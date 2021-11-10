@@ -66,17 +66,17 @@ const main = async () => {
   }
 
   const categories: string[] = [];
-  for (let i = 1; i <= 1000; i++) {
+  for (let i = 1; i <= 2000; i++) {
     categories.push(`category${i}`);
   }
 
   const keys: string[] = [];
-  for (let i = 1; i <= 1000; i++) {
+  for (let i = 1; i <= 2000; i++) {
     keys.push(`key${i}`);
   }
 
   const values: string[] = [];
-  for (let i = 1; i <= 1000; i++) {
+  for (let i = 1; i <= 2000; i++) {
     values.push(`value${i}`);
   }
 
@@ -166,6 +166,71 @@ const main = async () => {
         query: `INSERT INTO "views_attributes"("view_id", "attribute_id") VALUES ($1, $2)`,
         values: [100 + i + 1, 20000 + i + 1],
       });
+    }
+    await db.none(pgp.helpers.concat(toInsert));
+  }
+
+  // token_singles
+  {
+    console.log("token_singles");
+
+    const toInsert: any[] = [];
+    for (let i = 1; i <= 10000; i++) {
+      toInsert.push({
+        query: `INSERT INTO "token_singles"("contract", "token_id") VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        values: [
+          contracts[getRandomInt(0, contracts.length - 1)],
+          getRandomInt(1, 50000),
+        ],
+      });
+    }
+    await db.none(pgp.helpers.concat(toInsert));
+  }
+
+  // token_ranges
+  {
+    console.log("token_ranges");
+
+    const toInsert: any[] = [];
+    for (let i = 0; i < contracts.length; i++) {
+      toInsert.push({
+        query: `INSERT INTO "token_ranges"("view_id", "contract", "token_id_range") VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+        values: [100 + i + 1, contracts[i], `[1, 100]`],
+      });
+    }
+    await db.none(pgp.helpers.concat(toInsert));
+  }
+
+  // token_lists
+  {
+    console.log("token_lists");
+
+    const toInsert: any[] = [];
+    for (let i = 1; i <= 100; i++) {
+      toInsert.push({
+        query: `INSERT INTO "token_lists"("id", "view_id") VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        values: [`${i}`, i],
+      });
+    }
+    await db.none(pgp.helpers.concat(toInsert));
+  }
+
+  // token_lists_tokens
+  {
+    console.log("token_lists_tokens");
+
+    const toInsert: any[] = [];
+    for (let i = 1; i <= 100; i++) {
+      const results = await db.manyOrNone(
+        `SELECT "ta"."contract", "ta"."token_id" FROM "views_attributes" "va" JOIN "tokens_attributes" "ta" ON "va"."attribute_id" = "ta"."attribute_id" WHERE "va"."view_id" = $1`,
+        [`${i}`]
+      );
+      for (const { contract, token_id } of results) {
+        toInsert.push({
+          query: `INSERT INTO "token_lists_tokens"("contract", "token_id", "token_list_id") VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+          values: [contract, token_id, `${i}`],
+        });
+      }
     }
     await db.none(pgp.helpers.concat(toInsert));
   }

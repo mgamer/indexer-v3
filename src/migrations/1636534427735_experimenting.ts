@@ -311,6 +311,18 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
       type: "NUMERIC(78, 0)",
       notNull: true,
     },
+    valid_between: {
+      type: "TSRANGE",
+      notNull: true,
+    },
+    cancelled: {
+      type: "BOOLEAN",
+      default: false,
+    },
+    filled: {
+      type: "BOOLEAN",
+      default: false,
+    },
   });
 
   pgm.createConstraint("buy_orders", "buy_orders_pk", {
@@ -335,11 +347,16 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     },
   });
 
-  pgm.createIndex("buy_orders", ["token_single_id"]);
-  pgm.createIndex("buy_orders", ["token_range_id"]);
-  pgm.createIndex("buy_orders", ["token_list_id"]);
-
-  // TODO: Partial indexes on valid orders
+  pgm.createIndex("buy_orders", ["token_single_id"], {
+    where: `NOT "cancelled" AND NOT "filled"`,
+  });
+  pgm.createIndex("buy_orders", ["token_range_id"], {
+    where: `NOT "cancelled" AND NOT "filled"`,
+  });
+  pgm.createIndex("buy_orders", ["token_list_id"], {
+    where: `NOT "cancelled" AND NOT "filled"`,
+  });
+  pgm.createIndex("buy_orders", ["valid_between"], { method: "gist" });
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {}
