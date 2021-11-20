@@ -5,12 +5,13 @@ import { config } from "../config";
 const log = (severity: Severity) => {
   const coralogixPrivateKey = process.env.CORALOGIX_PRIVATE_KEY;
   if (coralogixPrivateKey) {
+    const environment = config.doBackgroundWork ? "worker" : "api";
+    const network = config.chainId === 1 ? "mainnet" : "rinkeby";
+
     const loggerConfig = new LoggerConfig({
       privateKey: String(coralogixPrivateKey),
       applicationName: "reservoir",
-      subsystemName: `indexer-v3-${
-        config.chainId === 1 ? "mainnet" : "rinkeby"
-      }`,
+      subsystemName: `indexer-v3-${environment}-${network}`,
     });
     CoralogixLogger.configure(loggerConfig);
 

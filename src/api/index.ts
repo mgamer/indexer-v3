@@ -33,5 +33,5 @@ export const start = async function (): Promise<void> {
   setupRoutes(server);
 
   await server.start();
-  logger.info(`api`, `Started on port ${config.port}`);
+  logger.info("process", `Started on port ${config.port}`);
 };
