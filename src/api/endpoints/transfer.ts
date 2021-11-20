@@ -9,15 +9,8 @@ export const getTransfersOptions: RouteOptions = {
   validate: {
     query: Joi.object({
       contract: Joi.string().lowercase().required(),
-      tokenId: Joi.string(),
-      offset: Joi.number().integer().positive().min(0).default(0).required(),
-      limit: Joi.number()
-        .integer()
-        .positive()
-        .min(0)
-        .max(20)
-        .default(20)
-        .required(),
+      offset: Joi.number().integer().min(0).default(0),
+      limit: Joi.number().integer().min(1).max(20).default(20),
     }),
   },
   handler: async (request: Request) => {
