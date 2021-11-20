@@ -4,6 +4,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
   pgm.createTable("transfer_events", {
     token_id: {
       type: "numeric(78, 0)",
+      notNull: true,
     },
     amount: {
       type: "numeric(78, 0)",

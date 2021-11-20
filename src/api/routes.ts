@@ -2,6 +2,7 @@ import { Server } from "@hapi/hapi";
 
 import * as adminEndpoints from "./endpoints/admin";
 import * as rootEndpoints from "./endpoints/root";
+import * as transferEndpoints from "./endpoints/transfer";
 
 export const setupRoutes = (server: Server) => {
   // Root
@@ -24,5 +25,13 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/admin/sync/events",
     options: adminEndpoints.postSyncEventsOptions,
+  });
+
+  // Transfers
+
+  server.route({
+    method: "GET",
+    path: "/transfers",
+    options: transferEndpoints.getTransfersOptions,
   });
 };
