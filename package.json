@@ -14,11 +14,30 @@
     "start": "node ./dist/index.js",
     "migrate": "ts-node ./node_modules/node-pg-migrate/bin/node-pg-migrate -m ./src/migrations"
   },
-  "devDependencies": {
+  "dependencies": {
+    "bullmq": "^1.52.2",
+    "coralogix-logger": "^1.1.28",
     "dotenv": "^10.0.0",
+    "ethers": "^5.5.1",
+    "hapi-swagger": "14.2.4",
+    "ioredis": "^4.28.0",
+    "joi": "17.x",
+    "node-cron": "^3.0.0",
     "node-pg-migrate": "^6.0.0",
     "pg": "^8.7.1",
     "pg-promise": "^10.11.1",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "@hapi/hapi": "^20.0.0",
+    "@hapi/inert": "^6.0.4",
+    "@hapi/vision": "^6.1.0",
+    "@types/hapi__hapi": "^20.0.9",
+    "@types/hapi__inert": "^5.2.3",
+    "@types/hapi__vision": "^5.5.3",
+    "@types/ioredis": "^4.28.1",
+    "@types/node-cron": "^3.0.0",
+    "@types/uuid": "^8.3.3",
     "ts-node": "^10.4.0",
     "typescript": "^4.4.4"
   }
