@@ -134,7 +134,7 @@ if (config.doBackgroundWork) {
         try {
           logger.info(
             eventType,
-            `Realtime syncing block range [${fromBlock}, ${headBlock}]`
+            `Catchup syncing block range [${fromBlock}, ${headBlock}]`
           );
 
           await sync(fromBlock, headBlock, getEventInfo(eventType, contracts));
