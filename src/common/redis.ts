@@ -1,7 +1,7 @@
 import Redis from "ioredis";
 import { v4 as uuidv4 } from "uuid";
 
-import { config } from "../config";
+import { config } from "@config";
 
 export const redis = new Redis(config.redisUrl, {
   maxRetriesPerRequest: null,

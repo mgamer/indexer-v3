@@ -1,10 +1,11 @@
 import { Interface } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 
-import { logger } from "../../../../common/logger";
-import { EventInfo } from "../../events";
-import { parseEvent } from "../parser";
-import { Transfer, addTransfers, removeTransfers } from "./common";
+import { batchQueries, db } from "@common/db";
+import { logger } from "@common/logger";
+import { baseProvider } from "@common/provider";
+import { EventInfo } from "@events/index";
+import { parseEvent } from "@events/parser";
 
 const abi = new Interface([
   `event TransferSingle(
@@ -26,12 +27,13 @@ const abi = new Interface([
 export const getTransferSingleEventInfo = (
   contracts: string[] = []
 ): EventInfo => ({
+  provider: baseProvider,
   filter: {
     topics: [abi.getEventTopic("TransferSingle"), null, null, null],
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
-    const transfers: Transfer[] = [];
+    const queries: any[] = [];
     for (const log of logs) {
       try {
         const baseParams = parseEvent(log);
@@ -42,12 +44,30 @@ export const getTransferSingleEventInfo = (
         const tokenId = parsedLog.args.tokenId.toString();
         const amount = parsedLog.args.amount.toString();
 
-        transfers.push({
-          tokenId,
-          from,
-          to,
-          amount,
-          baseParams,
+        queries.push({
+          query: `
+            select add_transfer_event(
+              $/kind/,
+              $/tokenId/,
+              $/from/,
+              $/to/,
+              $/amount/,
+              $/address/,
+              $/block/,
+              $/blockHash/,
+              $/txHash/,
+              $/txIndex/,
+              $/logIndex/
+            )
+          `,
+          values: {
+            kind: "erc1155",
+            tokenId,
+            from,
+            to,
+            amount,
+            ...baseParams,
+          },
         });
       } catch (error) {
         logger.error(
@@ -57,22 +77,23 @@ export const getTransferSingleEventInfo = (
       }
     }
 
-    await addTransfers(transfers, "erc1155");
+    await batchQueries(queries);
   },
   fixCallback: async (blockHash) => {
-    await removeTransfers(blockHash);
+    await db.none("select remove_transfer_events($/blockHash/)", { blockHash });
   },
 });
 
 export const getTransferBatchEventInfo = (
   contracts: string[] = []
 ): EventInfo => ({
+  provider: baseProvider,
   filter: {
     topics: [abi.getEventTopic("TransferBatch"), null, null, null],
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
-    const transfers: Transfer[] = [];
+    const queries: any[] = [];
     for (const log of logs) {
       try {
         const baseParams = parseEvent(log);
@@ -87,12 +108,30 @@ export const getTransferBatchEventInfo = (
           const tokenId = tokenIds[i].toString();
           const amount = amounts[i].toString();
 
-          transfers.push({
-            tokenId,
-            from,
-            to,
-            amount,
-            baseParams,
+          queries.push({
+            query: `
+              select add_transfer_event(
+                $/kind/,
+                $/tokenId/,
+                $/from/,
+                $/to/,
+                $/amount/,
+                $/address/,
+                $/block/,
+                $/blockHash/,
+                $/txHash/,
+                $/txIndex/,
+                $/logIndex/
+              )
+            `,
+            values: {
+              kind: "erc1155",
+              tokenId,
+              from,
+              to,
+              amount,
+              ...baseParams,
+            },
           });
         }
       } catch (error) {
@@ -103,9 +142,9 @@ export const getTransferBatchEventInfo = (
       }
     }
 
-    await addTransfers(transfers, "erc1155");
+    await batchQueries(queries);
   },
   fixCallback: async (blockHash) => {
-    await removeTransfers(blockHash);
+    await db.none("select remove_transfer_events($/blockHash/)", { blockHash });
   },
 });

@@ -1,4 +1,4 @@
-import { db } from "../common/db";
+import { db } from "@common/db";
 
 type GetTransfersFilter = {
   contract: string;

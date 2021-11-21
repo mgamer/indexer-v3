@@ -1,12 +1,12 @@
 import cron from "node-cron";
-import { db } from "../../common/db";
-import { logger } from "../../common/logger";
 
-import { baseProvider } from "../../common/provider";
-import { acquireLock, redis, releaseLock } from "../../common/redis";
-import { config } from "../../config";
-import { eventTypes, getEventInfo } from "../../sync/onchain/events";
-import { addToBackfillQueue } from "../events-sync";
+import { db } from "@common/db";
+import { logger } from "@common/logger";
+import { baseProvider } from "@common/provider";
+import { acquireLock, redis, releaseLock } from "@common/redis";
+import { config } from "@config";
+import { eventTypes, getEventInfo } from "@events/index";
+import { addToBackfillQueue } from "@jobs/events-sync";
 
 if (config.doBackgroundWork) {
   // Since we're syncing events up to the head of the blockchain
@@ -16,6 +16,9 @@ if (config.doBackgroundWork) {
   // We do this by comparing the ingested block hashes against
   // the upstream block hashes and reverting in case there is
   // any mismatch.
+
+  // Warning: for now, this check is only done for events synced
+  // from the base network (eg. via `baseProvider`)
 
   cron.schedule("*/1 * * * *", async () => {
     if (await acquireLock("events_fix_lock", 55)) {
@@ -56,13 +59,21 @@ if (config.doBackgroundWork) {
 
       for (const [block, blockHash] of wrongBlocks.entries()) {
         for (const eventType of eventTypes) {
-          const contracts = await redis.smembers(`${eventType}_contracts`);
+          // For now, skip fixing events that are not synced from
+          // the base network (eg. orderbook events)
+          const eventInfo = getEventInfo(eventType);
+          if (
+            eventInfo.provider._network.chainId !==
+            baseProvider._network.chainId
+          ) {
+            continue;
+          }
 
           // Fix wrong event entries
-          const eventInfo = getEventInfo(eventType);
           await eventInfo.fixCallback(blockHash);
 
-          // Re-sync
+          // Resync
+          const contracts = await redis.smembers(`${eventType}_contracts`);
           await addToBackfillQueue(eventType, contracts, block, block);
         }
       }

@@ -1,11 +1,10 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { baseProvider } from "../../common/provider";
-import { redis } from "../../common/redis";
-import { config } from "../../config";
-import { addToBackfillQueue } from "../../jobs/events-sync";
-import { eventTypes } from "../../sync/onchain/events";
+import { redis } from "@common/redis";
+import { config } from "@config";
+import { addToBackfillQueue } from "@jobs/events-sync";
+import { eventTypes, getEventInfo } from "@events/index";
 
 export const postSyncEventsOptions: RouteOptions = {
   description: "Trigger syncing of on-chain events",
@@ -89,9 +88,12 @@ export const postContractsOptions: RouteOptions = {
     }
 
     // Trigger backfilling of the contracts' events
-    const toBlock = await baseProvider.getBlockNumber();
     for (const syncType of syncTypes) {
-      addToBackfillQueue(syncType, [contract], creationBlock, toBlock, 1024);
+      if (eventTypes.includes(syncType)) {
+        const eventInfo = getEventInfo(syncType);
+        const toBlock = await eventInfo.provider.getBlockNumber();
+        addToBackfillQueue(syncType, [contract], creationBlock, toBlock, 1024);
+      }
     }
 
     return { message: "Contract added" };

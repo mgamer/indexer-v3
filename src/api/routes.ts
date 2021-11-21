@@ -1,8 +1,8 @@
 import { Server } from "@hapi/hapi";
 
-import * as adminEndpoints from "./endpoints/admin";
-import * as rootEndpoints from "./endpoints/root";
-import * as transferEndpoints from "./endpoints/transfer";
+import * as adminEndpoints from "@api/endpoints/admin";
+import * as rootEndpoints from "@api/endpoints/root";
+import * as transferEndpoints from "@api/endpoints/transfer";
 
 export const setupRoutes = (server: Server) => {
   // Root

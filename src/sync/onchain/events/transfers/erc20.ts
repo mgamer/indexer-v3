@@ -1,10 +1,11 @@
 import { Interface } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 
-import { logger } from "../../../../common/logger";
-import { EventInfo } from "../../events";
-import { parseEvent } from "../parser";
-import { Transfer, addTransfers, removeTransfers } from "./common";
+import { batchQueries, db } from "@common/db";
+import { logger } from "@common/logger";
+import { baseProvider } from "@common/provider";
+import { EventInfo } from "@events/index";
+import { parseEvent } from "@events/parser";
 
 const abi = new Interface([
   `event Transfer(
@@ -15,12 +16,13 @@ const abi = new Interface([
 ]);
 
 export const getTransferEventInfo = (contracts: string[] = []): EventInfo => ({
+  provider: baseProvider,
   filter: {
     topics: [abi.getEventTopic("Transfer"), null, null],
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
-    const transfers: Transfer[] = [];
+    const queries: any[] = [];
     for (const log of logs) {
       try {
         const baseParams = parseEvent(log);
@@ -31,21 +33,39 @@ export const getTransferEventInfo = (contracts: string[] = []): EventInfo => ({
         const to = parsedLog.args.to.toLowerCase();
         const amount = parsedLog.args.amount.toString();
 
-        transfers.push({
-          tokenId,
-          from,
-          to,
-          amount,
-          baseParams,
+        queries.push({
+          query: `
+            select add_transfer_event(
+              $/kind/,
+              $/tokenId/,
+              $/from/,
+              $/to/,
+              $/amount/,
+              $/address/,
+              $/block/,
+              $/blockHash/,
+              $/txHash/,
+              $/txIndex/,
+              $/logIndex/
+            )
+          `,
+          values: {
+            kind: "erc20",
+            tokenId,
+            from,
+            to,
+            amount,
+            ...baseParams,
+          },
         });
       } catch (error) {
         logger.error("erc20_transfer_callback", `Invalid log ${log}: ${error}`);
       }
     }
 
-    await addTransfers(transfers, "erc20");
+    await batchQueries(queries);
   },
   fixCallback: async (blockHash) => {
-    await removeTransfers(blockHash);
+    await db.none("select remove_transfer_events($/blockHash/)", { blockHash });
   },
 });

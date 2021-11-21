@@ -1,10 +1,9 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
-import { logger } from "../../common/logger";
-import { baseProvider } from "../../common/provider";
-import { redis } from "../../common/redis";
-import { config } from "../../config";
-import { EventType, getEventInfo, sync } from "../../sync/onchain/events";
+import { logger } from "@common/logger";
+import { redis } from "@common/redis";
+import { config } from "@config";
+import { EventType, getEventInfo, sync } from "@events/index";
 
 // For syncing events we have two separate job queues.
 // One is for handling backfilling while the other one
@@ -106,13 +105,17 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { eventType } = job.data;
 
+      // Sync all contracts of the given event type
+      const contracts = await redis.smembers(`${eventType}_contracts`);
+      const eventInfo = getEventInfo(eventType, contracts);
+
       // We allow syncing of up to `maxBlocks` blocks behind the
       // head of the blockchain. If the indexer lagged behind more
       // than that, then all blocks before that will be sent to the
       // backfill queue.
       const maxBlocks = 256;
 
-      let headBlock = await baseProvider.getBlockNumber();
+      let headBlock = await eventInfo.provider.getBlockNumber();
       // Try avoiding missing events by lagging behind 1 block
       // https://ethereum.stackexchange.com/questions/109660/eth-getlogs-and-some-missing-logs
       headBlock--;
@@ -127,9 +130,6 @@ if (config.doBackgroundWork) {
 
       // Compute block to start realtime syncing from
       const fromBlock = Math.max(localBlock, headBlock - maxBlocks + 1);
-
-      // Sync all contracts of the given event type
-      const contracts = await redis.smembers(`${eventType}_contracts`);
       if (contracts.length) {
         try {
           logger.info(

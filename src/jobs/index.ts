@@ -1,5 +1,5 @@
 // Initialize all background jobs/processes
 
-import "./catch-up";
-import "./events-fix";
-import "./events-sync";
+import "@jobs/catch-up";
+import "@jobs/events-fix";
+import "@jobs/events-sync";

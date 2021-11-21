@@ -1,7 +1,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { getTransfers } from "../../entities/transfer";
+import { getTransfers } from "@entities/transfer";
 
 export const getTransfersOptions: RouteOptions = {
   description: "Get transfers information",

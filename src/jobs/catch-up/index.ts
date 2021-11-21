@@ -1,10 +1,10 @@
 import cron from "node-cron";
-import { logger } from "../../common/logger";
 
-import { acquireLock, releaseLock } from "../../common/redis";
-import { config } from "../../config";
-import { eventTypes } from "../../sync/onchain/events";
-import { addToCatchupQueue } from "../events-sync";
+import { logger } from "@common/logger";
+import { acquireLock, releaseLock } from "@common/redis";
+import { config } from "@config";
+import { eventTypes } from "@events/index";
+import { addToCatchupQueue } from "@jobs/events-sync";
 
 if (config.doBackgroundWork) {
   // Every new block (approximately 15 seconds) there might be processes
