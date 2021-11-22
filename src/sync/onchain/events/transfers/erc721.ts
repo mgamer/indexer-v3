@@ -1,4 +1,4 @@
-import { Interface } from "@ethersproject/abi";
+import { Interface, LogDescription } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 
 import { batchQueries, db } from "@common/db";
@@ -15,10 +15,20 @@ const abi = new Interface([
   )`,
 ]);
 
+// Old contracts might use a non-standard Transfer event
+// which doesn't have the tokenId field indexed
+const nonStandardAbi = new Interface([
+  `event Transfer(
+    address indexed from,
+    address indexed to,
+    uint256 tokenId
+  )`,
+]);
+
 export const getTransferEventInfo = (contracts: string[] = []): EventInfo => ({
   provider: baseProvider,
   filter: {
-    topics: [abi.getEventTopic("Transfer"), null, null, null],
+    topics: [abi.getEventTopic("Transfer")],
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
@@ -27,7 +37,12 @@ export const getTransferEventInfo = (contracts: string[] = []): EventInfo => ({
       try {
         const baseParams = parseEvent(log);
 
-        const parsedLog = abi.parseLog(log);
+        let parsedLog: LogDescription;
+        try {
+          parsedLog = abi.parseLog(log);
+        } catch {
+          parsedLog = nonStandardAbi.parseLog(log);
+        }
         const from = parsedLog.args.from.toLowerCase();
         const to = parsedLog.args.to.toLowerCase();
         const tokenId = parsedLog.args.tokenId.toString();

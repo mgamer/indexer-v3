@@ -17,9 +17,10 @@ export type EventInfo = {
   // at once. As such, for all syncing processes we should be
   // using the base network provider. However, in order to reuse
   // the syncing methods for other various processes (eg. syncing
-  // orderbook events), we require explicitly passing the provider.
-  // This can be ditched once we no longer need syncing events
-  // from different chains.
+  // orderbook events which for now are retrieved from a different
+  // chain), we require explicitly passing the provider. This can
+  // be ditched once we no longer need syncing events from different
+  // chains, since it creates some useless complexities.
   provider: JsonRpcProvider;
   filter: EnhancedFilter;
   syncCallback: (logs: Log[]) => Promise<void>;

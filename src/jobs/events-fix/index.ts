@@ -3,41 +3,55 @@ import cron from "node-cron";
 import { db } from "@common/db";
 import { logger } from "@common/logger";
 import { baseProvider } from "@common/provider";
-import { acquireLock, redis, releaseLock } from "@common/redis";
-import { config } from "@config";
+import { acquireLock, releaseLock } from "@common/redis";
+import { config } from "@config/index";
 import { eventTypes, getEventInfo } from "@events/index";
-import { addToBackfillQueue } from "@jobs/events-sync";
+import { addToEventsSyncBackfillQueue } from "@jobs/events-sync";
+
+// Since we're syncing events up to the head of the blockchain
+// we might get some results that belong to dropped/orphaned
+// blocks. For this reason, we have to continuously check
+// fetched events to make sure they're in the canonical chain.
+// We do this by comparing the ingested block hashes against
+// the upstream block hashes and reverting in case there is
+// any mismatch. For now, this check is only done for events
+// synced from the base network (eg. via `baseProvider`).
 
 if (config.doBackgroundWork) {
-  // Since we're syncing events up to the head of the blockchain
-  // we might get some results that belong to dropped/orphaned
-  // blocks. For this reason, we have to continuously check
-  // fetched events to make sure they're in the canonical chain.
-  // We do this by comparing the ingested block hashes against
-  // the upstream block hashes and reverting in case there is
-  // any mismatch.
-
-  // Warning: for now, this check is only done for events synced
-  // from the base network (eg. via `baseProvider`)
-
   cron.schedule("*/1 * * * *", async () => {
     if (await acquireLock("events_fix_lock", 55)) {
       logger.info("events_fix_cron", "Checking events");
-
-      const numBlocksToCheck = 10;
 
       // Retrieve the last local block hashes from all event tables
       const localBlocks: { block: number; blockHash: string }[] =
         await db.manyOrNone(
           `
-            select distinct
+            (select distinct
               "block",
               "block_hash" as "blockHash"
             from "transfer_events"
             order by "block" desc
-            limit $/limit/
+            limit $/limit/)
+
+            union
+
+            (select distinct
+              "block",
+              "block_hash" as "blockHash"
+            from "cancel_events"
+            order by "block" desc
+            limit $/limit/)
+
+            union
+
+            (select distinct
+              "block",
+              "block_hash" as "blockHash"
+            from "fill_events"
+            order by "block" desc
+            limit $/limit/)
           `,
-          { limit: numBlocksToCheck }
+          { limit: 30 }
         );
 
       const wrongBlocks = new Map<number, string>();
@@ -54,13 +68,16 @@ if (config.doBackgroundWork) {
           }
         }
       } catch (error) {
-        logger.error("events_fix_cron", "Failed to retrieve block hashes");
+        logger.error(
+          "events_fix_cron",
+          `Failed to retrieve block hashes: ${error}`
+        );
       }
 
       for (const [block, blockHash] of wrongBlocks.entries()) {
         for (const eventType of eventTypes) {
-          // For now, skip fixing events that are not synced from
-          // the base network (eg. orderbook events)
+          // Skip fixing any events that are not synced from the
+          // base network (eg. orderbook events)
           const eventInfo = getEventInfo(eventType);
           if (
             eventInfo.provider._network.chainId !==
@@ -73,8 +90,14 @@ if (config.doBackgroundWork) {
           await eventInfo.fixCallback(blockHash);
 
           // Resync
-          const contracts = await redis.smembers(`${eventType}_contracts`);
-          await addToBackfillQueue(eventType, contracts, block, block);
+          const contracts =
+            require(`@config/data/${config.chainId}/contracts.json`)[eventType];
+          await addToEventsSyncBackfillQueue(
+            eventType,
+            contracts,
+            block,
+            block
+          );
         }
       }
 

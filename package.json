@@ -11,7 +11,7 @@
     "clean": "rm -rf ./dist tsconfig.tsbuildinfo",
     "compile": "tsc",
     "build": "yarn migrate up; yarn clean; yarn compile",
-    "start": "node ./dist/index.js",
+    "start": "node -r module-alias/register ./dist/index.js",
     "migrate": "ts-node ./node_modules/node-pg-migrate/bin/node-pg-migrate -m ./src/migrations"
   },
   "dependencies": {
@@ -26,6 +26,7 @@
     "hapi-swagger": "14.2.4",
     "ioredis": "^4.28.0",
     "joi": "17.x",
+    "module-alias": "^2.2.2",
     "node-cron": "^3.0.0",
     "node-pg-migrate": "^6.0.0",
     "pg": "^8.7.1",
@@ -41,5 +42,14 @@
     "@types/uuid": "^8.3.3",
     "ts-node": "^10.4.0",
     "typescript": "^4.4.4"
+  },
+  "_moduleAliases": {
+    "@api": "dist/api",
+    "@common": "dist/common",
+    "@config": "dist/config",
+    "@entities": "dist/entities",
+    "@jobs": "dist/jobs",
+    "@orders": "dist/orders",
+    "@events": "dist/sync/onchain/events"
   }
 }

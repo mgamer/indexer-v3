@@ -6,6 +6,7 @@ import { logger } from "@common/logger";
 import { baseProvider } from "@common/provider";
 import { EventInfo } from "@events/index";
 import { parseEvent } from "@events/parser";
+import { addToOrdersActionsQueue } from "@jobs/orders-actions";
 
 const abi = new Interface([
   `event OrderCancelled(bytes32 indexed hash)`,
@@ -24,22 +25,27 @@ export const getOrderCancelledEventInfo = (
 ): EventInfo => ({
   provider: baseProvider,
   filter: {
-    topics: [abi.getEventTopic("OrderCancelled"), null, null],
+    topics: [abi.getEventTopic("OrderCancelled")],
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
+    const orderHashes: string[] = [];
+
     const queries: any[] = [];
     for (const log of logs) {
       try {
         const baseParams = parseEvent(log);
 
         const parsedLog = abi.parseLog(log);
-        const hash = parsedLog.args.hash.toLowerCase();
+        const orderHash = parsedLog.args.hash.toLowerCase();
+
+        orderHashes.push(orderHash);
 
         queries.push({
           query: `
             select add_cancel_event(
-              $/hash/,
+              $/kind/,
+              $/orderHash/,
               $/address/,
               $/block/,
               $/blockHash/,
@@ -49,7 +55,8 @@ export const getOrderCancelledEventInfo = (
             )
           `,
           values: {
-            hash,
+            kind: "wyvern-v2",
+            orderHash,
             ...baseParams,
           },
         });
@@ -62,6 +69,7 @@ export const getOrderCancelledEventInfo = (
     }
 
     await batchQueries(queries);
+    await addToOrdersActionsQueue(orderHashes);
   },
   fixCallback: async (blockHash) => {
     await db.none("select remove_cancel_events($/blockHash/)", { blockHash });
@@ -73,10 +81,12 @@ export const getOrdersMatchedEventInfo = (
 ): EventInfo => ({
   provider: baseProvider,
   filter: {
-    topics: [abi.getEventTopic("OrdersMatched"), null, null, null],
+    topics: [abi.getEventTopic("OrdersMatched")],
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
+    const orderHashes: string[] = [];
+
     const queries: any[] = [];
     for (const log of logs) {
       try {
@@ -87,11 +97,15 @@ export const getOrdersMatchedEventInfo = (
         const sellHash = parsedLog.args.sellHash.toLowerCase();
         const maker = parsedLog.args.maker.toLowerCase();
         const taker = parsedLog.args.taker.toLowerCase();
-        const price = parsedLog.args.price.toLowerCase();
+        const price = parsedLog.args.price.toString();
+
+        orderHashes.push(buyHash);
+        orderHashes.push(sellHash);
 
         queries.push({
           query: `
             select add_fill_event(
+              $/kind/,
               $/buyHash/,
               $/sellHash/,
               $/maker/,
@@ -106,6 +120,7 @@ export const getOrdersMatchedEventInfo = (
             )
           `,
           values: {
+            kind: "wyvern-v2",
             buyHash,
             sellHash,
             maker,
@@ -123,6 +138,7 @@ export const getOrdersMatchedEventInfo = (
     }
 
     await batchQueries(queries);
+    await addToOrdersActionsQueue(orderHashes);
   },
   fixCallback: async (blockHash) => {
     await db.none("select remove_fill_events($/blockHash/)", { blockHash });

@@ -1,13 +1,14 @@
 import Redis from "ioredis";
 import { v4 as uuidv4 } from "uuid";
 
-import { config } from "@config";
+import { config } from "@config/index";
 
 export const redis = new Redis(config.redisUrl, {
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
 });
 
+// As in https://redis.io/topics/distlock
 const lockIds = new Map<string, string>();
 
 export const acquireLock = async (

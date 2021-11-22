@@ -17,12 +17,6 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/admin/contracts",
-    options: adminEndpoints.postContractsOptions,
-  });
-
-  server.route({
-    method: "POST",
     path: "/admin/sync/events",
     options: adminEndpoints.postSyncEventsOptions,
   });

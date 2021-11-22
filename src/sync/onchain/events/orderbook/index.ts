@@ -4,11 +4,7 @@ import { Order } from "@georgeroman/wyvern-v2-sdk";
 
 import { logger } from "@common/logger";
 import { orderbookProvider } from "@common/provider";
-import {
-  filterOrders,
-  parseOrderbookOrder,
-  storeOrders,
-} from "@orders/wyvern-v2";
+import { filterOrders, parseEncodedOrder, saveOrders } from "@orders/wyvern-v2";
 import { EventInfo } from "@events/index";
 
 const abi = new Interface([`event OrdersPosted(bytes[] orders)`]);
@@ -18,7 +14,7 @@ export const getOrdersPostedEventInfo = (
 ): EventInfo => ({
   provider: orderbookProvider,
   filter: {
-    topics: [abi.getEventTopic("OrdersPosted"), null, null],
+    topics: [abi.getEventTopic("OrdersPosted")],
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
@@ -29,7 +25,7 @@ export const getOrdersPostedEventInfo = (
         const orders = parsedLog.args.orders;
 
         for (const order of orders) {
-          const parsedOrder = parseOrderbookOrder(order);
+          const parsedOrder = parseEncodedOrder(order);
           if (parsedOrder) {
             parsedOrders.push(parsedOrder);
           }
@@ -44,7 +40,7 @@ export const getOrdersPostedEventInfo = (
 
     // Filter and save new and valid orders
     const filteredOrders = await filterOrders(parsedOrders);
-    await storeOrders(filteredOrders);
+    await saveOrders(filteredOrders);
   },
   fixCallback: async (_blockHash) => {
     // Not used

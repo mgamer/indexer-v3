@@ -1,17 +1,16 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { redis } from "@common/redis";
-import { config } from "@config";
-import { addToBackfillQueue } from "@jobs/events-sync";
-import { eventTypes, getEventInfo } from "@events/index";
+import { config } from "@config/index";
+import { eventTypes } from "@events/index";
+import { addToEventsSyncBackfillQueue } from "@jobs/events-sync";
 
 export const postSyncEventsOptions: RouteOptions = {
   description: "Trigger syncing of on-chain events",
   tags: ["api"],
   validate: {
     headers: Joi.object({
-      "x-admin-api-key": Joi.string().valid(config.adminApiKey).required(),
+      "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     payload: Joi.object({
       eventTypes: Joi.array()
@@ -25,6 +24,10 @@ export const postSyncEventsOptions: RouteOptions = {
     }),
   },
   handler: async (request: Request) => {
+    if (request.headers["x-admin-api-key"] !== config.adminApiKey) {
+      throw new Error("Unauthorized");
+    }
+
     const payload = request.payload as any;
 
     const eventTypes = payload.eventTypes;
@@ -33,20 +36,19 @@ export const postSyncEventsOptions: RouteOptions = {
     const toBlock = payload.toBlock;
     const maxEventsPerBatch = payload.maxEventsPerBatch;
 
-    // Make sure the contracts requested to sync were previously added
+    const contractsData = require(`@config/data/${config.chainId}/contracts`);
+
+    // Make sure the contracts requested to sync match the event types
     for (const eventType of eventTypes) {
-      const eventTypeContracts = new Set(
-        await redis.smembers(`${eventType}_contracts`)
-      );
       for (const contract of contracts) {
-        if (!eventTypeContracts.has(contract)) {
+        if (!contractsData[eventType].includes(contract)) {
           throw new Error(`Unknown contract ${contract}`);
         }
       }
     }
 
     for (const eventType of eventTypes) {
-      addToBackfillQueue(
+      addToEventsSyncBackfillQueue(
         eventType,
         contracts,
         fromBlock,
@@ -56,46 +58,5 @@ export const postSyncEventsOptions: RouteOptions = {
     }
 
     return { message: "Syncing request queued" };
-  },
-};
-
-export const postContractsOptions: RouteOptions = {
-  description: "Add new contracts for syncing",
-  tags: ["api"],
-  validate: {
-    headers: Joi.object({
-      "x-admin-api-key": Joi.string().valid(config.adminApiKey).required(),
-    }).options({ allowUnknown: true }),
-    payload: Joi.object({
-      syncTypes: Joi.array()
-        .items(Joi.string().valid(...eventTypes))
-        .min(1)
-        .required(),
-      contract: Joi.string().lowercase().required(),
-      creationBlock: Joi.number().integer().positive().required(),
-    }),
-  },
-  handler: async (request: Request) => {
-    const payload = request.payload as any;
-
-    const syncTypes = payload.syncTypes;
-    const contract = payload.contract;
-    const creationBlock = payload.creationBlock;
-
-    // Save the contracts and their associated sync types
-    for (const syncType of syncTypes) {
-      await redis.sadd(`${syncType}_contracts`, contract);
-    }
-
-    // Trigger backfilling of the contracts' events
-    for (const syncType of syncTypes) {
-      if (eventTypes.includes(syncType)) {
-        const eventInfo = getEventInfo(syncType);
-        const toBlock = await eventInfo.provider.getBlockNumber();
-        addToBackfillQueue(syncType, [contract], creationBlock, toBlock, 1024);
-      }
-    }
-
-    return { message: "Contract added" };
   },
 };

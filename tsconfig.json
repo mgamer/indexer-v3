@@ -16,7 +16,7 @@
     "paths": {
       "@api/*": ["api/*"],
       "@common/*": ["common/*"],
-      "@config": ["config"],
+      "@config/*": ["config/*"],
       "@entities/*": ["entities/*"],
       "@jobs/*": ["jobs/*"],
       "@orders/*": ["orders/*"],

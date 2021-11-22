@@ -5,7 +5,7 @@ import HapiSwagger from "hapi-swagger";
 
 import { setupRoutes } from "@api/routes";
 import { logger } from "@common/logger";
-import { config } from "@config";
+import { config } from "@config/index";
 
 export const start = async function (): Promise<void> {
   const server = Hapi.server({

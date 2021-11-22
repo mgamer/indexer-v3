@@ -1,12 +1,14 @@
 import { Builders, Helpers, Order, Utils } from "@georgeroman/wyvern-v2-sdk";
 
-import { db, pgp } from "../common/db";
-import { redis } from "../common/redis";
-import { config } from "../config";
+import { batchQueries, db } from "@common/db";
+import { config } from "@config/index";
+import { generateTokenSetId } from "@orders/utils";
+import { addToOrdersActionsQueue } from "@jobs/orders-actions";
 
-export const parseOrderbookOrder = (encodedOrder: string) => {
-  return Helpers.Order.decode(encodedOrder);
-};
+// Wyvern V2 orders are retrieved from three sources:
+// - OpenSea
+// - on-chain orderbook
+// - off-chain API
 
 type OpenseaOrder = {
   prefixed_hash: string;
@@ -105,6 +107,12 @@ export const parseOpenseaOrder = (openseaOrder: OpenseaOrder) => {
   }
 };
 
+export const parseEncodedOrder = (encodedOrder: string) => {
+  return Helpers.Order.decode(encodedOrder);
+};
+
+// Enhance orders with their token id (which is missing from
+// the default Wyvern V2 order format)
 type EnhancedOrder = Order & {
   tokenId: string;
 };
@@ -116,48 +124,44 @@ export const filterOrders = async (
     return [];
   }
 
+  // Get the kinds of all contracts targeted by the orders
   const contracts: { address: string; kind: string }[] = await db.manyOrNone(
     `select distinct "address", "kind" from "contracts" where "address" in ($1:csv)`,
     [orders.map((order) => order.target)]
   );
 
-  // Get the kinds of all contracts targeted by the orders
   const contractKinds = new Map<string, string>();
   for (const { address, kind } of contracts) {
     contractKinds.set(address, kind);
   }
 
+  // Get all orders we're already storing
   const hashes: { hash: string }[] = await db.manyOrNone(
-    `select "hash" from "sell_orders" where "hash" in ($1:csv) and "contract" is not null`,
+    `select "hash" from "orders" where "hash" in ($1:csv) and "token_set_id" is not null`,
     [orders.map((order) => Helpers.Order.hash(order))]
   );
 
-  // Get the hashes of all orders that are already stored
   const existingHashes = new Set<string>();
   for (const { hash } of hashes) {
     existingHashes.add(hash);
   }
 
-  const enhancedOrders: EnhancedOrder[] = [];
+  // Validate orders
+  const validOrders: EnhancedOrder[] = [];
   for (const order of orders) {
-    // Make sure the order has a valid signature
-    if (!Helpers.Order.verifySignature(order)) {
-      continue;
-    }
-
-    // Make sure the order is not expired
-    const currentTime = Math.floor(Date.now() / 1000);
-    const expirationTime = Number(order.expirationTime);
-    if (expirationTime !== 0 && currentTime > expirationTime) {
-      continue;
-    }
-
-    // Make sure the order doesn't already exist
+    // Check: order doesn't already exist
     if (existingHashes.has(Helpers.Order.hash(order))) {
       continue;
     }
 
-    // Only allow ETH sell orders
+    // Check: order is not expired
+    const currentTime = Math.floor(Date.now() / 1000);
+    const expirationTime = Number(order.expirationTime);
+    if (expirationTime !== 0 && currentTime > expirationTime) {
+      // continue;
+    }
+
+    // Check: sell order has ETH as payment token
     if (
       order.side === 1 &&
       order.paymentToken !== Utils.Address.eth(config.chainId)
@@ -165,89 +169,159 @@ export const filterOrders = async (
       continue;
     }
 
-    // For now, disallow buy orders
-    if (order.side === 0) {
+    // Check: buy order has WETH as payment token
+    if (
+      order.side === 0 &&
+      order.paymentToken !== Utils.Address.weth(config.chainId)
+    ) {
       continue;
     }
 
-    // // Only allow WETH buy orders
-    // if (order.side === 0 && order.paymentToken !== Utils.Address.weth(config.chainId)) {
-    //   continue;
-    // }
-
-    // Make sure the order has a valid exchange
+    // Check: order has a valid exchange
     if (order.exchange !== Utils.Address.wyvernV2(config.chainId)) {
       continue;
     }
 
+    // Signature validation is delayed as much as possible since it's
+    // the costliest operation and we don't want to run it unless every
+    // other check passed.
+
+    // Check: erc721 order is well formatted
     const isErc721SingleItem =
       Builders.Erc721.SingleItem.isWellFormatted(order);
     if (isErc721SingleItem && contractKinds.get(order.target) === "erc721") {
-      enhancedOrders.push({
-        ...order,
-        tokenId: Builders.Erc721.SingleItem.extractTokenId(order)!,
-      });
+      const tokenId = Builders.Erc721.SingleItem.extractTokenId(order)!;
+
+      // Check: order targets a known token
+      const tokenExists = await db.oneOrNone(
+        `select 1 from "tokens" where "contract" = $/contract/ and "token_id" = $/tokenId/`,
+        {
+          contract: order.target,
+          tokenId,
+        }
+      );
+      if (tokenExists) {
+        // Check: order has a valid signature
+        if (!Helpers.Order.verifySignature(order)) {
+          continue;
+        }
+
+        validOrders.push({
+          ...order,
+          tokenId,
+        });
+      }
+
       continue;
     }
 
+    // Check: erc1155 order is well formatted
     const isErc1155SingleItem =
       Builders.Erc1155.SingleItem.isWellFormatted(order);
     if (isErc1155SingleItem && contractKinds.get(order.target) === "erc1155") {
-      enhancedOrders.push({
-        ...order,
-        tokenId: Builders.Erc1155.SingleItem.extractTokenId(order)!,
-      });
+      const tokenId = Builders.Erc1155.SingleItem.extractTokenId(order)!;
+
+      // Check: order targets a known token
+      const tokenExists = await db.oneOrNone(
+        `select 1 from "tokens" where "contract" = $/contract/ and "token_id" = $/tokenId/`,
+        {
+          contract: order.target,
+          tokenId,
+        }
+      );
+      if (tokenExists) {
+        // Check: order has a valid signature
+        if (!Helpers.Order.verifySignature(order)) {
+          continue;
+        }
+
+        validOrders.push({
+          ...order,
+          tokenId,
+        });
+      }
+
       continue;
     }
   }
 
-  return enhancedOrders;
+  return validOrders;
 };
 
-export const storeOrders = async (orders: EnhancedOrder[]) => {
+export const saveOrders = async (orders: EnhancedOrder[]) => {
   if (!orders.length) {
     return;
   }
 
-  const inserts: any[] = [];
+  const queries: any[] = [];
   for (const order of orders) {
-    inserts.push({
+    // Generate the token set id corresponding to the order
+    const tokenSetId = generateTokenSetId([
+      {
+        contract: order.target,
+        tokenId: order.tokenId,
+      },
+    ]);
+
+    // Make sure the token set exists
+    queries.push({
+      query: `insert into "token_sets" ("id") values ($/tokenSetId/) on conflict do nothing`,
+      values: { tokenSetId },
+    });
+    queries.push({
       query: `
-        insert into "sell_orders" (
-          "hash",
-          "kind",
-          "status",
+        insert into "token_sets_tokens" (
+          "token_set_id",
           "contract",
-          "token_id",
-          "maker",
-          "price",
-          "valid_between",
-          "raw_data"
+          "token_id"
         ) values (
-          $/hash/,
-          $/kind/,
-          $/status/,
+          $/tokenSetId/,
           $/contract/,
-          $/tokenId/,
-          $/maker/,
-          $/price/,
-          tstzrange(to_timestamp($/listingTime/), to_timestamp($/expirationTime/)),
-          $/rawData/
-        ) on conflict ("hash") do
-        update set
-          "contract" = $/contract/,
-          "token_id" = $/tokenId/,
-          "maker" = $/maker/,
-          "price" = $/price/,
-          "valid_between" = tstzrange(to_timestamp($/listingTime/), to_timestamp($/expirationTime/)),
-          "raw_data" = $/rawData/
-      `,
+          $/tokenId/
+        ) on conflict do nothing`,
+      values: {
+        tokenSetId,
+        contract: order.target,
+        tokenId: order.tokenId,
+      },
+    });
+
+    queries.push({
+      query: `
+          insert into "orders" (
+            "hash",
+            "kind",
+            "status",
+            "side",
+            "token_set_id",
+            "maker",
+            "price",
+            "valid_between",
+            "raw_data"
+          ) values (
+            $/hash/,
+            $/kind/,
+            $/status/,
+            $/side/,
+            $/tokenSetId/,
+            $/maker/,
+            $/price/,
+            tstzrange(to_timestamp($/listingTime/), to_timestamp($/expirationTime/)),
+            $/rawData/
+          ) on conflict ("hash") do
+          update set
+            "token_set_id" = $/tokenSetId/,
+            "maker" = $/maker/,
+            "price" = $/price/,
+            "valid_between" = tstzrange(to_timestamp($/listingTime/), to_timestamp($/expirationTime/)),
+            "raw_data" = $/rawData/
+        `,
       values: {
         hash: Helpers.Order.hash(order),
         kind: "wyvern-v2",
         status: "valid",
-        contract: order.target,
-        tokenId: order.tokenId,
+        side: order.side === 0 ? "buy" : "sell",
+        tokenSetId,
         maker: order.maker,
         price: order.basePrice,
         listingTime: order.listingTime,
@@ -258,5 +332,8 @@ export const storeOrders = async (orders: EnhancedOrder[]) => {
     });
   }
 
-  await db.none(pgp.helpers.concat(inserts));
+  await batchQueries(queries);
+  await addToOrdersActionsQueue(
+    orders.map((order) => Helpers.Order.hash(order))
+  );
 };

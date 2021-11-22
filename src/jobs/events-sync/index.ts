@@ -2,20 +2,18 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { logger } from "@common/logger";
 import { redis } from "@common/redis";
-import { config } from "@config";
+import { config } from "@config/index";
 import { EventType, getEventInfo, sync } from "@events/index";
 
-// For syncing events we have two separate job queues.
-// One is for handling backfilling while the other one
-// handles realtime syncing. The reason for this is that
-// we don't want any ongoing backfilling processes to
-// delay the realtime syncing (which tries to catch up
-// to the head of the blockchain).
-
-const BACKFILL_JOB_NAME = "events_sync_backfill";
-const CATCHUP_JOB_NAME = "events_sync_catchup";
+// For syncing events we have two separate job queues. One is for
+// handling backfilling while the other one handles realtime
+// syncing. The reason for this is that we don't want any ongoing
+// backfilling processes to delay the realtime syncing (which tries
+// to catch up to the head of the blockchain).
 
 // Backfill
+
+const BACKFILL_JOB_NAME = "events_sync_backfill";
 
 const backfillQueue = new Queue(BACKFILL_JOB_NAME, {
   connection: redis,
@@ -31,6 +29,36 @@ const backfillQueue = new Queue(BACKFILL_JOB_NAME, {
 });
 new QueueScheduler(BACKFILL_JOB_NAME, { connection: redis });
 
+export const addToEventsSyncBackfillQueue = async (
+  eventType: EventType,
+  contracts: string[],
+  fromBlock: number,
+  toBlock: number,
+  // Syncing is done in batches since the requested block range
+  // might include lots of events that cannot fit within a single
+  // provider response
+  maxBlocksPerBatch = 512
+) => {
+  const jobs: any[] = [];
+
+  // Sync in reverse in order to handle more recent events first
+  for (let to = toBlock; to >= fromBlock; to -= maxBlocksPerBatch) {
+    const from = Math.max(fromBlock, to - maxBlocksPerBatch + 1);
+    jobs.push({
+      name: eventType,
+      data: {
+        eventType,
+        contracts,
+        fromBlock: from,
+        toBlock: to,
+      },
+    });
+  }
+
+  await backfillQueue.addBulk(jobs);
+};
+
+// Actual work is to be handled by background worker processes
 if (config.doBackgroundWork) {
   const worker = new Worker(
     BACKFILL_JOB_NAME,
@@ -58,47 +86,26 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToBackfillQueue = async (
-  eventType: EventType,
-  contracts: string[],
-  fromBlock: number,
-  toBlock: number,
-  // Syncing is done in batches since the requested block
-  // range might include lots of events that cannot fit
-  // within a single provider response
-  maxBlocksPerBatch = 512
-) => {
-  const jobs: any[] = [];
-
-  // Sync in reverse in order to handle more recent events first
-  for (let to = toBlock; to >= fromBlock; to -= maxBlocksPerBatch) {
-    const from = Math.max(fromBlock, to - maxBlocksPerBatch + 1);
-    jobs.push({
-      name: eventType,
-      data: {
-        eventType,
-        contracts,
-        fromBlock: from,
-        toBlock: to,
-      },
-    });
-  }
-
-  await backfillQueue.addBulk(jobs);
-};
-
 // Catchup
+
+const CATCHUP_JOB_NAME = "events_sync_catchup";
 
 const catchupQueue = new Queue(CATCHUP_JOB_NAME, {
   connection: redis,
   defaultJobOptions: {
-    // No retries here, we should be as lean as possible
+    // No retries here, we should be as lean as possible and
+    // retrying will be done on any subsequent jobs
     removeOnComplete: true,
     removeOnFail: true,
   },
 });
 new QueueScheduler(CATCHUP_JOB_NAME, { connection: redis });
 
+export const addToEventsSyncCatchupQueue = async (eventType: EventType) => {
+  await catchupQueue.add(eventType, { eventType });
+};
+
+// Actual work is to be handled by background worker processes
 if (config.doBackgroundWork) {
   const worker = new Worker(
     CATCHUP_JOB_NAME,
@@ -106,7 +113,8 @@ if (config.doBackgroundWork) {
       const { eventType } = job.data;
 
       // Sync all contracts of the given event type
-      const contracts = await redis.smembers(`${eventType}_contracts`);
+      const contracts =
+        require(`@config/data/${config.chainId}/contracts.json`)[eventType];
       const eventInfo = getEventInfo(eventType, contracts);
 
       // We allow syncing of up to `maxBlocks` blocks behind the
@@ -128,7 +136,6 @@ if (config.doBackgroundWork) {
         localBlock = headBlock;
       }
 
-      // Compute block to start realtime syncing from
       const fromBlock = Math.max(localBlock, headBlock - maxBlocks + 1);
       if (contracts.length) {
         try {
@@ -145,7 +152,12 @@ if (config.doBackgroundWork) {
 
         // Queue any remaining blocks for backfilling
         if (localBlock < fromBlock) {
-          addToBackfillQueue(eventType, contracts, localBlock, fromBlock - 1);
+          await addToEventsSyncBackfillQueue(
+            eventType,
+            contracts,
+            localBlock,
+            fromBlock - 1
+          );
         }
 
         // Update the last synced block
@@ -158,7 +170,3 @@ if (config.doBackgroundWork) {
     logger.error(CATCHUP_JOB_NAME, `Worker errored: ${error}`);
   });
 }
-
-export const addToCatchupQueue = async (eventType: EventType) => {
-  await catchupQueue.add(eventType, { eventType });
-};

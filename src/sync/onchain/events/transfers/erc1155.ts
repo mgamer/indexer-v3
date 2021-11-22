@@ -29,7 +29,7 @@ export const getTransferSingleEventInfo = (
 ): EventInfo => ({
   provider: baseProvider,
   filter: {
-    topics: [abi.getEventTopic("TransferSingle"), null, null, null],
+    topics: [abi.getEventTopic("TransferSingle")],
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
@@ -89,7 +89,7 @@ export const getTransferBatchEventInfo = (
 ): EventInfo => ({
   provider: baseProvider,
   filter: {
-    topics: [abi.getEventTopic("TransferBatch"), null, null, null],
+    topics: [abi.getEventTopic("TransferBatch")],
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {

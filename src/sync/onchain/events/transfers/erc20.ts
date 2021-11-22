@@ -18,7 +18,7 @@ const abi = new Interface([
 export const getTransferEventInfo = (contracts: string[] = []): EventInfo => ({
   provider: baseProvider,
   filter: {
-    topics: [abi.getEventTopic("Transfer"), null, null],
+    topics: [abi.getEventTopic("Transfer")],
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {

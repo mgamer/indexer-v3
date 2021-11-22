@@ -1,0 +1,21 @@
+{
+  "orderbook_orders_posted": [
+    "0xf0e1e2e5bc49eb351280386a0129dd37145c60f6"
+  ],
+  "erc20_transfer": [],
+  "erc721_transfer": [
+    "0xff9c1b15b16263c61d017ee9f65c50e4ae0113d7"
+  ],
+  "erc1155_transfer_single": [
+    "0x1dfe7ca09e99d10835bf73044a23b73fc20623df"
+  ],
+  "erc1155_transfer_batch": [
+    "0x1dfe7ca09e99d10835bf73044a23b73fc20623df"
+  ],
+  "wyvern_v2_order_cancelled": [
+    "0x7be8076f4ea4a4ad08075c2508e481d6c946d12b"
+  ],
+  "wyvern_v2_orders_matched": [
+    "0x7be8076f4ea4a4ad08075c2508e481d6c946d12b"
+  ]
+}
