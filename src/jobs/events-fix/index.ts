@@ -80,10 +80,9 @@ if (config.doBackgroundWork) {
             // Skip fixing any events that are not synced from the
             // base network (eg. orderbook events)
             const eventInfo = getEventInfo(eventType);
-            if (
-              eventInfo.provider._network.chainId !==
-              baseProvider._network.chainId
-            ) {
+            const eventChainId = (await eventInfo.provider.getNetwork())
+              .chainId;
+            if (eventChainId !== config.chainId) {
               continue;
             }
 
