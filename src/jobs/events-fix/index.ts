@@ -22,67 +22,68 @@ if (config.doBackgroundWork) {
     if (await acquireLock("events_fix_lock", 55)) {
       logger.info("events_fix_cron", "Checking events");
 
-      // Retrieve the last local block hashes from all event tables
-      const localBlocks: { block: number; blockHash: string }[] =
-        await db.manyOrNone(
-          `
-            (select distinct
-              "block",
-              "block_hash" as "blockHash"
-            from "transfer_events"
-            order by "block" desc
-            limit $/limit/)
-
-            union
-
-            (select distinct
-              "block",
-              "block_hash" as "blockHash"
-            from "cancel_events"
-            order by "block" desc
-            limit $/limit/)
-
-            union
-
-            (select distinct
-              "block",
-              "block_hash" as "blockHash"
-            from "fill_events"
-            order by "block" desc
-            limit $/limit/)
-          `,
-          { limit: 30 }
-        );
-
-      const wrongBlocks = new Map<number, string>();
       try {
-        for (const { block, blockHash } of localBlocks) {
-          const upstreamBlockHash = (await baseProvider.getBlock(block)).hash;
-          if (blockHash !== upstreamBlockHash) {
-            logger.info(
-              "events_fix_cron",
-              `Detected wrong block ${block} with hash ${blockHash}`
-            );
+        // Retrieve the last local block hashes from all event tables
+        const localBlocks: { block: number; blockHash: string }[] =
+          await db.manyOrNone(
+            `
+              (select distinct
+                "block",
+                "block_hash" as "blockHash"
+              from "transfer_events"
+              order by "block" desc
+              limit $/limit/)
 
-            wrongBlocks.set(block, blockHash);
+              union
+
+              (select distinct
+                "block",
+                "block_hash" as "blockHash"
+              from "cancel_events"
+              order by "block" desc
+              limit $/limit/)
+
+              union
+
+              (select distinct
+                "block",
+                "block_hash" as "blockHash"
+              from "fill_events"
+              order by "block" desc
+              limit $/limit/)
+            `,
+            { limit: 30 }
+          );
+
+        const wrongBlocks = new Map<number, string>();
+        try {
+          for (const { block, blockHash } of localBlocks) {
+            const upstreamBlockHash = (await baseProvider.getBlock(block)).hash;
+            if (blockHash !== upstreamBlockHash) {
+              logger.info(
+                "events_fix_cron",
+                `Detected wrong block ${block} with hash ${blockHash}`
+              );
+
+              wrongBlocks.set(block, blockHash);
+            }
           }
+        } catch (error) {
+          logger.error(
+            "events_fix_cron",
+            `Failed to retrieve block hashes: ${error}`
+          );
         }
-      } catch (error) {
-        logger.error(
-          "events_fix_cron",
-          `Failed to retrieve block hashes: ${error}`
-        );
-      }
 
-      try {
         for (const [block, blockHash] of wrongBlocks.entries()) {
           for (const eventType of eventTypes) {
             // Skip fixing any events that are not synced from the
             // base network (eg. orderbook events)
             const eventInfo = getEventInfo(eventType);
-            const eventChainId = (await eventInfo.provider.getNetwork())
-              .chainId;
-            if (eventChainId !== config.chainId) {
+            if (
+              eventInfo.provider._network.chainId !==
+              baseProvider._network.chainId
+            ) {
               continue;
             }
 
@@ -104,13 +105,10 @@ if (config.doBackgroundWork) {
           }
         }
       } catch (error) {
-        logger.error(
-          "events_fix_cron",
-          `Failed to handle wrong blocks: ${error}`
-        );
+        logger.error("events_fix_cron", `Failed to fix events: ${error}`);
+      } finally {
+        await releaseLock("events_fix_lock");
       }
-
-      await releaseLock("events_fix_lock");
     }
   });
 }

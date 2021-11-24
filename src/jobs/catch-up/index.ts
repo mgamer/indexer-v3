@@ -16,12 +16,16 @@ if (config.doBackgroundWork) {
     if (await acquireLock("catchup_lock", 10)) {
       logger.info("catchup_cron", "Catching up");
 
-      // Sync events
-      for (const eventType of eventTypes) {
-        addToEventsSyncCatchupQueue(eventType);
+      try {
+        // Sync events
+        for (const eventType of eventTypes) {
+          await addToEventsSyncCatchupQueue(eventType);
+        }
+      } catch (error) {
+        logger.error("catchup_cron", `Failed to catch up: ${error}`);
+      } finally {
+        await releaseLock("catchup_lock");
       }
-
-      await releaseLock("catchup_lock");
     }
   });
 }
