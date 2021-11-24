@@ -6,7 +6,7 @@ import { baseProvider } from "@/common/provider";
 import { acquireLock, releaseLock } from "@/common/redis";
 import { config } from "@/config/index";
 import { eventTypes, getEventInfo } from "@/events/index";
-import { addToEventsSyncCatchupQueue } from "@/jobs/events-sync";
+import { addToEventsSyncBackfillQueue } from "@/jobs/events-sync";
 
 // Since we're syncing events up to the head of the blockchain
 // we might get some results that belong to dropped/orphaned
@@ -74,28 +74,41 @@ if (config.doBackgroundWork) {
         );
       }
 
-      for (const [block, blockHash] of wrongBlocks.entries()) {
-        for (const eventType of eventTypes) {
-          // Skip fixing any events that are not synced from the
-          // base network (eg. orderbook events)
-          const eventInfo = getEventInfo(eventType);
-          if (
-            eventInfo.provider._network.chainId !==
-            baseProvider._network.chainId
-          ) {
-            continue;
+      try {
+        for (const [block, blockHash] of wrongBlocks.entries()) {
+          for (const eventType of eventTypes) {
+            // Skip fixing any events that are not synced from the
+            // base network (eg. orderbook events)
+            const eventInfo = getEventInfo(eventType);
+            if (
+              eventInfo.provider._network.chainId !==
+              baseProvider._network.chainId
+            ) {
+              continue;
+            }
+
+            // Fix wrong event entries
+            await eventInfo.fixCallback(blockHash);
+
+            // Resync
+            const contracts =
+              require(`@/config/data/${config.chainId}/contracts.json`)[
+                eventType
+              ];
+            await addToEventsSyncBackfillQueue(
+              eventType,
+              contracts,
+              block,
+              block,
+              { prioritized: true }
+            );
           }
-
-          // Fix wrong event entries
-          await eventInfo.fixCallback(blockHash);
-
-          // Resync
-          const contracts =
-            require(`@/config/data/${config.chainId}/contracts.json`)[
-              eventType
-            ];
-          await addToEventsSyncCatchupQueue(eventType, contracts, block, block);
         }
+      } catch (error) {
+        logger.error(
+          "events_fix_cron",
+          `Failed to handle wrong blocks: ${error}`
+        );
       }
 
       await releaseLock("events_fix_lock");
