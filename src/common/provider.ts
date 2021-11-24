@@ -1,6 +1,6 @@
 import { StaticJsonRpcProvider } from "@ethersproject/providers";
 
-import { config } from "@config/index";
+import { config } from "@/config/index";
 
 // Optimizations:
 // - use http everywhere since websockets are much more expensive

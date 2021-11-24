@@ -22,8 +22,12 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
   pgm.createConstraint("ownerships", "ownerships_pk", {
     primaryKey: ["contract", "token_id", "owner"],
   });
+
+  pgm.createIndex("ownerships", ["owner", "contract", "token_id"]);
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
+  pgm.dropIndex("ownerships", ["owner", "contract", "token_id"]);
+
   pgm.dropTable("ownerships");
 }

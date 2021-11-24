@@ -1,11 +1,11 @@
 import { Filter, Log } from "@ethersproject/abstract-provider";
 import { Formatter, JsonRpcProvider } from "@ethersproject/providers";
 
-import * as orderbook from "@events/orderbook";
-import * as erc20 from "@events/transfers/erc20";
-import * as erc721 from "@events/transfers/erc721";
-import * as erc1155 from "@events/transfers/erc1155";
-import * as wyvernV2 from "@events/wyvern-v2";
+import * as orderbook from "@/events/orderbook";
+import * as erc20 from "@/events/transfers/erc20";
+import * as erc721 from "@/events/transfers/erc721";
+import * as erc1155 from "@/events/transfers/erc1155";
+import * as wyvernV2 from "@/events/wyvern-v2";
 
 // https://github.com/ethers-io/ethers.js/discussions/2168
 interface EnhancedFilter extends Omit<Filter, "address"> {
@@ -53,6 +53,8 @@ export const sync = async (
 export type EventType =
   | "orderbook_orders_posted"
   | "erc20_transfer"
+  | "erc20_deposit"
+  | "erc20_withdrawal"
   | "erc721_transfer"
   | "erc1155_transfer_single"
   | "erc1155_transfer_batch"
@@ -62,6 +64,8 @@ export type EventType =
 export const eventTypes: EventType[] = [
   "orderbook_orders_posted",
   "erc20_transfer",
+  "erc20_deposit",
+  "erc20_withdrawal",
   "erc721_transfer",
   "erc1155_transfer_single",
   "erc1155_transfer_batch",
@@ -79,6 +83,12 @@ export const getEventInfo = (
     }
     case "erc20_transfer": {
       return erc20.getTransferEventInfo(contracts);
+    }
+    case "erc20_deposit": {
+      return erc20.getDepositEventInfo(contracts);
+    }
+    case "erc20_withdrawal": {
+      return erc20.getWithdrawalEventInfo(contracts);
     }
     case "erc721_transfer": {
       return erc721.getTransferEventInfo(contracts);

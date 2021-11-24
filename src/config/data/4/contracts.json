@@ -2,7 +2,15 @@
   "orderbook_orders_posted": [
     "0xf0e1e2e5bc49eb351280386a0129dd37145c60f6"
   ],
-  "erc20_transfer": [],
+  "erc20_transfer": [
+    "0xc778417e063141139fce010982780140aa0cd5ab"
+  ],
+  "erc20_deposit": [
+    "0xc778417e063141139fce010982780140aa0cd5ab"
+  ],
+  "erc20_withdrawal": [
+    "0xc778417e063141139fce010982780140aa0cd5ab"
+  ],
   "erc721_transfer": [
     "0x79e2d470f950f2cf78eef41720e8ff2cf4b3cd78"
   ],

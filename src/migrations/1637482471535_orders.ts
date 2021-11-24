@@ -4,7 +4,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
   pgm.createType("order_kind_t", ["wyvern-v2"]);
   pgm.createType("order_status_t", [
     "valid",
-    "invalid",
+    "no-balance",
     "cancelled",
     "filled",
     "expired",
@@ -37,6 +37,9 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     price: {
       type: "numeric(78, 0)",
     },
+    value: {
+      type: "numeric(78, 0)",
+    },
     valid_between: {
       type: "tstzrange",
     },
@@ -54,31 +57,39 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     },
   });
 
+  // Index for efficienctly retrieving the floor sell or top bid for
+  // any particular token id
   pgm.createIndex("orders", ["token_set_id", "side", "valid_between"], {
     where: `"status" = 'valid'`,
-    include: ["price", "hash"],
+    include: ["value", "price", "hash"],
   });
+
+  // Index for efficiently retrieving all expired orders that can still
+  // get filled (that is, valid orders or no-balance orders)
   pgm.createIndex("orders", ["valid_between"], {
-    where: `"status" = 'valid'`,
+    where: `"status" = 'valid' or "status" = 'no-balance'`,
     include: ["hash"],
   });
-  pgm.createIndex("orders", ["maker"], {
-    where: `"status" = 'valid'`,
+
+  // Index for efficiently retrieving a maker's both valid and no-balance
+  // orders for checking them against the maker's balance in order to
+  // revalidate or invalidate
+  pgm.createIndex("orders", ["maker", "side", "valid_between"], {
+    where: `"status" = 'valid' or "status" = 'no-balance'`,
     include: ["hash"],
   });
-  // TODO: Investigate indexes
 
   pgm.addColumns("tokens", {
     floor_sell_hash: {
       type: "text",
     },
-    floor_sell_price: {
+    floor_sell_value: {
       type: "numeric(78, 0)",
     },
     top_buy_hash: {
       type: "text",
     },
-    top_buy_price: {
+    top_buy_value: {
       type: "numeric(78, 0)",
     },
   });
@@ -96,24 +107,25 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
   });
 
   pgm.createIndex("tokens", ["floor_sell_hash"]);
-  pgm.createIndex("tokens", ["floor_sell_price"]);
+  pgm.createIndex("tokens", ["contract", "floor_sell_value"]);
   pgm.createIndex("tokens", ["top_buy_hash"]);
-  pgm.createIndex("tokens", ["top_buy_price"]);
+  pgm.createIndex("tokens", ["contract", "top_buy_value"]);
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.dropIndex("tokens", ["top_buy_price"]);
+  pgm.dropIndex("tokens", ["contract", "top_buy_value"]);
   pgm.dropIndex("tokens", ["top_buy_hash"]);
-  pgm.dropIndex("tokens", ["floor_sell_price"]);
+  pgm.dropIndex("tokens", ["contract", "floor_sell_value"]);
   pgm.dropIndex("tokens", ["floor_sell_hash"]);
 
   pgm.dropColumns("tokens", [
     "floor_sell_hash",
-    "floor_sell_price",
+    "floor_sell_value",
     "top_buy_hash",
-    "top_buy_price",
+    "top_buy_value",
   ]);
 
+  pgm.dropIndex("orders", ["maker", "side", "valid_between"]);
   pgm.dropIndex("orders", ["valid_between"]);
   pgm.dropIndex("orders", ["token_set_id", "side", "valid_between"]);
 

@@ -1,11 +1,12 @@
 import { Interface } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 
-import { batchQueries, db } from "@common/db";
-import { logger } from "@common/logger";
-import { baseProvider } from "@common/provider";
-import { EventInfo } from "@events/index";
-import { parseEvent } from "@events/parser";
+import { batchQueries, db } from "@/common/db";
+import { logger } from "@/common/logger";
+import { baseProvider } from "@/common/provider";
+import { EventInfo } from "@/events/index";
+import { parseEvent } from "@/events/parser";
+import { MakerInfo, addToOrdersUpdateByMakerQueue } from "@/jobs/orders-update";
 
 const abi = new Interface([
   `event TransferSingle(
@@ -33,6 +34,8 @@ export const getTransferSingleEventInfo = (
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
+    const makerInfos: MakerInfo[] = [];
+
     const queries: any[] = [];
     for (const log of logs) {
       try {
@@ -43,6 +46,19 @@ export const getTransferSingleEventInfo = (
         const to = parsedLog.args.to.toLowerCase();
         const tokenId = parsedLog.args.tokenId.toString();
         const amount = parsedLog.args.amount.toString();
+
+        makerInfos.push({
+          side: "sell",
+          maker: from,
+          contract: baseParams.address,
+          tokenId,
+        });
+        makerInfos.push({
+          side: "sell",
+          maker: to,
+          contract: baseParams.address,
+          tokenId,
+        });
 
         queries.push({
           query: `
@@ -78,9 +94,10 @@ export const getTransferSingleEventInfo = (
     }
 
     await batchQueries(queries);
+    await addToOrdersUpdateByMakerQueue(makerInfos);
   },
   fixCallback: async (blockHash) => {
-    await db.none("select remove_transfer_events($/blockHash/)", { blockHash });
+    await db.any("select remove_transfer_events($/blockHash/)", { blockHash });
   },
 });
 
@@ -93,6 +110,8 @@ export const getTransferBatchEventInfo = (
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
+    const makerInfos: MakerInfo[] = [];
+
     const queries: any[] = [];
     for (const log of logs) {
       try {
@@ -107,6 +126,19 @@ export const getTransferBatchEventInfo = (
         for (let i = 0; i < Math.min(tokenIds.length, amounts.length); i++) {
           const tokenId = tokenIds[i].toString();
           const amount = amounts[i].toString();
+
+          makerInfos.push({
+            side: "sell",
+            maker: from,
+            contract: baseParams.address,
+            tokenId,
+          });
+          makerInfos.push({
+            side: "sell",
+            maker: to,
+            contract: baseParams.address,
+            tokenId,
+          });
 
           queries.push({
             query: `
@@ -143,8 +175,9 @@ export const getTransferBatchEventInfo = (
     }
 
     await batchQueries(queries);
+    await addToOrdersUpdateByMakerQueue(makerInfos);
   },
   fixCallback: async (blockHash) => {
-    await db.none("select remove_transfer_events($/blockHash/)", { blockHash });
+    await db.any("select remove_transfer_events($/blockHash/)", { blockHash });
   },
 });

@@ -1,9 +1,10 @@
+import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { config } from "@config/index";
-import { eventTypes } from "@events/index";
-import { addToEventsSyncBackfillQueue } from "@jobs/events-sync";
+import { config } from "@/config/index";
+import { eventTypes } from "@/events/index";
+import { addToEventsSyncBackfillQueue } from "@/jobs/events-sync";
 
 export const postSyncEventsOptions: RouteOptions = {
   description: "Trigger syncing of on-chain events",
@@ -25,7 +26,7 @@ export const postSyncEventsOptions: RouteOptions = {
   },
   handler: async (request: Request) => {
     if (request.headers["x-admin-api-key"] !== config.adminApiKey) {
-      throw new Error("Unauthorized");
+      throw Boom.unauthorized("Unauthorized");
     }
 
     const payload = request.payload as any;
@@ -36,19 +37,19 @@ export const postSyncEventsOptions: RouteOptions = {
     const toBlock = payload.toBlock;
     const maxEventsPerBatch = payload.maxEventsPerBatch;
 
-    const contractsData = require(`@config/data/${config.chainId}/contracts`);
+    const contractsData = require(`@/config/data/${config.chainId}/contracts`);
 
     // Make sure the contracts requested to sync match the event types
     for (const eventType of eventTypes) {
       for (const contract of contracts) {
         if (!contractsData[eventType].includes(contract)) {
-          throw new Error(`Unknown contract ${contract}`);
+          throw Boom.badData(`Unknown contract ${contract}`);
         }
       }
     }
 
     for (const eventType of eventTypes) {
-      addToEventsSyncBackfillQueue(
+      await addToEventsSyncBackfillQueue(
         eventType,
         contracts,
         fromBlock,
@@ -57,6 +58,6 @@ export const postSyncEventsOptions: RouteOptions = {
       );
     }
 
-    return { message: "Syncing request queued" };
+    return { message: "Success" };
   },
 };

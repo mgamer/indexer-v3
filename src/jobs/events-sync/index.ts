@@ -1,9 +1,9 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
-import { logger } from "@common/logger";
-import { redis } from "@common/redis";
-import { config } from "@config/index";
-import { EventType, getEventInfo, sync } from "@events/index";
+import { logger } from "@/common/logger";
+import { redis } from "@/common/redis";
+import { config } from "@/config/index";
+import { EventType, getEventInfo, sync } from "@/events/index";
 
 // For syncing events we have two separate job queues. One is for
 // handling backfilling while the other one handles realtime
@@ -94,7 +94,7 @@ const catchupQueue = new Queue(CATCHUP_JOB_NAME, {
   connection: redis,
   defaultJobOptions: {
     // No retries here, we should be as lean as possible and
-    // retrying will be done on any subsequent jobs
+    // retrying will be implicitly done on subsequent jobs
     removeOnComplete: true,
     removeOnFail: true,
   },
@@ -114,7 +114,7 @@ if (config.doBackgroundWork) {
 
       // Sync all contracts of the given event type
       const contracts =
-        require(`@config/data/${config.chainId}/contracts.json`)[eventType];
+        require(`@/config/data/${config.chainId}/contracts.json`)[eventType];
       const eventInfo = getEventInfo(eventType, contracts);
 
       // We allow syncing of up to `maxBlocks` blocks behind the
@@ -128,12 +128,19 @@ if (config.doBackgroundWork) {
       // https://ethereum.stackexchange.com/questions/109660/eth-getlogs-and-some-missing-logs
       headBlock--;
 
-      // Fetch the last synced blocked for the current event type
+      // Fetch the last synced blocked for the current event type (if it exists)
       let localBlock = Number(
         await redis.get(`${eventType}_last_synced_block`)
       );
+      if (localBlock >= headBlock) {
+        // Nothing to sync
+        return;
+      }
+
       if (!localBlock) {
         localBlock = headBlock;
+      } else {
+        localBlock++;
       }
 
       const fromBlock = Math.max(localBlock, headBlock - maxBlocks + 1);

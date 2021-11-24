@@ -354,10 +354,10 @@
     "@ethersproject/properties" "^5.5.0"
     "@ethersproject/strings" "^5.5.0"
 
-"@georgeroman/wyvern-v2-sdk@0.0.31":
-  version "0.0.31"
-  resolved "https://registry.yarnpkg.com/@georgeroman/wyvern-v2-sdk/-/wyvern-v2-sdk-0.0.31.tgz#2517ef37c4b0a7af1362afd96145e449f48b3d97"
-  integrity sha512-v4UXUlFZu4+pbsRbOS1FgT4gYJw2hQk9hSpCV2WJrZJmZ3A/f8KNAfADDGOpPs82rF37CNIRQHMzGvK5rbaGDQ==
+"@georgeroman/wyvern-v2-sdk@0.0.32":
+  version "0.0.32"
+  resolved "https://registry.yarnpkg.com/@georgeroman/wyvern-v2-sdk/-/wyvern-v2-sdk-0.0.32.tgz#9957aa7eb7e4448bbe1b08c8443353bcda9a14c3"
+  integrity sha512-C2VVmdooJPP7WphIXf/X0GgTit+x8HLAgGnAZNnVPCxG9ag/EHWzjWFeRk0OWEPeXVqDv8yFjAtS+X9ALgrcpQ==
   dependencies:
     ethers "^5.4.6"
     merkletreejs "^0.2.24"
@@ -384,7 +384,7 @@
   dependencies:
     "@hapi/hoek" "9.x.x"
 
-"@hapi/boom@9.x.x", "@hapi/boom@^9.0.0", "@hapi/boom@^9.1.0":
+"@hapi/boom@9.x.x", "@hapi/boom@^9.0.0", "@hapi/boom@^9.1.0", "@hapi/boom@^9.1.4":
   version "9.1.4"
   resolved "https://registry.yarnpkg.com/@hapi/boom/-/boom-9.1.4.tgz#1f9dad367c6a7da9f8def24b4a986fc5a7bd9db6"
   integrity sha512-Ls1oH8jaN1vNsqcaHVYJrKmgMcKsC1wcp8bujvXrHaAqD2iDYq3HoOwsxwo09Cuda5R5nC0o0IxlrlTuvPuzSw==

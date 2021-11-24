@@ -1,15 +1,17 @@
 import { Interface } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 
-import { batchQueries, db } from "@common/db";
-import { logger } from "@common/logger";
-import { baseProvider } from "@common/provider";
-import { EventInfo } from "@events/index";
-import { parseEvent } from "@events/parser";
-import { addToOrdersActionsQueue } from "@jobs/orders-actions";
+import { batchQueries, db } from "@/common/db";
+import { logger } from "@/common/logger";
+import { baseProvider } from "@/common/provider";
+import { EventInfo } from "@/events/index";
+import { parseEvent } from "@/events/parser";
+import { HashInfo, addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
 
 const abi = new Interface([
-  `event OrderCancelled(bytes32 indexed hash)`,
+  `event OrderCancelled(
+    bytes32 indexed hash
+  )`,
   `event OrdersMatched(
     bytes32 buyHash,
     bytes32 sellHash,
@@ -29,7 +31,7 @@ export const getOrderCancelledEventInfo = (
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
-    const orderHashes: string[] = [];
+    const hashInfos: HashInfo[] = [];
 
     const queries: any[] = [];
     for (const log of logs) {
@@ -39,7 +41,7 @@ export const getOrderCancelledEventInfo = (
         const parsedLog = abi.parseLog(log);
         const orderHash = parsedLog.args.hash.toLowerCase();
 
-        orderHashes.push(orderHash);
+        hashInfos.push({ hash: orderHash });
 
         queries.push({
           query: `
@@ -69,10 +71,10 @@ export const getOrderCancelledEventInfo = (
     }
 
     await batchQueries(queries);
-    await addToOrdersActionsQueue(orderHashes);
+    await addToOrdersUpdateByHashQueue(hashInfos);
   },
   fixCallback: async (blockHash) => {
-    await db.none("select remove_cancel_events($/blockHash/)", { blockHash });
+    await db.any("select remove_cancel_events($/blockHash/)", { blockHash });
   },
 });
 
@@ -85,7 +87,7 @@ export const getOrdersMatchedEventInfo = (
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
-    const orderHashes: string[] = [];
+    const hashInfos: HashInfo[] = [];
 
     const queries: any[] = [];
     for (const log of logs) {
@@ -99,8 +101,8 @@ export const getOrdersMatchedEventInfo = (
         const taker = parsedLog.args.taker.toLowerCase();
         const price = parsedLog.args.price.toString();
 
-        orderHashes.push(buyHash);
-        orderHashes.push(sellHash);
+        hashInfos.push({ hash: buyHash });
+        hashInfos.push({ hash: sellHash });
 
         queries.push({
           query: `
@@ -138,9 +140,9 @@ export const getOrdersMatchedEventInfo = (
     }
 
     await batchQueries(queries);
-    await addToOrdersActionsQueue(orderHashes);
+    await addToOrdersUpdateByHashQueue(hashInfos);
   },
   fixCallback: async (blockHash) => {
-    await db.none("select remove_fill_events($/blockHash/)", { blockHash });
+    await db.any("select remove_fill_events($/blockHash/)", { blockHash });
   },
 });

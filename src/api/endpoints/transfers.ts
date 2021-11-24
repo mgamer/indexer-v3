@@ -1,10 +1,10 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { getTransfers } from "@entities/transfer";
+import { getTransfers } from "@/entities/transfers";
 
 export const getTransfersOptions: RouteOptions = {
-  description: "Get transfers information",
+  description: "Get transfer events information",
   tags: ["api"],
   validate: {
     query: Joi.object({

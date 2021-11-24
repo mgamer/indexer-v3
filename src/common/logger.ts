@@ -1,6 +1,6 @@
 import { CoralogixLogger, Log, LoggerConfig, Severity } from "coralogix-logger";
 
-import { config } from "@config/index";
+import { config } from "@/config/index";
 
 const log = (severity: Severity) => {
   const coralogixPrivateKey = process.env.CORALOGIX_PRIVATE_KEY;

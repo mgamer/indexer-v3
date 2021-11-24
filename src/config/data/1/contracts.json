@@ -3,6 +3,8 @@
     "0xf0e1e2e5bc49eb351280386a0129dd37145c60f6"
   ],
   "erc20_transfer": [],
+  "erc20_deposit": [],
+  "erc20_withdrawal": [],
   "erc721_transfer": [
     "0xff9c1b15b16263c61d017ee9f65c50e4ae0113d7"
   ],

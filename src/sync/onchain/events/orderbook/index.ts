@@ -2,10 +2,14 @@ import { Interface } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 import { Order } from "@georgeroman/wyvern-v2-sdk";
 
-import { logger } from "@common/logger";
-import { orderbookProvider } from "@common/provider";
-import { filterOrders, parseEncodedOrder, saveOrders } from "@orders/wyvern-v2";
-import { EventInfo } from "@events/index";
+import { logger } from "@/common/logger";
+import { orderbookProvider } from "@/common/provider";
+import {
+  filterOrders,
+  parseOrderbookOrder,
+  saveOrders,
+} from "@/orders/wyvern-v2";
+import { EventInfo } from "@/events/index";
 
 const abi = new Interface([`event OrdersPosted(bytes[] orders)`]);
 
@@ -25,7 +29,7 @@ export const getOrdersPostedEventInfo = (
         const orders = parsedLog.args.orders;
 
         for (const order of orders) {
-          const parsedOrder = parseEncodedOrder(order);
+          const parsedOrder = parseOrderbookOrder(order);
           if (parsedOrder) {
             parsedOrders.push(parsedOrder);
           }

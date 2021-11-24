@@ -1,12 +1,12 @@
 import cron from "node-cron";
 
-import { db } from "@common/db";
-import { logger } from "@common/logger";
-import { baseProvider } from "@common/provider";
-import { acquireLock, releaseLock } from "@common/redis";
-import { config } from "@config/index";
-import { eventTypes, getEventInfo } from "@events/index";
-import { addToEventsSyncBackfillQueue } from "@jobs/events-sync";
+import { db } from "@/common/db";
+import { logger } from "@/common/logger";
+import { baseProvider } from "@/common/provider";
+import { acquireLock, releaseLock } from "@/common/redis";
+import { config } from "@/config/index";
+import { eventTypes, getEventInfo } from "@/events/index";
+import { addToEventsSyncBackfillQueue } from "@/jobs/events-sync";
 
 // Since we're syncing events up to the head of the blockchain
 // we might get some results that belong to dropped/orphaned
@@ -91,7 +91,9 @@ if (config.doBackgroundWork) {
 
           // Resync
           const contracts =
-            require(`@config/data/${config.chainId}/contracts.json`)[eventType];
+            require(`@/config/data/${config.chainId}/contracts.json`)[
+              eventType
+            ];
           await addToEventsSyncBackfillQueue(
             eventType,
             contracts,

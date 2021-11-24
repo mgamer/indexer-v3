@@ -1,10 +1,10 @@
 import cron from "node-cron";
 
-import { logger } from "@common/logger";
-import { acquireLock, releaseLock } from "@common/redis";
-import { config } from "@config/index";
-import { eventTypes } from "@events/index";
-import { addToEventsSyncCatchupQueue } from "@jobs/events-sync";
+import { logger } from "@/common/logger";
+import { acquireLock, releaseLock } from "@/common/redis";
+import { config } from "@/config/index";
+import { eventTypes } from "@/events/index";
+import { addToEventsSyncCatchupQueue } from "@/jobs/events-sync";
 
 // Every new block (approximately 15 seconds) there might be processes
 // we want to run in order to stay up-to-date with the blockchain's
