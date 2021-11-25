@@ -397,6 +397,7 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
           $/rawData/
         ) on conflict ("hash") do
         update set
+          "side" = $/side/,
           "token_set_id" = $/tokenSetId/,
           "maker" = $/maker/,
           "price" = $/price/,
