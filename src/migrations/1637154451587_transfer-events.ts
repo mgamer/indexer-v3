@@ -47,8 +47,9 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     primaryKey: ["block_hash", "tx_hash", "log_index"],
   });
 
+  pgm.createIndex("transfer_events", ["tx_hash", "from"]);
   pgm.createIndex("transfer_events", ["address", "block"]);
-  pgm.createIndex("transfer_events", ["tx_hash"]);
+  pgm.createIndex("transfer_events", ["address", "token_id", "block"]);
 
   pgm.createFunction(
     "add_transfer_event",
@@ -184,8 +185,9 @@ export async function down(pgm: MigrationBuilder): Promise<void> {
     { name: "log_index_arg", type: "int" },
   ]);
 
-  pgm.dropIndex("transfer_events", ["tx_hash"]);
+  pgm.dropIndex("transfer_events", ["address", "token_id", "block"]);
   pgm.dropIndex("transfer_events", ["address", "block"]);
+  pgm.dropIndex("transfer_events", ["tx_hash", "from"]);
 
   pgm.dropTable("transfer_events");
 }
