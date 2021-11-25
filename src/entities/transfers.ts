@@ -43,12 +43,10 @@ export const getTransfers = async (filter: GetTransfersFilter) => {
       conditions.push(`"te"."from" = $/account/ or "te"."to" = $/account/`);
     }
   }
-  if (filter.type) {
-    if (filter.type === "transfer") {
-      conditions.push(`"fe"."price" is null`);
-    } else if (filter.type === "sale") {
-      conditions.push(`"fe"."price" is not null`);
-    }
+  if (filter.type === "transfer") {
+    conditions.push(`"fe"."price" is null`);
+  } else if (filter.type === "sale") {
+    conditions.push(`"fe"."price" is not null`);
   }
 
   if (conditions.length) {
