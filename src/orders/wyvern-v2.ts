@@ -7,109 +7,9 @@ import { config } from "@/config/index";
 import { generateTokenSetId } from "@/orders/utils";
 import { addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
 
-// Wyvern V2 orders can be retrieved from three different sources:
-// - OpenSea
+// Wyvern V2 orders are retrieved from two different sources:
 // - On-chain orderbook
 // - Off-chain api
-
-// OpenSea order
-
-type OpenseaOrder = {
-  prefixed_hash: string;
-  exchange: string;
-  metadata: { asset: { id: string; address: string; quantity?: string } };
-  created_date: string;
-  maker: { address: string };
-  taker: { address: string };
-  maker_relayer_fee: string;
-  taker_relayer_fee: string;
-  fee_recipient: { address: string };
-  side: number;
-  sale_kind: number;
-  target: string;
-  how_to_call: number;
-  calldata: string;
-  replacement_pattern: string;
-  static_target: string;
-  static_extradata: string;
-  payment_token: string;
-  base_price: string;
-  extra: string;
-  listing_time: number;
-  expiration_time: number;
-  salt: string;
-  v?: number;
-  r?: string;
-  s?: string;
-};
-
-export const parseOpenseaOrder = (openseaOrder: OpenseaOrder) => {
-  try {
-    let order: Order | undefined;
-    if (openseaOrder.metadata.asset.quantity) {
-      // erc1155
-      order = (
-        openseaOrder.side === 0
-          ? Builders.Erc1155.SingleItem.buy
-          : Builders.Erc1155.SingleItem.sell
-      )({
-        exchange: openseaOrder.exchange,
-        maker: openseaOrder.maker.address,
-        target: openseaOrder.metadata.asset.address,
-        tokenId: openseaOrder.metadata.asset.id,
-        paymentToken: openseaOrder.payment_token,
-        basePrice: openseaOrder.base_price,
-        fee:
-          openseaOrder.side === 0
-            ? openseaOrder.taker_relayer_fee
-            : openseaOrder.maker_relayer_fee,
-        feeRecipient: openseaOrder.fee_recipient.address,
-        listingTime: openseaOrder.listing_time.toString(),
-        expirationTime: openseaOrder.expiration_time.toString(),
-        salt: openseaOrder.salt,
-        extra: openseaOrder.extra,
-        v: openseaOrder.v,
-        r: openseaOrder.r,
-        s: openseaOrder.s,
-      });
-    } else {
-      // erc721
-      order = (
-        openseaOrder.side === 0
-          ? Builders.Erc721.SingleItem.buy
-          : Builders.Erc721.SingleItem.sell
-      )({
-        exchange: openseaOrder.exchange,
-        maker: openseaOrder.maker.address,
-        target: openseaOrder.metadata.asset.address,
-        tokenId: openseaOrder.metadata.asset.id,
-        paymentToken: openseaOrder.payment_token,
-        basePrice: openseaOrder.base_price,
-        fee:
-          openseaOrder.side === 0
-            ? openseaOrder.taker_relayer_fee
-            : openseaOrder.maker_relayer_fee,
-        feeRecipient: openseaOrder.fee_recipient.address,
-        listingTime: openseaOrder.listing_time.toString(),
-        expirationTime: openseaOrder.expiration_time.toString(),
-        salt: openseaOrder.salt,
-        extra: openseaOrder.extra,
-        v: openseaOrder.v,
-        r: openseaOrder.r,
-        s: openseaOrder.s,
-      });
-    }
-
-    // Check that the hashes match, just in case
-    if (order && openseaOrder.prefixed_hash !== Helpers.Order.hash(order)) {
-      return undefined;
-    }
-
-    return order;
-  } catch {
-    return undefined;
-  }
-};
 
 // On-chain orderbook order
 
@@ -367,7 +267,7 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
         .sub(bn(order.basePrice).mul(bn(fee)).div(10000))
         .toString();
     } else {
-      // For sell orders, value is the same as the price
+      // For sell orders, the value is the same as the price
       value = order.basePrice;
     }
 
