@@ -30,6 +30,12 @@ export const setupRoutes = (server: Server) => {
     options: ordersEndpoints.postOrdersOptions,
   });
 
+  server.route({
+    method: "GET",
+    path: "/orders",
+    options: ordersEndpoints.getOrdersOptions,
+  });
+
   // Transfers
 
   server.route({

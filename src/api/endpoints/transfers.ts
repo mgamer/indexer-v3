@@ -4,7 +4,7 @@ import Joi from "joi";
 import { GetTransfersFilter, getTransfers } from "@/entities/transfers";
 
 export const getTransfersOptions: RouteOptions = {
-  description: "Get transfer events information",
+  description: "Get transfer events",
   tags: ["api"],
   validate: {
     query: Joi.object({

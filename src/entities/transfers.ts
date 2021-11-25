@@ -55,7 +55,7 @@ export const getTransfers = async (filter: GetTransfersFilter) => {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
 
-  baseQuery += ` order by "block" desc`;
+  baseQuery += ` order by "te"."block" desc`;
 
   baseQuery += ` offset $/offset/`;
   baseQuery += ` limit $/limit/`;

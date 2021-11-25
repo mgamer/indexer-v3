@@ -3,6 +3,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
+import { GetOrdersFilter, getOrders } from "@/entities/orders";
 import { filterOrders, parseApiOrder, saveOrders } from "@/orders/wyvern-v2";
 
 export const postOrdersOptions: RouteOptions = {
@@ -63,5 +64,33 @@ export const postOrdersOptions: RouteOptions = {
     await saveOrders(filteredOrders);
 
     return { message: "Success" };
+  },
+};
+
+export const getOrdersOptions: RouteOptions = {
+  description: "Get orders",
+  tags: ["api"],
+  validate: {
+    query: Joi.object({
+      contract: Joi.string().lowercase(),
+      tokenId: Joi.string()
+        .pattern(/^[0-9]+$/)
+        .when("contract", {
+          is: Joi.exist(),
+          then: Joi.required(),
+          otherwise: Joi.forbidden(),
+        }),
+      maker: Joi.string().lowercase(),
+      side: Joi.string().lowercase().valid("sell", "buy").required(),
+      offset: Joi.number().integer().min(0).default(0),
+      limit: Joi.number().integer().min(1).max(20).default(20),
+    }).or("contract", "maker"),
+  },
+  handler: async (request: Request) => {
+    const query = request.query as any;
+
+    const orders = await getOrders(query as GetOrdersFilter);
+
+    return { orders };
   },
 };
