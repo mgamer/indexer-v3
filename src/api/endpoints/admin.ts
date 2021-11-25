@@ -2,6 +2,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
+import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { eventTypes } from "@/events/index";
 import { addToEventsSyncBackfillQueue } from "@/jobs/events-sync";
@@ -31,33 +32,38 @@ export const postSyncEventsOptions: RouteOptions = {
 
     const payload = request.payload as any;
 
-    const eventTypes = payload.eventTypes;
-    const contracts = payload.contracts;
-    const fromBlock = payload.fromBlock;
-    const toBlock = payload.toBlock;
-    const maxEventsPerBatch = payload.maxEventsPerBatch;
+    try {
+      const eventTypes = payload.eventTypes;
+      const contracts = payload.contracts;
+      const fromBlock = payload.fromBlock;
+      const toBlock = payload.toBlock;
+      const maxEventsPerBatch = payload.maxEventsPerBatch;
 
-    const contractsData = require(`@/config/data/${config.chainId}/contracts`);
+      const contractsData = require(`@/config/data/${config.chainId}/contracts`);
 
-    // Make sure the contracts requested to sync match the event types
-    for (const eventType of eventTypes) {
-      for (const contract of contracts) {
-        if (!contractsData[eventType].includes(contract)) {
-          throw Boom.badData(`Unknown contract ${contract}`);
+      // Make sure the contracts requested to sync match the event types
+      for (const eventType of eventTypes) {
+        for (const contract of contracts) {
+          if (!contractsData[eventType].includes(contract)) {
+            throw Boom.badData(`Unknown contract ${contract}`);
+          }
         }
       }
-    }
 
-    for (const eventType of eventTypes) {
-      await addToEventsSyncBackfillQueue(
-        eventType,
-        contracts,
-        fromBlock,
-        toBlock,
-        maxEventsPerBatch
-      );
-    }
+      for (const eventType of eventTypes) {
+        await addToEventsSyncBackfillQueue(
+          eventType,
+          contracts,
+          fromBlock,
+          toBlock,
+          maxEventsPerBatch
+        );
+      }
 
-    return { message: "Success" };
+      return { message: "Success" };
+    } catch (error) {
+      logger.error("post_sync_events_handler", `Handler failure: ${error}`);
+      throw error;
+    }
   },
 };

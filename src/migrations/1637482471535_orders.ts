@@ -108,13 +108,17 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
 
   pgm.createIndex("tokens", ["floor_sell_hash"]);
   pgm.createIndex("tokens", ["contract", "floor_sell_value"]);
+  pgm.createIndex("tokens", ["contract", "token_id", "floor_sell_value"]);
   pgm.createIndex("tokens", ["top_buy_hash"]);
   pgm.createIndex("tokens", ["contract", "top_buy_value"]);
+  pgm.createIndex("tokens", ["contract", "token_id", "top_buy_value"]);
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
+  pgm.dropIndex("tokens", ["contract", "token_id", "top_buy_value"]);
   pgm.dropIndex("tokens", ["contract", "top_buy_value"]);
   pgm.dropIndex("tokens", ["top_buy_hash"]);
+  pgm.dropIndex("tokens", ["contract", "token_id", "floor_sell_value"]);
   pgm.dropIndex("tokens", ["contract", "floor_sell_value"]);
   pgm.dropIndex("tokens", ["floor_sell_hash"]);
 

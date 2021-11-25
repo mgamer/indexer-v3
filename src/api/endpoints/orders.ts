@@ -3,6 +3,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
+import { logger } from "@/common/logger";
 import { GetOrdersFilter, getOrders } from "@/entities/orders";
 import { filterOrders, parseApiOrder, saveOrders } from "@/orders/wyvern-v2";
 
@@ -43,27 +44,32 @@ export const postOrdersOptions: RouteOptions = {
   handler: async (request: Request) => {
     const payload = request.payload as any;
 
-    const orders = payload.orders as any;
+    try {
+      const orders = payload.orders as any;
 
-    const parsedOrders: Order[] = [];
-    for (const order of orders) {
-      const parsedOrder = parseApiOrder(order);
-      if (parsedOrder) {
-        parsedOrders.push(parsedOrder);
+      const parsedOrders: Order[] = [];
+      for (const order of orders) {
+        const parsedOrder = parseApiOrder(order);
+        if (parsedOrder) {
+          parsedOrders.push(parsedOrder);
+        }
       }
-    }
 
-    if (parsedOrders.length < orders.length) {
-      throw Boom.badRequest("One or more orders are invalid");
-    }
+      if (parsedOrders.length < orders.length) {
+        throw Boom.badRequest("One or more orders are invalid");
+      }
 
-    const filteredOrders = await filterOrders(parsedOrders);
-    if (filteredOrders.length < orders.length) {
-      throw Boom.badData("One or more orders are invalid");
-    }
-    await saveOrders(filteredOrders);
+      const filteredOrders = await filterOrders(parsedOrders);
+      if (filteredOrders.length < orders.length) {
+        throw Boom.badData("One or more orders are invalid");
+      }
+      await saveOrders(filteredOrders);
 
-    return { message: "Success" };
+      return { message: "Success" };
+    } catch (error) {
+      logger.error("post_orders_handler", `Handler failure: ${error}`);
+      throw error;
+    }
   },
 };
 
@@ -89,8 +95,13 @@ export const getOrdersOptions: RouteOptions = {
   handler: async (request: Request) => {
     const query = request.query as any;
 
-    const orders = await getOrders(query as GetOrdersFilter);
+    try {
+      const orders = await getOrders(query as GetOrdersFilter);
 
-    return { orders };
+      return { orders };
+    } catch (error) {
+      logger.error("get_orders_handler", `Handler failure: ${error}`);
+      throw error;
+    }
   },
 };

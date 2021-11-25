@@ -2,10 +2,10 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import { GetTransfersFilter, getTransfers } from "@/entities/transfers";
+import { GetTokensFilter, getTokens } from "@/entities/tokens";
 
-export const getTransfersOptions: RouteOptions = {
-  description: "Get transfer events",
+export const getTokensOptions: RouteOptions = {
+  description: "Get tokens",
   tags: ["api"],
   validate: {
     query: Joi.object({
@@ -14,16 +14,10 @@ export const getTransfersOptions: RouteOptions = {
         .pattern(/^[0-9]+$/)
         .when("contract", {
           is: Joi.exist(),
-          then: Joi.required(),
+          then: Joi.allow(),
           otherwise: Joi.forbidden(),
         }),
-      account: Joi.string().lowercase(),
-      direction: Joi.string().lowercase().valid("from", "to").when("account", {
-        is: Joi.exist(),
-        then: Joi.allow(),
-        otherwise: Joi.forbidden(),
-      }),
-      type: Joi.string().lowercase().valid("transfer", "sale"),
+      owner: Joi.string().lowercase(),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     }),
@@ -32,11 +26,13 @@ export const getTransfersOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const transfers = await getTransfers(query as GetTransfersFilter);
+      const tokens = await getTokens(query as GetTokensFilter).catch((error) =>
+        console.log(error)
+      );
 
-      return { transfers };
+      return { tokens };
     } catch (error) {
-      logger.error("get_transfers_handler", `Handler failure: ${error}`);
+      logger.error("get_tokens_handler", `Handler failure: ${error}`);
       throw error;
     }
   },
