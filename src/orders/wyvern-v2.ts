@@ -209,7 +209,7 @@ export const filterOrders = async (
 
   // Get all orders we're already storing
   const hashes: { hash: string }[] = await db.manyOrNone(
-    `select "hash" from "orders" where "hash" in ($1:csv) and "token_set_id" is not null`,
+    `select "hash" from "orders" where "hash" in ($1:csv)`,
     [orders.map((order) => Helpers.Order.hash(order))]
   );
 
