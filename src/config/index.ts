@@ -10,5 +10,6 @@ export const config = {
   databaseUrl: String(process.env.DATABASE_URL),
   redisUrl: String(process.env.REDIS_URL),
 
+  acceptOrders: Boolean(process.env.ACCEPT_ORDERS),
   doBackgroundWork: Boolean(process.env.DO_BACKGROUND_WORK),
 };

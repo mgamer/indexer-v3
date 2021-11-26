@@ -4,6 +4,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
+import { config } from "@/config/index";
 import { GetOrdersFilter, getOrders } from "@/entities/orders";
 import { filterOrders, parseApiOrder, saveOrders } from "@/orders/wyvern-v2";
 
@@ -43,6 +44,10 @@ export const postOrdersOptions: RouteOptions = {
   },
   handler: async (request: Request) => {
     const payload = request.payload as any;
+
+    if (!config.acceptOrders) {
+      throw Boom.unauthorized("Not accepting orders");
+    }
 
     try {
       const orders = payload.orders as any;

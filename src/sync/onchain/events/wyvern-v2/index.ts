@@ -4,6 +4,7 @@ import { Log } from "@ethersproject/abstract-provider";
 import { batchQueries, db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
+import { config } from "@/config/index";
 import { EventInfo } from "@/events/index";
 import { parseEvent } from "@/events/parser";
 import { HashInfo, addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
@@ -71,7 +72,9 @@ export const getOrderCancelledEventInfo = (
     }
 
     await batchQueries(queries);
-    await addToOrdersUpdateByHashQueue(hashInfos);
+    if (config.acceptOrders) {
+      await addToOrdersUpdateByHashQueue(hashInfos);
+    }
   },
   fixCallback: async (blockHash) => {
     await db.any("select remove_cancel_events($/blockHash/)", { blockHash });
@@ -140,7 +143,9 @@ export const getOrdersMatchedEventInfo = (
     }
 
     await batchQueries(queries);
-    await addToOrdersUpdateByHashQueue(hashInfos);
+    if (config.acceptOrders) {
+      await addToOrdersUpdateByHashQueue(hashInfos);
+    }
   },
   fixCallback: async (blockHash) => {
     await db.any("select remove_fill_events($/blockHash/)", { blockHash });

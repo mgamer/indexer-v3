@@ -25,6 +25,7 @@ export type EventInfo = {
   filter: EnhancedFilter;
   syncCallback: (logs: Log[]) => Promise<void>;
   fixCallback: (blockHash: string) => Promise<void>;
+  skip?: boolean;
 };
 
 export const sync = async (
@@ -45,7 +46,9 @@ export const sync = async (
     rawLogs
   ) as Log[];
 
+  console.time(`${logs.length}`);
   await eventInfo.syncCallback(logs);
+  console.timeEnd(`${logs.length}`);
 };
 
 // Newly added events should all make it into the below lists

@@ -4,6 +4,7 @@ import { Order } from "@georgeroman/wyvern-v2-sdk";
 
 import { logger } from "@/common/logger";
 import { orderbookProvider } from "@/common/provider";
+import { config } from "@/config/index";
 import {
   filterOrders,
   parseOrderbookOrder,
@@ -49,4 +50,5 @@ export const getOrdersPostedEventInfo = (
   fixCallback: async (_blockHash) => {
     // Not used
   },
+  skip: !config.acceptOrders,
 });

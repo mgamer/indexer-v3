@@ -80,13 +80,18 @@ if (config.doBackgroundWork) {
       const { eventType, contracts, fromBlock, toBlock } = job.data;
 
       try {
+        const eventInfo = getEventInfo(eventType, contracts);
+        if (eventInfo.skip) {
+          return;
+        }
+
         if (contracts.length) {
           logger.info(
             eventType,
             `Backfill syncing block range [${fromBlock}, ${toBlock}]`
           );
 
-          await sync(fromBlock, toBlock, getEventInfo(eventType, contracts));
+          await sync(fromBlock, toBlock, eventInfo);
         }
       } catch (error) {
         logger.error(eventType, `Backfill job failed: ${error}`);
@@ -131,6 +136,9 @@ if (config.doBackgroundWork) {
         const contracts =
           require(`@/config/data/${config.chainId}/contracts.json`)[eventType];
         const eventInfo = getEventInfo(eventType, contracts);
+        if (eventInfo.skip) {
+          return;
+        }
 
         // We allow syncing of up to `maxBlocks` blocks behind the
         // head of the blockchain. If the indexer lagged behind more

@@ -320,29 +320,31 @@ if (config.doBackgroundWork) {
 
 // Actual work is to be handled by background worker processes
 if (config.doBackgroundWork) {
-  cron.schedule("*/1 * * * *", async () => {
-    if (await acquireLock("expired_orders_lock", 55)) {
-      logger.info("expired_orders_cron", "Invalidating expired orders");
+  if (config.acceptOrders) {
+    cron.schedule("*/1 * * * *", async () => {
+      if (await acquireLock("expired_orders_lock", 55)) {
+        logger.info("expired_orders_cron", "Invalidating expired orders");
 
-      try {
-        const hashes: { hash: string }[] = await db.manyOrNone(
-          `
-            update "orders" set "status" = 'expired'
-            where not "valid_between" @> now()
-              and ("status" = 'valid' or "status" = 'no-balance')
-            returning "hash"
-          `
-        );
+        try {
+          const hashes: { hash: string }[] = await db.manyOrNone(
+            `
+              update "orders" set "status" = 'expired'
+              where not "valid_between" @> now()
+                and ("status" = 'valid' or "status" = 'no-balance')
+              returning "hash"
+            `
+          );
 
-        await addToOrdersUpdateByHashQueue(hashes);
-      } catch (error) {
-        logger.error(
-          "expired_orders_cron",
-          `Failed to handle expired orders: ${error}`
-        );
-      } finally {
-        await releaseLock("expired_orders_lock");
+          await addToOrdersUpdateByHashQueue(hashes);
+        } catch (error) {
+          logger.error(
+            "expired_orders_cron",
+            `Failed to handle expired orders: ${error}`
+          );
+        } finally {
+          await releaseLock("expired_orders_lock");
+        }
       }
-    }
-  });
+    });
+  }
 }

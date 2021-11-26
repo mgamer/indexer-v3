@@ -4,6 +4,7 @@ import { Log } from "@ethersproject/abstract-provider";
 import { batchQueries, db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
+import { config } from "@/config/index";
 import { EventInfo } from "@/events/index";
 import { parseEvent } from "@/events/parser";
 import { MakerInfo, addToOrdersUpdateByMakerQueue } from "@/jobs/orders-update";
@@ -94,7 +95,9 @@ export const getTransferSingleEventInfo = (
     }
 
     await batchQueries(queries);
-    await addToOrdersUpdateByMakerQueue(makerInfos);
+    if (config.acceptOrders) {
+      await addToOrdersUpdateByMakerQueue(makerInfos);
+    }
   },
   fixCallback: async (blockHash) => {
     await db.any("select remove_transfer_events($/blockHash/)", { blockHash });
@@ -175,7 +178,9 @@ export const getTransferBatchEventInfo = (
     }
 
     await batchQueries(queries);
-    await addToOrdersUpdateByMakerQueue(makerInfos);
+    if (config.acceptOrders) {
+      await addToOrdersUpdateByMakerQueue(makerInfos);
+    }
   },
   fixCallback: async (blockHash) => {
     await db.any("select remove_transfer_events($/blockHash/)", { blockHash });
