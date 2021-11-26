@@ -1,7 +1,7 @@
 import { Builders, Helpers, Order, Utils } from "@georgeroman/wyvern-v2-sdk";
 
 import { bn } from "@/common/bignumber";
-import { batchQueries, db } from "@/common/db";
+import { db, pgp } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import { generateTokenSetId } from "@/orders/utils";
@@ -322,6 +322,8 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
     });
   }
 
-  await batchQueries(queries);
+  if (queries.length) {
+    await db.none(pgp.helpers.concat(queries));
+  }
   await addToOrdersUpdateByHashQueue(orders);
 };

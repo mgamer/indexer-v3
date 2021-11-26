@@ -1,10 +1,14 @@
 import { Interface } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 
-import { batchQueries, db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
+import {
+  TransferEvent,
+  addTransferEvents,
+  removeTransferEvents,
+} from "@/events/common/transfers";
 import { EventInfo } from "@/events/index";
 import { parseEvent } from "@/events/parser";
 import { MakerInfo, addToOrdersUpdateByMakerQueue } from "@/jobs/orders-update";
@@ -35,9 +39,9 @@ export const getTransferSingleEventInfo = (
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
+    const transferEvents: TransferEvent[] = [];
     const makerInfos: MakerInfo[] = [];
 
-    const queries: any[] = [];
     for (const log of logs) {
       try {
         const baseParams = parseEvent(log);
@@ -47,6 +51,14 @@ export const getTransferSingleEventInfo = (
         const to = parsedLog.args.to.toLowerCase();
         const tokenId = parsedLog.args.tokenId.toString();
         const amount = parsedLog.args.amount.toString();
+
+        transferEvents.push({
+          tokenId,
+          from,
+          to,
+          amount,
+          baseParams,
+        });
 
         makerInfos.push({
           side: "sell",
@@ -60,32 +72,6 @@ export const getTransferSingleEventInfo = (
           contract: baseParams.address,
           tokenId,
         });
-
-        queries.push({
-          query: `
-            select add_transfer_event(
-              $/kind/,
-              $/tokenId/,
-              $/from/,
-              $/to/,
-              $/amount/,
-              $/address/,
-              $/block/,
-              $/blockHash/,
-              $/txHash/,
-              $/txIndex/,
-              $/logIndex/
-            )
-          `,
-          values: {
-            kind: "erc1155",
-            tokenId,
-            from,
-            to,
-            amount,
-            ...baseParams,
-          },
-        });
       } catch (error) {
         logger.error(
           "erc1155_transfer_single_callback",
@@ -94,13 +80,13 @@ export const getTransferSingleEventInfo = (
       }
     }
 
-    await batchQueries(queries);
+    await addTransferEvents("erc1155", transferEvents);
     if (config.acceptOrders) {
       await addToOrdersUpdateByMakerQueue(makerInfos);
     }
   },
   fixCallback: async (blockHash) => {
-    await db.any("select remove_transfer_events($/blockHash/)", { blockHash });
+    await removeTransferEvents(blockHash);
   },
 });
 
@@ -113,6 +99,7 @@ export const getTransferBatchEventInfo = (
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
+    const transferEvents: TransferEvent[] = [];
     const makerInfos: MakerInfo[] = [];
 
     const queries: any[] = [];
@@ -130,6 +117,14 @@ export const getTransferBatchEventInfo = (
           const tokenId = tokenIds[i].toString();
           const amount = amounts[i].toString();
 
+          transferEvents.push({
+            tokenId,
+            from,
+            to,
+            amount,
+            baseParams,
+          });
+
           makerInfos.push({
             side: "sell",
             maker: from,
@@ -142,32 +137,6 @@ export const getTransferBatchEventInfo = (
             contract: baseParams.address,
             tokenId,
           });
-
-          queries.push({
-            query: `
-              select add_transfer_event(
-                $/kind/,
-                $/tokenId/,
-                $/from/,
-                $/to/,
-                $/amount/,
-                $/address/,
-                $/block/,
-                $/blockHash/,
-                $/txHash/,
-                $/txIndex/,
-                $/logIndex/
-              )
-            `,
-            values: {
-              kind: "erc1155",
-              tokenId,
-              from,
-              to,
-              amount,
-              ...baseParams,
-            },
-          });
         }
       } catch (error) {
         logger.error(
@@ -177,12 +146,12 @@ export const getTransferBatchEventInfo = (
       }
     }
 
-    await batchQueries(queries);
+    await addTransferEvents("erc1155", transferEvents);
     if (config.acceptOrders) {
       await addToOrdersUpdateByMakerQueue(makerInfos);
     }
   },
   fixCallback: async (blockHash) => {
-    await db.any("select remove_transfer_events($/blockHash/)", { blockHash });
+    await removeTransferEvents(blockHash);
   },
 });

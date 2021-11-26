@@ -1,0 +1,216 @@
+import { db, pgp } from "@/common/db";
+import { BaseParams } from "@/events/parser";
+
+type ContractKind = "erc20" | "erc721" | "erc1155";
+
+export type TransferEvent = {
+  tokenId: string;
+  from: string;
+  to: string;
+  amount: string;
+  baseParams: BaseParams;
+};
+
+export const addTransferEvents = async (
+  contractKind: ContractKind,
+  transferEvents: TransferEvent[]
+) => {
+  // Keep track of all involved tokens so that we can keep track
+  // of them in the `contracts` and `tokens` tables
+  const contractTokens = new Map<string, Set<string>>();
+  const addToken = (contract: string, tokenId: string) => {
+    if (!contractTokens.get(contract)) {
+      contractTokens.set(contract, new Set<string>());
+    }
+    contractTokens.get(contract)!.add(tokenId);
+  };
+
+  const transferValues: any[] = [];
+  for (const te of transferEvents) {
+    addToken(te.baseParams.address, te.tokenId);
+    transferValues.push({
+      token_id: te.tokenId,
+      amount: te.amount,
+      from: te.from,
+      to: te.to,
+      address: te.baseParams.address,
+      block: te.baseParams.block,
+      block_hash: te.baseParams.blockHash,
+      tx_hash: te.baseParams.txHash,
+      tx_index: te.baseParams.txIndex,
+      log_index: te.baseParams.logIndex,
+    });
+  }
+
+  let transferInsertsQuery: string | undefined;
+  if (transferValues) {
+    const columns = new pgp.helpers.ColumnSet(
+      [
+        "token_id",
+        "amount",
+        "from",
+        "to",
+        "address",
+        "block",
+        "block_hash",
+        "tx_hash",
+        "tx_index",
+        "log_index",
+      ],
+      { table: "transfer_events" }
+    );
+    const values = pgp.helpers.values(transferValues, columns);
+
+    if (values.length) {
+      // Atomically insert the transfer events and update ownership
+      transferInsertsQuery = `
+        with "x" as (
+          insert into "transfer_events"(
+            "token_id",
+            "amount",
+            "from",
+            "to",
+            "address",
+            "block",
+            "block_hash",
+            "tx_hash",
+            "tx_index",
+            "log_index"
+          ) values ${values}
+          on conflict do nothing
+          returning
+            "address",
+            "token_id",
+            array["from", "to"] as "owners",
+            array[-"amount", "amount"] as "amount_deltas"
+        )
+        insert into "ownerships" (
+          "contract",
+          "token_id",
+          "owner",
+          "amount"
+        ) (
+          select
+            "y"."address",
+            "y"."token_id",
+            "y"."owner",
+            sum("y"."amount_delta")
+          from (
+            select
+              "address",
+              "token_id",
+              unnest("owners") as "owner",
+              unnest("amount_deltas") as "amount_delta"
+            from "x"
+          ) "y"
+          group by "y"."address", "y"."token_id", "y"."owner"
+        ) on conflict ("contract", "token_id", "owner") do
+        update set "amount" = "ownerships"."amount" + "excluded"."amount"
+      `;
+    }
+  }
+
+  let contractInsertsQuery: string | undefined;
+  let tokenInsertsQuery: string | undefined;
+
+  // We only save the token (eg. contract + tokenId) in the database
+  // if we're dealing with erc721 or erc1155. For erc20 there is no
+  // need to keep track of these so we can skip.
+  if (contractKind !== "erc20") {
+    const contractValues: any[] = [];
+    const tokenValues: any[] = [];
+
+    for (const [contract, tokenIds] of contractValues.entries()) {
+      contractValues.push({
+        address: contract,
+        kind: contractKind,
+      });
+
+      for (const tokenId of tokenIds) {
+        tokenValues.push({
+          contract,
+          token_id: tokenId,
+        });
+      }
+    }
+
+    if (contractValues.length) {
+      const columns = new pgp.helpers.ColumnSet(["address", "kind"], {
+        table: "contracts",
+      });
+      const values = pgp.helpers.values(contractValues, columns);
+
+      contractInsertsQuery = `
+        insert into "contracts" ("address", "kind")
+        values ${values}
+        on conflict do nothing
+      `;
+    }
+    if (tokenValues.length) {
+      const columns = new pgp.helpers.ColumnSet(["contract", "token_id"], {
+        table: "tokens",
+      });
+      const values = pgp.helpers.values(tokenValues, columns);
+
+      tokenInsertsQuery = `
+        insert into "tokens" ("contract", "token_id")
+        values ${values}
+        on conflict do nothing
+      `;
+    }
+  }
+
+  const queries: any[] = [];
+  if (contractInsertsQuery) {
+    queries.push(contractInsertsQuery);
+  }
+  if (tokenInsertsQuery) {
+    queries.push(tokenInsertsQuery);
+  }
+  if (transferInsertsQuery) {
+    queries.push(transferInsertsQuery);
+  }
+
+  if (queries.length) {
+    await db.none(pgp.helpers.concat(queries));
+  }
+};
+
+export const removeTransferEvents = async (blockHash: string) => {
+  // Atomically delete the transfer events and revert ownership updates
+  await db.any(
+    `
+      with "x" as (
+        delete from "transfer_events" where "block_hash" = $/blockHash/
+        returning
+          "address",
+          "token_id",
+          array["from", "to"] as "owners",
+          array["amount", -"amount"] as "amount_deltas"
+      )
+      insert into "ownerships" (
+        "contract",
+        "token_id",
+        "owner",
+        "amount"
+      ) (
+        select
+          "y"."address",
+          "y"."token_id",
+          "y"."owner",
+          sum("y"."amount_delta")
+        from (
+          select
+            "address",
+            "token_id",
+            unnest("owners") as "owner",
+            unnest("amount_deltas") as "amount_delta"
+          from "x"
+        ) "y"
+        group by "y"."address", "y"."token_id", "y"."owner"
+      ) on conflict ("contract", "token_id", "owner") do
+      update set "amount" = "ownerships"."amount" + "excluded"."amount"
+    `,
+    { blockHash }
+  );
+};

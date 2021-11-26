@@ -1,10 +1,14 @@
 import { Interface } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 
-import { batchQueries, db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
+import {
+  TransferEvent,
+  addTransferEvents,
+  removeTransferEvents,
+} from "@/events/common/transfers";
 import { EventInfo } from "@/events/index";
 import { parseEvent } from "@/events/parser";
 import { MakerInfo, addToOrdersUpdateByMakerQueue } from "@/jobs/orders-update";
@@ -32,9 +36,9 @@ export const getTransferEventInfo = (contracts: string[] = []): EventInfo => ({
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
+    const transferEvents: TransferEvent[] = [];
     const makerInfos: MakerInfo[] = [];
 
-    const queries: any[] = [];
     for (const log of logs) {
       try {
         const baseParams = parseEvent(log);
@@ -44,6 +48,14 @@ export const getTransferEventInfo = (contracts: string[] = []): EventInfo => ({
         const from = parsedLog.args.from.toLowerCase();
         const to = parsedLog.args.to.toLowerCase();
         const amount = parsedLog.args.amount.toString();
+
+        transferEvents.push({
+          tokenId,
+          from,
+          to,
+          amount,
+          baseParams,
+        });
 
         makerInfos.push({
           side: "buy",
@@ -57,44 +69,18 @@ export const getTransferEventInfo = (contracts: string[] = []): EventInfo => ({
           contract: baseParams.address,
           tokenId,
         });
-
-        queries.push({
-          query: `
-            select add_transfer_event(
-              $/kind/,
-              $/tokenId/,
-              $/from/,
-              $/to/,
-              $/amount/,
-              $/address/,
-              $/block/,
-              $/blockHash/,
-              $/txHash/,
-              $/txIndex/,
-              $/logIndex/
-            )
-          `,
-          values: {
-            kind: "erc20",
-            tokenId,
-            from,
-            to,
-            amount,
-            ...baseParams,
-          },
-        });
       } catch (error) {
         logger.error("erc20_transfer_callback", `Invalid log ${log}: ${error}`);
       }
     }
 
-    await batchQueries(queries);
+    await addTransferEvents("erc20", transferEvents);
     if (config.acceptOrders) {
       await addToOrdersUpdateByMakerQueue(makerInfos);
     }
   },
   fixCallback: async (blockHash) => {
-    await db.any("select remove_transfer_events($/blockHash/)", { blockHash });
+    await removeTransferEvents(blockHash);
   },
 });
 
@@ -105,9 +91,9 @@ export const getDepositEventInfo = (contracts: string[] = []): EventInfo => ({
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
+    const transferEvents: TransferEvent[] = [];
     const makerInfos: MakerInfo[] = [];
 
-    const queries: any[] = [];
     for (const log of logs) {
       try {
         const baseParams = parseEvent(log);
@@ -118,50 +104,32 @@ export const getDepositEventInfo = (contracts: string[] = []): EventInfo => ({
         const to = parsedLog.args.to.toLowerCase();
         const amount = parsedLog.args.amount.toString();
 
+        transferEvents.push({
+          tokenId,
+          from,
+          to,
+          amount,
+          baseParams,
+        });
+
         makerInfos.push({
           side: "buy",
           maker: to,
           contract: baseParams.address,
           tokenId,
         });
-
-        queries.push({
-          query: `
-            select add_transfer_event(
-              $/kind/,
-              $/tokenId/,
-              $/from/,
-              $/to/,
-              $/amount/,
-              $/address/,
-              $/block/,
-              $/blockHash/,
-              $/txHash/,
-              $/txIndex/,
-              $/logIndex/
-            )
-          `,
-          values: {
-            kind: "erc20",
-            tokenId,
-            from,
-            to,
-            amount,
-            ...baseParams,
-          },
-        });
       } catch (error) {
         logger.error("erc20_deposit_callback", `Invalid log ${log}: ${error}`);
       }
     }
 
-    await batchQueries(queries);
+    await addTransferEvents("erc20", transferEvents);
     if (config.acceptOrders) {
       await addToOrdersUpdateByMakerQueue(makerInfos);
     }
   },
   fixCallback: async (blockHash) => {
-    await db.any("select remove_transfer_events($/blockHash/)", { blockHash });
+    await removeTransferEvents(blockHash);
   },
 });
 
@@ -174,9 +142,9 @@ export const getWithdrawalEventInfo = (
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
+    const transferEvents: TransferEvent[] = [];
     const makerInfos: MakerInfo[] = [];
 
-    const queries: any[] = [];
     for (const log of logs) {
       try {
         const baseParams = parseEvent(log);
@@ -187,37 +155,19 @@ export const getWithdrawalEventInfo = (
         const to = "0x0000000000000000000000000000000000000000";
         const amount = parsedLog.args.amount.toString();
 
+        transferEvents.push({
+          tokenId,
+          from,
+          to,
+          amount,
+          baseParams,
+        });
+
         makerInfos.push({
           side: "buy",
           maker: from,
           contract: baseParams.address,
           tokenId,
-        });
-
-        queries.push({
-          query: `
-            select add_transfer_event(
-              $/kind/,
-              $/tokenId/,
-              $/from/,
-              $/to/,
-              $/amount/,
-              $/address/,
-              $/block/,
-              $/blockHash/,
-              $/txHash/,
-              $/txIndex/,
-              $/logIndex/
-            )
-          `,
-          values: {
-            kind: "erc20",
-            tokenId,
-            from,
-            to,
-            amount,
-            ...baseParams,
-          },
         });
       } catch (error) {
         logger.error(
@@ -227,12 +177,12 @@ export const getWithdrawalEventInfo = (
       }
     }
 
-    await batchQueries(queries);
+    await addTransferEvents("erc20", transferEvents);
     if (config.acceptOrders) {
       await addToOrdersUpdateByMakerQueue(makerInfos);
     }
   },
   fixCallback: async (blockHash) => {
-    await db.any("select remove_transfer_events($/blockHash/)", { blockHash });
+    await removeTransferEvents(blockHash);
   },
 });

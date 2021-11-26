@@ -22,7 +22,7 @@ export const postSyncEventsOptions: RouteOptions = {
       contracts: Joi.array().items(Joi.string().lowercase()).min(1).required(),
       fromBlock: Joi.number().integer().positive().required(),
       toBlock: Joi.number().integer().positive().required(),
-      maxEventsPerBatch: Joi.number().integer().positive(),
+      blocksPerBatch: Joi.number().integer().positive(),
     }),
   },
   handler: async (request: Request) => {
@@ -37,7 +37,7 @@ export const postSyncEventsOptions: RouteOptions = {
       const contracts = payload.contracts;
       const fromBlock = payload.fromBlock;
       const toBlock = payload.toBlock;
-      const maxEventsPerBatch = payload.maxEventsPerBatch;
+      const blocksPerBatch = payload.blocksPerBatch;
 
       const contractsData = require(`@/config/data/${config.chainId}/contracts`);
 
@@ -56,7 +56,7 @@ export const postSyncEventsOptions: RouteOptions = {
           contracts,
           fromBlock,
           toBlock,
-          maxEventsPerBatch
+          { blocksPerBatch }
         );
       }
 

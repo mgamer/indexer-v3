@@ -2,14 +2,7 @@ import PgPromise from "pg-promise";
 
 import { config } from "@/config/index";
 
-const pgp = PgPromise();
-
+export const pgp = PgPromise();
 export const db = pgp({
   connectionString: config.databaseUrl,
 });
-
-export const batchQueries = async (queries: any[]) => {
-  if (queries.length) {
-    return db.any(pgp.helpers.concat(queries));
-  }
-};

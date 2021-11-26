@@ -1,10 +1,19 @@
 import { Interface } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 
-import { batchQueries, db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
+import {
+  CancelEvent,
+  addCancelEvents,
+  removeCancelEvents,
+} from "@/events/common/cancels";
+import {
+  FillEvent,
+  addFillEvents,
+  removeFillEvents,
+} from "@/events/common/fills";
 import { EventInfo } from "@/events/index";
 import { parseEvent } from "@/events/parser";
 import { HashInfo, addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
@@ -32,9 +41,9 @@ export const getOrderCancelledEventInfo = (
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
+    const cancelEvents: CancelEvent[] = [];
     const hashInfos: HashInfo[] = [];
 
-    const queries: any[] = [];
     for (const log of logs) {
       try {
         const baseParams = parseEvent(log);
@@ -42,27 +51,12 @@ export const getOrderCancelledEventInfo = (
         const parsedLog = abi.parseLog(log);
         const orderHash = parsedLog.args.hash.toLowerCase();
 
-        hashInfos.push({ hash: orderHash });
-
-        queries.push({
-          query: `
-            select add_cancel_event(
-              $/kind/,
-              $/orderHash/,
-              $/address/,
-              $/block/,
-              $/blockHash/,
-              $/txHash/,
-              $/txIndex/,
-              $/logIndex/
-            )
-          `,
-          values: {
-            kind: "wyvern-v2",
-            orderHash,
-            ...baseParams,
-          },
+        cancelEvents.push({
+          orderHash,
+          baseParams,
         });
+
+        hashInfos.push({ hash: orderHash });
       } catch (error) {
         logger.error(
           "wyvern_v2_order_cancelled_callback",
@@ -71,13 +65,13 @@ export const getOrderCancelledEventInfo = (
       }
     }
 
-    await batchQueries(queries);
+    await addCancelEvents("wyvern-v2", cancelEvents);
     if (config.acceptOrders) {
       await addToOrdersUpdateByHashQueue(hashInfos);
     }
   },
   fixCallback: async (blockHash) => {
-    await db.any("select remove_cancel_events($/blockHash/)", { blockHash });
+    await removeCancelEvents(blockHash);
   },
 });
 
@@ -90,9 +84,9 @@ export const getOrdersMatchedEventInfo = (
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
+    const fillEvents: FillEvent[] = [];
     const hashInfos: HashInfo[] = [];
 
-    const queries: any[] = [];
     for (const log of logs) {
       try {
         const baseParams = parseEvent(log);
@@ -104,36 +98,17 @@ export const getOrdersMatchedEventInfo = (
         const taker = parsedLog.args.taker.toLowerCase();
         const price = parsedLog.args.price.toString();
 
+        fillEvents.push({
+          buyHash,
+          sellHash,
+          maker,
+          taker,
+          price,
+          baseParams,
+        });
+
         hashInfos.push({ hash: buyHash });
         hashInfos.push({ hash: sellHash });
-
-        queries.push({
-          query: `
-            select add_fill_event(
-              $/kind/,
-              $/buyHash/,
-              $/sellHash/,
-              $/maker/,
-              $/taker/,
-              $/price/,
-              $/address/,
-              $/block/,
-              $/blockHash/,
-              $/txHash/,
-              $/txIndex/,
-              $/logIndex/
-            )
-          `,
-          values: {
-            kind: "wyvern-v2",
-            buyHash,
-            sellHash,
-            maker,
-            taker,
-            price,
-            ...baseParams,
-          },
-        });
       } catch (error) {
         logger.error(
           "wyvern_v2_orders_matched_callback",
@@ -142,12 +117,12 @@ export const getOrdersMatchedEventInfo = (
       }
     }
 
-    await batchQueries(queries);
+    await addFillEvents("wyvern-v2", fillEvents);
     if (config.acceptOrders) {
       await addToOrdersUpdateByHashQueue(hashInfos);
     }
   },
   fixCallback: async (blockHash) => {
-    await db.any("select remove_fill_events($/blockHash/)", { blockHash });
+    await removeFillEvents(blockHash);
   },
 });

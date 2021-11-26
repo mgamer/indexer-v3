@@ -50,12 +50,6 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
   pgm.createConstraint("orders", "orders_pk", {
     primaryKey: ["hash"],
   });
-  pgm.createConstraint("orders", "orders_token_set_fk", {
-    foreignKeys: {
-      columns: ["token_set_id"],
-      references: "token_sets(id)",
-    },
-  });
 
   // For efficienctly retrieving the floor sell or top bid of
   // any particular token id
@@ -91,18 +85,6 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     },
     top_buy_value: {
       type: "numeric(78, 0)",
-    },
-  });
-  pgm.createConstraint("tokens", "tokens_floor_sell_fk", {
-    foreignKeys: {
-      columns: ["floor_sell_hash"],
-      references: "orders(hash)",
-    },
-  });
-  pgm.createConstraint("tokens", "tokens_top_buy_fk", {
-    foreignKeys: {
-      columns: ["top_buy_hash"],
-      references: "orders(hash)",
     },
   });
 

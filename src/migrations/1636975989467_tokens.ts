@@ -14,12 +14,6 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
   pgm.createConstraint("tokens", "tokens_pk", {
     primaryKey: ["contract", "token_id"],
   });
-  pgm.createConstraint("tokens", "tokens_contract_fk", {
-    foreignKeys: {
-      columns: ["contract"],
-      references: "contracts(address)",
-    },
-  });
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {

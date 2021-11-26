@@ -30,7 +30,7 @@ const backfillQueue = new Queue(BACKFILL_JOB_NAME, {
 new QueueScheduler(BACKFILL_JOB_NAME, { connection: redis });
 
 type BackfillingOptions = {
-  maxBlocksPerBatch?: number;
+  blocksPerBatch?: number;
   prioritized?: boolean;
 };
 
@@ -44,7 +44,7 @@ export const addToEventsSyncBackfillQueue = async (
   // Syncing is done in batches since the requested block range
   // might include lots of events that cannot fit within a single
   // provider response
-  const maxBlocksPerBatch = options?.maxBlocksPerBatch ?? 512;
+  const blocksPerBatch = options?.blocksPerBatch ?? 512;
 
   // Important backfilling processes should be prioritized (eg.
   // refetching dropped/orphaned blocks)
@@ -53,8 +53,8 @@ export const addToEventsSyncBackfillQueue = async (
   const jobs: any[] = [];
 
   // Sync in reverse in order to handle more recent events first
-  for (let to = toBlock; to >= fromBlock; to -= maxBlocksPerBatch) {
-    const from = Math.max(fromBlock, to - maxBlocksPerBatch + 1);
+  for (let to = toBlock; to >= fromBlock; to -= blocksPerBatch) {
+    const from = Math.max(fromBlock, to - blocksPerBatch + 1);
     jobs.push({
       name: eventType,
       data: {

@@ -2,7 +2,7 @@ import { Utils } from "@georgeroman/wyvern-v2-sdk";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import cron from "node-cron";
 
-import { batchQueries, db } from "@/common/db";
+import { db, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { acquireLock, redis, releaseLock } from "@/common/redis";
 import { config } from "@/config/index";
@@ -168,7 +168,9 @@ if (config.doBackgroundWork) {
           }
         }
 
-        await batchQueries(queries);
+        if (queries.length) {
+          await db.none(pgp.helpers.concat(queries));
+        }
       } catch (error) {
         logger.error(BY_HASH_JOB_NAME, `Failed to handle ${hash}: ${error}`);
       }
