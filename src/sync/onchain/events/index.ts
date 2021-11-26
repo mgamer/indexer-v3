@@ -46,9 +46,7 @@ export const sync = async (
     rawLogs
   ) as Log[];
 
-  console.time(`${logs.length}`);
   await eventInfo.syncCallback(logs);
-  console.timeEnd(`${logs.length}`);
 };
 
 // Newly added events should all make it into the below lists
