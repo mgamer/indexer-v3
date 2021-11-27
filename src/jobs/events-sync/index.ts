@@ -91,7 +91,9 @@ if (config.doBackgroundWork) {
             `Backfill syncing block range [${fromBlock}, ${toBlock}]`
           );
 
+          console.time(`${fromBlock}-${toBlock}`);
           await sync(fromBlock, toBlock, eventInfo);
+          console.timeEnd(`${fromBlock}-${toBlock}`);
         }
       } catch (error) {
         logger.error(eventType, `Backfill job failed: ${error}`);
