@@ -74,9 +74,7 @@ export const getTransferEventInfo = (contracts: string[] = []): EventInfo => ({
       }
     }
 
-    console.time("erc20 db");
     await addTransferEvents("erc20", transferEvents);
-    console.timeEnd("erc20 db");
     if (config.acceptOrders) {
       await addToOrdersUpdateByMakerQueue(makerInfos);
     }

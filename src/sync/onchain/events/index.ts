@@ -31,10 +31,12 @@ export type EventInfo = {
 export const sync = async (
   fromBlock: number,
   toBlock: number,
-  eventInfo: EventInfo
+  eventInfo: EventInfo,
+  logTime?: string
 ) => {
   // https://github.com/ethers-io/ethers.js/discussions/2168
   const formatter = new Formatter();
+  if (logTime) console.time(logTime + "sync");
   const rawLogs = await eventInfo.provider.send("eth_getLogs", [
     {
       ...eventInfo.filter,
@@ -42,11 +44,14 @@ export const sync = async (
       toBlock: `0x${toBlock.toString(16)}`,
     },
   ]);
+  if (logTime) console.timeEnd(logTime + "sync");
   const logs = Formatter.arrayOf(formatter.filterLog.bind(formatter))(
     rawLogs
   ) as Log[];
 
+  if (logTime) console.time(logTime + "db");
   await eventInfo.syncCallback(logs);
+  if (logTime) console.timeEnd(logTime + "db");
 };
 
 // Newly added events should all make it into the below lists
