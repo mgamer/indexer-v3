@@ -51,11 +51,13 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     primaryKey: ["block_hash", "tx_hash", "log_index"],
   });
 
+  pgm.createIndex("fill_events", ["block"]);
   pgm.createIndex("fill_events", ["tx_hash", "maker"]);
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
   pgm.dropIndex("fill_events", ["tx_hash", "maker"]);
+  pgm.dropIndex("fill_events", ["block"]);
 
   pgm.dropTable("fill_events");
 }

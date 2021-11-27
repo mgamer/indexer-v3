@@ -34,8 +34,12 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
   pgm.createConstraint("cancel_events", "cancel_events_pk", {
     primaryKey: ["block_hash", "tx_hash", "log_index"],
   });
+
+  pgm.createIndex("cancel_events", ["block"]);
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
+  pgm.dropIndex("cancel_events", ["block"]);
+
   pgm.dropTable("cancel_events");
 }
