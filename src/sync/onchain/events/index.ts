@@ -48,6 +48,7 @@ export const sync = async (
   const logs = Formatter.arrayOf(formatter.filterLog.bind(formatter))(
     rawLogs
   ) as Log[];
+  if (logTime) console.log(logTime + " " + logs.length);
 
   if (logTime) console.time(logTime + "db");
   await eventInfo.syncCallback(logs);
