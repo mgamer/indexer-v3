@@ -30,6 +30,15 @@ if (config.doBackgroundWork) {
               (select distinct
                 "block",
                 "block_hash" as "blockHash"
+              from "transfer_events"
+              order by "block" desc
+              limit $/limit/)
+
+              union
+
+              (select distinct
+                "block",
+                "block_hash" as "blockHash"
               from "cancel_events"
               order by "block" desc
               limit $/limit/)
