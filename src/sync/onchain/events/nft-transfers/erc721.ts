@@ -5,10 +5,10 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import {
-  TransferEvent,
-  addTransferEvents,
-  removeTransferEvents,
-} from "@/events/common/transfers";
+  NftTransferEvent,
+  addNftTransferEvents,
+  removeNftTransferEvents,
+} from "@/events/common/nft-transfers";
 import { EventInfo } from "@/events/index";
 import { parseEvent } from "@/events/parser";
 import { MakerInfo, addToOrdersUpdateByMakerQueue } from "@/jobs/orders-update";
@@ -38,7 +38,7 @@ export const getTransferEventInfo = (contracts: string[] = []): EventInfo => ({
     address: contracts,
   },
   syncCallback: async (logs: Log[]) => {
-    const transferEvents: TransferEvent[] = [];
+    const transferEvents: NftTransferEvent[] = [];
     const makerInfos: MakerInfo[] = [];
 
     for (const log of logs) {
@@ -84,12 +84,12 @@ export const getTransferEventInfo = (contracts: string[] = []): EventInfo => ({
       }
     }
 
-    await addTransferEvents("erc721", transferEvents);
+    await addNftTransferEvents("erc721", transferEvents);
     if (config.acceptOrders) {
       await addToOrdersUpdateByMakerQueue(makerInfos);
     }
   },
   fixCallback: async (blockHash) => {
-    await removeTransferEvents(blockHash);
+    await removeNftTransferEvents(blockHash);
   },
 });

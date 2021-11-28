@@ -20,7 +20,6 @@ export const addCancelEvents = async (
       block: ce.baseParams.block,
       block_hash: ce.baseParams.blockHash,
       tx_hash: ce.baseParams.txHash,
-      tx_index: ce.baseParams.txIndex,
       log_index: ce.baseParams.logIndex,
     });
   }
@@ -28,15 +27,7 @@ export const addCancelEvents = async (
   let cancelInsertsQuery: string | undefined;
   if (cancelValues) {
     const columns = new pgp.helpers.ColumnSet(
-      [
-        "order_hash",
-        "address",
-        "block",
-        "block_hash",
-        "tx_hash",
-        "tx_index",
-        "log_index",
-      ],
+      ["order_hash", "address", "block", "block_hash", "tx_hash", "log_index"],
       { table: "cancel_events" }
     );
     const values = pgp.helpers.values(cancelValues, columns);
@@ -51,7 +42,6 @@ export const addCancelEvents = async (
             "block",
             "block_hash",
             "tx_hash",
-            "tx_index",
             "log_index"
           ) values ${values}
           on conflict do nothing

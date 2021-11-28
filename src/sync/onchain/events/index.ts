@@ -1,10 +1,10 @@
 import { Filter, Log } from "@ethersproject/abstract-provider";
 import { Formatter, JsonRpcProvider } from "@ethersproject/providers";
 
+import * as erc20 from "@/events/ft-transfers/erc20";
+import * as erc721 from "@/events/nft-transfers/erc721";
+import * as erc1155 from "@/events/nft-transfers/erc1155";
 import * as orderbook from "@/events/orderbook";
-import * as erc20 from "@/events/transfers/erc20";
-import * as erc721 from "@/events/transfers/erc721";
-import * as erc1155 from "@/events/transfers/erc1155";
 import * as wyvernV2 from "@/events/wyvern-v2";
 
 // https://github.com/ethers-io/ethers.js/discussions/2168

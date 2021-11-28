@@ -1,25 +1,17 @@
 import { MigrationBuilder } from "node-pg-migrate";
 
 export async function up(pgm: MigrationBuilder): Promise<void> {
-  pgm.createTable("fill_events", {
-    buy_order_hash: {
-      type: "text",
-      notNull: true,
-    },
-    sell_order_hash: {
-      type: "text",
-      notNull: true,
-    },
-    maker: {
-      type: "text",
-      notNull: true,
-    },
-    taker: {
-      type: "text",
-      notNull: true,
-    },
-    price: {
+  pgm.createTable("ft_transfer_events", {
+    amount: {
       type: "numeric(78, 0)",
+      notNull: true,
+    },
+    from: {
+      type: "text",
+      notNull: true,
+    },
+    to: {
+      type: "text",
       notNull: true,
     },
     address: {
@@ -43,17 +35,15 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
       notNull: true,
     },
   });
-  pgm.createConstraint("fill_events", "fill_events_pk", {
+  pgm.createConstraint("ft_transfer_events", "ft_transfer_events_pk", {
     primaryKey: ["block_hash", "tx_hash", "log_index"],
   });
 
-  pgm.createIndex("fill_events", ["block"]);
-  pgm.createIndex("fill_events", ["tx_hash", "maker"]);
+  pgm.createIndex("ft_transfer_events", ["block"]);
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.dropIndex("fill_events", ["tx_hash", "maker"]);
-  pgm.dropIndex("fill_events", ["block"]);
+  pgm.dropIndex("ft_transfer_events", ["block"]);
 
-  pgm.dropTable("fill_events");
+  pgm.dropTable("ft_transfer_events");
 }

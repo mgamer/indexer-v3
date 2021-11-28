@@ -1,9 +1,9 @@
 import { db, pgp } from "@/common/db";
 import { BaseParams } from "@/events/parser";
 
-type ContractKind = "erc20" | "erc721" | "erc1155";
+type ContractKind = "erc721" | "erc1155";
 
-export type TransferEvent = {
+export type NftTransferEvent = {
   tokenId: string;
   from: string;
   to: string;
@@ -11,12 +11,12 @@ export type TransferEvent = {
   baseParams: BaseParams;
 };
 
-export const addTransferEvents = async (
+export const addNftTransferEvents = async (
   contractKind: ContractKind,
-  transferEvents: TransferEvent[]
+  transferEvents: NftTransferEvent[]
 ) => {
-  // Keep track of all involved tokens so that we can keep track
-  // of them in the `contracts` and `tokens` tables
+  // Keep track of all involved tokens so that we can save
+  // them in the `contracts` and `tokens` tables
   const contractTokens = new Map<string, Set<string>>();
   const addToken = (contract: string, tokenId: string) => {
     if (!contractTokens.get(contract)) {
@@ -37,13 +37,12 @@ export const addTransferEvents = async (
       block: te.baseParams.block,
       block_hash: te.baseParams.blockHash,
       tx_hash: te.baseParams.txHash,
-      tx_index: te.baseParams.txIndex,
       log_index: te.baseParams.logIndex,
     });
   }
 
   let transferInsertsQuery: string | undefined;
-  if (transferValues) {
+  if (transferValues.length) {
     const columns = new pgp.helpers.ColumnSet(
       [
         "token_id",
@@ -54,10 +53,9 @@ export const addTransferEvents = async (
         "block",
         "block_hash",
         "tx_hash",
-        "tx_index",
         "log_index",
       ],
-      { table: "transfer_events" }
+      { table: "nft_transfer_events" }
     );
     const values = pgp.helpers.values(transferValues, columns);
 
@@ -65,7 +63,7 @@ export const addTransferEvents = async (
       // Atomically insert the transfer events and update ownership
       transferInsertsQuery = `
         with "x" as (
-          insert into "transfer_events"(
+          insert into "nft_transfer_events" (
             "token_id",
             "amount",
             "from",
@@ -74,7 +72,6 @@ export const addTransferEvents = async (
             "block",
             "block_hash",
             "tx_hash",
-            "tx_index",
             "log_index"
           ) values ${values}
           on conflict do nothing
@@ -110,54 +107,48 @@ export const addTransferEvents = async (
     }
   }
 
+  const contractValues: any[] = [];
+  const tokenValues: any[] = [];
+  for (const [contract, tokenIds] of contractValues.entries()) {
+    contractValues.push({
+      address: contract,
+      kind: contractKind,
+    });
+
+    for (const tokenId of tokenIds) {
+      tokenValues.push({
+        contract,
+        token_id: tokenId,
+      });
+    }
+  }
+
   let contractInsertsQuery: string | undefined;
+  if (contractValues.length) {
+    const columns = new pgp.helpers.ColumnSet(["address", "kind"], {
+      table: "contracts",
+    });
+    const values = pgp.helpers.values(contractValues, columns);
+
+    contractInsertsQuery = `
+      insert into "contracts" ("address", "kind")
+      values ${values}
+      on conflict do nothing
+    `;
+  }
+
   let tokenInsertsQuery: string | undefined;
+  if (tokenValues.length) {
+    const columns = new pgp.helpers.ColumnSet(["contract", "token_id"], {
+      table: "tokens",
+    });
+    const values = pgp.helpers.values(tokenValues, columns);
 
-  // We only save the token (eg. contract + tokenId) in the database
-  // if we're dealing with erc721 or erc1155. For erc20 there is no
-  // need to keep track of these so we can skip.
-  if (contractKind !== "erc20") {
-    const contractValues: any[] = [];
-    const tokenValues: any[] = [];
-
-    for (const [contract, tokenIds] of contractValues.entries()) {
-      contractValues.push({
-        address: contract,
-        kind: contractKind,
-      });
-
-      for (const tokenId of tokenIds) {
-        tokenValues.push({
-          contract,
-          token_id: tokenId,
-        });
-      }
-    }
-
-    if (contractValues.length) {
-      const columns = new pgp.helpers.ColumnSet(["address", "kind"], {
-        table: "contracts",
-      });
-      const values = pgp.helpers.values(contractValues, columns);
-
-      contractInsertsQuery = `
-        insert into "contracts" ("address", "kind")
-        values ${values}
-        on conflict do nothing
-      `;
-    }
-    if (tokenValues.length) {
-      const columns = new pgp.helpers.ColumnSet(["contract", "token_id"], {
-        table: "tokens",
-      });
-      const values = pgp.helpers.values(tokenValues, columns);
-
-      tokenInsertsQuery = `
-        insert into "tokens" ("contract", "token_id")
-        values ${values}
-        on conflict do nothing
-      `;
-    }
+    tokenInsertsQuery = `
+      insert into "tokens" ("contract", "token_id")
+      values ${values}
+      on conflict do nothing
+    `;
   }
 
   const queries: any[] = [];
@@ -176,12 +167,12 @@ export const addTransferEvents = async (
   }
 };
 
-export const removeTransferEvents = async (blockHash: string) => {
+export const removeNftTransferEvents = async (blockHash: string) => {
   // Atomically delete the transfer events and revert ownership updates
   await db.any(
     `
       with "x" as (
-        delete from "transfer_events" where "block_hash" = $/blockHash/
+        delete from "nft_transfer_events" where "block_hash" = $/blockHash/
         returning
           "address",
           "token_id",

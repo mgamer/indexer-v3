@@ -22,10 +22,6 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
       type: "text",
       notNull: true,
     },
-    tx_index: {
-      type: "int",
-      notNull: true,
-    },
     log_index: {
       type: "int",
       notNull: true,

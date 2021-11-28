@@ -28,7 +28,6 @@ export const addFillEvents = async (
       block: fe.baseParams.block,
       block_hash: fe.baseParams.blockHash,
       tx_hash: fe.baseParams.txHash,
-      tx_index: fe.baseParams.txIndex,
       log_index: fe.baseParams.logIndex,
     });
   }
@@ -46,7 +45,6 @@ export const addFillEvents = async (
         "block",
         "block_hash",
         "tx_hash",
-        "tx_index",
         "log_index",
       ],
       { table: "fill_events" }
@@ -67,7 +65,6 @@ export const addFillEvents = async (
             "block",
             "block_hash",
             "tx_hash",
-            "tx_index",
             "log_index"
           ) values ${values}
           on conflict do nothing

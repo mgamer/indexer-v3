@@ -5,7 +5,6 @@ export type BaseParams = {
   block: number;
   blockHash: string;
   txHash: string;
-  txIndex: number;
   logIndex: number;
 };
 
@@ -15,8 +14,7 @@ export const parseEvent = (log: Log): BaseParams => {
   const block = log.blockNumber;
   const blockHash = log.blockHash.toLowerCase();
   const txHash = log.transactionHash.toLowerCase();
-  const txIndex = log.transactionIndex;
   const logIndex = log.logIndex;
 
-  return { address, txHash, block, blockHash, txIndex, logIndex };
+  return { address, txHash, block, blockHash, logIndex };
 };
