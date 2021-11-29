@@ -13,34 +13,34 @@ export type GetTransfersFilter = {
 export const getTransfers = async (filter: GetTransfersFilter) => {
   let baseQuery = `
     select
-      "te"."address" as "contract",
-      "te"."token_id" as "tokenId",
-      "te"."from",
-      "te"."to",
-      "te"."amount",
-      "te"."tx_hash" as "txHash",
-      "te"."block",
+      "nte"."address" as "contract",
+      "nte"."token_id" as "tokenId",
+      "nte"."from",
+      "nte"."to",
+      "nte"."amount",
+      "nte"."tx_hash" as "txHash",
+      "nte"."block",
       "fe"."price"
-    from "transfer_events" "te"
+    from "nft_transfer_events" "nte"
     left join "fill_events" "fe"
-      on "te"."tx_hash" = "fe"."tx_hash"
-      and "te"."from" = "fe"."maker"
+      on "nte"."tx_hash" = "fe"."tx_hash"
+      and "nte"."from" = "fe"."maker"
   `;
 
   const conditions: string[] = [];
   if (filter.contract) {
-    conditions.push(`"te"."address" = $/contract/`);
+    conditions.push(`"nte"."address" = $/contract/`);
   }
   if (filter.tokenId) {
-    conditions.push(`"te"."token_id" = $/tokenId/`);
+    conditions.push(`"nte"."token_id" = $/tokenId/`);
   }
   if (filter.account) {
     if (filter.direction === "from") {
-      conditions.push(`"te"."from" = $/account/`);
+      conditions.push(`"nte"."from" = $/account/`);
     } else if (filter.direction === "to") {
-      conditions.push(`"te"."to" = $/account/`);
+      conditions.push(`"nte"."to" = $/account/`);
     } else {
-      conditions.push(`"te"."from" = $/account/ or "te"."to" = $/account/`);
+      conditions.push(`"nte"."from" = $/account/ or "nte"."to" = $/account/`);
     }
   }
   if (filter.type === "transfer") {
@@ -53,7 +53,7 @@ export const getTransfers = async (filter: GetTransfersFilter) => {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
 
-  baseQuery += ` order by "te"."block" desc`;
+  baseQuery += ` order by "nte"."block" desc`;
 
   baseQuery += ` offset $/offset/`;
   baseQuery += ` limit $/limit/`;

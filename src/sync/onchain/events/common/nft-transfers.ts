@@ -109,7 +109,7 @@ export const addNftTransferEvents = async (
 
   const contractValues: any[] = [];
   const tokenValues: any[] = [];
-  for (const [contract, tokenIds] of contractValues.entries()) {
+  for (const [contract, tokenIds] of contractTokens.entries()) {
     contractValues.push({
       address: contract,
       kind: contractKind,
