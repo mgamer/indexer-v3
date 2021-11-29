@@ -14,7 +14,7 @@ import {
   addFillEvents,
   removeFillEvents,
 } from "@/events/common/fills";
-import { EventInfo } from "@/events/index";
+import { ContractInfo } from "@/events/index";
 import { parseEvent } from "@/events/parser";
 import { HashInfo, addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
 
@@ -32,58 +32,11 @@ const abi = new Interface([
   )`,
 ]);
 
-export const getOrderCancelledEventInfo = (
-  contracts: string[] = []
-): EventInfo => ({
+export const getContractInfo = (address: string[] = []): ContractInfo => ({
   provider: baseProvider,
-  filter: {
-    topics: [abi.getEventTopic("OrderCancelled")],
-    address: contracts,
-  },
+  filter: { address },
   syncCallback: async (logs: Log[]) => {
     const cancelEvents: CancelEvent[] = [];
-    const hashInfos: HashInfo[] = [];
-
-    for (const log of logs) {
-      try {
-        const baseParams = parseEvent(log);
-
-        const parsedLog = abi.parseLog(log);
-        const orderHash = parsedLog.args.hash.toLowerCase();
-
-        cancelEvents.push({
-          orderHash,
-          baseParams,
-        });
-
-        hashInfos.push({ hash: orderHash });
-      } catch (error) {
-        logger.error(
-          "wyvern_v2_order_cancelled_callback",
-          `Invalid log ${log}: ${error}`
-        );
-      }
-    }
-
-    await addCancelEvents("wyvern-v2", cancelEvents);
-    if (config.acceptOrders) {
-      await addToOrdersUpdateByHashQueue(hashInfos);
-    }
-  },
-  fixCallback: async (blockHash) => {
-    await removeCancelEvents(blockHash);
-  },
-});
-
-export const getOrdersMatchedEventInfo = (
-  contracts: string[] = []
-): EventInfo => ({
-  provider: baseProvider,
-  filter: {
-    topics: [abi.getEventTopic("OrdersMatched")],
-    address: contracts,
-  },
-  syncCallback: async (logs: Log[]) => {
     const fillEvents: FillEvent[] = [];
     const hashInfos: HashInfo[] = [];
 
@@ -91,38 +44,60 @@ export const getOrdersMatchedEventInfo = (
       try {
         const baseParams = parseEvent(log);
 
-        const parsedLog = abi.parseLog(log);
-        const buyHash = parsedLog.args.buyHash.toLowerCase();
-        const sellHash = parsedLog.args.sellHash.toLowerCase();
-        const maker = parsedLog.args.maker.toLowerCase();
-        const taker = parsedLog.args.taker.toLowerCase();
-        const price = parsedLog.args.price.toString();
+        switch (log.topics[0]) {
+          case abi.getEventTopic("OrderCancelled"): {
+            const parsedLog = abi.parseLog(log);
+            const orderHash = parsedLog.args.hash.toLowerCase();
 
-        fillEvents.push({
-          buyHash,
-          sellHash,
-          maker,
-          taker,
-          price,
-          baseParams,
-        });
+            cancelEvents.push({
+              orderHash,
+              baseParams,
+            });
 
-        hashInfos.push({ hash: buyHash });
-        hashInfos.push({ hash: sellHash });
+            hashInfos.push({ hash: orderHash });
+
+            break;
+          }
+
+          case abi.getEventTopic("OrdersMatched"): {
+            const parsedLog = abi.parseLog(log);
+            const buyHash = parsedLog.args.buyHash.toLowerCase();
+            const sellHash = parsedLog.args.sellHash.toLowerCase();
+            const maker = parsedLog.args.maker.toLowerCase();
+            const taker = parsedLog.args.taker.toLowerCase();
+            const price = parsedLog.args.price.toString();
+
+            fillEvents.push({
+              buyHash,
+              sellHash,
+              maker,
+              taker,
+              price,
+              baseParams,
+            });
+
+            hashInfos.push({ hash: buyHash });
+            hashInfos.push({ hash: sellHash });
+
+            break;
+          }
+        }
       } catch (error) {
         logger.error(
-          "wyvern_v2_orders_matched_callback",
-          `Invalid log ${log}: ${error}`
+          "wyvern_v2_callback",
+          `Could not parse log ${log}: ${error}`
         );
       }
     }
 
+    await addCancelEvents("wyvern-v2", cancelEvents);
     await addFillEvents("wyvern-v2", fillEvents);
     if (config.acceptOrders) {
       await addToOrdersUpdateByHashQueue(hashInfos);
     }
   },
   fixCallback: async (blockHash) => {
+    await removeCancelEvents(blockHash);
     await removeFillEvents(blockHash);
   },
 });

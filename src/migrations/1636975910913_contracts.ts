@@ -1,7 +1,7 @@
 import { MigrationBuilder } from "node-pg-migrate";
 
 export async function up(pgm: MigrationBuilder): Promise<void> {
-  pgm.createType("contract_kind_t", ["erc20", "erc721", "erc1155"]);
+  pgm.createType("contract_kind_t", ["erc721", "erc1155"]);
 
   pgm.createTable("contracts", {
     address: {

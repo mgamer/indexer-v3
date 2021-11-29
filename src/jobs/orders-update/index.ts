@@ -204,7 +204,7 @@ export type MakerInfo = {
   side: "buy" | "sell";
   maker: string;
   contract: string;
-  tokenId: string;
+  tokenId?: string;
 };
 
 export const addToOrdersUpdateByMakerQueue = async (

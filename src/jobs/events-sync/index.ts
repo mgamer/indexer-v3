@@ -3,7 +3,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-import { EventType, getEventInfo, sync } from "@/events/index";
+import { ContractType, getContractInfo, sync } from "@/events/index";
 
 // For syncing events we have two separate job queues. One is for
 // handling backfilling while the other one handles realtime
@@ -35,7 +35,7 @@ type BackfillingOptions = {
 };
 
 export const addToEventsSyncBackfillQueue = async (
-  eventType: EventType,
+  contractType: ContractType,
   contracts: string[],
   fromBlock: number,
   toBlock: number,
@@ -56,9 +56,9 @@ export const addToEventsSyncBackfillQueue = async (
   for (let to = toBlock; to >= fromBlock; to -= blocksPerBatch) {
     const from = Math.max(fromBlock, to - blocksPerBatch + 1);
     jobs.push({
-      name: eventType,
+      name: contractType,
       data: {
-        eventType,
+        contractType,
         contracts,
         fromBlock: from,
         toBlock: to,
@@ -77,24 +77,24 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     BACKFILL_JOB_NAME,
     async (job: Job) => {
-      const { eventType, contracts, fromBlock, toBlock } = job.data;
+      const { contractType, contracts, fromBlock, toBlock } = job.data;
 
       try {
-        const eventInfo = getEventInfo(eventType, contracts);
+        const eventInfo = getContractInfo(contractType, contracts);
         if (eventInfo.skip) {
           return;
         }
 
         if (contracts.length) {
           logger.info(
-            eventType,
+            contractType,
             `Backfill syncing block range [${fromBlock}, ${toBlock}]`
           );
 
-          await sync(fromBlock, toBlock, eventInfo, "here");
+          await sync(fromBlock, toBlock, eventInfo);
         }
       } catch (error) {
-        logger.error(eventType, `Backfill job failed: ${error}`);
+        logger.error(contractType, `Backfill job failed: ${error}`);
         throw error;
       }
     },
@@ -120,8 +120,10 @@ const catchupQueue = new Queue(CATCHUP_JOB_NAME, {
 });
 new QueueScheduler(CATCHUP_JOB_NAME, { connection: redis });
 
-export const addToEventsSyncCatchupQueue = async (eventType: EventType) => {
-  await catchupQueue.add(eventType, { eventType });
+export const addToEventsSyncCatchupQueue = async (
+  contractType: ContractType
+) => {
+  await catchupQueue.add(contractType, { contractType });
 };
 
 // Actual work is to be handled by background worker processes
@@ -129,14 +131,16 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     CATCHUP_JOB_NAME,
     async (job: Job) => {
-      const { eventType } = job.data;
+      const { contractType } = job.data;
 
       try {
-        // Sync all contracts of the given event type
+        // Sync all contracts of the given contract type
         const contracts =
-          require(`@/config/data/${config.chainId}/contracts.json`)[eventType];
-        const eventInfo = getEventInfo(eventType, contracts);
-        if (eventInfo.skip) {
+          require(`@/config/data/${config.chainId}/contracts.json`)[
+            contractType
+          ];
+        const contractInfo = getContractInfo(contractType, contracts);
+        if (contractInfo.skip) {
           return;
         }
 
@@ -146,14 +150,14 @@ if (config.doBackgroundWork) {
         // backfill queue.
         const maxBlocks = 256;
 
-        let headBlock = await eventInfo.provider.getBlockNumber();
+        let headBlock = await contractInfo.provider.getBlockNumber();
         // Try avoiding missing events by lagging behind 1 block
         // https://ethereum.stackexchange.com/questions/109660/eth-getlogs-and-some-missing-logs
         headBlock--;
 
-        // Fetch the last synced blocked for the current event type (if it exists)
+        // Fetch the last synced blocked for the current contract type (if it exists)
         let localBlock = Number(
-          await redis.get(`${eventType}_last_synced_block`)
+          await redis.get(`${contractType}_last_synced_block`)
         );
         if (localBlock >= headBlock) {
           // Nothing to sync
@@ -169,16 +173,16 @@ if (config.doBackgroundWork) {
         const fromBlock = Math.max(localBlock, headBlock - maxBlocks + 1);
         if (contracts.length) {
           logger.info(
-            eventType,
+            contractType,
             `Catchup syncing block range [${fromBlock}, ${headBlock}]`
           );
 
-          await sync(fromBlock, headBlock, getEventInfo(eventType, contracts));
+          await sync(fromBlock, headBlock, contractInfo);
 
           // Queue any remaining blocks for backfilling
           if (localBlock < fromBlock) {
             await addToEventsSyncBackfillQueue(
-              eventType,
+              contractType,
               contracts,
               localBlock,
               fromBlock - 1
@@ -186,10 +190,10 @@ if (config.doBackgroundWork) {
           }
 
           // Update the last synced block
-          await redis.set(`${eventType}_last_synced_block`, headBlock);
+          await redis.set(`${contractType}_last_synced_block`, headBlock);
         }
       } catch (error) {
-        logger.error(eventType, `Catchup failed: ${error}`);
+        logger.error(contractType, `Catchup failed: ${error}`);
         throw error;
       }
     },

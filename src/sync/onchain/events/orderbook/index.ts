@@ -10,35 +10,37 @@ import {
   parseOrderbookOrder,
   saveOrders,
 } from "@/orders/wyvern-v2";
-import { EventInfo } from "@/events/index";
+import { ContractInfo } from "@/events/index";
 
 const abi = new Interface([`event OrdersPosted(bytes[] orders)`]);
 
-export const getOrdersPostedEventInfo = (
-  contracts: string[] = []
-): EventInfo => ({
+export const getContractInfo = (address: string[] = []): ContractInfo => ({
   provider: orderbookProvider,
-  filter: {
-    topics: [abi.getEventTopic("OrdersPosted")],
-    address: contracts,
-  },
+  filter: { address },
   syncCallback: async (logs: Log[]) => {
     const parsedOrders: Order[] = [];
+
     for (const log of logs) {
       try {
-        const parsedLog = abi.parseLog(log);
-        const orders = parsedLog.args.orders;
+        switch (log.topics[0]) {
+          case abi.getEventTopic("OrdersPosted"): {
+            const parsedLog = abi.parseLog(log);
+            const orders = parsedLog.args.orders;
 
-        for (const order of orders) {
-          const parsedOrder = parseOrderbookOrder(order);
-          if (parsedOrder) {
-            parsedOrders.push(parsedOrder);
+            for (const order of orders) {
+              const parsedOrder = parseOrderbookOrder(order);
+              if (parsedOrder) {
+                parsedOrders.push(parsedOrder);
+              }
+            }
+
+            break;
           }
         }
       } catch (error) {
         logger.error(
-          "orderbook_orders_posted_callback",
-          `Invalid log ${log}: ${error}`
+          "orderbook_callback",
+          `Could not parse log ${log}: ${error}`
         );
       }
     }

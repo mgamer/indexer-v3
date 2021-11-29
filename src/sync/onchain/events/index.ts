@@ -1,9 +1,9 @@
 import { Filter, Log } from "@ethersproject/abstract-provider";
 import { Formatter, JsonRpcProvider } from "@ethersproject/providers";
 
-import * as erc20 from "@/events/ft-transfers/erc20";
-import * as erc721 from "@/events/nft-transfers/erc721";
-import * as erc1155 from "@/events/nft-transfers/erc1155";
+import * as erc20 from "@/events/erc20";
+import * as erc721 from "@/events/erc721";
+import * as erc1155 from "@/events/erc1155";
 import * as orderbook from "@/events/orderbook";
 import * as wyvernV2 from "@/events/wyvern-v2";
 
@@ -12,7 +12,7 @@ interface EnhancedFilter extends Omit<Filter, "address"> {
   address?: string | string[];
 }
 
-export type EventInfo = {
+export type ContractInfo = {
   // The indexer is designed to be working on a single network
   // at once. As such, for all syncing processes we should be
   // using the base network provider. However, in order to reuse
@@ -31,86 +31,60 @@ export type EventInfo = {
 export const sync = async (
   fromBlock: number,
   toBlock: number,
-  eventInfo: EventInfo,
-  logTime?: string
+  contractInfo: ContractInfo
 ) => {
   // https://github.com/ethers-io/ethers.js/discussions/2168
   const formatter = new Formatter();
-  if (logTime) console.time(logTime + "sync");
-  const rawLogs = await eventInfo.provider.send("eth_getLogs", [
+  const rawLogs = await contractInfo.provider.send("eth_getLogs", [
     {
-      ...eventInfo.filter,
+      ...contractInfo.filter,
       fromBlock: `0x${fromBlock.toString(16)}`,
       toBlock: `0x${toBlock.toString(16)}`,
     },
   ]);
-  if (logTime) console.timeEnd(logTime + "sync");
   const logs = Formatter.arrayOf(formatter.filterLog.bind(formatter))(
     rawLogs
   ) as Log[];
-  if (logTime) console.log(logTime + " " + logs.length);
 
-  if (logTime) console.time(logTime + "db");
-  await eventInfo.syncCallback(logs);
-  if (logTime) console.timeEnd(logTime + "db");
+  await contractInfo.syncCallback(logs);
 };
 
-// Newly added events should all make it into the below lists
+// Newly added contract types should all make it into the below lists
 
-export type EventType =
-  | "orderbook_orders_posted"
-  | "erc20_transfer"
-  | "erc20_deposit"
-  | "erc20_withdrawal"
-  | "erc721_transfer"
-  | "erc1155_transfer_single"
-  | "erc1155_transfer_batch"
-  | "wyvern_v2_order_cancelled"
-  | "wyvern_v2_orders_matched";
+export type ContractType =
+  | "orderbook"
+  | "erc20"
+  | "erc721"
+  | "erc1155"
+  | "wyvern-v2";
 
-export const eventTypes: EventType[] = [
-  "orderbook_orders_posted",
-  "erc20_transfer",
-  "erc20_deposit",
-  "erc20_withdrawal",
-  "erc721_transfer",
-  "erc1155_transfer_single",
-  "erc1155_transfer_batch",
-  "wyvern_v2_order_cancelled",
-  "wyvern_v2_orders_matched",
+export const contractTypes: ContractType[] = [
+  "orderbook",
+  "erc20",
+  "erc721",
+  "erc1155",
+  "wyvern-v2",
 ];
 
-export const getEventInfo = (
-  eventType: EventType,
-  contracts: string[] = []
-): EventInfo => {
-  switch (eventType) {
-    case "orderbook_orders_posted": {
-      return orderbook.getOrdersPostedEventInfo(contracts);
+export const getContractInfo = (
+  contractType: ContractType,
+  address: string[] = []
+): ContractInfo => {
+  switch (contractType) {
+    case "orderbook": {
+      return orderbook.getContractInfo(address);
     }
-    case "erc20_transfer": {
-      return erc20.getTransferEventInfo(contracts);
+    case "erc20": {
+      return erc20.getContractInfo(address);
     }
-    case "erc20_deposit": {
-      return erc20.getDepositEventInfo(contracts);
+    case "erc721": {
+      return erc721.getContractInfo(address);
     }
-    case "erc20_withdrawal": {
-      return erc20.getWithdrawalEventInfo(contracts);
+    case "erc1155": {
+      return erc1155.getContractInfo(address);
     }
-    case "erc721_transfer": {
-      return erc721.getTransferEventInfo(contracts);
-    }
-    case "erc1155_transfer_single": {
-      return erc1155.getTransferSingleEventInfo(contracts);
-    }
-    case "erc1155_transfer_batch": {
-      return erc1155.getTransferBatchEventInfo(contracts);
-    }
-    case "wyvern_v2_order_cancelled": {
-      return wyvernV2.getOrderCancelledEventInfo(contracts);
-    }
-    case "wyvern_v2_orders_matched": {
-      return wyvernV2.getOrdersMatchedEventInfo(contracts);
+    case "wyvern-v2": {
+      return wyvernV2.getContractInfo(address);
     }
   }
 };

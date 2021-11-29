@@ -4,7 +4,7 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import { eventTypes } from "@/events/index";
+import { contractTypes } from "@/events/index";
 import { addToEventsSyncBackfillQueue } from "@/jobs/events-sync";
 
 export const postSyncEventsOptions: RouteOptions = {
@@ -15,9 +15,8 @@ export const postSyncEventsOptions: RouteOptions = {
       "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     payload: Joi.object({
-      eventTypes: Joi.array()
-        .items(Joi.string().valid(...eventTypes))
-        .min(1)
+      contractType: Joi.string()
+        .valid(...contractTypes)
         .required(),
       contracts: Joi.array().items(Joi.string().lowercase()).min(1).required(),
       fromBlock: Joi.number().integer().positive().required(),
@@ -33,7 +32,7 @@ export const postSyncEventsOptions: RouteOptions = {
     const payload = request.payload as any;
 
     try {
-      const eventTypes = payload.eventTypes;
+      const contractType = payload.contractType;
       const contracts = payload.contracts;
       const fromBlock = payload.fromBlock;
       const toBlock = payload.toBlock;
@@ -41,24 +40,20 @@ export const postSyncEventsOptions: RouteOptions = {
 
       const contractsData = require(`@/config/data/${config.chainId}/contracts`);
 
-      // Make sure the contracts requested to sync match the event types
-      for (const eventType of eventTypes) {
-        for (const contract of contracts) {
-          if (!contractsData[eventType].includes(contract)) {
-            throw Boom.badData(`Unknown contract ${contract}`);
-          }
+      // Make sure the contracts requested to sync match the contract type
+      for (const contract of contracts) {
+        if (!contractsData[contractType].includes(contract)) {
+          throw Boom.badData(`Unknown contract ${contract}`);
         }
       }
 
-      for (const eventType of eventTypes) {
-        await addToEventsSyncBackfillQueue(
-          eventType,
-          contracts,
-          fromBlock,
-          toBlock,
-          { blocksPerBatch }
-        );
-      }
+      await addToEventsSyncBackfillQueue(
+        contractType,
+        contracts,
+        fromBlock,
+        toBlock,
+        { blocksPerBatch }
+      );
 
       return { message: "Success" };
     } catch (error) {

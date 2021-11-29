@@ -3,7 +3,7 @@ import cron from "node-cron";
 import { logger } from "@/common/logger";
 import { acquireLock, releaseLock } from "@/common/redis";
 import { config } from "@/config/index";
-import { eventTypes } from "@/events/index";
+import { contractTypes } from "@/events/index";
 import { addToEventsSyncCatchupQueue } from "@/jobs/events-sync";
 
 // Every new block (approximately 15 seconds) there might be processes
@@ -18,8 +18,8 @@ if (config.doBackgroundWork) {
 
       try {
         // Sync events
-        for (const eventType of eventTypes) {
-          await addToEventsSyncCatchupQueue(eventType);
+        for (const contractType of contractTypes) {
+          await addToEventsSyncCatchupQueue(contractType);
         }
       } catch (error) {
         logger.error("catchup_cron", `Failed to catch up: ${error}`);

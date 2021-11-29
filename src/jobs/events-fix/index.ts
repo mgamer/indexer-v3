@@ -5,7 +5,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { acquireLock, releaseLock } from "@/common/redis";
 import { config } from "@/config/index";
-import { eventTypes, getEventInfo } from "@/events/index";
+import { contractTypes, getContractInfo } from "@/events/index";
 import { addToEventsSyncBackfillQueue } from "@/jobs/events-sync";
 
 // Since we're syncing events up to the head of the blockchain
@@ -85,27 +85,27 @@ if (config.doBackgroundWork) {
         }
 
         for (const [block, blockHash] of wrongBlocks.entries()) {
-          for (const eventType of eventTypes) {
+          for (const contractType of contractTypes) {
             // Skip fixing any events that are not synced from the
             // base network (eg. orderbook events)
-            const eventInfo = getEventInfo(eventType);
+            const contractInfo = getContractInfo(contractType);
             if (
-              eventInfo.provider._network.chainId !==
+              contractInfo.provider._network.chainId !==
               baseProvider._network.chainId
             ) {
               continue;
             }
 
             // Fix wrong event entries
-            await eventInfo.fixCallback(blockHash);
+            await contractInfo.fixCallback(blockHash);
 
             // Resync
             const contracts =
               require(`@/config/data/${config.chainId}/contracts.json`)[
-                eventType
+                contractType
               ];
             await addToEventsSyncBackfillQueue(
-              eventType,
+              contractType,
               contracts,
               block,
               block,

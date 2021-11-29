@@ -39,7 +39,7 @@ const checkBalance = async (order: EnhancedOrder) => {
     // For buy orders, we check that the maker has enough
     // balance of `paymentToken` (an erc20) to cover the
     // quoted price. The payment token will be weth for
-    // all orders.
+    // all orders in our case.
 
     const hasBalance = await db.oneOrNone(
       `
@@ -218,6 +218,9 @@ export const filterOrders = async (
 };
 
 export const saveOrders = async (orders: EnhancedOrder[]) => {
+  // TODO: The order inserts could do some batching in order
+  // to improve the performance
+
   if (!orders.length) {
     return;
   }

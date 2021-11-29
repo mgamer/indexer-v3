@@ -1,25 +1,15 @@
 {
-  "orderbook_orders_posted": [
+  "orderbook": [
     "0xf0e1e2e5bc49eb351280386a0129dd37145c60f6"
   ],
-  "erc20_transfer": [
+  "erc20": [
     "0xc778417e063141139fce010982780140aa0cd5ab"
   ],
-  "erc20_deposit": [
-    "0xc778417e063141139fce010982780140aa0cd5ab"
-  ],
-  "erc20_withdrawal": [
-    "0xc778417e063141139fce010982780140aa0cd5ab"
-  ],
-  "erc721_transfer": [
+  "erc721": [
     "0x79e2d470f950f2cf78eef41720e8ff2cf4b3cd78"
   ],
-  "erc1155_transfer_single": [],
-  "erc1155_transfer_batch": [],
-  "wyvern_v2_order_cancelled": [
-    "0x5206e78b21ce315ce284fb24cf05e0585a93b1d9"
-  ],
-  "wyvern_v2_orders_matched": [
+  "erc1155": [],
+  "wyvern-v2": [
     "0x5206e78b21ce315ce284fb24cf05e0585a93b1d9"
   ]
 }
