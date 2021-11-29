@@ -21,7 +21,7 @@ export const postSyncEventsOptions: RouteOptions = {
       contracts: Joi.array().items(Joi.string().lowercase()).min(1).required(),
       fromBlock: Joi.number().integer().positive().required(),
       toBlock: Joi.number().integer().positive().required(),
-      blocksPerBatch: Joi.number().integer().max(2000).positive(),
+      blocksPerBatch: Joi.number().integer().positive(),
     }),
   },
   handler: async (request: Request) => {
@@ -43,7 +43,9 @@ export const postSyncEventsOptions: RouteOptions = {
       // Make sure the contracts requested to sync match the contract type
       for (const contract of contracts) {
         if (!contractsData[contractType].includes(contract)) {
-          throw Boom.badData(`Unknown contract ${contract}`);
+          throw Boom.badData(
+            `Unknown contract ${contract} of type ${contractType}`
+          );
         }
       }
 
