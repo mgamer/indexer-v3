@@ -21,7 +21,7 @@ export const postSyncEventsOptions: RouteOptions = {
       contracts: Joi.array().items(Joi.string().lowercase()).min(1).required(),
       fromBlock: Joi.number().integer().positive().required(),
       toBlock: Joi.number().integer().positive().required(),
-      blocksPerBatch: Joi.number().integer().positive(),
+      blocksPerBatch: Joi.number().integer().max(2000).positive(),
     }),
   },
   handler: async (request: Request) => {
