@@ -20,7 +20,7 @@ export const getTransfersOptions: RouteOptions = {
       account: Joi.string().lowercase(),
       direction: Joi.string().lowercase().valid("from", "to").when("account", {
         is: Joi.exist(),
-        then: Joi.allow(),
+        then: Joi.optional(),
         otherwise: Joi.forbidden(),
       }),
       type: Joi.string().lowercase().valid("transfer", "sale"),

@@ -14,7 +14,7 @@ export const getTokensOptions: RouteOptions = {
         .pattern(/^[0-9]+$/)
         .when("contract", {
           is: Joi.exist(),
-          then: Joi.allow(),
+          then: Joi.optional(),
           otherwise: Joi.forbidden(),
         }),
       owner: Joi.string().lowercase(),
