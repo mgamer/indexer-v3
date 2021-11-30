@@ -26,9 +26,7 @@ export const getTokensOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const tokens = await getTokens(query as GetTokensFilter).catch((error) =>
-        console.log(error)
-      );
+      const tokens = await getTokens(query as GetTokensFilter);
 
       return { tokens };
     } catch (error) {

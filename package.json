@@ -20,6 +20,7 @@
     "@hapi/hapi": "^20.0.0",
     "@hapi/inert": "^6.0.4",
     "@hapi/vision": "^6.1.0",
+    "axios": "^0.24.0",
     "bullmq": "^1.52.2",
     "coralogix-logger": "^1.1.28",
     "dotenv": "^10.0.0",
