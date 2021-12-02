@@ -20,7 +20,6 @@ export const acquireLock = async (
   lockIds.set(name, id);
 
   const acquired = await redis.set(name, id, "EX", expirationInSeconds, "NX");
-  logger.info("redis", `${acquired === "OK"} ${name} acquired`);
   return acquired === "OK";
 };
 
