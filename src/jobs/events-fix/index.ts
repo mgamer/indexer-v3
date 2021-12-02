@@ -19,7 +19,8 @@ import { addToEventsSyncBackfillQueue } from "@/jobs/events-sync";
 
 if (config.doBackgroundWork) {
   cron.schedule("*/1 * * * *", async () => {
-    if (await acquireLock("events_fix_lock", 55)) {
+    const lockAcquired = await acquireLock("events_fix_lock", 55);
+    if (lockAcquired) {
       logger.info("events_fix_cron", "Checking events");
 
       try {

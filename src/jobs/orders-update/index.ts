@@ -337,7 +337,8 @@ if (config.doBackgroundWork) {
 if (config.doBackgroundWork) {
   if (config.acceptOrders) {
     cron.schedule("*/1 * * * *", async () => {
-      if (await acquireLock("expired_orders_lock", 55)) {
+      const lockAcquired = await acquireLock("expired_orders_lock", 55);
+      if (lockAcquired) {
         logger.info("expired_orders_cron", "Invalidating expired orders");
 
         try {
