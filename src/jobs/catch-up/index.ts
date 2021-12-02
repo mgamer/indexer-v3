@@ -15,7 +15,10 @@ if (config.doBackgroundWork) {
   cron.schedule("*/15 * * * * *", async () => {
     const lockAcquired = await acquireLock("catchup_lock", 10);
     if (lockAcquired) {
-      logger.info("catchup_cron", "Catching up");
+      logger.info(
+        "catchup_cron",
+        "Catching up" + " " + new Date().toUTCString()
+      );
 
       try {
         // Sync events
