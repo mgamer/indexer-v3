@@ -3,7 +3,7 @@ import cron from "node-cron";
 import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { acquireLock, releaseLock } from "@/common/redis";
+import { acquireLock } from "@/common/redis";
 import { config } from "@/config/index";
 import { contractTypes, getContractInfo } from "@/events/index";
 import { addToEventsSyncBackfillQueue } from "@/jobs/events-sync";
@@ -115,8 +115,6 @@ if (config.doBackgroundWork) {
         }
       } catch (error) {
         logger.error("events_fix_cron", `Failed to fix events: ${error}`);
-      } finally {
-        await releaseLock("events_fix_lock");
       }
     }
   });

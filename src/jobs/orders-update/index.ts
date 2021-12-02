@@ -4,7 +4,7 @@ import cron from "node-cron";
 
 import { db, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
-import { acquireLock, redis, releaseLock } from "@/common/redis";
+import { acquireLock, redis } from "@/common/redis";
 import { config } from "@/config/index";
 
 // Whenever an order changes its state (eg. a new order comes in,
@@ -356,8 +356,6 @@ if (config.doBackgroundWork) {
             "expired_orders_cron",
             `Failed to handle expired orders: ${error}`
           );
-        } finally {
-          await releaseLock("expired_orders_lock");
         }
       }
     });

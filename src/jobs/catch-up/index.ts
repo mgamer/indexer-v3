@@ -1,7 +1,7 @@
 import cron from "node-cron";
 
 import { logger } from "@/common/logger";
-import { acquireLock, releaseLock } from "@/common/redis";
+import { acquireLock } from "@/common/redis";
 import { config } from "@/config/index";
 import { contractTypes } from "@/events/index";
 import { addToEventsSyncCatchupQueue } from "@/jobs/events-sync";
@@ -23,8 +23,6 @@ if (config.doBackgroundWork) {
         }
       } catch (error) {
         logger.error("catchup_cron", `Failed to catch up: ${error}`);
-      } finally {
-        await releaseLock("catchup_lock");
       }
     }
   });
