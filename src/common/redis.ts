@@ -1,6 +1,7 @@
 import Redis from "ioredis";
 import { v4 as uuidv4 } from "uuid";
 
+import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 
 export const redis = new Redis(config.redisUrl, {
@@ -19,7 +20,7 @@ export const acquireLock = async (
   lockIds.set(name, id);
 
   const acquired = await redis.set(name, id, "EX", expirationInSeconds, "NX");
-  if (name === "catchup_lock") console.log("acquired", acquired === "OK");
+  logger.info("redis", `${acquired === "OK"} ${name} acquired`);
   return acquired === "OK";
 };
 
