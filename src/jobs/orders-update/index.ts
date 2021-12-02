@@ -45,6 +45,13 @@ export type HashInfo = {
 };
 
 export const addToOrdersUpdateByHashQueue = async (hashInfos: HashInfo[]) => {
+  // Ignore null hashes
+  hashInfos = hashInfos.filter(
+    ({ hash }) =>
+      hash !==
+      "0x0000000000000000000000000000000000000000000000000000000000000000"
+  );
+
   await byHashQueue.addBulk(
     hashInfos.map((hashInfo) => ({
       name: hashInfo.hash,

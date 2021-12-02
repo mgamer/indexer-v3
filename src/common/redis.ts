@@ -18,7 +18,7 @@ export const acquireLock = async (
   const id = uuidv4();
   lockIds.set(name, id);
 
-  const acquired = await redis.set(name, id, "ex", expirationInSeconds, "nx");
+  const acquired = await redis.set(name, id, "EX", expirationInSeconds, "NX");
   return acquired === "OK";
 };
 
