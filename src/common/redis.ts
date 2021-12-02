@@ -19,6 +19,7 @@ export const acquireLock = async (
   lockIds.set(name, id);
 
   const acquired = await redis.set(name, id, "EX", expirationInSeconds, "NX");
+  if (name === "catchup_lock") console.log("acquired", acquired === "OK");
   return acquired === "OK";
 };
 
