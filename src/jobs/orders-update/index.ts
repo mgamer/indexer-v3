@@ -60,6 +60,7 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { hash } = job.data;
 
+      console.time(`Handling ${hash}`);
       try {
         // Get all tokens targeted by the order
         const data: { side: string; contract: string; tokenId: string }[] =
@@ -174,6 +175,8 @@ if (config.doBackgroundWork) {
       } catch (error) {
         logger.error(BY_HASH_JOB_NAME, `Failed to handle ${hash}: ${error}`);
       }
+
+      console.timeEnd(`Handling ${hash}`);
     },
     { connection: redis }
   );
@@ -225,6 +228,7 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { side, maker, contract, tokenId } = job.data;
 
+      console.time(`Handling ${side} ${maker}`);
       try {
         if (side === "buy") {
           const hashes: { hash: string }[] = await db.manyOrNone(
@@ -307,6 +311,8 @@ if (config.doBackgroundWork) {
           `Failed to handle { ${side}, ${maker}, ${contract}, ${tokenId} }: ${error}`
         );
       }
+
+      console.timeEnd(`Handling ${side} ${maker}`);
     },
     { connection: redis }
   );
