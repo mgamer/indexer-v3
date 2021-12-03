@@ -8,8 +8,8 @@ import { config } from "@/config/index";
 import { GetOrdersFilter, getOrders } from "@/entities/orders";
 import { filterOrders, parseApiOrder, saveOrders } from "@/orders/wyvern-v2";
 
-export const postOrdersOptions: RouteOptions = {
-  description: "Post new orders",
+export const postWyvernV2OrdersOptions: RouteOptions = {
+  description: "Post new Wyvern V2 orders",
   tags: ["api"],
   validate: {
     payload: Joi.object().keys({
@@ -102,7 +102,6 @@ export const getOrdersOptions: RouteOptions = {
 
     try {
       const orders = await getOrders(query as GetOrdersFilter);
-
       return { orders };
     } catch (error) {
       logger.error("get_orders_handler", `Handler failure: ${error}`);

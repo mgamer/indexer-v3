@@ -33,7 +33,6 @@ export const getTransfersOptions: RouteOptions = {
 
     try {
       const transfers = await getTransfers(query as GetTransfersFilter);
-
       return { transfers };
     } catch (error) {
       logger.error("get_transfers_handler", `Handler failure: ${error}`);

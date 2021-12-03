@@ -27,8 +27,8 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/orders",
-    options: ordersEndpoints.postOrdersOptions,
+    path: "/orders/wyvern-v2",
+    options: ordersEndpoints.postWyvernV2OrdersOptions,
   });
 
   server.route({
@@ -43,6 +43,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/tokens",
     options: tokensEndpoints.getTokensOptions,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/owners",
+    options: tokensEndpoints.getTokenOwnersOptions,
   });
 
   // Transfers
