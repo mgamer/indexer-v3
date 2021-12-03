@@ -67,15 +67,15 @@ export const getTokenOwners = async (filter: GetTokensFilter) => {
   let baseQuery = `
     select
       "t"."contract",
-      "t"."token_id" as "tokenId"
-      "ow"."amount"
+      "t"."token_id" as "tokenId",
+      "o"."amount"
     from "tokens" "t"
     join "contracts" "c"
       on "t"."contract" = "c"."address"
-    join "ownerships" "ow"
+    join "ownerships" "o"
       on "t"."contract" = "o"."contract"
       and "t"."token_id" = "o"."token_id"
-      and "ow"."amount" > 0
+      and "o"."amount" > 0
   `;
 
   const conditions: string[] = [];
