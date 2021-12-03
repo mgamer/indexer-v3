@@ -14,7 +14,7 @@ export const getTokensOptions: RouteOptions = {
         .pattern(/^[0-9]+$/)
         .when("contract", {
           is: Joi.exist(),
-          then: Joi.optional(),
+          then: Joi.required(),
           otherwise: Joi.forbidden(),
         }),
       owner: Joi.string().lowercase(),
@@ -26,9 +26,7 @@ export const getTokensOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const tokens = await getTokens(query as GetTokensFilter).catch((error) =>
-        console.log(error)
-      );
+      const tokens = await getTokens(query as GetTokensFilter);
 
       return { tokens };
     } catch (error) {

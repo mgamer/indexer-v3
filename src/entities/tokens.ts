@@ -32,6 +32,15 @@ export const getTokens = async (filter: GetTokensFilter) => {
     `;
   }
 
+  const conditions: string[] = [];
+  if (filter.tokenId) {
+    conditions.push(`"t"."token_id" = $/tokenId/`);
+  }
+
+  if (conditions.length) {
+    baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
+  }
+
   baseQuery += ` order by "t"."floor_sell_value" asc nulls last`;
 
   baseQuery += ` offset $/offset/`;
