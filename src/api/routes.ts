@@ -51,6 +51,12 @@ export const setupRoutes = (server: Server) => {
     options: tokensEndpoints.getTokenOwnersOptions,
   });
 
+  server.route({
+    method: "GET",
+    path: "/stats",
+    options: tokensEndpoints.getTokenStatsOptions,
+  });
+
   // Transfers
 
   server.route({
