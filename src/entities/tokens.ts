@@ -17,7 +17,7 @@ export const getTokens = async (filter: GetTokensFilter) => {
       "t"."token_id" as "tokenId",
       "ct"."kind",
       "t"."name",
-      "t"."image"
+      "t"."image",
       "cl"."id",
       "cl"."name",
       "t"."floor_sell_hash" as "floorSellHash",
