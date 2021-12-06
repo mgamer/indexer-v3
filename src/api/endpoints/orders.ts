@@ -98,10 +98,11 @@ export const getOrdersOptions: RouteOptions = {
           otherwise: Joi.forbidden(),
         }),
       maker: Joi.string().lowercase(),
+      hash: Joi.string().lowercase(),
       side: Joi.string().lowercase().valid("sell", "buy").required(),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
-    }).or("contract", "maker"),
+    }).or("contract", "maker", "hash"),
   },
   handler: async (request: Request) => {
     const query = request.query as any;

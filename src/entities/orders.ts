@@ -4,6 +4,7 @@ export type GetOrdersFilter = {
   contract?: string;
   tokenId?: string;
   maker?: string;
+  hash?: string;
   side: "sell" | "buy";
   offset: number;
   limit: number;
@@ -37,6 +38,9 @@ export const getOrders = async (filter: GetOrdersFilter) => {
   }
   if (filter.maker) {
     conditions.push(`"o"."maker" = $/maker/`);
+  }
+  if (filter.hash) {
+    conditions.push(`"o"."hash" = $/hash/`);
   }
   if (filter.side === "buy") {
     conditions.push(`"o"."side" = 'buy'`);

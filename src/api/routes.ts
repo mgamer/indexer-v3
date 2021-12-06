@@ -65,6 +65,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/fill",
+    options: tokensEndpoints.getTokenFillOptions,
+  });
+
+  server.route({
+    method: "GET",
     path: "/owners",
     options: tokensEndpoints.getTokenOwnersOptions,
   });

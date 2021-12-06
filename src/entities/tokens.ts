@@ -30,6 +30,8 @@ export const getTokens = async (filter: GetTokensFilter) => {
     join "contracts" "ct"
       on "t"."contract" = "ct"."address"
   `;
+
+  // Conditional joins
   if (filter.owner) {
     baseQuery += `
       join "ownerships" "o"
@@ -80,6 +82,56 @@ export const getTokens = async (filter: GetTokensFilter) => {
   baseQuery += ` limit $/limit/`;
 
   return db.manyOrNone(baseQuery, filter);
+};
+
+export type GetTokenFillFilter = {
+  contract?: string;
+  tokenId?: string;
+  side?: "buy" | "sell";
+  offset: number;
+  limit: number;
+};
+
+export const getTokenFill = async (filter: GetTokenFillFilter) => {
+  let baseQuery = `
+    select
+      "o"."hash",
+      "o"."kind",
+      "o"."side",
+      "o"."maker",
+      "o"."price",
+      "o"."value",
+      "o"."raw_data" as "rawData"
+    from "tokens" "t"
+  `;
+
+  // Conditional joins
+  filter.side = filter.side ?? "sell";
+  if (filter.side === "buy") {
+    baseQuery += `
+      join "orders" "o"
+        on "t"."top_buy_hash" = "o"."hash"
+    `;
+  } else if (filter.side === "sell") {
+    baseQuery += `
+      join "orders" "o"
+        on "t"."floor_sell_hash" = "o"."hash"
+    `;
+  }
+
+  // Filters
+  const conditions: string[] = [];
+  if (filter.contract) {
+    conditions.push(`"t"."contract" = $/contract/`);
+  }
+  if (filter.tokenId) {
+    conditions.push(`"t"."token_id" = $/tokenId/`);
+  }
+  if (conditions.length) {
+    baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
+  }
+
+  return db.oneOrNone(baseQuery, filter);
 };
 
 export type GetTokenStatsFilter = {
