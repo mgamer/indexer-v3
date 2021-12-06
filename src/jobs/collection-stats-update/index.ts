@@ -11,6 +11,7 @@ import { db } from "@/common/db";
 // the queries every time we need the results (and we need
 // them quite often in the collections APIs).
 
+// Actual work is to be handled by background worker processes
 if (config.doBackgroundWork) {
   cron.schedule("*/5 * * * *", async () => {
     const lockAcquired = await acquireLock("collection_stats_update_lock", 295);

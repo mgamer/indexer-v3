@@ -4,7 +4,7 @@ import cron from "node-cron";
 
 import { db, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
-import { acquireLock, redis, releaseLock } from "@/common/redis";
+import { acquireLock, redis } from "@/common/redis";
 import { Token } from "@/common/types";
 import { config } from "@/config/index";
 
@@ -216,7 +216,8 @@ if (config.doBackgroundWork) {
 // Actual work is to be handled by background worker processes
 if (config.doBackgroundWork) {
   cron.schedule("*/30 * * * * *", async () => {
-    if (await acquireLock("metadata_index_lock", 25)) {
+    const lockAcquired = await acquireLock("metadata_index_lock", 25);
+    if (lockAcquired) {
       logger.info("metadata_index_cron", "Indexing missing metadata");
 
       try {
@@ -263,8 +264,6 @@ if (config.doBackgroundWork) {
           "metadata_index_cron",
           `Failed to trigger metadata indexing: ${error}`
         );
-      } finally {
-        await releaseLock("metadata_index_lock");
       }
     }
   });
