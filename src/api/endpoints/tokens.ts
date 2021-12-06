@@ -9,6 +9,7 @@ export const getTokensOptions: RouteOptions = {
   tags: ["api"],
   validate: {
     query: Joi.object({
+      collection: Joi.string().lowercase(),
       contract: Joi.string().lowercase(),
       tokenId: Joi.string()
         .pattern(/^[0-9]+$/)
@@ -18,9 +19,16 @@ export const getTokensOptions: RouteOptions = {
           otherwise: Joi.forbidden(),
         }),
       owner: Joi.string().lowercase(),
+      attributes: Joi.object().unknown().when("collection", {
+        is: Joi.exist(),
+        then: Joi.optional(),
+        otherwise: Joi.forbidden(),
+      }),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
-    }).xor("contract"),
+    })
+      .oxor("collection", "contract")
+      .or("collection", "contract", "owner"),
   },
   handler: async (request: Request) => {
     const query = request.query as any;
@@ -40,6 +48,7 @@ export const getTokenOwnersOptions: RouteOptions = {
   tags: ["api"],
   validate: {
     query: Joi.object({
+      collection: Joi.string().lowercase(),
       contract: Joi.string().lowercase(),
       tokenId: Joi.string()
         .pattern(/^[0-9]+$/)
@@ -49,9 +58,16 @@ export const getTokenOwnersOptions: RouteOptions = {
           otherwise: Joi.forbidden(),
         }),
       owner: Joi.string().lowercase(),
+      attributes: Joi.object().unknown().when("collection", {
+        is: Joi.exist(),
+        then: Joi.optional(),
+        otherwise: Joi.forbidden(),
+      }),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
-    }).xor("contract"),
+    })
+      .oxor("collection", "contract")
+      .or("collection", "contract", "owner"),
   },
   handler: async (request: Request) => {
     const query = request.query as any;
@@ -73,10 +89,25 @@ export const getTokenStatsOptions: RouteOptions = {
   tags: ["api"],
   validate: {
     query: Joi.object({
+      collection: Joi.string().lowercase(),
       contract: Joi.string().lowercase(),
+      tokenId: Joi.string()
+        .pattern(/^[0-9]+$/)
+        .when("contract", {
+          is: Joi.exist(),
+          then: Joi.required(),
+          otherwise: Joi.forbidden(),
+        }),
+      attributes: Joi.object().unknown().when("collection", {
+        is: Joi.exist(),
+        then: Joi.optional(),
+        otherwise: Joi.forbidden(),
+      }),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
-    }).xor("contract"),
+    })
+      .oxor("collection", "contract")
+      .or("collection", "contract"),
   },
   handler: async (request: Request) => {
     const query = request.query as any;

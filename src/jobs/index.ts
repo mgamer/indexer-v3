@@ -1,6 +1,7 @@
 // Initialize all background jobs/processes
 
 import "@/jobs/catch-up";
+import "@/jobs/collection-stats-update";
 import "@/jobs/events-fix";
 import "@/jobs/events-sync";
 import "@/jobs/metadata-index";

@@ -6,6 +6,7 @@ export type GetTransfersFilter = {
   account?: string;
   direction?: "from" | "to";
   type?: "transfer" | "sale";
+  attributes?: { [key: string]: string };
   offset: number;
   limit: number;
 };
@@ -47,6 +48,21 @@ export const getTransfers = async (filter: GetTransfersFilter) => {
     conditions.push(`"fe"."price" is null`);
   } else if (filter.type === "sale") {
     conditions.push(`"fe"."price" is not null`);
+  }
+  if (filter.attributes) {
+    Object.entries(filter.attributes).forEach(([key, value], i) => {
+      conditions.push(`
+        exists(
+          select from "attributes" "a"
+          where "a"."contract" = "nte"."address"
+            and "a"."token_id" = "nte"."token_id"
+            and "a"."key" = $/key${i}/
+            and "a"."value" = $/value${i}/
+        )
+      `);
+      (filter as any)[`key${i}`] = key;
+      (filter as any)[`value${i}`] = value;
+    });
   }
 
   if (conditions.length) {
