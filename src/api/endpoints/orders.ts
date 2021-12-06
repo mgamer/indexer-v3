@@ -5,11 +5,11 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import { GetOrdersFilter, getOrders } from "@/entities/orders";
-import { filterOrders, parseApiOrder, saveOrders } from "@/orders/wyvern-v2";
+import * as queries from "@/entities/orders";
+import * as wyvernV2 from "@/orders/wyvern-v2";
 
-export const postOrdersOptions: RouteOptions = {
-  description: "Post new orders",
+export const postWyvernV2OrdersOptions: RouteOptions = {
+  description: "Post Wyvern V2 orders",
   tags: ["api"],
   validate: {
     payload: Joi.object().keys({
@@ -54,7 +54,7 @@ export const postOrdersOptions: RouteOptions = {
 
       const parsedOrders: Order[] = [];
       for (const order of orders) {
-        const parsedOrder = parseApiOrder(order);
+        const parsedOrder = wyvernV2.parseApiOrder(order);
         if (parsedOrder) {
           parsedOrders.push(parsedOrder);
         }
@@ -64,11 +64,11 @@ export const postOrdersOptions: RouteOptions = {
         throw Boom.badRequest("One or more orders are invalid");
       }
 
-      const filteredOrders = await filterOrders(parsedOrders);
+      const filteredOrders = await wyvernV2.filterOrders(parsedOrders);
       if (filteredOrders.length < orders.length) {
         throw Boom.badData("One or more orders are invalid");
       }
-      await saveOrders(filteredOrders);
+      await wyvernV2.saveOrders(filteredOrders);
 
       return { message: "Success" };
     } catch (error) {
@@ -101,8 +101,7 @@ export const getOrdersOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const orders = await getOrders(query as GetOrdersFilter);
-
+      const orders = await queries.getOrders(query as queries.GetOrdersFilter);
       return { orders };
     } catch (error) {
       logger.error("get_orders_handler", `Handler failure: ${error}`);
