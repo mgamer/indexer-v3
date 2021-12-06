@@ -17,6 +17,10 @@ export const getTransfers = async (filter: GetTransfersFilter) => {
     select
       "nte"."address" as "contract",
       "nte"."token_id" as "tokenId",
+      "t"."name" as "tokenName",
+      "t"."image" as "tokenImage",
+      "t"."collection_id" as "collection",
+      "c"."collection_name" as "collectionName",
       "nte"."from",
       "nte"."to",
       "nte"."amount",
@@ -27,6 +31,8 @@ export const getTransfers = async (filter: GetTransfersFilter) => {
     join "tokens" "t"
       on "nte"."address" = "t"."contract"
       and "nte"."token_id" = "t"."token_id"
+    join "collections" "c"
+      on "t"."collection_id" = "c"."id"
     left join "fill_events" "fe"
       on "nte"."tx_hash" = "fe"."tx_hash"
       and "nte"."from" = "fe"."maker"
