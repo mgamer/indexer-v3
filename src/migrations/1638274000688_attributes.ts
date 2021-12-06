@@ -32,10 +32,10 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
 
   pgm.addColumns("collections", {
     filterable_attribute_keys: {
-      type: "text[]",
+      type: "jsonb",
     },
     sortable_attribute_keys: {
-      type: "text[]",
+      type: "jsonb",
     },
   });
 

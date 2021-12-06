@@ -56,6 +56,8 @@ if (config.doBackgroundWork) {
           royaltyBps: number;
           royaltyRecipient?: string;
           community: string;
+          filters?: any;
+          sort?: any;
         };
         name: string;
         description: string;
@@ -63,7 +65,7 @@ if (config.doBackgroundWork) {
         attributes: {
           key: string;
           value: string;
-          kind: "number" | "string";
+          kind?: "number" | "string";
         }[];
       };
 
@@ -84,7 +86,9 @@ if (config.doBackgroundWork) {
               "image",
               "royalty_bps",
               "royalty_recipient",
-              "community"
+              "community",
+              "filterable_attribute_keys",
+              "sortable_attribute_keys"
             ) values (
               $/id/,
               $/name/,
@@ -92,8 +96,19 @@ if (config.doBackgroundWork) {
               $/image/,
               $/royaltyBps/,
               $/royaltyRecipient/,
-              $/community/
-            ) on conflict do nothing
+              $/community/,
+              $/filterableAttributeKeys:json/,
+              $/sortableAttributeKeys:json/
+            ) on conflict ("id") do
+            update set
+              "name" = $/name/,
+              "description" = $/description/,
+              "image" = $/image/,
+              "royalty_bps" = $/royaltyBps/,
+              "royalty_recipient" = $/royaltyRecipient/,
+              "community" = $/community/,
+              "filterable_attribute_keys" = $/filterableAttributeKeys:json/,
+              "sortable_attribute_keys" = $/sortableAttributeKeys:json/
           `,
           values: {
             id: data.collection.id,
@@ -103,6 +118,8 @@ if (config.doBackgroundWork) {
             royaltyBps: data.collection.royaltyBps,
             royaltyRecipient: data.collection.royaltyRecipient,
             community: data.collection.community,
+            filterableAttributeKeys: data.collection.filters,
+            sortableAttributeKeys: data.collection.sort,
           },
         });
 
@@ -129,39 +146,44 @@ if (config.doBackgroundWork) {
 
         // Save token attribute metadata
         const attributeValues: any[] = [];
-        for (const { key, value } of data.attributes) {
+        for (const { key, value, kind } of data.attributes) {
           attributeValues.push({
             contract,
             token_id: tokenId,
             key,
             value,
+            // TODO: Defaulting to `string` should be done at the database level
+            kind: kind || "string",
           });
         }
         if (attributeValues.length) {
           const columns = new pgp.helpers.ColumnSet(
-            ["contract", "token_id", "key", "value"],
+            ["contract", "token_id", "key", "value", "kind"],
             { table: "attributes" }
           );
           const values = pgp.helpers.values(attributeValues, columns);
           queries.push({
             query: `
-              with "x" as (
-                delete from "attributes"
-                where "contract" = $/contract/
-                  and "token_id" = $/tokenId/
-              )
-              insert into "attributes" (
-                "contract",
-                "token_id",
-                "key",
-                "value"
-              ) values ${values}
-              on conflict do nothing
+              delete from "attributes"
+              where "contract" = $/contract/
+                and "token_id" = $/tokenId/
             `,
             values: {
               contract,
               tokenId,
             },
+          });
+          queries.push({
+            query: `
+              insert into "attributes" (
+                "contract",
+                "token_id",
+                "key",
+                "value",
+                "kind"
+              ) values ${values}
+              on conflict do nothing
+            `,
           });
         }
 

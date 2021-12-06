@@ -29,6 +29,8 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     primaryKey: ["id"],
   });
 
+  pgm.addIndex("collections", ["community"]);
+
   pgm.addColumns("tokens", {
     name: {
       type: "text",
@@ -51,6 +53,8 @@ export async function down(pgm: MigrationBuilder): Promise<void> {
   pgm.dropIndex("tokens", ["collection_id"]);
 
   pgm.dropColumns("tokens", ["name", "description", "image", "collection_id"]);
+
+  pgm.dropIndex("collections", ["community"]);
 
   pgm.dropTable("collections");
 }
