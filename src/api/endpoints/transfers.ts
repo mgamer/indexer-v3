@@ -24,7 +24,7 @@ export const getTransfersOptions: RouteOptions = {
         then: Joi.optional(),
         otherwise: Joi.forbidden(),
       }),
-      type: Joi.string().lowercase().valid("transfer", "sale"),
+      type: Joi.string().lowercase().valid("sale", "transfer"),
       attributes: Joi.object().unknown().when("collection", {
         is: Joi.exist(),
         then: Joi.optional(),

@@ -30,7 +30,6 @@ export const getTokens = async (filter: GetTokensFilter) => {
     join "contracts" "ct"
       on "t"."contract" = "ct"."address"
   `;
-
   if (filter.owner) {
     baseQuery += `
       join "ownerships" "o"
@@ -40,6 +39,7 @@ export const getTokens = async (filter: GetTokensFilter) => {
     `;
   }
 
+  // Filters
   const conditions: string[] = [];
   if (filter.collection) {
     conditions.push(`"t"."collection_id" = $/collection/`);
@@ -68,13 +68,14 @@ export const getTokens = async (filter: GetTokensFilter) => {
       (filter as any)[`value${i}`] = value;
     });
   }
-
   if (conditions.length) {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
 
+  // Sorting
   baseQuery += ` order by "t"."floor_sell_value" asc nulls last`;
 
+  // Pagination
   baseQuery += ` offset $/offset/`;
   baseQuery += ` limit $/limit/`;
 
@@ -107,6 +108,7 @@ export const getTokenStats = async (filter: GetTokenStatsFilter) => {
       and "o"."amount" > 0
   `;
 
+  // Filters
   const conditions: string[] = [];
   if (filter.collection) {
     conditions.push(`"t"."collection_id" = $/collection/`);
@@ -137,7 +139,6 @@ export const getTokenStats = async (filter: GetTokenStatsFilter) => {
       (filter as any)[`value${i}`] = value;
     });
   }
-
   if (conditions.length) {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
@@ -169,6 +170,7 @@ export const getTokenOwners = async (filter: GetTokenOwnersFilter) => {
       and "o"."amount" > 0
   `;
 
+  // Filters
   const conditions: string[] = [];
   if (filter.collection) {
     conditions.push(`"t"."collection_id" = $/collection/`);
@@ -197,13 +199,14 @@ export const getTokenOwners = async (filter: GetTokenOwnersFilter) => {
       (filter as any)[`value${i}`] = value;
     });
   }
-
   if (conditions.length) {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
 
+  // Sorting
   baseQuery += ` order by "o"."amount" desc nulls last`;
 
+  // Pagination
   baseQuery += ` offset $/offset/`;
   baseQuery += ` limit $/limit/`;
 

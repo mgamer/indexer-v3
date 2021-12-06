@@ -1,11 +1,12 @@
 import { db } from "@/common/db";
 
 export type GetTransfersFilter = {
+  collection?: string;
   contract?: string;
   tokenId?: string;
   account?: string;
   direction?: "from" | "to";
-  type?: "transfer" | "sale";
+  type?: "sale" | "transfer";
   attributes?: { [key: string]: string };
   offset: number;
   limit: number;
@@ -23,12 +24,19 @@ export const getTransfers = async (filter: GetTransfersFilter) => {
       "nte"."block",
       "fe"."price"
     from "nft_transfer_events" "nte"
+    join "tokens" "t"
+      on "nte"."address" = "t"."contract"
+      and "nte"."token_id" = "t"."token_id"
     left join "fill_events" "fe"
       on "nte"."tx_hash" = "fe"."tx_hash"
       and "nte"."from" = "fe"."maker"
   `;
 
+  // Filters
   const conditions: string[] = [];
+  if (filter.collection) {
+    conditions.push(`"t"."collection_id" = $/collection/`);
+  }
   if (filter.contract) {
     conditions.push(`"nte"."address" = $/contract/`);
   }
@@ -64,13 +72,14 @@ export const getTransfers = async (filter: GetTransfersFilter) => {
       (filter as any)[`value${i}`] = value;
     });
   }
-
   if (conditions.length) {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
 
+  // Sorting
   baseQuery += ` order by "nte"."block" desc`;
 
+  // Pagination
   baseQuery += ` offset $/offset/`;
   baseQuery += ` limit $/limit/`;
 

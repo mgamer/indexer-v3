@@ -8,36 +8,42 @@ import { config } from "@/config/index";
 import * as queries from "@/entities/orders";
 import * as wyvernV2 from "@/orders/wyvern-v2";
 
-export const postWyvernV2OrdersOptions: RouteOptions = {
-  description: "Post Wyvern V2 orders",
+export const postOrdersOptions: RouteOptions = {
+  description: "Post orders",
   tags: ["api"],
   validate: {
     payload: Joi.object().keys({
       orders: Joi.array().items(
         Joi.object().keys({
-          exchange: Joi.string().required(),
-          maker: Joi.string().required(),
-          taker: Joi.string().required(),
-          makerRelayerFee: Joi.string().required(),
-          takerRelayerFee: Joi.string().required(),
-          feeRecipient: Joi.string().required(),
-          side: Joi.number().valid(0, 1).required(),
-          saleKind: Joi.number().valid(0, 1).required(),
-          target: Joi.string().required(),
-          howToCall: Joi.number().valid(0, 1).required(),
-          calldata: Joi.string().required(),
-          replacementPattern: Joi.string().required(),
-          staticTarget: Joi.string().required(),
-          staticExtradata: Joi.string().required(),
-          paymentToken: Joi.string().required(),
-          basePrice: Joi.string().required(),
-          extra: Joi.string().required(),
-          listingTime: Joi.string().required(),
-          expirationTime: Joi.string().required(),
-          salt: Joi.string().required(),
-          v: Joi.number().required(),
-          r: Joi.string().required(),
-          s: Joi.string().required(),
+          kind: Joi.string().lowercase().valid("wyvern-v2").required(),
+          data: Joi.object().when("kind", {
+            is: "wyvern-v2",
+            then: Joi.object({
+              exchange: Joi.string().required(),
+              maker: Joi.string().required(),
+              taker: Joi.string().required(),
+              makerRelayerFee: Joi.string().required(),
+              takerRelayerFee: Joi.string().required(),
+              feeRecipient: Joi.string().required(),
+              side: Joi.number().valid(0, 1).required(),
+              saleKind: Joi.number().valid(0, 1).required(),
+              target: Joi.string().required(),
+              howToCall: Joi.number().valid(0, 1).required(),
+              calldata: Joi.string().required(),
+              replacementPattern: Joi.string().required(),
+              staticTarget: Joi.string().required(),
+              staticExtradata: Joi.string().required(),
+              paymentToken: Joi.string().required(),
+              basePrice: Joi.string().required(),
+              extra: Joi.string().required(),
+              listingTime: Joi.string().required(),
+              expirationTime: Joi.string().required(),
+              salt: Joi.string().required(),
+              v: Joi.number().required(),
+              r: Joi.string().required(),
+              s: Joi.string().required(),
+            }),
+          }),
         })
       ),
     }),

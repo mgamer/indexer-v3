@@ -1,6 +1,7 @@
 import { Server } from "@hapi/hapi";
 
 import * as adminEndpoints from "@/api/endpoints/admin";
+import * as attributesEndpoints from "@/api/endpoints/attributes";
 import * as collectionsEndpoints from "@/api/endpoints/collections";
 import * as ordersEndpoints from "@/api/endpoints/orders";
 import * as rootEndpoints from "@/api/endpoints/root";
@@ -24,6 +25,14 @@ export const setupRoutes = (server: Server) => {
     options: adminEndpoints.postSyncEventsOptions,
   });
 
+  // Attributes
+
+  server.route({
+    method: "GET",
+    path: "/attributes",
+    options: attributesEndpoints.getAttributesOptions,
+  });
+
   // Collections
 
   server.route({
@@ -36,8 +45,8 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/orders/wyvern-v2",
-    options: ordersEndpoints.postWyvernV2OrdersOptions,
+    path: "/orders",
+    options: ordersEndpoints.postOrdersOptions,
   });
 
   server.route({

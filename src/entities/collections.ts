@@ -4,6 +4,8 @@ export type GetCollectionsFilter = {
   collection?: string;
   community?: string;
   name?: string;
+  sortBy?: "floorCap";
+  sortDirection?: "asc" | "desc";
   offset: number;
   limit: number;
 };
@@ -28,6 +30,7 @@ export const getCollections = async (filter: GetCollectionsFilter) => {
       on "c"."id" = "cs"."collection_id"
   `;
 
+  // Filters
   const conditions: string[] = [];
   if (filter.collection) {
     conditions.push(`"c"."id" = $/collection/`);
@@ -39,13 +42,19 @@ export const getCollections = async (filter: GetCollectionsFilter) => {
     conditions.push(`"c"."name" ilike $/name/`);
     filter.name = `%${filter.name}%`;
   }
-
   if (conditions.length) {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
 
-  baseQuery += ` order by "c"."id" asc nulls last`;
+  // Sorting
+  filter.sortDirection = filter.sortDirection ?? "asc";
+  if (!filter.sortBy) {
+    baseQuery += ` order by "c"."id" ${filter.sortDirection} nulls last`;
+  } else if (filter.sortBy === "floorCap") {
+    baseQuery += ` order by "cs"."floor_sell_value" * "cs"."token_count" ${filter.sortDirection} nulls last`;
+  }
 
+  // Pagination
   baseQuery += ` offset $/offset/`;
   baseQuery += ` limit $/limit/`;
 

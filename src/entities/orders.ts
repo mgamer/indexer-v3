@@ -24,6 +24,7 @@ export const getOrders = async (filter: GetOrdersFilter) => {
       on "o"."token_set_id" = "tst"."token_set_id"
   `;
 
+  // Filters
   const conditions: string[] = [
     `"o"."status" = 'valid'`,
     `"o"."valid_between" @> now()`,
@@ -42,19 +43,20 @@ export const getOrders = async (filter: GetOrdersFilter) => {
   } else if (filter.side === "sell") {
     conditions.push(`"o"."side" = 'sell'`);
   }
-
   if (conditions.length) {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
 
   baseQuery += ` group by "o"."hash"`;
 
+  // Sorting
   if (filter.side === "buy") {
     baseQuery += ` order by "o"."value" desc`;
   } else if (filter.side === "sell") {
     baseQuery += ` order by "o"."value" asc`;
   }
 
+  // Pagination
   baseQuery += ` offset $/offset/`;
   baseQuery += ` limit $/limit/`;
 
