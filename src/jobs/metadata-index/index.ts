@@ -217,10 +217,7 @@ if (config.doBackgroundWork) {
 if (config.doBackgroundWork) {
   cron.schedule("*/30 * * * * *", async () => {
     if (await acquireLock("metadata_index_lock", 25)) {
-      logger.info(
-        "metadata_index_lock",
-        "Triggering indexing of missing metadata"
-      );
+      logger.info("metadata_index_cron", "Indexing missing metadata");
 
       try {
         // Retrieve tokens that don't have metadata indexed
