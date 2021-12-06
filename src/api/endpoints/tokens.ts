@@ -98,6 +98,7 @@ export const getTokenStatsOptions: RouteOptions = {
           then: Joi.required(),
           otherwise: Joi.forbidden(),
         }),
+      onSale: Joi.boolean(),
       attributes: Joi.object().unknown().when("collection", {
         is: Joi.exist(),
         then: Joi.optional(),

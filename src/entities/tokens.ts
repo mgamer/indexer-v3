@@ -85,6 +85,7 @@ export type GetTokenStatsFilter = {
   collection?: string;
   contract?: string;
   tokenId?: string;
+  onSale?: boolean;
   attributes?: { [key: string]: string };
   offset: number;
   limit: number;
@@ -93,12 +94,12 @@ export type GetTokenStatsFilter = {
 export const getTokenStats = async (filter: GetTokenStatsFilter) => {
   let baseQuery = `
     select
-      count(distinct("t"."token_id")) as "count",
+      count(distinct("t"."token_id")) as "tokenCount",
       count(distinct("t"."token_id")) filter (where "t"."floor_sell_value" is not null) as "onSaleCount",
       count(distinct("o"."owner")) filter (where "o"."amount" > 0) AS "uniqueOwnersCount",
       max("t"."image") as "sampleImage",
       min("t"."floor_sell_value") as "floorSellValue",
-      max("t"."top_buy_value") as "topBuyValue",
+      max("t"."top_buy_value") as "topBuyValue"
     from "tokens" "t"
     join "ownerships" "o"
       on "t"."contract" = "o"."contract"
@@ -115,6 +116,11 @@ export const getTokenStats = async (filter: GetTokenStatsFilter) => {
   }
   if (filter.tokenId) {
     conditions.push(`"t"."token_id" = $/tokenId/`);
+  }
+  if (filter.onSale === true) {
+    conditions.push(`"t"."floor_sell_value" is not null`);
+  } else if (filter.onSale === false) {
+    conditions.push(`"t"."floor_sell_value" is null`);
   }
   if (filter.attributes) {
     Object.entries(filter.attributes).forEach(([key, value], i) => {
