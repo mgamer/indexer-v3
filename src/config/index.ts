@@ -4,6 +4,8 @@ export const config = {
 
   adminApiKey: String(process.env.ADMIN_API_KEY),
 
+  metadataApiBaseUrl: String(process.env.METADATA_API_BASE_URL),
+
   baseNetworkHttpUrl: String(process.env.BASE_NETWORK_HTTP_URL),
   orderbookNetworkHttlUrl: String(process.env.ORDERBOOK_NETWORK_HTTP_URL),
 

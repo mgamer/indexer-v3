@@ -3,4 +3,5 @@
 import "@/jobs/catch-up";
 import "@/jobs/events-fix";
 import "@/jobs/events-sync";
+import "@/jobs/metadata-index";
 import "@/jobs/orders-update";

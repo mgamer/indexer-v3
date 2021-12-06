@@ -1,9 +1,6 @@
 import { keccak256 } from "@ethersproject/solidity";
 
-type Token = {
-  contract: string;
-  tokenId: string;
-};
+import { Token } from "@/common/types";
 
 // Orders are associated to a token set (eg. a set of tokens the order
 // can be filled on). To make things easy for handling, the id of any

@@ -1,0 +1,252 @@
+import axios from "axios";
+import { Job, Queue, QueueScheduler, Worker } from "bullmq";
+import cron from "node-cron";
+
+import { db, pgp } from "@/common/db";
+import { logger } from "@/common/logger";
+import { acquireLock, redis, releaseLock } from "@/common/redis";
+import { Token } from "@/common/types";
+import { config } from "@/config/index";
+
+// For filling collections/tokens metadata information, we rely
+// on external services. For now, these are centralized APIs
+// that provide the metadata in a standard custom format that
+// is easy for the indexer to process.
+
+const JOB_NAME = "metadata_index";
+
+const queue = new Queue(JOB_NAME, {
+  connection: redis,
+  defaultJobOptions: {
+    attempts: 10,
+    backoff: {
+      type: "exponential",
+      delay: 1000,
+    },
+    removeOnComplete: true,
+    removeOnFail: true,
+  },
+});
+new QueueScheduler(JOB_NAME, { connection: redis });
+
+const addToQueue = async (tokens: Token[]) => {
+  const jobs: any[] = [];
+  for (const token of tokens) {
+    jobs.push({
+      name: token.contract,
+      data: token,
+    });
+  }
+  await queue.addBulk(jobs);
+};
+
+// Actual work is to be handled by background worker processes
+if (config.doBackgroundWork) {
+  const worker = new Worker(
+    JOB_NAME,
+    async (job: Job) => {
+      const { contract, tokenId } = job.data;
+
+      type Metadata = {
+        collection: {
+          id: string;
+          name: string;
+          description: string;
+          image: string;
+          royaltyBps: number;
+          royaltyRecipient?: string;
+          community: string;
+        };
+        name: string;
+        description: string;
+        image: string;
+        attributes: {
+          key: string;
+          value: string;
+          kind: "number" | "string";
+        }[];
+      };
+
+      try {
+        const { data }: { data: Metadata } = await axios.get(
+          `${config.metadataApiBaseUrl}/${contract}/${tokenId}`
+        );
+
+        const queries: any[] = [];
+
+        // Save collection high-level metadata
+        queries.push({
+          query: `
+            insert into "collections" (
+              "id",
+              "name",
+              "description",
+              "image",
+              "royalty_bps",
+              "royalty_recipient",
+              "community"
+            ) values (
+              $/id/,
+              $/name/,
+              $/description/,
+              $/image/,
+              $/royaltyBps/,
+              $/royaltyRecipient/,
+              $/community/
+            ) on conflict do nothing
+          `,
+          values: {
+            id: data.collection.id,
+            name: data.collection.name,
+            description: data.collection.description,
+            image: data.collection.image,
+            royaltyBps: data.collection.royaltyBps,
+            royaltyRecipient: data.collection.royaltyRecipient,
+            community: data.collection.community,
+          },
+        });
+
+        // Save token high-level metadata
+        queries.push({
+          query: `
+            update "tokens" set
+              "name" = $/name/,
+              "description" = $/description/,
+              "image" = $/image/,
+              "collection_id" = $/collectionId/
+            where "contract" = $/contract/
+              and "token_id" = $/tokenId/
+          `,
+          values: {
+            name: data.name,
+            description: data.description,
+            image: data.image,
+            collectionId: data.collection.id,
+            contract,
+            tokenId,
+          },
+        });
+
+        // Save token attribute metadata
+        const attributeValues: any[] = [];
+        for (const { key, value } of data.attributes) {
+          attributeValues.push({
+            contract,
+            token_id: tokenId,
+            key,
+            value,
+          });
+        }
+        if (attributeValues.length) {
+          const columns = new pgp.helpers.ColumnSet(
+            ["contract", "token_id", "key", "value"],
+            { table: "attributes" }
+          );
+          const values = pgp.helpers.values(attributeValues, columns);
+          queries.push({
+            query: `
+              with "x" as (
+                delete from "attributes"
+                where "contract" = $/contract/
+                  and "token_id" = $/tokenId/
+              )
+              insert into "attributes" (
+                "contract",
+                "token_id",
+                "key",
+                "value"
+              ) values ${values}
+              on conflict do nothing
+            `,
+            values: {
+              contract,
+              tokenId,
+            },
+          });
+        }
+
+        if (queries.length) {
+          await db.none(pgp.helpers.concat(queries));
+        }
+      } catch (error) {
+        logger.error(
+          JOB_NAME,
+          `Failed to index (${contract}, ${tokenId}): ${error}`
+        );
+        throw error;
+      }
+    },
+    { connection: redis }
+  );
+  worker.on("error", (error) => {
+    logger.error(JOB_NAME, `Worker errored: ${error}`);
+  });
+}
+
+// Metadata indexing should be a one-time process where a cron
+// job checks for tokens within the database that are not indexed,
+// fethches and updates the metadata and then marks them as indexed.
+// In cases where tokens need to be reindexed for some reasons (eg.
+// metadata updates), they can simply be marked as not indexed and
+// the metadata indexing process will take care of reindexing them
+// atomically (eg. deleting old metadata and adding new one).
+
+// Actual work is to be handled by background worker processes
+if (config.doBackgroundWork) {
+  cron.schedule("*/30 * * * * *", async () => {
+    if (await acquireLock("metadata_index_lock", 25)) {
+      logger.info(
+        "metadata_index_lock",
+        "Triggering indexing of missing metadata"
+      );
+
+      try {
+        // Retrieve tokens that don't have metadata indexed
+        const tokens: { contract: string; tokenId: string }[] =
+          await db.manyOrNone(
+            `
+              select
+                "contract",
+                "token_id" as "tokenId"
+              from "tokens"
+              where not "metadata_indexed"
+              limit $/limit/
+            `,
+            { limit: 50 }
+          );
+
+        if (tokens.length) {
+          // Trigger metadata indexing for selected tokens
+          await addToQueue(tokens);
+
+          // Optimistically mark the selected tokens as indexed. The
+          // underlying indexing job has a retry mechanism so it's
+          // quite unlikely it will fail to index in all attempts.
+          const columns = new pgp.helpers.ColumnSet(["contract", "token_id"], {
+            table: "tokens",
+          });
+          const values = pgp.helpers.values(
+            tokens.map((t) => ({
+              contract: t.contract,
+              token_id: t.tokenId,
+            })),
+            columns
+          );
+          await db.none(`
+            update "tokens" as "t" set "metadata_indexed" = true
+            from (values ${values}) as "i"("contract", "token_id")
+            where "t"."contract" = "i"."contract"::text
+              and "t"."token_id" = "i"."token_id"::numeric(78, 0)
+          `);
+        }
+      } catch (error) {
+        logger.error(
+          "metadata_index_cron",
+          `Failed to trigger metadata indexing: ${error}`
+        );
+      } finally {
+        await releaseLock("metadata_index_lock");
+      }
+    }
+  });
+}

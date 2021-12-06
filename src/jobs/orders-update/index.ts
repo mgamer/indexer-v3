@@ -181,6 +181,7 @@ if (config.doBackgroundWork) {
         }
       } catch (error) {
         logger.error(BY_HASH_JOB_NAME, `Failed to handle ${hash}: ${error}`);
+        throw error;
       }
 
       console.timeEnd(`Handling ${hash}`);
@@ -317,6 +318,7 @@ if (config.doBackgroundWork) {
           BY_MAKER_JOB_NAME,
           `Failed to handle { ${side}, ${maker}, ${contract}, ${tokenId} }: ${error}`
         );
+        throw error;
       }
 
       console.timeEnd(`Handling ${side} ${maker}`);
