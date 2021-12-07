@@ -1,9 +1,9 @@
 import { db } from "@/common/db";
 
 export type GetAttributesFilter = {
-  collection?: string;
   contract?: string;
   tokenId?: string;
+  collection?: string;
   offset: number;
   limit: number;
 };
@@ -22,14 +22,14 @@ export const getAttributes = async (filter: GetAttributesFilter) => {
 
   // Filters
   const conditions: string[] = [];
-  if (filter.collection) {
-    conditions.push(`"t"."collection_id" = $/collection/`);
-  }
   if (filter.contract) {
     conditions.push(`"a"."contract" = $/contract/`);
   }
   if (filter.tokenId) {
     conditions.push(`"a"."token_id" = $/tokenId/`);
+  }
+  if (filter.collection) {
+    conditions.push(`"t"."collection_id" = $/collection/`);
   }
   if (conditions.length) {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");

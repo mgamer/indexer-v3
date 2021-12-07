@@ -1,11 +1,11 @@
 import { db } from "@/common/db";
 
 export type GetCollectionsFilter = {
-  collection?: string;
   community?: string;
+  collection?: string;
   name?: string;
-  sortBy?: "floorCap";
-  sortDirection?: "asc" | "desc";
+  sortBy: "id" | "floorCap";
+  sortDirection: "asc" | "desc";
   offset: number;
   limit: number;
 };
@@ -32,11 +32,11 @@ export const getCollections = async (filter: GetCollectionsFilter) => {
 
   // Filters
   const conditions: string[] = [];
-  if (filter.collection) {
-    conditions.push(`"c"."id" = $/collection/`);
-  }
   if (filter.community) {
     conditions.push(`"c"."community" = $/community/`);
+  }
+  if (filter.collection) {
+    conditions.push(`"c"."id" = $/collection/`);
   }
   if (filter.name) {
     conditions.push(`"c"."name" ilike $/name/`);
@@ -47,12 +47,135 @@ export const getCollections = async (filter: GetCollectionsFilter) => {
   }
 
   // Sorting
-  filter.sortDirection = filter.sortDirection ?? "asc";
-  if (!filter.sortBy) {
-    baseQuery += ` order by "c"."id" ${filter.sortDirection} nulls last`;
-  } else if (filter.sortBy === "floorCap") {
-    baseQuery += ` order by "cs"."floor_sell_value" * "cs"."token_count" ${filter.sortDirection} nulls last`;
+  switch (filter.sortBy) {
+    case "id": {
+      baseQuery += ` order by "c"."id" ${filter.sortDirection} nulls last`;
+      break;
+    }
+
+    case "floorCap": {
+      baseQuery += ` order by "cs"."floor_sell_value" * "cs"."token_count" ${filter.sortDirection} nulls last`;
+      break;
+    }
   }
+
+  // Pagination
+  baseQuery += ` offset $/offset/`;
+  baseQuery += ` limit $/limit/`;
+
+  return db.manyOrNone(baseQuery, filter);
+};
+
+export type GetCollectionOwnersFilter = {
+  collection?: string;
+  owner?: string;
+  offset: number;
+  limit: number;
+};
+
+export const getCollectionOwners = async (
+  filter: GetCollectionOwnersFilter
+) => {
+  let baseQuery = `
+    select
+      "o"."owner",
+      sum("o"."amount") as "amount",
+      max("t"."image") AS "sampleImage",
+      count("t"."token_id") filter (where "t"."floor_sell_value" is not null) as "onSaleCount",
+      min("t"."floor_sell_value") as "minFloorSellValue",
+      max("t"."floor_sell_value") as "maxFloorSellValue",
+      sum("t"."floor_sell_value") as "floorSellValueSum"
+    from "tokens" "t"
+    join "ownerships" "o"
+      on "t"."contract" = "o"."contract"
+      and "t"."token_id" = "o"."token_id"
+      and "o"."amount" > 0
+  `;
+
+  // Filters
+  const conditions: string[] = [];
+  if (filter.collection) {
+    conditions.push(`"t"."collection_id" = $/collection/`);
+  }
+  if (filter.owner) {
+    conditions.push(`"o"."owner" = $/owner/`);
+  }
+  if (conditions.length) {
+    baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
+  }
+
+  baseQuery += ` group by "o"."owner"`;
+
+  // Sorting
+  baseQuery += ` order by "amount" desc`;
+
+  // Pagination
+  baseQuery += ` offset $/offset/`;
+  baseQuery += ` limit $/limit/`;
+
+  return db.manyOrNone(baseQuery, filter);
+};
+
+export type GetUserCollectionsFilter = {
+  user?: string;
+  community?: string;
+  collection?: string;
+  offset: number;
+  limit: number;
+};
+
+export const getUserCollections = async (filter: GetUserCollectionsFilter) => {
+  let baseQuery = `
+    select
+      "c"."id",
+      "c"."name",
+      "c"."description",
+      "c"."image",
+      "cs"."floor_sell_value" as "floorSellValue",
+      "cs"."token_count" as "tokenCount",
+      "cs"."on_sale_count" as "onSaleCount",
+      "cs"."unique_owners_count" as "uniqueOwnersCount",
+      "cs"."sample_image" as "sampleImage",
+      "us"."owner",
+      "us"."owned_token_count" as "ownedTokenCount",
+      "us"."owned_token_count" * "cs"."floor_sell_value" as "ownedMarketValue"
+    from "collections" "c"
+    join "collection_stats" "cs"
+      on "c"."id" = "cs"."collection_id"
+    join (
+      select
+        "cc"."id" as "collection_id",
+        "o"."owner",
+        sum("o"."amount") as "owned_token_count"
+      from "collections" "cc"
+      join "tokens" "t"
+        on "cc"."id" = "t"."collection_id"
+      join "ownerships" "o"
+        on "t"."contract" = "o"."contract"
+        and "t"."token_id" = "o"."token_id"
+        and "o"."amount" > 0
+      group by "cc"."id", "o"."owner"
+    ) "us"
+      on "c"."id" = "us"."collection_id"
+  `;
+
+  // Filters
+  const conditions: string[] = [];
+  if (filter.user) {
+    conditions.push(`"us"."owner" = $/user/`);
+  }
+  if (filter.community) {
+    conditions.push(`"c"."community" = $/community/`);
+  }
+  if (filter.collection) {
+    conditions.push(`"c"."id" = $/collection/`);
+  }
+  if (conditions.length) {
+    baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
+  }
+
+  // Sorting
+  baseQuery += ` order by "us"."owned_token_count" desc nulls last`;
 
   // Pagination
   baseQuery += ` offset $/offset/`;

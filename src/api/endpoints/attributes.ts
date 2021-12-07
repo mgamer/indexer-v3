@@ -9,7 +9,6 @@ export const getAttributesOptions: RouteOptions = {
   tags: ["api"],
   validate: {
     query: Joi.object({
-      collection: Joi.string().lowercase(),
       contract: Joi.string().lowercase(),
       tokenId: Joi.string()
         .pattern(/^[0-9]+$/)
@@ -18,6 +17,7 @@ export const getAttributesOptions: RouteOptions = {
           then: Joi.required(),
           otherwise: Joi.forbidden(),
         }),
+      collection: Joi.string().lowercase(),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     })

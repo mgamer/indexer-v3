@@ -116,3 +116,34 @@ export const getOrdersOptions: RouteOptions = {
     }
   },
 };
+
+export const getFillOptions: RouteOptions = {
+  description: "Get fill order",
+  tags: ["api"],
+  validate: {
+    query: Joi.object({
+      contract: Joi.string().lowercase(),
+      tokenId: Joi.string()
+        .pattern(/^[0-9]+$/)
+        .when("contract", {
+          is: Joi.exist(),
+          then: Joi.required(),
+          otherwise: Joi.forbidden(),
+        }),
+      side: Joi.string().lowercase().valid("buy", "sell"),
+      offset: Joi.number().integer().min(0).default(0),
+      limit: Joi.number().integer().min(1).max(20).default(20),
+    }).or("contract"),
+  },
+  handler: async (request: Request) => {
+    const query = request.query as any;
+
+    try {
+      const fill = await queries.getFill(query as queries.GetFillFilter);
+      return { fill };
+    } catch (error) {
+      logger.error("get_fill_handler", `Handler failure: ${error}`);
+      throw error;
+    }
+  },
+};

@@ -1,13 +1,13 @@
 import { db } from "@/common/db";
 
 export type GetTransfersFilter = {
-  collection?: string;
   contract?: string;
   tokenId?: string;
+  collection?: string;
+  attributes?: { [key: string]: string };
   account?: string;
   direction?: "from" | "to";
   type?: "sale" | "transfer";
-  attributes?: { [key: string]: string };
   offset: number;
   limit: number;
 };
@@ -40,28 +40,14 @@ export const getTransfers = async (filter: GetTransfersFilter) => {
 
   // Filters
   const conditions: string[] = [];
-  if (filter.collection) {
-    conditions.push(`"t"."collection_id" = $/collection/`);
-  }
   if (filter.contract) {
     conditions.push(`"nte"."address" = $/contract/`);
   }
   if (filter.tokenId) {
     conditions.push(`"nte"."token_id" = $/tokenId/`);
   }
-  if (filter.account) {
-    if (filter.direction === "from") {
-      conditions.push(`"nte"."from" = $/account/`);
-    } else if (filter.direction === "to") {
-      conditions.push(`"nte"."to" = $/account/`);
-    } else {
-      conditions.push(`"nte"."from" = $/account/ or "nte"."to" = $/account/`);
-    }
-  }
-  if (filter.type === "transfer") {
-    conditions.push(`"fe"."price" is null`);
-  } else if (filter.type === "sale") {
-    conditions.push(`"fe"."price" is not null`);
+  if (filter.collection) {
+    conditions.push(`"t"."collection_id" = $/collection/`);
   }
   if (filter.attributes) {
     Object.entries(filter.attributes).forEach(([key, value], i) => {
@@ -77,6 +63,20 @@ export const getTransfers = async (filter: GetTransfersFilter) => {
       (filter as any)[`key${i}`] = key;
       (filter as any)[`value${i}`] = value;
     });
+  }
+  if (filter.account) {
+    if (filter.direction === "from") {
+      conditions.push(`"nte"."from" = $/account/`);
+    } else if (filter.direction === "to") {
+      conditions.push(`"nte"."to" = $/account/`);
+    } else {
+      conditions.push(`"nte"."from" = $/account/ or "nte"."to" = $/account/`);
+    }
+  }
+  if (filter.type === "transfer") {
+    conditions.push(`"fe"."price" is null`);
+  } else if (filter.type === "sale") {
+    conditions.push(`"fe"."price" is not null`);
   }
   if (conditions.length) {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
