@@ -26,6 +26,7 @@ export const getTransfers = async (filter: GetTransfersFilter) => {
       "nte"."amount",
       "nte"."tx_hash" as "txHash",
       "nte"."block",
+      coalesce("b"."timestamp", extract(epoch from now())::int) as "timestamp",
       "fe"."price"
     from "nft_transfer_events" "nte"
     join "tokens" "t"
@@ -36,6 +37,8 @@ export const getTransfers = async (filter: GetTransfersFilter) => {
     left join "fill_events" "fe"
       on "nte"."tx_hash" = "fe"."tx_hash"
       and "nte"."from" = "fe"."maker"
+    left join "blocks" "b"
+      on "nte"."block" = "b"."block"
   `;
 
   // Filters

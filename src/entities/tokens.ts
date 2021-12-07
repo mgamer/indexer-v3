@@ -6,8 +6,8 @@ export type GetTokensFilter = {
   collection?: string;
   attributes?: { [key: string]: string };
   onSale?: boolean;
-  sortBy: string;
-  sortDirection: "asc" | "desc";
+  sortBy?: string;
+  sortDirection?: "asc" | "desc";
   offset: number;
   limit: number;
 };
@@ -69,6 +69,8 @@ export const getTokens = async (filter: GetTokensFilter) => {
   }
 
   // Sorting
+  filter.sortBy = filter.sortBy ?? "tokenId";
+  filter.sortDirection = filter.sortDirection ?? "asc";
   switch (filter.sortBy) {
     case "tokenId": {
       baseQuery += ` order by "t"."token_id" ${filter.sortDirection} nulls last`;
@@ -114,8 +116,6 @@ export const getTokens = async (filter: GetTokensFilter) => {
   baseQuery += ` offset $/offset/`;
   baseQuery += ` limit $/limit/`;
 
-  console.log(baseQuery);
-
   return db.manyOrNone(baseQuery, filter);
 };
 
@@ -125,8 +125,6 @@ export type GetTokenStatsFilter = {
   collection?: string;
   attributes?: { [key: string]: string };
   onSale?: boolean;
-  offset: number;
-  limit: number;
 };
 
 export const getTokenStats = async (filter: GetTokenStatsFilter) => {
@@ -184,7 +182,7 @@ export const getTokenStats = async (filter: GetTokenStatsFilter) => {
 };
 
 export type GetUserTokensFilter = {
-  user?: string;
+  user: string;
   community?: string;
   collection?: string;
   offset: number;
@@ -199,12 +197,17 @@ export const getUserTokens = async (filter: GetUserTokensFilter) => {
       "ow"."owner",
       "ow"."amount",
       (
-        select max("nte"."block")
+        select
+          coalesce("b"."timestamp", extract(epoch from now())::int)
         from "nft_transfer_events" "nte"
+        left join "blocks" "b"
+          on "nte"."block" = "b"."block"
         where "nte"."address" = "ow"."contract"
           and "nte"."token_id" = "ow"."token_id"
           and "nte"."to" = "ow"."owner"
-      ) as "blockAcquired",
+        order by "nte"."block" desc
+        limit 1
+      ) as "acquiredAt",
       (
         select min("or"."value")
         from "orders" "or"
@@ -221,15 +224,12 @@ export const getUserTokens = async (filter: GetUserTokensFilter) => {
     join "tokens" "t"
       on "ow"."contract" = "t"."contract"
       and "ow"."token_id" = "t"."token_id"
-    left join "collections" "c"
+    join "collections" "c"
       on "t"."collection_id" = "c"."id"
   `;
 
   // Filters
-  const conditions: string[] = [];
-  if (filter.user) {
-    conditions.push(`"ow"."owner" = $/user/`);
-  }
+  const conditions: string[] = [`"ow"."owner" = $/user/`];
   if (filter.community) {
     conditions.push(`"c"."community" = $/community/`);
   }
@@ -240,10 +240,11 @@ export const getUserTokens = async (filter: GetUserTokensFilter) => {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
 
+  // Grouping
   baseQuery += ` group by "ow"."contract", "ow"."token_id", "ow"."owner"`;
 
   // Sorting
-  baseQuery += ` order by "blockAcquired" desc nulls last`;
+  baseQuery += ` order by "acquiredAt" desc nulls last`;
 
   // Pagination
   baseQuery += ` offset $/offset/`;

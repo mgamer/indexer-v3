@@ -53,7 +53,6 @@ export const getTokenStatsOptions: RouteOptions = {
   tags: ["api"],
   validate: {
     query: Joi.object({
-      collection: Joi.string().lowercase(),
       contract: Joi.string().lowercase(),
       tokenId: Joi.string()
         .pattern(/^[0-9]+$/)
@@ -62,14 +61,13 @@ export const getTokenStatsOptions: RouteOptions = {
           then: Joi.required(),
           otherwise: Joi.forbidden(),
         }),
-      onSale: Joi.boolean(),
+      collection: Joi.string().lowercase(),
       attributes: Joi.object().unknown().when("collection", {
         is: Joi.exist(),
         then: Joi.optional(),
         otherwise: Joi.forbidden(),
       }),
-      offset: Joi.number().integer().min(0).default(0),
-      limit: Joi.number().integer().min(1).max(20).default(20),
+      onSale: Joi.boolean(),
     })
       .oxor("collection", "contract")
       .or("collection", "contract"),
@@ -95,25 +93,11 @@ export const getUserTokensOptions: RouteOptions = {
   validate: {
     query: Joi.object({
       user: Joi.string().lowercase().required(),
+      community: Joi.string().lowercase(),
       collection: Joi.string().lowercase(),
-      contract: Joi.string().lowercase(),
-      tokenId: Joi.string()
-        .pattern(/^[0-9]+$/)
-        .when("contract", {
-          is: Joi.exist(),
-          then: Joi.required(),
-          otherwise: Joi.forbidden(),
-        }),
-      attributes: Joi.object().unknown().when("collection", {
-        is: Joi.exist(),
-        then: Joi.optional(),
-        otherwise: Joi.forbidden(),
-      }),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
-    })
-      .oxor("collection", "contract")
-      .or("collection", "contract"),
+    }),
   },
   handler: async (request: Request) => {
     const query = request.query as any;

@@ -1,7 +1,7 @@
 import cron from "node-cron";
 
 import { logger } from "@/common/logger";
-import { etherscanProvider } from "@/common/provider";
+import { cloudflareProvider } from "@/common/provider";
 import { acquireLock } from "@/common/redis";
 import { config } from "@/config/index";
 import { db, pgp } from "@/common/db";
@@ -30,12 +30,13 @@ if (config.doBackgroundWork) {
             where "b"."timestamp" is null
             limit $/limit/
           `,
-          { limit: 5 }
+          { limit: 20 }
         );
 
         let blockValues: any[] = [];
         for (const { block } of blocks) {
-          const timestamp = (await etherscanProvider.getBlock(block)).timestamp;
+          const timestamp = (await cloudflareProvider.getBlock(block))
+            .timestamp;
           blockValues.push({
             block,
             timestamp,

@@ -38,3 +38,42 @@ export const getAttributesOptions: RouteOptions = {
     }
   },
 };
+
+export const getCollectionAttributesOptions: RouteOptions = {
+  description: "Get collection attributes",
+  tags: ["api"],
+  validate: {
+    query: Joi.object({
+      collection: Joi.string().lowercase().required(),
+      attribute: Joi.string(),
+      onSaleCount: Joi.number(),
+      sortBy: Joi.string()
+        .valid("key", "floorSellValue", "topBuyValue", "floorCap")
+        .default("key"),
+      sortDirection: Joi.string()
+        .lowercase()
+        .valid("asc", "desc")
+        .default("asc"),
+      offset: Joi.number().integer().min(0).default(0),
+      limit: Joi.number().integer().min(1).max(20).default(20),
+    })
+      .oxor("collection", "contract")
+      .or("collection", "contract"),
+  },
+  handler: async (request: Request) => {
+    const query = request.query as any;
+
+    try {
+      const attributes = await queries.getCollectionAttributes(
+        query as queries.GetCollectionAttributesFilter
+      );
+      return { attributes };
+    } catch (error) {
+      logger.error(
+        "get_collection_attributes_handler",
+        `Handler failure: ${error}`
+      );
+      throw error;
+    }
+  },
+};

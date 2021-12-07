@@ -7,7 +7,6 @@ import * as ordersEndpoints from "@/api/endpoints/orders";
 import * as rootEndpoints from "@/api/endpoints/root";
 import * as tokensEndpoints from "@/api/endpoints/tokens";
 import * as transfersEndpoints from "@/api/endpoints/transfers";
-import * as usersEndpoints from "@/api/endpoints/users";
 
 export const setupRoutes = (server: Server) => {
   // Root
@@ -34,6 +33,12 @@ export const setupRoutes = (server: Server) => {
     options: attributesEndpoints.getAttributesOptions,
   });
 
+  server.route({
+    method: "GET",
+    path: "/collection-attributes",
+    options: attributesEndpoints.getCollectionAttributesOptions,
+  });
+
   // Collections
 
   server.route({
@@ -44,8 +49,14 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/collections/{collection}/owners",
-    options: collectionsEndpoints.getCollectionOwnersOptions,
+    path: "/collection-ownerships",
+    options: collectionsEndpoints.getCollectionOwnershipsOptions,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/user-collections",
+    options: collectionsEndpoints.getUserCollectionsOptions,
   });
 
   // Orders
@@ -78,22 +89,14 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/stats",
+    path: "/token-stats",
     options: tokensEndpoints.getTokenStatsOptions,
   });
 
-  // Users
-
   server.route({
     method: "GET",
-    path: "/users/{user}/tokens",
-    options: usersEndpoints.getUserTokensOptions,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/users/{user}/collections",
-    options: usersEndpoints.getUserCollectionsOptions,
+    path: "/user-tokens",
+    options: tokensEndpoints.getUserTokensOptions,
   });
 
   // Transfers

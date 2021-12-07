@@ -36,34 +36,57 @@ export const getCollectionsOptions: RouteOptions = {
   },
 };
 
-export const getCollectionOwnersOptions: RouteOptions = {
-  description: "Get collection owners",
+export const getCollectionOwnershipsOptions: RouteOptions = {
+  description: "Get collection ownerships",
   tags: ["api"],
   validate: {
-    params: Joi.object({
-      collection: Joi.string().lowercase().required(),
-    }),
     query: Joi.object({
+      collection: Joi.string().lowercase().required(),
       owner: Joi.string().lowercase(),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     }),
   },
   handler: async (request: Request) => {
-    const params = request.params as any;
     const query = request.query as any;
 
     try {
-      const owners = await queries.getCollectionOwners({
-        ...params,
-        ...query,
-      } as queries.GetCollectionOwnersFilter);
+      const owners = await queries.getCollectionOwnerships(
+        query as queries.GetCollectionOwnershipsFilter
+      );
       return { owners };
     } catch (error) {
       logger.error(
-        "get_collection_owners_handler",
+        "get_collection_ownerships_handler",
         `Handler failure: ${error}`
       );
+      throw error;
+    }
+  },
+};
+
+export const getUserCollectionsOptions: RouteOptions = {
+  description: "Get user collections",
+  tags: ["api"],
+  validate: {
+    query: Joi.object({
+      user: Joi.string().lowercase().required(),
+      community: Joi.string().lowercase(),
+      collection: Joi.string().lowercase(),
+      offset: Joi.number().integer().min(0).default(0),
+      limit: Joi.number().integer().min(1).max(20).default(20),
+    }),
+  },
+  handler: async (request: Request) => {
+    const query = request.query as any;
+
+    try {
+      const collections = await queries.getUserCollections(
+        query as queries.GetUserCollectionsFilter
+      );
+      return { collections };
+    } catch (error) {
+      logger.error("get_user_collections_handler", `Handler failure: ${error}`);
       throw error;
     }
   },

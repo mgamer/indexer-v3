@@ -35,6 +35,7 @@ export const getAttributes = async (filter: GetAttributesFilter) => {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
 
+  // Grouping
   baseQuery += ` group by "a"."key", "a"."value"`;
 
   // Sorting
@@ -45,4 +46,96 @@ export const getAttributes = async (filter: GetAttributesFilter) => {
   baseQuery += ` limit $/limit/`;
 
   return db.manyOrNone(baseQuery, filter);
+};
+
+export type GetCollectionAttributesFilter = {
+  collection: string;
+  attribute?: string;
+  onSaleCount?: number;
+  sortBy?: "key" | "floorSellValue" | "topBuyValue" | "floorCap";
+  sortDirection?: "asc" | "desc";
+  offset: number;
+  limit: number;
+};
+
+export const getCollectionAttributes = async (
+  filter: GetCollectionAttributesFilter
+) => {
+  let baseQueryInner = `
+    select
+      "a"."key",
+      "a"."value",
+      count(distinct("t"."token_id")) as "tokenCount",
+      count(distinct("t"."token_id")) filter (where "t"."floor_sell_hash" is not null) as "onSaleCount",
+      count(distinct("o"."owner")) filter (where "o"."amount" > 0) as "uniqueOwnersCount",
+      (array_agg("t"."image"))[1:4] as "sampleImages",
+      min("t"."floor_sell_value") as "floorSellValue",
+      max("t"."top_buy_value") as "topBuyValue"
+    from "attributes" "a"
+    join "tokens" "t"
+      on "a"."contract" = "t"."contract"
+      and "a"."token_id" = "t"."token_id"
+    left join "ownerships" "o"
+      on "a"."contract" = "o"."contract"
+      and "a"."token_id" = "o"."token_id"
+      and "o"."amount" > 0
+  `;
+
+  // Filters
+  const conditionsInner: string[] = [`"t"."collection_id" = $/collection/`];
+  if (filter.attribute) {
+    conditionsInner.push(`"a"."key" = $/attribute/`);
+  }
+  if (conditionsInner.length) {
+    baseQueryInner +=
+      " where " + conditionsInner.map((c) => `(${c})`).join(" and ");
+  }
+
+  // Grouping
+  baseQueryInner += ` group by "a"."key", "a"."value"`;
+
+  let baseQueryOuter = `
+    select * from (${baseQueryInner}) "x"
+  `;
+
+  // Filters
+  const conditionsOuter: string[] = [];
+  if (filter.onSaleCount) {
+    conditionsOuter.push(`"x"."onSaleCount" >= $/onSaleCount/`);
+  }
+  if (conditionsOuter.length) {
+    baseQueryOuter +=
+      " where " + conditionsOuter.map((c) => `(${c})`).join(" and ");
+  }
+
+  // Sorting
+  filter.sortBy = filter.sortBy ?? "key";
+  filter.sortDirection = filter.sortDirection ?? "asc";
+  switch (filter.sortBy) {
+    case "key": {
+      baseQueryOuter += ` order by "x"."key" ${filter.sortDirection} nulls last`;
+      break;
+    }
+
+    case "floorSellValue": {
+      baseQueryOuter += ` order by "x"."floorSellValue" ${filter.sortDirection} nulls last`;
+      break;
+    }
+
+    case "topBuyValue": {
+      baseQueryOuter += ` order by "x"."topBuyValue" ${filter.sortDirection} nulls last`;
+      break;
+    }
+
+    case "floorCap": {
+      baseQueryOuter += ` order by "x"."floorSellValue" * "x"."tokenCount" ${filter.sortDirection} nulls last`;
+      break;
+    }
+  }
+
+  // Pagination
+  baseQueryOuter += ` offset $/offset/`;
+  baseQueryOuter += ` limit $/limit/`;
+
+  return db.manyOrNone(baseQueryOuter, filter);
 };

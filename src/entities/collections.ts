@@ -4,8 +4,8 @@ export type GetCollectionsFilter = {
   community?: string;
   collection?: string;
   name?: string;
-  sortBy: "id" | "floorCap";
-  sortDirection: "asc" | "desc";
+  sortBy?: "id" | "floorCap";
+  sortDirection?: "asc" | "desc";
   offset: number;
   limit: number;
 };
@@ -39,14 +39,16 @@ export const getCollections = async (filter: GetCollectionsFilter) => {
     conditions.push(`"c"."id" = $/collection/`);
   }
   if (filter.name) {
-    conditions.push(`"c"."name" ilike $/name/`);
     filter.name = `%${filter.name}%`;
+    conditions.push(`"c"."name" ilike $/name/`);
   }
   if (conditions.length) {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
 
   // Sorting
+  filter.sortBy = filter.sortBy ?? "id";
+  filter.sortDirection = filter.sortDirection ?? "asc";
   switch (filter.sortBy) {
     case "id": {
       baseQuery += ` order by "c"."id" ${filter.sortDirection} nulls last`;
@@ -66,37 +68,34 @@ export const getCollections = async (filter: GetCollectionsFilter) => {
   return db.manyOrNone(baseQuery, filter);
 };
 
-export type GetCollectionOwnersFilter = {
-  collection?: string;
+export type GetCollectionOwnershipsFilter = {
+  collection: string;
   owner?: string;
   offset: number;
   limit: number;
 };
 
-export const getCollectionOwners = async (
-  filter: GetCollectionOwnersFilter
+export const getCollectionOwnerships = async (
+  filter: GetCollectionOwnershipsFilter
 ) => {
   let baseQuery = `
     select
       "o"."owner",
       sum("o"."amount") as "amount",
       max("t"."image") AS "sampleImage",
-      count("t"."token_id") filter (where "t"."floor_sell_value" is not null) as "onSaleCount",
+      count("t"."token_id") filter (where "t"."floor_sell_hash" is not null) as "onSaleCount",
       min("t"."floor_sell_value") as "minFloorSellValue",
       max("t"."floor_sell_value") as "maxFloorSellValue",
       sum("t"."floor_sell_value") as "floorSellValueSum"
-    from "tokens" "t"
-    join "ownerships" "o"
-      on "t"."contract" = "o"."contract"
-      and "t"."token_id" = "o"."token_id"
+    from "ownerships" "o"
+    join "tokens" "t"
+      on "o"."contract" = "t"."contract"
+      and "o"."token_id" = "t"."token_id"
       and "o"."amount" > 0
   `;
 
   // Filters
-  const conditions: string[] = [];
-  if (filter.collection) {
-    conditions.push(`"t"."collection_id" = $/collection/`);
-  }
+  const conditions: string[] = [`"t"."collection_id" = $/collection/`];
   if (filter.owner) {
     conditions.push(`"o"."owner" = $/owner/`);
   }
@@ -104,6 +103,7 @@ export const getCollectionOwners = async (
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
 
+  // Grouping
   baseQuery += ` group by "o"."owner"`;
 
   // Sorting
@@ -117,7 +117,7 @@ export const getCollectionOwners = async (
 };
 
 export type GetUserCollectionsFilter = {
-  user?: string;
+  user: string;
   community?: string;
   collection?: string;
   offset: number;
@@ -160,10 +160,7 @@ export const getUserCollections = async (filter: GetUserCollectionsFilter) => {
   `;
 
   // Filters
-  const conditions: string[] = [];
-  if (filter.user) {
-    conditions.push(`"us"."owner" = $/user/`);
-  }
+  const conditions: string[] = [`"us"."owner" = $/user/`];
   if (filter.community) {
     conditions.push(`"c"."community" = $/community/`);
   }

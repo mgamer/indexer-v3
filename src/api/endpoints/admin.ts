@@ -38,7 +38,7 @@ export const postSyncEventsOptions: RouteOptions = {
       const toBlock = payload.toBlock;
       const blocksPerBatch = payload.blocksPerBatch;
 
-      const contractsData = require(`@/config/data/${config.chainId}/contracts`);
+      const contractsData = require(`@/config/data/${config.chainId}/contracts.json`);
 
       // Make sure the contracts requested to sync match the contract type
       for (const contract of contracts) {
