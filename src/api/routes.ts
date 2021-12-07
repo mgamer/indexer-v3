@@ -35,7 +35,7 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/collection-attributes",
+    path: "/explore",
     options: attributesEndpoints.getCollectionAttributesOptions,
   });
 
