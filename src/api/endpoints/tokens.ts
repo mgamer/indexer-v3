@@ -95,6 +95,14 @@ export const getUserTokensOptions: RouteOptions = {
       user: Joi.string().lowercase().required(),
       community: Joi.string().lowercase(),
       collection: Joi.string().lowercase(),
+      hasOffer: Joi.boolean(),
+      sortBy: Joi.string()
+        .valid("acquiredAt", "topBuyListingTime")
+        .default("acquiredAt"),
+      sortDirection: Joi.string()
+        .lowercase()
+        .valid("asc", "desc")
+        .default("desc"),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     }),
