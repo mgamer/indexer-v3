@@ -65,7 +65,24 @@ export const getCollections = async (filter: GetCollectionsFilter) => {
   baseQuery += ` offset $/offset/`;
   baseQuery += ` limit $/limit/`;
 
-  return db.manyOrNone(baseQuery, filter);
+  return db.manyOrNone(baseQuery, filter).then((result) =>
+    result.map((r) => ({
+      id: r.id,
+      name: r.name,
+      description: r.description,
+      image: r.image,
+      royalty: {
+        recipient: r.royaltyRecipient,
+        bps: r.royaltyBps,
+      },
+      tokenCount: r.tokenCount,
+      onSaleCount: r.onSaleCount,
+      uniqueOwnersCount: r.uniqueOwnersCount,
+      sampleImage: r.sampleImage,
+      floorSellValue: r.floorSellValue,
+      topBuyValue: r.topBuyValue,
+    }))
+  );
 };
 
 export type GetCollectionOwnershipsFilter = {

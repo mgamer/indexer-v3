@@ -20,7 +20,7 @@ export const getTokens = async (filter: GetTokensFilter) => {
       "ct"."kind",
       "t"."name",
       "t"."image",
-      "cl"."id" as "collection",
+      "cl"."id" as "collectionId",
       "cl"."name" as "collectionName",
       "t"."floor_sell_hash" as "floorSellHash",
       "t"."floor_sell_value" as "floorSellValue",
@@ -116,7 +116,22 @@ export const getTokens = async (filter: GetTokensFilter) => {
   baseQuery += ` offset $/offset/`;
   baseQuery += ` limit $/limit/`;
 
-  return db.manyOrNone(baseQuery, filter);
+  return db.manyOrNone(baseQuery, filter).then((result) =>
+    result.map((r) => ({
+      contract: r.contract,
+      tokenId: r.tokenId,
+      kind: r.kind,
+      image: r.image,
+      collection: {
+        id: r.collectionId,
+        name: r.collectionName,
+      },
+      floorSellHash: r.floorSellHash,
+      floorSellValue: r.floorSellValue,
+      topBuyHash: r.topBuyHash,
+      topBuyValue: r.topBuyValue,
+    }))
+  );
 };
 
 export type GetTokenStatsFilter = {

@@ -247,12 +247,10 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
       `,
       values: {
         tokenSetId,
-        tag: [
-          {
-            contract: order.target,
-            tokenId: order.tokenId,
-          },
-        ],
+        tag: {
+          contract: order.target,
+          tokenId: order.tokenId,
+        },
       },
     });
     queries.push({
@@ -301,7 +299,7 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
       case "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073": {
         sourceInfo = {
           id: "opensea",
-          bps: 150,
+          bps: 250,
         };
         break;
       }

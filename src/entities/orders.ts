@@ -19,8 +19,15 @@ export const getOrders = async (filter: GetOrdersFilter) => {
       "o"."maker",
       "o"."price",
       "o"."value",
+      "ts"."tag",
+      date_part('epoch', lower("o"."valid_between")) as "validFrom",
+      coalesce(nullif(date_part('epoch', upper("o"."valid_between")), 'Infinity'), 0) as "validUntil",
+      "o"."source_info" as "sourceInfo",
+      "o"."royalty_info" as "royaltyInfo",
       "o"."raw_data" as "rawData"
     from "orders" "o"
+    join "token_sets" "ts"
+      on "o"."token_set_id" = "ts"."id"
     join "token_sets_tokens" "tst"
       on "o"."token_set_id" = "tst"."token_set_id"
   `;
@@ -51,7 +58,7 @@ export const getOrders = async (filter: GetOrdersFilter) => {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
 
-  baseQuery += ` group by "o"."hash"`;
+  baseQuery += ` group by "o"."hash", "ts"."tag"`;
 
   // Sorting
   if (filter.side === "buy") {
@@ -84,6 +91,11 @@ export const getFill = async (filter: GetFillFilter) => {
       "o"."maker",
       "o"."price",
       "o"."value",
+      "ts"."tag",
+      date_part('epoch', lower("o"."valid_between")) as "validFrom",
+      coalesce(nullif(date_part('epoch', upper("o"."valid_between")), 'Infinity'), 0) as "validUntil",
+      "o"."source_info" as "sourceInfo",
+      "o"."royalty_info" as "royaltyInfo",
       "o"."raw_data" as "rawData"
     from "tokens" "t"
   `;
@@ -94,11 +106,15 @@ export const getFill = async (filter: GetFillFilter) => {
     baseQuery += `
       join "orders" "o"
         on "t"."top_buy_hash" = "o"."hash"
+      join "token_sets" "ts"
+        on "o"."token_set_id" = "ts"."id"
     `;
   } else if (filter.side === "sell") {
     baseQuery += `
       join "orders" "o"
         on "t"."floor_sell_hash" = "o"."hash"
+      join "token_sets" "ts"
+        on "o"."token_set_id" = "ts"."id"
     `;
   }
 

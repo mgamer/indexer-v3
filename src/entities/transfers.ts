@@ -19,7 +19,7 @@ export const getTransfers = async (filter: GetTransfersFilter) => {
       "nte"."token_id" as "tokenId",
       "t"."name" as "tokenName",
       "t"."image" as "tokenImage",
-      "c"."id" as "collection",
+      "c"."id" as "collectionId",
       "c"."name" as "collectionName",
       "nte"."from",
       "nte"."to",
@@ -92,5 +92,25 @@ export const getTransfers = async (filter: GetTransfersFilter) => {
   baseQuery += ` offset $/offset/`;
   baseQuery += ` limit $/limit/`;
 
-  return db.manyOrNone(baseQuery, filter);
+  return db.manyOrNone(baseQuery, filter).then((result) =>
+    result.map((r) => ({
+      contract: r.contract,
+      tokenId: r.tokenId,
+      token: {
+        name: r.tokenName,
+        image: r.tokenImage,
+      },
+      collection: {
+        id: r.collectionId,
+        name: r.collectionName,
+      },
+      from: r.from,
+      to: r.to,
+      amount: r.amount,
+      txHash: r.txHash,
+      block: r.block,
+      timestamp: r.timestamp,
+      price: r.price,
+    }))
+  );
 };
