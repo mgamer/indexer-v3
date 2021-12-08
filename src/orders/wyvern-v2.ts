@@ -218,8 +218,7 @@ export const filterOrders = async (
 };
 
 export const saveOrders = async (orders: EnhancedOrder[]) => {
-  // TODO: The order inserts could do some batching in order
-  // to improve the performance
+  // TODO: Use multi-row inserts to improve performance
 
   if (!orders.length) {
     return;
@@ -237,8 +236,24 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
 
     // Make sure the token set exists
     queries.push({
-      query: `insert into "token_sets" ("id") values ($/tokenSetId/) on conflict do nothing`,
-      values: { tokenSetId },
+      query: `
+        insert into "token_sets" (
+          "id",
+          "tag"
+        ) values (
+          $/tokenSetId/,
+          $/tag:json/
+        ) on conflict do nothing
+      `,
+      values: {
+        tokenSetId,
+        tag: [
+          {
+            contract: order.target,
+            tokenId: order.tokenId,
+          },
+        ],
+      },
     });
     queries.push({
       query: `
@@ -274,6 +289,67 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
       value = order.basePrice;
     }
 
+    const feeBps = Math.max(
+      Number(order.makerRelayerFee),
+      Number(order.takerRelayerFee)
+    );
+
+    let sourceInfo;
+    let royaltyInfo;
+    switch (order.feeRecipient) {
+      // OpenSea
+      case "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073": {
+        sourceInfo = {
+          id: "opensea",
+          bps: 150,
+        };
+        break;
+      }
+
+      // LootExchange
+      case "0x8cfdf9e9f7ea8c0871025318407a6f1fbc5d5a18":
+      case "0x8e71a0d2cc9c48173d9a9b7d90d6036093212afa": {
+        sourceInfo = {
+          id: "lootexchange",
+          bps: 0,
+        };
+        break;
+      }
+
+      // Unknown
+      default: {
+        sourceInfo = {
+          id: "unknown",
+          bps: feeBps,
+        };
+        break;
+      }
+    }
+
+    const royalty: { recipient: string } | null = await db.oneOrNone(
+      `
+        select
+          "c"."royalty_recipient" as "recipient"
+        from "collections" "c"
+        join "tokens" "t"
+          on "c"."id" = "t"."collection_id"
+        where "t"."contract" = $/contract/
+          and "t"."token_id" = $/tokenId/
+      `,
+      { contract: order.target, tokenId: order.tokenId }
+    );
+    if (royalty) {
+      const bps = feeBps - sourceInfo.bps;
+      if (bps > 0) {
+        royaltyInfo = [
+          {
+            recipient: royalty.recipient,
+            bps: feeBps - sourceInfo.bps,
+          },
+        ];
+      }
+    }
+
     queries.push({
       query: `
         insert into "orders" (
@@ -286,6 +362,8 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
           "price",
           "value",
           "valid_between",
+          "source_info",
+          "royalty_info",
           "raw_data"
         ) values (
           $/hash/,
@@ -297,6 +375,8 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
           $/price/,
           $/value/,
           tstzrange(to_timestamp($/listingTime/), to_timestamp($/expirationTime/)),
+          $/sourceInfo:json/,
+          $/royaltyInfo:json/,
           $/rawData/
         ) on conflict ("hash") do
         update set
@@ -306,6 +386,8 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
           "price" = $/price/,
           "value" = $/value/,
           "valid_between" = tstzrange(to_timestamp($/listingTime/), to_timestamp($/expirationTime/)),
+          "source_info" = $/sourceInfo:json/,
+          "royalty_info" = $/royaltyInfo:json/,
           "raw_data" = $/rawData/
       `,
       values: {
@@ -320,6 +402,8 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
         listingTime: order.listingTime,
         expirationTime:
           order.expirationTime == "0" ? "infinity" : order.expirationTime,
+        sourceInfo,
+        royaltyInfo,
         rawData: order,
       },
     });

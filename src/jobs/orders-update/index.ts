@@ -221,6 +221,11 @@ export type MakerInfo = {
 export const addToOrdersUpdateByMakerQueue = async (
   makerInfos: MakerInfo[]
 ) => {
+  // Ignore null addresses
+  makerInfos = makerInfos.filter(
+    ({ maker }) => maker !== "0x0000000000000000000000000000000000000000"
+  );
+
   await byMakerQueue.addBulk(
     makerInfos.map((makerInfo) => ({
       name: makerInfo.maker,

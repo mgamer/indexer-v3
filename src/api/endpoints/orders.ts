@@ -17,7 +17,7 @@ export const postOrdersOptions: RouteOptions = {
         Joi.object().keys({
           kind: Joi.string().lowercase().valid("wyvern-v2").required(),
           data: Joi.object().when("kind", {
-            is: "wyvern-v2",
+            is: Joi.equal("wyvern-v2"),
             then: Joi.object({
               exchange: Joi.string().required(),
               maker: Joi.string().required(),
@@ -59,8 +59,12 @@ export const postOrdersOptions: RouteOptions = {
       const orders = payload.orders as any;
 
       const parsedOrders: Order[] = [];
-      for (const order of orders) {
-        const parsedOrder = wyvernV2.parseApiOrder(order);
+      for (const { kind, data } of orders) {
+        if (kind !== "wyvern-v2") {
+          throw Boom.badRequest("Unsupported kind");
+        }
+
+        const parsedOrder = wyvernV2.parseApiOrder(data);
         if (parsedOrder) {
           parsedOrders.push(parsedOrder);
         }
