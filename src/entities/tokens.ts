@@ -184,13 +184,16 @@ export const getTokenStats = async (filter: GetTokenStatsFilter) => {
 export type GetUserTokensFilter = {
   user: string;
   community?: string;
+  hasOffer?: string;
+  sortBy?: "acquiredAt" | "topBuyListingTime";
+  sortDirection?: "asc" | "desc";
   collection?: string;
   offset: number;
   limit: number;
 };
 
 export const getUserTokens = async (filter: GetUserTokensFilter) => {
-  let baseQuery = `
+  let baseQueryInner = `
     select
       "ow"."contract",
       "ow"."token_id" as "tokenId",
@@ -226,29 +229,61 @@ export const getUserTokens = async (filter: GetUserTokensFilter) => {
       and "ow"."token_id" = "t"."token_id"
     join "collections" "c"
       on "t"."collection_id" = "c"."id"
+    left join "orders" "o"
+      on "t"."top_buy_hash" = "o"."hash"
   `;
 
   // Filters
-  const conditions: string[] = [`"ow"."owner" = $/user/`];
+  const conditionsInner: string[] = [`"ow"."owner" = $/user/`];
   if (filter.community) {
-    conditions.push(`"c"."community" = $/community/`);
+    conditionsInner.push(`"c"."community" = $/community/`);
   }
   if (filter.collection) {
-    conditions.push(`"c"."id" = $/collection/`);
+    conditionsInner.push(`"c"."id" = $/collection/`);
   }
-  if (conditions.length) {
-    baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
+  if (filter.hasOffer) {
+    conditionsInner.push(`"t"."top_buy_hash" is not null`);
+  }
+  if (conditionsInner.length) {
+    baseQueryInner +=
+      " where " + conditionsInner.map((c) => `(${c})`).join(" and ");
   }
 
   // Grouping
-  baseQuery += ` group by "ow"."contract", "ow"."token_id", "ow"."owner"`;
+  baseQueryInner += ` group by "ow"."contract", "ow"."token_id", "ow"."owner"`;
+
+  let baseQueryOuter = `
+    select
+      "x".*,
+      "t"."top_buy_hash" as "topBuyHash",
+      "t"."top_buy_value" as "topBuyValue",
+      date_part('epoch', lower("o"."valid_between")) as "topBuyListingTime"
+    from (${baseQueryInner}) "x"
+    join "tokens" "t"
+      on "t"."contract" = "x"."contract"
+      and "t"."token_id" = "x"."tokenId"
+    left join "orders" "o"
+      on "t"."top_buy_hash" = "o"."hash"
+  `;
 
   // Sorting
-  baseQuery += ` order by "acquiredAt" desc nulls last`;
+  filter.sortBy = filter.sortBy ?? "acquiredAt";
+  filter.sortDirection = filter.sortDirection ?? "asc";
+  switch (filter.sortBy) {
+    case "acquiredAt": {
+      baseQueryOuter += ` order by "x"."acquiredAt" ${filter.sortDirection}, "t"."token_id" nulls last`;
+      break;
+    }
+
+    case "topBuyListingTime": {
+      baseQueryOuter += ` order by date_part('epoch', lower("o"."valid_between")) ${filter.sortDirection}, "t"."token_id" nulls last`;
+      break;
+    }
+  }
 
   // Pagination
-  baseQuery += ` offset $/offset/`;
-  baseQuery += ` limit $/limit/`;
+  baseQueryOuter += ` offset $/offset/`;
+  baseQueryOuter += ` limit $/limit/`;
 
-  return db.manyOrNone(baseQuery, filter);
+  return db.manyOrNone(baseQueryOuter, filter);
 };
