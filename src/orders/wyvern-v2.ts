@@ -239,18 +239,18 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
       query: `
         insert into "token_sets" (
           "id",
-          "tag"
+          "contract",
+          "token_id"
         ) values (
           $/tokenSetId/,
-          $/tag:json/
+          $/contract/,
+          $/tokenId/
         ) on conflict do nothing
       `,
       values: {
         tokenSetId,
-        tag: {
-          contract: order.target,
-          tokenId: order.tokenId,
-        },
+        contract: order.target,
+        tokenId: order.tokenId,
       },
     });
     queries.push({

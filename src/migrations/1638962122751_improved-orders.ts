@@ -14,14 +14,26 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
   });
 
   pgm.addColumns("token_sets", {
-    tag: {
-      type: "jsonb",
+    contract: {
+      type: "text",
+    },
+    token_id: {
+      type: "numeric(78, 0)",
+    },
+    collection_id: {
+      type: "text",
     },
   });
+
+  pgm.addIndex("token_sets", ["contract", "token_id"]);
+  pgm.addIndex("token_sets", ["collection_id"]);
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.dropColumns("token_sets", ["tag"]);
+  pgm.dropIndex("token_sets", ["collection_id"]);
+  pgm.dropIndex("token_sets", ["contract", "token_id"]);
+
+  pgm.dropColumns("token_sets", ["contract", "token_id", "collection_id"]);
 
   pgm.dropColumns("orders", ["taker", "source_info", "royalty_info"]);
 }

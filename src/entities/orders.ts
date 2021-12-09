@@ -11,67 +11,77 @@ export type GetOrdersFilter = {
 };
 
 export const getOrders = async (filter: GetOrdersFilter) => {
-  let baseQuery = `
+  let baseQueryInner = `
     select
       "o"."hash",
+      "o"."token_set_id" as "tokenSetId",
       "o"."kind",
       "o"."side",
       "o"."maker",
       "o"."price",
       "o"."value",
-      "ts"."tag",
       date_part('epoch', lower("o"."valid_between")) as "validFrom",
       coalesce(nullif(date_part('epoch', upper("o"."valid_between")), 'Infinity'), 0) as "validUntil",
       "o"."source_info" as "sourceInfo",
       "o"."royalty_info" as "royaltyInfo",
       "o"."raw_data" as "rawData"
     from "orders" "o"
-    join "token_sets" "ts"
-      on "o"."token_set_id" = "ts"."id"
     join "token_sets_tokens" "tst"
       on "o"."token_set_id" = "tst"."token_set_id"
   `;
 
   // Filters
-  const conditions: string[] = [
+  const conditionsInner: string[] = [
     `"o"."status" = 'valid'`,
     `"o"."valid_between" @> now()`,
   ];
   if (filter.contract) {
-    conditions.push(`"tst"."contract" = $/contract/`);
+    conditionsInner.push(`"tst"."contract" = $/contract/`);
   }
   if (filter.tokenId) {
-    conditions.push(`"tst"."token_id" = $/tokenId/`);
+    conditionsInner.push(`"tst"."token_id" = $/tokenId/`);
   }
   if (filter.maker) {
-    conditions.push(`"o"."maker" = $/maker/`);
+    conditionsInner.push(`"o"."maker" = $/maker/`);
   }
   if (filter.hash) {
-    conditions.push(`"o"."hash" = $/hash/`);
+    conditionsInner.push(`"o"."hash" = $/hash/`);
   }
   if (filter.side === "buy") {
-    conditions.push(`"o"."side" = 'buy'`);
+    conditionsInner.push(`"o"."side" = 'buy'`);
   } else if (filter.side === "sell") {
-    conditions.push(`"o"."side" = 'sell'`);
+    conditionsInner.push(`"o"."side" = 'sell'`);
   }
-  if (conditions.length) {
-    baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
+  if (conditionsInner.length) {
+    baseQueryInner +=
+      " where " + conditionsInner.map((c) => `(${c})`).join(" and ");
   }
 
-  baseQuery += ` group by "o"."hash", "ts"."tag"`;
+  baseQueryInner += ` group by "o"."hash"`;
 
   // Sorting
   if (filter.side === "buy") {
-    baseQuery += ` order by "o"."value" desc`;
+    baseQueryInner += ` order by "o"."value" desc`;
   } else if (filter.side === "sell") {
-    baseQuery += ` order by "o"."value" asc`;
+    baseQueryInner += ` order by "o"."value" asc`;
   }
 
-  // Pagination
-  baseQuery += ` offset $/offset/`;
-  baseQuery += ` limit $/limit/`;
+  let baseQueryOuter = `
+    select
+      "x".*,
+      "ts"."contract",
+      "ts"."token_id" as "tokenId",
+      "ts"."collection_id" as "collectionId"
+    from (${baseQueryInner}) "x"
+    join "token_sets" "ts"
+      on "ts"."id" = "x"."tokenSetId"
+  `;
 
-  return db.manyOrNone(baseQuery, filter);
+  // Pagination
+  baseQueryOuter += ` offset $/offset/`;
+  baseQueryOuter += ` limit $/limit/`;
+
+  return db.manyOrNone(baseQueryOuter, filter);
 };
 
 export type GetFillFilter = {
@@ -91,7 +101,10 @@ export const getFill = async (filter: GetFillFilter) => {
       "o"."maker",
       "o"."price",
       "o"."value",
-      "ts"."tag",
+      "ts"."id" as "tokenSetId",
+      "ts"."contract",
+      "ts"."token_id" as "tokenId",
+      "ts"."collection_id" as "collectionId",
       date_part('epoch', lower("o"."valid_between")) as "validFrom",
       coalesce(nullif(date_part('epoch', upper("o"."valid_between")), 'Infinity'), 0) as "validUntil",
       "o"."source_info" as "sourceInfo",
