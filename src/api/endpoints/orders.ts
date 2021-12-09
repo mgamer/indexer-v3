@@ -42,7 +42,7 @@ export const postOrdersOptions: RouteOptions = {
               v: Joi.number().required(),
               r: Joi.string().required(),
               s: Joi.string().required(),
-            }),
+            }).options({ allowUnknown: true }),
           }),
         })
       ),
