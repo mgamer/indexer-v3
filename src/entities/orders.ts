@@ -71,7 +71,7 @@ export const getOrders = async (filter: GetOrdersFilter) => {
       "x".*,
       "ts"."contract",
       "ts"."token_id" as "tokenId",
-      "ts"."collection_id" as "collectionId"
+      "ts"."collection_id" as "collection"
     from (${baseQueryInner}) "x"
     join "token_sets" "ts"
       on "ts"."id" = "x"."tokenSetId"
@@ -104,7 +104,7 @@ export const getFill = async (filter: GetFillFilter) => {
       "ts"."id" as "tokenSetId",
       "ts"."contract",
       "ts"."token_id" as "tokenId",
-      "ts"."collection_id" as "collectionId",
+      "ts"."collection_id" as "collection",
       date_part('epoch', lower("o"."valid_between")) as "validFrom",
       coalesce(nullif(date_part('epoch', upper("o"."valid_between")), 'Infinity'), 0) as "validUntil",
       "o"."source_info" as "sourceInfo",
