@@ -1,4 +1,5 @@
 import { Builders, Helpers, Order, Utils } from "@georgeroman/wyvern-v2-sdk";
+import * as ReservoirSdk from "@reservoir0x/sdk/dist";
 
 import { bn } from "@/common/bignumber";
 import { db, pgp } from "@/common/db";
@@ -31,7 +32,8 @@ export const parseApiOrder = (order: Order) => {
 // from the default Wyvern V2 order formar
 type EnhancedOrder = Order & {
   hash: string;
-  tokenId: string;
+  tokenId?: string;
+  tokenIdRange?: [string, string];
 };
 
 const checkBalance = async (order: EnhancedOrder) => {
@@ -161,7 +163,45 @@ export const filterOrders = async (
       continue;
     }
 
-    // Check: erc721 order is well formatted
+    // Check: erc721 token range order is well formatted
+    const reservoirSdkOrder = {
+      ...order,
+      makerRelayerFee: Number(order.makerRelayerFee),
+      takerRelayerFee: Number(order.takerRelayerFee),
+      listingTime: Number(order.listingTime),
+      expirationTime: Number(order.expirationTime),
+    };
+    const isErc721TokenRange =
+      ReservoirSdk.WyvernV2.Builders.TokenRangeErc721.check(reservoirSdkOrder);
+    if (isErc721TokenRange) {
+      const tokenIdRange =
+        ReservoirSdk.WyvernV2.Builders.TokenRangeErc721.getTokenRange(
+          reservoirSdkOrder
+        )!;
+      const enhancedOrder = { ...order, hash, tokenIdRange };
+
+      // The order can only be a buy so the below checks won't fail
+
+      // Check: order has a valid signature
+      if (!Helpers.Order.verifySignature(order)) {
+        continue;
+      }
+
+      // Check: the maker has the proper balance
+      if (!(await checkBalance(enhancedOrder))) {
+        continue;
+      }
+
+      // Check: the maker has set the proper approval
+      if (!(await Helpers.Order.isApproved(baseProvider, order))) {
+        continue;
+      }
+
+      validOrders.push(enhancedOrder);
+      continue;
+    }
+
+    // Check: erc721 single token order is well formatted
     const isErc721SingleItem =
       Builders.Erc721.SingleItem.isWellFormatted(order);
     if (isErc721SingleItem && contractKinds.get(order.target) === "erc721") {
@@ -187,7 +227,7 @@ export const filterOrders = async (
       continue;
     }
 
-    // Check: erc1155 order is well formatted
+    // Check: erc1155 single token order is well formatted
     const isErc1155SingleItem =
       Builders.Erc1155.SingleItem.isWellFormatted(order);
     if (isErc1155SingleItem && contractKinds.get(order.target) === "erc1155") {
@@ -226,50 +266,115 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
 
   const queries: any[] = [];
   for (const order of orders) {
-    // Generate the token set id corresponding to the order
-    const tokenSetId = generateTokenSetId([
-      {
-        contract: order.target,
-        tokenId: order.tokenId,
-      },
-    ]);
+    let tokenSetId: string | undefined;
+    if (order.tokenId) {
+      // Handle single-token order
 
-    // Make sure the token set exists
-    queries.push({
-      query: `
-        insert into "token_sets" (
-          "id",
-          "contract",
-          "token_id"
-        ) values (
-          $/tokenSetId/,
-          $/contract/,
-          $/tokenId/
-        ) on conflict do nothing
-      `,
-      values: {
-        tokenSetId,
-        contract: order.target,
-        tokenId: order.tokenId,
-      },
-    });
-    queries.push({
-      query: `
-        insert into "token_sets_tokens" (
-          "token_set_id",
-          "contract",
-          "token_id"
-        ) values (
-          $/tokenSetId/,
-          $/contract/,
-          $/tokenId/
-        ) on conflict do nothing`,
-      values: {
-        tokenSetId,
-        contract: order.target,
-        tokenId: order.tokenId,
-      },
-    });
+      // Generate the token set id corresponding to the order
+      tokenSetId = generateTokenSetId([
+        {
+          contract: order.target,
+          tokenId: order.tokenId,
+        },
+      ]);
+
+      // Make sure the token set exists
+      queries.push({
+        query: `
+          insert into "token_sets" (
+            "id",
+            "contract",
+            "token_id"
+          ) values (
+            $/tokenSetId/,
+            $/contract/,
+            $/tokenId/
+          ) on conflict do nothing
+        `,
+        values: {
+          tokenSetId,
+          contract: order.target,
+          tokenId: order.tokenId,
+        },
+      });
+      queries.push({
+        query: `
+          insert into "token_sets_tokens" (
+            "token_set_id",
+            "contract",
+            "token_id"
+          ) values (
+            $/tokenSetId/,
+            $/contract/,
+            $/tokenId/
+          ) on conflict do nothing
+        `,
+        values: {
+          tokenSetId,
+          contract: order.target,
+          tokenId: order.tokenId,
+        },
+      });
+    } else if (order.tokenIdRange) {
+      // Handle token-range order
+
+      const collection: { id: string } | null = await db.oneOrNone(
+        `
+          select "id"
+          from "collections"
+          where "contract" = $/contract/
+            and "token_id_range" = numrange($/startTokenId/, $/endTokenId/, '[]')
+        `,
+        {
+          contract: order.target,
+          startTokenId: order.tokenIdRange[0],
+          endTokenId: order.tokenIdRange[1],
+        }
+      );
+      if (collection?.id) {
+        // The token set id is the collection id
+        tokenSetId = collection.id;
+
+        // Make sure the token set exists
+        queries.push({
+          query: `
+            insert into "token_sets" (
+              "id",
+              "collection_id"
+            ) values (
+              $/tokenSetId/,
+              $/collectionId/
+            ) on conflict do nothing
+          `,
+          values: {
+            tokenSetId,
+            collectionId: collection.id,
+          },
+        });
+        queries.push({
+          query: `
+            insert into "token_sets_tokens" (
+              "token_set_id",
+              "contract",
+              "token_id"
+            )
+            (
+              select $/tokenSetId/, "contract", "token_id"
+              from "tokens"
+              where "collection_id" = $/collectionId/
+            ) on conflict do nothing
+          `,
+          values: {
+            tokenSetId,
+            collectionId: collection.id,
+          },
+        });
+      }
+    }
+
+    if (!tokenSetId) {
+      continue;
+    }
 
     const side = order.side === 0 ? "buy" : "sell";
 

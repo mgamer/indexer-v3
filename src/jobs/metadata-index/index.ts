@@ -56,6 +56,8 @@ if (config.doBackgroundWork) {
           royaltyBps: number;
           royaltyRecipient?: string;
           community: string;
+          contract?: string;
+          tokenRange?: [string, string];
           filters?: any;
           sort?: any;
         };
@@ -87,6 +89,8 @@ if (config.doBackgroundWork) {
               "royalty_bps",
               "royalty_recipient",
               "community",
+              "contract",
+              "token_id_range",
               "filterable_attribute_keys",
               "sortable_attribute_keys"
             ) values (
@@ -97,6 +101,8 @@ if (config.doBackgroundWork) {
               $/royaltyBps/,
               $/royaltyRecipient/,
               $/community/,
+              $/contract/,
+              numrange($/startTokenId/, $/endTokenId/),
               $/filterableAttributeKeys:json/,
               $/sortableAttributeKeys:json/
             ) on conflict ("id") do
@@ -107,6 +113,8 @@ if (config.doBackgroundWork) {
               "royalty_bps" = $/royaltyBps/,
               "royalty_recipient" = $/royaltyRecipient/,
               "community" = $/community/,
+              "contract" = $/contract/,
+              "token_id_range" = numrange($/startTokenId/, $/endTokenId/, '[]'),
               "filterable_attribute_keys" = $/filterableAttributeKeys:json/,
               "sortable_attribute_keys" = $/sortableAttributeKeys:json/
           `,
@@ -118,6 +126,9 @@ if (config.doBackgroundWork) {
             royaltyBps: data.collection.royaltyBps,
             royaltyRecipient: data.collection.royaltyRecipient,
             community: data.collection.community,
+            contract: data.collection.contract,
+            startTokenId: data.collection.tokenRange?.[0],
+            endTokenId: data.collection.tokenRange?.[1],
             filterableAttributeKeys: data.collection.filters,
             sortableAttributeKeys: data.collection.sort,
           },
@@ -186,6 +197,30 @@ if (config.doBackgroundWork) {
             `,
           });
         }
+
+        // Update collection-wide token sets
+        queries.push({
+          query: `
+            insert into "token_sets_tokens" (
+              "token_set_id",
+              "contract",
+              "token_id"
+            )
+            (
+              select
+                "id",
+                $/contract/,
+                $/tokenId/
+              from "token_sets"
+              where "id" = $/collectionId/
+            )
+          `,
+          values: {
+            contract,
+            tokenId,
+            collectionId: data.collection.id,
+          },
+        });
 
         if (queries.length) {
           await db.none(pgp.helpers.concat(queries));
