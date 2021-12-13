@@ -1,39 +1,36 @@
-import { CoralogixLogger, Log, LoggerConfig, Severity } from "coralogix-logger";
+import { createLogger, format, transports } from "winston";
 
 import { config } from "@/config/index";
 
-const log = (severity: Severity) => {
-  const coralogixPrivateKey = process.env.CORALOGIX_PRIVATE_KEY;
-  if (coralogixPrivateKey) {
-    const environment = config.doBackgroundWork ? "worker" : "api";
-    const network = config.chainId === 1 ? "mainnet" : "rinkeby";
+const log = (level: "debug" | "error" | "info") => {
+  const network = config.chainId === 1 ? "mainnet" : "rinkeby";
+  const service = `indexer-v3-${network}`;
 
-    const loggerConfig = new LoggerConfig({
-      privateKey: String(coralogixPrivateKey),
-      applicationName: "reservoir",
-      subsystemName: `indexer-v3-${environment}-${network}`,
-    });
-    CoralogixLogger.configure(loggerConfig);
+  const logger = createLogger({
+    exitOnError: false,
+    format: format.combine(
+      format.timestamp({
+        format: "YYYY-MM-DD HH:mm:ss",
+      }),
+      format.json()
+    ),
+    transports: [
+      process.env.DATADOG_API_KEY
+        ? new transports.Http({
+            host: "http-intake.logs.datadoghq.com",
+            path: `/api/v2/logs?dd-api-key=${process.env.DATADOG_API_KEY}&ddsource=nodejs&service=${service}`,
+            ssl: true,
+          })
+        : new transports.Console(),
+    ],
+  });
 
-    return (category: string, message: any) => {
-      const logger = new CoralogixLogger(category);
-      const log = new Log({
-        severity,
-        category,
-        text: message,
-      });
-      logger.addLog(log);
-    };
-  } else {
-    return (category: string, message: any) => {
-      const timestamp = `[${new Date().toUTCString()}]`;
-      console.log(timestamp, category, message);
-    };
-  }
+  return (component: string, message: string) =>
+    logger.log(level, message, { component });
 };
 
 export const logger = {
-  debug: log(Severity.debug),
-  error: log(Severity.error),
-  info: log(Severity.info),
+  debug: log("debug"),
+  error: log("error"),
+  info: log("info"),
 };

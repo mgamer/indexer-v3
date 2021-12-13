@@ -1,6 +1,7 @@
 import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 
+import "@/common/tracer";
 import "@/jobs/index";
 
 import { start } from "@/api/index";
