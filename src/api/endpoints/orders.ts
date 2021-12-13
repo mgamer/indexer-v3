@@ -75,9 +75,6 @@ export const postOrdersOptions: RouteOptions = {
       }
 
       const filteredOrders = await wyvernV2.filterOrders(parsedOrders);
-      if (filteredOrders.length < orders.length) {
-        throw Boom.badData("One or more orders are invalid");
-      }
       await wyvernV2.saveOrders(filteredOrders);
 
       return { message: "Success" };
