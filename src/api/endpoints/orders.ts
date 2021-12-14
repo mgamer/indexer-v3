@@ -91,13 +91,7 @@ export const getOrdersOptions: RouteOptions = {
   validate: {
     query: Joi.object({
       contract: Joi.string().lowercase(),
-      tokenId: Joi.string()
-        .pattern(/^[0-9]+$/)
-        .when("contract", {
-          is: Joi.exist(),
-          then: Joi.required(),
-          otherwise: Joi.optional(),
-        }),
+      tokenId: Joi.string().pattern(/^[0-9]+$/),
       maker: Joi.string().lowercase(),
       hash: Joi.string().lowercase(),
       side: Joi.string().lowercase().valid("sell", "buy").default("sell"),
@@ -124,13 +118,7 @@ export const getFillOptions: RouteOptions = {
   validate: {
     query: Joi.object({
       contract: Joi.string().lowercase(),
-      tokenId: Joi.string()
-        .pattern(/^[0-9]+$/)
-        .when("contract", {
-          is: Joi.exist(),
-          then: Joi.required(),
-          otherwise: Joi.optional(),
-        }),
+      tokenId: Joi.string().pattern(/^[0-9]+$/),
       side: Joi.string().lowercase().valid("buy", "sell").default("sell"),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),

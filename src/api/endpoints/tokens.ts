@@ -10,19 +10,9 @@ export const getTokensOptions: RouteOptions = {
   validate: {
     query: Joi.object({
       contract: Joi.string().lowercase(),
-      tokenId: Joi.string()
-        .pattern(/^[0-9]+$/)
-        .when("contract", {
-          is: Joi.exist(),
-          then: Joi.required(),
-          otherwise: Joi.optional(),
-        }),
+      tokenId: Joi.string().pattern(/^[0-9]+$/),
       collection: Joi.string().lowercase(),
-      attributes: Joi.object().unknown().when("collection", {
-        is: Joi.exist(),
-        then: Joi.optional(),
-        otherwise: Joi.optional(),
-      }),
+      attributes: Joi.object().unknown(),
       onSale: Joi.boolean(),
       sortBy: Joi.string().default("tokenId"),
       sortDirection: Joi.string()
@@ -54,19 +44,9 @@ export const getTokenStatsOptions: RouteOptions = {
   validate: {
     query: Joi.object({
       contract: Joi.string().lowercase(),
-      tokenId: Joi.string()
-        .pattern(/^[0-9]+$/)
-        .when("contract", {
-          is: Joi.exist(),
-          then: Joi.required(),
-          otherwise: Joi.optional(),
-        }),
+      tokenId: Joi.string().pattern(/^[0-9]+$/),
       collection: Joi.string().lowercase(),
-      attributes: Joi.object().unknown().when("collection", {
-        is: Joi.exist(),
-        then: Joi.optional(),
-        otherwise: Joi.optional(),
-      }),
+      attributes: Joi.object().unknown(),
       onSale: Joi.boolean(),
     })
       .oxor("collection", "contract")
