@@ -21,7 +21,15 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
       ],
     },
     `
-      select * from (
+      select
+        "x".*,
+        "y"."floor_sell_hash",
+        "y"."floor_sell_value",
+        "y"."floor_sell_maker",
+        "z"."top_buy_hash",
+        "z"."top_buy_value",
+        "z"."top_buy_maker"
+      from (
         select
           "t"."collection_id",
           count(distinct("t"."token_id")) as "token_count",
