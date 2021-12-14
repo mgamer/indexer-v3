@@ -26,8 +26,12 @@ export const getCollections = async (filter: GetCollectionsFilter) => {
       "cs"."on_sale_count" as "onSaleCount",
       "cs"."unique_owners_count" as "uniqueOwnersCount",
       "cs"."sample_image" as "sampleImage",
+      "cs"."floor_sell_hash" as "floorSellHash",
       "cs"."floor_sell_value" as "floorSellValue",
-      "cs"."top_buy_value" as "topBuyValue"
+      "cs"."floor_sell_maker" as "floorSellMaker",
+      "cs"."top_buy_hash" as "topBuyHash",
+      "cs"."top_buy_value" as "topBuyValue",
+      "cs"."top_buy_maker" as "topBuyMaker"
     from "collections" "c"
     join "collection_stats" "cs"
       on "c"."id" = "cs"."collection_id"
