@@ -301,17 +301,19 @@ if (config.doBackgroundWork) {
           );
         }
 
-        const columns = new pgp.helpers.ColumnSet(["hash", "status"], {
-          table: "orders",
-        });
-        const values = pgp.helpers.values(hashes, columns);
-        await db.none(`
-          update "orders" as "o" set "status" = "x"."status"
-          from (values ${values}) as "x"("hash", "status")
-          where "o"."hash" = "x"."hash"::text
-            and ("o"."status" = 'valid' or "o"."status" = 'no-balance')
-            and "o"."status" != "x"."status"::order_status_t
-        `);
+        if (hashes.length) {
+          const columns = new pgp.helpers.ColumnSet(["hash", "status"], {
+            table: "orders",
+          });
+          const values = pgp.helpers.values(hashes, columns);
+          await db.none(`
+            update "orders" as "o" set "status" = "x"."status"
+            from (values ${values}) as "x"("hash", "status")
+            where "o"."hash" = "x"."hash"::text
+              and ("o"."status" = 'valid' or "o"."status" = 'no-balance')
+              and "o"."status" != "x"."status"::order_status_t
+          `);
+        }
 
         await addToOrdersUpdateByHashQueue(hashes);
       } catch (error) {
