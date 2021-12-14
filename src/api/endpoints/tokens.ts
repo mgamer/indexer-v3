@@ -15,13 +15,13 @@ export const getTokensOptions: RouteOptions = {
         .when("contract", {
           is: Joi.exist(),
           then: Joi.required(),
-          otherwise: Joi.forbidden(),
+          otherwise: Joi.optional(),
         }),
       collection: Joi.string().lowercase(),
       attributes: Joi.object().unknown().when("collection", {
         is: Joi.exist(),
         then: Joi.optional(),
-        otherwise: Joi.forbidden(),
+        otherwise: Joi.optional(),
       }),
       onSale: Joi.boolean(),
       sortBy: Joi.string().default("tokenId"),
@@ -59,13 +59,13 @@ export const getTokenStatsOptions: RouteOptions = {
         .when("contract", {
           is: Joi.exist(),
           then: Joi.required(),
-          otherwise: Joi.forbidden(),
+          otherwise: Joi.optional(),
         }),
       collection: Joi.string().lowercase(),
       attributes: Joi.object().unknown().when("collection", {
         is: Joi.exist(),
         then: Joi.optional(),
-        otherwise: Joi.forbidden(),
+        otherwise: Joi.optional(),
       }),
       onSale: Joi.boolean(),
     })

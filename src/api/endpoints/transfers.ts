@@ -15,19 +15,19 @@ export const getTransfersOptions: RouteOptions = {
         .when("contract", {
           is: Joi.exist(),
           then: Joi.required(),
-          otherwise: Joi.forbidden(),
+          otherwise: Joi.optional(),
         }),
       collection: Joi.string().lowercase(),
       attributes: Joi.object().unknown().when("collection", {
         is: Joi.exist(),
         then: Joi.optional(),
-        otherwise: Joi.forbidden(),
+        otherwise: Joi.optional(),
       }),
       account: Joi.string().lowercase(),
       direction: Joi.string().lowercase().valid("from", "to").when("account", {
         is: Joi.exist(),
         then: Joi.optional(),
-        otherwise: Joi.forbidden(),
+        otherwise: Joi.optional(),
       }),
       type: Joi.string().lowercase().valid("sale", "transfer"),
       offset: Joi.number().integer().min(0).default(0),

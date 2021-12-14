@@ -15,7 +15,7 @@ export const getAttributesOptions: RouteOptions = {
         .when("contract", {
           is: Joi.exist(),
           then: Joi.required(),
-          otherwise: Joi.forbidden(),
+          otherwise: Joi.optional(),
         }),
       collection: Joi.string().lowercase(),
       offset: Joi.number().integer().min(0).default(0),

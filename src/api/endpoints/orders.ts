@@ -96,7 +96,7 @@ export const getOrdersOptions: RouteOptions = {
         .when("contract", {
           is: Joi.exist(),
           then: Joi.required(),
-          otherwise: Joi.forbidden(),
+          otherwise: Joi.optional(),
         }),
       maker: Joi.string().lowercase(),
       hash: Joi.string().lowercase(),
@@ -129,7 +129,7 @@ export const getFillOptions: RouteOptions = {
         .when("contract", {
           is: Joi.exist(),
           then: Joi.required(),
-          otherwise: Joi.forbidden(),
+          otherwise: Joi.optional(),
         }),
       side: Joi.string().lowercase().valid("buy", "sell").default("sell"),
       offset: Joi.number().integer().min(0).default(0),
