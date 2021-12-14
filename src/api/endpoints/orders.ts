@@ -92,12 +92,13 @@ export const getOrdersOptions: RouteOptions = {
     query: Joi.object({
       contract: Joi.string().lowercase(),
       tokenId: Joi.string().pattern(/^[0-9]+$/),
+      collection: Joi.string().lowercase(),
       maker: Joi.string().lowercase(),
       hash: Joi.string().lowercase(),
       side: Joi.string().lowercase().valid("sell", "buy").default("sell"),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
-    }).or("contract", "maker", "hash"),
+    }).or("contract", "collection", "maker", "hash"),
   },
   handler: async (request: Request) => {
     const query = request.query as any;

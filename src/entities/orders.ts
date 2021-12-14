@@ -3,6 +3,7 @@ import { db } from "@/common/db";
 export type GetOrdersFilter = {
   contract?: string;
   tokenId?: string;
+  collection?: string;
   maker?: string;
   hash?: string;
   side: "sell" | "buy";
@@ -40,6 +41,9 @@ export const getOrders = async (filter: GetOrdersFilter) => {
   }
   if (filter.tokenId) {
     conditionsInner.push(`"tst"."token_id" = $/tokenId/`);
+  }
+  if (filter.collection) {
+    conditionsInner.push(`"tst"."id" = $/collection/`);
   }
   if (filter.maker) {
     conditionsInner.push(`"o"."maker" = $/maker/`);
