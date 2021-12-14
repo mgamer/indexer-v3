@@ -52,9 +52,7 @@ export const getCollectionExploreOptions: RouteOptions = {
         .default("asc"),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
-    })
-      .oxor("collection", "contract")
-      .or("collection", "contract"),
+    }),
   },
   handler: async (request: Request) => {
     const params = request.params as any;
