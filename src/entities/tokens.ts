@@ -126,10 +126,14 @@ export const getTokens = async (filter: GetTokensFilter) => {
         id: r.collectionId,
         name: r.collectionName,
       },
-      floorSellHash: r.floorSellHash,
-      floorSellValue: r.floorSellValue,
-      topBuyHash: r.topBuyHash,
-      topBuyValue: r.topBuyValue,
+      floorSell: {
+        hash: r.floorSellHash,
+        value: r.floorSellValue,
+      },
+      topBuy: {
+        hash: r.topBuyHash,
+        value: r.topBuyValue,
+      },
     }))
   );
 };
