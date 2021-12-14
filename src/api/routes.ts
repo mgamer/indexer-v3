@@ -35,8 +35,8 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/explore",
-    options: attributesEndpoints.getCollectionAttributesOptions,
+    path: "/collections/explore",
+    options: attributesEndpoints.getCollectionExploreOptions,
   });
 
   // Collections
@@ -49,13 +49,13 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/collection-ownerships",
+    path: "/collections/{collection}/ownerships",
     options: collectionsEndpoints.getCollectionOwnershipsOptions,
   });
 
   server.route({
     method: "GET",
-    path: "/user-collections",
+    path: "/user/{user}/collections",
     options: collectionsEndpoints.getUserCollectionsOptions,
   });
 
@@ -89,13 +89,13 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/token-stats",
-    options: tokensEndpoints.getTokenStatsOptions,
+    path: "/tokens/stats",
+    options: tokensEndpoints.getTokensStatsOptions,
   });
 
   server.route({
     method: "GET",
-    path: "/user-tokens",
+    path: "/user/{user}/tokens",
     options: tokensEndpoints.getUserTokensOptions,
   });
 

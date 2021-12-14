@@ -33,12 +33,14 @@ export const getAttributesOptions: RouteOptions = {
   },
 };
 
-export const getCollectionAttributesOptions: RouteOptions = {
-  description: "Get collection attributes",
+export const getCollectionExploreOptions: RouteOptions = {
+  description: "Get collection explore",
   tags: ["api"],
   validate: {
-    query: Joi.object({
+    params: Joi.object({
       collection: Joi.string().lowercase().required(),
+    }),
+    query: Joi.object({
       attribute: Joi.string(),
       onSaleCount: Joi.number(),
       sortBy: Joi.string()
@@ -55,12 +57,14 @@ export const getCollectionAttributesOptions: RouteOptions = {
       .or("collection", "contract"),
   },
   handler: async (request: Request) => {
+    const params = request.params as any;
     const query = request.query as any;
 
     try {
-      const attributes = await queries.getCollectionAttributes(
-        query as queries.GetCollectionAttributesFilter
-      );
+      const attributes = await queries.getCollectionExplore({
+        ...params,
+        ...query,
+      } as queries.GetCollectionExploreFilter);
       return { attributes };
     } catch (error) {
       logger.error(
