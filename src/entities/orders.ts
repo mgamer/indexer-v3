@@ -43,7 +43,7 @@ export const getOrders = async (filter: GetOrdersFilter) => {
     conditionsInner.push(`"tst"."token_id" = $/tokenId/`);
   }
   if (filter.collection) {
-    conditionsInner.push(`"tst"."id" = $/collection/`);
+    conditionsInner.push(`"tst"."token_set_id" = $/collection/`);
   }
   if (filter.maker) {
     conditionsInner.push(`"o"."maker" = $/maker/`);
