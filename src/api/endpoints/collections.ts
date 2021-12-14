@@ -40,20 +40,24 @@ export const getCollectionOwnershipsOptions: RouteOptions = {
   description: "Get collection ownerships",
   tags: ["api"],
   validate: {
-    query: Joi.object({
+    params: Joi.object({
       collection: Joi.string().lowercase().required(),
+    }),
+    query: Joi.object({
       owner: Joi.string().lowercase(),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     }),
   },
   handler: async (request: Request) => {
+    const params = request.params as any;
     const query = request.query as any;
 
     try {
-      const owners = await queries.getCollectionOwnerships(
-        query as queries.GetCollectionOwnershipsFilter
-      );
+      const owners = await queries.getCollectionOwnerships({
+        ...params,
+        ...query,
+      } as queries.GetCollectionOwnershipsFilter);
       return { owners };
     } catch (error) {
       logger.error(
@@ -69,8 +73,10 @@ export const getUserCollectionsOptions: RouteOptions = {
   description: "Get user collections",
   tags: ["api"],
   validate: {
-    query: Joi.object({
+    params: Joi.object({
       user: Joi.string().lowercase().required(),
+    }),
+    query: Joi.object({
       community: Joi.string().lowercase(),
       collection: Joi.string().lowercase(),
       offset: Joi.number().integer().min(0).default(0),
@@ -78,12 +84,14 @@ export const getUserCollectionsOptions: RouteOptions = {
     }),
   },
   handler: async (request: Request) => {
+    const params = request.params as any;
     const query = request.query as any;
 
     try {
-      const collections = await queries.getUserCollections(
-        query as queries.GetUserCollectionsFilter
-      );
+      const collections = await queries.getUserCollections({
+        ...params,
+        ...query,
+      } as queries.GetUserCollectionsFilter);
       return { collections };
     } catch (error) {
       logger.error("get_user_collections_handler", `Handler failure: ${error}`);

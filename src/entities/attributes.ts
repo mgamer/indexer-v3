@@ -48,7 +48,7 @@ export const getAttributes = async (filter: GetAttributesFilter) => {
   return db.manyOrNone(baseQuery, filter);
 };
 
-export type GetCollectionAttributesFilter = {
+export type GetCollectionExploreFilter = {
   collection: string;
   attribute?: string;
   onSaleCount?: number;
@@ -58,8 +58,8 @@ export type GetCollectionAttributesFilter = {
   limit: number;
 };
 
-export const getCollectionAttributes = async (
-  filter: GetCollectionAttributesFilter
+export const getCollectionExplore = async (
+  filter: GetCollectionExploreFilter
 ) => {
   let baseQueryInner = `
     select

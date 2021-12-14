@@ -126,15 +126,19 @@ export const getTokens = async (filter: GetTokensFilter) => {
         id: r.collectionId,
         name: r.collectionName,
       },
-      floorSellHash: r.floorSellHash,
-      floorSellValue: r.floorSellValue,
-      topBuyHash: r.topBuyHash,
-      topBuyValue: r.topBuyValue,
+      floorSell: {
+        hash: r.floorSellHash,
+        value: r.floorSellValue,
+      },
+      topBuy: {
+        hash: r.topBuyHash,
+        value: r.topBuyValue,
+      },
     }))
   );
 };
 
-export type GetTokenStatsFilter = {
+export type GetTokensStatsFilter = {
   contract?: string;
   tokenId?: string;
   collection?: string;
@@ -142,7 +146,7 @@ export type GetTokenStatsFilter = {
   onSale?: boolean;
 };
 
-export const getTokenStats = async (filter: GetTokenStatsFilter) => {
+export const getTokensStats = async (filter: GetTokensStatsFilter) => {
   let baseQuery = `
     select
       count(distinct("t"."token_id")) as "tokenCount",

@@ -38,8 +38,8 @@ export const getTokensOptions: RouteOptions = {
   },
 };
 
-export const getTokenStatsOptions: RouteOptions = {
-  description: "Get token stats",
+export const getTokensStatsOptions: RouteOptions = {
+  description: "Get tokens stats",
   tags: ["api"],
   validate: {
     query: Joi.object({
@@ -56,8 +56,8 @@ export const getTokenStatsOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const stats = await queries.getTokenStats(
-        query as queries.GetTokenStatsFilter
+      const stats = await queries.getTokensStats(
+        query as queries.GetTokensStatsFilter
       );
       return { stats };
     } catch (error) {
@@ -71,8 +71,10 @@ export const getUserTokensOptions: RouteOptions = {
   description: "Get user tokens",
   tags: ["api"],
   validate: {
-    query: Joi.object({
+    params: Joi.object({
       user: Joi.string().lowercase().required(),
+    }),
+    query: Joi.object({
       community: Joi.string().lowercase(),
       collection: Joi.string().lowercase(),
       hasOffer: Joi.boolean(),
@@ -88,12 +90,14 @@ export const getUserTokensOptions: RouteOptions = {
     }),
   },
   handler: async (request: Request) => {
+    const params = request.params as any;
     const query = request.query as any;
 
     try {
-      const tokens = await queries.getUserTokens(
-        query as queries.GetUserTokensFilter
-      );
+      const tokens = await queries.getUserTokens({
+        ...params,
+        ...query,
+      } as queries.GetUserTokensFilter);
       return { tokens };
     } catch (error) {
       logger.error("get_user_tokens_handler", `Handler failure: ${error}`);
