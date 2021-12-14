@@ -130,7 +130,7 @@ export const getFillOptions: RouteOptions = {
 
     try {
       const fill = await queries.getFill(query as queries.GetFillFilter);
-      return { fill };
+      return { orders: fill ?? [] };
     } catch (error) {
       logger.error("get_fill_handler", `Handler failure: ${error}`);
       throw error;
