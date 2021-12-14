@@ -243,32 +243,26 @@ if (config.doBackgroundWork) {
 
       console.time(`Handling ${side} ${maker}`);
       try {
+        let hashes: { hash: string; status: string }[] = [];
+
         if (side === "buy") {
-          const hashes: { hash: string }[] = await db.manyOrNone(
+          hashes = await db.manyOrNone(
             `
-              update "orders" as "o" set
-                "status" = "x"."status"
-              from (
-                select
-                  "o"."hash",
-                  (case
-                    when "w"."amount" >= "o"."price" then 'valid'
-                    else 'no-balance'
-                  end)::order_status_t as "status"
-                from "orders" "o"
-                join "ownerships" "w"
-                  on "o"."maker" = "w"."owner"
-                where "o"."side" = 'buy'
-                  and "o"."valid_between" @> now()
-                  and ("o"."status" = 'valid' or "o"."status" = 'no-balance')
-                  and "w"."owner" = $/maker/
-                  and "w"."contract" = $/weth/
-                  and "w"."token_id" = -1
-              ) "x"
-              where "o"."hash" = "x"."hash"
+              select
+                "o"."hash",
+                (case
+                  when "w"."amount" >= "o"."price" then 'valid'
+                  else 'no-balance'
+                end)::order_status_t as "status"
+              from "orders" "o"
+              join "ownerships" "w"
+                on "o"."maker" = "w"."owner"
+              where "o"."side" = 'buy'
+                and "o"."valid_between" @> now()
                 and ("o"."status" = 'valid' or "o"."status" = 'no-balance')
-                and "o"."status" != "x"."status"
-              returning "o"."hash"
+                and "w"."owner" = $/maker/
+                and "w"."contract" = $/weth/
+                and "w"."token_id" = -1
             `,
             {
               maker,
@@ -276,38 +270,28 @@ if (config.doBackgroundWork) {
               weth: Utils.Address.weth(config.chainId),
             }
           );
-
-          await addToOrdersUpdateByHashQueue(hashes);
         } else if (side === "sell") {
-          const hashes: { hash: string }[] = await db.manyOrNone(
+          hashes = await db.manyOrNone(
             `
-              update "orders" as "o" set
-                "status" = "x"."status"
-              from (
-                select
-                  "o"."hash",
-                  (case
-                    when "w"."amount" > 0 then 'valid'
-                    else 'no-balance'
-                  end)::order_status_t as "status"
-                from "orders" "o"
-                join "ownerships" "w"
-                  on "o"."maker" = "w"."owner"
-                join "token_sets_tokens" "tst"
-                  on "o"."token_set_id" = "tst"."token_set_id"
-                  and "w"."contract" = "tst"."contract"
-                  and "w"."token_id" = "tst"."token_id"
-                where "o"."side" = 'sell'
-                  and "o"."valid_between" @> now()
-                  and ("o"."status" = 'valid' or "o"."status" = 'no-balance')
-                  and "w"."owner" = $/maker/
-                  and "w"."contract" = $/contract/
-                  and "w"."token_id" = $/tokenId/
-              ) "x"
-              where "o"."hash" = "x"."hash"
+              select
+                "o"."hash",
+                (case
+                  when "w"."amount" > 0 then 'valid'
+                  else 'no-balance'
+                end)::order_status_t as "status"
+              from "orders" "o"
+              join "ownerships" "w"
+                on "o"."maker" = "w"."owner"
+              join "token_sets_tokens" "tst"
+                on "o"."token_set_id" = "tst"."token_set_id"
+                and "w"."contract" = "tst"."contract"
+                and "w"."token_id" = "tst"."token_id"
+              where "o"."side" = 'sell'
+                and "o"."valid_between" @> now()
                 and ("o"."status" = 'valid' or "o"."status" = 'no-balance')
-                and "o"."status" != "x"."status"
-              returning "o"."hash"
+                and "w"."owner" = $/maker/
+                and "w"."contract" = $/contract/
+                and "w"."token_id" = $/tokenId/
             `,
             {
               maker,
@@ -315,9 +299,21 @@ if (config.doBackgroundWork) {
               tokenId,
             }
           );
-
-          await addToOrdersUpdateByHashQueue(hashes);
         }
+
+        const columns = new pgp.helpers.ColumnSet(["hash", "status"], {
+          table: "orders",
+        });
+        const values = pgp.helpers.values(hashes, columns);
+        await db.none(`
+          update "orders" as "o" set "status" = "x"."status"
+          from (values ${values}) as "x"("hash", "status")
+          where "o"."hash" = "x"."hash"::text
+            and ("o"."status" = 'valid' or "o"."status" = 'no-balance')
+            and "o"."status" != "x"."status"::order_status_t
+        `);
+
+        await addToOrdersUpdateByHashQueue(hashes);
       } catch (error) {
         logger.error(
           BY_MAKER_JOB_NAME,
