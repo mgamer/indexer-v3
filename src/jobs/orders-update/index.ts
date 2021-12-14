@@ -307,7 +307,7 @@ if (config.doBackgroundWork) {
           });
           const values = pgp.helpers.values(hashes, columns);
           await db.none(`
-            update "orders" as "o" set "status" = "x"."status"
+            update "orders" as "o" set "status" = "x"."status"::order_status_t
             from (values ${values}) as "x"("hash", "status")
             where "o"."hash" = "x"."hash"::text
               and ("o"."status" = 'valid' or "o"."status" = 'no-balance')
