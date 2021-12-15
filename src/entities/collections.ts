@@ -89,8 +89,16 @@ export const getCollections = async (filter: GetCollectionsFilter) => {
       onSaleCount: r.onSaleCount,
       uniqueOwnersCount: r.uniqueOwnersCount,
       sampleImage: r.sampleImage,
-      floorSellValue: r.floorSellValue,
-      topBuyValue: r.topBuyValue,
+      floorSell: {
+        hash: r.floorSellHash,
+        value: r.floorSellValue,
+        maker: r.floorSellMaker,
+      },
+      topBuy: {
+        hash: r.topBuyHash,
+        value: r.topBuyValue,
+        maker: r.topBuyMaker,
+      },
     }))
   );
 };
