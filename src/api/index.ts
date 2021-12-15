@@ -14,6 +14,11 @@ export const start = async function (): Promise<void> {
     query: {
       parser: (query) => qs.parse(query),
     },
+    routes: {
+      cors: {
+        origin: ["*"],
+      },
+    },
   });
 
   await server.register([
