@@ -51,7 +51,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
         from "tokens" "t"
         join "orders" "o"
           on "t"."floor_sell_hash" = "o"."hash"
-        order by "t"."collection_id", "t"."floor_sell_value"
+        order by "t"."collection_id", "t"."floor_sell_value" asc
       ) "y"
         on "x"."collection_id" = "y"."collection_id"
       left join (
@@ -64,6 +64,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
         join "token_sets" "ts"
           on "o"."token_set_id" = "ts"."id"
         where "ts"."collection_id" is not null
+        order by "ts"."collection_id", "o"."value" desc
       ) "z"
         on "x"."collection_id" = "z"."collection_id"
     `
