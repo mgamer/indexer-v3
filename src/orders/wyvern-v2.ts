@@ -5,7 +5,10 @@ import { bn } from "@/common/bignumber";
 import { db, pgp } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
-import { generateTokenSetId } from "@/orders/utils";
+import {
+  generateTokenListSetId,
+  generateTokenRangeSetId,
+} from "@/orders/utils";
 import { addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
 
 export const filterOrders = async (
@@ -43,6 +46,7 @@ export const filterOrders = async (
 
     // Check: order doesn't already exist
     if (existingHashes.has(hash)) {
+      console.log("order already exists");
       continue;
     }
 
@@ -50,6 +54,7 @@ export const filterOrders = async (
     const currentTime = Math.floor(Date.now() / 1000);
     const expirationTime = order.params.expirationTime;
     if (expirationTime !== 0 && currentTime >= expirationTime) {
+      console.log("order expired");
       continue;
     }
 
@@ -58,6 +63,7 @@ export const filterOrders = async (
       order.params.side === 0 &&
       order.params.paymentToken !== Sdk.Common.Addresses.Weth[config.chainId]
     ) {
+      console.log("order wrong payment token");
       continue;
     }
 
@@ -66,16 +72,19 @@ export const filterOrders = async (
       order.params.side === 1 &&
       order.params.paymentToken !== Sdk.Common.Addresses.Eth[config.chainId]
     ) {
+      console.log("order wrong payment token");
       continue;
     }
 
     // Check: order is not private
     if (order.params.taker !== AddressZero) {
+      console.log("order is private");
       continue;
     }
 
     // Check: order has a valid kind
     if (!order.hasValidKind()) {
+      console.log("order wrong kind");
       continue;
     }
 
@@ -83,16 +92,19 @@ export const filterOrders = async (
     if (
       !order.params.kind?.startsWith(contractKinds.get(order.params.target)!)
     ) {
+      console.log("order wrong target");
       continue;
     }
 
     // Check: order has a valid signature
     if (!order.hasValidSignature()) {
+      console.log("order wrong signature");
       continue;
     }
 
     // Check: order is fillable
     if (!order.isFillable(baseProvider)) {
+      console.log("order not fillable");
       continue;
     }
 
@@ -147,8 +159,8 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
     if (tokenId) {
       // The order is a single-token order
 
-      // Generate the token set id corresponding to the order
-      tokenSetId = generateTokenSetId([
+      // Generate the token list set id corresponding to the order
+      tokenSetId = generateTokenListSetId([
         {
           contract: order.params.target,
           tokenId,
@@ -212,8 +224,12 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
         }
       );
       if (collection?.id) {
-        // The token set id is the collection id
-        tokenSetId = collection.id;
+        // Generate the token range set id corresponding to the order
+        tokenSetId = generateTokenRangeSetId(
+          order.params.target,
+          tokenIdRange[0],
+          tokenIdRange[1]
+        );
 
         // Make sure the token set exists
         queries.push({

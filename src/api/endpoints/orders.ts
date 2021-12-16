@@ -70,6 +70,8 @@ export const postOrdersOptions: RouteOptions = {
     try {
       const orders = payload.orders as any;
 
+      console.log(`Got payload ${JSON.stringify(orders)}`);
+
       const validOrders: Sdk.WyvernV2.Order[] = [];
       for (const { kind, data } of orders) {
         if (kind === "wyvern-v2") {
@@ -83,6 +85,7 @@ export const postOrdersOptions: RouteOptions = {
       }
 
       const filteredOrders = await wyvernV2.filterOrders(validOrders);
+      console.log(`Valid orders: ${filteredOrders.length}`);
       await wyvernV2.saveOrders(filteredOrders);
 
       return { message: "Success" };
