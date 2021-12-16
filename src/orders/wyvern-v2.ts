@@ -97,13 +97,13 @@ export const filterOrders = async (
     }
 
     // Check: order has a valid signature
-    if (!order.hasValidSignature()) {
+    if (!(await order.hasValidSignature())) {
       console.log("order wrong signature");
       continue;
     }
 
     // Check: order is fillable
-    if (!order.isFillable(baseProvider)) {
+    if (!(await order.isFillable(baseProvider))) {
       console.log("order not fillable");
       continue;
     }
@@ -115,7 +115,9 @@ export const filterOrders = async (
 };
 
 export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
-  // TODO: Use multi-row inserts to improve performance
+  // TODO: Things that could potentially be done:
+  // - use multi-row inserts to improve performance
+  // - short-circuit token set creation
 
   if (!orders.length) {
     return;
