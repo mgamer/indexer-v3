@@ -4,8 +4,6 @@ export type GetAttributesFilter = {
   contract?: string;
   tokenId?: string;
   collection?: string;
-  offset: number;
-  limit: number;
 };
 
 export const getAttributes = async (filter: GetAttributesFilter) => {
@@ -39,11 +37,7 @@ export const getAttributes = async (filter: GetAttributesFilter) => {
   baseQuery += ` group by "a"."key", "a"."value"`;
 
   // Sorting
-  baseQuery += ` order by "count" desc nulls last`;
-
-  // Pagination
-  baseQuery += ` offset $/offset/`;
-  baseQuery += ` limit $/limit/`;
+  baseQuery += ` order by "count" desc, "a"."key" asc nulls last`;
 
   return db.manyOrNone(baseQuery, filter);
 };
