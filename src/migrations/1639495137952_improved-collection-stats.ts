@@ -74,39 +74,16 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.dropIndex("collection_stats", "collection_id");
+  pgm.dropIndex("collection_stats", "collection_id", {
+    // https://github.com/salsita/node-pg-migrate/issues/857
+    name: "collection_stats_collection_id_unique_index",
+  });
 
   pgm.dropMaterializedView("collection_stats");
 
-  pgm.createMaterializedView(
-    "collection_stats",
-    {
-      columns: [
-        "collection_id",
-        "token_count",
-        "on_sale_count",
-        "unique_owners_count",
-        "sample_image",
-        "floor_sell_value",
-        "top_buy_value",
-      ],
-    },
-    `
-      select
-        "t"."collection_id",
-        count(distinct("t"."token_id")) as "token_count",
-        count(distinct("t"."token_id")) filter (where "t"."floor_sell_value" is not null) as "on_sale_count",
-        count(distinct("o"."owner")) filter (where "o"."amount" > 0) AS "unique_owners_count",
-        max("t"."image") as "sample_image",
-        min("t"."floor_sell_value") as "floor_sell_value",
-        max("t"."top_buy_value") as "top_buy_value"
-      from "tokens" "t"
-      join "ownerships" "o"
-        on "t"."contract" = "o"."contract"
-        and "t"."token_id" = "o"."token_id"
-      group by "t"."collection_id"
-    `
-  );
-
-  pgm.createIndex("collection_stats", "collection_id", { unique: true });
+  // Skip recreating the old version of the materialized view,
+  // if that's needed then the code should be copied over from
+  // any previous migrations. This might raise some issues when
+  // redoing this migration, and some additional tweaks to the
+  // code might be needed in that case.
 }
