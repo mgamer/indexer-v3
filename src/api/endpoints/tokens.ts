@@ -38,6 +38,36 @@ export const getTokensOptions: RouteOptions = {
   },
 };
 
+export const getTokensOwnersOptions: RouteOptions = {
+  description: "Get tokens owners",
+  tags: ["api"],
+  validate: {
+    query: Joi.object({
+      contract: Joi.string().lowercase(),
+      tokenId: Joi.string().pattern(/^[0-9]+$/),
+      collection: Joi.string().lowercase(),
+      attributes: Joi.object().unknown(),
+      offset: Joi.number().integer().min(0).default(0),
+      limit: Joi.number().integer().min(1).max(20).default(20),
+    })
+      .oxor("collection", "contract")
+      .or("collection", "contract"),
+  },
+  handler: async (request: Request) => {
+    const query = request.query as any;
+
+    try {
+      const owners = await queries.getTokensOwners(
+        query as queries.GetTokensOwnersFilter
+      );
+      return { owners };
+    } catch (error) {
+      logger.error("get_tokens_owners_handler", `Handler failure: ${error}`);
+      throw error;
+    }
+  },
+};
+
 export const getTokensStatsOptions: RouteOptions = {
   description: "Get tokens stats",
   tags: ["api"],
@@ -61,7 +91,7 @@ export const getTokensStatsOptions: RouteOptions = {
       );
       return { stats };
     } catch (error) {
-      logger.error("get_token_stats_handler", `Handler failure: ${error}`);
+      logger.error("get_tokens_stats_handler", `Handler failure: ${error}`);
       throw error;
     }
   },
