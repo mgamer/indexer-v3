@@ -1,5 +1,5 @@
-import { Builders, Helpers, Order, Utils } from "@georgeroman/wyvern-v2-sdk";
-import * as ReservoirSdk from "@reservoir0x/sdk/dist";
+import { AddressZero } from "@ethersproject/constants";
+import * as Sdk from "@reservoir0x/sdk";
 
 import { bn } from "@/common/bignumber";
 import { db, pgp } from "@/common/db";
@@ -8,92 +8,9 @@ import { config } from "@/config/index";
 import { generateTokenSetId } from "@/orders/utils";
 import { addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
 
-// Wyvern V2 orders are retrieved from two different sources:
-// - On-chain orderbook
-// - Off-chain api
-
-// On-chain orderbook order
-
-export const parseOrderbookOrder = (encodedOrder: string) => {
-  return Helpers.Order.decode(encodedOrder);
-};
-
-// Off-chain api order
-
-export const parseApiOrder = (order: Order) => {
-  try {
-    return parseOrderbookOrder(Helpers.Order.encode(order));
-  } catch {
-    return undefined;
-  }
-};
-
-// Enhance orders with some extra fields which are missing
-// from the default Wyvern V2 order formar
-type EnhancedOrder = Order & {
-  hash: string;
-  tokenId?: string;
-  tokenIdRange?: [string, string];
-};
-
-const checkBalance = async (order: EnhancedOrder) => {
-  if (order.side === 0) {
-    // For buy orders, we check that the maker has enough
-    // balance of `paymentToken` (an erc20) to cover the
-    // quoted price. The payment token will be weth for
-    // all orders in our case.
-
-    const hasBalance = await db.oneOrNone(
-      `
-        select 1 from "ownerships"
-        where "contract" = $/contract/
-          and "token_id" = $/tokenId/
-          and "owner" = $/owner/
-          and "amount" > $/price/
-      `,
-      {
-        contract: order.paymentToken,
-        tokenId: "-1",
-        owner: order.maker,
-        price: order.basePrice,
-      }
-    );
-
-    if (!hasBalance) {
-      return false;
-    }
-
-    return true;
-  } else {
-    // For sell orders, we check that the maker holds the
-    // quoted token (either erc721 or erc1155)
-
-    const hasBalance = await db.oneOrNone(
-      `
-        select 1 from "ownerships"
-        where "contract" = $/contract/
-          and "token_id" = $/tokenId/
-          and "owner" = $/owner/
-          and "amount" > 0
-      `,
-      {
-        contract: order.target,
-        tokenId: order.tokenId,
-        owner: order.maker,
-      }
-    );
-
-    if (!hasBalance) {
-      return false;
-    }
-
-    return true;
-  }
-};
-
 export const filterOrders = async (
-  orders: Order[]
-): Promise<EnhancedOrder[]> => {
+  orders: Sdk.WyvernV2.Order[]
+): Promise<Sdk.WyvernV2.Order[]> => {
   if (!orders.length) {
     return [];
   }
@@ -101,7 +18,7 @@ export const filterOrders = async (
   // Get the kinds of all contracts targeted by the orders
   const contracts: { address: string; kind: string }[] = await db.manyOrNone(
     `select distinct "address", "kind" from "contracts" where "address" in ($1:csv)`,
-    [orders.map((order) => order.target)]
+    [orders.map((order) => order.params.target)]
   );
 
   const contractKinds = new Map<string, string>();
@@ -112,7 +29,7 @@ export const filterOrders = async (
   // Get all orders we're already storing
   const hashes: { hash: string }[] = await db.manyOrNone(
     `select "hash" from "orders" where "hash" in ($1:csv)`,
-    [orders.map((order) => Helpers.Order.hash(order))]
+    [orders.map((order) => order.prefixHash())]
   );
 
   const existingHashes = new Set<string>();
@@ -120,10 +37,9 @@ export const filterOrders = async (
     existingHashes.add(hash);
   }
 
-  // Validate orders
-  const validOrders: EnhancedOrder[] = [];
+  const validOrders: Sdk.WyvernV2.Order[] = [];
   for (const order of orders) {
-    const hash = Helpers.Order.hash(order);
+    const hash = order.prefixHash();
 
     // Check: order doesn't already exist
     if (existingHashes.has(hash)) {
@@ -132,132 +48,61 @@ export const filterOrders = async (
 
     // Check: order is not expired
     const currentTime = Math.floor(Date.now() / 1000);
-    const expirationTime = Number(order.expirationTime);
-    if (expirationTime !== 0 && currentTime > expirationTime) {
+    const expirationTime = order.params.expirationTime;
+    if (expirationTime !== 0 && currentTime >= expirationTime) {
       continue;
     }
 
-    // Check: buy order has WETH as payment token
+    // Check: buy order has Weth as payment token
     if (
-      order.side === 0 &&
-      order.paymentToken !== Utils.Address.weth(config.chainId)
+      order.params.side === 0 &&
+      order.params.paymentToken !== Sdk.Common.Addresses.Weth[config.chainId]
     ) {
       continue;
     }
 
-    // Check: sell order has ETH as payment token
+    // Check: sell order has Eth as payment token
     if (
-      order.side === 1 &&
-      order.paymentToken !== Utils.Address.eth(config.chainId)
+      order.params.side === 1 &&
+      order.params.paymentToken !== Sdk.Common.Addresses.Eth[config.chainId]
     ) {
       continue;
     }
 
     // Check: order is not private
-    if (order.taker !== "0x0000000000000000000000000000000000000000") {
+    if (order.params.taker !== AddressZero) {
       continue;
     }
 
-    // Check: order has a valid exchange
-    if (order.exchange !== Utils.Address.exchange(config.chainId)) {
+    // Check: order has a valid kind
+    if (!order.hasValidKind()) {
       continue;
     }
 
-    // Check: erc721 token range order is well formatted
-    const reservoirSdkOrder = {
-      ...order,
-      makerRelayerFee: Number(order.makerRelayerFee),
-      takerRelayerFee: Number(order.takerRelayerFee),
-      listingTime: Number(order.listingTime),
-      expirationTime: Number(order.expirationTime),
-    };
-    const isErc721TokenRange =
-      ReservoirSdk.WyvernV2.Builders.TokenRangeErc721.check(reservoirSdkOrder);
-    if (isErc721TokenRange) {
-      const tokenIdRange =
-        ReservoirSdk.WyvernV2.Builders.TokenRangeErc721.getTokenRange(
-          reservoirSdkOrder
-        )!;
-      const enhancedOrder = { ...order, hash, tokenIdRange };
-
-      // The order can only be a buy so the below checks won't fail
-
-      // Check: order has a valid signature
-      if (!Helpers.Order.verifySignature(order)) {
-        continue;
-      }
-
-      // Check: the maker has the proper balance
-      if (!(await checkBalance(enhancedOrder))) {
-        continue;
-      }
-
-      // Check: the maker has set the proper approval
-      if (!(await Helpers.Order.isApproved(baseProvider, order))) {
-        continue;
-      }
-
-      validOrders.push(enhancedOrder);
+    // Check: order has a valid target
+    if (
+      !order.params.kind?.startsWith(contractKinds.get(order.params.target)!)
+    ) {
       continue;
     }
 
-    // Check: erc721 single token order is well formatted
-    const isErc721SingleItem =
-      Builders.Erc721.SingleItem.isWellFormatted(order);
-    if (isErc721SingleItem && contractKinds.get(order.target) === "erc721") {
-      const tokenId = Builders.Erc721.SingleItem.extractTokenId(order)!;
-      const enhancedOrder = { ...order, hash, tokenId };
-
-      // Check: order has a valid signature
-      if (!Helpers.Order.verifySignature(order)) {
-        continue;
-      }
-
-      // Check: the maker has the proper balance
-      if (!(await checkBalance(enhancedOrder))) {
-        continue;
-      }
-
-      // Check: the maker has set the proper approval
-      if (!(await Helpers.Order.isApproved(baseProvider, order))) {
-        continue;
-      }
-
-      validOrders.push(enhancedOrder);
+    // Check: order has a valid signature
+    if (!order.hasValidSignature()) {
       continue;
     }
 
-    // Check: erc1155 single token order is well formatted
-    const isErc1155SingleItem =
-      Builders.Erc1155.SingleItem.isWellFormatted(order);
-    if (isErc1155SingleItem && contractKinds.get(order.target) === "erc1155") {
-      const tokenId = Builders.Erc1155.SingleItem.extractTokenId(order)!;
-      const enhancedOrder = { ...order, hash, tokenId };
-
-      // Check: order has a valid signature
-      if (!Helpers.Order.verifySignature(order)) {
-        continue;
-      }
-
-      // Check: the maker has the proper balance
-      if (!(await checkBalance(enhancedOrder))) {
-        continue;
-      }
-
-      // Check: the maker has set the proper approval
-      if (!(await Helpers.Order.isApproved(baseProvider, order))) {
-        continue;
-      }
-
-      validOrders.push(enhancedOrder);
+    // Check: order is fillable
+    if (!order.isFillable(baseProvider)) {
       continue;
     }
+
+    validOrders.push(order);
   }
 
   return validOrders;
 };
 
-export const saveOrders = async (orders: EnhancedOrder[]) => {
+export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
   // TODO: Use multi-row inserts to improve performance
 
   if (!orders.length) {
@@ -266,15 +111,47 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
 
   const queries: any[] = [];
   for (const order of orders) {
+    // Extract target token(s) information from the order
+    let tokenId: string | undefined;
+    let tokenIdRange: [string, string] | undefined;
+    switch (order.params.kind) {
+      case "erc721-single-token": {
+        const builder = new Sdk.WyvernV2.Builders.Erc721.SingleToken(
+          config.chainId
+        );
+        tokenId = builder.getTokenId(order);
+
+        break;
+      }
+
+      case "erc1155-single-token": {
+        const builder = new Sdk.WyvernV2.Builders.Erc1155.SingleToken(
+          config.chainId
+        );
+        tokenId = builder.getTokenId(order);
+
+        break;
+      }
+
+      case "erc721-token-range": {
+        const builder = new Sdk.WyvernV2.Builders.Erc721.TokenRange(
+          config.chainId
+        );
+        tokenIdRange = builder.getTokenIdRange(order);
+
+        break;
+      }
+    }
+
     let tokenSetId: string | undefined;
-    if (order.tokenId) {
-      // Handle single-token order
+    if (tokenId) {
+      // The order is a single-token order
 
       // Generate the token set id corresponding to the order
       tokenSetId = generateTokenSetId([
         {
-          contract: order.target,
-          tokenId: order.tokenId,
+          contract: order.params.target,
+          tokenId,
         },
       ]);
 
@@ -293,8 +170,8 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
         `,
         values: {
           tokenSetId,
-          contract: order.target,
-          tokenId: order.tokenId,
+          contract: order.params.target,
+          tokenId,
         },
       });
       queries.push({
@@ -311,13 +188,16 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
         `,
         values: {
           tokenSetId,
-          contract: order.target,
-          tokenId: order.tokenId,
+          contract: order.params.target,
+          tokenId,
         },
       });
-    } else if (order.tokenIdRange) {
-      // Handle token-range order
+    } else if (tokenIdRange) {
+      // The order is a token-range order
 
+      // Fetch the collection the range order is on (the token range
+      // must exactly match the collection token range definition,
+      // otherwise it won't be detected).
       const collection: { id: string } | null = await db.oneOrNone(
         `
           select "id"
@@ -326,9 +206,9 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
             and "token_id_range" = numrange($/startTokenId/, $/endTokenId/, '[]')
         `,
         {
-          contract: order.target,
-          startTokenId: order.tokenIdRange[0],
-          endTokenId: order.tokenIdRange[1],
+          contract: order.params.target,
+          startTokenId: tokenIdRange[0],
+          endTokenId: tokenIdRange[1],
         }
       );
       if (collection?.id) {
@@ -373,33 +253,36 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
     }
 
     if (!tokenSetId) {
+      // Skip if nothing matched so far
       continue;
     }
 
-    const side = order.side === 0 ? "buy" : "sell";
+    const side = order.params.side === 0 ? "buy" : "sell";
 
     let value: string;
     if (side === "buy") {
-      // For buy orders, we set the value as price - fee since it's
-      // best for UX to show the user exactly what they're going
-      // to receive on offer acceptance (and that is price - fee)
-      const fee = order.takerRelayerFee;
-      value = bn(order.basePrice)
-        .sub(bn(order.basePrice).mul(bn(fee)).div(10000))
+      // For buy orders, we set the value as `price - fee` since it's
+      // best for UX to show the user exactly what they're going to
+      // receive on offer acceptance (and that is `price - fee` and
+      // not `price`)
+      const fee = order.params.takerRelayerFee;
+      value = bn(order.params.basePrice)
+        .sub(bn(order.params.basePrice).mul(bn(fee)).div(10000))
         .toString();
     } else {
       // For sell orders, the value is the same as the price
-      value = order.basePrice;
+      value = order.params.basePrice;
     }
 
+    // Handle fees
+
     const feeBps = Math.max(
-      Number(order.makerRelayerFee),
-      Number(order.takerRelayerFee)
+      order.params.makerRelayerFee,
+      order.params.takerRelayerFee
     );
 
     let sourceInfo;
-    let royaltyInfo;
-    switch (order.feeRecipient) {
+    switch (order.params.feeRecipient) {
       // OpenSea
       case "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073": {
         sourceInfo = {
@@ -423,11 +306,14 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
       default: {
         sourceInfo = {
           id: "unknown",
+          // Assume everything goes to the order's fee recipient
           bps: feeBps,
         };
         break;
       }
     }
+
+    // Handle royalties
 
     const royalty: { recipient: string } | null = await db.oneOrNone(
       `
@@ -437,11 +323,14 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
         join "tokens" "t"
           on "c"."id" = "t"."collection_id"
         where "t"."contract" = $/contract/
-          and "t"."token_id" = $/tokenId/
+        limit 1
       `,
-      { contract: order.target, tokenId: order.tokenId }
+      { contract: order.params.target }
     );
+
+    let royaltyInfo;
     if (royalty) {
+      // Royalties are whatever is left after subtracting the marketplace fee
       const bps = feeBps - sourceInfo.bps;
       if (bps > 0) {
         royaltyInfo = [
@@ -494,20 +383,22 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
           "raw_data" = $/rawData/
       `,
       values: {
-        hash: Helpers.Order.hash(order),
+        hash: order.prefixHash(),
         kind: "wyvern-v2",
         status: "valid",
         side,
         tokenSetId,
-        maker: order.maker,
-        price: order.basePrice,
+        maker: order.params.maker,
+        price: order.params.basePrice,
         value,
-        listingTime: order.listingTime,
+        listingTime: order.params.listingTime,
         expirationTime:
-          order.expirationTime == "0" ? "infinity" : order.expirationTime,
+          order.params.expirationTime == 0
+            ? "infinity"
+            : order.params.expirationTime,
         sourceInfo,
         royaltyInfo,
-        rawData: order,
+        rawData: order.params,
       },
     });
   }
@@ -515,5 +406,7 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
   if (queries.length) {
     await db.none(pgp.helpers.concat(queries));
   }
-  await addToOrdersUpdateByHashQueue(orders);
+  await addToOrdersUpdateByHashQueue(
+    orders.map((order) => ({ hash: order.prefixHash() }))
+  );
 };

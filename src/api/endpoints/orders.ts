@@ -1,6 +1,6 @@
-import { Order } from "@georgeroman/wyvern-v2-sdk";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
+import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
@@ -22,8 +22,14 @@ export const postOrdersOptions: RouteOptions = {
               exchange: Joi.string().required(),
               maker: Joi.string().required(),
               taker: Joi.string().required(),
-              makerRelayerFee: Joi.string().required(),
-              takerRelayerFee: Joi.string().required(),
+              makerRelayerFee: Joi.alternatives(
+                Joi.number,
+                Joi.string()
+              ).required(),
+              takerRelayerFee: Joi.alternatives(
+                Joi.number,
+                Joi.string()
+              ).required(),
               feeRecipient: Joi.string().required(),
               side: Joi.number().valid(0, 1).required(),
               saleKind: Joi.number().valid(0, 1).required(),
@@ -36,8 +42,14 @@ export const postOrdersOptions: RouteOptions = {
               paymentToken: Joi.string().required(),
               basePrice: Joi.string().required(),
               extra: Joi.string().required(),
-              listingTime: Joi.string().required(),
-              expirationTime: Joi.string().required(),
+              listingTime: Joi.alternatives(
+                Joi.number,
+                Joi.string()
+              ).required(),
+              expirationTime: Joi.alternatives(
+                Joi.number,
+                Joi.string()
+              ).required(),
               salt: Joi.string().required(),
               v: Joi.number().required(),
               r: Joi.string().required(),
@@ -58,23 +70,19 @@ export const postOrdersOptions: RouteOptions = {
     try {
       const orders = payload.orders as any;
 
-      const parsedOrders: Order[] = [];
+      const validOrders: Sdk.WyvernV2.Order[] = [];
       for (const { kind, data } of orders) {
-        if (kind !== "wyvern-v2") {
-          throw Boom.badRequest("Unsupported kind");
-        }
-
-        const parsedOrder = wyvernV2.parseApiOrder(data);
-        if (parsedOrder) {
-          parsedOrders.push(parsedOrder);
+        if (kind === "wyvern-v2") {
+          try {
+            const order = new Sdk.WyvernV2.Order(config.chainId, data);
+            validOrders.push(order);
+          } catch {
+            // Skip any invalid orders
+          }
         }
       }
 
-      if (parsedOrders.length < orders.length) {
-        throw Boom.badRequest("One or more orders are invalid");
-      }
-
-      const filteredOrders = await wyvernV2.filterOrders(parsedOrders);
+      const filteredOrders = await wyvernV2.filterOrders(validOrders);
       await wyvernV2.saveOrders(filteredOrders);
 
       return { message: "Success" };

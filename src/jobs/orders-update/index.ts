@@ -1,4 +1,4 @@
-import { Utils } from "@georgeroman/wyvern-v2-sdk";
+import { Common } from "@reservoir0x/sdk";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import cron from "node-cron";
 
@@ -67,7 +67,6 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { hash } = job.data;
 
-      console.time(`Handling ${hash}`);
       try {
         // Get all tokens targeted by the order
         const data: { side: string; contract: string; tokenId: string }[] =
@@ -168,7 +167,7 @@ if (config.doBackgroundWork) {
               `,
               values: {
                 // We only support eth/weth as payment
-                weth: Utils.Address.weth(config.chainId),
+                weth: Common.Addresses.Weth[config.chainId],
                 contract,
                 tokenId,
               },
@@ -183,8 +182,6 @@ if (config.doBackgroundWork) {
         logger.error(BY_HASH_JOB_NAME, `Failed to handle ${hash}: ${error}`);
         throw error;
       }
-
-      console.timeEnd(`Handling ${hash}`);
     },
     { connection: redis }
   );
@@ -241,7 +238,6 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { side, maker, contract, tokenId } = job.data;
 
-      console.time(`Handling ${side} ${maker}`);
       try {
         let hashes: { hash: string; status: string }[] = [];
 
@@ -267,7 +263,7 @@ if (config.doBackgroundWork) {
             {
               maker,
               // We only support eth/weth as payment
-              weth: Utils.Address.weth(config.chainId),
+              weth: Common.Addresses.Weth[config.chainId],
             }
           );
         } else if (side === "sell") {
@@ -323,8 +319,6 @@ if (config.doBackgroundWork) {
         );
         throw error;
       }
-
-      console.timeEnd(`Handling ${side} ${maker}`);
     },
     { connection: redis }
   );
