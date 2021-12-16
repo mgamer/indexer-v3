@@ -12,8 +12,6 @@ export const getAttributesOptions: RouteOptions = {
       contract: Joi.string().lowercase(),
       tokenId: Joi.string().pattern(/^[0-9]+$/),
       collection: Joi.string().lowercase(),
-      offset: Joi.number().integer().min(0).default(0),
-      limit: Joi.number().integer().min(1).max(20).default(20),
     })
       .oxor("collection", "contract")
       .or("collection", "contract"),
@@ -25,7 +23,33 @@ export const getAttributesOptions: RouteOptions = {
       const attributes = await queries.getAttributes(
         query as queries.GetAttributesFilter
       );
-      return { attributes };
+
+      const keyValueCount: any = {};
+      for (const { key, value, count } of attributes) {
+        if (!keyValueCount[key]) {
+          keyValueCount[key] = {};
+        }
+        if (!keyValueCount[key][value]) {
+          keyValueCount[key][value] = 0;
+        }
+        keyValueCount[key][value] += Number(count);
+      }
+
+      const aggregatedAttributes: any[] = [];
+      for (const [key, values] of Object.entries(keyValueCount)) {
+        aggregatedAttributes.push({
+          key,
+          values: [],
+        });
+        for (const [value, count] of Object.entries(values as any)) {
+          aggregatedAttributes[aggregatedAttributes.length - 1].values.push({
+            value,
+            count,
+          });
+        }
+      }
+
+      return { attributes: aggregatedAttributes };
     } catch (error) {
       logger.error("get_attributes_handler", `Handler failure: ${error}`);
       throw error;
@@ -66,7 +90,7 @@ export const getCollectionExploreOptions: RouteOptions = {
       return { attributes };
     } catch (error) {
       logger.error(
-        "get_collection_attributes_handler",
+        "get_collection_explore_handler",
         `Handler failure: ${error}`
       );
       throw error;
