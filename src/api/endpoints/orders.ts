@@ -23,11 +23,11 @@ export const postOrdersOptions: RouteOptions = {
               maker: Joi.string().required(),
               taker: Joi.string().required(),
               makerRelayerFee: Joi.alternatives(
-                Joi.number,
+                Joi.number(),
                 Joi.string()
               ).required(),
               takerRelayerFee: Joi.alternatives(
-                Joi.number,
+                Joi.number(),
                 Joi.string()
               ).required(),
               feeRecipient: Joi.string().required(),
@@ -43,11 +43,11 @@ export const postOrdersOptions: RouteOptions = {
               basePrice: Joi.string().required(),
               extra: Joi.string().required(),
               listingTime: Joi.alternatives(
-                Joi.number,
+                Joi.number(),
                 Joi.string()
               ).required(),
               expirationTime: Joi.alternatives(
-                Joi.number,
+                Joi.number(),
                 Joi.string()
               ).required(),
               salt: Joi.string().required(),
