@@ -138,6 +138,68 @@ export const getTokens = async (filter: GetTokensFilter) => {
   );
 };
 
+export type GetTokensOwnersFilter = {
+  contract?: string;
+  tokenId?: string;
+  collection?: string;
+  attributes?: { [key: string]: string };
+  offset: number;
+  limit: number;
+};
+
+export const getTokensOwners = async (filter: GetTokensOwnersFilter) => {
+  let baseQuery = `
+    select
+      "o"."owner",
+      "o"."amount",
+      "t"."contract",
+      "t"."token_id" as "tokenId"
+    from "ownerships" "o"
+    join "tokens" "t"
+      on "o"."contract" = "t"."contract"
+      and "o"."token_id" = "t"."token_id"
+  `;
+
+  // Filters
+  const conditions: string[] = [`"o"."amount" > 0`];
+  if (filter.contract) {
+    conditions.push(`"t"."contract" = $/contract/`);
+  }
+  if (filter.tokenId) {
+    conditions.push(`"t"."token_id" = $/tokenId/`);
+  }
+  if (filter.collection) {
+    conditions.push(`"t"."collection_id" = $/collection/`);
+  }
+  if (filter.attributes) {
+    Object.entries(filter.attributes).forEach(([key, value], i) => {
+      conditions.push(`
+        exists(
+          select from "attributes" "a"
+          where "a"."contract" = "t"."contract"
+            and "a"."token_id" = "t"."token_id"
+            and "a"."key" = $/key${i}/
+            and "a"."value" = $/value${i}/
+        )
+      `);
+      (filter as any)[`key${i}`] = key;
+      (filter as any)[`value${i}`] = value;
+    });
+  }
+  if (conditions.length) {
+    baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
+  }
+
+  // Sorting
+  baseQuery += ` order by "t"."contract", "t"."token_id"`;
+
+  // Pagination
+  baseQuery += ` offset $/offset/`;
+  baseQuery += ` limit $/limit/`;
+
+  return db.manyOrNone(baseQuery, filter);
+};
+
 export type GetTokensStatsFilter = {
   contract?: string;
   tokenId?: string;
