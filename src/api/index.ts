@@ -19,6 +19,9 @@ export const start = async function (): Promise<void> {
         origin: ["*"],
       },
     },
+    router: {
+      stripTrailingSlash: true,
+    },
   });
 
   await server.register([

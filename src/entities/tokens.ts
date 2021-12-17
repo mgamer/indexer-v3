@@ -16,21 +16,29 @@ export const getTokens = async (filter: GetTokensFilter) => {
   let baseQuery = `
     select
       "t"."contract",
-      "t"."token_id" as "tokenId",
+      "t"."token_id",
       "ct"."kind",
       "t"."name",
       "t"."image",
-      "cl"."id" as "collectionId",
-      "cl"."name" as "collectionName",
-      "t"."floor_sell_hash" as "floorSellHash",
-      "t"."floor_sell_value" as "floorSellValue",
-      "t"."top_buy_hash" as "topBuyHash",
-      "t"."top_buy_value" as "topBuyValue"
+      "cl"."id" as "collection_id",
+      "cl"."name" as "collection_name",
+      "t"."floor_sell_hash",
+      "os"."value" as "floor_sell_value",
+      "os"."maker" as "floor_sell_maker",
+      date_part('epoch', lower("os"."valid_between")) as "floor_sell_valid_from",
+      "t"."top_buy_hash",
+      "ob"."value" as "top_buy_value",
+      "ob"."maker" as "top_buy_maker",
+      date_part('epoch', lower("ob"."valid_between")) as "top_buy_valid_from"
     from "tokens" "t"
     join "collections" "cl"
       on "t"."collection_id" = "cl"."id"
     join "contracts" "ct"
       on "t"."contract" = "ct"."address"
+    left join "orders" "os"
+      on "t"."floor_sell_hash" = "os"."hash"
+    left join "orders" "ob"
+      on "t"."top_buy_hash" = "ob"."hash"
   `;
 
   // Filters
@@ -118,86 +126,32 @@ export const getTokens = async (filter: GetTokensFilter) => {
 
   return db.manyOrNone(baseQuery, filter).then((result) =>
     result.map((r) => ({
-      contract: r.contract,
-      tokenId: r.tokenId,
-      kind: r.kind,
-      image: r.image,
-      collection: {
-        id: r.collectionId,
-        name: r.collectionName,
+      token: {
+        contract: r.contract,
+        tokenId: r.tokenId,
+        kind: r.kind,
+        image: r.image,
+        collection: {
+          id: r.collection_id,
+          name: r.collection_name,
+        },
       },
-      floorSell: {
-        hash: r.floorSellHash,
-        value: r.floorSellValue,
-      },
-      topBuy: {
-        hash: r.topBuyHash,
-        value: r.topBuyValue,
+      market: {
+        floorSell: {
+          hash: r.floor_sell_hash,
+          value: r.floor_sell_value,
+          maker: r.floor_sell_maker,
+          validFrom: r.floor_sell_valid_from,
+        },
+        topBuy: {
+          hash: r.top_buy_hash,
+          value: r.top_buy_value,
+          maker: r.top_buy_maker,
+          validFrom: r.top_buy_valid_from,
+        },
       },
     }))
   );
-};
-
-export type GetTokensOwnersFilter = {
-  contract?: string;
-  tokenId?: string;
-  collection?: string;
-  attributes?: { [key: string]: string };
-  offset: number;
-  limit: number;
-};
-
-export const getTokensOwners = async (filter: GetTokensOwnersFilter) => {
-  let baseQuery = `
-    select
-      "o"."owner",
-      "o"."amount",
-      "t"."contract",
-      "t"."token_id" as "tokenId"
-    from "ownerships" "o"
-    join "tokens" "t"
-      on "o"."contract" = "t"."contract"
-      and "o"."token_id" = "t"."token_id"
-  `;
-
-  // Filters
-  const conditions: string[] = [`"o"."amount" > 0`];
-  if (filter.contract) {
-    conditions.push(`"t"."contract" = $/contract/`);
-  }
-  if (filter.tokenId) {
-    conditions.push(`"t"."token_id" = $/tokenId/`);
-  }
-  if (filter.collection) {
-    conditions.push(`"t"."collection_id" = $/collection/`);
-  }
-  if (filter.attributes) {
-    Object.entries(filter.attributes).forEach(([key, value], i) => {
-      conditions.push(`
-        exists(
-          select from "attributes" "a"
-          where "a"."contract" = "t"."contract"
-            and "a"."token_id" = "t"."token_id"
-            and "a"."key" = $/key${i}/
-            and "a"."value" = $/value${i}/
-        )
-      `);
-      (filter as any)[`key${i}`] = key;
-      (filter as any)[`value${i}`] = value;
-    });
-  }
-  if (conditions.length) {
-    baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
-  }
-
-  // Sorting
-  baseQuery += ` order by "t"."contract", "t"."token_id"`;
-
-  // Pagination
-  baseQuery += ` offset $/offset/`;
-  baseQuery += ` limit $/limit/`;
-
-  return db.manyOrNone(baseQuery, filter);
 };
 
 export type GetTokensStatsFilter = {

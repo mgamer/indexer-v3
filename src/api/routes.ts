@@ -4,6 +4,7 @@ import * as adminEndpoints from "@/api/endpoints/admin";
 import * as attributesEndpoints from "@/api/endpoints/attributes";
 import * as collectionsEndpoints from "@/api/endpoints/collections";
 import * as ordersEndpoints from "@/api/endpoints/orders";
+import * as ownersEndpoints from "@/api/endpoints/owners";
 import * as rootEndpoints from "@/api/endpoints/root";
 import * as tokensEndpoints from "@/api/endpoints/tokens";
 import * as transfersEndpoints from "@/api/endpoints/transfers";
@@ -49,12 +50,6 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/collections/{collection}/ownerships",
-    options: collectionsEndpoints.getCollectionOwnershipsOptions,
-  });
-
-  server.route({
-    method: "GET",
     path: "/user/{user}/collections",
     options: collectionsEndpoints.getUserCollectionsOptions,
   });
@@ -79,18 +74,20 @@ export const setupRoutes = (server: Server) => {
     options: ordersEndpoints.getFillOptions,
   });
 
+  // Owners
+
+  server.route({
+    method: "GET",
+    path: "/owners",
+    options: ownersEndpoints.getOwnersOptions,
+  });
+
   // Tokens
 
   server.route({
     method: "GET",
     path: "/tokens",
     options: tokensEndpoints.getTokensOptions,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/tokens/owners",
-    options: tokensEndpoints.getTokensOwnersOptions,
   });
 
   server.route({

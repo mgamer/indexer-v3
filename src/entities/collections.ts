@@ -17,24 +17,27 @@ export const getCollections = async (filter: GetCollectionsFilter) => {
       "c"."name",
       "c"."description",
       "c"."image",
-      "c"."contract",
-      lower("c"."token_id_range") as "startTokenId",
-      upper("c"."token_id_range") as "endTokenId",
-      "c"."royalty_bps" as "royaltyBps",
-      "c"."royalty_recipient" as "royaltyRecipient",
-      "cs"."token_count" as "tokenCount",
-      "cs"."on_sale_count" as "onSaleCount",
-      "cs"."unique_owners_count" as "uniqueOwnersCount",
-      "cs"."sample_image" as "sampleImage",
-      "cs"."floor_sell_hash" as "floorSellHash",
-      "cs"."floor_sell_value" as "floorSellValue",
-      "cs"."floor_sell_maker" as "floorSellMaker",
-      "cs"."top_buy_hash" as "topBuyHash",
-      "cs"."top_buy_value" as "topBuyValue",
-      "cs"."top_buy_maker" as "topBuyMaker"
+      "c"."royalty_bps",
+      "c"."royalty_recipient",
+      "cs"."token_count",
+      "cs"."on_sale_count",
+      "cs"."unique_owners_count",
+      "cs"."sample_image",
+      "cs"."floor_sell_hash",
+      "os"."value" as "floor_sell_value",
+      "os"."maker" as "floor_sell_maker",
+      date_part('epoch', lower("os"."valid_between")) as "floor_sell_valid_from",
+      "cs"."top_buy_hash",
+      "ob"."value" as "top_buy_value",
+      "ob"."maker" as "top_buy_maker",
+      date_part('epoch', lower("ob"."valid_between")) as "top_buy_valid_from"
     from "collections" "c"
     join "collection_stats" "cs"
       on "c"."id" = "cs"."collection_id"
+    left join "orders" "os"
+      on "cs"."floor_sell_hash" = "os"."hash"
+    left join "orders" "ob"
+      on "cs"."top_buy_hash" = "ob"."hash"
   `;
 
   // Filters
@@ -74,30 +77,36 @@ export const getCollections = async (filter: GetCollectionsFilter) => {
 
   return db.manyOrNone(baseQuery, filter).then((result) =>
     result.map((r) => ({
-      id: r.id,
-      name: r.name,
-      description: r.description,
-      image: r.image,
-      royalty: {
-        recipient: r.royaltyRecipient,
-        bps: r.royaltyBps,
+      collection: {
+        id: r.id,
+        name: r.name,
+        description: r.description,
+        image: r.image,
       },
-      contract: r.contract,
-      startTokenId: r.startTokenId,
-      endTokenId: r.endTokenId,
-      tokenCount: r.tokenCount,
-      onSaleCount: r.onSaleCount,
-      uniqueOwnersCount: r.uniqueOwnersCount,
-      sampleImage: r.sampleImage,
-      floorSell: {
-        hash: r.floorSellHash,
-        value: r.floorSellValue,
-        maker: r.floorSellMaker,
+      royalties: {
+        recipient: r.royalty_recipient,
+        bps: r.royalty_bps,
       },
-      topBuy: {
-        hash: r.topBuyHash,
-        value: r.topBuyValue,
-        maker: r.topBuyMaker,
+      set: {
+        compositionId: null,
+        tokenCount: r.token_count,
+        onSaleCount: r.on_sale_count,
+        uniqueOwnersCount: r.unique_wwners_count,
+        sampleImages: [r.sample_image],
+        market: {
+          floorSell: {
+            hash: r.floor_sell_hash,
+            value: r.floor_sell_value,
+            maker: r.floor_sell_maker,
+            validFrom: r.floor_sell_valid_from,
+          },
+          topBuy: {
+            hash: r.top_buy_hash,
+            value: r.top_buy_value,
+            maker: r.top_buy_maker,
+            validFrom: r.top_buy_valid_from,
+          },
+        },
       },
     }))
   );

@@ -25,10 +25,10 @@ export const getCollectionsOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const collections = await queries.getCollections(
+      const data = await queries.getCollections(
         query as queries.GetCollectionsFilter
       );
-      return { collections };
+      return { data };
     } catch (error) {
       logger.error("get_collections_handler", `Handler failure: ${error}`);
       throw error;
