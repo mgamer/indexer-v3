@@ -94,11 +94,11 @@ export const getUserTokensOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const tokens = await queries.getUserTokens({
+      const data = await queries.getUserTokens({
         ...params,
         ...query,
       } as queries.GetUserTokensFilter);
-      return { tokens };
+      return { data };
     } catch (error) {
       logger.error("get_user_tokens_handler", `Handler failure: ${error}`);
       throw error;

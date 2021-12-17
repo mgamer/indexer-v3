@@ -125,38 +125,29 @@ export const getUserCollections = async (filter: GetUserCollectionsFilter) => {
     select
       "c"."id",
       "c"."name",
-      "c"."description",
-      "c"."image",
-      "cs"."floor_sell_value" as "floorSellValue",
-      "cs"."token_count" as "tokenCount",
-      "cs"."on_sale_count" as "onSaleCount",
-      "cs"."unique_owners_count" as "uniqueOwnersCount",
-      "cs"."sample_image" as "sampleImage",
-      "us"."owner",
-      "us"."owned_token_count" as "ownedTokenCount",
-      "us"."owned_token_count" * "cs"."floor_sell_value" as "ownedMarketValue"
-    from "collections" "c"
-    join "collection_stats" "cs"
-      on "c"."id" = "cs"."collection_id"
-    join (
-      select
-        "cc"."id" as "collection_id",
-        "o"."owner",
-        sum("o"."amount") as "owned_token_count"
-      from "collections" "cc"
-      join "tokens" "t"
-        on "cc"."id" = "t"."collection_id"
-      join "ownerships" "o"
-        on "t"."contract" = "o"."contract"
-        and "t"."token_id" = "o"."token_id"
-        and "o"."amount" > 0
-      group by "cc"."id", "o"."owner"
-    ) "us"
-      on "c"."id" = "us"."collection_id"
+      "o"."owner",
+      sum("o"."amount") as "token_count",
+      count(distinct("t"."token_id")) filter (where "t"."floor_sell_hash" is not null) as "on_sale_count",
+      min("t"."floor_sell_value") as "floor_sell_value",
+      max("t"."top_buy_value") as "top_buy_value",
+      sum("o"."amount") * max("t"."top_buy_value") as "total_buy_value",
+      max(coalesce("b"."timestamp", extract(epoch from now())::int)) as "last_acquired_at"
+    from "ownerships" "o"
+    join "tokens" "t"
+      on "o"."contract" = "t"."contract"
+      and "o"."token_id" = "t"."token_id"
+      and "o"."amount" > 0
+    join "collections" "c"
+      on "t"."collection_id" = "c"."id"
+    join "nft_transfer_events" "nte"
+      on "t"."contract" = "nte"."address"
+      and "t"."token_id" = "nte"."token_id"
+    left join "blocks" "b"
+      on "nte"."block" = "b"."block"
   `;
 
   // Filters
-  const conditions: string[] = [`"us"."owner" = $/user/`];
+  const conditions: string[] = [`"o"."owner" = $/user/`];
   if (filter.community) {
     conditions.push(`"c"."community" = $/community/`);
   }
@@ -167,12 +158,30 @@ export const getUserCollections = async (filter: GetUserCollectionsFilter) => {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
 
+  // Grouping
+  baseQuery += ` group by "c"."id", "o"."owner"`;
+
   // Sorting
-  baseQuery += ` order by "us"."owned_token_count" desc nulls last`;
+  baseQuery += ` order by "token_count" desc, "o"."owner"`;
 
   // Pagination
   baseQuery += ` offset $/offset/`;
   baseQuery += ` limit $/limit/`;
 
-  return db.manyOrNone(baseQuery, filter);
+  return db.manyOrNone(baseQuery, filter).then((result) =>
+    result.map((r) => ({
+      collection: {
+        id: r.id,
+        name: r.name,
+      },
+      ownership: {
+        tokenCount: r.token_count,
+        onSaleCount: r.on_sale_count,
+        floorSellValue: r.floor_sell_value,
+        topBuyValue: r.top_buy_value,
+        totalBuyValue: r.total_buy_value,
+        lastAcquiredAt: r.last_acquired_at,
+      },
+    }))
+  );
 };

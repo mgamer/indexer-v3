@@ -241,14 +241,6 @@ export const getUserTokens = async (filter: GetUserTokensFilter) => {
       "t"."floor_sell_value",
       "t"."top_buy_value",
       "o"."amount" * "t"."top_buy_value" as "total_buy_value",
-      "t"."floor_sell_hash",
-      "os"."value" as "floor_sell_value",
-      "os"."maker" as "floor_sell_maker",
-      date_part('epoch', lower("os"."valid_between")) as "floor_sell_valid_from",
-      "t"."top_buy_hash",
-      "ob"."value" as "top_buy_value",
-      "ob"."maker" as "top_buy_maker",
-      date_part('epoch', lower("ob"."valid_between")) as "top_buy_valid_from",
       coalesce("b"."timestamp", extract(epoch from now())::int) as "last_acquired_at"
     from "tokens" "t"
     join "collections" "c"
@@ -293,28 +285,12 @@ export const getUserTokens = async (filter: GetUserTokensFilter) => {
   return db.manyOrNone(baseQuery, filter).then((result) =>
     result.map((r) => ({
       token: {
-        token: {
-          contract: r.contract,
-          tokenId: r.token_id,
-          image: r.image,
-          collection: {
-            id: r.collection_id,
-            name: r.collection_name,
-          },
-        },
-        market: {
-          floorSell: {
-            hash: r.floor_sell_hash,
-            value: r.floor_sell_value,
-            maker: r.floor_sell_maker,
-            validFrom: r.floor_sell_valid_from,
-          },
-          topBuy: {
-            hash: r.top_buy_hash,
-            value: r.top_buy_value,
-            maker: r.top_buy_maker,
-            validFrom: r.top_buy_valid_from,
-          },
+        contract: r.contract,
+        tokenId: r.token_id,
+        image: r.image,
+        collection: {
+          id: r.collection_id,
+          name: r.collection_name,
         },
       },
       ownership: {
