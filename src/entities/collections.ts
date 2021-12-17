@@ -112,54 +112,6 @@ export const getCollections = async (filter: GetCollectionsFilter) => {
   );
 };
 
-export type GetCollectionOwnershipsFilter = {
-  collection: string;
-  owner?: string;
-  offset: number;
-  limit: number;
-};
-
-export const getCollectionOwnerships = async (
-  filter: GetCollectionOwnershipsFilter
-) => {
-  let baseQuery = `
-    select
-      "o"."owner",
-      sum("o"."amount") as "amount",
-      max("t"."image") AS "sampleImage",
-      count("t"."token_id") filter (where "t"."floor_sell_hash" is not null) as "onSaleCount",
-      min("t"."floor_sell_value") as "minFloorSellValue",
-      max("t"."floor_sell_value") as "maxFloorSellValue",
-      sum("t"."floor_sell_value") as "floorSellValueSum"
-    from "ownerships" "o"
-    join "tokens" "t"
-      on "o"."contract" = "t"."contract"
-      and "o"."token_id" = "t"."token_id"
-      and "o"."amount" > 0
-  `;
-
-  // Filters
-  const conditions: string[] = [`"t"."collection_id" = $/collection/`];
-  if (filter.owner) {
-    conditions.push(`"o"."owner" = $/owner/`);
-  }
-  if (conditions.length) {
-    baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
-  }
-
-  // Grouping
-  baseQuery += ` group by "o"."owner"`;
-
-  // Sorting
-  baseQuery += ` order by "amount" desc`;
-
-  // Pagination
-  baseQuery += ` offset $/offset/`;
-  baseQuery += ` limit $/limit/`;
-
-  return db.manyOrNone(baseQuery, filter);
-};
-
 export type GetUserCollectionsFilter = {
   user: string;
   community?: string;

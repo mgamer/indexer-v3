@@ -18,12 +18,18 @@ export const getOwners = async (filter: GetOwnersFilter) => {
       count(distinct("t"."token_id")) filter (where "t"."floor_sell_hash" is not null) as "on_sale_count",
       min("t"."floor_sell_value") as "floor_sell_value",
       max("t"."top_buy_value") as "top_buy_value",
-      sum("o"."amount") * max("t"."top_buy_value") as "total_buy_value"
+      sum("o"."amount") * max("t"."top_buy_value") as "total_buy_value",
+      max(coalesce("b"."timestamp", extract(epoch from now())::int)) as "last_acquired_at"
     from "ownerships" "o"
     join "tokens" "t"
       on "o"."contract" = "t"."contract"
       and "o"."token_id" = "t"."token_id"
       and "o"."amount" > 0
+    join "nft_transfer_events" "nte"
+      on "t"."contract" = "nte"."address"
+      and "t"."token_id" = "nte"."token_id"
+    left join "blocks" "b"
+      on "nte"."block" = "b"."block"
   `;
 
   // Filters
@@ -78,6 +84,7 @@ export const getOwners = async (filter: GetOwnersFilter) => {
         floorSellValue: r.floor_sell_value,
         topBuyValue: r.top_buy_value,
         totalBuyValue: r.total_buy_value,
+        lastAcquiredAt: r.last_acquired_at,
       },
     }))
   );

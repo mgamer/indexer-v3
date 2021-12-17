@@ -219,106 +219,112 @@ export const getTokensStats = async (filter: GetTokensStatsFilter) => {
 export type GetUserTokensFilter = {
   user: string;
   community?: string;
-  hasOffer?: string;
-  sortBy?: "acquiredAt" | "topBuyListingTime";
-  sortDirection?: "asc" | "desc";
   collection?: string;
+  hasOffer?: string;
   offset: number;
   limit: number;
 };
 
 export const getUserTokens = async (filter: GetUserTokensFilter) => {
-  let baseQueryInner = `
-    select
-      "ow"."contract",
-      "ow"."token_id" as "tokenId",
-      "ow"."owner",
-      "ow"."amount",
-      (
-        select
-          coalesce("b"."timestamp", extract(epoch from now())::int)
-        from "nft_transfer_events" "nte"
-        left join "blocks" "b"
-          on "nte"."block" = "b"."block"
-        where "nte"."address" = "ow"."contract"
-          and "nte"."token_id" = "ow"."token_id"
-          and "nte"."to" = "ow"."owner"
-        order by "nte"."block" desc
-        limit 1
-      ) as "acquiredAt",
-      (
-        select min("or"."value")
-        from "orders" "or"
-        join "token_sets_tokens" "tst"
-          on "or"."token_set_id" = "tst"."token_set_id"
-        where "tst"."contract" = "ow"."contract"
-          and "tst"."token_id" = "ow"."token_id"
-          and "or"."maker" = "ow"."owner"
-          and "or"."side" = 'sell'
-          and "or"."status" = 'valid'
-          and "or"."valid_between" @> now()
-      ) as "minFloorSellValue"
-    from "ownerships" "ow"
-    join "tokens" "t"
-      on "ow"."contract" = "t"."contract"
-      and "ow"."token_id" = "t"."token_id"
+  let baseQuery = `
+    select distinct on ("nte"."block")
+      "t"."contract",
+      "t"."token_id",
+      "t"."image",
+      "c"."id" as "collection_id",
+      "c"."name" as "collection_name",
+      "o"."amount" as "token_count",
+      (case when "t"."floor_sell_hash" is not null
+        then 1
+        else 0
+      end)::numeric(78, 0) as "on_sale_count",
+      "t"."floor_sell_value",
+      "t"."top_buy_value",
+      "o"."amount" * "t"."top_buy_value" as "total_buy_value",
+      "t"."floor_sell_hash",
+      "os"."value" as "floor_sell_value",
+      "os"."maker" as "floor_sell_maker",
+      date_part('epoch', lower("os"."valid_between")) as "floor_sell_valid_from",
+      "t"."top_buy_hash",
+      "ob"."value" as "top_buy_value",
+      "ob"."maker" as "top_buy_maker",
+      date_part('epoch', lower("ob"."valid_between")) as "top_buy_valid_from",
+      coalesce("b"."timestamp", extract(epoch from now())::int) as "last_acquired_at"
+    from "tokens" "t"
     join "collections" "c"
       on "t"."collection_id" = "c"."id"
-    left join "orders" "o"
-      on "t"."top_buy_hash" = "o"."hash"
+    join "ownerships" "o"
+      on "t"."contract" = "o"."contract"
+      and "t"."token_id" = "o"."token_id"
+      and "o"."amount" > 0
+    left join "orders" "os"
+      on "t"."floor_sell_hash" = "os"."hash"
+    left join "orders" "ob"
+      on "t"."top_buy_hash" = "ob"."hash"
+    join "nft_transfer_events" "nte"
+      on "t"."contract" = "nte"."address"
+      and "t"."token_id" = "nte"."token_id"
+    left join "blocks" "b"
+      on "nte"."block" = "b"."block"
   `;
 
   // Filters
-  const conditionsInner: string[] = [`"ow"."owner" = $/user/`];
+  const conditions: string[] = [`"o"."owner" = $/user/`];
   if (filter.community) {
-    conditionsInner.push(`"c"."community" = $/community/`);
+    conditions.push(`"c"."community" = $/community/`);
   }
   if (filter.collection) {
-    conditionsInner.push(`"c"."id" = $/collection/`);
+    conditions.push(`"c"."id" = $/collection/`);
   }
   if (filter.hasOffer) {
-    conditionsInner.push(`"t"."top_buy_hash" is not null`);
+    conditions.push(`"t"."top_buy_hash" is not null`);
   }
-  if (conditionsInner.length) {
-    baseQueryInner +=
-      " where " + conditionsInner.map((c) => `(${c})`).join(" and ");
+  if (conditions.length) {
+    baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
-
-  // Grouping
-  baseQueryInner += ` group by "ow"."contract", "ow"."token_id", "ow"."owner"`;
-
-  let baseQueryOuter = `
-    select
-      "x".*,
-      "t"."top_buy_hash" as "topBuyHash",
-      "t"."top_buy_value" as "topBuyValue",
-      date_part('epoch', lower("o"."valid_between")) as "topBuyListingTime"
-    from (${baseQueryInner}) "x"
-    join "tokens" "t"
-      on "t"."contract" = "x"."contract"
-      and "t"."token_id" = "x"."tokenId"
-    left join "orders" "o"
-      on "t"."top_buy_hash" = "o"."hash"
-  `;
 
   // Sorting
-  filter.sortBy = filter.sortBy ?? "acquiredAt";
-  filter.sortDirection = filter.sortDirection ?? "asc";
-  switch (filter.sortBy) {
-    case "acquiredAt": {
-      baseQueryOuter += ` order by "x"."acquiredAt" ${filter.sortDirection}, "t"."token_id" nulls last`;
-      break;
-    }
-
-    case "topBuyListingTime": {
-      baseQueryOuter += ` order by date_part('epoch', lower("o"."valid_between")) ${filter.sortDirection}, "t"."token_id" nulls last`;
-      break;
-    }
-  }
+  baseQuery += ` order by "nte"."block" desc`;
 
   // Pagination
-  baseQueryOuter += ` offset $/offset/`;
-  baseQueryOuter += ` limit $/limit/`;
+  baseQuery += ` offset $/offset/`;
+  baseQuery += ` limit $/limit/`;
 
-  return db.manyOrNone(baseQueryOuter, filter);
+  return db.manyOrNone(baseQuery, filter).then((result) =>
+    result.map((r) => ({
+      token: {
+        token: {
+          contract: r.contract,
+          tokenId: r.token_id,
+          image: r.image,
+          collection: {
+            id: r.collection_id,
+            name: r.collection_name,
+          },
+        },
+        market: {
+          floorSell: {
+            hash: r.floor_sell_hash,
+            value: r.floor_sell_value,
+            maker: r.floor_sell_maker,
+            validFrom: r.floor_sell_valid_from,
+          },
+          topBuy: {
+            hash: r.top_buy_hash,
+            value: r.top_buy_value,
+            maker: r.top_buy_maker,
+            validFrom: r.top_buy_valid_from,
+          },
+        },
+      },
+      ownership: {
+        tokenCount: r.token_count,
+        onSaleCount: r.on_sale_count,
+        floorSellValue: r.floor_sell_value,
+        topBuyValue: r.top_buy_value,
+        totalBuyValue: r.total_buy_value,
+        lastAcquiredAt: r.last_acquired_at,
+      },
+    }))
+  );
 };
