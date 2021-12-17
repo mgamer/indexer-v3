@@ -29,8 +29,8 @@ export const getTokensOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const data = await queries.getTokens(query as queries.GetTokensFilter);
-      return { data };
+      const tokens = await queries.getTokens(query as queries.GetTokensFilter);
+      return { tokens };
     } catch (error) {
       logger.error("get_tokens_handler", `Handler failure: ${error}`);
       throw error;
@@ -94,11 +94,11 @@ export const getUserTokensOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const data = await queries.getUserTokens({
+      const tokens = await queries.getUserTokens({
         ...params,
         ...query,
       } as queries.GetUserTokensFilter);
-      return { data };
+      return { tokens };
     } catch (error) {
       logger.error("get_user_tokens_handler", `Handler failure: ${error}`);
       throw error;

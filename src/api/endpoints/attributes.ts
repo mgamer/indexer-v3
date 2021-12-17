@@ -35,21 +35,21 @@ export const getAttributesOptions: RouteOptions = {
         keyValueCount[key][value] += Number(count);
       }
 
-      const data: any[] = [];
+      const attributesAgg: any[] = [];
       for (const [key, values] of Object.entries(keyValueCount)) {
-        data.push({
+        attributesAgg.push({
           key,
           values: [],
         });
         for (const [value, count] of Object.entries(values as any)) {
-          data[data.length - 1].values.push({
+          attributesAgg[attributesAgg.length - 1].values.push({
             value,
             count,
           });
         }
       }
 
-      return { data };
+      return { attributesAgg };
     } catch (error) {
       logger.error("get_attributes_handler", `Handler failure: ${error}`);
       throw error;
@@ -83,11 +83,11 @@ export const getCollectionAttributesOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const data = await queries.getCollectionAttributes({
+      const attributes = await queries.getCollectionAttributes({
         ...params,
         ...query,
       } as queries.GetCollectionAttributesFilter);
-      return { data };
+      return { attributes };
     } catch (error) {
       logger.error(
         "get_collection_attributes_handler",

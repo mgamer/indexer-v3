@@ -24,8 +24,8 @@ export const getOwnersOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const data = await queries.getOwners(query as queries.GetOwnersFilter);
-      return { data };
+      const owners = await queries.getOwners(query as queries.GetOwnersFilter);
+      return { owners };
     } catch (error) {
       logger.error("get_owners_handler", `Handler failure: ${error}`);
       throw error;

@@ -25,10 +25,10 @@ export const getCollectionsOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const data = await queries.getCollections(
+      const collections = await queries.getCollections(
         query as queries.GetCollectionsFilter
       );
-      return { data };
+      return { collections };
     } catch (error) {
       logger.error("get_collections_handler", `Handler failure: ${error}`);
       throw error;
@@ -55,11 +55,11 @@ export const getUserCollectionsOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const data = await queries.getUserCollections({
+      const collections = await queries.getUserCollections({
         ...params,
         ...query,
       } as queries.GetUserCollectionsFilter);
-      return { data };
+      return { collections };
     } catch (error) {
       logger.error("get_user_collections_handler", `Handler failure: ${error}`);
       throw error;
