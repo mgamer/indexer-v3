@@ -35,21 +35,21 @@ export const getAttributesOptions: RouteOptions = {
         keyValueCount[key][value] += Number(count);
       }
 
-      const aggregatedAttributes: any[] = [];
+      const data: any[] = [];
       for (const [key, values] of Object.entries(keyValueCount)) {
-        aggregatedAttributes.push({
+        data.push({
           key,
           values: [],
         });
         for (const [value, count] of Object.entries(values as any)) {
-          aggregatedAttributes[aggregatedAttributes.length - 1].values.push({
+          data[data.length - 1].values.push({
             value,
             count,
           });
         }
       }
 
-      return { attributes: aggregatedAttributes };
+      return { data };
     } catch (error) {
       logger.error("get_attributes_handler", `Handler failure: ${error}`);
       throw error;
@@ -57,8 +57,8 @@ export const getAttributesOptions: RouteOptions = {
   },
 };
 
-export const getCollectionExploreOptions: RouteOptions = {
-  description: "Get collection explore",
+export const getCollectionAttributesOptions: RouteOptions = {
+  description: "Get collection attributes",
   tags: ["api"],
   validate: {
     params: Joi.object({
@@ -68,7 +68,7 @@ export const getCollectionExploreOptions: RouteOptions = {
       attribute: Joi.string(),
       onSaleCount: Joi.number(),
       sortBy: Joi.string()
-        .valid("key", "floorSellValue", "topBuyValue", "floorCap")
+        .valid("key", "floorSellValue", "floorCap")
         .default("key"),
       sortDirection: Joi.string()
         .lowercase()
@@ -83,14 +83,14 @@ export const getCollectionExploreOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const attributes = await queries.getCollectionExplore({
+      const data = await queries.getCollectionAttributes({
         ...params,
         ...query,
-      } as queries.GetCollectionExploreFilter);
-      return { attributes };
+      } as queries.GetCollectionAttributesFilter);
+      return { data };
     } catch (error) {
       logger.error(
-        "get_collection_explore_handler",
+        "get_collection_attributes_handler",
         `Handler failure: ${error}`
       );
       throw error;

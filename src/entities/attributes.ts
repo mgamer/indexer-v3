@@ -42,7 +42,7 @@ export const getAttributes = async (filter: GetAttributesFilter) => {
   return db.manyOrNone(baseQuery, filter);
 };
 
-export type GetCollectionExploreFilter = {
+export type GetCollectionAttributesFilter = {
   collection: string;
   attribute?: string;
   onSaleCount?: number;
@@ -52,54 +52,62 @@ export type GetCollectionExploreFilter = {
   limit: number;
 };
 
-export const getCollectionExplore = async (
-  filter: GetCollectionExploreFilter
+export const getCollectionAttributes = async (
+  filter: GetCollectionAttributesFilter
 ) => {
-  let baseQueryInner = `
+  let baseQuery = `
     select
-      "a"."key",
-      "a"."value",
-      count(distinct("t"."token_id")) as "tokenCount",
-      count(distinct("t"."token_id")) filter (where "t"."floor_sell_hash" is not null) as "onSaleCount",
-      count(distinct("o"."owner")) filter (where "o"."amount" > 0) as "uniqueOwnersCount",
-      (array_agg("t"."image"))[1:4] as "sampleImages",
-      min("t"."floor_sell_value") as "floorSellValue",
-      max("t"."top_buy_value") as "topBuyValue"
-    from "attributes" "a"
-    join "tokens" "t"
-      on "a"."contract" = "t"."contract"
-      and "a"."token_id" = "t"."token_id"
-    left join "ownerships" "o"
-      on "a"."contract" = "o"."contract"
-      and "a"."token_id" = "o"."token_id"
-      and "o"."amount" > 0
+      "x".*,
+      "y".*
+    from (
+      select
+        "a"."key",
+        "a"."value",
+        count(distinct("t"."token_id")) as "token_count",
+        count(distinct("t"."token_id")) filter (where "t"."floor_sell_hash" is not null) as "on_sale_count",
+        count(distinct("o"."owner")) filter (where "o"."amount" > 0) as "unique_owners_count",
+        (array_agg("t"."image"))[1:4] as "sample_images"
+      from "attributes" "a"
+      join "tokens" "t"
+        on "a"."contract" = "t"."contract"
+        and "a"."token_id" = "t"."token_id"
+      left join "ownerships" "o"
+        on "a"."contract" = "o"."contract"
+        and "a"."token_id" = "o"."token_id"
+        and "o"."amount" > 0
+      group by "a"."key", "a"."value"
+    ) "x"
+    join (
+      select distinct on ("a"."key", "a"."value")
+        "a"."key",
+        "a"."value",
+        "t"."floor_sell_hash",
+        "t"."floor_sell_value",
+        "o"."maker" as "floor_sell_maker",
+        date_part('epoch', lower("o"."valid_between")) as "floor_sell_valid_from"
+      from "attributes" "a"
+      join "tokens" "t"
+        on "a"."contract" = "t"."contract"
+        and "a"."token_id" = "t"."token_id"
+      join "orders" "o"
+        on "t"."floor_sell_hash" = "o"."hash"
+      where "t"."collection_id" = $/collection/
+      order by "a"."key", "a"."value", "t"."floor_sell_value" asc
+    ) "y"
+      on "x"."key" = "y"."key"
+      and "x"."value" = "y"."value"
   `;
 
   // Filters
-  const conditionsInner: string[] = [`"t"."collection_id" = $/collection/`];
+  const conditions: string[] = [];
   if (filter.attribute) {
-    conditionsInner.push(`"a"."key" = $/attribute/`);
+    conditions.push(`"x"."key" = $/attribute/`);
   }
-  if (conditionsInner.length) {
-    baseQueryInner +=
-      " where " + conditionsInner.map((c) => `(${c})`).join(" and ");
-  }
-
-  // Grouping
-  baseQueryInner += ` group by "a"."key", "a"."value"`;
-
-  let baseQueryOuter = `
-    select * from (${baseQueryInner}) "x"
-  `;
-
-  // Filters
-  const conditionsOuter: string[] = [];
   if (filter.onSaleCount) {
-    conditionsOuter.push(`"x"."onSaleCount" >= $/onSaleCount/`);
+    conditions.push(`"x"."on_sale_count" >= $/onSaleCount/`);
   }
-  if (conditionsOuter.length) {
-    baseQueryOuter +=
-      " where " + conditionsOuter.map((c) => `(${c})`).join(" and ");
+  if (conditions.length) {
+    baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
 
   // Sorting
@@ -107,29 +115,50 @@ export const getCollectionExplore = async (
   filter.sortDirection = filter.sortDirection ?? "asc";
   switch (filter.sortBy) {
     case "key": {
-      baseQueryOuter += ` order by "x"."key" ${filter.sortDirection} nulls last`;
+      baseQuery += ` order by "x"."key" ${filter.sortDirection} nulls last`;
       break;
     }
 
     case "floorSellValue": {
-      baseQueryOuter += ` order by "x"."floorSellValue" ${filter.sortDirection} nulls last`;
-      break;
-    }
-
-    case "topBuyValue": {
-      baseQueryOuter += ` order by "x"."topBuyValue" ${filter.sortDirection} nulls last`;
+      baseQuery += ` order by "y"."floor_sell_value" ${filter.sortDirection} nulls last`;
       break;
     }
 
     case "floorCap": {
-      baseQueryOuter += ` order by "x"."floorSellValue" * "x"."tokenCount" ${filter.sortDirection} nulls last`;
+      baseQuery += ` order by "y"."floor_sell_value" * "x"."token_count" ${filter.sortDirection} nulls last`;
       break;
     }
   }
 
   // Pagination
-  baseQueryOuter += ` offset $/offset/`;
-  baseQueryOuter += ` limit $/limit/`;
+  baseQuery += ` offset $/offset/`;
+  baseQuery += ` limit $/limit/`;
 
-  return db.manyOrNone(baseQueryOuter, filter);
+  return db.manyOrNone(baseQuery, filter).then((result) =>
+    result.map((r) => ({
+      key: r.key,
+      value: r.value,
+      set: {
+        compositionId: null,
+        token_count: r.token_count,
+        on_sale_count: r.on_sale_count,
+        unique_owners_count: r.unique_owners_count,
+        sample_images: r.sample_images,
+        market: {
+          floorSell: {
+            hash: r.floor_sell_hash,
+            value: r.floor_sell_value,
+            maker: r.floor_sell_maker,
+            validFrom: r.floor_sell_valid_from,
+          },
+          topBuy: {
+            hash: null,
+            value: null,
+            maker: null,
+            validFrom: null,
+          },
+        },
+      },
+    }))
+  );
 };

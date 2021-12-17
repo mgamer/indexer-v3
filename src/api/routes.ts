@@ -36,8 +36,8 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/collections/{collection}/explore",
-    options: attributesEndpoints.getCollectionExploreOptions,
+    path: "/collections/{collection}/attributes",
+    options: attributesEndpoints.getCollectionAttributesOptions,
   });
 
   // Collections
@@ -92,14 +92,14 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/tokens/stats",
-    options: tokensEndpoints.getTokensStatsOptions,
+    path: "/users/{user}/tokens",
+    options: tokensEndpoints.getUserTokensOptions,
   });
 
   server.route({
     method: "GET",
-    path: "/users/{user}/tokens",
-    options: tokensEndpoints.getUserTokensOptions,
+    path: "/tokens/stats",
+    options: tokensEndpoints.getTokensStatsOptions,
   });
 
   // Transfers
