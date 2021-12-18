@@ -60,6 +60,7 @@ export const getCollectionsOptions: RouteOptions = {
   //response: {schema: getCollectionsResponse}, // this format validates, and gives 500 error with no explanation
   plugins: {
     'hapi-swagger': {
+        produces: ['application/json'],
         responses: {
             200: {
                 description: 'Successful',
