@@ -22,7 +22,7 @@ export const getCollections = async (filter: GetCollectionsFilter) => {
       "cs"."token_count",
       "cs"."on_sale_count",
       "cs"."unique_owners_count",
-      "cs"."sample_image",
+      "cs"."sample_images",
       "cs"."floor_sell_hash",
       "os"."value" as "floor_sell_value",
       "os"."maker" as "floor_sell_maker",
@@ -92,7 +92,7 @@ export const getCollections = async (filter: GetCollectionsFilter) => {
         tokenCount: r.token_count,
         onSaleCount: r.on_sale_count,
         uniqueOwnersCount: r.unique_wwners_count,
-        sampleImages: [r.sample_image],
+        sampleImages: r.sample_images,
         market: {
           floorSell: {
             hash: r.floor_sell_hash,
