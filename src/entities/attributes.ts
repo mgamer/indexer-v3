@@ -151,6 +151,8 @@ export const getCollectionAttributes = async (
             maker: r.floor_sell_maker,
             validFrom: r.floor_sell_valid_from,
           },
+          // TODO: Once attribute-based orders are live, these fields
+          // will need to be queried and populated in the response
           topBuy: {
             hash: null,
             value: null,

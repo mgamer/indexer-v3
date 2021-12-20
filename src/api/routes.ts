@@ -6,6 +6,7 @@ import * as collectionsEndpoints from "@/api/endpoints/collections";
 import * as ordersEndpoints from "@/api/endpoints/orders";
 import * as ownersEndpoints from "@/api/endpoints/owners";
 import * as rootEndpoints from "@/api/endpoints/root";
+import * as setsEndpoints from "@/api/endpoints/sets";
 import * as tokensEndpoints from "@/api/endpoints/tokens";
 import * as transfersEndpoints from "@/api/endpoints/transfers";
 
@@ -82,6 +83,14 @@ export const setupRoutes = (server: Server) => {
     options: ownersEndpoints.getOwnersOptions,
   });
 
+  // Sets
+
+  server.route({
+    method: "GET",
+    path: "/sets",
+    options: setsEndpoints.getSetsOptions,
+  });
+
   // Tokens
 
   server.route({
@@ -94,12 +103,6 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/users/{user}/tokens",
     options: tokensEndpoints.getUserTokensOptions,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/tokens/stats",
-    options: tokensEndpoints.getTokensStatsOptions,
   });
 
   // Transfers

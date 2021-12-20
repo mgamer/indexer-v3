@@ -154,68 +154,6 @@ export const getTokens = async (filter: GetTokensFilter) => {
   );
 };
 
-export type GetTokensStatsFilter = {
-  contract?: string;
-  tokenId?: string;
-  collection?: string;
-  attributes?: { [key: string]: string };
-  onSale?: boolean;
-};
-
-export const getTokensStats = async (filter: GetTokensStatsFilter) => {
-  let baseQuery = `
-    select
-      count(distinct("t"."token_id")) as "tokenCount",
-      count(distinct("t"."token_id")) filter (where "t"."floor_sell_value" is not null) as "onSaleCount",
-      count(distinct("o"."owner")) filter (where "o"."amount" > 0) AS "uniqueOwnersCount",
-      max("t"."image") as "sampleImage",
-      min("t"."floor_sell_value") as "floorSellValue",
-      max("t"."top_buy_value") as "topBuyValue"
-    from "tokens" "t"
-    join "ownerships" "o"
-      on "t"."contract" = "o"."contract"
-      and "t"."token_id" = "o"."token_id"
-      and "o"."amount" > 0
-  `;
-
-  // Filters
-  const conditions: string[] = [];
-  if (filter.contract) {
-    conditions.push(`"t"."contract" = $/contract/`);
-  }
-  if (filter.tokenId) {
-    conditions.push(`"t"."token_id" = $/tokenId/`);
-  }
-  if (filter.collection) {
-    conditions.push(`"t"."collection_id" = $/collection/`);
-  }
-  if (filter.attributes) {
-    Object.entries(filter.attributes).forEach(([key, value], i) => {
-      conditions.push(`
-        exists(
-          select from "attributes" "a"
-          where "a"."contract" = "t"."contract"
-            and "a"."token_id" = "t"."token_id"
-            and "a"."key" = $/key${i}/
-            and "a"."value" = $/value${i}/
-        )
-      `);
-      (filter as any)[`key${i}`] = key;
-      (filter as any)[`value${i}`] = value;
-    });
-  }
-  if (filter.onSale === true) {
-    conditions.push(`"t"."floor_sell_value" is not null`);
-  } else if (filter.onSale === false) {
-    conditions.push(`"t"."floor_sell_value" is null`);
-  }
-  if (conditions.length) {
-    baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
-  }
-
-  return db.oneOrNone(baseQuery, filter);
-};
-
 export type GetUserTokensFilter = {
   user: string;
   community?: string;

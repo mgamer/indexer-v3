@@ -1,7 +1,7 @@
 import { MigrationBuilder } from "node-pg-migrate";
 
 export async function up(pgm: MigrationBuilder): Promise<void> {
-  pgm.dropMaterializedView("collection_stats");
+  pgm.dropMaterializedView("collection_stats", { ifExists: true });
 
   pgm.createMaterializedView(
     "collection_stats",
@@ -11,13 +11,11 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
         "token_count",
         "on_sale_count",
         "unique_owners_count",
-        "sample_image",
+        "sample_images",
         "floor_sell_hash",
         "floor_sell_value",
-        "floor_sell_maker",
         "top_buy_hash",
         "top_buy_value",
-        "top_buy_maker",
       ],
     },
     `
@@ -25,17 +23,15 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
         "x".*,
         "y"."floor_sell_hash",
         "y"."floor_sell_value",
-        "y"."floor_sell_maker",
         "z"."top_buy_hash",
-        "z"."top_buy_value",
-        "z"."top_buy_maker"
+        "z"."top_buy_value"
       from (
         select
           "t"."collection_id",
           count(distinct("t"."token_id")) as "token_count",
-          count(distinct("t"."token_id")) filter (where "t"."floor_sell_value" is not null) as "on_sale_count",
+          count(distinct("t"."token_id")) filter (where "t"."floor_sell_hash" is not null) as "on_sale_count",
           count(distinct("o"."owner")) filter (where "o"."amount" > 0) AS "unique_owners_count",
-          max("t"."image") as "sample_image"
+          (array_agg("t"."image"))[1:4] as "sample_images"
         from "tokens" "t"
         join "ownerships" "o"
           on "t"."contract" = "o"."contract"
@@ -46,8 +42,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
         select distinct on ("t"."collection_id")
           "t"."collection_id",
           "t"."floor_sell_hash",
-          "t"."floor_sell_value",
-          "o"."maker" as "floor_sell_maker"
+          "o"."value" as "floor_sell_value"
         from "tokens" "t"
         join "orders" "o"
           on "t"."floor_sell_hash" = "o"."hash"
@@ -58,8 +53,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
         select distinct on ("ts"."collection_id")
           "ts"."collection_id",
           "o"."hash" as "top_buy_hash",
-          "o"."value" as "top_buy_value",
-          "o"."maker" as "top_buy_maker"
+          "o"."value" as "top_buy_value"
         from "orders" "o"
         join "token_sets" "ts"
           on "o"."token_set_id" = "ts"."id"
@@ -74,12 +68,9 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.dropIndex("collection_stats", "collection_id", {
-    // https://github.com/salsita/node-pg-migrate/issues/857
-    name: "collection_stats_collection_id_unique_index",
-  });
+  pgm.dropIndex("collection_stats", "collection_id", { unique: true });
 
-  pgm.dropMaterializedView("collection_stats");
+  pgm.dropMaterializedView("collection_stats", { ifExists: true });
 
   // Skip recreating the old version of the materialized view,
   // if that's needed then the code should be copied over from
