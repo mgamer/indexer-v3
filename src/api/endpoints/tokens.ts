@@ -38,35 +38,6 @@ export const getTokensOptions: RouteOptions = {
   },
 };
 
-export const getTokensStatsOptions: RouteOptions = {
-  description: "Get tokens stats",
-  tags: ["api"],
-  validate: {
-    query: Joi.object({
-      contract: Joi.string().lowercase(),
-      tokenId: Joi.string().pattern(/^[0-9]+$/),
-      collection: Joi.string().lowercase(),
-      attributes: Joi.object().unknown(),
-      onSale: Joi.boolean(),
-    })
-      .oxor("collection", "contract")
-      .or("collection", "contract"),
-  },
-  handler: async (request: Request) => {
-    const query = request.query as any;
-
-    try {
-      const stats = await queries.getTokensStats(
-        query as queries.GetTokensStatsFilter
-      );
-      return { stats };
-    } catch (error) {
-      logger.error("get_tokens_stats_handler", `Handler failure: ${error}`);
-      throw error;
-    }
-  },
-};
-
 export const getUserTokensOptions: RouteOptions = {
   description: "Get user tokens",
   tags: ["api"],
