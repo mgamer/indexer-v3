@@ -5,7 +5,8 @@ import { logger } from "@/common/logger";
 import * as queries from "@/entities/collections";
 
 const getCollectionsResponse = Joi.object({
-  collections: Joi.array().items(Joi.object({
+  collections: Joi.array().items(
+    Joi.object({
       collection: Joi.object({
         id: Joi.string(),
         name: Joi.string(),
@@ -13,32 +14,33 @@ const getCollectionsResponse = Joi.object({
         image: Joi.string(),
       }),
       royalties: Joi.object({
-        recipient: Joi.string().optional(),
+        recipient: Joi.string().allow(null),
         bps: Joi.number(),
       }),
       set: Joi.object({
-        compositionId: Joi.string().optional(),
+        compositionId: Joi.string().allow(null),
         tokenCount: Joi.string(),
         onSaleCount: Joi.string(),
         uniqueOwnersCount: Joi.string(),
         sampleImages: Joi.array().items(Joi.string()),
         market: Joi.object({
           floorSell: {
-            hash: Joi.string(),
-            value: Joi.string(),
-            maker: Joi.string(),
-            validFrom: Joi.number(),
+            hash: Joi.string().allow(null),
+            value: Joi.string().allow(null),
+            maker: Joi.string().allow(null),
+            validFrom: Joi.number().allow(null),
           },
           topBuy: Joi.object({
-            hash: Joi.string(),
-            value: Joi.string(),
-            maker: Joi.string(),
-            validFrom: Joi.number(),
+            hash: Joi.string().allow(null),
+            value: Joi.string().allow(null),
+            maker: Joi.string().allow(null),
+            validFrom: Joi.number().allow(null),
           }),
         }),
-      })
-  }))
-}).label('getCollectionsResponse');
+      }),
+    })
+  ),
+}).label("getCollectionsResponse");
 
 export const getCollectionsOptions: RouteOptions = {
   description: "Get collections",
@@ -57,17 +59,16 @@ export const getCollectionsOptions: RouteOptions = {
       limit: Joi.number().integer().min(1).max(20).default(20),
     }),
   },
-  //response: {schema: getCollectionsResponse}, // this format validates, and gives 500 error with no explanation
-  plugins: {
-    'hapi-swagger': {
-        produces: ['application/json'],
-        responses: {
-            200: {
-                description: 'Successful',
-                schema: getCollectionsResponse
-            }
-        }
-    }
+  response: {
+    schema: getCollectionsResponse,
+    failAction: (_request, _h, error) => {
+      logger.error(
+        "get_collections_handler",
+        `Wrong response schema: ${error}`
+      );
+
+      throw error;
+    },
   },
   handler: async (request: Request) => {
     const query = request.query as any;

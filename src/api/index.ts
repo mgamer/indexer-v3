@@ -18,6 +18,14 @@ export const start = async function (): Promise<void> {
       cors: {
         origin: ["*"],
       },
+      // Expose any validation errors
+      // https://github.com/hapijs/hapi/issues/3706
+      validate: {
+        failAction: (_request, _h, error) => {
+          // TODO: Remove `validation` field
+          throw error;
+        },
+      },
     },
     router: {
       stripTrailingSlash: true,
