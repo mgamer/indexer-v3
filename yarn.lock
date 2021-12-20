@@ -1006,15 +1006,14 @@ buffer-writer@2.0.0:
   resolved "https://registry.yarnpkg.com/buffer-writer/-/buffer-writer-2.0.0.tgz#ce7eb81a38f7829db09c873f2fbb792c0c98ec04"
   integrity sha512-a7ZpuTZU1TRtnwyCNW3I5dc0wWNC3VR9S++Ewyk2HHZdrO3CQJqSpd+95Us590V6AL7JqUAH2IwZ/398PmNFgw==
 
-bullmq@^1.52.2:
-  version "1.59.2"
-  resolved "https://registry.yarnpkg.com/bullmq/-/bullmq-1.59.2.tgz#2a73fbf5ed31947dc2f106a95666175064f6d934"
-  integrity sha512-wvZHNtnuxIQEU+6JRpVnnmvM8W7obEppX+zgDfOSgWnAS/EZPLOZ5yaFOy41M2Fxkq1IeNeu9R6CqILFyF0MYQ==
+bullmq@1.52.2:
+  version "1.52.2"
+  resolved "https://registry.yarnpkg.com/bullmq/-/bullmq-1.52.2.tgz#5a49a55323cde072ae7f92635067c0b70a22a434"
+  integrity sha512-TVAJHMALdVQQV6fxuqIJTyBTLBY7hUmLxLaXl+r2sZLK6A1fwKOTpYTdQGIrR0gyeoac+mA4Js8+JkeVsXxyXg==
   dependencies:
     cron-parser "^2.18.0"
     get-port "^5.1.1"
-    glob "^7.2.0"
-    ioredis "^4.28.2"
+    ioredis "^4.27.9"
     lodash "^4.17.21"
     msgpackr "^1.4.6"
     semver "^6.3.0"
@@ -1485,7 +1484,7 @@ getpass@^0.1.1:
   dependencies:
     assert-plus "^1.0.0"
 
-glob@^7.1.3, glob@^7.2.0:
+glob@^7.1.3:
   version "7.2.0"
   resolved "https://registry.yarnpkg.com/glob/-/glob-7.2.0.tgz#d15535af7732e02e948f4c41628bd910293f6023"
   integrity sha512-lmLf6gtyrPq8tTjSmrO94wBeQbFR3HbLHbuyD69wuyQkImp2hWqMGB47OX65FBkPffO641IP9jWa1z4ivqG26Q==
@@ -1598,7 +1597,7 @@ inherits@2, inherits@^2.0.3, inherits@^2.0.4, inherits@~2.0.1, inherits@~2.0.3:
   resolved "https://registry.yarnpkg.com/inherits/-/inherits-2.0.4.tgz#0fa2c64f932917c3433a0ded55363aae37416b7c"
   integrity sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==
 
-ioredis@^4.28.0, ioredis@^4.28.2:
+ioredis@^4.27.9, ioredis@^4.28.0:
   version "4.28.2"
   resolved "https://registry.yarnpkg.com/ioredis/-/ioredis-4.28.2.tgz#493ccd5d869fd0ec86c96498192718171f6c9203"
   integrity sha512-kQ+Iv7+c6HsDdPP2XUHaMv8DhnSeAeKEwMbaoqsXYbO+03dItXt7+5jGQDRyjdRUV2rFJbzg7P4Qt1iX2tqkOg==
