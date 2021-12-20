@@ -148,3 +148,32 @@ export const getFillOptions: RouteOptions = {
     }
   },
 };
+
+export const getUserLiquidityOptions: RouteOptions = {
+  description: "Get user liquidity",
+  tags: ["api"],
+  validate: {
+    params: Joi.object({
+      user: Joi.string().lowercase().required(),
+    }),
+    query: Joi.object({
+      offset: Joi.number().integer().min(0).default(0),
+      limit: Joi.number().integer().min(1).max(20).default(20),
+    }),
+  },
+  handler: async (request: Request) => {
+    const params = request.params as any;
+    const query = request.query as any;
+
+    try {
+      const liquidity = await queries.getUserLiquidity({
+        ...params,
+        ...query,
+      } as queries.GetUserLiquidityFilter);
+      return { liquidity: liquidity ?? [] };
+    } catch (error) {
+      logger.error("get_user_liquidity_handler", `Handler failure: ${error}`);
+      throw error;
+    }
+  },
+};
