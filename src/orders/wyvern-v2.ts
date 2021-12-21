@@ -6,8 +6,9 @@ import { db, pgp } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import {
-  generateTokenListSetId,
-  generateTokenRangeSetId,
+  TokenSetInfo,
+  generateSingleTokenSetInfo,
+  generateTokenRangeSetInfo,
 } from "@/orders/utils";
 import { addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
 
@@ -46,7 +47,7 @@ export const filterOrders = async (
 
     // Check: order doesn't already exist
     if (existingHashes.has(hash)) {
-      console.log("order already exists");
+      console.log("order already exists", hash);
       continue;
     }
 
@@ -157,17 +158,11 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
       }
     }
 
-    let tokenSetId: string | undefined;
+    let tokenSetInfo: TokenSetInfo | undefined;
     if (tokenId) {
       // The order is a single-token order
 
-      // Generate the token list set id corresponding to the order
-      tokenSetId = generateTokenListSetId([
-        {
-          contract: order.params.target,
-          tokenId,
-        },
-      ]);
+      tokenSetInfo = generateSingleTokenSetInfo(order.params.target, tokenId);
 
       // Make sure the token set exists
       queries.push({
@@ -175,17 +170,23 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
           insert into "token_sets" (
             "id",
             "contract",
-            "token_id"
+            "token_id",
+            "label",
+            "label_hash"
           ) values (
             $/tokenSetId/,
             $/contract/,
-            $/tokenId/
+            $/tokenId/,
+            $/tokenSetLabel/,
+            $/tokenSetLabelHash/
           ) on conflict do nothing
         `,
         values: {
-          tokenSetId,
+          tokenSetId: tokenSetInfo.id,
           contract: order.params.target,
           tokenId,
+          tokenSetLabel: tokenSetInfo.label,
+          tokenSetLabelHash: tokenSetInfo.labelHash,
         },
       });
       queries.push({
@@ -201,7 +202,7 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
           ) on conflict do nothing
         `,
         values: {
-          tokenSetId,
+          tokenSetId: tokenSetInfo.id,
           contract: order.params.target,
           tokenId,
         },
@@ -227,7 +228,8 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
       );
       if (collection?.id) {
         // Generate the token range set id corresponding to the order
-        tokenSetId = generateTokenRangeSetId(
+        tokenSetInfo = generateTokenRangeSetInfo(
+          collection.id,
           order.params.target,
           tokenIdRange[0],
           tokenIdRange[1]
@@ -238,15 +240,21 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
           query: `
             insert into "token_sets" (
               "id",
-              "collection_id"
+              "collection_id",
+              "label",
+              "label_hash"
             ) values (
               $/tokenSetId/,
-              $/collectionId/
+              $/collectionId/,
+              $/tokenSetLabel/,
+              $/tokenSetLabelHash/
             ) on conflict do nothing
           `,
           values: {
-            tokenSetId,
+            tokenSetId: tokenSetInfo.id,
             collectionId: collection.id,
+            tokenSetLabel: tokenSetInfo.label,
+            tokenSetLabelHash: tokenSetInfo.labelHash,
           },
         });
         queries.push({
@@ -263,14 +271,14 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
             ) on conflict do nothing
           `,
           values: {
-            tokenSetId,
+            tokenSetId: tokenSetInfo.id,
             collectionId: collection.id,
           },
         });
       }
     }
 
-    if (!tokenSetId) {
+    if (!tokenSetInfo) {
       // Skip if nothing matched so far
       continue;
     }
@@ -405,7 +413,7 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
         kind: "wyvern-v2",
         status: "valid",
         side,
-        tokenSetId,
+        tokenSetId: tokenSetInfo.id,
         maker: order.params.maker,
         price: order.params.basePrice,
         value,

@@ -212,7 +212,7 @@ if (config.doBackgroundWork) {
                 $/contract/,
                 $/tokenId/
               from "token_sets"
-              where "id" = $/collectionId/
+              where "collection_id" = $/collectionId/
             )
           `,
           values: {
