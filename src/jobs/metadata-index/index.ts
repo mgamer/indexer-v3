@@ -277,6 +277,12 @@ if (config.doBackgroundWork) {
           // Optimistically mark the selected tokens as indexed. The
           // underlying indexing job has a retry mechanism so it's
           // quite unlikely it will fail to index in all attempts.
+
+          // TODO: Since the optimistic approach of marking tokens
+          // as indexed and then triggering a metadata fetch might
+          // fail in quite a few cases, we should have a cron job
+          // that periodically checks for tokens marked as indexed
+          // that don't actually have metadata and retry indexing.
           const columns = new pgp.helpers.ColumnSet(["contract", "token_id"], {
             table: "tokens",
           });
