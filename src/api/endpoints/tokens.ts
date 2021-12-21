@@ -11,6 +11,7 @@ const getTokensResponse = Joi.object({
         contract: Joi.string(),
         kind: Joi.string(),
         image: Joi.string(),
+        tokenId: Joi.string(),
         collection: Joi.object({
           id: Joi.string(),
           name: Joi.string()
@@ -93,9 +94,9 @@ const getUserTokensResponse = Joi.object({
       }),
       ownership: Joi.object({
         tokenCount: Joi.number(),
-        onSaleCount: Joi.number(),
-        floorSellValue: Joi.string(),
-        topBuyValue: Joi.string(),
+        onSaleCount: Joi.number().allow(null),
+        floorSellValue: Joi.string().allow(null),
+        topBuyValue: Joi.string().allow(null),
         totalBuyValue: Joi.string(),
         lastAcquiredAt: Joi.number(),
     })

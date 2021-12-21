@@ -188,23 +188,23 @@ export const getOrdersOptions: RouteOptions = {
 };
 
 const getUserLiquidityResponse = Joi.object({
-  orders: Joi.array().items(
-  Joi.object({
+  liquidity: Joi.array().items(
+    Joi.object({
       collection: Joi.object({
-      id: Joi.string(),
-      name: Joi.string()
-  }),
-  buyCount: Joi.number(),
-  topBuy: Joi.object({
-      value: Joi.string(),
-      validUntil: Joi.number()
-  }),
-  sellCount: Joi.number(),
-  floorSell: Joi.object({
-      value: Joi.string(),
-      validUntil: Joi.number()
-  })
-}))
+        id: Joi.string(),
+        name: Joi.string()
+      }),
+      buyCount: Joi.number().allow(null),
+      topBuy: Joi.object({
+          value: Joi.string().allow(null),
+          validUntil: Joi.number().allow(null)
+      }),
+      sellCount: Joi.number().allow(null),
+      floorSell: Joi.object({
+          value: Joi.string().allow(null),
+          validUntil: Joi.number().allow(null)
+      })
+  }))
 })
 
 export const getUserLiquidityOptions: RouteOptions = {
