@@ -18,7 +18,6 @@ const getCollectionsResponse = Joi.object({
         bps: Joi.number(),
       }),
       set: Joi.object({
-        compositionId: Joi.string().allow(null),
         tokenCount: Joi.string(),
         onSaleCount: Joi.string(),
         uniqueOwnersCount: Joi.string(),

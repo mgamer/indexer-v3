@@ -116,10 +116,6 @@ export const filterOrders = async (
 };
 
 export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
-  // TODO: Things that could potentially be done:
-  // - use multi-row inserts to improve performance
-  // - short-circuit token set creation
-
   if (!orders.length) {
     return;
   }
@@ -160,59 +156,67 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
 
     let tokenSetInfo: TokenSetInfo | undefined;
     if (tokenId) {
-      // The order is a single-token order
-
+      // The order is a single token order
       tokenSetInfo = generateSingleTokenSetInfo(order.params.target, tokenId);
 
-      // Make sure the token set exists
-      queries.push({
-        query: `
-          insert into "token_sets" (
-            "id",
-            "contract",
-            "token_id",
-            "label",
-            "label_hash"
-          ) values (
-            $/tokenSetId/,
-            $/contract/,
-            $/tokenId/,
-            $/tokenSetLabel/,
-            $/tokenSetLabelHash/
-          ) on conflict do nothing
-        `,
-        values: {
-          tokenSetId: tokenSetInfo.id,
-          contract: order.params.target,
-          tokenId,
-          tokenSetLabel: tokenSetInfo.label,
-          tokenSetLabelHash: tokenSetInfo.labelHash,
-        },
-      });
-      queries.push({
-        query: `
-          insert into "token_sets_tokens" (
-            "token_set_id",
-            "contract",
-            "token_id"
-          ) values (
-            $/tokenSetId/,
-            $/contract/,
-            $/tokenId/
-          ) on conflict do nothing
-        `,
-        values: {
-          tokenSetId: tokenSetInfo.id,
-          contract: order.params.target,
-          tokenId,
-        },
-      });
+      // For increased performance, only trigger the creation of
+      // the token set if it doesn't already exist in the database
+      const tokenSetExists = await db.oneOrNone(
+        `select 1 from "token_sets" where "id" = $/tokenSetId/`,
+        { tokenSetId: tokenSetInfo.id }
+      );
+      if (!tokenSetExists) {
+        // Create the token set
+        queries.push({
+          query: `
+            insert into "token_sets" (
+              "id",
+              "contract",
+              "token_id",
+              "label",
+              "label_hash"
+            ) values (
+              $/tokenSetId/,
+              $/contract/,
+              $/tokenId/,
+              $/tokenSetLabel/,
+              $/tokenSetLabelHash/
+            ) on conflict do nothing
+          `,
+          values: {
+            tokenSetId: tokenSetInfo.id,
+            contract: order.params.target,
+            tokenId,
+            tokenSetLabel: tokenSetInfo.label,
+            tokenSetLabelHash: tokenSetInfo.labelHash,
+          },
+        });
+        // Insert matching tokens in the token set
+        queries.push({
+          query: `
+            insert into "token_sets_tokens" (
+              "token_set_id",
+              "contract",
+              "token_id"
+            ) values (
+              $/tokenSetId/,
+              $/contract/,
+              $/tokenId/
+            ) on conflict do nothing
+          `,
+          values: {
+            tokenSetId: tokenSetInfo.id,
+            contract: order.params.target,
+            tokenId,
+          },
+        });
+      }
     } else if (tokenIdRange) {
-      // The order is a token-range order
+      // The order is a token range order
 
       // Fetch the collection the range order is on (the token range
-      // must exactly match the collection token range definition,
-      // otherwise it won't be detected).
+      // must exactly match the collection's token range definition,
+      // otherwise it won't be detected)
       const collection: { id: string } | null = await db.oneOrNone(
         `
           select "id"
@@ -227,7 +231,6 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
         }
       );
       if (collection?.id) {
-        // Generate the token range set id corresponding to the order
         tokenSetInfo = generateTokenRangeSetInfo(
           collection.id,
           order.params.target,
@@ -235,46 +238,55 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
           tokenIdRange[1]
         );
 
-        // Make sure the token set exists
-        queries.push({
-          query: `
-            insert into "token_sets" (
-              "id",
-              "collection_id",
-              "label",
-              "label_hash"
-            ) values (
-              $/tokenSetId/,
-              $/collectionId/,
-              $/tokenSetLabel/,
-              $/tokenSetLabelHash/
-            ) on conflict do nothing
-          `,
-          values: {
-            tokenSetId: tokenSetInfo.id,
-            collectionId: collection.id,
-            tokenSetLabel: tokenSetInfo.label,
-            tokenSetLabelHash: tokenSetInfo.labelHash,
-          },
-        });
-        queries.push({
-          query: `
-            insert into "token_sets_tokens" (
-              "token_set_id",
-              "contract",
-              "token_id"
-            )
-            (
-              select $/tokenSetId/, "contract", "token_id"
-              from "tokens"
-              where "collection_id" = $/collectionId/
-            ) on conflict do nothing
-          `,
-          values: {
-            tokenSetId: tokenSetInfo.id,
-            collectionId: collection.id,
-          },
-        });
+        // For increased performance, only trigger the creation of
+        // the token set if it doesn't already exist in the database
+        const tokenSetExists = await db.oneOrNone(
+          `select 1 from "token_sets" where "id" = $/tokenSetId/`,
+          { tokenSetId: tokenSetInfo.id }
+        );
+        if (!tokenSetExists) {
+          // Create the token set
+          queries.push({
+            query: `
+              insert into "token_sets" (
+                "id",
+                "collection_id",
+                "label",
+                "label_hash"
+              ) values (
+                $/tokenSetId/,
+                $/collectionId/,
+                $/tokenSetLabel/,
+                $/tokenSetLabelHash/
+              ) on conflict do nothing
+            `,
+            values: {
+              tokenSetId: tokenSetInfo.id,
+              collectionId: collection.id,
+              tokenSetLabel: tokenSetInfo.label,
+              tokenSetLabelHash: tokenSetInfo.labelHash,
+            },
+          });
+          // Insert matching tokens in the token set
+          queries.push({
+            query: `
+              insert into "token_sets_tokens" (
+                "token_set_id",
+                "contract",
+                "token_id"
+              )
+              (
+                select $/tokenSetId/, "contract", "token_id"
+                from "tokens"
+                where "collection_id" = $/collectionId/
+              ) on conflict do nothing
+            `,
+            values: {
+              tokenSetId: tokenSetInfo.id,
+              collectionId: collection.id,
+            },
+          });
+        }
       }
     }
 
@@ -368,6 +380,9 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
       }
     }
 
+    // TODO: Not at all critical, but multi-row inserts could
+    // do here to get better insert performance when handling
+    // multiple orders
     queries.push({
       query: `
         insert into "orders" (

@@ -88,7 +88,6 @@ export const getCollections = async (filter: GetCollectionsFilter) => {
         bps: r.royalty_bps,
       },
       set: {
-        compositionId: null,
         tokenCount: r.token_count,
         onSaleCount: r.on_sale_count,
         uniqueOwnersCount: r.unique_wwners_count,

@@ -116,7 +116,6 @@ export const getSets = async (filter: GetSetsFilter) => {
 
   if (baseQuery) {
     return db.oneOrNone(baseQuery, filter).then((r) => ({
-      compositionId: null,
       tokenCount: r.token_count,
       onSaleCount: r.on_sale_count,
       uniqueOwnersCount: r.unique_owners_count,

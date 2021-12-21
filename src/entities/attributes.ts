@@ -139,7 +139,6 @@ export const getCollectionAttributes = async (
       key: r.key,
       value: r.value,
       set: {
-        compositionId: null,
         token_count: r.token_count,
         on_sale_count: r.on_sale_count,
         unique_owners_count: r.unique_owners_count,
