@@ -4,6 +4,20 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import * as queries from "@/entities/attributes";
 
+const getAttributesAggResponse = Joi.object({
+  attributesAgg: Joi.array().items(
+    Joi.object({
+      key: Joi.string(),
+      values: Joi.array().items(
+        Joi.object({
+          value: Joi.string(),
+          count: Joi.number()
+        })
+      ),
+    })
+  ),
+}).label("getAttributesAggResponse");
+
 export const getAttributesOptions: RouteOptions = {
   description: "Get attributes",
   tags: ["api"],
@@ -15,6 +29,16 @@ export const getAttributesOptions: RouteOptions = {
     })
       .oxor("collection", "contract")
       .or("collection", "contract"),
+  },
+  response: {
+    schema: getAttributesAggResponse,
+    failAction: (_request, _h, error) => {
+      logger.error(
+        "get_attributes_handler",
+        `Wrong response schema: ${error}`
+      );
+      throw error;
+    },
   },
   handler: async (request: Request) => {
     const query = request.query as any;
@@ -57,6 +81,37 @@ export const getAttributesOptions: RouteOptions = {
   },
 };
 
+const getCollectionAttributesResponse = Joi.object({
+  attributes: Joi.array().items(
+    Joi.object({
+      key: Joi.string(),
+      value: Joi.string(),
+      set: Joi.object({
+        token_count: Joi.string(),
+        on_sale_count: Joi.string(),
+        unique_owners_count: Joi.string(),
+        sample_images: Joi.array().items(
+          Joi.string()
+        ),
+        market: Joi.object({
+          floorSell: Joi.object({
+            hash: Joi.string().allow(null),
+            value: Joi.string().allow(null),
+            maker: Joi.string().allow(null),
+            validFrom: Joi.number().allow(null)
+          }),
+          topBuy: Joi.object({
+            hash: Joi.string().allow(null),
+            value: Joi.string().allow(null),
+            maker: Joi.string().allow(null),
+            validFrom: Joi.number().allow(null)
+          })
+        })
+      })
+    })
+  ),
+}).label("getCollectionAttributesResponse");
+
 export const getCollectionAttributesOptions: RouteOptions = {
   description: "Get collection attributes",
   tags: ["api"],
@@ -77,6 +132,16 @@ export const getCollectionAttributesOptions: RouteOptions = {
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     }),
+  },
+  response: {
+    schema: getCollectionAttributesResponse,
+    failAction: (_request, _h, error) => {
+      logger.error(
+        "get_collection_attributes_handler",
+        `Wrong response schema: ${error}`
+      );
+      throw error;
+    },
   },
   handler: async (request: Request) => {
     const params = request.params as any;

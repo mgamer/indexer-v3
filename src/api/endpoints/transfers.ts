@@ -4,6 +4,30 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import * as queries from "@/entities/transfers";
 
+const getTransfersResponse = Joi.object({
+  transfers: Joi.array().items(
+    Joi.object({
+      contract: Joi.string(),
+      tokenId: Joi.string(),
+      token: Joi.object({
+          name: Joi.string(),
+          image: Joi.string()
+      }),
+      collection: Joi.object({
+          id: Joi.string(),
+          name: Joi.string()
+      }),
+      from: Joi.string(),
+      to: Joi.string(),
+      amount: Joi.string(),
+      txHash: Joi.string(),
+      block: Joi.number(),
+      timestamp: Joi.number(),
+      price: Joi.string().allow(null)
+    })
+  ),
+}).label("getTransfersResponse");
+
 export const getTransfersOptions: RouteOptions = {
   description: "Get transfer events",
   tags: ["api"],
@@ -21,6 +45,16 @@ export const getTransfersOptions: RouteOptions = {
     })
       .oxor("collection", "contract")
       .or("collection", "contract", "account"),
+  },
+  response: {
+    schema: getTransfersResponse,
+    failAction: (_request, _h, error) => {
+      logger.error(
+        "get_transfers_handler",
+        `Wrong response schema: ${error}`
+      );
+      throw error;
+    },
   },
   handler: async (request: Request) => {
     const query = request.query as any;

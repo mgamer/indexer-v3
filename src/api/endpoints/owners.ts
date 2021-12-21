@@ -4,6 +4,22 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import * as queries from "@/entities/owners";
 
+const getOwnersResponse = Joi.object({
+  owners: Joi.array().items(
+    Joi.object({
+      address: Joi.string(),
+      ownership: Joi.object({
+        tokenCount: Joi.string(),
+        onSaleCount: Joi.string(),
+        floorSellValue: Joi.string().allow(null),
+        topBuyValue: Joi.string().allow(null),
+        totalBuyValue: Joi.string().allow(null),
+        lastAcquiredAt: Joi.number().allow(null)
+      })
+    })
+  ),
+}).label("getOwnersResponse");
+
 export const getOwnersOptions: RouteOptions = {
   description: "Get owners",
   tags: ["api"],
@@ -19,6 +35,16 @@ export const getOwnersOptions: RouteOptions = {
     })
       .oxor("collection", "contract")
       .or("collection", "contract"),
+  },
+  response: {
+    schema: getOwnersResponse,
+    failAction: (_request, _h, error) => {
+      logger.error(
+        "get_owners_handler",
+        `Wrong response schema: ${error}`
+      );
+      throw error;
+    },
   },
   handler: async (request: Request) => {
     const query = request.query as any;

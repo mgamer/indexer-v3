@@ -3,6 +3,36 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import * as queries from "@/entities/tokens";
+ 
+const getTokensResponse = Joi.object({
+  tokens: Joi.array().items(
+    Joi.object({
+      token: Joi.object({
+        contract: Joi.string(),
+        kind: Joi.string(),
+        image: Joi.string(),
+        collection: Joi.object({
+          id: Joi.string(),
+          name: Joi.string()
+        })
+      }),
+      market: Joi.object({
+        floorSell: Joi.object({
+          hash: Joi.string().allow(null),
+          value: Joi.string().allow(null),
+          maker: Joi.string().allow(null),
+          validFrom: Joi.number().allow(null)
+        }),
+        topBuy: Joi.object({
+          hash: Joi.string().allow(null),
+          value: Joi.string().allow(null),
+          maker: Joi.string().allow(null),
+          validFrom: Joi.number().allow(null)
+        })
+      })
+    })
+  ),
+}).label("getTokensResponse");
 
 export const getTokensOptions: RouteOptions = {
   description: "Get tokens",
@@ -25,6 +55,17 @@ export const getTokensOptions: RouteOptions = {
       .oxor("collection", "contract")
       .or("collection", "contract"),
   },
+  // TODO: resolve response type error 500
+  response: {
+    schema: getTokensResponse,
+    failAction: (_request, _h, error) => {
+      logger.error(
+        "get_tokens_handler",
+        `Wrong response schema: ${error}`
+      );
+      throw error;
+    },
+  },
   handler: async (request: Request) => {
     const query = request.query as any;
 
@@ -37,6 +78,31 @@ export const getTokensOptions: RouteOptions = {
     }
   },
 };
+
+const getUserTokensResponse = Joi.object({
+  tokens: Joi.array().items(
+    Joi.object({
+      token: Joi.object({
+        contract: Joi.string(),
+        tokenId: Joi.string(),
+        image: Joi.string(),
+        collection: Joi.object({
+            id: Joi.string(),
+            name: Joi.string(),
+        }),
+      }),
+      ownership: Joi.object({
+        tokenCount: Joi.number(),
+        onSaleCount: Joi.number(),
+        floorSellValue: Joi.string(),
+        topBuyValue: Joi.string(),
+        totalBuyValue: Joi.string(),
+        lastAcquiredAt: Joi.number(),
+    })
+    })
+  ),
+}).label("getUserTokensResponse");
+
 
 export const getUserTokensOptions: RouteOptions = {
   description: "Get user tokens",
@@ -59,6 +125,16 @@ export const getUserTokensOptions: RouteOptions = {
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     }),
+  },
+  response: {
+    schema: getUserTokensResponse,
+    failAction: (_request, _h, error) => {
+      logger.error(
+        "get_user_tokens_handler",
+        `Wrong response schema: ${error}`
+      );
+      throw error;
+    },
   },
   handler: async (request: Request) => {
     const params = request.params as any;

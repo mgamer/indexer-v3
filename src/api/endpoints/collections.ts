@@ -84,6 +84,25 @@ export const getCollectionsOptions: RouteOptions = {
   },
 };
 
+const getUserCollectionsResponse = Joi.object({
+  collections: Joi.array().items(
+    Joi.object({
+      collection: Joi.object({
+        id: Joi.string(),
+        name: Joi.string()
+      }),
+      ownership: Joi.object({
+        tokenCount: Joi.string(),
+        onSaleCount: Joi.string(),
+        floorSellValue: Joi.string(),
+        topBuyValue: Joi.string(),
+        totalBuyValue: Joi.string(),
+        lastAcquiredAt: Joi.number()
+      })
+    })
+  ),
+}).label("getUserCollectionsResponse");
+
 export const getUserCollectionsOptions: RouteOptions = {
   description: "Get user collections",
   tags: ["api"],
@@ -97,6 +116,16 @@ export const getUserCollectionsOptions: RouteOptions = {
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     }),
+  },
+  response: {
+    schema: getUserCollectionsResponse,
+    failAction: (_request, _h, error) => {
+      logger.error(
+        "get_user_collections_handler",
+        `Wrong response schema: ${error}`
+      );
+      throw error;
+    },
   },
   handler: async (request: Request) => {
     const params = request.params as any;

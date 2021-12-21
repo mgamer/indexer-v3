@@ -96,6 +96,59 @@ export const postOrdersOptions: RouteOptions = {
   },
 };
 
+const getOrdersResponse = Joi.object({
+  orders: Joi.array().items(
+    Joi.object({
+      hash: Joi.string(),
+      tokenSetId: Joi.string(),
+      tokenSetLabel: Joi.object({
+        data: Joi.object({
+          collection: Joi.string()
+        }),
+        kind: Joi.string()
+      }),
+      kind: Joi.string(),
+      side: Joi.string(),
+      maker: Joi.string(),
+      price: Joi.string(),
+      value: Joi.string(),
+      validFrom: Joi.number(),
+      validUntil: Joi.number(),
+      sourceInfo: Joi.object({
+        id: Joi.string(),
+        bps: Joi.number()
+      }),
+      royaltyInfo: Joi.string().allow(null),
+      rawData: Joi.object({
+        r: Joi.string(),
+        s: Joi.string(),
+        v: Joi.number(),
+        kind: Joi.string(),
+        salt: Joi.string(),
+        side: Joi.number(),
+        extra: Joi.string(),
+        maker: Joi.string(),
+        taker: Joi.string(),
+        target: Joi.string(),
+        calldata: Joi.string(),
+        exchange: Joi.string(),
+        saleKind: Joi.number(),
+        basePrice: Joi.string(),
+        howToCall: Joi.number(),
+        listingTime: Joi.number(),
+        feeRecipient: Joi.string(),
+        paymentToken: Joi.string(),
+        staticTarget: Joi.string(),
+        expirationTime: Joi.number(),
+        makerRelayerFee: Joi.number(),
+        staticExtradata: Joi.string(),
+        takerRelayerFee: Joi.number(),
+        replacementPattern: Joi.string()
+      })
+    })
+  ),
+}).label("getOrdersResponse");
+
 export const getOrdersOptions: RouteOptions = {
   description: "Get orders",
   tags: ["api"],
@@ -111,6 +164,16 @@ export const getOrdersOptions: RouteOptions = {
       limit: Joi.number().integer().min(1).max(20).default(20),
     }).or("contract", "collection", "maker", "hash"),
   },
+  response: {
+    schema: getOrdersResponse,
+    failAction: (_request, _h, error) => {
+      logger.error(
+        "get_orders_handler",
+        `Wrong response schema: ${error}`
+      );
+      throw error;
+    },
+  },
   handler: async (request: Request) => {
     const query = request.query as any;
 
@@ -124,6 +187,26 @@ export const getOrdersOptions: RouteOptions = {
   },
 };
 
+const getUserLiquidityResponse = Joi.object({
+  orders: Joi.array().items(
+  Joi.object({
+      collection: Joi.object({
+      id: Joi.string(),
+      name: Joi.string()
+  }),
+  buyCount: Joi.number(),
+  topBuy: Joi.object({
+      value: Joi.string(),
+      validUntil: Joi.number()
+  }),
+  sellCount: Joi.number(),
+  floorSell: Joi.object({
+      value: Joi.string(),
+      validUntil: Joi.number()
+  })
+}))
+})
+
 export const getUserLiquidityOptions: RouteOptions = {
   description: "Get user liquidity",
   tags: ["api"],
@@ -135,6 +218,16 @@ export const getUserLiquidityOptions: RouteOptions = {
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     }),
+  },
+  response: {
+    schema: getUserLiquidityResponse,
+    failAction: (_request, _h, error) => {
+      logger.error(
+        "get_user_liquidity_handler",
+        `Wrong response schema: ${error}`
+      );
+      throw error;
+    },
   },
   handler: async (request: Request) => {
     const params = request.params as any;
