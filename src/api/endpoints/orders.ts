@@ -185,26 +185,37 @@ export const getOrdersOptions: RouteOptions = {
   },
 };
 
-const getUserLiquidityResponse = Joi.object({
-  liquidity: Joi.array().items(
-    Joi.object({
-      collection: Joi.object({
-        id: Joi.string(),
-        name: Joi.string(),
-      }),
-      buyCount: Joi.number().allow(null),
-      topBuy: Joi.object({
-        value: Joi.string().allow(null),
-        validUntil: Joi.number().allow(null),
-      }),
-      sellCount: Joi.number().allow(null),
-      floorSell: Joi.object({
-        value: Joi.string().allow(null),
-        validUntil: Joi.number().allow(null),
-      }),
-    })
-  ),
-});
+const getOrdersBuildResponse = Joi.object({ 
+  order: Joi.object({
+    chainId: Joi.number(),
+    params: {
+      "kind": Joi.string(),
+      "exchange": Joi.string(),
+      "maker": Joi.string(),
+      "taker": Joi.string(),
+      "makerRelayerFee": Joi.number(),
+      "takerRelayerFee": Joi.number(),
+      "feeRecipient": Joi.string(),
+      "side": Joi.number(),
+      "saleKind": Joi.number(),
+      "target": Joi.string(),
+      "howToCall": Joi.number(),
+      "calldata": Joi.string(),
+      "replacementPattern": Joi.string(),
+      "staticTarget": Joi.string(),
+      "staticExtradata": Joi.string(),
+      "paymentToken": Joi.string(),
+      "basePrice": Joi.string(),
+      "extra": Joi.string(),
+      "listingTime": Joi.number(),
+      "expirationTime": Joi.number(),
+      "salt": Joi.string(),
+      "v": Joi.number(),
+      "r": Joi.string(),
+      "s": Joi.string()
+    }
+  })
+}).label("getOrdersBuildResponse");
 
 export const getOrdersBuildOptions: RouteOptions = {
   description: "Build orders",
@@ -226,6 +237,16 @@ export const getOrdersBuildOptions: RouteOptions = {
       .or("contract", "collection")
       .oxor("contract", "collection"),
   },
+  response: {
+    schema: getOrdersBuildResponse,
+    failAction: (_request, _h, error) => {
+      logger.error(
+        "get_orders_fill_handler",
+        `Wrong response schema: ${error}`
+      );
+      throw error;
+    },
+  },
   handler: async (request: Request) => {
     const query = request.query as any;
 
@@ -246,6 +267,39 @@ export const getOrdersBuildOptions: RouteOptions = {
   },
 };
 
+const getOrdersFillResponse = Joi.object({ 
+  order: Joi.object({
+    chainId: Joi.number(),
+    params: {
+      "kind": Joi.string(),
+      "exchange": Joi.string(),
+      "maker": Joi.string(),
+      "taker": Joi.string(),
+      "makerRelayerFee": Joi.number(),
+      "takerRelayerFee": Joi.number(),
+      "feeRecipient": Joi.string(),
+      "side": Joi.number(),
+      "saleKind": Joi.number(),
+      "target": Joi.string(),
+      "howToCall": Joi.number(),
+      "calldata": Joi.string(),
+      "replacementPattern": Joi.string(),
+      "staticTarget": Joi.string(),
+      "staticExtradata": Joi.string(),
+      "paymentToken": Joi.string(),
+      "basePrice": Joi.string(),
+      "extra": Joi.string(),
+      "listingTime": Joi.number(),
+      "expirationTime": Joi.number(),
+      "salt": Joi.string(),
+      "v": Joi.number(),
+      "r": Joi.string(),
+      "s": Joi.string()
+    }
+  })
+}).label("getOrdersFillResponse");
+
+
 export const getOrdersFillOptions: RouteOptions = {
   description: "Get order fill information",
   tags: ["api"],
@@ -256,6 +310,16 @@ export const getOrdersFillOptions: RouteOptions = {
       collection: Joi.string().lowercase(),
       side: Joi.string().lowercase().valid("sell", "buy").default("sell"),
     }).or("contract", "collection"),
+  },
+  response: {
+    schema: getOrdersFillResponse,
+    failAction: (_request, _h, error) => {
+      logger.error(
+        "get_orders_fill_handler",
+        `Wrong response schema: ${error}`
+      );
+      throw error;
+    },
   },
   handler: async (request: Request) => {
     const query = request.query as any;
@@ -278,6 +342,27 @@ export const getOrdersFillOptions: RouteOptions = {
     }
   },
 };
+
+const getUserLiquidityResponse = Joi.object({
+  liquidity: Joi.array().items(
+    Joi.object({
+      collection: Joi.object({
+        id: Joi.string(),
+        name: Joi.string(),
+      }),
+      buyCount: Joi.number().allow(null),
+      topBuy: Joi.object({
+        value: Joi.string().allow(null),
+        validUntil: Joi.number().allow(null),
+      }),
+      sellCount: Joi.number().allow(null),
+      floorSell: Joi.object({
+        value: Joi.string().allow(null),
+        validUntil: Joi.number().allow(null),
+      }),
+    })
+  ),
+});
 
 export const getUserLiquidityOptions: RouteOptions = {
   description: "Get user liquidity",
