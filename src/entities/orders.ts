@@ -6,6 +6,7 @@ export type GetOrdersFilter = {
   collection?: string;
   maker?: string;
   hash?: string;
+  includeAll?: boolean;
   side: "sell" | "buy";
   offset: number;
   limit: number;
@@ -39,19 +40,25 @@ export const getOrders = async (filter: GetOrdersFilter) => {
   `;
 
   // Filters
-  const conditions: string[] = [
-    `"o"."status" = 'valid'`,
-    `"o"."valid_between" @> now()`,
-  ];
-  if (filter.contract) {
-    conditions.push(`"tst"."contract" = $/contract/`);
-  }
-  if (filter.tokenId) {
-    conditions.push(`"tst"."token_id" = $/tokenId/`);
-  }
-  if (filter.collection) {
+  const conditions: string[] = [];
+  if (filter.contract && filter.tokenId) {
+    if (filter.includeAll) {
+      // Include all orders that include the specific token
+      conditions.push(`"tst"."contract" = $/contract/`);
+      conditions.push(`"tst"."token_id" = $/tokenId/`);
+    } else {
+      // By default only fetch exactly-matching orders
+      conditions.push(`"ts"."contract" = $/contract/`);
+      conditions.push(`"ts"."token_id" = $/tokenId/`);
+    }
+  } else if (filter.collection) {
+    // Fetch collection-wide orders only
     conditions.push(`"ts"."collection_id" = $/collection/`);
+  } else {
+    return [];
   }
+  conditions.push(`"o"."status" = 'valid'`);
+  conditions.push(`"o"."valid_between" @> now()`);
   if (filter.maker) {
     conditions.push(`"o"."maker" = $/maker/`);
   }
@@ -95,6 +102,49 @@ export const getOrders = async (filter: GetOrdersFilter) => {
       rawData: r.raw_data,
     }))
   );
+};
+
+export type GetBestOrderFilter = {
+  contract?: string;
+  tokenId?: string;
+  collection?: string;
+  side: "sell" | "buy";
+};
+
+export const getBestOrder = async (filter: GetBestOrderFilter) => {
+  if (filter.contract && filter.tokenId) {
+    const joinColumn =
+      filter.side === "sell" ? "floor_sell_hash" : "top_buy_hash";
+
+    const baseQuery = `
+      select
+        "o"."raw_data"
+      from "orders" "o"
+      join "tokens" "t"
+        on "t"."${joinColumn}" = "o"."hash"
+      where "t"."contract" = $/contract/
+        and "t"."token_id" = $/tokenId/
+    `;
+
+    return db.oneOrNone(baseQuery, filter);
+  } else if (filter.collection) {
+    const joinColumn =
+      filter.side === "sell" ? "floor_sell_hash" : "top_buy_hash";
+
+    const baseQuery = `
+      select
+        "o"."raw_data"
+      from "orders" "o"
+      join "collection_stats" "cs"
+        on "cs"."${joinColumn}" = "o"."hash"
+      where "cs"."collection_id" = $/collection/
+    `;
+
+    return db.oneOrNone(baseQuery, filter);
+  }
+
+  // If no match, return nothing
+  return undefined;
 };
 
 export type GetUserLiquidityFilter = {

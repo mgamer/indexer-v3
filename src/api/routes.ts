@@ -71,6 +71,18 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/orders/build",
+    options: ordersEndpoints.getOrdersBuildOptions,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/orders/fill",
+    options: ordersEndpoints.getOrdersFillOptions,
+  });
+
+  server.route({
+    method: "GET",
     path: "/users/{user}/liquidity",
     options: ordersEndpoints.getUserLiquidityOptions,
   });

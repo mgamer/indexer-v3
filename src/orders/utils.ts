@@ -5,26 +5,20 @@ import stringify from "json-stable-stringify";
 // can be filled on). To make things easy for handling (both for the
 // indexer and for the client), the id of any particular token set should
 // be a deterministic identifier based on the composition of the token
-// set. For now, we support two types of sets:
-// - single token sets
-// - token range sets
+// set.
 
 export type TokenSetInfo = {
   id: string;
   label: {
-    kind: "token" | "range";
+    kind: "token" | "collection";
     data: any;
   };
   labelHash: string;
 };
 
-export const generateSingleTokenSetInfo = (
-  contract: string,
-  tokenId: string
-) => {
-  const kind = "token";
+export const generateSingleTokenInfo = (contract: string, tokenId: string) => {
   const label: any = {
-    kind,
+    kind: "token",
     data: {
       contract,
       tokenId,
@@ -34,21 +28,20 @@ export const generateSingleTokenSetInfo = (
     "0x" + crypto.createHash("sha256").update(stringify(label)).digest("hex");
 
   return {
-    id: `${kind}:${contract}:${tokenId}`,
+    id: `token:${contract}:${tokenId}`,
     label,
     labelHash,
   };
 };
 
-export const generateTokenRangeSetInfo = (
+export const generateCollectionInfo = (
   collection: string,
   contract: string,
   startTokenId: string,
   endTokenId: string
 ) => {
-  const kind = "range";
   const label: any = {
-    kind,
+    kind: "collection",
     data: {
       collection,
     },
@@ -57,7 +50,7 @@ export const generateTokenRangeSetInfo = (
     "0x" + crypto.createHash("sha256").update(stringify(label)).digest("hex");
 
   return {
-    id: `${kind}:${contract}:${startTokenId}:${endTokenId}`,
+    id: `range:${contract}:${startTokenId}:${endTokenId}`,
     label,
     labelHash,
   };

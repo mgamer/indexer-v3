@@ -103,9 +103,9 @@ const getOrdersResponse = Joi.object({
       tokenSetId: Joi.string(),
       tokenSetLabel: Joi.object({
         data: Joi.object({
-          collection: Joi.string()
+          collection: Joi.string(),
         }),
-        kind: Joi.string()
+        kind: Joi.string(),
       }),
       kind: Joi.string(),
       side: Joi.string(),
@@ -116,7 +116,7 @@ const getOrdersResponse = Joi.object({
       validUntil: Joi.number(),
       sourceInfo: Joi.object({
         id: Joi.string(),
-        bps: Joi.number()
+        bps: Joi.number(),
       }),
       royaltyInfo: Joi.string().allow(null),
       rawData: Joi.object({
@@ -143,8 +143,8 @@ const getOrdersResponse = Joi.object({
         makerRelayerFee: Joi.number(),
         staticExtradata: Joi.string(),
         takerRelayerFee: Joi.number(),
-        replacementPattern: Joi.string()
-      })
+        replacementPattern: Joi.string(),
+      }),
     })
   ),
 }).label("getOrdersResponse");
@@ -160,6 +160,7 @@ export const getOrdersOptions: RouteOptions = {
       maker: Joi.string().lowercase(),
       hash: Joi.string().lowercase(),
       side: Joi.string().lowercase().valid("sell", "buy").default("sell"),
+      includeAll: Joi.bool().default(true),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     }).or("contract", "collection", "maker", "hash"),
@@ -167,10 +168,7 @@ export const getOrdersOptions: RouteOptions = {
   response: {
     schema: getOrdersResponse,
     failAction: (_request, _h, error) => {
-      logger.error(
-        "get_orders_handler",
-        `Wrong response schema: ${error}`
-      );
+      logger.error("get_orders_handler", `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -192,20 +190,94 @@ const getUserLiquidityResponse = Joi.object({
     Joi.object({
       collection: Joi.object({
         id: Joi.string(),
-        name: Joi.string()
+        name: Joi.string(),
       }),
       buyCount: Joi.number().allow(null),
       topBuy: Joi.object({
-          value: Joi.string().allow(null),
-          validUntil: Joi.number().allow(null)
+        value: Joi.string().allow(null),
+        validUntil: Joi.number().allow(null),
       }),
       sellCount: Joi.number().allow(null),
       floorSell: Joi.object({
-          value: Joi.string().allow(null),
-          validUntil: Joi.number().allow(null)
-      })
-  }))
-})
+        value: Joi.string().allow(null),
+        validUntil: Joi.number().allow(null),
+      }),
+    })
+  ),
+});
+
+export const getOrdersBuildOptions: RouteOptions = {
+  description: "Build orders",
+  tags: ["api"],
+  validate: {
+    query: Joi.object({
+      contract: Joi.string().lowercase(),
+      tokenId: Joi.string(),
+      collection: Joi.string().lowercase(),
+      maker: Joi.string().required(),
+      side: Joi.string().lowercase().valid("sell", "buy").required(),
+      price: Joi.string().required(),
+      fee: Joi.alternatives(Joi.string(), Joi.number()).required(),
+      feeRecipient: Joi.string().required(),
+      listingTime: Joi.alternatives(Joi.string(), Joi.number()),
+      expirationTime: Joi.alternatives(Joi.string(), Joi.number()),
+      salt: Joi.string(),
+    })
+      .or("contract", "collection")
+      .oxor("contract", "collection"),
+  },
+  handler: async (request: Request) => {
+    const query = request.query as any;
+
+    try {
+      const order = await wyvernV2.buildOrder(
+        query as wyvernV2.BuildOrderOptions
+      );
+
+      if (!order) {
+        return { order: null };
+      }
+
+      return { order };
+    } catch (error) {
+      logger.error("get_orders_build_handler", `Handler failure: ${error}`);
+      throw error;
+    }
+  },
+};
+
+export const getOrdersFillOptions: RouteOptions = {
+  description: "Get order fill information",
+  tags: ["api"],
+  validate: {
+    query: Joi.object({
+      contract: Joi.string().lowercase(),
+      tokenId: Joi.string().pattern(/^[0-9]+$/),
+      collection: Joi.string().lowercase(),
+      side: Joi.string().lowercase().valid("sell", "buy").default("sell"),
+    }).or("contract", "collection"),
+  },
+  handler: async (request: Request) => {
+    const query = request.query as any;
+
+    try {
+      const bestOrder = await queries.getBestOrder(
+        query as queries.GetBestOrderFilter
+      );
+
+      if (!bestOrder) {
+        return { order: null };
+      }
+
+      return {
+        order: new Sdk.WyvernV2.Order(config.chainId, bestOrder.raw_data),
+      };
+    } catch (error) {
+      logger.error("get_orders_fill_handler", `Handler failure: ${error}`);
+      throw error;
+    }
+  },
+};
 
 export const getUserLiquidityOptions: RouteOptions = {
   description: "Get user liquidity",
