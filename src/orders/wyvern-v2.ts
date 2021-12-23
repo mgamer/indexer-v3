@@ -7,7 +7,8 @@ import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import {
   TokenSetInfo,
-  generateSingleTokenInfo,
+  TokenSetLabelKind,
+  generateTokenInfo,
   generateCollectionInfo,
 } from "@/orders/utils";
 import { addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
@@ -115,6 +116,83 @@ export const filterOrders = async (
   return validOrders;
 };
 
+type OrderInfo = {
+  kind: TokenSetLabelKind;
+  data?: any;
+};
+
+const extractOrderInfo = (order: Sdk.WyvernV2.Order): OrderInfo | undefined => {
+  switch (order.params.kind) {
+    case "erc721-single-token": {
+      const builder = new Sdk.WyvernV2.Builders.Erc721.SingleToken(
+        config.chainId
+      );
+
+      return {
+        kind: "token",
+        data: {
+          tokenId: builder.getTokenId(order),
+        },
+      };
+    }
+
+    case "erc1155-single-token": {
+      const builder = new Sdk.WyvernV2.Builders.Erc1155.SingleToken(
+        config.chainId
+      );
+
+      return {
+        kind: "token",
+        data: {
+          tokenId: builder.getTokenId(order),
+        },
+      };
+    }
+
+    case "erc721-token-range": {
+      const builder = new Sdk.WyvernV2.Builders.Erc721.TokenRange(
+        config.chainId
+      );
+
+      return {
+        kind: "collection",
+        data: {
+          tokenIdRange: builder.getTokenIdRange(order),
+        },
+      };
+    }
+
+    case "erc1155-token-range": {
+      const builder = new Sdk.WyvernV2.Builders.Erc1155.TokenRange(
+        config.chainId
+      );
+
+      return {
+        kind: "collection",
+        data: {
+          tokenIdRange: builder.getTokenIdRange(order),
+        },
+      };
+    }
+
+    case "erc721-contract-wide": {
+      return {
+        kind: "collection",
+      };
+    }
+
+    case "erc1155-contract-wide": {
+      return {
+        kind: "collection",
+      };
+    }
+
+    default: {
+      return undefined;
+    }
+  }
+};
+
 export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
   if (!orders.length) {
     return;
@@ -122,80 +200,62 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
 
   const queries: any[] = [];
   for (const order of orders) {
-    // Extract target token(s) information from the order
-    let tokenId: string | undefined;
-    let tokenIdRange: [string, string] | undefined;
-    switch (order.params.kind) {
-      case "erc721-single-token": {
-        const builder = new Sdk.WyvernV2.Builders.Erc721.SingleToken(
-          config.chainId
-        );
-        tokenId = builder.getTokenId(order);
-
-        break;
-      }
-
-      case "erc1155-single-token": {
-        const builder = new Sdk.WyvernV2.Builders.Erc1155.SingleToken(
-          config.chainId
-        );
-        tokenId = builder.getTokenId(order);
-
-        break;
-      }
-
-      case "erc721-token-range": {
-        const builder = new Sdk.WyvernV2.Builders.Erc721.TokenRange(
-          config.chainId
-        );
-        tokenIdRange = builder.getTokenIdRange(order);
-
-        break;
-      }
+    const orderInfo = extractOrderInfo(order);
+    if (!orderInfo) {
+      continue;
     }
 
     let tokenSetInfo: TokenSetInfo | undefined;
-    if (tokenId) {
-      // The order is a single token order
-      tokenSetInfo = generateSingleTokenInfo(order.params.target, tokenId);
+    switch (orderInfo.kind) {
+      // We have a single-token order
+      case "token": {
+        tokenSetInfo = generateTokenInfo(
+          order.params.target,
+          orderInfo.data?.tokenId
+        );
 
-      // Create the token set
-      queries.push({
-        query: `
-          insert into "token_sets" (
-            "id",
-            "contract",
-            "token_id",
-            "label",
-            "label_hash"
-          ) values (
-            $/tokenSetId/,
-            $/contract/,
-            $/tokenId/,
-            $/tokenSetLabel/,
-            $/tokenSetLabelHash/
-          ) on conflict do nothing
-        `,
-        values: {
-          tokenSetId: tokenSetInfo.id,
-          contract: order.params.target,
-          tokenId,
-          tokenSetLabel: tokenSetInfo.label,
-          tokenSetLabelHash: tokenSetInfo.labelHash,
-        },
-      });
-
-      // For increased performance, only trigger the insertion of
-      // corresponding tokens in the token set if it doesn't yet
-      // exist in the database
-      const tokenSetTokensExists = await db.oneOrNone(
-        `select 1 from "token_sets_tokens" where "token_set_id" = $/tokenSetId/`,
-        { tokenSetId: tokenSetInfo.id }
-      );
-      if (!tokenSetTokensExists) {
-        // Insert matching tokens in the token set
+        // Create the token set
         queries.push({
           query: `
+            insert into "token_sets" (
+              "id",
+              "contract",
+              "token_id",
+              "label",
+              "label_hash"
+            ) values (
+              $/tokenSetId/,
+              $/contract/,
+              $/tokenId/,
+              $/tokenSetLabel/,
+              $/tokenSetLabelHash/
+            ) on conflict do nothing
+          `,
+          values: {
+            tokenSetId: tokenSetInfo.id,
+            contract: order.params.target,
+            tokenId: orderInfo.data.tokenId,
+            tokenSetLabel: tokenSetInfo.label,
+            tokenSetLabelHash: tokenSetInfo.labelHash,
+          },
+        });
+
+        // For increased performance, only trigger the insertion of
+        // corresponding tokens in the token set if we don't already
+        // have them stored in the database
+        const tokenSetTokensExists = await db.oneOrNone(
+          `
+            select 1
+            from "token_sets_tokens" "tst"
+            where "tst"."token_set_id" = $/tokenSetId/
+            limit 1
+          `,
+          { tokenSetId: tokenSetInfo.id }
+        );
+        if (!tokenSetTokensExists) {
+          // Insert matching tokens in the token set
+          queries.push({
+            query: `
             insert into "token_sets_tokens" (
               "token_set_id",
               "contract",
@@ -206,96 +266,127 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
               $/tokenId/
             ) on conflict do nothing
           `,
-          values: {
-            tokenSetId: tokenSetInfo.id,
-            contract: order.params.target,
-            tokenId,
-          },
-        });
-      }
-    } else if (tokenIdRange) {
-      // The order is a token range order
-
-      // Fetch the collection the range order is on (the token range
-      // must exactly match the collection's token range definition,
-      // otherwise it won't be detected)
-      const collection: { id: string } | null = await db.oneOrNone(
-        `
-          select "id"
-          from "collections"
-          where "contract" = $/contract/
-            and "token_id_range" = numrange($/startTokenId/, $/endTokenId/, '[]')
-        `,
-        {
-          contract: order.params.target,
-          startTokenId: tokenIdRange[0],
-          endTokenId: tokenIdRange[1],
+            values: {
+              tokenSetId: tokenSetInfo.id,
+              contract: order.params.target,
+              tokenId: orderInfo.data.tokenId,
+            },
+          });
         }
-      );
-      if (collection?.id) {
-        tokenSetInfo = generateCollectionInfo(
-          collection.id,
-          order.params.target,
-          tokenIdRange[0],
-          tokenIdRange[1]
-        );
 
-        // Create the token set
-        queries.push({
-          query: `
-            insert into "token_sets" (
-              "id",
-              "collection_id",
-              "label",
-              "label_hash"
-            ) values (
-              $/tokenSetId/,
-              $/collectionId/,
-              $/tokenSetLabel/,
-              $/tokenSetLabelHash/
-            ) on conflict do nothing
-          `,
-          values: {
-            tokenSetId: tokenSetInfo.id,
-            collectionId: collection.id,
-            tokenSetLabel: tokenSetInfo.label,
-            tokenSetLabelHash: tokenSetInfo.labelHash,
-          },
-        });
+        break;
+      }
 
-        // For increased performance, only trigger the insertion of
-        // corresponding tokens in the token set if it doesn't yet
-        // exist in the database
-        const tokenSetTokensExists = await db.oneOrNone(
-          `select 1 from "token_sets_tokens" where "token_set_id" = $/tokenSetId/`,
-          { tokenSetId: tokenSetInfo.id }
-        );
-        if (!tokenSetTokensExists) {
-          // Insert matching tokens in the token set
+      // We have a collection-wide order
+      case "collection": {
+        // Fetch the collection's contract and associated token range
+        // (if any). The order must exactly match the collection's
+        // definition in order for it to be properly validated.
+
+        let collection: { id: string } | null;
+        if (orderInfo.data?.tokenIdRange) {
+          collection = await db.oneOrNone(
+            `
+              select
+                "c"."id"
+              from "collections" "c"
+              where "c"."contract" = $/contract/
+                and "c"."token_id_range" = numrange($/startTokenId/, $/endTokenId/, '[]')
+            `,
+            {
+              contract: order.params.target,
+              startTokenId: orderInfo.data.tokenIdRange[0],
+              endTokenId: orderInfo.data.tokenIdRange[1],
+            }
+          );
+        } else {
+          collection = await db.oneOrNone(
+            `
+              select
+                "c"."id"
+              from "collections" "c"
+              where "c"."contract" = $/contract/
+                and "c"."token_id_range" is null
+            `,
+            {
+              contract: order.params.target,
+            }
+          );
+        }
+
+        if (collection) {
+          tokenSetInfo = generateCollectionInfo(
+            collection.id,
+            order.params.target,
+            orderInfo.data?.tokenIdRange
+          );
+
+          // Create the token set
           queries.push({
             query: `
-              insert into "token_sets_tokens" (
-                "token_set_id",
-                "contract",
-                "token_id"
-              )
-              (
-                select $/tokenSetId/, "contract", "token_id"
-                from "tokens"
-                where "collection_id" = $/collectionId/
+              insert into "token_sets" (
+                "id",
+                "collection_id",
+                "label",
+                "label_hash"
+              ) values (
+                $/tokenSetId/,
+                $/collectionId/,
+                $/tokenSetLabel/,
+                $/tokenSetLabelHash/
               ) on conflict do nothing
             `,
             values: {
               tokenSetId: tokenSetInfo.id,
               collectionId: collection.id,
+              tokenSetLabel: tokenSetInfo.label,
+              tokenSetLabelHash: tokenSetInfo.labelHash,
             },
           });
+
+          // For increased performance, only trigger the insertion of
+          // corresponding tokens in the token set if we don't already
+          // have them stored in the database
+          const tokenSetTokensExists = await db.oneOrNone(
+            `
+              select 1
+              from "token_sets_tokens" "tst"
+              where "tst"."token_set_id" = $/tokenSetId/
+              limit 1
+            `,
+            { tokenSetId: tokenSetInfo.id }
+          );
+          if (!tokenSetTokensExists) {
+            // Insert matching tokens in the token set
+            queries.push({
+              query: `
+                insert into "token_sets_tokens" (
+                  "token_set_id",
+                  "contract",
+                  "token_id"
+                )
+                (
+                  select
+                    $/tokenSetId/,
+                    "t"."contract",
+                    "t"."token_id"
+                  from "tokens" "t"
+                  where "t"."collection_id" = $/collection/
+                ) on conflict do nothing
+              `,
+              values: {
+                tokenSetId: tokenSetInfo.id,
+                collection: collection.id,
+              },
+            });
+          }
         }
+
+        break;
       }
     }
 
     if (!tokenSetInfo) {
-      // Skip if nothing matched so far
       continue;
     }
 
@@ -489,8 +580,6 @@ export const buildOrder = async (options: BuildOrderOptions) => {
 
     if (options.contract && options.tokenId) {
       const { contract, tokenId } = options;
-      buildParams.contract = contract;
-      buildParams.tokenId = tokenId;
 
       const data = await db.oneOrNone(
         `
@@ -507,11 +596,19 @@ export const buildOrder = async (options: BuildOrderOptions) => {
         const builder = new Sdk.WyvernV2.Builders.Erc721.SingleToken(
           config.chainId
         );
+
+        buildParams.contract = contract;
+        buildParams.tokenId = tokenId;
+
         return builder.build(buildParams);
       } else if (data.kind === "erc1155") {
         const builder = new Sdk.WyvernV2.Builders.Erc1155.SingleToken(
           config.chainId
         );
+
+        buildParams.contract = contract;
+        buildParams.tokenId = tokenId;
+
         return builder.build(buildParams);
       }
 
@@ -534,16 +631,58 @@ export const buildOrder = async (options: BuildOrderOptions) => {
         { collection }
       );
 
-      // For now, only erc721 collection-wide orders are supported
       if (data.kind === "erc721") {
-        buildParams.contract = data.contract;
-        buildParams.startTokenId = data.start_token_id;
-        buildParams.endTokenId = data.end_token_id;
+        if (data.contract && data.start_token_id && data.end_token_id) {
+          // Collection is a range of tokens within a contract
 
-        const builder = new Sdk.WyvernV2.Builders.Erc721.TokenRange(
-          config.chainId
-        );
-        return builder.build(buildParams);
+          const builder = new Sdk.WyvernV2.Builders.Erc721.TokenRange(
+            config.chainId
+          );
+
+          buildParams.contract = data.contract;
+          buildParams.startTokenId = data.start_token_id;
+          buildParams.endTokenId = data.end_token_id;
+
+          return builder.build(buildParams);
+        } else if (data.contract) {
+          // Collection is a full contract
+
+          const builder = new Sdk.WyvernV2.Builders.Erc721.ContractWide(
+            config.chainId
+          );
+
+          buildParams.contract = data.contract;
+
+          return builder.build(buildParams);
+        }
+
+        return undefined;
+      } else if (data.kind === "erc1155") {
+        if (data.contract && data.start_token_id && data.end_token_id) {
+          // Collection is a range of tokens within a contract
+
+          const builder = new Sdk.WyvernV2.Builders.Erc1155.TokenRange(
+            config.chainId
+          );
+
+          buildParams.contract = data.contract;
+          buildParams.startTokenId = data.start_token_id;
+          buildParams.endTokenId = data.end_token_id;
+
+          return builder.build(buildParams);
+        } else if (data.contract) {
+          // Collection is a full contract
+
+          const builder = new Sdk.WyvernV2.Builders.Erc1155.ContractWide(
+            config.chainId
+          );
+
+          buildParams.contract = data.contract;
+
+          return builder.build(buildParams);
+        }
+
+        return undefined;
       }
 
       return undefined;

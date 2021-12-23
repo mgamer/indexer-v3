@@ -70,8 +70,6 @@ export const postOrdersOptions: RouteOptions = {
     try {
       const orders = payload.orders as any;
 
-      console.log(`Got payload ${JSON.stringify(orders)}`);
-
       const validOrders: Sdk.WyvernV2.Order[] = [];
       for (const { kind, data } of orders) {
         if (kind === "wyvern-v2") {
@@ -84,8 +82,9 @@ export const postOrdersOptions: RouteOptions = {
         }
       }
 
+      console.log(`All count: ${orders.length}`);
       const filteredOrders = await wyvernV2.filterOrders(validOrders);
-      console.log(`Valid orders: ${filteredOrders.length}`);
+      console.log(`Valid count: ${filteredOrders.length}`);
       await wyvernV2.saveOrders(filteredOrders);
 
       return { message: "Success" };
@@ -185,36 +184,36 @@ export const getOrdersOptions: RouteOptions = {
   },
 };
 
-const getOrdersBuildResponse = Joi.object({ 
+const getOrdersBuildResponse = Joi.object({
   order: Joi.object({
     chainId: Joi.number(),
     params: {
-      "kind": Joi.string(),
-      "exchange": Joi.string(),
-      "maker": Joi.string(),
-      "taker": Joi.string(),
-      "makerRelayerFee": Joi.number(),
-      "takerRelayerFee": Joi.number(),
-      "feeRecipient": Joi.string(),
-      "side": Joi.number(),
-      "saleKind": Joi.number(),
-      "target": Joi.string(),
-      "howToCall": Joi.number(),
-      "calldata": Joi.string(),
-      "replacementPattern": Joi.string(),
-      "staticTarget": Joi.string(),
-      "staticExtradata": Joi.string(),
-      "paymentToken": Joi.string(),
-      "basePrice": Joi.string(),
-      "extra": Joi.string(),
-      "listingTime": Joi.number(),
-      "expirationTime": Joi.number(),
-      "salt": Joi.string(),
-      "v": Joi.number(),
-      "r": Joi.string(),
-      "s": Joi.string()
-    }
-  })
+      kind: Joi.string(),
+      exchange: Joi.string(),
+      maker: Joi.string(),
+      taker: Joi.string(),
+      makerRelayerFee: Joi.number(),
+      takerRelayerFee: Joi.number(),
+      feeRecipient: Joi.string(),
+      side: Joi.number(),
+      saleKind: Joi.number(),
+      target: Joi.string(),
+      howToCall: Joi.number(),
+      calldata: Joi.string(),
+      replacementPattern: Joi.string(),
+      staticTarget: Joi.string(),
+      staticExtradata: Joi.string(),
+      paymentToken: Joi.string(),
+      basePrice: Joi.string(),
+      extra: Joi.string(),
+      listingTime: Joi.number(),
+      expirationTime: Joi.number(),
+      salt: Joi.string(),
+      v: Joi.number(),
+      r: Joi.string(),
+      s: Joi.string(),
+    },
+  }),
 }).label("getOrdersBuildResponse");
 
 export const getOrdersBuildOptions: RouteOptions = {
@@ -267,38 +266,37 @@ export const getOrdersBuildOptions: RouteOptions = {
   },
 };
 
-const getOrdersFillResponse = Joi.object({ 
+const getOrdersFillResponse = Joi.object({
   order: Joi.object({
     chainId: Joi.number(),
     params: {
-      "kind": Joi.string(),
-      "exchange": Joi.string(),
-      "maker": Joi.string(),
-      "taker": Joi.string(),
-      "makerRelayerFee": Joi.number(),
-      "takerRelayerFee": Joi.number(),
-      "feeRecipient": Joi.string(),
-      "side": Joi.number(),
-      "saleKind": Joi.number(),
-      "target": Joi.string(),
-      "howToCall": Joi.number(),
-      "calldata": Joi.string(),
-      "replacementPattern": Joi.string(),
-      "staticTarget": Joi.string(),
-      "staticExtradata": Joi.string(),
-      "paymentToken": Joi.string(),
-      "basePrice": Joi.string(),
-      "extra": Joi.string(),
-      "listingTime": Joi.number(),
-      "expirationTime": Joi.number(),
-      "salt": Joi.string(),
-      "v": Joi.number(),
-      "r": Joi.string(),
-      "s": Joi.string()
-    }
-  })
+      kind: Joi.string(),
+      exchange: Joi.string(),
+      maker: Joi.string(),
+      taker: Joi.string(),
+      makerRelayerFee: Joi.number(),
+      takerRelayerFee: Joi.number(),
+      feeRecipient: Joi.string(),
+      side: Joi.number(),
+      saleKind: Joi.number(),
+      target: Joi.string(),
+      howToCall: Joi.number(),
+      calldata: Joi.string(),
+      replacementPattern: Joi.string(),
+      staticTarget: Joi.string(),
+      staticExtradata: Joi.string(),
+      paymentToken: Joi.string(),
+      basePrice: Joi.string(),
+      extra: Joi.string(),
+      listingTime: Joi.number(),
+      expirationTime: Joi.number(),
+      salt: Joi.string(),
+      v: Joi.number(),
+      r: Joi.string(),
+      s: Joi.string(),
+    },
+  }),
 }).label("getOrdersFillResponse");
-
 
 export const getOrdersFillOptions: RouteOptions = {
   description: "Get order fill information",
