@@ -128,7 +128,7 @@ export const getTokens = async (filter: GetTokensFilter) => {
     result.map((r) => ({
       token: {
         contract: r.contract,
-        tokenId: r.tokenId,
+        tokenId: r.token_id,
         kind: r.kind,
         image: r.image,
         collection: {
