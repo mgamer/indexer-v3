@@ -94,7 +94,7 @@ const getUserCollectionsResponse = Joi.object({
       ownership: Joi.object({
         tokenCount: Joi.string(),
         onSaleCount: Joi.string(),
-        floorSellValue: Joi.string(),
+        floorSellValue: Joi.string().allow(null),
         topBuyValue: Joi.string(),
         totalBuyValue: Joi.string(),
         lastAcquiredAt: Joi.number()
