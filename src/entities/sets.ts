@@ -93,6 +93,7 @@ export const getSets = async (filter: GetSetsFilter) => {
         where "t"."collection_id" = $/collection/
           and ("a"."key", "a"."value") in (${values})
         order by "t"."floor_sell_value" asc
+        limit 1
       ) "y"
         on "x"."key" = "y"."key"
         and "x"."value" = "y"."value"
