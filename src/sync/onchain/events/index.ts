@@ -59,7 +59,7 @@ export type ContractType =
   | "wyvern-v2";
 
 export const contractTypes: ContractType[] = [
-  "orderbook",
+  // "orderbook",
   "erc20",
   "erc721",
   "erc1155",
