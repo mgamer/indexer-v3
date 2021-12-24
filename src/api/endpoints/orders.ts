@@ -341,6 +341,33 @@ export const getOrdersFillOptions: RouteOptions = {
   },
 };
 
+export const getMarketOptions: RouteOptions = {
+  description: "Get market depth information",
+  tags: ["api"],
+  validate: {
+    query: Joi.object({
+      contract: Joi.string().lowercase(),
+      tokenId: Joi.string().pattern(/^[0-9]+$/),
+      collection: Joi.string().lowercase(),
+      attributes: Joi.object().unknown(),
+    })
+      .or("contract", "collection")
+      .oxor("contract", "collection"),
+  },
+  handler: async (request: Request) => {
+    const query = request.query as any;
+
+    try {
+      const market = await queries.getMarket(query as queries.GetMarketFilter);
+
+      return { market };
+    } catch (error) {
+      logger.error("get_market_handler", `Handler failure: ${error}`);
+      throw error;
+    }
+  },
+};
+
 const getUserLiquidityResponse = Joi.object({
   liquidity: Joi.array().items(
     Joi.object({
