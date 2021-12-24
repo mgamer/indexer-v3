@@ -9,24 +9,22 @@ const getSetsResponse = Joi.object({
     tokenCount: Joi.string(),
     onSaleCount: Joi.string(),
     uniqueOwnersCount: Joi.string(),
-    sampleImages: Joi.array().items(
-      Joi.string()
-    ),
+    sampleImages: Joi.array().items(Joi.string()),
     market: {
       floorSell: {
-        hash: Joi.string(),
-        value: Joi.string(),
-        maker: Joi.string(),
-        validFrom: Joi.number()
+        hash: Joi.string().allow(null),
+        value: Joi.string().allow(null),
+        maker: Joi.string().allow(null),
+        validFrom: Joi.number().allow(null),
       },
       topBuy: {
-        hash: Joi.string(),
-        value: Joi.string(),
-        maker: Joi.string(),
-        validFrom: Joi.number()
-      }
-    }
-  })
+        hash: Joi.string().allow(null),
+        value: Joi.string().allow(null),
+        maker: Joi.string().allow(null),
+        validFrom: Joi.number().allow(null),
+      },
+    },
+  }),
 }).label("getSetsResponse");
 
 export const getSetsOptions: RouteOptions = {
@@ -45,10 +43,7 @@ export const getSetsOptions: RouteOptions = {
   response: {
     schema: getSetsResponse,
     failAction: (_request, _h, error) => {
-      logger.error(
-        "get_attributes_handler",
-        `Wrong response schema: ${error}`
-      );
+      logger.error("get_attributes_handler", `Wrong response schema: ${error}`);
       throw error;
     },
   },
