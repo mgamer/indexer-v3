@@ -23,6 +23,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/fix/cache",
+    options: adminEndpoints.postFixCacheOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/sync/events",
     options: adminEndpoints.postSyncEventsOptions,
   });
