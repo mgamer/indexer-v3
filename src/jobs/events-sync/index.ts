@@ -3,7 +3,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-import { ContractType, getContractInfo, sync } from "@/events/index";
+import { ContractKind, getContractInfo, sync } from "@/events/index";
 
 // For syncing events we have two separate job queues. One is for
 // handling backfilling while the other one handles realtime
@@ -35,7 +35,7 @@ type BackfillingOptions = {
 };
 
 export const addToEventsSyncBackfillQueue = async (
-  contractType: ContractType,
+  contractKind: ContractKind,
   contracts: string[],
   fromBlock: number,
   toBlock: number,
@@ -56,9 +56,9 @@ export const addToEventsSyncBackfillQueue = async (
   for (let to = toBlock; to >= fromBlock; to -= blocksPerBatch) {
     const from = Math.max(fromBlock, to - blocksPerBatch + 1);
     jobs.push({
-      name: contractType,
+      name: contractKind,
       data: {
-        contractType,
+        contractKind,
         contracts,
         fromBlock: from,
         toBlock: to,
@@ -77,24 +77,24 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     BACKFILL_JOB_NAME,
     async (job: Job) => {
-      const { contractType, contracts, fromBlock, toBlock } = job.data;
+      const { contractKind, contracts, fromBlock, toBlock } = job.data;
 
       try {
-        const eventInfo = getContractInfo(contractType, contracts);
+        const eventInfo = getContractInfo(contractKind, contracts);
         if (eventInfo.skip) {
           return;
         }
 
         if (contracts.length) {
           logger.info(
-            contractType,
+            contractKind,
             `Backfill syncing block range [${fromBlock}, ${toBlock}]`
           );
 
           await sync(fromBlock, toBlock, eventInfo);
         }
       } catch (error) {
-        logger.error(contractType, `Backfill job failed: ${error}`);
+        logger.error(contractKind, `Backfill job failed: ${error}`);
         throw error;
       }
     },
@@ -121,9 +121,9 @@ const catchupQueue = new Queue(CATCHUP_JOB_NAME, {
 new QueueScheduler(CATCHUP_JOB_NAME, { connection: redis });
 
 export const addToEventsSyncCatchupQueue = async (
-  contractType: ContractType
+  contractKind: ContractKind
 ) => {
-  await catchupQueue.add(contractType, { contractType });
+  await catchupQueue.add(contractKind, { contractKind });
 };
 
 // Actual work is to be handled by background worker processes
@@ -131,15 +131,15 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     CATCHUP_JOB_NAME,
     async (job: Job) => {
-      const { contractType } = job.data;
+      const { contractKind } = job.data;
 
       try {
         // Sync all contracts of the given contract type
         const contracts =
           require(`@/config/data/${config.chainId}/contracts.json`)[
-            contractType
+            contractKind
           ];
-        const contractInfo = getContractInfo(contractType, contracts);
+        const contractInfo = getContractInfo(contractKind, contracts);
         if (contractInfo.skip) {
           return;
         }
@@ -157,7 +157,7 @@ if (config.doBackgroundWork) {
 
         // Fetch the last synced blocked for the current contract type (if it exists)
         let localBlock = Number(
-          await redis.get(`${contractType}_last_synced_block`)
+          await redis.get(`${contractKind}_last_synced_block`)
         );
         if (localBlock >= headBlock) {
           // Nothing to sync
@@ -173,7 +173,7 @@ if (config.doBackgroundWork) {
         const fromBlock = Math.max(localBlock, headBlock - maxBlocks + 1);
         if (contracts.length) {
           logger.info(
-            contractType,
+            contractKind,
             `Catchup syncing block range [${fromBlock}, ${headBlock}]`
           );
 
@@ -182,7 +182,7 @@ if (config.doBackgroundWork) {
           // Queue any remaining blocks for backfilling
           if (localBlock < fromBlock) {
             await addToEventsSyncBackfillQueue(
-              contractType,
+              contractKind,
               contracts,
               localBlock,
               fromBlock - 1
@@ -190,10 +190,10 @@ if (config.doBackgroundWork) {
           }
 
           // Update the last synced block
-          await redis.set(`${contractType}_last_synced_block`, headBlock);
+          await redis.set(`${contractKind}_last_synced_block`, headBlock);
         }
       } catch (error) {
-        logger.error(contractType, `Catchup failed: ${error}`);
+        logger.error(contractKind, `Catchup failed: ${error}`);
         throw error;
       }
     },

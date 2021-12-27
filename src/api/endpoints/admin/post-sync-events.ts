@@ -4,7 +4,7 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import { contractTypes } from "@/events/index";
+import { contractKinds } from "@/events/index";
 import { addToEventsSyncBackfillQueue } from "@/jobs/events-sync";
 
 export const postSyncEventsOptions: RouteOptions = {
@@ -15,8 +15,8 @@ export const postSyncEventsOptions: RouteOptions = {
       "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     payload: Joi.object({
-      contractType: Joi.string()
-        .valid(...contractTypes)
+      contractKind: Joi.string()
+        .valid(...contractKinds)
         .required(),
       contracts: Joi.array()
         .items(
@@ -39,7 +39,7 @@ export const postSyncEventsOptions: RouteOptions = {
     const payload = request.payload as any;
 
     try {
-      const contractType = payload.contractType;
+      const contractKind = payload.contractKind;
       const contracts = payload.contracts;
       const fromBlock = payload.fromBlock;
       const toBlock = payload.toBlock;
@@ -49,15 +49,15 @@ export const postSyncEventsOptions: RouteOptions = {
 
       // Make sure the contracts requested to sync match the contract type
       for (const contract of contracts) {
-        if (!contractsData[contractType].includes(contract)) {
+        if (!contractsData[contractKind].includes(contract)) {
           throw Boom.badData(
-            `Unknown contract ${contract} of type ${contractType}`
+            `Unknown contract ${contract} of type ${contractKind}`
           );
         }
       }
 
       await addToEventsSyncBackfillQueue(
-        contractType,
+        contractKind,
         contracts,
         fromBlock,
         toBlock,
