@@ -10,7 +10,9 @@ export const getTokensOptions: RouteOptions = {
   tags: ["api"],
   validate: {
     query: Joi.object({
-      contract: Joi.string().lowercase(),
+      contract: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}$/),
       tokenId: Joi.string().pattern(/^[0-9]+$/),
       collection: Joi.string().lowercase(),
       attributes: Joi.object().unknown(),

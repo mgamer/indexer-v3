@@ -10,15 +10,23 @@ export const getOrdersBuildOptions: RouteOptions = {
   tags: ["api"],
   validate: {
     query: Joi.object({
-      contract: Joi.string().lowercase(),
+      contract: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}$/),
       tokenId: Joi.string(),
       collection: Joi.string().lowercase(),
       // TODO: Integrate attributes once attribute-based orders are supported
-      maker: Joi.string().required(),
+      maker: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}$/)
+        .required(),
       side: Joi.string().lowercase().valid("sell", "buy").required(),
       price: Joi.string().required(),
       fee: Joi.alternatives(Joi.string(), Joi.number()).required(),
-      feeRecipient: Joi.string().required(),
+      feeRecipient: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}$/)
+        .required(),
       listingTime: Joi.alternatives(Joi.string(), Joi.number()),
       expirationTime: Joi.alternatives(Joi.string(), Joi.number()),
       salt: Joi.string(),

@@ -15,7 +15,10 @@ export const postFixCacheOptions: RouteOptions = {
     }).options({ allowUnknown: true }),
     payload: Joi.object({
       kind: Joi.string().valid("tokens-floor-sell", "tokens-top-buy"),
-      contract: Joi.string().lowercase().required(),
+      contract: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}$/)
+        .required(),
     }),
   },
   handler: async (request: Request) => {

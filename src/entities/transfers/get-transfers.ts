@@ -6,7 +6,7 @@ export type GetTransfersFilter = {
   tokenId?: string;
   collection?: string;
   attributes?: { [key: string]: string };
-  account?: string;
+  user?: string;
   direction?: "from" | "to";
   type?: "sale" | "transfer";
   offset: number;
@@ -90,13 +90,13 @@ export const getTransfers = async (
       (filter as any)[`value${i}`] = value;
     });
   }
-  if (filter.account) {
+  if (filter.user) {
     if (filter.direction === "from") {
-      conditions.push(`"nte"."from" = $/account/`);
+      conditions.push(`"nte"."from" = $/user/`);
     } else if (filter.direction === "to") {
-      conditions.push(`"nte"."to" = $/account/`);
+      conditions.push(`"nte"."to" = $/user/`);
     } else {
-      conditions.push(`"nte"."from" = $/account/ or "nte"."to" = $/account/`);
+      conditions.push(`"nte"."from" = $/user/ or "nte"."to" = $/user/`);
     }
   }
   if (filter.type === "transfer") {

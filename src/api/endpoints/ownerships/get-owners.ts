@@ -10,10 +10,14 @@ export const getOwnershipsOptions: RouteOptions = {
   tags: ["api"],
   validate: {
     query: Joi.object({
-      contract: Joi.string().lowercase(),
+      contract: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}$/),
       tokenId: Joi.string().pattern(/^[0-9]+$/),
       collection: Joi.string().lowercase(),
-      owner: Joi.string().lowercase(),
+      owner: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}$/),
       attributes: Joi.object().unknown(),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),

@@ -1,7 +1,6 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { formatEth } from "@/common/bignumber";
 import { logger } from "@/common/logger";
 import * as queries from "@/entities/orders/get-user-liquidity";
 
@@ -10,7 +9,10 @@ export const getUserLiquidityOptions: RouteOptions = {
   tags: ["api"],
   validate: {
     params: Joi.object({
-      user: Joi.string().lowercase().required(),
+      user: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}$/)
+        .required(),
     }),
     query: Joi.object({
       offset: Joi.number().integer().min(0).default(0),

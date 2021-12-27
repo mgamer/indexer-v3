@@ -18,7 +18,14 @@ export const postSyncEventsOptions: RouteOptions = {
       contractType: Joi.string()
         .valid(...contractTypes)
         .required(),
-      contracts: Joi.array().items(Joi.string().lowercase()).min(1).required(),
+      contracts: Joi.array()
+        .items(
+          Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-f0-9]{40}$/)
+        )
+        .min(1)
+        .required(),
       fromBlock: Joi.number().integer().positive().required(),
       toBlock: Joi.number().integer().positive().required(),
       blocksPerBatch: Joi.number().integer().positive(),
