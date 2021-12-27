@@ -8,6 +8,12 @@ import { config } from "@/config/index";
 import * as queries from "@/entities/orders";
 import * as wyvernV2 from "@/orders/wyvern-v2";
 
+// TODO: Move every single endpoint to its own individual
+// file inside the corresponding directory for having a
+// better and more redeable project structure.
+
+export * from "@/api/endpoints/orders/get_market";
+
 export const postOrdersOptions: RouteOptions = {
   description: "Post orders",
   tags: ["api"],
@@ -336,33 +342,6 @@ export const getOrdersFillOptions: RouteOptions = {
       };
     } catch (error) {
       logger.error("get_orders_fill_handler", `Handler failure: ${error}`);
-      throw error;
-    }
-  },
-};
-
-export const getMarketOptions: RouteOptions = {
-  description: "Get market depth information",
-  tags: ["api"],
-  validate: {
-    query: Joi.object({
-      contract: Joi.string().lowercase(),
-      tokenId: Joi.string().pattern(/^[0-9]+$/),
-      collection: Joi.string().lowercase(),
-      attributes: Joi.object().unknown(),
-    })
-      .or("contract", "collection")
-      .oxor("contract", "collection"),
-  },
-  handler: async (request: Request) => {
-    const query = request.query as any;
-
-    try {
-      const market = await queries.getMarket(query as queries.GetMarketFilter);
-
-      return { market };
-    } catch (error) {
-      logger.error("get_market_handler", `Handler failure: ${error}`);
       throw error;
     }
   },

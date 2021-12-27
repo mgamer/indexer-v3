@@ -20,7 +20,7 @@ export const orderbookProvider = new StaticJsonRpcProvider(
 
 // Cloudflare provides a very reliable RPC endpoint but unfortunately
 // it's only available on mainnet. For other chains we fallback to using
-// Etherscan has restrictive rate-limits but it still does the job.
+// Etherscan which has restrictive rate-limits but it still does the job.
 export const altProvider =
   config.chainId === 1
     ? new CloudflareProvider(config.chainId)
