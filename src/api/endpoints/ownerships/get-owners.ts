@@ -27,7 +27,7 @@ export const getOwnershipsOptions: RouteOptions = {
   },
   response: {
     schema: Joi.object({
-      owners: Joi.array().items(
+      ownerships: Joi.array().items(
         Joi.object({
           address: Joi.string(),
           ownership: ownershipFormat,
