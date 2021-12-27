@@ -19,7 +19,9 @@ if (config.doBackgroundWork) {
       logger.info("collection_stats_update_cron", "Updating collection stats");
 
       try {
-        await db.none(`refresh materialized view "collection_stats"`);
+        await db.none(
+          `refresh materialized view concurrently "collection_stats"`
+        );
       } catch (error) {
         logger.error(
           "collection_stats_update_cron",
