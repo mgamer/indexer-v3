@@ -153,10 +153,10 @@ export const getSet = async (filter: GetSetFilter): Promise<GetSetResponse> => {
         // TODO: Once attribute-based orders are live, these fields
         // will need to be queried and populated in the response
         topBuy: {
-          hash: r.top_buy_hash ?? null,
-          value: r.top_buy_value ?? null,
-          maker: r.top_buy_maker ?? null,
-          validFrom: r.top_buy_valid_from ?? null,
+          hash: r.top_buy_hash,
+          value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+          maker: r.top_buy_maker,
+          validFrom: r.top_buy_valid_from,
         },
       },
     }));
