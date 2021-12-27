@@ -21,7 +21,8 @@ const log = (level: "debug" | "error" | "info") => {
             path: `/api/v2/logs?dd-api-key=${process.env.DATADOG_API_KEY}&ddsource=nodejs&service=${service}`,
             ssl: true,
           })
-        : new transports.Console(),
+        : // Fallback to logging to standard output
+          new transports.Console(),
     ],
   });
 

@@ -11,7 +11,7 @@ export const redis = new Redis(config.redisUrl, {
 // The locking mechanism used here is not perfect. It only provides
 // weak guarantees of mutual exclusion. Do not use it for critical
 // operations that can't handle races conditions. It implements the
-// basic locking algorithm as descrbied in the first part of the
+// basic locking algorithm as described in the first part of the
 // following article: https://redis.io/topics/distlock.
 
 const lockIds = new Map<string, string>();

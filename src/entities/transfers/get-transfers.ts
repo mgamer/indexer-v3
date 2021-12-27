@@ -1,3 +1,4 @@
+import { formatEth } from "@/common/bignumber";
 import { db } from "@/common/db";
 
 export type GetTransfersFilter = {
@@ -12,7 +13,29 @@ export type GetTransfersFilter = {
   limit: number;
 };
 
-export const getTransfers = async (filter: GetTransfersFilter) => {
+export type GetTransfersResponse = {
+  contract: string;
+  tokenId: string;
+  token: {
+    name: string;
+    image: string;
+  };
+  collection: {
+    id: string;
+    name: string;
+  };
+  from: string;
+  to: string;
+  amount: number;
+  txHash: string;
+  block: number;
+  timestamp: number;
+  price: number | null;
+}[];
+
+export const getTransfers = async (
+  filter: GetTransfersFilter
+): Promise<GetTransfersResponse> => {
   let baseQuery = `
     select
       "nte"."address" as "contract",
@@ -106,11 +129,11 @@ export const getTransfers = async (filter: GetTransfersFilter) => {
       },
       from: r.from,
       to: r.to,
-      amount: r.amount,
+      amount: Number(r.amount),
       txHash: r.txHash,
       block: r.block,
       timestamp: r.timestamp,
-      price: r.price,
+      price: r.price ? formatEth(r.price) : null,
     }))
   );
 };

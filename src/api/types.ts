@@ -1,0 +1,63 @@
+import Joi from "joi";
+
+// Common Joi validation entities
+
+export const marketFormat = Joi.object({
+  floorSell: {
+    hash: Joi.string().allow(null),
+    value: Joi.string().allow(null),
+    maker: Joi.string().allow(null),
+    validFrom: Joi.number().allow(null),
+  },
+  topBuy: Joi.object({
+    hash: Joi.string().allow(null),
+    value: Joi.string().allow(null),
+    maker: Joi.string().allow(null),
+    validFrom: Joi.number().allow(null),
+  }),
+});
+
+export const setFormat = Joi.object({
+  tokenCount: Joi.string(),
+  onSaleCount: Joi.string(),
+  uniqueOwnersCount: Joi.string(),
+  sampleImages: Joi.array().items(Joi.string()),
+  market: marketFormat,
+});
+
+export const ownershipFormat = Joi.object({
+  tokenCount: Joi.number(),
+  onSaleCount: Joi.number(),
+  floorSellValue: Joi.number().allow(null),
+  topBuyValue: Joi.number().allow(null),
+  totalBuyValue: Joi.number().allow(null),
+  lastAcquiredAt: Joi.number().allow(null),
+});
+
+// Native order formats (for now, only WyvernV2 is supported)
+
+export const wyvernV2OrderFormat = Joi.object({
+  exchange: Joi.string().required(),
+  maker: Joi.string().required(),
+  taker: Joi.string().required(),
+  makerRelayerFee: Joi.alternatives(Joi.number(), Joi.string()).required(),
+  takerRelayerFee: Joi.alternatives(Joi.number(), Joi.string()).required(),
+  feeRecipient: Joi.string().required(),
+  side: Joi.number().valid(0, 1).required(),
+  saleKind: Joi.number().valid(0, 1).required(),
+  target: Joi.string().required(),
+  howToCall: Joi.number().valid(0, 1).required(),
+  calldata: Joi.string().required(),
+  replacementPattern: Joi.string().required(),
+  staticTarget: Joi.string().required(),
+  staticExtradata: Joi.string().required(),
+  paymentToken: Joi.string().required(),
+  basePrice: Joi.string().required(),
+  extra: Joi.string().required(),
+  listingTime: Joi.alternatives(Joi.number(), Joi.string()).required(),
+  expirationTime: Joi.alternatives(Joi.number(), Joi.string()).required(),
+  salt: Joi.string().required(),
+  v: Joi.number().required(),
+  r: Joi.string().required(),
+  s: Joi.string().required(),
+}).options({ allowUnknown: true });

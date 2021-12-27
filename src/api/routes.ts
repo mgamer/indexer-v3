@@ -4,7 +4,9 @@ import * as adminEndpoints from "@/api/endpoints/admin";
 import * as attributesEndpoints from "@/api/endpoints/attributes";
 import * as collectionsEndpoints from "@/api/endpoints/collections";
 import * as ordersEndpoints from "@/api/endpoints/orders";
+import * as ownershipsEndpoints from "@/api/endpoints/ownerships";
 import * as rootEndpoints from "@/api/endpoints/root";
+import * as setsEndpoints from "@/api/endpoints/sets";
 import * as tokensEndpoints from "@/api/endpoints/tokens";
 import * as transfersEndpoints from "@/api/endpoints/transfers";
 
@@ -35,8 +37,8 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/collections/{collection}/explore",
-    options: attributesEndpoints.getCollectionExploreOptions,
+    path: "/collections/{collection}/attributes",
+    options: attributesEndpoints.getCollectionAttributesOptions,
   });
 
   // Collections
@@ -49,13 +51,7 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/collections/{collection}/ownerships",
-    options: collectionsEndpoints.getCollectionOwnershipsOptions,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/user/{user}/collections",
+    path: "/users/{user}/collections",
     options: collectionsEndpoints.getUserCollectionsOptions,
   });
 
@@ -75,8 +71,49 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/fill",
-    options: ordersEndpoints.getFillOptions,
+    path: "/orders/build",
+    options: ordersEndpoints.getOrdersBuildOptions,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/orders/fill",
+    options: ordersEndpoints.getOrdersFillOptions,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/market",
+    options: ordersEndpoints.getMarketOptions,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/users/{user}/liquidity",
+    options: ordersEndpoints.getUserLiquidityOptions,
+  });
+
+  // Owners
+
+  // Only keeping this for backwards-compatibility
+  server.route({
+    method: "GET",
+    path: "/owners",
+    options: ownershipsEndpoints.getOwnershipsOptions,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/ownerships",
+    options: ownershipsEndpoints.getOwnershipsOptions,
+  });
+
+  // Sets
+
+  server.route({
+    method: "GET",
+    path: "/sets",
+    options: setsEndpoints.getSetOptions,
   });
 
   // Tokens
@@ -89,19 +126,7 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/tokens/owners",
-    options: tokensEndpoints.getTokensOwnersOptions,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/tokens/stats",
-    options: tokensEndpoints.getTokensStatsOptions,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/user/{user}/tokens",
+    path: "/users/{user}/tokens",
     options: tokensEndpoints.getUserTokensOptions,
   });
 

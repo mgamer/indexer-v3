@@ -1,97 +1,21 @@
-import { Builders, Helpers, Order, Utils } from "@georgeroman/wyvern-v2-sdk";
+import { AddressZero } from "@ethersproject/constants";
+import * as Sdk from "@reservoir0x/sdk";
 
 import { bn } from "@/common/bignumber";
 import { db, pgp } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
-import { generateTokenSetId } from "@/orders/utils";
+import {
+  TokenSetInfo,
+  TokenSetLabelKind,
+  generateTokenInfo,
+  generateCollectionInfo,
+} from "@/orders/utils";
 import { addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
 
-// Wyvern V2 orders are retrieved from two different sources:
-// - On-chain orderbook
-// - Off-chain api
-
-// On-chain orderbook order
-
-export const parseOrderbookOrder = (encodedOrder: string) => {
-  return Helpers.Order.decode(encodedOrder);
-};
-
-// Off-chain api order
-
-export const parseApiOrder = (order: Order) => {
-  try {
-    return parseOrderbookOrder(Helpers.Order.encode(order));
-  } catch {
-    return undefined;
-  }
-};
-
-// Enhance orders with some extra fields which are missing
-// from the default Wyvern V2 order formar
-type EnhancedOrder = Order & {
-  hash: string;
-  tokenId: string;
-};
-
-const checkBalance = async (order: EnhancedOrder) => {
-  if (order.side === 0) {
-    // For buy orders, we check that the maker has enough
-    // balance of `paymentToken` (an erc20) to cover the
-    // quoted price. The payment token will be weth for
-    // all orders in our case.
-
-    const hasBalance = await db.oneOrNone(
-      `
-        select 1 from "ownerships"
-        where "contract" = $/contract/
-          and "token_id" = $/tokenId/
-          and "owner" = $/owner/
-          and "amount" > $/price/
-      `,
-      {
-        contract: order.paymentToken,
-        tokenId: "-1",
-        owner: order.maker,
-        price: order.basePrice,
-      }
-    );
-
-    if (!hasBalance) {
-      return false;
-    }
-
-    return true;
-  } else {
-    // For sell orders, we check that the maker holds the
-    // quoted token (either erc721 or erc1155)
-
-    const hasBalance = await db.oneOrNone(
-      `
-        select 1 from "ownerships"
-        where "contract" = $/contract/
-          and "token_id" = $/tokenId/
-          and "owner" = $/owner/
-          and "amount" > 0
-      `,
-      {
-        contract: order.target,
-        tokenId: order.tokenId,
-        owner: order.maker,
-      }
-    );
-
-    if (!hasBalance) {
-      return false;
-    }
-
-    return true;
-  }
-};
-
 export const filterOrders = async (
-  orders: Order[]
-): Promise<EnhancedOrder[]> => {
+  orders: Sdk.WyvernV2.Order[]
+): Promise<Sdk.WyvernV2.Order[]> => {
   if (!orders.length) {
     return [];
   }
@@ -99,7 +23,7 @@ export const filterOrders = async (
   // Get the kinds of all contracts targeted by the orders
   const contracts: { address: string; kind: string }[] = await db.manyOrNone(
     `select distinct "address", "kind" from "contracts" where "address" in ($1:csv)`,
-    [orders.map((order) => order.target)]
+    [orders.map((order) => order.params.target)]
   );
 
   const contractKinds = new Map<string, string>();
@@ -110,7 +34,7 @@ export const filterOrders = async (
   // Get all orders we're already storing
   const hashes: { hash: string }[] = await db.manyOrNone(
     `select "hash" from "orders" where "hash" in ($1:csv)`,
-    [orders.map((order) => Helpers.Order.hash(order))]
+    [orders.map((order) => order.prefixHash())]
   );
 
   const existingHashes = new Set<string>();
@@ -118,183 +42,380 @@ export const filterOrders = async (
     existingHashes.add(hash);
   }
 
-  // Validate orders
-  const validOrders: EnhancedOrder[] = [];
+  const validOrders: Sdk.WyvernV2.Order[] = [];
   for (const order of orders) {
-    const hash = Helpers.Order.hash(order);
+    const hash = order.prefixHash();
 
     // Check: order doesn't already exist
     if (existingHashes.has(hash)) {
+      console.log("order already exists", hash);
       continue;
     }
 
     // Check: order is not expired
     const currentTime = Math.floor(Date.now() / 1000);
-    const expirationTime = Number(order.expirationTime);
-    if (expirationTime !== 0 && currentTime > expirationTime) {
+    const expirationTime = order.params.expirationTime;
+    if (expirationTime !== 0 && currentTime >= expirationTime) {
+      console.log("order expired");
       continue;
     }
 
-    // Check: buy order has WETH as payment token
+    // Check: buy order has Weth as payment token
     if (
-      order.side === 0 &&
-      order.paymentToken !== Utils.Address.weth(config.chainId)
+      order.params.side === 0 &&
+      order.params.paymentToken !== Sdk.Common.Addresses.Weth[config.chainId]
     ) {
+      console.log("order wrong payment token");
       continue;
     }
 
-    // Check: sell order has ETH as payment token
+    // Check: sell order has Eth as payment token
     if (
-      order.side === 1 &&
-      order.paymentToken !== Utils.Address.eth(config.chainId)
+      order.params.side === 1 &&
+      order.params.paymentToken !== Sdk.Common.Addresses.Eth[config.chainId]
     ) {
+      console.log("order wrong payment token");
       continue;
     }
 
     // Check: order is not private
-    if (order.taker !== "0x0000000000000000000000000000000000000000") {
+    if (order.params.taker !== AddressZero) {
+      console.log("order is private");
       continue;
     }
 
-    // Check: order has a valid exchange
-    if (order.exchange !== Utils.Address.exchange(config.chainId)) {
+    // Check: order has a valid kind
+    if (!order.hasValidKind()) {
+      console.log("order wrong kind");
       continue;
     }
 
-    // Check: erc721 order is well formatted
-    const isErc721SingleItem =
-      Builders.Erc721.SingleItem.isWellFormatted(order);
-    if (isErc721SingleItem && contractKinds.get(order.target) === "erc721") {
-      const tokenId = Builders.Erc721.SingleItem.extractTokenId(order)!;
-      const enhancedOrder = { ...order, hash, tokenId };
-
-      // Check: order has a valid signature
-      if (!Helpers.Order.verifySignature(order)) {
-        continue;
-      }
-
-      // Check: the maker has the proper balance
-      if (!(await checkBalance(enhancedOrder))) {
-        continue;
-      }
-
-      // Check: the maker has set the proper approval
-      if (!(await Helpers.Order.isApproved(baseProvider, order))) {
-        continue;
-      }
-
-      validOrders.push(enhancedOrder);
+    // Check: order has a valid target
+    if (
+      !order.params.kind?.startsWith(contractKinds.get(order.params.target)!)
+    ) {
+      console.log("order wrong target");
       continue;
     }
 
-    // Check: erc1155 order is well formatted
-    const isErc1155SingleItem =
-      Builders.Erc1155.SingleItem.isWellFormatted(order);
-    if (isErc1155SingleItem && contractKinds.get(order.target) === "erc1155") {
-      const tokenId = Builders.Erc1155.SingleItem.extractTokenId(order)!;
-      const enhancedOrder = { ...order, hash, tokenId };
-
-      // Check: order has a valid signature
-      if (!Helpers.Order.verifySignature(order)) {
-        continue;
-      }
-
-      // Check: the maker has the proper balance
-      if (!(await checkBalance(enhancedOrder))) {
-        continue;
-      }
-
-      // Check: the maker has set the proper approval
-      if (!(await Helpers.Order.isApproved(baseProvider, order))) {
-        continue;
-      }
-
-      validOrders.push(enhancedOrder);
+    // Check: order has a valid signature
+    if (!(await order.hasValidSignature())) {
+      console.log("order wrong signature");
       continue;
     }
+
+    // Check: order is fillable
+    if (!(await order.isFillable(baseProvider))) {
+      console.log("order not fillable");
+      continue;
+    }
+
+    validOrders.push(order);
   }
 
   return validOrders;
 };
 
-export const saveOrders = async (orders: EnhancedOrder[]) => {
-  // TODO: Use multi-row inserts to improve performance
+type OrderInfo = {
+  kind: TokenSetLabelKind;
+  data?: any;
+};
 
+const extractOrderInfo = (order: Sdk.WyvernV2.Order): OrderInfo | undefined => {
+  switch (order.params.kind) {
+    case "erc721-single-token": {
+      const builder = new Sdk.WyvernV2.Builders.Erc721.SingleToken(
+        config.chainId
+      );
+
+      return {
+        kind: "token",
+        data: {
+          tokenId: builder.getTokenId(order),
+        },
+      };
+    }
+
+    case "erc1155-single-token": {
+      const builder = new Sdk.WyvernV2.Builders.Erc1155.SingleToken(
+        config.chainId
+      );
+
+      return {
+        kind: "token",
+        data: {
+          tokenId: builder.getTokenId(order),
+        },
+      };
+    }
+
+    case "erc721-token-range": {
+      const builder = new Sdk.WyvernV2.Builders.Erc721.TokenRange(
+        config.chainId
+      );
+
+      return {
+        kind: "collection",
+        data: {
+          tokenIdRange: builder.getTokenIdRange(order),
+        },
+      };
+    }
+
+    case "erc1155-token-range": {
+      const builder = new Sdk.WyvernV2.Builders.Erc1155.TokenRange(
+        config.chainId
+      );
+
+      return {
+        kind: "collection",
+        data: {
+          tokenIdRange: builder.getTokenIdRange(order),
+        },
+      };
+    }
+
+    case "erc721-contract-wide": {
+      return {
+        kind: "collection",
+      };
+    }
+
+    case "erc1155-contract-wide": {
+      return {
+        kind: "collection",
+      };
+    }
+
+    default: {
+      return undefined;
+    }
+  }
+};
+
+export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
   if (!orders.length) {
     return;
   }
 
   const queries: any[] = [];
   for (const order of orders) {
-    // Generate the token set id corresponding to the order
-    const tokenSetId = generateTokenSetId([
-      {
-        contract: order.target,
-        tokenId: order.tokenId,
-      },
-    ]);
+    const orderInfo = extractOrderInfo(order);
+    if (!orderInfo) {
+      continue;
+    }
 
-    // Make sure the token set exists
-    queries.push({
-      query: `
-        insert into "token_sets" (
-          "id",
-          "contract",
-          "token_id"
-        ) values (
-          $/tokenSetId/,
-          $/contract/,
-          $/tokenId/
-        ) on conflict do nothing
-      `,
-      values: {
-        tokenSetId,
-        contract: order.target,
-        tokenId: order.tokenId,
-      },
-    });
-    queries.push({
-      query: `
-        insert into "token_sets_tokens" (
-          "token_set_id",
-          "contract",
-          "token_id"
-        ) values (
-          $/tokenSetId/,
-          $/contract/,
-          $/tokenId/
-        ) on conflict do nothing`,
-      values: {
-        tokenSetId,
-        contract: order.target,
-        tokenId: order.tokenId,
-      },
-    });
+    let tokenSetInfo: TokenSetInfo | undefined;
+    switch (orderInfo.kind) {
+      // We have a single-token order
+      case "token": {
+        tokenSetInfo = generateTokenInfo(
+          order.params.target,
+          orderInfo.data?.tokenId
+        );
 
-    const side = order.side === 0 ? "buy" : "sell";
+        // Create the token set
+        queries.push({
+          query: `
+            insert into "token_sets" (
+              "id",
+              "contract",
+              "token_id",
+              "label",
+              "label_hash"
+            ) values (
+              $/tokenSetId/,
+              $/contract/,
+              $/tokenId/,
+              $/tokenSetLabel/,
+              $/tokenSetLabelHash/
+            ) on conflict do nothing
+          `,
+          values: {
+            tokenSetId: tokenSetInfo.id,
+            contract: order.params.target,
+            tokenId: orderInfo.data.tokenId,
+            tokenSetLabel: tokenSetInfo.label,
+            tokenSetLabelHash: tokenSetInfo.labelHash,
+          },
+        });
+
+        // For increased performance, only trigger the insertion of
+        // corresponding tokens in the token set if we don't already
+        // have them stored in the database
+        const tokenSetTokensExists = await db.oneOrNone(
+          `
+            select 1
+            from "token_sets_tokens" "tst"
+            where "tst"."token_set_id" = $/tokenSetId/
+            limit 1
+          `,
+          { tokenSetId: tokenSetInfo.id }
+        );
+        if (!tokenSetTokensExists) {
+          // Insert matching tokens in the token set
+          queries.push({
+            query: `
+            insert into "token_sets_tokens" (
+              "token_set_id",
+              "contract",
+              "token_id"
+            ) values (
+              $/tokenSetId/,
+              $/contract/,
+              $/tokenId/
+            ) on conflict do nothing
+          `,
+            values: {
+              tokenSetId: tokenSetInfo.id,
+              contract: order.params.target,
+              tokenId: orderInfo.data.tokenId,
+            },
+          });
+        }
+
+        break;
+      }
+
+      // We have a collection-wide order
+      case "collection": {
+        // Fetch the collection's contract and associated token range
+        // (if any). The order must exactly match the collection's
+        // definition in order for it to be properly validated.
+
+        let collection: { id: string } | null;
+        if (orderInfo.data?.tokenIdRange) {
+          collection = await db.oneOrNone(
+            `
+              select
+                "c"."id"
+              from "collections" "c"
+              where "c"."contract" = $/contract/
+                and "c"."token_id_range" = numrange($/startTokenId/, $/endTokenId/, '[]')
+            `,
+            {
+              contract: order.params.target,
+              startTokenId: orderInfo.data.tokenIdRange[0],
+              endTokenId: orderInfo.data.tokenIdRange[1],
+            }
+          );
+        } else {
+          collection = await db.oneOrNone(
+            `
+              select
+                "c"."id"
+              from "collections" "c"
+              where "c"."contract" = $/contract/
+                and "c"."token_id_range" is null
+            `,
+            {
+              contract: order.params.target,
+            }
+          );
+        }
+
+        if (collection) {
+          tokenSetInfo = generateCollectionInfo(
+            collection.id,
+            order.params.target,
+            orderInfo.data?.tokenIdRange
+          );
+
+          // Create the token set
+          queries.push({
+            query: `
+              insert into "token_sets" (
+                "id",
+                "collection_id",
+                "label",
+                "label_hash"
+              ) values (
+                $/tokenSetId/,
+                $/collectionId/,
+                $/tokenSetLabel/,
+                $/tokenSetLabelHash/
+              ) on conflict do nothing
+            `,
+            values: {
+              tokenSetId: tokenSetInfo.id,
+              collectionId: collection.id,
+              tokenSetLabel: tokenSetInfo.label,
+              tokenSetLabelHash: tokenSetInfo.labelHash,
+            },
+          });
+
+          // For increased performance, only trigger the insertion of
+          // corresponding tokens in the token set if we don't already
+          // have them stored in the database
+          const tokenSetTokensExists = await db.oneOrNone(
+            `
+              select 1
+              from "token_sets_tokens" "tst"
+              where "tst"."token_set_id" = $/tokenSetId/
+              limit 1
+            `,
+            { tokenSetId: tokenSetInfo.id }
+          );
+          if (!tokenSetTokensExists) {
+            // Insert matching tokens in the token set
+            queries.push({
+              query: `
+                insert into "token_sets_tokens" (
+                  "token_set_id",
+                  "contract",
+                  "token_id"
+                )
+                (
+                  select
+                    $/tokenSetId/,
+                    "t"."contract",
+                    "t"."token_id"
+                  from "tokens" "t"
+                  where "t"."collection_id" = $/collection/
+                ) on conflict do nothing
+              `,
+              values: {
+                tokenSetId: tokenSetInfo.id,
+                collection: collection.id,
+              },
+            });
+          }
+        }
+
+        break;
+      }
+    }
+
+    if (!tokenSetInfo) {
+      continue;
+    }
+
+    const side = order.params.side === 0 ? "buy" : "sell";
 
     let value: string;
     if (side === "buy") {
-      // For buy orders, we set the value as price - fee since it's
-      // best for UX to show the user exactly what they're going
-      // to receive on offer acceptance (and that is price - fee)
-      const fee = order.takerRelayerFee;
-      value = bn(order.basePrice)
-        .sub(bn(order.basePrice).mul(bn(fee)).div(10000))
+      // For buy orders, we set the value as `price - fee` since it's
+      // best for UX to show the user exactly what they're going to
+      // receive on offer acceptance (and that is `price - fee` and
+      // not `price`)
+      const fee = order.params.takerRelayerFee;
+      value = bn(order.params.basePrice)
+        .sub(bn(order.params.basePrice).mul(bn(fee)).div(10000))
         .toString();
     } else {
       // For sell orders, the value is the same as the price
-      value = order.basePrice;
+      value = order.params.basePrice;
     }
 
+    // Handle fees
+
     const feeBps = Math.max(
-      Number(order.makerRelayerFee),
-      Number(order.takerRelayerFee)
+      order.params.makerRelayerFee,
+      order.params.takerRelayerFee
     );
 
     let sourceInfo;
-    let royaltyInfo;
-    switch (order.feeRecipient) {
+    switch (order.params.feeRecipient) {
       // OpenSea
       case "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073": {
         sourceInfo = {
@@ -318,11 +439,14 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
       default: {
         sourceInfo = {
           id: "unknown",
+          // Assume everything goes to the order's fee recipient
           bps: feeBps,
         };
         break;
       }
     }
+
+    // Handle royalties
 
     const royalty: { recipient: string } | null = await db.oneOrNone(
       `
@@ -332,11 +456,14 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
         join "tokens" "t"
           on "c"."id" = "t"."collection_id"
         where "t"."contract" = $/contract/
-          and "t"."token_id" = $/tokenId/
+        limit 1
       `,
-      { contract: order.target, tokenId: order.tokenId }
+      { contract: order.params.target }
     );
+
+    let royaltyInfo;
     if (royalty) {
+      // Royalties are whatever is left after subtracting the marketplace fee
       const bps = feeBps - sourceInfo.bps;
       if (bps > 0) {
         royaltyInfo = [
@@ -348,6 +475,9 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
       }
     }
 
+    // TODO: Not at all critical, but multi-row inserts could
+    // do here to get better insert performance when handling
+    // multiple orders
     queries.push({
       query: `
         insert into "orders" (
@@ -389,20 +519,22 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
           "raw_data" = $/rawData/
       `,
       values: {
-        hash: Helpers.Order.hash(order),
+        hash: order.prefixHash(),
         kind: "wyvern-v2",
         status: "valid",
         side,
-        tokenSetId,
-        maker: order.maker,
-        price: order.basePrice,
+        tokenSetId: tokenSetInfo.id,
+        maker: order.params.maker,
+        price: order.params.basePrice,
         value,
-        listingTime: order.listingTime,
+        listingTime: order.params.listingTime,
         expirationTime:
-          order.expirationTime == "0" ? "infinity" : order.expirationTime,
+          order.params.expirationTime == 0
+            ? "infinity"
+            : order.params.expirationTime,
         sourceInfo,
         royaltyInfo,
-        rawData: order,
+        rawData: order.params,
       },
     });
   }
@@ -410,5 +542,154 @@ export const saveOrders = async (orders: EnhancedOrder[]) => {
   if (queries.length) {
     await db.none(pgp.helpers.concat(queries));
   }
-  await addToOrdersUpdateByHashQueue(orders);
+  await addToOrdersUpdateByHashQueue(
+    orders.map((order) => ({ hash: order.prefixHash() }))
+  );
+};
+
+export type BuildOrderOptions = {
+  contract?: string;
+  tokenId?: string;
+  collection?: string;
+  maker: string;
+  side: "buy" | "sell";
+  price: string;
+  fee: number;
+  feeRecipient: string;
+  listingTime?: number;
+  expirationTime?: number;
+  salt?: string;
+};
+
+export const buildOrder = async (options: BuildOrderOptions) => {
+  try {
+    const buildParams: any = {
+      maker: options.maker,
+      side: options.side,
+      price: options.price,
+      paymentToken:
+        options.side === "buy"
+          ? Sdk.Common.Addresses.Weth[config.chainId]
+          : Sdk.Common.Addresses.Eth[config.chainId],
+      fee: options.fee,
+      feeRecipient: options.feeRecipient,
+      listingTime: options.listingTime,
+      expirationTime: options.expirationTime,
+      salt: options.salt,
+    };
+
+    if (options.contract && options.tokenId) {
+      const { contract, tokenId } = options;
+
+      const data = await db.oneOrNone(
+        `
+          select "c"."kind" from "tokens" "t"
+          join "contracts" "c"
+            on "t"."contract" = "c"."address"
+          where "t"."contract" = $/contract/
+            and "t"."token_id" = $/tokenId/
+        `,
+        { contract, tokenId }
+      );
+
+      if (data.kind === "erc721") {
+        const builder = new Sdk.WyvernV2.Builders.Erc721.SingleToken(
+          config.chainId
+        );
+
+        buildParams.contract = contract;
+        buildParams.tokenId = tokenId;
+
+        return builder.build(buildParams);
+      } else if (data.kind === "erc1155") {
+        const builder = new Sdk.WyvernV2.Builders.Erc1155.SingleToken(
+          config.chainId
+        );
+
+        buildParams.contract = contract;
+        buildParams.tokenId = tokenId;
+
+        return builder.build(buildParams);
+      }
+
+      return undefined;
+    } else if (options.collection) {
+      const { collection } = options;
+
+      const data = await db.oneOrNone(
+        `
+          select
+            "co"."kind",
+            "cl"."contract",
+            lower("cl"."token_id_range") as "start_token_id",
+            upper("cl"."token_id_range") as "end_token_id"
+          from "collections" "cl"
+          join "contracts" "co"
+            on "cl"."contract" = "co"."address"
+          where "cl"."id" = $/collection/
+        `,
+        { collection }
+      );
+
+      if (data.kind === "erc721") {
+        if (data.contract && data.start_token_id && data.end_token_id) {
+          // Collection is a range of tokens within a contract
+
+          const builder = new Sdk.WyvernV2.Builders.Erc721.TokenRange(
+            config.chainId
+          );
+
+          buildParams.contract = data.contract;
+          buildParams.startTokenId = data.start_token_id;
+          buildParams.endTokenId = data.end_token_id;
+
+          return builder.build(buildParams);
+        } else if (data.contract) {
+          // Collection is a full contract
+
+          const builder = new Sdk.WyvernV2.Builders.Erc721.ContractWide(
+            config.chainId
+          );
+
+          buildParams.contract = data.contract;
+
+          return builder.build(buildParams);
+        }
+
+        return undefined;
+      } else if (data.kind === "erc1155") {
+        if (data.contract && data.start_token_id && data.end_token_id) {
+          // Collection is a range of tokens within a contract
+
+          const builder = new Sdk.WyvernV2.Builders.Erc1155.TokenRange(
+            config.chainId
+          );
+
+          buildParams.contract = data.contract;
+          buildParams.startTokenId = data.start_token_id;
+          buildParams.endTokenId = data.end_token_id;
+
+          return builder.build(buildParams);
+        } else if (data.contract) {
+          // Collection is a full contract
+
+          const builder = new Sdk.WyvernV2.Builders.Erc1155.ContractWide(
+            config.chainId
+          );
+
+          buildParams.contract = data.contract;
+
+          return builder.build(buildParams);
+        }
+
+        return undefined;
+      }
+
+      return undefined;
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
 };

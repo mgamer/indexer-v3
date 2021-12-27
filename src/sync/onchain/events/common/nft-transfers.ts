@@ -144,6 +144,12 @@ export const addNftTransferEvents = async (
     });
     const values = pgp.helpers.values(tokenValues, columns);
 
+    // TODO: For newly minted tokens we should also populate
+    // various cached information (eg. floor sell, top buy),
+    // otherwise the tokens might be missing from the results
+    // of various APIs which depend on these cached values.
+    // Detecting newly minted tokens can easily be done by
+    // matching the `from` field to address 0.
     tokenInsertsQuery = `
       insert into "tokens" ("contract", "token_id")
       values ${values}
