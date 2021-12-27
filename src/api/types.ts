@@ -5,22 +5,22 @@ import Joi from "joi";
 export const marketFormat = Joi.object({
   floorSell: {
     hash: Joi.string().allow(null),
-    value: Joi.string().allow(null),
+    value: Joi.number().allow(null),
     maker: Joi.string().allow(null),
     validFrom: Joi.number().allow(null),
   },
   topBuy: Joi.object({
     hash: Joi.string().allow(null),
-    value: Joi.string().allow(null),
+    value: Joi.number().allow(null),
     maker: Joi.string().allow(null),
     validFrom: Joi.number().allow(null),
   }),
 });
 
 export const setFormat = Joi.object({
-  tokenCount: Joi.string(),
-  onSaleCount: Joi.string(),
-  uniqueOwnersCount: Joi.string(),
+  tokenCount: Joi.number(),
+  onSaleCount: Joi.number(),
+  uniqueOwnersCount: Joi.number(),
   sampleImages: Joi.array().items(Joi.string()),
   market: marketFormat,
 });
