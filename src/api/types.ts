@@ -5,13 +5,13 @@ import Joi from "joi";
 export const marketFormat = Joi.object({
   floorSell: {
     hash: Joi.string().allow(null),
-    value: Joi.number().allow(null),
+    value: Joi.number().unsafe().allow(null),
     maker: Joi.string().allow(null),
     validFrom: Joi.number().allow(null),
   },
   topBuy: Joi.object({
     hash: Joi.string().allow(null),
-    value: Joi.number().allow(null),
+    value: Joi.number().unsafe().allow(null),
     maker: Joi.string().allow(null),
     validFrom: Joi.number().allow(null),
   }),
@@ -28,9 +28,9 @@ export const setFormat = Joi.object({
 export const ownershipFormat = Joi.object({
   tokenCount: Joi.number(),
   onSaleCount: Joi.number(),
-  floorSellValue: Joi.number().allow(null),
-  topBuyValue: Joi.number().allow(null),
-  totalBuyValue: Joi.number().allow(null),
+  floorSellValue: Joi.number().unsafe().allow(null),
+  topBuyValue: Joi.number().unsafe().allow(null),
+  totalBuyValue: Joi.number().unsafe().allow(null),
   lastAcquiredAt: Joi.number().allow(null),
 });
 
