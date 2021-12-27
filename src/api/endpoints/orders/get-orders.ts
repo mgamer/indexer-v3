@@ -1,0 +1,76 @@
+import { Request, RouteOptions } from "@hapi/hapi";
+import Joi from "joi";
+
+import { wyvernV2OrderFormat } from "@/api/types";
+import { logger } from "@/common/logger";
+import * as queries from "@/entities/orders/get-orders";
+
+export const getOrdersOptions: RouteOptions = {
+  description: "Get orders",
+  tags: ["api"],
+  validate: {
+    query: Joi.object({
+      contract: Joi.string().lowercase(),
+      tokenId: Joi.string().pattern(/^[0-9]+$/),
+      collection: Joi.string().lowercase(),
+      // TODO: Integrate attributes once attribute-based orders are supported
+      maker: Joi.string().lowercase(),
+      hash: Joi.string().lowercase(),
+      side: Joi.string().lowercase().valid("sell", "buy").default("sell"),
+      offset: Joi.number().integer().min(0).default(0),
+      limit: Joi.number().integer().min(1).max(20).default(20),
+    })
+      // TODO: Only the following combinations should be allowed:
+      // - contract + tokenId
+      // - collection
+      // - collection + attributes
+      // - hash
+      .or("contract", "collection", "maker", "hash")
+      .oxor("contract", "collection", "hash"),
+  },
+  response: {
+    schema: Joi.object({
+      orders: Joi.array().items(
+        Joi.object({
+          hash: Joi.string(),
+          tokenSetId: Joi.string(),
+          tokenSetLabel: Joi.object({
+            data: Joi.object().unknown(),
+            kind: Joi.string(),
+          }),
+          kind: Joi.string(),
+          side: Joi.string(),
+          maker: Joi.string(),
+          price: Joi.number(),
+          value: Joi.number(),
+          validFrom: Joi.number(),
+          validUntil: Joi.number(),
+          sourceInfo: Joi.object({
+            id: Joi.string(),
+            bps: Joi.number(),
+          }),
+          royaltyInfo: Joi.object().allow(null),
+          rawData: Joi.object().when("kind", {
+            is: Joi.equal("wyvern-v2"),
+            then: wyvernV2OrderFormat,
+          }),
+        })
+      ),
+    }).label("getOrdersResponse"),
+    failAction: (_request, _h, error) => {
+      logger.error("get_orders_handler", `Wrong response schema: ${error}`);
+      throw error;
+    },
+  },
+  handler: async (request: Request) => {
+    const query = request.query as any;
+
+    try {
+      const orders = await queries.getOrders(query as queries.GetOrdersFilter);
+      return { orders };
+    } catch (error) {
+      logger.error("get_orders_handler", `Handler failure: ${error}`);
+      throw error;
+    }
+  },
+};

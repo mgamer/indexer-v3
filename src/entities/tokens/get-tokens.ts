@@ -1,3 +1,4 @@
+import { formatEth } from "@/common/bignumber";
 import { db } from "@/common/db";
 
 export type GetTokensFilter = {
@@ -12,7 +13,36 @@ export type GetTokensFilter = {
   limit: number;
 };
 
-export const getTokens = async (filter: GetTokensFilter) => {
+export type GetTokensResponse = {
+  token: {
+    contract: string;
+    tokenId: string;
+    kind: string;
+    image: string;
+    collection: {
+      id: string;
+      name: string;
+    };
+  };
+  market: {
+    floorSell: {
+      hash: string | null;
+      value: number | null;
+      maker: string | null;
+      validFrom: number | null;
+    };
+    topBuy: {
+      hash: string | null;
+      value: number | null;
+      maker: string | null;
+      validFrom: number | null;
+    };
+  };
+}[];
+
+export const getTokens = async (
+  filter: GetTokensFilter
+): Promise<GetTokensResponse> => {
   let baseQuery = `
     select
       "t"."contract",
@@ -139,105 +169,16 @@ export const getTokens = async (filter: GetTokensFilter) => {
       market: {
         floorSell: {
           hash: r.floor_sell_hash,
-          value: r.floor_sell_value,
+          value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
           maker: r.floor_sell_maker,
           validFrom: r.floor_sell_valid_from,
         },
         topBuy: {
           hash: r.top_buy_hash,
-          value: r.top_buy_value,
+          value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
           maker: r.top_buy_maker,
           validFrom: r.top_buy_valid_from,
         },
-      },
-    }))
-  );
-};
-
-export type GetUserTokensFilter = {
-  user: string;
-  community?: string;
-  collection?: string;
-  hasOffer?: string;
-  offset: number;
-  limit: number;
-};
-
-export const getUserTokens = async (filter: GetUserTokensFilter) => {
-  let baseQuery = `
-    select distinct on ("nte"."block")
-      "t"."contract",
-      "t"."token_id",
-      "t"."image",
-      "c"."id" as "collection_id",
-      "c"."name" as "collection_name",
-      "o"."amount" as "token_count",
-      (case when "t"."floor_sell_hash" is not null
-        then 1
-        else 0
-      end)::numeric(78, 0) as "on_sale_count",
-      "t"."floor_sell_value",
-      "t"."top_buy_value",
-      "o"."amount" * "t"."top_buy_value" as "total_buy_value",
-      coalesce("b"."timestamp", extract(epoch from now())::int) as "last_acquired_at"
-    from "tokens" "t"
-    join "collections" "c"
-      on "t"."collection_id" = "c"."id"
-    join "ownerships" "o"
-      on "t"."contract" = "o"."contract"
-      and "t"."token_id" = "o"."token_id"
-      and "o"."amount" > 0
-    left join "orders" "os"
-      on "t"."floor_sell_hash" = "os"."hash"
-    left join "orders" "ob"
-      on "t"."top_buy_hash" = "ob"."hash"
-    join "nft_transfer_events" "nte"
-      on "t"."contract" = "nte"."address"
-      and "t"."token_id" = "nte"."token_id"
-    left join "blocks" "b"
-      on "nte"."block" = "b"."block"
-  `;
-
-  // Filters
-  const conditions: string[] = [`"o"."owner" = $/user/`];
-  if (filter.community) {
-    conditions.push(`"c"."community" = $/community/`);
-  }
-  if (filter.collection) {
-    conditions.push(`"c"."id" = $/collection/`);
-  }
-  if (filter.hasOffer) {
-    conditions.push(`"t"."top_buy_hash" is not null`);
-  }
-  if (conditions.length) {
-    baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
-  }
-
-  // Sorting
-  baseQuery += ` order by "nte"."block" desc`;
-
-  // Pagination
-  baseQuery += ` offset $/offset/`;
-  baseQuery += ` limit $/limit/`;
-
-  return db.manyOrNone(baseQuery, filter).then((result) =>
-    result.map((r) => ({
-      token: {
-        contract: r.contract,
-        tokenId: r.token_id,
-        image: r.image,
-        collection: {
-          id: r.collection_id,
-          name: r.collection_name,
-        },
-      },
-      ownership: {
-        tokenCount: r.token_count,
-        onSaleCount: r.on_sale_count,
-        floorSellValue: r.floor_sell_value,
-        topBuyValue: r.top_buy_value,
-        totalBuyValue: r.total_buy_value,
-        lastAcquiredAt: r.last_acquired_at,
       },
     }))
   );

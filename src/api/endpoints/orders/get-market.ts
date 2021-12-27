@@ -1,9 +1,8 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { formatEth } from "@/common/bignumber";
 import { logger } from "@/common/logger";
-import * as queries from "@/entities/orders/get_market";
+import * as queries from "@/entities/orders/get-market";
 
 export const getMarketOptions: RouteOptions = {
   description: "Get market depth information",
@@ -50,18 +49,7 @@ export const getMarketOptions: RouteOptions = {
     try {
       const market = await queries.getMarket(query as queries.GetMarketFilter);
 
-      return {
-        market: {
-          buys: market.buys.map(({ value, quantity }) => ({
-            value: formatEth(value),
-            quantity: Number(quantity),
-          })),
-          sells: market.sells.map(({ value, quantity }) => ({
-            value: formatEth(value),
-            quantity: Number(quantity),
-          })),
-        },
-      };
+      return { market };
     } catch (error) {
       logger.error("get_market_handler", `Handler failure: ${error}`);
       throw error;

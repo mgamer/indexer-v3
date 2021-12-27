@@ -1,3 +1,4 @@
+import { formatEth } from "@/common/bignumber";
 import { db, pgp } from "@/common/db";
 
 export type GetMarketFilter = {
@@ -7,14 +8,15 @@ export type GetMarketFilter = {
   attributes?: { [key: string]: string };
 };
 
-type DepthInfo = {
-  value: string;
-  quantity: string;
-};
-
 export type GetMarketResponse = {
-  buys: DepthInfo[];
-  sells: DepthInfo[];
+  buys: {
+    value: number;
+    quantity: number;
+  }[];
+  sells: {
+    value: number;
+    quantity: number;
+  }[];
 };
 
 export const getMarket = async (
@@ -23,8 +25,13 @@ export const getMarket = async (
   // For safety, we cap the number of results that can get returned
   const limit = 100;
 
-  let buys: DepthInfo[] = [];
-  let sells: DepthInfo[] = [];
+  type RawDepthInfo = {
+    value: string;
+    quantity: string;
+  };
+
+  let buys: RawDepthInfo[] = [];
+  let sells: RawDepthInfo[] = [];
 
   if (filter.contract && filter.tokenId) {
     buys = await db.manyOrNone(
@@ -138,5 +145,14 @@ export const getMarket = async (
     );
   }
 
-  return { buys, sells };
+  return {
+    buys: buys.map(({ value, quantity }) => ({
+      value: formatEth(value),
+      quantity: Number(quantity),
+    })),
+    sells: sells.map(({ value, quantity }) => ({
+      value: formatEth(value),
+      quantity: Number(quantity),
+    })),
+  };
 };

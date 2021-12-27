@@ -5,7 +5,6 @@ import cron from "node-cron";
 import { db, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { acquireLock, redis } from "@/common/redis";
-import { Token } from "@/common/types";
 import { config } from "@/config/index";
 
 // For filling collections/tokens metadata information, we rely
@@ -29,7 +28,7 @@ const queue = new Queue(JOB_NAME, {
 });
 new QueueScheduler(JOB_NAME, { connection: redis });
 
-const addToQueue = async (tokens: Token[]) => {
+const addToQueue = async (tokens: { contract: string; tokenId: string }[]) => {
   const jobs: any[] = [];
   for (const token of tokens) {
     jobs.push({

@@ -1,46 +1,5 @@
+import { formatEth } from "@/common/bignumber";
 import { db } from "@/common/db";
-
-export type GetAttributesFilter = {
-  contract?: string;
-  tokenId?: string;
-  collection?: string;
-};
-
-export const getAttributes = async (filter: GetAttributesFilter) => {
-  let baseQuery = `
-    select
-      "a"."key",
-      "a"."value",
-      count(*) as "count"
-    from "attributes" "a"
-    join "tokens" "t"
-      on "a"."contract" = "t"."contract"
-      and "a"."token_id" = "t"."token_id"
-  `;
-
-  // Filters
-  const conditions: string[] = [];
-  if (filter.contract) {
-    conditions.push(`"a"."contract" = $/contract/`);
-  }
-  if (filter.tokenId) {
-    conditions.push(`"a"."token_id" = $/tokenId/`);
-  }
-  if (filter.collection) {
-    conditions.push(`"t"."collection_id" = $/collection/`);
-  }
-  if (conditions.length) {
-    baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
-  }
-
-  // Grouping
-  baseQuery += ` group by "a"."key", "a"."value"`;
-
-  // Sorting
-  baseQuery += ` order by "count" desc, "a"."key" asc nulls last`;
-
-  return db.manyOrNone(baseQuery, filter);
-};
 
 export type GetCollectionAttributesFilter = {
   collection: string;
@@ -52,9 +11,34 @@ export type GetCollectionAttributesFilter = {
   limit: number;
 };
 
+export type GetCollectionAttributesResponse = {
+  key: string;
+  value: string;
+  set: {
+    tokenCount: number;
+    onSaleCount: number;
+    uniqueOwnersCount: number;
+    sampleImages: string[];
+    market: {
+      floorSell: {
+        hash: string | null;
+        value: number | null;
+        maker: string | null;
+        validFrom: number | null;
+      };
+      topBuy: {
+        hash: string | null;
+        value: number | null;
+        maker: string | null;
+        validFrom: number | null;
+      };
+    };
+  };
+}[];
+
 export const getCollectionAttributes = async (
   filter: GetCollectionAttributesFilter
-) => {
+): Promise<GetCollectionAttributesResponse> => {
   let baseQuery = `
     select
       "x".*,
@@ -139,14 +123,14 @@ export const getCollectionAttributes = async (
       key: r.key,
       value: r.value,
       set: {
-        token_count: r.token_count,
-        on_sale_count: r.on_sale_count,
-        unique_owners_count: r.unique_owners_count,
-        sample_images: r.sample_images,
+        tokenCount: Number(r.token_count),
+        onSaleCount: Number(r.on_sale_count),
+        uniqueOwnersCount: Number(r.unique_owners_count),
+        sampleImages: r.sample_images,
         market: {
           floorSell: {
             hash: r.floor_sell_hash,
-            value: r.floor_sell_value,
+            value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
             maker: r.floor_sell_maker,
             validFrom: r.floor_sell_valid_from,
           },

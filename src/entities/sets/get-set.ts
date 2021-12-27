@@ -1,13 +1,35 @@
+import { formatEth } from "@/common/bignumber";
 import { db, pgp } from "@/common/db";
 
-export type GetSetsFilter = {
+export type GetSetFilter = {
   contract?: string;
   tokenId?: string;
   collection?: string;
   attributes?: { [key: string]: string };
 };
 
-export const getSets = async (filter: GetSetsFilter) => {
+export type GetSetResponse = {
+  tokenCount: number;
+  onSaleCount: number;
+  uniqueOwnersCount: number;
+  sampleImages: string[];
+  market: {
+    floorSell: {
+      hash: string | null;
+      value: number | null;
+      maker: string | null;
+      validFrom: number | null;
+    };
+    topBuy: {
+      hash: string | null;
+      value: number | null;
+      maker: string | null;
+      validFrom: number | null;
+    };
+  };
+} | null;
+
+export const getSet = async (filter: GetSetFilter): Promise<GetSetResponse> => {
   let baseQuery: string | undefined;
   if (filter.contract && filter.tokenId) {
     // Handle single token sets
@@ -117,14 +139,14 @@ export const getSets = async (filter: GetSetsFilter) => {
 
   if (baseQuery) {
     return db.oneOrNone(baseQuery, filter).then((r) => ({
-      tokenCount: r.token_count,
-      onSaleCount: r.on_sale_count,
-      uniqueOwnersCount: r.unique_owners_count,
+      tokenCount: Number(r.token_count),
+      onSaleCount: Number(r.on_sale_count),
+      uniqueOwnersCount: Number(r.unique_owners_count),
       sampleImages: r.sample_images,
       market: {
         floorSell: {
           hash: r.floor_sell_hash,
-          value: r.floor_sell_value,
+          value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
           maker: r.floor_sell_maker,
           validFrom: r.floor_sell_valid_from,
         },

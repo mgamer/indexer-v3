@@ -1,6 +1,7 @@
+import { formatEth } from "@/common/bignumber";
 import { db } from "@/common/db";
 
-export type GetOwnersFilter = {
+export type GetOwnershipsFilter = {
   contract?: string;
   tokenId?: string;
   collection?: string;
@@ -10,7 +11,21 @@ export type GetOwnersFilter = {
   limit: number;
 };
 
-export const getOwners = async (filter: GetOwnersFilter) => {
+export type GetOwnershipsResponse = {
+  address: string;
+  ownership: {
+    tokenCount: number;
+    onSaleCount: number;
+    floorSellValue: number | null;
+    topBuyValue: number | null;
+    totalBuyValue: number | null;
+    lastAcquiredAt: number | null;
+  };
+}[];
+
+export const getOwnerships = async (
+  filter: GetOwnershipsFilter
+): Promise<GetOwnershipsResponse> => {
   let baseQuery = `
     select
       "o"."owner",
@@ -79,11 +94,13 @@ export const getOwners = async (filter: GetOwnersFilter) => {
     result.map((r) => ({
       address: r.owner,
       ownership: {
-        tokenCount: r.token_count,
-        onSaleCount: r.on_sale_count,
-        floorSellValue: r.floor_sell_value,
-        topBuyValue: r.top_buy_value,
-        totalBuyValue: r.total_buy_value,
+        tokenCount: Number(r.token_count),
+        onSaleCount: Number(r.on_sale_count),
+        floorSellValue: r.floor_sell_value
+          ? formatEth(r.floor_sell_value)
+          : null,
+        topBuyValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+        totalBuyValue: r.total_buy_value ? formatEth(r.total_buy_value) : null,
         lastAcquiredAt: r.last_acquired_at,
       },
     }))

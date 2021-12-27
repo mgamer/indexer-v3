@@ -2,31 +2,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import * as queries from "@/entities/transfers";
-
-const getTransfersResponse = Joi.object({
-  transfers: Joi.array().items(
-    Joi.object({
-      contract: Joi.string(),
-      tokenId: Joi.string(),
-      token: Joi.object({
-          name: Joi.string(),
-          image: Joi.string()
-      }),
-      collection: Joi.object({
-          id: Joi.string(),
-          name: Joi.string()
-      }),
-      from: Joi.string(),
-      to: Joi.string(),
-      amount: Joi.string(),
-      txHash: Joi.string(),
-      block: Joi.number(),
-      timestamp: Joi.number(),
-      price: Joi.string().allow(null)
-    })
-  ),
-}).label("getTransfersResponse");
+import * as queries from "@/entities/transfers/get-transfers";
 
 export const getTransfersOptions: RouteOptions = {
   description: "Get transfer events",
@@ -47,12 +23,31 @@ export const getTransfersOptions: RouteOptions = {
       .or("collection", "contract", "account"),
   },
   response: {
-    schema: getTransfersResponse,
+    schema: Joi.object({
+      transfers: Joi.array().items(
+        Joi.object({
+          contract: Joi.string(),
+          tokenId: Joi.string(),
+          token: Joi.object({
+            name: Joi.string(),
+            image: Joi.string(),
+          }),
+          collection: Joi.object({
+            id: Joi.string(),
+            name: Joi.string(),
+          }),
+          from: Joi.string(),
+          to: Joi.string(),
+          amount: Joi.number(),
+          txHash: Joi.string(),
+          block: Joi.number(),
+          timestamp: Joi.number(),
+          price: Joi.number().allow(null),
+        })
+      ),
+    }).label("getTransfersResponse"),
     failAction: (_request, _h, error) => {
-      logger.error(
-        "get_transfers_handler",
-        `Wrong response schema: ${error}`
-      );
+      logger.error("get_transfers_handler", `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -63,6 +58,7 @@ export const getTransfersOptions: RouteOptions = {
       const transfers = await queries.getTransfers(
         query as queries.GetTransfersFilter
       );
+
       return { transfers };
     } catch (error) {
       logger.error("get_transfers_handler", `Handler failure: ${error}`);
