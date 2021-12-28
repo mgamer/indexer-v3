@@ -1,9 +1,7 @@
-import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 
 import { bn } from "@/common/bignumber";
 import { db, pgp } from "@/common/db";
-import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import {
   TokenSetInfo,
@@ -12,109 +10,6 @@ import {
   generateCollectionInfo,
 } from "@/orders/utils";
 import { addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
-
-export const filterOrders = async (
-  orders: Sdk.WyvernV2.Order[]
-): Promise<Sdk.WyvernV2.Order[]> => {
-  if (!orders.length) {
-    return [];
-  }
-
-  // Get the kinds of all contracts targeted by the orders
-  const contracts: { address: string; kind: string }[] = await db.manyOrNone(
-    `select distinct "address", "kind" from "contracts" where "address" in ($1:csv)`,
-    [orders.map((order) => order.params.target)]
-  );
-
-  const contractKinds = new Map<string, string>();
-  for (const { address, kind } of contracts) {
-    contractKinds.set(address, kind);
-  }
-
-  // Get all orders we're already storing
-  const hashes: { hash: string }[] = await db.manyOrNone(
-    `select "hash" from "orders" where "hash" in ($1:csv)`,
-    [orders.map((order) => order.prefixHash())]
-  );
-
-  const existingHashes = new Set<string>();
-  for (const { hash } of hashes) {
-    existingHashes.add(hash);
-  }
-
-  const validOrders: Sdk.WyvernV2.Order[] = [];
-  for (const order of orders) {
-    const hash = order.prefixHash();
-
-    // Check: order doesn't already exist
-    if (existingHashes.has(hash)) {
-      console.log("order already exists", hash);
-      continue;
-    }
-
-    // Check: order is not expired
-    const currentTime = Math.floor(Date.now() / 1000);
-    const expirationTime = order.params.expirationTime;
-    if (expirationTime !== 0 && currentTime >= expirationTime) {
-      console.log("order expired");
-      continue;
-    }
-
-    // Check: buy order has Weth as payment token
-    if (
-      order.params.side === 0 &&
-      order.params.paymentToken !== Sdk.Common.Addresses.Weth[config.chainId]
-    ) {
-      console.log("order wrong payment token");
-      continue;
-    }
-
-    // Check: sell order has Eth as payment token
-    if (
-      order.params.side === 1 &&
-      order.params.paymentToken !== Sdk.Common.Addresses.Eth[config.chainId]
-    ) {
-      console.log("order wrong payment token");
-      continue;
-    }
-
-    // Check: order is not private
-    if (order.params.taker !== AddressZero) {
-      console.log("order is private");
-      continue;
-    }
-
-    // Check: order has a valid kind
-    if (!order.hasValidKind()) {
-      console.log("order wrong kind");
-      continue;
-    }
-
-    // Check: order has a valid target
-    if (
-      !order.params.kind?.startsWith(contractKinds.get(order.params.target)!)
-    ) {
-      console.log("order wrong target");
-      continue;
-    }
-
-    // Check: order has a valid signature
-    if (!(await order.hasValidSignature())) {
-      console.log("order wrong signature");
-      continue;
-    }
-
-    // Check: order is fillable
-    if (!(await order.isFillable(baseProvider))) {
-      console.log("order not fillable");
-      continue;
-    }
-
-    validOrders.push(order);
-  }
-
-  return validOrders;
-};
 
 type OrderInfo = {
   kind: TokenSetLabelKind;
@@ -486,6 +381,7 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
           "status",
           "side",
           "token_set_id",
+          "token_set_label_hash",
           "maker",
           "price",
           "value",
@@ -499,6 +395,7 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
           $/status/,
           $/side/,
           $/tokenSetId/,
+          $/tokenSetLabelHash/,
           $/maker/,
           $/price/,
           $/value/,
@@ -510,6 +407,7 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
         update set
           "side" = $/side/,
           "token_set_id" = $/tokenSetId/,
+          "token_set_label_hash" = $/tokenSetLabelHash/,
           "maker" = $/maker/,
           "price" = $/price/,
           "value" = $/value/,
@@ -524,6 +422,7 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
         status: "valid",
         side,
         tokenSetId: tokenSetInfo.id,
+        tokenSetLabelHash: tokenSetInfo.labelHash,
         maker: order.params.maker,
         price: order.params.basePrice,
         value,
@@ -545,151 +444,4 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
   await addToOrdersUpdateByHashQueue(
     orders.map((order) => ({ hash: order.prefixHash() }))
   );
-};
-
-export type BuildOrderOptions = {
-  contract?: string;
-  tokenId?: string;
-  collection?: string;
-  maker: string;
-  side: "buy" | "sell";
-  price: string;
-  fee: number;
-  feeRecipient: string;
-  listingTime?: number;
-  expirationTime?: number;
-  salt?: string;
-};
-
-export const buildOrder = async (options: BuildOrderOptions) => {
-  try {
-    const buildParams: any = {
-      maker: options.maker,
-      side: options.side,
-      price: options.price,
-      paymentToken:
-        options.side === "buy"
-          ? Sdk.Common.Addresses.Weth[config.chainId]
-          : Sdk.Common.Addresses.Eth[config.chainId],
-      fee: options.fee,
-      feeRecipient: options.feeRecipient,
-      listingTime: options.listingTime,
-      expirationTime: options.expirationTime,
-      salt: options.salt,
-    };
-
-    if (options.contract && options.tokenId) {
-      const { contract, tokenId } = options;
-
-      const data = await db.oneOrNone(
-        `
-          select "c"."kind" from "tokens" "t"
-          join "contracts" "c"
-            on "t"."contract" = "c"."address"
-          where "t"."contract" = $/contract/
-            and "t"."token_id" = $/tokenId/
-        `,
-        { contract, tokenId }
-      );
-
-      if (data.kind === "erc721") {
-        const builder = new Sdk.WyvernV2.Builders.Erc721.SingleToken(
-          config.chainId
-        );
-
-        buildParams.contract = contract;
-        buildParams.tokenId = tokenId;
-
-        return builder.build(buildParams);
-      } else if (data.kind === "erc1155") {
-        const builder = new Sdk.WyvernV2.Builders.Erc1155.SingleToken(
-          config.chainId
-        );
-
-        buildParams.contract = contract;
-        buildParams.tokenId = tokenId;
-
-        return builder.build(buildParams);
-      }
-
-      return undefined;
-    } else if (options.collection) {
-      const { collection } = options;
-
-      const data = await db.oneOrNone(
-        `
-          select
-            "co"."kind",
-            "cl"."contract",
-            lower("cl"."token_id_range") as "start_token_id",
-            upper("cl"."token_id_range") as "end_token_id"
-          from "collections" "cl"
-          join "contracts" "co"
-            on "cl"."contract" = "co"."address"
-          where "cl"."id" = $/collection/
-        `,
-        { collection }
-      );
-
-      if (data.kind === "erc721") {
-        if (data.contract && data.start_token_id && data.end_token_id) {
-          // Collection is a range of tokens within a contract
-
-          const builder = new Sdk.WyvernV2.Builders.Erc721.TokenRange(
-            config.chainId
-          );
-
-          buildParams.contract = data.contract;
-          buildParams.startTokenId = data.start_token_id;
-          buildParams.endTokenId = data.end_token_id;
-
-          return builder.build(buildParams);
-        } else if (data.contract) {
-          // Collection is a full contract
-
-          const builder = new Sdk.WyvernV2.Builders.Erc721.ContractWide(
-            config.chainId
-          );
-
-          buildParams.contract = data.contract;
-
-          return builder.build(buildParams);
-        }
-
-        return undefined;
-      } else if (data.kind === "erc1155") {
-        if (data.contract && data.start_token_id && data.end_token_id) {
-          // Collection is a range of tokens within a contract
-
-          const builder = new Sdk.WyvernV2.Builders.Erc1155.TokenRange(
-            config.chainId
-          );
-
-          buildParams.contract = data.contract;
-          buildParams.startTokenId = data.start_token_id;
-          buildParams.endTokenId = data.end_token_id;
-
-          return builder.build(buildParams);
-        } else if (data.contract) {
-          // Collection is a full contract
-
-          const builder = new Sdk.WyvernV2.Builders.Erc1155.ContractWide(
-            config.chainId
-          );
-
-          buildParams.contract = data.contract;
-
-          return builder.build(buildParams);
-        }
-
-        return undefined;
-      }
-
-      return undefined;
-    }
-  } catch {
-    return undefined;
-  }
-
-  return undefined;
 };
