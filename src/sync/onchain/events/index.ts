@@ -52,11 +52,14 @@ export const sync = async (
 // Newly added contract kinds should all make it into the below lists
 
 export type ContractKind =
-  // | "orderbook"
-  "erc20" | "erc721" | "erc1155" | "wyvern-v2";
+  | "orderbook"
+  | "erc20"
+  | "erc721"
+  | "erc1155"
+  | "wyvern-v2";
 
 export const contractKinds: ContractKind[] = [
-  // "orderbook",
+  "orderbook",
   "erc20",
   "erc721",
   "erc1155",
@@ -68,9 +71,9 @@ export const getContractInfo = (
   address: string[] = []
 ): ContractInfo => {
   switch (contractKind) {
-    // case "orderbook": {
-    //   return orderbook.getContractInfo(address);
-    // }
+    case "orderbook": {
+      return orderbook.getContractInfo(address);
+    }
     case "erc20": {
       return erc20.getContractInfo(address);
     }

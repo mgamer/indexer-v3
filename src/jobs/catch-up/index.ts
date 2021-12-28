@@ -20,6 +20,11 @@ if (config.doBackgroundWork) {
       try {
         // Sync events
         for (const contractKind of contractKinds) {
+          // For now, skip orderbook indexing
+          if (contractKind === "orderbook") {
+            continue;
+          }
+
           await addToEventsSyncCatchupQueue(contractKind);
         }
       } catch (error) {
