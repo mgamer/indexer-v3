@@ -34,7 +34,7 @@ export const getUserTokens = async (
   filter: GetUserTokensFilter
 ): Promise<GetUserTokensResponse> => {
   let baseQuery = `
-    select distinct on ("nte"."block")
+    select distinct on ("t"."contract", "t"."token_id")
       "t"."contract",
       "t"."token_id",
       "t"."image",
@@ -48,6 +48,7 @@ export const getUserTokens = async (
       "t"."floor_sell_value",
       "t"."top_buy_value",
       "o"."amount" * "t"."top_buy_value" as "total_buy_value",
+      "b"."block",
       coalesce("b"."timestamp", extract(epoch from now())::int) as "last_acquired_at"
     from "tokens" "t"
     join "collections" "c"
@@ -83,7 +84,22 @@ export const getUserTokens = async (
   }
 
   // Sorting
-  baseQuery += ` order by "nte"."block" desc`;
+  baseQuery = `
+    select
+      "x"."contract",
+      "x"."token_id",
+      "x"."image",
+      "x"."collection_id",
+      "x"."collection_name",
+      "x"."token_count",
+      "x"."on_sale_count",
+      "x"."floor_sell_value",
+      "x"."top_buy_value",
+      "x"."total_buy_value",
+      "x"."last_acquired_at"
+    from (${baseQuery}) "x"
+    order by "x"."block" desc nulls last
+  `;
 
   // Pagination
   baseQuery += ` offset $/offset/`;
