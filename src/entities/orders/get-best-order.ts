@@ -45,7 +45,13 @@ export const getBestOrder = async (
     return null;
   }
 
-  return db.oneOrNone(baseQuery, filter).then((r) => ({
-    rawData: r.raw_data,
-  }));
+  return db.oneOrNone(baseQuery, filter).then((r) => {
+    if (r) {
+      return {
+        rawData: r.raw_data,
+      };
+    }
+
+    return null;
+  });
 };
