@@ -25,7 +25,6 @@ export type GetCollectionsResponse = {
   set: {
     tokenCount: number;
     onSaleCount: number;
-    uniqueOwnersCount: number;
     sampleImages: string[];
     market: {
       floorSell: {
@@ -57,7 +56,6 @@ export const getCollections = async (
       "c"."royalty_recipient",
       "cs"."token_count",
       "cs"."on_sale_count",
-      "cs"."unique_owners_count",
       "cs"."sample_images",
       "cs"."floor_sell_hash",
       "os"."value" as "floor_sell_value",
@@ -126,7 +124,6 @@ export const getCollections = async (
       set: {
         tokenCount: Number(r.token_count),
         onSaleCount: Number(r.on_sale_count),
-        uniqueOwnersCount: Number(r.unique_owners_count),
         sampleImages: r.sample_images,
         market: {
           floorSell: {

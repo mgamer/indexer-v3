@@ -30,8 +30,6 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     primaryKey: ["contract", "token_id", "key", "value"],
   });
 
-  pgm.addIndex("attributes", ["key", "value", "contract", "token_id"]);
-
   pgm.addColumns("collections", {
     filterable_attribute_keys: {
       type: "jsonb",
@@ -61,8 +59,6 @@ export async function down(pgm: MigrationBuilder): Promise<void> {
     "filterable_attribute_keys",
     "sortable_attribute_keys",
   ]);
-
-  pgm.dropIndex("attributes", ["key", "value", "contract", "token_id"]);
 
   pgm.dropTable("attributes");
 

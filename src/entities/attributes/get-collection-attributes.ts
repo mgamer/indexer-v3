@@ -5,7 +5,7 @@ export type GetCollectionAttributesFilter = {
   collection: string;
   attribute?: string;
   onSaleCount?: number;
-  sortBy?: "key" | "floorSellValue" | "topBuyValue" | "floorCap";
+  sortBy?: "key" | "floorSellValue" | "floorCap";
   sortDirection?: "asc" | "desc";
   offset: number;
   limit: number;
@@ -17,7 +17,6 @@ export type GetCollectionAttributesResponse = {
   set: {
     tokenCount: number;
     onSaleCount: number;
-    uniqueOwnersCount: number;
     sampleImages: string[];
     market: {
       floorSell: {
@@ -40,46 +39,22 @@ export const getCollectionAttributes = async (
   filter: GetCollectionAttributesFilter
 ): Promise<GetCollectionAttributesResponse> => {
   let baseQuery = `
-    select
-      "x".*,
-      "y".*
-    from (
+    with "x" as (
       select
         "a"."key",
         "a"."value",
         count(distinct("t"."token_id")) as "token_count",
         count(distinct("t"."token_id")) filter (where "t"."floor_sell_hash" is not null) as "on_sale_count",
-        count(distinct("o"."owner")) filter (where "o"."amount" > 0) as "unique_owners_count",
-        (array_agg("t"."image"))[1:4] as "sample_images"
+        (array_agg("t"."image"))[1:4] as "sample_images",
+        min("t"."floor_sell_value") as "floor_sell_value"
       from "attributes" "a"
       join "tokens" "t"
         on "a"."contract" = "t"."contract"
         and "a"."token_id" = "t"."token_id"
-      left join "ownerships" "o"
-        on "a"."contract" = "o"."contract"
-        and "a"."token_id" = "o"."token_id"
-        and "o"."amount" > 0
-      group by "a"."key", "a"."value"
-    ) "x"
-    join (
-      select distinct on ("a"."key", "a"."value")
-        "a"."key",
-        "a"."value",
-        "t"."floor_sell_hash",
-        "t"."floor_sell_value",
-        "o"."maker" as "floor_sell_maker",
-        date_part('epoch', lower("o"."valid_between")) as "floor_sell_valid_from"
-      from "attributes" "a"
-      join "tokens" "t"
-        on "a"."contract" = "t"."contract"
-        and "a"."token_id" = "t"."token_id"
-      join "orders" "o"
-        on "t"."floor_sell_hash" = "o"."hash"
       where "t"."collection_id" = $/collection/
-      order by "a"."key", "a"."value", "t"."floor_sell_value" asc
-    ) "y"
-      on "x"."key" = "y"."key"
-      and "x"."value" = "y"."value"
+      group by "a"."key", "a"."value"
+    )
+    select * from "x"
   `;
 
   // Filters
@@ -125,14 +100,15 @@ export const getCollectionAttributes = async (
       set: {
         tokenCount: Number(r.token_count),
         onSaleCount: Number(r.on_sale_count),
-        uniqueOwnersCount: Number(r.unique_owners_count),
         sampleImages: r.sample_images,
         market: {
+          // TODO: Find an efficient way to return all of these
+          // fields from the query, not only the value
           floorSell: {
-            hash: r.floor_sell_hash,
+            hash: null,
             value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-            maker: r.floor_sell_maker,
-            validFrom: r.floor_sell_valid_from,
+            maker: null,
+            validFrom: null,
           },
           // TODO: Once attribute-based orders are live, these fields
           // will need to be queried and populated in the response
