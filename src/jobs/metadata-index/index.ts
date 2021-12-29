@@ -126,6 +126,10 @@ if (config.doBackgroundWork) {
             royaltyRecipient: data.collection.royaltyRecipient,
             community: data.collection.community,
             contract: data.collection.contract,
+            // TODO: Set `token_id_range` as `null` instead of `numrange(null, null)`
+            // if the token id range information is missing from metadata. Right now,
+            // both `null` and `numrange(null, null)` are treated as missing data,
+            // but we should make this more consistent.
             startTokenId: data.collection.tokenRange?.[0],
             endTokenId: data.collection.tokenRange?.[1],
             filterableAttributeKeys: data.collection.filters,

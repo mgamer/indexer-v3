@@ -11,7 +11,6 @@ export type GetSetFilter = {
 export type GetSetResponse = {
   tokenCount: number;
   onSaleCount: number;
-  uniqueOwnersCount: number;
   sampleImages: string[];
   market: {
     floorSell: {
@@ -46,14 +45,10 @@ export const getSet = async (filter: GetSetFilter): Promise<GetSetResponse> => {
         select
           count(distinct("t"."token_id")) as "token_count",
           count(distinct("t"."token_id")) filter (where "t"."floor_sell_hash" is not null) as "on_sale_count",
-          count(distinct("o"."owner")) filter (where "o"."amount" > 0) as "unique_owners_count",
           (array_agg("t"."image"))[1:1] as "sample_images",
           max("t"."floor_sell_hash") as "floor_sell_hash",
           max("t"."top_buy_hash") as "top_buy_hash"
         from "tokens" "t"
-        join "ownerships" "o"
-          on "t"."contract" = "o"."contract"
-          and "t"."token_id" = "o"."token_id"
         where "t"."contract" = $/contract/
           and "t"."token_id" = $/tokenId/
         group by "t"."contract", "t"."token_id"
@@ -85,15 +80,11 @@ export const getSet = async (filter: GetSetFilter): Promise<GetSetResponse> => {
           "a"."value",
           count(distinct("t"."token_id")) as "token_count",
           count(distinct("t"."token_id")) filter (where "t"."floor_sell_hash" is not null) as "on_sale_count",
-          count(distinct("o"."owner")) filter (where "o"."amount" > 0) AS "unique_owners_count",
           (array_agg("t"."image"))[1:4] as "sample_images"
         from "tokens" "t"
         join "attributes" "a"
           on "t"."contract" = "a"."contract"
           and "t"."token_id" = "a"."token_id"
-        join "ownerships" "o"
-          on "t"."contract" = "o"."contract"
-          and "t"."token_id" = "o"."token_id"
         where "t"."collection_id" = $/collection/
           and ("a"."key", "a"."value") in (${values})
         group by "a"."key", "a"."value"
@@ -141,7 +132,6 @@ export const getSet = async (filter: GetSetFilter): Promise<GetSetResponse> => {
     return db.oneOrNone(baseQuery, filter).then((r) => ({
       tokenCount: Number(r.token_count),
       onSaleCount: Number(r.on_sale_count),
-      uniqueOwnersCount: Number(r.unique_owners_count),
       sampleImages: r.sample_images,
       market: {
         floorSell: {

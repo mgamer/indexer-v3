@@ -94,6 +94,14 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
   pgm.createIndex("tokens", ["top_buy_hash"]);
   pgm.createIndex("tokens", ["contract", "top_buy_value"]);
   pgm.createIndex("tokens", ["contract", "token_id", "top_buy_value"]);
+
+  // References:
+  // - https://www.lob.com/blog/supercharge-your-postgresql-performance
+  // - https://klotzandrew.com/blog/posgres-per-table-autovacuum-management
+  pgm.sql(`alter table "tokens" set (autovacuum_vacuum_scale_factor = 0.0)`);
+  pgm.sql(`alter table "tokens" set (autovacuum_vacuum_threshold = 5000)`);
+  pgm.sql(`alter table "tokens" set (autovacuum_analyze_scale_factor = 0.0)`);
+  pgm.sql(`alter table "tokens" set (autovacuum_analyze_threshold = 5000)`);
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
