@@ -79,12 +79,12 @@ export const getCollectionAttributes = async (
     }
 
     case "floorSellValue": {
-      baseQuery += ` order by "y"."floor_sell_value" ${filter.sortDirection} nulls last`;
+      baseQuery += ` order by "x"."floor_sell_value" ${filter.sortDirection} nulls last`;
       break;
     }
 
     case "floorCap": {
-      baseQuery += ` order by "y"."floor_sell_value" * "x"."token_count" ${filter.sortDirection} nulls last`;
+      baseQuery += ` order by "x"."floor_sell_value" * "x"."token_count" ${filter.sortDirection} nulls last`;
       break;
     }
   }
