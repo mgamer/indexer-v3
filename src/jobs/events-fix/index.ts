@@ -87,31 +87,38 @@ if (config.doBackgroundWork) {
 
         for (const [block, blockHash] of wrongBlocks.entries()) {
           for (const contractKind of contractKinds) {
-            // Skip fixing any events that are not synced from the
-            // base network (eg. orderbook events)
-            const contractInfo = getContractInfo(contractKind);
-            if (
-              contractInfo.provider._network.chainId !==
-              baseProvider._network.chainId
-            ) {
-              continue;
+            try {
+              // Skip fixing any events that are not synced from the
+              // base network (eg. orderbook events)
+              const contractInfo = getContractInfo(contractKind);
+              if (
+                contractInfo.provider._network.chainId !==
+                baseProvider._network.chainId
+              ) {
+                continue;
+              }
+
+              // Fix wrong event entries
+              await contractInfo.fixCallback(blockHash);
+
+              // Resync
+              const contracts =
+                require(`@/config/data/${config.chainId}/contracts.json`)[
+                  contractKind
+                ];
+              await addToEventsSyncBackfillQueue(
+                contractKind,
+                contracts,
+                block,
+                block,
+                { prioritized: true }
+              );
+            } catch (error) {
+              logger.error(
+                "events_fix_cron",
+                `Failed to check events for kind ${contractKind}: ${error}`
+              );
             }
-
-            // Fix wrong event entries
-            await contractInfo.fixCallback(blockHash);
-
-            // Resync
-            const contracts =
-              require(`@/config/data/${config.chainId}/contracts.json`)[
-                contractKind
-              ];
-            await addToEventsSyncBackfillQueue(
-              contractKind,
-              contracts,
-              block,
-              block,
-              { prioritized: true }
-            );
           }
         }
       } catch (error) {
