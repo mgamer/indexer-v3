@@ -18,6 +18,7 @@ export type GetTokensResponse = {
     contract: string;
     tokenId: string;
     kind: string;
+    name: string | null;
     image: string;
     collection: {
       id: string;
@@ -160,6 +161,7 @@ export const getTokens = async (
         contract: r.contract,
         tokenId: r.token_id,
         kind: r.kind,
+        name: r.name,
         image: r.image,
         collection: {
           id: r.collection_id,

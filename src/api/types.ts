@@ -2,6 +2,18 @@ import Joi from "joi";
 
 // Common Joi validation entities
 
+export const tokenFormat = Joi.object({
+  contract: Joi.string(),
+  kind: Joi.string(),
+  name: Joi.string().allow(null),
+  image: Joi.string(),
+  tokenId: Joi.string(),
+  collection: Joi.object({
+    id: Joi.string(),
+    name: Joi.string(),
+  }),
+});
+
 export const marketFormat = Joi.object({
   floorSell: {
     hash: Joi.string().allow(null),

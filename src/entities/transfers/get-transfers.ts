@@ -14,15 +14,16 @@ export type GetTransfersFilter = {
 };
 
 export type GetTransfersResponse = {
-  contract: string;
-  tokenId: string;
   token: {
-    name: string;
+    contract: string;
+    tokenId: string;
+    kind: string;
+    name: string | null;
     image: string;
-  };
-  collection: {
-    id: string;
-    name: string;
+    collection: {
+      id: string;
+      name: string;
+    };
   };
   from: string;
   to: string;
@@ -38,12 +39,13 @@ export const getTransfers = async (
 ): Promise<GetTransfersResponse> => {
   let baseQuery = `
     select
-      "nte"."address" as "contract",
-      "nte"."token_id" as "tokenId",
-      "t"."name" as "tokenName",
-      "t"."image" as "tokenImage",
-      "c"."id" as "collectionId",
-      "c"."name" as "collectionName",
+      "nte"."address",
+      "nte"."token_id",
+      "t"."name",
+      "t"."image",
+      "co"."kind",
+      "cl"."id" as "collection_id",
+      "cl"."name" as "collection_name",
       "nte"."from",
       "nte"."to",
       "nte"."amount",
@@ -55,8 +57,10 @@ export const getTransfers = async (
     join "tokens" "t"
       on "nte"."address" = "t"."contract"
       and "nte"."token_id" = "t"."token_id"
-    join "collections" "c"
-      on "t"."collection_id" = "c"."id"
+    join "collections" "cl"
+      on "t"."collection_id" = "cl"."id"
+    join "contracts" "co"
+      on "t"."contract" = "co"."address"
     left join "fill_events" "fe"
       on "nte"."tx_hash" = "fe"."tx_hash"
       and "nte"."from" = "fe"."maker"
@@ -109,7 +113,7 @@ export const getTransfers = async (
   }
 
   // Sorting
-  baseQuery += ` order by "nte"."block" desc`;
+  baseQuery += ` order by "nte"."block" desc nulls last`;
 
   // Pagination
   baseQuery += ` offset $/offset/`;
@@ -117,15 +121,16 @@ export const getTransfers = async (
 
   return db.manyOrNone(baseQuery, filter).then((result) =>
     result.map((r) => ({
-      contract: r.contract,
-      tokenId: r.tokenId,
       token: {
-        name: r.tokenName,
-        image: r.tokenImage,
-      },
-      collection: {
-        id: r.collectionId,
-        name: r.collectionName,
+        contract: r.contract,
+        tokenId: r.token_id,
+        kind: r.kind,
+        name: r.name,
+        image: r.mage,
+        collection: {
+          id: r.collection_id,
+          name: r.collection_name,
+        },
       },
       from: r.from,
       to: r.to,

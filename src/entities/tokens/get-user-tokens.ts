@@ -14,6 +14,7 @@ export type GetUserTokensResponse = {
   token: {
     contract: string;
     tokenId: string;
+    name: string | null;
     image: string;
     collection: {
       id: string;
@@ -37,6 +38,7 @@ export const getUserTokens = async (
     select distinct on ("t"."contract", "t"."token_id")
       "t"."contract",
       "t"."token_id",
+      "t"."name",
       "t"."image",
       "c"."id" as "collection_id",
       "c"."name" as "collection_name",
@@ -88,6 +90,7 @@ export const getUserTokens = async (
     select
       "x"."contract",
       "x"."token_id",
+      "x"."name",
       "x"."image",
       "x"."collection_id",
       "x"."collection_name",
@@ -110,6 +113,7 @@ export const getUserTokens = async (
       token: {
         contract: r.contract,
         tokenId: r.token_id,
+        name: r.name,
         image: r.image,
         collection: {
           id: r.collection_id,

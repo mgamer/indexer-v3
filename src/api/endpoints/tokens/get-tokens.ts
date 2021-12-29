@@ -1,7 +1,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { marketFormat } from "@/api/types";
+import { marketFormat, tokenFormat } from "@/api/types";
 import { logger } from "@/common/logger";
 import * as queries from "@/entities/tokens/get-tokens";
 
@@ -32,16 +32,7 @@ export const getTokensOptions: RouteOptions = {
     schema: Joi.object({
       tokens: Joi.array().items(
         Joi.object({
-          token: Joi.object({
-            contract: Joi.string(),
-            kind: Joi.string(),
-            image: Joi.string(),
-            tokenId: Joi.string(),
-            collection: Joi.object({
-              id: Joi.string(),
-              name: Joi.string(),
-            }),
-          }),
+          token: tokenFormat,
           market: marketFormat,
         })
       ),
