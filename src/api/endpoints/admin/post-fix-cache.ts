@@ -15,10 +15,12 @@ export const postFixCacheOptions: RouteOptions = {
     }).options({ allowUnknown: true }),
     payload: Joi.object({
       kind: Joi.string().valid("tokens-floor-sell", "tokens-top-buy"),
-      contract: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/)
-        .required(),
+      contracts: Joi.array().items(
+        Joi.string()
+          .lowercase()
+          .pattern(/^0x[a-f0-9]{40}$/)
+          .required()
+      ),
     }),
   },
   handler: async (request: Request) => {
@@ -30,71 +32,80 @@ export const postFixCacheOptions: RouteOptions = {
 
     try {
       const kind = payload.kind;
-      const contract = payload.contract;
+
+      let contracts = payload.contracts;
+      if (!contracts) {
+        const contractsData = require(`@/config/data/${config.chainId}/contracts.json`);
+        contracts = [...contractsData["erc721"], ...contractsData["erc1155"]];
+      }
 
       switch (kind) {
         case "tokens-floor-sell": {
-          await db.none(
-            `
-              update "tokens" "t" set
-                "floor_sell_hash" = "x"."hash",
-                "floor_sell_value" = "x"."value"
-              from (
-                select distinct on ("t"."contract", "t"."token_id")
-                  "t"."contract",
-                  "t"."token_id",
-                  "o"."value",
-                  "o"."hash"
-                from "tokens" "t"
-                left join "token_sets_tokens" "tst"
-                  on "t"."contract" = "tst"."contract"
-                  and "t"."token_id" = "tst"."token_id"
-                left join "orders" "o"
-                  on "tst"."token_set_id" = "o"."token_set_id"
-                  and "o"."side" = 'sell'
-                  and "o"."status" = 'valid'
-                  and "o"."valid_between" @> now()
-                where "t"."contract" = $/contract/
-                order by "t"."contract", "t"."token_id", "o"."value" asc nulls last
-              ) "x"
-              where "t"."contract" = "x"."contract"
-                and "t"."token_id" = "x"."token_id"
-            `,
-            { contract }
-          );
+          for (const contract of contracts) {
+            await db.none(
+              `
+                update "tokens" "t" set
+                  "floor_sell_hash" = "x"."hash",
+                  "floor_sell_value" = "x"."value"
+                from (
+                  select distinct on ("t"."contract", "t"."token_id")
+                    "t"."contract",
+                    "t"."token_id",
+                    "o"."value",
+                    "o"."hash"
+                  from "tokens" "t"
+                  left join "token_sets_tokens" "tst"
+                    on "t"."contract" = "tst"."contract"
+                    and "t"."token_id" = "tst"."token_id"
+                  left join "orders" "o"
+                    on "tst"."token_set_id" = "o"."token_set_id"
+                    and "o"."side" = 'sell'
+                    and "o"."status" = 'valid'
+                    and "o"."valid_between" @> now()
+                  where "t"."contract" = $/contract/
+                  order by "t"."contract", "t"."token_id", "o"."value" asc nulls last
+                ) "x"
+                where "t"."contract" = "x"."contract"
+                  and "t"."token_id" = "x"."token_id"
+              `,
+              { contract }
+            );
+          }
 
           break;
         }
 
         case "tokens-top-buy": {
-          await db.none(
-            `
-              update "tokens" "t" set
-                "top_buy_hash" = "x"."hash",
-                "top_buy_value" = "x"."value"
-              from (
-                select distinct on ("t"."contract", "t"."token_id")
-                  "t"."contract",
-                  "t"."token_id",
-                  "o"."value",
-                  "o"."hash"
-                from "tokens" "t"
-                left join "token_sets_tokens" "tst"
-                  on "t"."contract" = "tst"."contract"
-                  and "t"."token_id" = "tst"."token_id"
-                left join "orders" "o"
-                  on "tst"."token_set_id" = "o"."token_set_id"
-                  and "o"."side" = 'buy'
-                  and "o"."status" = 'valid'
-                  and "o"."valid_between" @> now()
-                where "t"."contract" = $/contract/
-                order by "t"."contract", "t"."token_id", "o"."value" desc nulls last
-              ) "x"
-              where "t"."contract" = "x"."contract"
-                and "t"."token_id" = "x"."token_id"
-            `,
-            { contract }
-          );
+          for (const contract of contracts) {
+            await db.none(
+              `
+                update "tokens" "t" set
+                  "top_buy_hash" = "x"."hash",
+                  "top_buy_value" = "x"."value"
+                from (
+                  select distinct on ("t"."contract", "t"."token_id")
+                    "t"."contract",
+                    "t"."token_id",
+                    "o"."value",
+                    "o"."hash"
+                  from "tokens" "t"
+                  left join "token_sets_tokens" "tst"
+                    on "t"."contract" = "tst"."contract"
+                    and "t"."token_id" = "tst"."token_id"
+                  left join "orders" "o"
+                    on "tst"."token_set_id" = "o"."token_set_id"
+                    and "o"."side" = 'buy'
+                    and "o"."status" = 'valid'
+                    and "o"."valid_between" @> now()
+                  where "t"."contract" = $/contract/
+                  order by "t"."contract", "t"."token_id", "o"."value" desc nulls last
+                ) "x"
+                where "t"."contract" = "x"."contract"
+                  and "t"."token_id" = "x"."token_id"
+              `,
+              { contract }
+            );
+          }
 
           break;
         }
