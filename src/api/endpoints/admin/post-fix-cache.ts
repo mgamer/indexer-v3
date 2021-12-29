@@ -40,7 +40,7 @@ export const postFixCacheOptions: RouteOptions = {
                 "floor_sell_hash" = "x"."hash",
                 "floor_sell_value" = "x"."value"
               from (
-                select distinct on ("t"."contract", "t"."token_id", "o"."value")
+                select distinct on ("t"."contract", "t"."token_id")
                   "t"."contract",
                   "t"."token_id",
                   "o"."value",
@@ -55,7 +55,7 @@ export const postFixCacheOptions: RouteOptions = {
                   and "o"."status" = 'valid'
                   and "o"."valid_between" @> now()
                 where "t"."contract" = $/contract/
-                order by "t"."contract", "t"."token_id", "o"."value" asc
+                order by "t"."contract", "t"."token_id", "o"."value" asc nulls last
               ) "x"
               where "t"."contract" = "x"."contract"
                 and "t"."token_id" = "x"."token_id"
@@ -73,7 +73,7 @@ export const postFixCacheOptions: RouteOptions = {
                 "top_buy_hash" = "x"."hash",
                 "top_buy_value" = "x"."value"
               from (
-                select distinct on ("t"."contract", "t"."token_id", "o"."value")
+                select distinct on ("t"."contract", "t"."token_id")
                   "t"."contract",
                   "t"."token_id",
                   "o"."value",
@@ -88,7 +88,7 @@ export const postFixCacheOptions: RouteOptions = {
                   and "o"."status" = 'valid'
                   and "o"."valid_between" @> now()
                 where "t"."contract" = $/contract/
-                order by "t"."contract", "t"."token_id", "o"."value" desc
+                order by "t"."contract", "t"."token_id", "o"."value" desc nulls last
               ) "x"
               where "t"."contract" = "x"."contract"
                 and "t"."token_id" = "x"."token_id"
