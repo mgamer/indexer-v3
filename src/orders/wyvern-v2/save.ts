@@ -201,7 +201,9 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
                 "c"."id"
               from "collections" "c"
               where "c"."contract" = $/contract/
-                and "c"."token_id_range" is null
+                and (
+                  "c"."token_id_range" is null or "c"."token_id_range" = numrange(null, null)
+                )
             `,
             {
               contract: order.params.target,
