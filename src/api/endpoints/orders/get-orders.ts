@@ -22,6 +22,7 @@ export const getOrdersOptions: RouteOptions = {
       hash: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{64}$/),
+      includeInvalid: Joi.bool(),
       side: Joi.string().lowercase().valid("sell", "buy").default("sell"),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
@@ -39,6 +40,7 @@ export const getOrdersOptions: RouteOptions = {
       orders: Joi.array().items(
         Joi.object({
           hash: Joi.string(),
+          status: Joi.string(),
           tokenSetId: Joi.string(),
           tokenSetLabel: Joi.object({
             data: Joi.object().unknown(),

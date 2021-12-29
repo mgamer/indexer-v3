@@ -7,6 +7,7 @@ export type GetOrdersFilter = {
   collection?: string;
   maker?: string;
   hash?: string;
+  includeInvalid?: boolean;
   side: "sell" | "buy";
   offset: number;
   limit: number;
@@ -36,6 +37,7 @@ export const getOrders = async (
   let baseQuery = `
     select distinct on ("o"."hash")
       "o"."hash",
+      "o"."status",
       "o"."token_set_id",
       "ts"."label" as "token_set_label",
       "o"."kind",
@@ -64,8 +66,10 @@ export const getOrders = async (
     conditions.push(`"ts"."collection_id" = $/collection/`);
   }
 
-  conditions.push(`"o"."status" = 'valid'`);
-  conditions.push(`"o"."valid_between" @> now()`);
+  if (!filter.includeInvalid) {
+    conditions.push(`"o"."status" = 'valid'`);
+    conditions.push(`"o"."valid_between" @> now()`);
+  }
   if (filter.maker) {
     conditions.push(`"o"."maker" = $/maker/`);
   }
@@ -95,6 +99,7 @@ export const getOrders = async (
   return db.manyOrNone(baseQuery, filter).then((result) =>
     result.map((r) => ({
       hash: r.hash,
+      status: r.status,
       tokenSetId: r.token_set_id,
       tokenSetLabel: r.token_set_label,
       kind: r.kind,
