@@ -32,7 +32,7 @@ export const marketFormat = Joi.object({
 export const setFormat = Joi.object({
   tokenCount: Joi.number(),
   onSaleCount: Joi.number(),
-  sampleImages: Joi.array().items(Joi.string()),
+  sampleImages: Joi.array().items(Joi.string().allow(null)),
   market: marketFormat,
 });
 
