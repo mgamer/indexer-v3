@@ -1,4 +1,4 @@
-import { AddressZero } from "@ethersproject/constants";
+import { HashZero } from "@ethersproject/constants";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { db } from "@/common/db";
@@ -57,9 +57,9 @@ if (config.doBackgroundWork) {
 
       try {
         let orderHash: string | undefined;
-        if (buyHash === AddressZero && sellHash !== AddressZero) {
+        if (buyHash === HashZero && sellHash !== HashZero) {
           orderHash = sellHash;
-        } else if (sellHash === AddressZero && buyHash !== AddressZero) {
+        } else if (sellHash === HashZero && buyHash !== HashZero) {
           orderHash = buyHash;
         }
 
