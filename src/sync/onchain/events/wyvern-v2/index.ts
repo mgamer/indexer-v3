@@ -16,6 +16,7 @@ import {
 } from "@/events/common/fills";
 import { ContractInfo } from "@/events/index";
 import { parseEvent } from "@/events/parser";
+import { FillInfo, addToFillsHandleQueue } from "@/jobs/fills-handle";
 import { HashInfo, addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
 
 const abi = new Interface([
@@ -39,6 +40,7 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
     const cancelEvents: CancelEvent[] = [];
     const fillEvents: FillEvent[] = [];
     const hashInfos: HashInfo[] = [];
+    const fillInfos: FillInfo[] = [];
 
     for (const log of logs) {
       try {
@@ -78,6 +80,12 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
 
             hashInfos.push({ hash: buyHash });
             hashInfos.push({ hash: sellHash });
+            fillInfos.push({
+              buyHash,
+              sellHash,
+              price,
+              block: baseParams.block,
+            });
 
             break;
           }
@@ -92,8 +100,10 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
 
     await addCancelEvents("wyvern-v2", cancelEvents);
     await addFillEvents("wyvern-v2", fillEvents);
+
     if (config.acceptOrders) {
       await addToOrdersUpdateByHashQueue(hashInfos);
+      await addToFillsHandleQueue(fillInfos);
     }
   },
   fixCallback: async (blockHash) => {

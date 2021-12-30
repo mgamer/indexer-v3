@@ -1,6 +1,6 @@
 import {
   CloudflareProvider,
-  EtherscanProvider,
+  AlchemyProvider,
   StaticJsonRpcProvider,
 } from "@ethersproject/providers";
 
@@ -20,8 +20,8 @@ export const orderbookProvider = new StaticJsonRpcProvider(
 
 // Cloudflare provides a very reliable RPC endpoint but unfortunately
 // it's only available on mainnet. For other chains we fallback to using
-// Etherscan which has restrictive rate-limits but it still does the job.
+// the free Alchemy endpoint provided by ethers.
 export const altProvider =
   config.chainId === 1
     ? new CloudflareProvider(config.chainId)
-    : new EtherscanProvider(config.chainId);
+    : new AlchemyProvider(config.chainId);
