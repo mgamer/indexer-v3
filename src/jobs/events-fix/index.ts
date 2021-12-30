@@ -88,6 +88,11 @@ if (config.doBackgroundWork) {
         for (const [block, blockHash] of wrongBlocks.entries()) {
           for (const contractKind of contractKinds) {
             try {
+              // Temporary disable any orderbook actions
+              if (contractKind === "orderbook") {
+                continue;
+              }
+
               // Skip fixing any events that are not synced from the
               // base network (eg. orderbook events)
               const contractInfo = getContractInfo(contractKind);
