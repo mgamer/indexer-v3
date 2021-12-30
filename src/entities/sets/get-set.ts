@@ -125,6 +125,7 @@ export const getSet = async (filter: GetSetFilter): Promise<GetSetResponse> => {
         on "cs"."floor_sell_hash" = "os"."hash"
       left join "orders" "ob"
         on "cs"."top_buy_hash" = "ob"."hash"
+      where "cs"."collection_id" = $/collection/
     `;
   }
 
