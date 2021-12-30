@@ -25,7 +25,7 @@ export const getTransfersOptions: RouteOptions = {
       limit: Joi.number().integer().min(1).max(20).default(20),
     })
       .oxor("collection", "contract")
-      .or("collection", "contract", "account"),
+      .or("collection", "contract", "user"),
   },
   response: {
     schema: Joi.object({
