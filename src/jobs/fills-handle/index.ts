@@ -50,7 +50,10 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { buyHash, sellHash, price, block } = job.data;
 
-      logger.info(JOB_NAME, `Here ${{ buyHash, sellHash, price, block }}`);
+      logger.info(
+        JOB_NAME,
+        `Here ${JSON.stringify({ buyHash, sellHash, price, block })}`
+      );
 
       try {
         let orderHash: string | undefined;
