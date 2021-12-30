@@ -16,6 +16,7 @@ export const getTokensOptions: RouteOptions = {
       tokenId: Joi.string().pattern(/^[0-9]+$/),
       collection: Joi.string().lowercase(),
       attributes: Joi.object().unknown(),
+      tokenSetId: Joi.string().lowercase(),
       onSale: Joi.boolean(),
       sortBy: Joi.string().default("tokenId"),
       sortDirection: Joi.string()
@@ -25,8 +26,8 @@ export const getTokensOptions: RouteOptions = {
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     })
-      .oxor("collection", "contract")
-      .or("collection", "contract"),
+      .or("contract", "collection", "tokenSetId")
+      .oxor("contract", "collection", "tokenSetId"),
   },
   response: {
     schema: Joi.object({

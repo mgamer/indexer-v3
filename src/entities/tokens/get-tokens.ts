@@ -6,6 +6,7 @@ export type GetTokensFilter = {
   tokenId?: string;
   collection?: string;
   attributes?: { [key: string]: string };
+  tokenSetId?: string;
   onSale?: boolean;
   sortBy?: string;
   sortDirection?: "asc" | "desc";
@@ -72,6 +73,22 @@ export const getTokens = async (
       on "t"."top_buy_hash" = "ob"."hash"
   `;
 
+  if (filter.tokenSetId) {
+    baseQuery += `
+      join "token_sets_tokens" "tst"
+        on "t"."contract" = "tst"."contract"
+        and "t"."token_id" = "tst"."token_id"
+    `;
+  }
+
+  if (filter.attributes) {
+    baseQuery += `
+      join "attributes" "a"
+        on "t"."contract" = "a"."contract"
+        and "t"."token_id" = "a"."token_id"
+    `;
+  }
+
   // Filters
   const conditions: string[] = [];
   if (filter.contract) {
@@ -86,17 +103,14 @@ export const getTokens = async (
   if (filter.attributes) {
     Object.entries(filter.attributes).forEach(([key, value], i) => {
       conditions.push(`
-        exists(
-          select from "attributes" "a"
-          where "a"."contract" = "t"."contract"
-            and "a"."token_id" = "t"."token_id"
-            and "a"."key" = $/key${i}/
-            and "a"."value" = $/value${i}/
-        )
+        "a"."key" = $/key${i}/ and "a"."value" = $/value${i}/
       `);
       (filter as any)[`key${i}`] = key;
       (filter as any)[`value${i}`] = value;
     });
+  }
+  if (filter.tokenSetId) {
+    conditions.push(`"tst"."token_set_id" = $/tokenSetId/`);
   }
   if (filter.onSale === true) {
     conditions.push(`"t"."floor_sell_value" is not null`);
