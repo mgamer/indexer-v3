@@ -41,7 +41,6 @@ export const getOrdersBuildOptions: RouteOptions = {
   response: {
     schema: Joi.object({
       order: Joi.object({
-        chainId: Joi.number(),
         // TODO: When time comes, add support for other order formats
         // apart from WyvernV2 which is the only one supported for now
         params: wyvernV2OrderFormat,
@@ -67,7 +66,11 @@ export const getOrdersBuildOptions: RouteOptions = {
         return { order: null };
       }
 
-      return { order };
+      return {
+        order: {
+          params: order.params,
+        },
+      };
     } catch (error) {
       logger.error("get_orders_build_handler", `Handler failure: ${error}`);
       throw error;
