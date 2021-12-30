@@ -101,9 +101,7 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
     await addCancelEvents("wyvern-v2", cancelEvents);
     await addFillEvents("wyvern-v2", fillEvents);
 
-    logger.info("wyvern_v2_callback", "here1");
     if (config.acceptOrders) {
-      logger.info("wyvern_v2_callback", "here2");
       await addToOrdersUpdateByHashQueue(hashInfos);
       await addToFillsHandleQueue(fillInfos);
     }

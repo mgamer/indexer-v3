@@ -50,6 +50,8 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { buyHash, sellHash, price, block } = job.data;
 
+      logger.info(JOB_NAME, `Here`);
+
       try {
         let orderHash: string | undefined;
         if (buyHash === AddressZero && sellHash !== AddressZero) {
@@ -59,7 +61,6 @@ if (config.doBackgroundWork) {
         }
 
         if (!orderHash) {
-          logger.info(JOB_NAME, `Got fill result: nothing`);
           // Skip if we can't detect which side was the maker
           return;
         }
