@@ -59,6 +59,7 @@ if (config.doBackgroundWork) {
         }
 
         if (!orderHash) {
+          logger.info(JOB_NAME, `Got fill result: nothing`);
           // Skip if we can't detect which side was the maker
           return;
         }
