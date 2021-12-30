@@ -14,6 +14,9 @@ export const start = async function (): Promise<void> {
     query: {
       parser: (query) => qs.parse(query),
     },
+    router: {
+      stripTrailingSlash: true,
+    },
     routes: {
       cors: {
         origin: ["*"],
@@ -22,13 +25,11 @@ export const start = async function (): Promise<void> {
       // https://github.com/hapijs/hapi/issues/3706
       validate: {
         failAction: (_request, _h, error) => {
-          // TODO: Remove `validation` field
+          // Remove any irrelevant information from the response
+          delete (error as any).output.payload.validation;
           throw error;
         },
       },
-    },
-    router: {
-      stripTrailingSlash: true,
     },
   });
 
