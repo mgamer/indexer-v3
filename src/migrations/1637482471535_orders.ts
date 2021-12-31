@@ -105,23 +105,12 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.dropIndex("tokens", ["contract", "token_id", "top_buy_value"]);
-  pgm.dropIndex("tokens", ["contract", "top_buy_value"]);
-  pgm.dropIndex("tokens", ["top_buy_hash"]);
-  pgm.dropIndex("tokens", ["contract", "token_id", "floor_sell_value"]);
-  pgm.dropIndex("tokens", ["contract", "floor_sell_value"]);
-  pgm.dropIndex("tokens", ["floor_sell_hash"]);
-
   pgm.dropColumns("tokens", [
     "floor_sell_hash",
     "floor_sell_value",
     "top_buy_hash",
     "top_buy_value",
   ]);
-
-  pgm.dropIndex("orders", ["maker", "side", "valid_between"]);
-  pgm.dropIndex("orders", ["valid_between"]);
-  pgm.dropIndex("orders", ["token_set_id", "side", "valid_between"]);
 
   pgm.dropTable("orders");
 

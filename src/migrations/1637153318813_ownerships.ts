@@ -35,7 +35,5 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.dropIndex("ownerships", ["owner", "contract", "token_id"]);
-
   pgm.dropTable("ownerships");
 }

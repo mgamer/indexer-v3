@@ -33,8 +33,6 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.dropIndex("token_sets_tokens", ["contract", "token_id"]);
-
   pgm.dropTable("token_sets_tokens");
 
   pgm.dropTable("token_sets");

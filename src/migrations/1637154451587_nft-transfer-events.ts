@@ -50,10 +50,5 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.dropIndex("nft_transfer_events", ["address", "token_id", "block"]);
-  pgm.dropIndex("nft_transfer_events", ["address", "block"]);
-  pgm.dropIndex("nft_transfer_events", ["tx_hash", "from"]);
-  pgm.dropIndex("nft_transfer_events", ["block"]);
-
   pgm.dropTable("nft_transfer_events");
 }

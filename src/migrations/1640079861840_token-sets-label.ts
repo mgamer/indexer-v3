@@ -30,7 +30,5 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
 export async function down(pgm: MigrationBuilder): Promise<void> {
   pgm.dropColumns("orders", ["token_set_label_hash"]);
 
-  pgm.dropIndex("token_sets", ["label_hash"]);
-
   pgm.dropColumns("token_sets", ["label", "label_hash"]);
 }

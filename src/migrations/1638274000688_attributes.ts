@@ -51,8 +51,6 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.dropIndex("tokens", ["metadata_indexed"]);
-
   pgm.dropColumns("tokens", ["metadata_indexed"]);
 
   pgm.dropColumns("collections", [

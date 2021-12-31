@@ -36,6 +36,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
         join "ownerships" "o"
           on "t"."contract" = "o"."contract"
           and "t"."token_id" = "o"."token_id"
+        where "t"."collection_id" is not null
         group by "t"."collection_id"
       ) "x"
       left join (
@@ -46,6 +47,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
         from "tokens" "t"
         join "orders" "o"
           on "t"."floor_sell_hash" = "o"."hash"
+        where "t"."collection_id" is not null
         order by "t"."collection_id", "t"."floor_sell_value" asc
       ) "y"
         on "x"."collection_id" = "y"."collection_id"
@@ -68,8 +70,6 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.dropIndex("collection_stats", "collection_id", { unique: true });
-
   pgm.dropMaterializedView("collection_stats", { ifExists: true });
 
   // Skip recreating the old version of the materialized view,

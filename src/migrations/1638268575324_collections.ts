@@ -50,11 +50,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.dropIndex("tokens", ["collection_id"]);
-
   pgm.dropColumns("tokens", ["name", "description", "image", "collection_id"]);
-
-  pgm.dropIndex("collections", ["community"]);
 
   pgm.dropTable("collections");
 }

@@ -52,8 +52,5 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.dropIndex("fill_events", ["tx_hash", "maker"]);
-  pgm.dropIndex("fill_events", ["block"]);
-
   pgm.dropTable("fill_events");
 }

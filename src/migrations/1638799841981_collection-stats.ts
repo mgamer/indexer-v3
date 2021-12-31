@@ -35,7 +35,5 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.dropIndex("collection_stats", "collection_id");
-
   pgm.dropMaterializedView("collection_stats", { ifExists: true });
 }
