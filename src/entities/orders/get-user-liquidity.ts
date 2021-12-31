@@ -31,8 +31,16 @@ export const getUserLiquidity = async (
 
   let baseQuery = `
     select
-      "b".*,
-      "s".*
+      "b"."collection_id" as "buy_collection_id",
+      "b"."collection_name" as "buy_collection_name",
+      "b"."buy_count",
+      "b"."top_buy_value",
+      "b"."top_buy_valid_until",
+      "s"."collection_id" as "sell_collection_id",
+      "s"."collection_name" as "sell_collection_name",
+      "s"."sell_count",
+      "s"."floor_sell_value",
+      "s"."floor_sell_valid_until"
     from (
       select
         "x"."collection_id",
@@ -57,6 +65,7 @@ export const getUserLiquidity = async (
           and "o"."side" = 'buy'
           and "o"."status" = 'valid'
           and "o"."valid_between" @> now()
+          and "t"."collection_id" is not null
         group by "t"."collection_id", "c"."name"
       ) "x"
       join (
@@ -74,6 +83,7 @@ export const getUserLiquidity = async (
           and "o"."side" = 'buy'
           and "o"."status" = 'valid'
           and "o"."valid_between" @> now()
+          and "t"."collection_id" is not null
         order by "t"."collection_id", "o"."value" desc
       ) "y"
         on "x"."collection_id" = "y"."collection_id"
@@ -102,6 +112,7 @@ export const getUserLiquidity = async (
           and "o"."side" = 'sell'
           and "o"."status" = 'valid'
           and "o"."valid_between" @> now()
+          and "t"."collection_id" is not null
         group by "t"."collection_id", "c"."name"
       ) "x"
       join (
@@ -119,6 +130,7 @@ export const getUserLiquidity = async (
           and "o"."side" = 'sell'
           and "o"."status" = 'valid'
           and "o"."valid_between" @> now()
+          and "t"."collection_id" is not null
         order by "t"."collection_id", "o"."value" desc
       ) "y"
         on "x"."collection_id" = "y"."collection_id"
@@ -136,8 +148,8 @@ export const getUserLiquidity = async (
   return db.manyOrNone(baseQuery, filter).then((result) =>
     result.map((r) => ({
       collection: {
-        id: r.collection_id,
-        name: r.collection_name,
+        id: r.buy_collection_id || r.sell_collection_id,
+        name: r.buy_collection_name || r.sell_collection_name,
       },
       buyCount: Number(r.buy_count),
       topBuy: {
