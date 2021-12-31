@@ -56,6 +56,16 @@ export const addToOrdersUpdateByHashQueue = async (hashInfos: HashInfo[]) => {
     hashInfos.map((hashInfo) => ({
       name: hashInfo.hash,
       data: hashInfo,
+      opts: {
+        // Since it can happen to sync and handle the same events more
+        // than once, we should make sure not to do any expensive work
+        // more than once for the same event. As such, we keep the last
+        // performed jobs in the queue (via the above `removeOnComplete`
+        // option) and give the jobs a deterministic id so that a job
+        // will not be re-executed if it already did recently.
+        jobId: hashInfo.hash,
+        removeOnComplete: 1000,
+      },
     }))
   );
 };
@@ -209,6 +219,7 @@ const byMakerQueue = new Queue(BY_MAKER_JOB_NAME, {
 new QueueScheduler(BY_MAKER_JOB_NAME, { connection: redis });
 
 export type MakerInfo = {
+  txHash: string;
   side: "buy" | "sell";
   maker: string;
   contract: string;
@@ -227,6 +238,16 @@ export const addToOrdersUpdateByMakerQueue = async (
     makerInfos.map((makerInfo) => ({
       name: makerInfo.maker,
       data: makerInfo,
+      opts: {
+        // Since it can happen to sync and handle the same events more
+        // than once, we should make sure not to do any expensive work
+        // more than once for the same event. As such, we keep the last
+        // performed jobs in the queue (via the above `removeOnComplete`
+        // option) and give the jobs a deterministic id so that a job
+        // will not be re-executed if it already did recently.
+        jobId: makerInfo.txHash + makerInfo.maker,
+        removeOnComplete: 1000,
+      },
     }))
   );
 };

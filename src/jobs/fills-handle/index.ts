@@ -21,8 +21,6 @@ const queue = new Queue(JOB_NAME, {
       type: "exponential",
       delay: 1000,
     },
-    // Keep the latest jobs in order to avoid performing duplicated work
-    removeOnComplete: 1000,
     removeOnFail: true,
   },
 });
@@ -47,6 +45,7 @@ export const addToFillsHandleQueue = async (fillInfos: FillInfo[]) => {
         // option) and give the jobs a deterministic id so that a job
         // will not be re-executed if it already did recently.
         jobId: fillInfo.buyHash + fillInfo.sellHash,
+        removeOnComplete: 1000,
       },
     }))
   );

@@ -55,11 +55,13 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
             });
 
             makerInfos.push({
+              txHash: baseParams.txHash,
               side: "buy",
               maker: from,
               contract: baseParams.address,
             });
             makerInfos.push({
+              txHash: baseParams.txHash,
               side: "buy",
               maker: to,
               contract: baseParams.address,
@@ -82,6 +84,7 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
             });
 
             makerInfos.push({
+              txHash: baseParams.txHash,
               side: "buy",
               maker: to,
               contract: baseParams.address,
@@ -104,6 +107,7 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
             });
 
             makerInfos.push({
+              txHash: baseParams.txHash,
               side: "buy",
               maker: from,
               contract: baseParams.address,

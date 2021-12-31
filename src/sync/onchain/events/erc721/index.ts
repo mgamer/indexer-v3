@@ -66,12 +66,14 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
             });
 
             makerInfos.push({
+              txHash: baseParams.txHash,
               side: "sell",
               maker: from,
               contract: baseParams.address,
               tokenId,
             });
             makerInfos.push({
+              txHash: baseParams.txHash,
               side: "sell",
               maker: to,
               contract: baseParams.address,
