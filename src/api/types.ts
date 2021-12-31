@@ -5,7 +5,7 @@ import Joi from "joi";
 export const tokenFormat = Joi.object({
   contract: Joi.string(),
   kind: Joi.string(),
-  name: Joi.string().allow(null),
+  name: Joi.string().allow(""),
   image: Joi.string().allow(""),
   tokenId: Joi.string(),
   collection: Joi.object({
