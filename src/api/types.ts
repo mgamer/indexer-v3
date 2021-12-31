@@ -6,7 +6,7 @@ export const tokenFormat = Joi.object({
   contract: Joi.string(),
   kind: Joi.string(),
   name: Joi.string().allow(null),
-  image: Joi.string(),
+  image: Joi.string().allow(""),
   tokenId: Joi.string(),
   collection: Joi.object({
     id: Joi.string(),
@@ -32,7 +32,7 @@ export const marketFormat = Joi.object({
 export const setFormat = Joi.object({
   tokenCount: Joi.number(),
   onSaleCount: Joi.number(),
-  sampleImages: Joi.array().items(Joi.string()),
+  sampleImages: Joi.array().items(Joi.string().allow("")),
   market: marketFormat,
 });
 
