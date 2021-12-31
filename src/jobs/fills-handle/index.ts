@@ -85,7 +85,7 @@ if (config.doBackgroundWork) {
                   "last_${result.side}_block" = $/block/,
                   "last_${result.side}_value" = $/value/
                 where "contract" = $/contract/
-                  and "token_id" = $/token_id/
+                  and "token_id" = $/tokenId/
               `,
               {
                 contract,
