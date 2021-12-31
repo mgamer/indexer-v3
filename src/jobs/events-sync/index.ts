@@ -156,10 +156,7 @@ if (config.doBackgroundWork) {
         // backfill queue.
         const maxBlocks = 256;
 
-        let headBlock = await contractInfo.provider.getBlockNumber();
-        // Try avoiding missing events by lagging behind 4 blocks
-        // https://ethereum.stackexchange.com/questions/109660/eth-getlogs-and-some-missing-logs
-        headBlock -= 4;
+        const headBlock = await contractInfo.provider.getBlockNumber();
 
         // Fetch the last synced blocked for the current contract type (if it exists)
         let localBlock = Number(
@@ -195,8 +192,12 @@ if (config.doBackgroundWork) {
             );
           }
 
-          // Update the last synced block
-          await redis.set(`${contractKind}_last_synced_block`, headBlock);
+          // To avoid missing any events, save the latest synced block with a delay.
+          // This will ensure that the latest blocks will get queried more than once,
+          // which is exactly what we need (since events for the latest blocks might
+          // be missing due to upstream chain reorgs):
+          // https://ethereum.stackexchange.com/questions/109660/eth-getlogs-and-some-missing-logs
+          await redis.set(`${contractKind}_last_synced_block`, headBlock - 5);
         }
       } catch (error) {
         logger.error(contractKind, `Catchup failed: ${error}`);
