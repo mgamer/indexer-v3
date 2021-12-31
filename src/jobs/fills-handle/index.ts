@@ -30,7 +30,6 @@ new QueueScheduler(JOB_NAME, { connection: redis });
 export type FillInfo = {
   buyHash: string;
   sellHash: string;
-  price: string;
   block: number;
 };
 
@@ -48,12 +47,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     JOB_NAME,
     async (job: Job) => {
-      const { buyHash, sellHash, price, block } = job.data;
-
-      logger.info(
-        JOB_NAME,
-        `Here ${JSON.stringify({ buyHash, sellHash, price, block })}`
-      );
+      const { buyHash, sellHash, block } = job.data;
 
       try {
         let orderHash: string | undefined;
@@ -70,16 +64,38 @@ if (config.doBackgroundWork) {
 
         const result = await db.oneOrNone(
           `
-            select "o"."token_set_id" from "orders" "o"
+            select
+              "o"."side",
+              "o"."token_set_id",
+              "o"."value"
+            from "orders" "o"
             where "o"."hash" = $/orderHash/
           `,
           { orderHash }
         );
 
-        logger.info(
-          JOB_NAME,
-          `Got fill result: ${JSON.stringify({ price, block, result })}`
-        );
+        if (result && result.token_set_id) {
+          const components = result.token_set_id.split(":");
+          if (components[0] === "token") {
+            const [contract, tokenId] = components.slice(1);
+
+            await db.none(
+              `
+                update "tokens" set
+                  "last_${result.side}_block" = $/block/,
+                  "last_${result.side}_value" = $/value/
+                where "contract" = $/contract/
+                  and "token_id" = $/token_id/
+              `,
+              {
+                contract,
+                tokenId,
+                block,
+                value: result.value,
+              }
+            );
+          }
+        }
       } catch (error) {
         logger.error(
           JOB_NAME,

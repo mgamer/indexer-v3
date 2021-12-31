@@ -83,7 +83,6 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
             fillInfos.push({
               buyHash,
               sellHash,
-              price,
               block: baseParams.block,
             });
 
