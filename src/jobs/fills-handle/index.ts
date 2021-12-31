@@ -95,6 +95,11 @@ if (config.doBackgroundWork) {
               }
             );
           }
+
+          logger.info(
+            JOB_NAME,
+            `Updated sale data for token set ${result.token_set_id}`
+          );
         }
       } catch (error) {
         logger.error(
