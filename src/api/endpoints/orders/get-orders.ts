@@ -57,7 +57,9 @@ export const getOrdersOptions: RouteOptions = {
             id: Joi.string(),
             bps: Joi.number(),
           }),
-          royaltyInfo: Joi.object().allow(null),
+          royaltyInfo: Joi.array()
+            .items(Joi.object({ recipient: Joi.string(), bps: Joi.number() }))
+            .allow(null),
           rawData: Joi.object().when("kind", {
             is: Joi.equal("wyvern-v2"),
             then: wyvernV2OrderFormat,
