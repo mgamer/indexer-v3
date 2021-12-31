@@ -1,9 +1,15 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
+import cron from "node-cron";
 
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
+import { acquireLock, redis } from "@/common/redis";
 import { config } from "@/config/index";
-import { ContractKind, getContractInfo, sync } from "@/events/index";
+import {
+  ContractKind,
+  contractKinds,
+  getContractInfo,
+  sync,
+} from "@/events/index";
 
 // For syncing events we have two separate job queues. One is for
 // handling backfilling while the other one handles realtime
@@ -151,9 +157,9 @@ if (config.doBackgroundWork) {
         const maxBlocks = 256;
 
         let headBlock = await contractInfo.provider.getBlockNumber();
-        // Try avoiding missing events by lagging behind 1 block
+        // Try avoiding missing events by lagging behind 4 blocks
         // https://ethereum.stackexchange.com/questions/109660/eth-getlogs-and-some-missing-logs
-        headBlock--;
+        headBlock -= 4;
 
         // Fetch the last synced blocked for the current contract type (if it exists)
         let localBlock = Number(
@@ -201,5 +207,34 @@ if (config.doBackgroundWork) {
   );
   worker.on("error", (error) => {
     logger.error(CATCHUP_JOB_NAME, `Worker errored: ${error}`);
+  });
+}
+
+// Every new block (approximately 15 seconds) there might be processes
+// we want to run in order to stay up-to-date with the blockchain's
+// current state. These processes are all to be triggered from this
+// cron job.
+
+// Actual work is to be handled by background worker processes
+if (config.doBackgroundWork) {
+  cron.schedule("*/15 * * * * *", async () => {
+    const lockAcquired = await acquireLock("catchup_lock", 10);
+    if (lockAcquired) {
+      logger.info("catchup_cron", "Catching up");
+
+      try {
+        // Sync events
+        for (const contractKind of contractKinds) {
+          // For now, skip orderbook indexing
+          if (contractKind === "orderbook") {
+            continue;
+          }
+
+          await addToEventsSyncCatchupQueue(contractKind);
+        }
+      } catch (error) {
+        logger.error("catchup_cron", `Failed to catch up: ${error}`);
+      }
+    }
   });
 }
