@@ -21,7 +21,8 @@ const queue = new Queue(JOB_NAME, {
       type: "exponential",
       delay: 1000,
     },
-    removeOnComplete: true,
+    // Keep the latest jobs in order to avoid performing duplicated work
+    removeOnComplete: 1000,
     removeOnFail: true,
   },
 });
@@ -38,6 +39,15 @@ export const addToFillsHandleQueue = async (fillInfos: FillInfo[]) => {
     fillInfos.map((fillInfo) => ({
       name: fillInfo.buyHash + fillInfo.sellHash,
       data: fillInfo,
+      opts: {
+        // Since it can happen to sync and handle the same events more
+        // than once, we should make sure not to do any expensive work
+        // more than once for the same event. As such, we keep the last
+        // performed jobs in the queue (via the above `removeOnComplete`
+        // option) and give the jobs a deterministic id so that a job
+        // will not be re-executed if it already did recently.
+        jobId: fillInfo.buyHash + fillInfo.sellHash,
+      },
     }))
   );
 };
