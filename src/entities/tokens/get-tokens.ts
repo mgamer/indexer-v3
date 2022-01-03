@@ -122,7 +122,7 @@ export const getTokens = async (
   }
 
   // Sorting
-  filter.sortBy = filter.sortBy ?? "tokenId";
+  filter.sortBy = filter.sortBy ?? "floorSellValue";
   filter.sortDirection = filter.sortDirection ?? "asc";
   switch (filter.sortBy) {
     case "tokenId": {
