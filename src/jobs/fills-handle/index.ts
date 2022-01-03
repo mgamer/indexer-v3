@@ -21,6 +21,7 @@ const queue = new Queue(JOB_NAME, {
       type: "exponential",
       delay: 1000,
     },
+    removeOnComplete: 10000,
     removeOnFail: true,
   },
 });
@@ -49,7 +50,6 @@ export const addToFillsHandleQueue = async (fillInfos: FillInfo[]) => {
         // will not be re-executed if it already did recently.
         jobId:
           fillInfo.context + "-" + fillInfo.buyHash + "-" + fillInfo.sellHash,
-        removeOnComplete: 10000,
       },
     }))
   );

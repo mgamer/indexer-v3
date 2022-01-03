@@ -35,6 +35,7 @@ const byHashQueue = new Queue(BY_HASH_JOB_NAME, {
       type: "exponential",
       delay: 1000,
     },
+    removeOnComplete: 10000,
     removeOnFail: true,
   },
 });
@@ -63,7 +64,6 @@ export const addToOrdersUpdateByHashQueue = async (hashInfos: HashInfo[]) => {
         // option) and give the jobs a deterministic id so that a job
         // will not be re-executed if it already did recently.
         jobId: hashInfo.context + "-" + hashInfo.hash,
-        removeOnComplete: 10000,
       },
     }))
   );
@@ -211,6 +211,7 @@ const byMakerQueue = new Queue(BY_MAKER_JOB_NAME, {
       type: "exponential",
       delay: 1000,
     },
+    removeOnComplete: 10000,
     removeOnFail: true,
   },
 });
@@ -244,7 +245,6 @@ export const addToOrdersUpdateByMakerQueue = async (
         // option) and give the jobs a deterministic id so that a job
         // will not be re-executed if it already did recently.
         jobId: makerInfo.context + "-" + makerInfo.maker,
-        removeOnComplete: 10000,
       },
     }))
   );
