@@ -18,7 +18,10 @@ export const getTokensOptions: RouteOptions = {
       attributes: Joi.object().unknown(),
       tokenSetId: Joi.string().lowercase(),
       onSale: Joi.boolean(),
-      sortBy: Joi.string().default("tokenId"),
+      sortBy: Joi.string()
+        .valid("tokenId", "floorSellValue", "topBuyValue")
+        .default("floorSellValue"),
+      sortByAttribute: Joi.string(),
       sortDirection: Joi.string()
         .lowercase()
         .valid("asc", "desc")
