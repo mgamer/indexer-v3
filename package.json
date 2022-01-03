@@ -21,7 +21,7 @@
     "@hapi/vision": "^6.1.0",
     "@reservoir0x/sdk": "0.0.11",
     "axios": "^0.24.0",
-    "bullmq": "1.52.2",
+    "bullmq": "1.63.0",
     "dd-trace": "^1.5.1",
     "dotenv": "^10.0.0",
     "ethers": "^5.5.1",
