@@ -46,13 +46,21 @@ export const postOrdersOptions: RouteOptions = {
         }
       }
 
-      // TODO: Remove debug logs once in a more stable state
-      console.log(`All count: ${orders.length}`);
-      const filteredOrders = await wyvernV2.filterOrders(validOrders);
-      console.log(`Valid count: ${filteredOrders.length}`);
-      await wyvernV2.saveOrders(filteredOrders);
+      const filterResults = await wyvernV2.filterOrders(validOrders);
+      const saveResults = await wyvernV2.saveOrders(filterResults.validOrders);
 
-      return { message: "Success" };
+      const result: { [hash: string]: string } = {};
+      for (const { order, reason } of filterResults.invalidOrders) {
+        result[order.prefixHash()] = reason;
+      }
+      for (const { order, reason } of saveResults.invalidOrders) {
+        result[order.prefixHash()] = reason;
+      }
+      for (const order of saveResults.validOrders) {
+        result[order.prefixHash()] = "Success";
+      }
+
+      return { result };
     } catch (error) {
       logger.error("post_orders_handler", `Handler failure: ${error}`);
       throw error;

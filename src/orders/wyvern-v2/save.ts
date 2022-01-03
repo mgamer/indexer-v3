@@ -88,15 +88,33 @@ const extractOrderInfo = (order: Sdk.WyvernV2.Order): OrderInfo | undefined => {
   }
 };
 
-export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
+type SaveResult = {
+  validOrders: Sdk.WyvernV2.Order[];
+  invalidOrders: {
+    order: Sdk.WyvernV2.Order;
+    reason: string;
+  }[];
+};
+
+export const saveOrders = async (
+  orders: Sdk.WyvernV2.Order[]
+): Promise<SaveResult> => {
+  const result: SaveResult = {
+    validOrders: [],
+    invalidOrders: [],
+  };
+
   if (!orders.length) {
-    return;
+    return result;
   }
 
   const queries: any[] = [];
   for (const order of orders) {
+    const hash = order.prefixHash();
+
     const orderInfo = extractOrderInfo(order);
     if (!orderInfo) {
+      result.invalidOrders.push({ order, reason: "Order is invalid" });
       continue;
     }
 
@@ -284,6 +302,10 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
     }
 
     if (!tokenSetInfo) {
+      result.invalidOrders.push({
+        order,
+        reason: "Order has no matching token set",
+      });
       continue;
     }
 
@@ -438,6 +460,8 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
         rawData: order.params,
       },
     });
+
+    result.validOrders.push(order);
   }
 
   if (queries.length) {
@@ -446,4 +470,6 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
   await addToOrdersUpdateByHashQueue(
     orders.map((order) => ({ context: "save", hash: order.prefixHash() }))
   );
+
+  return result;
 };

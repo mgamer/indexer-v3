@@ -5,11 +5,24 @@ import { db } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 
+type FilterResult = {
+  validOrders: Sdk.WyvernV2.Order[];
+  invalidOrders: {
+    order: Sdk.WyvernV2.Order;
+    reason: string;
+  }[];
+};
+
 export const filterOrders = async (
   orders: Sdk.WyvernV2.Order[]
-): Promise<Sdk.WyvernV2.Order[]> => {
+): Promise<FilterResult> => {
+  const result: FilterResult = {
+    validOrders: [],
+    invalidOrders: [],
+  };
+
   if (!orders.length) {
-    return [];
+    return result;
   }
 
   // Get the kinds of all contracts targeted by the orders
@@ -44,13 +57,23 @@ export const filterOrders = async (
     existingHashes.add(hash);
   }
 
-  const validOrders: Sdk.WyvernV2.Order[] = [];
   for (const order of orders) {
     const hash = order.prefixHash();
 
     // Check: order doesn't already exist
     if (existingHashes.has(hash)) {
-      console.log("order already exists", hash);
+      result.invalidOrders.push({ order, reason: "Order already exists" });
+      continue;
+    }
+
+    // Check: order has a valid target
+    if (
+      !order.params.kind?.startsWith(contractKinds.get(order.params.target)!)
+    ) {
+      result.invalidOrders.push({
+        order,
+        reason: "Order has unsupported target",
+      });
       continue;
     }
 
@@ -58,7 +81,7 @@ export const filterOrders = async (
     const currentTime = Math.floor(Date.now() / 1000);
     const expirationTime = order.params.expirationTime;
     if (expirationTime !== 0 && currentTime >= expirationTime) {
-      console.log("order expired");
+      result.invalidOrders.push({ order, reason: "Order is expired" });
       continue;
     }
 
@@ -67,53 +90,69 @@ export const filterOrders = async (
       order.params.side === 0 &&
       order.params.paymentToken !== Sdk.Common.Addresses.Weth[config.chainId]
     ) {
-      console.log("order wrong payment token");
+      result.invalidOrders.push({
+        order,
+        reason: "Order has unsupported payment token",
+      });
       continue;
     }
 
-    // Check: sell order has Eth as payment token 
+    // Check: sell order has Eth as payment token
     if (
       order.params.side === 1 &&
       order.params.paymentToken !== Sdk.Common.Addresses.Eth[config.chainId]
     ) {
-      console.log("order wrong payment token");
+      result.invalidOrders.push({
+        order,
+        reason: "Order has unsupported payment token",
+      });
       continue;
     }
 
     // Check: order is not private
     if (order.params.taker !== AddressZero) {
-      console.log("order is private");
+      result.invalidOrders.push({
+        order,
+        reason: "Order is private",
+      });
       continue;
     }
 
-    // Check: order has a valid kind
-    if (!order.hasValidKind()) {
-      console.log("order wrong kind");
-      continue;
-    }
-
-    // Check: order has a valid target
-    if (
-      !order.params.kind?.startsWith(contractKinds.get(order.params.target)!)
-    ) {
-      console.log("order wrong target");
+    // Check: order is valid
+    try {
+      order.checkValidity();
+    } catch {
+      result.invalidOrders.push({
+        order,
+        reason: "Order is invalid",
+      });
       continue;
     }
 
     // Check: order has a valid signature
-    if (!(await order.hasValidSignature())) {
-      console.log("order wrong signature");
+    try {
+      await order.checkSignature();
+    } catch {
+      result.invalidOrders.push({
+        order,
+        reason: "Order has invalid signature",
+      });
       continue;
     }
 
     // Check: order is fillable
-    if (!(await order.isFillable(baseProvider))) {
-      console.log("order not fillable");
+    try {
+      await order.checkFillability(baseProvider);
+    } catch {
+      result.invalidOrders.push({
+        order,
+        reason: "Order is not fillable",
+      });
       continue;
     }
 
-    validOrders.push(order);
+    result.validOrders.push(order);
   }
 
-  return validOrders;
+  return result;
 };
