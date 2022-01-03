@@ -59,10 +59,13 @@ export const getOrders = async (
 
   // Filters
   const conditions: string[] = [];
-  if (filter.contract && filter.tokenId) {
+  if (filter.contract) {
     conditions.push(`"tst"."contract" = $/contract/`);
+  }
+  if (filter.tokenId) {
     conditions.push(`"tst"."token_id" = $/tokenId/`);
-  } else if (filter.collection) {
+  }
+  if (filter.collection) {
     conditions.push(`"ts"."collection_id" = $/collection/`);
   }
 
