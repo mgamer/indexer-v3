@@ -21,7 +21,6 @@ const queue = new Queue(JOB_NAME, {
       type: "exponential",
       delay: 1000,
     },
-    removeOnComplete: true,
     removeOnFail: true,
   },
 });
