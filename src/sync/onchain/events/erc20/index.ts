@@ -1,3 +1,4 @@
+import { AddressZero } from "@ethersproject/constants";
 import { Interface } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 
@@ -74,7 +75,7 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
 
           case abi.getEventTopic("Deposit"): {
             const parsedLog = abi.parseLog(log);
-            const from = "0x0000000000000000000000000000000000000000";
+            const from = AddressZero;
             const to = parsedLog.args.to.toLowerCase();
             const amount = parsedLog.args.amount.toString();
 
@@ -98,7 +99,7 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
           case abi.getEventTopic("Withdrawal"): {
             const parsedLog = abi.parseLog(log);
             const from = parsedLog.args.from.toLowerCase();
-            const to = "0x0000000000000000000000000000000000000000";
+            const to = AddressZero;
             const amount = parsedLog.args.amount.toString();
 
             transferEvents.push({

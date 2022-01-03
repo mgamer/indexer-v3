@@ -1,3 +1,4 @@
+import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Common } from "@reservoir0x/sdk";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import cron from "node-cron";
@@ -49,28 +50,12 @@ export type HashInfo = {
 
 export const addToOrdersUpdateByHashQueue = async (hashInfos: HashInfo[]) => {
   // Ignore null hashes
-  hashInfos = hashInfos.filter(
-    ({ hash }) =>
-      hash !==
-      "0x0000000000000000000000000000000000000000000000000000000000000000"
-  );
+  hashInfos = hashInfos.filter(({ hash }) => hash !== HashZero);
 
   await byHashQueue.addBulk(
     hashInfos.map((hashInfo) => ({
       name: hashInfo.hash,
       data: hashInfo,
-<<<<<<< HEAD
-      // opts: {
-      //   // Since it can happen to sync and handle the same events more
-      //   // than once, we should make sure not to do any expensive work
-      //   // more than once for the same event. As such, we keep the last
-      //   // performed jobs in the queue (via the above `removeOnComplete`
-      //   // option) and give the jobs a deterministic id so that a job
-      //   // will not be re-executed if it already did recently.
-      //   jobId: hashInfo.hash,
-      //   removeOnComplete: 1000,
-      // },
-=======
       opts: {
         // Since it can happen to sync and handle the same events more
         // than once, we should make sure not to do any expensive work
@@ -81,7 +66,6 @@ export const addToOrdersUpdateByHashQueue = async (hashInfos: HashInfo[]) => {
         jobId: hashInfo.context + "-" + hashInfo.hash,
         removeOnComplete: 10000,
       },
->>>>>>> main
     }))
   );
 };
@@ -248,9 +232,7 @@ export const addToOrdersUpdateByMakerQueue = async (
   makerInfos: MakerInfo[]
 ) => {
   // Ignore null addresses
-  makerInfos = makerInfos.filter(
-    ({ maker }) => maker !== "0x0000000000000000000000000000000000000000"
-  );
+  makerInfos = makerInfos.filter(({ maker }) => maker !== AddressZero);
 
   await byMakerQueue.addBulk(
     makerInfos.map((makerInfo) => ({
