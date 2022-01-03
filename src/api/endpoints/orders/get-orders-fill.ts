@@ -12,10 +12,6 @@ export const getOrdersFillOptions: RouteOptions = {
   tags: ["api"],
   validate: {
     query: Joi.object({
-      taker: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/)
-        .required(),
       tokenId: Joi.string()
         .pattern(/^[0-9]+$/)
         .required(),
@@ -67,7 +63,7 @@ export const getOrdersFillOptions: RouteOptions = {
         bestOrder.rawData
       );
 
-      const buildMatchingArgs: any[] = [query.taker];
+      const buildMatchingArgs: any[] = [];
       if (
         sdkOrder.params.kind?.endsWith("token-range") ||
         sdkOrder.params.kind?.endsWith("contract-wide")

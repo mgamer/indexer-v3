@@ -71,7 +71,7 @@ export const filterOrders = async (
       continue;
     }
 
-    // Check: sell order has Eth as payment token
+    // Check: sell order has Eth as payment token 
     if (
       order.params.side === 1 &&
       order.params.paymentToken !== Sdk.Common.Addresses.Eth[config.chainId]

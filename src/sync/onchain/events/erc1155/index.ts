@@ -40,6 +40,8 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
     for (const log of logs) {
       try {
         const baseParams = parseEvent(log);
+        const context =
+          baseParams.txHash + "-" + baseParams.logIndex.toString();
 
         switch (log.topics[0]) {
           case abi.getEventTopic("TransferSingle"): {
@@ -58,14 +60,14 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
             });
 
             makerInfos.push({
-              txHash: baseParams.txHash,
+              context,
               side: "sell",
               maker: from,
               contract: baseParams.address,
               tokenId,
             });
             makerInfos.push({
-              txHash: baseParams.txHash,
+              context,
               side: "sell",
               maker: to,
               contract: baseParams.address,
@@ -96,14 +98,14 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
               });
 
               makerInfos.push({
-                txHash: baseParams.txHash,
+                context,
                 side: "sell",
                 maker: from,
                 contract: baseParams.address,
                 tokenId,
               });
               makerInfos.push({
-                txHash: baseParams.txHash,
+                context,
                 side: "sell",
                 maker: to,
                 contract: baseParams.address,

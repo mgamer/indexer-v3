@@ -41,6 +41,9 @@ const byHashQueue = new Queue(BY_HASH_JOB_NAME, {
 new QueueScheduler(BY_HASH_JOB_NAME, { connection: redis });
 
 export type HashInfo = {
+  // The context will ensure the queue won't process the same job more
+  // than once in the same context (over a recent time period)
+  context: string;
   hash: string;
 };
 
@@ -56,6 +59,7 @@ export const addToOrdersUpdateByHashQueue = async (hashInfos: HashInfo[]) => {
     hashInfos.map((hashInfo) => ({
       name: hashInfo.hash,
       data: hashInfo,
+<<<<<<< HEAD
       // opts: {
       //   // Since it can happen to sync and handle the same events more
       //   // than once, we should make sure not to do any expensive work
@@ -66,6 +70,18 @@ export const addToOrdersUpdateByHashQueue = async (hashInfos: HashInfo[]) => {
       //   jobId: hashInfo.hash,
       //   removeOnComplete: 1000,
       // },
+=======
+      opts: {
+        // Since it can happen to sync and handle the same events more
+        // than once, we should make sure not to do any expensive work
+        // more than once for the same event. As such, we keep the last
+        // performed jobs in the queue (via the above `removeOnComplete`
+        // option) and give the jobs a deterministic id so that a job
+        // will not be re-executed if it already did recently.
+        jobId: hashInfo.context + "-" + hashInfo.hash,
+        removeOnComplete: 10000,
+      },
+>>>>>>> main
     }))
   );
 };
@@ -219,7 +235,9 @@ const byMakerQueue = new Queue(BY_MAKER_JOB_NAME, {
 new QueueScheduler(BY_MAKER_JOB_NAME, { connection: redis });
 
 export type MakerInfo = {
-  txHash: string;
+  // The context will ensure the queue won't process the same job more
+  // than once in the same context (over a recent time period)
+  context: string;
   side: "buy" | "sell";
   maker: string;
   contract: string;
@@ -238,16 +256,16 @@ export const addToOrdersUpdateByMakerQueue = async (
     makerInfos.map((makerInfo) => ({
       name: makerInfo.maker,
       data: makerInfo,
-      // opts: {
-      //   // Since it can happen to sync and handle the same events more
-      //   // than once, we should make sure not to do any expensive work
-      //   // more than once for the same event. As such, we keep the last
-      //   // performed jobs in the queue (via the above `removeOnComplete`
-      //   // option) and give the jobs a deterministic id so that a job
-      //   // will not be re-executed if it already did recently.
-      //   jobId: makerInfo.txHash + makerInfo.maker,
-      //   removeOnComplete: 1000,
-      // },
+      opts: {
+        // Since it can happen to sync and handle the same events more
+        // than once, we should make sure not to do any expensive work
+        // more than once for the same event. As such, we keep the last
+        // performed jobs in the queue (via the above `removeOnComplete`
+        // option) and give the jobs a deterministic id so that a job
+        // will not be re-executed if it already did recently.
+        jobId: makerInfo.context + "-" + makerInfo.maker,
+        removeOnComplete: 10000,
+      },
     }))
   );
 };
@@ -257,7 +275,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     BY_MAKER_JOB_NAME,
     async (job: Job) => {
-      const { side, maker, contract, tokenId } = job.data;
+      const { context, side, maker, contract, tokenId } = job.data;
 
       try {
         let hashes: { hash: string; status: string }[] = [];
@@ -332,7 +350,9 @@ if (config.doBackgroundWork) {
           `);
         }
 
-        await addToOrdersUpdateByHashQueue(hashes);
+        await addToOrdersUpdateByHashQueue(
+          hashes.map(({ hash }) => ({ context, hash }))
+        );
       } catch (error) {
         logger.error(
           BY_MAKER_JOB_NAME,
@@ -371,7 +391,12 @@ if (config.doBackgroundWork) {
             `
           );
 
-          await addToOrdersUpdateByHashQueue(hashes);
+          await addToOrdersUpdateByHashQueue(
+            hashes.map(({ hash }) => ({
+              context: Math.floor(Date.now() / 1000).toString(),
+              hash,
+            }))
+          );
         } catch (error) {
           logger.error(
             "expired_orders_cron",

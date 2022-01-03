@@ -28,6 +28,9 @@ const queue = new Queue(JOB_NAME, {
 new QueueScheduler(JOB_NAME, { connection: redis });
 
 export type FillInfo = {
+  // The context will ensure the queue won't process the same job more
+  // than once in the same context (over a recent time period)
+  context: string;
   buyHash: string;
   sellHash: string;
   block: number;
@@ -38,16 +41,17 @@ export const addToFillsHandleQueue = async (fillInfos: FillInfo[]) => {
     fillInfos.map((fillInfo) => ({
       name: fillInfo.buyHash + fillInfo.sellHash,
       data: fillInfo,
-      // opts: {
-      //   // Since it can happen to sync and handle the same events more
-      //   // than once, we should make sure not to do any expensive work
-      //   // more than once for the same event. As such, we keep the last
-      //   // performed jobs in the queue (via the above `removeOnComplete`
-      //   // option) and give the jobs a deterministic id so that a job
-      //   // will not be re-executed if it already did recently.
-      //   jobId: fillInfo.buyHash + fillInfo.sellHash,
-      //   removeOnComplete: 1000,
-      // },
+      opts: {
+        // Since it can happen to sync and handle the same events more
+        // than once, we should make sure not to do any expensive work
+        // more than once for the same event. As such, we keep the last
+        // performed jobs in the queue (via the above `removeOnComplete`
+        // option) and give the jobs a deterministic id so that a job
+        // will not be re-executed if it already did recently.
+        jobId:
+          fillInfo.context + "-" + fillInfo.buyHash + "-" + fillInfo.sellHash,
+        removeOnComplete: 10000,
+      },
     }))
   );
 };
