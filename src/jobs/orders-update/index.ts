@@ -265,10 +265,6 @@ if (config.doBackgroundWork) {
       try {
         let hashes: { hash: string; status: string }[] = [];
 
-        logger.info(
-          BY_HASH_JOB_NAME,
-          `Handling ${side} balance change for ${maker}`
-        );
         if (side === "buy") {
           hashes = await db.manyOrNone(
             `
