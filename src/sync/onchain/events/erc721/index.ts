@@ -36,7 +36,7 @@ const nonStandardAbi = new Interface([
 export const getContractInfo = (address: string[] = []): ContractInfo => ({
   provider: baseProvider,
   filter: { address },
-  syncCallback: async (logs: Log[]) => {
+  syncCallback: async (logs: Log[], backfill?: boolean) => {
     const transferEvents: NftTransferEvent[] = [];
     const makerInfos: MakerInfo[] = [];
 
@@ -91,8 +91,11 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
     }
 
     await addNftTransferEvents("erc721", transferEvents);
-    if (config.acceptOrders) {
-      await addToOrdersUpdateByMakerQueue(makerInfos);
+
+    if (!backfill) {
+      if (config.acceptOrders) {
+        await addToOrdersUpdateByMakerQueue(makerInfos);
+      }
     }
   },
   fixCallback: async (blockHash) => {

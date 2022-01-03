@@ -23,7 +23,7 @@ export type ContractInfo = {
   // chains, since it creates some useless complexities.
   provider: JsonRpcProvider;
   filter: EnhancedFilter;
-  syncCallback: (logs: Log[]) => Promise<void>;
+  syncCallback: (logs: Log[], backfill?: boolean) => Promise<void>;
   fixCallback: (blockHash: string) => Promise<void>;
   skip?: boolean;
 };
@@ -31,7 +31,8 @@ export type ContractInfo = {
 export const sync = async (
   fromBlock: number,
   toBlock: number,
-  contractInfo: ContractInfo
+  contractInfo: ContractInfo,
+  backfill?: boolean
 ) => {
   // https://github.com/ethers-io/ethers.js/discussions/2168
   const formatter = new Formatter();
@@ -46,7 +47,7 @@ export const sync = async (
     rawLogs
   ) as Log[];
 
-  await contractInfo.syncCallback(logs);
+  await contractInfo.syncCallback(logs, backfill);
 };
 
 // Newly added contract kinds should all make it into the below lists

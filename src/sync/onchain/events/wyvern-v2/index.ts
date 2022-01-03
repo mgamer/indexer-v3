@@ -36,7 +36,7 @@ const abi = new Interface([
 export const getContractInfo = (address: string[] = []): ContractInfo => ({
   provider: baseProvider,
   filter: { address },
-  syncCallback: async (logs: Log[]) => {
+  syncCallback: async (logs: Log[], backfill?: boolean) => {
     const cancelEvents: CancelEvent[] = [];
     const fillEvents: FillEvent[] = [];
     const hashInfos: HashInfo[] = [];
@@ -103,9 +103,11 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
     await addCancelEvents("wyvern-v2", cancelEvents);
     await addFillEvents("wyvern-v2", fillEvents);
 
-    if (config.acceptOrders) {
-      await addToOrdersUpdateByHashQueue(hashInfos);
-      await addToFillsHandleQueue(fillInfos);
+    if (!backfill) {
+      if (config.acceptOrders) {
+        await addToOrdersUpdateByHashQueue(hashInfos);
+        await addToFillsHandleQueue(fillInfos);
+      }
     }
   },
   fixCallback: async (blockHash) => {

@@ -97,7 +97,7 @@ if (config.doBackgroundWork) {
             `Backfill syncing block range [${fromBlock}, ${toBlock}]`
           );
 
-          await sync(fromBlock, toBlock, eventInfo);
+          await sync(fromBlock, toBlock, eventInfo, true);
         }
       } catch (error) {
         logger.error(contractKind, `Backfill job failed: ${error}`);
