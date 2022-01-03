@@ -33,7 +33,7 @@ if (config.doBackgroundWork) {
   cron.schedule("*/1 * * * *", async () => {
     const lockAcquired = await acquireLock("fills_handle_queue_clean_lock", 55);
     if (lockAcquired) {
-      queue.clean(5 * 60, 100000, "completed");
+      await queue.clean(5 * 60 * 1000, 100000);
     }
   });
 }

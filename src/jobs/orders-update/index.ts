@@ -49,7 +49,7 @@ if (config.doBackgroundWork) {
       55
     );
     if (lockAcquired) {
-      byHashQueue.clean(5 * 60, 100000, "completed");
+      await byHashQueue.clean(5 * 60 * 1000, 100000);
     }
   });
 }
@@ -238,7 +238,7 @@ if (config.doBackgroundWork) {
       55
     );
     if (lockAcquired) {
-      byMakerQueue.clean(5 * 60, 100000, "completed");
+      await byMakerQueue.clean(5 * 60 * 1000, 100000);
     }
   });
 }
