@@ -1,9 +1,10 @@
 import { HashZero } from "@ethersproject/constants";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
+import cron from "node-cron";
 
 import { db } from "@/common/db";
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
+import { acquireLock, redis } from "@/common/redis";
 import { config } from "@/config/index";
 
 // Whenever a fill happens, we want to extract some useful information
@@ -26,6 +27,16 @@ const queue = new Queue(JOB_NAME, {
   },
 });
 new QueueScheduler(JOB_NAME, { connection: redis });
+
+// Actual work is to be handled by background worker processes
+if (config.doBackgroundWork) {
+  cron.schedule("*/1 * * * *", async () => {
+    const lockAcquired = await acquireLock("fills_handle_queue_clean_lock", 55);
+    if (lockAcquired) {
+      queue.clean(5 * 60, 100000, "completed");
+    }
+  });
+}
 
 export type FillInfo = {
   // The context will ensure the queue won't process the same job more

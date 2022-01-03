@@ -41,6 +41,19 @@ const byHashQueue = new Queue(BY_HASH_JOB_NAME, {
 });
 new QueueScheduler(BY_HASH_JOB_NAME, { connection: redis });
 
+// Actual work is to be handled by background worker processes
+if (config.doBackgroundWork) {
+  cron.schedule("*/1 * * * *", async () => {
+    const lockAcquired = await acquireLock(
+      "orders_update_by_hash_queue_clean_lock",
+      55
+    );
+    if (lockAcquired) {
+      byHashQueue.clean(5 * 60, 100000, "completed");
+    }
+  });
+}
+
 export type HashInfo = {
   // The context will ensure the queue won't process the same job more
   // than once in the same context (over a recent time period)
@@ -216,6 +229,19 @@ const byMakerQueue = new Queue(BY_MAKER_JOB_NAME, {
   },
 });
 new QueueScheduler(BY_MAKER_JOB_NAME, { connection: redis });
+
+// Actual work is to be handled by background worker processes
+if (config.doBackgroundWork) {
+  cron.schedule("*/1 * * * *", async () => {
+    const lockAcquired = await acquireLock(
+      "orders_update_by_maker_queue_clean_lock",
+      55
+    );
+    if (lockAcquired) {
+      byMakerQueue.clean(5 * 60, 100000, "completed");
+    }
+  });
+}
 
 export type MakerInfo = {
   // The context will ensure the queue won't process the same job more
