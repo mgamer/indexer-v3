@@ -60,7 +60,7 @@ export const postOrdersOptions: RouteOptions = {
         result[order.prefixHash()] = "Success";
       }
 
-      return { result };
+      return { orders: result };
     } catch (error) {
       logger.error("post_orders_handler", `Handler failure: ${error}`);
       throw error;

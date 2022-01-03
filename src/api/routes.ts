@@ -47,6 +47,12 @@ export const setupRoutes = (server: Server) => {
     options: attributesEndpoints.getCollectionAttributesOptions,
   });
 
+  server.route({
+    method: "POST",
+    path: "/attributes/refresh",
+    options: attributesEndpoints.postAttributesRefreshOptions,
+  });
+
   // Collections
 
   server.route({

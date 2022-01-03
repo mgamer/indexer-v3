@@ -217,6 +217,7 @@ if (config.doBackgroundWork) {
               from "token_sets"
               where "collection_id" = $/collectionId/
             )
+            on conflict do nothing
           `,
           values: {
             contract,
