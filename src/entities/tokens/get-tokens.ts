@@ -8,7 +8,8 @@ export type GetTokensFilter = {
   attributes?: { [key: string]: string };
   tokenSetId?: string;
   onSale?: boolean;
-  sortBy?: string;
+  sortBy?: "tokenId" | "floorSellValue" | "topBuyValue";
+  sortByAttribute?: string;
   sortDirection?: "asc" | "desc";
   offset: number;
   limit: number;
@@ -122,21 +123,21 @@ export const getTokens = async (
   }
 
   // Sorting
-  filter.sortBy = filter.sortBy ?? "floorSellValue";
-  filter.sortDirection = filter.sortDirection ?? "asc";
-  switch (filter.sortBy) {
+  const sortBy = filter.sortByAttribute ?? filter.sortBy ?? "floorSellValue";
+  const sortDirection = filter.sortDirection ?? "asc";
+  switch (sortBy) {
     case "tokenId": {
-      baseQuery += ` order by "t"."token_id" ${filter.sortDirection} nulls last`;
+      baseQuery += ` order by "t"."token_id" ${sortDirection} nulls last`;
       break;
     }
 
     case "floorSellValue": {
-      baseQuery += ` order by "t"."floor_sell_value" ${filter.sortDirection} nulls last`;
+      baseQuery += ` order by "t"."floor_sell_value" ${sortDirection} nulls last`;
       break;
     }
 
     case "topBuyValue": {
-      baseQuery += ` order by "t"."top_buy_value" ${filter.sortDirection} nulls last`;
+      baseQuery += ` order by "t"."top_buy_value" ${sortDirection} nulls last`;
       break;
     }
 
@@ -148,17 +149,17 @@ export const getTokens = async (
             from "attributes" "a"
             where "a"."contract" = "t"."contract"
               and "a"."token_id" = "t"."token_id"
-              and "a"."key" = $/sortBy/
+              and "a"."key" = $/sortByAttribute/
               and "a"."kind" = 'string'
-          ) ${filter.sortDirection} nulls last,
+          ) ${sortDirection} nulls last,
           (
             select "a"."value"::numeric
             from "attributes" "a"
             where "a"."contract" = "t"."contract"
               and "a"."token_id" = "t"."token_id"
-              and "a"."key" = $/sortBy/
+              and "a"."key" = $/sortByAttribute/
               and "a"."kind" = 'number'
-          ) ${filter.sortDirection} nulls last,
+          ) ${sortDirection} nulls last,
           "t"."token_id" asc nulls last
       `;
       break;
