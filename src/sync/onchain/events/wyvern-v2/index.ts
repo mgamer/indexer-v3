@@ -45,6 +45,8 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
     for (const log of logs) {
       try {
         const baseParams = parseEvent(log);
+        const context =
+          baseParams.txHash + "-" + baseParams.logIndex.toString();
 
         switch (log.topics[0]) {
           case abi.getEventTopic("OrderCancelled"): {
@@ -56,7 +58,7 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
               baseParams,
             });
 
-            hashInfos.push({ hash: orderHash });
+            hashInfos.push({ context, hash: orderHash });
 
             break;
           }
@@ -78,9 +80,10 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
               baseParams,
             });
 
-            hashInfos.push({ hash: buyHash });
-            hashInfos.push({ hash: sellHash });
+            hashInfos.push({ context, hash: buyHash });
+            hashInfos.push({ context, hash: sellHash });
             fillInfos.push({
+              context,
               buyHash,
               sellHash,
               block: baseParams.block,

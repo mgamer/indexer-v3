@@ -444,6 +444,6 @@ export const saveOrders = async (orders: Sdk.WyvernV2.Order[]) => {
     await db.none(pgp.helpers.concat(queries));
   }
   await addToOrdersUpdateByHashQueue(
-    orders.map((order) => ({ hash: order.prefixHash() }))
+    orders.map((order) => ({ context: "save", hash: order.prefixHash() }))
   );
 };
