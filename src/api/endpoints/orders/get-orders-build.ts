@@ -1,3 +1,4 @@
+import { AddressZero } from "@ethersproject/constants";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
@@ -26,6 +27,7 @@ export const getOrdersBuildOptions: RouteOptions = {
       feeRecipient: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/)
+        .disallow(AddressZero)
         .required(),
       listingTime: Joi.alternatives(Joi.string(), Joi.number()),
       expirationTime: Joi.alternatives(Joi.string(), Joi.number()),
