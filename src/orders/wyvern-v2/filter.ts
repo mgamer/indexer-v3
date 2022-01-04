@@ -85,6 +85,12 @@ export const filterOrders = async (
       continue;
     }
 
+    // Check: order has a non-zero fee recipient
+    if (order.params.feeRecipient === AddressZero) {
+      result.invalidOrders.push({ order, reason: "Fee recipient is zero" });
+      continue;
+    }
+
     // Check: buy order has Weth as payment token
     if (
       order.params.side === 0 &&
