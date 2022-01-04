@@ -57,14 +57,8 @@ export const getCollections = async (
       "cs"."token_count",
       "cs"."on_sale_count",
       "cs"."sample_images",
-      "cs"."floor_sell_hash",
       "os"."value" as "floor_sell_value",
-      "os"."maker" as "floor_sell_maker",
-      date_part('epoch', lower("os"."valid_between")) as "floor_sell_valid_from",
-      "cs"."top_buy_hash",
-      "ob"."value" as "top_buy_value",
-      "ob"."maker" as "top_buy_maker",
-      date_part('epoch', lower("ob"."valid_between")) as "top_buy_valid_from"
+      "ob"."value" as "top_buy_value"
     from "collections" "c"
     join "collection_stats" "cs"
       on "c"."id" = "cs"."collection_id"
@@ -127,16 +121,16 @@ export const getCollections = async (
         sampleImages: r.sample_images,
         market: {
           floorSell: {
-            hash: r.floor_sell_hash,
+            hash: null,
             value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-            maker: r.floor_sell_maker,
-            validFrom: r.floor_sell_valid_from,
+            maker: null,
+            validFrom: null,
           },
           topBuy: {
-            hash: r.top_buy_hash,
+            hash: null,
             value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-            maker: r.top_buy_maker,
-            validFrom: r.top_buy_valid_from,
+            maker: null,
+            validFrom: null,
           },
         },
       },
