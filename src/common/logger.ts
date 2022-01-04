@@ -4,7 +4,7 @@ import { config } from "@/config/index";
 
 const log = (level: "debug" | "error" | "info") => {
   const network = config.chainId === 1 ? "mainnet" : "rinkeby";
-  const service = `indexer-v3-${network}`;
+  const service = `indexer-${config.version}-${network}`;
 
   const logger = createLogger({
     exitOnError: false,
