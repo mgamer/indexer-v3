@@ -5,7 +5,7 @@ export type GetTokensFilter = {
   contract?: string;
   tokenId?: string;
   collection?: string;
-  attributes?: { [key: string]: string };
+  attributes?: { [key: string]: string | string[] };
   tokenSetId?: string;
   onSale?: boolean;
   sortBy?: "tokenId" | "floorSellValue" | "topBuyValue";
@@ -82,12 +82,34 @@ export const getTokens = async (
     `;
   }
 
-  if (filter.attributes) {
+  if (filter.sortByAttribute) {
     baseQuery += `
       join "attributes" "a"
         on "t"."contract" = "a"."contract"
         and "t"."token_id" = "a"."token_id"
     `;
+  }
+
+  if (filter.attributes) {
+    const attributes: { key: string; value: string }[] = [];
+    Object.entries(filter.attributes).forEach(([key, values]) => {
+      (Array.isArray(values) ? values : [values]).forEach((value) =>
+        attributes.push({ key, value })
+      );
+    });
+
+    // For performance reasons, only allow up to 5 attributes
+    attributes.slice(0, 5).forEach(({ key, value }, i) => {
+      baseQuery += `
+        join "attributes" "a${i}"
+          on "t"."contract" = "a${i}"."contract"
+          and "t"."token_id" = "a${i}"."token_id"
+          and "a${i}"."key" = $/key${i}/
+          and "a${i}"."value" = $/value${i}/
+      `;
+      (filter as any)[`key${i}`] = key;
+      (filter as any)[`value${i}`] = value;
+    });
   }
 
   // Filters
@@ -100,15 +122,6 @@ export const getTokens = async (
   }
   if (filter.collection) {
     conditions.push(`"t"."collection_id" = $/collection/`);
-  }
-  if (filter.attributes) {
-    Object.entries(filter.attributes).forEach(([key, value], i) => {
-      conditions.push(`
-        "a"."key" = $/key${i}/ and "a"."value" = $/value${i}/
-      `);
-      (filter as any)[`key${i}`] = key;
-      (filter as any)[`value${i}`] = value;
-    });
   }
   if (filter.tokenSetId) {
     conditions.push(`"tst"."token_set_id" = $/tokenSetId/`);
