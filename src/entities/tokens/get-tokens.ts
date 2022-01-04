@@ -98,8 +98,7 @@ export const getTokens = async (
       );
     });
 
-    // For performance reasons, only allow up to 5 attributes
-    attributes.slice(0, 5).forEach(({ key, value }, i) => {
+    attributes.forEach(({ key, value }, i) => {
       baseQuery += `
         join "attributes" "a${i}"
           on "t"."contract" = "a${i}"."contract"

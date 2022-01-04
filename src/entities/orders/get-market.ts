@@ -5,7 +5,7 @@ export type GetMarketFilter = {
   contract?: string;
   tokenId?: string;
   collection?: string;
-  attributes?: { [key: string]: string };
+  attributes?: { [key: string]: string | string[] };
 };
 
 export type GetMarketResponse = {
@@ -23,7 +23,7 @@ export const getMarket = async (
   filter: GetMarketFilter
 ): Promise<GetMarketResponse> => {
   // For safety, we cap the number of results that can get returned
-  const limit = 100;
+  const limit = 200;
 
   type RawDepthInfo = {
     value: string;
@@ -38,7 +38,7 @@ export const getMarket = async (
       `
         select
           "o"."value",
-          count("o"."hash") as "quantity"
+          count(distinct("o"."hash")) as "quantity"
         from "orders" "o"
         join "token_sets_tokens" "tst"
           on "o"."token_set_id" = "tst"."token_set_id"
@@ -50,10 +50,7 @@ export const getMarket = async (
         order by "o"."value" desc
         limit ${limit}
       `,
-      {
-        contract: filter.contract,
-        tokenId: filter.tokenId,
-      }
+      filter
     );
 
     sells = await db.manyOrNone(
@@ -67,50 +64,59 @@ export const getMarket = async (
         where "t"."contract" = $/contract/
           and "t"."token_id" = $/tokenId/
         group by "o"."value"
-        order by "o"."value" desc
+        order by "o"."value" asc
         limit ${limit}
       `,
-      {
-        contract: filter.contract,
-        tokenId: filter.tokenId,
-      }
+      filter
     );
   } else if (filter.collection && filter.attributes) {
-    // TODO: Add support for `buys` once attribute-based get supported
+    let sellsQuery = `
+      select
+        "o"."value",
+        count(distinct("o"."hash")) as "quantity"
+      from "tokens" "t"
+      join "orders" "o"
+        on "t"."floor_sell_hash" = "o"."hash"
+      join "attributes" "a"
+        on "t"."contract" = "a"."contract"
+        and "t"."token_id" = "a"."token_id"
+    `;
 
-    const columns = new pgp.helpers.ColumnSet(["key", "value"]);
-    const values = pgp.helpers.values(
-      Object.entries(filter.attributes).map(([key, value]) => ({ key, value })),
-      columns
-    );
+    const attributes: { key: string; value: string }[] = [];
+    Object.entries(filter.attributes).forEach(([key, values]) => {
+      (Array.isArray(values) ? values : [values]).forEach((value) =>
+        attributes.push({ key, value })
+      );
+    });
 
-    sells = await db.manyOrNone(
-      `
-        select
-          "o"."value",
-          count(distinct("o"."hash")) as "quantity"
-        from "tokens" "t"
-        join "orders" "o"
-          on "t"."floor_sell_hash" = "o"."hash"
-        join "attributes" "a"
-          on "t"."contract" = "a"."contract"
-          and "t"."token_id" = "a"."token_id"
-        where "t"."collection_id" = $/collection/
-          and ("a"."key", "a"."value") in (${values})
-        group by "o"."hash", "o"."value"
-        order by "o"."value" desc
-        limit ${limit}
-      `,
-      {
-        collection: filter.collection,
-      }
-    );
+    attributes.forEach(({ key, value }, i) => {
+      sellsQuery += `
+        join "attributes" "a${i}"
+          on "t"."contract" = "a${i}"."contract"
+          and "t"."token_id" = "a${i}"."token_id"
+          and "a${i}"."key" = $/key${i}/
+          and "a${i}"."value" = $/value${i}/
+      `;
+      (filter as any)[`key${i}`] = key;
+      (filter as any)[`value${i}`] = value;
+    });
+
+    sellsQuery += `
+      where "t"."collection_id" = $/collection/
+      group by "o"."hash", "o"."value"
+      order by "o"."value" asc
+      limit ${limit}
+    `;
+
+    sells = await db.manyOrNone(sellsQuery, filter);
+
+    // TODO: Retrieve matching buy orders once attribute-based get integrated
   } else if (filter.collection) {
     buys = await db.manyOrNone(
       `
         select
           "o"."value",
-          count("o"."hash") as "quantity"
+          count(distinct("o"."hash")) as "quantity"
         from "orders" "o"
         join "token_sets" "ts"
           on "o"."token_set_id" = "ts"."id"
@@ -121,9 +127,7 @@ export const getMarket = async (
         order by "o"."value" desc
         limit ${limit}
       `,
-      {
-        collection: filter.collection,
-      }
+      filter
     );
 
     sells = await db.manyOrNone(
@@ -135,13 +139,11 @@ export const getMarket = async (
         join "orders" "o"
           on "t"."floor_sell_hash" = "o"."hash"
         where "t"."collection_id" = $/collection/
-        group by "o"."hash", "o"."value"
-        order by "o"."value" desc
+        group by "o"."value"
+        order by "o"."value" asc
         limit ${limit}
       `,
-      {
-        collection: filter.collection,
-      }
+      filter
     );
   }
 
