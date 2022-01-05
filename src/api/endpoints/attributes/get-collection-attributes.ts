@@ -6,7 +6,7 @@ import { logger } from "@/common/logger";
 import * as queries from "@/entities/attributes/get-collection-attributes";
 
 export const getCollectionAttributesOptions: RouteOptions = {
-  description: "Explore the top attribute values, across the whole collection or within a single attribute key",
+  description: "Explore the top attribute values, across a whole collection or within a single attribute key",
   tags: ["api"],
   validate: {
     params: Joi.object({

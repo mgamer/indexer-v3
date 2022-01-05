@@ -6,7 +6,7 @@ import { logger } from "@/common/logger";
 import * as queries from "@/entities/tokens/get-user-tokens";
 
 export const getUserTokensOptions: RouteOptions = {
-  description: "Get user tokens",
+  description: "Get tokens held by a user, along with ownership information such as associated orders and date acquired",
   tags: ["api"],
   validate: {
     params: Joi.object({
