@@ -1,7 +1,6 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { marketFormat, tokenFormat } from "@/api/types";
 import { logger } from "@/common/logger";
 import * as queries from "@/entities/tokens/get-tokens";
 
