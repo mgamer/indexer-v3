@@ -59,6 +59,7 @@ export const getTokensDetails = async (
 ): Promise<GetTokensDetailsResponse> => {
   let baseQuery = `
     select
+      row_number() over () as "row_number",
       "t"."contract",
       "t"."token_id",
       "ct"."kind",
@@ -213,29 +214,21 @@ export const getTokensDetails = async (
   baseQuery += ` limit $/limit/`;
 
   baseQuery = `
-    select
+    with "x" as (${baseQuery})
+    select distinct on ("x"."contract", "x"."token_id", "x"."row_number")
       "x".*,
-      "y"."owner",
-      "y"."attributes"
-    from (${baseQuery}) "x"
-    join (
-      select distinct on ("t"."contract", "t"."token_id")
-        "t"."contract",
-        "t"."token_id",
-        "o"."owner",
-        array_agg(json_build_object('key', "a"."key", 'value', "a"."value"))
-          over (partition by "t"."contract", "t"."token_id") as "attributes"
-      from "tokens" "t"
-      join "ownerships" "o"
-        on "t"."contract" = "o"."contract"
-        and "t"."token_id" = "o"."token_id"
-        and "o"."amount" > 0
-      join "attributes" "a"
-        on "t"."contract" = "a"."contract"
-        and "t"."token_id" = "a"."token_id"
-    ) "y"
-      on "x"."contract" = "y"."contract"
-      and "x"."token_id" = "y"."token_id"
+      "o"."owner",
+      array_agg(json_build_object('key', "a"."key", 'value', "a"."value"))
+        over (partition by "x"."contract", "x"."token_id") as "attributes"
+    from "x"
+    join "ownerships" "o"
+      on "x"."contract" = "o"."contract"
+      and "x"."token_id" = "o"."token_id"
+      and "o"."amount" > 0
+    join "attributes" "a"
+      on "x"."contract" = "a"."contract"
+      and "x"."token_id" = "a"."token_id"
+    order by "x"."row_number"
   `;
 
   return db.manyOrNone(baseQuery, filter).then((result) =>
