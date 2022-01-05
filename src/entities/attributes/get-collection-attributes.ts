@@ -52,6 +52,7 @@ export const getCollectionAttributes = async (
         on "a"."contract" = "t"."contract"
         and "a"."token_id" = "t"."token_id"
       where "t"."collection_id" = $/collection/
+        and "a"."rank" is not null
       group by "a"."key", "a"."value"
     )
     select * from "x"

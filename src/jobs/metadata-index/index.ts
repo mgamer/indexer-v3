@@ -66,7 +66,8 @@ if (config.doBackgroundWork) {
         attributes: {
           key: string;
           value: string;
-          kind?: "number" | "string";
+          kind?: "number" | "string" | "date" | "range";
+          rank?: number;
         }[];
       };
 
@@ -160,7 +161,7 @@ if (config.doBackgroundWork) {
 
         // Save token attribute metadata
         const attributeValues: any[] = [];
-        for (const { key, value, kind } of data.attributes) {
+        for (const { key, value, kind, rank } of data.attributes) {
           attributeValues.push({
             contract,
             token_id: tokenId,
@@ -168,11 +169,13 @@ if (config.doBackgroundWork) {
             value,
             // TODO: Defaulting to `string` should be done at the database level
             kind: kind || "string",
+            // TODO: Defaulting to `1` should be done at the database level
+            rank: rank ? (rank === -1 ? null : rank) : 1,
           });
         }
         if (attributeValues.length) {
           const columns = new pgp.helpers.ColumnSet(
-            ["contract", "token_id", "key", "value", "kind"],
+            ["contract", "token_id", "key", "value", "kind", "rank"],
             { table: "attributes" }
           );
           const values = pgp.helpers.values(attributeValues, columns);
@@ -194,7 +197,8 @@ if (config.doBackgroundWork) {
                 "token_id",
                 "key",
                 "value",
-                "kind"
+                "kind",
+                "rank"
               ) values ${values}
               on conflict do nothing
             `,
