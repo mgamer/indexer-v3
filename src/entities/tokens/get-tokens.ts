@@ -16,31 +16,16 @@ export type GetTokensFilter = {
 };
 
 export type GetTokensResponse = {
-  token: {
-    contract: string;
-    tokenId: string;
-    kind: string;
-    name: string | null;
-    image: string;
-    collection: {
-      id: string;
-      name: string;
-    };
+  contract: string;
+  tokenId: string;
+  name: string | null;
+  image: string;
+  collection: {
+    id: string;
+    name: string;
   };
-  market: {
-    floorSell: {
-      hash: string | null;
-      value: number | null;
-      maker: string | null;
-      validFrom: number | null;
-    };
-    topBuy: {
-      hash: string | null;
-      value: number | null;
-      maker: string | null;
-      validFrom: number | null;
-    };
-  };
+  topBuyValue: number | null;
+  floorSellValue: number | null;
 }[];
 
 export const getTokens = async (
@@ -50,28 +35,15 @@ export const getTokens = async (
     select
       "t"."contract",
       "t"."token_id",
-      "ct"."kind",
       "t"."name",
       "t"."image",
-      "cl"."id" as "collection_id",
-      "cl"."name" as "collection_name",
-      "t"."floor_sell_hash",
-      "os"."value" as "floor_sell_value",
-      "os"."maker" as "floor_sell_maker",
-      date_part('epoch', lower("os"."valid_between")) as "floor_sell_valid_from",
-      "t"."top_buy_hash",
-      "ob"."value" as "top_buy_value",
-      "ob"."maker" as "top_buy_maker",
-      date_part('epoch', lower("ob"."valid_between")) as "top_buy_valid_from"
+      "c"."id" as "collection_id",
+      "c"."name" as "collection_name",
+      "t"."floor_sell_value",
+      "t"."top_buy_value"
     from "tokens" "t"
-    join "collections" "cl"
-      on "t"."collection_id" = "cl"."id"
-    join "contracts" "ct"
-      on "t"."contract" = "ct"."address"
-    left join "orders" "os"
-      on "t"."floor_sell_hash" = "os"."hash"
-    left join "orders" "ob"
-      on "t"."top_buy_hash" = "ob"."hash"
+    join "collections" "c"
+      on "t"."collection_id" = "c"."id"
   `;
 
   if (filter.tokenSetId) {
@@ -126,9 +98,9 @@ export const getTokens = async (
     conditions.push(`"tst"."token_set_id" = $/tokenSetId/`);
   }
   if (filter.onSale === true) {
-    conditions.push(`"t"."floor_sell_value" is not null`);
+    conditions.push(`"t"."floor_sell_hash" is not null`);
   } else if (filter.onSale === false) {
-    conditions.push(`"t"."floor_sell_value" is null`);
+    conditions.push(`"t"."floor_sell_hash" is null`);
   }
   if (conditions.length) {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
@@ -184,31 +156,16 @@ export const getTokens = async (
 
   return db.manyOrNone(baseQuery, filter).then((result) =>
     result.map((r) => ({
-      token: {
-        contract: r.contract,
-        tokenId: r.token_id,
-        kind: r.kind,
-        name: r.name,
-        image: r.image,
-        collection: {
-          id: r.collection_id,
-          name: r.collection_name,
-        },
+      contract: r.contract,
+      tokenId: r.token_id,
+      name: r.name,
+      image: r.image,
+      collection: {
+        id: r.collection_id,
+        name: r.collection_name,
       },
-      market: {
-        floorSell: {
-          hash: r.floor_sell_hash,
-          value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-          maker: r.floor_sell_maker,
-          validFrom: r.floor_sell_valid_from,
-        },
-        topBuy: {
-          hash: r.top_buy_hash,
-          value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-          maker: r.top_buy_maker,
-          validFrom: r.top_buy_valid_from,
-        },
-      },
+      topBuyValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+      floorSellValue: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
     }))
   );
 };

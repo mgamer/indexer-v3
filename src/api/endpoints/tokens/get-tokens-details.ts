@@ -1,11 +1,11 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { marketFormat, tokenFormat } from "@/api/types";
+import { marketFormat } from "@/api/types";
 import { logger } from "@/common/logger";
-import * as queries from "@/entities/tokens/get-tokens";
+import * as queries from "@/entities/tokens/get-tokens-details";
 
-export const getTokensOptions: RouteOptions = {
+export const getTokensDetailsOptions: RouteOptions = {
   description:
     "Get a list of tokens. Useful for showing the best priced tokens in a collection or attribute.",
   tags: ["api"],
@@ -37,21 +37,37 @@ export const getTokensOptions: RouteOptions = {
     schema: Joi.object({
       tokens: Joi.array().items(
         Joi.object({
-          contract: Joi.string(),
-          name: Joi.string().allow("", null),
-          image: Joi.string().allow(""),
-          tokenId: Joi.string(),
-          collection: Joi.object({
-            id: Joi.string(),
-            name: Joi.string(),
+          token: Joi.object({
+            contract: Joi.string(),
+            kind: Joi.string(),
+            name: Joi.string().allow("", null),
+            description: Joi.string().allow("", null),
+            image: Joi.string().allow(""),
+            tokenId: Joi.string(),
+            collection: Joi.object({
+              id: Joi.string(),
+              name: Joi.string(),
+            }),
+            lastBuy: {
+              value: Joi.number().unsafe().allow(null),
+              timestamp: Joi.number().unsafe().allow(null),
+            },
+            lastSell: {
+              value: Joi.number().unsafe().allow(null),
+              timestamp: Joi.number().unsafe().allow(null),
+            },
+            owner: Joi.string().allow(null),
+            attributes: Joi.any().allow(null),
           }),
-          topBuyValue: Joi.number().unsafe().allow(null),
-          floorSellValue: Joi.number().unsafe().allow(null),
+          market: marketFormat,
         })
       ),
-    }).label("getTokensResponse"),
+    }).label("getTokensDetailsResponse"),
     failAction: (_request, _h, error) => {
-      logger.error("get_tokens_handler", `Wrong response schema: ${error}`);
+      logger.error(
+        "get_tokens_details_handler",
+        `Wrong response schema: ${error}`
+      );
       throw error;
     },
   },
@@ -59,11 +75,13 @@ export const getTokensOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const tokens = await queries.getTokens(query as queries.GetTokensFilter);
+      const tokens = await queries.getTokensDetails(
+        query as queries.GetTokensDetailsFilter
+      );
 
       return { tokens };
     } catch (error) {
-      logger.error("get_tokens_handler", `Handler failure: ${error}`);
+      logger.error("get_tokens_details_handler", `Handler failure: ${error}`);
       throw error;
     }
   },
