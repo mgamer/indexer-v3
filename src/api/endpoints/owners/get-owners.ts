@@ -3,10 +3,11 @@ import Joi from "joi";
 
 import { ownershipFormat } from "@/api/types";
 import { logger } from "@/common/logger";
-import * as queries from "@/entities/ownerships/get-ownerships";
+import * as queries from "@/entities/owners/get-owners";
 
-export const getOwnershipsOptions: RouteOptions = {
-  description: "Get a list of owners and their ownership info. Useful for exploring top owners in a collection or attribute.",
+export const getOwnersOptions: RouteOptions = {
+  description:
+    "Get a list of owners and their ownership info. Useful for exploring top owners in a collection or attribute.",
   tags: ["api"],
   validate: {
     query: Joi.object({
@@ -27,15 +28,15 @@ export const getOwnershipsOptions: RouteOptions = {
   },
   response: {
     schema: Joi.object({
-      ownerships: Joi.array().items(
+      owners: Joi.array().items(
         Joi.object({
           address: Joi.string(),
           ownership: ownershipFormat,
         })
       ),
-    }).label("getOwnershipsResponse"),
+    }).label("getOwnersResponse"),
     failAction: (_request, _h, error) => {
-      logger.error("get_ownerships_handler", `Wrong response schema: ${error}`);
+      logger.error("get_owners_handler", `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -43,13 +44,11 @@ export const getOwnershipsOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const ownerships = await queries.getOwnerships(
-        query as queries.GetOwnershipsFilter
-      );
+      const owners = await queries.getOwners(query as queries.GetOwnersFilter);
 
-      return { ownerships };
+      return { owners };
     } catch (error) {
-      logger.error("get_ownerships_handler", `Handler failure: ${error}`);
+      logger.error("get_owners_handler", `Handler failure: ${error}`);
       throw error;
     }
   },

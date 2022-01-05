@@ -1,7 +1,7 @@
 import { formatEth } from "@/common/bignumber";
 import { db } from "@/common/db";
 
-export type GetOwnershipsFilter = {
+export type GetOwnersFilter = {
   contract?: string;
   tokenId?: string;
   collection?: string;
@@ -11,7 +11,7 @@ export type GetOwnershipsFilter = {
   limit: number;
 };
 
-export type GetOwnershipsResponse = {
+export type GetOwnersResponse = {
   address: string;
   ownership: {
     tokenCount: number;
@@ -23,9 +23,9 @@ export type GetOwnershipsResponse = {
   };
 }[];
 
-export const getOwnerships = async (
-  filter: GetOwnershipsFilter
-): Promise<GetOwnershipsResponse> => {
+export const getOwners = async (
+  filter: GetOwnersFilter
+): Promise<GetOwnersResponse> => {
   let baseQuery = `
     select
       "o"."owner",
