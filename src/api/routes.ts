@@ -4,7 +4,7 @@ import * as adminEndpoints from "@/api/endpoints/admin";
 import * as attributesEndpoints from "@/api/endpoints/attributes";
 import * as collectionsEndpoints from "@/api/endpoints/collections";
 import * as ordersEndpoints from "@/api/endpoints/orders";
-import * as ownershipsEndpoints from "@/api/endpoints/ownerships";
+import * as ownersEndpoints from "@/api/endpoints/owners";
 import * as rootEndpoints from "@/api/endpoints/root";
 import * as setsEndpoints from "@/api/endpoints/sets";
 import * as tokensEndpoints from "@/api/endpoints/tokens";
@@ -113,17 +113,10 @@ export const setupRoutes = (server: Server) => {
 
   // Owners
 
-  // Only keeping this for backwards-compatibility
   server.route({
     method: "GET",
     path: "/owners",
-    options: ownershipsEndpoints.getOwnershipsOptions,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/ownerships",
-    options: ownershipsEndpoints.getOwnershipsOptions,
+    options: ownersEndpoints.getOwnersOptions,
   });
 
   // Sets
@@ -140,6 +133,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/tokens",
     options: tokensEndpoints.getTokensOptions,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/tokens/details",
+    options: tokensEndpoints.getTokensDetailsOptions,
   });
 
   server.route({
