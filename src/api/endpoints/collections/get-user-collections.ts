@@ -6,7 +6,7 @@ import { logger } from "@/common/logger";
 import * as queries from "@/entities/collections/get-user-collections";
 
 export const getUserCollectionsOptions: RouteOptions = {
-  description: "Get user collections",
+  description: "Get aggregate stats for a user, grouped by collection. Useful for showing total portfolio information",
   tags: ["api"],
   validate: {
     params: Joi.object({

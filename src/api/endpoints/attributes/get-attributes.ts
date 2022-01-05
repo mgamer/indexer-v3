@@ -5,7 +5,7 @@ import { logger } from "@/common/logger";
 import * as queries from "@/entities/attributes/get-attributes";
 
 export const getAttributesOptions: RouteOptions = {
-  description: "Get attributes",
+  description: "Get ALL attributes in a collection, and their counts. Useful for displaying filtering options.",
   tags: ["api"],
   validate: {
     query: Joi.object({

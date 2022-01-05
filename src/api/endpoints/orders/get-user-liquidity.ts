@@ -5,7 +5,7 @@ import { logger } from "@/common/logger";
 import * as queries from "@/entities/orders/get-user-liquidity";
 
 export const getUserLiquidityOptions: RouteOptions = {
-  description: "Get user liquidity information",
+  description: "Get aggrgate user liquidity, grouped by collection. Useful for showing a summary of liquidity being provided (orders made).",
   tags: ["api"],
   validate: {
     params: Joi.object({

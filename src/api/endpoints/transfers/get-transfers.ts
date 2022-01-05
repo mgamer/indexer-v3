@@ -6,7 +6,7 @@ import { logger } from "@/common/logger";
 import * as queries from "@/entities/transfers/get-transfers";
 
 export const getTransfersOptions: RouteOptions = {
-  description: "Get transfer events",
+  description: "Get historical transfer events, including sales. Can filter by collection, attribute or token.",
   tags: ["api"],
   validate: {
     query: Joi.object({

@@ -6,7 +6,7 @@ import { logger } from "@/common/logger";
 import * as queries from "@/entities/tokens/get-tokens";
 
 export const getTokensOptions: RouteOptions = {
-  description: "Get tokens",
+  description: "Get a list of tokens. Useful for showing the best priced tokens in a collection or attribute.",
   tags: ["api"],
   validate: {
     query: Joi.object({

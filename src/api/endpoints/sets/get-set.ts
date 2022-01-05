@@ -6,7 +6,7 @@ import { logger } from "@/common/logger";
 import * as queries from "@/entities/sets/get-set";
 
 export const getSetOptions: RouteOptions = {
-  description: "Get set information",
+  description: "Get aggregate stats for a particular set (collection, attribute or single token)",
   tags: ["api"],
   validate: {
     query: Joi.object({

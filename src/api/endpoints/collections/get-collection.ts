@@ -6,7 +6,7 @@ import { logger } from "@/common/logger";
 import * as queries from "@/entities/collections/get-collection";
 
 export const getCollectionOptions: RouteOptions = {
-  description: "Get collection",
+  description: "Get a single collection. Returns more detailed information, and real-time stats.",
   tags: ["api"],
   validate: {
     params: Joi.object({
@@ -21,6 +21,14 @@ export const getCollectionOptions: RouteOptions = {
           name: Joi.string(),
           description: Joi.string(),
           image: Joi.string().allow(""),
+          lastBuy: {
+            value: Joi.number().unsafe().allow(null),
+            timestamp: Joi.number().allow(null),
+          },
+          lastSell: {
+            value: Joi.number().unsafe().allow(null),
+            timestamp: Joi.number().allow(null),
+          },
         }),
         royalties: Joi.object({
           recipient: Joi.string().allow(null),

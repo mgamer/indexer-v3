@@ -9,7 +9,7 @@ import { config } from "@/config/index";
 import * as wyvernV2 from "@/orders/wyvern-v2";
 
 export const postOrdersOptions: RouteOptions = {
-  description: "Post new orders",
+  description: "Submit a new signed order to the order book. Use the SDK to help build and sign orders.",
   tags: ["api"],
   validate: {
     payload: Joi.object().keys({

@@ -7,7 +7,7 @@ import { logger } from "@/common/logger";
 import * as wyvernV2 from "@/orders/wyvern-v2";
 
 export const getOrdersBuildOptions: RouteOptions = {
-  description: "Build order",
+  description: "Build an order object that abstracts different token / order types. The response can be passed to SDK for signing.",
   tags: ["api"],
   validate: {
     query: Joi.object({
