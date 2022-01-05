@@ -26,7 +26,8 @@
   ],
   "erc1155": [
     "0x9b51a88cffe9b50e043661ddd7f492cc3888fcbf",
-    "0x22c36bfdcef207f9c0cc941936eff94d4246d14a"
+    "0x22c36bfdcef207f9c0cc941936eff94d4246d14a",
+    "0x73c5013fa9701425be4a436ca0cec1c0898e6f14"
   ],
   "wyvern-v2": [
     "0x7be8076f4ea4a4ad08075c2508e481d6c946d12b"
