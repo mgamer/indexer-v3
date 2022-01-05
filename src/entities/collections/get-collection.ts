@@ -11,6 +11,14 @@ export type GetCollectionResponse = {
     name: string;
     description: string;
     image: string;
+    lastBuy: {
+      value: number;
+      timestamp: number;
+    };
+    lastSell: {
+      value: number;
+      timestamp: number;
+    };
   };
   royalties: {
     recipient: string | null;
@@ -40,9 +48,15 @@ export type GetCollectionResponse = {
 export const getCollection = async (
   filter: GetCollectionFilter
 ): Promise<GetCollectionResponse> => {
+  // TODO: Implement last buy information directly on collections
+
   let baseQuery = `
     select
       "x".*,
+      "u"."last_sell_value",
+      "u"."last_sell_timestamp",
+      "v"."last_buy_value",
+      "v"."last_buy_timestamp",
       "y"."floor_sell_hash",
       "y"."floor_sell_value",
       "y"."floor_sell_maker",
@@ -96,6 +110,42 @@ export const getCollection = async (
       order by "ts"."collection_id", "o"."value" desc
     ) "z"
       on "x"."id" = "z"."collection_id"
+    left join (
+      select distinct on ("t"."last_sell_block")
+        "t"."collection_id",
+        "t"."last_sell_value",
+        (
+          case when "t"."last_sell_value" is not null
+            then coalesce("b"."timestamp", extract(epoch from now())::int)
+            else null
+          end
+        ) as "last_sell_timestamp"
+      from "tokens" "t"
+      left join "blocks" "b"
+        on "t"."last_sell_block" = "b"."block"
+      where "t"."collection_id" = $/collection/
+      order by "t"."last_sell_block" desc nulls last, "t"."last_sell_value"
+      limit 1
+    ) "u"
+      on "x"."id" = "u"."collection_id"
+    left join (
+      select distinct on ("t"."last_buy_block")
+        "t"."collection_id",
+        "t"."last_buy_value",
+        (
+          case when "t"."last_buy_value" is not null
+            then coalesce("b"."timestamp", extract(epoch from now())::int)
+            else null
+          end
+        ) as "last_buy_timestamp"
+      from "tokens" "t"
+      left join "blocks" "b"
+        on "t"."last_buy_block" = "b"."block"
+      where "t"."collection_id" = $/collection/
+      order by "t"."last_buy_block" desc nulls last, "t"."last_buy_value" desc
+      limit 1
+    ) "v"
+      on "x"."id" = "v"."collection_id"
   `;
 
   return db.oneOrNone(baseQuery, filter).then((r) => ({
@@ -104,6 +154,14 @@ export const getCollection = async (
       name: r.name,
       description: r.description,
       image: r.image,
+      lastBuy: {
+        value: r.last_buy_value,
+        timestamp: r.last_buy_timestamp,
+      },
+      lastSell: {
+        value: r.last_sell_value,
+        timestamp: r.last_sell_timestamp,
+      },
     },
     royalties: {
       recipient: r.royalty_recipient,

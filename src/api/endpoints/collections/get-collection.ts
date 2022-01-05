@@ -21,6 +21,14 @@ export const getCollectionOptions: RouteOptions = {
           name: Joi.string(),
           description: Joi.string(),
           image: Joi.string().allow(""),
+          lastBuy: {
+            value: Joi.number().unsafe().allow(null),
+            timestamp: Joi.number().allow(null),
+          },
+          lastSell: {
+            value: Joi.number().unsafe().allow(null),
+            timestamp: Joi.number().allow(null),
+          },
         }),
         royalties: Joi.object({
           recipient: Joi.string().allow(null),
