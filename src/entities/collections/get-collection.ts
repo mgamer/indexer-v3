@@ -12,12 +12,12 @@ export type GetCollectionResponse = {
     description: string;
     image: string;
     lastBuy: {
-      value: number;
-      timestamp: number;
+      value: number | null;
+      timestamp: number | null;
     };
     lastSell: {
-      value: number;
-      timestamp: number;
+      value: number | null;
+      timestamp: number | null;
     };
   };
   royalties: {
@@ -34,12 +34,19 @@ export type GetCollectionResponse = {
         value: number | null;
         maker: string | null;
         validFrom: number | null;
+        validUntil: number | null;
+        token: {
+          tokenId: number | null;
+          name: string | null;
+          image: string | null;
+        } | null;
       };
       topBuy: {
         hash: string | null;
         value: number | null;
         maker: string | null;
         validFrom: number | null;
+        validUntil: number | null;
       };
     };
   };
@@ -61,10 +68,15 @@ export const getCollection = async (
       "y"."floor_sell_value",
       "y"."floor_sell_maker",
       "y"."floor_sell_valid_from",
+      "y"."floor_sell_valid_until",
+      "y"."token_id",
+      "y"."token_name",
+      "y"."token_image",
       "z"."top_buy_hash",
       "z"."top_buy_value",
       "z"."top_buy_maker",
-      "z"."top_buy_valid_from"
+      "z"."top_buy_valid_from",
+      "z"."top_buy_valid_until"
     from (
       select
         "c"."id",
@@ -85,10 +97,17 @@ export const getCollection = async (
     left join (
       select distinct on ("t"."collection_id")
         "t"."collection_id",
+        "t"."token_id",
+        "t"."name" as "token_name",
+        "t"."image" as "token_image",
         "t"."floor_sell_hash",
         "o"."value" as "floor_sell_value",
         "o"."maker" as "floor_sell_maker",
-        date_part('epoch', lower("o"."valid_between")) as "floor_sell_valid_from"
+        date_part('epoch', lower("o"."valid_between")) as "floor_sell_valid_from",
+        (case when "t"."floor_sell_hash" is not null
+          then coalesce(nullif(date_part('epoch', upper("o"."valid_between")), 'Infinity'), 0)
+          else null
+        end) as "floor_sell_valid_until"
       from "tokens" "t"
       join "orders" "o"
         on "t"."floor_sell_hash" = "o"."hash"
@@ -102,7 +121,11 @@ export const getCollection = async (
         "o"."hash" as "top_buy_hash",
         "o"."value" as "top_buy_value",
         "o"."maker" as "top_buy_maker",
-        date_part('epoch', lower("o"."valid_between")) as "top_buy_valid_from"
+        date_part('epoch', lower("o"."valid_between")) as "top_buy_valid_from",
+        (case when "o"."hash" is not null
+          then coalesce(nullif(date_part('epoch', upper("o"."valid_between")), 'Infinity'), 0)
+          else null
+        end) as "top_buy_valid_until"
       from "orders" "o"
       join "token_sets" "ts"
         on "o"."token_set_id" = "ts"."id"
@@ -155,11 +178,11 @@ export const getCollection = async (
       description: r.description,
       image: r.image,
       lastBuy: {
-        value: r.last_buy_value,
+        value: r.last_buy_value ? formatEth(r.last_buy_value) : null,
         timestamp: r.last_buy_timestamp,
       },
       lastSell: {
-        value: r.last_sell_value,
+        value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
         timestamp: r.last_sell_timestamp,
       },
     },
@@ -177,12 +200,19 @@ export const getCollection = async (
           value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
           maker: r.floor_sell_maker,
           validFrom: r.floor_sell_valid_from,
+          validUntil: r.floor_sell_valid_until,
+          token: r.token_id && {
+            tokenId: r.token_id,
+            name: r.token_name,
+            image: r.token_image,
+          },
         },
         topBuy: {
           hash: r.top_buy_hash,
           value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
           maker: r.top_buy_maker,
           validFrom: r.top_buy_valid_from,
+          validUntil: r.top_buy_valid_until,
         },
       },
     },

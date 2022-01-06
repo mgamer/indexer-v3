@@ -44,12 +44,14 @@ export type GetTokensDetailsResponse = {
       value: number | null;
       maker: string | null;
       validFrom: number | null;
+      validUntil: number | null;
     };
     topBuy: {
       hash: string | null;
       value: number | null;
       maker: string | null;
       validFrom: number | null;
+      validUntil: number | null;
     };
   };
 }[];
@@ -72,24 +74,28 @@ export const getTokensDetails = async (
       "os"."value" as "floor_sell_value",
       "os"."maker" as "floor_sell_maker",
       date_part('epoch', lower("os"."valid_between")) as "floor_sell_valid_from",
+      (case when "t"."floor_sell_hash" is not null
+        then coalesce(nullif(date_part('epoch', upper("os"."valid_between")), 'Infinity'), 0)
+        else null
+      end) as "floor_sell_valid_until",
       "t"."top_buy_hash",
       "ob"."value" as "top_buy_value",
       "ob"."maker" as "top_buy_maker",
       date_part('epoch', lower("ob"."valid_between")) as "top_buy_valid_from",
+      (case when "t"."top_buy_hash" is not null
+        then coalesce(nullif(date_part('epoch', upper("ob"."valid_between")), 'Infinity'), 0)
+        else null
+      end) as "top_buy_valid_until",
       "t"."last_sell_value",
-      (
-        case when "t"."last_sell_value" is not null
-          then coalesce("bs"."timestamp", extract(epoch from now())::int)
-          else null
-        end
-      ) as "last_sell_timestamp",
+      (case when "t"."last_sell_value" is not null
+        then coalesce("bs"."timestamp", extract(epoch from now())::int)
+        else null
+      end) as "last_sell_timestamp",
       "t"."last_buy_value",
-      (
-        case when "t"."last_buy_value" is not null
-          then coalesce("bb"."timestamp", extract(epoch from now())::int)
-          else null
-        end
-      ) as "last_buy_timestamp"
+      (case when "t"."last_buy_value" is not null
+        then coalesce("bb"."timestamp", extract(epoch from now())::int)
+        else null
+      end) as "last_buy_timestamp"
     from "tokens" "t"
     join "collections" "cl"
       on "t"."collection_id" = "cl"."id"
@@ -245,11 +251,11 @@ export const getTokensDetails = async (
           name: r.collection_name,
         },
         lastBuy: {
-          value: r.last_buy_value,
+          value: r.last_buy_value ? formatEth(r.last_buy_value) : null,
           timestamp: r.last_buy_timestamp,
         },
         lastSell: {
-          value: r.last_sell_value,
+          value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
           timestamp: r.last_sell_timestamp,
         },
         owner: r.owner,
@@ -261,12 +267,14 @@ export const getTokensDetails = async (
           value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
           maker: r.floor_sell_maker,
           validFrom: r.floor_sell_valid_from,
+          validUntil: r.floor_sell_valid_until,
         },
         topBuy: {
           hash: r.top_buy_hash,
           value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
           maker: r.top_buy_maker,
           validFrom: r.top_buy_valid_from,
+          validUntil: r.top_buy_valid_until,
         },
       },
     }))

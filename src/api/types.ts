@@ -20,12 +20,19 @@ export const marketFormat = Joi.object({
     value: Joi.number().unsafe().allow(null),
     maker: Joi.string().allow(null),
     validFrom: Joi.number().allow(null),
+    validUntil: Joi.number().allow(null),
+    token: Joi.object({
+      tokenId: Joi.number().allow(null),
+      name: Joi.string().allow(null),
+      image: Joi.string().allow(null),
+    }).allow(null),
   },
   topBuy: Joi.object({
     hash: Joi.string().allow(null),
     value: Joi.number().unsafe().allow(null),
     maker: Joi.string().allow(null),
     validFrom: Joi.number().allow(null),
+    validUntil: Joi.number().allow(null),
   }),
 });
 
