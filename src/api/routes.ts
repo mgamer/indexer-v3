@@ -6,7 +6,7 @@ import * as collectionsEndpoints from "@/api/endpoints/collections";
 import * as ordersEndpoints from "@/api/endpoints/orders";
 import * as ownersEndpoints from "@/api/endpoints/owners";
 import * as rootEndpoints from "@/api/endpoints/root";
-import * as setsEndpoints from "@/api/endpoints/sets";
+import * as statsEndpoints from "@/api/endpoints/stats";
 import * as tokensEndpoints from "@/api/endpoints/tokens";
 import * as transfersEndpoints from "@/api/endpoints/transfers";
 
@@ -119,12 +119,12 @@ export const setupRoutes = (server: Server) => {
     options: ownersEndpoints.getOwnersOptions,
   });
 
-  // Sets
+  // Stats
 
   server.route({
     method: "GET",
-    path: "/sets",
-    options: setsEndpoints.getSetOptions,
+    path: "/stats",
+    options: statsEndpoints.getStatsOptions,
   });
 
   // Tokens
