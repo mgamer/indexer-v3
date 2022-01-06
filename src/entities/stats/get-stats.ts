@@ -40,7 +40,7 @@ export const getStats = async (
           then 1
           else 0
         end) as "on_sale_count",
-        "t"."image",
+        array["t"."image"] as "sample_images",
         "t"."floor_sell_hash",
         "os"."value" as "floor_sell_value",
         "os"."maker" as "floor_sell_maker",
@@ -133,31 +133,49 @@ export const getStats = async (
   }
 
   if (baseQuery) {
-    return db.oneOrNone(baseQuery, filter).then(
-      (r) =>
-        r && {
-          tokenCount: Number(r.token_count),
-          onSaleCount: Number(r.on_sale_count),
-          sampleImages: r.sample_images,
-          market: {
-            floorSell: {
-              hash: r.floor_sell_hash,
-              value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-              maker: r.floor_sell_maker,
-              validFrom: r.floor_sell_valid_from,
-            },
-            // TODO: Once attribute-based orders are live, these fields
-            // will need to be queried and populated in the response
-            topBuy: {
-              hash: r.top_buy_hash || null,
-              value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-              maker: r.top_buy_maker || null,
-              validFrom: r.top_buy_valid_from || null,
-            },
+    const r = await db.oneOrNone(baseQuery, filter);
+    if (r) {
+      return {
+        tokenCount: Number(r.token_count),
+        onSaleCount: Number(r.on_sale_count),
+        sampleImages: r.sample_images || [],
+        market: {
+          floorSell: {
+            hash: r.floor_sell_hash || null,
+            value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+            maker: r.floor_sell_maker || null,
+            validFrom: r.floor_sell_valid_from || null,
           },
-        }
-    );
+          // TODO: Once attribute-based orders are live, these fields
+          // will need to be queried and populated in the response
+          topBuy: {
+            hash: r.top_buy_hash || null,
+            value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+            maker: r.top_buy_maker || null,
+            validFrom: r.top_buy_valid_from || null,
+          },
+        },
+      };
+    }
   }
 
-  return null;
+  return {
+    tokenCount: 0,
+    onSaleCount: 0,
+    sampleImages: [],
+    market: {
+      floorSell: {
+        hash: null,
+        value: null,
+        maker: null,
+        validFrom: null,
+      },
+      topBuy: {
+        hash: null,
+        value: null,
+        maker: null,
+        validFrom: null,
+      },
+    },
+  };
 };
