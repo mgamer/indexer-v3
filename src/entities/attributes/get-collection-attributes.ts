@@ -5,7 +5,7 @@ export type GetCollectionAttributesFilter = {
   collection: string;
   attribute?: string;
   onSaleCount?: number;
-  sortBy?: "key" | "floorSellValue" | "floorCap";
+  sortBy?: "value" | "floorSellValue" | "floorCap";
   sortDirection?: "asc" | "desc";
   offset: number;
   limit: number;
@@ -43,6 +43,7 @@ export const getCollectionAttributes = async (
       select
         "a"."key",
         "a"."value",
+        min("a"."rank") as "rank",
         count(distinct("t"."token_id")) as "token_count",
         count(distinct("t"."token_id")) filter (where "t"."floor_sell_hash" is not null) as "on_sale_count",
         (array_agg("t"."image"))[1:4] as "sample_images",
@@ -71,11 +72,17 @@ export const getCollectionAttributes = async (
   }
 
   // Sorting
-  filter.sortBy = filter.sortBy ?? "key";
+  filter.sortBy = filter.sortBy ?? "value";
   filter.sortDirection = filter.sortDirection ?? "asc";
   switch (filter.sortBy) {
-    case "key": {
-      baseQuery += ` order by "x"."key" ${filter.sortDirection} nulls last`;
+    case "value": {
+      // TODO: Integrate sorting by attribute kind
+      baseQuery += `
+        order by
+          "x"."rank",
+          "x"."key",
+          "x"."value" ${filter.sortDirection} nulls last
+        `;
       break;
     }
 
