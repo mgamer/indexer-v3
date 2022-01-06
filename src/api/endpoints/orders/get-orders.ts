@@ -6,7 +6,8 @@ import { logger } from "@/common/logger";
 import * as queries from "@/entities/orders/get-orders";
 
 export const getOrdersOptions: RouteOptions = {
-  description: "Get a list of orders. Useful for showing users their currently active or expired orders.",
+  description:
+    "Get a list of orders. Useful for showing users their currently active or expired orders.",
   tags: ["api"],
   validate: {
     query: Joi.object({
@@ -23,7 +24,7 @@ export const getOrdersOptions: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-f0-9]{64}$/),
       includeInvalid: Joi.bool(),
-      side: Joi.string().lowercase().valid("sell", "buy").default("sell"),
+      side: Joi.string().lowercase().valid("sell", "buy"),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     })

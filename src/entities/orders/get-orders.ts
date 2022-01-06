@@ -8,7 +8,7 @@ export type GetOrdersFilter = {
   maker?: string;
   hash?: string;
   includeInvalid?: boolean;
-  side: "sell" | "buy";
+  side?: "sell" | "buy";
   offset: number;
   limit: number;
 };
@@ -79,9 +79,9 @@ export const getOrders = async (
   if (filter.hash) {
     conditions.push(`"o"."hash" = $/hash/`);
   }
-  if (filter.side === "buy") {
+  if (filter?.side === "buy") {
     conditions.push(`"o"."side" = 'buy'`);
-  } else if (filter.side === "sell") {
+  } else if (filter?.side === "sell") {
     conditions.push(`"o"."side" = 'sell'`);
   }
   if (conditions.length) {
@@ -89,10 +89,12 @@ export const getOrders = async (
   }
 
   // Sorting
-  if (filter.side === "buy") {
-    baseQuery += ` order by "o"."hash", "o"."value" desc`;
-  } else if (filter.side === "sell") {
-    baseQuery += ` order by "o"."hash", "o"."value" asc`;
+  if (filter?.side === "buy") {
+    baseQuery += ` order by "o"."hash", "o"."value" desc nulls last`;
+  } else if (filter?.side === "sell") {
+    baseQuery += ` order by "o"."hash", "o"."value" asc nulls last`;
+  } else {
+    baseQuery += ` order by "o"."hash", lower("o"."valid_between") desc nulls last`;
   }
 
   // Pagination
