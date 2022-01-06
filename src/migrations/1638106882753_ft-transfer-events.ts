@@ -39,7 +39,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     primaryKey: ["block_hash", "tx_hash", "log_index"],
   });
 
-  pgm.createIndex("ft_transfer_events", ["block"]);
+  pgm.createIndex("ft_transfer_events", [{ name: "block", sort: "DESC" }]);
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {

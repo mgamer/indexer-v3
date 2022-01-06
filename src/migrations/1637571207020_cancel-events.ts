@@ -31,7 +31,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     primaryKey: ["block_hash", "tx_hash", "log_index"],
   });
 
-  pgm.createIndex("cancel_events", ["block"]);
+  pgm.createIndex("cancel_events", [{ name: "block", sort: "DESC" }]);
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {

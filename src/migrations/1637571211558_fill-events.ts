@@ -47,7 +47,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     primaryKey: ["block_hash", "tx_hash", "log_index"],
   });
 
-  pgm.createIndex("fill_events", ["block"]);
+  pgm.createIndex("fill_events", [{ name: "block", sort: "DESC" }]);
   pgm.createIndex("fill_events", ["tx_hash", "maker"]);
 }
 

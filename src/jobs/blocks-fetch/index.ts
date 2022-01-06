@@ -24,10 +24,12 @@ if (config.doBackgroundWork) {
       try {
         const blocks: { block: number }[] = await db.manyOrNone(
           `
-            select "nte"."block" from "nft_transfer_events" "nte"
-            left join "blocks" "b"
-              on "nte"."block" = "b"."block"
-            where "b"."timestamp" is null
+            select
+              "nte"."block"
+            from "nft_transfer_events" "nte"
+            where not exists(
+              select from "blocks" "b" where "b"."block" = "nte"."block"
+            )
             limit $/limit/
           `,
           { limit: 20 }
