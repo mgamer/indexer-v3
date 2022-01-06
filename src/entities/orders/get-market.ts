@@ -1,5 +1,5 @@
 import { formatEth } from "@/common/bignumber";
-import { db, pgp } from "@/common/db";
+import { db } from "@/common/db";
 
 export type GetMarketFilter = {
   contract?: string;
@@ -38,7 +38,7 @@ export const getMarket = async (
       `
         select
           "o"."value",
-          count(distinct("o"."hash")) as "quantity"
+          sum(count(distinct("o"."hash"))) over (rows between unbounded preceding and current row) as "quantity"
         from "orders" "o"
         join "token_sets_tokens" "tst"
           on "o"."token_set_id" = "tst"."token_set_id"
@@ -57,7 +57,7 @@ export const getMarket = async (
       `
         select
           "o"."value",
-          count(distinct("o"."hash")) as "quantity"
+          sum(count(distinct("o"."hash"))) over (rows between unbounded preceding and current row) as "quantity"
         from "tokens" "t"
         join "orders" "o"
           on "t"."floor_sell_hash" = "o"."hash"
@@ -73,7 +73,7 @@ export const getMarket = async (
     let sellsQuery = `
       select
         "o"."value",
-        count(distinct("o"."hash")) as "quantity"
+        sum(count(distinct("o"."hash"))) over (rows between unbounded preceding and current row) as "quantity"
       from "tokens" "t"
       join "orders" "o"
         on "t"."floor_sell_hash" = "o"."hash"
@@ -116,7 +116,7 @@ export const getMarket = async (
       `
         select
           "o"."value",
-          count(distinct("o"."hash")) as "quantity"
+          sum(count(distinct("o"."hash"))) over (rows between unbounded preceding and current row) as "quantity"
         from "orders" "o"
         join "token_sets" "ts"
           on "o"."token_set_id" = "ts"."id"
@@ -134,7 +134,7 @@ export const getMarket = async (
       `
         select
           "o"."value",
-          count(distinct("o"."hash")) as "quantity"
+          sum(count(distinct("o"."hash"))) over (rows between unbounded preceding and current row) as "quantity"
         from "tokens" "t"
         join "orders" "o"
           on "t"."floor_sell_hash" = "o"."hash"
