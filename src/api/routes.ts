@@ -23,6 +23,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/index/metadata",
+    options: adminEndpoints.postIndexMetadataOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/fix/cache",
     options: adminEndpoints.postFixCacheOptions,
   });
