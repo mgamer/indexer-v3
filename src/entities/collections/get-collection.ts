@@ -36,6 +36,7 @@ export type GetCollectionResponse = {
         validFrom: number | null;
         validUntil: number | null;
         token: {
+          contract: string | null;
           tokenId: number | null;
           name: string | null;
           image: string | null;
@@ -69,9 +70,10 @@ export const getCollection = async (
       "y"."floor_sell_maker",
       "y"."floor_sell_valid_from",
       "y"."floor_sell_valid_until",
-      "y"."token_id",
-      "y"."token_name",
-      "y"."token_image",
+      "y"."floor_sell_token_contract",
+      "y"."floor_sell_token_id",
+      "y"."floor_sell_token_name",
+      "y"."floor_sell_token_image",
       "z"."top_buy_hash",
       "z"."top_buy_value",
       "z"."top_buy_maker",
@@ -97,9 +99,10 @@ export const getCollection = async (
     left join (
       select distinct on ("t"."collection_id")
         "t"."collection_id",
-        "t"."token_id",
-        "t"."name" as "token_name",
-        "t"."image" as "token_image",
+        "t"."contract" as "floor_sell_token_contract",
+        "t"."token_id" as "floor_sell_token_id",
+        "t"."name" as "floor_sell_token_name",
+        "t"."image" as "floor_sell_token_image",
         "t"."floor_sell_hash",
         "o"."value" as "floor_sell_value",
         "o"."maker" as "floor_sell_maker",
@@ -201,10 +204,11 @@ export const getCollection = async (
           maker: r.floor_sell_maker,
           validFrom: r.floor_sell_valid_from,
           validUntil: r.floor_sell_valid_until,
-          token: r.token_id && {
-            tokenId: r.token_id,
-            name: r.token_name,
-            image: r.token_image,
+          token: r.floor_sell_token_contract && {
+            contract: r.floor_sell_token_contract,
+            tokenId: r.floor_sell_token_id,
+            name: r.floor_sell_token_name,
+            image: r.floor_sell_token_image,
           },
         },
         topBuy: {
