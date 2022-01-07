@@ -17,7 +17,7 @@ const JOB_NAME = "metadata_index";
 const queue = new Queue(JOB_NAME, {
   connection: redis,
   defaultJobOptions: {
-    attempts: 2,
+    attempts: 5,
     backoff: {
       type: "exponential",
       delay: 1000,
