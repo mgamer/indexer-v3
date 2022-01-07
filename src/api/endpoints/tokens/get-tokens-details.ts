@@ -56,7 +56,12 @@ export const getTokensDetailsOptions: RouteOptions = {
               timestamp: Joi.number().unsafe().allow(null),
             },
             owner: Joi.string().allow(null),
-            attributes: Joi.any().allow(null),
+            attributes: Joi.array().items(
+              Joi.object({
+                key: Joi.string(),
+                value: Joi.string(),
+              })
+            ),
           }),
           market: marketFormat,
         })
