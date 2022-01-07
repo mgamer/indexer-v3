@@ -120,7 +120,7 @@ const catchupQueue = new Queue(CATCHUP_JOB_NAME, {
   defaultJobOptions: {
     // No retries here, we should be as lean as possible and
     // retrying will be implicitly done on subsequent jobs
-    removeOnComplete: true,
+    removeOnComplete: 10000,
     removeOnFail: true,
   },
 });
