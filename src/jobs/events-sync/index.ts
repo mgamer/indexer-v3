@@ -124,7 +124,7 @@ const catchupQueue = new Queue(CATCHUP_JOB_NAME, {
     removeOnFail: true,
   },
 });
-new QueueScheduler(CATCHUP_JOB_NAME, { connection: redis });
+new QueueScheduler(CATCHUP_JOB_NAME, { connection: redis.duplicate() });
 
 export const addToEventsSyncCatchupQueue = async (
   contractKind: ContractKind
