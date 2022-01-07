@@ -113,8 +113,8 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/users/{user}/liquidity",
-    options: ordersEndpoints.getUserLiquidityOptions,
+    path: "/users/{user}/positions",
+    options: ordersEndpoints.getUserPositionsOptions,
   });
 
   // Owners
