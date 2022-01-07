@@ -231,7 +231,9 @@ if (config.doBackgroundWork) {
             continue;
           }
 
+          logger.info("catchup_cron", `Queueing ${contractKind}`);
           await addToEventsSyncCatchupQueue(contractKind);
+          logger.info("catchup_cron", `Queued ${contractKind}`);
         }
       } catch (error) {
         logger.error("catchup_cron", `Failed to catch up: ${error}`);
