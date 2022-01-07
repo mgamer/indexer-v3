@@ -144,6 +144,8 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { contractKind } = job.data;
 
+      logger.info("catchup_cron", `Handling ${contractKind}`);
+
       try {
         // Sync all contracts of the given contract type
         const contracts =
