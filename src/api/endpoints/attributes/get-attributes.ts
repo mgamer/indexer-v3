@@ -18,6 +18,7 @@ export const getAttributesOptions: RouteOptions = {
       attributes: Joi.array().items(
         Joi.object({
           key: Joi.string(),
+          kind: Joi.string(),
           values: Joi.array().items(
             Joi.object({
               value: Joi.string(),
