@@ -37,6 +37,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
           on "t"."contract" = "o"."contract"
           and "t"."token_id" = "o"."token_id"
         where "t"."collection_id" is not null
+          and "t"."collection_id" != 'ens'
         group by "t"."collection_id"
       ) "x"
       left join (
@@ -48,6 +49,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
         join "orders" "o"
           on "t"."floor_sell_hash" = "o"."hash"
         where "t"."collection_id" is not null
+          and "t"."collection_id" != 'ens'
         order by "t"."collection_id", "t"."floor_sell_value" asc
       ) "y"
         on "x"."collection_id" = "y"."collection_id"
@@ -60,6 +62,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
         join "token_sets" "ts"
           on "o"."token_set_id" = "ts"."id"
         where "ts"."collection_id" is not null
+          and "ts"."collection_id" != 'ens'
         order by "ts"."collection_id", "o"."value" desc
       ) "z"
         on "x"."collection_id" = "z"."collection_id"
