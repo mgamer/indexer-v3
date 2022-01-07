@@ -73,13 +73,10 @@ export const getMarket = async (
     let sellsQuery = `
       select
         "o"."value",
-        sum(count(distinct("o"."hash"))) over (rows between unbounded preceding and current row) as "quantity"
+        count(distinct("o"."hash")) as "quantity"
       from "tokens" "t"
       join "orders" "o"
         on "t"."floor_sell_hash" = "o"."hash"
-      join "attributes" "a"
-        on "t"."contract" = "a"."contract"
-        and "t"."token_id" = "a"."token_id"
     `;
 
     const attributes: { key: string; value: string }[] = [];
@@ -103,9 +100,17 @@ export const getMarket = async (
 
     sellsQuery += `
       where "t"."collection_id" = $/collection/
-      group by "o"."hash", "o"."value"
+      group by "o"."value"
       order by "o"."value" asc
       limit ${limit}
+    `;
+
+    sellsQuery = `
+      with "x" as (${sellsQuery})
+      select
+        "x"."value",
+        sum("x"."quantity") over (rows between unbounded preceding and current row) as "quantity"
+      from "x"
     `;
 
     sells = await db.manyOrNone(sellsQuery, filter);
