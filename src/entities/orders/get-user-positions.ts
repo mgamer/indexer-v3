@@ -38,7 +38,7 @@ export const getUserPositions = async (
         "o"."value",
         "o"."status",
         "o"."expiry",
-        count(*) over (partition by "o"."token_set_id") as "total_valid"
+        (count(*) over (partition by "o"."token_set_id"))::int as "total_valid"
       from "orders" "o"
       where "o"."status" = 'valid'
         and "o"."side" = 'sell'
@@ -66,7 +66,7 @@ export const getUserPositions = async (
         "o"."value",
         "o"."status",
         "o"."expiry",
-        count(*) over (partition by "o"."token_set_id") as "total_valid"
+        (count(*) over (partition by "o"."token_set_id"))::int as "total_valid"
       from "orders" "o"
       where "o"."status" = 'valid'
         and "o"."side" = 'buy'

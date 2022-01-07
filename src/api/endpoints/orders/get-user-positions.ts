@@ -24,7 +24,23 @@ export const getUserPositionsOptions: RouteOptions = {
   },
   response: {
     schema: Joi.object({
-      positions: Joi.any(),
+      positions: Joi.array().items(
+        Joi.object({
+          set: {
+            id: Joi.string(),
+            schema: Joi.any(),
+            image: Joi.string().allow("", null),
+            floorSellValue: Joi.number().unsafe().allow(null),
+            topBuyValue: Joi.number().unsafe().allow(null),
+          },
+          primaryOrder: {
+            value: Joi.number().unsafe().allow(null),
+            expiry: Joi.number().unsafe().allow(null),
+            status: Joi.string().allow(null),
+          },
+          totalValid: Joi.number().allow(null),
+        })
+      ),
     }).label("getUserPositionsResponse"),
     failAction: (_request, _h, error) => {
       logger.error(

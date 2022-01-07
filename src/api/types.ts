@@ -22,7 +22,7 @@ export const marketFormat = Joi.object({
     validFrom: Joi.number().allow(null),
     validUntil: Joi.number().allow(null),
     token: Joi.object({
-      tokenId: Joi.number().allow(null),
+      tokenId: Joi.string().allow(null),
       name: Joi.string().allow(null),
       image: Joi.string().allow(null),
     }).allow(null),
