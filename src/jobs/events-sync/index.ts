@@ -129,7 +129,12 @@ new QueueScheduler(CATCHUP_JOB_NAME, { connection: redis });
 export const addToEventsSyncCatchupQueue = async (
   contractKind: ContractKind
 ) => {
-  await catchupQueue.add(contractKind, { contractKind });
+  await catchupQueue
+    .add(contractKind, { contractKind })
+    .then((job) => logger.info("catchup_cron", `Added ${job.name} ${job.id}`))
+    .catch((error) =>
+      logger.error("catchup_cron", `Failed to add job: ${error}`)
+    );
 };
 
 // Actual work is to be handled by background worker processes
