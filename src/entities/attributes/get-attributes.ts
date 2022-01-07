@@ -65,8 +65,8 @@ export const getAttributes = async (
           "y"."kind",
           "y"."rank",
           array[
-            json_build_object('value', "y"."min_value", 'count', 0),
-            json_build_object('value', "y"."max_value", 'count', 0)
+            json_build_object('value', "y"."min_value"::text, 'count', 0),
+            json_build_object('value', "y"."max_value"::text, 'count', 0)
           ] as "values"
         from "y"
         group by "y"."key", "y"."kind", "y"."rank", "y"."min_value", "y"."max_value"
