@@ -412,7 +412,8 @@ export const saveOrders = async (
           "valid_between",
           "source_info",
           "royalty_info",
-          "raw_data"
+          "raw_data",
+          "expiry"
         ) values (
           $/hash/,
           $/kind/,
@@ -426,7 +427,8 @@ export const saveOrders = async (
           tstzrange(to_timestamp($/listingTime/), to_timestamp($/expirationTime/)),
           $/sourceInfo:json/,
           $/royaltyInfo:json/,
-          $/rawData/
+          $/rawData/,
+          to_timestamp($/expirationTime/)
         ) on conflict ("hash") do
         update set
           "side" = $/side/,
@@ -438,7 +440,8 @@ export const saveOrders = async (
           "valid_between" = tstzrange(to_timestamp($/listingTime/), to_timestamp($/expirationTime/)),
           "source_info" = $/sourceInfo:json/,
           "royalty_info" = $/royaltyInfo:json/,
-          "raw_data" = $/rawData/
+          "raw_data" = $/rawData/,
+          "expiry" = to_timestamp($/expirationTime/)
       `,
       values: {
         hash: order.prefixHash(),
