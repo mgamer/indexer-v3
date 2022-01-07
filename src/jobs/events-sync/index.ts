@@ -218,8 +218,8 @@ if (config.doBackgroundWork) {
 
 // Actual work is to be handled by background worker processes
 if (config.doBackgroundWork) {
-  cron.schedule("*/15 * * * * *", async () => {
-    const lockAcquired = await acquireLock("catchup_lock", 10);
+  cron.schedule("*/30 * * * * *", async () => {
+    const lockAcquired = await acquireLock("catchup_lock", 25);
     if (lockAcquired) {
       logger.info("catchup_cron", "Catching up");
 
