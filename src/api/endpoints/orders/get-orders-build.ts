@@ -16,7 +16,7 @@ export const getOrdersBuildOptions: RouteOptions = {
         .pattern(/^0x[a-f0-9]{40}$/),
       tokenId: Joi.string(),
       collection: Joi.string().lowercase(),
-      // TODO: Integrate attributes once attribute-based orders are supported
+      // TODO: Integrate attributes once attribute-based orders are supported 
       maker: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/)
