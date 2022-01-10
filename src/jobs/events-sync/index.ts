@@ -104,7 +104,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 5 }
+    { connection: redis.duplicate(), concurrency: 3 }
   );
   worker.on("error", (error) => {
     logger.error(BACKFILL_JOB_NAME, `Worker errored: ${error}`);
@@ -204,7 +204,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 5 }
+    { connection: redis.duplicate(), concurrency: 3 }
   );
   worker.on("error", (error) => {
     logger.error(CATCHUP_JOB_NAME, `Worker errored: ${error}`);
