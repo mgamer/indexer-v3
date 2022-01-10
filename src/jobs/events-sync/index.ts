@@ -177,7 +177,7 @@ if (config.doBackgroundWork) {
         if (contracts.length) {
           logger.info(
             contractKind,
-            `[CORRECT] Catchup syncing block range [${fromBlock}, ${headBlock}]`
+            `Catchup syncing block range [${fromBlock}, ${headBlock}]`
           );
 
           await sync(fromBlock, headBlock, contractInfo);
