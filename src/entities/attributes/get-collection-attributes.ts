@@ -14,25 +14,11 @@ export type GetCollectionAttributesFilter = {
 export type GetCollectionAttributesResponse = {
   key: string;
   value: string;
-  set: {
-    tokenCount: number;
-    onSaleCount: number;
-    sampleImages: string[];
-    market: {
-      floorSell: {
-        hash: string | null;
-        value: number | null;
-        maker: string | null;
-        validFrom: number | null;
-      };
-      topBuy: {
-        hash: string | null;
-        value: number | null;
-        maker: string | null;
-        validFrom: number | null;
-      };
-    };
-  };
+  tokenCount: number;
+  onSaleCount: number;
+  sampleImages: string[];
+  floorSellValues: number[];
+  topBuyValues: number[];
 }[];
 
 export const getCollectionAttributes = async (
@@ -46,14 +32,16 @@ export const getCollectionAttributes = async (
         min("a"."rank") as "rank",
         count(distinct("t"."token_id")) as "token_count",
         count(distinct("t"."token_id")) filter (where "t"."floor_sell_hash" is not null) as "on_sale_count",
-        (array_agg("t"."image"))[1:4] as "sample_images",
-        min("t"."floor_sell_value") as "floor_sell_value"
+        (array_agg(distinct("t"."image")))[1:4] as "sample_images",
+        min("t"."floor_sell_value") as "floor_sell_value",
+        (array_agg("t"."floor_sell_value" order by "t"."floor_sell_value") filter (where "t"."floor_sell_value" is not null))[1:10]::text[] as "floor_sell_values"
       from "attributes" "a"
       join "tokens" "t"
         on "a"."contract" = "t"."contract"
         and "a"."token_id" = "t"."token_id"
       where "t"."collection_id" = $/collection/
         and "a"."rank" is not null
+        and ("a"."kind" = 'string' or "a"."kind" = 'number')
       group by "a"."key", "a"."value"
     )
     select * from "x"
@@ -105,29 +93,14 @@ export const getCollectionAttributes = async (
     result.map((r) => ({
       key: r.key,
       value: r.value,
-      set: {
-        tokenCount: Number(r.token_count),
-        onSaleCount: Number(r.on_sale_count),
-        sampleImages: r.sample_images,
-        market: {
-          // TODO: Find an efficient way to return all of these
-          // fields from the query, not only the value
-          floorSell: {
-            hash: null,
-            value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-            maker: null,
-            validFrom: null,
-          },
-          // TODO: Once attribute-based orders are live, these fields
-          // will need to be queried and populated in the response
-          topBuy: {
-            hash: null,
-            value: null,
-            maker: null,
-            validFrom: null,
-          },
-        },
-      },
+      tokenCount: Number(r.token_count),
+      onSaleCount: Number(r.on_sale_count),
+      sampleImages: r.sample_images,
+      floorSellValues: r.floor_sell_values
+        ? r.floor_sell_values.map((x: any) => x && formatEth(x))
+        : [],
+      // TODO: Integrate buy orders once attribute-based orders get integrated
+      topBuyValues: [],
     }))
   );
 };

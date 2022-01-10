@@ -24,7 +24,7 @@ export const getCollectionAttributesOptions: RouteOptions = {
         .valid("asc", "desc")
         .default("asc"),
       offset: Joi.number().integer().min(0).default(0),
-      limit: Joi.number().integer().min(1).max(20).default(20),
+      limit: Joi.number().integer().min(1).default(20),
     }),
   },
   response: {
@@ -33,7 +33,11 @@ export const getCollectionAttributesOptions: RouteOptions = {
         Joi.object({
           key: Joi.string(),
           value: Joi.string(),
-          set: setFormat,
+          tokenCount: Joi.number(),
+          onSaleCount: Joi.number(),
+          sampleImages: Joi.array().items(Joi.string()),
+          floorSellValues: Joi.array().items(Joi.number().unsafe()),
+          topBuyValues: Joi.array().items(Joi.number().unsafe()),
         })
       ),
     }).label("getCollectionAttributesResponse"),
