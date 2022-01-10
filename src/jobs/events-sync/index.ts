@@ -120,7 +120,7 @@ const catchupQueue = new Queue(CATCHUP_JOB_NAME, {
   defaultJobOptions: {
     // No retries here, we should be as lean as possible and
     // retrying will be implicitly done on subsequent jobs
-    removeOnComplete: 10000,
+    removeOnComplete: true,
     removeOnFail: true,
   },
 });
@@ -129,11 +129,7 @@ new QueueScheduler(CATCHUP_JOB_NAME, { connection: redis.duplicate() });
 export const addToEventsSyncCatchupQueue = async (
   contractKind: ContractKind
 ) => {
-  await catchupQueue
-    .add(contractKind, { contractKind })
-    .catch((error) =>
-      logger.error("catchup_cron", `Failed to add job: ${error}`)
-    );
+  await catchupQueue.add(contractKind, { contractKind });
 };
 
 // Actual work is to be handled by background worker processes
@@ -142,8 +138,6 @@ if (config.doBackgroundWork) {
     CATCHUP_JOB_NAME,
     async (job: Job) => {
       const { contractKind } = job.data;
-
-      logger.info("catchup_cron", `Handling ${contractKind}`);
 
       try {
         // Sync all contracts of the given contract type
