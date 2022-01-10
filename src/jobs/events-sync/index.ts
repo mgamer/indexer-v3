@@ -22,7 +22,7 @@ import {
 const BACKFILL_JOB_NAME = "events_sync_backfill";
 
 const backfillQueue = new Queue(BACKFILL_JOB_NAME, {
-  connection: redis,
+  connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 5,
     backoff: {
@@ -33,7 +33,7 @@ const backfillQueue = new Queue(BACKFILL_JOB_NAME, {
     removeOnFail: true,
   },
 });
-new QueueScheduler(BACKFILL_JOB_NAME, { connection: redis });
+new QueueScheduler(BACKFILL_JOB_NAME, { connection: redis.duplicate() });
 
 type BackfillingOptions = {
   blocksPerBatch?: number;
@@ -104,7 +104,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis }
+    { connection: redis.duplicate(), concurrency: 5 }
   );
   worker.on("error", (error) => {
     logger.error(BACKFILL_JOB_NAME, `Worker errored: ${error}`);
@@ -116,7 +116,7 @@ if (config.doBackgroundWork) {
 const CATCHUP_JOB_NAME = "events_sync_catchup";
 
 const catchupQueue = new Queue(CATCHUP_JOB_NAME, {
-  connection: redis,
+  connection: redis.duplicate(),
   defaultJobOptions: {
     // No retries here, we should be as lean as possible and
     // retrying will be implicitly done on subsequent jobs
@@ -131,7 +131,6 @@ export const addToEventsSyncCatchupQueue = async (
 ) => {
   await catchupQueue
     .add(contractKind, { contractKind })
-    .then((job) => logger.info("catchup_cron", `Added ${job.name} ${job.id}`))
     .catch((error) =>
       logger.error("catchup_cron", `Failed to add job: ${error}`)
     );
@@ -211,7 +210,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis }
+    { connection: redis.duplicate(), concurrency: 5 }
   );
   worker.on("error", (error) => {
     logger.error(CATCHUP_JOB_NAME, `Worker errored: ${error}`);
@@ -238,9 +237,7 @@ if (config.doBackgroundWork) {
             continue;
           }
 
-          logger.info("catchup_cron", `Queueing ${contractKind}`);
           await addToEventsSyncCatchupQueue(contractKind);
-          logger.info("catchup_cron", `Queued ${contractKind}`);
         }
       } catch (error) {
         logger.error("catchup_cron", `Failed to catch up: ${error}`);
