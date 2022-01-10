@@ -205,7 +205,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate() }
+    { connection: redis.duplicate(), concurrency: 3 }
   );
   worker.on("error", (error) => {
     logger.error(BY_HASH_JOB_NAME, `Worker errored: ${error}`);
@@ -367,7 +367,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate() }
+    { connection: redis.duplicate(), concurrency: 3 }
   );
   worker.on("error", (error) => {
     logger.error(BY_MAKER_JOB_NAME, `Worker errored: ${error}`);
