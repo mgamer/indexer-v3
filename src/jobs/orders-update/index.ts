@@ -28,7 +28,7 @@ import { config } from "@/config/index";
 const BY_HASH_JOB_NAME = "orders_update_by_hash";
 
 const byHashQueue = new Queue(BY_HASH_JOB_NAME, {
-  connection: redis,
+  connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 5,
     backoff: {
@@ -39,7 +39,7 @@ const byHashQueue = new Queue(BY_HASH_JOB_NAME, {
     removeOnFail: true,
   },
 });
-new QueueScheduler(BY_HASH_JOB_NAME, { connection: redis });
+new QueueScheduler(BY_HASH_JOB_NAME, { connection: redis.duplicate() });
 
 // Actual work is to be handled by background worker processes
 if (config.doBackgroundWork) {
@@ -205,7 +205,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis }
+    { connection: redis.duplicate() }
   );
   worker.on("error", (error) => {
     logger.error(BY_HASH_JOB_NAME, `Worker errored: ${error}`);
@@ -217,7 +217,7 @@ if (config.doBackgroundWork) {
 const BY_MAKER_JOB_NAME = "orders_update_by_maker";
 
 const byMakerQueue = new Queue(BY_MAKER_JOB_NAME, {
-  connection: redis,
+  connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 5,
     backoff: {
@@ -228,7 +228,7 @@ const byMakerQueue = new Queue(BY_MAKER_JOB_NAME, {
     removeOnFail: true,
   },
 });
-new QueueScheduler(BY_MAKER_JOB_NAME, { connection: redis });
+new QueueScheduler(BY_MAKER_JOB_NAME, { connection: redis.duplicate() });
 
 // Actual work is to be handled by background worker processes
 if (config.doBackgroundWork) {
@@ -367,7 +367,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis }
+    { connection: redis.duplicate() }
   );
   worker.on("error", (error) => {
     logger.error(BY_MAKER_JOB_NAME, `Worker errored: ${error}`);
