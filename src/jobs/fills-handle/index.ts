@@ -15,7 +15,7 @@ import { config } from "@/config/index";
 const JOB_NAME = "fills_handle";
 
 const queue = new Queue(JOB_NAME, {
-  connection: redis,
+  connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 5,
     backoff: {
@@ -26,7 +26,7 @@ const queue = new Queue(JOB_NAME, {
     removeOnFail: true,
   },
 });
-new QueueScheduler(JOB_NAME, { connection: redis });
+new QueueScheduler(JOB_NAME, { connection: redis.duplicate() });
 
 // Actual work is to be handled by background worker processes
 if (config.doBackgroundWork) {
@@ -133,7 +133,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis }
+    { connection: redis.duplicate() }
   );
   worker.on("error", (error) => {
     logger.error(JOB_NAME, `Worker errored: ${error}`);

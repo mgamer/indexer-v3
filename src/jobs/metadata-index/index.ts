@@ -15,7 +15,7 @@ import { config } from "@/config/index";
 const JOB_NAME = "metadata_index";
 
 const queue = new Queue(JOB_NAME, {
-  connection: redis,
+  connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 10,
     backoff: {
@@ -26,7 +26,7 @@ const queue = new Queue(JOB_NAME, {
     removeOnFail: true,
   },
 });
-new QueueScheduler(JOB_NAME, { connection: redis });
+new QueueScheduler(JOB_NAME, { connection: redis.duplicate() });
 
 const addToQueue = async (tokens: { contract: string; tokenId: string }[]) => {
   const jobs: any[] = [];
@@ -241,7 +241,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis }
+    { connection: redis.duplicate() }
   );
   worker.on("error", (error) => {
     logger.error(JOB_NAME, `Worker errored: ${error}`);
