@@ -9,6 +9,7 @@ import {
   generateTokenInfo,
   generateCollectionInfo,
 } from "@/orders/utils";
+import { addPendingOrders } from "@/jobs/orders-relay";
 import { addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
 
 type OrderInfo = {
@@ -473,6 +474,7 @@ export const saveOrders = async (
   await addToOrdersUpdateByHashQueue(
     orders.map((order) => ({ context: "save", hash: order.prefixHash() }))
   );
+  await addPendingOrders(orders);
 
   return result;
 };

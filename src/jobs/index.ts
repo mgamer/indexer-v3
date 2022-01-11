@@ -5,4 +5,6 @@ import "@/jobs/collection-stats-update";
 import "@/jobs/events-fix";
 import "@/jobs/events-sync";
 import "@/jobs/metadata-index";
+import "@/jobs/orders-relay";
 import "@/jobs/orders-update";
+import "@/jobs/orders-sync";
