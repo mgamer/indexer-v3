@@ -109,7 +109,7 @@ export const addToOrdersSyncCatchupQueue = async () => {
 if (true) {
   const worker = new Worker(
     CATCHUP_JOB_NAME,
-    async (job: Job) => {
+    async (_job: Job) => {
       try {
         // We allow syncing of up to `maxBlocks` blocks behind the
         // head of the blockchain. If the indexer lagged behind more
@@ -117,7 +117,8 @@ if (true) {
         // backfill queue.
         const maxBlocks = 64;
 
-        const headBlock = (await arweaveGateway.blocks.getCurrent()).height;
+        let headBlock = (await arweaveGateway.blocks.getCurrent()).height;
+        headBlock -= 50;
 
         // Fetch the last synced blocked for the current contract type (if it exists)
         let localBlock = Number(await redis.get(`orders_last_synced_block`));
@@ -125,8 +126,6 @@ if (true) {
           // Nothing to sync
           return;
         }
-
-        console.log(localBlock, headBlock);
 
         if (!localBlock) {
           localBlock = headBlock;
@@ -141,6 +140,7 @@ if (true) {
         );
 
         const orders = await sync(fromBlock, headBlock);
+        logger.info("orders_sync", `Fetched orders: ${orders}`);
 
         // Queue any remaining blocks for backfilling
         if (localBlock < fromBlock) {

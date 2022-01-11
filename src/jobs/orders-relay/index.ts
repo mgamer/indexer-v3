@@ -35,7 +35,7 @@ if (config.doBackgroundWork) {
           const wallet = JSON.parse(config.arweaveRelayerKey);
 
           const transaction = await arweaveGateway.createTransaction(
-            { data: JSON.stringify(batch) },
+            { data: JSON.stringify(batch.map((o) => JSON.parse(o))) },
             wallet
           );
           transaction.addTag("Content-Type", "application/json");
@@ -57,9 +57,11 @@ if (config.doBackgroundWork) {
             `${CRON_NAME}_cron`,
             `${batch.length} pending orders relayed via transaction ${transaction.id}`
           );
-        }
 
-        await redis.ltrim(PENDING_ORDERS_KEY, 0, batchSize);
+          await redis.ltrim(PENDING_ORDERS_KEY, 0, batchSize);
+        } else {
+          logger.info(`${CRON_NAME}_cron`, "No pending orders to relay");
+        }
       } catch (error) {
         logger.error(
           `${CRON_NAME}_cron`,

@@ -3,7 +3,6 @@ import { gql, request } from "graphql-request";
 
 import { arweaveGateway } from "@/common/provider";
 import { config } from "@/config/index";
-import { logger } from "@/common/logger";
 
 export const sync = async (
   fromBlock: number,
@@ -33,15 +32,17 @@ export const sync = async (
   const { protocol, host } = arweaveGateway.api.config;
   const data = await request(`${protocol}://${host}/graphql`, query);
   for (const { node } of data?.transactions?.edges ?? []) {
-    const upstreamOrders = await arweaveGateway.transactions.getData(node.id, {
-      decode: true,
-      string: true,
-    });
-
-    logger.info(
-      "orderbook_sync",
-      `Data received: ${JSON.stringify(upstreamOrders, null, 2)}`
-    );
+    try {
+      const upstreamOrders = JSON.parse(
+        (await arweaveGateway.transactions.getData(node.id, {
+          decode: true,
+          string: true,
+        })) as string
+      );
+      for (const order of upstreamOrders) {
+        orders.push(new Sdk.WyvernV2.Order(config.chainId, order));
+      }
+    } catch {}
   }
 
   return orders;
