@@ -59,7 +59,7 @@ if (config.doBackgroundWork) {
             `${batch.length} pending orders relayed via transaction ${transaction.id}`
           );
 
-          await redis.ltrim(PENDING_ORDERS_KEY, 0, batchSize);
+          await redis.ltrim(PENDING_ORDERS_KEY, batchSize, -1);
         } else {
           logger.info(`${CRON_NAME}_cron`, "No pending orders to relay");
         }
