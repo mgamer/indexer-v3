@@ -9,6 +9,7 @@ import { config } from "@/config/index";
 const PENDING_ORDERS_KEY = "pending_orders";
 
 export const addPendingOrders = async (orders: Sdk.WyvernV2.Order[]) => {
+  logger.info("add_pending_orders", `Adding: ${JSON.stringify(orders)}`);
   await redis.rpush(
     PENDING_ORDERS_KEY,
     orders.map((order) => JSON.stringify(order.params))
