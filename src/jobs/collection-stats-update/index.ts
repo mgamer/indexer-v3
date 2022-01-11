@@ -17,6 +17,11 @@ if (config.doBackgroundWork) {
     const lockAcquired = await acquireLock("collection_stats_update_lock", 295);
     if (lockAcquired) {
       logger.info("collection_stats_update_cron", "Updating collection stats");
+      logger.info(
+        "collection_stats_update_cron",
+        "Skipping updating collection stats"
+      );
+      return;
 
       try {
         await db.none(
