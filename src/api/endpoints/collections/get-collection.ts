@@ -6,7 +6,8 @@ import { logger } from "@/common/logger";
 import * as queries from "@/entities/collections/get-collection";
 
 export const getCollectionOptions: RouteOptions = {
-  description: "Get a single collection. Returns more detailed information, and real-time stats.",
+  description:
+    "Get a single collection. Returns more detailed information, and real-time stats.",
   tags: ["api"],
   validate: {
     params: Joi.object({
@@ -35,7 +36,7 @@ export const getCollectionOptions: RouteOptions = {
           bps: Joi.number(),
         }),
         set: setFormat,
-      }),
+      }).allow(null),
     }).label("getCollectionResponse"),
     failAction: (_request, _h, error) => {
       logger.error("get_collection_handler", `Wrong response schema: ${error}`);

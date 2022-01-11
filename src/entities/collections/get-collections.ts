@@ -118,7 +118,7 @@ export const getCollections = async (
       set: {
         tokenCount: Number(r.token_count),
         onSaleCount: Number(r.on_sale_count),
-        sampleImages: r.sample_images,
+        sampleImages: r.sample_images || [],
         market: {
           floorSell: {
             hash: null,

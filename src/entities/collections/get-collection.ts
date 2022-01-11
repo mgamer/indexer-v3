@@ -174,51 +174,54 @@ export const getCollection = async (
       on "x"."id" = "v"."collection_id"
   `;
 
-  return db.oneOrNone(baseQuery, filter).then((r) => ({
-    collection: {
-      id: r.id,
-      name: r.name,
-      description: r.description,
-      image: r.image,
-      lastBuy: {
-        value: r.last_buy_value ? formatEth(r.last_buy_value) : null,
-        timestamp: r.last_buy_timestamp,
-      },
-      lastSell: {
-        value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
-        timestamp: r.last_sell_timestamp,
-      },
-    },
-    royalties: {
-      recipient: r.royalty_recipient,
-      bps: r.royalty_bps,
-    },
-    set: {
-      tokenCount: Number(r.token_count),
-      onSaleCount: Number(r.on_sale_count),
-      sampleImages: r.sample_images,
-      market: {
-        floorSell: {
-          hash: r.floor_sell_hash,
-          value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-          maker: r.floor_sell_maker,
-          validFrom: r.floor_sell_valid_from,
-          validUntil: r.floor_sell_valid_until,
-          token: r.floor_sell_token_contract && {
-            contract: r.floor_sell_token_contract,
-            tokenId: r.floor_sell_token_id,
-            name: r.floor_sell_token_name,
-            image: r.floor_sell_token_image,
+  return db.oneOrNone(baseQuery, filter).then(
+    (r) =>
+      r && {
+        collection: {
+          id: r.id,
+          name: r.name,
+          description: r.description,
+          image: r.image,
+          lastBuy: {
+            value: r.last_buy_value ? formatEth(r.last_buy_value) : null,
+            timestamp: r.last_buy_timestamp,
+          },
+          lastSell: {
+            value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
+            timestamp: r.last_sell_timestamp,
           },
         },
-        topBuy: {
-          hash: r.top_buy_hash,
-          value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-          maker: r.top_buy_maker,
-          validFrom: r.top_buy_valid_from,
-          validUntil: r.top_buy_valid_until,
+        royalties: {
+          recipient: r.royalty_recipient,
+          bps: r.royalty_bps,
         },
-      },
-    },
-  }));
+        set: {
+          tokenCount: Number(r.token_count),
+          onSaleCount: Number(r.on_sale_count),
+          sampleImages: r.sample_images,
+          market: {
+            floorSell: {
+              hash: r.floor_sell_hash,
+              value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+              maker: r.floor_sell_maker,
+              validFrom: r.floor_sell_valid_from,
+              validUntil: r.floor_sell_valid_until,
+              token: r.floor_sell_token_contract && {
+                contract: r.floor_sell_token_contract,
+                tokenId: r.floor_sell_token_id,
+                name: r.floor_sell_token_name,
+                image: r.floor_sell_token_image,
+              },
+            },
+            topBuy: {
+              hash: r.top_buy_hash,
+              value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+              maker: r.top_buy_maker,
+              validFrom: r.top_buy_valid_from,
+              validUntil: r.top_buy_valid_until,
+            },
+          },
+        },
+      }
+  );
 };

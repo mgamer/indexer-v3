@@ -77,8 +77,19 @@ export const filterOrders = async (
       continue;
     }
 
-    // Check: order is not expired
     const currentTime = Math.floor(Date.now() / 1000);
+
+    // Check: order has a valid listing time
+    const listingTime = order.params.listingTime;
+    if (listingTime >= currentTime) {
+      result.invalidOrders.push({
+        order,
+        reason: "Order has an invalid listing time",
+      });
+      continue;
+    }
+
+    // Check: order is not expired
     const expirationTime = order.params.expirationTime;
     if (expirationTime !== 0 && currentTime >= expirationTime) {
       result.invalidOrders.push({ order, reason: "Order is expired" });
