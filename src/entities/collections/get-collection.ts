@@ -133,6 +133,9 @@ export const getCollection = async (
       join "token_sets" "ts"
         on "o"."token_set_id" = "ts"."id"
       where "ts"."collection_id" = $/collection/
+        and "o"."side" = 'buy'
+        and "o"."status" = 'valid'
+        and "o"."valid_between" @> now()
       order by "ts"."collection_id", "o"."value" desc
     ) "z"
       on "x"."id" = "z"."collection_id"
