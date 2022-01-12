@@ -2,6 +2,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import cron from "node-cron";
 
 import { logger } from "@/common/logger";
+import { baseProvider } from "@/common/provider";
 import { acquireLock, redis } from "@/common/redis";
 import { config } from "@/config/index";
 import {
@@ -87,20 +88,16 @@ if (config.doBackgroundWork) {
 
       try {
         const eventInfo = getContractInfo(contractKind, contracts);
-        if (eventInfo.skip) {
-          return;
-        }
-
         if (contracts.length) {
           logger.info(
             contractKind,
-            `Backfill syncing block range [${fromBlock}, ${toBlock}]`
+            `Events backfill syncing block range [${fromBlock}, ${toBlock}]`
           );
 
           await sync(fromBlock, toBlock, eventInfo, true);
         }
       } catch (error) {
-        logger.error(contractKind, `Backfill job failed: ${error}`);
+        logger.error(contractKind, `Events backfill job failed: ${error}`);
         throw error;
       }
     },
@@ -146,9 +143,6 @@ if (config.doBackgroundWork) {
             contractKind
           ];
         const contractInfo = getContractInfo(contractKind, contracts);
-        if (contractInfo.skip) {
-          return;
-        }
 
         // We allow syncing of up to `maxBlocks` blocks behind the
         // head of the blockchain. If the indexer lagged behind more
@@ -156,7 +150,7 @@ if (config.doBackgroundWork) {
         // backfill queue.
         const maxBlocks = 256;
 
-        const headBlock = await contractInfo.provider.getBlockNumber();
+        const headBlock = await baseProvider.getBlockNumber();
 
         // Fetch the last synced blocked for the current contract type (if it exists)
         let localBlock = Number(
@@ -177,7 +171,7 @@ if (config.doBackgroundWork) {
         if (contracts.length) {
           logger.info(
             contractKind,
-            `Catchup syncing block range [${fromBlock}, ${headBlock}]`
+            `Events catchup syncing block range [${fromBlock}, ${headBlock}]`
           );
 
           await sync(fromBlock, headBlock, contractInfo);
@@ -200,7 +194,7 @@ if (config.doBackgroundWork) {
           await redis.set(`${contractKind}_last_synced_block`, headBlock - 5);
         }
       } catch (error) {
-        logger.error(contractKind, `Catchup failed: ${error}`);
+        logger.error(contractKind, `Events catchup failed: ${error}`);
         throw error;
       }
     },
@@ -218,23 +212,21 @@ if (config.doBackgroundWork) {
 
 // Actual work is to be handled by background worker processes
 if (config.doBackgroundWork) {
-  cron.schedule("*/30 * * * * *", async () => {
-    const lockAcquired = await acquireLock("catchup_lock", 25);
+  cron.schedule("*/15 * * * * *", async () => {
+    const lockAcquired = await acquireLock("events_catchup_lock", 10);
     if (lockAcquired) {
-      logger.info("catchup_cron", "Catching up");
+      logger.info("events_catchup_cron", "Catching up events");
 
       try {
         // Sync events
         for (const contractKind of contractKinds) {
-          // For now, skip orderbook indexing
-          if (contractKind === "orderbook") {
-            continue;
-          }
-
           await addToEventsSyncCatchupQueue(contractKind);
         }
       } catch (error) {
-        logger.error("catchup_cron", `Failed to catch up: ${error}`);
+        logger.error(
+          "events_catchup_cron",
+          `Failed to catch up events: ${error}`
+        );
       }
     }
   });

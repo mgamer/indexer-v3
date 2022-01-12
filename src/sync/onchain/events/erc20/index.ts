@@ -3,7 +3,6 @@ import { Interface } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 
 import { logger } from "@/common/logger";
-import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import {
   FtTransferEvent,
@@ -31,7 +30,6 @@ const abi = new Interface([
 ]);
 
 export const getContractInfo = (address: string[] = []): ContractInfo => ({
-  provider: baseProvider,
   filter: { address },
   syncCallback: async (logs: Log[], backfill?: boolean) => {
     const transferEvents: FtTransferEvent[] = [];

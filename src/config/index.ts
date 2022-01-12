@@ -4,11 +4,11 @@ export const config = {
   chainId: Number(process.env.CHAIN_ID),
 
   adminApiKey: String(process.env.ADMIN_API_KEY),
+  arweaveRelayerKey: String(process.env.ARWEAVE_RELAYER_KEY),
 
   metadataApiBaseUrl: String(process.env.METADATA_API_BASE_URL),
 
   baseNetworkHttpUrl: String(process.env.BASE_NETWORK_HTTP_URL),
-  orderbookNetworkHttlUrl: String(process.env.ORDERBOOK_NETWORK_HTTP_URL),
 
   databaseUrl: String(process.env.DATABASE_URL),
   redisUrl: String(process.env.REDIS_URL),

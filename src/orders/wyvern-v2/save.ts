@@ -2,6 +2,7 @@ import * as Sdk from "@reservoir0x/sdk";
 
 import { bn } from "@/common/bignumber";
 import { db, pgp } from "@/common/db";
+import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import {
   TokenSetInfo,
@@ -9,6 +10,7 @@ import {
   generateTokenInfo,
   generateCollectionInfo,
 } from "@/orders/utils";
+import { addPendingOrders } from "@/jobs/orders-relay";
 import { addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
 
 type OrderInfo = {
@@ -473,6 +475,8 @@ export const saveOrders = async (
   await addToOrdersUpdateByHashQueue(
     orders.map((order) => ({ context: "save", hash: order.prefixHash() }))
   );
+  logger.info("save_orders", `Triggering: ${JSON.stringify(orders)}`);
+  await addPendingOrders(orders);
 
   return result;
 };
