@@ -10,6 +10,7 @@ export const sync = async (
 ): Promise<Sdk.WyvernV2.Order[]> => {
   const orders: Sdk.WyvernV2.Order[] = [];
 
+  const network = config.chainId === 1 ? "mainnet" : "rinkeby";
   const query = gql`
     {
       transactions(
@@ -17,9 +18,7 @@ export const sync = async (
         tags: [
           { name: "App-Name", values: ["Reservoir Protocol"] },
           { name: "App-Version", values: ["0.0.1"] },
-          { name: "Network", values: [${
-            config.chainId === 1 ? "mainnet" : "rinkeby"
-          }] }
+          { name: "Network", values: ["${network}"] }
         ]
       ) {
         edges {
