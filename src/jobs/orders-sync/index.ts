@@ -61,7 +61,7 @@ export const addToOrdersSyncBackfillQueue = async (
 };
 
 // Actual work is to be handled by background worker processes
-if (true) {
+if (config.doBackgroundWork) {
   const worker = new Worker(
     BACKFILL_JOB_NAME,
     async (job: Job) => {
@@ -141,7 +141,10 @@ if (true) {
 
         const orders = await sync(fromBlock, headBlock);
         if (orders.length) {
-          logger.info("orders_sync", `Fetched orders: ${orders}`);
+          logger.info(
+            "orders_sync",
+            `Fetched orders: ${JSON.stringify(orders)}`
+          );
         }
 
         // Queue any remaining blocks for backfilling

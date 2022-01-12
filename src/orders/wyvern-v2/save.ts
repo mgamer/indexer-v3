@@ -1,4 +1,5 @@
 import * as Sdk from "@reservoir0x/sdk";
+import { generateMerkleTree } from "@reservoir0x/sdk/dist/wyvern-v2/builders/token-list/utils";
 
 import { bn } from "@/common/bignumber";
 import { db, pgp } from "@/common/db";
@@ -6,18 +7,22 @@ import { config } from "@/config/index";
 import {
   TokenSetInfo,
   TokenSetLabelKind,
-  generateTokenInfo,
+  generateAttributeInfo,
   generateCollectionInfo,
+  generateTokenInfo,
 } from "@/orders/utils";
 import { addPendingOrders } from "@/jobs/orders-relay";
 import { addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
+import { OrderInfo } from "@/orders/wyvern-v2";
 
-type OrderInfo = {
+type OrderMetadata = {
   kind: TokenSetLabelKind;
   data?: any;
 };
 
-const extractOrderInfo = (order: Sdk.WyvernV2.Order): OrderInfo | undefined => {
+const extractOrderMetadata = (
+  order: Sdk.WyvernV2.Order
+): OrderMetadata | undefined => {
   switch (order.params.kind) {
     case "erc721-single-token": {
       const builder = new Sdk.WyvernV2.Builders.Erc721.SingleToken(
@@ -83,6 +88,19 @@ const extractOrderInfo = (order: Sdk.WyvernV2.Order): OrderInfo | undefined => {
       };
     }
 
+    case "erc721-token-list": {
+      const builder = new Sdk.WyvernV2.Builders.Erc721.TokenList(
+        config.chainId
+      );
+
+      return {
+        kind: "attribute",
+        data: {
+          merkleRoot: builder.getMerkleRoot(order),
+        },
+      };
+    }
+
     default: {
       return undefined;
     }
@@ -90,42 +108,42 @@ const extractOrderInfo = (order: Sdk.WyvernV2.Order): OrderInfo | undefined => {
 };
 
 type SaveResult = {
-  validOrders: Sdk.WyvernV2.Order[];
-  invalidOrders: {
-    order: Sdk.WyvernV2.Order;
+  valid: OrderInfo[];
+  invalid: {
+    orderInfo: OrderInfo;
     reason: string;
   }[];
 };
 
 export const saveOrders = async (
-  orders: Sdk.WyvernV2.Order[]
+  orderInfos: OrderInfo[]
 ): Promise<SaveResult> => {
   const result: SaveResult = {
-    validOrders: [],
-    invalidOrders: [],
+    valid: [],
+    invalid: [],
   };
 
-  if (!orders.length) {
+  if (!orderInfos.length) {
     return result;
   }
 
   const queries: any[] = [];
-  for (const order of orders) {
-    const hash = order.prefixHash();
+  for (const orderInfo of orderInfos) {
+    const { order } = orderInfo;
 
-    const orderInfo = extractOrderInfo(order);
-    if (!orderInfo) {
-      result.invalidOrders.push({ order, reason: "Order is invalid" });
+    const orderMetadata = extractOrderMetadata(order);
+    if (!orderMetadata) {
+      result.invalid.push({ orderInfo, reason: "Order is invalid" });
       continue;
     }
 
     let tokenSetInfo: TokenSetInfo | undefined;
-    switch (orderInfo.kind) {
+    switch (orderMetadata.kind) {
       // We have a single-token order
       case "token": {
         tokenSetInfo = generateTokenInfo(
           order.params.target,
-          orderInfo.data?.tokenId
+          orderMetadata.data?.tokenId
         );
 
         // Create the token set
@@ -148,7 +166,7 @@ export const saveOrders = async (
           values: {
             tokenSetId: tokenSetInfo.id,
             contract: order.params.target,
-            tokenId: orderInfo.data.tokenId,
+            tokenId: orderMetadata.data.tokenId,
             tokenSetLabel: tokenSetInfo.label,
             tokenSetLabelHash: tokenSetInfo.labelHash,
           },
@@ -183,7 +201,7 @@ export const saveOrders = async (
             values: {
               tokenSetId: tokenSetInfo.id,
               contract: order.params.target,
-              tokenId: orderInfo.data.tokenId,
+              tokenId: orderMetadata.data.tokenId,
             },
           });
         }
@@ -198,7 +216,7 @@ export const saveOrders = async (
         // definition in order for it to be properly validated.
 
         let collection: { id: string } | null;
-        if (orderInfo.data?.tokenIdRange) {
+        if (orderMetadata.data?.tokenIdRange) {
           collection = await db.oneOrNone(
             `
               select
@@ -209,8 +227,8 @@ export const saveOrders = async (
             `,
             {
               contract: order.params.target,
-              startTokenId: orderInfo.data.tokenIdRange[0],
-              endTokenId: orderInfo.data.tokenIdRange[1],
+              startTokenId: orderMetadata.data.tokenIdRange[0],
+              endTokenId: orderMetadata.data.tokenIdRange[1],
             }
           );
         } else {
@@ -234,7 +252,7 @@ export const saveOrders = async (
           tokenSetInfo = generateCollectionInfo(
             collection.id,
             order.params.target,
-            orderInfo.data?.tokenIdRange
+            orderMetadata.data?.tokenIdRange
           );
 
           // Create the token set
@@ -300,11 +318,140 @@ export const saveOrders = async (
 
         break;
       }
+
+      // We have an attribute order
+      case "attribute": {
+        // Fetch all tokens that match the order's attribute
+
+        if (!orderInfo.attribute) {
+          // Skip if the order was passed without any associated attribute
+          break;
+        }
+
+        let tokens: { contract: string; token_id: string }[] =
+          await db.manyOrNone(
+            `
+              select
+                "a"."contract",
+                "a"."token_id"
+              from "attributes" "a"
+              join "tokens" "t"
+                on "a"."contract" = "t"."contract"
+                and "a"."token_id" = "t"."token_id"
+              where "t"."collection_id" = $/collection/
+                and "a"."key" = $/key/
+                and "a"."value" = $/value/
+            `,
+            {
+              collection: orderInfo.attribute.collection,
+              key: orderInfo.attribute.key,
+              value: orderInfo.attribute.value,
+            }
+          );
+
+        if (!tokens.length) {
+          // No tokens matched the passed attribute
+          break;
+        }
+
+        if (!tokens.every(({ contract }) => contract === order.params.target)) {
+          // Make sure all matching tokens are on the same order target contract
+          break;
+        }
+
+        const merkleTree = generateMerkleTree(
+          tokens.map(({ token_id }) => token_id)
+        );
+        if (merkleTree.getHexRoot() !== orderMetadata.data?.merkleRoot) {
+          // The order's merkle root doesn't match the attributes
+          break;
+        }
+
+        tokenSetInfo = generateAttributeInfo(
+          orderInfo.attribute,
+          merkleTree.getHexRoot()
+        );
+
+        // Create the token set
+        queries.push({
+          query: `
+            insert into "token_sets" (
+              "id",
+              "collection_id",
+              "attribute_key",
+              "attribute_value",
+              "label",
+              "label_hash"
+            ) values (
+              $/tokenSetId/,
+              $/collectionId/,
+              $/attributeKey/,
+              $/attributeValue/,
+              $/tokenSetLabel/,
+              $/tokenSetLabelHash/
+            ) on conflict do nothing
+          `,
+          values: {
+            tokenSetId: tokenSetInfo.id,
+            collectionId: orderInfo.attribute.collection,
+            attributeKey: orderInfo.attribute.key,
+            attributeValue: orderInfo.attribute.value,
+            tokenSetLabel: tokenSetInfo.label,
+            tokenSetLabelHash: tokenSetInfo.labelHash,
+          },
+        });
+
+        // For increased performance, only trigger the insertion of
+        // corresponding tokens in the token set if we don't already
+        // have them stored in the database
+        const tokenSetTokensExists = await db.oneOrNone(
+          `
+            select 1
+            from "token_sets_tokens" "tst"
+            where "tst"."token_set_id" = $/tokenSetId/
+            limit 1
+          `,
+          { tokenSetId: tokenSetInfo.id }
+        );
+        if (!tokenSetTokensExists) {
+          // Insert matching tokens in the token set
+          queries.push({
+            query: `
+              insert into "token_sets_tokens" (
+                "token_set_id",
+                "contract",
+                "token_id"
+              )
+              (
+                select
+                  $/tokenSetId/,
+                  "t"."contract",
+                  "t"."token_id"
+                from "tokens" "t"
+                join "attributes" "a"
+                  on "t"."contract" = "a"."contract"
+                  and "t"."token_id" = "a"."token_id"
+                where "t"."collection_id" = $/collection/
+                  and "a"."key" = $/attributeKey/
+                  and "a"."value" = $/attributeValue/
+              ) on conflict do nothing
+            `,
+            values: {
+              tokenSetId: tokenSetInfo.id,
+              collection: orderInfo.attribute.collection,
+              attributeKey: orderInfo.attribute.key,
+              attributeValue: orderInfo.attribute.value,
+            },
+          });
+        }
+
+        break;
+      }
     }
 
     if (!tokenSetInfo) {
-      result.invalidOrders.push({
-        order,
+      result.invalid.push({
+        orderInfo,
         reason: "Order has no matching token set",
       });
       continue;
@@ -465,7 +612,7 @@ export const saveOrders = async (
       },
     });
 
-    result.validOrders.push(order);
+    result.valid.push(orderInfo);
   }
 
   if (queries.length) {
@@ -473,9 +620,12 @@ export const saveOrders = async (
   }
 
   await addToOrdersUpdateByHashQueue(
-    orders.map((order) => ({ context: "save", hash: order.prefixHash() }))
+    orderInfos.map(({ order }) => ({
+      context: "save",
+      hash: order.prefixHash(),
+    }))
   );
-  await addPendingOrders(orders);
+  await addPendingOrders(orderInfos.map(({ order }) => order));
 
   return result;
 };

@@ -4,24 +4,25 @@ import * as Sdk from "@reservoir0x/sdk";
 import { db } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
+import { OrderInfo } from "@/orders/wyvern-v2";
 
 type FilterResult = {
-  validOrders: Sdk.WyvernV2.Order[];
-  invalidOrders: {
-    order: Sdk.WyvernV2.Order;
+  valid: OrderInfo[];
+  invalid: {
+    orderInfo: OrderInfo;
     reason: string;
   }[];
 };
 
 export const filterOrders = async (
-  orders: Sdk.WyvernV2.Order[]
+  orderInfos: OrderInfo[]
 ): Promise<FilterResult> => {
   const result: FilterResult = {
-    validOrders: [],
-    invalidOrders: [],
+    valid: [],
+    invalid: [],
   };
 
-  if (!orders.length) {
+  if (!orderInfos.length) {
     return result;
   }
 
@@ -34,7 +35,7 @@ export const filterOrders = async (
       from "contracts" "c"
       where "c"."address" in ($1:csv)
     `,
-    [orders.map((order) => order.params.target)]
+    [orderInfos.map(({ order }) => order.params.target)]
   );
 
   const contractKinds = new Map<string, string>();
@@ -49,7 +50,7 @@ export const filterOrders = async (
       from "orders" "o"
       where "o"."hash" in ($1:csv)
     `,
-    [orders.map((order) => order.prefixHash())]
+    [orderInfos.map(({ order }) => order.prefixHash())]
   );
 
   const existingHashes = new Set<string>();
@@ -57,12 +58,14 @@ export const filterOrders = async (
     existingHashes.add(hash);
   }
 
-  for (const order of orders) {
+  for (const orderInfo of orderInfos) {
+    const { order } = orderInfo;
+
     const hash = order.prefixHash();
 
     // Check: order doesn't already exist
     if (existingHashes.has(hash)) {
-      result.invalidOrders.push({ order, reason: "Order already exists" });
+      result.invalid.push({ orderInfo, reason: "Order already exists" });
       continue;
     }
 
@@ -70,8 +73,8 @@ export const filterOrders = async (
     if (
       !order.params.kind?.startsWith(contractKinds.get(order.params.target)!)
     ) {
-      result.invalidOrders.push({
-        order,
+      result.invalid.push({
+        orderInfo,
         reason: "Order has unsupported target",
       });
       continue;
@@ -82,8 +85,8 @@ export const filterOrders = async (
     // Check: order has a valid listing time
     const listingTime = order.params.listingTime;
     if (listingTime >= currentTime) {
-      result.invalidOrders.push({
-        order,
+      result.invalid.push({
+        orderInfo,
         reason: "Order has an invalid listing time",
       });
       continue;
@@ -92,13 +95,13 @@ export const filterOrders = async (
     // Check: order is not expired
     const expirationTime = order.params.expirationTime;
     if (expirationTime !== 0 && currentTime >= expirationTime) {
-      result.invalidOrders.push({ order, reason: "Order is expired" });
+      result.invalid.push({ orderInfo, reason: "Order is expired" });
       continue;
     }
 
     // Check: order has a non-zero fee recipient
     if (order.params.feeRecipient === AddressZero) {
-      result.invalidOrders.push({ order, reason: "Fee recipient is zero" });
+      result.invalid.push({ orderInfo, reason: "Fee recipient is zero" });
       continue;
     }
 
@@ -107,8 +110,8 @@ export const filterOrders = async (
       order.params.side === 0 &&
       order.params.paymentToken !== Sdk.Common.Addresses.Weth[config.chainId]
     ) {
-      result.invalidOrders.push({
-        order,
+      result.invalid.push({
+        orderInfo,
         reason: "Order has unsupported payment token",
       });
       continue;
@@ -119,8 +122,8 @@ export const filterOrders = async (
       order.params.side === 1 &&
       order.params.paymentToken !== Sdk.Common.Addresses.Eth[config.chainId]
     ) {
-      result.invalidOrders.push({
-        order,
+      result.invalid.push({
+        orderInfo,
         reason: "Order has unsupported payment token",
       });
       continue;
@@ -128,8 +131,8 @@ export const filterOrders = async (
 
     // Check: order is not private
     if (order.params.taker !== AddressZero) {
-      result.invalidOrders.push({
-        order,
+      result.invalid.push({
+        orderInfo,
         reason: "Order is private",
       });
       continue;
@@ -139,8 +142,8 @@ export const filterOrders = async (
     try {
       order.checkValidity();
     } catch {
-      result.invalidOrders.push({
-        order,
+      result.invalid.push({
+        orderInfo,
         reason: "Order is invalid",
       });
       continue;
@@ -150,8 +153,8 @@ export const filterOrders = async (
     try {
       await order.checkSignature();
     } catch {
-      result.invalidOrders.push({
-        order,
+      result.invalid.push({
+        orderInfo,
         reason: "Order has invalid signature",
       });
       continue;
@@ -161,14 +164,14 @@ export const filterOrders = async (
     try {
       await order.checkFillability(baseProvider);
     } catch {
-      result.invalidOrders.push({
-        order,
+      result.invalid.push({
+        orderInfo,
         reason: "Order is not fillable",
       });
       continue;
     }
 
-    result.validOrders.push(order);
+    result.valid.push(orderInfo);
   }
 
   return result;

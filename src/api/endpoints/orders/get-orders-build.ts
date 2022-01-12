@@ -7,7 +7,8 @@ import { logger } from "@/common/logger";
 import * as wyvernV2 from "@/orders/wyvern-v2";
 
 export const getOrdersBuildOptions: RouteOptions = {
-  description: "Build an order object that abstracts different token / order types. The response can be passed to SDK for signing.",
+  description:
+    "Build an order object that abstracts different token / order types. The response can be passed to SDK for signing.",
   tags: ["api"],
   validate: {
     query: Joi.object({
@@ -16,7 +17,8 @@ export const getOrdersBuildOptions: RouteOptions = {
         .pattern(/^0x[a-f0-9]{40}$/),
       tokenId: Joi.string(),
       collection: Joi.string().lowercase(),
-      // TODO: Integrate attributes once attribute-based orders are supported 
+      attributeKey: Joi.string(),
+      attributeValue: Joi.string(),
       maker: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/)
@@ -33,10 +35,6 @@ export const getOrdersBuildOptions: RouteOptions = {
       expirationTime: Joi.alternatives(Joi.string(), Joi.number()),
       salt: Joi.string(),
     })
-      // TODO: Only the following combinations should be allowed:
-      // - contract + tokenId
-      // - collection
-      // - collection + attributes
       .or("contract", "collection")
       .oxor("contract", "collection"),
   },

@@ -21,6 +21,11 @@ export const postOrdersOptions: RouteOptions = {
             is: Joi.equal("wyvern-v2"),
             then: wyvernV2OrderFormat,
           }),
+          attribute: Joi.object({
+            collection: Joi.string().required(),
+            key: Joi.string().required(),
+            value: Joi.string().required(),
+          }),
         })
       ),
     }),
@@ -35,30 +40,30 @@ export const postOrdersOptions: RouteOptions = {
     try {
       const orders = payload.orders as any;
 
-      const validOrders: Sdk.WyvernV2.Order[] = [];
-      for (const { kind, data } of orders) {
+      const validOrderInfos: wyvernV2.OrderInfo[] = [];
+      for (const { kind, data, attribute } of orders) {
         if (kind === "wyvern-v2") {
           try {
             const order = new Sdk.WyvernV2.Order(config.chainId, data);
-            validOrders.push(order);
+            validOrderInfos.push({ order, attribute });
           } catch {
             // Skip any invalid orders
           }
         }
       }
 
-      const filterResults = await wyvernV2.filterOrders(validOrders);
-      const saveResults = await wyvernV2.saveOrders(filterResults.validOrders);
+      const filterResults = await wyvernV2.filterOrders(validOrderInfos);
+      const saveResults = await wyvernV2.saveOrders(filterResults.valid);
 
       const result: { [hash: string]: string } = {};
-      for (const { order, reason } of filterResults.invalidOrders) {
-        result[order.prefixHash()] = reason;
+      for (const { orderInfo, reason } of filterResults.invalid) {
+        result[orderInfo.order.prefixHash()] = reason;
       }
-      for (const { order, reason } of saveResults.invalidOrders) {
-        result[order.prefixHash()] = reason;
+      for (const { orderInfo, reason } of saveResults.invalid) {
+        result[orderInfo.order.prefixHash()] = reason;
       }
-      for (const order of saveResults.validOrders) {
-        result[order.prefixHash()] = "Success";
+      for (const orderInfo of saveResults.valid) {
+        result[orderInfo.order.prefixHash()] = "Success";
       }
 
       return { orders: result };

@@ -11,7 +11,8 @@ export type BuildOrderOptions = {
   contract?: string;
   tokenId?: string;
   collection?: string;
-  // TODO: Add support for attribute-based orders
+  attributeKey?: string;
+  attributeValue?: string;
   maker: string;
   side: "buy" | "sell";
   price: string;
@@ -62,7 +63,54 @@ export const buildOrder = async (options: BuildOrderOptions) => {
       } else if (data.kind === "erc1155") {
         builder = new Sdk.WyvernV2.Builders.Erc1155.SingleToken(config.chainId);
       }
-    } else if (options.collection) {
+    } else if (
+      options.collection &&
+      options.attributeKey &&
+      options.attributeValue
+    ) {
+      const { collection, attributeKey, attributeValue } = options;
+
+      const data = await db.manyOrNone(
+        `
+          select
+            "c"."kind",
+            "t"."contract",
+            "t"."token_id"
+          from "tokens" "t"
+          join "attributes" "a"
+            on "t"."contract" = "a"."contract"
+            and "t"."token_id" = "a"."token_id"
+          join "contracts" "c"
+            on "t"."contract" = "c"."address"
+          where "t"."collection_id" = $/collection/
+            and "a"."key" = $/attributeKey/
+            and "a"."value" = $/attributeValue/
+        `,
+        { collection, attributeKey, attributeValue }
+      );
+
+      if (
+        data.length &&
+        data.every(
+          ({ kind, contract }) =>
+            kind === data[0].kind && contract === data[0].contract
+        )
+      ) {
+        const contract = data[0].contract;
+        const kind = data[0].kind;
+
+        (buildParams as any).contract = contract;
+        (buildParams as any).tokenIds = data.map(({ token_id }) => token_id);
+
+        if (kind === "erc721") {
+          builder = new Sdk.WyvernV2.Builders.Erc721.TokenList(config.chainId);
+        }
+      }
+    } else if (
+      options.collection &&
+      !options.attributeKey &&
+      !options.attributeValue
+    ) {
       const { collection } = options;
 
       const data = await db.oneOrNone(

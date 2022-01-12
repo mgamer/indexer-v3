@@ -6,14 +6,14 @@ import stringify from "json-stable-stringify";
 // indexer and for the client), the id of any particular token set should
 // be a deterministic identifier based on the composition of the set.
 
-export type TokenSetLabelKind = "token" | "collection";
+export type TokenSetLabelKind = "token" | "collection" | "attribute";
 
 export type TokenSetInfo = {
   // Token set ids have one of the following formats:
   // - `token:${contract}:${tokenId}`
   // - `range:${contract}:${startTokenId}:${endTokenId}`
   // - `contract:${contract}`
-  // - `merkle:${merkleRoot}`
+  // - `list:${merkleRoot}`
   id: string;
   label: {
     kind: TokenSetLabelKind;
@@ -69,4 +69,32 @@ export const generateCollectionInfo = (
       labelHash,
     };
   }
+};
+
+export const generateAttributeInfo = (
+  attribute: {
+    collection: string;
+    key: string;
+    value: string;
+  },
+  merkleRoot: string
+) => {
+  const label: any = {
+    kind: "attribute",
+    data: {
+      collection: attribute.collection,
+      attribute: {
+        key: attribute.key,
+        value: attribute.value,
+      },
+    },
+  };
+  const labelHash =
+    "0x" + crypto.createHash("sha256").update(stringify(label)).digest("hex");
+
+  return {
+    id: `list:${merkleRoot}`,
+    label,
+    labelHash,
+  };
 };
