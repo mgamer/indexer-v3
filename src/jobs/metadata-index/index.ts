@@ -17,10 +17,10 @@ const JOB_NAME = "metadata_index";
 const queue = new Queue(JOB_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
-    attempts: 10,
+    attempts: 5,
     backoff: {
       type: "exponential",
-      delay: 1000,
+      delay: 120000,
     },
     removeOnComplete: true,
     removeOnFail: true,
