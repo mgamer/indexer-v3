@@ -106,7 +106,7 @@ export const addToOrdersSyncCatchupQueue = async () => {
 };
 
 // Actual work is to be handled by background worker processes
-if (true) {
+if (config.doBackgroundWork) {
   const worker = new Worker(
     CATCHUP_JOB_NAME,
     async (_job: Job) => {
