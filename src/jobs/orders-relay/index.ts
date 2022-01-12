@@ -13,11 +13,8 @@ export const addPendingOrders = async (orders: Sdk.WyvernV2.Order[]) => {
     PENDING_ORDERS_KEY,
     orders.map((order) =>
       JSON.stringify({
-        kind: "order",
-        data: {
-          kind: "wyvern-v2",
-          data: order.params,
-        },
+        kind: "wyvern-v2",
+        data: order.params,
       })
     )
   );

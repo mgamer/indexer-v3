@@ -40,13 +40,9 @@ export const sync = async (
           string: true,
         })) as string
       );
-      for (const data1 of upstreamData) {
-        if (data1.kind === "order") {
-          if (data1.data.kind === "wyvern-v2") {
-            orders.push(
-              new Sdk.WyvernV2.Order(config.chainId, data1.data.data)
-            );
-          }
+      for (const { kind, data } of upstreamData) {
+        if (kind === "wyvern-v2") {
+          orders.push(new Sdk.WyvernV2.Order(config.chainId, data));
         }
       }
     } catch {}
