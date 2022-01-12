@@ -118,7 +118,7 @@ if (true) {
         const maxBlocks = 64;
 
         let headBlock = (await arweaveGateway.blocks.getCurrent()).height;
-        headBlock -= 50;
+        headBlock -= 3;
 
         // Fetch the last synced blocked for the current contract type (if it exists)
         let localBlock = Number(await redis.get(`orders_last_synced_block`));
@@ -140,7 +140,9 @@ if (true) {
         );
 
         const orders = await sync(fromBlock, headBlock);
-        logger.info("orders_sync", `Fetched orders: ${orders}`);
+        if (orders.length) {
+          logger.info("orders_sync", `Fetched orders: ${orders}`);
+        }
 
         // Queue any remaining blocks for backfilling
         if (localBlock < fromBlock) {

@@ -10,14 +10,16 @@ export const sync = async (
 ): Promise<Sdk.WyvernV2.Order[]> => {
   const orders: Sdk.WyvernV2.Order[] = [];
 
-  const network = config.chainId === 1 ? "mainnet" : "rinkeby";
   const query = gql`
     {
       transactions(
         block: { min: ${fromBlock}, max: ${toBlock} }
         tags: [
-          { name: "App-Name", values: ["reservoir-${network}"] },
-          { name: "App-Version", values: ["0.0.1"]}
+          { name: "App-Name", values: ["Reservoir Protocol"] },
+          { name: "App-Version", values: ["0.0.1"] },
+          { name: "Network", values: [${
+            config.chainId === 1 ? "mainnet" : "rinkeby"
+          }] }
         ]
       ) {
         edges {
@@ -33,14 +35,20 @@ export const sync = async (
   const data = await request(`${protocol}://${host}/graphql`, query);
   for (const { node } of data?.transactions?.edges ?? []) {
     try {
-      const upstreamOrders = JSON.parse(
+      const upstreamData = JSON.parse(
         (await arweaveGateway.transactions.getData(node.id, {
           decode: true,
           string: true,
         })) as string
       );
-      for (const order of upstreamOrders) {
-        orders.push(new Sdk.WyvernV2.Order(config.chainId, order));
+      for (const data1 of upstreamData) {
+        if (data1.kind === "order") {
+          if (data1.data.kind === "wyvern-v2") {
+            orders.push(
+              new Sdk.WyvernV2.Order(config.chainId, data1.data.data)
+            );
+          }
+        }
       }
     } catch {}
   }

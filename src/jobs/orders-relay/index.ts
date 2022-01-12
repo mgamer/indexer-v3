@@ -9,10 +9,17 @@ import { config } from "@/config/index";
 const PENDING_ORDERS_KEY = "pending_orders";
 
 export const addPendingOrders = async (orders: Sdk.WyvernV2.Order[]) => {
-  logger.info("add_pending_orders", `Adding: ${JSON.stringify(orders)}`);
   await redis.rpush(
     PENDING_ORDERS_KEY,
-    orders.map((order) => JSON.stringify(order.params))
+    orders.map((order) =>
+      JSON.stringify({
+        kind: "order",
+        data: {
+          kind: "wyvern-v2",
+          data: order.params,
+        },
+      })
+    )
   );
 };
 
@@ -32,16 +39,20 @@ if (config.doBackgroundWork) {
         const batchSize = 500;
         const batch = await redis.lrange(PENDING_ORDERS_KEY, 0, batchSize);
         if (batch.length) {
-          const network = config.chainId === 1 ? "mainnet" : "rinkeby";
           const wallet = JSON.parse(config.arweaveRelayerKey);
-
           const transaction = await arweaveGateway.createTransaction(
-            { data: JSON.stringify(batch.map((o) => JSON.parse(o))) },
+            {
+              data: JSON.stringify(batch.map((b) => JSON.parse(b))),
+            },
             wallet
           );
           transaction.addTag("Content-Type", "application/json");
-          transaction.addTag("App-Name", `reservoir-${network}`);
+          transaction.addTag("App-Name", `Reservoir Protocol`);
           transaction.addTag("App-Version", "0.0.1");
+          transaction.addTag(
+            "Network",
+            config.chainId === 1 ? "mainnet" : "rinkeby"
+          );
 
           await arweaveGateway.transactions
             .sign(transaction, wallet)
