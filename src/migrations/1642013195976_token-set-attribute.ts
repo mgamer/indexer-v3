@@ -8,6 +8,9 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     attribute_value: {
       type: "text",
     },
+    metadata: {
+      type: "jsonb",
+    },
   });
 
   pgm.dropIndex("token_sets", ["collection_id"]);
@@ -19,5 +22,9 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
-  pgm.dropColumns("token_sets", ["attribute_key", "attribute_value"]);
+  pgm.dropColumns("token_sets", [
+    "attribute_key",
+    "attribute_value",
+    "metadata",
+  ]);
 }

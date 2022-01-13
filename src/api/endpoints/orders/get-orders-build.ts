@@ -36,7 +36,9 @@ export const getOrdersBuildOptions: RouteOptions = {
       salt: Joi.string(),
     })
       .or("contract", "collection")
-      .oxor("contract", "collection"),
+      .oxor("contract", "collection")
+      .with("contract", "tokenId")
+      .with("attributeKey", ["collection", "attributeValue"]),
   },
   response: {
     schema: Joi.object({

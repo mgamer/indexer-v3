@@ -5,6 +5,8 @@ export type GetOrdersFilter = {
   contract?: string;
   tokenId?: string;
   collection?: string;
+  attributeKey?: string;
+  attributeValue?: string;
   maker?: string;
   hash?: string;
   includeInvalid?: boolean;
@@ -16,7 +18,8 @@ export type GetOrdersFilter = {
 export type GetOrdersResponse = {
   hash: string;
   tokenSetId: string;
-  tokenSetLabel: string;
+  schema: any;
+  metadata: any;
   kind: string;
   side: string;
   maker: string;
@@ -39,7 +42,8 @@ export const getOrders = async (
       "o"."hash",
       "o"."status",
       "o"."token_set_id",
-      "ts"."label" as "token_set_label",
+      "ts"."label" as "schema",
+      "ts"."metadata" as "metadata",
       "o"."kind",
       "o"."side",
       "o"."maker",
@@ -59,14 +63,18 @@ export const getOrders = async (
 
   // Filters
   const conditions: string[] = [];
-  if (filter.contract) {
+  if (filter.contract && filter.tokenId) {
     conditions.push(`"tst"."contract" = $/contract/`);
-  }
-  if (filter.tokenId) {
     conditions.push(`"tst"."token_id" = $/tokenId/`);
   }
-  if (filter.collection) {
+  if (filter.collection && !filter.attributeKey && !filter.attributeValue) {
     conditions.push(`"ts"."collection_id" = $/collection/`);
+    conditions.push(`"ts"."attribute_key" is null`);
+  }
+  if (filter.collection && filter.attributeKey && filter.attributeValue) {
+    conditions.push(`"ts"."collection_id" = $/collection/`);
+    conditions.push(`"ts"."attribute_key" = $/attributeKey/`);
+    conditions.push(`"ts"."attribute_value" = $/attributeValue/`);
   }
 
   if (!filter.includeInvalid) {
@@ -106,7 +114,8 @@ export const getOrders = async (
       hash: r.hash,
       status: r.status,
       tokenSetId: r.token_set_id,
-      tokenSetLabel: r.token_set_label,
+      schema: r.schema,
+      metadata: r.metadata || null,
       kind: r.kind,
       side: r.side,
       maker: r.maker,

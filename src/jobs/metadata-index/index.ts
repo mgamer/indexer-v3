@@ -124,7 +124,7 @@ if (config.doBackgroundWork) {
             description: data.collection.description,
             image: data.collection.image,
             royaltyBps: data.collection.royaltyBps,
-            royaltyRecipient: data.collection.royaltyRecipient,
+            royaltyRecipient: data.collection.royaltyRecipient?.toLowerCase(),
             community: data.collection.community,
             contract: data.collection.contract,
             // TODO: Set `token_id_range` as `null` instead of `numrange(null, null)`

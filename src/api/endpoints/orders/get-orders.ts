@@ -16,7 +16,8 @@ export const getOrdersOptions: RouteOptions = {
         .pattern(/^0x[a-f0-9]{40}$/),
       tokenId: Joi.string().pattern(/^[0-9]+$/),
       collection: Joi.string().lowercase(),
-      // TODO: Integrate attributes once attribute-based orders are supported
+      attributeKey: Joi.string(),
+      attributeValue: Joi.string(),
       maker: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
@@ -28,13 +29,10 @@ export const getOrdersOptions: RouteOptions = {
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     })
-      // TODO: Only the following combinations should be allowed:
-      // - contract + tokenId
-      // - collection
-      // - collection + attributes
-      // - hash
       .or("contract", "collection", "maker", "hash")
-      .oxor("contract", "collection", "hash"),
+      .oxor("contract", "collection", "hash")
+      .with("contract", "tokenId")
+      .with("attributeKey", ["collection", "attributeValue"]),
   },
   response: {
     schema: Joi.object({
@@ -43,10 +41,14 @@ export const getOrdersOptions: RouteOptions = {
           hash: Joi.string(),
           status: Joi.string(),
           tokenSetId: Joi.string(),
-          tokenSetLabel: Joi.object({
+          schema: Joi.object({
             data: Joi.object().unknown(),
             kind: Joi.string(),
           }),
+          metadata: Joi.object({
+            collectionName: Joi.string().allow("", null),
+            tokenName: Joi.string().allow("", null),
+          }).allow(null),
           kind: Joi.string(),
           side: Joi.string(),
           maker: Joi.string(),

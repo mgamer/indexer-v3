@@ -4,6 +4,8 @@ import { generateMerkleTree } from "@reservoir0x/sdk/dist/wyvern-v2/builders/tok
 import { bn } from "@/common/bignumber";
 import { db, pgp } from "@/common/db";
 import { config } from "@/config/index";
+import { addPendingOrders } from "@/jobs/orders-relay";
+import { addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
 import {
   TokenSetInfo,
   TokenSetLabelKind,
@@ -11,8 +13,6 @@ import {
   generateCollectionInfo,
   generateTokenInfo,
 } from "@/orders/utils";
-import { addPendingOrders } from "@/jobs/orders-relay";
-import { addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
 import { OrderInfo } from "@/orders/wyvern-v2";
 
 type OrderMetadata = {
@@ -154,13 +154,23 @@ export const saveOrders = async (
               "contract",
               "token_id",
               "label",
-              "label_hash"
+              "label_hash",
+              "metadata"
             ) values (
               $/tokenSetId/,
               $/contract/,
               $/tokenId/,
               $/tokenSetLabel/,
-              $/tokenSetLabelHash/
+              $/tokenSetLabelHash/,
+              (
+                select
+                  jsonb_build_object('collectionName', "c"."name", 'tokenName', "t"."name")
+                from "tokens" "t"
+                join "collections" "c"
+                  on "t"."collection_id" = "c"."id"
+                where "t"."contract" = $/contract/
+                and "t"."token_id" = $/tokenId/
+              )
             ) on conflict do nothing
           `,
           values: {
@@ -262,12 +272,19 @@ export const saveOrders = async (
                 "id",
                 "collection_id",
                 "label",
-                "label_hash"
+                "label_hash",
+                "metadata"
               ) values (
                 $/tokenSetId/,
                 $/collectionId/,
                 $/tokenSetLabel/,
-                $/tokenSetLabelHash/
+                $/tokenSetLabelHash/,
+                (
+                  select
+                    jsonb_build_object('collectionName', "c"."name")
+                  from "collections" "c"
+                  where "c"."id" = $/collectionId/
+                )
               ) on conflict do nothing
             `,
             values: {
@@ -381,14 +398,21 @@ export const saveOrders = async (
               "attribute_key",
               "attribute_value",
               "label",
-              "label_hash"
+              "label_hash",
+              "metadata"
             ) values (
               $/tokenSetId/,
               $/collectionId/,
               $/attributeKey/,
               $/attributeValue/,
               $/tokenSetLabel/,
-              $/tokenSetLabelHash/
+              $/tokenSetLabelHash/,
+              (
+                select
+                  jsonb_build_object('collectionName', "c"."name")
+                from "collections" "c"
+                where "c"."id" = $/collectionId/
+              )
             ) on conflict do nothing
           `,
           values: {
