@@ -5,7 +5,8 @@ import { logger } from "@/common/logger";
 import * as queries from "@/entities/orders/get-market";
 
 export const getMarketOptions: RouteOptions = {
-  description: "Get aggregate liquidity information for a collection, attribute or token. Useful for building a market depth chart.",
+  description:
+    "Get aggregate liquidity information for a collection, attribute or token. Useful for building a market depth chart.",
   tags: ["api"],
   validate: {
     query: Joi.object({
@@ -16,12 +17,10 @@ export const getMarketOptions: RouteOptions = {
       collection: Joi.string().lowercase(),
       attributes: Joi.object().unknown(),
     })
-      // TODO: Only the following combinations should be allowed:
-      // - contract + tokenId
-      // - collection
-      // - collection + attributes
       .or("contract", "collection")
-      .oxor("contract", "collection"),
+      .oxor("contract", "collection")
+      .with("contract", "tokenId")
+      .with("attributes", "collection"),
   },
   response: {
     schema: Joi.object({
