@@ -8,7 +8,6 @@ export type GetTransfersFilter = {
   attributes?: { [key: string]: string };
   user?: string;
   direction?: "from" | "to";
-  type?: "sale" | "transfer";
   offset: number;
   limit: number;
 };
@@ -17,7 +16,6 @@ export type GetTransfersResponse = {
   token: {
     contract: string;
     tokenId: string;
-    kind: string;
     name: string | null;
     image: string;
     collection: {
@@ -43,7 +41,6 @@ export const getTransfers = async (
       "nte"."token_id",
       "t"."name",
       "t"."image",
-      "co"."kind",
       "cl"."id" as "collection_id",
       "cl"."name" as "collection_name",
       "nte"."from",
@@ -103,11 +100,6 @@ export const getTransfers = async (
       conditions.push(`"nte"."from" = $/user/ or "nte"."to" = $/user/`);
     }
   }
-  if (filter.type === "transfer") {
-    conditions.push(`"fe"."price" is null`);
-  } else if (filter.type === "sale") {
-    conditions.push(`"fe"."price" is not null`);
-  }
   if (conditions.length) {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
@@ -124,7 +116,6 @@ export const getTransfers = async (
       token: {
         contract: r.contract,
         tokenId: r.token_id,
-        kind: r.kind,
         name: r.name,
         image: r.mage,
         collection: {

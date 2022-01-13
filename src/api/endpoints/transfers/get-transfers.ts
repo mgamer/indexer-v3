@@ -6,7 +6,8 @@ import { logger } from "@/common/logger";
 import * as queries from "@/entities/transfers/get-transfers";
 
 export const getTransfersOptions: RouteOptions = {
-  description: "Get historical transfer events, including sales. Can filter by collection, attribute or token.",
+  description:
+    "Get historical transfer events, including sales. Can filter by collection, attribute or token.",
   tags: ["api"],
   validate: {
     query: Joi.object({
@@ -20,12 +21,13 @@ export const getTransfersOptions: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
       direction: Joi.string().lowercase().valid("from", "to"),
-      type: Joi.string().lowercase().valid("sale", "transfer"),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     })
       .oxor("collection", "contract")
-      .or("collection", "contract", "user"),
+      .or("collection", "contract", "user")
+      .with("contract", "tokenId")
+      .with("attributes", "collection"),
   },
   response: {
     schema: Joi.object({
