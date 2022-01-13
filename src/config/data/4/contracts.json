@@ -4,7 +4,8 @@
   ],
   "erc721": [
     "0x79e2d470f950f2cf78eef41720e8ff2cf4b3cd78",
-    "0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85"
+    "0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85",
+    "0x521f9c7505005cfa19a8e5786a9c3c9c9f5e6f42"
   ],
   "erc1155": [],
   "wyvern-v2": [
