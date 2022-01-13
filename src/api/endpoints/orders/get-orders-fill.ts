@@ -3,12 +3,14 @@ import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 
 import { wyvernV2OrderFormat } from "@/api/types";
+import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import * as queries from "@/entities/orders/get-best-order";
 
 export const getOrdersFillOptions: RouteOptions = {
-  description: "Get the best available order for buying or selling a token. The response can be passed to the SDK for signing.",
+  description:
+    "Get the best available order for buying or selling a token. The response can be passed to the SDK for signing.",
   tags: ["api"],
   validate: {
     query: Joi.object({
@@ -17,17 +19,10 @@ export const getOrdersFillOptions: RouteOptions = {
         .required(),
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/),
-      collection: Joi.string().lowercase(),
-      // TODO: Integrate attributes once attribute-based orders are supported
+        .pattern(/^0x[a-f0-9]{40}$/)
+        .required(),
       side: Joi.string().lowercase().valid("sell", "buy").default("sell"),
-    })
-      // TODO: Only the following combinations should be allowed:
-      // - contract
-      // - collection
-      // - collection + attributes
-      .or("contract", "collection")
-      .oxor("contract", "collection"),
+    }),
   },
   response: {
     schema: Joi.object({
@@ -68,8 +63,23 @@ export const getOrdersFillOptions: RouteOptions = {
         sdkOrder.params.kind?.endsWith("token-range") ||
         sdkOrder.params.kind?.endsWith("contract-wide")
       ) {
-        // Passing the token id we want to match is required
+        // Pass the token id to match
         buildMatchingArgs.push(query.tokenId);
+      }
+      if (sdkOrder.params.kind?.endsWith("token-list")) {
+        // Pass the token id to match
+        buildMatchingArgs.push(query.tokenId);
+
+        const tokens: { token_id: string }[] = await db.manyOrNone(
+          `
+            select "tst"."token_id" from "token_sets_tokens" "tst"
+            where "tst"."token_set_id" = $/tokenSetId/
+          `,
+          { tokenSetId: bestOrder.tokenSetId }
+        );
+
+        // Pass the list of tokens of the underlying filled order
+        buildMatchingArgs.push(tokens.map(({ token_id }) => token_id));
       }
 
       return {
