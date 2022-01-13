@@ -1,9 +1,6 @@
 import { MigrationBuilder } from "node-pg-migrate";
 
 export async function up(pgm: MigrationBuilder): Promise<void> {
-  // TODO: Investigate if `contract`, `token_id` and `collection_id` fields
-  // are still needed now that we keep track of the label and its hash
-
   pgm.addColumns("token_sets", {
     label: {
       type: "jsonb",

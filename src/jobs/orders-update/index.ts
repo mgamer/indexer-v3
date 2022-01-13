@@ -89,6 +89,7 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { hash } = job.data;
 
+      // TODO: Batch update all affected tokens for efficiency
       try {
         // Get all tokens targeted by the order
         const data: { side: string; contract: string; tokenId: string }[] =

@@ -13,9 +13,6 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     },
   });
 
-  // TODO: These fields are just temporary, we should be able
-  // to use the newly added `label` and `label_hash` fields
-  // to achieve the same results everywhere in a cleaner way
   pgm.addColumns("token_sets", {
     contract: {
       type: "text",

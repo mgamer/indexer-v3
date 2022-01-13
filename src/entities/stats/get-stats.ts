@@ -31,6 +31,8 @@ export type GetStatsResponse = {
 export const getStats = async (
   filter: GetStatsFilter
 ): Promise<GetStatsResponse> => {
+  // TODO: Improve query performance
+
   let baseQuery: string | undefined;
   if (filter.contract && filter.tokenId) {
     baseQuery = `
@@ -58,77 +60,181 @@ export const getStats = async (
         and "t"."token_id" = $/tokenId/
     `;
   } else if (filter.collection && filter.attributes) {
-    baseQuery = `
-      select
-        "t"."contract",
-        "t"."token_id",
-        "t"."image",
-        "t"."floor_sell_hash",
-        "t"."floor_sell_value"
-      from "tokens" "t"
-    `;
+    const aggConditions: string[] = [`"t"."collection_id" = $/collection/`];
+    const sellConditions: string[] = [`"t"."collection_id" = $/collection/`];
 
-    const attributes: { key: string; value: string }[] = [];
-    Object.entries(filter.attributes).forEach(([key, values]) => {
-      (Array.isArray(values) ? values : [values]).forEach((value) =>
-        attributes.push({ key, value })
-      );
-    });
-
-    attributes.forEach(({ key, value }, i) => {
-      baseQuery += `
-        join "attributes" "a${i}"
-          on "t"."contract" = "a${i}"."contract"
-          and "t"."token_id" = "a${i}"."token_id"
-          and "a${i}"."key" = $/key${i}/
-          and "a${i}"."value" = $/value${i}/
+    Object.entries(filter.attributes).forEach(([key, value], i) => {
+      const condition = `
+        exists(
+          select from "attributes" "a"
+          where "a"."contract" = "t"."contract"
+            and "a"."token_id" = "t"."token_id"
+            and "a"."key" = $/key${i}/
+            and "a"."value" = $/value${i}/
+        )
       `;
+      aggConditions.push(condition);
+      sellConditions.push(condition);
+
       (filter as any)[`key${i}`] = key;
       (filter as any)[`value${i}`] = value;
     });
 
-    baseQuery += ` where "t"."collection_id" = $/collection/`;
+    let aggQuery = `
+      select
+        "t"."collection_id",
+        count("t"."token_id") as "token_count",
+        count("t"."token_id") filter (where "t"."floor_sell_hash" is not null) as "on_sale_count",
+        (array_agg(distinct("t"."image")))[1:4] as "sample_images"
+      from "tokens" "t"
+    `;
+    aggQuery += " where " + aggConditions.map((c) => `(${c})`).join(" and ");
+    aggQuery += ` group by "t"."collection_id"`;
+
+    let sellQuery = `
+      select distinct on ("t"."collection_id")
+        "t"."collection_id",
+        "t"."floor_sell_hash",
+        "o"."value" as "floor_sell_value",
+        "o"."maker" as "floor_sell_maker",
+        date_part('epoch', lower("o"."valid_between")) as "floor_sell_valid_from",
+        (case when "t"."floor_sell_hash" is not null
+          then coalesce(nullif(date_part('epoch', upper("o"."valid_between")), 'Infinity'), 0)
+          else null
+        end) as "floor_sell_valid_until"
+      from "tokens" "t"
+      join "orders" "o"
+        on "t"."floor_sell_hash" = "o"."hash"
+    `;
+    sellQuery += " where " + sellConditions.map((c) => `(${c})`).join(" and ");
+    sellQuery += `
+      order by "t"."collection_id", "t"."floor_sell_value" asc nulls last
+      limit 1
+    `;
+
+    let buyQuery: string;
+    if (Object.entries(filter.attributes).length === 1) {
+      buyQuery = `
+        select distinct on ("ts"."collection_id")
+          "ts"."collection_id",
+          "o"."hash" as "top_buy_hash",
+          "o"."value" as "top_buy_value",
+          "o"."maker" as "top_buy_maker",
+          date_part('epoch', lower("o"."valid_between")) as "top_buy_valid_from",
+          coalesce(nullif(date_part('epoch', upper("o"."valid_between")), 'Infinity'), 0) as "top_buy_valid_until"
+        from "orders" "o"
+        join "token_sets" "ts"
+          on "o"."token_set_id" = "ts"."id"
+        where "ts"."collection_id" = $/collection/
+          and "ts"."attribute_key" = $/attributeKey/
+          and "ts"."attribute_value" = $/attributeValue/
+          and "o"."status" = 'valid'
+          and "o"."side" = 'buy'
+          and "o"."valid_between" @> now()
+        order by "ts"."collection_id", "o"."value" desc nulls last
+        limit 1
+      `;
+
+      const [attributeKey, attributeValue] = Object.entries(
+        filter.attributes
+      )[0];
+      (filter as any).attributeKey = attributeKey;
+      (filter as any).attributeValue = attributeValue;
+    } else {
+      // TODO: Support multiple attributes once integrated
+      buyQuery = `
+        select
+          null as "top_buy_hash",
+          null as "top_buy_value",
+          null as "top_buy_maker",
+          null as "top_buy_valid_from",
+          null as "top_buy_valid_until"
+      `;
+    }
 
     baseQuery = `
-      with
-        "x" as (${baseQuery}),
-        "y" as (
-          select distinct on ("x"."floor_sell_value")
-            "o"."hash" as "floor_sell_hash",
-            "o"."value" as "floor_sell_value",
-            "o"."maker" as "floor_sell_maker",
-            date_part('epoch', lower("o"."valid_between")) as "floor_sell_valid_from"
-          from "x"
-          left join "orders" "o"
-            on "x"."floor_sell_hash" = "o"."hash"
-          order by "x"."floor_sell_value" asc nulls last
-          limit 1
-        )
       select
-        count(distinct("x"."token_id")) as "token_count",
-        count(distinct("x"."token_id")) filter (where "x"."floor_sell_hash" is not null) as "on_sale_count",
-        (array_agg(distinct("x"."image")))[1:4] as "sample_images",
-        (select "y"."floor_sell_hash" from "y"),
-        (select "y"."floor_sell_value" from "y"),
-        (select "y"."floor_sell_maker" from "y"),
-        (select "y"."floor_sell_valid_from" from "y")
-      from "x"
+        "x".*,
+        "y"."floor_sell_hash",
+        "y"."floor_sell_value",
+        "y"."floor_sell_maker",
+        "y"."floor_sell_valid_from",
+        "y"."floor_sell_valid_until",
+        "z"."top_buy_hash",
+        "z"."top_buy_value",
+        "z"."top_buy_maker",
+        "z"."top_buy_valid_from",
+        "z"."top_buy_valid_until"
+      from (${aggQuery}) "x"
+      left join (${sellQuery}) "y"
+        on "x"."collection_id" = "y"."collection_id"
+      left join (${buyQuery}) "z"
+        on "x"."collection_id" = "z"."collection_id"
     `;
-  } else if (filter.collection) {
-    // Handle collection sets
+  } else if (filter.collection && !filter.attributes) {
     baseQuery = `
       select
-        "cs".*,
-        "os"."maker" as "floor_sell_maker",
-        date_part('epoch', lower("os"."valid_between")) as "floor_sell_valid_from",
-        "ob"."maker" as "top_buy_maker",
-        date_part('epoch', lower("ob"."valid_between")) as "top_buy_valid_from"
-      from "collection_stats" "cs"
-      left join "orders" "os"
-        on "cs"."floor_sell_hash" = "os"."hash"
-      left join "orders" "ob"
-        on "cs"."top_buy_hash" = "ob"."hash"
-      where "cs"."collection_id" = $/collection/
+        "x".*,
+        "y"."floor_sell_hash",
+        "y"."floor_sell_value",
+        "y"."floor_sell_maker",
+        "y"."floor_sell_valid_from",
+        "y"."floor_sell_valid_until",
+        "z"."top_buy_hash",
+        "z"."top_buy_value",
+        "z"."top_buy_maker",
+        "z"."top_buy_valid_from",
+        "z"."top_buy_valid_until"
+      from (
+        select
+          "t"."collection_id",
+          count("t"."token_id") as "token_count",
+          count("t"."token_id") filter (where "t"."floor_sell_hash" is not null) as "on_sale_count",
+          (array_agg(distinct("t"."image")))[1:4] as "sample_images"
+        from "tokens" "t"
+        where "t"."collection_id" = $/collection/
+        group by "t"."collection_id"
+      ) "x"
+      left join (
+        select distinct on ("t"."collection_id")
+          "t"."collection_id",
+          "t"."floor_sell_hash",
+          "o"."value" as "floor_sell_value",
+          "o"."maker" as "floor_sell_maker",
+          date_part('epoch', lower("o"."valid_between")) as "floor_sell_valid_from",
+          (case when "t"."floor_sell_hash" is not null
+            then coalesce(nullif(date_part('epoch', upper("o"."valid_between")), 'Infinity'), 0)
+            else null
+          end) as "floor_sell_valid_until"
+        from "tokens" "t"
+        join "orders" "o"
+          on "t"."floor_sell_hash" = "o"."hash"
+        where "t"."collection_id" = $/collection/
+        order by "t"."collection_id", "t"."floor_sell_value" asc nulls last
+      ) "y"
+        on "x"."collection_id" = "y"."collection_id"
+      left join (
+        select distinct on ("ts"."collection_id")
+          "ts"."collection_id",
+          "o"."hash" as "top_buy_hash",
+          "o"."value" as "top_buy_value",
+          "o"."maker" as "top_buy_maker",
+          date_part('epoch', lower("o"."valid_between")) as "top_buy_valid_from",
+          (case when "o"."hash" is not null
+            then coalesce(nullif(date_part('epoch', upper("o"."valid_between")), 'Infinity'), 0)
+            else null
+          end) as "top_buy_valid_until"
+        from "orders" "o"
+        join "token_sets" "ts"
+          on "o"."token_set_id" = "ts"."id"
+        where "ts"."collection_id" = $/collection/
+          and "ts"."attribute_key" is null
+          and "o"."side" = 'buy'
+          and "o"."status" = 'valid'
+          and "o"."valid_between" @> now()
+        order by "ts"."collection_id", "o"."value" desc nulls last
+      ) "z"
+        on "x"."collection_id" = "z"."collection_id"
     `;
   }
 
@@ -146,8 +252,6 @@ export const getStats = async (
             maker: r.floor_sell_maker || null,
             validFrom: r.floor_sell_valid_from || null,
           },
-          // TODO: Once attribute-based orders are live, these fields
-          // will need to be queried and populated in the response
           topBuy: {
             hash: r.top_buy_hash || null,
             value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
@@ -159,6 +263,7 @@ export const getStats = async (
     }
   }
 
+  // Default empty response
   return {
     tokenCount: 0,
     onSaleCount: 0,
