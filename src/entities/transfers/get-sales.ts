@@ -1,7 +1,7 @@
 import { formatEth } from "@/common/bignumber";
 import { db } from "@/common/db";
 
-export type GetTransfersFilter = {
+export type GetSalesFilter = {
   contract?: string;
   tokenId?: string;
   collection?: string;
@@ -12,7 +12,7 @@ export type GetTransfersFilter = {
   limit: number;
 };
 
-export type GetTransfersResponse = {
+export type GetSalesResponse = {
   token: {
     contract: string;
     tokenId: string;
@@ -30,11 +30,12 @@ export type GetTransfersResponse = {
   block: number;
   timestamp: number;
   price: number | null;
+  tokenSetId: string;
 }[];
 
-export const getTransfers = async (
-  filter: GetTransfersFilter
-): Promise<GetTransfersResponse> => {
+export const getSales = async (
+  filter: GetSalesFilter
+): Promise<GetSalesResponse> => {
   let baseQuery = `
     select
       "nte"."address",
@@ -49,22 +50,25 @@ export const getTransfers = async (
       "nte"."tx_hash" as "txHash",
       "nte"."block",
       coalesce("b"."timestamp", extract(epoch from now())::int) as "timestamp",
-      "fe"."price"
+      "fe"."price",
+      "o"."token_set_id" as "token_set_id"
     from "nft_transfer_events" "nte"
+    join "fill_events" "fe"
+      on "nte"."tx_hash" = "fe"."tx_hash"
+      and "nte"."from" = "fe"."maker"
     join "tokens" "t"
       on "nte"."address" = "t"."contract"
       and "nte"."token_id" = "t"."token_id"
     join "collections" "c"
       on "t"."collection_id" = "c"."id"
-    left join "fill_events" "fe"
-      on "nte"."tx_hash" = "fe"."tx_hash"
-      and "nte"."from" = "fe"."maker"
+    join "orders" "o"
+      on ("fe"."buy_order_hash" = "o"."hash" or "fe"."sell_order_hash" = "o"."hash")
     left join "blocks" "b"
-      on "nte"."block" = "b"."block"
+      on "fe"."block" = "b"."block"
   `;
 
   // Filters
-  const conditions: string[] = [];
+  const conditions: string[] = [`"o"."token_set_id" is not null`];
   if (filter.contract) {
     conditions.push(`"nte"."address" = $/contract/`);
   }
@@ -103,7 +107,7 @@ export const getTransfers = async (
   }
 
   // Sorting
-  baseQuery += ` order by "nte"."block" desc nulls last`;
+  baseQuery += ` order by "fe"."block" desc nulls last`;
 
   // Pagination
   baseQuery += ` offset $/offset/`;
@@ -128,6 +132,7 @@ export const getTransfers = async (
       block: r.block,
       timestamp: r.timestamp,
       price: r.price ? formatEth(r.price) : null,
+      tokenSetId: r.token_set_id,
     }))
   );
 };

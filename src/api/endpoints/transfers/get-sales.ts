@@ -3,11 +3,11 @@ import Joi from "joi";
 
 import { tokenFormat } from "@/api/types";
 import { logger } from "@/common/logger";
-import * as queries from "@/entities/transfers/get-transfers";
+import * as queries from "@/entities/transfers/get-sales";
 
-export const getTransfersOptions: RouteOptions = {
+export const getSalesOptions: RouteOptions = {
   description:
-    "Get historical transfer events. Can filter by collection, attribute or token.",
+    "Get historical sales. Can filter by collection, attribute or token.",
   tags: ["api"],
   validate: {
     query: Joi.object({
@@ -31,7 +31,7 @@ export const getTransfersOptions: RouteOptions = {
   },
   response: {
     schema: Joi.object({
-      transfers: Joi.array().items(
+      sales: Joi.array().items(
         Joi.object({
           token: tokenFormat,
           from: Joi.string(),
@@ -41,11 +41,12 @@ export const getTransfersOptions: RouteOptions = {
           block: Joi.number(),
           timestamp: Joi.number(),
           price: Joi.number().unsafe().allow(null),
+          tokenSetId: Joi.string(),
         })
       ),
-    }).label("getTransfersResponse"),
+    }).label("getSalesResponse"),
     failAction: (_request, _h, error) => {
-      logger.error("get_transfers_handler", `Wrong response schema: ${error}`);
+      logger.error("get_sales_handler", `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -53,13 +54,11 @@ export const getTransfersOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const transfers = await queries.getTransfers(
-        query as queries.GetTransfersFilter
-      );
+      const sales = await queries.getSales(query as queries.GetSalesFilter);
 
-      return { transfers };
+      return { sales };
     } catch (error) {
-      logger.error("get_transfers_handler", `Handler failure: ${error}`);
+      logger.error("get_sales_handler", `Handler failure: ${error}`);
       throw error;
     }
   },

@@ -163,6 +163,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/sales",
+    options: transfersEndpoints.getSalesOptions,
+  });
+
+  server.route({
+    method: "GET",
     path: "/transfers",
     options: transfersEndpoints.getTransfersOptions,
   });
