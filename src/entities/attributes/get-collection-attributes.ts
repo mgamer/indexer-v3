@@ -5,7 +5,7 @@ export type GetCollectionAttributesFilter = {
   collection: string;
   attribute?: string;
   onSaleCount?: number;
-  sortBy?: "value" | "floorSellValue" | "floorCap";
+  sortBy?: "value" | "floorSellValue" | "floorCap" | "topBuyValue";
   sortDirection?: "asc" | "desc";
   offset: number;
   limit: number;
@@ -17,13 +17,17 @@ export type GetCollectionAttributesResponse = {
   tokenCount: number;
   onSaleCount: number;
   sampleImages: string[];
-  floorSellValues: number[];
-  topBuyValues: number[];
+  floorSellValues: (number | null)[];
+  topBuyValues: (number | null)[];
 }[];
 
 export const getCollectionAttributes = async (
   filter: GetCollectionAttributesFilter
 ): Promise<GetCollectionAttributesResponse> => {
+  // TODO: The aggregated list of top buys is not actually correct,
+  // we shouldn't get the distinct values but all values distinct
+  // per order hash.
+
   let baseQuery = `
     with "x" as (
       select
@@ -34,11 +38,19 @@ export const getCollectionAttributes = async (
         count(distinct("t"."token_id")) filter (where "t"."floor_sell_hash" is not null) as "on_sale_count",
         (array_agg(distinct("t"."image")))[1:4] as "sample_images",
         min("t"."floor_sell_value") as "floor_sell_value",
-        (array_agg("t"."floor_sell_value" order by "t"."floor_sell_value") filter (where "t"."floor_sell_value" is not null))[1:10]::text[] as "floor_sell_values"
+        (array_agg("t"."floor_sell_value" order by "t"."floor_sell_value") filter (where "t"."floor_sell_value" is not null))[1:10]::text[] as "floor_sell_values",
+        max("o"."value") as "top_buy_value",
+        (array_agg(distinct("o"."value") order by "o"."value" desc) filter (where "t"."floor_sell_value" is not null))[1:10]::text[] as "top_buy_values"
       from "attributes" "a"
       join "tokens" "t"
         on "a"."contract" = "t"."contract"
         and "a"."token_id" = "t"."token_id"
+      left join "token_sets" "ts"
+        on "ts"."collection_id" = "t"."collection_id"
+        and "ts"."attribute_key" = "a"."key"
+        and "ts"."attribute_value" = "a"."value"
+      left join "orders" "o"
+        on "ts"."id" = "o"."token_set_id"
       where "t"."collection_id" = $/collection/
         and "a"."rank" is not null
         and ("a"."kind" = 'string' or "a"."kind" = 'number')
@@ -83,6 +95,11 @@ export const getCollectionAttributes = async (
       baseQuery += ` order by "x"."floor_sell_value" * "x"."token_count" ${filter.sortDirection} nulls last`;
       break;
     }
+
+    case "topBuyValue": {
+      baseQuery += ` order by "x"."top_buy_value" ${filter.sortDirection} nulls last`;
+      break;
+    }
   }
 
   // Pagination
@@ -99,8 +116,9 @@ export const getCollectionAttributes = async (
       floorSellValues: r.floor_sell_values
         ? r.floor_sell_values.map((x: any) => x && formatEth(x))
         : [],
-      // TODO: Integrate buy orders once attribute-based orders get integrated
-      topBuyValues: [],
+      topBuyValues: r.top_buy_values
+        ? r.top_buy_values.map((x: any) => x && formatEth(x))
+        : [],
     }))
   );
 };

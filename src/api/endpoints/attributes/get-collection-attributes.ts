@@ -1,7 +1,6 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { setFormat } from "@/api/types";
 import { logger } from "@/common/logger";
 import * as queries from "@/entities/attributes/get-collection-attributes";
 
@@ -17,7 +16,7 @@ export const getCollectionAttributesOptions: RouteOptions = {
       attribute: Joi.string(),
       onSaleCount: Joi.number(),
       sortBy: Joi.string()
-        .valid("value", "floorSellValue", "floorCap")
+        .valid("value", "floorSellValue", "floorCap", "topBuyValue")
         .default("value"),
       sortDirection: Joi.string()
         .lowercase()
@@ -36,8 +35,8 @@ export const getCollectionAttributesOptions: RouteOptions = {
           tokenCount: Joi.number(),
           onSaleCount: Joi.number(),
           sampleImages: Joi.array().items(Joi.string()),
-          floorSellValues: Joi.array().items(Joi.number().unsafe()),
-          topBuyValues: Joi.array().items(Joi.number().unsafe()),
+          floorSellValues: Joi.array().items(Joi.number().unsafe().allow(null)),
+          topBuyValues: Joi.array().items(Joi.number().unsafe().allow(null)),
         })
       ),
     }).label("getCollectionAttributesResponse"),
