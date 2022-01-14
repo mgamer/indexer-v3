@@ -35,6 +35,7 @@ const byHashQueue = new Queue(BY_HASH_JOB_NAME, {
       type: "exponential",
       delay: 10000,
     },
+    removeOnComplete: 100000,
     removeOnFail: true,
   },
 });
@@ -213,6 +214,7 @@ const byMakerQueue = new Queue(BY_MAKER_JOB_NAME, {
       type: "exponential",
       delay: 10000,
     },
+    removeOnComplete: 100000,
     removeOnFail: true,
   },
 });
