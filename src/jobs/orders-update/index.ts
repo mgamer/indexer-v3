@@ -147,8 +147,8 @@ if (config.doBackgroundWork) {
                 select
                   "x"."contract",
                   "x"."token_id",
-                  "o"."hash",
-                  "o"."value"
+                  "y"."hash",
+                  "y"."value"
                 from (
                   select
                     "tst"."contract",
