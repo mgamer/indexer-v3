@@ -91,8 +91,8 @@ if (config.doBackgroundWork) {
 
       try {
         const data: {
-          side: string;
-          token_set_id: string;
+          side: string | null;
+          token_set_id: string | null;
         } | null = await db.oneOrNone(
           `
             select
@@ -100,13 +100,11 @@ if (config.doBackgroundWork) {
               "o"."token_set_id"
             from "orders" "o"
             where "o"."hash" = $/hash/
-              and "o"."side" is not null
-              and "o"."token_set_id" is not null
           `,
           { hash }
         );
 
-        if (data) {
+        if (data && data.side && data.token_set_id) {
           const side = data.side;
           const tokenSetId = data.token_set_id;
 
