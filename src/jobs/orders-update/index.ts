@@ -100,6 +100,8 @@ if (config.doBackgroundWork) {
               "o"."token_set_id"
             from "orders" "o"
             where "o"."hash" = $/hash/
+              and "o"."side" is not null
+              and "o"."token_set_id" is not null
           `,
           { hash }
         );
