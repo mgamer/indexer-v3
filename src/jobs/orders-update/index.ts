@@ -10,18 +10,18 @@ import { config } from "@/config/index";
 
 // Whenever an order changes its state (eg. a new order comes in,
 // a fill/cancel happens, an order gets expired or an order gets
-// revalidated/invalidated due to a token balance change), we might
-// want to take some actions (eg. update any cached state, like
-// a token's floor sell value or top buy value). Any such actions
-// are all performed in here.
+// revalidated/invalidated due to balance change), we might want
+// to take some actions (eg. update any cached state). Any such
+// actions are all to be performed via the "orders-update" jobs.
 
-// As for events syncing we have two separate job queues. One is for
-// handling direct order state changes (eg. cancel/fill/expiration -
-// where we know exactly the hashes of the affected orders), while
-// the other one is used for indirect state changes (eg. the balance
-// of an order's maker changes - where we don't know exactly the hashes
-// of the affected orders and some additional processing has to be done
-// in order to find those).
+// As for events syncing we have two separate job queues. The first
+// one is for handling direct order state changes (eg. cancel/fill/
+// expiration - where we know exactly the hashes of the orders that
+// are affected), while the other one is for indirect state changes
+// - where we don't exactly know the hashes of the affected orders
+// and some additional processing has to be done for finding these
+// (eg. on balance changes many of the owner's orders might change
+// their state so we have to check all of them).
 
 // By hash
 
@@ -33,26 +33,12 @@ const byHashQueue = new Queue(BY_HASH_JOB_NAME, {
     attempts: 5,
     backoff: {
       type: "exponential",
-      delay: 1000,
+      delay: 10000,
     },
-    removeOnComplete: 10000,
     removeOnFail: true,
   },
 });
 new QueueScheduler(BY_HASH_JOB_NAME, { connection: redis.duplicate() });
-
-// Actual work is to be handled by background worker processes
-if (config.doBackgroundWork) {
-  cron.schedule("*/1 * * * *", async () => {
-    const lockAcquired = await acquireLock(
-      "orders_update_by_hash_queue_clean_lock",
-      55
-    );
-    if (lockAcquired) {
-      await byHashQueue.clean(5 * 60 * 1000, 100000);
-    }
-  });
-}
 
 export type HashInfo = {
   // The context will ensure the queue won't process the same job more
@@ -82,131 +68,128 @@ export const addToOrdersUpdateByHashQueue = async (hashInfos: HashInfo[]) => {
   );
 };
 
-// Actual work is to be handled by background worker processes
+// BACKGROUND WORKER ONLY
+if (config.doBackgroundWork) {
+  cron.schedule("*/1 * * * *", async () => {
+    const lockAcquired = await acquireLock(
+      `${BY_HASH_JOB_NAME}_queue_clean_lock`,
+      60 - 5
+    );
+    if (lockAcquired) {
+      // Clean up jobs older than 10 minutes
+      await byHashQueue.clean(10 * 60 * 1000, 100000);
+    }
+  });
+}
+
+// BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
   const worker = new Worker(
     BY_HASH_JOB_NAME,
     async (job: Job) => {
       const { hash } = job.data;
 
-      // TODO: Batch update all affected tokens for efficiency
       try {
-        // Get all tokens targeted by the order
-        const data: { side: string; contract: string; tokenId: string }[] =
-          await db.manyOrNone(
-            `
-              select
-                "o"."side",
-                "tst"."contract",
-                "tst"."token_id" as "tokenId"
-              from "token_sets_tokens" "tst"
-              join "orders" "o" on "tst"."token_set_id" = "o"."token_set_id"
-              where "o"."hash" = $/hash/
-            `,
-            { hash }
-          );
+        const data: {
+          side: string;
+          token_set_id: string;
+        } | null = await db.oneOrNone(
+          `
+            select
+              "o"."side",
+              "o"."token_set_id"
+            from "orders" "o"
+            where "o"."hash" = $/hash/
+          `,
+          { hash }
+        );
 
-        // Recompute floor_sell_hash or top_buy_hash for targeted tokens.
-        // TODO: An optimization of this would only recompute in certain
-        // cases (eg. only recompute for tokens that have the floor_sell_hash
-        // or top_buy_hash filled/cancelled/expired or for tokens that have
-        // the floor_sell_value or top_buy_value less/higher than an incoming
-        // order).
-        const queries: any[] = [];
-        for (const { side, contract, tokenId } of data) {
+        if (data) {
+          const side = data.side;
+          const tokenSetId = data.token_set_id;
+
           logger.info(
             BY_HASH_JOB_NAME,
-            `Recomputing cached ${side} data for (${contract}, ${tokenId})`
+            `Recomputing cached ${side} data given token set ${tokenSetId}`
           );
 
-          if (side === "sell") {
-            queries.push({
-              query: `
-                update "tokens" as "t" set
-                  "floor_sell_hash" = "x"."hash",
-                  "floor_sell_value" = "x"."value"
-                from (
+          // Recompute `top_buy` for token sets that are not single token
+          if (side === "buy" && !tokenSetId.startsWith("token")) {
+            await db.none(
+              `
+                with "x" as (
                   select
-                    max("y"."hash") as "hash",
-                    max("y"."value") as "value"
-                  from (
-                    select "o"."hash", "o"."value" from "orders" "o"
-                    join "token_sets_tokens" "tst"
-                      on "o"."token_set_id" = "tst"."token_set_id"
-                    join "ownerships" "w"
-                      on "o"."maker" = "w"."owner"
-                      and "tst"."contract" = "w"."contract"
-                      and "tst"."token_id" = "w"."token_id"
-                    where "tst"."contract" = $/contract/
-                      and "tst"."token_id" = $/tokenId/
-                      and "o"."valid_between" @> now()
-                      and "o"."side" = 'sell'
-                      and "o"."status" = 'valid'
-                      and "w"."amount" > 0
-                    order by "o"."value" asc
-                    limit 1
-                  ) "y"
-                ) "x"
-                where "contract" = $/contract/
-                  and "token_id" = $/tokenId/
-                  and "t"."floor_sell_hash" is distinct from "x"."hash"
-              `,
-              values: {
-                contract,
-                tokenId,
-              },
-            });
-          } else if (side === "buy") {
-            queries.push({
-              query: `
-                update "tokens" as "t" set
+                    "o"."token_set_id",
+                    "o"."hash",
+                    "o"."value"
+                  from "orders" "o"
+                  where "o"."token_set_id" = $/tokenSetId/
+                    and "o"."side" = 'buy'
+                    and "o"."status" = 'valid'
+                  order by "o"."value" desc
+                  limit 1
+                )
+                update "token_sets" as "ts" set
                   "top_buy_hash" = "x"."hash",
                   "top_buy_value" = "x"."value"
+                from "x"
+                where "ts"."id" = "x"."token_set_id"
+                  and "ts"."top_buy_hash" is distinct from "x"."hash"
+              `,
+              { tokenSetId }
+            );
+          }
+
+          // Recompute `top_buy` and `floor_sell` for single tokens
+          await db.none(
+            `
+              with "z" as (
+                select
+                  "x"."contract",
+                  "x"."token_id",
+                  "o"."hash",
+                  "o"."value"
                 from (
                   select
-                    max("y"."hash") as "hash",
-                    max("y"."value") as "value"
-                  from (
-                    select "o"."hash", "o"."value" from "orders" "o"
-                    join "token_sets_tokens" "tst"
-                      on "o"."token_set_id" = "tst"."token_set_id"
-                    join "ownerships" "w"
-                      on "o"."maker" = "w"."owner"
-                    where "tst"."contract" = $/contract/
-                      and "tst"."token_id" = $/tokenId/
-                      and "o"."valid_between" @> now()
-                      and "o"."side" = 'buy'
-                      and "o"."status" = 'valid'
-                      and "w"."amount" >= "o"."price"
-                      and "w"."contract" = $/weth/
-                      and "w"."token_id" = -1
-                    order by "o"."value" desc
-                    limit 1
-                  ) "y"
-                ) "x"
-                where "contract" = $/contract/
-                  and "token_id" = $/tokenId/
-                  and "t"."top_buy_hash" is distinct from "x"."hash"
-              `,
-              values: {
-                // We only support eth/weth as payment
-                weth: Common.Addresses.Weth[config.chainId],
-                contract,
-                tokenId,
-              },
-            });
-          }
-        }
-
-        if (queries.length) {
-          await db.none(pgp.helpers.concat(queries));
+                    "tst"."contract",
+                    "tst"."token_id"
+                  from "orders" "o"
+                  join "token_sets_tokens" "tst"
+                    on "o"."token_set_id" = "tst"."token_set_id"
+                  where "o"."hash" = $/hash/
+                ) "x" left join lateral (
+                  select
+                    "o"."hash",
+                    "o"."value"
+                  from "orders" "o"
+                  join "token_sets_tokens" "tst"
+                    on "o"."token_set_id" = "tst"."token_set_id"
+                  where "tst"."contract" = "x"."contract"
+                    and "tst"."token_id" = "x"."token_id"
+                    and "o"."side" = '${side}'
+                    and "o"."status" = 'valid'
+                  order by value ${side === "sell" ? "asc" : "desc"} nulls last
+                  limit 1
+                ) "y" on true
+              )
+              update "tokens" as "t" set
+                "${
+                  side === "sell" ? "floor_sell_hash" : "top_buy_hash"
+                }" = "z"."hash",
+                "${
+                  side === "sell" ? "floor_sell_value" : "top_buy_value"
+                }" = "z"."value"
+              where "t"."contract" = "z"."contract"
+                and "t"."token_id" = "z"."token_id"
+            `
+          );
         }
       } catch (error) {
         logger.error(BY_HASH_JOB_NAME, `Failed to handle ${hash}: ${error}`);
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 3 }
+    { connection: redis.duplicate(), concurrency: 10 }
   );
   worker.on("error", (error) => {
     logger.error(BY_HASH_JOB_NAME, `Worker errored: ${error}`);
@@ -223,26 +206,12 @@ const byMakerQueue = new Queue(BY_MAKER_JOB_NAME, {
     attempts: 5,
     backoff: {
       type: "exponential",
-      delay: 1000,
+      delay: 10000,
     },
-    removeOnComplete: 10000,
     removeOnFail: true,
   },
 });
 new QueueScheduler(BY_MAKER_JOB_NAME, { connection: redis.duplicate() });
-
-// Actual work is to be handled by background worker processes
-if (config.doBackgroundWork) {
-  cron.schedule("*/1 * * * *", async () => {
-    const lockAcquired = await acquireLock(
-      "orders_update_by_maker_queue_clean_lock",
-      55
-    );
-    if (lockAcquired) {
-      await byMakerQueue.clean(5 * 60 * 1000, 100000);
-    }
-  });
-}
 
 export type MakerInfo = {
   // The context will ensure the queue won't process the same job more
@@ -277,7 +246,21 @@ export const addToOrdersUpdateByMakerQueue = async (
   );
 };
 
-// Actual work is to be handled by background worker processes
+// BACKGROUND WORKER ONLY
+if (config.doBackgroundWork) {
+  cron.schedule("*/1 * * * *", async () => {
+    const lockAcquired = await acquireLock(
+      `${BY_MAKER_JOB_NAME}_queue_clean_lock`,
+      60 - 5
+    );
+    if (lockAcquired) {
+      // Clean up jobs older than 10 minutes
+      await byMakerQueue.clean(10 * 60 * 1000, 100000);
+    }
+  });
+}
+
+// BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
   const worker = new Worker(
     BY_MAKER_JOB_NAME,
@@ -380,37 +363,35 @@ if (config.doBackgroundWork) {
 // up-to-date, we have to do a cleanup by fetching all orders
 // that expired an marking them as such.
 
-// Actual work is to be handled by background worker processes
-if (config.doBackgroundWork) {
-  if (config.acceptOrders) {
-    cron.schedule("*/1 * * * *", async () => {
-      const lockAcquired = await acquireLock("expired_orders_lock", 55);
-      if (lockAcquired) {
-        logger.info("expired_orders_cron", "Invalidating expired orders");
+// BACKGROUND WORKER ONLY
+if (config.doBackgroundWork && config.acceptOrders) {
+  cron.schedule("*/1 * * * *", async () => {
+    const lockAcquired = await acquireLock("expired_orders_lock", 55);
+    if (lockAcquired) {
+      logger.info("expired_orders_cron", "Invalidating expired orders");
 
-        try {
-          const hashes: { hash: string }[] = await db.manyOrNone(
-            `
-              update "orders" set "status" = 'expired'
-              where not "valid_between" @> now()
-                and ("status" = 'valid' or "status" = 'no-balance')
-              returning "hash"
-            `
-          );
+      try {
+        const hashes: { hash: string }[] = await db.manyOrNone(
+          `
+            update "orders" set "status" = 'expired'
+            where not "valid_between" @> now()
+              and ("status" = 'valid' or "status" = 'no-balance')
+            returning "hash"
+          `
+        );
 
-          await addToOrdersUpdateByHashQueue(
-            hashes.map(({ hash }) => ({
-              context: Math.floor(Date.now() / 1000).toString(),
-              hash,
-            }))
-          );
-        } catch (error) {
-          logger.error(
-            "expired_orders_cron",
-            `Failed to handle expired orders: ${error}`
-          );
-        }
+        await addToOrdersUpdateByHashQueue(
+          hashes.map(({ hash }) => ({
+            context: Math.floor(Date.now() / 1000).toString(),
+            hash,
+          }))
+        );
+      } catch (error) {
+        logger.error(
+          "expired_orders_cron",
+          `Failed to handle expired orders: ${error}`
+        );
       }
-    });
-  }
+    }
+  });
 }
