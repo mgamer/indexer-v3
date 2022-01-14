@@ -171,7 +171,7 @@ if (config.doBackgroundWork) {
                   order by value ${side === "sell" ? "asc" : "desc"} nulls last
                   limit 1
                 ) "y" on true
-              )
+              ) "z"
               update "tokens" as "t" set
                 "${
                   side === "sell" ? "floor_sell_hash" : "top_buy_hash"
@@ -181,6 +181,9 @@ if (config.doBackgroundWork) {
                 }" = "z"."value"
               where "t"."contract" = "z"."contract"
                 and "t"."token_id" = "z"."token_id"
+                and "t"."${
+                  side === "sell" ? "floor_sell_hash" : "top_buy_hash"
+                }" is distinct from "z"."hash"
             `,
             { hash }
           );
