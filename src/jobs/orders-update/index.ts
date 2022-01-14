@@ -181,7 +181,8 @@ if (config.doBackgroundWork) {
                 }" = "z"."value"
               where "t"."contract" = "z"."contract"
                 and "t"."token_id" = "z"."token_id"
-            `
+            `,
+            { hash }
           );
         }
       } catch (error) {
