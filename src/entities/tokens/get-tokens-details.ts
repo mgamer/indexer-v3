@@ -224,14 +224,18 @@ export const getTokensDetails = async (
     select distinct on ("x"."contract", "x"."token_id", "x"."row_number")
       "x".*,
       "o"."owner",
-      array_agg(json_build_object('key', "a"."key", 'value', "a"."value"))
-        over (partition by "x"."contract", "x"."token_id") as "attributes"
+      coalesce(
+        array_agg(json_build_object('key', "a"."key", 'value', "a"."value"))
+          filter (where "a"."key" is not null)
+          over (partition by "x"."contract", "x"."token_id"),
+        array[]::json[]
+      ) as "attributes"
     from "x"
     join "ownerships" "o"
       on "x"."contract" = "o"."contract"
       and "x"."token_id" = "o"."token_id"
       and "o"."amount" > 0
-    join "attributes" "a"
+    left join "attributes" "a"
       on "x"."contract" = "a"."contract"
       and "x"."token_id" = "a"."token_id"
     order by "x"."row_number"
