@@ -273,24 +273,28 @@ if (config.doBackgroundWork) {
       const { context, side, maker, contract, tokenId } = job.data;
 
       try {
-        let hashes: { hash: string; status: string }[] = [];
+        let orderStatuses: {
+          hash: string;
+          old_status: string;
+          new_status: string;
+        }[] = [];
 
         if (side === "buy") {
-          hashes = await db.manyOrNone(
+          orderStatuses = await db.manyOrNone(
             `
               select
                 "o"."hash",
+                "o"."status" as "old_status",
                 (case
                   when "w"."amount" >= "o"."price" then 'valid'
                   else 'no-balance'
-                end)::order_status_t as "status"
+                end)::order_status_t as "new_status"
               from "orders" "o"
               join "ownerships" "w"
                 on "o"."maker" = "w"."owner"
-              where "o"."side" = 'buy'
-                and "o"."valid_between" @> now()
+              where "o"."maker" = $/maker/
+                and "o"."side" = 'buy'
                 and ("o"."status" = 'valid' or "o"."status" = 'no-balance')
-                and "w"."owner" = $/maker/
                 and "w"."contract" = $/weth/
                 and "w"."token_id" = -1
             `,
@@ -301,14 +305,15 @@ if (config.doBackgroundWork) {
             }
           );
         } else if (side === "sell") {
-          hashes = await db.manyOrNone(
+          orderStatuses = await db.manyOrNone(
             `
               select
                 "o"."hash",
+                "o"."status" as "old_status",
                 (case
                   when "w"."amount" > 0 then 'valid'
                   else 'no-balance'
-                end)::order_status_t as "status"
+                end)::order_status_t as "new_status"
               from "orders" "o"
               join "ownerships" "w"
                 on "o"."maker" = "w"."owner"
@@ -316,10 +321,9 @@ if (config.doBackgroundWork) {
                 on "o"."token_set_id" = "tst"."token_set_id"
                 and "w"."contract" = "tst"."contract"
                 and "w"."token_id" = "tst"."token_id"
-              where "o"."side" = 'sell'
-                and "o"."valid_between" @> now()
+              where "o"."maker" = $/maker/
+                and "o"."side" = 'sell'
                 and ("o"."status" = 'valid' or "o"."status" = 'no-balance')
-                and "w"."owner" = $/maker/
                 and "w"."contract" = $/contract/
                 and "w"."token_id" = $/tokenId/
             `,
@@ -331,22 +335,35 @@ if (config.doBackgroundWork) {
           );
         }
 
-        if (hashes.length) {
+        // Filter out orders which have the same status as before
+        orderStatuses = orderStatuses.filter(
+          ({ old_status, new_status }) => old_status !== new_status
+        );
+
+        if (orderStatuses.length) {
           const columns = new pgp.helpers.ColumnSet(["hash", "status"], {
             table: "orders",
           });
-          const values = pgp.helpers.values(hashes, columns);
-          await db.none(`
-            update "orders" as "o" set "status" = "x"."status"::order_status_t
-            from (values ${values}) as "x"("hash", "status")
-            where "o"."hash" = "x"."hash"::text
-              and ("o"."status" = 'valid' or "o"."status" = 'no-balance')
-              and "o"."status" != "x"."status"::order_status_t
-          `);
+          const values = pgp.helpers.values(
+            orderStatuses.map(({ hash, new_status }) => ({
+              hash,
+              status: new_status,
+            })),
+            columns
+          );
+
+          await db.none(
+            `
+              update "orders" as "o" set
+                "status" = "x"."status"::order_status_t
+              from (values ${values}) as "x"("hash", "status")
+              where "o"."hash" = "x"."hash"::text
+            `
+          );
         }
 
         await addToOrdersUpdateByHashQueue(
-          hashes.map(({ hash }) => ({ context, hash }))
+          orderStatuses.map(({ hash }) => ({ context, hash }))
         );
       } catch (error) {
         logger.error(
