@@ -16,7 +16,12 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     },
   });
 
-  pgm.createIndex("token_sets", ["id", "top_buy_value"]);
+  pgm.createIndex("token_sets", [
+    "collection_id",
+    "attribute_key",
+    "attribute_value",
+    "top_buy_value",
+  ]);
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {

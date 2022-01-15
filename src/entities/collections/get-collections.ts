@@ -3,7 +3,6 @@ import { db } from "@/common/db";
 
 export type GetCollectionsFilter = {
   community?: string;
-  collection?: string;
   name?: string;
   sortBy?: "id" | "floorCap";
   sortDirection?: "asc" | "desc";
@@ -54,27 +53,25 @@ export const getCollections = async (
       "c"."image",
       "c"."royalty_bps",
       "c"."royalty_recipient",
-      "cs"."token_count",
-      "cs"."on_sale_count",
-      "cs"."sample_images",
-      "os"."value" as "floor_sell_value",
-      "ob"."value" as "top_buy_value"
+      count("t"."token_id") as "token_count",
+      count("t"."token_id") filter (where "t"."floor_sell_value" is not null) as "on_sale_count",
+      array(
+        select
+          "t"."image"
+        from "tokens" "t"
+        where "t"."collection_id" = "c"."id"
+        limit 4
+      ) as "sample_images"
     from "collections" "c"
-    join "collection_stats" "cs"
-      on "c"."id" = "cs"."collection_id"
-    left join "orders" "os"
-      on "cs"."floor_sell_hash" = "os"."hash"
-    left join "orders" "ob"
-      on "cs"."top_buy_hash" = "ob"."hash"
+    join "tokens" "t"
+      on "c"."id" = "t"."collection_id"
+    group by "c"."id"
   `;
 
   // Filters
   const conditions: string[] = [];
   if (filter.community) {
     conditions.push(`"c"."community" = $/community/`);
-  }
-  if (filter.collection) {
-    conditions.push(`"c"."id" = $/collection/`);
   }
   if (filter.name) {
     filter.name = `%${filter.name}%`;
@@ -85,16 +82,16 @@ export const getCollections = async (
   }
 
   // Sorting
-  filter.sortBy = filter.sortBy ?? "id";
-  filter.sortDirection = filter.sortDirection ?? "asc";
-  switch (filter.sortBy) {
+  const sortBy = filter.sortBy ?? "id";
+  const sortDirection = filter.sortDirection ?? "asc";
+  switch (sortBy) {
     case "id": {
-      baseQuery += ` order by "c"."id" ${filter.sortDirection} nulls last`;
+      baseQuery += ` order by "c"."id" ${sortDirection} nulls last`;
       break;
     }
 
     case "floorCap": {
-      baseQuery += ` order by "cs"."floor_sell_value" * "cs"."token_count" ${filter.sortDirection} nulls last`;
+      baseQuery += ` order by count("t"."token_id") * min("t"."floor_sell_value") ${sortDirection} nulls last`;
       break;
     }
   }
@@ -102,6 +99,43 @@ export const getCollections = async (
   // Pagination
   baseQuery += ` offset $/offset/`;
   baseQuery += ` limit $/limit/`;
+
+  baseQuery = `
+    with "x" as (${baseQuery})
+    select
+      "x".*,
+      "y".*,
+      "z".*
+    from "x"
+    left join lateral (
+      select
+        "o"."hash" as "floor_sell_hash",
+        "o"."value" as "floor_sell_value",
+        "o"."maker" as "floor_sell_maker",
+        date_part('epoch', lower("o"."valid_between")) as "floor_sell_valid_from"
+      from "tokens" "t"
+      join "orders" "o"
+        on "t"."floor_sell_hash" = "o"."hash"
+      where "t"."collection_id" = "x"."id"
+      order by "t"."floor_sell_value" asc nulls last
+      limit 1
+    ) "y" on true
+    left join lateral (
+      select
+        "o"."hash" as "top_buy_hash",
+        "o"."value" as "top_buy_value",
+        "o"."maker" as "top_buy_maker",
+        date_part('epoch', lower("o"."valid_between")) as "top_buy_valid_from"
+      from "token_sets" "ts"
+      join "orders" "o"
+        on "ts"."top_buy_hash" = "o"."hash"
+      where "ts"."collection_id" = "x"."id"
+        and "ts"."attribute_key" is null
+        and "ts"."attribute_value" is null
+      order by "ts"."top_buy_hash" asc nulls last
+      limit 1
+    ) "z" on true
+  `;
 
   return db.manyOrNone(baseQuery, filter).then((result) =>
     result.map((r) => ({
@@ -121,16 +155,16 @@ export const getCollections = async (
         sampleImages: r.sample_images || [],
         market: {
           floorSell: {
-            hash: null,
+            hash: r.floor_sell_hash,
             value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-            maker: null,
-            validFrom: null,
+            maker: r.floor_sell_maker,
+            validFrom: r.floor_sell_valid_from,
           },
           topBuy: {
-            hash: null,
+            hash: r.top_buy_hash,
             value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-            maker: null,
-            validFrom: null,
+            maker: r.top_buy_maker,
+            validFrom: r.top_buy_valid_from,
           },
         },
       },
