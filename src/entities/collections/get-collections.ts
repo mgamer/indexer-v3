@@ -65,7 +65,6 @@ export const getCollections = async (
     from "collections" "c"
     join "tokens" "t"
       on "c"."id" = "t"."collection_id"
-    group by "c"."id"
   `;
 
   // Filters
@@ -80,6 +79,9 @@ export const getCollections = async (
   if (conditions.length) {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
+
+  // Grouping
+  baseQuery += ` group by "c"."id"`;
 
   // Sorting
   const sortBy = filter.sortBy ?? "id";
