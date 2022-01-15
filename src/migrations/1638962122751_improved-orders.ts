@@ -14,6 +14,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
   });
 
   pgm.addColumns("token_sets", {
+    // TODO: Remove `contract and `token_id` from `token_sets`
     contract: {
       type: "text",
     },
@@ -25,7 +26,6 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     },
   });
 
-  pgm.addIndex("token_sets", ["contract", "token_id"]);
   pgm.addIndex("token_sets", ["collection_id"]);
 }
 

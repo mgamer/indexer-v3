@@ -84,7 +84,7 @@ export const getStats = async (
       select
         "t"."collection_id",
         count("t"."token_id") as "token_count",
-        count("t"."token_id") filter (where "t"."floor_sell_hash" is not null) as "on_sale_count",
+        count("t"."token_id") filter (where "t"."floor_sell_value" is not null) as "on_sale_count",
         (array_agg(distinct("t"."image")))[1:4] as "sample_images"
       from "tokens" "t"
     `;

@@ -163,9 +163,9 @@ export const getTokensDetails = async (
     conditions.push(`"tst"."token_set_id" = $/tokenSetId/`);
   }
   if (filter.onSale === true) {
-    conditions.push(`"t"."floor_sell_hash" is not null`);
+    conditions.push(`"t"."floor_sell_value" is not null`);
   } else if (filter.onSale === false) {
-    conditions.push(`"t"."floor_sell_hash" is null`);
+    conditions.push(`"t"."floor_sell_value" is null`);
   }
   if (conditions.length) {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
