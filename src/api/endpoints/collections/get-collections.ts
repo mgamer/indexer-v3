@@ -6,7 +6,8 @@ import { logger } from "@/common/logger";
 import * as queries from "@/entities/collections/get-collections";
 
 export const getCollectionsOptions: RouteOptions = {
-  description: "Get a list of collections. Useful for getting all collections in a marketplace. Returns minimal details and stats are refreshed every 5 mins.",
+  description:
+    "Get a list of collections. Useful for getting all collections in a marketplace. Returns minimal details and stats are refreshed every 5 mins.",
   tags: ["api"],
   validate: {
     query: Joi.object({

@@ -35,7 +35,7 @@ export const getCollectionAttributes = async (
         "a"."value",
         min("a"."rank") as "rank",
         count(distinct("t"."token_id")) as "token_count",
-        count(distinct("t"."token_id")) filter (where "t"."floor_sell_hash" is not null) as "on_sale_count",
+        count(distinct("t"."token_id")) filter (where "t"."floor_sell_value" is not null) as "on_sale_count",
         (array_agg(distinct("t"."image")))[1:4] as "sample_images",
         min("t"."floor_sell_value") as "floor_sell_value",
         (array_agg("t"."floor_sell_value" order by "t"."floor_sell_value") filter (where "t"."floor_sell_value" is not null))[1:10]::text[] as "floor_sell_values",

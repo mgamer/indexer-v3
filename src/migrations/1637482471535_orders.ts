@@ -51,6 +51,9 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     primaryKey: ["hash"],
   });
 
+  // TODO: Remove `valid_between` from the `token_set_id` and `maker`
+  // indexes. For efficiency we should always rely on `status`.
+
   // For efficienctly retrieving the floor sell or top bid of
   // any particular token id
   pgm.createIndex("orders", ["token_set_id", "side", "valid_between"], {
@@ -88,12 +91,11 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     },
   });
 
-  pgm.createIndex("tokens", ["floor_sell_hash"]);
-  pgm.createIndex("tokens", ["contract", "floor_sell_value"]);
+  pgm.dropIndex("tokens", ["collection_id"]);
   pgm.createIndex("tokens", ["contract", "token_id", "floor_sell_value"]);
-  pgm.createIndex("tokens", ["top_buy_hash"]);
-  pgm.createIndex("tokens", ["contract", "top_buy_value"]);
+  pgm.createIndex("tokens", ["collection_id", "floor_sell_value"]);
   pgm.createIndex("tokens", ["contract", "token_id", "top_buy_value"]);
+  pgm.createIndex("tokens", ["collection_id", "top_buy_value"]);
 
   // References:
   // - https://www.lob.com/blog/supercharge-your-postgresql-performance
@@ -111,6 +113,7 @@ export async function down(pgm: MigrationBuilder): Promise<void> {
     "top_buy_hash",
     "top_buy_value",
   ]);
+  pgm.addIndex("tokens", ["collection_id"]);
 
   pgm.dropTable("orders");
 

@@ -61,7 +61,6 @@ export const postFixCacheOptions: RouteOptions = {
                     on "tst"."token_set_id" = "o"."token_set_id"
                     and "o"."side" = 'sell'
                     and "o"."status" = 'valid'
-                    and "o"."valid_between" @> now()
                   where "t"."contract" = $/contract/
                   order by "t"."contract", "t"."token_id", "o"."value" asc nulls last
                 ) "x"
@@ -96,7 +95,6 @@ export const postFixCacheOptions: RouteOptions = {
                     on "tst"."token_set_id" = "o"."token_set_id"
                     and "o"."side" = 'buy'
                     and "o"."status" = 'valid'
-                    and "o"."valid_between" @> now()
                   where "t"."contract" = $/contract/
                   order by "t"."contract", "t"."token_id", "o"."value" desc nulls last
                 ) "x"

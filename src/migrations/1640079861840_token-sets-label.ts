@@ -15,8 +15,6 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     primaryKey: ["id", "label_hash"],
   });
 
-  pgm.addIndex("token_sets", ["label_hash"]);
-
   pgm.addColumns("orders", {
     token_set_label_hash: {
       type: "text",

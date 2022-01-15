@@ -33,7 +33,7 @@ export const getUserCollections = async (
       "c"."name",
       "o"."owner",
       sum("o"."amount") as "token_count",
-      count(distinct("t"."token_id")) filter (where "t"."floor_sell_hash" is not null) as "on_sale_count",
+      count(distinct("t"."token_id")) filter (where "t"."floor_sell_value" is not null) as "on_sale_count",
       min("t"."floor_sell_value") as "floor_sell_value",
       max("t"."top_buy_value") as "top_buy_value",
       sum("o"."amount") * max("t"."top_buy_value") as "total_buy_value",

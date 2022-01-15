@@ -29,8 +29,6 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     primaryKey: ["id"],
   });
 
-  pgm.addIndex("collections", ["community"]);
-
   pgm.addColumns("tokens", {
     name: {
       type: "text",

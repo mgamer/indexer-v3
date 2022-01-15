@@ -47,10 +47,6 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
   pgm.createIndex("nft_transfer_events", ["tx_hash", "from"]);
   pgm.createIndex("nft_transfer_events", [
     "address",
-    { name: "block", sort: "DESC" },
-  ]);
-  pgm.createIndex("nft_transfer_events", [
-    "address",
     "token_id",
     { name: "block", sort: "DESC" },
   ]);
