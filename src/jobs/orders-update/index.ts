@@ -35,15 +35,18 @@ const byHashQueue = new Queue(BY_HASH_JOB_NAME, {
       type: "exponential",
       delay: 10000,
     },
+    // We should make sure not to perform any expensive work more
+    // than once. As such, we keep the last performed jobs in the
+    // queue and give jobs a deterministic id so that it will not
+    // get re-executed if it already did recently.
     removeOnComplete: 100000,
-    removeOnFail: true,
+    removeOnFail: 100000,
   },
 });
 new QueueScheduler(BY_HASH_JOB_NAME, { connection: redis.duplicate() });
 
 export type HashInfo = {
-  // The context will ensure the queue won't process the same job more
-  // than once in the same context (over a recent time period)
+  // The deterministic context/event that triggered the job
   context: string;
   hash: string;
 };
@@ -57,12 +60,6 @@ export const addToOrdersUpdateByHashQueue = async (hashInfos: HashInfo[]) => {
       name: hashInfo.hash,
       data: hashInfo,
       opts: {
-        // Since it can happen to sync and handle the same events more
-        // than once, we should make sure not to do any expensive work
-        // more than once for the same event. As such, we keep the last
-        // performed jobs in the queue (via the above `removeOnComplete`
-        // option) and give the jobs a deterministic id so that a job
-        // will not be re-executed if it already did recently.
         jobId: hashInfo.context + "-" + hashInfo.hash,
       },
     }))
@@ -71,14 +68,16 @@ export const addToOrdersUpdateByHashQueue = async (hashInfos: HashInfo[]) => {
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
-  cron.schedule("*/1 * * * *", async () => {
+  // TODO: Check if cleaning the queue is indeed required
+  cron.schedule("*/10 * * * *", async () => {
     const lockAcquired = await acquireLock(
       `${BY_HASH_JOB_NAME}_queue_clean_lock`,
-      60 - 5
+      10 * 60 - 5
     );
     if (lockAcquired) {
       // Clean up jobs older than 10 minutes
-      await byHashQueue.clean(10 * 60 * 1000, 100000);
+      await byHashQueue.clean(10 * 60 * 1000, 100000, "completed");
+      await byHashQueue.clean(10 * 60 * 1000, 100000, "failed");
     }
   });
 }
@@ -142,6 +141,7 @@ if (config.doBackgroundWork) {
           }
 
           // Recompute `top_buy` and `floor_sell` for single tokens
+          const column = data.side === "sell" ? "floor_sell" : "top_buy";
           await db.none(
             `
               with "z" as (
@@ -174,18 +174,12 @@ if (config.doBackgroundWork) {
                 ) "y" on true
               )
               update "tokens" as "t" set
-                "${
-                  side === "sell" ? "floor_sell_hash" : "top_buy_hash"
-                }" = "z"."hash",
-                "${
-                  side === "sell" ? "floor_sell_value" : "top_buy_value"
-                }" = "z"."value"
+                "${column}_hash" = "z"."hash",
+                "${column}_value" = "z"."value"
               from "z"
               where "t"."contract" = "z"."contract"
                 and "t"."token_id" = "z"."token_id"
-                and "t"."${
-                  side === "sell" ? "floor_sell_hash" : "top_buy_hash"
-                }" is distinct from "z"."hash"
+                and "t"."${column}_hash" is distinct from "z"."hash"
             `,
             { hash }
           );
@@ -214,19 +208,23 @@ const byMakerQueue = new Queue(BY_MAKER_JOB_NAME, {
       type: "exponential",
       delay: 10000,
     },
+    // We should make sure not to perform any expensive work more
+    // than once. As such, we keep the last performed jobs in the
+    // queue and give jobs a deterministic id so that it will not
+    // get re-executed if it already did recently.
     removeOnComplete: 100000,
-    removeOnFail: true,
+    removeOnFail: 100000,
   },
 });
 new QueueScheduler(BY_MAKER_JOB_NAME, { connection: redis.duplicate() });
 
 export type MakerInfo = {
-  // The context will ensure the queue won't process the same job more
-  // than once in the same context (over a recent time period)
+  // The deterministic context/event that triggered the job
   context: string;
   side: "buy" | "sell";
   maker: string;
   contract: string;
+  // The token id will be missing for `buy` orders
   tokenId?: string;
 };
 
@@ -241,12 +239,6 @@ export const addToOrdersUpdateByMakerQueue = async (
       name: makerInfo.maker,
       data: makerInfo,
       opts: {
-        // Since it can happen to sync and handle the same events more
-        // than once, we should make sure not to do any expensive work
-        // more than once for the same event. As such, we keep the last
-        // performed jobs in the queue (via the above `removeOnComplete`
-        // option) and give the jobs a deterministic id so that a job
-        // will not be re-executed if it already did recently.
         jobId: makerInfo.context + "-" + makerInfo.maker,
       },
     }))
@@ -255,14 +247,16 @@ export const addToOrdersUpdateByMakerQueue = async (
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
-  cron.schedule("*/1 * * * *", async () => {
+  // TODO: Check if cleaning the queue is indeed required
+  cron.schedule("*/10 * * * *", async () => {
     const lockAcquired = await acquireLock(
       `${BY_MAKER_JOB_NAME}_queue_clean_lock`,
-      60 - 5
+      10 * 60 - 5
     );
     if (lockAcquired) {
       // Clean up jobs older than 10 minutes
-      await byMakerQueue.clean(10 * 60 * 1000, 100000);
+      await byMakerQueue.clean(10 * 60 * 1000, 100000, "completed");
+      await byMakerQueue.clean(10 * 60 * 1000, 100000, "failed");
     }
   });
 }
@@ -364,6 +358,7 @@ if (config.doBackgroundWork) {
           );
         }
 
+        // Re-check all affected orders
         await addToOrdersUpdateByHashQueue(
           orderStatuses.map(({ hash }) => ({ context, hash }))
         );
@@ -384,15 +379,15 @@ if (config.doBackgroundWork) {
 
 // Orders might expire anytime, without us getting notified.
 // For this reason, every once in a while, in order to stay
-// up-to-date, we have to do a cleanup by fetching all orders
-// that expired an marking them as such.
+// up-to-date, we check and invalidate orders that expired.
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork && config.acceptOrders) {
-  cron.schedule("*/1 * * * *", async () => {
-    const lockAcquired = await acquireLock("expired_orders_lock", 55);
+  const CRON_NAME = "expired_orders";
+  cron.schedule("*/30 * * * * *", async () => {
+    const lockAcquired = await acquireLock(`${CRON_NAME}_lock`, 30 - 5);
     if (lockAcquired) {
-      logger.info("expired_orders_cron", "Invalidating expired orders");
+      logger.info(`${CRON_NAME}_cron`, "Invalidating expired orders");
 
       try {
         const hashes: { hash: string }[] = await db.manyOrNone(
@@ -406,13 +401,13 @@ if (config.doBackgroundWork && config.acceptOrders) {
 
         await addToOrdersUpdateByHashQueue(
           hashes.map(({ hash }) => ({
-            context: Math.floor(Date.now() / 1000).toString(),
+            context: `${CRON_NAME}_${Math.floor(Date.now() / 1000)}`,
             hash,
           }))
         );
       } catch (error) {
         logger.error(
-          "expired_orders_cron",
+          `${CRON_NAME}_cron`,
           `Failed to handle expired orders: ${error}`
         );
       }

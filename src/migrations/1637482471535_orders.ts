@@ -51,6 +51,9 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     primaryKey: ["hash"],
   });
 
+  // TODO: Remove `valid_between` from the `token_set_id` and `maker`
+  // indexes. For efficiency we should always rely on `status`.
+
   // For efficienctly retrieving the floor sell or top bid of
   // any particular token id
   pgm.createIndex("orders", ["token_set_id", "side", "valid_between"], {
