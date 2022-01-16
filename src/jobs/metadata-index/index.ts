@@ -296,7 +296,7 @@ if (config.doBackgroundWork) {
               where not "metadata_indexed"
               limit $/limit/
             `,
-            { limit: 50 }
+            { limit: 500 }
           );
 
         if (tokens.length) {
