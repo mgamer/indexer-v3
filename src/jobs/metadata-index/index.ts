@@ -193,17 +193,20 @@ if (config.doBackgroundWork) {
 
         // Save token attribute metadata
         const attributeValues: any[] = [];
-        for (const { key, value, kind, rank } of data.attributes || []) {
-          attributeValues.push({
-            contract,
-            token_id: tokenId,
-            key,
-            value,
-            // TODO: Defaulting to `string` should be done at the database level
-            kind: kind || "string",
-            // TODO: Defaulting to `1` should be done at the database level
-            rank: rank ? (rank === -1 ? null : rank) : 1,
-          });
+        if (data.collection) {
+          for (const { key, value, kind, rank } of data.attributes || []) {
+            attributeValues.push({
+              collection_id: data.collection.id,
+              contract,
+              token_id: tokenId,
+              key,
+              value,
+              // TODO: Defaulting to `string` should be done at the database level
+              kind: kind || "string",
+              // TODO: Defaulting to `1` should be done at the database level
+              rank: rank ? (rank === -1 ? null : rank) : 1,
+            });
+          }
         }
 
         queries.push({
@@ -220,13 +223,22 @@ if (config.doBackgroundWork) {
 
         if (attributeValues.length) {
           const columns = new pgp.helpers.ColumnSet(
-            ["contract", "token_id", "key", "value", "kind", "rank"],
+            [
+              "collection_id",
+              "contract",
+              "token_id",
+              "key",
+              "value",
+              "kind",
+              "rank",
+            ],
             { table: "attributes" }
           );
           const values = pgp.helpers.values(attributeValues, columns);
           queries.push({
             query: `
               insert into "attributes" (
+                "collection_id",
                 "contract",
                 "token_id",
                 "key",
