@@ -47,7 +47,7 @@ if (config.doBackgroundWork) {
       const { contract, tokenId } = job.data;
 
       type Metadata = {
-        collection: {
+        collection?: {
           id: string;
           name: string;
           description: string;
@@ -60,10 +60,10 @@ if (config.doBackgroundWork) {
           filters?: any;
           sort?: any;
         };
-        name: string;
-        description: string;
-        image: string;
-        attributes: {
+        name?: string;
+        description?: string;
+        image?: string;
+        attributes?: {
           key: string;
           value: string;
           kind?: "number" | "string" | "date" | "range";
@@ -78,65 +78,92 @@ if (config.doBackgroundWork) {
 
         const queries: any[] = [];
 
-        // Save collection high-level metadata
-        queries.push({
-          query: `
-            insert into "collections" (
-              "id",
-              "name",
-              "description",
-              "image",
-              "royalty_bps",
-              "royalty_recipient",
-              "community",
-              "contract",
-              "token_id_range",
-              "filterable_attribute_keys",
-              "sortable_attribute_keys"
-            ) values (
-              $/id/,
-              $/name/,
-              $/description/,
-              $/image/,
-              $/royaltyBps/,
-              $/royaltyRecipient/,
-              $/community/,
-              $/contract/,
-              numrange($/startTokenId/, $/endTokenId/),
-              $/filterableAttributeKeys:json/,
-              $/sortableAttributeKeys:json/
-            ) on conflict ("id") do
-            update set
-              "name" = $/name/,
-              "description" = $/description/,
-              "image" = $/image/,
-              "royalty_bps" = $/royaltyBps/,
-              "royalty_recipient" = $/royaltyRecipient/,
-              "community" = $/community/,
-              "contract" = $/contract/,
-              "token_id_range" = numrange($/startTokenId/, $/endTokenId/, '[]'),
-              "filterable_attribute_keys" = $/filterableAttributeKeys:json/,
-              "sortable_attribute_keys" = $/sortableAttributeKeys:json/
-          `,
-          values: {
-            id: data.collection.id,
-            name: data.collection.name,
-            description: data.collection.description,
-            image: data.collection.image,
-            royaltyBps: data.collection.royaltyBps,
-            royaltyRecipient: data.collection.royaltyRecipient?.toLowerCase(),
-            community: data.collection.community,
-            contract: data.collection.contract,
-            // TODO: Set `token_id_range` as `null` instead of `numrange(null, null)`
-            // if the token id range information is missing from metadata. Right now,
-            // both `null` and `numrange(null, null)` are treated as missing data,
-            // but we should make this more consistent.
-            startTokenId: data.collection.tokenRange?.[0],
-            endTokenId: data.collection.tokenRange?.[1],
-            filterableAttributeKeys: data.collection.filters,
-            sortableAttributeKeys: data.collection.sort,
-          },
-        });
+        if (data.collection) {
+          // Save collection high-level metadata
+          queries.push({
+            query: `
+              insert into "collections" (
+                "id",
+                "name",
+                "description",
+                "image",
+                "royalty_bps",
+                "royalty_recipient",
+                "community",
+                "contract",
+                "token_id_range",
+                "filterable_attribute_keys",
+                "sortable_attribute_keys"
+              ) values (
+                $/id/,
+                $/name/,
+                $/description/,
+                $/image/,
+                $/royaltyBps/,
+                $/royaltyRecipient/,
+                $/community/,
+                $/contract/,
+                numrange($/startTokenId/, $/endTokenId/),
+                $/filterableAttributeKeys:json/,
+                $/sortableAttributeKeys:json/
+              ) on conflict ("id") do
+              update set
+                "name" = $/name/,
+                "description" = $/description/,
+                "image" = $/image/,
+                "royalty_bps" = $/royaltyBps/,
+                "royalty_recipient" = $/royaltyRecipient/,
+                "community" = $/community/,
+                "contract" = $/contract/,
+                "token_id_range" = numrange($/startTokenId/, $/endTokenId/, '[]'),
+                "filterable_attribute_keys" = $/filterableAttributeKeys:json/,
+                "sortable_attribute_keys" = $/sortableAttributeKeys:json/
+            `,
+            values: {
+              id: data.collection.id,
+              name: data.collection.name,
+              description: data.collection.description,
+              image: data.collection.image,
+              royaltyBps: data.collection.royaltyBps,
+              royaltyRecipient: data.collection.royaltyRecipient?.toLowerCase(),
+              community: data.collection.community,
+              contract: data.collection.contract,
+              // TODO: Set `token_id_range` as `null` instead of `numrange(null, null)`
+              // if the token id range information is missing from metadata. Right now,
+              // both `null` and `numrange(null, null)` are treated as missing data,
+              // but we should make this more consistent.
+              startTokenId: data.collection.tokenRange?.[0],
+              endTokenId: data.collection.tokenRange?.[1],
+              filterableAttributeKeys: data.collection.filters,
+              sortableAttributeKeys: data.collection.sort,
+            },
+          });
+
+          // Update collection-wide token sets
+          queries.push({
+            query: `
+              insert into "token_sets_tokens" (
+                "token_set_id",
+                "contract",
+                "token_id"
+              )
+              (
+                select
+                  "id",
+                  $/contract/,
+                  $/tokenId/
+                from "token_sets"
+                where "collection_id" = $/collectionId/
+              )
+              on conflict do nothing
+            `,
+            values: {
+              contract,
+              tokenId,
+              collectionId: data.collection.id,
+            },
+          });
+        }
 
         // Save token high-level metadata
         queries.push({
@@ -150,10 +177,10 @@ if (config.doBackgroundWork) {
               and "token_id" = $/tokenId/
           `,
           values: {
-            name: data.name,
-            description: data.description,
-            image: data.image,
-            collectionId: data.collection.id,
+            name: data.name || null,
+            description: data.description || null,
+            image: data.image || null,
+            collectionId: data.collection?.id || null,
             contract,
             tokenId,
           },
@@ -161,7 +188,7 @@ if (config.doBackgroundWork) {
 
         // Save token attribute metadata
         const attributeValues: any[] = [];
-        for (const { key, value, kind, rank } of data.attributes) {
+        for (const { key, value, kind, rank } of data.attributes || []) {
           attributeValues.push({
             contract,
             token_id: tokenId,
@@ -173,23 +200,25 @@ if (config.doBackgroundWork) {
             rank: rank ? (rank === -1 ? null : rank) : 1,
           });
         }
+
+        queries.push({
+          query: `
+            delete from "attributes"
+            where "contract" = $/contract/
+              and "token_id" = $/tokenId/
+          `,
+          values: {
+            contract,
+            tokenId,
+          },
+        });
+
         if (attributeValues.length) {
           const columns = new pgp.helpers.ColumnSet(
             ["contract", "token_id", "key", "value", "kind", "rank"],
             { table: "attributes" }
           );
           const values = pgp.helpers.values(attributeValues, columns);
-          queries.push({
-            query: `
-              delete from "attributes"
-              where "contract" = $/contract/
-                and "token_id" = $/tokenId/
-            `,
-            values: {
-              contract,
-              tokenId,
-            },
-          });
           queries.push({
             query: `
               insert into "attributes" (
@@ -204,31 +233,6 @@ if (config.doBackgroundWork) {
             `,
           });
         }
-
-        // Update collection-wide token sets
-        queries.push({
-          query: `
-            insert into "token_sets_tokens" (
-              "token_set_id",
-              "contract",
-              "token_id"
-            )
-            (
-              select
-                "id",
-                $/contract/,
-                $/tokenId/
-              from "token_sets"
-              where "collection_id" = $/collectionId/
-            )
-            on conflict do nothing
-          `,
-          values: {
-            contract,
-            tokenId,
-            collectionId: data.collection.id,
-          },
-        });
 
         if (queries.length) {
           await db.none(pgp.helpers.concat(queries));
