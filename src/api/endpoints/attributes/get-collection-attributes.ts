@@ -14,7 +14,6 @@ export const getCollectionAttributesOptions: RouteOptions = {
     }),
     query: Joi.object({
       attribute: Joi.string(),
-      onSaleCount: Joi.number(),
       sortBy: Joi.string()
         .valid("value", "floorSellValue", "floorCap", "topBuyValue")
         .default("value"),
@@ -35,8 +34,13 @@ export const getCollectionAttributesOptions: RouteOptions = {
           tokenCount: Joi.number(),
           onSaleCount: Joi.number(),
           sampleImages: Joi.array().items(Joi.string()),
-          floorSellValues: Joi.array().items(Joi.number().unsafe().allow(null)),
-          topBuyValues: Joi.array().items(Joi.number().unsafe().allow(null)),
+          floorSellValues: Joi.array().items(Joi.number().unsafe()),
+          topBuy: Joi.object({
+            hash: Joi.string().allow(null),
+            value: Joi.number().unsafe().allow(null),
+            maker: Joi.string().allow(null),
+            validFrom: Joi.number().allow(null),
+          }),
         })
       ),
     }).label("getCollectionAttributesResponse"),

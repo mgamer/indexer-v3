@@ -4,7 +4,6 @@ import { db } from "@/common/db";
 export type GetCollectionAttributesFilter = {
   collection: string;
   attribute?: string;
-  onSaleCount?: number;
   sortBy?: "value" | "floorSellValue" | "floorCap" | "topBuyValue";
   sortDirection?: "asc" | "desc";
   offset: number;
@@ -18,86 +17,80 @@ export type GetCollectionAttributesResponse = {
   onSaleCount: number;
   sampleImages: string[];
   floorSellValues: (number | null)[];
-  topBuyValues: (number | null)[];
+  topBuy: {
+    hash: string | null;
+    value: number | null;
+    maker: string | null;
+    validFrom: number | null;
+  };
 }[];
 
 export const getCollectionAttributes = async (
   filter: GetCollectionAttributesFilter
 ): Promise<GetCollectionAttributesResponse> => {
-  // TODO: The aggregated list of top buys is not actually correct,
-  // we shouldn't get the distinct values but all values distinct
-  // per order hash.
-
   let baseQuery = `
-    with "x" as (
-      select
-        "a"."key",
-        "a"."value",
-        min("a"."rank") as "rank",
-        count(distinct("t"."token_id")) as "token_count",
-        count(distinct("t"."token_id")) filter (where "t"."floor_sell_value" is not null) as "on_sale_count",
-        (array_agg(distinct("t"."image")))[1:4] as "sample_images",
-        min("t"."floor_sell_value") as "floor_sell_value",
-        (array_agg("t"."floor_sell_value" order by "t"."floor_sell_value") filter (where "t"."floor_sell_value" is not null))[1:10]::text[] as "floor_sell_values",
-        max("o"."value") as "top_buy_value",
-        (array_agg(distinct("o"."value") order by "o"."value" desc) filter (where "t"."floor_sell_value" is not null))[1:10]::text[] as "top_buy_values"
-      from "attributes" "a"
-      join "tokens" "t"
-        on "a"."contract" = "t"."contract"
-        and "a"."token_id" = "t"."token_id"
-      left join "token_sets" "ts"
-        on "ts"."collection_id" = "t"."collection_id"
-        and "ts"."attribute_key" = "a"."key"
-        and "ts"."attribute_value" = "a"."value"
-      left join "orders" "o"
-        on "ts"."id" = "o"."token_set_id"
-      where "t"."collection_id" = $/collection/
-        and "a"."rank" is not null
-        and ("a"."kind" = 'string' or "a"."kind" = 'number')
-      group by "a"."key", "a"."value"
-    )
-    select * from "x"
+    select
+      "a"."collection_id",
+      "a"."key",
+      "a"."value",
+      min("a"."rank") as "rank",
+      count(distinct("t"."token_id")) as "token_count",
+      count(distinct("t"."token_id")) filter (where "t"."floor_sell_value" is not null) as "on_sale_count",
+      min("t"."floor_sell_value") as "floor_sell_value",
+      max("ts"."top_buy_value") as "top_buy_value"
+    from "attributes" "a"
+    join "tokens" "t"
+      on "a"."contract" = "t"."contract"
+      and "a"."token_id" = "t"."token_id"
+    left join "token_sets" "ts"
+      on "ts"."collection_id" = "a"."collection_id"
+      and "ts"."attribute_key" = "a"."key"
+      and "ts"."attribute_value" = "a"."value"
   `;
 
   // Filters
-  const conditions: string[] = [];
+  const conditions: string[] = [
+    `"a"."collection_id" = $/collection/`,
+    `"a"."rank" is not null`,
+    `"a"."kind" = 'string' or "a"."kind" = 'number'`,
+  ];
   if (filter.attribute) {
-    conditions.push(`"x"."key" = $/attribute/`);
-  }
-  if (filter.onSaleCount) {
-    conditions.push(`"x"."on_sale_count" >= $/onSaleCount/`);
+    conditions.push(`"a"."key" = $/attribute/`);
   }
   if (conditions.length) {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
 
+  // Grouping
+  baseQuery += ` group by "a"."collection_id", "a"."key", "a"."value", "a"."rank"`;
+
   // Sorting
-  filter.sortBy = filter.sortBy ?? "value";
-  filter.sortDirection = filter.sortDirection ?? "asc";
-  switch (filter.sortBy) {
+  const sortBy = filter.sortBy ?? "value";
+  const sortDirection = filter.sortDirection ?? "asc";
+  switch (sortBy) {
     case "value": {
       // TODO: Integrate sorting by attribute kind
       baseQuery += `
         order by
-          "x"."rank",
-          "x"."key",
-          "x"."value" ${filter.sortDirection} nulls last
+          "a"."rank",
+          "a"."key",
+          "a"."value" ${sortDirection} nulls last
         `;
       break;
     }
 
     case "floorSellValue": {
-      baseQuery += ` order by "x"."floor_sell_value" ${filter.sortDirection} nulls last`;
+      baseQuery += ` order by min("t"."floor_sell_value") ${sortDirection} nulls last`;
       break;
     }
 
     case "floorCap": {
-      baseQuery += ` order by "x"."floor_sell_value" * "x"."token_count" ${filter.sortDirection} nulls last`;
+      baseQuery += ` order by min("t"."floor_sell_value") * count(distinct("a"."token_id")) ${sortDirection} nulls last`;
       break;
     }
 
     case "topBuyValue": {
-      baseQuery += ` order by "x"."top_buy_value" ${filter.sortDirection} nulls last`;
+      baseQuery += ` order by max("ts"."top_buy_value") ${sortDirection} nulls last`;
       break;
     }
   }
@@ -106,19 +99,77 @@ export const getCollectionAttributes = async (
   baseQuery += ` offset $/offset/`;
   baseQuery += ` limit $/limit/`;
 
+  baseQuery = `
+    with "x" as (${baseQuery})
+    select
+      "x".*,
+      "y".*,
+      "z".*,
+      "w".*
+    from "x"
+    left join lateral (
+      select array(
+        select
+          "t"."image"
+        from "tokens" "t"
+        join "attributes" "a"
+          on "t"."contract" = "a"."contract"
+          and "t"."token_id" = "a"."token_id"
+        where "a"."collection_id" = "x"."collection_id"
+          and "a"."key" = "x"."key"
+          and "a"."value" = "x"."value"
+        limit 4
+      ) as "sample_images"
+    ) "y" on true
+    left join lateral (
+      select array(
+        select
+          "t"."floor_sell_value"
+        from "tokens" "t"
+        join "attributes" "a"
+          on "t"."contract" = "a"."contract"
+          and "t"."token_id" = "a"."token_id"
+        where "a"."collection_id" = "x"."collection_id"
+          and "a"."key" = "x"."key"
+          and "a"."value" = "x"."value"
+          and "t"."floor_sell_value" is not null
+        order by "t"."floor_sell_value" asc nulls last
+        limit 10
+      )::text[] as "floor_sell_values"
+    ) "z" on true
+    left join lateral (
+      select
+        "o"."hash" as "top_buy_hash",
+        "o"."value" as "top_buy_value",
+        "o"."maker" as "top_buy_maker",
+        date_part('epoch', lower("o"."valid_between")) as "top_buy_valid_from"
+      from "token_sets" "ts"
+      join "orders" "o"
+        on "ts"."top_buy_hash" = "o"."hash"
+      where "ts"."collection_id" = "x"."collection_id"
+        and "ts"."attribute_key" = "x"."key"
+        and "ts"."attribute_value" = "x"."value"
+      order by "ts"."top_buy_hash" asc nulls last
+      limit 1
+    ) "w" on true
+  `;
+
   return db.manyOrNone(baseQuery, filter).then((result) =>
     result.map((r) => ({
       key: r.key,
       value: r.value,
       tokenCount: Number(r.token_count),
       onSaleCount: Number(r.on_sale_count),
-      sampleImages: r.sample_images,
+      sampleImages: r.sample_images || [],
       floorSellValues: r.floor_sell_values
-        ? r.floor_sell_values.map((x: any) => x && formatEth(x))
+        ? r.floor_sell_values.filter(Boolean).map(formatEth)
         : [],
-      topBuyValues: r.top_buy_values
-        ? r.top_buy_values.map((x: any) => x && formatEth(x))
-        : [],
+      topBuy: {
+        hash: r.top_buy_hash,
+        value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+        maker: r.top_buy_maker,
+        validFrom: r.top_buy_valid_from,
+      },
     }))
   );
 };
