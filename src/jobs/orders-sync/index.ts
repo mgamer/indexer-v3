@@ -43,7 +43,7 @@ export const addToOrdersSyncBackfillQueue = async (
   // Syncing is done in batches since the requested block range
   // might include lots of events that cannot fit within a single
   // provider response
-  const blocksPerBatch = options?.blocksPerBatch ?? 64;
+  const blocksPerBatch = options?.blocksPerBatch ?? 4;
 
   // Sync in reverse in order to handle more recent events first
   for (let to = toBlock; to >= fromBlock; to -= blocksPerBatch) {
