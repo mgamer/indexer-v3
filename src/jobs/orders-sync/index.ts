@@ -6,6 +6,7 @@ import { acquireLock, redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { sync } from "@/orders/orderbook";
 import { arweaveGateway } from "@/common/provider";
+import * as wyvernV2 from "@/orders/wyvern-v2";
 
 // Just like events syncing, for syncing orders we have two separate
 // job queues. One is for handling backfilling while the other one
@@ -29,14 +30,12 @@ export const backfillQueue = new Queue(BACKFILL_JOB_NAME, {
 });
 new QueueScheduler(BACKFILL_JOB_NAME, { connection: redis.duplicate() });
 
-type BackfillingOptions = {
-  blocksPerBatch?: number;
-};
-
 export const addToOrdersSyncBackfillQueue = async (
   fromBlock: number,
   toBlock: number,
-  options?: BackfillingOptions
+  options?: {
+    blocksPerBatch?: number;
+  }
 ) => {
   const jobs: any[] = [];
 
@@ -49,7 +48,7 @@ export const addToOrdersSyncBackfillQueue = async (
   for (let to = toBlock; to >= fromBlock; to -= blocksPerBatch) {
     const from = Math.max(fromBlock, to - blocksPerBatch + 1);
     jobs.push({
-      name: `${fromBlock}-${toBlock}`,
+      name: fromBlock + "-" + toBlock,
       data: {
         fromBlock: from,
         toBlock: to,
@@ -69,13 +68,23 @@ if (config.doBackgroundWork) {
 
       try {
         logger.info(
-          "orders_sync",
+          BACKFILL_JOB_NAME,
           `Orders backfill syncing block range [${fromBlock}, ${toBlock}]`
         );
 
-        await sync(fromBlock, toBlock);
+        const orders = await sync(fromBlock, toBlock);
+
+        const filterResults = await wyvernV2.filterOrders(
+          orders.map((order) => ({ order }))
+        );
+        const saveResults = await wyvernV2.saveOrders(filterResults.valid);
+
+        logger.info(
+          BACKFILL_JOB_NAME,
+          `Synced ${orders.length} orders (kept ${saveResults.valid.length} orders)`
+        );
       } catch (error) {
-        logger.error("orders_sync", `Orders backfill job failed: ${error}`);
+        logger.error(BACKFILL_JOB_NAME, `Orders backfill job failed: ${error}`);
         throw error;
       }
     },
