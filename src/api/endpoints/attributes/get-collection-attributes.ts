@@ -33,7 +33,7 @@ export const getCollectionAttributesOptions: RouteOptions = {
           value: Joi.string(),
           tokenCount: Joi.number(),
           onSaleCount: Joi.number(),
-          sampleImages: Joi.array().items(Joi.string()),
+          sampleImages: Joi.array().items(Joi.string().allow("")),
           floorSellValues: Joi.array().items(Joi.number().unsafe()),
           topBuy: Joi.object({
             hash: Joi.string().allow(null),
