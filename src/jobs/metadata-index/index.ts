@@ -62,6 +62,7 @@ if (config.doBackgroundWork) {
       const { contract, tokenId } = job.data;
 
       type Metadata = {
+        error?: any;
         collection?: {
           id: string;
           name: string;
@@ -90,6 +91,10 @@ if (config.doBackgroundWork) {
         const { data }: { data: Metadata } = await axios.get(
           `${config.metadataApiBaseUrl}/${contract}/${tokenId}`
         );
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
 
         const queries: any[] = [];
 
