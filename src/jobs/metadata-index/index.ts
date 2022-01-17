@@ -76,11 +76,6 @@ if (config.doBackgroundWork) {
           `${config.metadataApiBaseUrl}/${contract}/${tokenId}`
         );
 
-        if (!data.collection) {
-          // Skip
-          return;
-        }
-
         const queries: any[] = [];
 
         if (data.collection) {
