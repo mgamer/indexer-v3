@@ -8,8 +8,9 @@ import { acquireLock, redis } from "@/common/redis";
 import { config } from "@/config/index";
 
 // For filling collections/tokens metadata information, we rely
-// on external services. For now, these are centralized APIs
-// that provide the metadata in a standard custom format that
+// on external services. For now, these are external APIs which
+// retrieve the metadata from different well-known sources (eg.
+// OpenSea, Rarible) and convert it into a standard format that
 // is easy for the indexer to process.
 
 const JOB_NAME = "metadata_index";
@@ -22,8 +23,6 @@ export const queue = new Queue(JOB_NAME, {
       type: "exponential",
       delay: 120000,
     },
-    removeOnComplete: true,
-    removeOnFail: true,
   },
 });
 new QueueScheduler(JOB_NAME, { connection: redis.duplicate() });
@@ -40,7 +39,22 @@ const addToQueue = async (tokens: { contract: string; tokenId: string }[]) => {
   );
 };
 
-// Actual work is to be handled by background worker processes
+// BACKGROUND WORKER ONLY
+if (config.doBackgroundWork) {
+  cron.schedule("*/10 * * * *", async () => {
+    const lockAcquired = await acquireLock(
+      `${JOB_NAME}_queue_clean_lock`,
+      10 * 60 - 5
+    );
+    if (lockAcquired) {
+      // Clean up jobs older than 10 minutes
+      await queue.clean(10 * 60 * 1000, 100000, "completed");
+      await queue.clean(10 * 60 * 1000, 100000, "failed");
+    }
+  });
+}
+
+// BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
   const worker = new Worker(
     JOB_NAME,
