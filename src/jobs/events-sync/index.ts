@@ -101,7 +101,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 3 }
+    { connection: redis.duplicate(), concurrency: 2 }
   );
   worker.on("error", (error) => {
     logger.error(BACKFILL_JOB_NAME, `Worker errored: ${error}`);
