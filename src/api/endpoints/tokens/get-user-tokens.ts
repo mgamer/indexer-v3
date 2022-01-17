@@ -6,7 +6,8 @@ import { logger } from "@/common/logger";
 import * as queries from "@/entities/tokens/get-user-tokens";
 
 export const getUserTokensOptions: RouteOptions = {
-  description: "Get tokens held by a user, along with ownership information such as associated orders and date acquired",
+  description:
+    "Get tokens held by a user, along with ownership information such as associated orders and date acquired",
   tags: ["api"],
   validate: {
     params: Joi.object({
@@ -19,9 +20,7 @@ export const getUserTokensOptions: RouteOptions = {
       community: Joi.string().lowercase(),
       collection: Joi.string().lowercase(),
       hasOffer: Joi.boolean(),
-      sortBy: Joi.string()
-        .valid("acquiredAt", "topBuyListingTime")
-        .default("acquiredAt"),
+      sortBy: Joi.string().valid("acquiredAt", "topBuyValue"),
       sortDirection: Joi.string()
         .lowercase()
         .valid("asc", "desc")
@@ -36,6 +35,11 @@ export const getUserTokensOptions: RouteOptions = {
         Joi.object({
           token: tokenFormat,
           ownership: ownershipFormat,
+          topBuy: Joi.object({
+            hash: Joi.string().allow(null),
+            value: Joi.number().unsafe().allow(null),
+            schema: Joi.any().allow(null),
+          }),
         })
       ),
     }).label("getUserTokensResponse"),

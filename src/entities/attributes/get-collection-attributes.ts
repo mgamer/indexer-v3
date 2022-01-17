@@ -37,7 +37,11 @@ export const getCollectionAttributes = async (
       count(distinct("t"."token_id")) as "token_count",
       count(distinct("t"."token_id")) filter (where "t"."floor_sell_value" is not null) as "on_sale_count",
       min("t"."floor_sell_value") as "floor_sell_value",
-      max("ts"."top_buy_value") as "top_buy_value"
+      max("ts"."top_buy_value") as "top_buy_value",
+      (array_agg(distinct("t"."image")))[1:4] as "sample_images",
+      ((array_agg(
+        "t"."floor_sell_value" order by "t"."floor_sell_value" asc
+      ) filter (where "t"."floor_sell_value" is not null))::text[])[1:10] as "floor_sell_values"
     from "attributes" "a"
     join "tokens" "t"
       on "a"."contract" = "t"."contract"
@@ -103,40 +107,8 @@ export const getCollectionAttributes = async (
     with "x" as (${baseQuery})
     select
       "x".*,
-      "y".*,
-      "z".*,
-      "w".*
+      "y".*
     from "x"
-    left join lateral (
-      select array(
-        select
-          "t"."image"
-        from "tokens" "t"
-        join "attributes" "a"
-          on "t"."contract" = "a"."contract"
-          and "t"."token_id" = "a"."token_id"
-        where "a"."collection_id" = "x"."collection_id"
-          and "a"."key" = "x"."key"
-          and "a"."value" = "x"."value"
-        limit 4
-      ) as "sample_images"
-    ) "y" on true
-    left join lateral (
-      select array(
-        select
-          "t"."floor_sell_value"
-        from "tokens" "t"
-        join "attributes" "a"
-          on "t"."contract" = "a"."contract"
-          and "t"."token_id" = "a"."token_id"
-        where "a"."collection_id" = "x"."collection_id"
-          and "a"."key" = "x"."key"
-          and "a"."value" = "x"."value"
-          and "t"."floor_sell_value" is not null
-        order by "t"."floor_sell_value" asc nulls last
-        limit 10
-      )::text[] as "floor_sell_values"
-    ) "z" on true
     left join lateral (
       select
         "o"."hash" as "top_buy_hash",
@@ -151,7 +123,7 @@ export const getCollectionAttributes = async (
         and "ts"."attribute_value" = "x"."value"
       order by "ts"."top_buy_hash" asc nulls last
       limit 1
-    ) "w" on true
+    ) "y" on true
   `;
 
   return db.manyOrNone(baseQuery, filter).then((result) =>

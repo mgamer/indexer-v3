@@ -15,7 +15,7 @@ import { arweaveGateway } from "@/common/provider";
 
 const BACKFILL_JOB_NAME = "orders_sync_backfill";
 
-const backfillQueue = new Queue(BACKFILL_JOB_NAME, {
+export const backfillQueue = new Queue(BACKFILL_JOB_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 5,
@@ -90,7 +90,7 @@ if (config.doBackgroundWork) {
 
 const CATCHUP_JOB_NAME = "orders_sync_catchup";
 
-const catchupQueue = new Queue(CATCHUP_JOB_NAME, {
+export const catchupQueue = new Queue(CATCHUP_JOB_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     // No retries here, we should be as lean as possible and

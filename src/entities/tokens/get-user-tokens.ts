@@ -6,6 +6,8 @@ export type GetUserTokensFilter = {
   community?: string;
   collection?: string;
   hasOffer?: string;
+  sortBy?: "acquiredAt" | "topBuyValue";
+  sortDirection?: "asc" | "desc";
   offset: number;
   limit: number;
 };
@@ -29,6 +31,11 @@ export type GetUserTokensResponse = {
     totalBuyValue: number | null;
     lastAcquiredAt: number | null;
   };
+  topBuy: {
+    hash: string | null;
+    value: number | null;
+    schema: any | string;
+  };
 }[];
 
 export const getUserTokens = async (
@@ -48,6 +55,8 @@ export const getUserTokens = async (
         else 0
       end)::numeric(78, 0) as "on_sale_count",
       "t"."floor_sell_value",
+      "t"."top_buy_hash",
+      "ts"."label" as "top_buy_schema",
       "t"."top_buy_value",
       "o"."amount" * "t"."top_buy_value" as "total_buy_value",
       "b"."block",
@@ -63,6 +72,8 @@ export const getUserTokens = async (
       on "t"."floor_sell_hash" = "os"."hash"
     left join "orders" "ob"
       on "t"."top_buy_hash" = "ob"."hash"
+    left join "token_sets" "ts"
+      on "ob"."token_set_id" = "ts"."id"
     join "nft_transfer_events" "nte"
       on "t"."contract" = "nte"."address"
       and "t"."token_id" = "nte"."token_id"
@@ -85,7 +96,6 @@ export const getUserTokens = async (
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
 
-  // Sorting
   baseQuery = `
     select
       "x"."contract",
@@ -97,12 +107,38 @@ export const getUserTokens = async (
       "x"."token_count",
       "x"."on_sale_count",
       "x"."floor_sell_value",
+      "x"."top_buy_hash",
       "x"."top_buy_value",
+      "x"."top_buy_schema",
       "x"."total_buy_value",
       "x"."last_acquired_at"
     from (${baseQuery}) "x"
-    order by "x"."block" desc nulls last
   `;
+
+  // Sorting
+  const sortBy = filter.sortBy ?? "acquiredAt";
+  const sortDirection = filter.sortDirection ?? "desc";
+  switch (sortBy) {
+    case "acquiredAt": {
+      baseQuery += `
+        order by
+          "x"."block" ${sortDirection} nulls last,
+          "x"."contract",
+          "x"."token_id"
+      `;
+      break;
+    }
+
+    case "topBuyValue": {
+      baseQuery += `
+        order by
+          "x"."top_buy_value" ${sortDirection} nulls last,
+          "x"."contract",
+          "x"."token_id"
+      `;
+      break;
+    }
+  }
 
   // Pagination
   baseQuery += ` offset $/offset/`;
@@ -129,6 +165,11 @@ export const getUserTokens = async (
         topBuyValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
         totalBuyValue: r.total_buy_value ? formatEth(r.total_buy_value) : null,
         lastAcquiredAt: r.last_acquired_at,
+      },
+      topBuy: {
+        hash: r.top_buy_hash,
+        value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+        schema: r.top_buy_schema,
       },
     }))
   );

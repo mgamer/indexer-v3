@@ -8,13 +8,14 @@ import { acquireLock, redis } from "@/common/redis";
 import { config } from "@/config/index";
 
 // For filling collections/tokens metadata information, we rely
-// on external services. For now, these are centralized APIs
-// that provide the metadata in a standard custom format that
+// on external services. For now, these are external APIs which
+// retrieve the metadata from different well-known sources (eg.
+// OpenSea, Rarible) and convert it into a standard format that
 // is easy for the indexer to process.
 
 const JOB_NAME = "metadata_index";
 
-const queue = new Queue(JOB_NAME, {
+export const queue = new Queue(JOB_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 5,
@@ -22,24 +23,38 @@ const queue = new Queue(JOB_NAME, {
       type: "exponential",
       delay: 120000,
     },
-    removeOnComplete: true,
-    removeOnFail: true,
   },
 });
 new QueueScheduler(JOB_NAME, { connection: redis.duplicate() });
 
 const addToQueue = async (tokens: { contract: string; tokenId: string }[]) => {
-  const jobs: any[] = [];
-  for (const token of tokens) {
-    jobs.push({
-      name: token.contract,
+  await queue.addBulk(
+    tokens.map((token) => ({
+      name: token.contract + "-" + token.tokenId,
       data: token,
-    });
-  }
-  await queue.addBulk(jobs);
+      opts: {
+        jobId: token.contract + "-" + token.tokenId,
+      },
+    }))
+  );
 };
 
-// Actual work is to be handled by background worker processes
+// BACKGROUND WORKER ONLY
+if (config.doBackgroundWork) {
+  cron.schedule("*/10 * * * *", async () => {
+    const lockAcquired = await acquireLock(
+      `${JOB_NAME}_queue_clean_lock`,
+      10 * 60 - 5
+    );
+    if (lockAcquired) {
+      // Clean up jobs older than 10 minutes
+      await queue.clean(10 * 60 * 1000, 100000, "completed");
+      await queue.clean(10 * 60 * 1000, 100000, "failed");
+    }
+  });
+}
+
+// BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
   const worker = new Worker(
     JOB_NAME,
@@ -47,6 +62,7 @@ if (config.doBackgroundWork) {
       const { contract, tokenId } = job.data;
 
       type Metadata = {
+        error?: any;
         collection?: {
           id: string;
           name: string;
@@ -76,9 +92,17 @@ if (config.doBackgroundWork) {
           `${config.metadataApiBaseUrl}/${contract}/${tokenId}`
         );
 
+<<<<<<< HEAD
         if (!data.collection) {
           // Skip
           return;
+=======
+        // Ideally, the metadata APIs should return an error status
+        // in case of failure. However, just in case, we explicitly
+        // check here the presence of any `error` field.
+        if (data.error) {
+          throw new Error(data.error);
+>>>>>>> v3.2-mainnet
         }
 
         const queries: any[] = [];

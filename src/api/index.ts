@@ -1,3 +1,6 @@
+import { createBullBoard } from "@bull-board/api";
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
+import { HapiAdapter } from "@bull-board/hapi";
 import Hapi from "@hapi/hapi";
 import Inert from "@hapi/inert";
 import Vision from "@hapi/vision";
@@ -7,6 +10,7 @@ import qs from "qs";
 import { setupRoutes } from "@/api/routes";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
+import { allQueues } from "@/jobs/index";
 
 export const start = async function (): Promise<void> {
   const server = Hapi.server({
@@ -31,6 +35,17 @@ export const start = async function (): Promise<void> {
         },
       },
     },
+  });
+
+  // Integrated BullMQ monitoring UI
+  const serverAdapter = new HapiAdapter();
+  createBullBoard({
+    queues: allQueues.map((q) => new BullMQAdapter(q)),
+    serverAdapter,
+  });
+  serverAdapter.setBasePath("/admin/bullmq");
+  await server.register(serverAdapter.registerPlugin(), {
+    routes: { prefix: "/admin/bullmq" },
   });
 
   await server.register([
