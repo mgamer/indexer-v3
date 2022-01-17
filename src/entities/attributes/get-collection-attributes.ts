@@ -41,7 +41,7 @@ export const getCollectionAttributes = async (
       (array_agg(distinct("t"."image")))[1:4] as "sample_images",
       ((array_agg(
         "t"."floor_sell_value" order by "t"."floor_sell_value" asc
-      ) filter (where "t"."floor_sell_value" is not null))::text[])[1:10] as "floor_sell_values"
+      ) filter (where "t"."floor_sell_value" is not null))::text[])[1:21] as "floor_sell_values"
     from "attributes" "a"
     join "tokens" "t"
       on "a"."contract" = "t"."contract"
