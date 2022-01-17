@@ -92,7 +92,7 @@ if (config.doBackgroundWork) {
           url += `${i === 0 ? "?" : "&"}token_ids=${tokenIds[i]}`;
         }
 
-        console.log(url);
+        logger.info(JOB_NAME, url);
         let { data } = await axios.get(url);
 
         // Ideally, the metadata APIs should return an error status
