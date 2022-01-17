@@ -357,16 +357,26 @@ if (config.doBackgroundWork) {
                 limit 1
               )
                 and "t"."metadata_indexed" = false
-              limit 30
+              limit 90
             `
           );
 
         if (tokens.length) {
-          // Trigger metadata indexing for selected tokens
-          await addToQueue(
-            tokens[0].contract,
-            tokens.map(({ token_id }) => token_id)
-          );
+          let current = 0;
+          while (current < tokens.length) {
+            const batchSize = 30;
+            const batch = tokens.slice(current, current + batchSize);
+
+            if (batch.length) {
+              // Trigger metadata indexing for selected tokens
+              await addToQueue(
+                batch[0].contract,
+                batch.map(({ token_id }) => token_id)
+              );
+            }
+
+            current += batchSize;
+          }
 
           // Optimistically mark the selected tokens as indexed and have
           // the underlying indexing jobs retry in case failures
