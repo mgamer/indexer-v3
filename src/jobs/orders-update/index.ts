@@ -142,6 +142,8 @@ if (config.doBackgroundWork) {
 
           // Recompute `top_buy` and `floor_sell` for single tokens
           const column = data.side === "sell" ? "floor_sell" : "top_buy";
+          // TODO: Split updates in multiple batches to avoid blocking
+          // other concurrent queries
           await db.none(
             `
               with "z" as (
