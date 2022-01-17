@@ -73,11 +73,6 @@ if (config.doBackgroundWork) {
       };
 
       try {
-        logger.info(
-          JOB_NAME,
-          `Indexing metadata for (${contract}, ${tokenId})`
-        );
-
         const { data }: { data: Metadata } = await axios.get(
           `${config.metadataApiBaseUrl}/${contract}/${tokenId}`
         );
