@@ -14,7 +14,7 @@ import { config } from "@/config/index";
 
 const JOB_NAME = "fills_handle";
 
-const queue = new Queue(JOB_NAME, {
+export const queue = new Queue(JOB_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 5,

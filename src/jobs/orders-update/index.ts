@@ -27,7 +27,7 @@ import { config } from "@/config/index";
 
 const BY_HASH_JOB_NAME = "orders_update_by_hash";
 
-const byHashQueue = new Queue(BY_HASH_JOB_NAME, {
+export const byHashQueue = new Queue(BY_HASH_JOB_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 5,
@@ -200,7 +200,7 @@ if (config.doBackgroundWork) {
 
 const BY_MAKER_JOB_NAME = "orders_update_by_maker";
 
-const byMakerQueue = new Queue(BY_MAKER_JOB_NAME, {
+export const byMakerQueue = new Queue(BY_MAKER_JOB_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 5,
