@@ -334,8 +334,8 @@ if (config.doBackgroundWork) {
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
-  cron.schedule("*/30 * * * * *", async () => {
-    const lockAcquired = await acquireLock("metadata_index_lock", 30 - 5);
+  cron.schedule("*/10 * * * * *", async () => {
+    const lockAcquired = await acquireLock("metadata_index_lock", 10 - 5);
     if (lockAcquired) {
       logger.info("metadata_index_cron", "Indexing missing metadata");
 
