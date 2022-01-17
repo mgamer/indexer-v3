@@ -357,7 +357,7 @@ if (config.doBackgroundWork) {
                 limit 1
               )
                 and "t"."metadata_indexed" = false
-              limit 50
+              limit 30
             `
           );
 
