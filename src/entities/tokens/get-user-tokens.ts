@@ -22,19 +22,16 @@ export type GetUserTokensResponse = {
       id: string;
       name: string;
     };
+    floorSellValue: number | null;
+    topBuy: {
+      hash: string | null;
+      value: number | null;
+      schema: any | string;
+    };
   };
   ownership: {
     tokenCount: number;
     onSaleCount: number;
-    floorSellValue: number | null;
-    topBuyValue: number | null;
-    totalBuyValue: number | null;
-    lastAcquiredAt: number | null;
-  };
-  topBuy: {
-    hash: string | null;
-    value: number | null;
-    schema: any | string;
   };
 }[];
 
@@ -155,21 +152,19 @@ export const getUserTokens = async (
           id: r.collection_id,
           name: r.collection_name,
         },
+        floorSellValue: r.floor_sell_value
+          ? formatEth(r.floor_sell_value)
+          : null,
+        topBuy: {
+          hash: r.top_buy_hash,
+          value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+          schema: r.top_buy_schema,
+        },
       },
       ownership: {
         tokenCount: Number(r.token_count),
         onSaleCount: Number(r.on_sale_count),
-        floorSellValue: r.floor_sell_value
-          ? formatEth(r.floor_sell_value)
-          : null,
-        topBuyValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-        totalBuyValue: r.total_buy_value ? formatEth(r.total_buy_value) : null,
         lastAcquiredAt: r.last_acquired_at,
-      },
-      topBuy: {
-        hash: r.top_buy_hash,
-        value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-        schema: r.top_buy_schema,
       },
     }))
   );

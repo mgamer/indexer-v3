@@ -1,7 +1,6 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { ownershipFormat, tokenFormat } from "@/api/types";
 import { logger } from "@/common/logger";
 import * as queries from "@/entities/tokens/get-user-tokens";
 
@@ -33,12 +32,26 @@ export const getUserTokensOptions: RouteOptions = {
     schema: Joi.object({
       tokens: Joi.array().items(
         Joi.object({
-          token: tokenFormat,
-          ownership: ownershipFormat,
-          topBuy: Joi.object({
-            hash: Joi.string().allow(null),
-            value: Joi.number().unsafe().allow(null),
-            schema: Joi.any().allow(null),
+          token: Joi.object({
+            contract: Joi.string(),
+            name: Joi.string().allow("", null),
+            image: Joi.string().allow(""),
+            tokenId: Joi.string(),
+            collection: Joi.object({
+              id: Joi.string(),
+              name: Joi.string(),
+            }),
+            floorSellValue: Joi.number().unsafe().allow(null),
+            topBuy: Joi.object({
+              hash: Joi.string().allow(null),
+              value: Joi.number().unsafe().allow(null),
+              schema: Joi.any().allow(null),
+            }),
+          }),
+          ownership: Joi.object({
+            tokenCount: Joi.number(),
+            onSaleCount: Joi.number(),
+            lastAcquiredAt: Joi.number().allow(null),
           }),
         })
       ),
