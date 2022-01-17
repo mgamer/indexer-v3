@@ -92,6 +92,9 @@ if (config.doBackgroundWork) {
           `${config.metadataApiBaseUrl}/${contract}/${tokenId}`
         );
 
+        // Ideally, the metadata APIs should return an error status
+        // in case of failure. However, just in case, we explicitly
+        // check here the presence of any `error` field.
         if (data.error) {
           throw new Error(data.error);
         }
