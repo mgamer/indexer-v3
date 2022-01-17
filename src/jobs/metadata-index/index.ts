@@ -29,14 +29,15 @@ const queue = new Queue(JOB_NAME, {
 new QueueScheduler(JOB_NAME, { connection: redis.duplicate() });
 
 const addToQueue = async (tokens: { contract: string; tokenId: string }[]) => {
-  const jobs: any[] = [];
-  for (const token of tokens) {
-    jobs.push({
-      name: token.contract,
+  await queue.addBulk(
+    tokens.map((token) => ({
+      name: token.contract + "-" + token.tokenId,
       data: token,
-    });
-  }
-  await queue.addBulk(jobs);
+      opts: {
+        jobId: token.contract + "-" + token.tokenId,
+      },
+    }))
+  );
 };
 
 // Actual work is to be handled by background worker processes
