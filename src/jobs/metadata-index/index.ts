@@ -18,25 +18,17 @@ const JOB_NAME = "metadata_index";
 export const queue = new Queue(JOB_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
-    attempts: 5,
+    attempts: 10,
     backoff: {
       type: "exponential",
-      delay: 120000,
+      delay: 60000,
     },
   },
 });
 new QueueScheduler(JOB_NAME, { connection: redis.duplicate() });
 
-const addToQueue = async (tokens: { contract: string; tokenId: string }[]) => {
-  await queue.addBulk(
-    tokens.map((token) => ({
-      name: token.contract + "-" + token.tokenId,
-      data: token,
-      opts: {
-        jobId: token.contract + "-" + token.tokenId,
-      },
-    }))
-  );
+const addToQueue = async (contract: string, tokenIds: string[]) => {
+  await queue.add(contract, { contract, tokenIds });
 };
 
 // BACKGROUND WORKER ONLY
@@ -56,226 +48,279 @@ if (config.doBackgroundWork) {
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
+  type Metadata = {
+    skip?: boolean;
+    collection: {
+      id: string;
+      name: string;
+      description: string;
+      image: string;
+      royaltyBps: number;
+      royaltyRecipient?: string;
+      community: string;
+      contract?: string;
+      tokenRange?: [string, string];
+      filters?: any;
+      sort?: any;
+    };
+    token_id: string;
+    name: string;
+    description: string;
+    image: string;
+    attributes: {
+      key: string;
+      value: string;
+      kind?: "number" | "string" | "date" | "range";
+      rank?: number;
+    }[];
+  };
+
   const worker = new Worker(
     JOB_NAME,
     async (job: Job) => {
-      const { contract, tokenId } = job.data;
-
-      type Metadata = {
-        error?: any;
-        collection?: {
-          id: string;
-          name: string;
-          description: string;
-          image: string;
-          royaltyBps: number;
-          royaltyRecipient?: string;
-          community: string;
-          contract?: string;
-          tokenRange?: [string, string];
-          filters?: any;
-          sort?: any;
-        };
-        name?: string;
-        description?: string;
-        image?: string;
-        attributes?: {
-          key: string;
-          value: string;
-          kind?: "number" | "string" | "date" | "range";
-          rank?: number;
-        }[];
-      };
+      const { contract, tokenIds } = job.data;
 
       try {
-        const { data }: { data: Metadata } = await axios.get(
-          `${config.metadataApiBaseUrl}/${contract}/${tokenId}`
-        );
+        if (!tokenIds.length) {
+          // Skip if we don't need to index anything
+          return;
+        }
+
+        // Batch request the metadata for the token ids
+        let url = `${config.metadataApiBaseUrl}/${contract}/${tokenIds[0]}`;
+        for (let i = 0; i < tokenIds.length; i++) {
+          url += `${i === 0 ? "?" : "&"}token_ids=${tokenIds[i]}`;
+        }
+
+        console.log(url);
+        let { data } = await axios.get(url);
 
         // Ideally, the metadata APIs should return an error status
         // in case of failure. However, just in case, we explicitly
         // check here the presence of any `error` field.
-        if (data.error) {
-          throw new Error(data.error);
+        if ((data as any).error) {
+          throw new Error((data as any).error);
         }
 
-        const queries: any[] = [];
+        for (const info of data as Metadata[]) {
+          try {
+            const queries: any[] = [];
 
-        if (data.collection) {
-          // Save collection high-level metadata
-          queries.push({
-            query: `
-              insert into "collections" (
-                "id",
-                "name",
-                "description",
-                "image",
-                "royalty_bps",
-                "royalty_recipient",
-                "community",
-                "contract",
-                "token_id_range",
-                "filterable_attribute_keys",
-                "sortable_attribute_keys"
-              ) values (
-                $/id/,
-                $/name/,
-                $/description/,
-                $/image/,
-                $/royaltyBps/,
-                $/royaltyRecipient/,
-                $/community/,
-                $/contract/,
-                numrange($/startTokenId/, $/endTokenId/),
-                $/filterableAttributeKeys:json/,
-                $/sortableAttributeKeys:json/
-              ) on conflict ("id") do
-              update set
-                "name" = $/name/,
-                "description" = $/description/,
-                "image" = $/image/,
-                "royalty_bps" = $/royaltyBps/,
-                "royalty_recipient" = $/royaltyRecipient/,
-                "community" = $/community/,
-                "contract" = $/contract/,
-                "token_id_range" = numrange($/startTokenId/, $/endTokenId/, '[]'),
-                "filterable_attribute_keys" = $/filterableAttributeKeys:json/,
-                "sortable_attribute_keys" = $/sortableAttributeKeys:json/
-            `,
-            values: {
-              id: data.collection.id,
-              name: data.collection.name,
-              description: data.collection.description,
-              image: data.collection.image,
-              royaltyBps: data.collection.royaltyBps,
-              royaltyRecipient: data.collection.royaltyRecipient?.toLowerCase(),
-              community: data.collection.community,
-              contract: data.collection.contract,
-              // TODO: Set `token_id_range` as `null` instead of `numrange(null, null)`
-              // if the token id range information is missing from metadata. Right now,
-              // both `null` and `numrange(null, null)` are treated as missing data,
-              // but we should make this more consistent.
-              startTokenId: data.collection.tokenRange?.[0],
-              endTokenId: data.collection.tokenRange?.[1],
-              filterableAttributeKeys: data.collection.filters,
-              sortableAttributeKeys: data.collection.sort,
-            },
-          });
+            if (info.skip) {
+              // If the token was marked as non-indexable we simply remove
+              // any previous metadata it had from the tables (in order to
+              // support the use case where we need to remove a token after
+              // it was indexed a first time).
 
-          // Update collection-wide token sets
-          queries.push({
-            query: `
-              insert into "token_sets_tokens" (
-                "token_set_id",
-                "contract",
-                "token_id"
-              )
-              (
-                select
-                  "id",
-                  $/contract/,
-                  $/tokenId/
-                from "token_sets"
-                where "collection_id" = $/collectionId/
-              )
-              on conflict do nothing
-            `,
-            values: {
-              contract,
-              tokenId,
-              collectionId: data.collection.id,
-            },
-          });
-        }
+              queries.push(
+                `
+                  update "tokens" set
+                    "name" = null,
+                    "description" = null,
+                    "image" = null,
+                    "collection_id" = null
+                  where "contract" = $/contract/
+                    and "token_id" = $/tokenId/
+                `,
+                {
+                  contract,
+                  tokenId: info.token_id,
+                }
+              );
 
-        // Save token high-level metadata
-        queries.push({
-          query: `
-            update "tokens" set
-              "name" = $/name/,
-              "description" = $/description/,
-              "image" = $/image/,
-              "collection_id" = $/collectionId/
-            where "contract" = $/contract/
-              and "token_id" = $/tokenId/
-          `,
-          values: {
-            name: data.name || null,
-            description: data.description || null,
-            image: data.image || null,
-            collectionId: data.collection?.id || null,
-            contract,
-            tokenId,
-          },
-        });
+              queries.push(
+                `
+                  delete from "attributes"
+                  where "contract" = $/contract/
+                    and "token_id" = $/tokenId/
+                `,
+                {
+                  contract,
+                  tokenId: info.token_id,
+                }
+              );
+            } else {
+              if (!info.collection) {
+                continue;
+              }
 
-        // Save token attribute metadata
-        const attributeValues: any[] = [];
-        if (data.collection) {
-          for (const { key, value, kind, rank } of data.attributes || []) {
-            attributeValues.push({
-              collection_id: data.collection.id,
-              contract,
-              token_id: tokenId,
-              key,
-              value,
-              // TODO: Defaulting to `string` should be done at the database level
-              kind: kind || "string",
-              // TODO: Defaulting to `1` should be done at the database level
-              rank: rank ? (rank === -1 ? null : rank) : 1,
-            });
+              // Save collection high-level metadata
+              queries.push({
+                query: `
+                  insert into "collections" (
+                    "id",
+                    "name",
+                    "description",
+                    "image",
+                    "royalty_bps",
+                    "royalty_recipient",
+                    "community",
+                    "contract",
+                    "token_id_range",
+                    "filterable_attribute_keys",
+                    "sortable_attribute_keys"
+                  ) values (
+                    $/id/,
+                    $/name/,
+                    $/description/,
+                    $/image/,
+                    $/royaltyBps/,
+                    $/royaltyRecipient/,
+                    $/community/,
+                    $/contract/,
+                    numrange($/startTokenId/, $/endTokenId/),
+                    $/filterableAttributeKeys:json/,
+                    $/sortableAttributeKeys:json/
+                  ) on conflict ("id") do
+                  update set
+                    "name" = $/name/,
+                    "description" = $/description/,
+                    "image" = $/image/,
+                    "royalty_bps" = $/royaltyBps/,
+                    "royalty_recipient" = $/royaltyRecipient/,
+                    "community" = $/community/,
+                    "contract" = $/contract/,
+                    "token_id_range" = numrange($/startTokenId/, $/endTokenId/, '[]'),
+                    "filterable_attribute_keys" = $/filterableAttributeKeys:json/,
+                    "sortable_attribute_keys" = $/sortableAttributeKeys:json/
+                `,
+                values: {
+                  id: info.collection.id,
+                  name: info.collection.name,
+                  description: info.collection.description,
+                  image: info.collection.image,
+                  royaltyBps: info.collection.royaltyBps,
+                  royaltyRecipient:
+                    info.collection.royaltyRecipient?.toLowerCase(),
+                  community: info.collection.community,
+                  contract: info.collection.contract,
+                  // TODO: Set `token_id_range` as `null` instead of `numrange(null, null)`
+                  // if the token id range information is missing from metadata. Right now,
+                  // both `null` and `numrange(null, null)` are treated in the same way, as
+                  // missing data, but we should make this more consistent.
+                  startTokenId: info.collection.tokenRange?.[0],
+                  endTokenId: info.collection.tokenRange?.[1],
+                  filterableAttributeKeys: info.collection.filters,
+                  sortableAttributeKeys: info.collection.sort,
+                },
+              });
+
+              // Update collection-wide token sets
+              queries.push({
+                query: `
+                  insert into "token_sets_tokens" (
+                    "token_set_id",
+                    "contract",
+                    "token_id"
+                  )
+                  (
+                    select
+                      "id",
+                      $/contract/,
+                      $/tokenId/
+                    from "token_sets"
+                    where "collection_id" = $/collectionId/
+                  )
+                  on conflict do nothing
+                `,
+                values: {
+                  contract,
+                  tokenId: info.token_id,
+                  collectionId: info.collection.id,
+                },
+              });
+
+              // Save token high-level metadata
+              queries.push({
+                query: `
+                  update "tokens" set
+                    "name" = $/name/,
+                    "description" = $/description/,
+                    "image" = $/image/,
+                    "collection_id" = $/collectionId/
+                  where "contract" = $/contract/
+                    and "token_id" = $/tokenId/
+                `,
+                values: {
+                  name: info.name || null,
+                  description: info.description || null,
+                  image: info.image || null,
+                  collectionId: info.collection?.id || null,
+                  contract,
+                  tokenId: info.token_id,
+                },
+              });
+
+              // Save token attributes
+              const attributeValues: any[] = [];
+              for (const { key, value, kind, rank } of info.attributes || []) {
+                attributeValues.push({
+                  collection_id: info.collection.id,
+                  contract,
+                  token_id: info.token_id,
+                  key,
+                  value,
+                  // TODO: Defaulting to `string` should be done at the database level
+                  kind: kind || "string",
+                  // TODO: Defaulting to `1` should be done at the database level
+                  rank: rank ? (rank === -1 ? null : rank) : 1,
+                });
+              }
+
+              queries.push({
+                query: `
+                  delete from "attributes"
+                  where "contract" = $/contract/
+                    and "token_id" = $/tokenId/
+                `,
+                values: {
+                  contract,
+                  tokenId: info.token_id,
+                },
+              });
+
+              if (attributeValues.length) {
+                const columns = new pgp.helpers.ColumnSet(
+                  [
+                    "collection_id",
+                    "contract",
+                    "token_id",
+                    "key",
+                    "value",
+                    "kind",
+                    "rank",
+                  ],
+                  { table: "attributes" }
+                );
+                const values = pgp.helpers.values(attributeValues, columns);
+                queries.push({
+                  query: `
+                    insert into "attributes" (
+                      "collection_id",
+                      "contract",
+                      "token_id",
+                      "key",
+                      "value",
+                      "kind",
+                      "rank"
+                    ) values ${values}
+                    on conflict do nothing
+                  `,
+                });
+              }
+            }
+
+            if (queries.length) {
+              await db.none(pgp.helpers.concat(queries));
+            }
+          } catch {
+            // Ignore any errors
           }
-        }
-
-        queries.push({
-          query: `
-            delete from "attributes"
-            where "contract" = $/contract/
-              and "token_id" = $/tokenId/
-          `,
-          values: {
-            contract,
-            tokenId,
-          },
-        });
-
-        if (attributeValues.length) {
-          const columns = new pgp.helpers.ColumnSet(
-            [
-              "collection_id",
-              "contract",
-              "token_id",
-              "key",
-              "value",
-              "kind",
-              "rank",
-            ],
-            { table: "attributes" }
-          );
-          const values = pgp.helpers.values(attributeValues, columns);
-          queries.push({
-            query: `
-              insert into "attributes" (
-                "collection_id",
-                "contract",
-                "token_id",
-                "key",
-                "value",
-                "kind",
-                "rank"
-              ) values ${values}
-              on conflict do nothing
-            `,
-          });
-        }
-
-        if (queries.length) {
-          await db.none(pgp.helpers.concat(queries));
         }
       } catch (error) {
         logger.error(
           JOB_NAME,
-          `Failed to index (${contract}, ${tokenId}): ${error}`
+          `Failed to index (${contract}, ${tokenIds}): ${error}`
         );
         throw error;
       }
@@ -287,61 +332,51 @@ if (config.doBackgroundWork) {
   });
 }
 
-// Metadata indexing should be a one-time process where a cron
-// job checks for tokens within the database that are not indexed,
-// fethches and updates the metadata and then marks them as indexed.
-// In cases where tokens need to be reindexed for some reasons (eg.
-// metadata updates), they can simply be marked as not indexed and
-// the metadata indexing process will take care of reindexing them
-// atomically (eg. deleting old metadata and adding new one).
-
-// Actual work is to be handled by background worker processes
+// BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
   cron.schedule("*/30 * * * * *", async () => {
-    const lockAcquired = await acquireLock("metadata_index_lock", 25);
+    const lockAcquired = await acquireLock("metadata_index_lock", 30 - 5);
     if (lockAcquired) {
       logger.info("metadata_index_cron", "Indexing missing metadata");
 
       try {
-        // Retrieve tokens that don't have metadata indexed
-        const tokens: { contract: string; tokenId: string }[] =
+        const tokens: { contract: string; token_id: string }[] =
           await db.manyOrNone(
             `
               select
-                "contract",
-                "token_id" as "tokenId"
-              from "tokens"
-              where not "metadata_indexed"
-              limit $/limit/
-            `,
-            { limit: 50 }
+                "t"."contract",
+                "t"."token_id"
+              from "tokens" "t"
+              where "t"."contract" in (
+                select
+                  "t"."contract"
+                from "tokens" "t"
+                where "t"."metadata_indexed" = false
+                group by "t"."contract"
+                having count(*) > 0
+                limit 1
+              )
+                and "t"."metadata_indexed" = false
+              limit 50
+            `
           );
 
         if (tokens.length) {
           // Trigger metadata indexing for selected tokens
-          await addToQueue(tokens);
+          await addToQueue(
+            tokens[0].contract,
+            tokens.map(({ token_id }) => token_id)
+          );
 
-          // Optimistically mark the selected tokens as indexed. The
-          // underlying indexing job has a retry mechanism so it's
-          // quite unlikely it will fail to index in all attempts.
-
-          // TODO: Since the optimistic approach of marking tokens
-          // as indexed and then triggering a metadata fetch might
-          // fail in quite a few cases, we should have a cron job
-          // that periodically checks for tokens marked as indexed
-          // that don't actually have metadata and retry indexing.
+          // Optimistically mark the selected tokens as indexed and have
+          // the underlying indexing jobs retry in case failures
           const columns = new pgp.helpers.ColumnSet(["contract", "token_id"], {
             table: "tokens",
           });
-          const values = pgp.helpers.values(
-            tokens.map((t) => ({
-              contract: t.contract,
-              token_id: t.tokenId,
-            })),
-            columns
-          );
+          const values = pgp.helpers.values(tokens, columns);
           await db.none(`
-            update "tokens" as "t" set "metadata_indexed" = true
+            update "tokens" as "t" set
+              "metadata_indexed" = true
             from (values ${values}) as "i"("contract", "token_id")
             where "t"."contract" = "i"."contract"::text
               and "t"."token_id" = "i"."token_id"::numeric(78, 0)
