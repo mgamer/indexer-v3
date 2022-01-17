@@ -39,6 +39,12 @@ export const setupRoutes = (server: Server) => {
     options: adminEndpoints.postSyncEventsOptions,
   });
 
+  server.route({
+    method: "POST",
+    path: "/admin/sync/orders",
+    options: adminEndpoints.postSyncOrdersOptions,
+  });
+
   // Attributes
 
   server.route({
