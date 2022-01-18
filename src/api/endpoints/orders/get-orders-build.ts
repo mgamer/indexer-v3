@@ -46,7 +46,7 @@ export const getOrdersBuildOptions: RouteOptions = {
         // TODO: When time comes, add support for other order formats
         // apart from WyvernV2 which is the only one supported for now
         params: wyvernV2OrderFormat,
-      }),
+      }).allow(null),
     }).label("getOrdersBuildResponse"),
     failAction: (_request, _h, error) => {
       logger.error(
