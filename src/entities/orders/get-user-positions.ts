@@ -13,6 +13,8 @@ export type GetUserPositionsResponse = {
   set: {
     id: string;
     schema: any;
+    metadata: any;
+    sampleImages: string[];
     image: string | null;
     floorSellValue: number | null;
     topBuyValue: number | null;
@@ -98,6 +100,17 @@ export const getUserPositions = async (
       coalesce(nullif(date_part('epoch', "x"."expiry"), 'Infinity'), 0) as "expiry",
       "x"."total_valid",
       "ts"."label" as "schema",
+      "ts"."metadata",
+      array(
+        select
+          "t"."image"
+        from "tokens" "t"
+        join "token_sets_tokens" "tst"
+          on "t"."contract" = "tst"."contract"
+          and "t"."token_id" = "tst"."token_id"
+        where "tst"."token_set_id" = "x"."token_set_id"
+        limit 4
+      ) as "sample_images",
       "t"."image" as "token_image",
       "c"."image" as "collection_image",
       (
@@ -136,6 +149,8 @@ export const getUserPositions = async (
       set: {
         id: r.token_set_id,
         schema: r.schema,
+        metadata: r.metadata,
+        sampleImages: r.sample_images,
         image: r.token_image || r.collection_image || null,
         floorSellValue: r.floor_sell_value
           ? formatEth(r.floor_sell_value)

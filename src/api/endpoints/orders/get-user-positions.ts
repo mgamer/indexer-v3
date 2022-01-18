@@ -29,6 +29,8 @@ export const getUserPositionsOptions: RouteOptions = {
           set: {
             id: Joi.string(),
             schema: Joi.any(),
+            metadata: Joi.any(),
+            sampleImages: Joi.array().items(Joi.string().allow("", null)),
             image: Joi.string().allow("", null),
             floorSellValue: Joi.number().unsafe().allow(null),
             topBuyValue: Joi.number().unsafe().allow(null),
