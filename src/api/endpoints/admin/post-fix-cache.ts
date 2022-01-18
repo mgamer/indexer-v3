@@ -46,13 +46,15 @@ export const postFixCacheOptions: RouteOptions = {
               `
                 update "tokens" "t" set
                   "floor_sell_hash" = "x"."hash",
-                  "floor_sell_value" = "x"."value"
+                  "floor_sell_value" = "x"."value",
+                  "floor_sell_maker" = "x"."maker"
                 from (
                   select distinct on ("t"."contract", "t"."token_id")
                     "t"."contract",
                     "t"."token_id",
                     "o"."value",
-                    "o"."hash"
+                    "o"."hash",
+                    "o"."maker"
                   from "tokens" "t"
                   left join "token_sets_tokens" "tst"
                     on "t"."contract" = "tst"."contract"
@@ -80,13 +82,15 @@ export const postFixCacheOptions: RouteOptions = {
               `
                 update "tokens" "t" set
                   "top_buy_hash" = "x"."hash",
-                  "top_buy_value" = "x"."value"
+                  "top_buy_value" = "x"."value",
+                  "top_buy_maker" = "x"."maker"
                 from (
                   select distinct on ("t"."contract", "t"."token_id")
                     "t"."contract",
                     "t"."token_id",
                     "o"."value",
-                    "o"."hash"
+                    "o"."hash",
+                    "o"."maker"
                   from "tokens" "t"
                   left join "token_sets_tokens" "tst"
                     on "t"."contract" = "tst"."contract"

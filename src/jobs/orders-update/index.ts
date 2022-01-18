@@ -121,7 +121,8 @@ if (config.doBackgroundWork) {
                   select
                     "o"."token_set_id",
                     "o"."hash",
-                    "o"."value"
+                    "o"."value",
+                    "o"."maker"
                   from "orders" "o"
                   where "o"."token_set_id" = $/tokenSetId/
                     and "o"."side" = 'buy'
@@ -131,7 +132,8 @@ if (config.doBackgroundWork) {
                 )
                 update "token_sets" as "ts" set
                   "top_buy_hash" = "x"."hash",
-                  "top_buy_value" = "x"."value"
+                  "top_buy_value" = "x"."value",
+                  "top_buy_maker" = "x"."maker"
                 from "x"
                 where "ts"."id" = "x"."token_set_id"
                   and "ts"."top_buy_hash" is distinct from "x"."hash"
@@ -151,7 +153,8 @@ if (config.doBackgroundWork) {
                   "x"."contract",
                   "x"."token_id",
                   "y"."hash",
-                  "y"."value"
+                  "y"."value",
+                  "y"."maker"
                 from (
                   select
                     "tst"."contract",
@@ -163,7 +166,8 @@ if (config.doBackgroundWork) {
                 ) "x" left join lateral (
                   select
                     "o"."hash",
-                    "o"."value"
+                    "o"."value",
+                    "o"."maker"
                   from "orders" "o"
                   join "token_sets_tokens" "tst"
                     on "o"."token_set_id" = "tst"."token_set_id"
@@ -177,7 +181,8 @@ if (config.doBackgroundWork) {
               )
               update "tokens" as "t" set
                 "${column}_hash" = "z"."hash",
-                "${column}_value" = "z"."value"
+                "${column}_value" = "z"."value",
+                "${column}_maker" = "z"."maker"
               from "z"
               where "t"."contract" = "z"."contract"
                 and "t"."token_id" = "z"."token_id"
