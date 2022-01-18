@@ -314,7 +314,19 @@ if (config.doBackgroundWork) {
               await db.none(pgp.helpers.concat(queries));
             }
           } catch {
-            // Ignore any errors
+            // Make sure to retry this particular token
+            await db.none(
+              `
+                update "tokens" set
+                  "metadata_indexed" = false
+                where "contract" = $/contract/
+                  and "token_id" = $/tokenId/
+              `,
+              {
+                contract,
+                tokenId: info.token_id,
+              }
+            );
           }
         }
       } catch (error) {
@@ -357,14 +369,14 @@ if (config.doBackgroundWork) {
                 limit 1
               )
                 and "t"."metadata_indexed" = false
-              limit 90
+              limit 80
             `
           );
 
         if (tokens.length) {
           let current = 0;
           while (current < tokens.length) {
-            const batchSize = 30;
+            const batchSize = 20;
             const batch = tokens.slice(current, current + batchSize);
 
             if (batch.length) {
