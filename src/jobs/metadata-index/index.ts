@@ -323,35 +323,24 @@ if (config.doBackgroundWork) {
           // If everything went well mark the token as handled
           handledTokenIds.add(info.token_id);
         }
-      } catch (error) {
-        logger.error(
-          JOB_NAME,
-          `Failed to index (${contract}, ${tokenIds}): ${error}`
-        );
 
-        // Make sure to retry all tokens which were not processed by the current job
-        // TODO: We need a way to stop retrying
         const notHandledTokenIds = (tokenIds as string[]).filter(
           (tokenId) => !handledTokenIds.has(tokenId)
         );
-
-        const columns = new pgp.helpers.ColumnSet(["contract", "token_id"], {
-          table: "tokens",
-        });
-        const values = pgp.helpers.values(
-          notHandledTokenIds.map((tokenId) => ({ contract, tokenId })),
-          columns
+        if (notHandledTokenIds.length) {
+          // If we have tokens that failed the indexing process, then
+          // only retry those particular tokens
+          await job.update({
+            contract,
+            tokenIds: notHandledTokenIds,
+          });
+          throw new Error();
+        }
+      } catch (error) {
+        logger.error(
+          JOB_NAME,
+          `Metadata indexing failure (${contract}, ${tokenIds}): ${error}`
         );
-        await db.none(`
-          update "tokens" as "t" set
-            "metadata_indexed" = false
-          from (values ${values}) as "i"("contract", "token_id")
-          where "t"."contract" = "i"."contract"::text
-            and "t"."token_id" = "i"."token_id"::numeric(78, 0)
-        `);
-
-        logger.info(JOB_NAME, `Marked (${values}) as not indexed`);
-
         throw error;
       }
     },
