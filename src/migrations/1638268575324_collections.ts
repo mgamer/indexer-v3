@@ -44,7 +44,8 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
     },
   });
 
-  pgm.addIndex("tokens", ["collection_id"]);
+  pgm.createIndex("tokens", ["collection_id", "floor_sell_value"]);
+  pgm.createIndex("tokens", ["collection_id", "top_buy_value"]);
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
