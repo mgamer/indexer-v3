@@ -89,7 +89,7 @@ if (config.doBackgroundWork) {
         }
 
         // Batch request the metadata for the token ids
-        let url = `${config.metadataApiBaseUrl}/${contract}}`;
+        let url = `${config.metadataApiBaseUrl}/${contract}`;
         for (let i = 0; i < tokenIds.length; i++) {
           url += `${i === 0 ? "?" : "&"}token_ids=${tokenIds[i]}`;
         }
