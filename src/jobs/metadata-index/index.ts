@@ -105,8 +105,6 @@ if (config.doBackgroundWork) {
         }
 
         for (const info of data as Metadata[]) {
-          logger.info(JOB_NAME, JSON.stringify(info));
-
           try {
             const queries: any[] = [];
 
