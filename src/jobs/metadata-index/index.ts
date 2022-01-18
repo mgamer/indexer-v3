@@ -368,7 +368,7 @@ if (config.doBackgroundWork) {
                   from "tokens"
                   where "contract" = "t"."contract"
                     and "metadata_indexed" = false
-                  limit 20
+                  limit 60
                 )::text[] as "token_ids"
               from "tokens" "t"
               where "t"."metadata_indexed" = false
@@ -380,32 +380,37 @@ if (config.doBackgroundWork) {
           );
 
         for (const { contract, token_ids } of tokenInfos) {
-          if (token_ids.length) {
-            // Trigger metadata indexing for selected tokens
-            await addToQueue(contract, token_ids);
+          let current = 0;
+          while (current < token_ids.length) {
+            const batchSize = 20;
+            const batch = token_ids.slice(current, current + batchSize);
 
-            // Optimistically mark the selected tokens as indexed and have
-            // the underlying indexing jobs retry in case failures
-            const columns = new pgp.helpers.ColumnSet(
-              ["contract", "token_id"],
-              {
-                table: "tokens",
-              }
-            );
-            const values = pgp.helpers.values(
-              token_ids.map((token_id) => ({ contract, token_id })),
-              columns
-            );
-            await db.none(
-              `
-                update "tokens" as "t" set
-                  "metadata_indexed" = true
-                from (values ${values}) as "i"("contract", "token_id")
-                where "t"."contract" = "i"."contract"::text
-                  and "t"."token_id" = "i"."token_id"::numeric(78, 0)
-              `
-            );
+            if (batch.length) {
+              // Trigger metadata indexing for selected tokens
+              await addToQueue(contract, batch);
+            }
+
+            current += batchSize;
           }
+
+          // Optimistically mark the selected tokens as indexed and have
+          // the underlying indexing jobs retry in case failures
+          const columns = new pgp.helpers.ColumnSet(["contract", "token_id"], {
+            table: "tokens",
+          });
+          const values = pgp.helpers.values(
+            token_ids.map((token_id) => ({ contract, token_id })),
+            columns
+          );
+          await db.none(
+            `
+              update "tokens" as "t" set
+                "metadata_indexed" = true
+              from (values ${values}) as "i"("contract", "token_id")
+              where "t"."contract" = "i"."contract"::text
+                and "t"."token_id" = "i"."token_id"::numeric(78, 0)
+            `
+          );
         }
       } catch (error) {
         logger.error(
