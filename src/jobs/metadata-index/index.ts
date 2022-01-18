@@ -80,6 +80,8 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { contract, tokenIds } = job.data;
 
+      // Keep a list of all tokens that were properly indexed
+      const handledTokenIds = new Set<string>();
       try {
         if (!tokenIds.length) {
           // Skip if we don't need to index anything
@@ -92,8 +94,8 @@ if (config.doBackgroundWork) {
           url += `${i === 0 ? "?" : "&"}token_ids=${tokenIds[i]}`;
         }
 
-        logger.info(JOB_NAME, url);
-        let { data } = await axios.get(url);
+        logger.info(JOB_NAME, `Requesting ${url}`);
+        const { data } = await axios.get(url);
 
         // Ideally, the metadata APIs should return an error status
         // in case of failure. However, just in case, we explicitly
@@ -141,6 +143,7 @@ if (config.doBackgroundWork) {
               );
             } else {
               if (!info.collection) {
+                // Skip (and retry) tokens for which data is missing
                 continue;
               }
 
@@ -314,26 +317,39 @@ if (config.doBackgroundWork) {
               await db.none(pgp.helpers.concat(queries));
             }
           } catch {
-            // Make sure to retry this particular token
-            await db.none(
-              `
-                update "tokens" set
-                  "metadata_indexed" = false
-                where "contract" = $/contract/
-                  and "token_id" = $/tokenId/
-              `,
-              {
-                contract,
-                tokenId: info.token_id,
-              }
-            );
+            continue;
           }
+
+          // If everything went well mark the token as handled
+          handledTokenIds.add(info.token_id);
         }
       } catch (error) {
         logger.error(
           JOB_NAME,
           `Failed to index (${contract}, ${tokenIds}): ${error}`
         );
+
+        // Make sure to retry all tokens which were not processed by the current job
+        // TODO: We need a way to stop retrying
+        const notHandledTokenIds = (tokenIds as string[]).filter(
+          (tokenId) => !handledTokenIds.has(tokenId)
+        );
+
+        const columns = new pgp.helpers.ColumnSet(["contract", "token_id"], {
+          table: "tokens",
+        });
+        const values = pgp.helpers.values(
+          notHandledTokenIds.map((tokenId) => ({ contract, tokenId })),
+          columns
+        );
+        await db.none(`
+          update "tokens" as "t" set
+            "metadata_indexed" = false
+          from (values ${values}) as "i"("contract", "token_id")
+          where "t"."contract" = "i"."contract"::text
+            and "t"."token_id" = "i"."token_id"::numeric(78, 0)
+        `);
+
         throw error;
       }
     },
@@ -352,57 +368,55 @@ if (config.doBackgroundWork) {
       logger.info("metadata_index_cron", "Indexing missing metadata");
 
       try {
-        const tokens: { contract: string; token_id: string }[] =
+        const tokenInfos: { contract: string; token_ids: string[] }[] =
           await db.manyOrNone(
             `
               select
                 "t"."contract",
-                "t"."token_id"
+                array(
+                  select
+                    "token_id"
+                  from "tokens"
+                  where "contract" = "t"."contract"
+                    and "metadata_indexed" = false
+                  limit 20
+                )::text[] as "token_ids"
               from "tokens" "t"
-              where "t"."contract" in (
-                select
-                  "t"."contract"
-                from "tokens" "t"
-                where "t"."metadata_indexed" = false
-                group by "t"."contract"
-                having count(*) > 0
-                limit 1
-              )
-                and "t"."metadata_indexed" = false
-              limit 80
+              where "t"."metadata_indexed" = false
+              group by "t"."contract"
+              having count(*) > 0
+              order by count(*) desc
+              limit 3
             `
           );
 
-        if (tokens.length) {
-          let current = 0;
-          while (current < tokens.length) {
-            const batchSize = 20;
-            const batch = tokens.slice(current, current + batchSize);
+        for (const { contract, token_ids } of tokenInfos) {
+          if (token_ids.length) {
+            // Trigger metadata indexing for selected tokens
+            await addToQueue(contract, token_ids);
 
-            if (batch.length) {
-              // Trigger metadata indexing for selected tokens
-              await addToQueue(
-                batch[0].contract,
-                batch.map(({ token_id }) => token_id)
-              );
-            }
-
-            current += batchSize;
+            // Optimistically mark the selected tokens as indexed and have
+            // the underlying indexing jobs retry in case failures
+            const columns = new pgp.helpers.ColumnSet(
+              ["contract", "token_id"],
+              {
+                table: "tokens",
+              }
+            );
+            const values = pgp.helpers.values(
+              token_ids.map((token_id) => ({ contract, token_id })),
+              columns
+            );
+            await db.none(
+              `
+                update "tokens" as "t" set
+                  "metadata_indexed" = true
+                from (values ${values}) as "i"("contract", "token_id")
+                where "t"."contract" = "i"."contract"::text
+                  and "t"."token_id" = "i"."token_id"::numeric(78, 0)
+              `
+            );
           }
-
-          // Optimistically mark the selected tokens as indexed and have
-          // the underlying indexing jobs retry in case failures
-          const columns = new pgp.helpers.ColumnSet(["contract", "token_id"], {
-            table: "tokens",
-          });
-          const values = pgp.helpers.values(tokens, columns);
-          await db.none(`
-            update "tokens" as "t" set
-              "metadata_indexed" = true
-            from (values ${values}) as "i"("contract", "token_id")
-            where "t"."contract" = "i"."contract"::text
-              and "t"."token_id" = "i"."token_id"::numeric(78, 0)
-          `);
         }
       } catch (error) {
         logger.error(
