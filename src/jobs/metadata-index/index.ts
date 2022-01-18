@@ -116,8 +116,8 @@ if (config.doBackgroundWork) {
               // support the use case where we need to remove a token after
               // it was indexed a first time).
 
-              queries.push(
-                `
+              queries.push({
+                query: `
                   update "tokens" set
                     "name" = null,
                     "description" = null,
@@ -126,23 +126,23 @@ if (config.doBackgroundWork) {
                   where "contract" = $/contract/
                     and "token_id" = $/tokenId/
                 `,
-                {
+                values: {
                   contract,
                   tokenId: info.token_id,
-                }
-              );
+                },
+              });
 
-              queries.push(
-                `
+              queries.push({
+                query: `
                   delete from "attributes"
                   where "contract" = $/contract/
                     and "token_id" = $/tokenId/
                 `,
-                {
+                values: {
                   contract,
                   tokenId: info.token_id,
-                }
-              );
+                },
+              });
             } else {
               if (!info.collection) {
                 // Skip (and retry) tokens for which data is missing
