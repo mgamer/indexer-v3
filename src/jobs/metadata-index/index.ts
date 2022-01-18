@@ -314,7 +314,19 @@ if (config.doBackgroundWork) {
               await db.none(pgp.helpers.concat(queries));
             }
           } catch {
-            // Ignore any errors
+            // Make sure to retry this particular token
+            await db.none(
+              `
+                update "tokens" set
+                  "metadata_indexed" = false
+                where "contract" = $/contract/
+                  and "token_id" = $/tokenId/
+              `,
+              {
+                contract,
+                tokenId: info.token_id,
+              }
+            );
           }
         }
       } catch (error) {
