@@ -41,7 +41,6 @@ export const getUserTokensOptions: RouteOptions = {
               id: Joi.string(),
               name: Joi.string(),
             }),
-            floorSellValue: Joi.number().unsafe().allow(null),
             topBuy: Joi.object({
               hash: Joi.string().allow(null),
               value: Joi.number().unsafe().allow(null),
@@ -51,6 +50,7 @@ export const getUserTokensOptions: RouteOptions = {
           ownership: Joi.object({
             tokenCount: Joi.number(),
             onSaleCount: Joi.number(),
+            floorSellValue: Joi.number().unsafe().allow(null),
             lastAcquiredAt: Joi.number().allow(null),
           }),
         })
