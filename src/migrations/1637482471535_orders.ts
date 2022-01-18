@@ -58,14 +58,14 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
   // any particular token id
   pgm.createIndex("orders", ["token_set_id", "side", "valid_between"], {
     where: `"status" = 'valid'`,
-    include: ["value", "price", "hash"],
+    // include: ["value", "price", "hash"],
   });
 
   // For efficiently retrieving all expired orders that can still
   // get filled (that is, valid orders or no-balance orders)
   pgm.createIndex("orders", ["valid_between"], {
     where: `"status" = 'valid' or "status" = 'no-balance'`,
-    include: ["hash"],
+    // include: ["hash"],
   });
 
   // For efficiently retrieving a maker's both valid and no-balance
@@ -73,7 +73,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
   // to revalidate or invalidate
   pgm.createIndex("orders", ["maker", "side", "valid_between"], {
     where: `"status" = 'valid' or "status" = 'no-balance'`,
-    include: ["hash"],
+    // include: ["hash"],
   });
 
   pgm.addColumns("tokens", {
