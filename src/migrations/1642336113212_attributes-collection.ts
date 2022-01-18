@@ -9,7 +9,7 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
 
   pgm.createIndex("attributes", ["collection_id", "key", "value"], {
     where: `"rank" is not null and ("kind" = 'number' or "kind" = 'string')`,
-    include: ["contract", "token_id"],
+    // include: ["contract", "token_id"],
   });
 }
 
