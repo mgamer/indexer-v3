@@ -129,6 +129,12 @@ export const setupRoutes = (server: Server) => {
     options: ordersEndpoints.getUsersLiquidityOptions,
   });
 
+  server.route({
+    method: "GET",
+    path: "/collections/liquidity",
+    options: ordersEndpoints.getCollectionsLiquidityOptions,
+  });
+
   // Owners
 
   server.route({
