@@ -328,14 +328,18 @@ if (config.doBackgroundWork) {
           (tokenId) => !handledTokenIds.has(tokenId)
         );
         if (notHandledTokenIds.length) {
-          // If we have tokens that failed the indexing process, then
-          // only retry those particular tokens
+          // If we have tokens that failed the indexing process
+          // then we should only retry those particular tokens
           await job.update({
             contract,
             tokenIds: notHandledTokenIds,
           });
 
-          throw new Error(`Retrying (${contract}, ${notHandledTokenIds})`);
+          logger.info(
+            JOB_NAME,
+            `Retrying (${contract}, ${notHandledTokenIds})`
+          );
+          throw new Error("Missing tokens");
         }
       } catch (error) {
         logger.error(JOB_NAME, `Metadata indexing failure: ${error}`);
