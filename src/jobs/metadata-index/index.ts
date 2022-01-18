@@ -334,13 +334,11 @@ if (config.doBackgroundWork) {
             contract,
             tokenIds: notHandledTokenIds,
           });
-          throw new Error();
+
+          throw new Error(`Retrying (${contract}, ${notHandledTokenIds})`);
         }
       } catch (error) {
-        logger.error(
-          JOB_NAME,
-          `Metadata indexing failure (${contract}, ${tokenIds}): ${error}`
-        );
+        logger.error(JOB_NAME, `Metadata indexing failure: ${error}`);
         throw error;
       }
     },
