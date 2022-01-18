@@ -350,6 +350,8 @@ if (config.doBackgroundWork) {
             and "t"."token_id" = "i"."token_id"::numeric(78, 0)
         `);
 
+        logger.info(JOB_NAME, `Marked (${values}) as not indexed`);
+
         throw error;
       }
     },
