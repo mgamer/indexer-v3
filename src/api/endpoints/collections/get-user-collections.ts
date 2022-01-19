@@ -1,12 +1,12 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { ownershipFormat } from "@/api/types";
 import { logger } from "@/common/logger";
 import * as queries from "@/entities/collections/get-user-collections";
 
 export const getUserCollectionsOptions: RouteOptions = {
-  description: "Get aggregate stats for a user, grouped by collection. Useful for showing total portfolio information",
+  description:
+    "Get aggregate stats for a user, grouped by collection. Useful for showing total portfolio information",
   tags: ["api"],
   validate: {
     params: Joi.object({
@@ -29,8 +29,15 @@ export const getUserCollectionsOptions: RouteOptions = {
           collection: Joi.object({
             id: Joi.string(),
             name: Joi.string(),
+            image: Joi.string(),
+            floorSellValue: Joi.number().unsafe().allow(null),
+            topBuyValue: Joi.number().unsafe().allow(null),
           }),
-          ownership: ownershipFormat,
+          ownership: Joi.object({
+            tokenCount: Joi.number(),
+            onSaleCount: Joi.number(),
+            lastAcquiredAt: Joi.number().allow(null),
+          }),
         })
       ),
     }).label("getUserCollectionsResponse"),
