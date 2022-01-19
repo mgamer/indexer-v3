@@ -117,9 +117,7 @@ export const buildOrder = async (options: BuildOrderOptions) => {
         `
           select
             "co"."kind",
-            "cl"."contract",
-            lower("cl"."token_id_range") as "start_token_id",
-            upper("cl"."token_id_range") as "end_token_id"
+            "cl"."token_set_id"
           from "collections" "cl"
           join "contracts" "co"
             on "cl"."contract" = "co"."address"
@@ -128,24 +126,10 @@ export const buildOrder = async (options: BuildOrderOptions) => {
         { collection }
       );
 
-      if (data.contract && data.start_token_id && data.end_token_id) {
-        // Collection is a range of tokens within a contract
-
-        (buildParams as any).contract = data.contract;
-        (buildParams as any).startTokenId = data.start_token_id;
-        (buildParams as any).endTokenId = data.end_token_id;
-
-        if (data.kind === "erc721") {
-          builder = new Sdk.WyvernV2.Builders.Erc721.TokenRange(config.chainId);
-        } else if (data.kind === "erc1155") {
-          builder = new Sdk.WyvernV2.Builders.Erc1155.TokenRange(
-            config.chainId
-          );
-        }
-      } else if (data.contract) {
+      if (data?.token_set_id?.startsWith("contract")) {
         // Collection is a full contract
 
-        (buildParams as any).contract = data.contract;
+        (buildParams as any).contract = data.token_set_id.split(":")[1];
 
         if (data.kind === "erc721") {
           builder = new Sdk.WyvernV2.Builders.Erc721.ContractWide(
@@ -156,6 +140,21 @@ export const buildOrder = async (options: BuildOrderOptions) => {
             config.chainId
           );
         }
+      } else if (data?.token_set_id?.startsWith("range")) {
+        // Collection is a range of tokens within a contract
+
+        const [contract, startTokenId, endTokenId] = data.token_set_id
+          .split(":")
+          .slice(1);
+        (buildParams as any).contract = contract;
+        (buildParams as any).startTokenId = startTokenId;
+        (buildParams as any).endTokenId = endTokenId;
+      }
+
+      if (data.kind === "erc721") {
+        builder = new Sdk.WyvernV2.Builders.Erc721.TokenRange(config.chainId);
+      } else if (data.kind === "erc1155") {
+        builder = new Sdk.WyvernV2.Builders.Erc1155.TokenRange(config.chainId);
       }
     }
 

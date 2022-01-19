@@ -221,42 +221,21 @@ export const saveOrders = async (
 
       // We have a collection-wide order
       case "collection": {
-        // Fetch the collection's contract and associated token range
-        // (if any). The order must exactly match the collection's
-        // definition in order for it to be properly validated.
+        // Build the token set associated to the order
+        const tokenSetId = orderMetadata.data?.tokenIdRange
+          ? `range:${order.params.target}:${orderMetadata.data.tokenIdRange[0]}:${orderMetadata.data.tokenIdRange[1]}`
+          : `contract:${order.params.target}`;
 
-        let collection: { id: string } | null;
-        if (orderMetadata.data?.tokenIdRange) {
-          collection = await db.oneOrNone(
-            `
-              select
-                "c"."id"
-              from "collections" "c"
-              where "c"."contract" = $/contract/
-                and "c"."token_id_range" = numrange($/startTokenId/, $/endTokenId/, '[]')
-            `,
-            {
-              contract: order.params.target,
-              startTokenId: orderMetadata.data.tokenIdRange[0],
-              endTokenId: orderMetadata.data.tokenIdRange[1],
-            }
-          );
-        } else {
-          collection = await db.oneOrNone(
-            `
-              select
-                "c"."id"
-              from "collections" "c"
-              where "c"."contract" = $/contract/
-                and (
-                  "c"."token_id_range" is null or "c"."token_id_range" = numrange(null, null)
-                )
-            `,
-            {
-              contract: order.params.target,
-            }
-          );
-        }
+        // Fetch the collection that matches the token set
+        const collection: { id: string } | null = await db.oneOrNone(
+          `
+            select
+              "c"."id"
+            from "collections" "c"
+            where "c"."token_set_id" = $/tokenSetId/
+          `,
+          { tokenSetId }
+        );
 
         if (collection) {
           tokenSetInfo = generateCollectionInfo(
@@ -345,6 +324,23 @@ export const saveOrders = async (
           break;
         }
 
+        const collection: { token_set_id: string | null } | null =
+          await db.oneOrNone(
+            `
+              select
+                "c"."token_set_id"
+              from "collections" "c"
+              where "c"."id" = $/collection/
+            `,
+            {
+              collection: orderInfo.attribute.collection,
+            }
+          );
+        if (!collection?.token_set_id) {
+          // Skip if the collection has no associated token set
+          break;
+        }
+
         let tokens: { contract: string; token_id: string }[] =
           await db.manyOrNone(
             `
@@ -352,10 +348,7 @@ export const saveOrders = async (
                 "a"."contract",
                 "a"."token_id"
               from "attributes" "a"
-              join "tokens" "t"
-                on "a"."contract" = "t"."contract"
-                and "a"."token_id" = "t"."token_id"
-              where "t"."collection_id" = $/collection/
+              where "a"."collection_id" = $/collection/
                 and "a"."key" = $/key/
                 and "a"."value" = $/value/
             `,

@@ -58,8 +58,7 @@ if (config.doBackgroundWork) {
       royaltyBps: number;
       royaltyRecipient?: string;
       community: string;
-      contract?: string;
-      tokenRange?: [string, string];
+      setId?: string;
       filters?: any;
       sort?: any;
     };
@@ -158,8 +157,7 @@ if (config.doBackgroundWork) {
                     "royalty_bps",
                     "royalty_recipient",
                     "community",
-                    "contract",
-                    "token_id_range",
+                    "token_set_id",
                     "filterable_attribute_keys",
                     "sortable_attribute_keys"
                   ) values (
@@ -170,8 +168,7 @@ if (config.doBackgroundWork) {
                     $/royaltyBps/,
                     $/royaltyRecipient/,
                     $/community/,
-                    $/contract/,
-                    numrange($/startTokenId/, $/endTokenId/),
+                    $/tokenSetId/,
                     $/filterableAttributeKeys:json/,
                     $/sortableAttributeKeys:json/
                   ) on conflict ("id") do
@@ -182,8 +179,7 @@ if (config.doBackgroundWork) {
                     "royalty_bps" = $/royaltyBps/,
                     "royalty_recipient" = $/royaltyRecipient/,
                     "community" = $/community/,
-                    "contract" = $/contract/,
-                    "token_id_range" = numrange($/startTokenId/, $/endTokenId/, '[]'),
+                    "contract" = $/tokenSetId/,
                     "filterable_attribute_keys" = $/filterableAttributeKeys:json/,
                     "sortable_attribute_keys" = $/sortableAttributeKeys:json/
                 `,
@@ -196,42 +192,36 @@ if (config.doBackgroundWork) {
                   royaltyRecipient:
                     info.collection.royaltyRecipient?.toLowerCase(),
                   community: info.collection.community,
-                  contract: info.collection.contract,
-                  // TODO: Set `token_id_range` as `null` instead of `numrange(null, null)`
-                  // if the token id range information is missing from metadata. Right now,
-                  // both `null` and `numrange(null, null)` are treated in the same way, as
-                  // missing data, but we should make this more consistent.
-                  startTokenId: info.collection.tokenRange?.[0],
-                  endTokenId: info.collection.tokenRange?.[1],
+                  tokenSetId: info.collection.setId,
                   filterableAttributeKeys: info.collection.filters,
                   sortableAttributeKeys: info.collection.sort,
                 },
               });
 
-              // Update collection-wide token sets
-              queries.push({
-                query: `
-                  insert into "token_sets_tokens" (
-                    "token_set_id",
-                    "contract",
-                    "token_id"
-                  )
-                  (
-                    select
-                      "id",
-                      $/contract/,
-                      $/tokenId/
-                    from "token_sets"
-                    where "collection_id" = $/collectionId/
-                  )
-                  on conflict do nothing
-                `,
-                values: {
-                  contract,
-                  tokenId: info.token_id,
-                  collectionId: info.collection.id,
-                },
-              });
+              if (info.collection.setId) {
+                // Update collection-wide token sets
+                queries.push({
+                  query: `
+                    insert into "token_sets_tokens" (
+                      "token_set_id",
+                      "contract",
+                      "token_id"
+                    )
+                    (
+                      select
+                        "ts"."id",
+                        $/contract/,
+                        $/tokenId/
+                      from "token_sets" "ts"
+                      where "ts"."id" = $/tokenSetId/
+                    )
+                    on conflict do nothing
+                  `,
+                  values: {
+                    tokenSetId: info.collection.setId,
+                  },
+                });
+              }
 
               // Save token high-level metadata
               queries.push({
