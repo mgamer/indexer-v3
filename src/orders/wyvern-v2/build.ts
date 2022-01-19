@@ -73,18 +73,18 @@ export const buildOrder = async (options: BuildOrderOptions) => {
       const data = await db.manyOrNone(
         `
           select
-            "c"."kind",
-            "t"."contract",
-            "t"."token_id"
-          from "tokens" "t"
-          join "attributes" "a"
-            on "t"."contract" = "a"."contract"
-            and "t"."token_id" = "a"."token_id"
-          join "contracts" "c"
-            on "t"."contract" = "c"."address"
-          where "t"."collection_id" = $/collection/
+            "co"."kind",
+            "a"."contract",
+            "a"."token_id"
+          from "attributes" "a"
+          join "contracts" "co"
+            on "a"."contract" = "co"."address"
+          join "collections" "cl"
+            on "a"."collection_id" = "cl"."id"
+          where "a"."collection_id" = $/collection/
             and "a"."key" = $/attributeKey/
             and "a"."value" = $/attributeValue/
+            and "cl"."token_set_id" is not null
         `,
         { collection, attributeKey, attributeValue }
       );
@@ -104,6 +104,8 @@ export const buildOrder = async (options: BuildOrderOptions) => {
 
         if (kind === "erc721") {
           builder = new Sdk.WyvernV2.Builders.Erc721.TokenList(config.chainId);
+        } else if (kind === "erc1155") {
+          builder = new Sdk.WyvernV2.Builders.Erc1155.TokenList(config.chainId);
         }
       }
     } else if (
