@@ -26,13 +26,10 @@ export const getAttributes = async (
           min("a"."rank") as "rank",
           count(*) as "count"
         from "attributes" "a"
-        join "tokens" "t"
-          on "a"."contract" = "t"."contract"
-          and "a"."token_id" = "t"."token_id"
+        where "a"."collection_id" = $/collection/
           and "a"."rank" is not null
-        where "t"."collection_id" = $/collection/
           and ("a"."kind" = 'string' or "a"."kind" = 'number')
-        group by "a"."key", "a"."value", "a"."rank"
+        group by "a"."key", "a"."value"
       ),
       "xx" as (
         select
@@ -51,13 +48,10 @@ export const getAttributes = async (
           min("a"."value"::numeric) as "min_value",
           max("a"."value"::numeric) as "max_value"
         from "attributes" "a"
-        join "tokens" "t"
-          on "a"."contract" = "t"."contract"
-          and "a"."token_id" = "t"."token_id"
+        where "a"."collection_id" = $/collection/
           and "a"."rank" is not null
-        where "t"."collection_id" = $/collection/
           and ("a"."kind" = 'range' or "a"."kind" = 'date')
-        group by "a"."key", "a"."rank"
+        group by "a"."key"
       ),
       "yy" as (
         select
