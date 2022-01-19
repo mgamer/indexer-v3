@@ -81,6 +81,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/collections/{collection}/top-buys",
+    options: collectionsEndpoints.getCollectionTopBuysOptions,
+  });
+
+  server.route({
+    method: "GET",
     path: "/users/{user}/collections",
     options: collectionsEndpoints.getUserCollectionsOptions,
   });
