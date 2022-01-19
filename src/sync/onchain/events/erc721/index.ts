@@ -20,10 +20,9 @@ const abi = new Interface([
   )`,
 ]);
 
-// Old contracts might use a non-standard `Transfer` event
-// which doesn't have the `tokenId` field indexed. Since it
-// has the same name as the standard event, we cannot plug
-// it in the same interface due to conflicts.
+// Some old contracts might use a non-standard `Transfer` event
+// which is exactly the same as the standard one, but it misses
+// the index on the `tokenId` field.
 const nonStandardAbi = new Interface([
   `event Transfer(
     address indexed from,
@@ -88,12 +87,10 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
       }
     }
 
-    await addNftTransferEvents("erc721", transferEvents);
+    await addNftTransferEvents(transferEvents);
 
-    if (!backfill) {
-      if (config.acceptOrders) {
-        await addToOrdersUpdateByMakerQueue(makerInfos);
-      }
+    if (!backfill && config.acceptOrders) {
+      await addToOrdersUpdateByMakerQueue(makerInfos);
     }
   },
   fixCallback: async (blockHash) => {

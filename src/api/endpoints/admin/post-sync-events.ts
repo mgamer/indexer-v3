@@ -2,6 +2,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
+import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { contractKinds } from "@/events/index";
@@ -45,11 +46,22 @@ export const postSyncEventsOptions: RouteOptions = {
       const toBlock = payload.toBlock;
       const blocksPerBatch = payload.blocksPerBatch;
 
-      const contractsData = require(`@/config/data/${config.chainId}/contracts.json`);
+      // Fetch all contracts of the requested kind from the database
+      const matchingContracts: string[] = await db
+        .manyOrNone(
+          `
+            select
+              "c"."address"
+            from "contracts" "c"
+            where "c"."kind" = $/contractKind/
+          `,
+          { contractKind }
+        )
+        .then((result) => result.map(({ address }) => address));
 
       // Make sure the contracts requested to sync match the contract type
       for (const contract of contracts) {
-        if (!contractsData[contractKind].includes(contract)) {
+        if (!matchingContracts.includes(contract)) {
           throw Boom.badData(
             `Unknown contract ${contract} of type ${contractKind}`
           );

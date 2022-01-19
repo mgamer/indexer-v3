@@ -14,4 +14,6 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
 
 export async function down(pgm: MigrationBuilder): Promise<void> {
   pgm.dropColumns("attributes", ["rank"]);
+
+  // Not possible to remove enum values once added
 }

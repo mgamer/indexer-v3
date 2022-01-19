@@ -1,6 +1,7 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import cron from "node-cron";
 
+import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { acquireLock, redis } from "@/common/redis";
@@ -26,6 +27,7 @@ export const backfillQueue = new Queue(BACKFILL_JOB_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 10,
+    // TODO: Introduce jitter to retries
     backoff: {
       type: "exponential",
       delay: 5000,
@@ -138,10 +140,17 @@ if (config.doBackgroundWork) {
 
       try {
         // Sync all contracts of the given contract type
-        const contracts =
-          require(`@/config/data/${config.chainId}/contracts.json`)[
-            contractKind
-          ];
+        const contracts: string[] = await db
+          .manyOrNone(
+            `
+              select
+                "c"."address"
+              from "contracts" "c"
+              where "c"."kind" = $/contractKind/
+            `,
+            { contractKind }
+          )
+          .then((result) => result.map(({ address }) => address));
         const contractInfo = getContractInfo(contractKind, contracts);
 
         // We allow syncing of up to `maxBlocks` blocks behind the

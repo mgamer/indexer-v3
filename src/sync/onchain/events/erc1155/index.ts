@@ -122,12 +122,10 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
       }
     }
 
-    await addNftTransferEvents("erc1155", transferEvents);
+    await addNftTransferEvents(transferEvents);
 
-    if (!backfill) {
-      if (config.acceptOrders) {
-        await addToOrdersUpdateByMakerQueue(makerInfos);
-      }
+    if (!backfill && config.acceptOrders) {
+      await addToOrdersUpdateByMakerQueue(makerInfos);
     }
   },
   fixCallback: async (blockHash) => {

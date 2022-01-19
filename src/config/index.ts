@@ -5,9 +5,9 @@ export const config = {
 
   adminApiKey: String(process.env.ADMIN_API_KEY),
   arweaveRelayerKey: String(process.env.ARWEAVE_RELAYER_KEY),
+  etherscanApiKey: String(process.env.ETHERSCAN_API_KEY),
 
   metadataApiBaseUrl: String(process.env.METADATA_API_BASE_URL),
-
   baseNetworkHttpUrl: String(process.env.BASE_NETWORK_HTTP_URL),
 
   databaseUrl: String(process.env.DATABASE_URL),

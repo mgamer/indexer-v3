@@ -94,10 +94,18 @@ if (config.doBackgroundWork) {
               await contractInfo.fixCallback(blockHash);
 
               // Resync
-              const contracts =
-                require(`@/config/data/${config.chainId}/contracts.json`)[
-                  contractKind
-                ];
+              const contracts: string[] = await db
+                .manyOrNone(
+                  `
+                    select
+                      "c"."address"
+                    from "contracts" "c"
+                    where "c"."kind" = $/contractKind/
+                  `,
+                  { contractKind }
+                )
+                .then((result) => result.map(({ address }) => address));
+
               await addToEventsSyncBackfillQueue(
                 contractKind,
                 contracts,

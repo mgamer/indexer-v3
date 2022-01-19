@@ -39,8 +39,17 @@ export const postFixCacheOptions: RouteOptions = {
 
       let contracts = payload.contracts;
       if (!contracts) {
-        const contractsData = require(`@/config/data/${config.chainId}/contracts.json`);
-        contracts = [...contractsData["erc721"], ...contractsData["erc1155"]];
+        // Fetch all erc721/erc1155 contracts from the database
+        contracts = await db
+          .manyOrNone(
+            `
+              select
+                "c"."address"
+              from "contracts" "c"
+              where "c"."kind" = 'erc721' or "c"."kind" = 'erc1155'
+            `
+          )
+          .then((result) => result.map(({ address }) => address));
       }
 
       switch (kind) {

@@ -1,8 +1,6 @@
 import { db, pgp } from "@/common/db";
 import { BaseParams } from "@/events/parser";
 
-type ContractKind = "erc721" | "erc1155";
-
 export type NftTransferEvent = {
   tokenId: string;
   from: string;
@@ -12,7 +10,6 @@ export type NftTransferEvent = {
 };
 
 export const addNftTransferEvents = async (
-  contractKind: ContractKind,
   transferEvents: NftTransferEvent[]
 ) => {
   // Keep track of all involved tokens so that we can save
@@ -107,34 +104,14 @@ export const addNftTransferEvents = async (
     }
   }
 
-  const contractValues: any[] = [];
   const tokenValues: any[] = [];
   for (const [contract, tokenIds] of contractTokens.entries()) {
-    contractValues.push({
-      address: contract,
-      kind: contractKind,
-    });
-
     for (const tokenId of tokenIds) {
       tokenValues.push({
         contract,
         token_id: tokenId,
       });
     }
-  }
-
-  let contractInsertsQuery: string | undefined;
-  if (contractValues.length) {
-    const columns = new pgp.helpers.ColumnSet(["address", "kind"], {
-      table: "contracts",
-    });
-    const values = pgp.helpers.values(contractValues, columns);
-
-    contractInsertsQuery = `
-      insert into "contracts" ("address", "kind")
-      values ${values}
-      on conflict do nothing
-    `;
   }
 
   let tokenInsertsQuery: string | undefined;
@@ -158,9 +135,6 @@ export const addNftTransferEvents = async (
   }
 
   const queries: any[] = [];
-  if (contractInsertsQuery) {
-    queries.push(contractInsertsQuery);
-  }
   if (tokenInsertsQuery) {
     queries.push(tokenInsertsQuery);
   }

@@ -23,6 +23,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/contracts",
+    options: adminEndpoints.postContractsOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/index/metadata",
     options: adminEndpoints.postIndexMetadataOptions,
   });
