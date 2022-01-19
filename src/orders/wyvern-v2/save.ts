@@ -101,6 +101,19 @@ const extractOrderMetadata = (
       };
     }
 
+    case "erc1155-token-list": {
+      const builder = new Sdk.WyvernV2.Builders.Erc1155.TokenList(
+        config.chainId
+      );
+
+      return {
+        kind: "attribute",
+        data: {
+          merkleRoot: builder.getMerkleRoot(order),
+        },
+      };
+    }
+
     default: {
       return undefined;
     }
