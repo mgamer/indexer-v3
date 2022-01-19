@@ -5,6 +5,7 @@ import {
 } from "@reservoir0x/sdk/dist/wyvern-v2/builders/base";
 
 import { db } from "@/common/db";
+import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 
 export type BuildOrderOptions = {
@@ -118,12 +119,9 @@ export const buildOrder = async (options: BuildOrderOptions) => {
       const data = await db.oneOrNone(
         `
           select
-            "co"."kind",
-            "cl"."token_set_id"
-          from "collections" "cl"
-          join "contracts" "co"
-            on "cl"."contract" = "co"."address"
-          where "cl"."id" = $/collection/
+            "c"."token_set_id"
+          from "collections" "c"
+          where "c"."id" = $/collection/
         `,
         { collection }
       );
@@ -131,13 +129,24 @@ export const buildOrder = async (options: BuildOrderOptions) => {
       if (data?.token_set_id?.startsWith("contract")) {
         // Collection is a full contract
 
-        (buildParams as any).contract = data.token_set_id.split(":")[1];
+        const contract = data.token_set_id.split(":")[1];
+        (buildParams as any).contract = contract;
 
-        if (data.kind === "erc721") {
+        const { kind } = await db.one(
+          `
+            select
+              "c"."kind"
+            from "contracts" "c"
+            where "c"."address" = $/contract/
+          `,
+          { contract }
+        );
+
+        if (kind === "erc721") {
           builder = new Sdk.WyvernV2.Builders.Erc721.ContractWide(
             config.chainId
           );
-        } else if (data.kind === "erc1155") {
+        } else if (kind === "erc1155") {
           builder = new Sdk.WyvernV2.Builders.Erc1155.ContractWide(
             config.chainId
           );
@@ -151,17 +160,30 @@ export const buildOrder = async (options: BuildOrderOptions) => {
         (buildParams as any).contract = contract;
         (buildParams as any).startTokenId = startTokenId;
         (buildParams as any).endTokenId = endTokenId;
-      }
 
-      if (data.kind === "erc721") {
-        builder = new Sdk.WyvernV2.Builders.Erc721.TokenRange(config.chainId);
-      } else if (data.kind === "erc1155") {
-        builder = new Sdk.WyvernV2.Builders.Erc1155.TokenRange(config.chainId);
+        const { kind } = await db.one(
+          `
+            select
+              "c"."kind"
+            from "contracts" "c"
+            where "c"."address" = $/contract/
+          `,
+          { contract }
+        );
+
+        if (kind === "erc721") {
+          builder = new Sdk.WyvernV2.Builders.Erc721.TokenRange(config.chainId);
+        } else if (kind === "erc1155") {
+          builder = new Sdk.WyvernV2.Builders.Erc1155.TokenRange(
+            config.chainId
+          );
+        }
       }
     }
 
     return builder?.build(buildParams);
-  } catch {
+  } catch (error) {
+    logger.error("wyvern_v2_order_build", `Failed to build order: ${error}`);
     return undefined;
   }
 };
