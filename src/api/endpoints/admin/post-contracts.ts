@@ -62,6 +62,20 @@ export const postContractsOptions: RouteOptions = {
             continue;
           }
 
+          // Make sure to not double-process any contract
+          const contractExists = await db.oneOrNone(
+            `
+              select 1 from "contracts" "c"
+              where "c"."address" = $/address/
+            `,
+            {
+              address: contract,
+            }
+          );
+          if (contractExists) {
+            continue;
+          }
+
           try {
             const etherscanUrl =
               config.chainId === 1
