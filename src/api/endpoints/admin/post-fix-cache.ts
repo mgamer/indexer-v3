@@ -14,7 +14,11 @@ export const postFixCacheOptions: RouteOptions = {
       "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     payload: Joi.object({
-      kind: Joi.string().valid("tokens-floor-sell", "tokens-top-buy"),
+      kind: Joi.string().valid(
+        "tokens-floor-sell",
+        "tokens-top-buy",
+        "token-sets-top-buy"
+      ),
       contracts: Joi.array().items(
         Joi.string()
           .lowercase()
@@ -108,6 +112,40 @@ export const postFixCacheOptions: RouteOptions = {
               { contract }
             );
           }
+
+          break;
+        }
+
+        case "token-sets-top-buy": {
+          await db.none(
+            `
+              update "token_sets" "ts" set
+                "top_buy_hash" = "x"."hash",
+                "top_buy_value" = "x"."value",
+                "top_buy_maker" = "x"."maker"
+              from (
+                select distinct on ("ts"."id")
+                  "ts"."id",
+                  "y".*
+                from "token_sets" "ts"
+                left join lateral (
+                  select
+                    "o"."hash",
+                    "o"."value",
+                    "o"."maker"
+                  from "orders" "o"
+                  where "o"."token_set_id" = "ts"."id"
+                    and "o"."side" = 'buy'
+                    and "o"."status" = 'valid'
+                  order by "o"."value" desc nulls last
+                  limit 1
+                ) "y" on true
+                where "ts"."collection_id" is not null
+              ) "x"
+              where "ts"."id" = "x"."id"
+                and "ts"."top_buy_hash" is distinct from "x"."hash"
+            `
+          );
 
           break;
         }

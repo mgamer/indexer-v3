@@ -119,23 +119,29 @@ if (config.doBackgroundWork) {
               `
                 with "x" as (
                   select
-                    "o"."token_set_id",
-                    "o"."hash",
-                    "o"."value",
-                    "o"."maker"
-                  from "orders" "o"
-                  where "o"."token_set_id" = $/tokenSetId/
-                    and "o"."side" = 'buy'
-                    and "o"."status" = 'valid'
-                  order by "o"."value" desc
-                  limit 1
+                    "ts"."id",
+                    "y".*
+                  from "token_sets" "ts"
+                  left join lateral (
+                    select
+                      "o"."hash",
+                      "o"."value",
+                      "o"."maker"
+                    from "orders" "o"
+                    where "o"."token_set_id" = "ts"."id"
+                      and "o"."side" = 'buy'
+                      and "o"."status" = 'valid'
+                    order by "o"."value" desc nulls last
+                    limit 1
+                  ) "y" on true
+                  where "ts"."id" = $/tokenSetId/
                 )
                 update "token_sets" as "ts" set
                   "top_buy_hash" = "x"."hash",
                   "top_buy_value" = "x"."value",
                   "top_buy_maker" = "x"."maker"
                 from "x"
-                where "ts"."id" = "x"."token_set_id"
+                where "ts"."id" = "x"."id"
                   and "ts"."top_buy_hash" is distinct from "x"."hash"
               `,
               { tokenSetId }
