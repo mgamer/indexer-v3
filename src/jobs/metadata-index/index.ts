@@ -100,7 +100,7 @@ if (config.doBackgroundWork) {
         // in case of failure. However, just in case, we explicitly
         // check here the presence of any `error` field.
         if ((data as any).error) {
-          throw new Error((data as any).error);
+          throw new Error(JSON.stringify((data as any).error));
         }
 
         for (const info of data as Metadata[]) {
@@ -309,12 +309,7 @@ if (config.doBackgroundWork) {
               await db.none(pgp.helpers.concat(queries));
             }
           } catch (error) {
-            logger.error(
-              JOB_NAME,
-              `Internal failure indexing token: ${
-                (error as any).message || JSON.stringify(error)
-              }`
-            );
+            logger.error(JOB_NAME, `Internal failure indexing token: ${error}`);
             continue;
           }
 
@@ -340,12 +335,7 @@ if (config.doBackgroundWork) {
           throw new Error("Missing tokens");
         }
       } catch (error) {
-        logger.error(
-          JOB_NAME,
-          `Metadata indexing failure: ${
-            (error as any).message || JSON.stringify(error)
-          }`
-        );
+        logger.error(JOB_NAME, `Metadata indexing failure: ${error}`);
         throw error;
       }
     },
