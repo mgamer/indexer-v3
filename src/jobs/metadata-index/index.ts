@@ -311,7 +311,9 @@ if (config.doBackgroundWork) {
           } catch (error) {
             logger.error(
               JOB_NAME,
-              `Internal failure indexing token: ${error.message}`
+              `Internal failure indexing token: ${
+                (error as any).message || JSON.stringify(error)
+              }`
             );
             continue;
           }
@@ -338,7 +340,12 @@ if (config.doBackgroundWork) {
           throw new Error("Missing tokens");
         }
       } catch (error) {
-        logger.error(JOB_NAME, `Metadata indexing failure: ${error.message}`);
+        logger.error(
+          JOB_NAME,
+          `Metadata indexing failure: ${
+            (error as any).message || JSON.stringify(error)
+          }`
+        );
         throw error;
       }
     },
