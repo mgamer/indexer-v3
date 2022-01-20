@@ -365,7 +365,7 @@ if (config.doBackgroundWork) {
                   from "tokens"
                   where "contract" = "t"."contract"
                     and "metadata_indexed" = false
-                  limit 60
+                  limit 20
                 )::text[] as "token_ids"
               from "tokens" "t"
               where "t"."metadata_indexed" = false
