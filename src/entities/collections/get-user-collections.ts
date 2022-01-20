@@ -20,6 +20,7 @@ export type GetUserCollectionsResponse = {
   ownership: {
     tokenCount: number;
     onSaleCount: number;
+    liquidCount: number;
     lastAcquiredAt: number | null;
   };
 }[];
@@ -32,6 +33,7 @@ export const getUserCollections = async (
       "c"."id" as "collection_id",
       sum("o"."amount") as "token_count",
       count(distinct("t"."token_id")) filter (where "t"."floor_sell_value" is not null) as "on_sale_count",
+      count(distinct("t"."token_id")) filter (where "t"."top_buy_value" is not null) as "liquid_count",
       sum("t"."top_buy_value") as "total_buy_value"
     from "tokens" "t"
     join "ownerships" "o"
@@ -124,6 +126,7 @@ export const getUserCollections = async (
       ownership: {
         tokenCount: Number(r.token_count),
         onSaleCount: Number(r.on_sale_count),
+        liquidCount: Number(r.liquid_count),
         lastAcquiredAt: r.last_acquired_at,
       },
     }))

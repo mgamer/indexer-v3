@@ -19,7 +19,7 @@ export const getUserCollectionsOptions: RouteOptions = {
       community: Joi.string().lowercase(),
       collection: Joi.string().lowercase(),
       offset: Joi.number().integer().min(0).default(0),
-      limit: Joi.number().integer().min(1).max(20).default(20),
+      limit: Joi.number().integer().min(1).max(100).default(20),
     }),
   },
   response: {
@@ -36,6 +36,7 @@ export const getUserCollectionsOptions: RouteOptions = {
           ownership: Joi.object({
             tokenCount: Joi.number(),
             onSaleCount: Joi.number(),
+            liquidCount: Joi.number(),
             lastAcquiredAt: Joi.number().allow(null),
           }),
         })
