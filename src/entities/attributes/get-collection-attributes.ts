@@ -16,10 +16,7 @@ export type GetCollectionAttributesResponse = {
   tokenCount: number;
   onSaleCount: number;
   sampleImages: string[];
-  lastSells: {
-    value: number;
-    timestamp: number;
-  }[];
+  lastSellValues: number[];
   floorSellValues: number[];
   topBuy: {
     hash: string | null;
@@ -47,11 +44,8 @@ export const getCollectionAttributes = async (
         "t"."floor_sell_value" order by "t"."floor_sell_value" asc
       ) filter (where "t"."floor_sell_value" is not null))::text[])[1:21] as "floor_sell_values",
       ((array_agg(
-        json_build_object(
-          'value', "t"."last_sell_value"::text,
-          'timestamp', coalesce("b"."timestamp", extract(epoch from now())::int)
-        ) order by "t"."last_sell_block" desc
-      ) filter (where "t"."last_sell_value" is not null))::json[])[1:21] as "last_sells"
+        "t"."last_sell_value" order by "t"."floor_sell_value" asc
+      ) filter (where "t"."last_sell_value" is not null))::text[])[1:21] as "last_sell_values"
     from "attributes" "a"
     join "tokens" "t"
       on "a"."contract" = "t"."contract"
@@ -60,8 +54,6 @@ export const getCollectionAttributes = async (
       on "ts"."collection_id" = "a"."collection_id"
       and "ts"."attribute_key" = "a"."key"
       and "ts"."attribute_value" = "a"."value"
-    left join "blocks" "b"
-      on "t"."last_sell_block" = "b"."block"
   `;
 
   // Filters
@@ -145,10 +137,7 @@ export const getCollectionAttributes = async (
       tokenCount: Number(r.token_count),
       onSaleCount: Number(r.on_sale_count),
       sampleImages: r.sample_images || [],
-      lastSells: (r.last_sells || []).map(({ value, timestamp }: any) => ({
-        value: formatEth(value),
-        timestamp: Number(timestamp),
-      })),
+      lastSellValues: (r.last_sell_values || []).map(formatEth),
       floorSellValues: (r.floor_sell_values || []).map(formatEth),
       topBuy: {
         hash: r.top_buy_hash,
