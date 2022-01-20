@@ -100,7 +100,7 @@ if (config.doBackgroundWork) {
         // in case of failure. However, just in case, we explicitly
         // check here the presence of any `error` field.
         if ((data as any).error) {
-          throw new Error((data as any).error);
+          throw new Error(JSON.stringify((data as any).error));
         }
 
         for (const info of data as Metadata[]) {
@@ -179,7 +179,7 @@ if (config.doBackgroundWork) {
                     "royalty_bps" = $/royaltyBps/,
                     "royalty_recipient" = $/royaltyRecipient/,
                     "community" = $/community/,
-                    "contract" = $/tokenSetId/,
+                    "token_set_id" = $/tokenSetId/,
                     "filterable_attribute_keys" = $/filterableAttributeKeys:json/,
                     "sortable_attribute_keys" = $/sortableAttributeKeys:json/
                 `,
@@ -218,6 +218,8 @@ if (config.doBackgroundWork) {
                     on conflict do nothing
                   `,
                   values: {
+                    contract,
+                    tokenId: info.token_id,
                     tokenSetId: info.collection.setId,
                   },
                 });
@@ -306,7 +308,8 @@ if (config.doBackgroundWork) {
             if (queries.length) {
               await db.none(pgp.helpers.concat(queries));
             }
-          } catch {
+          } catch (error) {
+            logger.error(JOB_NAME, `Internal failure indexing token: ${error}`);
             continue;
           }
 
