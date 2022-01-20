@@ -179,7 +179,7 @@ if (config.doBackgroundWork) {
                     "royalty_bps" = $/royaltyBps/,
                     "royalty_recipient" = $/royaltyRecipient/,
                     "community" = $/community/,
-                    "contract" = $/tokenSetId/,
+                    "token_set_id" = $/tokenSetId/,
                     "filterable_attribute_keys" = $/filterableAttributeKeys:json/,
                     "sortable_attribute_keys" = $/sortableAttributeKeys:json/
                 `,
