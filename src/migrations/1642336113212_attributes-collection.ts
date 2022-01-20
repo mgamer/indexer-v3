@@ -10,6 +10,14 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
   pgm.createIndex("attributes", ["collection_id", "key", "value"], {
     // include: ["contract", "token_id"],
   });
+
+  // TODO: We definitely need to rethink the design of the attribute tables
+  pgm.addIndex("attributes", ["collection_id", "key", "value"], {
+    where: `"rank" is not null and ("kind" = 'string' or "kind" = 'number')`,
+  });
+  pgm.addIndex("attributes", ["collection_id", "key", "value"], {
+    where: `"rank" is not null and ("kind" = 'date' or "kind" = 'range')`,
+  });
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {

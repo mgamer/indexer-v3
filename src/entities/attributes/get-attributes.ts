@@ -16,6 +16,8 @@ export type GetAttributesResponse = {
 export const getAttributes = async (
   filter: GetAttributesFilter
 ): Promise<GetAttributesResponse> => {
+  // TODO: Implement sorting by rank
+
   let baseQuery = `
     with
       "x" as (
@@ -35,10 +37,9 @@ export const getAttributes = async (
         select
           "x"."key",
           "x"."kind",
-          "x"."rank",
           array_agg(json_build_object('value', "x"."value", 'count', "x"."count")) as "values"
         from "x"
-        group by "x"."key", "x"."kind", "x"."rank"
+        group by "x"."key", "x"."kind"
       ),
       "y" as (
         select
@@ -57,18 +58,16 @@ export const getAttributes = async (
         select
           "y"."key",
           "y"."kind",
-          "y"."rank",
           array[
             json_build_object('value', "y"."min_value"::text, 'count', 0),
             json_build_object('value', "y"."max_value"::text, 'count', 0)
           ] as "values"
         from "y"
-        group by "y"."key", "y"."kind", "y"."rank", "y"."min_value", "y"."max_value"
+        group by "y"."key", "y"."kind", "y"."min_value", "y"."max_value"
       )
     select * from "xx"
     union all
     select * from "yy"
-    order by "rank"
   `;
 
   return db.manyOrNone(baseQuery, filter).then((result) =>
