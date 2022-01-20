@@ -77,10 +77,9 @@ export const getCollectionAttributes = async (
   const sortDirection = filter.sortDirection ?? "asc";
   switch (sortBy) {
     case "value": {
-      // TODO: Integrate sorting by attribute kind
+      // TODO: Properly integrate sorting by attribute rank and kind
       baseQuery += `
         order by
-          "a"."rank",
           "a"."key",
           "a"."value" ${sortDirection} nulls last
         `;
