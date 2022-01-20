@@ -218,6 +218,8 @@ if (config.doBackgroundWork) {
                     on conflict do nothing
                   `,
                   values: {
+                    contract,
+                    tokenId: info.token_id,
                     tokenSetId: info.collection.setId,
                   },
                 });
@@ -307,7 +309,7 @@ if (config.doBackgroundWork) {
               await db.none(pgp.helpers.concat(queries));
             }
           } catch (error) {
-            logger.error(JOB_NAME, `Failed to index token: ${error}`);
+            logger.error(JOB_NAME, `Internal failure indexing token: ${error}`);
             continue;
           }
 
