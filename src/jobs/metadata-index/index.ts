@@ -306,7 +306,8 @@ if (config.doBackgroundWork) {
             if (queries.length) {
               await db.none(pgp.helpers.concat(queries));
             }
-          } catch {
+          } catch (error) {
+            logger.error(JOB_NAME, `Failed to index token: ${error}`);
             continue;
           }
 
