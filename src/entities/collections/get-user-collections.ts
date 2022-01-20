@@ -96,7 +96,7 @@ export const getUserCollections = async (
         join "ownerships" "o"
           on "nte"."address" = "o"."contract"
           and "nte"."token_id" = "o"."token_id"
-        join "blocks" "b"
+        left join "blocks" "b"
           on "nte"."block" = "b"."block"
         where "t"."collection_id" = "x"."collection_id"
           and "o"."owner" = $/user/
