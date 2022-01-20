@@ -16,7 +16,11 @@ export type GetCollectionAttributesResponse = {
   tokenCount: number;
   onSaleCount: number;
   sampleImages: string[];
-  floorSellValues: (number | null)[];
+  lastSells: {
+    value: number;
+    timestamp: number;
+  }[];
+  floorSellValues: number[];
   topBuy: {
     hash: string | null;
     value: number | null;
@@ -41,7 +45,13 @@ export const getCollectionAttributes = async (
       (array_agg(distinct("t"."image")))[1:4] as "sample_images",
       ((array_agg(
         "t"."floor_sell_value" order by "t"."floor_sell_value" asc
-      ) filter (where "t"."floor_sell_value" is not null))::text[])[1:21] as "floor_sell_values"
+      ) filter (where "t"."floor_sell_value" is not null))::text[])[1:21] as "floor_sell_values",
+      ((array_agg(
+        json_build_object(
+          'value', "t"."last_sell_value"::text,
+          'timestamp', coalesce("b"."timestamp", extract(epoch from now())::int)
+        ) order by "t"."last_sell_block" desc
+      ) filter (where "t"."last_sell_value" is not null))::json[])[1:21] as "last_sells"
     from "attributes" "a"
     join "tokens" "t"
       on "a"."contract" = "t"."contract"
@@ -50,6 +60,8 @@ export const getCollectionAttributes = async (
       on "ts"."collection_id" = "a"."collection_id"
       and "ts"."attribute_key" = "a"."key"
       and "ts"."attribute_value" = "a"."value"
+    left join "blocks" "b"
+      on "t"."last_sell_block" = "b"."block"
   `;
 
   // Filters
@@ -66,7 +78,7 @@ export const getCollectionAttributes = async (
   }
 
   // Grouping
-  baseQuery += ` group by "a"."collection_id", "a"."key", "a"."value", "a"."rank"`;
+  baseQuery += ` group by "a"."collection_id", "a"."key", "a"."value"`;
 
   // Sorting
   const sortBy = filter.sortBy ?? "value";
@@ -133,9 +145,11 @@ export const getCollectionAttributes = async (
       tokenCount: Number(r.token_count),
       onSaleCount: Number(r.on_sale_count),
       sampleImages: r.sample_images || [],
-      floorSellValues: r.floor_sell_values
-        ? r.floor_sell_values.filter(Boolean).map(formatEth)
-        : [],
+      lastSells: (r.last_sells || []).map(({ value, timestamp }: any) => ({
+        value: formatEth(value),
+        timestamp: Number(timestamp),
+      })),
+      floorSellValues: (r.floor_sell_values || []).map(formatEth),
       topBuy: {
         hash: r.top_buy_hash,
         value: r.top_buy_value ? formatEth(r.top_buy_value) : null,

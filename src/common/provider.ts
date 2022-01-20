@@ -15,14 +15,6 @@ export const baseProvider = new StaticJsonRpcProvider(
   config.baseNetworkHttpUrl
 );
 
-// Cloudflare provides a very reliable RPC endpoint but unfortunately
-// it's only available on mainnet. For other chains we fallback to using
-// the free Alchemy endpoint provided by ethers.
-export const altProvider =
-  config.chainId === 1
-    ? new CloudflareProvider(config.chainId)
-    : new AlchemyProvider(config.chainId);
-
 // Default Arweave gateway
 export const arweaveGateway = Arweave.init({
   host: "arweave.net",

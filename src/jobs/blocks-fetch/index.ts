@@ -1,7 +1,7 @@
 import cron from "node-cron";
 
 import { logger } from "@/common/logger";
-import { altProvider } from "@/common/provider";
+import { baseProvider } from "@/common/provider";
 import { acquireLock } from "@/common/redis";
 import { config } from "@/config/index";
 import { db, pgp } from "@/common/db";
@@ -37,7 +37,7 @@ if (config.doBackgroundWork) {
 
         let blockValues: any[] = [];
         for (const { block } of blocks) {
-          const timestamp = (await altProvider.getBlock(block)).timestamp;
+          const timestamp = (await baseProvider.getBlock(block)).timestamp;
           blockValues.push({
             block,
             timestamp,
