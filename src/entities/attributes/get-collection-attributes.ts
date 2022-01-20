@@ -50,8 +50,8 @@ export const getCollectionAttributes = async (
         json_build_object(
           'value', "t"."last_sell_value"::text,
           'block', "t"."last_sell_block"
-        ) order by "t"."floor_sell_value" asc
-      ) filter (where "t"."last_sell_value" is not null))::json[])[1:21] as "last_sells"
+        ) order by "t"."last_sell_block" desc
+      ) filter (where "t"."last_sell_value" is not null))::json[])[1:11] as "last_sells"
     from "attributes" "a"
     join "tokens" "t"
       on "a"."contract" = "t"."contract"
