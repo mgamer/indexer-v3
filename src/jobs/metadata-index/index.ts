@@ -309,7 +309,10 @@ if (config.doBackgroundWork) {
               await db.none(pgp.helpers.concat(queries));
             }
           } catch (error) {
-            logger.error(JOB_NAME, `Internal failure indexing token: ${error}`);
+            logger.error(
+              JOB_NAME,
+              `Internal failure indexing token: ${error.message}`
+            );
             continue;
           }
 
@@ -335,7 +338,7 @@ if (config.doBackgroundWork) {
           throw new Error("Missing tokens");
         }
       } catch (error) {
-        logger.error(JOB_NAME, `Metadata indexing failure: ${error}`);
+        logger.error(JOB_NAME, `Metadata indexing failure: ${error.message}`);
         throw error;
       }
     },
