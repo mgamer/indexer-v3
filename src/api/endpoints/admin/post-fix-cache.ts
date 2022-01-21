@@ -113,6 +113,13 @@ export const postFixCacheOptions: RouteOptions = {
                     and "o"."side" = 'buy'
                     and "o"."status" = 'valid'
                   where "t"."contract" = $/contract/
+                    and exists(
+                      select from "ownerships" "w"
+                        where "w"."contract" = "t"."contract"
+                        and "w"."token_id" = "t"."token_id"
+                        and "w"."amount" > 0
+                        and "w"."owner" != "o"."maker"
+                    )
                   order by "t"."contract", "t"."token_id", "o"."value" desc nulls last
                 ) "x"
                 where "t"."contract" = "x"."contract"

@@ -178,21 +178,23 @@ if (config.doBackgroundWork) {
                   from "orders" "o"
                   join "token_sets_tokens" "tst"
                     on "o"."token_set_id" = "tst"."token_set_id"
-                  ${
-                    side === "sell"
-                      ? ""
-                      : `
-                          join "ownerships" "w"
-                            on "w"."contract" = "x"."contract"
-                            and "w"."token_id" = "x"."token_id"
-                            and "w"."amount" > 0
-                            and "w"."owner" != "o"."maker"
-                        `
-                  }
                   where "tst"."contract" = "x"."contract"
                     and "tst"."token_id" = "x"."token_id"
                     and "o"."side" = '${side}'
                     and "o"."status" = 'valid'
+                    and ${
+                      side === "sell"
+                        ? "true"
+                        : `
+                            exists(
+                              select from "ownerships" "w"
+                                where "w"."contract" = "x"."contract"
+                                and "w"."token_id" = "x"."token_id"
+                                and "w"."amount" > 0
+                                and "w"."owner" != "o"."maker"
+                            )
+                          `
+                    }
                   order by value ${side === "sell" ? "asc" : "desc"} nulls last
                   limit 1
                 ) "y" on true
