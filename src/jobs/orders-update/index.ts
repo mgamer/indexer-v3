@@ -186,7 +186,7 @@ if (config.doBackgroundWork) {
                             on "w"."contract" = "x"."contract"
                             and "w"."token_id" = "x"."token_id"
                             and "w"."amount" > 0
-                            and "w"."maker" != "o"."maker"
+                            and "w"."owner" != "o"."maker"
                         `
                   }
                   where "tst"."contract" = "x"."contract"
