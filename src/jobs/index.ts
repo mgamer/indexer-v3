@@ -1,6 +1,7 @@
 // Initialize all background jobs/processes
 
 import "@/jobs/blocks-fetch";
+import "@/jobs/cache-check";
 import "@/jobs/events-fix";
 import "@/jobs/events-sync";
 import "@/jobs/metadata-index";
