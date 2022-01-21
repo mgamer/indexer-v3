@@ -16,58 +16,27 @@ export type GetAttributesResponse = {
 export const getAttributes = async (
   filter: GetAttributesFilter
 ): Promise<GetAttributesResponse> => {
-  // TODO: Implement sorting by rank
+  // TODO: Once we refactor the attributes, there are a few things
+  // we need to properly handle in here:
+  // - for `date` and `range` kinds return the min and max values
+  // - return the attributes ordered by rank
 
-  let baseQuery = `
-    with
-      "x" as (
-        select
-          "a"."key",
-          "a"."value",
-          min("a"."kind") as "kind",
-          min("a"."rank") as "rank",
-          count(*) as "count"
-        from "attributes" "a"
-        where "a"."collection_id" = $/collection/
-          and "a"."rank" is not null
-          and ("a"."kind" = 'string' or "a"."kind" = 'number')
-        group by "a"."key", "a"."value"
-      ),
-      "xx" as (
-        select
-          "x"."key",
-          "x"."kind",
-          array_agg(json_build_object('value', "x"."value", 'count', "x"."count")) as "values"
-        from "x"
-        group by "x"."key", "x"."kind"
-      ),
-      "y" as (
-        select
-          "a"."key",
-          min("a"."kind") as "kind",
-          min("a"."rank") as "rank",
-          min("a"."value"::numeric) as "min_value",
-          max("a"."value"::numeric) as "max_value"
-        from "attributes" "a"
-        where "a"."collection_id" = $/collection/
-          and "a"."rank" is not null
-          and ("a"."kind" = 'range' or "a"."kind" = 'date')
-        group by "a"."key"
-      ),
-      "yy" as (
-        select
-          "y"."key",
-          "y"."kind",
-          array[
-            json_build_object('value', "y"."min_value"::text, 'count', 0),
-            json_build_object('value', "y"."max_value"::text, 'count', 0)
-          ] as "values"
-        from "y"
-        group by "y"."key", "y"."kind", "y"."min_value", "y"."max_value"
-      )
-    select * from "xx"
-    union all
-    select * from "yy"
+  const baseQuery = `
+    select
+      "x"."key",
+      array_agg(json_build_object('value', "x"."value", 'count', "x"."count")) as "values"
+    from (
+      select
+        "a"."key",
+        "a"."value",
+        count(*) as "count"
+      from "attributes" "a"
+      where "a"."collection_id" = $/collection/
+        and "a"."rank" is not null
+        and ("a"."kind" = 'number' or "a"."kind" = 'string')
+      group by "a"."key", "a"."value"
+    ) "x"
+    group by "x"."key"
   `;
 
   return db.manyOrNone(baseQuery, filter).then((result) =>
