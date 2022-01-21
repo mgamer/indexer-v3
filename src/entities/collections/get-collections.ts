@@ -25,6 +25,10 @@ export type GetCollectionsResponse = {
     tokenCount: number;
     onSaleCount: number;
     sampleImages: string[];
+    lastBuy: {
+      value: number;
+      block: number;
+    } | null;
     market: {
       floorSell: {
         hash: string | null;
@@ -61,7 +65,19 @@ export const getCollections = async (
         from "tokens" "t"
         where "t"."collection_id" = "c"."id"
         limit 4
-      ) as "sample_images"
+      ) as "sample_images",
+      (
+        select
+          json_build_object(
+            'value', "ts"."last_buy_value"::text,
+            'block', "ts"."last_buy_block"
+          )
+        from "token_sets" "ts"
+        where "ts"."collection_id" = "c"."id"
+          and "ts"."attribute_key" is null
+          and "ts"."attribute_value" is null
+        limit 1
+      ) as "last_buy"
     from "collections" "c"
     join "tokens" "t"
       on "c"."id" = "t"."collection_id"
@@ -154,6 +170,12 @@ export const getCollections = async (
       set: {
         tokenCount: Number(r.token_count),
         onSaleCount: Number(r.on_sale_count),
+        lastBuy: r.last_buy?.value
+          ? {
+              value: formatEth(r.last_buy.value),
+              block: Number(r.last_buy.block),
+            }
+          : null,
         sampleImages: r.sample_images || [],
         market: {
           floorSell: {

@@ -40,6 +40,10 @@ export const setFormat = Joi.object({
   tokenCount: Joi.number(),
   onSaleCount: Joi.number(),
   sampleImages: Joi.array().items(Joi.string().allow("", null)),
+  lastBuy: Joi.object({
+    value: Joi.number().unsafe(),
+    block: Joi.number(),
+  }).allow(null),
   market: marketFormat,
 });
 
