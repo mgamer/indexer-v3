@@ -15,9 +15,6 @@ export async function up(pgm: MigrationBuilder): Promise<void> {
   pgm.addIndex("attributes", ["collection_id", "key", "value"], {
     where: `"rank" is not null and ("kind" = 'string' or "kind" = 'number')`,
   });
-  pgm.addIndex("attributes", ["collection_id", "key", "value"], {
-    where: `"rank" is not null and ("kind" = 'date' or "kind" = 'range')`,
-  });
 }
 
 export async function down(pgm: MigrationBuilder): Promise<void> {

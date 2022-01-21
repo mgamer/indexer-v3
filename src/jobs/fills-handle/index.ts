@@ -118,11 +118,25 @@ if (config.doBackgroundWork) {
                 value: result.value,
               }
             );
+          } else if (result.side === "buy") {
+            await db.none(
+              `
+                update "token_sets" set
+                  "last_buy_block" = $/block/,
+                  "last_buy_value" = $/value/
+                where "id" = $/tokenSetId/
+              `,
+              {
+                tokenSetId: result.token_set_id,
+                block,
+                value: result.value,
+              }
+            );
           }
 
           logger.info(
             JOB_NAME,
-            `Updated sale data for token set ${result.token_set_id}`
+            `Updated last ${result.side} given token set ${result.token_set_id}`
           );
         }
       } catch (error) {
