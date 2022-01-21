@@ -35,10 +35,8 @@ export const byHashQueue = new Queue(BY_HASH_JOB_NAME, {
       type: "exponential",
       delay: 10000,
     },
-    // We should make sure not to perform any expensive work more
-    // than once. As such, we keep the last performed jobs in the
-    // queue and give jobs a deterministic id so that it will not
-    // get re-executed if it already did recently.
+    // TODO: Check if these are really needed given that
+    // we have a cron job to clear the jobs periodically
     removeOnComplete: 100000,
     removeOnFail: 100000,
   },
@@ -60,6 +58,10 @@ export const addToOrdersUpdateByHashQueue = async (hashInfos: HashInfo[]) => {
       name: hashInfo.hash,
       data: hashInfo,
       opts: {
+        // We should make sure not to perform any expensive work more
+        // than once. As such, we keep the last performed jobs in the
+        // queue and give jobs a deterministic id so that it will not
+        // get re-executed if it already did recently.
         jobId: hashInfo.context + "-" + hashInfo.hash,
       },
     }))
@@ -68,7 +70,6 @@ export const addToOrdersUpdateByHashQueue = async (hashInfos: HashInfo[]) => {
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
-  // TODO: Check if cleaning the queue is indeed required
   cron.schedule("*/10 * * * *", async () => {
     const lockAcquired = await acquireLock(
       `${BY_HASH_JOB_NAME}_queue_clean_lock`,
@@ -150,8 +151,8 @@ if (config.doBackgroundWork) {
 
           // Recompute `top_buy` and `floor_sell` for single tokens
           const column = data.side === "sell" ? "floor_sell" : "top_buy";
-          // TODO: Split updates in multiple batches to avoid blocking
-          // other concurrent queries
+          // TODO: Research if splitting the updates in multiple batches
+          // is needed (eg. to avoid blocking other concurrent queries)
           await db.none(
             `
               with "z" as (
@@ -177,6 +178,17 @@ if (config.doBackgroundWork) {
                   from "orders" "o"
                   join "token_sets_tokens" "tst"
                     on "o"."token_set_id" = "tst"."token_set_id"
+                  ${
+                    side === "sell"
+                      ? ""
+                      : `
+                          join "ownerships" "w"
+                            on "w"."contract" = "x"."contract"
+                            and "w"."token_id" = "x"."token_id"
+                            and "w"."amount" > 0
+                            and "w"."maker" != "o"."maker"
+                        `
+                  }
                   where "tst"."contract" = "x"."contract"
                     and "tst"."token_id" = "x"."token_id"
                     and "o"."side" = '${side}'
