@@ -20,6 +20,10 @@ export type GetCollectionAttributesResponse = {
     value: number;
     block: number;
   }[];
+  lastBuys: {
+    value: number;
+    block: number;
+  }[];
   floorSellValues: number[];
   topBuy: {
     hash: string | null;
@@ -37,7 +41,6 @@ export const getCollectionAttributes = async (
       "a"."collection_id",
       "a"."key",
       "a"."value",
-      min("a"."rank") as "rank",
       count(distinct("t"."token_id")) as "token_count",
       count(distinct("t"."token_id")) filter (where "t"."floor_sell_value" is not null) as "on_sale_count",
       min("t"."floor_sell_value") as "floor_sell_value",
@@ -51,7 +54,13 @@ export const getCollectionAttributes = async (
           'value', "t"."last_sell_value"::text,
           'block', "t"."last_sell_block"
         ) order by "t"."last_sell_block" desc
-      ) filter (where "t"."last_sell_value" is not null))::json[])[1:11] as "last_sells"
+      ) filter (where "t"."last_sell_value" is not null))::json[])[1:11] as "last_sells",
+      ((array_agg(
+        json_build_object(
+          'value', "ts"."last_buy_value"::text,
+          'block', "ts"."last_buy_block"
+        )
+      ) filter (where "ts"."last_buy_value" is not null))::json[])[1:11] as "last_buys"
     from "attributes" "a"
     join "tokens" "t"
       on "a"."contract" = "t"."contract"
@@ -143,6 +152,10 @@ export const getCollectionAttributes = async (
       onSaleCount: Number(r.on_sale_count),
       sampleImages: r.sample_images || [],
       lastSells: (r.last_sells || []).map(({ value, block }: any) => ({
+        value: formatEth(value),
+        block: Number(block),
+      })),
+      lastBuys: (r.last_buys || []).map(({ value, block }: any) => ({
         value: formatEth(value),
         block: Number(block),
       })),

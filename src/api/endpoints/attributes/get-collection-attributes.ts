@@ -40,6 +40,12 @@ export const getCollectionAttributesOptions: RouteOptions = {
               block: Joi.number(),
             })
           ),
+          lastBuys: Joi.array().items(
+            Joi.object({
+              value: Joi.number().unsafe(),
+              block: Joi.number(),
+            })
+          ),
           floorSellValues: Joi.array().items(Joi.number().unsafe()),
           topBuy: Joi.object({
             hash: Joi.string().allow(null),
