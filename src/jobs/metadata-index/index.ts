@@ -18,7 +18,7 @@ const JOB_NAME = "metadata_index";
 export const queue = new Queue(JOB_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
-    attempts: 5,
+    attempts: 8,
     backoff: {
       type: "exponential",
       delay: 60000,
