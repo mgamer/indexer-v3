@@ -29,6 +29,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/disable/orders",
+    options: adminEndpoints.postDisableOrdersOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/index/metadata",
     options: adminEndpoints.postIndexMetadataOptions,
   });
