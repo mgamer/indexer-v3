@@ -145,6 +145,7 @@ if (config.doBackgroundWork) {
               ({ token_id, name, description, image }) => ({
                 contract,
                 token_id,
+                collection_id: collection.id,
                 name,
                 description,
                 image,
@@ -157,12 +158,14 @@ if (config.doBackgroundWork) {
               insert into "tokens" (
                 "contract",
                 "token_id",
+                "collection_id",
                 "name",
                 "description",
                 "image"
               ) values ${values}
               on conflict ("contract", "token_id") do
               update set
+                "collection_id" = excluded."collection_id",
                 "name" = excluded."name",
                 "description" = excluded."description",
                 "image" = excluded."image"
@@ -173,7 +176,15 @@ if (config.doBackgroundWork) {
         // Save tokens attributes
         {
           const columns = new pgp.helpers.ColumnSet(
-            ["contract", "token_id", "key", "value", "kind", "rank"],
+            [
+              "collection_id",
+              "contract",
+              "token_id",
+              "key",
+              "value",
+              "kind",
+              "rank",
+            ],
             {
               table: "attributes",
             }
@@ -182,6 +193,7 @@ if (config.doBackgroundWork) {
             (data as Metadata).tokens
               .map(({ token_id, attributes }) =>
                 attributes.map(({ key, value, kind, rank }) => ({
+                  collection_id: collection.id,
                   contract,
                   token_id,
                   key,
@@ -198,6 +210,7 @@ if (config.doBackgroundWork) {
           queries.push({
             query: `
               insert into "attributes" (
+                "collection_id",
                 "contract",
                 "token_id",
                 "key",
