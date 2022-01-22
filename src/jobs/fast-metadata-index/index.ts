@@ -1,9 +1,10 @@
 import axios from "axios";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
+import cron from "node-cron";
 
 import { db, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
+import { acquireLock, redis } from "@/common/redis";
 import { config } from "@/config/index";
 
 const JOB_NAME = "fast_metadata_index";
@@ -16,8 +17,6 @@ export const queue = new Queue(JOB_NAME, {
       type: "exponential",
       delay: 5000,
     },
-    removeOnComplete: true,
-    removeOnFail: true,
   },
 });
 new QueueScheduler(JOB_NAME, { connection: redis.duplicate() });
@@ -25,6 +24,22 @@ new QueueScheduler(JOB_NAME, { connection: redis.duplicate() });
 export const addToFastMetadataIndexQueue = async (contract: string) => {
   await queue.add(contract, { contract });
 };
+
+// BACKGROUND WORKER ONLY
+if (config.doBackgroundWork) {
+  // TODO: Check if cleaning the queue is indeed required
+  cron.schedule("*/10 * * * *", async () => {
+    const lockAcquired = await acquireLock(
+      `${JOB_NAME}_queue_clean_lock`,
+      10 * 60 - 5
+    );
+    if (lockAcquired) {
+      // Clean up jobs older than 10 minutes
+      await queue.clean(10 * 60 * 1000, 100000, "completed");
+      await queue.clean(10 * 60 * 1000, 100000, "failed");
+    }
+  });
+}
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
