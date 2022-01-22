@@ -135,7 +135,14 @@ if (config.doBackgroundWork) {
         // Save tokens metadata
         {
           const columns = new pgp.helpers.ColumnSet(
-            ["contract", "token_id", "name", "description", "image"],
+            [
+              "collection_id",
+              "contract",
+              "token_id",
+              "name",
+              "description",
+              "image",
+            ],
             {
               table: "tokens",
             }
