@@ -194,7 +194,7 @@ export const postContractsOptions: RouteOptions = {
 
         // Trigger fast metadata indexing
         if (config.chainId === 1) {
-          for (const { address } of contracts) {
+          for (const { address } of validContracts) {
             await addToFastMetadataIndexQueue(address);
           }
         }

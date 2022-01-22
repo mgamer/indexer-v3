@@ -59,6 +59,8 @@ if (config.doBackgroundWork) {
       const { contract } = job.data;
 
       try {
+        logger.info(JOB_NAME, `Handling ${contract}`);
+
         const url = `${config.metadataApiBaseUrl}/${contract}?all=true`;
         const { data } = await axios.get(url, { timeout: 10 * 60000 });
 
