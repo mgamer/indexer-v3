@@ -136,9 +136,9 @@ if (config.doBackgroundWork) {
         {
           const columns = new pgp.helpers.ColumnSet(
             [
-              "collection_id",
               "contract",
               "token_id",
+              "collection_id",
               "name",
               "description",
               "image",
