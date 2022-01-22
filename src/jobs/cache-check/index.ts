@@ -3,6 +3,7 @@ import cron from "node-cron";
 import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { acquireLock } from "@/common/redis";
+import { config } from "@/config/index";
 
 // Periodically check cached values against the underlying
 // data backing those caches in order to ensure there are
@@ -12,7 +13,7 @@ import { acquireLock } from "@/common/redis";
 // - token sets cached `top_buy`
 
 // BACKGROUND WORKER ONLY
-if (true) {
+if (config.doBackgroundWork) {
   cron.schedule("*/1 * * * *", async () => {
     const lockAcquired = await acquireLock("cache_check_lock", 60 - 5);
     if (lockAcquired) {

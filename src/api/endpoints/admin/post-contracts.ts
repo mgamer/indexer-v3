@@ -9,6 +9,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import { addToEventsSyncBackfillQueue } from "@/jobs/events-sync";
+import { addToFastMetadataIndexQueue } from "@/jobs/fast-metadata-index";
 
 export const postContractsOptions: RouteOptions = {
   description: "Add new contracts for tracking.",
@@ -188,6 +189,13 @@ export const postContractsOptions: RouteOptions = {
                 `Failed to sync orders for contract ${address}`
               );
             }
+          }
+        }
+
+        // Trigger fast metadata indexing
+        if (config.chainId === 1) {
+          for (const { address } of contracts) {
+            await addToFastMetadataIndexQueue(address);
           }
         }
       }
