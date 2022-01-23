@@ -134,100 +134,104 @@ if (config.doBackgroundWork) {
 
         // Save tokens metadata
         {
-          const columns = new pgp.helpers.ColumnSet(
-            [
-              "contract",
-              "token_id",
-              "collection_id",
-              "name",
-              "description",
-              "image",
-            ],
-            {
-              table: "tokens",
-            }
+          const tokenValues = (data as Metadata).tokens.map(
+            ({ token_id, name, description, image }) => ({
+              contract,
+              token_id,
+              collection_id: collection.id,
+              name,
+              description,
+              image,
+              metadata_indexed: true,
+            })
           );
-          const values = pgp.helpers.values(
-            (data as Metadata).tokens.map(
-              ({ token_id, name, description, image }) => ({
-                contract,
-                token_id,
-                collection_id: collection.id,
-                name,
-                description,
-                image,
-              })
-            ),
-            columns
-          );
-          queries.push({
-            query: `
-              insert into "tokens" (
+          if (tokenValues.length) {
+            const columns = new pgp.helpers.ColumnSet(
+              [
                 "contract",
                 "token_id",
                 "collection_id",
                 "name",
                 "description",
-                "image"
-              ) values ${values}
-              on conflict ("contract", "token_id") do
-              update set
-                "collection_id" = excluded."collection_id",
-                "name" = excluded."name",
-                "description" = excluded."description",
-                "image" = excluded."image"
-            `,
-          });
+                "image",
+                "metadata_indexed",
+              ],
+              {
+                table: "tokens",
+              }
+            );
+            const values = pgp.helpers.values(tokenValues, columns);
+            queries.push({
+              query: `
+                insert into "tokens" (
+                  "contract",
+                  "token_id",
+                  "collection_id",
+                  "name",
+                  "description",
+                  "image",
+                  "metadata_indexed"
+                ) values ${values}
+                on conflict ("contract", "token_id") do
+                update set
+                  "collection_id" = excluded."collection_id",
+                  "name" = excluded."name",
+                  "description" = excluded."description",
+                  "image" = excluded."image",
+                  "metadata_indexed" = excluded."metadata_indexed"
+              `,
+            });
+          }
         }
 
         // Save tokens attributes
         {
-          const columns = new pgp.helpers.ColumnSet(
-            [
-              "collection_id",
-              "contract",
-              "token_id",
-              "key",
-              "value",
-              "kind",
-              "rank",
-            ],
-            {
-              table: "attributes",
-            }
-          );
-          const values = pgp.helpers.values(
-            (data as Metadata).tokens
-              .map(({ token_id, attributes }) =>
-                attributes.map(({ key, value, kind, rank }) => ({
-                  collection_id: collection.id,
-                  contract,
-                  token_id,
-                  key,
-                  value,
-                  // TODO: Defaulting to `string` should be done at the database level
-                  kind: kind || "string",
-                  // TODO: Defaulting to `1` should be done at the database level
-                  rank: rank ? (rank === -1 ? null : rank) : 1,
-                }))
-              )
-              .flat(),
-            columns
-          );
-          queries.push({
-            query: `
-              insert into "attributes" (
+          const attributeValues = (data as Metadata).tokens
+            .map(({ token_id, attributes }) =>
+              attributes.map(({ key, value, kind, rank }) => ({
+                collection_id: collection.id,
+                contract,
+                token_id,
+                key,
+                value,
+                // TODO: Defaulting to `string` should be done at the database level
+                kind: kind || "string",
+                // TODO: Defaulting to `1` should be done at the database level
+                rank: rank ? (rank === -1 ? null : rank) : 1,
+              }))
+            )
+            .flat();
+          if (attributeValues.length) {
+            const columns = new pgp.helpers.ColumnSet(
+              [
                 "collection_id",
                 "contract",
                 "token_id",
                 "key",
                 "value",
                 "kind",
-                "rank"
-              ) values ${values}
-              on conflict do nothing
-            `,
-          });
+                "rank",
+              ],
+              {
+                table: "attributes",
+              }
+            );
+            const values = pgp.helpers.values(attributeValues, columns);
+            queries.push({
+              query: `
+                insert into "attributes" (
+                  "collection_id",
+                  "contract",
+                  "token_id",
+                  "key",
+                  "value",
+                  "kind",
+                  "rank"
+                ) values ${values}
+                on conflict do nothing
+              `,
+            });
+          }
         }
 
         if (queries.length) {
