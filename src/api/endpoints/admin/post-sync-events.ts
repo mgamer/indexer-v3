@@ -25,8 +25,7 @@ export const postSyncEventsOptions: RouteOptions = {
             .lowercase()
             .pattern(/^0x[a-f0-9]{40}$/)
         )
-        .min(1)
-        .required(),
+        .min(1),
       fromBlock: Joi.number().integer().positive().required(),
       toBlock: Joi.number().integer().positive().required(),
       blocksPerBatch: Joi.number().integer().positive(),
@@ -41,7 +40,7 @@ export const postSyncEventsOptions: RouteOptions = {
 
     try {
       const contractKind = payload.contractKind;
-      const contracts = payload.contracts;
+      let contracts = payload.contracts;
       const fromBlock = payload.fromBlock;
       const toBlock = payload.toBlock;
       const blocksPerBatch = payload.blocksPerBatch;
@@ -59,13 +58,18 @@ export const postSyncEventsOptions: RouteOptions = {
         )
         .then((result) => result.map(({ address }) => address));
 
-      // Make sure the contracts requested to sync match the contract type
-      for (const contract of contracts) {
-        if (!matchingContracts.includes(contract)) {
-          throw Boom.badData(
-            `Unknown contract ${contract} of type ${contractKind}`
-          );
+      if (contracts) {
+        // Make sure the contracts requested to sync match the given kind
+        for (const contract of contracts) {
+          if (!matchingContracts.includes(contract)) {
+            throw Boom.badData(
+              `Unknown contract ${contract} of type ${contractKind}`
+            );
+          }
         }
+      } else {
+        // Sync everything of the given kind
+        contracts = matchingContracts;
       }
 
       await addToEventsSyncBackfillQueue(
