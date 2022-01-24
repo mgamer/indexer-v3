@@ -29,6 +29,7 @@ export const getAttributes = async (
       select
         "a"."key",
         "a"."value",
+        min("a"."rank") as "rank",
         count(*) as "count"
       from "attributes" "a"
       where "a"."collection_id" = $/collection/
@@ -36,7 +37,7 @@ export const getAttributes = async (
         and ("a"."kind" = 'number' or "a"."kind" = 'string')
       group by "a"."key", "a"."value"
     ) "x"
-    group by "x"."key"
+    group by "x"."rank", "x"."key"
   `;
 
   return db.manyOrNone(baseQuery, filter).then((result) =>
