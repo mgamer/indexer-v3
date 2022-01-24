@@ -46,14 +46,14 @@ export const getOrdersOptions: RouteOptions = {
             kind: Joi.string(),
           }),
           metadata: Joi.object({
-            collectionName: Joi.string().allow("", null),
-            tokenName: Joi.string().allow("", null),
+            collectionName: Joi.string().allow(null, ""),
+            tokenName: Joi.string().allow(null, ""),
           }).allow(null),
           kind: Joi.string(),
           side: Joi.string(),
           maker: Joi.string(),
-          price: Joi.number(),
-          value: Joi.number(),
+          price: Joi.number().unsafe(),
+          value: Joi.number().unsafe(),
           validFrom: Joi.number(),
           validUntil: Joi.number(),
           sourceInfo: Joi.object({

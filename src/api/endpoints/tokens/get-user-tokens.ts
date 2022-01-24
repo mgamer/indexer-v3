@@ -34,8 +34,8 @@ export const getUserTokensOptions: RouteOptions = {
         Joi.object({
           token: Joi.object({
             contract: Joi.string(),
-            name: Joi.string().allow("", null),
-            image: Joi.string().allow(""),
+            name: Joi.string().allow(null, ""),
+            image: Joi.string().allow(null, ""),
             tokenId: Joi.string(),
             collection: Joi.object({
               id: Joi.string(),

@@ -4,8 +4,8 @@ import Joi from "joi";
 
 export const tokenFormat = Joi.object({
   contract: Joi.string(),
-  name: Joi.string().allow("", null),
-  image: Joi.string().allow(""),
+  name: Joi.string().allow(null, ""),
+  image: Joi.string().allow(null, ""),
   tokenId: Joi.string(),
   collection: Joi.object({
     id: Joi.string(),
@@ -18,28 +18,28 @@ export const marketFormat = Joi.object({
     hash: Joi.string().allow(null),
     value: Joi.number().unsafe().allow(null),
     maker: Joi.string().allow(null),
-    validFrom: Joi.number().allow(null),
-    validUntil: Joi.number().allow(null),
+    validFrom: Joi.number().unsafe().allow(null),
+    validUntil: Joi.number().unsafe().allow(null),
     token: Joi.object({
       contract: Joi.string().allow(null),
       tokenId: Joi.string().allow(null),
       name: Joi.string().allow(null),
-      image: Joi.string().allow(null),
+      image: Joi.string().allow(null, ""),
     }).allow(null),
   },
   topBuy: Joi.object({
     hash: Joi.string().allow(null),
     value: Joi.number().unsafe().allow(null),
     maker: Joi.string().allow(null),
-    validFrom: Joi.number().allow(null),
-    validUntil: Joi.number().allow(null),
+    validFrom: Joi.number().unsafe().allow(null),
+    validUntil: Joi.number().unsafe().allow(null),
   }),
 });
 
 export const setFormat = Joi.object({
   tokenCount: Joi.number(),
   onSaleCount: Joi.number(),
-  sampleImages: Joi.array().items(Joi.string().allow("", null)),
+  sampleImages: Joi.array().items(Joi.string().allow(null, "")),
   lastBuy: Joi.object({
     value: Joi.number().unsafe(),
     block: Joi.number(),

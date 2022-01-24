@@ -19,7 +19,6 @@ export const getAttributes = async (
   // TODO: Once we refactor the attributes, there are a few things
   // we need to properly handle in here:
   // - for `date` and `range` kinds return the min and max values
-  // - return the attributes ordered by rank
 
   const baseQuery = `
     select

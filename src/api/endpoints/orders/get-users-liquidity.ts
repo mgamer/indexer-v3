@@ -18,10 +18,10 @@ export const getUsersLiquidityOptions: RouteOptions = {
     schema: Joi.object({
       liquidity: Joi.array().items(
         Joi.object({
-          user: Joi.string().required(),
-          tokenCount: Joi.number().required(),
-          liquidity: Joi.number().unsafe().required(),
-          wethBalance: Joi.number().unsafe().required(),
+          user: Joi.string(),
+          tokenCount: Joi.number(),
+          liquidity: Joi.number().unsafe(),
+          wethBalance: Joi.number().unsafe(),
         })
       ),
     }).label("getUsersLiquidityResponse"),

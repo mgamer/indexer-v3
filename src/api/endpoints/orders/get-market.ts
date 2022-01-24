@@ -27,14 +27,14 @@ export const getMarketOptions: RouteOptions = {
       market: Joi.object({
         buys: Joi.array().items(
           Joi.object({
-            value: Joi.number().required(),
-            quantity: Joi.number().required(),
+            value: Joi.number().unsafe(),
+            quantity: Joi.number(),
           })
         ),
         sells: Joi.array().items(
           Joi.object({
-            value: Joi.number().required(),
-            quantity: Joi.number().required(),
+            value: Joi.number().unsafe(),
+            quantity: Joi.number(),
           })
         ),
       }),

@@ -30,8 +30,8 @@ export const getCollectionsOptions: RouteOptions = {
           collection: Joi.object({
             id: Joi.string(),
             name: Joi.string(),
-            description: Joi.string(),
-            image: Joi.string().allow("", null),
+            description: Joi.string().allow(null, ""),
+            image: Joi.string().allow(null, ""),
           }),
           royalties: Joi.object({
             recipient: Joi.string().allow(null),

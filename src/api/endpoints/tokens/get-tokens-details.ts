@@ -39,9 +39,9 @@ export const getTokensDetailsOptions: RouteOptions = {
           token: Joi.object({
             contract: Joi.string(),
             kind: Joi.string(),
-            name: Joi.string().allow("", null),
-            description: Joi.string().allow("", null),
-            image: Joi.string().allow(""),
+            name: Joi.string().allow(null, ""),
+            description: Joi.string().allow(null, ""),
+            image: Joi.string().allow(null, ""),
             tokenId: Joi.string(),
             collection: Joi.object({
               id: Joi.string(),

@@ -18,14 +18,14 @@ export const getCollectionsLiquidityOptions: RouteOptions = {
       liquidity: Joi.array().items(
         Joi.object({
           collection: Joi.object({
-            id: Joi.string().required(),
-            name: Joi.string().required(),
-            image: Joi.string().required(),
+            id: Joi.string(),
+            name: Joi.string(),
+            image: Joi.string().allow(null, ""),
           }).required(),
-          tokenCount: Joi.number().required(),
-          liquidity: Joi.number().unsafe().required(),
-          uniqueTopBuyers: Joi.number().required(),
-          topLiquidityProvider: Joi.string(),
+          tokenCount: Joi.number(),
+          liquidity: Joi.number().unsafe(),
+          uniqueTopBuyers: Joi.number(),
+          topLiquidityProvider: Joi.string().allow(null),
         })
       ),
     }).label("getCollectionsLiquidityResponse"),

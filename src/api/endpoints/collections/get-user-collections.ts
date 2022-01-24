@@ -29,7 +29,7 @@ export const getUserCollectionsOptions: RouteOptions = {
           collection: Joi.object({
             id: Joi.string(),
             name: Joi.string(),
-            image: Joi.string(),
+            image: Joi.string().allow(null, ""),
             floorSellValue: Joi.number().unsafe().allow(null),
             topBuyValue: Joi.number().unsafe().allow(null),
           }),
