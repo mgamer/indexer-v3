@@ -171,17 +171,7 @@ if (config.doBackgroundWork) {
                     $/tokenSetId/,
                     $/filterableAttributeKeys:json/,
                     $/sortableAttributeKeys:json/
-                  ) on conflict ("id") do
-                  update set
-                    "name" = $/name/,
-                    "description" = $/description/,
-                    "image" = $/image/,
-                    "royalty_bps" = $/royaltyBps/,
-                    "royalty_recipient" = $/royaltyRecipient/,
-                    "community" = $/community/,
-                    "token_set_id" = $/tokenSetId/,
-                    "filterable_attribute_keys" = $/filterableAttributeKeys:json/,
-                    "sortable_attribute_keys" = $/sortableAttributeKeys:json/
+                  ) on conflict do nothing
                 `,
                 values: {
                   id: info.collection.id,

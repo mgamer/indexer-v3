@@ -110,15 +110,7 @@ if (config.doBackgroundWork) {
               $/royaltyRecipient/,
               $/community/,
               $/tokenSetId/
-            ) on conflict ("id") do
-            update set
-              "name" = $/name/,
-              "description" = $/description/,
-              "image" = $/image/,
-              "royalty_bps" = $/royaltyBps/,
-              "royalty_recipient" = $/royaltyRecipient/,
-              "community" = $/community/,
-              "token_set_id" = $/tokenSetId/
+            ) on conflict do nothing
           `,
           values: {
             id: collection.id,
