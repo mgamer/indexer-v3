@@ -16,6 +16,7 @@ export type GetCollectionsResponse = {
     name: string;
     description: string;
     image: string;
+    tokenSetId: string | null;
   };
   royalties: {
     recipient: string | null;
@@ -57,6 +58,7 @@ export const getCollections = async (
       "c"."image",
       "c"."royalty_bps",
       "c"."royalty_recipient",
+      "c"."token_set_id",
       count("t"."token_id") as "token_count",
       count("t"."token_id") filter (where "t"."floor_sell_value" is not null) as "on_sale_count",
       array(
@@ -162,6 +164,7 @@ export const getCollections = async (
         name: r.name,
         description: r.description,
         image: r.image,
+        tokenSetId: r.token_set_id,
       },
       royalties: {
         recipient: r.royalty_recipient,

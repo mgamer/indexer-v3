@@ -32,6 +32,7 @@ export const getCollectionsOptions: RouteOptions = {
             name: Joi.string(),
             description: Joi.string().allow(null, ""),
             image: Joi.string().allow(null, ""),
+            tokenSetId: Joi.string().allow(null),
           }),
           royalties: Joi.object({
             recipient: Joi.string().allow(null),
