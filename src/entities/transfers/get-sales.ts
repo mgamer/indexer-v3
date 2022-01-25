@@ -1,3 +1,5 @@
+import { HashZero } from "@ethersproject/constants";
+
 import { formatEth } from "@/common/bignumber";
 import { db } from "@/common/db";
 
@@ -8,6 +10,7 @@ export type GetSalesFilter = {
   attributes?: { [key: string]: string };
   user?: string;
   direction?: "from" | "to";
+  side?: "buy" | "sell";
   offset: number;
   limit: number;
 };
@@ -31,6 +34,7 @@ export type GetSalesResponse = {
   timestamp: number;
   price: number | null;
   tokenSetId: string;
+  schema: any;
 }[];
 
 export const getSales = async (
@@ -51,7 +55,8 @@ export const getSales = async (
       "nte"."block",
       coalesce("b"."timestamp", extract(epoch from now())::int) as "timestamp",
       "fe"."price",
-      "o"."token_set_id" as "token_set_id"
+      "o"."token_set_id" as "token_set_id",
+      "ts"."label" as "schema"
     from "nft_transfer_events" "nte"
     join "fill_events" "fe"
       on "nte"."tx_hash" = "fe"."tx_hash"
@@ -63,6 +68,8 @@ export const getSales = async (
       on "t"."collection_id" = "c"."id"
     join "orders" "o"
       on ("fe"."buy_order_hash" = "o"."hash" or "fe"."sell_order_hash" = "o"."hash")
+    join "token_sets" "ts"
+      on "o"."token_set_id" = "ts"."id"
     left join "blocks" "b"
       on "fe"."block" = "b"."block"
   `;
@@ -102,6 +109,15 @@ export const getSales = async (
       conditions.push(`"nte"."from" = $/user/ or "nte"."to" = $/user/`);
     }
   }
+  if (filter.side === "buy") {
+    conditions.push(
+      `"fe"."sell_order_hash" = '${HashZero}' and "fe"."buy_order_hash" != '${HashZero}'`
+    );
+  } else if (filter.side === "sell") {
+    conditions.push(
+      `"fe"."sell_order_hash" != '${HashZero}' and "fe"."buy_order_hash" = '${HashZero}'`
+    );
+  }
   if (conditions.length) {
     baseQuery += " where " + conditions.map((c) => `(${c})`).join(" and ");
   }
@@ -133,6 +149,7 @@ export const getSales = async (
       timestamp: r.timestamp,
       price: r.price ? formatEth(r.price) : null,
       tokenSetId: r.token_set_id,
+      schema: r.schema,
     }))
   );
 };
