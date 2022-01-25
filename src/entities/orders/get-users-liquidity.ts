@@ -6,15 +6,18 @@ import { config } from "@/config/index";
 
 export type GetUsersLiquidityFilter = {
   collection?: string;
+  user?: string;
   offset: number;
   limit: number;
 };
 
 export type GetUsersLiquidityResponse = {
   user: string;
+  rank: number;
   tokenCount: number;
   liquidity: number;
-  wethBalance: number;
+  maxTopBuyValue: number;
+  wethBalance: number | null;
 }[];
 
 export const getUsersLiquidity = async (
@@ -24,6 +27,8 @@ export const getUsersLiquidity = async (
     select
       "t"."top_buy_maker" as "user",
       sum("t"."top_buy_value") as "liquidity",
+      max("t"."top_buy_value") as "max_top_buy_value",
+      rank() over (order by sum("t"."top_buy_value") desc nulls last),
       count(*) as "token_count"
     from "tokens" "t"
   `;
@@ -40,11 +45,13 @@ export const getUsersLiquidity = async (
   baseQuery += ` group by "t"."top_buy_maker"`;
 
   // Sorting
-  baseQuery += ` order by sum("t"."top_buy_value") desc nulls last`;
+  baseQuery += ` order by "rank"`;
 
-  // Pagination
-  baseQuery += ` offset $/offset/`;
-  baseQuery += ` limit $/limit/`;
+  if (!filter.user) {
+    // Pagination
+    baseQuery += ` offset $/offset/`;
+    baseQuery += ` limit $/limit/`;
+  }
 
   baseQuery = `
     with "x" as (${baseQuery})
@@ -63,12 +70,18 @@ export const getUsersLiquidity = async (
   `;
   (filter as any).weth = Sdk.Common.Addresses.Weth[config.chainId];
 
+  if (filter.user) {
+    baseQuery += ` where "x"."user" = $/user/`;
+  }
+
   return db.manyOrNone(baseQuery, filter).then((result) =>
     result.map((r) => ({
       user: r.user,
+      rank: Number(r.rank),
       liquidity: formatEth(r.liquidity),
+      maxTopBuyValue: formatEth(r.max_top_buy_value),
       tokenCount: Number(r.token_count),
-      wethBalance: formatEth(r.weth_balance),
+      wethBalance: r.weth_balance ? formatEth(r.weth_balance) : null,
     }))
   );
 };

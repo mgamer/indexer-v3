@@ -10,6 +10,9 @@ export const getUsersLiquidityOptions: RouteOptions = {
   validate: {
     query: Joi.object({
       collection: Joi.string(),
+      user: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}$/),
       offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     }),
@@ -19,8 +22,10 @@ export const getUsersLiquidityOptions: RouteOptions = {
       liquidity: Joi.array().items(
         Joi.object({
           user: Joi.string(),
+          rank: Joi.number(),
           tokenCount: Joi.number(),
           liquidity: Joi.number().unsafe(),
+          maxTopBuyValue: Joi.number().unsafe(),
           wethBalance: Joi.number().unsafe(),
         })
       ),
