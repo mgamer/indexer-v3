@@ -1,4 +1,4 @@
-import { Request, RouteOptions } from "@hapi/hapi";
+import { Request, ResponseToolkit, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
@@ -64,7 +64,7 @@ export const getCollectionAttributesOptions: RouteOptions = {
       throw error;
     },
   },
-  handler: async (request: Request) => {
+  handler: async (request: Request, h: ResponseToolkit) => {
     const params = request.params as any;
     const query = request.query as any;
 
@@ -74,7 +74,9 @@ export const getCollectionAttributesOptions: RouteOptions = {
         ...query,
       } as queries.GetCollectionAttributesFilter);
 
-      return { attributes };
+      return h
+        .response({ attributes })
+        .header("Cache-Control", "max-age=1, stale-while-revalidate=10800");
     } catch (error) {
       logger.error(
         "get_collection_attributes_handler",
