@@ -37,6 +37,7 @@ export const getAttributes = async (
       group by "a"."key", "a"."value"
     ) "x"
     group by "x"."rank", "x"."key"
+    order by "x"."rank" desc nulls last, "x"."key"
   `;
 
   return db.manyOrNone(baseQuery, filter).then((result) =>
