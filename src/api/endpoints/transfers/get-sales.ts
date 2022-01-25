@@ -42,8 +42,8 @@ export const getSalesOptions: RouteOptions = {
           block: Joi.number(),
           timestamp: Joi.number(),
           price: Joi.number().unsafe().allow(null),
-          tokenSetId: Joi.string(),
-          schema: Joi.any(),
+          tokenSetId: Joi.string().allow(null),
+          schema: Joi.any().allow(null),
         })
       ),
     }).label("getSalesResponse"),

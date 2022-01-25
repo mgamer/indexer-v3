@@ -33,7 +33,7 @@ export type GetSalesResponse = {
   block: number;
   timestamp: number;
   price: number | null;
-  tokenSetId: string;
+  tokenSetId: string | null;
   schema: any;
 }[];
 
@@ -55,27 +55,36 @@ export const getSales = async (
       "nte"."block",
       coalesce("b"."timestamp", extract(epoch from now())::int) as "timestamp",
       "fe"."price",
-      "o"."token_set_id" as "token_set_id",
-      "ts"."label" as "schema"
+      "x"."token_set_id",
+      "x"."schema"
     from "nft_transfer_events" "nte"
     join "fill_events" "fe"
       on "nte"."tx_hash" = "fe"."tx_hash"
       and "nte"."from" = "fe"."maker"
+      and "nte"."log_index" + 1 = "fe"."log_index"
     join "tokens" "t"
       on "nte"."address" = "t"."contract"
       and "nte"."token_id" = "t"."token_id"
     join "collections" "c"
       on "t"."collection_id" = "c"."id"
-    join "orders" "o"
-      on ("fe"."buy_order_hash" = "o"."hash" or "fe"."sell_order_hash" = "o"."hash")
-    join "token_sets" "ts"
-      on "o"."token_set_id" = "ts"."id"
     left join "blocks" "b"
-      on "fe"."block" = "b"."block"
+      on "nte"."block" = "b"."block"
+    left join lateral (
+      select
+        "o"."hash",
+        "o"."token_set_id",
+        "ts"."label" as "schema"
+      from
+        "orders" "o"
+      join "token_sets" "ts"
+        on "o"."token_set_id" = "ts"."id"
+      where "o"."hash" = "fe"."buy_order_hash" or "o"."hash" = "fe"."sell_order_hash"
+      limit 1
+    ) "x" on true
   `;
 
   // Filters
-  const conditions: string[] = [`"o"."token_set_id" is not null`];
+  const conditions: string[] = [];
   if (filter.contract) {
     conditions.push(`"nte"."address" = $/contract/`);
   }
@@ -148,8 +157,8 @@ export const getSales = async (
       block: r.block,
       timestamp: r.timestamp,
       price: r.price ? formatEth(r.price) : null,
-      tokenSetId: r.token_set_id,
-      schema: r.schema,
+      tokenSetId: r.token_set_id || null,
+      schema: r.schema || null,
     }))
   );
 };
