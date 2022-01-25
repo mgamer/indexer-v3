@@ -8,7 +8,7 @@ import { config } from "@/config/index";
 
 export const postDisableOrdersOptions: RouteOptions = {
   description: "Disable orders",
-  tags: ["api"],
+  tags: ["api", "x-admin"],
   validate: {
     headers: Joi.object({
       "x-admin-api-key": Joi.string().required(),

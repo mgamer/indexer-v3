@@ -8,7 +8,7 @@ import * as queries from "@/entities/collections/get-collection";
 export const getCollectionOptions: RouteOptions = {
   description:
     "Get a single collection. Returns more detailed information, and real-time stats.",
-  tags: ["api"],
+  tags: ["api", "collections"],
   validate: {
     params: Joi.object({
       collection: Joi.string().lowercase().required(),

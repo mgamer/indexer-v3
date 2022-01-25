@@ -8,7 +8,7 @@ import * as queries from "@/entities/collections/get-collections";
 export const getCollectionsOptions: RouteOptions = {
   description:
     "Get a list of collections. Useful for getting all collections in a marketplace. Returns minimal details and stats are refreshed every 5 mins.",
-  tags: ["api"],
+  tags: ["api", "collections"],
   validate: {
     query: Joi.object({
       community: Joi.string().lowercase(),

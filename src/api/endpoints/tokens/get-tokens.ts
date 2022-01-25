@@ -7,7 +7,7 @@ import * as queries from "@/entities/tokens/get-tokens";
 export const getTokensOptions: RouteOptions = {
   description:
     "Get a list of tokens. Useful for showing the best priced tokens in a collection or attribute.",
-  tags: ["api"],
+  tags: ["api", "tokens"],
   validate: {
     query: Joi.object({
       contract: Joi.string()

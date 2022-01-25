@@ -7,7 +7,7 @@ import * as queries from "@/entities/collections/get-collection-top-buys";
 export const getCollectionTopBuysOptions: RouteOptions = {
   description:
     "Get the top buys for a single collection (and optionally an attribute).",
-  tags: ["api"],
+  tags: ["api", "collections"],
   validate: {
     params: Joi.object({
       collection: Joi.string().lowercase().required(),

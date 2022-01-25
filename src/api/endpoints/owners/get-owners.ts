@@ -8,7 +8,7 @@ import * as queries from "@/entities/owners/get-owners";
 export const getOwnersOptions: RouteOptions = {
   description:
     "Get a list of owners and their ownership info. Useful for exploring top owners in a collection or attribute.",
-  tags: ["api"],
+  tags: ["api", "owners"],
   validate: {
     query: Joi.object({
       contract: Joi.string()

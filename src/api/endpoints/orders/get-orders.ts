@@ -8,7 +8,7 @@ import * as queries from "@/entities/orders/get-orders";
 export const getOrdersOptions: RouteOptions = {
   description:
     "Get a list of orders. Useful for showing users their currently active or expired orders.",
-  tags: ["api"],
+  tags: ["api", "orders"],
   validate: {
     query: Joi.object({
       contract: Joi.string()

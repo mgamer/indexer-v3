@@ -6,7 +6,7 @@ import * as queries from "@/entities/tokens/get-tokens-floor";
 
 export const getTokensFloorOptions: RouteOptions = {
   description: "Get a tokens floor",
-  tags: ["api"],
+  tags: ["api", "tokens"],
   validate: {
     query: Joi.object({
       collection: Joi.string().lowercase().required(),

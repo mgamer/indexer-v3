@@ -8,7 +8,7 @@ import * as queries from "@/entities/transfers/get-transfers";
 export const getTransfersOptions: RouteOptions = {
   description:
     "Get historical transfer events. Can filter by collection, attribute or token.",
-  tags: ["api"],
+  tags: ["api", "transfers"],
   validate: {
     query: Joi.object({
       contract: Joi.string()

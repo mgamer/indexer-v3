@@ -11,7 +11,7 @@ export const getAttributesOptions: RouteOptions = {
   },
   description:
     "Get ALL attributes in a collection, and their counts. Useful for displaying filtering options.",
-  tags: ["api"],
+  tags: ["api", "attributes"],
   validate: {
     query: Joi.object({
       collection: Joi.string().lowercase().required(),

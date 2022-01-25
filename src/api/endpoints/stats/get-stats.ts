@@ -8,7 +8,7 @@ import * as queries from "@/entities/stats/get-stats";
 export const getStatsOptions: RouteOptions = {
   description:
     "Get aggregate stats for a particular set (collection, attribute or single token)",
-  tags: ["api"],
+  tags: ["api", "stats"],
   validate: {
     query: Joi.object({
       contract: Joi.string()

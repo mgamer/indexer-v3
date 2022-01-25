@@ -7,7 +7,7 @@ import * as queries from "@/entities/tokens/get-tokens-details";
 
 export const getTokensDetailsOptions: RouteOptions = {
   description: "Get tokens details",
-  tags: ["api"],
+  tags: ["api", "tokens"],
   validate: {
     query: Joi.object({
       contract: Joi.string()

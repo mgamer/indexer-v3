@@ -8,7 +8,7 @@ import * as queries from "@/entities/transfers/get-sales";
 export const getSalesOptions: RouteOptions = {
   description:
     "Get historical sales. Can filter by collection, attribute or token.",
-  tags: ["api"],
+  tags: ["api", "transfers"],
   validate: {
     query: Joi.object({
       contract: Joi.string()

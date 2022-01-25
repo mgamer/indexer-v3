@@ -7,7 +7,7 @@ import * as queries from "@/entities/orders/get-market";
 export const getMarketOptions: RouteOptions = {
   description:
     "Get aggregate liquidity information for a collection, attribute or token. Useful for building a market depth chart.",
-  tags: ["api"],
+  tags: ["api", "orders"],
   validate: {
     query: Joi.object({
       contract: Joi.string()

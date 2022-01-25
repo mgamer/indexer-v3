@@ -7,7 +7,7 @@ import * as queries from "@/entities/attributes/get-collection-attributes";
 export const getCollectionAttributesOptions: RouteOptions = {
   description:
     "Explore the top attribute values, across a whole collection or within a single attribute key",
-  tags: ["api"],
+  tags: ["api", "attributes"],
   validate: {
     params: Joi.object({
       collection: Joi.string().lowercase().required(),

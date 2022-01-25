@@ -7,7 +7,7 @@ import * as queries from "@/entities/tokens/get-user-tokens";
 export const getUserTokensOptions: RouteOptions = {
   description:
     "Get tokens held by a user, along with ownership information such as associated orders and date acquired",
-  tags: ["api"],
+  tags: ["api", "tokens"],
   validate: {
     params: Joi.object({
       user: Joi.string()

@@ -8,7 +8,7 @@ import { addToFastMetadataIndexQueue } from "@/jobs/fast-metadata-index";
 
 export const postIndexMetadataFastOptions: RouteOptions = {
   description: "Trigger fast (re)indexing of metadata.",
-  tags: ["api"],
+  tags: ["api", "x-admin"],
   validate: {
     headers: Joi.object({
       "x-admin-api-key": Joi.string().required(),

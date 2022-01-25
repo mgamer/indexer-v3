@@ -6,7 +6,7 @@ import * as queries from "@/entities/orders/get-collections-liquidity";
 
 export const getCollectionsLiquidityOptions: RouteOptions = {
   description: "Get aggregate collection liquidity.",
-  tags: ["api"],
+  tags: ["api", "orders"],
   validate: {
     query: Joi.object({
       offset: Joi.number().integer().min(0).default(0),

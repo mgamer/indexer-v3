@@ -63,6 +63,7 @@ export const start = async function (): Promise<void> {
     {
       plugin: HapiSwagger,
       options: <HapiSwagger.RegisterOptions>{
+        grouping: "tags",
         schemes: ["https", "http"],
         host: apiHost,
         cors: true,

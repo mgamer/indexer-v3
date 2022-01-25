@@ -7,7 +7,7 @@ import * as queries from "@/entities/orders/get-user-positions";
 export const getUserPositionsOptions: RouteOptions = {
   description:
     "Get aggregate user liquidity, grouped by collection. Useful for showing a summary of liquidity being provided (orders made).",
-  tags: ["api"],
+  tags: ["api", "orders"],
   validate: {
     params: Joi.object({
       user: Joi.string()

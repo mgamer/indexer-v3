@@ -8,7 +8,7 @@ import { config } from "@/config/index";
 
 export const postIndexMetadataOptions: RouteOptions = {
   description: "Trigger (re)indexing of metadata.",
-  tags: ["api"],
+  tags: ["api", "x-admin"],
   validate: {
     headers: Joi.object({
       "x-admin-api-key": Joi.string().required(),

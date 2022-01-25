@@ -10,7 +10,7 @@ import { addToEventsSyncBackfillQueue } from "@/jobs/events-sync";
 
 export const postSyncEventsOptions: RouteOptions = {
   description: "Trigger syncing of on-chain events",
-  tags: ["api"],
+  tags: ["api", "x-admin"],
   validate: {
     headers: Joi.object({
       "x-admin-api-key": Joi.string().required(),

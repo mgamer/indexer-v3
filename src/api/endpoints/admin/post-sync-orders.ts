@@ -8,7 +8,7 @@ import { addToOrdersSyncBackfillQueue } from "@/jobs/orders-sync";
 
 export const postSyncOrdersOptions: RouteOptions = {
   description: "Trigger syncing of on-chain orders",
-  tags: ["api"],
+  tags: ["api", "x-admin"],
   validate: {
     headers: Joi.object({
       "x-admin-api-key": Joi.string().required(),

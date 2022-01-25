@@ -6,7 +6,7 @@ import { logger } from "@/common/logger";
 
 export const postAttributesRefreshOptions: RouteOptions = {
   description: "Trigger attributes refresh",
-  tags: ["api"],
+  tags: ["api", "attributes"],
   validate: {
     query: Joi.object({
       contract: Joi.string()
