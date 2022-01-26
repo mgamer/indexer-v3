@@ -78,8 +78,8 @@ export const getOrdersAll = async (
   // Sorting
   baseQuery += `
     order by
-      "o"."created_at" ${filter.sortDirection} nulls last,
-      "o"."hash" ${filter.sortDirection} nulls last
+      "o"."created_at" ${filter.sortDirection},
+      "o"."hash" ${filter.sortDirection}
     `;
 
   // Pagination
