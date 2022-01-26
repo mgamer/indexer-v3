@@ -1,6 +1,7 @@
 export * from "@/api/endpoints/orders/get-collections-liquidity";
 export * from "@/api/endpoints/orders/get-market";
 export * from "@/api/endpoints/orders/get-orders";
+export * from "@/api/endpoints/orders/get-orders-all";
 export * from "@/api/endpoints/orders/get-orders-build";
 export * from "@/api/endpoints/orders/get-orders-fill";
 export * from "@/api/endpoints/orders/get-user-positions";

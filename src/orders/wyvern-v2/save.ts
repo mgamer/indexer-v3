@@ -591,7 +591,8 @@ export const saveOrders = async (
           "source_info",
           "royalty_info",
           "raw_data",
-          "expiry"
+          "expiry",
+          "created_at"
         ) values (
           $/hash/,
           $/kind/,
@@ -602,11 +603,12 @@ export const saveOrders = async (
           $/maker/,
           $/price/,
           $/value/,
-          tstzrange(to_timestamp($/listingTime/), to_timestamp($/expirationTime/)),
+          tstzrange(date_trunc('seconds', to_timestamp($/listingTime/)), date_trunc('seconds', to_timestamp($/expirationTime/))),
           $/sourceInfo:json/,
           $/royaltyInfo:json/,
           $/rawData/,
-          to_timestamp($/expirationTime/)
+          date_trunc('seconds', to_timestamp($/expirationTime/)),
+          date_trunc('milliseconds', now())
         ) on conflict ("hash") do
         update set
           "side" = $/side/,
@@ -615,11 +617,12 @@ export const saveOrders = async (
           "maker" = $/maker/,
           "price" = $/price/,
           "value" = $/value/,
-          "valid_between" = tstzrange(to_timestamp($/listingTime/), to_timestamp($/expirationTime/)),
+          "valid_between" = tstzrange(date_trunc('seconds', to_timestamp($/listingTime/)), date_trunc('seconds', to_timestamp($/expirationTime/))),
           "source_info" = $/sourceInfo:json/,
           "royalty_info" = $/royaltyInfo:json/,
           "raw_data" = $/rawData/,
-          "expiry" = to_timestamp($/expirationTime/)
+          "expiry" = date_trunc('seconds', to_timestamp($/expirationTime/)),
+          "created_at" = date_trunc('milliseconds', now())
       `,
       values: {
         hash: order.prefixHash(),

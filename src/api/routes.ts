@@ -125,6 +125,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/orders/all",
+    options: ordersEndpoints.getOrdersAllOptions,
+  });
+
+  server.route({
+    method: "GET",
     path: "/orders/build",
     options: ordersEndpoints.getOrdersBuildOptions,
   });
