@@ -30,7 +30,7 @@ export const getCollectionAttributesOptions: RouteOptions = {
       attributes: Joi.array().items(
         Joi.object({
           key: Joi.string(),
-          value: Joi.string(),
+          value: Joi.string().allow(""),
           tokenCount: Joi.number(),
           onSaleCount: Joi.number(),
           sampleImages: Joi.array().items(Joi.string().allow(null, "")),
