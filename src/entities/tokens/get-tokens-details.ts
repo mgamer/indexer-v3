@@ -223,7 +223,7 @@ export const getTokensDetails = async (
     with "x" as (${baseQuery})
     select distinct on ("x"."contract", "x"."token_id", "x"."row_number")
       "x".*,
-      "o"."owner",
+      coalesce("o"."owner", '0x0000000000000000000000000000000000000000'),
       coalesce(
         array_agg(json_build_object('key', "a"."key", 'value', "a"."value"))
           filter (where "a"."key" is not null)
@@ -231,7 +231,7 @@ export const getTokensDetails = async (
         array[]::json[]
       ) as "attributes"
     from "x"
-    join "ownerships" "o"
+    left join "ownerships" "o"
       on "x"."contract" = "o"."contract"
       and "x"."token_id" = "o"."token_id"
       and "o"."amount" > 0
