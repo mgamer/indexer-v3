@@ -14,7 +14,7 @@ export const addPendingOrders = async (
   if (data.length) {
     await redis.rpush(
       PENDING_ORDERS_KEY,
-      data.map(({ order, schemaHash }) =>
+      ...data.map(({ order, schemaHash }) =>
         JSON.stringify({
           kind: "wyvern-v2",
           data: {
@@ -33,7 +33,7 @@ export const addPendingTokenSets = async (
   if (data.length) {
     await redis.rpush(
       PENDING_ORDERS_KEY,
-      data.map((tokenSet) =>
+      ...data.map((tokenSet) =>
         JSON.stringify({
           kind: "token-set",
           data: {
