@@ -225,9 +225,15 @@ export const getTokensDetails = async (
       "x".*,
       coalesce("o"."owner", '0x0000000000000000000000000000000000000000'),
       coalesce(
-        array_agg(json_build_object('key', "a"."key", 'value', "a"."value"))
-          filter (where "a"."key" is not null)
-          over (partition by "x"."contract", "x"."token_id"),
+        (select
+          array_agg(
+            json_build_object('key', "a"."key", 'value', "a"."value")
+            order by "a"."rank" desc nulls last, "a"."key", "a"."value"
+          )
+        from "attributes" "a"
+        where "a"."contract" = "x"."contract"
+          and "a"."token_id" = "x"."token_id"
+        ),
         array[]::json[]
       ) as "attributes"
     from "x"
@@ -235,9 +241,6 @@ export const getTokensDetails = async (
       on "x"."contract" = "o"."contract"
       and "x"."token_id" = "o"."token_id"
       and "o"."amount" > 0
-    left join "attributes" "a"
-      on "x"."contract" = "a"."contract"
-      and "x"."token_id" = "a"."token_id"
     order by "x"."row_number"
   `;
 
