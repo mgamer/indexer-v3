@@ -11,34 +11,38 @@ const PENDING_ORDERS_KEY = "pending_orders";
 export const addPendingOrders = async (
   data: { order: Sdk.WyvernV2.Order; schemaHash?: string }[]
 ) => {
-  await redis.rpush(
-    PENDING_ORDERS_KEY,
-    data.map(({ order, schemaHash }) =>
-      JSON.stringify({
-        kind: "wyvern-v2",
-        data: {
-          ...order.params,
-          schemaHash,
-        },
-      })
-    )
-  );
+  if (data.length) {
+    await redis.rpush(
+      PENDING_ORDERS_KEY,
+      data.map(({ order, schemaHash }) =>
+        JSON.stringify({
+          kind: "wyvern-v2",
+          data: {
+            ...order.params,
+            schemaHash,
+          },
+        })
+      )
+    );
+  }
 };
 
 export const addPendingTokenSets = async (
   data: { id: string; schema: any; contract: string; tokenIds: string[] }[]
 ) => {
-  await redis.rpush(
-    PENDING_ORDERS_KEY,
-    data.map((tokenSet) =>
-      JSON.stringify({
-        kind: "token-set",
-        data: {
-          ...tokenSet,
-        },
-      })
-    )
-  );
+  if (data.length) {
+    await redis.rpush(
+      PENDING_ORDERS_KEY,
+      data.map((tokenSet) =>
+        JSON.stringify({
+          kind: "token-set",
+          data: {
+            ...tokenSet,
+          },
+        })
+      )
+    );
+  }
 };
 
 // Only background worker processes
