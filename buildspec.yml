@@ -20,4 +20,4 @@ phases:
       - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$CODEBUILD_BUILD_NUMBER
 
 artifacts:
-  files: imagedefinitions.json
+  files: imageDetail.json
