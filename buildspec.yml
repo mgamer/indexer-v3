@@ -22,6 +22,7 @@ phases:
       - sed -i "s/aws_region/$AWS_DEFAULT_REGION/g" appspec.yml
       - sed -i "s/environment/$ENVIRONMENT/g" appspec.yml
       - sed -i "s/aws_account_id/$AWS_ACCOUNT_ID/g" appspec.yml
+      - sed -i "s/revision/$CODEBUILD_BUILD_NUMBER/g" appspec.yml
 
 artifacts:
   files:
