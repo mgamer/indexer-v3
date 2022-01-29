@@ -3,7 +3,7 @@ Resources:
   - TargetService:
       Type: AWS::ECS::Service
       Properties:
-        TaskDefinition: "arn:aws:ecs:aws_region:aws_account_id:task-definition/indexer-environment-api:revision"
+        TaskDefinition: "task_definition_arn"
         LoadBalancerInfo:
           ContainerName: "indexer-environment-api"
           ContainerPort: 3000

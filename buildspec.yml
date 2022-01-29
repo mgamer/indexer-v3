@@ -19,10 +19,8 @@ phases:
       - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
       - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$CODEBUILD_BUILD_NUMBER
       - printf '{"ImageURI":"image_URI"}' > imageDetail.json
-      - sed -i "s/aws_region/$AWS_DEFAULT_REGION/g" appspec.yaml
+      - sed -i "s/task_definition_arn/$TASK_DEFINITION_ARN/g" appspec.yaml
       - sed -i "s/environment/$ENVIRONMENT/g" appspec.yaml
-      - sed -i "s/aws_account_id/$AWS_ACCOUNT_ID/g" appspec.yaml
-      - sed -i "s/revision/$CODEBUILD_BUILD_NUMBER/g" appspec.yaml
 
 artifacts:
   files:
