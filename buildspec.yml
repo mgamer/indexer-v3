@@ -21,7 +21,7 @@ phases:
       - printf "{\"ImageURI\":\"$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG\"}" > imageDetail.json
       - sed -i "s/environment/$ENVIRONMENT/g" appspec.yaml
       - sed -i "s taskdefinition $TASK_DEFINITION_ARN g" appspec.yaml
-      - aws ecs describe-task-definition --task-definition $TASK_DEFINITION_ARN > taskdef.json
+      - aws ecs describe-task-definition --task-definition $TASK_DEFINITION_ARN --query 'taskDefinition' > taskdef.json
 
 artifacts:
   files:
