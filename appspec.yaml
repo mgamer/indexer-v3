@@ -3,7 +3,7 @@ Resources:
   - TargetService:
       Type: AWS::ECS::Service
       Properties:
-        TaskDefinition: <TASK_DEFINITION>
+        TaskDefinition: "taskdefinition"
         LoadBalancerInfo:
           ContainerName: "indexer-environment-api"
           ContainerPort: 3000
