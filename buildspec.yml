@@ -22,7 +22,7 @@ phases:
       - sed -i "s/environment/$ENVIRONMENT/g" appspec.yaml
       - sed -i "s taskdefinition $TASK_DEFINITION_ARN g" appspec.yaml
       - aws ecs describe-task-definition --task-definition $TASK_DEFINITION_ARN --query 'taskDefinition' > taskdef.json
-      - sed -i "s/\"image\":.*,/\"image\": \"<ImageURI>\"/" taskdef.json
+      - "sed -i 's/\"image.*,/\"image\": \"<ImageURI>\"/' taskdef.json"
 
 artifacts:
   files:
