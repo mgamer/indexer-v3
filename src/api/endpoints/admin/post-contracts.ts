@@ -14,6 +14,9 @@ import { addToFastMetadataIndexQueue } from "@/jobs/fast-metadata-index";
 export const postContractsOptions: RouteOptions = {
   description: "Add new contracts for tracking.",
   tags: ["api", "x-admin"],
+  timeout: {
+    server: 2 * 60 * 1000,
+  },
   validate: {
     headers: Joi.object({
       "x-admin-api-key": Joi.string().required(),

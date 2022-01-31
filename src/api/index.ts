@@ -22,6 +22,9 @@ export const start = async function (): Promise<void> {
       stripTrailingSlash: true,
     },
     routes: {
+      timeout: {
+        server: 10 * 1000,
+      },
       cors: {
         origin: ["*"],
       },
