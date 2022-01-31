@@ -223,7 +223,7 @@ export const getTokensDetails = async (
     with "x" as (${baseQuery})
     select distinct on ("x"."contract", "x"."token_id", "x"."row_number")
       "x".*,
-      coalesce("o"."owner", '0x0000000000000000000000000000000000000000'),
+      coalesce("o"."owner", '0x0000000000000000000000000000000000000000') as "owner",
       coalesce(
         (select
           array_agg(
