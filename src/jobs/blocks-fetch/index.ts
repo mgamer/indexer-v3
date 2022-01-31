@@ -63,7 +63,7 @@ if (config.doBackgroundWork) {
         const existingBlocks: { [block: number]: boolean } = await db
           .manyOrNone(
             `
-              select "b"."block" from "block" where "b"."block" in ($1:csv)
+              select "b"."block" from "blocks" "b" where "b"."block" in ($1:csv)
             `,
             [
               [...Array(toBlock - fromBlock + 1).keys()].map(
