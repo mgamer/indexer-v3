@@ -2,22 +2,20 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
+import { addToBlocksFetchBackfillQueue } from "@/jobs/blocks-fetch";
 
-export const postIndexMetadataOptions: RouteOptions = {
-  description: "Trigger (re)indexing of metadata.",
+export const postFetchBlocksOptions: RouteOptions = {
+  description: "Trigger syncing of block timestamps",
   tags: ["api", "x-admin"],
-  timeout: {
-    server: 2 * 60 * 1000,
-  },
   validate: {
     headers: Joi.object({
       "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     payload: Joi.object({
-      collection: Joi.string().required(),
+      fromBlock: Joi.number().integer().positive().required(),
+      toBlock: Joi.number().integer().positive().required(),
     }),
   },
   handler: async (request: Request) => {
@@ -28,19 +26,14 @@ export const postIndexMetadataOptions: RouteOptions = {
     const payload = request.payload as any;
 
     try {
-      const collection = payload.collection;
+      const fromBlock = payload.fromBlock;
+      const toBlock = payload.toBlock;
 
-      await db.none(
-        `
-          update "tokens" set "metadata_indexed" = false
-          where "collection_id" = $/collection/
-        `,
-        { collection }
-      );
+      await addToBlocksFetchBackfillQueue(fromBlock, toBlock);
 
       return { message: "Success" };
     } catch (error) {
-      logger.error("post_index_metadata_handler", `Handler failure: ${error}`);
+      logger.error("post_fetch_blocks_handler", `Handler failure: ${error}`);
       throw error;
     }
   },

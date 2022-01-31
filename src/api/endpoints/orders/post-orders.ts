@@ -12,6 +12,9 @@ export const postOrdersOptions: RouteOptions = {
   description:
     "Submit a new signed order to the order book. Use the SDK to help build and sign orders.",
   tags: ["api", "orders"],
+  timeout: {
+    server: 2 * 60 * 1000,
+  },
   validate: {
     payload: Joi.object().keys({
       orders: Joi.array().items(

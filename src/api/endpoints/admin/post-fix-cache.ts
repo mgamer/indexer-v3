@@ -9,6 +9,9 @@ import { config } from "@/config/index";
 export const postFixCacheOptions: RouteOptions = {
   description: "Trigger fixing any cache inconsistencies",
   tags: ["api", "x-admin"],
+  timeout: {
+    server: 2 * 60 * 1000,
+  },
   validate: {
     headers: Joi.object({
       "x-admin-api-key": Joi.string().required(),
