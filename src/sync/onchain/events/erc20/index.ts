@@ -123,11 +123,8 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
     }
 
     await addFtTransferEvents(transferEvents);
-
-    if (!backfill) {
-      if (config.acceptOrders) {
-        await addToOrdersUpdateByMakerQueue(makerInfos);
-      }
+    if (!backfill && config.acceptOrders) {
+      await addToOrdersUpdateByMakerQueue(makerInfos);
     }
   },
   fixCallback: async (blockHash) => {

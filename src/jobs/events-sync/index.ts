@@ -41,6 +41,7 @@ new QueueScheduler(BACKFILL_JOB_NAME, { connection: redis.duplicate() });
 type BackfillingOptions = {
   blocksPerBatch?: number;
   prioritized?: boolean;
+  handleAsCatchup?: boolean;
 };
 
 export const addToEventsSyncBackfillQueue = async (
@@ -71,6 +72,7 @@ export const addToEventsSyncBackfillQueue = async (
         contracts,
         fromBlock: from,
         toBlock: to,
+        handleAsCatchup: options?.handleAsCatchup,
       },
       opts: {
         priority: prioritized ? 1 : undefined,
@@ -86,7 +88,8 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     BACKFILL_JOB_NAME,
     async (job: Job) => {
-      const { contractKind, contracts, fromBlock, toBlock } = job.data;
+      const { contractKind, contracts, fromBlock, toBlock, handleAsCatchup } =
+        job.data;
 
       try {
         const eventInfo = getContractInfo(contractKind, contracts);
@@ -96,7 +99,7 @@ if (config.doBackgroundWork) {
             `Events backfill syncing block range [${fromBlock}, ${toBlock}]`
           );
 
-          await sync(fromBlock, toBlock, eventInfo, true);
+          await sync(fromBlock, toBlock, eventInfo, !handleAsCatchup);
         }
       } catch (error) {
         logger.error(contractKind, `Events backfill job failed: ${error}`);

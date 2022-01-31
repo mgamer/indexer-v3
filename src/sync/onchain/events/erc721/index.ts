@@ -88,7 +88,6 @@ export const getContractInfo = (address: string[] = []): ContractInfo => ({
     }
 
     await addNftTransferEvents(transferEvents);
-
     if (!backfill && config.acceptOrders) {
       await addToOrdersUpdateByMakerQueue(makerInfos);
     }
