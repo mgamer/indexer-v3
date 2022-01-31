@@ -35,6 +35,18 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/fetch/blocks",
+    options: adminEndpoints.postFetchBlocksOptions,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/admin/fix/cache",
+    options: adminEndpoints.postFixCacheOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/index/metadata",
     options: adminEndpoints.postIndexMetadataOptions,
   });
@@ -43,12 +55,6 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/admin/index/metadata/fast",
     options: adminEndpoints.postIndexMetadataOptions,
-  });
-
-  server.route({
-    method: "POST",
-    path: "/admin/fix/cache",
-    options: adminEndpoints.postFixCacheOptions,
   });
 
   server.route({
