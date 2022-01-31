@@ -29,6 +29,7 @@ export const postSyncEventsOptions: RouteOptions = {
       fromBlock: Joi.number().integer().positive().required(),
       toBlock: Joi.number().integer().positive().required(),
       blocksPerBatch: Joi.number().integer().positive(),
+      handleAsCatchup: Joi.boolean(),
     }),
   },
   handler: async (request: Request) => {
@@ -44,6 +45,7 @@ export const postSyncEventsOptions: RouteOptions = {
       const fromBlock = payload.fromBlock;
       const toBlock = payload.toBlock;
       const blocksPerBatch = payload.blocksPerBatch;
+      const handleAsCatchup = payload.handleAsCatchup;
 
       // Fetch all contracts of the requested kind from the database
       const matchingContracts: string[] = await db
@@ -77,7 +79,7 @@ export const postSyncEventsOptions: RouteOptions = {
         contracts,
         fromBlock,
         toBlock,
-        { blocksPerBatch }
+        { blocksPerBatch, handleAsCatchup }
       );
 
       return { message: "Success" };

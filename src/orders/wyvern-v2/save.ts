@@ -4,7 +4,7 @@ import { generateMerkleTree } from "@reservoir0x/sdk/dist/wyvern-v2/builders/tok
 import { bn } from "@/common/bignumber";
 import { db, pgp } from "@/common/db";
 import { config } from "@/config/index";
-import { addPendingOrders } from "@/jobs/orders-relay";
+import { addPendingOrders, addPendingTokenSets } from "@/jobs/orders-relay";
 import { addToOrdersUpdateByHashQueue } from "@/jobs/orders-update";
 import {
   TokenSetInfo,
@@ -129,7 +129,8 @@ type SaveResult = {
 };
 
 export const saveOrders = async (
-  orderInfos: OrderInfo[]
+  orderInfos: OrderInfo[],
+  relayToArweave = true
 ): Promise<SaveResult> => {
   const result: SaveResult = {
     valid: [],
@@ -139,6 +140,20 @@ export const saveOrders = async (
   if (!orderInfos.length) {
     return result;
   }
+
+  // For Arweave relaying, we must keep track of the following:
+  // - valid orders together with their associated schema hashes
+  // - new token sets
+  const arweaveOrderData: {
+    order: Sdk.WyvernV2.Order;
+    schemaHash?: string;
+  }[] = [];
+  const arweaveTokenSetData: {
+    id: string;
+    schema: any;
+    contract: string;
+    tokenIds: string[];
+  }[] = [];
 
   const queries: any[] = [];
   for (const orderInfo of orderInfos) {
@@ -158,6 +173,8 @@ export const saveOrders = async (
           order.params.target,
           orderMetadata.data?.tokenId
         );
+
+        arweaveOrderData.push({ order });
 
         // Create the token set
         queries.push({
@@ -211,16 +228,16 @@ export const saveOrders = async (
           // Insert matching tokens in the token set
           queries.push({
             query: `
-            insert into "token_sets_tokens" (
-              "token_set_id",
-              "contract",
-              "token_id"
-            ) values (
-              $/tokenSetId/,
-              $/contract/,
-              $/tokenId/
-            ) on conflict do nothing
-          `,
+              insert into "token_sets_tokens" (
+                "token_set_id",
+                "contract",
+                "token_id"
+              ) values (
+                $/tokenSetId/,
+                $/contract/,
+                $/tokenId/
+              ) on conflict do nothing
+            `,
             values: {
               tokenSetId: tokenSetInfo.id,
               contract: order.params.target,
@@ -256,6 +273,8 @@ export const saveOrders = async (
             order.params.target,
             orderMetadata.data?.tokenIdRange
           );
+
+          arweaveOrderData.push({ order });
 
           // Create the token set
           queries.push({
@@ -395,6 +414,11 @@ export const saveOrders = async (
           merkleTree.getHexRoot()
         );
 
+        arweaveOrderData.push({
+          order,
+          schemaHash: tokenSetInfo.labelHash,
+        });
+
         // Create the token set
         queries.push({
           query: `
@@ -444,6 +468,13 @@ export const saveOrders = async (
           { tokenSetId: tokenSetInfo.id }
         );
         if (!tokenSetTokensExists) {
+          arweaveTokenSetData.push({
+            id: tokenSetInfo.id,
+            schema: tokenSetInfo.label,
+            contract: order.params.target,
+            tokenIds: tokens.map(({ token_id }) => token_id),
+          });
+
           // Insert matching tokens in the token set
           queries.push({
             query: `
@@ -658,7 +689,11 @@ export const saveOrders = async (
       hash: order.prefixHash(),
     }))
   );
-  await addPendingOrders(orderInfos.map(({ order }) => order));
+
+  if (relayToArweave) {
+    await addPendingOrders(arweaveOrderData);
+    await addPendingTokenSets(arweaveTokenSetData);
+  }
 
   return result;
 };

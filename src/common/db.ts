@@ -6,6 +6,7 @@ export const pgp = PgPromise();
 export const db = pgp({
   connectionString: config.databaseUrl,
   keepAlive: true,
-  // Timeout after 10 minutes
-  query_timeout: 60 * 10 * 1000,
+  connectionTimeoutMillis: 10 * 1000,
+  query_timeout: 60 * 1000,
+  statement_timeout: 60 * 1000,
 });
