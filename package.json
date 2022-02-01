@@ -11,7 +11,7 @@
     "clean": "rm -rf ./dist tsconfig.tsbuildinfo",
     "compile": "tsc",
     "build": "yarn clean; yarn compile",
-    "start": "yarn migrate up && node -r module-alias/register ./dist/index.js",
+    "start": "yarn migrate up; node -r module-alias/register ./dist/index.js",
     "migrate": "ts-node ./node_modules/node-pg-migrate/bin/node-pg-migrate -m ./src/migrations"
   },
   "dependencies": {
