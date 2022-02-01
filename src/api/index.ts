@@ -10,7 +10,7 @@ import qs from "qs";
 import { setupRoutes } from "@/api/routes";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import { allQueues } from "@/jobs/index";
+import { allJobQueues } from "@/jobs/index";
 
 export const start = async function (): Promise<void> {
   const server = Hapi.server({
@@ -43,7 +43,7 @@ export const start = async function (): Promise<void> {
   // Integrated BullMQ monitoring UI
   const serverAdapter = new HapiAdapter();
   createBullBoard({
-    queues: allQueues.map((q) => new BullMQAdapter(q)),
+    queues: allJobQueues.map((q) => new BullMQAdapter(q)),
     serverAdapter,
   });
   serverAdapter.setBasePath("/admin/bullmq");
@@ -74,7 +74,7 @@ export const start = async function (): Promise<void> {
           title: "Reservoir Protocol API",
           version: require("../../package.json").version,
           description:
-            "You are viewing the the reference docs for the Reservoir API. \n\nFor a more complete overview with guides and examples, check out the <a href='https://reservoirprotocol.github.io'>Reservoir Protocol Docs</a>.",
+            "You are viewing the reference docs for the Reservoir API. \n\nFor a more complete overview with guides and examples, check out the <a href='https://reservoirprotocol.github.io'>Reservoir Protocol Docs</a>.",
         },
         tryItOutEnabled: true,
       },

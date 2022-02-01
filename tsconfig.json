@@ -20,7 +20,7 @@
       "@/entities/*": ["entities/*"],
       "@/jobs/*": ["jobs/*"],
       "@/orders/*": ["orders/*"],
-      "@/events/*": ["sync/onchain/events/*"]
+      "@/events-sync/*": ["sync/events/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.json"]

@@ -1,78 +1,94 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import cron from "node-cron";
 
-import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { acquireLock, redis } from "@/common/redis";
 import { config } from "@/config/index";
-import {
-  ContractKind,
-  contractKinds,
-  getContractInfo,
-  sync,
-} from "@/events/index";
+import { syncEvents } from "@/events-sync/index";
 
 // For syncing events we have two separate job queues. One is for
-// handling backfilling while the other one handles realtime
-// syncing. The reason for this is that we don't want any ongoing
-// backfilling processes to delay the realtime syncing (which tries
-// to catch up to the head of the blockchain).
+// handling backfilling of past event while the other one handles
+// realtime syncing of events. The reason for having these two be
+// separated is that we don't want any ongoing backfilling action
+// to delay realtime syncing (which tries to catch up to the head
+// of the blockchain).
 
 // Backfill
 
-const BACKFILL_JOB_NAME = "events_sync_backfill";
+const BACKFILL_QUEUE_NAME = "events-sync-backfill";
 
-export const backfillQueue = new Queue(BACKFILL_JOB_NAME, {
+export const backfillQueue = new Queue(BACKFILL_QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 10,
-    // TODO: Introduce jitter to retries
+    // TODO: Introduce jitter
     backoff: {
       type: "exponential",
-      delay: 5000,
+      delay: 10000,
     },
     removeOnComplete: true,
     removeOnFail: true,
   },
 });
-new QueueScheduler(BACKFILL_JOB_NAME, { connection: redis.duplicate() });
+new QueueScheduler(BACKFILL_QUEUE_NAME, { connection: redis.duplicate() });
 
-type BackfillingOptions = {
+// BACKGROUND WORKER ONLY
+if (config.doBackgroundWork) {
+  const worker = new Worker(
+    BACKFILL_QUEUE_NAME,
+    async (job: Job) => {
+      const { fromBlock, toBlock } = job.data;
+
+      try {
+        logger.info(
+          BACKFILL_QUEUE_NAME,
+          `Events backfill syncing block range [${fromBlock}, ${toBlock}]`
+        );
+
+        await syncEvents(fromBlock, toBlock);
+      } catch (error) {
+        logger.error(
+          BACKFILL_QUEUE_NAME,
+          `Events backfill syncing failed: ${error}`
+        );
+        throw error;
+      }
+    },
+    { connection: redis.duplicate(), concurrency: 10 }
+  );
+  worker.on("error", (error) => {
+    logger.error(BACKFILL_QUEUE_NAME, `Worker errored: ${error}`);
+  });
+}
+
+type BackfillOptions = {
   blocksPerBatch?: number;
   prioritized?: boolean;
-  handleAsCatchup?: boolean;
 };
 
 export const addToEventsSyncBackfillQueue = async (
-  contractKind: ContractKind,
-  contracts: string[],
   fromBlock: number,
   toBlock: number,
-  options?: BackfillingOptions
+  options?: BackfillOptions
 ) => {
-  // Syncing is done in batches since the requested block range
-  // might include lots of events that cannot fit within a single
-  // provider response
-  const blocksPerBatch = options?.blocksPerBatch ?? 512;
+  // Syncing is done in several batches since the requested block
+  // range might result in lots of events which could potentially
+  // not fir within a single provider response.
+  const blocksPerBatch = options?.blocksPerBatch ?? 16;
 
-  // Important backfilling processes should be prioritized (eg.
-  // refetching dropped/orphaned blocks)
+  // Important backfill processes should be prioritized
   const prioritized = options?.prioritized ?? false;
 
+  // Sync in reverse to handle more recent events first
   const jobs: any[] = [];
-
-  // Sync in reverse in order to handle more recent events first
   for (let to = toBlock; to >= fromBlock; to -= blocksPerBatch) {
     const from = Math.max(fromBlock, to - blocksPerBatch + 1);
     jobs.push({
-      name: contractKind,
+      name: `${from}-${to}`,
       data: {
-        contractKind,
-        contracts,
         fromBlock: from,
         toBlock: to,
-        handleAsCatchup: options?.handleAsCatchup,
       },
       opts: {
         priority: prioritized ? 1 : undefined,
@@ -80,165 +96,109 @@ export const addToEventsSyncBackfillQueue = async (
     });
   }
 
+  // Random shuffle the jobs (via the Fisher-Yates algorithm) in order
+  // to avoid database deadlocks as much as possible (these occur when
+  // atomically updating balances given inserted transfers).
+  for (let i = jobs.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+
+    let tmp = jobs[i];
+    jobs[i] = jobs[j];
+    jobs[j] = tmp;
+  }
+
   await backfillQueue.addBulk(jobs);
 };
 
-// Actual work is to be handled by background worker processes
-if (config.doBackgroundWork) {
-  const worker = new Worker(
-    BACKFILL_JOB_NAME,
-    async (job: Job) => {
-      const { contractKind, contracts, fromBlock, toBlock, handleAsCatchup } =
-        job.data;
+// Realtime
 
-      try {
-        const eventInfo = getContractInfo(contractKind, contracts);
-        if (contracts.length) {
-          logger.info(
-            contractKind,
-            `Events backfill syncing block range [${fromBlock}, ${toBlock}]`
-          );
+const REALTIME_QUEUE_NAME = "events-sync-realtime";
 
-          await sync(fromBlock, toBlock, eventInfo, !handleAsCatchup);
-        }
-      } catch (error) {
-        logger.error(contractKind, `Events backfill job failed: ${error}`);
-        throw error;
-      }
-    },
-    { connection: redis.duplicate(), concurrency: 2 }
-  );
-  worker.on("error", (error) => {
-    logger.error(BACKFILL_JOB_NAME, `Worker errored: ${error}`);
-  });
-}
-
-// Catchup
-
-const CATCHUP_JOB_NAME = "events_sync_catchup";
-
-export const catchupQueue = new Queue(CATCHUP_JOB_NAME, {
+export const realtimeQueue = new Queue(REALTIME_QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
-    // No retries here, we should be as lean as possible and
-    // retrying will be implicitly done on subsequent jobs
+    // In order to be as lean as possible, leave retrying
+    // any failed processes to be done by subsequent jobs
     removeOnComplete: true,
     removeOnFail: true,
   },
 });
-new QueueScheduler(CATCHUP_JOB_NAME, { connection: redis.duplicate() });
+new QueueScheduler(REALTIME_QUEUE_NAME, { connection: redis.duplicate() });
 
-export const addToEventsSyncCatchupQueue = async (
-  contractKind: ContractKind
-) => {
-  await catchupQueue.add(contractKind, { contractKind });
-};
-
-// Actual work is to be handled by background worker processes
+// BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
   const worker = new Worker(
-    CATCHUP_JOB_NAME,
-    async (job: Job) => {
-      const { contractKind } = job.data;
-
+    REALTIME_QUEUE_NAME,
+    async (_job: Job) => {
       try {
-        // Sync all contracts of the given contract type
-        const contracts: string[] = await db
-          .manyOrNone(
-            `
-              select
-                "c"."address"
-              from "contracts" "c"
-              where "c"."kind" = $/contractKind/
-            `,
-            { contractKind }
-          )
-          .then((result) => result.map(({ address }) => address));
-        const contractInfo = getContractInfo(contractKind, contracts);
-
-        // We allow syncing of up to `maxBlocks` blocks behind the
-        // head of the blockchain. If the indexer lagged behind more
-        // than that, then all blocks before that will be sent to the
-        // backfill queue.
-        const maxBlocks = 256;
+        // We allow syncing of up to `maxBlocks` blocks behind the head
+        // of the blockchain. If we lag behind more than that, then all
+        // previous blocks that we cannot cover here will be relayed to
+        // the backfill queue.
+        const maxBlocks = 16;
 
         const headBlock = await baseProvider.getBlockNumber();
 
-        // Fetch the last synced blocked for the current contract type (if it exists)
+        // Fetch the last synced blocked
         let localBlock = Number(
-          await redis.get(`${contractKind}_last_synced_block`)
+          await redis.get(`${REALTIME_QUEUE_NAME}-last-block`)
         );
         if (localBlock >= headBlock) {
           // Nothing to sync
           return;
         }
 
-        if (!localBlock) {
+        if (localBlock === 0) {
           localBlock = headBlock;
         } else {
           localBlock++;
         }
 
         const fromBlock = Math.max(localBlock, headBlock - maxBlocks + 1);
-        if (contracts.length) {
-          logger.info(
-            contractKind,
-            `Events catchup syncing block range [${fromBlock}, ${headBlock}]`
-          );
+        logger.info(
+          REALTIME_QUEUE_NAME,
+          `Events realtime syncing block range [${fromBlock}, ${headBlock}]`
+        );
 
-          await sync(fromBlock, headBlock, contractInfo);
+        await syncEvents(fromBlock, headBlock);
 
-          // Queue any remaining blocks for backfilling
-          if (localBlock < fromBlock) {
-            await addToEventsSyncBackfillQueue(
-              contractKind,
-              contracts,
-              localBlock,
-              fromBlock - 1
-            );
-          }
-
-          // To avoid missing any events, save the latest synced block with a delay.
-          // This will ensure that the latest blocks will get queried more than once,
-          // which is exactly what we need (since events for the latest blocks might
-          // be missing due to upstream chain reorgs):
-          // https://ethereum.stackexchange.com/questions/109660/eth-getlogs-and-some-missing-logs
-          await redis.set(`${contractKind}_last_synced_block`, headBlock - 5);
+        // Send any remaining blocks to the backfill queue
+        if (localBlock < fromBlock) {
+          await addToEventsSyncBackfillQueue(localBlock, fromBlock - 1);
         }
+
+        // To avoid missing any events, save the last synced block with a delay
+        // in order to ensure that the latest blocks will get queried more than
+        // once, which is exactly what we are looking for (since events for the
+        // latest blocks might be missing due to upstream chain reorgs):
+        // https://ethereum.stackexchange.com/questions/109660/eth-getlogs-and-some-missing-logs
+        await redis.set(`${REALTIME_QUEUE_NAME}-last-block`, headBlock - 5);
       } catch (error) {
-        logger.error(contractKind, `Events catchup failed: ${error}`);
+        logger.error(
+          REALTIME_QUEUE_NAME,
+          `Events realtime syncing failed: ${error}`
+        );
         throw error;
       }
     },
     { connection: redis.duplicate(), concurrency: 3 }
   );
   worker.on("error", (error) => {
-    logger.error(CATCHUP_JOB_NAME, `Worker errored: ${error}`);
+    logger.error(REALTIME_QUEUE_NAME, `Worker errored: ${error}`);
   });
 }
 
-// Every new block (approximately 15 seconds) there might be processes
-// we want to run in order to stay up-to-date with the blockchain's
-// current state. These processes are all to be triggered from this
-// cron job.
-
-// Actual work is to be handled by background worker processes
-if (config.doBackgroundWork) {
+// BACKGROUND WORKER ONLY
+if (config.doBackgroundWork && config.catchup) {
   cron.schedule("*/15 * * * * *", async () => {
-    const lockAcquired = await acquireLock("events_catchup_lock", 10);
+    const lockAcquired = await acquireLock("catchup-events-lock", 10);
     if (lockAcquired) {
-      logger.info("events_catchup_cron", "Catching up events");
+      logger.info("catchup-events", "Catching up events");
 
       try {
-        // Sync events
-        for (const contractKind of contractKinds) {
-          await addToEventsSyncCatchupQueue(contractKind);
-        }
+        await realtimeQueue.add("catchup", {});
       } catch (error) {
-        logger.error(
-          "events_catchup_cron",
-          `Failed to catch up events: ${error}`
-        );
+        logger.error("catchup-events", `Failed to catch up events: ${error}`);
       }
     }
   });

@@ -1,5 +1,4 @@
 import { StaticJsonRpcProvider } from "@ethersproject/providers";
-import Arweave from "arweave";
 
 import { config } from "@/config/index";
 
@@ -9,10 +8,3 @@ import { config } from "@/config/index";
 export const baseProvider = new StaticJsonRpcProvider(
   config.baseNetworkHttpUrl
 );
-
-// Default Arweave gateway
-export const arweaveGateway = Arweave.init({
-  host: "arweave.net",
-  port: 443,
-  protocol: "https",
-});

@@ -2,7 +2,7 @@ import { RouteOptions } from "@hapi/hapi";
 
 export const pingOptions: RouteOptions = {
   description: "Ping",
-  handler: async () => {
+  handler: () => {
     return { message: "Success" };
   },
 };
