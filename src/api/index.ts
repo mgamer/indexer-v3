@@ -43,7 +43,7 @@ export const start = async function (): Promise<void> {
   // Integrated BullMQ monitoring UI
   const serverAdapter = new HapiAdapter();
   createBullBoard({
-    queues: allQueues.map((q) => new BullMQAdapter(q)),
+    queues: allQueues.map((q) => new BullMQAdapter(q, { readOnlyMode: true })),
     serverAdapter,
   });
   serverAdapter.setBasePath("/admin/bullmq");

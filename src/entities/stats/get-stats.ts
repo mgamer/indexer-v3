@@ -144,6 +144,7 @@ export const getStats = async (
       // TODO: Support multiple attributes once integrated
       buyQuery = `
         select
+          null as "collection_id",
           null as "top_buy_hash",
           null as "top_buy_value",
           null as "top_buy_maker",
