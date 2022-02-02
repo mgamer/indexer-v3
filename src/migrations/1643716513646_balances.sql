@@ -13,11 +13,10 @@ ALTER TABLE "nft_balances"
 
 -- https://www.lob.com/blog/supercharge-your-postgresql-performance
 -- https://klotzandrew.com/blog/posgres-per-table-autovacuum-management
-ALTER TABLE "nft_balances" SET
-  "autovacuum_vacuum_scale_factor" = 0.0,
-  "autovacuum_vacuum_threshold" = 5000,
-  "autovacuum_analyze_scale_factor" = 0.0,
-  "autovacuum_analyze_threshold" = 5000;
+ALTER TABLE "nft_balances" SET (autovacuum_vacuum_scale_factor = 0.0);
+ALTER TABLE "nft_balances" SET (autovacuum_vacuum_threshold = 5000);
+ALTER TABLE "nft_balances" SET (autovacuum_analyze_scale_factor = 0.0);
+ALTER TABLE "nft_balances" SET (autovacuum_analyze_threshold = 5000);
 
 CREATE TABLE "ft_balances" (
   "contract" BYTEA NOT NULL,
@@ -31,11 +30,10 @@ ALTER TABLE "ft_balances"
 
 -- https://www.lob.com/blog/supercharge-your-postgresql-performance
 -- https://klotzandrew.com/blog/posgres-per-table-autovacuum-management
-ALTER TABLE "ft_balances" SET
-  "autovacuum_vacuum_scale_factor" = 0.0,
-  "autovacuum_vacuum_threshold" = 5000,
-  "autovacuum_analyze_scale_factor" = 0.0,
-  "autovacuum_analyze_threshold" = 5000;
+ALTER TABLE "ft_balances" SET (autovacuum_vacuum_scale_factor = 0.0);
+ALTER TABLE "ft_balances" SET (autovacuum_vacuum_threshold = 5000);
+ALTER TABLE "ft_balances" SET (autovacuum_analyze_scale_factor = 0.0);
+ALTER TABLE "ft_balances" SET (autovacuum_analyze_threshold = 5000);
 
 -- Down Migration
 

@@ -36,11 +36,10 @@ CREATE INDEX "tokens_contract_token_id_top_buy_value"
 
 -- https://www.lob.com/blog/supercharge-your-postgresql-performance
 -- https://klotzandrew.com/blog/posgres-per-table-autovacuum-management
-ALTER TABLE "tokens" SET
-  "autovacuum_vacuum_scale_factor" = 0.0,
-  "autovacuum_vacuum_threshold" = 5000,
-  "autovacuum_analyze_scale_factor" = 0.0,
-  "autovacuum_analyze_threshold" = 5000;
+ALTER TABLE "tokens" SET (autovacuum_vacuum_scale_factor = 0.0);
+ALTER TABLE "tokens" SET (autovacuum_vacuum_threshold = 5000);
+ALTER TABLE "tokens" SET (autovacuum_analyze_scale_factor = 0.0);
+ALTER TABLE "tokens" SET (autovacuum_analyze_threshold = 5000);
 
 -- Down Migration
 

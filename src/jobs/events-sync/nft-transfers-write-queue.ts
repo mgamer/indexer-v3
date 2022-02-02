@@ -30,8 +30,6 @@ if (config.doBackgroundWork) {
       const { query } = job.data;
 
       try {
-        logger.info(QUEUE_NAME, `Flushing nft transfer events to the database`);
-
         await db.none(query);
       } catch (error) {
         logger.error(

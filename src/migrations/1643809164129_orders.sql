@@ -68,11 +68,10 @@ CREATE INDEX "orders_created_at_id_side_index"
 
 -- https://www.lob.com/blog/supercharge-your-postgresql-performance
 -- https://klotzandrew.com/blog/posgres-per-table-autovacuum-management
-ALTER TABLE "orders" SET
-  "autovacuum_vacuum_scale_factor" = 0.0,
-  "autovacuum_vacuum_threshold" = 5000,
-  "autovacuum_analyze_scale_factor" = 0.0,
-  "autovacuum_analyze_threshold" = 5000;
+ALTER TABLE "orders" SET (autovacuum_vacuum_scale_factor = 0.0);
+ALTER TABLE "orders" SET (autovacuum_vacuum_threshold = 5000);
+ALTER TABLE "orders" SET (autovacuum_analyze_scale_factor = 0.0);
+ALTER TABLE "orders" SET (autovacuum_analyze_threshold = 5000);
 
 -- Down Migration
 

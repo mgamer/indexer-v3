@@ -57,7 +57,7 @@ export const addToQueue = async (
 ) => {
   // Syncing is done in several batches since the requested block
   // range might result in lots of events which could potentially
-  // not fir within a single provider response.
+  // not fit within a single provider response.
   const blocksPerBatch = options?.blocksPerBatch ?? 32;
 
   // Important backfill processes should be prioritized
