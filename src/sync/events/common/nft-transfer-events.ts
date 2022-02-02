@@ -1,6 +1,6 @@
 import { db, pgp } from "@/common/db";
 import { BaseEventParams } from "@/events-sync/parser";
-import * as eventsSyncWrite from "@/jobs/events-sync/write-queue";
+import * as eventsSyncNftTransfersWrite from "@/jobs/events-sync/nft-transfers-write-queue";
 
 export type Event = {
   kind: "erc721" | "erc1155";
@@ -159,7 +159,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }
 
   if (queries.length) {
-    await eventsSyncWrite.addToQueue(pgp.helpers.concat(queries), {
+    await eventsSyncNftTransfersWrite.addToQueue(pgp.helpers.concat(queries), {
       prioritized: !backfill,
     });
   }

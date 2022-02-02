@@ -10,14 +10,17 @@ import * as realtimeEventsSync from "@/jobs/events-sync/realtime-queue";
 // realtime syncing of events. The reason for having these two be
 // separated is that we don't want any ongoing backfilling action
 // to delay realtime syncing (which tries to catch up to the head
-// of the blockchain). We also have a single-threaded queue which
-// acts as a buffer for all writes to the database (this helps to
-// avoid database deadlocks on concurrent upserts):
+// of the blockchain). Apart from these, we also have several job
+// queues (that are single-threaded) which act as writing buffers
+// for queries that are prone to database deadlocks (these are ft
+// and nft transfer events writes which can run into deadlocks on
+// concurrent upserts of the balances):
 // https://stackoverflow.com/questions/46366324/postgres-deadlocks-on-concurrent-upserts
 
 import "@/jobs/events-sync/backfill-queue";
 import "@/jobs/events-sync/realtime-queue";
-import "@/jobs/events-sync/write-queue";
+import "@/jobs/events-sync/ft-transfers-write-queue";
+import "@/jobs/events-sync/nft-transfers-write-queue";
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork && config.catchup) {

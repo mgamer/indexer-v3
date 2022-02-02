@@ -1,6 +1,6 @@
 import { db, pgp } from "@/common/db";
 import { BaseEventParams } from "@/events-sync/parser";
-import * as eventsSyncWrite from "@/jobs/events-sync/write-queue";
+import * as eventsSyncFtTransfersWrite from "@/jobs/events-sync/ft-transfers-write-queue";
 
 export type Event = {
   from: Buffer;
@@ -90,7 +90,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }
 
   if (queries.length) {
-    await eventsSyncWrite.addToQueue(pgp.helpers.concat(queries), {
+    await eventsSyncFtTransfersWrite.addToQueue(pgp.helpers.concat(queries), {
       prioritized: !backfill,
     });
   }

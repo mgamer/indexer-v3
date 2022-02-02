@@ -6,7 +6,7 @@ import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { db } from "@/common/db";
 
-const QUEUE_NAME = "events-sync-write";
+const QUEUE_NAME = "events-sync-nft-transfers-write";
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
@@ -30,13 +30,13 @@ if (config.doBackgroundWork) {
       const { query } = job.data;
 
       try {
-        logger.info(QUEUE_NAME, `Flushing events sync database writes`);
+        logger.info(QUEUE_NAME, `Flushing nft transfer events to the database`);
 
         await db.none(query);
       } catch (error) {
         logger.error(
           QUEUE_NAME,
-          `Events sync databsse writes flushing failed: ${error}`
+          `Flushing nft transfer events to the database failed: ${error}`
         );
         throw error;
       }
