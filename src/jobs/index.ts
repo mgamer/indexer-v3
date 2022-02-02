@@ -2,9 +2,12 @@
 
 import "@/jobs/events-sync";
 
-import * as eventsSync from "@/jobs/events-sync";
+import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
+import * as eventsSyncRealtime from "@/jobs/events-sync/realtime-queue";
+import * as eventsSyncWrite from "@/jobs/events-sync/write-queue";
 
 export const allJobQueues = [
-  eventsSync.backfillQueue,
-  eventsSync.realtimeQueue,
+  eventsSyncBackfill.queue,
+  eventsSyncRealtime.queue,
+  eventsSyncWrite.queue,
 ];

@@ -1,16 +1,44 @@
 -- Up Migration
 
-CREATE TABLE "balances" (
+CREATE TABLE "nft_balances" (
   "contract" BYTEA NOT NULL,
   "token_id" NUMERIC(78, 0) NOT NULL,
   "owner" BYTEA NOT NULL,
   "amount" NUMERIC(78, 0) NOT NULL
 );
 
-ALTER TABLE "balances"
-  ADD CONSTRAINT "balances_pk"
+ALTER TABLE "nft_balances"
+  ADD CONSTRAINT "nft_balances_pk"
   PRIMARY KEY ("contract", "token_id", "owner");
+
+-- https://www.lob.com/blog/supercharge-your-postgresql-performance
+-- https://klotzandrew.com/blog/posgres-per-table-autovacuum-management
+ALTER TABLE "nft_balances" SET
+  "autovacuum_vacuum_scale_factor" = 0.0,
+  "autovacuum_vacuum_threshold" = 5000,
+  "autovacuum_analyze_scale_factor" = 0.0,
+  "autovacuum_analyze_threshold" = 5000;
+
+CREATE TABLE "ft_balances" (
+  "contract" BYTEA NOT NULL,
+  "owner" BYTEA NOT NULL,
+  "amount" NUMERIC(78, 0) NOT NULL
+);
+
+ALTER TABLE "ft_balances"
+  ADD CONSTRAINT "ft_balances_pk"
+  PRIMARY KEY ("contract", "owner");
+
+-- https://www.lob.com/blog/supercharge-your-postgresql-performance
+-- https://klotzandrew.com/blog/posgres-per-table-autovacuum-management
+ALTER TABLE "ft_balances" SET
+  "autovacuum_vacuum_scale_factor" = 0.0,
+  "autovacuum_vacuum_threshold" = 5000,
+  "autovacuum_analyze_scale_factor" = 0.0,
+  "autovacuum_analyze_threshold" = 5000;
 
 -- Down Migration
 
-DROP TABLE "balances";
+DROP TABLE "ft_balances";
+
+DROP TABLE "nft_balances";

@@ -1,14 +1,14 @@
 import { Interface } from "@ethersproject/abi";
 import { AddressZero } from "@ethersproject/constants";
-import { Common } from "@reservoir0x/sdk";
+import { Common, WyvernV2 } from "@reservoir0x/sdk";
 
 import { logger } from "@/common/logger";
-import { baseProvider } from "@/common/provider";
+import { baseBatchProvider, baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
-import {
-  TransferEvent,
-  addTransferEvents,
-} from "@/events-sync/common/transfer-events";
+import * as cancels from "@/events-sync/common/cancel-events";
+import * as fills from "@/events-sync/common/fill-events";
+import * as ftTransfers from "@/events-sync/common/ft-transfer-events";
+import * as nftTransfers from "@/events-sync/common/nft-transfer-events";
 import { parseEvent } from "@/events-sync/parser";
 
 type EventKind =
@@ -17,7 +17,9 @@ type EventKind =
   | "erc1155-transfer-single"
   | "erc1155-transfer-batch"
   | "weth-deposit"
-  | "weth-withdrawal";
+  | "weth-withdrawal"
+  | "wyvern-v2-orders-matched"
+  | "wyvern-v2-order-cancelled";
 
 type EventData = {
   kind: EventKind;
@@ -112,6 +114,35 @@ const wethWithdrawal: EventData = {
   ]),
 };
 
+const wyvernV2OrderCancelled: EventData = {
+  kind: "wyvern-v2-order-cancelled",
+  addresses: { [WyvernV2.Addresses.Exchange[config.chainId]]: true },
+  topic: "0x5152abf959f6564662358c2e52b702259b78bac5ee7842a0f01937e670efcc7d",
+  numTopics: 2,
+  abi: new Interface([
+    `event OrderCancelled(
+      bytes32 indexed hash
+    )`,
+  ]),
+};
+
+const wyvernV2OrdersMatched: EventData = {
+  kind: "wyvern-v2-orders-matched",
+  addresses: { [WyvernV2.Addresses.Exchange[config.chainId]]: true },
+  topic: "0xc4109843e0b7d514e4c093114b863f8e7d8d9a458c372cd51bfe526b588006c9",
+  numTopics: 4,
+  abi: new Interface([
+    `event OrdersMatched(
+      bytes32 buyHash,
+      bytes32 sellHash,
+      address indexed maker,
+      address indexed taker,
+      uint256 price,
+      bytes32 indexed metadata
+    )`,
+  ]),
+};
+
 const allEventData = [
   erc20Transfer,
   erc721Transfer,
@@ -119,10 +150,33 @@ const allEventData = [
   erc1155TransferBatch,
   wethDeposit,
   wethWithdrawal,
+  wyvernV2OrderCancelled,
+  wyvernV2OrdersMatched,
 ];
 
-export const syncEvents = async (fromBlock: number, toBlock: number) =>
-  baseProvider
+export const syncEvents = async (
+  fromBlock: number,
+  toBlock: number,
+  backfill = false
+) => {
+  // Fetch the timestamp of the blocks at each side of the range
+  const [fromBlockTimestamp, toBlockTimestamp] = await Promise.all([
+    baseBatchProvider.getBlock(fromBlock),
+    baseBatchProvider.getBlock(toBlock),
+  ]).then((blocks) => [blocks[0].timestamp, blocks[1].timestamp]);
+
+  const blockRange = {
+    from: {
+      block: fromBlock,
+      timestamp: fromBlockTimestamp,
+    },
+    to: {
+      block: toBlock,
+      timestamp: toBlockTimestamp,
+    },
+  };
+
+  await baseProvider
     .getLogs({
       topics: [
         [
@@ -132,18 +186,23 @@ export const syncEvents = async (fromBlock: number, toBlock: number) =>
           erc1155TransferBatch.topic,
           wethDeposit.topic,
           wethWithdrawal.topic,
+          wyvernV2OrderCancelled.topic,
+          wyvernV2OrdersMatched.topic,
         ],
       ],
       fromBlock,
       toBlock,
     })
     .then(async (logs) => {
-      const transferEvents: TransferEvent[] = [];
+      const cancelEvents: cancels.Event[] = [];
+      const fillEvents: fills.Event[] = [];
+      const ftTransferEvents: ftTransfers.Event[] = [];
+      const nftTransferEvents: nftTransfers.Event[] = [];
 
       for (const log of logs) {
         try {
           // Parse common event params
-          const baseEventParams = parseEvent(log);
+          const baseEventParams = parseEvent(log, blockRange);
 
           // Find first matching event
           const eventData = allEventData.find(
@@ -160,11 +219,9 @@ export const syncEvents = async (fromBlock: number, toBlock: number) =>
               const to = Buffer.from(parsedLog.args["to"].slice(2), "hex");
               const amount = parsedLog.args["amount"].toString();
 
-              transferEvents.push({
-                kind: "erc20",
+              ftTransferEvents.push({
                 from,
                 to,
-                tokenId: "-1",
                 amount,
                 baseEventParams,
               });
@@ -178,7 +235,7 @@ export const syncEvents = async (fromBlock: number, toBlock: number) =>
               const to = Buffer.from(parsedLog.args["to"].slice(2), "hex");
               const tokenId = parsedLog.args["tokenId"].toString();
 
-              transferEvents.push({
+              nftTransferEvents.push({
                 kind: "erc721",
                 from,
                 to,
@@ -197,7 +254,7 @@ export const syncEvents = async (fromBlock: number, toBlock: number) =>
               const tokenId = parsedLog.args["tokenId"].toString();
               const amount = parsedLog.args["amount"].toString();
 
-              transferEvents.push({
+              nftTransferEvents.push({
                 kind: "erc1155",
                 from,
                 to,
@@ -218,7 +275,7 @@ export const syncEvents = async (fromBlock: number, toBlock: number) =>
 
               const count = Math.min(tokenIds.length, amounts.length);
               for (let i = 0; i < count; i++) {
-                transferEvents.push({
+                nftTransferEvents.push({
                   kind: "erc1155",
                   from,
                   to,
@@ -236,11 +293,9 @@ export const syncEvents = async (fromBlock: number, toBlock: number) =>
               const to = Buffer.from(parsedLog.args["to"].slice(2), "hex");
               const amount = parsedLog.args["amount"].toString();
 
-              transferEvents.push({
-                kind: "erc20",
+              ftTransferEvents.push({
                 from: Buffer.from(AddressZero.slice(2), "hex"),
                 to,
-                tokenId: "-1",
                 amount,
                 baseEventParams,
               });
@@ -253,12 +308,48 @@ export const syncEvents = async (fromBlock: number, toBlock: number) =>
               const from = Buffer.from(parsedLog.args["from"].slice(2), "hex");
               const amount = parsedLog.args["amount"].toString();
 
-              transferEvents.push({
-                kind: "erc20",
+              ftTransferEvents.push({
                 from,
                 to: Buffer.from(AddressZero.slice(2), "hex"),
-                tokenId: "-1",
                 amount,
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "wyvern-v2-order-cancelled": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const orderId = parsedLog.args["hash"].toLowerCase();
+
+              cancelEvents.push({
+                orderId,
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "wyvern-v2-orders-matched": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const buyOrderId = parsedLog.args["buyHash"].toLowerCase();
+              const sellOrderId = parsedLog.args["sellHash"].toLowerCase();
+              const maker = Buffer.from(
+                parsedLog.args["maker"].slice(2),
+                "hex"
+              );
+              const taker = Buffer.from(
+                parsedLog.args["taker"].slice(2),
+                "hex"
+              );
+              const price = parsedLog.args["price"].toString();
+
+              fillEvents.push({
+                buyOrderId,
+                sellOrderId,
+                maker,
+                taker,
+                price,
                 baseEventParams,
               });
 
@@ -271,5 +362,11 @@ export const syncEvents = async (fromBlock: number, toBlock: number) =>
         }
       }
 
-      await addTransferEvents(transferEvents);
+      await Promise.all([
+        cancels.addEvents(cancelEvents),
+        fills.addEvents(fillEvents),
+        ftTransfers.addEvents(ftTransferEvents, backfill),
+        nftTransfers.addEvents(nftTransferEvents, backfill),
+      ]);
     });
+};

@@ -4,7 +4,7 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import { addToEventsSyncBackfillQueue } from "@/jobs/events-sync";
+import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
 
 export const postSyncEventsOptions: RouteOptions = {
   description: "Trigger syncing of events.",
@@ -29,7 +29,7 @@ export const postSyncEventsOptions: RouteOptions = {
       const fromBlock = payload.fromBlock;
       const toBlock = payload.toBlock;
 
-      await addToEventsSyncBackfillQueue(fromBlock, toBlock);
+      await eventsSyncBackfill.addToQueue(fromBlock, toBlock);
 
       return { message: "Request accepted" };
     } catch (error) {
