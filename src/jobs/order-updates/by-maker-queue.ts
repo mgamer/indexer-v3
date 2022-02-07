@@ -6,7 +6,7 @@ import cron from "node-cron";
 import { db, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis, redlock } from "@/common/redis";
-import { toBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 
@@ -173,14 +173,14 @@ export const addToQueue = async (makerInfos: MakerInfo[]) => {
 
   await queue.addBulk(
     makerInfos.map((makerInfo) => ({
-      name: "0x" + makerInfo.maker.toString("hex"),
+      name: fromBuffer(makerInfo.maker),
       data: makerInfo,
       opts: {
         // We should make sure not to perform any expensive work more
         // than once. As such, we keep the last performed jobs in the
         // queue and give all jobs a deterministic id so that we skip
         // handling jobs that already got executed.
-        jobId: `${makerInfo.context}-${"0x" + makerInfo.maker.toString("hex")}`,
+        jobId: `${makerInfo.context}-${fromBuffer(makerInfo.maker)}`,
       },
     }))
   );

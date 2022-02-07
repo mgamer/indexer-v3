@@ -4,7 +4,7 @@ import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { redlock } from "@/common/redis";
-import { toBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { unsyncEvents } from "@/events-sync/index";
 import * as backfillEventsSync from "@/jobs/events-sync/backfill-queue";
@@ -115,9 +115,9 @@ if (config.doBackgroundWork && config.catchup) {
 
                   logger.info(
                     "events-sync-orphan-check",
-                    `Detected wrong block ${block} with hash ${
-                      "0x" + block_hash.toString("hex")
-                    }`
+                    `Detected wrong block ${block} with hash ${fromBuffer(
+                      block_hash
+                    )}`
                   );
                 }
               }

@@ -4,7 +4,7 @@ import { Common, WyvernV2 } from "@reservoir0x/sdk";
 
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { toBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as cancels from "@/events-sync/common/cancel-events";
 import * as fills from "@/events-sync/common/fill-events";
@@ -221,8 +221,7 @@ export const syncEvents = async (
           );
 
           const context =
-            "0x" +
-            baseEventParams.txHash.toString("hex") +
+            fromBuffer(baseEventParams.txHash) +
             "-" +
             baseEventParams.logIndex.toString();
 

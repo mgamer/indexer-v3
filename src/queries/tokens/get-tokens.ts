@@ -1,4 +1,4 @@
-import { formatEth, toBuffer } from "@/common/utils";
+import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { db } from "@/common/db";
 
 export type Filter = {
@@ -91,7 +91,7 @@ export const execute = async (filter: Filter): Promise<Response> => {
 
   return db.manyOrNone(baseQuery, filter).then((result) =>
     result.map((r) => ({
-      contract: r.contract,
+      contract: fromBuffer(r.contract),
       tokenId: r.token_id,
       name: r.name,
       image: r.image,
