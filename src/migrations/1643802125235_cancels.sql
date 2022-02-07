@@ -15,6 +15,9 @@ ALTER TABLE "cancel_events"
   ADD CONSTRAINT "cancel_events_pk"
   PRIMARY KEY ("block_hash", "tx_hash", "log_index");
 
+CREATE INDEX "cancel_events_block_index"
+  ON "cancel_events" ("block" DESC);
+
 -- Down Migration
 
 DROP TABLE "cancel_events";

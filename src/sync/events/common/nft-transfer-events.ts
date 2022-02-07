@@ -1,6 +1,6 @@
 import { db, pgp } from "@/common/db";
 import { BaseEventParams } from "@/events-sync/parser";
-import * as eventsSyncNftTransfersWrite from "@/jobs/events-sync/nft-transfers-write-queue";
+import * as nftTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/nft-transfers";
 
 export type Event = {
   kind: "erc721" | "erc1155";
@@ -159,13 +159,13 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }
 
   if (queries.length) {
-    await eventsSyncNftTransfersWrite.addToQueue(pgp.helpers.concat(queries), {
+    await nftTransfersWriteBuffer.addToQueue(pgp.helpers.concat(queries), {
       prioritized: !backfill,
     });
   }
 };
 
-export const removeEvents = async (blockHash: string) => {
+export const removeEvents = async (blockHash: Buffer) => {
   // Atomically delete the transfer events and revert balance updates
   await db.any(
     `
@@ -192,6 +192,7 @@ export const removeEvents = async (blockHash: string) => {
         FROM (
           SELECT
             "address",
+            "token_id",
             unnest("owners") as "owner",
             unnest("amount_deltas") as "amount_delta"
           FROM "x"

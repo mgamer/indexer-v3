@@ -82,7 +82,7 @@ export const addEvents = async (events: Event[]) => {
   }
 };
 
-export const removeEvents = async (blockHash: string) => {
+export const removeEvents = async (blockHash: Buffer) => {
   // Delete the cancel events but skip reverting order status updates
   // since it's not possible to know what to revert to and even if we
   // knew, it might mess up other higher-level order processes.

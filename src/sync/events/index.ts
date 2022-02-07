@@ -3,15 +3,19 @@ import { AddressZero } from "@ethersproject/constants";
 import { Common, WyvernV2 } from "@reservoir0x/sdk";
 
 import { logger } from "@/common/logger";
-import { baseBatchProvider, baseProvider } from "@/common/provider";
+import { baseProvider } from "@/common/provider";
+import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as cancels from "@/events-sync/common/cancel-events";
 import * as fills from "@/events-sync/common/fill-events";
 import * as ftTransfers from "@/events-sync/common/ft-transfer-events";
 import * as nftTransfers from "@/events-sync/common/nft-transfer-events";
 import { parseEvent } from "@/events-sync/parser";
+import * as fillUpdates from "@/jobs/fill-updates/queue";
+import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
+import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 
-type EventKind =
+type EventDataKind =
   | "erc20-transfer"
   | "erc721-transfer"
   | "erc1155-transfer-single"
@@ -22,7 +26,7 @@ type EventKind =
   | "wyvern-v2-order-cancelled";
 
 type EventData = {
-  kind: EventKind;
+  kind: EventDataKind;
   addresses?: { [address: string]: boolean };
   topic: string;
   numTopics: number;
@@ -161,8 +165,8 @@ export const syncEvents = async (
 ) => {
   // Fetch the timestamp of the blocks at each side of the range
   const [fromBlockTimestamp, toBlockTimestamp] = await Promise.all([
-    baseBatchProvider.getBlock(fromBlock),
-    baseBatchProvider.getBlock(toBlock),
+    baseProvider.getBlock(fromBlock),
+    baseProvider.getBlock(toBlock),
   ]).then((blocks) => [blocks[0].timestamp, blocks[1].timestamp]);
 
   const blockRange = {
@@ -175,6 +179,10 @@ export const syncEvents = async (
       timestamp: toBlockTimestamp,
     },
   };
+
+  const fillInfos: fillUpdates.FillInfo[] = [];
+  const orderInfos: orderUpdatesById.OrderInfo[] = [];
+  const makerInfos: orderUpdatesByMaker.MakerInfo[] = [];
 
   await baseProvider
     .getLogs({
@@ -212,11 +220,17 @@ export const syncEvents = async (
               (addresses ? addresses[log.address.toLowerCase()] : true)
           );
 
+          const context =
+            "0x" +
+            baseEventParams.txHash.toString("hex") +
+            "-" +
+            baseEventParams.logIndex.toString();
+
           switch (eventData?.kind) {
             case "erc20-transfer": {
               const parsedLog = eventData.abi.parseLog(log);
-              const from = Buffer.from(parsedLog.args["from"].slice(2), "hex");
-              const to = Buffer.from(parsedLog.args["to"].slice(2), "hex");
+              const from = toBuffer(parsedLog.args["from"]);
+              const to = toBuffer(parsedLog.args["to"]);
               const amount = parsedLog.args["amount"].toString();
 
               ftTransferEvents.push({
@@ -226,13 +240,26 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              makerInfos.push({
+                context,
+                side: "buy",
+                maker: from,
+                contract: baseEventParams.address,
+              });
+              makerInfos.push({
+                context,
+                side: "buy",
+                maker: to,
+                contract: baseEventParams.address,
+              });
+
               break;
             }
 
             case "erc721-transfer": {
               const parsedLog = eventData.abi.parseLog(log);
-              const from = Buffer.from(parsedLog.args["from"].slice(2), "hex");
-              const to = Buffer.from(parsedLog.args["to"].slice(2), "hex");
+              const from = toBuffer(parsedLog.args["from"]);
+              const to = toBuffer(parsedLog.args["to"]);
               const tokenId = parsedLog.args["tokenId"].toString();
 
               nftTransferEvents.push({
@@ -244,13 +271,28 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              makerInfos.push({
+                context,
+                side: "sell",
+                maker: from,
+                contract: baseEventParams.address,
+                tokenId,
+              });
+              makerInfos.push({
+                context,
+                side: "sell",
+                maker: to,
+                contract: baseEventParams.address,
+                tokenId,
+              });
+
               break;
             }
 
             case "erc1155-transfer-single": {
               const parsedLog = eventData.abi.parseLog(log);
-              const from = Buffer.from(parsedLog.args["from"].slice(2), "hex");
-              const to = Buffer.from(parsedLog.args["to"].slice(2), "hex");
+              const from = toBuffer(parsedLog.args["from"]);
+              const to = toBuffer(parsedLog.args["to"]);
               const tokenId = parsedLog.args["tokenId"].toString();
               const amount = parsedLog.args["amount"].toString();
 
@@ -263,13 +305,28 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              makerInfos.push({
+                context,
+                side: "sell",
+                maker: from,
+                contract: baseEventParams.address,
+                tokenId,
+              });
+              makerInfos.push({
+                context,
+                side: "sell",
+                maker: to,
+                contract: baseEventParams.address,
+                tokenId,
+              });
+
               break;
             }
 
             case "erc1155-transfer-batch": {
               const parsedLog = eventData.abi.parseLog(log);
-              const from = Buffer.from(parsedLog.args["from"].slice(2), "hex");
-              const to = Buffer.from(parsedLog.args["to"].slice(2), "hex");
+              const from = toBuffer(parsedLog.args["from"]);
+              const to = toBuffer(parsedLog.args["to"]);
               const tokenIds = parsedLog.args["tokenIds"].map(String);
               const amounts = parsedLog.args["amounts"].map(String);
 
@@ -283,6 +340,21 @@ export const syncEvents = async (
                   amount: amounts[i],
                   baseEventParams,
                 });
+
+                makerInfos.push({
+                  context,
+                  side: "sell",
+                  maker: from,
+                  contract: baseEventParams.address,
+                  tokenId: tokenIds[i],
+                });
+                makerInfos.push({
+                  context,
+                  side: "sell",
+                  maker: to,
+                  contract: baseEventParams.address,
+                  tokenId: tokenIds[i],
+                });
               }
 
               break;
@@ -290,14 +362,21 @@ export const syncEvents = async (
 
             case "weth-deposit": {
               const parsedLog = eventData.abi.parseLog(log);
-              const to = Buffer.from(parsedLog.args["to"].slice(2), "hex");
+              const to = toBuffer(parsedLog.args["to"]);
               const amount = parsedLog.args["amount"].toString();
 
               ftTransferEvents.push({
-                from: Buffer.from(AddressZero.slice(2), "hex"),
+                from: toBuffer(AddressZero),
                 to,
                 amount,
                 baseEventParams,
+              });
+
+              makerInfos.push({
+                context,
+                side: "buy",
+                maker: to,
+                contract: baseEventParams.address,
               });
 
               break;
@@ -305,14 +384,21 @@ export const syncEvents = async (
 
             case "weth-withdrawal": {
               const parsedLog = eventData.abi.parseLog(log);
-              const from = Buffer.from(parsedLog.args["from"].slice(2), "hex");
+              const from = toBuffer(parsedLog.args["from"]);
               const amount = parsedLog.args["amount"].toString();
 
               ftTransferEvents.push({
                 from,
-                to: Buffer.from(AddressZero.slice(2), "hex"),
+                to: toBuffer(AddressZero),
                 amount,
                 baseEventParams,
+              });
+
+              makerInfos.push({
+                context,
+                side: "buy",
+                maker: from,
+                contract: baseEventParams.address,
               });
 
               break;
@@ -327,6 +413,11 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              orderInfos.push({
+                context,
+                id: orderId,
+              });
+
               break;
             }
 
@@ -334,14 +425,8 @@ export const syncEvents = async (
               const parsedLog = eventData.abi.parseLog(log);
               const buyOrderId = parsedLog.args["buyHash"].toLowerCase();
               const sellOrderId = parsedLog.args["sellHash"].toLowerCase();
-              const maker = Buffer.from(
-                parsedLog.args["maker"].slice(2),
-                "hex"
-              );
-              const taker = Buffer.from(
-                parsedLog.args["taker"].slice(2),
-                "hex"
-              );
+              const maker = toBuffer(parsedLog.args["maker"]);
+              const taker = toBuffer(parsedLog.args["taker"]);
               const price = parsedLog.args["price"].toString();
 
               fillEvents.push({
@@ -353,11 +438,27 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              fillInfos.push({
+                context,
+                buyOrderId,
+                sellOrderId,
+                timestamp: baseEventParams.timestamp,
+              });
+
+              orderInfos.push({
+                context,
+                id: buyOrderId,
+              });
+              orderInfos.push({
+                context,
+                id: sellOrderId,
+              });
+
               break;
             }
           }
         } catch (error) {
-          logger.info("sync_events", `Failed to handle events: ${error}`);
+          logger.info("sync-events", `Failed to handle events: ${error}`);
           throw error;
         }
       }
@@ -368,5 +469,21 @@ export const syncEvents = async (
         ftTransfers.addEvents(ftTransferEvents, backfill),
         nftTransfers.addEvents(nftTransferEvents, backfill),
       ]);
+
+      if (!backfill) {
+        await Promise.all([
+          fillUpdates.addToQueue(fillInfos),
+          orderUpdatesById.addToQueue(orderInfos),
+          orderUpdatesByMaker.addToQueue(makerInfos),
+        ]);
+      }
     });
 };
+
+export const unsyncEvents = async (blockHash: Buffer) =>
+  Promise.all([
+    cancels.removeEvents(blockHash),
+    fills.removeEvents(blockHash),
+    ftTransfers.removeEvents(blockHash),
+    nftTransfers.removeEvents(blockHash),
+  ]);

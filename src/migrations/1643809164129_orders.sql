@@ -13,7 +13,8 @@ CREATE TYPE "order_fillability_status_t" AS ENUM (
   'fillable',
   'no-balance',
   'cancelled',
-  'filled'
+  'filled',
+  'expired'
 );
 
 CREATE TYPE "order_approval_status_t" AS ENUM (
