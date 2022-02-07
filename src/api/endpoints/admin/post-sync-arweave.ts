@@ -4,10 +4,10 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
+import * as arweaveSyncBackfill from "@/jobs/arweave-sync/backfill-queue";
 
-export const postSyncEventsOptions: RouteOptions = {
-  description: "Trigger syncing of events.",
+export const postSyncArweaveOptions: RouteOptions = {
+  description: "Trigger syncing of Arweave data.",
   tags: ["api", "x-admin"],
   timeout: {
     server: 5 * 60 * 1000,
@@ -32,11 +32,11 @@ export const postSyncEventsOptions: RouteOptions = {
       const fromBlock = payload.fromBlock;
       const toBlock = payload.toBlock;
 
-      await eventsSyncBackfill.addToQueue(fromBlock, toBlock);
+      await arweaveSyncBackfill.addToQueue(fromBlock, toBlock);
 
       return { message: "Request accepted" };
     } catch (error) {
-      logger.error("post-sync-events-handler", `Handler failure: ${error}`);
+      logger.error("post-sync-arweave-handler", `Handler failure: ${error}`);
       throw error;
     }
   },

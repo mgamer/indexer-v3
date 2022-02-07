@@ -1,6 +1,6 @@
 import { db, pgp } from "@/common/db";
 import { BaseEventParams } from "@/events-sync/parser";
-import * as eventsSyncFtTransfersWrite from "@/jobs/events-sync/ft-transfers-write-queue";
+import * as ftTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/ft-transfers";
 
 export type Event = {
   from: Buffer;
@@ -90,13 +90,13 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }
 
   if (queries.length) {
-    await eventsSyncFtTransfersWrite.addToQueue(pgp.helpers.concat(queries), {
+    await ftTransfersWriteBuffer.addToQueue(pgp.helpers.concat(queries), {
       prioritized: !backfill,
     });
   }
 };
 
-export const removeEvents = async (blockHash: string) => {
+export const removeEvents = async (blockHash: Buffer) => {
   // Atomically delete the transfer events and revert balance updates
   await db.any(
     `

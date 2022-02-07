@@ -1,5 +1,7 @@
 import { Log } from "@ethersproject/abstract-provider";
 
+import { toBuffer } from "@/common/utils";
+
 export type BaseEventParams = {
   address: Buffer;
   block: number;
@@ -23,10 +25,10 @@ export const parseEvent = (
     };
   }
 ): BaseEventParams => {
-  const address = Buffer.from(log.address.slice(2), "hex");
+  const address = toBuffer(log.address);
   const block = log.blockNumber;
-  const blockHash = Buffer.from(log.blockHash.slice(2), "hex");
-  const txHash = Buffer.from(log.transactionHash.slice(2), "hex");
+  const blockHash = toBuffer(log.blockHash);
+  const txHash = toBuffer(log.transactionHash);
   const txIndex = log.transactionIndex;
   const logIndex = log.logIndex;
 

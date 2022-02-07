@@ -1,8 +1,13 @@
 import cron from "node-cron";
 
+import { db } from "@/common/db";
 import { logger } from "@/common/logger";
-import { acquireLock } from "@/common/redis";
+import { baseProvider } from "@/common/provider";
+import { redlock } from "@/common/redis";
+import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { unsyncEvents } from "@/events-sync/index";
+import * as backfillEventsSync from "@/jobs/events-sync/backfill-queue";
 import * as realtimeEventsSync from "@/jobs/events-sync/realtime-queue";
 
 // For syncing events we have two separate job queues. One is for
@@ -19,24 +24,124 @@ import * as realtimeEventsSync from "@/jobs/events-sync/realtime-queue";
 
 import "@/jobs/events-sync/backfill-queue";
 import "@/jobs/events-sync/realtime-queue";
-import "@/jobs/events-sync/ft-transfers-write-queue";
-import "@/jobs/events-sync/nft-transfers-write-queue";
+import "@/jobs/events-sync/write-buffers/ft-transfers";
+import "@/jobs/events-sync/write-buffers/nft-transfers";
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork && config.catchup) {
-  cron.schedule("*/15 * * * * *", async () => {
-    const lockAcquired = await acquireLock("events-sync-catchup-lock", 10);
-    if (lockAcquired) {
-      logger.info("events-sync-catchup", "Catching up events");
+  cron.schedule(
+    "*/15 * * * * *",
+    async () =>
+      await redlock
+        .acquire(["events-sync-catchup-lock"], (15 - 5) * 1000)
+        .then(async () => {
+          logger.info("events-sync-catchup", "Catching up events");
 
-      try {
-        await realtimeEventsSync.addToQueue();
-      } catch (error) {
-        logger.error(
-          "events-sync-catchup",
-          `Failed to catch up events: ${error}`
-        );
-      }
-    }
-  });
+          try {
+            await realtimeEventsSync.addToQueue();
+          } catch (error) {
+            logger.error(
+              "events-sync-catchup",
+              `Failed to catch up events: ${error}`
+            );
+          }
+        })
+        .catch(() => {})
+  );
+}
+
+// BACKGROUND WORKER ONLY
+if (config.doBackgroundWork && config.catchup) {
+  cron.schedule(
+    "*/1 * * * *",
+    async () =>
+      await redlock
+        .acquire(["events-sync-orphan-check-lock"], (60 - 5) * 1000)
+        .then(async () => {
+          logger.info("events-sync-orphan-check", "Checking orphaned blocks");
+
+          try {
+            // Fetch last local blocks
+            const blocksInfo: { block: number; block_hash: Buffer }[] =
+              await db.manyOrNone(
+                `
+                  (
+                    SELECT DISTINCT "block", "block_hash"
+                    FROM "nft_transfer_events"
+                    ORDER BY "block" DESC
+                    LIMIT 30
+                  )
+
+                  UNION
+
+                  (
+                    SELECT DISTINCT "block", "block_hash"
+                    FROM "ft_transfer_events"
+                    ORDER BY "block" DESC
+                    LIMIT 30
+                  )
+
+                  UNION
+
+                  (
+                    SELECT DISTINCT "block", "block_hash"
+                    FROM "cancel_events"
+                    ORDER BY "block" DESC
+                    LIMIT 30
+                  )
+
+                  UNION
+
+                  (
+                    SELECT DISTINCT "block", "block_hash"
+                    FROM "fill_events"
+                    ORDER BY "block" DESC
+                    LIMIT 30
+                  )
+                `,
+                { limit: 30 }
+              );
+
+            // Check orphaned blocks by comparing the local block
+            // hash against the latest upstream block hash
+            const wrongBlocks = new Map<number, Buffer>();
+            try {
+              for (const { block, block_hash } of blocksInfo) {
+                const upstreamBlockHash = toBuffer(
+                  (await baseProvider.getBlock(block)).hash
+                );
+                if (!block_hash.equals(upstreamBlockHash)) {
+                  wrongBlocks.set(block, block_hash);
+
+                  logger.info(
+                    "events-sync-orphan-check",
+                    `Detected wrong block ${block} with hash ${
+                      "0x" + block_hash.toString("hex")
+                    }`
+                  );
+                }
+              }
+            } catch (error) {
+              logger.error(
+                "events-sync-orphan-check",
+                `Failed to retrieve block hashes: ${error}`
+              );
+            }
+
+            // Fix any orphaned blocks
+            for (const [block, blockHash] of wrongBlocks.entries()) {
+              await backfillEventsSync.addToQueue(block, block, {
+                prioritized: true,
+              });
+              await unsyncEvents(blockHash);
+            }
+          } catch (error) {
+            logger.error(
+              "events-sync-orphan-check",
+              `Failed to checking/fixing orphaned blocks: ${error}`
+            );
+          }
+        })
+        .catch(() => {})
+  );
 }

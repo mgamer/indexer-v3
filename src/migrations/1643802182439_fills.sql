@@ -19,6 +19,9 @@ ALTER TABLE "fill_events"
   ADD CONSTRAINT "fill_events_pk"
   PRIMARY KEY ("block_hash", "tx_hash", "log_index");
 
+CREATE INDEX "fill_events_block_index"
+  ON "fill_events" ("block" DESC);
+
 -- Down Migration
 
 DROP TABLE "fill_events";

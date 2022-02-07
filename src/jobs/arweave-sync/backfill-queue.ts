@@ -1,11 +1,11 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
+import { syncArweave } from "@/arweave-sync/index";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-import { syncEvents } from "@/events-sync/index";
 
-const QUEUE_NAME = "events-sync-backfill";
+const QUEUE_NAME = "arweave-sync-backfill";
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
@@ -30,31 +30,23 @@ if (config.doBackgroundWork) {
       try {
         logger.info(
           QUEUE_NAME,
-          `Events backfill syncing block range [${fromBlock}, ${toBlock}]`
+          `Arweave backfill syncing block range [${fromBlock}, ${toBlock}]`
         );
 
-        // https://github.com/taskforcesh/bullmq/issues/652#issuecomment-984840987
-        await new Promise(async (resolve, reject) => {
-          try {
-            const timeout = setTimeout(
-              () => reject(new Error("timeout")),
-              60 * 1000
-            );
-
-            await syncEvents(fromBlock, toBlock, true);
-
-            clearTimeout(timeout);
-            resolve(true);
-          } catch (error) {
-            reject(error);
-          }
-        });
+        let { lastCursor, done } = await syncArweave({ fromBlock, toBlock });
+        while (!done) {
+          ({ lastCursor, done } = await syncArweave({
+            fromBlock,
+            toBlock,
+            afterCursor: lastCursor,
+          }));
+        }
       } catch (error) {
-        logger.error(QUEUE_NAME, `Events backfill syncing failed: ${error}`);
+        logger.error(QUEUE_NAME, `Arweave backfill syncing failed: ${error}`);
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 10 }
+    { connection: redis.duplicate(), concurrency: 1 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
@@ -66,16 +58,10 @@ export const addToQueue = async (
   toBlock: number,
   options?: {
     blocksPerBatch?: number;
-    prioritized?: boolean;
   }
 ) => {
-  // Syncing is done in several batches since the requested block
-  // range might result in lots of events which could potentially
-  // not fit within a single provider response.
-  const blocksPerBatch = options?.blocksPerBatch ?? 32;
-
-  // Important backfill processes should be prioritized
-  const prioritized = options?.prioritized ?? false;
+  // Syncing is done in several batches as for events syncing
+  const blocksPerBatch = options?.blocksPerBatch ?? 4;
 
   // Sync in reverse to handle more recent events first
   const jobs: any[] = [];
@@ -86,9 +72,6 @@ export const addToQueue = async (
       data: {
         fromBlock: from,
         toBlock: to,
-      },
-      opts: {
-        priority: prioritized ? 1 : undefined,
       },
     });
   }

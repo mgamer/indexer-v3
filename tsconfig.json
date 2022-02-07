@@ -15,11 +15,12 @@
     "baseUrl": "src",
     "paths": {
       "@/api/*": ["api/*"],
+      "@/arweave-sync/*": ["sync/arweave/*"],
       "@/common/*": ["common/*"],
       "@/config/*": ["config/*"],
-      "@/entities/*": ["entities/*"],
       "@/jobs/*": ["jobs/*"],
-      "@/orders/*": ["orders/*"],
+      "@/orderbook/*": ["orderbook/*"],
+      "@/queries/*": ["queries/*"],
       "@/events-sync/*": ["sync/events/*"]
     }
   },
