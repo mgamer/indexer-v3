@@ -62,7 +62,7 @@ if (config.doBackgroundWork) {
               60 * 1000
             );
 
-            await syncEvents(fromBlock, headBlock, true);
+            await syncEvents(fromBlock, headBlock);
 
             clearTimeout(timeout);
             resolve(true);
