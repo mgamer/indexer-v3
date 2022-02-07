@@ -5,6 +5,7 @@ import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
 import * as wyvernV2 from "@/orderbook/orders/wyvern-v2";
 import * as tokenList from "@/orderbook/token-sets/token-list";
+import { logger } from "@/common/logger";
 
 // Version 0.0.1 of Reservoir Protocol Arweave data:
 // - `wyvern-v2` orders
@@ -41,4 +42,13 @@ export const processTransactionData = async (transactionData: any) => {
     orderbookOrders.addToQueue(orderInfos),
     orderbookTokenSets.addToQueue(tokenSets),
   ]);
+
+  logger.info(
+    "process-tranaction-data-v0.0.1",
+    `Got ${orderInfos} orders from Arweave`
+  );
+  logger.info(
+    "process-tranaction-data-v0.0.1",
+    `Got ${tokenSets} token sets from Arweave`
+  );
 };
