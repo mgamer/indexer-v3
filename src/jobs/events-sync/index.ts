@@ -63,6 +63,9 @@ if (config.doBackgroundWork && config.catchup) {
           try {
             // Fetch last local blocks
             const blocksInfo: { block: number; block_hash: Buffer }[] =
+              // TODO: Investigate the best index to use for retrieving
+              // the latest distinct block hashes (so that we don't get
+              // slow writes/updates - especially when backfilling).
               await db.manyOrNone(
                 `
                   (
@@ -71,27 +74,21 @@ if (config.doBackgroundWork && config.catchup) {
                     ORDER BY "block" DESC
                     LIMIT 30
                   )
-
                   UNION
-
                   (
                     SELECT DISTINCT "block", "block_hash"
                     FROM "ft_transfer_events"
                     ORDER BY "block" DESC
                     LIMIT 30
                   )
-
                   UNION
-
                   (
                     SELECT DISTINCT "block", "block_hash"
                     FROM "cancel_events"
                     ORDER BY "block" DESC
                     LIMIT 30
                   )
-
                   UNION
-
                   (
                     SELECT DISTINCT "block", "block_hash"
                     FROM "fill_events"
