@@ -15,6 +15,8 @@ import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 
+// TODO: Split into multiple modules
+
 type EventDataKind =
   | "erc20-transfer"
   | "erc721-transfer"
