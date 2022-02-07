@@ -2,7 +2,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import * as dbQuery from "@/queries/tokens/get-tokens";
+import * as getTokensDb from "@/queries/tokens/get-tokens";
 
 export const getTokensOptions: RouteOptions = {
   description:
@@ -31,10 +31,19 @@ export const getTokensOptions: RouteOptions = {
     schema: Joi.object({
       tokens: Joi.array().items(
         Joi.object({
-          contract: Joi.string(),
-          tokenId: Joi.string(),
+          contract: Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-f0-9]{40}$/)
+            .required(),
+          tokenId: Joi.string()
+            .pattern(/^[0-9]+$/)
+            .required(),
           name: Joi.string().allow(null, ""),
           image: Joi.string().allow(null, ""),
+          collection: Joi.object({
+            id: Joi.string().allow(null, ""),
+            name: Joi.string().allow(null, ""),
+          }),
           topBuyValue: Joi.number().unsafe().allow(null),
           floorSellValue: Joi.number().unsafe().allow(null),
         })
@@ -49,7 +58,7 @@ export const getTokensOptions: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const tokens = await dbQuery.execute(query as dbQuery.Filter);
+      const tokens = await getTokensDb.execute(query as getTokensDb.Filter);
       return { tokens };
     } catch (error) {
       logger.error("get-tokens-handler", `Handler failure: ${error}`);

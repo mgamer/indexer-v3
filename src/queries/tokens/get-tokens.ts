@@ -72,7 +72,7 @@ export const execute = async (filter: Filter): Promise<Response> => {
     case "topBuyValue": {
       baseQuery += ` ORDER BY "t"."top_buy_value" ${
         filter.sortDirection || "DESC"
-      } NULLS LAST`;
+      } NULLS LAST, "t"."token_id"`;
       break;
     }
 
@@ -80,7 +80,7 @@ export const execute = async (filter: Filter): Promise<Response> => {
     default: {
       baseQuery += ` ORDER BY "t"."floor_sell_value" ${
         filter.sortDirection || "ASC"
-      } NULLS LAST`;
+      } NULLS LAST, "t"."token_id"`;
       break;
     }
   }
@@ -95,6 +95,11 @@ export const execute = async (filter: Filter): Promise<Response> => {
       tokenId: r.token_id,
       name: r.name,
       image: r.image,
+      // TODO: Integrate the collection once available
+      collection: {
+        id: null,
+        name: null,
+      },
       topBuyValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
       floorSellValue: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
     }))
