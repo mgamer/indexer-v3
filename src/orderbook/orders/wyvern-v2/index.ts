@@ -3,12 +3,13 @@ import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
 
 import { db, pgp } from "@/common/db";
+import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { OrderMetadata, defaultSchemaHash } from "@/orderbook/orders/utils";
 import * as tokenSet from "@/orderbook/token-sets";
-import { logger } from "@/common/logger";
 
 export type OrderInfo = {
   orderParams: Sdk.WyvernV2.Types.OrderParams;
@@ -368,6 +369,15 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
     );
     await db.none(
       pgp.helpers.insert(orderValues, columns) + " ON CONFLICT DO NOTHING"
+    );
+
+    await ordersUpdateById.addToQueue(
+      results
+        .filter((r) => r.status === "success")
+        .map(({ id }) => ({
+          context: "new-order",
+          id,
+        }))
     );
   }
 
