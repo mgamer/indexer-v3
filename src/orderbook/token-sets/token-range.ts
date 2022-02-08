@@ -2,6 +2,7 @@ import crypto from "crypto";
 import stringify from "json-stable-stringify";
 
 import { db, pgp } from "@/common/db";
+import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
 
 export type TokenSet = {
@@ -90,7 +91,7 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
               SELECT
                 $/tokenSetId/,
                 $/contract/,
-                "t"."token_id""
+                "t"."token_id"
               FROM "tokens" "t"
               WHERE "t"."contract" = $/contract/
                 AND "t"."token_id" >= $/startTokenId/
@@ -108,8 +109,11 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
       }
 
       valid.push(tokenSet);
-    } catch {
-      // Ignore any invalid token sets
+    } catch (error) {
+      logger.error(
+        "orderbook-token-range-set",
+        `Failed to check/save token set ${JSON.stringify(tokenSet)}: ${error}`
+      );
     }
   }
 
