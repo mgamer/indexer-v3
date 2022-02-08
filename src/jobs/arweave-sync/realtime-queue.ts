@@ -26,27 +26,24 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (_job: Job) => {
       try {
-        let localBlock = Number(await redis.get(`${QUEUE_NAME}-min-block`));
+        let localBlock = Number(await redis.get(`${QUEUE_NAME}-last-block`));
         if (localBlock === 0) {
           localBlock = (await arweaveGateway.blocks.getCurrent()).height;
-          await redis.set(`${QUEUE_NAME}-min-block`, localBlock);
+          await redis.set(`${QUEUE_NAME}-last-block`, localBlock);
         }
 
-        const localCursor = await redis.get(`${QUEUE_NAME}-after-cursor`);
-
-        let { lastCursor, done } = await syncArweave({
-          fromBlock: localBlock,
-          afterCursor: localCursor ?? undefined,
+        let { lastBlock, lastCursor, done } = await syncArweave({
+          fromBlock: localBlock + 1,
         });
         while (!done) {
-          ({ lastCursor, done } = await syncArweave({
+          ({ lastBlock, lastCursor, done } = await syncArweave({
             fromBlock: localBlock,
             afterCursor: lastCursor,
           }));
         }
 
-        if (lastCursor) {
-          await redis.set(`${QUEUE_NAME}-after-cursor`, lastCursor);
+        if (lastBlock) {
+          await redis.set(`${QUEUE_NAME}-last-block`, lastBlock);
         }
       } catch (error) {
         logger.error(QUEUE_NAME, `Arweave realtime syncing failed: ${error}`);

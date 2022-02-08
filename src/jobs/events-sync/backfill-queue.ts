@@ -2,6 +2,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
+import { manualTimeout } from "@/common/utils";
 import { config } from "@/config/index";
 import { syncEvents } from "@/events-sync/index";
 
@@ -33,22 +34,10 @@ if (config.doBackgroundWork) {
           `Events backfill syncing block range [${fromBlock}, ${toBlock}]`
         );
 
-        // https://github.com/taskforcesh/bullmq/issues/652#issuecomment-984840987
-        await new Promise(async (resolve, reject) => {
-          try {
-            const timeout = setTimeout(
-              () => reject(new Error("timeout")),
-              60 * 1000
-            );
-
-            await syncEvents(fromBlock, toBlock, true);
-
-            clearTimeout(timeout);
-            resolve(true);
-          } catch (error) {
-            reject(error);
-          }
-        });
+        await manualTimeout(
+          () => syncEvents(fromBlock, toBlock, true),
+          2 * 60 * 1000
+        );
       } catch (error) {
         logger.error(QUEUE_NAME, `Events backfill syncing failed: ${error}`);
         throw error;
@@ -72,7 +61,7 @@ export const addToQueue = async (
   // Syncing is done in several batches since the requested block
   // range might result in lots of events which could potentially
   // not fit within a single provider response.
-  const blocksPerBatch = options?.blocksPerBatch ?? 32;
+  const blocksPerBatch = options?.blocksPerBatch ?? 16;
 
   // Important backfill processes should be prioritized
   const prioritized = options?.prioritized ?? false;

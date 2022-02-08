@@ -45,10 +45,10 @@ export const processTransactionData = async (transactionData: any) => {
 
   logger.info(
     "process-tranaction-data-v0.0.1",
-    `Got ${orderInfos} orders from Arweave`
+    `Got ${orderInfos.length} orders from Arweave`
   );
   logger.info(
     "process-tranaction-data-v0.0.1",
-    `Got ${tokenSets} token sets from Arweave`
+    `Got ${tokenSets.length} token sets from Arweave`
   );
 };

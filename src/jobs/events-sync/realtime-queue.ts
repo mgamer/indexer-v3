@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { redis } from "@/common/redis";
+import { manualTimeout } from "@/common/utils";
 import { config } from "@/config/index";
 import { syncEvents } from "@/events-sync/index";
 import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
@@ -31,7 +32,7 @@ if (config.doBackgroundWork) {
         // of the blockchain. If we lag behind more than that, then all
         // previous blocks that we cannot cover here will be relayed to
         // the backfill queue.
-        const maxBlocks = 32;
+        const maxBlocks = 16;
 
         const headBlock = await baseProvider.getBlockNumber();
 
@@ -54,22 +55,10 @@ if (config.doBackgroundWork) {
           `Events realtime syncing block range [${fromBlock}, ${headBlock}]`
         );
 
-        // https://github.com/taskforcesh/bullmq/issues/652#issuecomment-984840987
-        await new Promise(async (resolve, reject) => {
-          try {
-            const timeout = setTimeout(
-              () => reject(new Error("timeout")),
-              60 * 1000
-            );
-
-            await syncEvents(fromBlock, headBlock);
-
-            clearTimeout(timeout);
-            resolve(true);
-          } catch (error) {
-            reject(error);
-          }
-        });
+        await manualTimeout(
+          () => syncEvents(fromBlock, headBlock),
+          2 * 60 * 1000
+        );
 
         // Send any remaining blocks to the backfill queue
         if (localBlock < fromBlock) {

@@ -29,6 +29,9 @@ import "@/jobs/events-sync/write-buffers/nft-transfers";
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork && config.catchup) {
+  // Keep up with the head of the blockchain by polling for new blocks
+  // every once in a while (hardcoded at 15 seconds for now but should
+  // be set dynamically depending on the chain's average block time).
   cron.schedule(
     "*/15 * * * * *",
     async () =>
@@ -48,10 +51,11 @@ if (config.doBackgroundWork && config.catchup) {
         })
         .catch(() => {})
   );
-}
 
-// BACKGROUND WORKER ONLY
-if (config.doBackgroundWork && config.catchup) {
+  // Since we're polling up to the latest block of the chain, we have
+  // to ensure we have don't persist orphaned blocks. Every once in a
+  // while, we have to check the latest blocks and make sure they are
+  // still in the canonical chain.
   cron.schedule(
     "*/1 * * * *",
     async () =>

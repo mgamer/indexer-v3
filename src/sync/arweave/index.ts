@@ -11,6 +11,7 @@ type Transaction = {
 };
 
 type ArweaveSyncResult = {
+  lastBlock?: number;
   lastCursor?: string;
   done: boolean;
   transactions: Transaction[];
@@ -56,6 +57,9 @@ export const syncArweave = async (options?: {
               name
               value
             }
+            block {
+              height
+            }
           }
         }
       }
@@ -73,8 +77,16 @@ export const syncArweave = async (options?: {
         name: string;
         value: string;
       }[];
+      block: {
+        height: number;
+      };
     };
   }[] = data?.transactions?.edges ?? [];
+
+  let lastBlock: number | undefined;
+  if (results.length) {
+    lastBlock = results[results.length - 1].node.block.height;
+  }
 
   let lastCursor: string | undefined;
   if (results.length) {
@@ -113,6 +125,7 @@ export const syncArweave = async (options?: {
   }
 
   return {
+    lastBlock,
     lastCursor,
     done: results.length < batchSize,
     transactions,

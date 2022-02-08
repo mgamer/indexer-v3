@@ -30,7 +30,10 @@ if (config.doBackgroundWork) {
       const { order, metadata } = job.data as wyvernV2.OrderInfo;
 
       try {
-        await wyvernV2.save([{ order, metadata }]);
+        logger.info(
+          QUEUE_NAME,
+          JSON.stringify(await wyvernV2.save([{ order, metadata }]))
+        );
       } catch (error) {
         logger.error(
           QUEUE_NAME,
