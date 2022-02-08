@@ -68,7 +68,8 @@ if (config.doBackgroundWork) {
                     SELECT
                       "o"."id" as "order_id",
                       "o"."value",
-                      "o"."maker"
+                      "o"."maker",
+                      "o"."valid_between",
                     FROM "orders" "o"
                     WHERE "o"."token_set_id" = "ts"."id"
                       AND "o"."side" = 'buy'
@@ -119,7 +120,8 @@ if (config.doBackgroundWork) {
                   SELECT
                     "o"."id" as "order_id",
                     "o"."value",
-                    "o"."maker"
+                    "o"."maker",
+                    "o"."valid_between"
                   FROM "orders" "o"
                   JOIN "token_sets_tokens" "tst"
                     ON "o"."token_set_id" = "tst"."token_set_id"
@@ -161,7 +163,7 @@ if (config.doBackgroundWork) {
       } catch (error) {
         logger.error(
           QUEUE_NAME,
-          `Failed to handle order info ${job.data}: ${error}`
+          `Failed to handle order info ${JSON.stringify(job.data)}: ${error}`
         );
         throw error;
       }

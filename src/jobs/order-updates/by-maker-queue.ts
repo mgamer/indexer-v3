@@ -147,7 +147,7 @@ if (config.doBackgroundWork) {
       } catch (error) {
         logger.error(
           QUEUE_NAME,
-          `Failed to handle maker info ${job.data}: ${error}`
+          `Failed to handle maker info ${JSON.stringify(job.data)}: ${error}`
         );
         throw error;
       }

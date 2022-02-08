@@ -163,7 +163,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Check and save: associated token set
       let tokenSetId: string | undefined;
-      const schemaHash = metadata.schemaHash || defaultSchemaHash;
+      const schemaHash = toBuffer(metadata.schemaHash || defaultSchemaHash);
 
       const orderKind = order.params.kind?.split("-").slice(1).join("-");
       switch (orderKind) {
@@ -305,9 +305,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       }
 
       const validFrom = `date_trunc('seconds', to_timestamp(${order.params.listingTime}))`;
-      const validTo = `date_trunc('seconds', to_timestamp(${
-        order.params.expirationTime || "infinity"
-      }))`;
+      const validTo = order.params.expirationTime
+        ? `date_trunc('seconds', to_timestamp(${order.params.expirationTime}))`
+        : "'infinity'";
       orderValues.push({
         id,
         kind: "wyvern-v2",
