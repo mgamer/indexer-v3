@@ -132,7 +132,7 @@ if (config.doBackgroundWork) {
             `
               UPDATE "orders" AS "o" SET
                 "fillability_status" = "x"."fillability_status"::order_fillability_status_t,
-                "expiration" = "x"."expiration",
+                "expiration" = "x"."expiration"::timestamptz,
                 "updated_at" = now()
               FROM (VALUES ${values}) AS "x"("id", "fillability_status", "expiration")
               WHERE "o"."id" = "x"."id"::text
