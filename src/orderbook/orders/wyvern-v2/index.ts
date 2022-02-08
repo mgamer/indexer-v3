@@ -152,14 +152,23 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       }
 
-      // Check: order is fillable
+      // Check: fillability and approval status
+      let fillabilityStatus = "fillable";
+      let approvalStatus = "approved";
       try {
         await order.checkFillability(baseProvider);
-      } catch {
-        return results.push({
-          id,
-          status: "not-fillable",
-        });
+      } catch (error: any) {
+        // Keep any orders that can potentially get valid in the future
+        if (error.message === "no-approval") {
+          approvalStatus = "no-approval";
+        } else if (error.message === "no-balance") {
+          fillabilityStatus = "no-balance";
+        } else {
+          return results.push({
+            id,
+            status: "not-fillable",
+          });
+        }
       }
 
       // Check and save: associated token set
@@ -313,8 +322,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         id,
         kind: "wyvern-v2",
         side,
-        fillability_status: "fillable",
-        approval_status: "approved",
+        fillability_status: fillabilityStatus,
+        approval_status: approvalStatus,
         token_set_id: tokenSetId,
         token_set_schema_hash: schemaHash,
         maker: toBuffer(order.params.maker),
