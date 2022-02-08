@@ -5,6 +5,7 @@ import cron from "node-cron";
 import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis, redlock } from "@/common/redis";
+import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
 const QUEUE_NAME = "fill-updates";
@@ -69,7 +70,7 @@ if (config.doBackgroundWork) {
                   AND "token_id" = $/tokenId/
               `,
               {
-                contract,
+                contract: toBuffer(contract),
                 tokenId,
                 timestamp,
                 value: result.value,
@@ -104,7 +105,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 3 }
+    { connection: redis.duplicate(), concurrency: 5 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
