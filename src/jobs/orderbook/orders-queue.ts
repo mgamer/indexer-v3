@@ -27,13 +27,10 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { order, metadata } = job.data as wyvernV2.OrderInfo;
+      const { orderParams, metadata } = job.data as wyvernV2.OrderInfo;
 
       try {
-        logger.info(
-          QUEUE_NAME,
-          JSON.stringify(await wyvernV2.save([{ order, metadata }]))
-        );
+        await wyvernV2.save([{ orderParams, metadata }]);
       } catch (error) {
         logger.error(
           QUEUE_NAME,
@@ -65,7 +62,7 @@ if (config.doBackgroundWork) {
 export const addToQueue = async (orderInfos: wyvernV2.OrderInfo[]) => {
   await queue.addBulk(
     orderInfos.map((orderInfo) => ({
-      name: orderInfo.order.prefixHash(),
+      name: `${orderInfo.orderParams.maker}-${orderInfo.orderParams.salt}`,
       data: orderInfo,
     }))
   );

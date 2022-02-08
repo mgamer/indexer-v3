@@ -30,10 +30,12 @@ if (config.doBackgroundWork) {
         if (localBlock === 0) {
           localBlock = (await arweaveGateway.blocks.getCurrent()).height;
           await redis.set(`${QUEUE_NAME}-last-block`, localBlock);
+        } else {
+          localBlock++;
         }
 
         let { lastBlock, lastCursor, done } = await syncArweave({
-          fromBlock: localBlock + 1,
+          fromBlock: localBlock,
         });
         while (!done) {
           ({ lastBlock, lastCursor, done } = await syncArweave({

@@ -15,6 +15,13 @@ import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 
+// TODO: All event tables have as primary key (blockHash, txHash, logIndex).
+// While this is the correct way to do it in order to protect against chain
+// reorgs we might as well do without the block hash (since the exact block
+// at which an event occured is less important for us than the fact that it
+// did occur). Removing the block hash from the primary key will definitely
+// result in a write/update speed up. Something to research.
+
 // TODO: Split into multiple modules
 
 type EventDataKind =
@@ -243,12 +250,14 @@ export const syncEvents = async (
 
               makerInfos.push({
                 context,
+                timestamp: baseEventParams.timestamp,
                 side: "buy",
                 maker: from,
                 contract: baseEventParams.address,
               });
               makerInfos.push({
                 context,
+                timestamp: baseEventParams.timestamp,
                 side: "buy",
                 maker: to,
                 contract: baseEventParams.address,
@@ -274,6 +283,7 @@ export const syncEvents = async (
 
               makerInfos.push({
                 context,
+                timestamp: baseEventParams.timestamp,
                 side: "sell",
                 maker: from,
                 contract: baseEventParams.address,
@@ -281,6 +291,7 @@ export const syncEvents = async (
               });
               makerInfos.push({
                 context,
+                timestamp: baseEventParams.timestamp,
                 side: "sell",
                 maker: to,
                 contract: baseEventParams.address,
@@ -308,6 +319,7 @@ export const syncEvents = async (
 
               makerInfos.push({
                 context,
+                timestamp: baseEventParams.timestamp,
                 side: "sell",
                 maker: from,
                 contract: baseEventParams.address,
@@ -315,6 +327,7 @@ export const syncEvents = async (
               });
               makerInfos.push({
                 context,
+                timestamp: baseEventParams.timestamp,
                 side: "sell",
                 maker: to,
                 contract: baseEventParams.address,
@@ -344,6 +357,7 @@ export const syncEvents = async (
 
                 makerInfos.push({
                   context,
+                  timestamp: baseEventParams.timestamp,
                   side: "sell",
                   maker: from,
                   contract: baseEventParams.address,
@@ -351,6 +365,7 @@ export const syncEvents = async (
                 });
                 makerInfos.push({
                   context,
+                  timestamp: baseEventParams.timestamp,
                   side: "sell",
                   maker: to,
                   contract: baseEventParams.address,
@@ -375,6 +390,7 @@ export const syncEvents = async (
 
               makerInfos.push({
                 context,
+                timestamp: baseEventParams.timestamp,
                 side: "buy",
                 maker: to,
                 contract: baseEventParams.address,
@@ -397,6 +413,7 @@ export const syncEvents = async (
 
               makerInfos.push({
                 context,
+                timestamp: baseEventParams.timestamp,
                 side: "buy",
                 maker: from,
                 contract: baseEventParams.address,

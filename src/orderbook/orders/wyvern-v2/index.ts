@@ -8,9 +8,10 @@ import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { OrderMetadata, defaultSchemaHash } from "@/orderbook/orders/utils";
 import * as tokenSet from "@/orderbook/token-sets";
+import { logger } from "@/common/logger";
 
 export type OrderInfo = {
-  order: Sdk.WyvernV2.Order;
+  orderParams: Sdk.WyvernV2.Types.OrderParams;
   metadata: OrderMetadata;
 };
 
@@ -23,8 +24,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: any[] = [];
 
-  const handleOrder = async ({ order, metadata }: OrderInfo) => {
+  const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
+      const order = new Sdk.WyvernV2.Order(config.chainId, orderParams);
       const id = order.prefixHash();
 
       // Check: order doesn't already exist
@@ -192,7 +194,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           if (tokenId) {
             [{ id: tokenSetId }] = await tokenSet.singleToken.save([
               {
-                id: `token:${order.params.target}`,
+                id: `token:${order.params.target}:${tokenId}`,
                 schemaHash,
                 contract: order.params.target,
                 tokenId,
@@ -302,6 +304,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         }
       }
 
+      const validFrom = `date_trunc('seconds', to_timestamp(${order.params.listingTime}))`;
+      const validTo = `date_trunc('seconds', to_timestamp(${
+        order.params.expirationTime || "infinity"
+      }))`;
       orderValues.push({
         id,
         kind: "wyvern-v2",
@@ -314,26 +320,18 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         taker: toBuffer(order.params.taker),
         price: order.params.basePrice,
         value,
-        valid_between: `
-          tstzrange(
-            date_trunc('seconds', to_timestamp(${order.params.listingTime})),
-            date_trunc('seconds', to_timestamp(${
-              order.params.expirationTime || "infinity"
-            })),
-            '[]'
-        `,
+        valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
         source_info: sourceInfo,
         raw_data: order.params,
-        expiration: `
-          date_trunc('seconds', to_timestamp(${
-            order.params.expirationTime || "infinity"
-          }))
-        `,
+        expiration: validTo,
       });
 
       results.push({ id, status: "success" });
-    } catch {
-      // Ignore any failures
+    } catch (error) {
+      logger.error(
+        "orders-wyvern-v2-save",
+        `Failed to handle orders: ${error}`
+      );
     }
   };
 
@@ -357,10 +355,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         "taker",
         "price",
         "value",
-        "valid_between",
+        { name: "valid_between", mod: ":raw" },
         "source_info",
         "raw_data",
-        "expiration",
+        { name: "expiration", mod: ":raw" },
         { name: "created_at", init: () => "now()", mod: ":raw" },
         { name: "updated_at", init: () => "now()", mod: ":raw" },
       ],

@@ -53,12 +53,13 @@ export const addEvents = async (events: Event[]) => {
           "order_id"
         ) VALUES ${pgp.helpers.values(cancelValues, columns)}
         ON CONFLICT DO NOTHING
-        RETURNING "order_id"
+        RETURNING "order_id", "timestamp"
       )
       INSERT INTO "orders" (
         "id",
         "kind",
         "fillability_status",
+        "expiration",
         "created_at",
         "updated_at"
       ) ( 
@@ -66,12 +67,16 @@ export const addEvents = async (events: Event[]) => {
           "x"."order_id",
           'wyvern-v2'::order_kind_t,
           'cancelled'::order_fillability_status_t,
+          to_timestamp("x"."timestamp") as "expiration",
           now(),
           now()
         FROM "x"
       )
       ON CONFLICT ("id") DO
-      UPDATE SET "fillability_status" = 'cancelled', "updated_at" = now()
+      UPDATE SET
+        "fillability_status" = 'cancelled',
+        "expiration" = EXCLUDED."expiration",
+        "updated_at" = now()
     `);
   }
 

@@ -1,11 +1,8 @@
-import * as Sdk from "@reservoir0x/sdk";
-
-import { config } from "@/config/index";
+import { logger } from "@/common/logger";
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
 import * as wyvernV2 from "@/orderbook/orders/wyvern-v2";
 import * as tokenList from "@/orderbook/token-sets/token-list";
-import { logger } from "@/common/logger";
 
 // Version 0.0.1 of Reservoir Protocol Arweave data:
 // - `wyvern-v2` orders
@@ -19,7 +16,7 @@ export const processTransactionData = async (transactionData: any) => {
     try {
       if (kind === "wyvern-v2") {
         orderInfos.push({
-          order: new Sdk.WyvernV2.Order(config.chainId, data),
+          orderParams: data,
           metadata: {
             schemaHash: data.schemaHash,
           },

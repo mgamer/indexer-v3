@@ -1,5 +1,4 @@
 import { AddressZero } from "@ethersproject/constants";
-import { Common } from "@reservoir0x/sdk";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import cron from "node-cron";
 
@@ -31,7 +30,8 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { context, side, maker, contract, tokenId } = job.data as MakerInfo;
+      const { context, timestamp, side, maker, contract, tokenId } =
+        job.data as MakerInfo;
 
       try {
         // TODO: Handle the order's approval status as well
@@ -40,6 +40,7 @@ if (config.doBackgroundWork) {
           id: string;
           old_status: string;
           new_status: string;
+          expiration: string | null;
         }[] = [];
 
         if (side === "buy") {
@@ -51,7 +52,11 @@ if (config.doBackgroundWork) {
                 (CASE
                   WHEN "fb"."amount" >= "o"."price" THEN 'fillable'
                   ELSE 'no-balance'
-                END)::order_fillability_status_t AS "new_status"
+                END)::order_fillability_status_t AS "new_status",
+                (CASE
+                  WHEN "fb"."amount" >= "o"."price" THEN upper("o"."valid_between")
+                  ELSE to_timestamp($/timestamp/)
+                END) AS "expiration"
               FROM "orders" "o"
               JOIN "ft_balances" "fb"
                 ON "o"."maker" = "fb"."owner"
@@ -63,6 +68,7 @@ if (config.doBackgroundWork) {
             {
               maker,
               contract,
+              timestamp,
             }
           );
         } else if (side === "sell") {
@@ -74,7 +80,11 @@ if (config.doBackgroundWork) {
                 (CASE
                   WHEN "nb"."amount" > 0 THEN 'fillable'
                   ELSE 'no-balance'
-                END)::order_fillability_status_t AS "new_status"
+                END)::order_fillability_status_t AS "new_status",
+                (CASE
+                  WHEN "nb"."amount" > 0 THEN upper("o"."valid_between")
+                  ELSE to_timestamp($/timestamp/)
+                END) AS "expiration"
               FROM "orders" "o"
               JOIN "nft_balances" "nb"
                 on "o"."maker" = "nb"."owner"
@@ -92,6 +102,7 @@ if (config.doBackgroundWork) {
               maker,
               contract,
               tokenId,
+              timestamp,
             }
           );
         }
@@ -102,13 +113,17 @@ if (config.doBackgroundWork) {
         );
 
         if (fillabilityStatuses.length) {
-          const columns = new pgp.helpers.ColumnSet(["hash", "status"], {
-            table: "orders",
-          });
+          const columns = new pgp.helpers.ColumnSet(
+            ["id", "fillability_status", "expiration"],
+            {
+              table: "orders",
+            }
+          );
           const values = pgp.helpers.values(
-            fillabilityStatuses.map(({ id, new_status }) => ({
+            fillabilityStatuses.map(({ id, new_status, expiration }) => ({
               id,
-              status: new_status,
+              fillability_status: new_status,
+              expiration,
             })),
             columns
           );
@@ -116,8 +131,10 @@ if (config.doBackgroundWork) {
           await db.none(
             `
               UPDATE "orders" AS "o" SET
-                "fillability_status" = "x"."fillability_status"::order_fillability_status_t
-              FROM (VALUES ${values}) AS "x"("id", "status")
+                "fillability_status" = "x"."fillability_status"::order_fillability_status_t,
+                "expiration" = "x"."expiration",
+                "updated_at" = now()
+              FROM (VALUES ${values}) AS "x"("id", "fillability_status", "expiration")
               WHERE "o"."id" = "x"."id"::text
             `
           );
@@ -156,8 +173,10 @@ if (config.doBackgroundWork) {
 }
 
 export type MakerInfo = {
-  // Deterministic context that triggered the jobs
+  // Deterministic context that triggered the job
   context: string;
+  // The timestamp of the event that triggered the job
+  timestamp: number;
   side: "buy" | "sell";
   maker: Buffer;
   contract?: Buffer;
