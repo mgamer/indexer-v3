@@ -331,7 +331,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
     } catch (error) {
       logger.error(
         "orders-wyvern-v2-save",
-        `Failed to handle orders: ${error}`
+        `Failed to handle order with params ${JSON.stringify(
+          orderParams
+        )}: ${error}`
       );
     }
   };
