@@ -69,7 +69,7 @@ if (config.doBackgroundWork) {
                       "o"."id" as "order_id",
                       "o"."value",
                       "o"."maker",
-                      "o"."valid_between",
+                      "o"."valid_between"
                     FROM "orders" "o"
                     WHERE "o"."token_set_id" = "ts"."id"
                       AND "o"."side" = 'buy'
