@@ -56,7 +56,7 @@ if (config.doBackgroundWork) {
                 (CASE
                   WHEN "fb"."amount" >= "o"."price" THEN upper("o"."valid_between")
                   ELSE to_timestamp($/timestamp/)
-                END) AS "expiration"
+                END)::timestamptz AS "expiration"
               FROM "orders" "o"
               JOIN "ft_balances" "fb"
                 ON "o"."maker" = "fb"."owner"
@@ -84,7 +84,7 @@ if (config.doBackgroundWork) {
                 (CASE
                   WHEN "nb"."amount" > 0 THEN upper("o"."valid_between")
                   ELSE to_timestamp($/timestamp/)
-                END) AS "expiration"
+                END)::timestamptz AS "expiration"
               FROM "orders" "o"
               JOIN "nft_balances" "nb"
                 on "o"."maker" = "nb"."owner"
