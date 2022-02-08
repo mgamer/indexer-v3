@@ -137,15 +137,15 @@ if (config.doBackgroundWork) {
                             EXISTS(
                               SELECT FROM "nft_balances" "nb"
                                 WHERE "nb"."contract" = "x"."contract"
-                                and "nb"."token_id" = "x"."token_id"
-                                and "nb"."amount" > 0
-                                and "nb"."owner" != "o"."maker"
+                                AND "nb"."token_id" = "x"."token_id"
+                                AND "nb"."amount" > 0
+                                AND "nb"."owner" != "o"."maker"
                             )
                           `
                     }
                   ORDER BY "o"."value" ${side === "sell" ? "ASC" : "DESC"}
                   LIMIT 1
-                ) "y" on true
+                ) "y" ON TRUE
               )
               UPDATE "tokens" AS "t" SET
                 "${column}_id" = "z"."order_id",

@@ -2,6 +2,7 @@ import crypto from "crypto";
 import stringify from "json-stable-stringify";
 
 import { db, pgp } from "@/common/db";
+import { toBuffer } from "@/common/utils";
 
 export type TokenSet = {
   id: string;
@@ -91,7 +92,7 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
           `,
           values: {
             tokenSetId: tokenSet.id,
-            contract,
+            contract: toBuffer(contract),
           },
         });
       }
