@@ -306,7 +306,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         id,
         kind: "wyvern-v2",
         side,
-        fillability_status: "valid",
+        fillability_status: "fillable",
         approval_status: "approved",
         token_set_id: tokenSetId,
         token_set_schema_hash: schemaHash,
