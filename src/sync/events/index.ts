@@ -252,15 +252,15 @@ export const syncEvents = async (
                 context,
                 timestamp: baseEventParams.timestamp,
                 side: "buy",
-                maker: from,
-                contract: baseEventParams.address,
+                maker: fromBuffer(from),
+                contract: fromBuffer(baseEventParams.address),
               });
               makerInfos.push({
                 context,
                 timestamp: baseEventParams.timestamp,
                 side: "buy",
-                maker: to,
-                contract: baseEventParams.address,
+                maker: fromBuffer(to),
+                contract: fromBuffer(baseEventParams.address),
               });
 
               break;
@@ -285,16 +285,16 @@ export const syncEvents = async (
                 context,
                 timestamp: baseEventParams.timestamp,
                 side: "sell",
-                maker: from,
-                contract: baseEventParams.address,
+                maker: fromBuffer(from),
+                contract: fromBuffer(baseEventParams.address),
                 tokenId,
               });
               makerInfos.push({
                 context,
                 timestamp: baseEventParams.timestamp,
                 side: "sell",
-                maker: to,
-                contract: baseEventParams.address,
+                maker: fromBuffer(to),
+                contract: fromBuffer(baseEventParams.address),
                 tokenId,
               });
 
@@ -321,16 +321,16 @@ export const syncEvents = async (
                 context,
                 timestamp: baseEventParams.timestamp,
                 side: "sell",
-                maker: from,
-                contract: baseEventParams.address,
+                maker: fromBuffer(from),
+                contract: fromBuffer(baseEventParams.address),
                 tokenId,
               });
               makerInfos.push({
                 context,
                 timestamp: baseEventParams.timestamp,
                 side: "sell",
-                maker: to,
-                contract: baseEventParams.address,
+                maker: fromBuffer(to),
+                contract: fromBuffer(baseEventParams.address),
                 tokenId,
               });
 
@@ -359,16 +359,16 @@ export const syncEvents = async (
                   context,
                   timestamp: baseEventParams.timestamp,
                   side: "sell",
-                  maker: from,
-                  contract: baseEventParams.address,
+                  maker: fromBuffer(from),
+                  contract: fromBuffer(baseEventParams.address),
                   tokenId: tokenIds[i],
                 });
                 makerInfos.push({
                   context,
                   timestamp: baseEventParams.timestamp,
                   side: "sell",
-                  maker: to,
-                  contract: baseEventParams.address,
+                  maker: fromBuffer(to),
+                  contract: fromBuffer(baseEventParams.address),
                   tokenId: tokenIds[i],
                 });
               }
@@ -392,8 +392,8 @@ export const syncEvents = async (
                 context,
                 timestamp: baseEventParams.timestamp,
                 side: "buy",
-                maker: to,
-                contract: baseEventParams.address,
+                maker: fromBuffer(to),
+                contract: fromBuffer(baseEventParams.address),
               });
 
               break;
@@ -415,8 +415,8 @@ export const syncEvents = async (
                 context,
                 timestamp: baseEventParams.timestamp,
                 side: "buy",
-                maker: from,
-                contract: baseEventParams.address,
+                maker: fromBuffer(from),
+                contract: fromBuffer(baseEventParams.address),
               });
 
               break;

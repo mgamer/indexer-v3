@@ -5,7 +5,7 @@ import cron from "node-cron";
 import { db, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis, redlock } from "@/common/redis";
-import { fromBuffer, toBuffer } from "@/common/utils";
+import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 
@@ -66,8 +66,8 @@ if (config.doBackgroundWork) {
                 AND "fb"."contract" = $/contract/
             `,
             {
-              maker,
-              contract,
+              maker: toBuffer(maker),
+              contract: toBuffer(contract),
               timestamp,
             }
           );
@@ -99,8 +99,8 @@ if (config.doBackgroundWork) {
                 AND "nb"."token_id" = $/tokenId/
             `,
             {
-              maker,
-              contract,
+              maker: toBuffer(maker),
+              contract: toBuffer(contract),
               tokenId,
               timestamp,
             }
@@ -178,28 +178,26 @@ export type MakerInfo = {
   // The timestamp of the event that triggered the job
   timestamp: number;
   side: "buy" | "sell";
-  maker: Buffer;
-  contract?: Buffer;
+  maker: string;
+  contract: string;
   // Only relevant for sell orders
   tokenId?: string;
 };
 
 export const addToQueue = async (makerInfos: MakerInfo[]) => {
   // Ignore empty makers
-  makerInfos = makerInfos.filter(
-    ({ maker }) => !maker.equals(toBuffer(AddressZero))
-  );
+  makerInfos = makerInfos.filter(({ maker }) => maker !== AddressZero);
 
   await queue.addBulk(
     makerInfos.map((makerInfo) => ({
-      name: fromBuffer(makerInfo.maker),
+      name: makerInfo.maker,
       data: makerInfo,
       opts: {
         // We should make sure not to perform any expensive work more
         // than once. As such, we keep the last performed jobs in the
         // queue and give all jobs a deterministic id so that we skip
         // handling jobs that already got executed.
-        jobId: `${makerInfo.context}-${fromBuffer(makerInfo.maker)}`,
+        jobId: `${makerInfo.context}-${makerInfo.maker}`,
       },
     }))
   );
