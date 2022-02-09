@@ -1,7 +1,7 @@
 import { gql, request } from "graphql-request";
 
 import * as v001 from "@/arweave-sync/common/v001";
-import { arweaveGateway } from "@/common/provider";
+import { arweaveGateway, network } from "@/common/provider";
 import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 
@@ -25,7 +25,6 @@ export const syncArweave = async (options?: {
   const transactions: Transaction[] = [];
 
   const batchSize = 100;
-  const network = config.chainId === 1 ? "mainnet" : "rinkeby";
 
   // https://gist.github.com/TheLoneRonin/08d9fe4a43486815c78d6bebb2da4fff
   const { fromBlock, toBlock, afterCursor } = options || {};

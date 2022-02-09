@@ -17,3 +17,5 @@ export const arweaveGateway = Arweave.init({
   port: 443,
   protocol: "https",
 });
+
+export const network = config.chainId === 1 ? "mainnet" : "rinkeby";

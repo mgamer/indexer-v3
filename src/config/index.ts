@@ -6,6 +6,7 @@ export const config = {
   adminApiKey: String(process.env.ADMIN_API_KEY),
 
   baseNetworkHttpUrl: String(process.env.BASE_NETWORK_HTTP_URL),
+  metadataApiBaseUrl: String(process.env.METADATA_API_BASE_URL),
 
   databaseUrl: String(process.env.DATABASE_URL),
   redisUrl: String(process.env.REDIS_URL),

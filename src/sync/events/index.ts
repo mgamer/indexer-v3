@@ -13,6 +13,7 @@ import { parseEvent } from "@/events-sync/parser";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
+import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 
 // TODO: All event tables have as primary key (blockHash, txHash, logIndex).
 // While this is the correct way to do it in order to protect against chain
@@ -191,6 +192,7 @@ export const syncEvents = async (
   const fillInfos: fillUpdates.FillInfo[] = [];
   const orderInfos: orderUpdatesById.OrderInfo[] = [];
   const makerInfos: orderUpdatesByMaker.MakerInfo[] = [];
+  const mintInfos: tokenUpdatesMint.MintInfo[] = [];
 
   await baseProvider
     .getLogs({
@@ -295,6 +297,13 @@ export const syncEvents = async (
                 tokenId,
               });
 
+              if (from === AddressZero) {
+                mintInfos.push({
+                  contract: baseEventParams.address,
+                  tokenId,
+                });
+              }
+
               break;
             }
 
@@ -330,6 +339,13 @@ export const syncEvents = async (
                 contract: baseEventParams.address,
                 tokenId,
               });
+
+              if (from === AddressZero) {
+                mintInfos.push({
+                  contract: baseEventParams.address,
+                  tokenId,
+                });
+              }
 
               break;
             }
@@ -368,6 +384,13 @@ export const syncEvents = async (
                   contract: baseEventParams.address,
                   tokenId: tokenIds[i],
                 });
+
+                if (from === AddressZero) {
+                  mintInfos.push({
+                    contract: baseEventParams.address,
+                    tokenId: tokenIds[i],
+                  });
+                }
               }
 
               break;
@@ -490,6 +513,7 @@ export const syncEvents = async (
           fillUpdates.addToQueue(fillInfos),
           orderUpdatesById.addToQueue(orderInfos),
           orderUpdatesByMaker.addToQueue(makerInfos),
+          tokenUpdatesMint.addToQueue(mintInfos),
         ]);
       }
     });

@@ -1,9 +1,9 @@
 import tracer from "dd-trace";
 
+import { network } from "@/common/provider";
 import { config } from "@/config/index";
 
 if (process.env.DATADOG_AGENT_URL) {
-  const network = config.chainId === 1 ? "mainnet" : "rinkeby";
   const service = `indexer-${config.version}-${network}`;
 
   tracer.init({

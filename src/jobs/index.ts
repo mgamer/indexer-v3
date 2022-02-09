@@ -5,6 +5,7 @@ import "@/jobs/events-sync";
 import "@/jobs/fill-updates";
 import "@/jobs/order-updates";
 import "@/jobs/orderbook";
+import "@/jobs/token-updates";
 
 // Export all job queues for monitoring through the UI
 
@@ -19,6 +20,7 @@ import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
+import * as tokenUpdatesMintQueue from "@/jobs/token-updates/mint-queue";
 
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
@@ -32,4 +34,5 @@ export const allJobQueues = [
   orderUpdatesByMaker.queue,
   orderbookOrders.queue,
   orderbookTokenSets.queue,
+  tokenUpdatesMintQueue.queue,
 ];
