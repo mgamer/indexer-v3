@@ -34,6 +34,12 @@ if (config.doBackgroundWork) {
           localBlock++;
         }
 
+        // TODO: It is possible to filter and fetch pending Arweave
+        // transactions (eg. still in the mempool) by using exactly
+        // the same gql query we're using but removing filtering by
+        // block. We should integrate it so that we get orders asap.
+        // https://discordapp.com/channels/357957786904166400/358038065974870018/940653379133272134
+
         let { lastBlock, lastCursor, done } = await syncArweave({
           fromBlock: localBlock,
         });
