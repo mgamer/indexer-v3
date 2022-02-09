@@ -66,11 +66,12 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
         },
       });
 
-      // For efficiency, directly skip if data already exists
+      // For efficiency, skip if data already exists
       const tokenSetTokensExist = await db.oneOrNone(
         `
           SELECT 1 FROM "token_sets_tokens" "tst"
           WHERE "tst"."token_set_id" = $/tokenSetId/
+          LIMIT 1
         `,
         { tokenSetId: id }
       );
