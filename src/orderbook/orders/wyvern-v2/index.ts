@@ -173,7 +173,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Check and save: associated token set
       let tokenSetId: string | undefined;
-      const schemaHash = toBuffer(metadata.schemaHash || defaultSchemaHash);
+      const schemaHash = metadata.schemaHash || defaultSchemaHash;
 
       const orderKind = order.params.kind?.split("-").slice(1).join("-");
       switch (orderKind) {
@@ -325,7 +325,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         fillability_status: fillabilityStatus,
         approval_status: approvalStatus,
         token_set_id: tokenSetId,
-        token_set_schema_hash: schemaHash,
+        token_set_schema_hash: toBuffer(schemaHash),
         maker: toBuffer(order.params.maker),
         taker: toBuffer(order.params.taker),
         price: order.params.basePrice,

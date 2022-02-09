@@ -1,12 +1,13 @@
 import { db, pgp } from "@/common/db";
+import { toBuffer } from "@/common/utils";
 import { BaseEventParams } from "@/events-sync/parser";
 
 // TODO: Support for than one kind (for now, `wyvern-v2`)
 export type Event = {
   buyOrderId: string;
   sellOrderId: string;
-  maker: Buffer;
-  taker: Buffer;
+  maker: string;
+  taker: string;
   price: string;
   baseEventParams: BaseEventParams;
 };
@@ -15,17 +16,17 @@ export const addEvents = async (events: Event[]) => {
   const fillValues: any[] = [];
   for (const event of events) {
     fillValues.push({
-      address: event.baseEventParams.address,
+      address: toBuffer(event.baseEventParams.address),
       block: event.baseEventParams.block,
-      block_hash: event.baseEventParams.blockHash,
-      tx_hash: event.baseEventParams.txHash,
+      block_hash: toBuffer(event.baseEventParams.blockHash),
+      tx_hash: toBuffer(event.baseEventParams.txHash),
       tx_index: event.baseEventParams.txIndex,
       log_index: event.baseEventParams.logIndex,
       timestamp: event.baseEventParams.timestamp,
       buy_order_id: event.buyOrderId,
       sell_order_id: event.sellOrderId,
-      maker: event.maker,
-      taker: event.taker,
+      maker: toBuffer(event.maker),
+      taker: toBuffer(event.taker),
       price: event.price,
     });
   }
@@ -111,11 +112,11 @@ export const addEvents = async (events: Event[]) => {
   }
 };
 
-export const removeEvents = async (blockHash: Buffer) => {
+export const removeEvents = async (blockHash: string) => {
   // Delete the fill events but skip reverting order status updates
   // since it is not possible to know what to revert to and even if
   // we knew, it might mess up other higher-level order processes.
   await db.any(`DELETE FROM "fill_events" WHERE "block_hash" = $/blockHash/`, {
-    blockHash,
+    blockHash: toBuffer(blockHash),
   });
 };

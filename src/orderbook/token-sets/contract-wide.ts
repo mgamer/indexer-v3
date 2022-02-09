@@ -7,7 +7,7 @@ import { toBuffer } from "@/common/utils";
 
 export type TokenSet = {
   id: string;
-  schemaHash: Buffer;
+  schemaHash: string;
   schema?: any;
   contract: string;
 };
@@ -20,11 +20,13 @@ const isValid = (tokenSet: TokenSet) => {
 
     if (tokenSet.schema) {
       // If we have the schema, then validate it against the schema hash
-      const schemaHash = crypto
-        .createHash("sha256")
-        .update(stringify(tokenSet.schema))
-        .digest();
-      if (!schemaHash.equals(tokenSet.schemaHash)) {
+      const schemaHash =
+        "0x" +
+        crypto
+          .createHash("sha256")
+          .update(stringify(tokenSet.schema))
+          .digest("hex");
+      if (schemaHash !== tokenSet.schemaHash) {
         return false;
       }
     }
@@ -61,7 +63,7 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
         `,
         values: {
           id,
-          schemaHash,
+          schemaHash: toBuffer(schemaHash),
           schema,
         },
       });

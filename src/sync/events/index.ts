@@ -4,7 +4,6 @@ import { Common, WyvernV2 } from "@reservoir0x/sdk";
 
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as cancels from "@/events-sync/common/cancel-events";
 import * as fills from "@/events-sync/common/fill-events";
@@ -230,15 +229,13 @@ export const syncEvents = async (
           );
 
           const context =
-            fromBuffer(baseEventParams.txHash) +
-            "-" +
-            baseEventParams.logIndex.toString();
+            baseEventParams.txHash + "-" + baseEventParams.logIndex.toString();
 
           switch (eventData?.kind) {
             case "erc20-transfer": {
               const parsedLog = eventData.abi.parseLog(log);
-              const from = toBuffer(parsedLog.args["from"]);
-              const to = toBuffer(parsedLog.args["to"]);
+              const from = parsedLog.args["from"].toLowerCase();
+              const to = parsedLog.args["to"].toLowerCase();
               const amount = parsedLog.args["amount"].toString();
 
               ftTransferEvents.push({
@@ -252,15 +249,15 @@ export const syncEvents = async (
                 context,
                 timestamp: baseEventParams.timestamp,
                 side: "buy",
-                maker: fromBuffer(from),
-                contract: fromBuffer(baseEventParams.address),
+                maker: from,
+                contract: baseEventParams.address,
               });
               makerInfos.push({
                 context,
                 timestamp: baseEventParams.timestamp,
                 side: "buy",
-                maker: fromBuffer(to),
-                contract: fromBuffer(baseEventParams.address),
+                maker: to,
+                contract: baseEventParams.address,
               });
 
               break;
@@ -268,8 +265,8 @@ export const syncEvents = async (
 
             case "erc721-transfer": {
               const parsedLog = eventData.abi.parseLog(log);
-              const from = toBuffer(parsedLog.args["from"]);
-              const to = toBuffer(parsedLog.args["to"]);
+              const from = parsedLog.args["from"].toLowerCase();
+              const to = parsedLog.args["to"].toLowerCase();
               const tokenId = parsedLog.args["tokenId"].toString();
 
               nftTransferEvents.push({
@@ -285,16 +282,16 @@ export const syncEvents = async (
                 context,
                 timestamp: baseEventParams.timestamp,
                 side: "sell",
-                maker: fromBuffer(from),
-                contract: fromBuffer(baseEventParams.address),
+                maker: from,
+                contract: baseEventParams.address,
                 tokenId,
               });
               makerInfos.push({
                 context,
                 timestamp: baseEventParams.timestamp,
                 side: "sell",
-                maker: fromBuffer(to),
-                contract: fromBuffer(baseEventParams.address),
+                maker: to,
+                contract: baseEventParams.address,
                 tokenId,
               });
 
@@ -303,8 +300,8 @@ export const syncEvents = async (
 
             case "erc1155-transfer-single": {
               const parsedLog = eventData.abi.parseLog(log);
-              const from = toBuffer(parsedLog.args["from"]);
-              const to = toBuffer(parsedLog.args["to"]);
+              const from = parsedLog.args["from"].toLowerCase();
+              const to = parsedLog.args["to"].toLowerCase();
               const tokenId = parsedLog.args["tokenId"].toString();
               const amount = parsedLog.args["amount"].toString();
 
@@ -321,16 +318,16 @@ export const syncEvents = async (
                 context,
                 timestamp: baseEventParams.timestamp,
                 side: "sell",
-                maker: fromBuffer(from),
-                contract: fromBuffer(baseEventParams.address),
+                maker: from,
+                contract: baseEventParams.address,
                 tokenId,
               });
               makerInfos.push({
                 context,
                 timestamp: baseEventParams.timestamp,
                 side: "sell",
-                maker: fromBuffer(to),
-                contract: fromBuffer(baseEventParams.address),
+                maker: to,
+                contract: baseEventParams.address,
                 tokenId,
               });
 
@@ -339,8 +336,8 @@ export const syncEvents = async (
 
             case "erc1155-transfer-batch": {
               const parsedLog = eventData.abi.parseLog(log);
-              const from = toBuffer(parsedLog.args["from"]);
-              const to = toBuffer(parsedLog.args["to"]);
+              const from = parsedLog.args["from"].toLowerCase();
+              const to = parsedLog.args["to"].toLowerCase();
               const tokenIds = parsedLog.args["tokenIds"].map(String);
               const amounts = parsedLog.args["amounts"].map(String);
 
@@ -359,16 +356,16 @@ export const syncEvents = async (
                   context,
                   timestamp: baseEventParams.timestamp,
                   side: "sell",
-                  maker: fromBuffer(from),
-                  contract: fromBuffer(baseEventParams.address),
+                  maker: from,
+                  contract: baseEventParams.address,
                   tokenId: tokenIds[i],
                 });
                 makerInfos.push({
                   context,
                   timestamp: baseEventParams.timestamp,
                   side: "sell",
-                  maker: fromBuffer(to),
-                  contract: fromBuffer(baseEventParams.address),
+                  maker: to,
+                  contract: baseEventParams.address,
                   tokenId: tokenIds[i],
                 });
               }
@@ -378,11 +375,11 @@ export const syncEvents = async (
 
             case "weth-deposit": {
               const parsedLog = eventData.abi.parseLog(log);
-              const to = toBuffer(parsedLog.args["to"]);
+              const to = parsedLog.args["to"].toLowerCase();
               const amount = parsedLog.args["amount"].toString();
 
               ftTransferEvents.push({
-                from: toBuffer(AddressZero),
+                from: AddressZero,
                 to,
                 amount,
                 baseEventParams,
@@ -392,8 +389,8 @@ export const syncEvents = async (
                 context,
                 timestamp: baseEventParams.timestamp,
                 side: "buy",
-                maker: fromBuffer(to),
-                contract: fromBuffer(baseEventParams.address),
+                maker: to,
+                contract: baseEventParams.address,
               });
 
               break;
@@ -401,12 +398,12 @@ export const syncEvents = async (
 
             case "weth-withdrawal": {
               const parsedLog = eventData.abi.parseLog(log);
-              const from = toBuffer(parsedLog.args["from"]);
+              const from = parsedLog.args["from"].toLowerCase();
               const amount = parsedLog.args["amount"].toString();
 
               ftTransferEvents.push({
                 from,
-                to: toBuffer(AddressZero),
+                to: AddressZero,
                 amount,
                 baseEventParams,
               });
@@ -415,8 +412,8 @@ export const syncEvents = async (
                 context,
                 timestamp: baseEventParams.timestamp,
                 side: "buy",
-                maker: fromBuffer(from),
-                contract: fromBuffer(baseEventParams.address),
+                maker: from,
+                contract: baseEventParams.address,
               });
 
               break;
@@ -443,8 +440,8 @@ export const syncEvents = async (
               const parsedLog = eventData.abi.parseLog(log);
               const buyOrderId = parsedLog.args["buyHash"].toLowerCase();
               const sellOrderId = parsedLog.args["sellHash"].toLowerCase();
-              const maker = toBuffer(parsedLog.args["maker"]);
-              const taker = toBuffer(parsedLog.args["taker"]);
+              const maker = parsedLog.args["maker"].toLowerCase();
+              const taker = parsedLog.args["taker"].toLowerCase();
               const price = parsedLog.args["price"].toString();
 
               fillEvents.push({
@@ -498,7 +495,7 @@ export const syncEvents = async (
     });
 };
 
-export const unsyncEvents = async (blockHash: Buffer) =>
+export const unsyncEvents = async (blockHash: string) =>
   Promise.all([
     cancels.removeEvents(blockHash),
     fills.removeEvents(blockHash),

@@ -1,4 +1,5 @@
 import { db, pgp } from "@/common/db";
+import { toBuffer } from "@/common/utils";
 import { BaseEventParams } from "@/events-sync/parser";
 
 // TODO: Support for than one kind (for now, `wyvern-v2`)
@@ -11,10 +12,10 @@ export const addEvents = async (events: Event[]) => {
   const cancelValues: any[] = [];
   for (const event of events) {
     cancelValues.push({
-      address: event.baseEventParams.address,
+      address: toBuffer(event.baseEventParams.address),
       block: event.baseEventParams.block,
-      block_hash: event.baseEventParams.blockHash,
-      tx_hash: event.baseEventParams.txHash,
+      block_hash: toBuffer(event.baseEventParams.blockHash),
+      tx_hash: toBuffer(event.baseEventParams.txHash),
       tx_index: event.baseEventParams.txIndex,
       log_index: event.baseEventParams.logIndex,
       timestamp: event.baseEventParams.timestamp,
@@ -87,12 +88,12 @@ export const addEvents = async (events: Event[]) => {
   }
 };
 
-export const removeEvents = async (blockHash: Buffer) => {
+export const removeEvents = async (blockHash: string) => {
   // Delete the cancel events but skip reverting order status updates
   // since it's not possible to know what to revert to and even if we
   // knew, it might mess up other higher-level order processes.
   await db.any(
     `DELETE FROM "cancel_events" WHERE "block_hash" = $/blockHash/`,
-    { blockHash }
+    { blockHash: toBuffer(blockHash) }
   );
 };

@@ -1,10 +1,11 @@
 import { db, pgp } from "@/common/db";
+import { toBuffer } from "@/common/utils";
 import { BaseEventParams } from "@/events-sync/parser";
 import * as ftTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/ft-transfers";
 
 export type Event = {
-  from: Buffer;
-  to: Buffer;
+  from: string;
+  to: string;
   amount: string;
   baseEventParams: BaseEventParams;
 };
@@ -13,15 +14,15 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   const transferValues: any[] = [];
   for (const event of events) {
     transferValues.push({
-      address: event.baseEventParams.address,
+      address: toBuffer(event.baseEventParams.address),
       block: event.baseEventParams.block,
-      block_hash: event.baseEventParams.blockHash,
-      tx_hash: event.baseEventParams.txHash,
+      block_hash: toBuffer(event.baseEventParams.blockHash),
+      tx_hash: toBuffer(event.baseEventParams.txHash),
       tx_index: event.baseEventParams.txIndex,
       log_index: event.baseEventParams.logIndex,
       timestamp: event.baseEventParams.timestamp,
-      from: event.from,
-      to: event.to,
+      from: toBuffer(event.from),
+      to: toBuffer(event.to),
       amount: event.amount,
     });
   }
@@ -96,7 +97,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }
 };
 
-export const removeEvents = async (blockHash: Buffer) => {
+export const removeEvents = async (blockHash: string) => {
   // Atomically delete the transfer events and revert balance updates
   await db.any(
     `
@@ -129,6 +130,6 @@ export const removeEvents = async (blockHash: Buffer) => {
       ON CONFLICT ("contract", "owner") DO
       UPDATE SET "amount" = "ft_balances"."amount" + "excluded"."amount"
     `,
-    { blockHash }
+    { blockHash: toBuffer(blockHash) }
   );
 };

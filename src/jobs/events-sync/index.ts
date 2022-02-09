@@ -134,7 +134,7 @@ if (config.doBackgroundWork && config.catchup) {
               await backfillEventsSync.addToQueue(block, block, {
                 prioritized: true,
               });
-              await unsyncEvents(blockHash);
+              await unsyncEvents(fromBuffer(blockHash));
             }
           } catch (error) {
             logger.error(
