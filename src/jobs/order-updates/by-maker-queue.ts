@@ -1,10 +1,9 @@
 import { AddressZero } from "@ethersproject/constants";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
-import cron from "node-cron";
 
 import { db, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
-import { redis, redlock } from "@/common/redis";
+import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
@@ -157,19 +156,6 @@ if (config.doBackgroundWork) {
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
-
-  cron.schedule(
-    "*/1 * * * *",
-    async () =>
-      await redlock
-        .acquire([`${QUEUE_NAME}-queue-clean-lock`], (60 - 5) * 1000)
-        .then(async () => {
-          // Clean up jobs older than 10 minutes
-          await queue.clean(10 * 60 * 1000, 10000, "completed");
-          await queue.clean(10 * 60 * 1000, 10000, "failed");
-        })
-        .catch(() => {})
-  );
 }
 
 export type MakerInfo = {
