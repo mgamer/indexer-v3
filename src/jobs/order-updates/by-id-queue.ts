@@ -86,7 +86,7 @@ if (config.doBackgroundWork) {
                   "top_buy_maker" = "x"."maker",
                   "top_buy_valid_between" = "x"."valid_between"
                 FROM "x"
-                WHERE "ts"."id" = "x"."id"
+                WHERE "ts"."id" = "x"."order_id"
                   AND "ts"."top_buy_id" IS DISTINCT FROM "x"."order_id"
               `,
               { tokenSetId }
