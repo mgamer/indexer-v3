@@ -105,20 +105,18 @@ if (config.doBackgroundWork && config.catchup) {
 
             // Check orphaned blocks by comparing the local block
             // hash against the latest upstream block hash
-            const wrongBlocks = new Map<number, Buffer>();
+            const wrongBlocks = new Map<number, string>();
             try {
               for (const { block, block_hash } of blocksInfo) {
-                const upstreamBlockHash = toBuffer(
-                  (await baseProvider.getBlock(block)).hash
-                );
-                if (!block_hash.equals(upstreamBlockHash)) {
-                  wrongBlocks.set(block, block_hash);
+                const upstreamBlockHash = (await baseProvider.getBlock(block))
+                  .hash;
+                const localBlockHash = fromBuffer(block_hash);
+                if (localBlockHash !== upstreamBlockHash) {
+                  wrongBlocks.set(block, localBlockHash);
 
                   logger.info(
                     "events-sync-orphan-check",
-                    `Detected wrong block ${block} with hash ${fromBuffer(
-                      block_hash
-                    )}`
+                    `Detected wrong block ${block} with hash ${localBlockHash}}`
                   );
                 }
               }
@@ -134,7 +132,7 @@ if (config.doBackgroundWork && config.catchup) {
               await backfillEventsSync.addToQueue(block, block, {
                 prioritized: true,
               });
-              await unsyncEvents(fromBuffer(blockHash));
+              await unsyncEvents(blockHash);
             }
           } catch (error) {
             logger.error(
