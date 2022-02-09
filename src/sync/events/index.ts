@@ -513,6 +513,8 @@ export const syncEvents = async (
           fillUpdates.addToQueue(fillInfos),
           orderUpdatesById.addToQueue(orderInfos),
           orderUpdatesByMaker.addToQueue(makerInfos),
+          // TODO: Should we run this on backfilling as well in order
+          // to sync and integrate all collections directly?
           tokenUpdatesMint.addToQueue(mintInfos),
         ]);
       }
