@@ -43,6 +43,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       }
 
       // Check: order has a valid target
+      // TODO: For efficiency, first check the database for the contract's
+      // kind and in case that's missing use on-chain cals to check
       const contractKind = order.params.kind?.split("-")[0];
       if (contractKind === "erc721") {
         const contract = new Sdk.Common.Helpers.Erc721(

@@ -30,6 +30,10 @@ ALTER TABLE "token_sets_tokens"
   ADD CONSTRAINT "token_sets_tokens_pk"
   PRIMARY KEY ("token_set_id", "contract", "token_id");
 
+CREATE INDEX "token_sets_tokens"
+  ON "token_sets" ("contract", "token_id")
+  INCLUDE ("token_set_id");
+
 -- Down Migration
 
 DROP TABLE "token_sets_tokens";
