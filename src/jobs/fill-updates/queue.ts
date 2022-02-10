@@ -99,7 +99,7 @@ if (config.doBackgroundWork) {
       } catch (error) {
         logger.error(
           QUEUE_NAME,
-          `Failed to handle fill info ${job.data}: ${error}`
+          `Failed to handle fill info ${JSON.stringify(job.data)}: ${error}`
         );
         throw error;
       }

@@ -2,6 +2,7 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { db } from "@/common/db";
 
 export type Filter = {
+  collection?: string;
   contract?: string;
   tokenId?: string;
   tokenSetId?: string;
@@ -17,6 +18,10 @@ export type Response = {
   tokenId: string;
   name: string | null;
   image: string | null;
+  collection: {
+    id: string | null;
+    name: string | null;
+  };
   topBuyValue: number | null;
   floorSellValue: number | null;
 }[];
@@ -28,9 +33,13 @@ export const execute = async (filter: Filter): Promise<Response> => {
       "t"."token_id",
       "t"."name",
       "t"."image",
+      "c"."id" as "collection_id",
+      "c"."name" as "collection_name",
       "t"."floor_sell_value",
       "t"."top_buy_value"
     FROM "tokens" "t"
+    JOIN "collections" "c"
+      ON "t"."collection_id" = "c"."id"
   `;
 
   if (filter.tokenSetId) {
@@ -43,6 +52,9 @@ export const execute = async (filter: Filter): Promise<Response> => {
 
   // Filters
   const conditions: string[] = [];
+  if (filter.collection) {
+    conditions.push(`"t"."collection_id" = $/collection/`);
+  }
   if (filter.contract) {
     (filter as any).contract = toBuffer(filter.contract);
     conditions.push(`"t"."contract" = $/contract/`);
@@ -95,10 +107,9 @@ export const execute = async (filter: Filter): Promise<Response> => {
       tokenId: r.token_id,
       name: r.name,
       image: r.image,
-      // TODO: Integrate the collection once available
       collection: {
-        id: null,
-        name: null,
+        id: r.collection_id,
+        name: r.collection_name,
       },
       topBuyValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
       floorSellValue: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
