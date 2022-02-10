@@ -45,8 +45,10 @@ if (config.doBackgroundWork) {
           }
         );
 
-        const updateTokenCollection = async (collectionId: string) =>
-          db.none(
+        if (collection) {
+          // If the collection is readily available in the database
+          // then all that's needed is to associate the token to it.
+          await db.none(
             `
               UPDATE "tokens" SET
                 "collection_id" = $/collectionId/,
@@ -57,15 +59,12 @@ if (config.doBackgroundWork) {
             {
               contract: toBuffer(contract),
               tokenId,
-              collectionId,
+              collectionId: collection.id,
             }
           );
-
-        if (collection) {
-          // If the collection is readily available in the database, use it
-          await updateTokenCollection(collection.id);
         } else {
-          // Otherwise, fetch the collection metadata from upstream
+          // Otherwise, we have to fetch the collection metadata
+          // and definition from the upstream service.
           const url = `${config.metadataApiBaseUrl}/v3/${network}/collection?contract=${contract}&tokenId=${tokenId}`;
 
           const { data } = await axios.get(url);
@@ -81,6 +80,9 @@ if (config.doBackgroundWork) {
             tokenSetId: string;
           } = (data as any).collection;
 
+          const tokenIdRange = collection.tokenIdRange
+            ? `numrange(${collection.tokenIdRange[0]}, ${collection.tokenIdRange[1]}, '[]')`
+            : `'(,)'::numrange`;
           await db.none(
             `
               INSERT INTO "collections" (
@@ -117,14 +119,26 @@ if (config.doBackgroundWork) {
               metadata: collection.metadata,
               royalties: collection.royalties,
               contract: toBuffer(collection.contract),
-              tokenIdRange: collection.tokenIdRange
-                ? `numrange(${collection.tokenIdRange[0]}, ${collection.tokenIdRange[1]}, '[]')`
-                : `'(,)'::numrange`,
+              tokenIdRange,
               tokenSetId: collection.tokenSetId,
             }
           );
 
-          await updateTokenCollection(collection.id);
+          // Since this is the first time we run into this collection,
+          // we update all tokens that match its token definition.
+          await db.none(
+            `
+              UPDATE "tokens" SET "collection_id" = $/collectionId/
+              WHERE "contract" = $/contract/
+                AND "token_id" <@ $/tokenIdRange:raw/
+                AND "collection_id" IS NULL
+            `,
+            {
+              contract: toBuffer(collection.contract),
+              tokenIdRange,
+              collectionId: collection.id,
+            }
+          );
         }
       } catch (error) {
         logger.error(

@@ -28,11 +28,17 @@ ALTER TABLE "tokens"
   ADD CONSTRAINT "tokens_pk"
   PRIMARY KEY ("contract", "token_id");
 
-CREATE INDEX "tokens_contract_token_id_floor_sell_value"
+CREATE INDEX "tokens_contract_token_id_floor_sell_value_index"
   ON "tokens" ("contract", "token_id", "floor_sell_value");
 
-CREATE INDEX "tokens_contract_token_id_top_buy_value"
+CREATE INDEX "tokens_contract_token_id_top_buy_value_index"
   ON "tokens" ("contract", "token_id", "top_buy_value" DESC NULLS LAST);
+
+CREATE INDEX "tokens_collection_id_floor_sell_value_index"
+  ON "tokens" ("collection_id", "floor_sell_value");
+
+CREATE INDEX "tokens_collection_id_top_buy_value_index"
+  ON "tokens" ("collection_id", "top_buy_value" DESC NULLS LAST);
 
 -- https://www.lob.com/blog/supercharge-your-postgresql-performance
 -- https://klotzandrew.com/blog/posgres-per-table-autovacuum-management
