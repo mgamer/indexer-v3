@@ -21,6 +21,33 @@ type SaveResult = {
   status: string;
 };
 
+// TODO: This definitely needs to get moved into the SDK. We should
+// also refactor the SDK so that the clients are as abstracted away
+// as possible from the underlying order formats.
+const getOrderTarget = (order: Sdk.WyvernV2.Order): string | undefined => {
+  try {
+    if (order.params.kind?.endsWith("single-token-v2")) {
+      if (order.params.kind?.startsWith("erc721")) {
+        const { contract } = new Sdk.WyvernV2.Builders.Erc721.SingleToken.V2(
+          config.chainId
+        ).getDetails(order)!;
+
+        return contract;
+      } else if (order.params.kind?.startsWith("erc1155")) {
+        const { contract } = new Sdk.WyvernV2.Builders.Erc1155.SingleToken.V2(
+          config.chainId
+        ).getDetails(order)!;
+
+        return contract;
+      }
+    } else {
+      return order.params.target;
+    }
+  } catch {
+    return undefined;
+  }
+};
+
 export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: any[] = [];
@@ -28,7 +55,16 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
       const order = new Sdk.WyvernV2.Order(config.chainId, orderParams);
+      const target = getOrderTarget(order);
       const id = order.prefixHash();
+
+      // Check: order has a valid target
+      if (!target) {
+        return results.push({
+          id,
+          status: "unknown-target",
+        });
+      }
 
       // Check: order doesn't already exist
       const orderExists = await db.oneOrNone(
@@ -47,10 +83,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       // kind and in case that's missing use on-chain cals to check
       const contractKind = order.params.kind?.split("-")[0];
       if (contractKind === "erc721") {
-        const contract = new Sdk.Common.Helpers.Erc721(
-          baseProvider,
-          order.params.target
-        );
+        const contract = new Sdk.Common.Helpers.Erc721(baseProvider, target);
         if (!(await contract.isValid())) {
           return results.push({
             id,
@@ -58,10 +91,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           });
         }
       } else if (contractKind === "erc1155") {
-        const contract = new Sdk.Common.Helpers.Erc1155(
-          baseProvider,
-          order.params.target
-        );
+        const contract = new Sdk.Common.Helpers.Erc1155(baseProvider, target);
         if (!(await contract.isValid())) {
           return results.push({
             id,
@@ -182,9 +212,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         case "contract-wide": {
           [{ id: tokenSetId }] = await tokenSet.contractWide.save([
             {
-              id: `contract:${order.params.target}`,
+              id: `contract:${target}`,
               schemaHash,
-              contract: order.params.target,
+              contract: target,
             },
           ]);
 
@@ -194,11 +224,11 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         case "single-token": {
           let tokenId: string | undefined;
           if (contractKind === "erc721") {
-            tokenId = new Sdk.WyvernV2.Builders.Erc721.SingleToken(
+            tokenId = new Sdk.WyvernV2.Builders.Erc721.SingleToken.V1(
               config.chainId
             ).getTokenId(order);
           } else if (contractKind === "erc1155") {
-            tokenId = new Sdk.WyvernV2.Builders.Erc1155.SingleToken(
+            tokenId = new Sdk.WyvernV2.Builders.Erc1155.SingleToken.V1(
               config.chainId
             ).getTokenId(order);
           }
@@ -206,9 +236,35 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           if (tokenId) {
             [{ id: tokenSetId }] = await tokenSet.singleToken.save([
               {
-                id: `token:${order.params.target}:${tokenId}`,
+                id: `token:${target}:${tokenId}`,
                 schemaHash,
-                contract: order.params.target,
+                contract: target,
+                tokenId,
+              },
+            ]);
+          }
+
+          break;
+        }
+
+        case "single-token-v2": {
+          let tokenId: string | undefined;
+          if (contractKind === "erc721") {
+            ({ tokenId } = new Sdk.WyvernV2.Builders.Erc721.SingleToken.V2(
+              config.chainId
+            ).getDetails(order)!);
+          } else if (contractKind === "erc1155") {
+            ({ tokenId } = new Sdk.WyvernV2.Builders.Erc1155.SingleToken.V2(
+              config.chainId
+            ).getDetails(order)!);
+          }
+
+          if (tokenId) {
+            [{ id: tokenSetId }] = await tokenSet.singleToken.save([
+              {
+                id: `token:${target}:${tokenId}`,
+                schemaHash,
+                contract: target,
                 tokenId,
               },
             ]);
@@ -231,7 +287,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
           if (merkleRoot) {
             // Skip saving the token set since we don't know the underlying tokens
-            tokenSetId = `list:${order.params.target}:${merkleRoot}`;
+            tokenSetId = `list:${target}:${merkleRoot}`;
           }
 
           break;
@@ -252,9 +308,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           if (tokenIdRange) {
             [{ id: tokenSetId }] = await tokenSet.tokenRange.save([
               {
-                id: `token:${order.params.target}`,
+                id: `range:${target}:${tokenIdRange[0]}:${tokenIdRange[1]}`,
                 schemaHash,
-                contract: order.params.target,
+                contract: target,
                 startTokenId: tokenIdRange[0],
                 endTokenId: tokenIdRange[1],
               },
