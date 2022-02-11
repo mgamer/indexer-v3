@@ -1,7 +1,7 @@
 import axios from "axios";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
-import { db } from "@/common/db";
+import { db, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { network } from "@/common/provider";
 import { redis } from "@/common/redis";
@@ -45,23 +45,36 @@ if (config.doBackgroundWork) {
           }
         );
 
+        const queries: any[] = [];
         if (collection) {
           // If the collection is readily available in the database
           // then all that's needed is to associate the token to it.
-          await db.none(
-            `
+          queries.push({
+            query: `
               UPDATE "tokens" SET
                 "collection_id" = $/collectionId/,
                 "updated_at" = now()
               WHERE "contract" = $/contract/
                 AND "token_id" = $/tokenId/
             `,
-            {
+            values: {
               contract: toBuffer(contract),
               tokenId,
               collectionId: collection.id,
-            }
-          );
+            },
+          });
+
+          // Update the collection's token count
+          queries.push({
+            query: `
+              UPDATE "collections" SET
+                "token_count" = "token_count" + 1
+              WHERE "id" = $/collectionId/
+            `,
+            values: {
+              collectionId: collection.id,
+            },
+          });
         } else {
           // Otherwise, we have to fetch the collection metadata
           // and definition from the upstream service.
@@ -83,8 +96,8 @@ if (config.doBackgroundWork) {
           const tokenIdRange = collection.tokenIdRange
             ? `numrange(${collection.tokenIdRange[0]}, ${collection.tokenIdRange[1]}, '[]')`
             : `'(,)'::numrange`;
-          await db.none(
-            `
+          queries.push({
+            query: `
               INSERT INTO "collections" (
                 "id",
                 "slug",
@@ -111,7 +124,7 @@ if (config.doBackgroundWork) {
                 now()
               ) ON CONFLICT DO NOTHING
             `,
-            {
+            values: {
               id: collection.id,
               slug: collection.slug,
               name: collection.name,
@@ -121,24 +134,41 @@ if (config.doBackgroundWork) {
               contract: toBuffer(collection.contract),
               tokenIdRange,
               tokenSetId: collection.tokenSetId,
-            }
-          );
+            },
+          });
 
           // Since this is the first time we run into this collection,
           // we update all tokens that match its token definition.
-          await db.none(
-            `
+          queries.push({
+            query: `
               UPDATE "tokens" SET "collection_id" = $/collectionId/
               WHERE "contract" = $/contract/
                 AND "token_id" <@ $/tokenIdRange:raw/
                 AND "collection_id" IS NULL
             `,
-            {
+            values: {
               contract: toBuffer(collection.contract),
               tokenIdRange,
               collectionId: collection.id,
-            }
-          );
+            },
+          });
+
+          // Update the collection's token count
+          queries.push({
+            query: `
+              UPDATE "collections" SET "token_count" = (
+                SELECT COUNT(*) FROM "tokens" "t"
+                WHERE "t"."collection_id" = $/collectionId/
+              )
+            `,
+            values: {
+              collectionId: collection.id,
+            },
+          });
+        }
+
+        if (queries.length) {
+          await db.none(pgp.helpers.concat(queries));
         }
       } catch (error) {
         logger.error(
