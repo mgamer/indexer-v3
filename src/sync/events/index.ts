@@ -230,9 +230,6 @@ export const syncEvents = async (
               (addresses ? addresses[log.address.toLowerCase()] : true)
           );
 
-          const context =
-            baseEventParams.txHash + "-" + baseEventParams.logIndex.toString();
-
           switch (eventData?.kind) {
             case "erc20-transfer": {
               const parsedLog = eventData.abi.parseLog(log);
@@ -247,15 +244,18 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              // Make sure to only handle the same data once per block
+              const contextPrefix = `${baseEventParams.blockHash}-${baseEventParams.address}`;
+
               makerInfos.push({
-                context,
+                context: `${contextPrefix}-${from}-buy`,
                 timestamp: baseEventParams.timestamp,
                 side: "buy",
                 maker: from,
                 contract: baseEventParams.address,
               });
               makerInfos.push({
-                context,
+                context: `${contextPrefix}-${to}-buy`,
                 timestamp: baseEventParams.timestamp,
                 side: "buy",
                 maker: to,
@@ -280,8 +280,11 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              // Make sure to only handle the same data once per block
+              const contextPrefix = `${baseEventParams.blockHash}-${baseEventParams.address}-${tokenId}`;
+
               makerInfos.push({
-                context,
+                context: `${contextPrefix}-${from}-sell`,
                 timestamp: baseEventParams.timestamp,
                 side: "sell",
                 maker: from,
@@ -289,7 +292,7 @@ export const syncEvents = async (
                 tokenId,
               });
               makerInfos.push({
-                context,
+                context: `${contextPrefix}-${to}-sell`,
                 timestamp: baseEventParams.timestamp,
                 side: "sell",
                 maker: to,
@@ -323,8 +326,11 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              // Make sure to only handle the same data once per block
+              const contextPrefix = `${baseEventParams.blockHash}-${baseEventParams.address}-${tokenId}`;
+
               makerInfos.push({
-                context,
+                context: `${contextPrefix}-${from}-sell`,
                 timestamp: baseEventParams.timestamp,
                 side: "sell",
                 maker: from,
@@ -332,7 +338,7 @@ export const syncEvents = async (
                 tokenId,
               });
               makerInfos.push({
-                context,
+                context: `${contextPrefix}-${to}-sell`,
                 timestamp: baseEventParams.timestamp,
                 side: "sell",
                 maker: to,
@@ -368,8 +374,11 @@ export const syncEvents = async (
                   baseEventParams,
                 });
 
+                // Make sure to only handle the same data once per block
+                const contextPrefix = `${baseEventParams.blockHash}-${baseEventParams.address}-${tokenIds[i]}`;
+
                 makerInfos.push({
-                  context,
+                  context: `${contextPrefix}-${from}-sell`,
                   timestamp: baseEventParams.timestamp,
                   side: "sell",
                   maker: from,
@@ -377,7 +386,7 @@ export const syncEvents = async (
                   tokenId: tokenIds[i],
                 });
                 makerInfos.push({
-                  context,
+                  context: `${contextPrefix}-${to}-sell`,
                   timestamp: baseEventParams.timestamp,
                   side: "sell",
                   maker: to,
@@ -408,8 +417,11 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              // Make sure to only handle the same data once per block
+              const contextPrefix = `${baseEventParams.blockHash}-${baseEventParams.address}`;
+
               makerInfos.push({
-                context,
+                context: `${contextPrefix}-${to}-buy`,
                 timestamp: baseEventParams.timestamp,
                 side: "buy",
                 maker: to,
@@ -431,8 +443,11 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              // Make sure to only handle the same data once per block
+              const contextPrefix = `${baseEventParams.blockHash}-${baseEventParams.address}`;
+
               makerInfos.push({
-                context,
+                context: `${contextPrefix}-${from}-buy`,
                 timestamp: baseEventParams.timestamp,
                 side: "buy",
                 maker: from,
@@ -452,7 +467,7 @@ export const syncEvents = async (
               });
 
               orderInfos.push({
-                context,
+                context: orderId,
                 id: orderId,
               });
 
@@ -477,18 +492,18 @@ export const syncEvents = async (
               });
 
               fillInfos.push({
-                context,
+                context: `${buyOrderId}-${sellOrderId}`,
                 buyOrderId,
                 sellOrderId,
                 timestamp: baseEventParams.timestamp,
               });
 
               orderInfos.push({
-                context,
+                context: buyOrderId,
                 id: buyOrderId,
               });
               orderInfos.push({
-                context,
+                context: sellOrderId,
                 id: sellOrderId,
               });
 

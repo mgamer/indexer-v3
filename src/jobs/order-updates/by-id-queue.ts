@@ -193,7 +193,7 @@ export const addToQueue = async (orderInfos: OrderInfo[]) => {
         // than once. As such, we keep the last performed jobs in the
         // queue and give all jobs a deterministic id so that we skip
         // handling jobs that already got executed.
-        jobId: `${orderInfo.context}-${orderInfo.id}`,
+        jobId: orderInfo.context,
       },
     }))
   );

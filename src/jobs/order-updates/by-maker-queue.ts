@@ -141,7 +141,10 @@ if (config.doBackgroundWork) {
 
         // Re-check all affected orders
         await orderUpdatesById.addToQueue(
-          fillabilityStatuses.map(({ id }) => ({ context, id }))
+          fillabilityStatuses.map(({ id }) => ({
+            context: `${context}-${id}`,
+            id,
+          }))
         );
       } catch (error) {
         logger.error(
@@ -183,7 +186,7 @@ export const addToQueue = async (makerInfos: MakerInfo[]) => {
         // than once. As such, we keep the last performed jobs in the
         // queue and give all jobs a deterministic id so that we skip
         // handling jobs that already got executed.
-        jobId: `${makerInfo.context}-${makerInfo.maker}`,
+        jobId: makerInfo.context,
       },
     }))
   );
