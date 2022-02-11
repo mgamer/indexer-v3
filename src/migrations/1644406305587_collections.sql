@@ -26,6 +26,12 @@ CREATE INDEX "collections_contract_token_id_range_index"
 CREATE INDEX "collections_community_index"
   ON "collections" ("community");
 
+CREATE EXTENSION pg_trgm;
+
+CREATE INDEX "collections_name_index"
+  ON "collections"
+  USING GIN ("name" gin_trgm_ops);
+
 -- Down Migration
 
 DROP TABLE "collections";
