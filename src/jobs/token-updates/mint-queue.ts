@@ -156,10 +156,12 @@ if (config.doBackgroundWork) {
           // Update the collection's token count
           queries.push({
             query: `
-              UPDATE "collections" SET "token_count" = (
-                SELECT COUNT(*) FROM "tokens" "t"
-                WHERE "t"."collection_id" = $/collectionId/
-              )
+              UPDATE "collections" SET
+                "token_count" = (
+                  SELECT COUNT(*) FROM "tokens" "t"
+                  WHERE "t"."collection_id" = $/collectionId/
+                )
+              WHERE "id" = $/collectionId/
             `,
             values: {
               collectionId: collection.id,
