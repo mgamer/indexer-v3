@@ -23,7 +23,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
         .valid("tokenId", "floorSellValue", "topBuyValue")
         .default("floorSellValue"),
       sortDirection: Joi.string().lowercase().valid("asc", "desc"),
-      offset: Joi.number().integer().min(0).default(0),
+      offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(50).default(20),
     })
       .or("contract", "collection", "tokenSetId")

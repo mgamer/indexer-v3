@@ -1,6 +1,7 @@
 import { Server } from "@hapi/hapi";
 
 import * as adminEndpoints from "@/api/endpoints/admin";
+import * as ownersEndpoints from "@/api/endpoints/owners";
 import * as tokensEndpoints from "@/api/endpoints/tokens";
 
 export const setupRoutes = (server: Server) => {
@@ -16,6 +17,14 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/admin/sync-events",
     options: adminEndpoints.postSyncEventsOptions,
+  });
+
+  // Owners
+
+  server.route({
+    method: "GET",
+    path: "/owners/v1",
+    options: ownersEndpoints.getOwnersV1Options,
   });
 
   // Tokens

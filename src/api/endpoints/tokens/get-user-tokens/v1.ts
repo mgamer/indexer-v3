@@ -27,7 +27,7 @@ export const getUserTokensV1Options: RouteOptions = {
       hasOffer: Joi.boolean(),
       sortBy: Joi.string().valid("acquiredAt", "topBuyValue"),
       sortDirection: Joi.string().lowercase().valid("asc", "desc"),
-      offset: Joi.number().integer().min(0).default(0),
+      offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     }),
   },
@@ -188,7 +188,7 @@ export const getUserTokensV1Options: RouteOptions = {
               floorSellValue: r.floor_sell_value
                 ? formatEth(r.floor_sell_value)
                 : null,
-              acquiredAt: r.acquired_at,
+              acquiredAt: Number(r.acquired_at),
             },
           }))
         );
