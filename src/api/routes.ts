@@ -1,18 +1,9 @@
 import { Server } from "@hapi/hapi";
 
 import * as adminEndpoints from "@/api/endpoints/admin";
-import * as rootEndpoints from "@/api/endpoints/root";
 import * as tokensEndpoints from "@/api/endpoints/tokens";
 
 export const setupRoutes = (server: Server) => {
-  // Root
-
-  server.route({
-    method: "GET",
-    path: "/",
-    options: rootEndpoints.pingOptions,
-  });
-
   // Admin
 
   server.route({
@@ -31,7 +22,25 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/tokens",
-    options: tokensEndpoints.getTokensOptions,
+    path: "/tokens/v1",
+    options: tokensEndpoints.getTokensV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/tokens/details/v1",
+    options: tokensEndpoints.getTokensDetailsV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/tokens/floor/v1",
+    options: tokensEndpoints.getTokensFloorV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/users/{user}/tokens/v1",
+    options: tokensEndpoints.getUserTokensV1Options,
   });
 };

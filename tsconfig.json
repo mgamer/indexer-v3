@@ -20,7 +20,6 @@
       "@/config/*": ["config/*"],
       "@/jobs/*": ["jobs/*"],
       "@/orderbook/*": ["orderbook/*"],
-      "@/queries/*": ["queries/*"],
       "@/events-sync/*": ["sync/events/*"]
     }
   },

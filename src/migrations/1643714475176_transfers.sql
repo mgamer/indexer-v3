@@ -21,6 +21,9 @@ ALTER TABLE "nft_transfer_events"
 CREATE INDEX "nft_transfer_events_block_index"
   ON "nft_transfer_events" ("block" DESC);
 
+CREATE INDEX "nft_transfer_events_address_token_id_index"
+  ON "nft_transfer_events" ("address", "token_id");
+
 CREATE TABLE "ft_transfer_events" (
   "address" BYTEA NOT NULL,
   "block" INT NOT NULL,

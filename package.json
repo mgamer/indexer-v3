@@ -63,7 +63,6 @@
     "@/config": "dist/config",
     "@/jobs": "dist/jobs",
     "@/orderbook": "dist/orderbook",
-    "@/queries": "dist/queries",
     "@/events-sync": "dist/sync/events"
   }
 }

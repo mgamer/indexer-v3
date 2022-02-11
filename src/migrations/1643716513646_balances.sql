@@ -11,6 +11,10 @@ ALTER TABLE "nft_balances"
   ADD CONSTRAINT "nft_balances_pk"
   PRIMARY KEY ("contract", "token_id", "owner");
 
+CREATE INDEX "nft_balances_owner_index"
+  ON "nft_balances" ("owner")
+  WHERE ("amount" > 0);
+
 -- https://www.lob.com/blog/supercharge-your-postgresql-performance
 -- https://klotzandrew.com/blog/posgres-per-table-autovacuum-management
 ALTER TABLE "nft_balances" SET (autovacuum_vacuum_scale_factor = 0.0);

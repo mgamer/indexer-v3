@@ -9,10 +9,11 @@ import qs from "qs";
 
 import { setupRoutes } from "@/api/routes";
 import { logger } from "@/common/logger";
+import { network } from "@/common/provider";
 import { config } from "@/config/index";
 import { allJobQueues } from "@/jobs/index";
 
-export const start = async function (): Promise<void> {
+export const start = async (): Promise<void> => {
   const server = Hapi.server({
     port: config.port,
     query: {
@@ -51,11 +52,6 @@ export const start = async function (): Promise<void> {
     routes: { prefix: "/admin/bullmq" },
   });
 
-  const apiHost =
-    config.chainId === 1
-      ? "mainnet-api-v4.reservoir.tools"
-      : "rinkeby-api-v4.reservoir.tools";
-
   await server.register([
     {
       plugin: Inert,
@@ -68,15 +64,16 @@ export const start = async function (): Promise<void> {
       options: <HapiSwagger.RegisterOptions>{
         grouping: "tags",
         schemes: ["https", "http"],
-        host: apiHost,
+        host: `${network}-api-v4.reservoir.tools`,
         cors: true,
+        tryItOutEnabled: true,
+        documentationPath: "/",
         info: {
           title: "Reservoir Protocol API",
           version: require("../../package.json").version,
           description:
             "You are viewing the reference docs for the Reservoir API. \n\nFor a more complete overview with guides and examples, check out the <a href='https://reservoirprotocol.github.io'>Reservoir Protocol Docs</a>.",
         },
-        tryItOutEnabled: true,
       },
     },
   ]);
