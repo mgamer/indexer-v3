@@ -34,6 +34,12 @@ export const setupRoutes = (server: Server) => {
     options: collectionsEndpoints.getCollectionV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/users/{user}/collections/v1",
+    options: collectionsEndpoints.getUserCollectionsV1Options,
+  });
+
   // Owners
 
   server.route({

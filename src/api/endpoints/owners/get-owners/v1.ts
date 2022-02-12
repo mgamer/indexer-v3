@@ -56,7 +56,7 @@ export const getOwnersV1Options: RouteOptions = {
         SELECT
           "nb"."owner",
           SUM("nb"."amount") AS "token_count",
-          COUNT("t"."token_id") FILTER (WHERE "t"."floor_sell_value" IS NOT NULL) AS "on_sale_count",
+          COUNT(*) FILTER (WHERE "t"."floor_sell_value" IS NOT NULL) AS "on_sale_count",
           MIN("t"."floor_sell_value") AS "floor_sell_value",
           MAX("t"."top_buy_value") AS "top_buy_value",
           SUM("nb"."amount") * MAX("t"."top_buy_value") AS "total_buy_value"
