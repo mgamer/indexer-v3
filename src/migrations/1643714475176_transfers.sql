@@ -24,6 +24,9 @@ CREATE INDEX "nft_transfer_events_block_index"
 CREATE INDEX "nft_transfer_events_address_token_id_to_index"
   ON "nft_transfer_events" ("address", "token_id", "to");
 
+CREATE INDEX "nft_transfer_events_tx_hash_log_index_index"
+  ON "nft_transfer_events" ("tx_hash", "log_index");
+
 CREATE TABLE "ft_transfer_events" (
   "address" BYTEA NOT NULL,
   "block" INT NOT NULL,

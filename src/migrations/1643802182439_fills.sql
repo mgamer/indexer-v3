@@ -22,6 +22,10 @@ ALTER TABLE "fill_events"
 CREATE INDEX "fill_events_block_index"
   ON "fill_events" ("block" DESC);
 
+CREATE INDEX "fill_events_tx_hash_log_index_index"
+  ON "fill_events" ("tx_hash", "log_index")
+  INCLUDE ("price");
+
 -- Down Migration
 
 DROP TABLE "fill_events";

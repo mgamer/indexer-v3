@@ -4,6 +4,7 @@ import * as adminEndpoints from "@/api/endpoints/admin";
 import * as collectionsEndpoints from "@/api/endpoints/collections";
 import * as ownersEndpoints from "@/api/endpoints/owners";
 import * as tokensEndpoints from "@/api/endpoints/tokens";
+import * as transfersEndpoints from "@/api/endpoints/transfers";
 
 export const setupRoutes = (server: Server) => {
   // Admin
@@ -84,5 +85,13 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/users/{user}/tokens/v1",
     options: tokensEndpoints.getUserTokensV1Options,
+  });
+
+  // Transfers
+
+  server.route({
+    method: "GET",
+    path: "/transfers/v1",
+    options: transfersEndpoints.getTransfersV1Options,
   });
 };
