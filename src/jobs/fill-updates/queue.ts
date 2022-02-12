@@ -93,7 +93,7 @@ if (config.doBackgroundWork) {
 
           logger.info(
             QUEUE_NAME,
-            `Updated last ${result.side} given token set ${result.token_set_id}`
+            `Updated last ${result.side} given token set ${result.token_set_id} (context ${job.id})`
           );
         }
       } catch (error) {

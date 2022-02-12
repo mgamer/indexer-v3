@@ -51,7 +51,7 @@ if (config.doBackgroundWork) {
 
           logger.info(
             QUEUE_NAME,
-            `Recomputing cached ${side} data given token set ${tokenSetId}`
+            `Recomputing cached ${side} data given token set ${tokenSetId} (context ${job.id})`
           );
 
           // Recompute `top_buy` for token sets that are not single token
