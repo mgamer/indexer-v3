@@ -45,7 +45,7 @@ if (config.doBackgroundWork) {
               expiredOrders.map(({ id }) => ({
                 context: `expired-orders-check-${Math.floor(
                   Date.now() / 1000
-                )}`,
+                )}-${id}`,
                 id,
               }))
             );
