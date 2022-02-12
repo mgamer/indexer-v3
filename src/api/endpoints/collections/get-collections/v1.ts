@@ -113,9 +113,7 @@ export const getCollectionsV1Options: RouteOptions = {
             "ts"."top_buy_value",
             "ts"."top_buy_maker"
           FROM "token_sets" "ts"
-          WHERE "ts"."collection_id" = "x"."id"
-            AND "ts"."attribute_key" IS NULL
-            AND "ts"."attribute_value" IS NULL
+          WHERE "ts"."id" = "x"."token_set_id"
           ORDER BY "ts"."top_buy_value" DESC
           LIMIT 1
         ) "y" ON TRUE

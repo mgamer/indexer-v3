@@ -124,17 +124,17 @@ export const getTokensDetailsV1Options: RouteOptions = {
           "t"."floor_sell_id",
           "t"."floor_sell_value",
           "t"."floor_sell_maker",
-          date_part('epoch', lower("t"."floor_sell_valid_between")) AS "floor_sell_valid_from",
-          coalesce(
-            nullif(date_part('epoch', upper("t"."floor_sell_valid_between")), 'Infinity'),
+          DATE_PART('epoch', LOWER("t"."floor_sell_valid_between")) AS "floor_sell_valid_from",
+          COALESCE(
+            NULLIF(date_part('epoch', UPPER("t"."floor_sell_valid_between")), 'Infinity'),
             0
           ) AS "floor_sell_valid_until",
           "t"."top_buy_id",
           "t"."top_buy_value",
           "t"."top_buy_maker",
-          date_part('epoch', lower("t"."top_buy_valid_between")) AS "top_buy_valid_from",
-          coalesce(
-            nullif(date_part('epoch', upper("t"."top_buy_valid_between")), 'Infinity'),
+          DATE_PART('epoch', LOWER("t"."top_buy_valid_between")) AS "top_buy_valid_from",
+          COALESCE(
+            NULLIF(DATE_PART('epoch', UPPER("t"."top_buy_valid_between")), 'Infinity'),
             0
           ) AS "top_buy_valid_until"
         FROM "tokens" "t"
@@ -233,14 +233,14 @@ export const getTokensDetailsV1Options: RouteOptions = {
               value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
               maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
               validFrom: r.floor_sell_valid_from,
-              validUntil: r.floor_sell_valid_until,
+              validUntil: r.floor_sell_value ? r.floor_sell_valid_until : null,
             },
             topBuy: {
               id: r.top_buy_id,
               value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
               maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
               validFrom: r.top_buy_valid_from,
-              validUntil: r.top_buy_valid_until,
+              validUntil: r.top_buy_value ? r.top_buy_valid_until : null,
             },
           },
         }))
