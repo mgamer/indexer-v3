@@ -444,7 +444,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       results
         .filter((r) => r.status === "success")
         .map(({ id }) => ({
-          context: "new-order",
+          context: `new-order-${id}`,
           id,
         }))
     );
