@@ -175,7 +175,16 @@ if (config.doBackgroundWork) {
 }
 
 export type OrderInfo = {
-  // Deterministic context that triggered the jobs
+  // The context represents a deterministic id for what triggered
+  // the job in the first place. Since this is what's going to be
+  // set as the id of the job, the queue is only going to process
+  // a context once (further jobs that have the same context will
+  // be ignored - as long as the queue still holds past jobs with
+  // the same context). It is VERY IMPORTANT to have this in mind
+  // and set the contexts distinctive enough so that jobs are not
+  // going to be wrongfully ignored. However, to be as performant
+  // as possible it's also important to not have the contexts too
+  // distinctive in order to avoid doing duplicative work.
   context: string;
   id: string;
 };
