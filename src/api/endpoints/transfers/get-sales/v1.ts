@@ -7,17 +7,17 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 
 const version = "v1";
 
-export const getTransfersV1Options: RouteOptions = {
+export const getSalesV1Options: RouteOptions = {
   description:
-    "Get historical transfer events. Can filter by collection, attribute or token.",
+    "Get historical sales. Can filter by collection, attribute or token.",
   tags: ["api", "transfers"],
   validate: {
     query: Joi.object({
-      collection: Joi.string().lowercase(),
       contract: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
       tokenId: Joi.string().pattern(/^[0-9]+$/),
+      collection: Joi.string().lowercase(),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(100).default(20),
     })
@@ -27,7 +27,7 @@ export const getTransfersV1Options: RouteOptions = {
   },
   response: {
     schema: Joi.object({
-      transfers: Joi.array().items(
+      sales: Joi.array().items(
         Joi.object({
           token: Joi.object({
             contract: Joi.string()
@@ -55,10 +55,10 @@ export const getTransfersV1Options: RouteOptions = {
           price: Joi.number().unsafe().allow(null),
         })
       ),
-    }).label(`getTransfers${version.toUpperCase()}Response`),
+    }).label(`getSales${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
-        `get-transfers-${version}-handler`,
+        `get-sales-${version}-handler`,
         `Wrong response schema: ${error}`
       );
       throw error;
@@ -75,7 +75,7 @@ export const getTransfersV1Options: RouteOptions = {
           "t"."name",
           "t"."image",
           "t"."collection_id",
-          "c"."name" as "collection_name",
+          "c"."name" AS "collection_name",
           "nte"."from",
           "nte"."to",
           "nte"."amount",
@@ -83,27 +83,27 @@ export const getTransfersV1Options: RouteOptions = {
           "nte"."timestamp",
           "fe"."price"
         FROM "nft_transfer_events" "nte"
+        JOIN "fill_events" "fe"
+          ON "nte"."tx_hash" = "fe"."tx_hash"
+          AND "nte"."log_index" = "fe"."log_index" - 1
         JOIN "tokens" "t"
           ON "nte"."address" = "t"."contract"
           AND "nte"."token_id" = "t"."token_id"
         JOIN "collections" "c"
           ON "t"."collection_id" = "c"."id"
-        LEFT JOIN "fill_events" "fe"
-          ON "nte"."tx_hash" = "fe"."tx_hash"
-          AND "nte"."log_index" = "fe"."log_index" - 1
       `;
 
       // Filters
       const conditions: string[] = [];
-      if (query.collection) {
-        conditions.push(`"t"."collection_id" = $/collection/`);
-      }
       if (query.contract) {
         (query as any).contract = toBuffer(query.contract);
         conditions.push(`"nte"."address" = $/contract/`);
       }
       if (query.tokenId) {
         conditions.push(`"nte"."token_id" = $/tokenId/`);
+      }
+      if (query.collection) {
+        conditions.push(`"t"."collection_id" = $/collection/`);
       }
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
@@ -137,12 +137,9 @@ export const getTransfersV1Options: RouteOptions = {
         }))
       );
 
-      return { transfers: result };
+      return { sales: result };
     } catch (error) {
-      logger.error(
-        `get-transfers-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-sales-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },
