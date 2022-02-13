@@ -2,6 +2,7 @@ import { Server } from "@hapi/hapi";
 
 import * as adminEndpoints from "@/api/endpoints/admin";
 import * as collectionsEndpoints from "@/api/endpoints/collections";
+import * as ordersEndpoints from "@/api/endpoints/orders";
 import * as ownersEndpoints from "@/api/endpoints/owners";
 import * as tokensEndpoints from "@/api/endpoints/tokens";
 import * as transfersEndpoints from "@/api/endpoints/transfers";
@@ -51,6 +52,14 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/users/{user}/collections/v1",
     options: collectionsEndpoints.getUserCollectionsV1Options,
+  });
+
+  // Orders
+
+  server.route({
+    method: "GET",
+    path: "/orders/all/v1",
+    options: ordersEndpoints.getOrdersAllV1Options,
   });
 
   // Owners
