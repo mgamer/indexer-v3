@@ -7,7 +7,7 @@ import { formatEth, fromBuffer } from "@/common/utils";
 
 const version = "v1";
 
-export const getOrdersAllV1Options: RouteOptions = {
+export const getOrdersV1Options: RouteOptions = {
   description: "Get all valid orders by side sorted by their creation date.",
   tags: ["api", "orders"],
   validate: {
@@ -22,33 +22,43 @@ export const getOrdersAllV1Options: RouteOptions = {
     schema: Joi.object({
       orders: Joi.array().items(
         Joi.object({
-          id: Joi.string(),
-          tokenSetId: Joi.string(),
-          schema: Joi.any(),
-          metadata: Joi.any(),
-          kind: Joi.string().valid("wyvern-v2"),
-          side: Joi.string().valid("buy", "sell"),
+          id: Joi.string().required(),
+          kind: Joi.string().required(),
+          side: Joi.string().valid("buy", "sell").required(),
+          fillabilityStatus: Joi.string().required(),
+          approvalStatus: Joi.string().required(),
+          tokenSetId: Joi.string().required(),
+          tokenSetSchemaHash: Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-f0-9]{64}$/)
+            .required(),
           maker: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{40}$/),
-          price: Joi.number().unsafe(),
-          value: Joi.number().unsafe(),
-          validFrom: Joi.number(),
-          validUntil: Joi.number(),
+            .pattern(/^0x[a-f0-9]{40}$/)
+            .required(),
+          taker: Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-f0-9]{40}$/)
+            .required(),
+          price: Joi.number().unsafe().required(),
+          value: Joi.number().unsafe().required(),
+          validFrom: Joi.number().required(),
+          validUntil: Joi.number().required(),
           sourceInfo: Joi.any(),
           royaltyInfo: Joi.any(),
-          createdAt: Joi.string(),
-          updatedAt: Joi.string(),
+          expiration: Joi.number().required(),
+          createdAt: Joi.string().required(),
+          updatedAt: Joi.string().required(),
           rawData: Joi.any(),
         })
       ),
       continuation: Joi.string()
         .pattern(/^\d+_0x[a-f0-9]{64}$/)
         .allow(null),
-    }).label(`getOrdersAll${version.toUpperCase()}Response`),
+    }).label(`getOrders${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
-        `get-orders-all-${version}-handler`,
+        `get-orders-${version}-handler`,
         `Wrong response schema: ${error}`
       );
       throw error;
@@ -61,10 +71,14 @@ export const getOrdersAllV1Options: RouteOptions = {
       let baseQuery = `
         SELECT
           "o"."id",
-          "o"."token_set_id",
           "o"."kind",
           "o"."side",
+          "o"."fillability_status",
+          "o"."approval_status",
+          "o"."token_set_id",
+          "o"."token_set_schema_hash",
           "o"."maker",
+          "o"."taker",
           "o"."price",
           "o"."value",
           DATE_PART('epoch', LOWER("o"."valid_between")) AS "valid_from",
@@ -74,6 +88,7 @@ export const getOrdersAllV1Options: RouteOptions = {
           ) AS "valid_until",
           "o"."source_info",
           "o"."royalty_info",
+          "o"."expiration",
           "o"."created_at",
           "o"."updated_at",
           "o"."raw_data"
@@ -117,16 +132,21 @@ export const getOrdersAllV1Options: RouteOptions = {
       const result = await db.manyOrNone(baseQuery, query).then((result) =>
         result.map((r) => ({
           id: r.id,
-          tokenSetId: r.token_set_id,
           kind: r.kind,
           side: r.side,
+          fillabilityStatus: r.fillability_status,
+          approvalStatus: r.approval_status,
+          tokenSetId: r.token_set_id,
+          tokenSetSchemaHash: fromBuffer(r.token_set_schema_hash),
           maker: fromBuffer(r.maker),
+          taker: fromBuffer(r.taker),
           price: formatEth(r.price),
           value: formatEth(r.value),
           validFrom: Number(r.valid_from),
           validUntil: Number(r.valid_until),
           sourceInfo: r.source_info,
           royaltyInfo: r.royalty_info,
+          expiration: Number(r.expiration),
           createdAt: new Date(r.created_at).toISOString(),
           updatedAt: new Date(r.updated_at).toISOString(),
           rawData: r.raw_data,
@@ -155,7 +175,7 @@ export const getOrdersAllV1Options: RouteOptions = {
       };
     } catch (error) {
       logger.error(
-        `get-orders-all-${version}-handler`,
+        `get-orders-${version}-handler`,
         `Handler failure: ${error}`
       );
       throw error;

@@ -58,8 +58,14 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/orders/all/v1",
-    options: ordersEndpoints.getOrdersAllV1Options,
+    path: "/orders/{id}/v1",
+    options: ordersEndpoints.getOrderV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/orders/v1",
+    options: ordersEndpoints.getOrdersV1Options,
   });
 
   // Owners
