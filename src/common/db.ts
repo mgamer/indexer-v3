@@ -8,6 +8,6 @@ export const db = pgp({
   keepAlive: true,
   max: 20,
   connectionTimeoutMillis: 60 * 1000,
-  query_timeout: 10 * 60 * 1000,
-  statement_timeout: 10 * 60 * 1000,
+  query_timeout: 5 * 60 * 1000,
+  statement_timeout: 5 * 60 * 1000,
 });

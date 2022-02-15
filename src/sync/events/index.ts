@@ -365,6 +365,13 @@ export const syncEvents = async (
 
               const count = Math.min(tokenIds.length, amounts.length);
               for (let i = 0; i < count; i++) {
+                // TODO: This is not going to work since the events are uniquely
+                // identified by their on-chain event identifier (which consists
+                // of the tuple (block_hash, tx_hash, tx_index)). Any duplicated
+                // events are simply ignored and here we created a duplicate one
+                // for each item in the batch. We should add a new column to the
+                // primary key to account for this (maybe also address the above
+                // todo item and remove the block hash from the primary key).
                 nftTransferEvents.push({
                   kind: "erc1155",
                   from,
