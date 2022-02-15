@@ -95,6 +95,13 @@ if (config.doBackgroundWork && config.catchup) {
                   UNION
                   (
                     SELECT DISTINCT "block", "block_hash"
+                    FROM "fill_events_2"
+                    ORDER BY "block" DESC
+                    LIMIT 30
+                  )
+                  UNION
+                  (
+                    SELECT DISTINCT "block", "block_hash"
                     FROM "fill_events"
                     ORDER BY "block" DESC
                     LIMIT 30

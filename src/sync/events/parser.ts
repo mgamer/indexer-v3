@@ -8,6 +8,7 @@ export type BaseEventParams = {
   txIndex: number;
   logIndex: number;
   timestamp: number;
+  batchIndex: number;
 };
 
 export const parseEvent = (
@@ -21,7 +22,8 @@ export const parseEvent = (
       block: number;
       timestamp: number;
     };
-  }
+  },
+  batchIndex = 1
 ): BaseEventParams => {
   const address = log.address.toLowerCase();
   const block = log.blockNumber;
@@ -44,5 +46,14 @@ export const parseEvent = (
       from.timestamp + Math.round(averageBlockTime * (block - from.block));
   }
 
-  return { address, txHash, txIndex, block, blockHash, logIndex, timestamp };
+  return {
+    address,
+    txHash,
+    txIndex,
+    block,
+    blockHash,
+    logIndex,
+    timestamp,
+    batchIndex,
+  };
 };

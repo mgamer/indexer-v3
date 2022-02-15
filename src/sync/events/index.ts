@@ -1,11 +1,12 @@
 import { Interface } from "@ethersproject/abi";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Common, WyvernV2 } from "@reservoir0x/sdk";
 
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import * as cancels from "@/events-sync/common/cancel-events";
+import * as fills2 from "@/events-sync/common/fill-events-2";
 import * as fills from "@/events-sync/common/fill-events";
 import * as ftTransfers from "@/events-sync/common/ft-transfer-events";
 import * as nftTransfers from "@/events-sync/common/nft-transfer-events";
@@ -213,6 +214,7 @@ export const syncEvents = async (
     })
     .then(async (logs) => {
       const cancelEvents: cancels.Event[] = [];
+      const fill2Events: fills2.Event[] = [];
       const fillEvents: fills.Event[] = [];
       const ftTransferEvents: ftTransfers.Event[] = [];
       const nftTransferEvents: nftTransfers.Event[] = [];
@@ -371,14 +373,18 @@ export const syncEvents = async (
                 // events are simply ignored and here we created a duplicate one
                 // for each item in the batch. We should add a new column to the
                 // primary key to account for this (maybe also address the above
-                // todo item and remove the block hash from the primary key).
+                // todo item and remove the block hash from the primary key). As
+                // for the new fills table we should integrate batch_index.
                 nftTransferEvents.push({
                   kind: "erc1155",
                   from,
                   to,
                   tokenId: tokenIds[i],
                   amount: amounts[i],
-                  baseEventParams,
+                  baseEventParams: {
+                    ...baseEventParams,
+                    batchIndex: i + 1,
+                  },
                 });
 
                 // Make sure to only handle the same data once per block
@@ -514,6 +520,64 @@ export const syncEvents = async (
                 id: sellOrderId,
               });
 
+              // Improved fills handling
+
+              // Since WyvernV2 fill events don't include the traded token, we
+              // have to deduce it from the nft transfer event occured exactly
+              // before the fill event. The code below assumes that events are
+              // retrieved in chronological orders from the blockchain.
+              let associatedNftTransferEvent: nftTransfers.Event | undefined;
+              if (nftTransferEvents.length) {
+                // Ensure the last nft transfer event was part of the fill
+                const event = nftTransferEvents[nftTransferEvents.length - 1];
+                if (
+                  event.baseEventParams.txHash === baseEventParams.txHash &&
+                  event.baseEventParams.logIndex ===
+                    baseEventParams.logIndex - 1 &&
+                  // Only single token fills are supported and recognized
+                  event.baseEventParams.batchIndex === 1
+                ) {
+                  associatedNftTransferEvent = event;
+                }
+              }
+
+              if (!associatedNftTransferEvent) {
+                // Skip if we can't associated to an nft transfer event
+                break;
+              }
+
+              let batchIndex = 1;
+              if (buyOrderId !== HashZero) {
+                fill2Events.push({
+                  orderId: buyOrderId,
+                  maker,
+                  taker,
+                  price,
+                  contract: associatedNftTransferEvent.baseEventParams.address,
+                  tokenId: associatedNftTransferEvent.tokenId,
+                  amount: associatedNftTransferEvent.amount,
+                  baseEventParams: {
+                    ...baseEventParams,
+                    batchIndex: batchIndex++,
+                  },
+                });
+              }
+              if (sellOrderId !== HashZero) {
+                fill2Events.push({
+                  orderId: sellOrderId,
+                  maker,
+                  taker,
+                  price,
+                  contract: associatedNftTransferEvent.baseEventParams.address,
+                  tokenId: associatedNftTransferEvent.tokenId,
+                  amount: associatedNftTransferEvent.amount,
+                  baseEventParams: {
+                    ...baseEventParams,
+                    batchIndex: batchIndex++,
+                  },
+                });
+              }
+
               break;
             }
           }
@@ -525,6 +589,7 @@ export const syncEvents = async (
 
       await Promise.all([
         cancels.addEvents(cancelEvents),
+        fills2.addEvents(fill2Events),
         fills.addEvents(fillEvents),
         ftTransfers.addEvents(ftTransferEvents, backfill),
         nftTransfers.addEvents(nftTransferEvents, backfill),
@@ -544,6 +609,7 @@ export const syncEvents = async (
 export const unsyncEvents = async (blockHash: string) =>
   Promise.all([
     cancels.removeEvents(blockHash),
+    fills2.removeEvents(blockHash),
     fills.removeEvents(blockHash),
     ftTransfers.removeEvents(blockHash),
     nftTransfers.removeEvents(blockHash),
