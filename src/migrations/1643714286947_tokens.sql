@@ -40,6 +40,10 @@ CREATE INDEX "tokens_collection_id_floor_sell_value_index"
 CREATE INDEX "tokens_collection_id_top_buy_value_index"
   ON "tokens" ("collection_id", "top_buy_value" DESC NULLS LAST);
 
+CREATE INDEX "tokens_top_buy_maker_collection_id_index"
+  ON "tokens" ("top_buy_maker", "collection_id")
+  INCLUDE ("top_buy_value");
+
 -- https://www.lob.com/blog/supercharge-your-postgresql-performance
 -- https://klotzandrew.com/blog/posgres-per-table-autovacuum-management
 ALTER TABLE "tokens" SET (autovacuum_vacuum_scale_factor = 0.0);
