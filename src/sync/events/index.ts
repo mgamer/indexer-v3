@@ -560,8 +560,8 @@ export const syncEvents = async (
 
             case "wyvern-v2.3-nonce-incremented": {
               const parsedLog = eventData.abi.parseLog(log);
-              const maker = parsedLog.args["from"].toLowerCase();
-              const newNonce = parsedLog.args["to"].toString();
+              const maker = parsedLog.args["maker"].toLowerCase();
+              const newNonce = parsedLog.args["newNonce"].toString();
 
               bulkCancelEvents.push({
                 orderKind: "wyvern-v2.3",
