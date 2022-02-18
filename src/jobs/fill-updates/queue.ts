@@ -65,11 +65,6 @@ if (config.doBackgroundWork) {
                 price,
               }
             );
-
-            logger.info(
-              QUEUE_NAME,
-              `Updated last ${result.side} given token set ${result.token_set_id} (context ${job.id})`
-            );
           }
         }
 
@@ -89,11 +84,6 @@ if (config.doBackgroundWork) {
               price,
               timestamp,
             }
-          );
-
-          logger.info(
-            QUEUE_NAME,
-            `Updated last ${orderSide} given token (${contract}, ${tokenId}) (context ${job.id})`
           );
         }
       } catch (error) {
