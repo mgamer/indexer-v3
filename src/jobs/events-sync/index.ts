@@ -99,13 +99,6 @@ if (config.doBackgroundWork && config.catchup) {
                     ORDER BY "block" DESC
                     LIMIT 30
                   )
-                  UNION
-                  (
-                    SELECT DISTINCT "block", "block_hash"
-                    FROM "fill_events"
-                    ORDER BY "block" DESC
-                    LIMIT 30
-                  )
                 `,
                 { limit: 30 }
               );
