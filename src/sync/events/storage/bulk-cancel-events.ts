@@ -69,7 +69,7 @@ export const addEvents = async (events: Event[], backfill = false) => {
       )
       UPDATE "orders" AS "o" SET
         "fillability_status" = 'cancelled',
-        "expiration" = "x"."timestamp",
+        "expiration" = to_timestamp("x"."timestamp"),
         "updated_at" = now()
       FROM "x"
       WHERE "o"."kind" = "x"."order_kind"
