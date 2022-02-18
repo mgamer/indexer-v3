@@ -93,7 +93,7 @@ if (config.doBackgroundWork) {
 
           logger.info(
             QUEUE_NAME,
-            `Updated last ${result.side} given token (${contract}, ${tokenId}) (context ${job.id})`
+            `Updated last ${orderSide} given token (${contract}, ${tokenId}) (context ${job.id})`
           );
         }
       } catch (error) {
