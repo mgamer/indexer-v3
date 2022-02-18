@@ -12,7 +12,7 @@ import { OrderMetadata, defaultSchemaHash } from "@/orderbook/orders/utils";
 import * as tokenSet from "@/orderbook/token-sets";
 
 export type OrderInfo = {
-  orderParams: Sdk.WyvernV2.Types.OrderParams;
+  orderParams: Sdk.WyvernV23.Types.OrderParams;
   metadata: OrderMetadata;
 };
 
@@ -27,7 +27,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
-      const order = new Sdk.WyvernV2.Order(config.chainId, orderParams);
+      const order = new Sdk.WyvernV23.Order(config.chainId, orderParams);
       const info = order.getInfo();
       const id = order.prefixHash();
 
@@ -318,7 +318,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         : "'infinity'";
       orderValues.push({
         id,
-        kind: "wyvern-v2",
+        kind: "wyvern-v2.3",
         side,
         fillability_status: fillabilityStatus,
         approval_status: approvalStatus,
@@ -329,7 +329,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         price: order.params.basePrice,
         value,
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
-        nonce: 0,
+        nonce: order.params.nonce,
         source_info: sourceInfo,
         raw_data: order.params,
         expiration: validTo,
@@ -338,7 +338,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       results.push({ id, status: "success" });
     } catch (error) {
       logger.error(
-        "orders-wyvern-v2-save",
+        "orders-wyvern-v2.3-save",
         `Failed to handle order with params ${JSON.stringify(
           orderParams
         )}: ${error}`

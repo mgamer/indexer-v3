@@ -59,6 +59,7 @@ export const syncEvents = async (
     .then(async (logs) => {
       const ftTransferEvents: es.ftTransfers.Event[] = [];
       const nftTransferEvents: es.nftTransfers.Event[] = [];
+      const bulkCancelEvents: es.bulkCancels.Event[] = [];
       const cancelEvents: es.cancels.Event[] = [];
       const fillEvents: es.fills.Event[] = [];
 
@@ -326,7 +327,7 @@ export const syncEvents = async (
               });
 
               orderInfos.push({
-                context: orderId,
+                context: `cancelled-${orderId}`,
                 id: orderId,
               });
 
@@ -383,6 +384,11 @@ export const syncEvents = async (
                   },
                 });
 
+                orderInfos.push({
+                  context: `filled-${buyOrderId}`,
+                  id: buyOrderId,
+                });
+
                 fillInfos.push({
                   context: buyOrderId,
                   orderId: buyOrderId,
@@ -411,6 +417,11 @@ export const syncEvents = async (
                   },
                 });
 
+                orderInfos.push({
+                  context: `filled-${sellOrderId}`,
+                  id: sellOrderId,
+                });
+
                 fillInfos.push({
                   context: sellOrderId,
                   orderId: sellOrderId,
@@ -425,6 +436,140 @@ export const syncEvents = async (
 
               break;
             }
+
+            case "wyvern-v2.3-order-cancelled": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const orderId = parsedLog.args["hash"].toLowerCase();
+
+              cancelEvents.push({
+                orderKind: "wyvern-v2.3",
+                orderId,
+                baseEventParams,
+              });
+
+              orderInfos.push({
+                context: `cancelled-${orderId}`,
+                id: orderId,
+              });
+
+              break;
+            }
+
+            case "wyvern-v2.3-orders-matched": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const buyOrderId = parsedLog.args["buyHash"].toLowerCase();
+              const sellOrderId = parsedLog.args["sellHash"].toLowerCase();
+              const maker = parsedLog.args["maker"].toLowerCase();
+              const taker = parsedLog.args["taker"].toLowerCase();
+              const price = parsedLog.args["price"].toString();
+
+              // Since WyvernV2 fill events don't include the traded token, we
+              // have to deduce it from the nft transfer event occured exactly
+              // before the fill event. The code below assumes that events are
+              // retrieved in chronological orders from the blockchain.
+              let associatedNftTransferEvent: es.nftTransfers.Event | undefined;
+              if (nftTransferEvents.length) {
+                // Ensure the last nft transfer event was part of the fill
+                const event = nftTransferEvents[nftTransferEvents.length - 1];
+                if (
+                  event.baseEventParams.txHash === baseEventParams.txHash &&
+                  event.baseEventParams.logIndex ===
+                    baseEventParams.logIndex - 1 &&
+                  // Only single token fills are supported and recognized
+                  event.baseEventParams.batchIndex === 1
+                ) {
+                  associatedNftTransferEvent = event;
+                }
+              }
+
+              if (!associatedNftTransferEvent) {
+                // Skip if we can't associated to an nft transfer event
+                break;
+              }
+
+              let batchIndex = 1;
+              if (buyOrderId !== HashZero) {
+                fillEvents.push({
+                  orderKind: "wyvern-v2.3",
+                  orderId: buyOrderId,
+                  orderSide: "buy",
+                  maker,
+                  taker,
+                  price,
+                  contract: associatedNftTransferEvent.baseEventParams.address,
+                  tokenId: associatedNftTransferEvent.tokenId,
+                  amount: associatedNftTransferEvent.amount,
+                  baseEventParams: {
+                    ...baseEventParams,
+                    batchIndex: batchIndex++,
+                  },
+                });
+
+                orderInfos.push({
+                  context: `filled-${buyOrderId}`,
+                  id: buyOrderId,
+                });
+
+                fillInfos.push({
+                  context: buyOrderId,
+                  orderId: buyOrderId,
+                  orderSide: "buy",
+                  contract: associatedNftTransferEvent.baseEventParams.address,
+                  tokenId: associatedNftTransferEvent.tokenId,
+                  amount: associatedNftTransferEvent.amount,
+                  price,
+                  timestamp: baseEventParams.timestamp,
+                });
+              }
+              if (sellOrderId !== HashZero) {
+                fillEvents.push({
+                  orderKind: "wyvern-v2.3",
+                  orderId: sellOrderId,
+                  orderSide: "sell",
+                  maker,
+                  taker,
+                  price,
+                  contract: associatedNftTransferEvent.baseEventParams.address,
+                  tokenId: associatedNftTransferEvent.tokenId,
+                  amount: associatedNftTransferEvent.amount,
+                  baseEventParams: {
+                    ...baseEventParams,
+                    batchIndex: batchIndex++,
+                  },
+                });
+
+                orderInfos.push({
+                  context: `filled-${sellOrderId}`,
+                  id: sellOrderId,
+                });
+
+                fillInfos.push({
+                  context: sellOrderId,
+                  orderId: sellOrderId,
+                  orderSide: "sell",
+                  contract: associatedNftTransferEvent.baseEventParams.address,
+                  tokenId: associatedNftTransferEvent.tokenId,
+                  amount: associatedNftTransferEvent.amount,
+                  price,
+                  timestamp: baseEventParams.timestamp,
+                });
+              }
+
+              break;
+            }
+
+            case "wyvern-v2.3-nonce-incremented": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const maker = parsedLog.args["from"].toLowerCase();
+              const newNonce = parsedLog.args["to"].toString();
+
+              bulkCancelEvents.push({
+                orderKind: "wyvern-v2.3",
+                maker,
+                minNonce: newNonce,
+                baseEventParams,
+              });
+            }
           }
         } catch (error) {
           logger.info("sync-events", `Failed to handle events: ${error}`);
@@ -433,6 +578,7 @@ export const syncEvents = async (
       }
 
       await Promise.all([
+        es.bulkCancels.addEvents(bulkCancelEvents, backfill),
         es.cancels.addEvents(cancelEvents),
         es.fills.addEvents(fillEvents),
         es.ftTransfers.addEvents(ftTransferEvents, backfill),
@@ -452,6 +598,7 @@ export const syncEvents = async (
 
 export const unsyncEvents = async (blockHash: string) =>
   Promise.all([
+    es.bulkCancels.removeEvents(blockHash),
     es.cancels.removeEvents(blockHash),
     es.fills.removeEvents(blockHash),
     es.ftTransfers.removeEvents(blockHash),

@@ -1,7 +1,7 @@
 import { db, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { BaseEventParams } from "@/events-sync/parser";
-import { OrderKind } from "@/events-sync/storage";
+import { OrderKind } from "@/orderbook/orders";
 
 export type Event = {
   orderKind: OrderKind;

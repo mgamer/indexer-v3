@@ -1,7 +1,8 @@
 -- Up Migration
 
 CREATE TYPE "order_kind_t" AS ENUM (
-  'wyvern-v2'
+  'wyvern-v2',
+  'wyvern-v2.3'
 );
 
 CREATE TYPE "order_side_t" AS ENUM (
@@ -36,6 +37,7 @@ CREATE TABLE "orders" (
   "price" NUMERIC(78, 0),
   "value" NUMERIC(78, 0),
   "valid_between" TSTZRANGE,
+  "nonce" NUMERIC(78, 0),
   "source_info" JSONB,
   "royalty_info" JSONB,
   "raw_data" JSONB,
@@ -61,6 +63,10 @@ CREATE INDEX "orders_maker_side_index"
 CREATE INDEX "orders_valid_between_index"
   ON "orders" ("valid_between")
   INCLUDE ("id")
+  WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
+
+CREATE INDEX "orders_kind_maker_nonce"
+  ON "orders" ("kind", "maker", "nonce")
   WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
 
 CREATE INDEX "orders_created_at_id_side_index"

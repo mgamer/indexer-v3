@@ -2,7 +2,6 @@ import { gql, request } from "graphql-request";
 
 import * as v001 from "@/arweave-sync/common/v001";
 import { arweaveGateway, network } from "@/common/provider";
-import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 
 type Transaction = {

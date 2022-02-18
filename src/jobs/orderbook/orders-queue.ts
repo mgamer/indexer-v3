@@ -1,9 +1,10 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
+import { v4 as uuidv4 } from "uuid";
 
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-import * as wyvernV2 from "@/orderbook/orders/wyvern-v2/index";
+import * as orders from "@/orderbook/orders";
 
 const QUEUE_NAME = "orderbook-orders-queue";
 
@@ -26,10 +27,20 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { orderParams, metadata } = job.data as wyvernV2.OrderInfo;
+      const { kind, info } = job.data as GenericOrderInfo;
 
       try {
-        await wyvernV2.save([{ orderParams, metadata }]);
+        switch (kind) {
+          case "wyvern-v2": {
+            await orders.wyvernV2.save([info as orders.wyvernV2.OrderInfo]);
+            break;
+          }
+
+          case "wyvern-v2.3": {
+            await orders.wyvernV23.save([info as orders.wyvernV23.OrderInfo]);
+            break;
+          }
+        }
       } catch (error) {
         logger.error(
           QUEUE_NAME,
@@ -45,10 +56,20 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (orderInfos: wyvernV2.OrderInfo[]) => {
+export type GenericOrderInfo =
+  | {
+      kind: "wyvern-v2";
+      info: orders.wyvernV2.OrderInfo;
+    }
+  | {
+      kind: "wyvern-v2.3";
+      info: orders.wyvernV23.OrderInfo;
+    };
+
+export const addToQueue = async (orderInfos: GenericOrderInfo[]) => {
   await queue.addBulk(
     orderInfos.map((orderInfo) => ({
-      name: `${orderInfo.orderParams.maker}-${orderInfo.orderParams.salt}`,
+      name: uuidv4(),
       data: orderInfo,
     }))
   );
