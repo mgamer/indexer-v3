@@ -3,7 +3,7 @@ import Joi from "joi";
 
 import { db } from "@/common/db";
 import { logger } from "@/common/logger";
-import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { formatEth, fromBuffer } from "@/common/utils";
 
 const version = "v1";
 
@@ -122,14 +122,16 @@ export const getCollectionV1Options: RouteOptions = {
             "t"."floor_sell_id",
             "t"."floor_sell_value",
             "t"."floor_sell_maker",
-            DATE_PART('epoch', LOWER("t"."floor_sell_valid_between")) AS "floor_sell_valid_from",
-            COALESCE(
-              NULLIF(DATE_PART('epoch', UPPER("t"."floor_sell_valid_between")), 'Infinity'),
-              0
-            ) AS "floor_sell_valid_until",
+            DATE_PART('epoch', LOWER("o"."valid_between")) AS "floor_sell_valid_from",
+              COALESCE(
+                NULLIF(DATE_PART('epoch', UPPER("o"."valid_between")), 'Infinity'),
+                0
+              ) AS "floor_sell_valid_until",
             "t"."last_sell_value",
             "t"."last_sell_timestamp"
           FROM "tokens" "t"
+          LEFT JOIN "orders" "o"
+            ON "t"."floor_sell_id" = "o"."id"
           WHERE "t"."collection_id" = "x"."id"
           ORDER BY "t"."floor_sell_value"
           LIMIT 1
@@ -139,14 +141,16 @@ export const getCollectionV1Options: RouteOptions = {
             "ts"."top_buy_id",
             "ts"."top_buy_value",
             "ts"."top_buy_maker",
-            DATE_PART('epoch', LOWER("ts"."top_buy_valid_between")) AS "top_buy_valid_from",
+            DATE_PART('epoch', LOWER("o"."valid_between")) AS "top_buy_valid_from",
             COALESCE(
-              NULLIF(DATE_PART('epoch', UPPER("ts"."top_buy_valid_between")), 'Infinity'),
+              NULLIF(DATE_PART('epoch', UPPER("o"."valid_between")), 'Infinity'),
               0
             ) AS "top_buy_valid_until",
             "ts"."last_buy_value",
             "ts"."last_buy_timestamp"
           FROM "token_sets" "ts"
+          LEFT JOIN "orders" "o"
+            ON "t"."top_buy_id" = "o"."id"
           WHERE "ts"."id" = "x"."token_set_id"
           ORDER BY "ts"."top_buy_value" DESC NULLS LAST
           LIMIT 1

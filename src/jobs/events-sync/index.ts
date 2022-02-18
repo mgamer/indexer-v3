@@ -4,7 +4,7 @@ import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { redlock } from "@/common/redis";
-import { fromBuffer, toBuffer } from "@/common/utils";
+import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { unsyncEvents } from "@/events-sync/index";
 import * as backfillEventsSync from "@/jobs/events-sync/backfill-queue";

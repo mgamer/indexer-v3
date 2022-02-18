@@ -11,7 +11,6 @@ CREATE TABLE "token_sets" (
   "top_buy_id" TEXT,
   "top_buy_value" NUMERIC(78, 0),
   "top_buy_maker" BYTEA,
-  "top_buy_valid_between" TSTZRANGE,
   "last_buy_timestamp" INT,
   "last_buy_value" NUMERIC(78, 0)
 );

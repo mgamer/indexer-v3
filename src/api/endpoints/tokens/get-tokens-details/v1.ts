@@ -124,20 +124,24 @@ export const getTokensDetailsV1Options: RouteOptions = {
           "t"."floor_sell_id",
           "t"."floor_sell_value",
           "t"."floor_sell_maker",
-          DATE_PART('epoch', LOWER("t"."floor_sell_valid_between")) AS "floor_sell_valid_from",
+          DATE_PART('epoch', LOWER("os"."valid_between")) AS "floor_sell_valid_from",
           COALESCE(
-            NULLIF(date_part('epoch', UPPER("t"."floor_sell_valid_between")), 'Infinity'),
+            NULLIF(date_part('epoch', UPPER("os"."valid_between")), 'Infinity'),
             0
           ) AS "floor_sell_valid_until",
           "t"."top_buy_id",
           "t"."top_buy_value",
           "t"."top_buy_maker",
-          DATE_PART('epoch', LOWER("t"."top_buy_valid_between")) AS "top_buy_valid_from",
+          DATE_PART('epoch', LOWER("ob"."valid_between")) AS "top_buy_valid_from",
           COALESCE(
-            NULLIF(DATE_PART('epoch', UPPER("t"."top_buy_valid_between")), 'Infinity'),
+            NULLIF(DATE_PART('epoch', UPPER("ob"."valid_between")), 'Infinity'),
             0
           ) AS "top_buy_valid_until"
         FROM "tokens" "t"
+        LEFT JOIN "orders" "os"
+          ON "t"."floor_sell_id" = "os"."id"
+        LEFT JOIN "orders" "ob"
+          ON "t"."top_buy_id" = "ob"."id"
         JOIN "collections" "c"
           ON "t"."collection_id" = "c"."id"
       `;

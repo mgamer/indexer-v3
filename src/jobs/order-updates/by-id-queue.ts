@@ -67,8 +67,7 @@ if (config.doBackgroundWork) {
                     SELECT
                       "o"."id" as "order_id",
                       "o"."value",
-                      "o"."maker",
-                      "o"."valid_between"
+                      "o"."maker"
                     FROM "orders" "o"
                     WHERE "o"."token_set_id" = "ts"."id"
                       AND "o"."side" = 'buy'
@@ -82,8 +81,7 @@ if (config.doBackgroundWork) {
                 UPDATE "token_sets" AS "ts" SET
                   "top_buy_id" = "x"."order_id",
                   "top_buy_value" = "x"."value",
-                  "top_buy_maker" = "x"."maker",
-                  "top_buy_valid_between" = "x"."valid_between"
+                  "top_buy_maker" = "x"."maker"
                 FROM "x"
                 WHERE "ts"."id" = "x"."order_id"
                   AND "ts"."top_buy_id" IS DISTINCT FROM "x"."order_id"
@@ -105,8 +103,7 @@ if (config.doBackgroundWork) {
                   "x"."token_id",
                   "y"."order_id",
                   "y"."value",
-                  "y"."maker",
-                  "y"."valid_between"
+                  "y"."maker"
                 FROM (
                   SELECT
                     "tst"."contract",
@@ -119,8 +116,7 @@ if (config.doBackgroundWork) {
                   SELECT
                     "o"."id" as "order_id",
                     "o"."value",
-                    "o"."maker",
-                    "o"."valid_between"
+                    "o"."maker"
                   FROM "orders" "o"
                   JOIN "token_sets_tokens" "tst"
                     ON "o"."token_set_id" = "tst"."token_set_id"
@@ -149,8 +145,7 @@ if (config.doBackgroundWork) {
               UPDATE "tokens" AS "t" SET
                 "${column}_id" = "z"."order_id",
                 "${column}_value" = "z"."value",
-                "${column}_maker" = "z"."maker",
-                "${column}_valid_between" = "z"."valid_between"
+                "${column}_maker" = "z"."maker"
               FROM "z"
               WHERE "t"."contract" = "z"."contract"
                 AND "t"."token_id" = "z"."token_id"
