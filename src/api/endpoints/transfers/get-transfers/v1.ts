@@ -90,7 +90,7 @@ export const getTransfersV1Options: RouteOptions = {
           ON "t"."collection_id" = "c"."id"
         LEFT JOIN "fill_events" "fe"
           ON "nte"."tx_hash" = "fe"."tx_hash"
-          AND "nte"."log_index" = "fe"."log_index" - 1
+          AND "nte"."log_index" + 1 = "fe"."log_index"
       `;
 
       // Filters

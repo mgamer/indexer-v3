@@ -1,9 +1,10 @@
 import { db, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { BaseEventParams } from "@/events-sync/parser";
+import { OrderKind } from "@/events-sync/storage";
 
-// TODO: Support for than one kind (for now, `wyvern-v2`)
 export type Event = {
+  orderKind: OrderKind;
   orderId: string;
   baseEventParams: BaseEventParams;
 };
@@ -19,6 +20,7 @@ export const addEvents = async (events: Event[]) => {
       tx_index: event.baseEventParams.txIndex,
       log_index: event.baseEventParams.logIndex,
       timestamp: event.baseEventParams.timestamp,
+      order_kind: event.orderKind,
       order_id: event.orderId,
     });
   }
@@ -35,6 +37,7 @@ export const addEvents = async (events: Event[]) => {
         "tx_index",
         "log_index",
         "timestamp",
+        "order_kind",
         "order_id",
       ],
       { table: "cancel_events" }
@@ -51,10 +54,11 @@ export const addEvents = async (events: Event[]) => {
           "tx_index",
           "log_index",
           "timestamp",
+          "order_kind",
           "order_id"
         ) VALUES ${pgp.helpers.values(cancelValues, columns)}
         ON CONFLICT DO NOTHING
-        RETURNING "order_id", "timestamp"
+        RETURNING "order_kind", "order_id", "timestamp"
       )
       INSERT INTO "orders" (
         "id",
@@ -66,7 +70,7 @@ export const addEvents = async (events: Event[]) => {
       ) ( 
         SELECT
           "x"."order_id",
-          'wyvern-v2'::order_kind_t,
+          "x"."order_kind",
           'cancelled'::order_fillability_status_t,
           to_timestamp("x"."timestamp") as "expiration",
           now(),

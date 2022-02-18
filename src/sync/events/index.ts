@@ -1,16 +1,11 @@
-import { Interface } from "@ethersproject/abi";
 import { AddressZero, HashZero } from "@ethersproject/constants";
-import { Common, WyvernV2 } from "@reservoir0x/sdk";
 
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { config } from "@/config/index";
-import * as cancels from "@/events-sync/common/cancel-events";
-import * as fills2 from "@/events-sync/common/fill-events-2";
-import * as fills from "@/events-sync/common/fill-events";
-import * as ftTransfers from "@/events-sync/common/ft-transfer-events";
-import * as nftTransfers from "@/events-sync/common/nft-transfer-events";
+import { allEventData, allEventTopics } from "@/events-sync/data";
+import * as es from "@/events-sync/storage";
 import { parseEvent } from "@/events-sync/parser";
+
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
@@ -21,159 +16,19 @@ import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 // reorgs we might as well do without the block hash (since the exact block
 // at which an event occured is less important for us than the fact that it
 // did occur). Removing the block hash from the primary key will definitely
-// result in a write/update speed up. Something to research.
-
-// TODO: Split into multiple modules
-
-type EventDataKind =
-  | "erc20-transfer"
-  | "erc721-transfer"
-  | "erc1155-transfer-single"
-  | "erc1155-transfer-batch"
-  | "weth-deposit"
-  | "weth-withdrawal"
-  | "wyvern-v2-orders-matched"
-  | "wyvern-v2-order-cancelled";
-
-type EventData = {
-  kind: EventDataKind;
-  addresses?: { [address: string]: boolean };
-  topic: string;
-  numTopics: number;
-  abi: Interface;
-};
-
-// New events to get synced should be added below
-
-const erc20Transfer: EventData = {
-  kind: "erc20-transfer",
-  addresses: { [Common.Addresses.Weth[config.chainId]]: true },
-  topic: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-  numTopics: 3,
-  abi: new Interface([
-    `event Transfer(
-      address indexed from,
-      address indexed to,
-      uint256 amount
-    )`,
-  ]),
-};
-
-const erc721Transfer: EventData = {
-  kind: "erc721-transfer",
-  topic: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-  numTopics: 4,
-  abi: new Interface([
-    `event Transfer(
-      address indexed from,
-      address indexed to,
-      uint256 indexed tokenId
-    )`,
-  ]),
-};
-
-const erc1155TransferSingle: EventData = {
-  kind: "erc1155-transfer-single",
-  topic: "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62",
-  numTopics: 4,
-  abi: new Interface([
-    `event TransferSingle(
-      address indexed operator,
-      address indexed from,
-      address indexed to,
-      uint256 tokenId,
-      uint256 amount
-    )`,
-  ]),
-};
-
-const erc1155TransferBatch: EventData = {
-  kind: "erc1155-transfer-batch",
-  topic: "0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb",
-  numTopics: 4,
-  abi: new Interface([
-    `event TransferBatch(
-      address indexed operator,
-      address indexed from,
-      address indexed to,
-      uint256[] tokenIds,
-      uint256[] amounts
-    )`,
-  ]),
-};
-
-const wethDeposit: EventData = {
-  kind: "weth-deposit",
-  addresses: { [Common.Addresses.Weth[config.chainId]]: true },
-  topic: "0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c",
-  numTopics: 2,
-  abi: new Interface([
-    `event Deposit(
-      address indexed to,
-      uint256 amount
-    )`,
-  ]),
-};
-
-const wethWithdrawal: EventData = {
-  kind: "weth-withdrawal",
-  addresses: { [Common.Addresses.Weth[config.chainId]]: true },
-  topic: "0x7fcf532c15f0a6db0bd6d0e038bea71d30d808c7d98cb3bf7268a95bf5081b65",
-  numTopics: 2,
-  abi: new Interface([
-    `event Withdrawal(
-      address indexed from,
-      uint256 amount
-    )`,
-  ]),
-};
-
-const wyvernV2OrderCancelled: EventData = {
-  kind: "wyvern-v2-order-cancelled",
-  addresses: { [WyvernV2.Addresses.Exchange[config.chainId]]: true },
-  topic: "0x5152abf959f6564662358c2e52b702259b78bac5ee7842a0f01937e670efcc7d",
-  numTopics: 2,
-  abi: new Interface([
-    `event OrderCancelled(
-      bytes32 indexed hash
-    )`,
-  ]),
-};
-
-const wyvernV2OrdersMatched: EventData = {
-  kind: "wyvern-v2-orders-matched",
-  addresses: { [WyvernV2.Addresses.Exchange[config.chainId]]: true },
-  topic: "0xc4109843e0b7d514e4c093114b863f8e7d8d9a458c372cd51bfe526b588006c9",
-  numTopics: 4,
-  abi: new Interface([
-    `event OrdersMatched(
-      bytes32 buyHash,
-      bytes32 sellHash,
-      address indexed maker,
-      address indexed taker,
-      uint256 price,
-      bytes32 indexed metadata
-    )`,
-  ]),
-};
-
-const allEventData = [
-  erc20Transfer,
-  erc721Transfer,
-  erc1155TransferSingle,
-  erc1155TransferBatch,
-  wethDeposit,
-  wethWithdrawal,
-  wyvernV2OrderCancelled,
-  wyvernV2OrdersMatched,
-];
+// result in a write/update speed up. We already have an example of the new
+// design in the `fill_events_2` table - ideally we should port every event
+// table to it.
 
 export const syncEvents = async (
   fromBlock: number,
   toBlock: number,
   backfill = false
 ) => {
-  // Fetch the timestamp of the blocks at each side of the range
+  // Fetch the timestamps of the blocks at each side of the range in
+  // order to be able to estimate the timestamp of each block within
+  // the range (to avoid any further `eth_getBlockByNumber` calls).
+
   const [fromBlockTimestamp, toBlockTimestamp] = await Promise.all([
     baseProvider.getBlock(fromBlock),
     baseProvider.getBlock(toBlock),
@@ -197,34 +52,24 @@ export const syncEvents = async (
 
   await baseProvider
     .getLogs({
-      topics: [
-        [
-          erc20Transfer.topic,
-          // erc721Transfer.topic === erc20Transfer.topic
-          erc1155TransferSingle.topic,
-          erc1155TransferBatch.topic,
-          wethDeposit.topic,
-          wethWithdrawal.topic,
-          wyvernV2OrderCancelled.topic,
-          wyvernV2OrdersMatched.topic,
-        ],
-      ],
+      topics: [allEventTopics],
       fromBlock,
       toBlock,
     })
     .then(async (logs) => {
-      const cancelEvents: cancels.Event[] = [];
-      const fill2Events: fills2.Event[] = [];
-      const fillEvents: fills.Event[] = [];
-      const ftTransferEvents: ftTransfers.Event[] = [];
-      const nftTransferEvents: nftTransfers.Event[] = [];
+      const ftTransferEvents: es.ftTransfers.Event[] = [];
+      const nftTransferEvents: es.nftTransfers.Event[] = [];
+      const cancelEvents: es.cancels.Event[] = [];
+      const fillEvents: es.fills.Event[] = [];
 
       for (const log of logs) {
         try {
-          // Parse common event params
           const baseEventParams = parseEvent(log, blockRange);
 
-          // Find first matching event
+          // Find first matching event:
+          // - matching topic
+          // - matching number of topics (eg. indexed fields)
+          // - matching addresses
           const eventData = allEventData.find(
             ({ addresses, topic, numTopics }) =>
               log.topics[0] === topic &&
@@ -246,8 +91,8 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
-              // Make sure to only handle the same data once per block
-              const contextPrefix = `${baseEventParams.blockHash}-${baseEventParams.address}`;
+              // Make sure to only handle the same data once per transaction
+              const contextPrefix = `${baseEventParams.txHash}-${baseEventParams.address}`;
 
               makerInfos.push({
                 context: `${contextPrefix}-${from}-buy`,
@@ -282,8 +127,8 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
-              // Make sure to only handle the same data once per block
-              const contextPrefix = `${baseEventParams.blockHash}-${baseEventParams.address}-${tokenId}`;
+              // Make sure to only handle the same data once per transaction
+              const contextPrefix = `${baseEventParams.txHash}-${baseEventParams.address}-${tokenId}`;
 
               makerInfos.push({
                 context: `${contextPrefix}-${from}-sell`,
@@ -328,8 +173,8 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
-              // Make sure to only handle the same data once per block
-              const contextPrefix = `${baseEventParams.blockHash}-${baseEventParams.address}-${tokenId}`;
+              // Make sure to only handle the same data once per transaction
+              const contextPrefix = `${baseEventParams.txHash}-${baseEventParams.address}-${tokenId}`;
 
               makerInfos.push({
                 context: `${contextPrefix}-${from}-sell`,
@@ -387,8 +232,8 @@ export const syncEvents = async (
                   },
                 });
 
-                // Make sure to only handle the same data once per block
-                const contextPrefix = `${baseEventParams.blockHash}-${baseEventParams.address}-${tokenIds[i]}`;
+                // Make sure to only handle the same data once per transaction
+                const contextPrefix = `${baseEventParams.txHash}-${baseEventParams.address}-${tokenIds[i]}`;
 
                 makerInfos.push({
                   context: `${contextPrefix}-${from}-sell`,
@@ -430,8 +275,8 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
-              // Make sure to only handle the same data once per block
-              const contextPrefix = `${baseEventParams.blockHash}-${baseEventParams.address}`;
+              // Make sure to only handle the same data once per transaction
+              const contextPrefix = `${baseEventParams.txHash}-${baseEventParams.address}`;
 
               makerInfos.push({
                 context: `${contextPrefix}-${to}-buy`,
@@ -456,8 +301,8 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
-              // Make sure to only handle the same data once per block
-              const contextPrefix = `${baseEventParams.blockHash}-${baseEventParams.address}`;
+              // Make sure to only handle the same data once per transaction
+              const contextPrefix = `${baseEventParams.txHash}-${baseEventParams.address}`;
 
               makerInfos.push({
                 context: `${contextPrefix}-${from}-buy`,
@@ -475,6 +320,7 @@ export const syncEvents = async (
               const orderId = parsedLog.args["hash"].toLowerCase();
 
               cancelEvents.push({
+                orderKind: "wyvern-v2",
                 orderId,
                 baseEventParams,
               });
@@ -495,38 +341,11 @@ export const syncEvents = async (
               const taker = parsedLog.args["taker"].toLowerCase();
               const price = parsedLog.args["price"].toString();
 
-              fillEvents.push({
-                buyOrderId,
-                sellOrderId,
-                maker,
-                taker,
-                price,
-                baseEventParams,
-              });
-
-              fillInfos.push({
-                context: `${buyOrderId}-${sellOrderId}`,
-                buyOrderId,
-                sellOrderId,
-                timestamp: baseEventParams.timestamp,
-              });
-
-              orderInfos.push({
-                context: buyOrderId,
-                id: buyOrderId,
-              });
-              orderInfos.push({
-                context: sellOrderId,
-                id: sellOrderId,
-              });
-
-              // Improved fills handling
-
               // Since WyvernV2 fill events don't include the traded token, we
               // have to deduce it from the nft transfer event occured exactly
               // before the fill event. The code below assumes that events are
               // retrieved in chronological orders from the blockchain.
-              let associatedNftTransferEvent: nftTransfers.Event | undefined;
+              let associatedNftTransferEvent: es.nftTransfers.Event | undefined;
               if (nftTransferEvents.length) {
                 // Ensure the last nft transfer event was part of the fill
                 const event = nftTransferEvents[nftTransferEvents.length - 1];
@@ -548,8 +367,10 @@ export const syncEvents = async (
 
               let batchIndex = 1;
               if (buyOrderId !== HashZero) {
-                fill2Events.push({
+                fillEvents.push({
+                  orderKind: "wyvern-v2",
                   orderId: buyOrderId,
+                  orderSide: "buy",
                   maker,
                   taker,
                   price,
@@ -561,10 +382,23 @@ export const syncEvents = async (
                     batchIndex: batchIndex++,
                   },
                 });
+
+                fillInfos.push({
+                  context: buyOrderId,
+                  orderId: buyOrderId,
+                  orderSide: "buy",
+                  contract: associatedNftTransferEvent.baseEventParams.address,
+                  tokenId: associatedNftTransferEvent.tokenId,
+                  amount: associatedNftTransferEvent.amount,
+                  price,
+                  timestamp: baseEventParams.timestamp,
+                });
               }
               if (sellOrderId !== HashZero) {
-                fill2Events.push({
+                fillEvents.push({
+                  orderKind: "wyvern-v2",
                   orderId: sellOrderId,
+                  orderSide: "sell",
                   maker,
                   taker,
                   price,
@@ -575,6 +409,17 @@ export const syncEvents = async (
                     ...baseEventParams,
                     batchIndex: batchIndex++,
                   },
+                });
+
+                fillInfos.push({
+                  context: sellOrderId,
+                  orderId: sellOrderId,
+                  orderSide: "sell",
+                  contract: associatedNftTransferEvent.baseEventParams.address,
+                  tokenId: associatedNftTransferEvent.tokenId,
+                  amount: associatedNftTransferEvent.amount,
+                  price,
+                  timestamp: baseEventParams.timestamp,
                 });
               }
 
@@ -588,11 +433,10 @@ export const syncEvents = async (
       }
 
       await Promise.all([
-        cancels.addEvents(cancelEvents),
-        fills2.addEvents(fill2Events),
-        fills.addEvents(fillEvents),
-        ftTransfers.addEvents(ftTransferEvents, backfill),
-        nftTransfers.addEvents(nftTransferEvents, backfill),
+        es.cancels.addEvents(cancelEvents),
+        es.fills.addEvents(fillEvents),
+        es.ftTransfers.addEvents(ftTransferEvents, backfill),
+        es.nftTransfers.addEvents(nftTransferEvents, backfill),
       ]);
 
       if (!backfill) {
@@ -608,9 +452,8 @@ export const syncEvents = async (
 
 export const unsyncEvents = async (blockHash: string) =>
   Promise.all([
-    cancels.removeEvents(blockHash),
-    fills2.removeEvents(blockHash),
-    fills.removeEvents(blockHash),
-    ftTransfers.removeEvents(blockHash),
-    nftTransfers.removeEvents(blockHash),
+    es.cancels.removeEvents(blockHash),
+    es.fills.removeEvents(blockHash),
+    es.ftTransfers.removeEvents(blockHash),
+    es.nftTransfers.removeEvents(blockHash),
   ]);

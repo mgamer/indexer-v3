@@ -8,6 +8,7 @@ CREATE TABLE "cancel_events" (
   "tx_index" INT NOT NULL,
   "log_index" INT NOT NULL,
   "timestamp" INT NOT NULL,
+  "order_kind" order_kind_t NOT NULL,
   "order_id" TEXT NOT NULL
 );
 

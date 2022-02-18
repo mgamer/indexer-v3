@@ -1,4 +1,3 @@
-import { HashZero } from "@ethersproject/constants";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { db } from "@/common/db";
@@ -28,72 +27,73 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { buyOrderId, sellOrderId, timestamp } = job.data as FillInfo;
+      const {
+        orderId,
+        orderSide,
+        contract,
+        tokenId,
+        amount,
+        price,
+        timestamp,
+      } = job.data as FillInfo;
 
       try {
-        let orderId: string | undefined;
-        if (buyOrderId === HashZero && sellOrderId !== HashZero) {
-          orderId = sellOrderId;
-        } else if (sellOrderId === HashZero && buyOrderId !== HashZero) {
-          orderId = buyOrderId;
-        }
-
-        if (!orderId) {
-          // Skip if we can't detect which side was the maker
-          return;
-        }
-
         const result = await db.oneOrNone(
           `
-            SELECT
-              "o"."side",
-              "o"."token_set_id",
-              "o"."value"
-            FROM "orders" "o"
+            SELECT "o"."token_set_id" FROM "orders" "o"
             WHERE "o"."id" = $/orderId/
           `,
           { orderId }
         );
 
+        // If we can detect that the order was on a complex token set
+        // (eg. not single token), then update the last buy caches of
+        // that particular token set.
         if (result && result.token_set_id) {
           const components = result.token_set_id.split(":");
-          if (components[0] === "token") {
-            const [contract, tokenId] = components.slice(1);
-
-            await db.none(
-              `
-                UPDATE "tokens" SET
-                  "last_${result.side}_timestamp" = $/timestamp/,
-                  "last_${result.side}_value" = $/value/
-                WHERE "contract" = $/contract/
-                  AND "token_id" = $/tokenId/
-              `,
-              {
-                contract: toBuffer(contract),
-                tokenId,
-                timestamp,
-                value: result.value,
-              }
-            );
-          } else if (result.side === "buy") {
+          if (components[0] !== "token") {
             await db.none(
               `
                 UPDATE "token_sets" SET
                   "last_buy_timestamp" = $/timestamp/,
-                  "last_buy_value" = $/value/
+                  "last_buy_value" = $/price/
                 WHERE "id" = $/tokenSetId/
               `,
               {
                 tokenSetId: result.token_set_id,
                 timestamp,
-                value: result.value,
+                price,
               }
             );
+
+            logger.info(
+              QUEUE_NAME,
+              `Updated last ${result.side} given token set ${result.token_set_id} (context ${job.id})`
+            );
           }
+        }
+
+        if (amount === "1") {
+          // TODO: We should also handle amounts greater than 1
+          await db.none(
+            `
+              UPDATE "tokens" SET
+                "last_${orderSide}_timestamp" = $/timestamp/,
+                "last_${orderSide}_value" = $/price/
+              WHERE "contract" = $/contract/
+                AND "token_id" = $/tokenId/
+            `,
+            {
+              contract: toBuffer(contract),
+              tokenId,
+              price,
+              timestamp,
+            }
+          );
 
           logger.info(
             QUEUE_NAME,
-            `Updated last ${result.side} given token set ${result.token_set_id} (context ${job.id})`
+            `Updated last ${result.side} given token (${contract}, ${tokenId}) (context ${job.id})`
           );
         }
       } catch (error) {
@@ -123,15 +123,19 @@ export type FillInfo = {
   // as possible it's also important to not have the contexts too
   // distinctive in order to avoid doing duplicative work.
   context: string;
-  buyOrderId: string;
-  sellOrderId: string;
+  orderId: string;
+  orderSide: "buy" | "sell";
+  contract: string;
+  tokenId: string;
+  amount: string;
+  price: string;
   timestamp: number;
 };
 
 export const addToQueue = async (fillInfos: FillInfo[]) => {
   await queue.addBulk(
     fillInfos.map((fillInfo) => ({
-      name: `${fillInfo.buyOrderId}-${fillInfo.sellOrderId}`,
+      name: `${fillInfo.orderId}`,
       data: fillInfo,
       opts: {
         // We should make sure not to perform any expensive work more

@@ -1,10 +1,12 @@
 import { db, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { BaseEventParams } from "@/events-sync/parser";
+import { OrderKind } from "@/events-sync/storage";
 
-// TODO: Support for than one kind (for now, `wyvern-v2`)
 export type Event = {
+  orderKind: OrderKind;
   orderId: string;
+  orderSide: "buy" | "sell";
   maker: string;
   taker: string;
   price: string;
@@ -26,7 +28,9 @@ export const addEvents = async (events: Event[]) => {
       log_index: event.baseEventParams.logIndex,
       timestamp: event.baseEventParams.timestamp,
       batch_index: event.baseEventParams.batchIndex,
+      order_kind: event.orderKind,
       order_id: event.orderId,
+      order_side: event.orderSide,
       maker: toBuffer(event.maker),
       taker: toBuffer(event.taker),
       price: event.price,
@@ -49,7 +53,9 @@ export const addEvents = async (events: Event[]) => {
         "log_index",
         "timestamp",
         "batch_index",
+        "order_kind",
         "order_id",
+        "order_side",
         "maker",
         "taker",
         "price",
@@ -60,77 +66,54 @@ export const addEvents = async (events: Event[]) => {
       { table: "fill_events_2" }
     );
 
-    // TODO: To avoid any deadlocks when updating the order statuses
-    // disable order updates when writing to the new fills table. To
-    // revert once we get rid of the old fill events table.
-
+    // Atomically insert the fill events and update order statuses
     queries.push(`
-      INSERT INTO "fill_events_2" (
-        "address",
-        "block",
-        "block_hash",
-        "tx_hash",
-        "tx_index",
-        "log_index",
-        "timestamp",
-        "batch_index",
-        "order_id",
-        "maker",
-        "taker",
-        "price",
-        "contract",
-        "token_id",
-        "amount"
-      ) VALUES ${pgp.helpers.values(fillValues, columns)}
-      ON CONFLICT DO NOTHING
+      WITH "x" AS (
+        INSERT INTO "fill_events_2" (
+          "address",
+          "block",
+          "block_hash",
+          "tx_hash",
+          "tx_index",
+          "log_index",
+          "timestamp",
+          "batch_index",
+          "order_kind",
+          "order_id",
+          "order_side",
+          "maker",
+          "taker",
+          "price",
+          "contract",
+          "token_id",
+          "amount"
+        ) VALUES ${pgp.helpers.values(fillValues, columns)}
+        ON CONFLICT DO NOTHING
+        RETURNING "order_kind", "order_id", "timestamp"
+      )
+      INSERT INTO "orders" (
+        "id",
+        "kind",
+        "fillability_status",
+        "expiration",
+        "created_at",
+        "updated_at"
+      ) (
+        SELECT
+          "x"."order_id",
+          "x"."order_kind",
+          'filled'::order_fillability_status_t,
+          to_timestamp("x"."timestamp") AS "expiration",
+          NOW(),
+          NOW()
+        FROM "x"
+      )
+      ON CONFLICT ("id") DO
+      UPDATE SET
+        "fillability_status" = 'filled',
+        "expiration" = EXCLUDED."expiration",
+        "updated_at" = NOW()
     `);
-
-    // // Atomically insert the fill events and update order statuses
-    // queries.push(`
-    //   WITH "x" AS (
-    //     INSERT INTO "fill_events_2" (
-    //       "address",
-    //       "block",
-    //       "block_hash",
-    //       "tx_hash",
-    //       "tx_index",
-    //       "log_index",
-    //       "timestamp",
-    //       "batch_index",
-    //       "order_id",
-    //       "maker",
-    //       "taker",
-    //       "price",
-    //       "contract",
-    //       "token_id",
-    //       "amount"
-    //     ) VALUES ${pgp.helpers.values(fillValues, columns)}
-    //     ON CONFLICT DO NOTHING
-    //     RETURNING "order_id", "timestamp"
-    //   )
-    //   INSERT INTO "orders" (
-    //     "id",
-    //     "kind",
-    //     "fillability_status",
-    //     "expiration",
-    //     "created_at",
-    //     "updated_at"
-    //   ) (
-    //     SELECT
-    //       "x"."order_id",
-    //       'wyvern-v2'::order_kind_t,
-    //       'filled'::order_fillability_status_t,
-    //       to_timestamp("x"."timestamp") AS "expiration",
-    //       NOW(),
-    //       NOW()
-    //     FROM "x"
-    //   )
-    //   ON CONFLICT ("id") DO
-    //   UPDATE SET
-    //     "fillability_status" = 'filled',
-    //     "expiration" = EXCLUDED."expiration",
-    //     "updated_at" = NOW()
-    // `);
   }
 
   if (queries.length) {

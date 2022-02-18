@@ -48,9 +48,9 @@ ALTER TABLE "orders"
   ADD CONSTRAINT "orders_pk"
   PRIMARY KEY ("id");
 
-CREATE INDEX "orders_token_set_id_side_value_index"
-  ON "orders" ("token_set_id", "side", "value")
-  INCLUDE ("id", "maker", "valid_between")
+CREATE INDEX "orders_token_set_id_side_value_maker_index"
+  ON "orders" ("token_set_id", "side", "value", "maker")
+  INCLUDE ("id")
   WHERE ("fillability_status" = 'fillable' AND "approval_status" = 'approved');
 
 CREATE INDEX "orders_maker_side_index"

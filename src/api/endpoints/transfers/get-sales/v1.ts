@@ -70,25 +70,22 @@ export const getSalesV1Options: RouteOptions = {
     try {
       let baseQuery = `
         SELECT
-          "nte"."address",
-          "nte"."token_id",
+          "fe"."contract",
+          "fe"."token_id",
           "t"."name",
           "t"."image",
           "t"."collection_id",
           "c"."name" AS "collection_name",
-          "nte"."from",
-          "nte"."to",
-          "nte"."amount",
-          "nte"."tx_hash",
-          "nte"."timestamp",
+          "fe"."maker",
+          "fe"."taker",
+          "fe"."amount",
+          "fe"."tx_hash",
+          "fe"."timestamp",
           "fe"."price"
-        FROM "nft_transfer_events" "nte"
-        JOIN "fill_events" "fe"
-          ON "nte"."tx_hash" = "fe"."tx_hash"
-          AND "nte"."log_index" = "fe"."log_index" - 1
+        FROM "fill_events_2" "fe"
         JOIN "tokens" "t"
-          ON "nte"."address" = "t"."contract"
-          AND "nte"."token_id" = "t"."token_id"
+          ON "fe"."contract" = "t"."contract"
+          AND "fe"."token_id" = "t"."token_id"
         JOIN "collections" "c"
           ON "t"."collection_id" = "c"."id"
       `;
@@ -97,10 +94,10 @@ export const getSalesV1Options: RouteOptions = {
       const conditions: string[] = [];
       if (query.contract) {
         (query as any).contract = toBuffer(query.contract);
-        conditions.push(`"nte"."address" = $/contract/`);
+        conditions.push(`"fe"."contract" = $/contract/`);
       }
       if (query.tokenId) {
-        conditions.push(`"nte"."token_id" = $/tokenId/`);
+        conditions.push(`"fe"."token_id" = $/tokenId/`);
       }
       if (query.collection) {
         conditions.push(`"t"."collection_id" = $/collection/`);
@@ -110,7 +107,7 @@ export const getSalesV1Options: RouteOptions = {
       }
 
       // Sorting
-      baseQuery += ` ORDER BY "nte"."block" DESC`;
+      baseQuery += ` ORDER BY "fe"."block" DESC`;
 
       // Pagination
       baseQuery += ` OFFSET $/offset/`;
