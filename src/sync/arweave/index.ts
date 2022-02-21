@@ -137,7 +137,7 @@ export const syncArweave = async (options: {
         // reason we have to fetch directly via the gateway.
 
         const result = await axios.get(`${protocol}://${host}/${node.id}`, {
-          timeout: 30000,
+          timeout: 60000,
         });
         data = result.data;
       } else {
