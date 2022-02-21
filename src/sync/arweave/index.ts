@@ -94,6 +94,10 @@ export const syncArweave = async (options: {
   }
 
   for (const { node } of results) {
+    if (pending) {
+      logger.info("sync-arweave", `Got pending transaction ${node.id}`);
+    }
+
     // https://discordapp.com/channels/357957786904166400/358038065974870018/940653379133272134
     if (pending && node.block) {
       break;
