@@ -74,6 +74,12 @@ export const setupRoutes = (server: Server) => {
     options: ordersEndpoints.getUsersLiquidityV1Options,
   });
 
+  server.route({
+    method: "POST",
+    path: "/orders/v1",
+    options: ordersEndpoints.postOrdersV1Options,
+  });
+
   // Owners
 
   server.route({
