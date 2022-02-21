@@ -44,6 +44,7 @@ export const postOrdersV1Options: RouteOptions = {
         wyvernV23OrderInfos.map((orderInfo) => ({
           kind: "wyvern-v2.3",
           info: orderInfo,
+          relayToArweave: true,
         }))
       );
 

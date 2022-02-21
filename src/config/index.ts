@@ -4,6 +4,9 @@ export const config = {
   chainId: Number(process.env.CHAIN_ID),
 
   adminApiKey: String(process.env.ADMIN_API_KEY),
+  arweaveRelayerKey: process.env.ARWEAVE_RELAYER_KEY
+    ? String(process.env.ARWEAVE_RELAYER_KEY)
+    : undefined,
 
   baseNetworkHttpUrl: String(process.env.BASE_NETWORK_HTTP_URL),
   metadataApiBaseUrl: String(process.env.METADATA_API_BASE_URL),

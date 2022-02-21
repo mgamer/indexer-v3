@@ -7,6 +7,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { OrderMetadata, defaultSchemaHash } from "@/orderbook/orders/utils";
 import * as tokenSet from "@/orderbook/token-sets";
@@ -21,9 +22,17 @@ type SaveResult = {
   status: string;
 };
 
-export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
+export const save = async (
+  orderInfos: OrderInfo[],
+  relayToArweave?: boolean
+): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: any[] = [];
+
+  const arweaveData: {
+    order: Sdk.WyvernV23.Order;
+    schemaHash?: string;
+  }[] = [];
 
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
@@ -350,7 +359,14 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         expiration: validTo,
       });
 
-      results.push({ id, status: "success" });
+      results.push({
+        id,
+        status: "success",
+      });
+
+      if (relayToArweave) {
+        arweaveData.push({ order, schemaHash });
+      }
     } catch (error) {
       logger.error(
         "orders-wyvern-v2.3-save",
@@ -405,6 +421,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           id,
         }))
     );
+
+    if (relayToArweave) {
+      await arweaveRelay.addPendingOrdersWyvernV23(arweaveData);
+    }
   }
 
   return results;
