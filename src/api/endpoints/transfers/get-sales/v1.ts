@@ -13,16 +13,17 @@ export const getSalesV1Options: RouteOptions = {
   tags: ["api", "transfers"],
   validate: {
     query: Joi.object({
+      // TODO: Look into optimizing filtering by collection
+      // collection: Joi.string().lowercase(),
       contract: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
       tokenId: Joi.string().pattern(/^[0-9]+$/),
-      collection: Joi.string().lowercase(),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(100).default(20),
     })
-      .oxor("collection", "contract")
-      .or("collection", "contract")
+      .oxor("contract")
+      .or("contract")
       .with("tokenId", "contract"),
   },
   response: {
