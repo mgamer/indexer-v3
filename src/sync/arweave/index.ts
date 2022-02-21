@@ -123,13 +123,6 @@ export const syncArweave = async (options: {
         continue;
       }
 
-      if (pending) {
-        logger.info(
-          "sync-arweave",
-          `Downloading pending transaction ${node.id} (block ${node.block})`
-        );
-      }
-
       let data: any;
       if (pending) {
         // Ideally, we sync via arweave.js but unfortunately it doesn't
@@ -146,13 +139,6 @@ export const syncArweave = async (options: {
             decode: true,
             string: true,
           })) as string
-        );
-      }
-
-      if (pending) {
-        logger.info(
-          "sync-arweave",
-          `Handled pending transaction ${node.id} (block ${node.block})`
         );
       }
 
