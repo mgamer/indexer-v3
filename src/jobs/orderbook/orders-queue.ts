@@ -31,11 +31,6 @@ if (config.doBackgroundWork) {
 
       try {
         switch (kind) {
-          case "wyvern-v2": {
-            await orders.wyvernV2.save([info as orders.wyvernV2.OrderInfo]);
-            break;
-          }
-
           case "wyvern-v2.3": {
             await orders.wyvernV23.save([info as orders.wyvernV23.OrderInfo]);
             break;
@@ -56,15 +51,10 @@ if (config.doBackgroundWork) {
   });
 }
 
-export type GenericOrderInfo =
-  | {
-      kind: "wyvern-v2";
-      info: orders.wyvernV2.OrderInfo;
-    }
-  | {
-      kind: "wyvern-v2.3";
-      info: orders.wyvernV23.OrderInfo;
-    };
+export type GenericOrderInfo = {
+  kind: "wyvern-v2.3";
+  info: orders.wyvernV23.OrderInfo;
+};
 
 export const addToQueue = async (orderInfos: GenericOrderInfo[]) => {
   await queue.addBulk(

@@ -51,37 +51,52 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       }
 
-      // Check: order has a valid target
-      // TODO: For efficiency, first check the database for the contract's
-      // kind and in case that's missing use on-chain cals to check
+      const localTarget = await db.oneOrNone(
+        `
+          SELECT "c"."kind" FROM "contracts" "c"
+          WHERE "c"."address" = $/address/
+        `,
+        {
+          address: toBuffer(info.contract),
+        }
+      );
+
+      // Check: order's target is valid
       const contractKind = order.params.kind?.split("-")[0];
-      if (contractKind === "erc721") {
-        const contract = new Sdk.Common.Helpers.Erc721(
-          baseProvider,
-          info.contract
-        );
-        if (!(await contract.isValid())) {
-          return results.push({
-            id,
-            status: "invalid-target",
-          });
-        }
-      } else if (contractKind === "erc1155") {
-        const contract = new Sdk.Common.Helpers.Erc1155(
-          baseProvider,
-          info.contract
-        );
-        if (!(await contract.isValid())) {
-          return results.push({
-            id,
-            status: "invalid-target",
-          });
-        }
-      } else {
+      if (
+        (localTarget && localTarget.kind !== contractKind) ||
+        (contractKind !== "erc721" && contractKind !== "erc1155")
+      ) {
+        // First check locally for the target's validity
         return results.push({
           id,
           status: "invalid-target",
         });
+      } else if (!localTarget) {
+        // If no local information is available, then check on-chain
+        if (contractKind === "erc721") {
+          const contract = new Sdk.Common.Helpers.Erc721(
+            baseProvider,
+            info.contract
+          );
+          if (!(await contract.isValid())) {
+            return results.push({
+              id,
+              status: "invalid-target",
+            });
+          }
+        } else if (contractKind === "erc1155") {
+          const contract = new Sdk.Common.Helpers.Erc1155(
+            baseProvider,
+            info.contract
+          );
+          if (!(await contract.isValid())) {
+            return results.push({
+              id,
+              status: "invalid-target",
+            });
+          }
+        }
       }
 
       const currentTime = Math.floor(Date.now() / 1000);
