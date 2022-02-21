@@ -118,6 +118,11 @@ if (config.doBackgroundWork) {
               table: "orders",
             }
           );
+
+          if (maker === "0xf6aafb44bc183d3083bfae12d743d947ca376562") {
+            logger.info("debug", JSON.stringify(fillabilityStatuses));
+          }
+
           const values = pgp.helpers.values(
             fillabilityStatuses.map(({ id, new_status, expiration }) => ({
               id,
