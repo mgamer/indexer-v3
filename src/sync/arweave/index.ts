@@ -122,6 +122,13 @@ export const syncArweave = async (options: {
         continue;
       }
 
+      if (pending) {
+        logger.info(
+          "sync-arweave",
+          `Downloading pending transaction ${node.id} (block ${node.block})`
+        );
+      }
+
       const transactionData = JSON.parse(
         (await arweaveGateway.transactions.getData(node.id, {
           decode: true,
