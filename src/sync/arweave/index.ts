@@ -1,3 +1,4 @@
+import axios from "axios";
 import { gql, request } from "graphql-request";
 
 import * as v001 from "@/arweave-sync/common/v001";
@@ -129,12 +130,24 @@ export const syncArweave = async (options: {
         );
       }
 
-      const transactionData = JSON.parse(
-        (await arweaveGateway.transactions.getData(node.id, {
-          decode: true,
-          string: true,
-        })) as string
-      );
+      let data: any;
+      if (pending) {
+        // Ideally, we sync via arweave.js but unfortunately it doesn't
+        // have support for fetching pending transactions, and for this
+        // reason we have to fetch directly via the gateway.
+
+        const result = await axios.get(`${protocol}://${host}/${node.id}`, {
+          timeout: 30000,
+        });
+        data = result.data;
+      } else {
+        data = JSON.parse(
+          (await arweaveGateway.transactions.getData(node.id, {
+            decode: true,
+            string: true,
+          })) as string
+        );
+      }
 
       if (pending) {
         logger.info(
@@ -145,7 +158,7 @@ export const syncArweave = async (options: {
 
       switch (version) {
         case "0.0.1": {
-          await v001.processTransactionData(transactionData);
+          await v001.processTransactionData(data);
           break;
         }
 

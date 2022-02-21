@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from "uuid";
 
 import { syncArweave } from "@/arweave-sync/index";
 import { logger } from "@/common/logger";
-import { arweaveGateway } from "@/common/provider";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 
