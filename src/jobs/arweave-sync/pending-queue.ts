@@ -7,7 +7,7 @@ import { arweaveGateway } from "@/common/provider";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 
-const QUEUE_NAME = "arweave-sync-realtime";
+const QUEUE_NAME = "arweave-sync-pending";
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
@@ -26,27 +26,10 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (_job: Job) => {
       try {
-        let localBlock = Number(await redis.get(`${QUEUE_NAME}-last-block`));
-        if (localBlock === 0) {
-          localBlock = (await arweaveGateway.blocks.getCurrent()).height;
-          await redis.set(`${QUEUE_NAME}-last-block`, localBlock);
-        } else {
-          localBlock++;
-        }
-
-        let { lastBlock, lastCursor, done } = await syncArweave({
-          fromBlock: localBlock,
-        });
-        while (!done) {
-          ({ lastBlock, lastCursor, done } = await syncArweave({
-            fromBlock: localBlock,
-            afterCursor: lastCursor,
-          }));
-        }
-
-        if (lastBlock) {
-          await redis.set(`${QUEUE_NAME}-last-block`, lastBlock);
-        }
+        // The code below assumes we cannot have more than 100 (or whatever
+        // is the query size limit for Arweave's gql endpoint) transactions
+        // pending in the Arweave mempool.
+        await syncArweave({ pending: true });
       } catch (error) {
         logger.error(QUEUE_NAME, `Arweave realtime syncing failed: ${error}`);
         throw error;

@@ -3,6 +3,7 @@ import { gql, request } from "graphql-request";
 import * as v001 from "@/arweave-sync/common/v001";
 import { arweaveGateway, network } from "@/common/provider";
 import { logger } from "@/common/logger";
+import { redis } from "@/common/redis";
 
 type Transaction = {
   version: string;
@@ -16,17 +17,18 @@ type ArweaveSyncResult = {
   transactions: Transaction[];
 };
 
-export const syncArweave = async (options?: {
+export const syncArweave = async (options: {
   fromBlock?: number;
   toBlock?: number;
   afterCursor?: string;
+  pending?: boolean;
 }): Promise<ArweaveSyncResult> => {
   const transactions: Transaction[] = [];
 
   const batchSize = 100;
 
   // https://gist.github.com/TheLoneRonin/08d9fe4a43486815c78d6bebb2da4fff
-  const { fromBlock, toBlock, afterCursor } = options || {};
+  const { fromBlock, toBlock, afterCursor, pending } = options;
   const query = gql`
     {
       transactions(
@@ -35,7 +37,7 @@ export const syncArweave = async (options?: {
           { name: "Network", values: ["${network}"] }
         ]
         first: ${batchSize}
-        sort: HEIGHT_ASC
+        sort: ${pending ? "HEIGHT_DESC" : "HEIGHT_ASC"}
         ${
           fromBlock && toBlock
             ? `block: { min: ${fromBlock}, max: ${toBlock} }`
@@ -92,6 +94,17 @@ export const syncArweave = async (options?: {
   }
 
   for (const { node } of results) {
+    // https://discordapp.com/channels/357957786904166400/358038065974870018/940653379133272134
+    if (pending && node.block) {
+      break;
+    }
+
+    // Skip if we already processed this particular transaction
+    const transactionCache = await redis.get(`arweave-transaction-${node.id}`);
+    if (transactionCache) {
+      continue;
+    }
+
     try {
       const version = node.tags.find((t) => t.name === "App-Version")?.value;
       if (!version) {
@@ -117,6 +130,9 @@ export const syncArweave = async (options?: {
           break;
         }
       }
+
+      // Cache processed transactions for 1 hour
+      await redis.set(`arweave-transaction-${node.id}`, "1", "EX", 3600);
     } catch {
       // Ignore any errors
     }
