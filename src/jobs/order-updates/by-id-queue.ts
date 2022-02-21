@@ -49,11 +49,6 @@ if (config.doBackgroundWork) {
           const side = data.side;
           const tokenSetId = data.token_set_id;
 
-          logger.info(
-            QUEUE_NAME,
-            `Recomputing cached ${side} data given token set ${tokenSetId} (context ${job.id})`
-          );
-
           // Recompute `top_buy` for token sets that are not single token
           if (side === "buy" && !tokenSetId.startsWith("token")) {
             await db.none(
