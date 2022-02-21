@@ -24,10 +24,10 @@ import "@/jobs/order-updates/by-maker-queue";
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
   cron.schedule(
-    "*/30 * * * * *",
+    "*/15 * * * * *",
     async () =>
       await redlock
-        .acquire(["expired-orders-check-lock"], (30 - 5) * 1000)
+        .acquire(["expired-orders-check-lock"], (15 - 5) * 1000)
         .then(async () => {
           logger.info(`expired-orders-check`, "Invalidating expired orders");
 
