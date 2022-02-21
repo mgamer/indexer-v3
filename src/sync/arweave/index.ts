@@ -106,13 +106,10 @@ export const syncArweave = async (options: {
       continue;
     } else {
       if (pending) {
-        logger.info(
-          "sync-arweave",
-          `Got pending transaction ${node.id} (block ${node.block})`
-        );
+        logger.info("sync-arweave", `Got pending transaction ${node.id}`);
       }
 
-      // Optimistically cache the transaction as processed
+      // Optimistically cache the pending transaction as processed
       await redis.set(`arweave-transaction-${node.id}`, "1", "EX", 3600);
     }
 
