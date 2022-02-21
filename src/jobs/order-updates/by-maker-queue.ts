@@ -128,6 +128,13 @@ if (config.doBackgroundWork) {
             columns
           );
 
+          if (maker === "0xf6aafb44bc183d3083bfae12d743d947ca376562") {
+            logger.info(
+              "debug",
+              JSON.stringify({ fillabilityStatuses, values })
+            );
+          }
+
           await db.none(
             `
               UPDATE "orders" AS "o" SET
