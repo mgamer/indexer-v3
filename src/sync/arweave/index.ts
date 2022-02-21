@@ -99,17 +99,17 @@ export const syncArweave = async (options: {
       break;
     }
 
+    // Skip if we already processed this particular transaction
+    const transactionCache = await redis.get(`arweave-transaction-${node.id}`);
+    if (transactionCache) {
+      continue;
+    }
+
     if (pending) {
       logger.info(
         "sync-arweave",
         `Got pending transaction ${node.id} (block ${node.block})`
       );
-    }
-
-    // Skip if we already processed this particular transaction
-    const transactionCache = await redis.get(`arweave-transaction-${node.id}`);
-    if (transactionCache) {
-      continue;
     }
 
     try {
