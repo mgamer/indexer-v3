@@ -30,6 +30,12 @@ CREATE INDEX "fill_events_2_block_index"
 CREATE INDEX "fill_events_2_block_hash_index"
   ON "fill_events_2" ("block_hash");
 
+CREATE INDEX "fill_events_2_contract_block_index"
+  ON "fill_events_2" ("contract", "block" DESC);
+
+CREATE INDEX "fill_events_2_contract_token_id_block_index"
+  ON "fill_events_2" ("contract", "token_id", "block" DESC);
+
 -- Down Migration
 
 DROP TABLE "fill_events_2";

@@ -81,16 +81,18 @@ export const getTransfersV1Options: RouteOptions = {
           "nte"."amount",
           "nte"."tx_hash",
           "nte"."timestamp",
-          "fe"."price"
+          (
+            SELECT "fe"."price" FROM "fill_events_2" "fe"
+            WHERE "fe"."tx_hash" = "nte"."tx_hash"
+              AND "fe"."log_index" = "nte"."log_index" + 1
+            LIMIT 1
+          ) AS "price"
         FROM "nft_transfer_events" "nte"
         JOIN "tokens" "t"
           ON "nte"."address" = "t"."contract"
           AND "nte"."token_id" = "t"."token_id"
         JOIN "collections" "c"
           ON "t"."collection_id" = "c"."id"
-        LEFT JOIN "fill_events" "fe"
-          ON "nte"."tx_hash" = "fe"."tx_hash"
-          AND "nte"."log_index" + 1 = "fe"."log_index"
       `;
 
       // Filters

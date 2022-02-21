@@ -41,10 +41,10 @@ export const getSalesV1Options: RouteOptions = {
               name: Joi.string().allow(null, ""),
             }),
           }),
-          from: Joi.string()
+          maker: Joi.string()
             .lowercase()
             .pattern(/^0x[a-f0-9]{40}$/),
-          to: Joi.string()
+          taker: Joi.string()
             .lowercase()
             .pattern(/^0x[a-f0-9]{40}$/),
           amount: Joi.number(),
@@ -116,7 +116,7 @@ export const getSalesV1Options: RouteOptions = {
       const result = await db.manyOrNone(baseQuery, query).then((result) =>
         result.map((r) => ({
           token: {
-            contract: fromBuffer(r.address),
+            contract: fromBuffer(r.contract),
             tokenId: r.token_id,
             name: r.name,
             image: r.mage,
@@ -125,8 +125,8 @@ export const getSalesV1Options: RouteOptions = {
               name: r.collection_name,
             },
           },
-          from: fromBuffer(r.from),
-          to: fromBuffer(r.to),
+          maker: fromBuffer(r.maker),
+          taker: fromBuffer(r.taker),
           amount: Number(r.amount),
           txHash: fromBuffer(r.tx_hash),
           timestamp: r.timestamp,
