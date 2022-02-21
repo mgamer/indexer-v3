@@ -35,8 +35,8 @@ if (config.doBackgroundWork) {
             const expiredOrders: { id: string }[] = await db.manyOrNone(`
               UPDATE "orders" SET
                 "fillability_status" = 'expired',
-                "expiration" = upper("valid_between")
-              WHERE NOT "valid_between" @> now()
+                "expiration" = UPPER("valid_between")
+              WHERE NOT "valid_between" @> NOW()
                 AND ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance')
               RETURNING "id"
             `);

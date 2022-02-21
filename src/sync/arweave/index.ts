@@ -99,17 +99,20 @@ export const syncArweave = async (options: {
       break;
     }
 
-    // Skip if we already processed this particular transaction
     const transactionCache = await redis.get(`arweave-transaction-${node.id}`);
     if (transactionCache) {
+      // Skip if we already processed this particular transaction
       continue;
-    }
+    } else {
+      if (pending) {
+        logger.info(
+          "sync-arweave",
+          `Got pending transaction ${node.id} (block ${node.block})`
+        );
+      }
 
-    if (pending) {
-      logger.info(
-        "sync-arweave",
-        `Got pending transaction ${node.id} (block ${node.block})`
-      );
+      // Optimistically cache the transaction as processed
+      await redis.set(`arweave-transaction-${node.id}`, "1", "EX", 3600);
     }
 
     try {
@@ -126,6 +129,13 @@ export const syncArweave = async (options: {
         })) as string
       );
 
+      if (pending) {
+        logger.info(
+          "sync-arweave",
+          `Handled pending transaction ${node.id} (block ${node.block})`
+        );
+      }
+
       switch (version) {
         case "0.0.1": {
           await v001.processTransactionData(transactionData);
@@ -137,9 +147,6 @@ export const syncArweave = async (options: {
           break;
         }
       }
-
-      // Cache processed transactions for 1 hour
-      await redis.set(`arweave-transaction-${node.id}`, "1", "EX", 3600);
     } catch {
       // Ignore any errors
     }
