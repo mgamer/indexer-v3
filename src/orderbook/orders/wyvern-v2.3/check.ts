@@ -67,7 +67,12 @@ export const offChainCheck = async (
     if (!balanceResult || bn(balanceResult.amount).lt(1)) {
       logger.info(
         "debug",
-        JSON.stringify({ side: "sell", balanceResult, info })
+        JSON.stringify({
+          side: "sell",
+          balanceResult,
+          info,
+          maker: order.params.maker,
+        })
       );
       throw new Error("no-balance");
     }
