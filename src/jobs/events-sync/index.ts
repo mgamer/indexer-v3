@@ -43,7 +43,7 @@ export const saveLatestBlocks = async (
     if (result.length) {
       // Only keep the latest 30 blocks
       const latestBlockNegated = Number(result[1]);
-      await redis.zremrangebyscore("key", latestBlockNegated + 30, "+inf");
+      await redis.zremrangebyscore(key, latestBlockNegated + 30, "+inf");
     }
   } catch (error) {
     logger.error(
