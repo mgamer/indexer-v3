@@ -149,17 +149,19 @@ export const save = async (
         await offChainCheck(order, info);
       } catch (error: any) {
         logger.info("debug", error.message);
-        // Keep any orders that can potentially get valid in the future
-        if (error.message === "no-approval") {
-          approvalStatus = "no-approval";
-        } else if (error.message === "no-balance") {
-          fillabilityStatus = "no-balance";
-        } else {
-          return results.push({
-            id,
-            status: "not-fillable",
-          });
-        }
+        // // Keep any orders that can potentially get valid in the future
+        // if (error.message === "no-approval") {
+        //   approvalStatus = "no-approval";
+        // } else if (error.message === "no-balance") {
+        //   fillabilityStatus = "no-balance";
+        // } else {
+
+        // }
+
+        return results.push({
+          id,
+          status: "not-fillable",
+        });
       }
 
       // Check and save: associated token set

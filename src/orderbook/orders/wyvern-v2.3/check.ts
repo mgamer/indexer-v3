@@ -3,6 +3,7 @@ import { BaseOrderInfo } from "@reservoir0x/sdk/dist/wyvern-v2.3/builders/base";
 
 import { db } from "@/common/db";
 import { bn, toBuffer } from "@/common/utils";
+import { logger } from "@/common/logger";
 
 export const offChainCheck = async (
   order: Sdk.WyvernV23.Order,
@@ -60,6 +61,7 @@ export const offChainCheck = async (
       }
     );
     if (!balanceResult || bn(balanceResult.amount).lt(1)) {
+      logger.debug("debug", JSON.stringify({ balanceResult, info }));
       throw new Error("no-balance");
     }
 
