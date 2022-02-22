@@ -5,6 +5,7 @@ import * as v001 from "@/arweave-sync/common/v001";
 import { arweaveGateway, network } from "@/common/provider";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
+import { config } from "@/config/index";
 
 type Transaction = {
   version: string;
@@ -54,6 +55,9 @@ export const syncArweave = async (options: {
           cursor
           node {
             id
+            owner {
+              address
+            }
             tags {
               name
               value
@@ -74,6 +78,9 @@ export const syncArweave = async (options: {
     cursor: string;
     node: {
       id: string;
+      owner: {
+        address: string;
+      };
       tags: {
         name: string;
         value: string;
@@ -114,6 +121,15 @@ export const syncArweave = async (options: {
     }
 
     try {
+      const owner = node.owner.address;
+      const relayer = await arweaveGateway.wallets.jwkToAddress(
+        JSON.parse(config.arweaveRelayerKey!)
+      );
+      if (owner === relayer) {
+        // Skip transactions relayed by this indexer
+        continue;
+      }
+
       const version = node.tags.find((t) => t.name === "App-Version")?.value;
       if (!version) {
         // Skip unversioned transactions

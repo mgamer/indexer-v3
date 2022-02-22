@@ -27,7 +27,7 @@ export const getCollectionV1Options: RouteOptions = {
         onSaleCount: Joi.number(),
         tokenSetId: Joi.string().allow(null),
         royalties: Joi.object({
-          recipient: Joi.string().allow(null),
+          recipient: Joi.string().allow(null, ""),
           bps: Joi.number(),
         }),
         lastBuy: {
