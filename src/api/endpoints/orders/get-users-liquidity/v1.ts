@@ -20,7 +20,9 @@ export const getUsersLiquidityV1Options: RouteOptions = {
         .pattern(/^0x[a-f0-9]{40}$/),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
-    }),
+    })
+      .or("collection", "user")
+      .oxor("collection", "user"),
   },
   response: {
     schema: Joi.object({
@@ -69,7 +71,7 @@ export const getUsersLiquidityV1Options: RouteOptions = {
       baseQuery += ` GROUP BY "t"."top_buy_maker"`;
 
       // Sorting
-      baseQuery += ` ORDER BY "rank"`;
+      baseQuery += ` ORDER BY "rank", "t"."top_buy_maker"`;
 
       // Pagination
       baseQuery += ` OFFSET $/offset/`;
