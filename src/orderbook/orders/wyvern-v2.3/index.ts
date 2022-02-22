@@ -148,7 +148,7 @@ export const save = async (
       try {
         await offChainCheck(order, info);
       } catch (error: any) {
-        logger.info("debug", error.message);
+        // logger.info("debug", error.message);
         // // Keep any orders that can potentially get valid in the future
         // if (error.message === "no-approval") {
         //   approvalStatus = "no-approval";
