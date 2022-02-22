@@ -37,6 +37,10 @@ export const offChainCheck = async (
       }
     );
     if (!balanceResult || bn(balanceResult.amount).lt(order.params.basePrice)) {
+      logger.debug(
+        "debug",
+        JSON.stringify({ side: "buy", balanceResult, info })
+      );
       throw new Error("no-balance");
     }
 
@@ -61,7 +65,10 @@ export const offChainCheck = async (
       }
     );
     if (!balanceResult || bn(balanceResult.amount).lt(1)) {
-      logger.debug("debug", JSON.stringify({ balanceResult, info }));
+      logger.debug(
+        "debug",
+        JSON.stringify({ side: "sell", balanceResult, info })
+      );
       throw new Error("no-balance");
     }
 
