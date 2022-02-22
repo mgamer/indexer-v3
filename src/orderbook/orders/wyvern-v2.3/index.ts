@@ -4,12 +4,12 @@ import pLimit from "p-limit";
 
 import { db, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
-import { baseProvider } from "@/common/provider";
 import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { OrderMetadata, defaultSchemaHash } from "@/orderbook/orders/utils";
+import { offChainCheck } from "@/orderbook/orders/wyvern-v2.3/check";
 import * as tokenSet from "@/orderbook/token-sets";
 
 export type OrderInfo = {
@@ -49,6 +49,9 @@ export const save = async (
       }
 
       // Check: order doesn't already exist
+      // TODO: We should probably store any missing information
+      // for the orders that are cancelled or filled (these can
+      // be missing the order details).
       const orderExists = await db.oneOrNone(
         `SELECT 1 FROM "orders" "o" WHERE "o"."id" = $/id/`,
         { id }
@@ -58,54 +61,6 @@ export const save = async (
           id,
           status: "already-exists",
         });
-      }
-
-      const localTarget = await db.oneOrNone(
-        `
-          SELECT "c"."kind" FROM "contracts" "c"
-          WHERE "c"."address" = $/address/
-        `,
-        {
-          address: toBuffer(info.contract),
-        }
-      );
-
-      // Check: order's target is valid
-      const contractKind = order.params.kind?.split("-")[0];
-      if (
-        (localTarget && localTarget.kind !== contractKind) ||
-        (contractKind !== "erc721" && contractKind !== "erc1155")
-      ) {
-        // First check locally for the target's validity
-        return results.push({
-          id,
-          status: "invalid-target",
-        });
-      } else if (!localTarget) {
-        // If no local information is available, then check on-chain
-        if (contractKind === "erc721") {
-          const contract = new Sdk.Common.Helpers.Erc721(
-            baseProvider,
-            info.contract
-          );
-          if (!(await contract.isValid())) {
-            return results.push({
-              id,
-              status: "invalid-target",
-            });
-          }
-        } else if (contractKind === "erc1155") {
-          const contract = new Sdk.Common.Helpers.Erc1155(
-            baseProvider,
-            info.contract
-          );
-          if (!(await contract.isValid())) {
-            return results.push({
-              id,
-              status: "invalid-target",
-            });
-          }
-        }
       }
 
       const currentTime = Math.floor(Date.now() / 1000);
@@ -187,12 +142,13 @@ export const save = async (
         });
       }
 
-      // Check: fillability and approval status
+      // Check: order fillability
       let fillabilityStatus = "fillable";
       let approvalStatus = "approved";
       try {
-        await order.checkFillability(baseProvider);
+        await offChainCheck(order, info);
       } catch (error: any) {
+        logger.info("debug", error.message);
         // Keep any orders that can potentially get valid in the future
         if (error.message === "no-approval") {
           approvalStatus = "no-approval";

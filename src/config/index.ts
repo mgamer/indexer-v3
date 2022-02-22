@@ -16,4 +16,5 @@ export const config = {
 
   catchup: Boolean(Number(process.env.CATCHUP)),
   doBackgroundWork: Boolean(Number(process.env.DO_BACKGROUND_WORK)),
+  onChainOrderCheck: Boolean(Number(process.env.ON_CHAIN_ORDER_CHECK)),
 };
