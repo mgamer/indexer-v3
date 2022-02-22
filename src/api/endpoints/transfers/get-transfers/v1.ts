@@ -18,13 +18,14 @@ export const getTransfersV1Options: RouteOptions = {
       contract: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
-      tokenId: Joi.string().pattern(/^[0-9]+$/),
+      token: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}:[0-9]+$/),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(100).default(20),
     })
-      .oxor("contract")
-      .or("contract")
-      .with("tokenId", "contract"),
+      .oxor("contract", "token")
+      .or("contract", "token"),
   },
   response: {
     schema: Joi.object({
@@ -105,8 +106,13 @@ export const getTransfersV1Options: RouteOptions = {
         (query as any).contract = toBuffer(query.contract);
         conditions.push(`"nte"."address" = $/contract/`);
       }
-      if (query.tokenId) {
-        conditions.push(`"nte"."token_id" = $/tokenId/`);
+      if (query.token) {
+        const [contract, tokenId] = query.token.split(":");
+
+        (query as any).contract = toBuffer(contract);
+        (query as any).tokenId = tokenId;
+        conditions.push(`"t"."contract" = $/contract/`);
+        conditions.push(`"t"."token_id" = $/tokenId/`);
       }
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
