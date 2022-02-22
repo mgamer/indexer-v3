@@ -32,6 +32,11 @@ if (config.doBackgroundWork) {
       const { contract, tokenId } = job.data as MintInfo;
 
       try {
+        // TODO: For newly minted tokens we should also populate
+        // various cached information (eg. floor sell, top buy),
+        // otherwise the tokens might be missing from the result
+        // of various APIs which depend on these cached values.
+
         // First, check the database for any matching collection
         const collection: { id: string } | null = await db.oneOrNone(
           `
