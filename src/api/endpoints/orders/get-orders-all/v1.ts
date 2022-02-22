@@ -3,25 +3,20 @@ import Joi from "joi";
 
 import { db } from "@/common/db";
 import { logger } from "@/common/logger";
-import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { formatEth, fromBuffer } from "@/common/utils";
 
 const version = "v1";
 
-export const getOrdersV1Options: RouteOptions = {
-  description: "Get a list of valid orders.",
+export const getOrdersAllV1Options: RouteOptions = {
+  description: "Get all valid orders by side sorted by their creation date.",
   tags: ["api", "orders"],
   validate: {
     query: Joi.object({
-      id: Joi.string(),
-      token: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-f0-9]{40}:[0-9]+$/),
-      tokenSetId: Joi.string().lowercase(),
-      offset: Joi.number().integer().min(0).max(10000).default(0),
-      limit: Joi.number().integer().min(1).max(50).default(20),
-    })
-      .or("id", "token", "tokenSetId")
-      .oxor("id", "token", "tokenSetId"),
+      side: Joi.string().lowercase().valid("buy", "sell"),
+      sortDirection: Joi.string().lowercase().valid("asc", "desc"),
+      continuation: Joi.string().pattern(/^\d+_0x[a-f0-9]{64}$/),
+      limit: Joi.number().integer().min(1).max(1000).default(50),
+    }),
   },
   response: {
     schema: Joi.object({
@@ -33,7 +28,10 @@ export const getOrdersV1Options: RouteOptions = {
           fillabilityStatus: Joi.string().required(),
           approvalStatus: Joi.string().required(),
           tokenSetId: Joi.string().required(),
-          tokenSetSchemaHash: Joi.string().required(),
+          tokenSetSchemaHash: Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-f0-9]{64}$/)
+            .required(),
           maker: Joi.string()
             .lowercase()
             .pattern(/^0x[a-f0-9]{40}$/)
@@ -48,16 +46,19 @@ export const getOrdersV1Options: RouteOptions = {
           validUntil: Joi.number().required(),
           sourceInfo: Joi.any(),
           royaltyInfo: Joi.any(),
-          rawData: Joi.any(),
           expiration: Joi.number().required(),
           createdAt: Joi.string().required(),
           updatedAt: Joi.string().required(),
+          rawData: Joi.any(),
         })
       ),
-    }).label(`getOrders${version.toUpperCase()}Response`),
+      continuation: Joi.string()
+        .pattern(/^\d+_0x[a-f0-9]{64}$/)
+        .allow(null),
+    }).label(`getOrdersAll${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
-        `get-orders-${version}-handler`,
+        `get-orders-all-${version}-handler`,
         `Wrong response schema: ${error}`
       );
       throw error;
@@ -68,7 +69,7 @@ export const getOrdersV1Options: RouteOptions = {
 
     try {
       let baseQuery = `
-        SELECT DISTINCT ON ("o"."id")
+        SELECT
           "o"."id",
           "o"."kind",
           "o"."side",
@@ -97,41 +98,38 @@ export const getOrdersV1Options: RouteOptions = {
         FROM "orders" "o"
       `;
 
-      if (query.token) {
-        baseQuery += `
-          JOIN "token_sets_tokens" "tst"
-            ON "o"."token_set_id" = "tst"."token_set_id"
-        `;
-      }
-
       // Filters
       const conditions: string[] = [
         `"o"."fillability_status" = 'fillable'`,
         `"o"."approval_status" = 'approved'`,
       ];
-      if (query.id) {
-        conditions.push(`"o"."id" = $/id/`);
+      if (query.side) {
+        conditions.push(`"o"."side" = $/side/`);
       }
-      if (query.token) {
-        const [contract, tokenId] = query.token.split(":");
+      if (query.continuation) {
+        const [createdAt, id] = query.continuation.split("_");
+        (query as any).createdAt = createdAt;
+        (query as any).id = id;
 
-        (query as any).contract = toBuffer(contract);
-        (query as any).tokenId = tokenId;
-        conditions.push(`"tst"."contract" = $/contract/`);
-        conditions.push(`"tst"."token_id" = $/tokenId/`);
+        conditions.push(
+          `("o"."created_at", "o"."id") ${
+            (query.sortDirection || "asc") === "asc" ? ">" : "<"
+          } (to_timestamp($/createdAt/ / 1000.0), $/id/)`
+        );
       }
-      if (query.tokenSetId) {
-        conditions.push(`"o"."token_set_id" = $/tokenSetId/`);
-      }
+
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
 
       // Sorting
-      baseQuery += ` ORDER BY "o"."id"`;
+      baseQuery += `
+        ORDER BY
+          "o"."created_at" ${query.sortDirection || "ASC"},
+          "o"."id" ${query.sortDirection || "ASC"}
+      `;
 
       // Pagination
-      baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
       const result = await db.manyOrNone(baseQuery, query).then((result) =>
@@ -158,10 +156,29 @@ export const getOrdersV1Options: RouteOptions = {
         }))
       );
 
-      return { orders: result };
+      let continuation = null;
+      if (result.length === query.limit) {
+        // TODO: By default Postgres stores any timestamps at a microsecond
+        // precision. However, NodeJS's Date type can only handle precision
+        // at millisecond level. The code below assumes that there exist no
+        // orders created at the same millisecond but different microsecond
+        // when building the continuation token. However, this might not be
+        // always true so we should either include microsecond precision in
+        // the continuation tokens or store all timestamps at a millisecond
+        // precision in Postgres.
+        continuation =
+          new Date(result[result.length - 1].createdAt).getTime() +
+          "_" +
+          result[result.length - 1].id;
+      }
+
+      return {
+        orders: result,
+        continuation,
+      };
     } catch (error) {
       logger.error(
-        `get-orders-${version}-handler`,
+        `get-orders-all-${version}-handler`,
         `Handler failure: ${error}`
       );
       throw error;
