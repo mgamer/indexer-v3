@@ -3,7 +3,7 @@ import cron from "node-cron";
 import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { redlock } from "@/common/redis";
+import { redlock, redis } from "@/common/redis";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { unsyncEvents } from "@/events-sync/index";
@@ -26,6 +26,32 @@ import "@/jobs/events-sync/backfill-queue";
 import "@/jobs/events-sync/realtime-queue";
 import "@/jobs/events-sync/write-buffers/ft-transfers";
 import "@/jobs/events-sync/write-buffers/nft-transfers";
+
+export const saveLatestBlocks = async (
+  blockInfos: { block: number; hash: string }[]
+) => {
+  try {
+    const key = "events-sync-latest-blocks";
+    for (const { block, hash } of blockInfos) {
+      // Use a sorted set scored by the negated block number
+      // so that the latest blocks are prioritized.
+      await redis.zadd(key, -block, hash);
+    }
+
+    // Get the latest block number
+    const result = await redis.zrange(key, 0, 0, "WITHSCORES");
+    if (result.length) {
+      // Only keep the latest 30 blocks
+      const latestBlockNegated = Number(result[1]);
+      await redis.zremrangebyscore("key", latestBlockNegated + 30, "+inf");
+    }
+  } catch (error) {
+    logger.error(
+      "events-sync-save-latest-blocks",
+      `Failed to save latest blocks: ${error}`
+    );
+  }
+};
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork && config.catchup) {

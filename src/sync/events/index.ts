@@ -6,6 +6,7 @@ import { allEventData, allEventTopics } from "@/events-sync/data";
 import * as es from "@/events-sync/storage";
 import { parseEvent } from "@/events-sync/parser";
 
+import * as eventsSync from "@/jobs/events-sync/index";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
@@ -50,6 +51,8 @@ export const syncEvents = async (
   const makerInfos: orderUpdatesByMaker.MakerInfo[] = [];
   const mintInfos: tokenUpdatesMint.MintInfo[] = [];
 
+  const blockHashToNumber: { [hash: string]: number } = {};
+
   await baseProvider
     .getLogs({
       topics: [allEventTopics],
@@ -66,6 +69,11 @@ export const syncEvents = async (
       for (const log of logs) {
         try {
           const baseEventParams = parseEvent(log, blockRange);
+
+          if (!backfill) {
+            blockHashToNumber[baseEventParams.blockHash] =
+              baseEventParams.block;
+          }
 
           // Find first matching event:
           // - matching topic
@@ -592,6 +600,15 @@ export const syncEvents = async (
           orderUpdatesByMaker.addToQueue(makerInfos),
           tokenUpdatesMint.addToQueue(mintInfos),
         ]);
+
+        // When not backfilling, save all retrieved blocks in order
+        // to efficiently check and handle block reorgs.
+        await eventsSync.saveLatestBlocks(
+          Object.entries(blockHashToNumber).map(([hash, block]) => ({
+            hash,
+            block,
+          }))
+        );
       }
     });
 };
