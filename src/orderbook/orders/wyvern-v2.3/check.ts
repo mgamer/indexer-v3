@@ -54,7 +54,7 @@ export const offChainCheck = async (
           AND "nb"."owner" = $/owner/
       `,
       {
-        contract: toBuffer(order.params.paymentToken),
+        contract: toBuffer(info.contract),
         tokenId: (info as any).tokenId,
         owner: toBuffer(order.params.maker),
       }
