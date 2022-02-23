@@ -6,6 +6,8 @@ import * as ordersEndpoints from "@/api/endpoints/orders";
 import * as ownersEndpoints from "@/api/endpoints/owners";
 import * as tokensEndpoints from "@/api/endpoints/tokens";
 import * as transfersEndpoints from "@/api/endpoints/transfers";
+import * as healthEndpoints from "@/api/endpoints/health";
+import * as apikeyEndpoints from "@/api/endpoints/apikeys";
 
 export const setupRoutes = (server: Server) => {
   // Admin
@@ -126,5 +128,27 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/transfers/v1",
     options: transfersEndpoints.getTransfersV1Options,
+  });
+
+  // Both readyz and livez endpoints point to the same handler, maybe at some point we want to separate the logic
+  // readyz: when can container be added to the load balancer and receive traffic
+  // livez: during the lifetime of the container do checks to see if the container is still responsive
+  server.route({
+    method: "GET",
+    path: "/livez",
+    options: healthEndpoints.getLiveOptions,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/readyz",
+    options: healthEndpoints.getLiveOptions,
+  });
+
+  // All routes related to api keys
+  server.route({
+    method: "POST",
+    path: "/apikey/v1",
+    options: apikeyEndpoints.postApiKey,
   });
 };
