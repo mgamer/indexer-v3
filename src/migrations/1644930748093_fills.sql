@@ -24,9 +24,6 @@ ALTER TABLE "fill_events_2"
   ADD CONSTRAINT "fill_events_2_pk"
   PRIMARY KEY ("tx_hash", "log_index", "batch_index");
 
-CREATE INDEX "fill_events_2_block_index"
-  ON "fill_events_2" ("block" DESC);
-
 CREATE INDEX "fill_events_2_block_hash_index"
   ON "fill_events_2" ("block_hash");
 

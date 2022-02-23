@@ -1,10 +1,8 @@
 import cron from "node-cron";
 
-import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { redlock, redis } from "@/common/redis";
-import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { unsyncEvents } from "@/events-sync/index";
 import * as backfillEventsSync from "@/jobs/events-sync/backfill-queue";
@@ -27,23 +25,33 @@ import "@/jobs/events-sync/realtime-queue";
 import "@/jobs/events-sync/write-buffers/ft-transfers";
 import "@/jobs/events-sync/write-buffers/nft-transfers";
 
+const LATEST_BLOCKS_CACHE_KEY = "events-sync-latest-blocks";
+
 export const saveLatestBlocks = async (
   blockInfos: { block: number; hash: string }[]
 ) => {
   try {
-    const key = "events-sync-latest-blocks";
     for (const { block, hash } of blockInfos) {
       // Use a sorted set scored by the negated block number
       // so that the latest blocks are prioritized.
-      await redis.zadd(key, -block, hash);
+      await redis.zadd(LATEST_BLOCKS_CACHE_KEY, -block, hash);
     }
 
     // Get the latest block number
-    const result = await redis.zrange(key, 0, 0, "WITHSCORES");
+    const result = await redis.zrange(
+      LATEST_BLOCKS_CACHE_KEY,
+      0,
+      0,
+      "WITHSCORES"
+    );
     if (result.length) {
       // Only keep the latest 30 blocks
       const latestBlockNegated = Number(result[1]);
-      await redis.zremrangebyscore(key, latestBlockNegated + 30, "+inf");
+      await redis.zremrangebyscore(
+        LATEST_BLOCKS_CACHE_KEY,
+        latestBlockNegated + 30,
+        "+inf"
+      );
     }
   } catch (error) {
     logger.error(
@@ -91,65 +99,28 @@ if (config.doBackgroundWork && config.catchup) {
           logger.info("events-sync-orphan-check", "Checking orphaned blocks");
 
           try {
-            // Fetch last local blocks
-            const blocksInfo: { block: number; block_hash: Buffer }[] =
-              // TODO: Investigate the best index to use for retrieving
-              // the latest distinct block hashes (so that we don't get
-              // slow writes/updates - especially when backfilling).
-              await db.manyOrNone(
-                `
-                  (
-                    SELECT DISTINCT "block", "block_hash"
-                    FROM "nft_transfer_events"
-                    ORDER BY "block" DESC
-                    LIMIT 30
-                  )
-                  UNION
-                  (
-                    SELECT DISTINCT "block", "block_hash"
-                    FROM "ft_transfer_events"
-                    ORDER BY "block" DESC
-                    LIMIT 30
-                  )
-                  UNION
-                  (
-                    SELECT DISTINCT "block", "block_hash"
-                    FROM "bulk_cancel_events"
-                    ORDER BY "block" DESC
-                    LIMIT 30
-                  )
-                  UNION
-                  (
-                    SELECT DISTINCT "block", "block_hash"
-                    FROM "cancel_events"
-                    ORDER BY "block" DESC
-                    LIMIT 30
-                  )
-                  UNION
-                  (
-                    SELECT DISTINCT "block", "block_hash"
-                    FROM "fill_events_2"
-                    ORDER BY "block" DESC
-                    LIMIT 30
-                  )
-                `,
-                { limit: 30 }
-              );
-
             // Check orphaned blocks by comparing the local block
             // hash against the latest upstream block hash
             const wrongBlocks = new Map<number, string>();
             try {
-              for (const { block, block_hash } of blocksInfo) {
+              const blockInfos = await redis.zrange(
+                LATEST_BLOCKS_CACHE_KEY,
+                0,
+                50,
+                "WITHSCORES"
+              );
+              for (let i = 0; i < blockInfos.length; i += 2) {
+                const blockHash = blockInfos[i];
+                const block = -Number(blockInfos[i + 1]);
+
                 const upstreamBlockHash = (await baseProvider.getBlock(block))
                   .hash;
-                const localBlockHash = fromBuffer(block_hash);
-                if (localBlockHash !== upstreamBlockHash) {
-                  wrongBlocks.set(block, localBlockHash);
+                if (blockHash !== upstreamBlockHash) {
+                  wrongBlocks.set(block, blockHash);
 
                   logger.info(
                     "events-sync-orphan-check",
-                    `Detected wrong block ${block} with hash ${localBlockHash}}`
+                    `Detected wrong block ${block} with hash ${blockHash}}`
                   );
                 }
               }
@@ -166,6 +137,9 @@ if (config.doBackgroundWork && config.catchup) {
                 prioritized: true,
               });
               await unsyncEvents(blockHash);
+
+              // Remove the fixed block from the cached latest blocks
+              await redis.zrem(LATEST_BLOCKS_CACHE_KEY, blockHash);
             }
           } catch (error) {
             logger.error(
