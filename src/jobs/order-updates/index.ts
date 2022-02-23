@@ -36,7 +36,7 @@ if (config.doBackgroundWork) {
               UPDATE "orders" SET
                 "fillability_status" = 'expired',
                 "expiration" = UPPER("valid_between")
-              WHERE NOT "valid_between" @> NOW()
+              WHERE UPPER("valid_between") < NOW()
                 AND ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance')
               RETURNING "id"
             `);

@@ -60,8 +60,8 @@ CREATE INDEX "orders_maker_side_index"
   INCLUDE ("id")
   WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
 
-CREATE INDEX "orders_valid_between_index"
-  ON "orders" ("valid_between")
+CREATE INDEX "orders_upper_valid_between_index"
+  ON "orders" (UPPER("valid_between"))
   INCLUDE ("id")
   WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
 
