@@ -10,7 +10,7 @@ tsconfig.tsbuildinfo
 
 # Misc
 yarn-error.log
-postgres
+postgres/
 
 # IDE
 *.iml
