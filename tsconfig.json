@@ -20,7 +20,8 @@
       "@/config/*": ["config/*"],
       "@/jobs/*": ["jobs/*"],
       "@/orderbook/*": ["orderbook/*"],
-      "@/events-sync/*": ["sync/events/*"]
+      "@/events-sync/*": ["sync/events/*"],
+      "@/entities/*": ["entities/*"],
     }
   },
   "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.json"]
