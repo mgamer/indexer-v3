@@ -61,10 +61,9 @@ export type GenericOrderInfo = {
 };
 
 export const addToQueue = async (orderInfos: GenericOrderInfo[]) => {
-  await queue.addBulk(
-    orderInfos.map((orderInfo) => ({
-      name: randomUUID(),
-      data: orderInfo,
-    }))
-  );
+  const x = orderInfos.map((orderInfo) => ({
+    name: randomUUID(),
+    data: orderInfo,
+  }));
+  await queue.addBulk(x);
 };
