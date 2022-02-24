@@ -322,8 +322,6 @@ export const save = async (
       if (relayToArweave) {
         arweaveData.push({ order, schemaHash });
       }
-
-      logger.debug("here", JSON.stringify({ id, status: "success" }));
     } catch (error) {
       logger.error(
         "orders-wyvern-v2.3-save",

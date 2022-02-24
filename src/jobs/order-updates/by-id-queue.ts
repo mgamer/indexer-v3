@@ -27,9 +27,11 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { id } = job.data as OrderInfo;
+      const { id, context } = job.data as OrderInfo;
 
       try {
+        logger.info(QUEUE_NAME, `Handling order ${id} (context ${context})`);
+
         // Fetch the order's associated token set
         const data: {
           side: string | null;
