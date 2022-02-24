@@ -12,10 +12,11 @@ import * as wyvernV23 from "@/events-sync/data/wyvern-v2.3";
 // processing to any job queues).
 
 export type EventDataKind =
-  | "erc20-transfer"
   | "erc721-transfer"
   | "erc1155-transfer-single"
   | "erc1155-transfer-batch"
+  | "erc721/1155-approval-for-all"
+  | "erc20-transfer"
   | "weth-deposit"
   | "weth-withdrawal"
   | "wyvern-v2-orders-matched"
@@ -32,22 +33,60 @@ export type EventData = {
   abi: Interface;
 };
 
-export const allEventData = [
-  erc721.transfer,
-  erc1155.transferSingle,
-  erc1155.transferBatch,
-  weth.transfer,
-  weth.deposit,
-  weth.withdrawal,
-  wyvernV2.orderCancelled,
-  wyvernV2.ordersMatched,
-  wyvernV23.orderCancelled,
-  wyvernV23.ordersMatched,
-  wyvernV23.nonceIncremented,
-];
+export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
+  if (!eventDataKinds) {
+    return [
+      erc721.transfer,
+      erc721.approvalForAll,
+      erc1155.transferSingle,
+      erc1155.transferBatch,
+      weth.transfer,
+      weth.deposit,
+      weth.withdrawal,
+      wyvernV2.orderCancelled,
+      wyvernV2.ordersMatched,
+      wyvernV23.orderCancelled,
+      wyvernV23.ordersMatched,
+      wyvernV23.nonceIncremented,
+    ];
+  } else {
+    return (
+      eventDataKinds
+        .map(internalGetEventData)
+        .filter(Boolean)
+        // Force TS to remove `undefined`
+        .map((x) => x!)
+    );
+  }
+};
 
-export const allEventTopics = [
-  // Only keep unique topics (eg. an example of duplicated topics are
-  // erc721 and erc20 transfers which have the exact same signature).
-  ...new Set(allEventData.map(({ topic }) => topic)),
-];
+const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
+  switch (kind) {
+    case "erc721-transfer":
+      return erc721.transfer;
+    case "erc721/1155-approval-for-all":
+      return erc721.approvalForAll;
+    case "erc1155-transfer-batch":
+      return erc1155.transferBatch;
+    case "erc1155-transfer-single":
+      return erc1155.transferSingle;
+    case "erc20-transfer":
+      return weth.transfer;
+    case "weth-deposit":
+      return weth.deposit;
+    case "weth-withdrawal":
+      return weth.withdrawal;
+    case "wyvern-v2-order-cancelled":
+      return wyvernV2.orderCancelled;
+    case "wyvern-v2-orders-matched":
+      return wyvernV2.ordersMatched;
+    case "wyvern-v2.3-order-cancelled":
+      return wyvernV23.orderCancelled;
+    case "wyvern-v2.3-orders-matched":
+      return wyvernV23.ordersMatched;
+    case "wyvern-v2.3-nonce-incremented":
+      return wyvernV23.nonceIncremented;
+    default:
+      return undefined;
+  }
+};

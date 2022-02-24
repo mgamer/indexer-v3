@@ -7,6 +7,7 @@ import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
+import * as wyvernV23Utils from "@/orderbook/orders/wyvern-v2.3/utils";
 
 const QUEUE_NAME = "order-updates-by-maker";
 
@@ -29,131 +30,203 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { context, timestamp, side, maker, contract, tokenId } =
-        job.data as MakerInfo;
+      const { context, timestamp, maker, data } = job.data as MakerInfo;
 
       try {
-        // TODO: Handle the order's approval status as well
-
-        let fillabilityStatuses: {
-          id: string;
-          old_status: string;
-          new_status: string;
-          expiration: string | null;
-        }[] = [];
-
-        if (side === "buy") {
-          fillabilityStatuses = await db.manyOrNone(
-            `
-              SELECT
-                "o"."id",
-                "o"."fillability_status" AS "old_status",
-                (CASE
-                  WHEN "fb"."amount" >= "o"."price" THEN 'fillable'
-                  ELSE 'no-balance'
-                END)::order_fillability_status_t AS "new_status",
-                (CASE
-                  WHEN "fb"."amount" >= "o"."price" THEN upper("o"."valid_between")
-                  ELSE to_timestamp($/timestamp/)
-                END)::timestamptz AS "expiration"
-              FROM "orders" "o"
-              JOIN "ft_balances" "fb"
-                ON "o"."maker" = "fb"."owner"
-              WHERE "o"."maker" = $/maker/
-                AND "o"."side" = 'buy'
-                AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-                AND "fb"."contract" = $/contract/
-            `,
-            {
-              maker: toBuffer(maker),
-              contract: toBuffer(contract),
-              timestamp,
-            }
-          );
-        } else if (side === "sell") {
-          fillabilityStatuses = await db.manyOrNone(
-            `
-              SELECT
-                "o"."id",
-                "o"."fillability_status" AS "old_status",
-                (CASE
-                  WHEN "nb"."amount" > 0 THEN 'fillable'
-                  ELSE 'no-balance'
-                END)::order_fillability_status_t AS "new_status",
-                (CASE
-                  WHEN "nb"."amount" > 0 THEN upper("o"."valid_between")
-                  ELSE to_timestamp($/timestamp/)
-                END)::timestamptz AS "expiration"
-              FROM "orders" "o"
-              JOIN "nft_balances" "nb"
-                on "o"."maker" = "nb"."owner"
-              JOIN "token_sets_tokens" "tst"
-                ON "o"."token_set_id" = "tst"."token_set_id"
-                AND "nb"."contract" = "tst"."contract"
-                AND "nb"."token_id" = "tst"."token_id"
-              WHERE "o"."maker" = $/maker/
-                AND "o"."side" = 'sell'
-                AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-                AND "nb"."contract" = $/contract/
-                AND "nb"."token_id" = $/tokenId/
-            `,
-            {
-              maker: toBuffer(maker),
-              contract: toBuffer(contract),
-              tokenId,
-              timestamp,
-            }
-          );
-        }
-
-        // Filter out orders which have the same fillability status as before
-        fillabilityStatuses = fillabilityStatuses.filter(
-          ({ old_status, new_status }) => old_status !== new_status
-        );
-
-        if (fillabilityStatuses.length) {
-          const columns = new pgp.helpers.ColumnSet(
-            ["id", "fillability_status", "expiration"],
-            {
-              table: "orders",
-            }
-          );
-
-          const values = pgp.helpers.values(
-            fillabilityStatuses.map(({ id, new_status, expiration }) => ({
-              id,
-              fillability_status: new_status,
-              expiration: expiration || "infinity",
-            })),
-            columns
-          );
-
-          if (maker === "0xf6aafb44bc183d3083bfae12d743d947ca376562") {
-            logger.info(
-              "debug",
-              JSON.stringify({ fillabilityStatuses, values })
+        switch (data.kind) {
+          case "buy-balance": {
+            const fillabilityStatuses = await db.manyOrNone(
+              `
+                SELECT
+                  "o"."id",
+                  "o"."fillability_status" AS "old_status",
+                  (CASE
+                    WHEN "fb"."amount" >= "o"."price" THEN 'fillable'
+                    ELSE 'no-balance'
+                  END)::order_fillability_status_t AS "new_status",
+                  (CASE
+                    WHEN "fb"."amount" >= "o"."price" THEN upper("o"."valid_between")
+                    ELSE to_timestamp($/timestamp/)
+                  END)::timestamptz AS "expiration"
+                FROM "orders" "o"
+                JOIN "ft_balances" "fb"
+                  ON "o"."maker" = "fb"."owner"
+                WHERE "o"."maker" = $/maker/
+                  AND "o"."side" = 'buy'
+                  AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
+                  AND "fb"."contract" = $/contract/
+              `,
+              {
+                maker: toBuffer(maker),
+                contract: toBuffer(data.contract),
+                timestamp,
+              }
             );
+
+            const values = fillabilityStatuses
+              .filter(({ old_status, new_status }) => old_status !== new_status)
+              .map(({ id, new_status, expiration }) => ({
+                id,
+                fillability_status: new_status,
+                expiration: expiration || "infinity",
+              }));
+            if (values.length) {
+              const columns = new pgp.helpers.ColumnSet(
+                ["id", "fillability_status", "expiration"],
+                { table: "orders" }
+              );
+
+              await db.none(
+                `
+                  UPDATE "orders" AS "o" SET
+                    "fillability_status" = "x"."fillability_status"::order_fillability_status_t,
+                    "expiration" = "x"."expiration"::timestamptz,
+                    "updated_at" = now()
+                  FROM (VALUES ${pgp.helpers.values(
+                    values,
+                    columns
+                  )}) AS "x"("id", "fillability_status", "expiration")
+                  WHERE "o"."id" = "x"."id"::text
+                `
+              );
+            }
+
+            // Re-check all affected orders
+            await orderUpdatesById.addToQueue(
+              fillabilityStatuses.map(({ id }) => ({
+                context: `${context}-${id}`,
+                id,
+              }))
+            );
+
+            break;
           }
 
-          await db.none(
-            `
-              UPDATE "orders" AS "o" SET
-                "fillability_status" = "x"."fillability_status"::order_fillability_status_t,
-                "expiration" = "x"."expiration"::timestamptz,
-                "updated_at" = now()
-              FROM (VALUES ${values}) AS "x"("id", "fillability_status", "expiration")
-              WHERE "o"."id" = "x"."id"::text
-            `
-          );
-        }
+          case "sell-balance": {
+            const fillabilityStatuses = await db.manyOrNone(
+              `
+                SELECT
+                  "o"."id",
+                  "o"."fillability_status" AS "old_status",
+                  (CASE
+                    WHEN "nb"."amount" > 0 THEN 'fillable'
+                    ELSE 'no-balance'
+                  END)::order_fillability_status_t AS "new_status",
+                  (CASE
+                    WHEN "nb"."amount" > 0 THEN upper("o"."valid_between")
+                    ELSE to_timestamp($/timestamp/)
+                  END)::timestamptz AS "expiration"
+                FROM "orders" "o"
+                JOIN "nft_balances" "nb"
+                  on "o"."maker" = "nb"."owner"
+                JOIN "token_sets_tokens" "tst"
+                  ON "o"."token_set_id" = "tst"."token_set_id"
+                  AND "nb"."contract" = "tst"."contract"
+                  AND "nb"."token_id" = "tst"."token_id"
+                WHERE "o"."maker" = $/maker/
+                  AND "o"."side" = 'sell'
+                  AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
+                  AND "nb"."contract" = $/contract/
+                  AND "nb"."token_id" = $/tokenId/
+              `,
+              {
+                maker: toBuffer(maker),
+                contract: toBuffer(data.contract),
+                tokenId: data.tokenId,
+                timestamp,
+              }
+            );
 
-        // Re-check all affected orders
-        await orderUpdatesById.addToQueue(
-          fillabilityStatuses.map(({ id }) => ({
-            context: `${context}-${id}`,
-            id,
-          }))
-        );
+            const values = fillabilityStatuses
+              .filter(({ old_status, new_status }) => old_status !== new_status)
+              .map(({ id, new_status, expiration }) => ({
+                id,
+                fillability_status: new_status,
+                expiration: expiration || "infinity",
+              }));
+            if (values.length) {
+              const columns = new pgp.helpers.ColumnSet(
+                ["id", "fillability_status", "expiration"],
+                { table: "orders" }
+              );
+
+              await db.none(
+                `
+                  UPDATE "orders" AS "o" SET
+                    "fillability_status" = "x"."fillability_status"::order_fillability_status_t,
+                    "expiration" = "x"."expiration"::timestamptz,
+                    "updated_at" = now()
+                  FROM (VALUES ${pgp.helpers.values(
+                    values,
+                    columns
+                  )}) AS "x"("id", "fillability_status", "expiration")
+                  WHERE "o"."id" = "x"."id"::text
+                `
+              );
+            }
+
+            // Re-check all affected orders
+            await orderUpdatesById.addToQueue(
+              fillabilityStatuses.map(({ id }) => ({
+                context: `${context}-${id}`,
+                id,
+              }))
+            );
+
+            break;
+          }
+
+          case "sell-approval": {
+            // We must detect which exchange the approval is for (if any)
+
+            // Wyvern v2.3
+            const proxy = await wyvernV23Utils.getUserProxy(maker);
+            if (proxy && proxy === data.operator) {
+              // For "sell" orders we can be sure the associated token set
+              // consists of a single token - otherwise we should probably
+              // use `DISTINCT ON ("o"."id")`.
+              const result = await db.manyOrNone(
+                `
+                  UPDATE "orders" AS "o" SET
+                    "approval_status" = $/approvalStatus/,
+                    "expiration" = to_timestamp($/expiration/),
+                    "updated_at" = NOW()
+                  FROM (
+                    SELECT
+                      "o"."id"
+                    FROM "orders" "o"
+                    JOIN "token_sets_tokens" "tst"
+                      ON "o"."token_set_id" = "tst"."token_set_id"
+                    WHERE "tst"."contract" = $/contract/
+                      AND "o"."kind" = 'wyvern-v2.3'
+                      AND "o"."maker" = $/maker/
+                      AND "o"."side" = 'sell'
+                      AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
+                      AND "o"."approval_status" != $/approvalStatus/
+                  ) "x"
+                  WHERE "o"."id" = "x"."id"
+                  RETURNING "o"."id"
+                `,
+                {
+                  maker: toBuffer(maker),
+                  contract: toBuffer(data.contract),
+                  approvalStatus: data.approved ? "approved" : "no-approval",
+                  expiration: timestamp,
+                }
+              );
+
+              // Re-check all affected orders
+              await orderUpdatesById.addToQueue(
+                result.map(({ id }) => ({
+                  context: `${context}-${id}`,
+                  id,
+                }))
+              );
+            }
+
+            break;
+          }
+        }
       } catch (error) {
         logger.error(
           QUEUE_NAME,
@@ -183,11 +256,23 @@ export type MakerInfo = {
   context: string;
   // The timestamp of the event that triggered the job
   timestamp: number;
-  side: "buy" | "sell";
   maker: string;
-  contract: string;
-  // Only relevant for sell orders
-  tokenId?: string;
+  data:
+    | {
+        kind: "buy-balance";
+        contract: string;
+      }
+    | {
+        kind: "sell-balance";
+        contract: string;
+        tokenId: string;
+      }
+    | {
+        kind: "sell-approval";
+        contract: string;
+        operator: string;
+        approved: boolean;
+      };
 };
 
 export const addToQueue = async (makerInfos: MakerInfo[]) => {

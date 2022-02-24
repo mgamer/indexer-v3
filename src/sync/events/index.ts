@@ -2,7 +2,7 @@ import { AddressZero, HashZero } from "@ethersproject/constants";
 
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { allEventData, allEventTopics } from "@/events-sync/data";
+import { EventDataKind, getEventData } from "@/events-sync/data";
 import * as es from "@/events-sync/storage";
 import { parseEvent } from "@/events-sync/parser";
 
@@ -24,7 +24,10 @@ import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 export const syncEvents = async (
   fromBlock: number,
   toBlock: number,
-  backfill = false
+  options?: {
+    backfill?: boolean;
+    eventDataKinds?: EventDataKind[];
+  }
 ) => {
   // Fetch the timestamps of the blocks at each side of the range in
   // order to be able to estimate the timestamp of each block within
@@ -53,14 +56,20 @@ export const syncEvents = async (
 
   const blockHashToNumber: { [hash: string]: number } = {};
 
+  const backfill = Boolean(options?.backfill);
+  const eventDatas = getEventData(options?.eventDataKinds);
+
   await baseProvider
     .getLogs({
-      topics: [allEventTopics],
+      // Only keep unique topics (eg. an example of duplicated topics are
+      // erc721 and erc20 transfers which have the exact same signature).
+      topics: [[...new Set(eventDatas.map(({ topic }) => topic))]],
       fromBlock,
       toBlock,
     })
     .then(async (logs) => {
       const ftTransferEvents: es.ftTransfers.Event[] = [];
+      const nftApprovalEvents: es.nftApprovals.Event[] = [];
       const nftTransferEvents: es.nftTransfers.Event[] = [];
       const bulkCancelEvents: es.bulkCancels.Event[] = [];
       const cancelEvents: es.cancels.Event[] = [];
@@ -70,7 +79,7 @@ export const syncEvents = async (
         try {
           const baseEventParams = parseEvent(log, blockRange);
 
-          if (!backfill) {
+          if (!options?.backfill) {
             blockHashToNumber[baseEventParams.blockHash] =
               baseEventParams.block;
           }
@@ -79,7 +88,7 @@ export const syncEvents = async (
           // - matching topic
           // - matching number of topics (eg. indexed fields)
           // - matching addresses
-          const eventData = allEventData.find(
+          const eventData = eventDatas.find(
             ({ addresses, topic, numTopics }) =>
               log.topics[0] === topic &&
               log.topics.length === numTopics &&
@@ -87,40 +96,6 @@ export const syncEvents = async (
           );
 
           switch (eventData?.kind) {
-            case "erc20-transfer": {
-              const parsedLog = eventData.abi.parseLog(log);
-              const from = parsedLog.args["from"].toLowerCase();
-              const to = parsedLog.args["to"].toLowerCase();
-              const amount = parsedLog.args["amount"].toString();
-
-              ftTransferEvents.push({
-                from,
-                to,
-                amount,
-                baseEventParams,
-              });
-
-              // Make sure to only handle the same data once per transaction
-              const contextPrefix = `${baseEventParams.txHash}-${baseEventParams.address}`;
-
-              makerInfos.push({
-                context: `${contextPrefix}-${from}-buy`,
-                timestamp: baseEventParams.timestamp,
-                side: "buy",
-                maker: from,
-                contract: baseEventParams.address,
-              });
-              makerInfos.push({
-                context: `${contextPrefix}-${to}-buy`,
-                timestamp: baseEventParams.timestamp,
-                side: "buy",
-                maker: to,
-                contract: baseEventParams.address,
-              });
-
-              break;
-            }
-
             case "erc721-transfer": {
               const parsedLog = eventData.abi.parseLog(log);
               const from = parsedLog.args["from"].toLowerCase();
@@ -140,20 +115,24 @@ export const syncEvents = async (
               const contextPrefix = `${baseEventParams.txHash}-${baseEventParams.address}-${tokenId}`;
 
               makerInfos.push({
-                context: `${contextPrefix}-${from}-sell`,
+                context: `${contextPrefix}-${from}-sell-balance`,
                 timestamp: baseEventParams.timestamp,
-                side: "sell",
                 maker: from,
-                contract: baseEventParams.address,
-                tokenId,
+                data: {
+                  kind: "sell-balance",
+                  contract: baseEventParams.address,
+                  tokenId,
+                },
               });
               makerInfos.push({
-                context: `${contextPrefix}-${to}-sell`,
+                context: `${contextPrefix}-${to}-sell-balance`,
                 timestamp: baseEventParams.timestamp,
-                side: "sell",
                 maker: to,
-                contract: baseEventParams.address,
-                tokenId,
+                data: {
+                  kind: "sell-balance",
+                  contract: baseEventParams.address,
+                  tokenId,
+                },
               });
 
               if (from === AddressZero) {
@@ -186,20 +165,24 @@ export const syncEvents = async (
               const contextPrefix = `${baseEventParams.txHash}-${baseEventParams.address}-${tokenId}`;
 
               makerInfos.push({
-                context: `${contextPrefix}-${from}-sell`,
+                context: `${contextPrefix}-${from}-sell-balance`,
                 timestamp: baseEventParams.timestamp,
-                side: "sell",
                 maker: from,
-                contract: baseEventParams.address,
-                tokenId,
+                data: {
+                  kind: "sell-balance",
+                  contract: baseEventParams.address,
+                  tokenId,
+                },
               });
               makerInfos.push({
-                context: `${contextPrefix}-${to}-sell`,
+                context: `${contextPrefix}-${to}-sell-balance`,
                 timestamp: baseEventParams.timestamp,
-                side: "sell",
                 maker: to,
-                contract: baseEventParams.address,
-                tokenId,
+                data: {
+                  kind: "sell-balance",
+                  contract: baseEventParams.address,
+                  tokenId,
+                },
               });
 
               if (from === AddressZero) {
@@ -245,20 +228,24 @@ export const syncEvents = async (
                 const contextPrefix = `${baseEventParams.txHash}-${baseEventParams.address}-${tokenIds[i]}`;
 
                 makerInfos.push({
-                  context: `${contextPrefix}-${from}-sell`,
+                  context: `${contextPrefix}-${from}-sell-balance`,
                   timestamp: baseEventParams.timestamp,
-                  side: "sell",
                   maker: from,
-                  contract: baseEventParams.address,
-                  tokenId: tokenIds[i],
+                  data: {
+                    kind: "sell-balance",
+                    contract: baseEventParams.address,
+                    tokenId: tokenIds[i],
+                  },
                 });
                 makerInfos.push({
-                  context: `${contextPrefix}-${to}-sell`,
+                  context: `${contextPrefix}-${to}-sell-balance`,
                   timestamp: baseEventParams.timestamp,
-                  side: "sell",
                   maker: to,
-                  contract: baseEventParams.address,
-                  tokenId: tokenIds[i],
+                  data: {
+                    kind: "sell-balance",
+                    contract: baseEventParams.address,
+                    tokenId: tokenIds[i],
+                  },
                 });
 
                 if (from === AddressZero) {
@@ -268,6 +255,78 @@ export const syncEvents = async (
                   });
                 }
               }
+
+              break;
+            }
+
+            case "erc721/1155-approval-for-all": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const owner = parsedLog.args["owner"].toLowerCase();
+              const operator = parsedLog.args["operator"].toLowerCase();
+              const approved = parsedLog.args["approved"];
+
+              nftApprovalEvents.push({
+                owner,
+                operator,
+                approved,
+                baseEventParams,
+              });
+
+              // Make sure to only handle the same data once per on-chain event
+              // (instead of once per transaction as we do with balance updates
+              // since we're handling nft approvals differently - checking them
+              // individually).
+              const contextPrefix = `${baseEventParams.txHash}-${baseEventParams.address}-${baseEventParams.logIndex}`;
+
+              makerInfos.push({
+                context: `${contextPrefix}-${owner}-sell-approval`,
+                timestamp: baseEventParams.timestamp,
+                maker: owner,
+                data: {
+                  kind: "sell-approval",
+                  contract: baseEventParams.address,
+                  operator,
+                  approved,
+                },
+              });
+
+              break;
+            }
+
+            case "erc20-transfer": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const from = parsedLog.args["from"].toLowerCase();
+              const to = parsedLog.args["to"].toLowerCase();
+              const amount = parsedLog.args["amount"].toString();
+
+              ftTransferEvents.push({
+                from,
+                to,
+                amount,
+                baseEventParams,
+              });
+
+              // Make sure to only handle the same data once per transaction
+              const contextPrefix = `${baseEventParams.txHash}-${baseEventParams.address}`;
+
+              makerInfos.push({
+                context: `${contextPrefix}-${from}-buy-balance`,
+                timestamp: baseEventParams.timestamp,
+                maker: from,
+                data: {
+                  kind: "buy-balance",
+                  contract: baseEventParams.address,
+                },
+              });
+              makerInfos.push({
+                context: `${contextPrefix}-${to}-buy-balance`,
+                timestamp: baseEventParams.timestamp,
+                maker: to,
+                data: {
+                  kind: "buy-balance",
+                  contract: baseEventParams.address,
+                },
+              });
 
               break;
             }
@@ -288,11 +347,13 @@ export const syncEvents = async (
               const contextPrefix = `${baseEventParams.txHash}-${baseEventParams.address}`;
 
               makerInfos.push({
-                context: `${contextPrefix}-${to}-buy`,
+                context: `${contextPrefix}-${to}-buy-balance`,
                 timestamp: baseEventParams.timestamp,
-                side: "buy",
                 maker: to,
-                contract: baseEventParams.address,
+                data: {
+                  kind: "buy-balance",
+                  contract: baseEventParams.address,
+                },
               });
 
               break;
@@ -314,11 +375,13 @@ export const syncEvents = async (
               const contextPrefix = `${baseEventParams.txHash}-${baseEventParams.address}`;
 
               makerInfos.push({
-                context: `${contextPrefix}-${from}-buy`,
+                context: `${contextPrefix}-${from}-buy-balance`,
                 timestamp: baseEventParams.timestamp,
-                side: "buy",
                 maker: from,
-                contract: baseEventParams.address,
+                data: {
+                  kind: "buy-balance",
+                  contract: baseEventParams.address,
+                },
               });
 
               break;
@@ -590,6 +653,7 @@ export const syncEvents = async (
         es.cancels.addEvents(cancelEvents),
         es.fills.addEvents(fillEvents),
         es.ftTransfers.addEvents(ftTransferEvents, backfill),
+        es.nftApprovals.addEvents(nftApprovalEvents),
         es.nftTransfers.addEvents(nftTransferEvents, backfill),
       ]);
 
@@ -619,5 +683,6 @@ export const unsyncEvents = async (blockHash: string) =>
     es.cancels.removeEvents(blockHash),
     es.fills.removeEvents(blockHash),
     es.ftTransfers.removeEvents(blockHash),
+    es.nftApprovals.removeEvents(blockHash),
     es.nftTransfers.removeEvents(blockHash),
   ]);

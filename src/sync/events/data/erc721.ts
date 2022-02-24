@@ -18,3 +18,17 @@ export const transfer: EventData = {
     )`,
   ]),
 };
+
+// The `ApprovalForAll` event is the same for erc721 and erc1155
+export const approvalForAll: EventData = {
+  kind: "erc721/1155-approval-for-all",
+  topic: "0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31",
+  numTopics: 3,
+  abi: new Interface([
+    `event ApprovalForAll(
+      address indexed owner,
+      address indexed operator,
+      bool approved
+    )`,
+  ]),
+};

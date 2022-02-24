@@ -9,6 +9,10 @@ CREATE TABLE "api_keys" (
   "active" BOOLEAN NOT NULL DEFAULT TRUE
 );
 
+ALTER TABLE "api_keys"
+  ADD CONSTRAINT "api_keys_pk"
+  PRIMARY KEY ("key");
+
 -- Down Migration
 
 DROP TABLE "api_keys";
