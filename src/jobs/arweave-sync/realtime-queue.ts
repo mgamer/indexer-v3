@@ -1,5 +1,5 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "crypto";
 
 import { syncArweave } from "@/arweave-sync/index";
 import { logger } from "@/common/logger";
@@ -60,5 +60,5 @@ if (config.doBackgroundWork) {
 }
 
 export const addToQueue = async () => {
-  await queue.add(uuidv4(), {});
+  await queue.add(randomUUID(), {});
 };
