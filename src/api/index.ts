@@ -75,7 +75,7 @@ export const start = async (): Promise<void> => {
           },
         },
         schemes: ["https", "http"],
-        host: `${network}-api-v4.reservoir.tools`,
+        host: `${network=='mainnet'?'api':'api-rinkeby'}.reservoir.tools`,
         cors: true,
         tryItOutEnabled: true,
         documentationPath: "/",
