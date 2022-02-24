@@ -27,7 +27,6 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      logger.info("debug", `Job id: ${job.id}`);
       const { kind, info, relayToArweave } = job.data as GenericOrderInfo;
 
       try {
