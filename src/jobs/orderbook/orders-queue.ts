@@ -27,6 +27,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
+      logger.info("debug", `Job id: ${job.id}`);
       const { kind, info, relayToArweave } = job.data as GenericOrderInfo;
 
       try {
@@ -61,7 +62,10 @@ export type GenericOrderInfo = {
 };
 
 export const addToQueue = async (orderInfos: GenericOrderInfo[]) => {
-  for (const orderInfo of orderInfos) {
-    await queue.add(randomUUID(), orderInfo);
-  }
+  await queue.addBulk(
+    orderInfos.map((orderInfo) => ({
+      name: randomUUID(),
+      data: orderInfo,
+    }))
+  );
 };
