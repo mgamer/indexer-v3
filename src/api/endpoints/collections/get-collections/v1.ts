@@ -34,9 +34,9 @@ export const getCollectionsV1Options: RouteOptions = {
             recipient: Joi.string().allow(null, ""),
             bps: Joi.number(),
           }),
-          floorSellValue: Joi.number().unsafe().allow(null),
-          topBuyValue: Joi.number().unsafe().allow(null),
-          topBuyMaker: Joi.string()
+          floorListPrice: Joi.number().unsafe().allow(null),
+          topBidValue: Joi.number().unsafe().allow(null),
+          topBidMaker: Joi.string()
             .lowercase()
             .pattern(/^0x[a-f0-9]{40}$/)
             .allow(null),
@@ -127,11 +127,11 @@ export const getCollectionsV1Options: RouteOptions = {
           tokenCount: Number(r.token_count),
           tokenSetId: r.token_set_id,
           royalties: r.royalties ? r.royalties[0] : null,
-          floorSellValue: r.floor_sell_value
+          floorListPrice: r.floor_sell_value
             ? formatEth(r.floor_sell_value)
             : null,
-          topBuyValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-          topBuyMaker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
+          topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+          topBidMaker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
         }))
       );
 

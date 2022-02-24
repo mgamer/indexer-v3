@@ -38,9 +38,9 @@ export const getCollectionV1Options: RouteOptions = {
           value: Joi.number().unsafe().allow(null),
           timestamp: Joi.number().allow(null),
         },
-        floorSell: {
+        floorList: {
           id: Joi.string().allow(null),
-          value: Joi.number().unsafe().allow(null),
+          price: Joi.number().unsafe().allow(null),
           maker: Joi.string()
             .lowercase()
             .pattern(/^0x[a-f0-9]{40}$/)
@@ -59,7 +59,7 @@ export const getCollectionV1Options: RouteOptions = {
             image: Joi.string().allow(null, ""),
           }).allow(null),
         },
-        topBuy: Joi.object({
+        topBid: Joi.object({
           id: Joi.string().allow(null),
           value: Joi.number().unsafe().allow(null),
           maker: Joi.string()
@@ -176,9 +176,9 @@ export const getCollectionV1Options: RouteOptions = {
                 value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
                 timestamp: r.last_sell_timestamp,
               },
-              floorSell: {
+              floorList: {
                 id: r.floor_sell_id,
-                value: r.floor_sell_value
+                price: r.floor_sell_value
                   ? formatEth(r.floor_sell_value)
                   : null,
                 maker: r.floor_sell_maker
@@ -197,7 +197,7 @@ export const getCollectionV1Options: RouteOptions = {
                   image: r.floor_sell_token_image,
                 },
               },
-              topBuy: {
+              topBid: {
                 id: r.top_buy_id,
                 value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
                 maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,

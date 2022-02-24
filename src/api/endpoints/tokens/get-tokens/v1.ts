@@ -49,8 +49,8 @@ export const getTokensV1Options: RouteOptions = {
             id: Joi.string().allow(null),
             name: Joi.string().allow(null, ""),
           }),
-          topBuyValue: Joi.number().unsafe().allow(null),
-          floorSellValue: Joi.number().unsafe().allow(null),
+          topBidValue: Joi.number().unsafe().allow(null),
+          floorListPrice: Joi.number().unsafe().allow(null),
         })
       ),
     }).label(`getTokens${version.toUpperCase()}Response`),
@@ -157,8 +157,8 @@ export const getTokensV1Options: RouteOptions = {
             id: r.collection_id,
             name: r.collection_name,
           },
-          topBuyValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-          floorSellValue: r.floor_sell_value
+          topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+          floorListPrice: r.floor_sell_value
             ? formatEth(r.floor_sell_value)
             : null,
         }))

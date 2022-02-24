@@ -67,9 +67,9 @@ export const getTokensDetailsV1Options: RouteOptions = {
             ),
           }),
           market: Joi.object({
-            floorSell: {
+            floorList: {
               id: Joi.string().allow(null),
-              value: Joi.number().unsafe().allow(null),
+              price: Joi.number().unsafe().allow(null),
               maker: Joi.string()
                 .lowercase()
                 .pattern(/^0x[a-f0-9]{40}$/)
@@ -77,7 +77,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
               validFrom: Joi.number().unsafe().allow(null),
               validUntil: Joi.number().unsafe().allow(null),
             },
-            topBuy: Joi.object({
+            topBid: Joi.object({
               id: Joi.string().allow(null),
               value: Joi.number().unsafe().allow(null),
               maker: Joi.string()
@@ -239,14 +239,14 @@ export const getTokensDetailsV1Options: RouteOptions = {
             attributes: [],
           },
           market: {
-            floorSell: {
+            floorList: {
               id: r.floor_sell_id,
-              value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+              price: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
               maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
               validFrom: r.floor_sell_valid_from,
               validUntil: r.floor_sell_value ? r.floor_sell_valid_until : null,
             },
-            topBuy: {
+            topBid: {
               id: r.top_buy_id,
               value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
               maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,

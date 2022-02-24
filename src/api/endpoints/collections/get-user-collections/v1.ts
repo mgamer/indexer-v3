@@ -33,8 +33,8 @@ export const getUserCollectionsV1Options: RouteOptions = {
             id: Joi.string(),
             name: Joi.string().allow(null, ""),
             metadata: Joi.any().allow(null),
-            floorSellValue: Joi.number().unsafe().allow(null),
-            topBuyValue: Joi.number().unsafe().allow(null),
+            floorListPrice: Joi.number().unsafe().allow(null),
+            topBidValue: Joi.number().unsafe().allow(null),
           }),
           ownership: Joi.object({
             tokenCount: Joi.number(),
@@ -112,10 +112,10 @@ export const getUserCollectionsV1Options: RouteOptions = {
               id: r.id,
               name: r.name,
               metadata: r.metadata,
-              floorSellValue: r.floor_sell_value
+              floorListPrice: r.floor_sell_value
                 ? formatEth(r.floor_sell_value)
                 : null,
-              topBuyValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+              topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
             },
             ownership: {
               tokenCount: Number(r.token_count),
