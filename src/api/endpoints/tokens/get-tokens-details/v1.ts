@@ -22,8 +22,8 @@ export const getTokensDetailsV1Options: RouteOptions = {
       tokenSetId: Joi.string().lowercase(),
       onSale: Joi.boolean(),
       sortBy: Joi.string()
-        .valid("tokenId", "floorSellValue", "topBuyValue")
-        .default("floorSellValue"),
+        .valid("tokenId", "floorListPrice", "topBidValue")
+        .default("floorListPrice"),
       sortDirection: Joi.string().lowercase().valid("asc", "desc"),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(50).default(20),
@@ -194,14 +194,14 @@ export const getTokensDetailsV1Options: RouteOptions = {
           break;
         }
 
-        case "topBuyValue": {
+        case "topBidValue": {
           baseQuery += ` ORDER BY "t"."top_buy_value" ${
             query.sortDirection || "DESC"
           } NULLS LAST, "t"."token_id"`;
           break;
         }
 
-        case "floorSellValue":
+        case "floorListPrice":
         default: {
           baseQuery += ` ORDER BY "t"."floor_sell_value" ${
             query.sortDirection || "ASC"
