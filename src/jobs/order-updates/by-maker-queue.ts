@@ -190,7 +190,7 @@ if (config.doBackgroundWork) {
                   UPDATE "orders" AS "o" SET
                     "approval_status" = $/approvalStatus/,
                     "expiration" = to_timestamp($/expiration/),
-                    "updated_at" = NOW()
+                    "updated_at" = now()
                   FROM (
                     SELECT
                       "o"."id"
@@ -235,7 +235,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 3 }
+    { connection: redis.duplicate(), concurrency: 5 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);

@@ -64,8 +64,8 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
         ON CONFLICT DO NOTHING
         RETURNING
           "address",
-          array["from", "to"] as "owners",
-          array[-"amount", "amount"] as "amount_deltas"
+          ARRAY["from", "to"] AS "owners",
+          ARRAY[-"amount", "amount"] AS "amount_deltas"
       )
       INSERT INTO "ft_balances" (
         "contract",
@@ -75,12 +75,12 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
         SELECT
           "y"."address",
           "y"."owner",
-          sum("y"."amount_delta")
+          SUM("y"."amount_delta")
         FROM (
           SELECT
             "address",
-            unnest("owners") as "owner",
-            unnest("amount_deltas") as "amount_delta"
+            unnest("owners") AS "owner",
+            unnest("amount_deltas") AS "amount_delta"
           FROM "x"
         ) "y"
         GROUP BY "y"."address", "y"."owner"
@@ -106,8 +106,8 @@ export const removeEvents = async (blockHash: string) => {
         WHERE "block_hash" = $/blockHash/
         RETURNING
           "address",
-          array["from", "to"] as "owners",
-          array["amount", -"amount"] as "amount_deltas"
+          ARRAY["from", "to"] AS "owners",
+          ARRAY["amount", -"amount"] AS "amount_deltas"
       )
       INSERT INTO "ft_balances" (
         "contract",
@@ -117,12 +117,12 @@ export const removeEvents = async (blockHash: string) => {
         SELECT
           "y"."address",
           "y"."owner",
-          sum("y"."amount_delta")
+          SUM("y"."amount_delta")
         FROM (
           SELECT
             "address",
-            unnest("owners") as "owner",
-            unnest("amount_deltas") as "amount_delta"
+            unnest("owners") AS "owner",
+            unnest("amount_deltas") AS "amount_delta"
           FROM "x"
         ) "y"
         GROUP BY "y"."address", "y"."owner"
