@@ -1,13 +1,14 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
+import { logger } from "@/common/logger";
 import { ApiKeyManager } from "@/entities/apikeys/api-key";
 
 export const postApiKey: RouteOptions = {
-  description: "Create a new API key",
+  description: "Create a new API key.",
   notes:
-    "The API key can be used optionally in every route, set it as a request header **x-api-key**",
-  tags: ["api", "apikeys"],
+    "The API key can be used optionally in every route, set it as a request header **x-api-key**.",
+  tags: ["api", "api-keys"],
   plugins: {
     "hapi-swagger": {
       payloadType: "form",
@@ -31,23 +32,30 @@ export const postApiKey: RouteOptions = {
       key: Joi.string().required().uuid(),
     }).label("getNewApiKeyResponse"),
     failAction: (_request, _h, error) => {
+      logger.error("post-api-key-handler", `Wrong response schema: ${error}`);
       throw error;
     },
   },
   handler: async (request: Request) => {
-    const payload: any = request.payload;
-    const manager = new ApiKeyManager();
+    const payload = request.payload as any;
 
-    const key: any = await manager.create({
-      app_name: payload.appName,
-      website: payload.website,
-      email: payload.email,
-    });
+    try {
+      const manager = new ApiKeyManager();
 
-    if (!key) {
-      throw new Error(`Unable to create a new api key with given values`);
+      const key = await manager.create({
+        app_name: payload.appName,
+        website: payload.website,
+        email: payload.email,
+      });
+
+      if (!key) {
+        throw new Error("Unable to create a new api key with given values");
+      }
+
+      return key;
+    } catch (error) {
+      logger.error("post-api-key-handler", `Handler failure: ${error}`);
+      throw error;
     }
-
-    return key;
   },
 };

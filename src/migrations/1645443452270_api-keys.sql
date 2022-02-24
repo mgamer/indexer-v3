@@ -1,14 +1,14 @@
 -- Up Migration
-create table api_keys
-(
-    key        text                                                                                       not null
-        primary key,
-    app_name   text                                                                                       not null,
-    website    text                                                                                       not null,
-    email      text                                                                                       not null,
-    created_at timestamp with time zone default now(),
-    active     boolean                  default true                                                      not null
+
+CREATE TABLE "api_keys" (
+  "key" TEXT NOT NULL,
+  "app_name" TEXT NOT NULL,
+  "website" TEXT NOT NULL,
+  "email" TEXT NOT NULL,
+  "created_at" TIMESTAMPTZ DEFAULT NOW(),
+  "active" BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 -- Down Migration
-drop table api_keys
+
+DROP TABLE "api_keys";

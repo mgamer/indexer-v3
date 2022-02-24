@@ -76,7 +76,6 @@ export const getCollectionV1Options: RouteOptions = {
         `get-collection-${version}-handler`,
         `Wrong response schema: ${error}`
       );
-
       throw error;
     },
   },
