@@ -26,6 +26,8 @@ export const postOrdersV1Options: RouteOptions = {
     try {
       const orders = payload.orders;
 
+      logger.info("debug", `Got ${orders.length} orders`);
+
       const wyvernV23OrderInfos: wyvernV23.OrderInfo[] = [];
       for (const { kind, data } of orders) {
         switch (kind) {
