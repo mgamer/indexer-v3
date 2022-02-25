@@ -159,7 +159,12 @@ export const getOrdersV1Options: RouteOptions = {
           maker: fromBuffer(r.maker),
           taker: fromBuffer(r.taker),
           price: formatEth(r.price),
-          value: formatEth(r.value),
+          // For consistency, we set the value of "sell" orders as price - fee
+          value:
+            r.side === "buy"
+              ? formatEth(r.value)
+              : formatEth(r.value) -
+                (formatEth(r.value) * Number(r.fee_bps)) / 10000,
           validFrom: Number(r.valid_from),
           validUntil: Number(r.valid_until),
           sourceId: r.source_id ? fromBuffer(r.source_id) : null,
