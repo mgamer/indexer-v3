@@ -38,7 +38,7 @@ export const getCollectionV1Options: RouteOptions = {
           value: Joi.number().unsafe().allow(null),
           timestamp: Joi.number().allow(null),
         },
-        floorList: {
+        floorAsk: {
           id: Joi.string().allow(null),
           price: Joi.number().unsafe().allow(null),
           maker: Joi.string()
@@ -176,7 +176,7 @@ export const getCollectionV1Options: RouteOptions = {
                 value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
                 timestamp: r.last_sell_timestamp,
               },
-              floorList: {
+              floorAsk: {
                 id: r.floor_sell_id,
                 price: r.floor_sell_value
                   ? formatEth(r.floor_sell_value)

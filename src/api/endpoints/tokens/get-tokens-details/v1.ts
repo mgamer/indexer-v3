@@ -22,8 +22,8 @@ export const getTokensDetailsV1Options: RouteOptions = {
       tokenSetId: Joi.string().lowercase(),
       onSale: Joi.boolean(),
       sortBy: Joi.string()
-        .valid("tokenId", "floorListPrice", "topBidValue")
-        .default("floorListPrice"),
+        .valid("tokenId", "floorAskPrice", "topBidValue")
+        .default("floorAskPrice"),
       sortDirection: Joi.string().lowercase().valid("asc", "desc"),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(50).default(20),
@@ -67,7 +67,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
             ),
           }),
           market: Joi.object({
-            floorList: {
+            floorAsk: {
               id: Joi.string().allow(null),
               price: Joi.number().unsafe().allow(null),
               maker: Joi.string()
@@ -201,7 +201,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
           break;
         }
 
-        case "floorListPrice":
+        case "floorAskPrice":
         default: {
           baseQuery += ` ORDER BY "t"."floor_sell_value" ${
             query.sortDirection || "ASC"
@@ -239,7 +239,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
             attributes: [],
           },
           market: {
-            floorList: {
+            floorAsk: {
               id: r.floor_sell_id,
               price: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
               maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,

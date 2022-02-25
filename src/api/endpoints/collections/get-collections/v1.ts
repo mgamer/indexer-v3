@@ -34,7 +34,7 @@ export const getCollectionsV1Options: RouteOptions = {
             recipient: Joi.string().allow(null, ""),
             bps: Joi.number(),
           }),
-          floorListPrice: Joi.number().unsafe().allow(null),
+          floorAskPrice: Joi.number().unsafe().allow(null),
           topBidValue: Joi.number().unsafe().allow(null),
           topBidMaker: Joi.string()
             .lowercase()
@@ -127,7 +127,7 @@ export const getCollectionsV1Options: RouteOptions = {
           tokenCount: Number(r.token_count),
           tokenSetId: r.token_set_id,
           royalties: r.royalties ? r.royalties[0] : null,
-          floorListPrice: r.floor_sell_value
+          floorAskPrice: r.floor_sell_value
             ? formatEth(r.floor_sell_value)
             : null,
           topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,

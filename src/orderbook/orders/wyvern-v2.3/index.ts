@@ -270,23 +270,30 @@ export const save = async (
         order.params.takerRelayerFee
       );
 
-      let sourceInfo: any;
+      // Handle: source and fees breakdown
+      let sourceId: string | undefined;
+      let feeBreakdown: object[] | undefined;
       switch (order.params.feeRecipient) {
         // OpenSea
         case "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073": {
-          sourceInfo = {
-            id: "opensea",
-            bps: 250,
-          };
-          break;
-        }
+          sourceId = order.params.feeRecipient;
+          feeBreakdown = [
+            {
+              kind: "marketplace",
+              recipient: order.params.feeRecipient,
+              bps: 250,
+            },
+          ];
 
-        // Unknown
-        default: {
-          sourceInfo = {
-            id: "unknown",
-            bps: feeBps,
-          };
+          if (feeBps > 250) {
+            feeBreakdown.push({
+              kind: "royalties",
+              // TODO: We should extract royalties out of the associated collection
+              recipient: null,
+              bps: feeBps - 250,
+            });
+          }
+
           break;
         }
       }
@@ -309,7 +316,9 @@ export const save = async (
         value,
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
         nonce: order.params.nonce,
-        source_info: sourceInfo,
+        source_id: sourceId ? toBuffer(sourceId) : null,
+        fee_bps: feeBps,
+        fee_breakdown: feeBreakdown || null,
         raw_data: order.params,
         expiration: validTo,
       });
@@ -354,7 +363,9 @@ export const save = async (
         "value",
         { name: "valid_between", mod: ":raw" },
         "nonce",
-        "source_info",
+        "source_id",
+        "fee_bps",
+        { name: "fee_breakdown", mod: ":json" },
         "raw_data",
         { name: "expiration", mod: ":raw" },
         { name: "created_at", init: () => "now()", mod: ":raw" },
