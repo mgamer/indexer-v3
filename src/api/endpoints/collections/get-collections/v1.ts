@@ -26,6 +26,7 @@ export const getCollectionsV1Options: RouteOptions = {
       collections: Joi.array().items(
         Joi.object({
           id: Joi.string(),
+          slug: Joi.string(),
           name: Joi.string().allow(null, ""),
           metadata: Joi.any().allow(null),
           tokenCount: Joi.number(),
@@ -59,6 +60,7 @@ export const getCollectionsV1Options: RouteOptions = {
       let baseQuery = `
         SELECT
           "c"."id",
+          "c"."slug",
           "c"."name",
           "c"."metadata",
           "c"."royalties",
@@ -122,6 +124,7 @@ export const getCollectionsV1Options: RouteOptions = {
       const result = await db.manyOrNone(baseQuery, query).then((result) =>
         result.map((r) => ({
           id: r.id,
+          slug: r.slug,
           name: r.name,
           metadata: r.metadata,
           tokenCount: Number(r.token_count),

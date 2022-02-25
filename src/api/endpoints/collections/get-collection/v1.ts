@@ -13,13 +13,14 @@ export const getCollectionV1Options: RouteOptions = {
   tags: ["api", "collections"],
   validate: {
     params: Joi.object({
-      collection: Joi.string().lowercase().required(),
+      collectionOrSlug: Joi.string().lowercase().required(),
     }),
   },
   response: {
     schema: Joi.object({
       collection: Joi.object({
         id: Joi.string(),
+        slug: Joi.string(),
         name: Joi.string().allow(null, ""),
         metadata: Joi.any().allow(null),
         sampleImages: Joi.array().items(Joi.string().allow(null, "")),
@@ -86,6 +87,7 @@ export const getCollectionV1Options: RouteOptions = {
       let baseQuery = `
         SELECT
           "c"."id",
+          "c"."slug",
           "c"."name",
           "c"."metadata",
           "c"."royalties",
@@ -102,8 +104,16 @@ export const getCollectionV1Options: RouteOptions = {
             LIMIT 4
           ) AS "sample_images"
         FROM "collections" "c"
-        WHERE "c"."id" = $/collection/
       `;
+
+      // If `collectionOrSlug` matches a contract address then we
+      // assume the search is by collection id, otherwise it must
+      // be a search by slug.
+      if (params.collectionOrSlug.match(/0x[a-f0-9]{40}/g)) {
+        baseQuery += ` WHERE "c"."id" = $/collectionOrSlug/`;
+      } else {
+        baseQuery += ` WHERE "c"."slug" = $/collectionOrSlug/`;
+      }
 
       baseQuery = `
         WITH "x" AS (${baseQuery})
@@ -161,6 +171,7 @@ export const getCollectionV1Options: RouteOptions = {
           ? null
           : {
               id: r.id,
+              slug: r.slug,
               name: r.name,
               metadata: r.metadata,
               sampleImages: r.sample_images || [],
