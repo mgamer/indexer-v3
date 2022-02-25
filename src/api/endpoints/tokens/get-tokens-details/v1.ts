@@ -4,6 +4,7 @@ import Joi from "joi";
 import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { getOrderSourceMetadata } from "@/orderbook/orders/utils";
 
 const version = "v1";
 
@@ -131,6 +132,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
             NULLIF(date_part('epoch', UPPER("os"."valid_between")), 'Infinity'),
             0
           ) AS "floor_sell_valid_until",
+          "os"."source_id" AS "floor_sell_source_id",
           "t"."top_buy_id",
           "t"."top_buy_value",
           "t"."top_buy_maker",
@@ -245,6 +247,15 @@ export const getTokensDetailsV1Options: RouteOptions = {
               maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
               validFrom: r.floor_sell_valid_from,
               validUntil: r.floor_sell_value ? r.floor_sell_valid_until : null,
+              source: r.floor_sell_id
+                ? getOrderSourceMetadata(
+                    r.floor_sell_source_id
+                      ? fromBuffer(r.floor_sell_source_id)
+                      : null,
+                    fromBuffer(r.contract),
+                    r.token_id
+                  )
+                : null,
             },
             topBid: {
               id: r.top_buy_id,
