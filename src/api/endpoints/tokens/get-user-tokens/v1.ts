@@ -183,8 +183,8 @@ export const getUserTokensV1Options: RouteOptions = {
               },
             },
             ownership: {
-              tokenCount: r.token_count,
-              onSaleCount: r.on_sale_count,
+              tokenCount: String(r.token_count),
+              onSaleCount: String(r.on_sale_count),
               floorSellValue: r.floor_sell_value
                 ? formatEth(r.floor_sell_value)
                 : null,
@@ -192,7 +192,7 @@ export const getUserTokensV1Options: RouteOptions = {
             },
           }))
         );
-
+        
       return { tokens: result };
     } catch (error) {
       logger.error(
