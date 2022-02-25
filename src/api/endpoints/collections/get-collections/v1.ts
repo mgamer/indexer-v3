@@ -3,7 +3,7 @@ import Joi from "joi";
 
 import { db } from "@/common/db";
 import { logger } from "@/common/logger";
-import { formatEth, fromBuffer } from "@/common/utils";
+import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 
 const version = "v1";
 
@@ -14,12 +14,17 @@ export const getCollectionsV1Options: RouteOptions = {
   validate: {
     query: Joi.object({
       community: Joi.string().lowercase(),
+      contract: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}$/),
       name: Joi.string().lowercase(),
       sortBy: Joi.string().valid("id").default("id"),
       sortDirection: Joi.string().lowercase().valid("asc", "desc"),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
-    }),
+    })
+      .or("community", "contract", "name")
+      .oxor("community", "contract", "name"),
   },
   response: {
     schema: Joi.object({
@@ -79,6 +84,10 @@ export const getCollectionsV1Options: RouteOptions = {
       const conditions: string[] = [];
       if (query.community) {
         conditions.push(`"c"."community" = $/community/`);
+      }
+      if (query.contract) {
+        query.contract = toBuffer(query.contract);
+        conditions.push(`"c"."contract" = $/contract/`);
       }
       if (query.name) {
         query.name = `%${query.name}%`;
