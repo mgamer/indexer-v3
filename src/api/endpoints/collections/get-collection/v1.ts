@@ -159,7 +159,7 @@ export const getCollectionV1Options: RouteOptions = {
             "ts"."last_buy_timestamp"
           FROM "token_sets" "ts"
           LEFT JOIN "orders" "o"
-            ON "t"."top_buy_id" = "o"."id"
+            ON "ts"."top_buy_id" = "o"."id"
           WHERE "ts"."id" = "x"."token_set_id"
           ORDER BY "ts"."top_buy_value" DESC NULLS LAST
           LIMIT 1
