@@ -11,12 +11,16 @@ import { setupRoutes } from "@/api/routes";
 import { logger } from "@/common/logger";
 import { network } from "@/common/provider";
 import { config } from "@/config/index";
+import { ApiKeyManager } from "@/entities/apikeys/api-key";
 import { allJobQueues } from "@/jobs/index";
 
-import { ApiKeyManager} from '@/entities/apikeys/api-key';
+let server: Hapi.Server;
+
+export const inject = (options: Hapi.ServerInjectOptions) =>
+  server.inject(options);
 
 export const start = async (): Promise<void> => {
-  const server = Hapi.server({
+  server = Hapi.server({
     port: config.port,
     query: {
       parser: (query) => qs.parse(query),
@@ -30,7 +34,7 @@ export const start = async (): Promise<void> => {
       },
       cors: {
         origin: ["*"],
-        additionalHeaders: ["x-api-key"]
+        additionalHeaders: ["x-api-key"],
       },
       // Expose any validation errors
       // https://github.com/hapijs/hapi/issues/3706
@@ -66,16 +70,18 @@ export const start = async (): Promise<void> => {
       plugin: HapiSwagger,
       options: <HapiSwagger.RegisterOptions>{
         grouping: "tags",
-        security: [{ 'API_KEY': [] }],
+        security: [{ API_KEY: [] }],
         securityDefinitions: {
-          'API_KEY': {
-            type: 'apiKey',
-            name: 'x-api-key',
-            in: 'header',
+          API_KEY: {
+            type: "apiKey",
+            name: "x-api-key",
+            in: "header",
           },
         },
         schemes: ["https", "http"],
-        host: `${network=='mainnet'?'api':'api-rinkeby'}.reservoir.tools`,
+        host: `${
+          network === "mainnet" ? "api" : "api-rinkeby"
+        }.reservoir.tools`,
         cors: true,
         tryItOutEnabled: true,
         documentationPath: "/",
@@ -89,7 +95,7 @@ export const start = async (): Promise<void> => {
     },
   ]);
 
-  server.ext('onPreHandler', (request, h) => {
+  server.ext("onPreHandler", (request, h) => {
     ApiKeyManager.logUsage(request);
     return h.continue;
   });

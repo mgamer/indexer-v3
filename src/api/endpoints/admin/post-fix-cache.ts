@@ -11,7 +11,7 @@ export const postFixCacheOptions: RouteOptions = {
   description: "Trigger fixing any cache inconsistencies.",
   tags: ["api", "x-admin"],
   timeout: {
-    server: 5 * 60 * 1000,
+    server: 2 * 60 * 1000,
   },
   validate: {
     headers: Joi.object({
@@ -49,16 +49,14 @@ export const postFixCacheOptions: RouteOptions = {
                 UPDATE "tokens" "t" SET
                   "floor_sell_id" = "x"."id",
                   "floor_sell_value" = "x"."value",
-                  "floor_sell_maker" = "x"."maker",
-                  "floor_sell_valid_between" = "x"."valid_between"
+                  "floor_sell_maker" = "x"."maker"
                 FROM (
                   SELECT DISTINCT ON ("t"."contract", "t"."token_id")
                     "t"."contract",
                     "t"."token_id",
                     "o"."id",
                     "o"."value",
-                    "o"."maker",
-                    "o"."valid_between"
+                    "o"."maker"
                   FROM "tokens" "t"
                   LEFT JOIN "token_sets_tokens" "tst"
                     ON "t"."contract" = "tst"."contract"
@@ -91,16 +89,14 @@ export const postFixCacheOptions: RouteOptions = {
                 UPDATE "tokens" "t" SET
                   "top_buy_id" = "x"."id",
                   "top_buy_value" = "x"."value",
-                  "top_buy_maker" = "x"."maker",
-                  "top_buy_valid_between" = "x"."valid_between"
+                  "top_buy_maker" = "x"."maker"
                 FROM (
                   SELECT DISTINCT ON ("t"."contract", "t"."token_id")
                     "t"."contract",
                     "t"."token_id",
                     "o"."id",
                     "o"."value",
-                    "o"."maker",
-                    "o"."valid_between"
+                    "o"."maker"
                   FROM "tokens" "t"
                   LEFT JOIN "token_sets_tokens" "tst"
                     ON "t"."contract" = "tst"."contract"
