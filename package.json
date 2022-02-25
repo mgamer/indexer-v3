@@ -61,9 +61,9 @@
     "@/arweave-sync": "dist/sync/arweave",
     "@/common": "dist/common",
     "@/config": "dist/config",
+    "@/entities": "dist/entities",
     "@/jobs": "dist/jobs",
     "@/orderbook": "dist/orderbook",
-    "@/events-sync": "dist/sync/events",
-    "@/entities": "dist/entities"
+    "@/events-sync": "dist/sync/events"
   }
 }

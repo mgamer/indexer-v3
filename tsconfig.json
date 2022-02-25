@@ -18,10 +18,10 @@
       "@/arweave-sync/*": ["sync/arweave/*"],
       "@/common/*": ["common/*"],
       "@/config/*": ["config/*"],
+      "@/entities/*": ["entities/*"],
       "@/jobs/*": ["jobs/*"],
       "@/orderbook/*": ["orderbook/*"],
-      "@/events-sync/*": ["sync/events/*"],
-      "@/entities/*": ["entities/*"],
+      "@/events-sync/*": ["sync/events/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.json"]
