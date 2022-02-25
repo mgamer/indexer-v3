@@ -287,12 +287,24 @@ export const save = async (
 
           if (feeBps > 250) {
             feeBreakdown.push({
-              kind: "royalties",
+              kind: "royalty",
               // TODO: We should extract royalties out of the associated collection
               recipient: null,
               bps: feeBps - 250,
             });
           }
+
+          break;
+        }
+
+        default: {
+          feeBreakdown = [
+            {
+              kind: "royalty",
+              recipient: order.params.feeRecipient,
+              bps: feeBps,
+            },
+          ];
 
           break;
         }
