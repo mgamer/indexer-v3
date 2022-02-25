@@ -153,7 +153,7 @@ export const getUserTokensV1Options: RouteOptions = {
             ORDER BY
               "x"."top_buy_value" ${query.sortDirection || "DESC"} NULLS LAST,
               "x"."contract",
-              "x"."token_id",
+              "x"."token_id"
           `;
           break;
         }
