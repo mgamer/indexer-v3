@@ -44,7 +44,7 @@ export const getUserTokensV1Options: RouteOptions = {
               id: Joi.string().allow(null),
               name: Joi.string().allow(null, ""),
             }),
-            topBuy: Joi.object({
+            topBid: Joi.object({
               id: Joi.string().allow(null),
               value: Joi.number().unsafe().allow(null),
               schema: Joi.any().allow(null),
@@ -176,7 +176,7 @@ export const getUserTokensV1Options: RouteOptions = {
                 id: r.collection_id,
                 name: r.collection_name,
               },
-              topBuy: {
+              topBid: {
                 id: r.top_buy_id,
                 value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
                 schema: r.top_buy_schema,

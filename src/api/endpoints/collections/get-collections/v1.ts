@@ -3,7 +3,7 @@ import Joi from "joi";
 
 import { db } from "@/common/db";
 import { logger } from "@/common/logger";
-import { formatEth, fromBuffer } from "@/common/utils";
+import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 
 const version = "v1";
 
@@ -14,18 +14,24 @@ export const getCollectionsV1Options: RouteOptions = {
   validate: {
     query: Joi.object({
       community: Joi.string().lowercase(),
+      contract: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}$/),
       name: Joi.string().lowercase(),
       sortBy: Joi.string().valid("id").default("id"),
       sortDirection: Joi.string().lowercase().valid("asc", "desc"),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
-    }),
+    })
+      .or("community", "contract", "name")
+      .oxor("community", "contract", "name"),
   },
   response: {
     schema: Joi.object({
       collections: Joi.array().items(
         Joi.object({
           id: Joi.string(),
+          slug: Joi.string(),
           name: Joi.string().allow(null, ""),
           metadata: Joi.any().allow(null),
           tokenCount: Joi.number(),
@@ -34,9 +40,9 @@ export const getCollectionsV1Options: RouteOptions = {
             recipient: Joi.string().allow(null, ""),
             bps: Joi.number(),
           }),
-          floorSellValue: Joi.number().unsafe().allow(null),
-          topBuyValue: Joi.number().unsafe().allow(null),
-          topBuyMaker: Joi.string()
+          floorAskPrice: Joi.number().unsafe().allow(null),
+          topBidValue: Joi.number().unsafe().allow(null),
+          topBidMaker: Joi.string()
             .lowercase()
             .pattern(/^0x[a-f0-9]{40}$/)
             .allow(null),
@@ -59,6 +65,7 @@ export const getCollectionsV1Options: RouteOptions = {
       let baseQuery = `
         SELECT
           "c"."id",
+          "c"."slug",
           "c"."name",
           "c"."metadata",
           "c"."royalties",
@@ -77,6 +84,10 @@ export const getCollectionsV1Options: RouteOptions = {
       const conditions: string[] = [];
       if (query.community) {
         conditions.push(`"c"."community" = $/community/`);
+      }
+      if (query.contract) {
+        query.contract = toBuffer(query.contract);
+        conditions.push(`"c"."contract" = $/contract/`);
       }
       if (query.name) {
         query.name = `%${query.name}%`;
@@ -122,16 +133,17 @@ export const getCollectionsV1Options: RouteOptions = {
       const result = await db.manyOrNone(baseQuery, query).then((result) =>
         result.map((r) => ({
           id: r.id,
+          slug: r.slug,
           name: r.name,
           metadata: r.metadata,
           tokenCount: Number(r.token_count),
           tokenSetId: r.token_set_id,
           royalties: r.royalties ? r.royalties[0] : null,
-          floorSellValue: r.floor_sell_value
+          floorAskPrice: r.floor_sell_value
             ? formatEth(r.floor_sell_value)
             : null,
-          topBuyValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-          topBuyMaker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
+          topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+          topBidMaker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
         }))
       );
 

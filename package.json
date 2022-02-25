@@ -39,7 +39,6 @@
     "pg-promise": "^10.11.1",
     "qs": "^6.10.1",
     "redlock": "^5.0.0-beta.1",
-    "uuid": "^8.3.2",
     "winston": "^3.3.3"
   },
   "devDependencies": {
@@ -51,7 +50,6 @@
     "@types/node": "^17.0.0",
     "@types/node-cron": "^3.0.0",
     "@types/qs": "^6.9.7",
-    "@types/uuid": "^8.3.3",
     "module-alias": "^2.2.2",
     "node-pg-migrate": "^6.0.0",
     "nodemon": "^2.0.15",

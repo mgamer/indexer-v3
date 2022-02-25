@@ -1,5 +1,5 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
@@ -62,7 +62,7 @@ export const addToQueue = async (
   const prioritized = options?.prioritized ?? false;
 
   await queue.add(
-    uuidv4(),
+    randomUUID(),
     { query },
     { priority: prioritized ? 1 : undefined }
   );

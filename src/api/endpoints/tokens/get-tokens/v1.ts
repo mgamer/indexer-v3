@@ -23,8 +23,8 @@ export const getTokensV1Options: RouteOptions = {
       tokenSetId: Joi.string().lowercase(),
       onSale: Joi.boolean(),
       sortBy: Joi.string()
-        .valid("tokenId", "floorSellValue", "topBuyValue")
-        .default("floorSellValue"),
+        .valid("tokenId", "floorAskPrice", "topBidValue")
+        .default("floorAskPrice"),
       sortDirection: Joi.string().lowercase().valid("asc", "desc"),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(50).default(20),
@@ -49,8 +49,8 @@ export const getTokensV1Options: RouteOptions = {
             id: Joi.string().allow(null),
             name: Joi.string().allow(null, ""),
           }),
-          topBuyValue: Joi.number().unsafe().allow(null),
-          floorSellValue: Joi.number().unsafe().allow(null),
+          topBidValue: Joi.number().unsafe().allow(null),
+          floorAskPrice: Joi.number().unsafe().allow(null),
         })
       ),
     }).label(`getTokens${version.toUpperCase()}Response`),
@@ -127,14 +127,14 @@ export const getTokensV1Options: RouteOptions = {
           break;
         }
 
-        case "topBuyValue": {
+        case "topBidValue": {
           baseQuery += ` ORDER BY "t"."top_buy_value" ${
             query.sortDirection || "DESC"
           } NULLS LAST, "t"."token_id"`;
           break;
         }
 
-        case "floorSellValue":
+        case "floorAskPrice":
         default: {
           baseQuery += ` ORDER BY "t"."floor_sell_value" ${
             query.sortDirection || "ASC"
@@ -157,10 +157,10 @@ export const getTokensV1Options: RouteOptions = {
             id: r.collection_id,
             name: r.collection_name,
           },
-          topBuyValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-          floorSellValue: r.floor_sell_value
+          floorAskPrice: r.floor_sell_value
             ? formatEth(r.floor_sell_value)
             : null,
+          topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
         }))
       );
 

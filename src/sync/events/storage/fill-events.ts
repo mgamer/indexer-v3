@@ -104,15 +104,15 @@ export const addEvents = async (events: Event[]) => {
           "x"."order_kind",
           'filled'::order_fillability_status_t,
           to_timestamp("x"."timestamp") AS "expiration",
-          NOW(),
-          NOW()
+          now(),
+          now()
         FROM "x"
       )
       ON CONFLICT ("id") DO
       UPDATE SET
         "fillability_status" = 'filled',
         "expiration" = EXCLUDED."expiration",
-        "updated_at" = NOW()
+        "updated_at" = now()
     `);
   }
 

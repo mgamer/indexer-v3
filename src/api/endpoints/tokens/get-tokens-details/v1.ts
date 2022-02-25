@@ -4,6 +4,7 @@ import Joi from "joi";
 import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { getOrderSourceMetadata } from "@/orderbook/orders/utils";
 
 const version = "v1";
 
@@ -22,8 +23,8 @@ export const getTokensDetailsV1Options: RouteOptions = {
       tokenSetId: Joi.string().lowercase(),
       onSale: Joi.boolean(),
       sortBy: Joi.string()
-        .valid("tokenId", "floorSellValue", "topBuyValue")
-        .default("floorSellValue"),
+        .valid("tokenId", "floorAskPrice", "topBidValue")
+        .default("floorAskPrice"),
       sortDirection: Joi.string().lowercase().valid("asc", "desc"),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(50).default(20),
@@ -67,9 +68,9 @@ export const getTokensDetailsV1Options: RouteOptions = {
             ),
           }),
           market: Joi.object({
-            floorSell: {
+            floorAsk: {
               id: Joi.string().allow(null),
-              value: Joi.number().unsafe().allow(null),
+              price: Joi.number().unsafe().allow(null),
               maker: Joi.string()
                 .lowercase()
                 .pattern(/^0x[a-f0-9]{40}$/)
@@ -77,7 +78,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
               validFrom: Joi.number().unsafe().allow(null),
               validUntil: Joi.number().unsafe().allow(null),
             },
-            topBuy: Joi.object({
+            topBid: Joi.object({
               id: Joi.string().allow(null),
               value: Joi.number().unsafe().allow(null),
               maker: Joi.string()
@@ -131,6 +132,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
             NULLIF(date_part('epoch', UPPER("os"."valid_between")), 'Infinity'),
             0
           ) AS "floor_sell_valid_until",
+          "os"."source_id" AS "floor_sell_source_id",
           "t"."top_buy_id",
           "t"."top_buy_value",
           "t"."top_buy_maker",
@@ -194,14 +196,14 @@ export const getTokensDetailsV1Options: RouteOptions = {
           break;
         }
 
-        case "topBuyValue": {
+        case "topBidValue": {
           baseQuery += ` ORDER BY "t"."top_buy_value" ${
             query.sortDirection || "DESC"
           } NULLS LAST, "t"."token_id"`;
           break;
         }
 
-        case "floorSellValue":
+        case "floorAskPrice":
         default: {
           baseQuery += ` ORDER BY "t"."floor_sell_value" ${
             query.sortDirection || "ASC"
@@ -239,14 +241,23 @@ export const getTokensDetailsV1Options: RouteOptions = {
             attributes: [],
           },
           market: {
-            floorSell: {
+            floorAsk: {
               id: r.floor_sell_id,
-              value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+              price: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
               maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
               validFrom: r.floor_sell_valid_from,
               validUntil: r.floor_sell_value ? r.floor_sell_valid_until : null,
+              source: r.floor_sell_id
+                ? getOrderSourceMetadata(
+                    r.floor_sell_source_id
+                      ? fromBuffer(r.floor_sell_source_id)
+                      : null,
+                    fromBuffer(r.contract),
+                    r.token_id
+                  )
+                : null,
             },
-            topBuy: {
+            topBid: {
               id: r.top_buy_id,
               value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
               maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,

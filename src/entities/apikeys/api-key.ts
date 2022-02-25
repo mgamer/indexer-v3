@@ -1,8 +1,9 @@
-import { db } from "@/common/db";
-import { redis } from "@/common/redis";
-import { v4 as uuidv4 } from "uuid";
-import { logger } from "@/common/logger";
 import { Request } from "@hapi/hapi";
+import { randomUUID } from "crypto";
+
+import { db } from "@/common/db";
+import { logger } from "@/common/logger";
+import { redis } from "@/common/redis";
 
 export type ApiKeyRecord = {
   app_name: string;
@@ -26,7 +27,7 @@ export class ApiKeyManager {
   ): Promise<NewApiKeyResponse | boolean> {
     // Create a new key if none was set
     if (!values.key) {
-      values.key = uuidv4();
+      values.key = randomUUID();
     }
 
     // Create the record in the database

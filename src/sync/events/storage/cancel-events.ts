@@ -72,7 +72,7 @@ export const addEvents = async (events: Event[]) => {
           "x"."order_id",
           "x"."order_kind",
           'cancelled'::order_fillability_status_t,
-          to_timestamp("x"."timestamp") as "expiration",
+          to_timestamp("x"."timestamp") AS "expiration",
           now(),
           now()
         FROM "x"

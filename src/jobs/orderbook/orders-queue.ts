@@ -1,5 +1,5 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
@@ -63,7 +63,7 @@ export type GenericOrderInfo = {
 export const addToQueue = async (orderInfos: GenericOrderInfo[]) => {
   await queue.addBulk(
     orderInfos.map((orderInfo) => ({
-      name: uuidv4(),
+      name: randomUUID(),
       data: orderInfo,
     }))
   );

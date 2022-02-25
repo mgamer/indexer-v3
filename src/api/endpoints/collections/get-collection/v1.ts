@@ -13,13 +13,14 @@ export const getCollectionV1Options: RouteOptions = {
   tags: ["api", "collections"],
   validate: {
     params: Joi.object({
-      collection: Joi.string().lowercase().required(),
+      collectionOrSlug: Joi.string().lowercase().required(),
     }),
   },
   response: {
     schema: Joi.object({
       collection: Joi.object({
         id: Joi.string(),
+        slug: Joi.string(),
         name: Joi.string().allow(null, ""),
         metadata: Joi.any().allow(null),
         sampleImages: Joi.array().items(Joi.string().allow(null, "")),
@@ -38,9 +39,9 @@ export const getCollectionV1Options: RouteOptions = {
           value: Joi.number().unsafe().allow(null),
           timestamp: Joi.number().allow(null),
         },
-        floorSell: {
+        floorAsk: {
           id: Joi.string().allow(null),
-          value: Joi.number().unsafe().allow(null),
+          price: Joi.number().unsafe().allow(null),
           maker: Joi.string()
             .lowercase()
             .pattern(/^0x[a-f0-9]{40}$/)
@@ -59,7 +60,7 @@ export const getCollectionV1Options: RouteOptions = {
             image: Joi.string().allow(null, ""),
           }).allow(null),
         },
-        topBuy: Joi.object({
+        topBid: Joi.object({
           id: Joi.string().allow(null),
           value: Joi.number().unsafe().allow(null),
           maker: Joi.string()
@@ -76,7 +77,6 @@ export const getCollectionV1Options: RouteOptions = {
         `get-collection-${version}-handler`,
         `Wrong response schema: ${error}`
       );
-
       throw error;
     },
   },
@@ -87,6 +87,7 @@ export const getCollectionV1Options: RouteOptions = {
       let baseQuery = `
         SELECT
           "c"."id",
+          "c"."slug",
           "c"."name",
           "c"."metadata",
           "c"."royalties",
@@ -103,8 +104,16 @@ export const getCollectionV1Options: RouteOptions = {
             LIMIT 4
           ) AS "sample_images"
         FROM "collections" "c"
-        WHERE "c"."id" = $/collection/
       `;
+
+      // If `collectionOrSlug` matches a contract address then we
+      // assume the search is by collection id, otherwise it must
+      // be a search by slug.
+      if (params.collectionOrSlug.match(/0x[a-f0-9]{40}/g)) {
+        baseQuery += ` WHERE "c"."id" = $/collectionOrSlug/`;
+      } else {
+        baseQuery += ` WHERE "c"."slug" = $/collectionOrSlug/`;
+      }
 
       baseQuery = `
         WITH "x" AS (${baseQuery})
@@ -150,7 +159,7 @@ export const getCollectionV1Options: RouteOptions = {
             "ts"."last_buy_timestamp"
           FROM "token_sets" "ts"
           LEFT JOIN "orders" "o"
-            ON "t"."top_buy_id" = "o"."id"
+            ON "ts"."top_buy_id" = "o"."id"
           WHERE "ts"."id" = "x"."token_set_id"
           ORDER BY "ts"."top_buy_value" DESC NULLS LAST
           LIMIT 1
@@ -162,6 +171,7 @@ export const getCollectionV1Options: RouteOptions = {
           ? null
           : {
               id: r.id,
+              slug: r.slug,
               name: r.name,
               metadata: r.metadata,
               sampleImages: r.sample_images || [],
@@ -177,9 +187,9 @@ export const getCollectionV1Options: RouteOptions = {
                 value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
                 timestamp: r.last_sell_timestamp,
               },
-              floorSell: {
+              floorAsk: {
                 id: r.floor_sell_id,
-                value: r.floor_sell_value
+                price: r.floor_sell_value
                   ? formatEth(r.floor_sell_value)
                   : null,
                 maker: r.floor_sell_maker
@@ -198,7 +208,7 @@ export const getCollectionV1Options: RouteOptions = {
                   image: r.floor_sell_token_image,
                 },
               },
-              topBuy: {
+              topBid: {
                 id: r.top_buy_id,
                 value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
                 maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,

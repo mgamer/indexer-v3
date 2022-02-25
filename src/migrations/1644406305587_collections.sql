@@ -26,6 +26,9 @@ CREATE INDEX "collections_contract_token_id_range_index"
 CREATE INDEX "collections_community_index"
   ON "collections" ("community");
 
+CREATE INDEX "collections_slug_index"
+  ON "collections" ("slug");
+
 CREATE EXTENSION pg_trgm;
 
 CREATE INDEX "collections_name_index"

@@ -44,8 +44,21 @@ export const getOrdersAllV1Options: RouteOptions = {
           value: Joi.number().unsafe().required(),
           validFrom: Joi.number().required(),
           validUntil: Joi.number().required(),
-          sourceInfo: Joi.any(),
-          royaltyInfo: Joi.any(),
+          sourceId: Joi.string()
+            .pattern(/^0x[a-f0-9]{40}$/)
+            .allow(null),
+          feeBps: Joi.number().allow(null),
+          feeBreakdown: Joi.array()
+            .items(
+              Joi.object({
+                kind: Joi.string(),
+                recipient: Joi.string()
+                  .pattern(/^0x[a-f0-9]{40}$/)
+                  .allow(null),
+                bps: Joi.number(),
+              })
+            )
+            .allow(null),
           expiration: Joi.number().required(),
           createdAt: Joi.string().required(),
           updatedAt: Joi.string().required(),
@@ -86,8 +99,9 @@ export const getOrdersAllV1Options: RouteOptions = {
             NULLIF(DATE_PART('epoch', UPPER("o"."valid_between")), 'Infinity'),
             0
           ) AS "valid_until",
-          "o"."source_info",
-          "o"."royalty_info",
+          "o"."source_id",
+          "o"."fee_bps",
+          "o"."fee_breakdown",
           COALESCE(
             NULLIF(DATE_PART('epoch', "o"."expiration"), 'Infinity'),
             0
@@ -144,11 +158,17 @@ export const getOrdersAllV1Options: RouteOptions = {
           maker: fromBuffer(r.maker),
           taker: fromBuffer(r.taker),
           price: formatEth(r.price),
-          value: formatEth(r.value),
+          // For consistency, we set the value of "sell" orders as price - fee
+          value:
+            r.side === "buy"
+              ? formatEth(r.value)
+              : formatEth(r.value) -
+                (formatEth(r.value) * Number(r.fee_bps)) / 10000,
           validFrom: Number(r.valid_from),
           validUntil: Number(r.valid_until),
-          sourceInfo: r.source_info,
-          royaltyInfo: r.royalty_info,
+          sourceId: r.source_id ? fromBuffer(r.source_id) : null,
+          feeBps: Number(r.fee_bps),
+          feeBreakdown: r.fee_breakdown,
           expiration: Number(r.expiration),
           createdAt: new Date(r.created_at).toISOString(),
           updatedAt: new Date(r.updated_at).toISOString(),

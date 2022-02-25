@@ -55,9 +55,6 @@ export const syncArweave = async (options: {
           cursor
           node {
             id
-            owner {
-              address
-            }
             tags {
               name
               value
@@ -78,9 +75,6 @@ export const syncArweave = async (options: {
     cursor: string;
     node: {
       id: string;
-      owner: {
-        address: string;
-      };
       tags: {
         name: string;
         value: string;
@@ -121,15 +115,6 @@ export const syncArweave = async (options: {
     }
 
     try {
-      const owner = node.owner.address;
-      const relayer = await arweaveGateway.wallets.jwkToAddress(
-        JSON.parse(config.arweaveRelayerKey!)
-      );
-      if (owner === relayer) {
-        // Skip transactions relayed by this indexer
-        continue;
-      }
-
       const version = node.tags.find((t) => t.name === "App-Version")?.value;
       if (!version) {
         // Skip unversioned transactions
@@ -138,10 +123,7 @@ export const syncArweave = async (options: {
 
       let data: any;
       if (pending) {
-        // Ideally, we sync via arweave.js but unfortunately it doesn't
-        // have support for fetching pending transactions, and for this
-        // reason we have to fetch directly via the gateway.
-
+        // https://discordapp.com/channels/357957786904166400/358038065974870018/945399371426582579
         const result = await axios.get(`${protocol}://${host}/${node.id}`, {
           timeout: 60000,
         });

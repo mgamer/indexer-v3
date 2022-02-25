@@ -1,15 +1,13 @@
 import { db } from "@/common/db";
-import { redis } from "@/common/redis"
-import { logger } from "@/common/logger"
+import { logger } from "@/common/logger";
+import { redis } from "@/common/redis";
 
 export class HealthCheck {
   static async check(): Promise<boolean> {
-
     try {
-      await db.query("SELECT 1")
-      await redis.ping();
-    } catch (e: any) {
-      logger.error('healthcheck', e);
+      await Promise.all([db.query("SELECT 1"), redis.ping()]);
+    } catch (error) {
+      logger.error("healthcheck", `Healthcheck failed: ${error}`);
       return false;
     }
 

@@ -92,8 +92,8 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
         RETURNING
           "address",
           "token_id",
-          array["from", "to"] as "owners",
-          array[-"amount", "amount"] as "amount_deltas"
+          ARRAY["from", "to"] AS "owners",
+          ARRAY[-"amount", "amount"] AS "amount_deltas"
       )
       INSERT INTO "nft_balances" (
         "contract",
@@ -105,13 +105,13 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           "y"."address",
           "y"."token_id",
           "y"."owner",
-          sum("y"."amount_delta")
+          SUM("y"."amount_delta")
         FROM (
           SELECT
             "address",
             "token_id",
-            unnest("owners") as "owner",
-            unnest("amount_deltas") as "amount_delta"
+            unnest("owners") AS "owner",
+            unnest("amount_deltas") AS "amount_delta"
           FROM "x"
         ) "y"
         GROUP BY "y"."address", "y"."token_id", "y"."owner"
@@ -176,8 +176,8 @@ export const removeEvents = async (blockHash: string) => {
         RETURNING
           "address",
           "token_id",
-          array["from", "to"] as "owners",
-          array["amount", -"amount"] as "amount_deltas"
+          ARRAY["from", "to"] AS "owners",
+          ARRAY["amount", -"amount"] AS "amount_deltas"
       )
       INSERT INTO "nft_balances" (
         "contract",
@@ -189,13 +189,13 @@ export const removeEvents = async (blockHash: string) => {
           "y"."address",
           "y"."token_id",
           "y"."owner",
-          sum("y"."amount_delta")
+          SUM("y"."amount_delta")
         FROM (
           SELECT
             "address",
             "token_id",
-            unnest("owners") as "owner",
-            unnest("amount_deltas") as "amount_delta"
+            unnest("owners") AS "owner",
+            unnest("amount_deltas") AS "amount_delta"
           FROM "x"
         ) "y"
         GROUP BY "y"."address", "y"."token_id", "y"."owner"

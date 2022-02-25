@@ -4,6 +4,7 @@ import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { manualTimeout } from "@/common/utils";
 import { config } from "@/config/index";
+import { EventDataKind } from "@/events-sync/data";
 import { syncEvents } from "@/events-sync/index";
 
 const QUEUE_NAME = "events-sync-backfill";
@@ -26,7 +27,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { fromBlock, toBlock } = job.data;
+      const { fromBlock, toBlock, backfill, eventDataKinds } = job.data;
 
       try {
         logger.info(
@@ -35,7 +36,7 @@ if (config.doBackgroundWork) {
         );
 
         await manualTimeout(
-          () => syncEvents(fromBlock, toBlock, true),
+          () => syncEvents(fromBlock, toBlock, { backfill, eventDataKinds }),
           2 * 60 * 1000
         );
       } catch (error) {
@@ -56,6 +57,8 @@ export const addToQueue = async (
   options?: {
     blocksPerBatch?: number;
     prioritized?: boolean;
+    backfill?: boolean;
+    eventDataKinds?: EventDataKind[];
   }
 ) => {
   // Syncing is done in several batches since the requested block
@@ -75,6 +78,8 @@ export const addToQueue = async (
       data: {
         fromBlock: from,
         toBlock: to,
+        backfill: options?.backfill,
+        eventDataKinds: options?.eventDataKinds,
       },
       opts: {
         priority: prioritized ? 1 : undefined,

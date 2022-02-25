@@ -7,9 +7,9 @@ import { formatEth } from "@/common/utils";
 
 const version = "v1";
 
-export const getCollectionTopBuysV1Options: RouteOptions = {
+export const getCollectionTopBidsV1Options: RouteOptions = {
   description:
-    "Get the top buys for a single collection (and optionally an attribute).",
+    "Get the top bids for a single collection (and optionally an attribute).",
   tags: ["api", "collections"],
   validate: {
     params: Joi.object({
@@ -18,16 +18,16 @@ export const getCollectionTopBuysV1Options: RouteOptions = {
   },
   response: {
     schema: Joi.object({
-      topBuys: Joi.array().items(
+      topBids: Joi.array().items(
         Joi.object({
           value: Joi.number().unsafe(),
           quantity: Joi.number(),
         })
       ),
-    }).label(`getCollectionTopBuys${version.toUpperCase()}Response`),
+    }).label(`getCollectionTopBids${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
-        `get-collection-top-buys-${version}-handler`,
+        `get-collection-top-bids-${version}-handler`,
         `Wrong response schema: ${error}`
       );
       throw error;
@@ -55,10 +55,10 @@ export const getCollectionTopBuysV1Options: RouteOptions = {
         }))
       );
 
-      return { topBuys: result };
+      return { topBids: result };
     } catch (error) {
       logger.error(
-        `get-collection-top-buys-${version}-handler`,
+        `get-collection-top-bids-${version}-handler`,
         `Handler failure: ${error}`
       );
       throw error;
