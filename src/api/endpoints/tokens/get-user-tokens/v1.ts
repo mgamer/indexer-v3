@@ -151,7 +151,7 @@ export const getUserTokensV1Options: RouteOptions = {
         default: {
           baseQuery += `
             ORDER BY
-              "x"."top_buy_value" ${query.sortDirection || "DESC"} NULLS LAST
+              "x"."top_buy_value" ${query.sortDirection || "DESC"} NULLS LAST,
               "x"."contract",
               "x"."token_id",
           `;
