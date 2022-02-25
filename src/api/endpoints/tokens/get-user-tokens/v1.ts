@@ -51,8 +51,8 @@ export const getUserTokensV1Options: RouteOptions = {
             }),
           }),
           ownership: Joi.object({
-            tokenCount: Joi.string(),
-            onSaleCount: Joi.string(),
+            tokenCount: Joi.string().allow(null, ""),
+            onSaleCount: Joi.string().allow(null, ""),
             floorSellValue: Joi.number().unsafe().allow(null),
             acquiredAt: Joi.number().allow(null),
           }),
