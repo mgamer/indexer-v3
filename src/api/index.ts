@@ -89,7 +89,16 @@ export const start = async (): Promise<void> => {
           title: "Reservoir Protocol API",
           version: require("../../package.json").version,
           description:
-            "You are viewing the reference docs for the Reservoir API. \n\nFor a more complete overview with guides and examples, check out the <a href='https://reservoirprotocol.github.io'>Reservoir Protocol Docs</a>.",
+            `You are viewing the reference docs for the Reservoir API. \n\nFor a more complete overview with guides and examples, check out the <a href='https://reservoirprotocol.github.io'>Reservoir Protocol Docs</a>.
+            
+            # Subheading
+            Here is another page
+
+            ## Something within. Sorry, testing...
+
+            # Second one
+            Helloooo
+            `,
         },
       },
     },

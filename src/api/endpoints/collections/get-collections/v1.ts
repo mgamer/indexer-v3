@@ -8,8 +8,8 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getCollectionsV1Options: RouteOptions = {
-  description:
-    "Get a list of collections. Useful for getting all collections in a marketplace.",
+  description: "Get collections",
+  notes: "Get a list of collections. Useful for getting all collections in a marketplace.",
   tags: ["api", "collections"],
   validate: {
     query: Joi.object({
