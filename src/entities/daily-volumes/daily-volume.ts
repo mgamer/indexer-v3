@@ -1,7 +1,5 @@
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { config } from "@/config/index";
-import { v4 as uuidv4 } from 'uuid';
 import { db, pgp } from "@/common/db";
 
 export class DailyVolume {
