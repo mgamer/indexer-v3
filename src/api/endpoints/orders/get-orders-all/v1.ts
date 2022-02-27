@@ -8,7 +8,7 @@ import { formatEth, fromBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getOrdersAllV1Options: RouteOptions = {
-  description: "Access orders in bulk",
+  description: "Bulk orders access",
   notes: "This API is designed for efficiently ingesting large volumes of orders, for external processing",
   tags: ["api", "orders"],
   validate: {

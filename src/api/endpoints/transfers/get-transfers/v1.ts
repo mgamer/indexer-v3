@@ -8,9 +8,9 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getTransfersV1Options: RouteOptions = {
-  description:
-    "Get historical transfer events. Can filter by collection, attribute or token.",
-  tags: ["api", "transfers"],
+  description: "Historical token transfers",
+  notes: "Get recent transfers for a contract or token.",
+  tags: ["api", "events"],
   validate: {
     query: Joi.object({
       // TODO: Look into optimizing filtering by collection

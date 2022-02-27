@@ -8,7 +8,7 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getOrdersV1Options: RouteOptions = {
-  description: "Get a list of valid orders.",
+  description: "List of valid orders.",
   notes:"Access orders with various filters applied. If you need orders created by a single user, use the positions API instead.",
   tags: ["api", "orders"],
   validate: {

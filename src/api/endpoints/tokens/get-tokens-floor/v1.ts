@@ -8,7 +8,8 @@ import { formatEth, toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getTokensFloorV1Options: RouteOptions = {
-  description: "Get the list of floor prices for a collection or contract.",
+  description: "All prices in a collection",
+  notes: "This API will return the bestt price of every token in a collection that is currently on sale",
   tags: ["api", "tokens"],
   validate: {
     query: Joi.object({

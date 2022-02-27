@@ -8,9 +8,9 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getUserTokensV1Options: RouteOptions = {
-  description:
-    "Get tokens held by a user, along with ownership information such as associated orders and date acquired.",
-  tags: ["api", "tokens"],
+  description: "User tokens",
+  notes: "Get tokens held by a user, along with ownership information such as associated orders and date acquired.",
+  tags: ["api", "users"],
   validate: {
     params: Joi.object({
       user: Joi.string()

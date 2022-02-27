@@ -8,9 +8,9 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getSalesV1Options: RouteOptions = {
-  description:
-    "Get historical sales. Can filter by collection, attribute or token.",
-  tags: ["api", "transfers"],
+  description: "Historical sales",
+  notes: "Get recent sales for a contract or token.",
+  tags: ["api", "events"],
   validate: {
     query: Joi.object({
       // TODO: Look into optimizing filtering by collection
