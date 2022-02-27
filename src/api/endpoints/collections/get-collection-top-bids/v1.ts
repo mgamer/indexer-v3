@@ -8,9 +8,9 @@ import { formatEth } from "@/common/utils";
 const version = "v1";
 
 export const getCollectionTopBidsV1Options: RouteOptions = {
-  description:
-    "Get the top bids for a single collection (and optionally an attribute).",
-  tags: ["api", "collections"],
+  description: "Get the top bid for all tokens in a collection",
+  notes: "When users are placing collection or trait bids, this API can be used to show them where the bid is in the context of other bids, and how many tokens it will be the top bid for.",
+  tags: ["api", "liquidity"],
   validate: {
     params: Joi.object({
       collection: Joi.string().lowercase().required(),
