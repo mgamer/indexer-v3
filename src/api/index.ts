@@ -59,6 +59,11 @@ export const start = async (): Promise<void> => {
     routes: { prefix: "/admin/bullmq" },
   });
 
+  let apiDescription = `You are viewing the reference docs for the Reservoir API. 
+  
+  For a more complete overview with guides and examples, check out the <a href='https://reservoirprotocol.github.io'>Reservoir Protocol Docs</a>.x
+  `
+
   await server.register([
     {
       plugin: Inert,
@@ -88,17 +93,7 @@ export const start = async (): Promise<void> => {
         info: {
           title: "Reservoir Protocol API",
           version: require("../../package.json").version,
-          description:
-            `You are viewing the reference docs for the Reservoir API. \n\nFor a more complete overview with guides and examples, check out the <a href='https://reservoirprotocol.github.io'>Reservoir Protocol Docs</a>.
-            
-            # Subheading
-            Here is another page
-
-            ## Something within. Sorry, testing...
-
-            # Second one
-            Helloooo
-            `,
+          description: apiDescription,
         },
       },
     },
