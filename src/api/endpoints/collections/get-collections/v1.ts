@@ -8,7 +8,7 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getCollectionsV1Options: RouteOptions = {
-  description: "Get a list of collections",
+  description: "List of collections",
   notes: "Useful for getting multiple collections to show in a marketplace, or search for particular collections.",
   tags: ["api", "collections"],
   validate: {
