@@ -193,7 +193,7 @@ export class DailyVolume {
         FROM daily_volumes
         WHERE timestamp >= $3 AND collection_id != '-1'
         GROUP BY collection_id
-      `
+      `;
 
     try {
       day7Results = await db.manyOrNone(query, ["day7_rank", "day7_volume", day7Timestamp]);
