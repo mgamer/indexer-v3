@@ -70,6 +70,14 @@ export const getCollectionV1Options: RouteOptions = {
           validFrom: Joi.number().unsafe().allow(null),
           validUntil: Joi.number().unsafe().allow(null),
         }),
+        day1Rank: Joi.number(),
+        day7Rank: Joi.number(),
+        day30Rank: Joi.number(),
+        allTimeRank: Joi.number(),
+        day1Volume: Joi.number().unsafe().allow(null),
+        day7Volume: Joi.number().unsafe().allow(null),
+        day30Volume: Joi.number().unsafe().allow(null),
+        allTimeVolume: Joi.number().unsafe().allow(null),
       }).allow(null),
     }).label(`getCollection${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
@@ -92,6 +100,14 @@ export const getCollectionV1Options: RouteOptions = {
           "c"."metadata",
           "c"."royalties",
           "c"."token_set_id",
+          "c"."day1_rank",
+          "c"."day1_volume",
+          "c"."day7_rank",
+          "c"."day7_volume",
+          "c"."day30_rank",
+          "c"."day30_volume",
+          "c"."all_time_rank",
+          "c"."all_time_volume",
           "c"."token_count",
           (
             SELECT COUNT(*) FROM "tokens" "t"
@@ -102,7 +118,7 @@ export const getCollectionV1Options: RouteOptions = {
             SELECT "t"."image" FROM "tokens" "t"
             WHERE "t"."collection_id" = "c"."id"
             LIMIT 4
-          ) AS "sample_images"
+          ) AS "sample_images"          
         FROM "collections" "c"
       `;
 
@@ -215,6 +231,14 @@ export const getCollectionV1Options: RouteOptions = {
                 validFrom: r.top_buy_valid_from,
                 validUntil: r.top_buy_value ? r.top_buy_valid_until : null,
               },
+              day1Rank: r.day1_rank,
+              day7Rank: r.day7_rank,
+              day30Rank: r.day30_rank,
+              allTimeRank: r.all_time_rank,
+              day1Volume: Number(r.day1_volume),
+              day7Volume: Number(r.day7_volume),
+              day30Volume: Number(r.day30_volume),
+              allTimeVolume: Number(r.all_time_volume),
             }
       );
 

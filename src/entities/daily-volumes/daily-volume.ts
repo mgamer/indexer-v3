@@ -6,6 +6,8 @@ import { db, pgp } from "@/common/db";
 
 export class DailyVolume {
 
+  private static lockKey = "daily-volumes-running";
+
   /**
    * Check if the daily volume for this day was already calculated and stored
    * We will keep a collection_id: -1 and timestamp in the database for each day we processed already
@@ -49,16 +51,20 @@ export class DailyVolume {
    * day already
    *
    * @param startTime
-   * @param updateCollections
+   * @param ignoreInsertedRows
    */
-  public static async calculateDay(startTime: number, updateCollections: boolean = false): Promise<boolean> {
+  public static async calculateDay(startTime: number, ignoreInsertedRows: boolean = false): Promise<boolean> {
 
-    try {
-      if (await this.isDaySynced(startTime)) {
-        return true;
+    logger.info('daily-volumes', `Calculating daily volumes for ${startTime}`);
+    // Don't recalculate if the day was already calculated
+    if (!ignoreInsertedRows) {
+      try {
+        if (await this.isDaySynced(startTime)) {
+          return true;
+        }
+      } catch (e) {
+        return false;
       }
-    } catch (e) {
-      return false;
     }
 
     // Get the startTime and endTime of the day we want to calculate
@@ -123,31 +129,16 @@ export class DailyVolume {
             `,
           values: values
         });
-
-        if (updateCollections) {
-          // Skip the query when the collection_id = -1
-          if (values.collection_id !== -1) {
-            queries.push({
-              query: `
-                  UPDATE collections
-                  SET day1_volume = $ / volume /,
-                      day1_rank   = $ / rank /
-                  WHERE id = $ / collection_id /
-              `,
-              values: values
-            });
-          }
-        }
       })
 
       try {
         const concat = pgp.helpers.concat(queries);
         const result = await db.none(concat);
-      } catch (e) {
+      } catch (e: any) {
         logger.error('daily-volumes', JSON.stringify({
           msg: `Error while inserting/updating daily volumes`,
           timestamp: startTime,
-          exception: e
+          exception: e.message,
         }));
         return false;
       }
@@ -157,30 +148,191 @@ export class DailyVolume {
   }
 
   /**
-   * Work our way back until the earliest point in time for fill_events_2
-   * We take the minimum timestamp we have from that table, and then sync backwards
-   *
-   * @param startTime
+   * Update the collections table (fields day1_volume, day1_rank, etc) with latest values we have from daily_volumes
    */
-  public static async updatePreviousDays(startTime: number) {
-    try {
-      const result = await redis.get('daily-volumes-sync-completed');
-      if (result) {
-        return true;
-      }
-    } catch (e) {
-      logger.error('daily-volumes', JSON.stringify({
-        msg: `Unable to get daily-volumes-sync-completed from redis`,
-        timestamp: startTime,
-        exception: e
-      }));
+  public static async updateCollections(): Promise<boolean> {
+    // Skip the query when the collection_id = -1
+    const date = new Date();
+    date.setUTCHours(0, 0, 0, 0);
+    const day1Timestamp  = (date.getTime() / 1000) - 24 * 3600;
+    const day7Timestamp = (date.getTime() / 1000) - 7 * 24 * 3600;
+    const day30Timestamp = (date.getTime() / 1000) - 30 * 24 * 3600;
 
-      return false;
+    let day1Results: any = []
+    let day7Results: any = []
+    let day30Results: any = []
+    let allTimeResults: any = []
+
+    // Get the previous day data
+    try {
+      day1Results = await db.manyOrNone(`
+          SELECT 
+                 collection_id,
+                 rank AS $1:name,
+                 volume AS $2:name
+          FROM daily_volumes
+          WHERE timestamp = $3 AND collection_id != '-1'
+      `, ["day1_rank", "day1_volume", day1Timestamp]);
+    } catch (e: any) {
+      logger.error('daily-volumes', JSON.stringify({
+        msg: `Error while calculating previous day volumes`,
+        exception: e.message,
+      }));
     }
 
-    const minimum = await db.oneOrNone(`SELECT MIN(timestamp) FROM fill_events_2`)
-    console.log(minimum);
+    if (!day1Results.length) {
+      logger.error("daily-volumes", "No daily volumes found for the previous day, should be impossible");
+    }
 
-    // await redis.set('daily-volumes-sync-completed', new Date().getTime());
+    // Get 7, 30 days previous data
+    const query = `
+        SELECT 
+               collection_id,
+               RANK() OVER (ORDER BY SUM(volume) DESC, "collection_id") $1:name,
+               SUM(volume) AS $2:name
+        FROM daily_volumes
+        WHERE timestamp >= $3 AND collection_id != '-1'
+        GROUP BY collection_id
+      `
+
+    try {
+      day7Results = await db.manyOrNone(query, ["day7_rank", "day7_volume", day7Timestamp]);
+    } catch (e: any) {
+      logger.error('daily-volumes', JSON.stringify({
+        msg: `Error while calculating 7 day daily volumes`,
+        exception: e.message,
+      }));
+    }
+
+    try {
+      day30Results = await db.manyOrNone(query, ["day30_rank", "day30_volume", day30Timestamp]);
+    } catch (e: any) {
+      logger.error('daily-volumes', JSON.stringify({
+        msg: `Error while calculating 30 day daily volumes`,
+        exception: e.message,
+      }));
+    }
+
+    try {
+      allTimeResults = await db.manyOrNone(query, ["all_time_rank", "all_time_volume", 0]);
+    } catch (e: any) {
+      logger.error('daily-volumes', JSON.stringify({
+        msg: `Error while calculating all time daily volumes`,
+        exception: e.message,
+      }));
+    }
+
+    const mergedArr = this.mergeArrays(day1Results, day7Results, day30Results, allTimeResults);
+
+    if (!mergedArr.length) {
+      logger.error("daily-volumes", "No daily volumes found for 1, 7 and 30 days. Should be impossible");
+      return true;
+    }
+
+    try {
+      const queries: any = [];
+      mergedArr.forEach((row: any) => {
+        queries.push({
+          query: `
+            UPDATE collections
+            SET
+                day1_volume = $/day1_volume/,
+                day1_rank   = $/day1_rank/,
+                day7_volume = $/day7_volume/,
+                day7_rank   = $/day7_rank/,
+                day30_volume = $/day30_volume/,
+                day30_rank   = $/day30_rank/,
+                all_time_volume = $/all_time_volume/,
+                all_time_rank = $/all_time_rank/
+            WHERE
+                id = $/collection_id/`,
+          values: row
+        });
+      });
+
+      await db.none(pgp.helpers.concat(queries));
+    } catch (e: any) {
+      logger.error('daily-volumes', JSON.stringify({
+        msg: `Error while calculating the daily volumes for insertion into the collections table`,
+        exception: e.message,
+      }));
+      return false;
+    }
+    return true;
   }
+
+  /**
+   * Merge the individual arrays of day summaries together, make sure all fields exist for each collection_id
+   *
+   * @param day1
+   * @param day7
+   * @param day30
+   */
+  public static mergeArrays(day1: any, day7: any, day30: any, allTime: any) {
+    const map = new Map();
+    day1.forEach((item: any) => map.set(item.collection_id, item));
+    day7.forEach((item: any) => map.set(item.collection_id, {...map.get(item.collection_id), ...item}));
+    day30.forEach((item: any) => map.set(item.collection_id, {...map.get(item.collection_id), ...item}));
+    allTime.forEach((item: any) => map.set(item.collection_id, {...map.get(item.collection_id), ...item}));
+    const mergedArr = Array.from(map.values());
+
+    for (let x: number = 0; x < mergedArr.length; x++) {
+      const row = mergedArr[x];
+
+      if (!row['day1_volume']) {
+        row['day1_volume'] = 0;
+        row['day1_rank'] = 0;
+      }
+
+      if (!row['day7_volume']) {
+        row['day7_volume'] = 0;
+        row['day7_rank'] = 0;
+      }
+
+      if (!row['day30_volume']) {
+        row['day30_volume'] = 0;
+        row['day30_rank'] = 0;
+      }
+
+      if (!row['all_time_volume']) {
+        row['all_time_volume'] = 0;
+        row['all_time_rank'] = 0;
+      }
+    }
+
+    return mergedArr;
+  }
+
+  /**
+   * Put a lock into place so no 2 processes can start calculations at the same time
+   *
+   * @param jobs
+   */
+  public static async initiateLock(jobs: number): Promise<boolean> {
+    const res = await redis.set(this.lockKey, jobs, ["NX", "EX"], "3600");
+    return res ? true : false;
+  }
+
+  /**
+   * Check if calculations are running
+   */
+  public static async isJobRunning(): Promise<boolean> {
+    return await redis.get(this.lockKey) ? true : false;
+  }
+
+  /**
+   * Each time a job is finished, do a tick, and decrease the number on the lock
+   * Once we reach 0, we know we don't have any more jobs to run, and we can finish by updating our calculations table
+   * with the latest values
+   */
+  public static async tickLock(): Promise<boolean> {
+    const res = await redis.decr(this.lockKey);
+    if (res <= 0) {
+      await redis.expire(this.lockKey, 0);
+      return true;
+    }  else {
+      return false;
+    }
+  }
+
 }

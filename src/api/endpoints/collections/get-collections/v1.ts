@@ -46,6 +46,14 @@ export const getCollectionsV1Options: RouteOptions = {
             .lowercase()
             .pattern(/^0x[a-f0-9]{40}$/)
             .allow(null),
+          day1Rank: Joi.number(),
+          day7Rank: Joi.number(),
+          day30Rank: Joi.number(),
+          allTimeRank: Joi.number(),
+          day1Volume: Joi.number().unsafe().allow(null),
+          day7Volume: Joi.number().unsafe().allow(null),
+          day30Volume: Joi.number().unsafe().allow(null),
+          allTimeVolume: Joi.number().unsafe().allow(null),
         })
       ),
     }).label(`getCollections${version.toUpperCase()}Response`),
@@ -74,7 +82,15 @@ export const getCollectionsV1Options: RouteOptions = {
           (
             SELECT MIN("t"."floor_sell_value") FROM "tokens" "t"
             WHERE "t"."collection_id" = "c"."id"
-          ) AS "floor_sell_value"
+          ) AS "floor_sell_value",
+          "c"."day1_rank",
+          "c"."day1_volume",
+          "c"."day7_rank",
+          "c"."day7_volume",
+          "c"."day30_rank",
+          "c"."day30_volume",
+          "c"."all_time_rank",
+          "c"."all_time_volume"
         FROM "collections" "c"
         JOIN "tokens" "t"
           ON "c"."id" = "t"."collection_id"
@@ -144,6 +160,14 @@ export const getCollectionsV1Options: RouteOptions = {
             : null,
           topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
           topBidMaker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
+          day1Rank: r.day1_rank,
+          day7Rank: r.day7_rank,
+          day30Rank: r.day30_rank,
+          allTimeRank: r.all_time_rank,
+          day1Volume: Number(r.day1_volume),
+          day7Volume: Number(r.day7_volume),
+          day30Volume: Number(r.day30_volume),
+          allTimeVolume: Number(r.all_time_volume),
         }))
       );
 
