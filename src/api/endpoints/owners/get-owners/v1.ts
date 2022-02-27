@@ -8,8 +8,8 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getOwnersV1Options: RouteOptions = {
-  description:
-    "Get a list of owners and their ownership info. Useful for exploring top owners in a collection or attribute.",
+  description: "Get a list of owners",
+  notes: "Get owners with various filters applied, and a summary of their ownership. Useful for exploring top owners in a collection or attribute.",
   tags: ["api", "owners"],
   validate: {
     query: Joi.object({

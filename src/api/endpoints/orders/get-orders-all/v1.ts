@@ -8,7 +8,8 @@ import { formatEth, fromBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getOrdersAllV1Options: RouteOptions = {
-  description: "Get all valid orders by side sorted by their creation date.",
+  description: "Access orders in bulk",
+  notes: "This API is designed for efficiently ingesting large volumes of orders, for external processing",
   tags: ["api", "orders"],
   validate: {
     query: Joi.object({

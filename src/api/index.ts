@@ -59,10 +59,11 @@ export const start = async (): Promise<void> => {
     routes: { prefix: "/admin/bullmq" },
   });
 
-  let apiDescription = `You are viewing the reference docs for the Reservoir API. 
+  let apiDescription = 
+    `You are viewing the reference docs for the Reservoir API. 
   
-  For a more complete overview with guides and examples, check out the <a href='https://reservoirprotocol.github.io'>Reservoir Protocol Docs</a>.x
-  `
+    For a more complete overview with guides and examples, check out the <a href='https://reservoirprotocol.github.io'>Reservoir Protocol Docs</a>.
+    `
 
   await server.register([
     {
@@ -91,7 +92,7 @@ export const start = async (): Promise<void> => {
         tryItOutEnabled: true,
         documentationPath: "/",
         info: {
-          title: "Reservoir Protocol API",
+          title: "Reservoir API",
           version: require("../../package.json").version,
           description: apiDescription,
         },

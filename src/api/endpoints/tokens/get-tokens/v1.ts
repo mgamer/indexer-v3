@@ -8,8 +8,8 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getTokensV1Options: RouteOptions = {
-  description:
-    "Get a list of tokens. Useful for showing the best priced tokens in a collection or attribute.",
+  description: "Get a list of tokens",
+  notes: "This API is optimized for quickly fetching a list of tokens in a collection, sorted by price, with only the most important information returned. If you need more metadata, use the `tokens/details` API",
   tags: ["api", "tokens"],
   validate: {
     query: Joi.object({
