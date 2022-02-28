@@ -3,7 +3,7 @@ import { createLogger, format, transports } from "winston";
 import { network } from "@/common/provider";
 import { config } from "@/config/index";
 
-const log = (level: "debug" | "error" | "info") => {
+const log = (level: "error" | "info" | "warn") => {
   const service = `indexer-${config.version}-${network}`;
 
   const logger = createLogger({
@@ -31,7 +31,7 @@ const log = (level: "debug" | "error" | "info") => {
 };
 
 export const logger = {
-  debug: log("debug"),
   error: log("error"),
   info: log("info"),
+  warn: log("warn"),
 };
