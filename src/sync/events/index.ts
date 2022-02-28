@@ -387,23 +387,8 @@ export const syncEvents = async (
               break;
             }
 
-            case "wyvern-v2-order-cancelled": {
-              const parsedLog = eventData.abi.parseLog(log);
-              const orderId = parsedLog.args["hash"].toLowerCase();
-
-              cancelEvents.push({
-                orderKind: "wyvern-v2",
-                orderId,
-                baseEventParams,
-              });
-
-              orderInfos.push({
-                context: `cancelled-${orderId}`,
-                id: orderId,
-              });
-
-              break;
-            }
+            // Wyvern V2 is now decomissioned, but we still keep handling
+            // its fill event in order to get access to historical sales.
 
             case "wyvern-v2-orders-matched": {
               const parsedLog = eventData.abi.parseLog(log);
@@ -454,22 +439,6 @@ export const syncEvents = async (
                     batchIndex: batchIndex++,
                   },
                 });
-
-                orderInfos.push({
-                  context: `filled-${buyOrderId}`,
-                  id: buyOrderId,
-                });
-
-                fillInfos.push({
-                  context: buyOrderId,
-                  orderId: buyOrderId,
-                  orderSide: "buy",
-                  contract: associatedNftTransferEvent.baseEventParams.address,
-                  tokenId: associatedNftTransferEvent.tokenId,
-                  amount: associatedNftTransferEvent.amount,
-                  price,
-                  timestamp: baseEventParams.timestamp,
-                });
               }
               if (sellOrderId !== HashZero) {
                 fillEvents.push({
@@ -486,22 +455,6 @@ export const syncEvents = async (
                     ...baseEventParams,
                     batchIndex: batchIndex++,
                   },
-                });
-
-                orderInfos.push({
-                  context: `filled-${sellOrderId}`,
-                  id: sellOrderId,
-                });
-
-                fillInfos.push({
-                  context: sellOrderId,
-                  orderId: sellOrderId,
-                  orderSide: "sell",
-                  contract: associatedNftTransferEvent.baseEventParams.address,
-                  tokenId: associatedNftTransferEvent.tokenId,
-                  amount: associatedNftTransferEvent.amount,
-                  price,
-                  timestamp: baseEventParams.timestamp,
                 });
               }
 

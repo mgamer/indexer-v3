@@ -20,7 +20,6 @@ export type EventDataKind =
   | "weth-deposit"
   | "weth-withdrawal"
   | "wyvern-v2-orders-matched"
-  | "wyvern-v2-order-cancelled"
   | "wyvern-v2.3-orders-matched"
   | "wyvern-v2.3-order-cancelled"
   | "wyvern-v2.3-nonce-incremented";
@@ -43,7 +42,6 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       weth.transfer,
       weth.deposit,
       weth.withdrawal,
-      wyvernV2.orderCancelled,
       wyvernV2.ordersMatched,
       wyvernV23.orderCancelled,
       wyvernV23.ordersMatched,
@@ -76,8 +74,6 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return weth.deposit;
     case "weth-withdrawal":
       return weth.withdrawal;
-    case "wyvern-v2-order-cancelled":
-      return wyvernV2.orderCancelled;
     case "wyvern-v2-orders-matched":
       return wyvernV2.ordersMatched;
     case "wyvern-v2.3-order-cancelled":
