@@ -9,7 +9,8 @@ const version = "v1";
 
 export const getOrdersV1Options: RouteOptions = {
   description: "List of valid orders.",
-  notes:"Access orders with various filters applied. If you need orders created by a single user, use the positions API instead.",
+  notes:
+    "Access orders with various filters applied. If you need orders created by a single user, use the positions API instead.",
   tags: ["api", "orders"],
   validate: {
     query: Joi.object({
@@ -171,7 +172,6 @@ export const getOrdersV1Options: RouteOptions = {
           sourceId: r.source_id ? fromBuffer(r.source_id) : null,
           feeBps: Number(r.fee_bps),
           feeBreakdown: r.fee_breakdown,
-          royaltyInfo: r.royalty_info,
           expiration: Number(r.expiration),
           createdAt: new Date(r.created_at).toISOString(),
           updatedAt: new Date(r.updated_at).toISOString(),

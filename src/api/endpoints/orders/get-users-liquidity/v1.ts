@@ -11,7 +11,8 @@ const version = "v1";
 
 export const getUsersLiquidityV1Options: RouteOptions = {
   description: "User liquidity rankings",
-  notes: "This API calculates the total liquidity created by users, based on the number of tokens they are top bidder for.",
+  notes:
+    "This API calculates the total liquidity created by users, based on the number of tokens they are top bidder for.",
   tags: ["api", "liquidity"],
   validate: {
     query: Joi.object({
@@ -31,7 +32,7 @@ export const getUsersLiquidityV1Options: RouteOptions = {
         Joi.object({
           user: Joi.string().pattern(/^0x[a-f0-9]{40}$/),
           rank: Joi.number().required(),
-          tokenCount: Joi.number().required(),
+          tokenCount: Joi.string().required(),
           liquidity: Joi.number().unsafe().required(),
           maxTopBuyValue: Joi.number().unsafe().required(),
           wethBalance: Joi.number().unsafe().required(),
@@ -105,7 +106,7 @@ export const getUsersLiquidityV1Options: RouteOptions = {
           rank: Number(r.rank),
           liquidity: formatEth(r.liquidity),
           maxTopBuyValue: formatEth(r.max_top_buy_value),
-          tokenCount: Number(r.token_count),
+          tokenCount: String(r.token_count),
           wethBalance: r.weth_balance ? formatEth(r.weth_balance) : null,
         }))
       );

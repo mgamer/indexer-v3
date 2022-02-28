@@ -9,7 +9,8 @@ const version = "v1";
 
 export const getCollectionsV1Options: RouteOptions = {
   description: "List of collections",
-  notes: "Useful for getting multiple collections to show in a marketplace, or search for particular collections.",
+  notes:
+    "Useful for getting multiple collections to show in a marketplace, or search for particular collections.",
   tags: ["api", "collections"],
   validate: {
     query: Joi.object({
@@ -34,7 +35,7 @@ export const getCollectionsV1Options: RouteOptions = {
           slug: Joi.string(),
           name: Joi.string().allow(null, ""),
           metadata: Joi.any().allow(null),
-          tokenCount: Joi.number(),
+          tokenCount: Joi.string(),
           tokenSetId: Joi.string().allow(null),
           royalties: Joi.object({
             recipient: Joi.string().allow(null, ""),
@@ -136,7 +137,7 @@ export const getCollectionsV1Options: RouteOptions = {
           slug: r.slug,
           name: r.name,
           metadata: r.metadata,
-          tokenCount: Number(r.token_count),
+          tokenCount: String(r.token_count),
           tokenSetId: r.token_set_id,
           royalties: r.royalties ? r.royalties[0] : null,
           floorAskPrice: r.floor_sell_value

@@ -9,7 +9,8 @@ const version = "v1";
 
 export const getUserTokensV1Options: RouteOptions = {
   description: "User tokens",
-  notes: "Get tokens held by a user, along with ownership information such as associated orders and date acquired.",
+  notes:
+    "Get tokens held by a user, along with ownership information such as associated orders and date acquired.",
   tags: ["api", "users"],
   validate: {
     params: Joi.object({
@@ -25,7 +26,7 @@ export const getUserTokensV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
       hasOffer: Joi.boolean(),
-      sortBy: Joi.string().valid("acquiredAt", "topBuyValue"),
+      sortBy: Joi.string().valid("topBuyValue"),
       sortDirection: Joi.string().lowercase().valid("asc", "desc"),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
@@ -51,8 +52,8 @@ export const getUserTokensV1Options: RouteOptions = {
             }),
           }),
           ownership: Joi.object({
-            tokenCount: Joi.string().allow(null, ""),
-            onSaleCount: Joi.string().allow(null, ""),
+            tokenCount: Joi.string(),
+            onSaleCount: Joi.string(),
             floorSellValue: Joi.number().unsafe().allow(null),
             acquiredAt: Joi.number().allow(null),
           }),
@@ -90,19 +91,20 @@ export const getUserTokensV1Options: RouteOptions = {
           "t"."top_buy_value",
           "ts"."schema" AS "top_buy_schema",
           "nb"."amount" * "t"."top_buy_value" AS "total_buy_value",
-          "nte"."timestamp" AS "acquired_at"
-        FROM "tokens" "t"
+          (
+            SELECT "nte"."timestamp" FROM "nft_transfer_events" "nte"
+            WHERE "nte"."address" = "t"."contract"
+              AND "nte"."token_id" = "t"."token_id"
+              AND "nte"."to" = $/user/
+            ORDER BY "nte"."block" DESC
+            LIMIT 1
+          ) AS "acquired_at"
+        FROM "nft_balances" "nb"
+        JOIN "tokens" "t"
+          ON "nb"."contract" = "t"."contract"
+          AND "nb"."token_id" = "t"."token_id"
         JOIN "collections" "c"
           ON "t"."collection_id" = "c"."id"
-        JOIN "nft_balances" "nb"
-          ON "t"."contract" = "nb"."contract"
-          AND "t"."token_id" = "nb"."token_id"
-          AND "nb"."owner" = $/user/
-          AND "nb"."amount" > 0
-        JOIN "nft_transfer_events" "nte"
-          ON "t"."contract" = "nte"."address"
-          AND "t"."token_id" = "nte"."token_id"
-          AND "nte"."to" = $/user/
         LEFT JOIN "orders" "o"
           ON "t"."top_buy_id" = "o"."id"
         LEFT JOIN "token_sets" "ts"
@@ -111,7 +113,10 @@ export const getUserTokensV1Options: RouteOptions = {
 
       // Filters
       (params as any).user = toBuffer(params.user);
-      const conditions: string[] = [];
+      const conditions: string[] = [
+        `"nb"."owner" = $/user/`,
+        `"nb"."amount" > 0`,
+      ];
       if (query.community) {
         conditions.push(`"c"."community" = $/community/`);
       }
@@ -125,28 +130,10 @@ export const getUserTokensV1Options: RouteOptions = {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
 
-      // Sorting
-      baseQuery += `
-        ORDER BY
-          "t"."contract",
-          "t"."token_id",
-          "nte"."block" DESC NULLS LAST
-      `;
-
       // https://stackoverflow.com/a/18939498
       baseQuery = `SELECT "x".* FROM (${baseQuery}) "x"`;
 
       switch (query.sortBy) {
-        case "acquiredAt": {
-          baseQuery += `
-            ORDER BY
-              "x"."acquired_at" ${query.sortDirection || "DESC"},
-              "x"."contract",
-              "x"."token_id"
-          `;
-          break;
-        }
-
         case "topBuyValue":
         default: {
           baseQuery += `
@@ -192,7 +179,7 @@ export const getUserTokensV1Options: RouteOptions = {
             },
           }))
         );
-        
+
       return { tokens: result };
     } catch (error) {
       logger.error(

@@ -9,7 +9,8 @@ const version = "v1";
 
 export const getCollectionV1Options: RouteOptions = {
   description: "Single collection",
-  notes: "Get detailed information about a single collection, including real-time stats.",
+  notes:
+    "Get detailed information about a single collection, including real-time stats.",
   tags: ["api", "collections"],
   validate: {
     params: Joi.object({
@@ -24,8 +25,8 @@ export const getCollectionV1Options: RouteOptions = {
         name: Joi.string().allow(null, ""),
         metadata: Joi.any().allow(null),
         sampleImages: Joi.array().items(Joi.string().allow(null, "")),
-        tokenCount: Joi.number(),
-        onSaleCount: Joi.number(),
+        tokenCount: Joi.string(),
+        onSaleCount: Joi.string(),
         tokenSetId: Joi.string().allow(null),
         royalties: Joi.object({
           recipient: Joi.string().allow(null, ""),
@@ -175,8 +176,8 @@ export const getCollectionV1Options: RouteOptions = {
               name: r.name,
               metadata: r.metadata,
               sampleImages: r.sample_images || [],
-              tokenCount: Number(r.token_count),
-              onSaleCount: Number(r.on_sale_count),
+              tokenCount: String(r.token_count),
+              onSaleCount: String(r.on_sale_count),
               tokenSetId: r.token_set_id,
               royalties: r.royalties ? r.royalties[0] : null,
               lastBuy: {

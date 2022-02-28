@@ -9,7 +9,8 @@ const version = "v1";
 
 export const getOwnersV1Options: RouteOptions = {
   description: "List of owners",
-  notes: "Get owners with various filters applied, and a summary of their ownership. Useful for exploring top owners in a collection or attribute.",
+  notes:
+    "Get owners with various filters applied, and a summary of their ownership. Useful for exploring top owners in a collection or attribute.",
   tags: ["api", "owners"],
   validate: {
     query: Joi.object({
@@ -31,8 +32,8 @@ export const getOwnersV1Options: RouteOptions = {
         Joi.object({
           address: Joi.string(),
           ownership: Joi.object({
-            tokenCount: Joi.number(),
-            onSaleCount: Joi.number(),
+            tokenCount: Joi.string(),
+            onSaleCount: Joi.string(),
             floorAskPrice: Joi.number().unsafe().allow(null),
             topBidValue: Joi.number().unsafe().allow(null),
             totalBidValue: Joi.number().unsafe().allow(null),
@@ -97,8 +98,8 @@ export const getOwnersV1Options: RouteOptions = {
         result.map((r) => ({
           address: fromBuffer(r.owner),
           ownership: {
-            tokenCount: Number(r.token_count),
-            onSaleCount: Number(r.on_sale_count),
+            tokenCount: String(r.token_count),
+            onSaleCount: String(r.on_sale_count),
             floorAskPrice: r.floor_sell_value
               ? formatEth(r.floor_sell_value)
               : null,

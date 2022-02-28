@@ -49,7 +49,7 @@ export const getSalesV1Options: RouteOptions = {
           taker: Joi.string()
             .lowercase()
             .pattern(/^0x[a-f0-9]{40}$/),
-          amount: Joi.number(),
+          amount: Joi.string(),
           txHash: Joi.string()
             .lowercase()
             .pattern(/^0x[a-f0-9]{64}$/),
@@ -134,7 +134,7 @@ export const getSalesV1Options: RouteOptions = {
           },
           maker: fromBuffer(r.maker),
           taker: fromBuffer(r.taker),
-          amount: Number(r.amount),
+          amount: String(r.amount),
           txHash: fromBuffer(r.tx_hash),
           timestamp: r.timestamp,
           price: r.price ? formatEth(r.price) : null,

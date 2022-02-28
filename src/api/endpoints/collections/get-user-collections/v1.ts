@@ -9,7 +9,8 @@ const version = "v1";
 
 export const getUserCollectionsV1Options: RouteOptions = {
   description: "User collections",
-  notes: "Get aggregate stats for a user, grouped by collection. Useful for showing total portfolio information.",
+  notes:
+    "Get aggregate stats for a user, grouped by collection. Useful for showing total portfolio information.",
   tags: ["api", "users"],
   validate: {
     params: Joi.object({
@@ -37,9 +38,9 @@ export const getUserCollectionsV1Options: RouteOptions = {
             topBidValue: Joi.number().unsafe().allow(null),
           }),
           ownership: Joi.object({
-            tokenCount: Joi.number(),
-            onSaleCount: Joi.number(),
-            liquidCount: Joi.number(),
+            tokenCount: Joi.string(),
+            onSaleCount: Joi.string(),
+            liquidCount: Joi.string(),
           }),
         })
       ),
@@ -118,9 +119,9 @@ export const getUserCollectionsV1Options: RouteOptions = {
               topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
             },
             ownership: {
-              tokenCount: Number(r.token_count),
-              onSaleCount: Number(r.on_sale_count),
-              liquidCount: Number(r.liquid_count),
+              tokenCount: String(r.token_count),
+              onSaleCount: String(r.on_sale_count),
+              liquidCount: String(r.liquid_count),
             },
           }))
         );

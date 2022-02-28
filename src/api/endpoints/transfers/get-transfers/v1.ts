@@ -49,7 +49,7 @@ export const getTransfersV1Options: RouteOptions = {
           to: Joi.string()
             .lowercase()
             .pattern(/^0x[a-f0-9]{40}$/),
-          amount: Joi.number(),
+          amount: Joi.string(),
           txHash: Joi.string()
             .lowercase()
             .pattern(/^0x[a-f0-9]{64}$/),
@@ -139,7 +139,7 @@ export const getTransfersV1Options: RouteOptions = {
           },
           from: fromBuffer(r.from),
           to: fromBuffer(r.to),
-          amount: Number(r.amount),
+          amount: String(r.amount),
           txHash: fromBuffer(r.tx_hash),
           timestamp: r.timestamp,
           price: r.price ? formatEth(r.price) : null,
