@@ -182,7 +182,7 @@ export class DailyVolume {
       logger.error("daily-volumes", "No daily volumes found for the previous day, should be impossible");
     }
 
-    // Get 7, 30 days previous data
+    // Get 7, 30, all_time days previous data
     const query = `
         SELECT 
                collection_id,
@@ -278,23 +278,23 @@ export class DailyVolume {
       const row = mergedArr[x];
 
       if (!row['day1_volume']) {
-        row['day1_volume'] = 0;
-        row['day1_rank'] = 0;
+        row['day1_volume'] = null;
+        row['day1_rank'] = null;
       }
 
       if (!row['day7_volume']) {
-        row['day7_volume'] = 0;
-        row['day7_rank'] = 0;
+        row['day7_volume'] = null;
+        row['day7_rank'] = null;
       }
 
       if (!row['day30_volume']) {
-        row['day30_volume'] = 0;
-        row['day30_rank'] = 0;
+        row['day30_volume'] = null;
+        row['day30_rank'] = null;
       }
 
       if (!row['all_time_volume']) {
-        row['all_time_volume'] = 0;
-        row['all_time_rank'] = 0;
+        row['all_time_volume'] = null;
+        row['all_time_rank'] = null;
       }
     }
 
@@ -321,7 +321,11 @@ export class DailyVolume {
   /**
    * Each time a job is finished, do a tick, and decrease the number on the lock
    * Once we reach 0, we know we don't have any more jobs to run, and we can finish by updating our calculations table
-   * with the latest values
+   * with the latest values.
+   * For the cronjob that syncs daily volumes, this lock will not exist, and it will decrease the value to -1
+   * which is fine, and just cleans up the lock anyway
+   *
+   * @return boolean When all jobs are done return true, otherwise we return false
    */
   public static async tickLock(): Promise<boolean> {
     const res = await redis.decr(this.lockKey);

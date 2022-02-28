@@ -9,7 +9,7 @@ import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
 if (config.doBackgroundWork) {
   logger.info("calculate-daily-volumes", "Starting daily-volumes-lock");
   cron.schedule(
-    "30 0 * * *",
+    "* * * * *",
     async () =>
       await redlock
         .acquire(["daily-volumes-job-lock"], 5000)
