@@ -20,6 +20,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/fix-order-updates",
+    options: adminEndpoints.postFixOrderUpdatesOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/sync-arweave",
     options: adminEndpoints.postSyncArweaveOptions,
   });
