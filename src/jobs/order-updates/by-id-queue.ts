@@ -4,6 +4,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
+import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { TriggerKind } from "@/jobs/order-updates/types";
 
@@ -91,7 +92,7 @@ if (config.doBackgroundWork) {
 
           if (data.side === "sell") {
             // Atomically update the cache and trigger an api event if needed
-            const result = await db.oneOrNone(
+            await db.none(
               `
                 WITH "z" AS (
                   SELECT
@@ -174,7 +175,7 @@ if (config.doBackgroundWork) {
               {
                 id,
                 kind: trigger.kind,
-                txHash: trigger.txHash || null,
+                txHash: trigger.txHash ? toBuffer(trigger.txHash) : null,
                 txTimestamp: trigger.txTimestamp || null,
               }
             );
