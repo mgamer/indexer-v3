@@ -9,13 +9,14 @@ const version = "v1";
 
 export const getOrdersAllV1Options: RouteOptions = {
   description: "Bulk orders access",
-  notes: "This API is designed for efficiently ingesting large volumes of orders, for external processing",
+  notes:
+    "This API is designed for efficiently ingesting large volumes of orders, for external processing",
   tags: ["api", "orders"],
   validate: {
     query: Joi.object({
       side: Joi.string().lowercase().valid("buy", "sell"),
       sortDirection: Joi.string().lowercase().valid("asc", "desc"),
-      continuation: Joi.string().pattern(/^\d+_0x[a-f0-9]{64}$/),
+      continuation: Joi.string().pattern(/^\d+(.\d+)?_0x[a-f0-9]{64}$/),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     }),
   },
@@ -67,7 +68,7 @@ export const getOrdersAllV1Options: RouteOptions = {
         })
       ),
       continuation: Joi.string()
-        .pattern(/^\d+_0x[a-f0-9]{64}$/)
+        .pattern(/^\d+(.\d+)?_0x[a-f0-9]{64}$/)
         .allow(null),
     }).label(`getOrdersAll${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
@@ -107,7 +108,7 @@ export const getOrdersAllV1Options: RouteOptions = {
             NULLIF(DATE_PART('epoch', "o"."expiration"), 'Infinity'),
             0
           ) AS "expiration",
-          "o"."created_at",
+          extract(epoch from "o"."created_at") AS "created_at",
           "o"."updated_at",
           "o"."raw_data"
         FROM "orders" "o"
@@ -129,7 +130,7 @@ export const getOrdersAllV1Options: RouteOptions = {
         conditions.push(
           `("o"."created_at", "o"."id") ${
             (query.sortDirection || "asc") === "asc" ? ">" : "<"
-          } (to_timestamp($/createdAt/ / 1000.0), $/id/)`
+          } (to_timestamp($/createdAt/), $/id/)`
         );
       }
 
@@ -147,51 +148,43 @@ export const getOrdersAllV1Options: RouteOptions = {
       // Pagination
       baseQuery += ` LIMIT $/limit/`;
 
-      const result = await db.manyOrNone(baseQuery, query).then((result) =>
-        result.map((r) => ({
-          id: r.id,
-          kind: r.kind,
-          side: r.side,
-          fillabilityStatus: r.fillability_status,
-          approvalStatus: r.approval_status,
-          tokenSetId: r.token_set_id,
-          tokenSetSchemaHash: fromBuffer(r.token_set_schema_hash),
-          maker: fromBuffer(r.maker),
-          taker: fromBuffer(r.taker),
-          price: formatEth(r.price),
-          // For consistency, we set the value of "sell" orders as price - fee
-          value:
-            r.side === "buy"
-              ? formatEth(r.value)
-              : formatEth(r.value) -
-                (formatEth(r.value) * Number(r.fee_bps)) / 10000,
-          validFrom: Number(r.valid_from),
-          validUntil: Number(r.valid_until),
-          sourceId: r.source_id ? fromBuffer(r.source_id) : null,
-          feeBps: Number(r.fee_bps),
-          feeBreakdown: r.fee_breakdown,
-          expiration: Number(r.expiration),
-          createdAt: new Date(r.created_at).toISOString(),
-          updatedAt: new Date(r.updated_at).toISOString(),
-          rawData: r.raw_data,
-        }))
-      );
+      const rawResult = await db.manyOrNone(baseQuery, query);
 
       let continuation = null;
-      if (result.length === query.limit) {
-        // TODO: By default Postgres stores any timestamps at a microsecond
-        // precision. However, NodeJS's Date type can only handle precision
-        // at millisecond level. The code below assumes that there exist no
-        // orders created at the same millisecond but different microsecond
-        // when building the continuation token. However, this might not be
-        // always true so we should either include microsecond precision in
-        // the continuation tokens or store all timestamps at a millisecond
-        // precision in Postgres.
+      if (rawResult.length === query.limit) {
         continuation =
-          new Date(result[result.length - 1].createdAt).getTime() +
+          rawResult[rawResult.length - 1].created_at +
           "_" +
-          result[result.length - 1].id;
+          rawResult[rawResult.length - 1].id;
       }
+
+      const result = rawResult.map((r) => ({
+        id: r.id,
+        kind: r.kind,
+        side: r.side,
+        fillabilityStatus: r.fillability_status,
+        approvalStatus: r.approval_status,
+        tokenSetId: r.token_set_id,
+        tokenSetSchemaHash: fromBuffer(r.token_set_schema_hash),
+        maker: fromBuffer(r.maker),
+        taker: fromBuffer(r.taker),
+        price: formatEth(r.price),
+        // For consistency, we set the value of "sell" orders as price - fee
+        value:
+          r.side === "buy"
+            ? formatEth(r.value)
+            : formatEth(r.value) -
+              (formatEth(r.value) * Number(r.fee_bps)) / 10000,
+        validFrom: Number(r.valid_from),
+        validUntil: Number(r.valid_until),
+        sourceId: r.source_id ? fromBuffer(r.source_id) : null,
+        feeBps: Number(r.fee_bps),
+        feeBreakdown: r.fee_breakdown,
+        expiration: Number(r.expiration),
+        createdAt: new Date(r.created_at * 1000).toISOString(),
+        updatedAt: new Date(r.updated_at).toISOString(),
+        rawData: r.raw_data,
+      }));
 
       return {
         orders: result,

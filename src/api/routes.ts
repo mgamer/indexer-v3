@@ -2,6 +2,7 @@ import { Server } from "@hapi/hapi";
 
 import * as adminEndpoints from "@/api/endpoints/admin";
 import * as apiKeysEndpoints from "@/api/endpoints/api-keys";
+import * as eventsEndpoints from "@/api/endpoints/events";
 import * as collectionsEndpoints from "@/api/endpoints/collections";
 import * as healthEndpoints from "@/api/endpoints/health";
 import * as ordersEndpoints from "@/api/endpoints/orders";
@@ -68,6 +69,14 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/users/{user}/collections/v1",
     options: collectionsEndpoints.getUserCollectionsV1Options,
+  });
+
+  // Events
+
+  server.route({
+    method: "GET",
+    path: "/events/tokens/floor-ask/v1",
+    options: eventsEndpoints.getTokensFloorAskV1Options,
   });
 
   // Orders

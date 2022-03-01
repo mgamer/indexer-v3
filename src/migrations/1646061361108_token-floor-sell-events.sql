@@ -28,6 +28,15 @@ ALTER TABLE "token_floor_sell_events"
   ADD CONSTRAINT "token_floor_sell_events_pk"
   PRIMARY KEY ("id");
 
+CREATE INDEX "token_floor_sell_events_created_at_id_index"
+  ON "token_floor_sell_events"("created_at", "id");
+
+CREATE INDEX "token_floor_sell_events_contract_created_at_id_index"
+  ON "token_floor_sell_events"("contract", "created_at", "id");
+
+CREATE INDEX "token_floor_sell_events_contract_token_id_created_at_id_index"
+  ON "token_floor_sell_events"("contract", "token_id", "created_at", "id");
+
 -- Down Migration
 
 DROP TABLE "token_floor_sell_events";
