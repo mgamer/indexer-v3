@@ -1,5 +1,5 @@
 import { db, pgp } from "@/common/db";
-import { toBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { BaseEventParams } from "@/events-sync/parser";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import { OrderKind } from "@/orderbook/orders";
@@ -100,7 +100,7 @@ export const addEvents = async (events: Event[], backfill = false) => {
               id,
               trigger: {
                 kind: "cancel",
-                txHash: tx_hash,
+                txHash: fromBuffer(tx_hash),
                 txTimestamp: timestamp,
               },
             } as orderUpdatesById.OrderInfo)
