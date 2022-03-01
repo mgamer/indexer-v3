@@ -4,7 +4,6 @@ import { randomUUID } from "crypto";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { redis } from "@/common/redis";
-import { manualTimeout } from "@/common/utils";
 import { config } from "@/config/index";
 import { syncEvents } from "@/events-sync/index";
 import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
@@ -55,10 +54,7 @@ if (config.doBackgroundWork) {
           `Events realtime syncing block range [${fromBlock}, ${headBlock}]`
         );
 
-        await manualTimeout(
-          () => syncEvents(fromBlock, headBlock),
-          2 * 60 * 1000
-        );
+        await syncEvents(fromBlock, headBlock);
 
         // Send any remaining blocks to the backfill queue
         if (localBlock < fromBlock) {
