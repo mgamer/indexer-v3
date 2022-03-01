@@ -278,22 +278,22 @@ export class DailyVolume {
       const row = mergedArr[x];
 
       if (!row['day1_volume']) {
-        row['day1_volume'] = null;
+        row['day1_volume'] = 0;
         row['day1_rank'] = null;
       }
 
       if (!row['day7_volume']) {
-        row['day7_volume'] = null;
+        row['day7_volume'] = 0;
         row['day7_rank'] = null;
       }
 
       if (!row['day30_volume']) {
-        row['day30_volume'] = null;
+        row['day30_volume'] = 0;
         row['day30_rank'] = null;
       }
 
       if (!row['all_time_volume']) {
-        row['all_time_volume'] = null;
+        row['all_time_volume'] = 0;
         row['all_time_rank'] = null;
       }
     }

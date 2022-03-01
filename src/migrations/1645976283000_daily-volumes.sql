@@ -10,25 +10,25 @@ create table daily_volumes
 );
 
 alter table collections
-    add day1_volume numeric(78) default null;
+    add day1_volume numeric(78) default 0;
 
 alter table collections
     add day1_rank int default null;
 
 alter table collections
-    add day7_volume numeric(78) default null;
+    add day7_volume numeric(78) default 0;
 
 alter table collections
     add day7_rank int default null;
 
 alter table collections
-    add day30_volume numeric(78) default null;
+    add day30_volume numeric(78) default 0;
 
 alter table collections
     add day30_rank int default null;
 
 alter table collections
-    add all_time_volume numeric(78) default null;
+    add all_time_volume numeric(78) default 0;
 
 alter table collections
     add all_time_rank int default null;
@@ -39,16 +39,16 @@ create index fill_events_2_timestamp_index
 drop index collections_name_index;
 
 create index collections_name_all_time_volume_index
-    on collections (name, all_time_volume);
+    on collections (name, all_time_volume desc);
 
 create index collections_name_day1_volume_index
-    on collections (name, day1_volume);
+    on collections (name, day1_volume desc);
 
 create index collections_day1_volume_index
-    on collections (day1_volume);
+    on collections (day1_volume desc);
 
 create index collections_all_time_volume_index
-    on collections (all_time_volume);
+    on collections (all_time_volume desc);
 
 -- Down Migration
 drop table daily_volumes;
