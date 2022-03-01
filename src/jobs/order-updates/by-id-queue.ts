@@ -135,7 +135,11 @@ if (config.doBackgroundWork) {
                   AND "t"."token_id" = "z"."token_id"
                   AND "t"."floor_sell_id" IS DISTINCT FROM "z"."order_id"
                 RETURNING
-                  "floor_sell_value" AS "old_floor_sell_value",
+                  (
+                    SELECT "t"."floor_sell_value" FROM "tokens" "t"
+                    WHERE "t"."contract" = "z"."contract"
+                      AND "t"."token_id" = "z"."token_id"
+                  ) AS "old_floor_sell_value",
                   "z"."contract",
                   "z"."token_id",
                   "z"."order_id" AS "new_floor_sell_id",
