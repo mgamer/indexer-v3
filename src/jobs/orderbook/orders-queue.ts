@@ -18,6 +18,7 @@ export const queue = new Queue(QUEUE_NAME, {
     },
     removeOnComplete: 10000,
     removeOnFail: 10000,
+    timeout: 30000,
   },
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
