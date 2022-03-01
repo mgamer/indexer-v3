@@ -3,7 +3,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from "crypto";
 import { DailyVolume } from '@/entities/daily-volumes/daily-volume';
 
 const QUEUE_NAME = "calculate-daily-volumes";
@@ -62,7 +62,7 @@ export const addToQueue = async (startTime?: number|null, ignoreInsertedRows: bo
     startTime = (dayBeginning.getTime() / 1000) - 24 * 3600;
   }
 
-  await queue.add(uuidv4(), {
+  await queue.add(randomUUID(), {
     startTime,
     ignoreInsertedRows
   });
