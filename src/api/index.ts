@@ -11,7 +11,7 @@ import { setupRoutes } from "@/api/routes";
 import { logger } from "@/common/logger";
 import { network } from "@/common/provider";
 import { config } from "@/config/index";
-import { ApiKeyManager } from "@/entities/apikeys/api-key";
+import { ApiKeyManager } from "@/entities/api-keys";
 import { allJobQueues } from "@/jobs/index";
 
 let server: Hapi.Server;
@@ -59,10 +59,10 @@ export const start = async (): Promise<void> => {
     routes: { prefix: "/admin/bullmq" },
   });
 
-  let apiDescription = `You are viewing the reference docs for the Reservoir API. 
-  
-  For a more complete overview with guides and examples, check out the <a href='https://reservoirprotocol.github.io'>Reservoir Protocol Docs</a>.
-  `
+  const apiDescription = `
+    You are viewing the reference docs for the Reservoir API.
+    For a more complete overview with guides and examples, check out the <a href='https://reservoirprotocol.github.io'>Reservoir Protocol Docs</a>.
+  `;
 
   await server.register([
     {

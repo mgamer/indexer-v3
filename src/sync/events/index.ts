@@ -116,8 +116,12 @@ export const syncEvents = async (
 
               makerInfos.push({
                 context: `${contextPrefix}-${from}-sell-balance`,
-                timestamp: baseEventParams.timestamp,
                 maker: from,
+                trigger: {
+                  kind: "balance-change",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
                 data: {
                   kind: "sell-balance",
                   contract: baseEventParams.address,
@@ -126,8 +130,12 @@ export const syncEvents = async (
               });
               makerInfos.push({
                 context: `${contextPrefix}-${to}-sell-balance`,
-                timestamp: baseEventParams.timestamp,
                 maker: to,
+                trigger: {
+                  kind: "balance-change",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
                 data: {
                   kind: "sell-balance",
                   contract: baseEventParams.address,
@@ -166,8 +174,12 @@ export const syncEvents = async (
 
               makerInfos.push({
                 context: `${contextPrefix}-${from}-sell-balance`,
-                timestamp: baseEventParams.timestamp,
                 maker: from,
+                trigger: {
+                  kind: "balance-change",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
                 data: {
                   kind: "sell-balance",
                   contract: baseEventParams.address,
@@ -176,8 +188,12 @@ export const syncEvents = async (
               });
               makerInfos.push({
                 context: `${contextPrefix}-${to}-sell-balance`,
-                timestamp: baseEventParams.timestamp,
                 maker: to,
+                trigger: {
+                  kind: "balance-change",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
                 data: {
                   kind: "sell-balance",
                   contract: baseEventParams.address,
@@ -229,8 +245,12 @@ export const syncEvents = async (
 
                 makerInfos.push({
                   context: `${contextPrefix}-${from}-sell-balance`,
-                  timestamp: baseEventParams.timestamp,
                   maker: from,
+                  trigger: {
+                    kind: "balance-change",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
                   data: {
                     kind: "sell-balance",
                     contract: baseEventParams.address,
@@ -239,8 +259,12 @@ export const syncEvents = async (
                 });
                 makerInfos.push({
                   context: `${contextPrefix}-${to}-sell-balance`,
-                  timestamp: baseEventParams.timestamp,
                   maker: to,
+                  trigger: {
+                    kind: "balance-change",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
                   data: {
                     kind: "sell-balance",
                     contract: baseEventParams.address,
@@ -280,8 +304,12 @@ export const syncEvents = async (
 
               makerInfos.push({
                 context: `${contextPrefix}-${owner}-sell-approval`,
-                timestamp: baseEventParams.timestamp,
                 maker: owner,
+                trigger: {
+                  kind: "approval-change",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
                 data: {
                   kind: "sell-approval",
                   contract: baseEventParams.address,
@@ -311,8 +339,12 @@ export const syncEvents = async (
 
               makerInfos.push({
                 context: `${contextPrefix}-${from}-buy-balance`,
-                timestamp: baseEventParams.timestamp,
                 maker: from,
+                trigger: {
+                  kind: "balance-change",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
                 data: {
                   kind: "buy-balance",
                   contract: baseEventParams.address,
@@ -320,8 +352,12 @@ export const syncEvents = async (
               });
               makerInfos.push({
                 context: `${contextPrefix}-${to}-buy-balance`,
-                timestamp: baseEventParams.timestamp,
                 maker: to,
+                trigger: {
+                  kind: "balance-change",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
                 data: {
                   kind: "buy-balance",
                   contract: baseEventParams.address,
@@ -348,8 +384,12 @@ export const syncEvents = async (
 
               makerInfos.push({
                 context: `${contextPrefix}-${to}-buy-balance`,
-                timestamp: baseEventParams.timestamp,
                 maker: to,
+                trigger: {
+                  kind: "balance-change",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
                 data: {
                   kind: "buy-balance",
                   contract: baseEventParams.address,
@@ -376,8 +416,12 @@ export const syncEvents = async (
 
               makerInfos.push({
                 context: `${contextPrefix}-${from}-buy-balance`,
-                timestamp: baseEventParams.timestamp,
                 maker: from,
+                trigger: {
+                  kind: "balance-change",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
                 data: {
                   kind: "buy-balance",
                   contract: baseEventParams.address,
@@ -389,6 +433,7 @@ export const syncEvents = async (
 
             // Wyvern V2 is now decomissioned, but we still keep handling
             // its fill event in order to get access to historical sales.
+            // This is only relevant when backfilling though.
 
             case "wyvern-v2-orders-matched": {
               const parsedLog = eventData.abi.parseLog(log);
@@ -474,6 +519,11 @@ export const syncEvents = async (
               orderInfos.push({
                 context: `cancelled-${orderId}`,
                 id: orderId,
+                trigger: {
+                  kind: "cancel",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
               });
 
               break;
@@ -532,6 +582,11 @@ export const syncEvents = async (
                 orderInfos.push({
                   context: `filled-${buyOrderId}`,
                   id: buyOrderId,
+                  trigger: {
+                    kind: "sale",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
                 });
 
                 fillInfos.push({
@@ -565,6 +620,11 @@ export const syncEvents = async (
                 orderInfos.push({
                   context: `filled-${sellOrderId}`,
                   id: sellOrderId,
+                  trigger: {
+                    kind: "sale",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
                 });
 
                 fillInfos.push({

@@ -65,7 +65,7 @@ export const addEvents = async (events: Event[], backfill = false) => {
           "min_nonce"
         ) VALUES ${pgp.helpers.values(bulkCancelValues, columns)}
         ON CONFLICT DO NOTHING
-        RETURNING "order_kind", "maker", "min_nonce", "timestamp"
+        RETURNING "order_kind", "maker", "min_nonce", "tx_hash", "timestamp"
       )
       UPDATE "orders" AS "o" SET
         "fillability_status" = 'cancelled',
@@ -76,7 +76,7 @@ export const addEvents = async (events: Event[], backfill = false) => {
         AND "o"."maker" = "x"."maker"
         AND "o"."nonce" < "x"."min_nonce"
         AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-      RETURNING "o"."id"
+      RETURNING "o"."id", "x"."tx_hash", "x"."timestamp"
     `;
   }
 
@@ -85,18 +85,28 @@ export const addEvents = async (events: Event[], backfill = false) => {
     // are no chances of database deadlocks in this scenario
     const result = await db.manyOrNone(query);
 
-    // TODO: Ideally, we should trigger all further processing
-    // pipelines one layer higher but for now we can just have
-    // it here. We should also run the order status updates in
-    // a job queue (since we can potentially have an unbounded
-    // number of orders that need status updates and executing
-    // it synchronously is not ideal).
-    await orderUpdatesById.addToQueue(
-      result.map(({ id }) => ({
-        context: `cancelled-${id}`,
-        id,
-      }))
-    );
+    if (!backfill) {
+      // TODO: Ideally, we should trigger all further processing
+      // pipelines one layer higher but for now we can just have
+      // it here. We should also run the order status updates in
+      // a job queue (since we can potentially have an unbounded
+      // number of orders that need status updates and executing
+      // it synchronously is not ideal).
+      await orderUpdatesById.addToQueue(
+        result.map(
+          ({ id, tx_hash, timestamp }) =>
+            ({
+              context: `cancelled-${id}`,
+              id,
+              trigger: {
+                kind: "cancel",
+                txHash: tx_hash,
+                txTimestamp: timestamp,
+              },
+            } as orderUpdatesById.OrderInfo)
+        )
+      );
+    }
   }
 };
 

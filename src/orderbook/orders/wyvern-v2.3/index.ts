@@ -394,10 +394,16 @@ export const save = async (
     await ordersUpdateById.addToQueue(
       results
         .filter((r) => r.status === "success")
-        .map(({ id }) => ({
-          context: `new-order-${id}`,
-          id,
-        }))
+        .map(
+          ({ id }) =>
+            ({
+              context: `new-order-${id}`,
+              id,
+              trigger: {
+                kind: "new-order",
+              },
+            } as ordersUpdateById.OrderInfo)
+        )
     );
 
     if (relayToArweave) {
