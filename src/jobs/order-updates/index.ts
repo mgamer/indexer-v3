@@ -42,12 +42,16 @@ if (config.doBackgroundWork) {
             `);
 
             await orderUpdatesById.addToQueue(
-              expiredOrders.map(({ id }) => ({
-                context: `expired-orders-check-${Math.floor(
-                  Date.now() / 1000
-                )}-${id}`,
-                id,
-              }))
+              expiredOrders.map(
+                ({ id }) =>
+                  ({
+                    context: `expired-orders-check-${Math.floor(
+                      Date.now() / 1000
+                    )}-${id}`,
+                    id,
+                    trigger: { kind: "expiry" },
+                  } as orderUpdatesById.OrderInfo)
+              )
             );
           } catch (error) {
             logger.error(

@@ -3,6 +3,7 @@ import { BaseOrderInfo } from "@reservoir0x/sdk/dist/wyvern-v2.3/builders/base";
 
 import { db } from "@/common/db";
 import { bn, toBuffer } from "@/common/utils";
+import * as utils from "@/orderbook/orders/wyvern-v2.3/utils";
 
 // TODO: Add support for on-chain check
 
@@ -44,8 +45,11 @@ export const offChainCheck = async (
     // Check: maker has set the proper approval
     // TODO: above check
   } else {
-    // Check: maker has initialized a user proxy
-    // TODO: above check
+    // Check: maker has initialized a proxy
+    const proxy = await utils.getUserProxy(order.params.maker);
+    if (!proxy) {
+      throw new Error("no-user-proxy");
+    }
 
     // Check: maker has enough balance
     const balanceResult = await db.oneOrNone(
@@ -66,6 +70,23 @@ export const offChainCheck = async (
     }
 
     // Check: maker has set the proper approval
-    // TODO: above check
+    const approvalResult = await db.oneOrNone(
+      `
+        SELECT "nae"."approved" FROM "nft_approval_events" "nae"
+        WHERE "nae"."address" = $/address/
+          AND "nae"."owner" = $/owner/
+          AND "nae"."operator" = $/operator/
+        ORDER BY "nae"."block" DESC
+        LIMIT 1
+      `,
+      {
+        address: toBuffer(info.contract),
+        owner: toBuffer(order.params.maker),
+        operator: toBuffer(proxy),
+      }
+    );
+    if (!approvalResult || !approvalResult.approved) {
+      throw new Error("no-approval");
+    }
   }
 };

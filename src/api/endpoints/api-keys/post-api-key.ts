@@ -2,7 +2,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import { ApiKeyManager } from "@/entities/apikeys/api-key";
+import { ApiKeyManager } from "@/entities/api-keys";
 
 export const postApiKey: RouteOptions = {
   description: "Create a new API key.",

@@ -1,6 +1,6 @@
 {
-  "name": "indexer-v3",
-  "version": "4.0.0",
+  "name": "reservoir-indexer",
+  "version": "5.0.0",
   "description": "Reservoir Protocol Indexer",
   "main": "./dist/index.js",
   "repository": "https://github.com/reservoirprotocol/indexer-v3",

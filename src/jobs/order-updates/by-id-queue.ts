@@ -4,7 +4,10 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
+import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import * as tokenFloorSellApiEvents from "@/jobs/api-events/token-floor-sell-queue";
+import { TriggerKind } from "@/jobs/order-updates/types";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -27,7 +30,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { id } = job.data as OrderInfo;
+      const { id, trigger } = job.data as OrderInfo;
 
       try {
         // Fetch the order's associated token set
@@ -88,66 +91,136 @@ if (config.doBackgroundWork) {
           // TODO: Research if splitting the single token updates in multiple
           // batches is needed (eg. to avoid blocking other running queries).
 
-          // Recompute `top_buy` and `floor_sell` for single tokens
-          const column = data.side === "sell" ? "floor_sell" : "top_buy";
-          await db.none(
-            `
-              WITH "z" AS (
-                SELECT
-                  "x"."contract",
-                  "x"."token_id",
-                  "y"."order_id",
-                  "y"."value",
-                  "y"."maker"
-                FROM (
+          if (data.side === "sell") {
+            const result = await db.oneOrNone(
+              `
+                WITH "z" AS (
                   SELECT
-                    "tst"."contract",
-                    "tst"."token_id"
-                  FROM "orders" "o"
-                  JOIN "token_sets_tokens" "tst"
-                    ON "o"."token_set_id" = "tst"."token_set_id"
-                  WHERE "o"."id" = $/id/
-                ) "x" LEFT JOIN LATERAL (
+                    "x"."contract",
+                    "x"."token_id",
+                    "y"."order_id",
+                    "y"."value",
+                    "y"."maker"
+                  FROM (
+                    SELECT
+                      "tst"."contract",
+                      "tst"."token_id"
+                    FROM "orders" "o"
+                    JOIN "token_sets_tokens" "tst"
+                      ON "o"."token_set_id" = "tst"."token_set_id"
+                    WHERE "o"."id" = $/id/
+                  ) "x" LEFT JOIN LATERAL (
+                    SELECT
+                      "o"."id" as "order_id",
+                      "o"."value",
+                      "o"."maker"
+                    FROM "orders" "o"
+                    JOIN "token_sets_tokens" "tst"
+                      ON "o"."token_set_id" = "tst"."token_set_id"
+                    WHERE "tst"."contract" = "x"."contract"
+                      AND "tst"."token_id" = "x"."token_id"
+                      AND "o"."side" = 'sell'
+                      AND "o"."fillability_status" = 'fillable'
+                      AND "o"."approval_status" = 'approved'
+                    ORDER BY "o"."value"
+                    LIMIT 1
+                  ) "y" ON TRUE
+                )
+                UPDATE "tokens" AS "t" SET
+                  "floor_sell_id" = "z"."order_id",
+                  "floor_sell_value" = "z"."value",
+                  "floor_sell_maker" = "z"."maker"
+                FROM "z"
+                WHERE "t"."contract" = "z"."contract"
+                  AND "t"."token_id" = "z"."token_id"
+                  AND "t"."floor_sell_id" IS DISTINCT FROM "z"."order_id"
+                RETURNING
+                  (
+                    SELECT "t"."floor_sell_value" FROM "tokens" "t"
+                    WHERE "t"."contract" = "z"."contract"
+                      AND "t"."token_id" = "z"."token_id"
+                  ) AS "old_floor_sell_value",
+                  "z"."contract",
+                  "z"."token_id",
+                  "z"."order_id" AS "new_floor_sell_id",
+                  "z"."value" AS "new_floor_sell_value",
+                  "z"."maker" AS "new_floor_sell_maker"
+              `,
+              { id }
+            );
+
+            if (result) {
+              // Emit an api event for every floor sell update
+              await tokenFloorSellApiEvents.addToQueue([
+                {
+                  kind: trigger.kind,
+                  contract: fromBuffer(result.contract),
+                  tokenId: result.token_id,
+                  orderId: result.new_floor_sell_id,
+                  maker: result.new_floor_sell_maker
+                    ? fromBuffer(result.new_floor_sell_maker)
+                    : null,
+                  price: result.new_floor_sell_value,
+                  previousPrice: result.old_floor_sell_value,
+                  txHash: trigger.txHash,
+                  txTimestamp: trigger.txTimestamp,
+                },
+              ]);
+            }
+          } else if (data.side === "buy") {
+            await db.none(
+              `
+                WITH "z" AS (
                   SELECT
-                    "o"."id" as "order_id",
-                    "o"."value",
-                    "o"."maker"
-                  FROM "orders" "o"
-                  JOIN "token_sets_tokens" "tst"
-                    ON "o"."token_set_id" = "tst"."token_set_id"
-                  WHERE "tst"."contract" = "x"."contract"
-                    AND "tst"."token_id" = "x"."token_id"
-                    AND "o"."side" = '${side}'
-                    AND "o"."fillability_status" = 'fillable'
-                    AND "o"."approval_status" = 'approved'
-                    AND ${
-                      side === "sell"
-                        ? "true"
-                        : `
-                            EXISTS(
-                              SELECT FROM "nft_balances" "nb"
-                                WHERE "nb"."contract" = "x"."contract"
-                                AND "nb"."token_id" = "x"."token_id"
-                                AND "nb"."amount" > 0
-                                AND "nb"."owner" != "o"."maker"
-                            )
-                          `
-                    }
-                  ORDER BY "o"."value" ${side === "sell" ? "ASC" : "DESC"}
-                  LIMIT 1
-                ) "y" ON TRUE
-              )
-              UPDATE "tokens" AS "t" SET
-                "${column}_id" = "z"."order_id",
-                "${column}_value" = "z"."value",
-                "${column}_maker" = "z"."maker"
-              FROM "z"
-              WHERE "t"."contract" = "z"."contract"
-                AND "t"."token_id" = "z"."token_id"
-                AND "t"."${column}_id" IS DISTINCT FROM "z"."order_id"
-            `,
-            { id }
-          );
+                    "x"."contract",
+                    "x"."token_id",
+                    "y"."order_id",
+                    "y"."value",
+                    "y"."maker"
+                  FROM (
+                    SELECT
+                      "tst"."contract",
+                      "tst"."token_id"
+                    FROM "orders" "o"
+                    JOIN "token_sets_tokens" "tst"
+                      ON "o"."token_set_id" = "tst"."token_set_id"
+                    WHERE "o"."id" = $/id/
+                  ) "x" LEFT JOIN LATERAL (
+                    SELECT
+                      "o"."id" as "order_id",
+                      "o"."value",
+                      "o"."maker"
+                    FROM "orders" "o"
+                    JOIN "token_sets_tokens" "tst"
+                      ON "o"."token_set_id" = "tst"."token_set_id"
+                    WHERE "tst"."contract" = "x"."contract"
+                      AND "tst"."token_id" = "x"."token_id"
+                      AND "o"."side" = 'buy'
+                      AND "o"."fillability_status" = 'fillable'
+                      AND "o"."approval_status" = 'approved'
+                      AND EXISTS(
+                        SELECT FROM "nft_balances" "nb"
+                          WHERE "nb"."contract" = "x"."contract"
+                          AND "nb"."token_id" = "x"."token_id"
+                          AND "nb"."amount" > 0
+                          AND "nb"."owner" != "o"."maker"
+                      )
+                    ORDER BY "o"."value" DESC
+                    LIMIT 1
+                  ) "y" ON TRUE
+                )
+                UPDATE "tokens" AS "t" SET
+                  "top_buy_id" = "z"."order_id",
+                  "top_buy_value" = "z"."value",
+                  "top_buy_maker" = "z"."maker"
+                FROM "z"
+                WHERE "t"."contract" = "z"."contract"
+                  AND "t"."token_id" = "z"."token_id"
+                  AND "t"."top_buy_id" IS DISTINCT FROM "z"."order_id"
+              `,
+              { id }
+            );
+          }
         }
       } catch (error) {
         logger.error(
@@ -177,6 +250,12 @@ export type OrderInfo = {
   // distinctive in order to avoid doing duplicative work.
   context: string;
   id: string;
+  // Information regarding what triggered the job
+  trigger: {
+    kind: TriggerKind;
+    txHash?: string;
+    txTimestamp?: number;
+  };
 };
 
 export const addToQueue = async (orderInfos: OrderInfo[]) => {

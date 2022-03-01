@@ -4,18 +4,6 @@ import { WyvernV2 } from "@reservoir0x/sdk";
 import { config } from "@/config/index";
 import { EventData } from "@/events-sync/data";
 
-export const orderCancelled: EventData = {
-  kind: "wyvern-v2-order-cancelled",
-  addresses: { [WyvernV2.Addresses.Exchange[config.chainId]]: true },
-  topic: "0x5152abf959f6564662358c2e52b702259b78bac5ee7842a0f01937e670efcc7d",
-  numTopics: 2,
-  abi: new Interface([
-    `event OrderCancelled(
-      bytes32 indexed hash
-    )`,
-  ]),
-};
-
 export const ordersMatched: EventData = {
   kind: "wyvern-v2-orders-matched",
   addresses: { [WyvernV2.Addresses.Exchange[config.chainId]]: true },

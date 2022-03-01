@@ -7,6 +7,7 @@ import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
+import { TriggerKind } from "@/jobs/order-updates/types";
 import * as wyvernV23Utils from "@/orderbook/orders/wyvern-v2.3/utils";
 
 const QUEUE_NAME = "order-updates-by-maker";
@@ -30,7 +31,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { context, timestamp, maker, data } = job.data as MakerInfo;
+      const { context, maker, trigger, data } = job.data as MakerInfo;
 
       try {
         switch (data.kind) {
@@ -59,7 +60,7 @@ if (config.doBackgroundWork) {
               {
                 maker: toBuffer(maker),
                 contract: toBuffer(data.contract),
-                timestamp,
+                timestamp: trigger.txTimestamp,
               }
             );
 
@@ -96,6 +97,7 @@ if (config.doBackgroundWork) {
               fillabilityStatuses.map(({ id }) => ({
                 context: `${context}-${id}`,
                 id,
+                trigger,
               }))
             );
 
@@ -133,7 +135,7 @@ if (config.doBackgroundWork) {
                 maker: toBuffer(maker),
                 contract: toBuffer(data.contract),
                 tokenId: data.tokenId,
-                timestamp,
+                timestamp: trigger.txTimestamp,
               }
             );
 
@@ -170,6 +172,7 @@ if (config.doBackgroundWork) {
               fillabilityStatuses.map(({ id }) => ({
                 context: `${context}-${id}`,
                 id,
+                trigger,
               }))
             );
 
@@ -211,7 +214,7 @@ if (config.doBackgroundWork) {
                   maker: toBuffer(maker),
                   contract: toBuffer(data.contract),
                   approvalStatus: data.approved ? "approved" : "no-approval",
-                  expiration: timestamp,
+                  expiration: trigger.txTimestamp,
                 }
               );
 
@@ -220,6 +223,7 @@ if (config.doBackgroundWork) {
                 result.map(({ id }) => ({
                   context: `${context}-${id}`,
                   id,
+                  trigger,
                 }))
               );
             }
@@ -254,9 +258,13 @@ export type MakerInfo = {
   // as possible it's also important to not have the contexts too
   // distinctive in order to avoid doing duplicative work.
   context: string;
-  // The timestamp of the event that triggered the job
-  timestamp: number;
   maker: string;
+  // Information regarding what triggered the job
+  trigger: {
+    kind: TriggerKind;
+    txHash: string;
+    txTimestamp: number;
+  };
   data:
     | {
         kind: "buy-balance";
