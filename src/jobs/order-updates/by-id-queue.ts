@@ -125,8 +125,8 @@ if (config.doBackgroundWork) {
                     ORDER BY "o"."value"
                     LIMIT 1
                   ) "y" ON TRUE
-                )
-                WITH "w" AS (
+                ),
+                "w" AS (
                   UPDATE "tokens" AS "t" SET
                     "floor_sell_id" = "z"."order_id",
                     "floor_sell_value" = "z"."value",
@@ -161,7 +161,7 @@ if (config.doBackgroundWork) {
                 )
                 SELECT
                   $/kind/ AS "kind",
-                  "w"."contract"
+                  "w"."contract",
                   "w"."token_id",
                   "w"."new_floor_sell_id" AS "order_id",
                   "w"."new_floor_sell_maker" AS "maker",
