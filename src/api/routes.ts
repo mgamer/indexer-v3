@@ -36,6 +36,12 @@ export const setupRoutes = (server: Server) => {
     options: adminEndpoints.postSyncEventsOptions,
   });
 
+  server.route({
+    method: "POST",
+    path: "/admin/sync-daily-volumes",
+    options: adminEndpoints.postSyncDailyVolumes,
+  });
+
   // Api keys
 
   server.route({
