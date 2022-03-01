@@ -2,7 +2,6 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { manualTimeout } from "@/common/utils";
 import { config } from "@/config/index";
 import { EventDataKind } from "@/events-sync/data";
 import { syncEvents } from "@/events-sync/index";
@@ -18,6 +17,8 @@ export const queue = new Queue(QUEUE_NAME, {
       delay: 10000,
     },
     removeOnComplete: true,
+    removeOnFail: 10000,
+    timeout: 120000,
   },
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
@@ -35,10 +36,7 @@ if (config.doBackgroundWork) {
           `Events backfill syncing block range [${fromBlock}, ${toBlock}]`
         );
 
-        await manualTimeout(
-          () => syncEvents(fromBlock, toBlock, { backfill, eventDataKinds }),
-          2 * 60 * 1000
-        );
+        await syncEvents(fromBlock, toBlock, { backfill, eventDataKinds });
       } catch (error) {
         logger.error(QUEUE_NAME, `Events backfill syncing failed: ${error}`);
         throw error;
