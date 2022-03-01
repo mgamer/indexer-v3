@@ -40,7 +40,11 @@ if (config.doBackgroundWork) {
           maker: event.maker ? toBuffer(event.maker) : null,
           price: event.price || null,
           previous_price: event.previousPrice || null,
-          tx_hash: event.txHash ? toBuffer(event.txHash) : null,
+          tx_hash: event.txHash
+            ? Buffer.isBuffer(event.txHash)
+              ? event.txHash
+              : toBuffer(event.txHash)
+            : null,
           tx_timestamp: event.txTimestamp || null,
         };
         const columns = new pgp.helpers.ColumnSet(
