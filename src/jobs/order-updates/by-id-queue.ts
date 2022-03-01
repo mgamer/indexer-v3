@@ -4,9 +4,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as tokenFloorSellApiEvents from "@/jobs/api-events/token-floor-sell-queue";
 import { TriggerKind } from "@/jobs/order-updates/types";
 
 const QUEUE_NAME = "order-updates-by-id";
@@ -92,6 +90,7 @@ if (config.doBackgroundWork) {
           // batches is needed (eg. to avoid blocking other running queries).
 
           if (data.side === "sell") {
+            // Atomically update the cache and trigger an api event if needed
             const result = await db.oneOrNone(
               `
                 WITH "z" AS (
@@ -126,47 +125,59 @@ if (config.doBackgroundWork) {
                     LIMIT 1
                   ) "y" ON TRUE
                 )
-                UPDATE "tokens" AS "t" SET
-                  "floor_sell_id" = "z"."order_id",
-                  "floor_sell_value" = "z"."value",
-                  "floor_sell_maker" = "z"."maker"
-                FROM "z"
-                WHERE "t"."contract" = "z"."contract"
-                  AND "t"."token_id" = "z"."token_id"
-                  AND "t"."floor_sell_id" IS DISTINCT FROM "z"."order_id"
-                RETURNING
-                  (
-                    SELECT "t"."floor_sell_value" FROM "tokens" "t"
-                    WHERE "t"."contract" = "z"."contract"
-                      AND "t"."token_id" = "z"."token_id"
-                  ) AS "old_floor_sell_value",
-                  "z"."contract",
-                  "z"."token_id",
-                  "z"."order_id" AS "new_floor_sell_id",
-                  "z"."value" AS "new_floor_sell_value",
-                  "z"."maker" AS "new_floor_sell_maker"
+                WITH "w" AS (
+                  UPDATE "tokens" AS "t" SET
+                    "floor_sell_id" = "z"."order_id",
+                    "floor_sell_value" = "z"."value",
+                    "floor_sell_maker" = "z"."maker"
+                  FROM "z"
+                  WHERE "t"."contract" = "z"."contract"
+                    AND "t"."token_id" = "z"."token_id"
+                    AND "t"."floor_sell_id" IS DISTINCT FROM "z"."order_id"
+                  RETURNING
+                    "z"."contract",
+                    "z"."token_id",
+                    "z"."order_id" AS "new_floor_sell_id",
+                    "z"."maker" AS "new_floor_sell_maker",
+                    "z"."value" AS "new_floor_sell_value",
+                    (
+                      SELECT "t"."floor_sell_value" FROM "tokens" "t"
+                      WHERE "t"."contract" = "z"."contract"
+                        AND "t"."token_id" = "z"."token_id"
+                    ) AS "old_floor_sell_value"
+                )
+                INSERT INTO "token_floor_sell_events"(
+                  "kind",
+                  "contract",
+                  "token_id",
+                  "order_id",
+                  "maker",
+                  "price",
+                  "previous_price",
+                  "tx_hash",
+                  "tx_timestamp",
+                  "created_at"
+                )
+                SELECT
+                  $/kind/ AS "kind",
+                  "w"."contract"
+                  "w"."token_id",
+                  "w"."new_floor_sell_id" AS "order_id",
+                  "w"."new_floor_sell_maker" AS "maker",
+                  "w"."new_floor_sell_value" AS "price",
+                  "w"."old_floor_sell_value" AS "previous_price",
+                  $/txHash/ AS "tx_hash",
+                  $/txTimestamp/ AS "tx_timestamp",
+                  now() AS "created_at"
+                FROM "w"
               `,
-              { id }
+              {
+                id,
+                kind: trigger.kind,
+                txHash: trigger.txHash || null,
+                txTimestamp: trigger.txTimestamp || null,
+              }
             );
-
-            if (result) {
-              // Emit an api event for every floor sell update
-              await tokenFloorSellApiEvents.addToQueue([
-                {
-                  kind: trigger.kind,
-                  contract: fromBuffer(result.contract),
-                  tokenId: result.token_id,
-                  orderId: result.new_floor_sell_id,
-                  maker: result.new_floor_sell_maker
-                    ? fromBuffer(result.new_floor_sell_maker)
-                    : null,
-                  price: result.new_floor_sell_value,
-                  previousPrice: result.old_floor_sell_value,
-                  txHash: trigger.txHash,
-                  txTimestamp: trigger.txTimestamp,
-                },
-              ]);
-            }
           } else if (data.side === "buy") {
             await db.none(
               `
