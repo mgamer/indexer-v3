@@ -5,4 +5,5 @@ export type TriggerKind =
   | "sale"
   | "cancel"
   | "balance-change"
-  | "approval-change";
+  | "approval-change"
+  | "revalidation";
