@@ -17,9 +17,9 @@ export const postSyncEventsOptions: RouteOptions = {
       "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     payload: Joi.object({
-      // Warning! Some events should always be fetched together (eg.
-      // wyvern-v2/wyvern-v2.3 sales + erc721/erc1155 transfers) in
-      // order to have the tables filled properly.
+      // WARNING! Some events should always be fetched together (eg.
+      // wyvern-v2/v2.3 sales + erc20/721/1155 transfers) so that we
+      // properly fill the tables.
       eventDataKinds: Joi.array().items(Joi.string()),
       fromBlock: Joi.number().integer().positive().required(),
       toBlock: Joi.number().integer().positive().required(),

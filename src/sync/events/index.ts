@@ -1,7 +1,10 @@
+import { Log } from "@ethersproject/abstract-provider";
 import { AddressZero, HashZero } from "@ethersproject/constants";
+import * as Sdk from "@reservoir0x/sdk";
 
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
+import { config } from "@/config/index";
 import { EventDataKind, getEventData } from "@/events-sync/data";
 import * as es from "@/events-sync/storage";
 import { parseEvent } from "@/events-sync/parser";
@@ -75,11 +78,31 @@ export const syncEvents = async (
       const cancelEvents: es.cancels.Event[] = [];
       const fillEvents: es.fills.Event[] = [];
 
+      // Keep track of all events within the currently processing transaction
+      let currentTx: string | undefined;
+      let currentTxEvents: {
+        log: Log;
+        address: string;
+        logIndex: number;
+      }[] = [];
+
       for (const log of logs) {
         try {
           const baseEventParams = parseEvent(log, blockRange);
 
+          // Save the event in the currently processing transaction data
+          if (currentTx !== baseEventParams.txHash) {
+            currentTx = baseEventParams.txHash;
+            currentTxEvents = [];
+          }
+          currentTxEvents.push({
+            log,
+            address: baseEventParams.address,
+            logIndex: baseEventParams.logIndex,
+          });
+
           if (!options?.backfill) {
+            // Save the block (and its hash) in order to detect orphans
             blockHashToNumber[baseEventParams.blockHash] =
               baseEventParams.block;
           }
@@ -443,10 +466,18 @@ export const syncEvents = async (
               const taker = parsedLog.args["taker"].toLowerCase();
               const price = parsedLog.args["price"].toString();
 
-              // Since WyvernV2 fill events don't include the traded token, we
-              // have to deduce it from the nft transfer event occured exactly
-              // before the fill event. The code below assumes that events are
-              // retrieved in chronological orders from the blockchain.
+              // The code below assumes that events are retrieved in chronological
+              // order from the blockchain (this is safe to assume in most cases).
+
+              // With Wyvern, there are two main issues:
+              // - the traded token is not included in the fill event, so we have
+              // to deduce it by checking the nft transfer occured exactly before
+              // the fill event
+              // - the payment token is not included in the fill event, and we deduce
+              // it as well by checking any Erc20 transfers that occured close before
+              // the fill event (and default to native Eth if cannot find any)
+
+              // Detect the traded token
               let associatedNftTransferEvent: es.nftTransfers.Event | undefined;
               if (nftTransferEvents.length) {
                 // Ensure the last nft transfer event was part of the fill
@@ -501,6 +532,49 @@ export const syncEvents = async (
                     batchIndex: batchIndex++,
                   },
                 });
+              }
+
+              // Detect the payment token
+              let paymentToken = Sdk.Common.Addresses.Eth[config.chainId];
+              for (const event of currentTxEvents.slice(0, -1).reverse()) {
+                // Skip once we detect another fill in the same transaction
+                // (this will happen if filling through an aggregator).
+                if (
+                  event.log.topics[0] ===
+                  getEventData([eventData.kind])[0].topic
+                ) {
+                  break;
+                }
+
+                // If we detect an Erc20 transfer as part of the same transaction
+                // then we assume it's the payment for the current sale and so we
+                // only keep the sale if the payment token is Weth.
+                const erc20EventData = getEventData(["erc20-transfer"])[0];
+                if (
+                  event.log.topics[0] === erc20EventData.topic &&
+                  event.log.topics.length === erc20EventData.numTopics
+                ) {
+                  const parsed = erc20EventData.abi.parseLog(event.log);
+                  const from = parsed.args["from"].toLowerCase();
+                  const to = parsed.args["to"].toLowerCase();
+                  const amount = parsed.args["amount"].toLowerCase();
+                  if (from === maker && to === taker && amount === price) {
+                    paymentToken = event.log.address.toLowerCase();
+                    break;
+                  }
+                }
+              }
+
+              logger.info("debug", `Detected payment token: ${paymentToken}`);
+
+              if (
+                ![
+                  Sdk.Common.Addresses.Eth[config.chainId],
+                  Sdk.Common.Addresses.Weth[config.chainId],
+                ].includes(paymentToken)
+              ) {
+                // Skip if we don't support the payment token
+                // break;
               }
 
               break;
@@ -637,6 +711,49 @@ export const syncEvents = async (
                   price,
                   timestamp: baseEventParams.timestamp,
                 });
+              }
+
+              // Detect the payment token
+              let paymentToken = Sdk.Common.Addresses.Eth[config.chainId];
+              for (const event of currentTxEvents.slice(0, -1).reverse()) {
+                // Skip once we detect another fill in the same transaction
+                // (this will happen if filling through an aggregator).
+                if (
+                  event.log.topics[0] ===
+                  getEventData([eventData.kind])[0].topic
+                ) {
+                  break;
+                }
+
+                // If we detect an Erc20 transfer as part of the same transaction
+                // then we assume it's the payment for the current sale and so we
+                // only keep the sale if the payment token is Weth.
+                const erc20EventData = getEventData(["erc20-transfer"])[0];
+                if (
+                  event.log.topics[0] === erc20EventData.topic &&
+                  event.log.topics.length === erc20EventData.numTopics
+                ) {
+                  const parsed = erc20EventData.abi.parseLog(event.log);
+                  const from = parsed.args["from"].toLowerCase();
+                  const to = parsed.args["to"].toLowerCase();
+                  const amount = parsed.args["amount"].toLowerCase();
+                  if (from === maker && to === taker && amount === price) {
+                    paymentToken = event.log.address.toLowerCase();
+                    break;
+                  }
+                }
+              }
+
+              logger.info("debug", `Detected payment token: ${paymentToken}`);
+
+              if (
+                ![
+                  Sdk.Common.Addresses.Eth[config.chainId],
+                  Sdk.Common.Addresses.Weth[config.chainId],
+                ].includes(paymentToken)
+              ) {
+                // Skip if we don't support the payment token
+                // break;
               }
 
               break;
