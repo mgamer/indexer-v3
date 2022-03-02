@@ -53,19 +53,6 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (
-  query: string,
-  options?: {
-    blocksPerBatch?: number;
-    prioritized?: boolean;
-  }
-) => {
-  // Important write processes should be prioritized
-  const prioritized = options?.prioritized ?? false;
-
-  await queue.add(
-    randomUUID(),
-    { query },
-    { priority: prioritized ? 1 : undefined }
-  );
+export const addToQueue = async (query: string) => {
+  await queue.add(randomUUID(), { query });
 };
