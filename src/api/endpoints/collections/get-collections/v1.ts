@@ -19,7 +19,7 @@ export const getCollectionsV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
       name: Joi.string().lowercase(),
-      sortBy: Joi.string().valid("1_day_volume", "all_time_volume").default("id"),
+      sortBy: Joi.string().valid("1_day_volume", "all_time_volume").default("all_time_volume"),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     })
@@ -46,14 +46,18 @@ export const getCollectionsV1Options: RouteOptions = {
             .lowercase()
             .pattern(/^0x[a-f0-9]{40}$/)
             .allow(null),
-          day1Rank: Joi.number().allow(null),
-          day7Rank: Joi.number().allow(null),
-          day30Rank: Joi.number().allow(null),
-          allTimeRank: Joi.number().allow(null),
-          day1Volume: Joi.number().unsafe().allow(null),
-          day7Volume: Joi.number().unsafe().allow(null),
-          day30Volume: Joi.number().unsafe().allow(null),
-          allTimeVolume: Joi.number().unsafe().allow(null),
+          rank: Joi.object({
+            "1day": Joi.number().unsafe().allow(null),
+            "7day": Joi.number().unsafe().allow(null),
+            "30day": Joi.number().unsafe().allow(null),
+            "allTime": Joi.number().unsafe().allow(null),
+          }),
+          volume: Joi.object({
+            "1day": Joi.number().unsafe().allow(null),
+            "7day": Joi.number().unsafe().allow(null),
+            "30day": Joi.number().unsafe().allow(null),
+            "allTime": Joi.number().unsafe().allow(null),
+          }),
         })
       ),
     }).label(`getCollections${version.toUpperCase()}Response`),
@@ -119,12 +123,12 @@ export const getCollectionsV1Options: RouteOptions = {
       // Sorting, only allow sorting when the name is not chosen
       if (!query.name) {
         switch (query.sortBy) {
-          case "all_time_volume":
-            baseQuery += ` ORDER BY "c"."all_time_volume" ${query.sortDirection || "DESC"}`;
-            break;
           case "1_day_volume":
+            baseQuery += ` ORDER BY "c"."day1_volume" DESC`;
+            break;
+          case "all_time_volume":
           default:
-            baseQuery += ` ORDER BY "c"."day1_volume" ${query.sortDirection || "DESC"}`;
+            baseQuery += ` ORDER BY "c"."all_time_volume DESC`;
             break;
         }
       }
@@ -164,14 +168,18 @@ export const getCollectionsV1Options: RouteOptions = {
             : null,
           topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
           topBidMaker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
-          day1Rank: r.day1_rank,
-          day7Rank: r.day7_rank,
-          day30Rank: r.day30_rank,
-          allTimeRank: r.all_time_rank,
-          day1Volume: r.day1_volume ? formatEth(r.day1_volume) : null,
-          day7Volume: r.day7_volume ? formatEth(r.day7_volume) : null,
-          day30Volume: r.day30_volume ? formatEth(r.day30_volume) : null,
-          allTimeVolume: r.all_time_volume ? formatEth(r.all_time_volume) : null,
+          rank: {
+            "1day": r.day1_rank,
+            "7day": r.day7_rank,
+            "30day": r.day30_rank,
+            "allTime": r.all_time_rank,
+          },
+          volume: {
+            "1day": r.day1_volume ? formatEth(r.day1_volume) : null,
+            "7day": r.day7_volume ? formatEth(r.day7_volume) : null,
+            "30day": r.day30_volume ? formatEth(r.day30_volume) : null,
+            "allTime": r.all_time_volume ? formatEth(r.all_time_volume) : null,
+          },
         }))
       );
 
