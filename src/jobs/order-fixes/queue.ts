@@ -1,11 +1,11 @@
-import { AddressZero, HashZero } from "@ethersproject/constants";
+import { HashZero } from "@ethersproject/constants";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { fromBuffer, toBuffer } from "@/common/utils";
+import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 
@@ -35,13 +35,7 @@ if (config.doBackgroundWork) {
 
       try {
         if (kind === "balance" && side === "sell") {
-          let makerContinuation = toBuffer(AddressZero);
-          let idContinuation = HashZero;
-          if (continuation) {
-            const [maker, id] = continuation.split("_");
-            makerContinuation = toBuffer(maker);
-            idContinuation = id;
-          }
+          // We should make sure the `orders` table has the right index
 
           const limit = 10000;
           const result = await db.oneOrNone(
@@ -66,8 +60,8 @@ if (config.doBackgroundWork) {
                   AND "o"."maker" = "nb"."owner"
                 WHERE "o"."side" = 'sell'
                   AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-                  AND ("o"."maker", "o"."id") > ($/makerContinuation/, $/idContinuation/)
-                ORDER BY "o"."maker", "o"."id"
+                  AND "o"."id" > $/continuation/
+                ORDER BY "o"."id"
                 LIMIT ${limit}
               ),
               "y" AS (
@@ -79,18 +73,12 @@ if (config.doBackgroundWork) {
                 RETURNING "o"."id"
               )
               SELECT
-                (SELECT COUNT(*) FROM "x") AS "count",
                 (SELECT array_agg("y"."id") FROM "y") AS "order_ids",
-                "x"."maker",
-                "x"."id"
+                COUNT(*) AS "count",
+                MAX("x"."id") AS "continuation"
               FROM "x"
-              ORDER BY "x"."maker" DESC, "x"."id" DESC
-              LIMIT 1
             `,
-            {
-              makerContinuation,
-              idContinuation,
-            }
+            { continuation: continuation || HashZero }
           );
 
           if (result) {
@@ -112,10 +100,8 @@ if (config.doBackgroundWork) {
             // Trigger the next job if we still have orders to process
             const count = Number(result.count);
             if (count === limit) {
-              const maker = fromBuffer(result.maker);
-              const id = result.id;
               await addToQueue([
-                { kind, side, continuation: `${maker}_${id}` },
+                { kind, side, continuation: result.continuation },
               ]);
             }
           }

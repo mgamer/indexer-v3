@@ -74,6 +74,12 @@ CREATE INDEX "orders_created_at_id_side_index"
   ON "orders" ("created_at", "id", "side")
   WHERE ("fillability_status" = 'fillable' AND "approval_status" = 'approved');
 
+-- Optional index for order fixing
+CREATE INDEX "orders_side_id_index"
+  ON "orders" ("side", "id")
+  INCLUDE ("maker", "fillability_status")
+  WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
+
 -- https://www.lob.com/blog/supercharge-your-postgresql-performance
 -- https://klotzandrew.com/blog/posgres-per-table-autovacuum-management
 ALTER TABLE "orders" SET (autovacuum_vacuum_scale_factor = 0.0);
