@@ -557,7 +557,7 @@ export const syncEvents = async (
                   const parsed = erc20EventData.abi.parseLog(event.log);
                   const from = parsed.args["from"].toLowerCase();
                   const to = parsed.args["to"].toLowerCase();
-                  const amount = parsed.args["amount"].toLowerCase();
+                  const amount = parsed.args["amount"].toString();
                   if (from === maker && to === taker && amount === price) {
                     paymentToken = event.log.address.toLowerCase();
                     break;
