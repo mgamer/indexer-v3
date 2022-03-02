@@ -7,7 +7,8 @@ CREATE TYPE "token_floor_sell_event_kind_t" AS ENUM (
   'sale',
   'cancel',
   'balance-change',
-  'approval-change'
+  'approval-change',
+  'revalidation'
 );
 
 CREATE TABLE "token_floor_sell_events" (
