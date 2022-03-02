@@ -37,7 +37,7 @@ if (config.doBackgroundWork) {
         if (kind === "balance" && side === "sell") {
           // We should make sure the `orders` table has the right index
 
-          const limit = 10000;
+          const limit = 1000;
           const result = await db.oneOrNone(
             `
               WITH "x" AS (
