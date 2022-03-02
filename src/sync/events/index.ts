@@ -671,6 +671,11 @@ export const syncEvents = async (
       ]);
 
       if (!backfill) {
+        // WARNING! It's very important to guarantee that the previous
+        // events are persisted to the database before any of the jobs
+        // below are executed. Otherwise, the jobs can potentially use
+        // stale data which will cause inconsistencies (eg. orders can
+        // have wrong statuses).
         await Promise.all([
           fillUpdates.addToQueue(fillInfos),
           orderUpdatesById.addToQueue(orderInfos),

@@ -91,9 +91,16 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }
 
   if (queries.length) {
-    await ftTransfersWriteBuffer.addToQueue(pgp.helpers.concat(queries), {
-      prioritized: !backfill,
-    });
+    if (backfill) {
+      // When backfilling, use the write buffer to avoid deadlocks
+      await ftTransfersWriteBuffer.addToQueue(pgp.helpers.concat(queries));
+    } else {
+      // Otherwise write directly since there might be jobs that depend
+      // on the events to have been written to the database at the time
+      // they get to run and we have no way to easily enforce this when
+      // using the write buffer.
+      await db.none(pgp.helpers.concat(queries));
+    }
   }
 };
 
