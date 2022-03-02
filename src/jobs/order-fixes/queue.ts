@@ -43,6 +43,8 @@ if (config.doBackgroundWork) {
             idContinuation = id;
           }
 
+          return;
+
           const limit = 1000;
           const result = await db.oneOrNone(
             `
