@@ -716,51 +716,51 @@ export const syncEvents = async (
                 });
               }
 
-              // Detect the payment token
-              let paymentToken = Sdk.Common.Addresses.Eth[config.chainId];
-              for (const event of currentTxEvents.slice(0, -1).reverse()) {
-                // Skip once we detect another fill in the same transaction
-                // (this will happen if filling through an aggregator).
-                if (
-                  event.log.topics[0] ===
-                  getEventData([eventData.kind])[0].topic
-                ) {
-                  break;
-                }
+              // // Detect the payment token
+              // let paymentToken = Sdk.Common.Addresses.Eth[config.chainId];
+              // for (const event of currentTxEvents.slice(0, -1).reverse()) {
+              //   // Skip once we detect another fill in the same transaction
+              //   // (this will happen if filling through an aggregator).
+              //   if (
+              //     event.log.topics[0] ===
+              //     getEventData([eventData.kind])[0].topic
+              //   ) {
+              //     break;
+              //   }
 
-                // If we detect an Erc20 transfer as part of the same transaction
-                // then we assume it's the payment for the current sale and so we
-                // only keep the sale if the payment token is Weth.
-                const erc20EventData = getEventData(["erc20-transfer"])[0];
-                if (
-                  event.log.topics[0] === erc20EventData.topic &&
-                  event.log.topics.length === erc20EventData.numTopics
-                ) {
-                  const parsed = erc20EventData.abi.parseLog(event.log);
-                  const from = parsed.args["from"].toLowerCase();
-                  const to = parsed.args["to"].toLowerCase();
-                  const amount = parsed.args["amount"].toLowerCase();
-                  if (from === maker && to === taker && amount === price) {
-                    paymentToken = event.log.address.toLowerCase();
-                    break;
-                  }
-                }
-              }
+              //   // If we detect an Erc20 transfer as part of the same transaction
+              //   // then we assume it's the payment for the current sale and so we
+              //   // only keep the sale if the payment token is Weth.
+              //   const erc20EventData = getEventData(["erc20-transfer"])[0];
+              //   if (
+              //     event.log.topics[0] === erc20EventData.topic &&
+              //     event.log.topics.length === erc20EventData.numTopics
+              //   ) {
+              //     const parsed = erc20EventData.abi.parseLog(event.log);
+              //     const from = parsed.args["from"].toLowerCase();
+              //     const to = parsed.args["to"].toLowerCase();
+              //     const amount = parsed.args["amount"].toLowerCase();
+              //     if (from === maker && to === taker && amount === price) {
+              //       paymentToken = event.log.address.toLowerCase();
+              //       break;
+              //     }
+              //   }
+              // }
 
-              logger.info(
-                "debug",
-                `Detected payment token ${paymentToken} for (${baseEventParams.txHash}, ${baseEventParams.logIndex})`
-              );
+              // logger.info(
+              //   "debug",
+              //   `Detected payment token ${paymentToken} for (${baseEventParams.txHash}, ${baseEventParams.logIndex})`
+              // );
 
-              if (
-                ![
-                  Sdk.Common.Addresses.Eth[config.chainId],
-                  Sdk.Common.Addresses.Weth[config.chainId],
-                ].includes(paymentToken)
-              ) {
-                // Skip if we don't support the payment token
-                // break;
-              }
+              // if (
+              //   ![
+              //     Sdk.Common.Addresses.Eth[config.chainId],
+              //     Sdk.Common.Addresses.Weth[config.chainId],
+              //   ].includes(paymentToken)
+              // ) {
+              //   // Skip if we don't support the payment token
+              //   // break;
+              // }
 
               break;
             }
