@@ -150,7 +150,7 @@ export const syncArweave = async (options: {
       }
     } catch (error) {
       // Ignore any errors
-      logger.info(
+      logger.error(
         "sync-arweave",
         `Failed to handle transaction ${node.id}: ${error}`
       );
