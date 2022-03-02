@@ -565,7 +565,10 @@ export const syncEvents = async (
                 }
               }
 
-              logger.info("debug", `Detected payment token: ${paymentToken}`);
+              logger.info(
+                "debug",
+                `Detected payment token ${paymentToken} for (${baseEventParams.txHash}, ${baseEventParams.logIndex})`
+              );
 
               if (
                 ![
@@ -744,7 +747,10 @@ export const syncEvents = async (
                 }
               }
 
-              logger.info("debug", `Detected payment token: ${paymentToken}`);
+              logger.info(
+                "debug",
+                `Detected payment token ${paymentToken} for (${baseEventParams.txHash}, ${baseEventParams.logIndex})`
+              );
 
               if (
                 ![
