@@ -19,7 +19,9 @@ export const getCollectionsV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
       name: Joi.string().lowercase(),
-      sortBy: Joi.string().valid("1_day_volume", "all_time_volume").default("all_time_volume"),
+      sortBy: Joi.string()
+        .valid("1_day_volume", "all_time_volume")
+        .default("all_time_volume"),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     })
@@ -50,13 +52,13 @@ export const getCollectionsV1Options: RouteOptions = {
             "1day": Joi.number().unsafe().allow(null),
             "7day": Joi.number().unsafe().allow(null),
             "30day": Joi.number().unsafe().allow(null),
-            "allTime": Joi.number().unsafe().allow(null),
+            allTime: Joi.number().unsafe().allow(null),
           }),
           volume: Joi.object({
             "1day": Joi.number().unsafe().allow(null),
             "7day": Joi.number().unsafe().allow(null),
             "30day": Joi.number().unsafe().allow(null),
-            "allTime": Joi.number().unsafe().allow(null),
+            allTime: Joi.number().unsafe().allow(null),
           }),
         })
       ),
@@ -111,7 +113,7 @@ export const getCollectionsV1Options: RouteOptions = {
       }
       if (query.name) {
         query.name = `%${query.name}%`;
-        conditions.push(`"c"."name" ilike $/name/`);
+        conditions.push(`"c"."name" ILIKE $/name/`);
       }
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
@@ -126,9 +128,10 @@ export const getCollectionsV1Options: RouteOptions = {
           case "1_day_volume":
             baseQuery += ` ORDER BY "c"."day1_volume" DESC`;
             break;
+
           case "all_time_volume":
           default:
-            baseQuery += ` ORDER BY "c"."all_time_volume DESC`;
+            baseQuery += ` ORDER BY "c"."all_time_volume" DESC`;
             break;
         }
       }
@@ -172,13 +175,13 @@ export const getCollectionsV1Options: RouteOptions = {
             "1day": r.day1_rank,
             "7day": r.day7_rank,
             "30day": r.day30_rank,
-            "allTime": r.all_time_rank,
+            allTime: r.all_time_rank,
           },
           volume: {
             "1day": r.day1_volume ? formatEth(r.day1_volume) : null,
             "7day": r.day7_volume ? formatEth(r.day7_volume) : null,
             "30day": r.day30_volume ? formatEth(r.day30_volume) : null,
-            "allTime": r.all_time_volume ? formatEth(r.all_time_volume) : null,
+            allTime: r.all_time_volume ? formatEth(r.all_time_volume) : null,
           },
         }))
       );

@@ -75,13 +75,13 @@ export const getCollectionV1Options: RouteOptions = {
           "1day": Joi.number().unsafe().allow(null),
           "7day": Joi.number().unsafe().allow(null),
           "30day": Joi.number().unsafe().allow(null),
-          "allTime": Joi.number().unsafe().allow(null),
+          allTime: Joi.number().unsafe().allow(null),
         }),
         volume: Joi.object({
           "1day": Joi.number().unsafe().allow(null),
           "7day": Joi.number().unsafe().allow(null),
           "30day": Joi.number().unsafe().allow(null),
-          "allTime": Joi.number().unsafe().allow(null),
+          allTime: Joi.number().unsafe().allow(null),
         }),
       }).allow(null),
     }).label(`getCollection${version.toUpperCase()}Response`),
@@ -240,13 +240,15 @@ export const getCollectionV1Options: RouteOptions = {
                 "1day": r.day1_rank,
                 "7day": r.day7_rank,
                 "30day": r.day30_rank,
-                "allTime": r.all_time_rank,
+                allTime: r.all_time_rank,
               },
               volume: {
                 "1day": r.day1_volume ? formatEth(r.day1_volume) : null,
                 "7day": r.day7_volume ? formatEth(r.day7_volume) : null,
                 "30day": r.day30_volume ? formatEth(r.day30_volume) : null,
-                "allTime": r.all_time_volume ? formatEth(r.all_time_volume) : null,
+                allTime: r.all_time_volume
+                  ? formatEth(r.all_time_volume)
+                  : null,
               },
             }
       );
