@@ -15,6 +15,9 @@ import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 
+import { db, pgp } from "@/common/db";
+import { toBuffer } from "@/common/utils";
+
 // TODO: All event tables have as primary key (blockHash, txHash, logIndex).
 // While this is the correct way to do it in order to protect against chain
 // reorgs we might as well do without the block hash (since the exact block
@@ -61,6 +64,8 @@ export const syncEvents = async (
 
   const backfill = Boolean(options?.backfill);
   const eventDatas = getEventData(options?.eventDataKinds);
+
+  const tmpQueries: any[] = [];
 
   await baseProvider
     .getLogs({
@@ -541,6 +546,12 @@ export const syncEvents = async (
                 ].includes(paymentToken)
               ) {
                 // Skip if we don't support the payment token
+                if (backfill) {
+                  tmpQueries.push({
+                    query: `DELETE FROM "fill_events_2" WHERE "tx_hash" = $/txHash/`,
+                    values: { txHash: toBuffer(baseEventParams.txHash) },
+                  });
+                }
                 logger.warn(
                   "wrong-payment-token",
                   `Wrong payment token ${paymentToken} at block hash ${baseEventParams.blockHash} and tx hash ${baseEventParams.txHash}`
@@ -683,6 +694,10 @@ export const syncEvents = async (
         es.nftApprovals.addEvents(nftApprovalEvents),
         es.nftTransfers.addEvents(nftTransferEvents, backfill),
       ]);
+
+      if (backfill) {
+        await db.none(pgp.helpers.concat(tmpQueries));
+      }
 
       if (!backfill) {
         // WARNING! It's very important to guarantee that the previous
