@@ -67,13 +67,13 @@ if (config.doBackgroundWork) {
                 WHERE "c"."id" = $/collectionId/
               ),
               "y" AS (
-                UPDATE "tokens" SET
+                UPDATE "tokens" AS "t" SET
                   "collection_id" = $/collectionId/,
                   "updated_at" = now()
                 FROM "x"
-                WHERE "contract" = "x"."contract"
-                  AND "token_id" <@ "x"."token_id_range"
-                  AND "collection_id" IS NULL
+                WHERE "t"."contract" = "x"."contract"
+                  AND "t"."token_id" <@ "x"."token_id_range"
+                  AND "t"."collection_id" IS NULL
                 RETURNING 1
               )
               UPDATE "collections" SET
