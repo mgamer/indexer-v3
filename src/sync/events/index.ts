@@ -695,7 +695,7 @@ export const syncEvents = async (
         es.nftTransfers.addEvents(nftTransferEvents, backfill),
       ]);
 
-      if (backfill) {
+      if (backfill && tmpQueries.length) {
         await db.none(pgp.helpers.concat(tmpQueries));
       }
 
