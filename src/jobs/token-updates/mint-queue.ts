@@ -43,7 +43,7 @@ if (config.doBackgroundWork) {
           `
             SELECT "c"."id" FROM "collections" "c"
             WHERE "c"."contract" = $/contract/
-              AND "c"."token_id_range" @> $/tokenId/::numeric(78, 0)
+              AND "c"."token_id_range" @> $/tokenId/::NUMERIC(78, 0)
           `,
           {
             contract: toBuffer(contract),
@@ -53,31 +53,36 @@ if (config.doBackgroundWork) {
 
         const queries: any[] = [];
         if (collection) {
-          // If the collection is readily available in the database
-          // then all that's needed is to associate the token to it.
+          // If the collection is readily available in the database then
+          // all we needed to do is to associate it with the token. As a
+          // safety measure, we also associate all the other tokens that
+          // match it and have no collection yet.
           queries.push({
             query: `
-              UPDATE "tokens" SET
-                "collection_id" = $/collectionId/,
-                "updated_at" = now()
-              WHERE "contract" = $/contract/
-                AND "token_id" = $/tokenId/
+              WITH "x" AS (
+                SELECT
+                  "c"."contract",
+                  "c"."token_id_range"
+                FROM "collections" "c"
+                WHERE "c"."id" = $/collectionId/
+              ),
+              "y" AS (
+                UPDATE "tokens" SET
+                  "collection_id" = $/collectionId/,
+                  "updated_at" = now()
+                FROM "x"
+                WHERE "contract" = "x"."contract"
+                  AND "token_id" <@ "x"."token_id_range"
+                  AND "collection_id" IS NULL
+                RETURNING 1
+              )
+              UPDATE "collections" SET
+                "token_count" = "token_count" + (SELECT COUNT(*) FROM "y")
+              WHERE "id" = $/collectionId/
             `,
             values: {
               contract: toBuffer(contract),
               tokenId,
-              collectionId: collection.id,
-            },
-          });
-
-          // Update the collection's token count
-          queries.push({
-            query: `
-              UPDATE "collections" SET
-                "token_count" = "token_count" + 1
-              WHERE "id" = $/collectionId/
-            `,
-            values: {
               collectionId: collection.id,
             },
           });
@@ -147,29 +152,19 @@ if (config.doBackgroundWork) {
           // we update all tokens that match its token definition.
           queries.push({
             query: `
-              UPDATE "tokens" SET "collection_id" = $/collectionId/
-              WHERE "contract" = $/contract/
-                AND "token_id" <@ $/tokenIdRange:raw/
-                AND "collection_id" IS NULL
+              WITH "x" AS (
+                UPDATE "tokens" SET "collection_id" = $/collectionId/
+                WHERE "contract" = $/contract/
+                  AND "token_id" <@ $/tokenIdRange:raw/
+                RETURNING 1
+              )
+              UPDATE "collections" SET
+                "token_count" = (SELECT COUNT(*) FROM "x")
+              WHERE "id" = $/collectionId/
             `,
             values: {
               contract: toBuffer(collection.contract),
               tokenIdRange,
-              collectionId: collection.id,
-            },
-          });
-
-          // Update the collection's token count
-          queries.push({
-            query: `
-              UPDATE "collections" SET
-                "token_count" = (
-                  SELECT COUNT(*) FROM "tokens" "t"
-                  WHERE "t"."collection_id" = $/collectionId/
-                )
-              WHERE "id" = $/collectionId/
-            `,
-            values: {
               collectionId: collection.id,
             },
           });
