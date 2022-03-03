@@ -68,6 +68,7 @@ export const save = async (
       // Check: order has a valid listing time
       const listingTime = order.params.listingTime;
       if (listingTime - 3 * 60 >= currentTime) {
+        logger.info("debug", JSON.stringify({ listingTime, currentTime }));
         // TODO: Add support for not-yet-valid orders
         return results.push({
           id,
