@@ -558,7 +558,11 @@ export const syncEvents = async (
                   const from = parsed.args["from"].toLowerCase();
                   const to = parsed.args["to"].toLowerCase();
                   const amount = parsed.args["amount"].toString();
-                  if (from === maker && to === taker && amount === price) {
+                  if (
+                    ((maker === from && taker === to) ||
+                      (maker === to && taker === from)) &&
+                    amount === price
+                  ) {
                     paymentToken = event.log.address.toLowerCase();
                     break;
                   }
@@ -740,7 +744,11 @@ export const syncEvents = async (
                   const from = parsed.args["from"].toLowerCase();
                   const to = parsed.args["to"].toLowerCase();
                   const amount = parsed.args["amount"].toString();
-                  if (from === maker && to === taker && amount === price) {
+                  if (
+                    ((maker === from && taker === to) ||
+                      (maker === to && taker === from)) &&
+                    amount === price
+                  ) {
                     paymentToken = event.log.address.toLowerCase();
                     break;
                   }
