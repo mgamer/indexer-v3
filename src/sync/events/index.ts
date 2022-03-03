@@ -537,6 +537,10 @@ export const syncEvents = async (
                 ].includes(paymentToken)
               ) {
                 // Skip if we don't support the payment token
+                logger.warn(
+                  "wrong-payment-token",
+                  `Wrong payment token ${paymentToken} at block hash ${baseEventParams.blockHash} and tx hash ${baseEventParams.txHash}`
+                );
                 break;
               }
 
