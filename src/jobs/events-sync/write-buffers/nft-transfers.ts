@@ -31,7 +31,7 @@ if (config.doBackgroundWork) {
       const { query } = job.data;
 
       try {
-        await db.none(query);
+        // await db.none(query);
       } catch (error) {
         logger.error(
           QUEUE_NAME,
