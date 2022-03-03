@@ -458,7 +458,8 @@ export const syncEvents = async (
             // its fill event in order to get access to historical sales.
             // This is only relevant when backfilling though.
 
-            case "wyvern-v2-orders-matched": {
+            case "wyvern-v2-orders-matched":
+            case "wyvern-v2.3-orders-matched": {
               const parsedLog = eventData.abi.parseLog(log);
               const buyOrderId = parsedLog.args["buyHash"].toLowerCase();
               const sellOrderId = parsedLog.args["sellHash"].toLowerCase();
@@ -498,42 +499,6 @@ export const syncEvents = async (
                 break;
               }
 
-              let batchIndex = 1;
-              if (buyOrderId !== HashZero) {
-                fillEvents.push({
-                  orderKind: "wyvern-v2",
-                  orderId: buyOrderId,
-                  orderSide: "buy",
-                  maker,
-                  taker,
-                  price,
-                  contract: associatedNftTransferEvent.baseEventParams.address,
-                  tokenId: associatedNftTransferEvent.tokenId,
-                  amount: associatedNftTransferEvent.amount,
-                  baseEventParams: {
-                    ...baseEventParams,
-                    batchIndex: batchIndex++,
-                  },
-                });
-              }
-              if (sellOrderId !== HashZero) {
-                fillEvents.push({
-                  orderKind: "wyvern-v2",
-                  orderId: sellOrderId,
-                  orderSide: "sell",
-                  maker,
-                  taker,
-                  price,
-                  contract: associatedNftTransferEvent.baseEventParams.address,
-                  tokenId: associatedNftTransferEvent.tokenId,
-                  amount: associatedNftTransferEvent.amount,
-                  baseEventParams: {
-                    ...baseEventParams,
-                    batchIndex: batchIndex++,
-                  },
-                });
-              }
-
               // Detect the payment token
               let paymentToken = Sdk.Common.Addresses.Eth[config.chainId];
               for (const event of currentTxEvents.slice(0, -1).reverse()) {
@@ -569,11 +534,6 @@ export const syncEvents = async (
                 }
               }
 
-              logger.info(
-                "debug",
-                `Detected payment token ${paymentToken} for (${baseEventParams.txHash}, ${baseEventParams.logIndex})`
-              );
-
               if (
                 ![
                   Sdk.Common.Addresses.Eth[config.chainId],
@@ -581,71 +541,21 @@ export const syncEvents = async (
                 ].includes(paymentToken)
               ) {
                 // Skip if we don't support the payment token
-                // break;
-              }
-
-              break;
-            }
-
-            case "wyvern-v2.3-order-cancelled": {
-              const parsedLog = eventData.abi.parseLog(log);
-              const orderId = parsedLog.args["hash"].toLowerCase();
-
-              cancelEvents.push({
-                orderKind: "wyvern-v2.3",
-                orderId,
-                baseEventParams,
-              });
-
-              orderInfos.push({
-                context: `cancelled-${orderId}`,
-                id: orderId,
-                trigger: {
-                  kind: "cancel",
-                  txHash: baseEventParams.txHash,
-                  txTimestamp: baseEventParams.timestamp,
-                },
-              });
-
-              break;
-            }
-
-            case "wyvern-v2.3-orders-matched": {
-              const parsedLog = eventData.abi.parseLog(log);
-              const buyOrderId = parsedLog.args["buyHash"].toLowerCase();
-              const sellOrderId = parsedLog.args["sellHash"].toLowerCase();
-              const maker = parsedLog.args["maker"].toLowerCase();
-              const taker = parsedLog.args["taker"].toLowerCase();
-              const price = parsedLog.args["price"].toString();
-
-              // Since WyvernV2 fill events don't include the traded token, we
-              // have to deduce it from the nft transfer event occured exactly
-              // before the fill event. The code below assumes that events are
-              // retrieved in chronological orders from the blockchain.
-              let associatedNftTransferEvent: es.nftTransfers.Event | undefined;
-              if (nftTransferEvents.length) {
-                // Ensure the last nft transfer event was part of the fill
-                const event = nftTransferEvents[nftTransferEvents.length - 1];
-                if (
-                  event.baseEventParams.txHash === baseEventParams.txHash &&
-                  event.baseEventParams.logIndex ===
-                    baseEventParams.logIndex - 1 &&
-                  // Only single token fills are supported and recognized
-                  event.baseEventParams.batchIndex === 1
-                ) {
-                  associatedNftTransferEvent = event;
-                }
-              }
-
-              if (!associatedNftTransferEvent) {
-                // Skip if we can't associated to an nft transfer event
+                logger.warn(
+                  "wrong-payment-token",
+                  `Wrong payment token ${paymentToken} at block hash ${baseEventParams.blockHash} and tx hash ${baseEventParams.txHash}`
+                );
                 break;
               }
+
+              const orderKind = eventData.kind.startsWith("wyvern-v2.3")
+                ? "wyvern-v2.3"
+                : "wyvern-v2";
 
               let batchIndex = 1;
               if (buyOrderId !== HashZero) {
                 fillEvents.push({
-                  orderKind: "wyvern-v2.3",
+                  orderKind,
                   orderId: buyOrderId,
                   orderSide: "buy",
                   maker,
@@ -683,7 +593,7 @@ export const syncEvents = async (
               }
               if (sellOrderId !== HashZero) {
                 fillEvents.push({
-                  orderKind: "wyvern-v2.3",
+                  orderKind,
                   orderId: sellOrderId,
                   orderSide: "sell",
                   maker,
@@ -720,55 +630,28 @@ export const syncEvents = async (
                 });
               }
 
-              // Detect the payment token
-              let paymentToken = Sdk.Common.Addresses.Eth[config.chainId];
-              for (const event of currentTxEvents.slice(0, -1).reverse()) {
-                // Skip once we detect another fill in the same transaction
-                // (this will happen if filling through an aggregator).
-                if (
-                  event.log.topics[0] ===
-                  getEventData([eventData.kind])[0].topic
-                ) {
-                  break;
-                }
+              break;
+            }
 
-                // If we detect an Erc20 transfer as part of the same transaction
-                // then we assume it's the payment for the current sale and so we
-                // only keep the sale if the payment token is Weth.
-                const erc20EventData = getEventData(["erc20-transfer"])[0];
-                if (
-                  event.log.topics[0] === erc20EventData.topic &&
-                  event.log.topics.length === erc20EventData.numTopics
-                ) {
-                  const parsed = erc20EventData.abi.parseLog(event.log);
-                  const from = parsed.args["from"].toLowerCase();
-                  const to = parsed.args["to"].toLowerCase();
-                  const amount = parsed.args["amount"].toString();
-                  if (
-                    ((maker === from && taker === to) ||
-                      (maker === to && taker === from)) &&
-                    amount === price
-                  ) {
-                    paymentToken = event.log.address.toLowerCase();
-                    break;
-                  }
-                }
-              }
+            case "wyvern-v2.3-order-cancelled": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const orderId = parsedLog.args["hash"].toLowerCase();
 
-              logger.info(
-                "debug",
-                `Detected payment token ${paymentToken} for (${baseEventParams.txHash}, ${baseEventParams.logIndex})`
-              );
+              cancelEvents.push({
+                orderKind: "wyvern-v2.3",
+                orderId,
+                baseEventParams,
+              });
 
-              if (
-                ![
-                  Sdk.Common.Addresses.Eth[config.chainId],
-                  Sdk.Common.Addresses.Weth[config.chainId],
-                ].includes(paymentToken)
-              ) {
-                // Skip if we don't support the payment token
-                // break;
-              }
+              orderInfos.push({
+                context: `cancelled-${orderId}`,
+                id: orderId,
+                trigger: {
+                  kind: "cancel",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+              });
 
               break;
             }
