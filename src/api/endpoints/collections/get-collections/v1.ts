@@ -20,13 +20,11 @@ export const getCollectionsV1Options: RouteOptions = {
         .pattern(/^0x[a-f0-9]{40}$/),
       name: Joi.string().lowercase(),
       sortBy: Joi.string()
-        .valid("1_day_volume", "all_time_volume")
-        .default("all_time_volume"),
+        .valid("1DayVolume", "allTimeVolume")
+        .default("allTimeVolume"),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
-    })
-      .or("community", "contract", "name")
-      .oxor("community", "contract", "name"),
+    }).or("community", "contract", "name", "sortBy"),
   },
   response: {
     schema: Joi.object({
@@ -122,8 +120,8 @@ export const getCollectionsV1Options: RouteOptions = {
       // Grouping
       baseQuery += ` GROUP BY "c"."id"`;
 
-      // Sorting, only allow sorting when the name is not chosen
-      if (!query.name) {
+      // Sorting
+      if (query.sortBy) {
         switch (query.sortBy) {
           case "1_day_volume":
             baseQuery += ` ORDER BY "c"."day1_volume" DESC`;
