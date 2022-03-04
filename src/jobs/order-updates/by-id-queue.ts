@@ -181,6 +181,11 @@ if (config.doBackgroundWork) {
               }
             );
           } else if (data.side === "buy") {
+            // TODO: Updating the caches of a few tens of thousands of tokens
+            // can potentially be quite expensive to be done all at once. For
+            // this reason, it might be worthwhile to look into other ways of
+            // doing it, like updating each token individually or running the
+            // updates in fixed-size batches.
             await db.none(
               `
                 WITH "z" AS (
