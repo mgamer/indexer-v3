@@ -43,7 +43,10 @@ CREATE TABLE "ft_transfer_events" (
 
 ALTER TABLE "ft_transfer_events"
   ADD CONSTRAINT "ft_transfer_events_pk"
-  PRIMARY KEY ("block_hash", "tx_hash", "log_index");
+  PRIMARY KEY ("tx_hash", "log_index");
+
+CREATE INDEX "ft_transfer_events_block_hash_index"
+  ON "ft_transfer_events" ("block_hash");
 
 -- Down Migration
 
