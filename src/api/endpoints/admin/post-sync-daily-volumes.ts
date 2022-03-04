@@ -2,14 +2,15 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
+import { db } from "@/common/db";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
+import { DailyVolume } from "@/entities/daily-volumes/daily-volume";
 import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
-import { db } from '@/common/db';
-import { DailyVolume } from '@/entities/daily-volumes/daily-volume';
 
 export const postSyncDailyVolumes: RouteOptions = {
-  description: "Trigger a re-sync of daily volume calculations, " +
+  description:
+    "Trigger a re-sync of daily volume calculations, " +
     "volumes should only be calculated when fill_events have been fully synced",
   tags: ["api", "x-admin"],
   timeout: {
@@ -20,11 +21,13 @@ export const postSyncDailyVolumes: RouteOptions = {
       "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     payload: Joi.object({
-      days:  Joi.number()
+      days: Joi.number()
         .integer()
         .positive()
         .default(0)
-        .description('If no days are passed, will automatically resync from beginning of time.')
+        .description(
+          "If no days are passed, will automatically resync from beginning of time."
+        ),
     }),
   },
   handler: async (request: Request) => {
@@ -42,17 +45,19 @@ export const postSyncDailyVolumes: RouteOptions = {
 
       // Get the current day timestamp
       const date = new Date();
-      date.setUTCHours(0,0,0,0);
+      date.setUTCHours(0, 0, 0, 0);
       const currentDay = date.getTime() / 1000;
 
       // If no days are set, lets take the earliest fill_event that we have in the database
       // we calculate from that time onwards
       let startDay: number = 0;
       if (!days) {
-        const values = await db.oneOrNone(`SELECT MIN(timestamp) as earliest FROM fill_events_2`);
+        const values = await db.oneOrNone(
+          `SELECT MIN(timestamp) as earliest FROM fill_events_2`
+        );
         if (values) {
           const earliestDate = new Date(values.earliest);
-          earliestDate.setUTCHours(0,0,0,0);
+          earliestDate.setUTCHours(0, 0, 0, 0);
           startDay = earliestDate.getTime(); // Don't divide by 1000, it's already in seconds because the db is in secs
         }
         days = (currentDay - startDay) / (3600 * 24);
@@ -60,8 +65,11 @@ export const postSyncDailyVolumes: RouteOptions = {
         startDay = currentDay - days * 3600 * 24;
       }
 
-      if (!await DailyVolume.initiateLock(days)) {
-        return { message: "Job to update daily volumes is already running, please wait until it's finished" };
+      if (!(await DailyVolume.initiateLock(days))) {
+        return {
+          message:
+            "Job to update daily volumes is already running, please wait until it's finished",
+        };
       }
 
       let jobs = 0;
