@@ -17,9 +17,15 @@ export const postFixOrdersOptions: RouteOptions = {
       "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     payload: Joi.object({
-      kind: Joi.string().valid("balance").required(),
-      side: Joi.string().valid("sell").required(),
-    }),
+      id: Joi.string(),
+      maker: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}$/),
+      kind: Joi.string().valid("balance"),
+      side: Joi.string().valid("sell"),
+    })
+      .or("id", "maker", "kind")
+      .with("kind", "side"),
   },
   handler: async (request: Request) => {
     if (request.headers["x-admin-api-key"] !== config.adminApiKey) {
@@ -29,10 +35,23 @@ export const postFixOrdersOptions: RouteOptions = {
     const payload = request.payload as any;
 
     try {
+      const id = payload.id;
+      const maker = payload.maker;
       const kind = payload.kind;
       const side = payload.side;
 
-      await orderFixes.addToQueue([{ kind, side }]);
+      if (id) {
+        await orderFixes.addToQueue([{ by: "id", data: { id } }]);
+      } else if (maker) {
+        await orderFixes.addToQueue([{ by: "maker", data: { maker } }]);
+      } else if (kind && side) {
+        await orderFixes.addToQueue([
+          {
+            by: "all",
+            data: { kind, side },
+          },
+        ]);
+      }
 
       return { message: "Success" };
     } catch (error) {
