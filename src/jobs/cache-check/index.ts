@@ -38,8 +38,7 @@ if (config.doBackgroundWork) {
                       "c"."id",
                       "c"."contract"
                     FROM "collections" "c"
-                    OFFSET FLOOR(RANDOM() * (SELECT COUNT(*) FROM "collections"))
-                    LIMIT 5
+                    TABLESAMPLE system_rows(5)
                   ) "x"
                   LEFT JOIN LATERAL (
                     WITH "w" AS (
@@ -108,8 +107,7 @@ if (config.doBackgroundWork) {
                       "c"."id",
                       "c"."contract"
                     FROM "collections" "c"
-                    OFFSET FLOOR(RANDOM() * (SELECT COUNT(*) FROM "collections"))
-                    LIMIT 5
+                    TABLESAMPLE system_rows(5)
                   ) "x"
                   LEFT JOIN LATERAL (
                     WITH "w" AS (

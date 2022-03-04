@@ -41,6 +41,8 @@ CREATE INDEX "collections_day1_volume_index"
 CREATE INDEX "collections_all_time_volume_index"
   ON "collections" ("all_time_volume" DESC);
 
+CREATE EXTENSION tsm_system_rows;
+
 -- Down Migration
 
 DROP TABLE "collections";
