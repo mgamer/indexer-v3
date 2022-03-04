@@ -18,13 +18,14 @@ export const getOwnersV1Options: RouteOptions = {
       contract: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
-      tokenId: Joi.string().pattern(/^[0-9]+$/),
+      token: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}:[0-9]+$/),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     })
-      .oxor("collection", "contract")
-      .or("collection", "contract")
-      .with("tokenId", "contract"),
+      .oxor("collection", "contract", "token")
+      .or("collection", "contract", "token"),
   },
   response: {
     schema: Joi.object({
@@ -77,7 +78,12 @@ export const getOwnersV1Options: RouteOptions = {
         (query as any).contract = toBuffer(query.contract);
         conditions.push(`"t"."contract" = $/contract/`);
       }
-      if (query.tokenId) {
+      if (query.token) {
+        const [contract, tokenId] = query.token.split(":");
+
+        (query as any).contract = toBuffer(contract);
+        (query as any).tokenId = tokenId;
+        conditions.push(`"t"."contract" = $/contract/`);
         conditions.push(`"t"."token_id" = $/tokenId/`);
       }
       if (conditions.length) {
