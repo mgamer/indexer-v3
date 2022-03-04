@@ -45,11 +45,11 @@ export const saveLatestBlocks = async (
       "WITHSCORES"
     );
     if (result.length) {
-      // Only keep the latest 30 blocks
+      // Only keep the latest 60 blocks
       const latestBlockNegated = Number(result[1]);
       await redis.zremrangebyscore(
         LATEST_BLOCKS_CACHE_KEY,
-        latestBlockNegated + 30,
+        latestBlockNegated + 60,
         "+inf"
       );
     }
@@ -106,7 +106,7 @@ if (config.doBackgroundWork && config.catchup) {
               const blockInfos = await redis.zrange(
                 LATEST_BLOCKS_CACHE_KEY,
                 0,
-                50,
+                60,
                 "WITHSCORES"
               );
               for (let i = 0; i < blockInfos.length; i += 2) {
