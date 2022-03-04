@@ -8,6 +8,7 @@ CREATE TABLE "nft_transfer_events" (
   "tx_index" INT NOT NULL,
   "log_index" INT NOT NULL,
   "timestamp" INT NOT NULL,
+  "batch_index" INT NOT NULL,
   "from" BYTEA NOT NULL,
   "to" BYTEA NOT NULL,
   "token_id" NUMERIC(78, 0) NOT NULL,
@@ -16,7 +17,10 @@ CREATE TABLE "nft_transfer_events" (
 
 ALTER TABLE "nft_transfer_events"
   ADD CONSTRAINT "nft_transfer_events_pk"
-  PRIMARY KEY ("block_hash", "tx_hash", "log_index");
+  PRIMARY KEY ("tx_hash", "log_index", "batch_index");
+
+CREATE INDEX "nft_transfer_events_block_hash_index"
+  ON "nft_transfer_events" ("block_hash");
 
 CREATE INDEX "nft_transfer_events_address_block_index"
   ON "nft_transfer_events" ("address", "block" DESC);
