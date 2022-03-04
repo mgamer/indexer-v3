@@ -29,6 +29,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
       tx_index: event.baseEventParams.txIndex,
       log_index: event.baseEventParams.logIndex,
       timestamp: event.baseEventParams.timestamp,
+      batch_index: event.baseEventParams.batchIndex,
       from: toBuffer(event.from),
       to: toBuffer(event.to),
       token_id: event.tokenId,
@@ -64,6 +65,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
         "tx_index",
         "log_index",
         "timestamp",
+        "batch_index",
         "from",
         "to",
         "token_id",
@@ -83,6 +85,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           "tx_index",
           "log_index",
           "timestamp",
+          "batch_index",
           "from",
           "to",
           "token_id",
@@ -208,7 +211,7 @@ export const removeEvents = async (blockHash: string) => {
         GROUP BY "y"."address", "y"."token_id", "y"."owner"
       )
       ON CONFLICT ("contract", "token_id", "owner") DO
-      UPDATE SET "amount" = "nft_balances"."amount" + "excluded"."amount"
+      UPDATE SET "amount" = "nft_balances"."amount" + EXCLUDED."amount"
     `,
     { blockHash: toBuffer(blockHash) }
   );

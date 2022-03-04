@@ -32,7 +32,7 @@ export const parseEvent = (
   const txIndex = log.transactionIndex;
   const logIndex = log.logIndex;
 
-  // Estimate the event block's timestamp
+  // Estimate the event's block timestamp
   const { from, to } = blockRange;
   let timestamp: number;
   if (block === from.block) {
