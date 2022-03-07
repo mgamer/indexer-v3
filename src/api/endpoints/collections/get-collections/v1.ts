@@ -14,11 +14,16 @@ export const getCollectionsV1Options: RouteOptions = {
   tags: ["api", "collections"],
   validate: {
     query: Joi.object({
-      community: Joi.string().lowercase(),
+      community: Joi.string()
+        .lowercase()
+        .description('Filter to a particular community, e.g. `arttblocks`'),
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/),
-      name: Joi.string().lowercase(),
+        .pattern(/^0x[a-f0-9]{40}$/)
+        .description('Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`'),
+      name: Joi.string()
+        .lowercase()
+        .description('Search for collections that match a string, e.g. `bored`'),
       sortBy: Joi.string()
         .valid("1DayVolume", "allTimeVolume")
         .default("allTimeVolume"),
