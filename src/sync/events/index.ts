@@ -15,6 +15,9 @@ import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 
+import { idb } from "@/common/db";
+import { toBuffer } from "@/common/utils";
+
 // TODO: All event tables have as primary key (blockHash, txHash, logIndex).
 // While this is the correct way to do it in order to protect against chain
 // reorgs we might as well do without the block hash (since the exact block
@@ -532,6 +535,12 @@ export const syncEvents = async (
                   Sdk.Common.Addresses.Weth[config.chainId],
                 ].includes(paymentToken)
               ) {
+                if (backfill) {
+                  await idb.none(
+                    `DELETE FROM "fill_events_2" WHERE "tx_hash" = $/txHash/`,
+                    { txHash: toBuffer(baseEventParams.txHash) }
+                  );
+                }
                 // Skip if the payment token is not supported
                 break;
               }
