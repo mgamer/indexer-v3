@@ -518,7 +518,7 @@ export const syncEvents = async (
                   if (
                     ((maker === from && taker === to) ||
                       (maker === to && taker === from)) &&
-                    amount === price
+                    amount <= price
                   ) {
                     paymentToken = event.log.address.toLowerCase();
                     break;
