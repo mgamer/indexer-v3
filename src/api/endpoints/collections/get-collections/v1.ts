@@ -16,14 +16,18 @@ export const getCollectionsV1Options: RouteOptions = {
     query: Joi.object({
       community: Joi.string()
         .lowercase()
-        .description('Filter to a particular community, e.g. `arttblocks`'),
+        .description("Filter to a particular community, e.g. `artblocks`"),
       contract: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/)
-        .description('Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`'),
+        .description(
+          "Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        ),
       name: Joi.string()
         .lowercase()
-        .description('Search for collections that match a string, e.g. `bored`'),
+        .description(
+          "Search for collections that match a string, e.g. `bored`"
+        ),
       sortBy: Joi.string()
         .valid("1DayVolume", "allTimeVolume")
         .default("allTimeVolume"),
@@ -101,8 +105,6 @@ export const getCollectionsV1Options: RouteOptions = {
           "c"."all_time_rank",
           "c"."all_time_volume"
         FROM "collections" "c"
-        JOIN "tokens" "t"
-          ON "c"."id" = "t"."collection_id"
       `;
 
       // Filters
