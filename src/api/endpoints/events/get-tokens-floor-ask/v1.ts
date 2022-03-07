@@ -18,8 +18,9 @@ export const getTokensFloorAskV1Options: RouteOptions = {
       token: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}:[0-9]+$/),
-      startTimestamp: Joi.number().required(),
-      endTimestamp: Joi.number().required(),
+      startTimestamp: Joi.number().default(0),
+      endTimestamp: Joi.number().default(9999999999),
+      sortDirection: Joi.string().valid("asc", "desc").default("desc"),
       continuation: Joi.string().pattern(/^\d+(.\d+)?_\d+$/),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     }).oxor("contract", "token"),
@@ -35,7 +36,8 @@ export const getTokensFloorAskV1Options: RouteOptions = {
             "cancel",
             "balance-change",
             "approval-change",
-            "bootstrap"
+            "bootstrap",
+            "revalidation"
           ),
           contract: Joi.string()
             .lowercase()
@@ -111,7 +113,9 @@ export const getTokensFloorAskV1Options: RouteOptions = {
         (query as any).id = id;
 
         conditions.push(
-          `("e"."created_at", "e"."id") > (to_timestamp($/createdAt/), $/id/)`
+          `("e"."created_at", "e"."id") ${
+            query.sortDirection === "asc" ? ">" : "<"
+          } (to_timestamp($/createdAt/), $/id/)`
         );
       }
       if (conditions.length) {
@@ -119,7 +123,11 @@ export const getTokensFloorAskV1Options: RouteOptions = {
       }
 
       // Sorting
-      baseQuery += ` ORDER BY "e"."created_at", "e"."id"`;
+      baseQuery += `
+        ORDER BY
+          "e"."created_at" ${query.sortDirection},
+          "e"."id" ${query.sortDirection}
+      `;
 
       // Pagination
       baseQuery += ` LIMIT $/limit/`;
