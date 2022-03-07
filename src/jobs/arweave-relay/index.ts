@@ -8,6 +8,8 @@ import { config } from "@/config/index";
 
 const PENDING_DATA_KEY = "pending-arweave-data";
 
+// TODO: Add support for relaying token sets, once integrated
+
 export const addPendingOrdersWyvernV23 = async (
   data: { order: Sdk.WyvernV23.Order; schemaHash?: string }[]
 ) => {

@@ -1,7 +1,7 @@
 import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 
-import { db } from "@/common/db";
+import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { fromBuffer, toBuffer } from "@/common/utils";
@@ -12,7 +12,7 @@ export const getUserProxy = async (
 ): Promise<string | undefined> => {
   try {
     // First, try to get the user proxy from the local database
-    let proxy = await db
+    let proxy = await idb
       .oneOrNone(
         `
           SELECT "wp"."proxy" FROM "wyvern_proxies" "wp"
@@ -37,7 +37,7 @@ export const getUserProxy = async (
       }
 
       // Cache the proxy in the local database
-      await db.none(
+      await idb.none(
         `
           INSERT INTO "wyvern_proxies"(
             "owner",

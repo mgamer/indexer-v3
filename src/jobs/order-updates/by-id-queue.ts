@@ -1,7 +1,7 @@
 import { HashZero } from "@ethersproject/constants";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
-import { db } from "@/common/db";
+import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
@@ -37,7 +37,7 @@ if (config.doBackgroundWork) {
         const data: {
           side: string | null;
           token_set_id: string | null;
-        } | null = await db.oneOrNone(
+        } | null = await idb.oneOrNone(
           `
             SELECT
               "o"."side",
@@ -54,7 +54,7 @@ if (config.doBackgroundWork) {
 
           // Recompute `top_buy` for token sets that are not single token
           if (side === "buy" && !tokenSetId.startsWith("token")) {
-            await db.none(
+            await idb.none(
               `
                 WITH "x" AS (
                   SELECT
@@ -93,7 +93,7 @@ if (config.doBackgroundWork) {
 
           if (data.side === "sell") {
             // Atomically update the cache and trigger an api event if needed
-            await db.none(
+            await idb.none(
               `
                 WITH "z" AS (
                   SELECT
@@ -186,7 +186,7 @@ if (config.doBackgroundWork) {
             // this reason, it might be worthwhile to look into other ways of
             // doing it, like updating each token individually or running the
             // updates in fixed-size batches.
-            await db.none(
+            await idb.none(
               `
                 WITH "z" AS (
                   SELECT

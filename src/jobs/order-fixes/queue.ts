@@ -3,7 +3,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
-import { db } from "@/common/db";
+import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
@@ -54,7 +54,7 @@ if (config.doBackgroundWork) {
               }
 
               const limit = 1000;
-              const result = await db.oneOrNone(
+              const result = await idb.oneOrNone(
                 `
                   WITH "x" AS (
                     SELECT
@@ -138,7 +138,7 @@ if (config.doBackgroundWork) {
           }
 
           case "id": {
-            const result = await db.oneOrNone(
+            const result = await idb.oneOrNone(
               `
                 SELECT "o"."kind", "o"."raw_data" FROM "orders" "o"
                 WHERE "o"."id" = $/id/
@@ -167,7 +167,7 @@ if (config.doBackgroundWork) {
                     }
                   }
 
-                  const fixResult = await db.oneOrNone(
+                  const fixResult = await idb.oneOrNone(
                     `
                       UPDATE "orders" AS "o" SET
                         "fillability_status" = $/fillabilityStatus/,
@@ -206,7 +206,7 @@ if (config.doBackgroundWork) {
 
           case "maker": {
             // Trigger a fix for all of the maker's potentially valid orders
-            const result = await db.manyOrNone(
+            const result = await idb.manyOrNone(
               `
                 SELECT "o"."id" FROM "orders" "o"
                 WHERE "o"."maker" = $/maker/

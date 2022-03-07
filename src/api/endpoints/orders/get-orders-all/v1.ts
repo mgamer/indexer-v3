@@ -1,7 +1,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { db } from "@/common/db";
+import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
 
@@ -148,7 +148,7 @@ export const getOrdersAllV1Options: RouteOptions = {
       // Pagination
       baseQuery += ` LIMIT $/limit/`;
 
-      const rawResult = await db.manyOrNone(baseQuery, query);
+      const rawResult = await edb.manyOrNone(baseQuery, query);
 
       let continuation = null;
       if (rawResult.length === query.limit) {

@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-import { db } from "@/common/db";
+import { idb } from "@/common/db";
 
 const QUEUE_NAME = "events-sync-ft-transfers-write";
 
@@ -31,7 +31,7 @@ if (config.doBackgroundWork) {
       const { query } = job.data;
 
       try {
-        // await db.none(query);
+        await idb.none(query);
       } catch (error) {
         logger.error(
           QUEUE_NAME,

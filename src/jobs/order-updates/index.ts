@@ -1,6 +1,6 @@
 import cron from "node-cron";
 
-import { db } from "@/common/db";
+import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redlock } from "@/common/redis";
 import { config } from "@/config/index";
@@ -32,7 +32,7 @@ if (config.doBackgroundWork) {
           logger.info(`expired-orders-check`, "Invalidating expired orders");
 
           try {
-            const expiredOrders: { id: string }[] = await db.manyOrNone(`
+            const expiredOrders: { id: string }[] = await idb.manyOrNone(`
               UPDATE "orders" SET
                 "fillability_status" = 'expired',
                 "expiration" = UPPER("valid_between")

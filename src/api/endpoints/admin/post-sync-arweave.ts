@@ -10,7 +10,7 @@ export const postSyncArweaveOptions: RouteOptions = {
   description: "Trigger syncing of Arweave data.",
   tags: ["api", "x-admin"],
   timeout: {
-    server: 5 * 60 * 1000,
+    server: 2 * 60 * 1000,
   },
   validate: {
     headers: Joi.object({

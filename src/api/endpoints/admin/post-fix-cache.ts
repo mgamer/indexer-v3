@@ -2,7 +2,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { db, pgp } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { toBuffer } from "@/common/utils";
@@ -131,7 +131,7 @@ export const postFixCacheOptions: RouteOptions = {
       }
 
       if (queries.length) {
-        await db.none(pgp.helpers.concat(queries));
+        await idb.none(pgp.helpers.concat(queries));
       }
 
       return { message: "Success" };

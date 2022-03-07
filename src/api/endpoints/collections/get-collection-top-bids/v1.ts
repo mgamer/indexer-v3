@@ -1,7 +1,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { db } from "@/common/db";
+import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth } from "@/common/utils";
 
@@ -9,7 +9,8 @@ const version = "v1";
 
 export const getCollectionTopBidsV1Options: RouteOptions = {
   description: "Top bids for all tokens in a collection",
-  notes: "When users are placing collection or trait bids, this API can be used to show them where the bid is in the context of other bids, and how many tokens it will be the top bid for.",
+  notes:
+    "When users are placing collection or trait bids, this API can be used to show them where the bid is in the context of other bids, and how many tokens it will be the top bid for.",
   tags: ["api", "liquidity"],
   validate: {
     params: Joi.object({
@@ -48,7 +49,7 @@ export const getCollectionTopBidsV1Options: RouteOptions = {
         ORDER BY "t"."top_buy_value" DESC NULLS LAST
       `;
 
-      const result = await db.manyOrNone(baseQuery, params).then((result) =>
+      const result = await edb.manyOrNone(baseQuery, params).then((result) =>
         result.map((r) => ({
           value: formatEth(r.value),
           quantity: Number(r.quantity),

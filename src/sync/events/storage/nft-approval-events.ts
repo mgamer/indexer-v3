@@ -1,4 +1,4 @@
-import { db, pgp } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { BaseEventParams } from "@/events-sync/parser";
 
@@ -67,14 +67,14 @@ export const addEvents = async (events: Event[]) => {
   if (query) {
     // No need to buffer through the write queue since there
     // are no chances of database deadlocks in this scenario
-    await db.none(query);
+    await idb.none(query);
   }
 };
 
 export const removeEvents = async (blockHash: string) => {
   // Delete the approval events but skip reverting order status updates
   // since it might mess up other higher-level order processes.
-  await db.any(
+  await idb.any(
     `DELETE FROM "nft_approval_events" WHERE "block_hash" = $/blockHash/`,
     { blockHash: toBuffer(blockHash) }
   );

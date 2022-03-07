@@ -1,7 +1,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { db } from "@/common/db";
+import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, toBuffer } from "@/common/utils";
 
@@ -9,11 +9,12 @@ const version = "v1";
 
 export const getTokensFloorV1Options: RouteOptions = {
   description: "All prices in a collection",
-  notes: "This API will return the bestt price of every token in a collection that is currently on sale",
+  notes:
+    "This API will return the bestt price of every token in a collection that is currently on sale",
   tags: ["api", "tokens"],
   validate: {
     query: Joi.object({
-      collection: Joi.string(),
+      collection: Joi.string().lowercase(),
       contract: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
@@ -57,7 +58,7 @@ export const getTokensFloorV1Options: RouteOptions = {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
 
-      const result = await db
+      const result = await edb
         .manyOrNone(baseQuery, query)
         .then((result) =>
           Object.fromEntries(

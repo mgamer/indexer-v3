@@ -1,7 +1,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { db } from "@/common/db";
+import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
 
@@ -187,7 +187,7 @@ export const getCollectionV1Options: RouteOptions = {
         ) "z" ON TRUE
       `;
 
-      const result = await db.oneOrNone(baseQuery, params).then((r) =>
+      const result = await edb.oneOrNone(baseQuery, params).then((r) =>
         !r
           ? null
           : {

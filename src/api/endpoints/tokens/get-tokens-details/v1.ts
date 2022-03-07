@@ -1,7 +1,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { db } from "@/common/db";
+import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { getOrderSourceMetadata } from "@/orderbook/orders/utils";
@@ -10,11 +10,12 @@ const version = "v1";
 
 export const getTokensDetailsV1Options: RouteOptions = {
   description: "Tokens with metadata",
-  notes: "Get a list of tokens with full metadata. This is useful for showing a single token page, or scenarios that require more metadata. If you don't need this metadata, you should use the <a href='#/tokens/getTokensV1'>tokens</a> API, which is much faster.",
+  notes:
+    "Get a list of tokens with full metadata. This is useful for showing a single token page, or scenarios that require more metadata. If you don't need this metadata, you should use the <a href='#/tokens/getTokensV1'>tokens</a> API, which is much faster.",
   tags: ["api", "tokens"],
   validate: {
     query: Joi.object({
-      collection: Joi.string(),
+      collection: Joi.string().lowercase(),
       contract: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
@@ -218,7 +219,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
       baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
-      const result = await db.manyOrNone(baseQuery, query).then((result) =>
+      const result = await edb.manyOrNone(baseQuery, query).then((result) =>
         result.map((r) => ({
           token: {
             contract: fromBuffer(r.contract),

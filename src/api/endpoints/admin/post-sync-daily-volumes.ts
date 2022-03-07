@@ -2,7 +2,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { db } from "@/common/db";
+import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { DailyVolume } from "@/entities/daily-volumes/daily-volume";
@@ -14,7 +14,7 @@ export const postSyncDailyVolumes: RouteOptions = {
     "volumes should only be calculated when fill_events have been fully synced",
   tags: ["api", "x-admin"],
   timeout: {
-    server: 5 * 60 * 1000,
+    server: 2 * 60 * 1000,
   },
   validate: {
     headers: Joi.object({
@@ -52,7 +52,7 @@ export const postSyncDailyVolumes: RouteOptions = {
       // we calculate from that time onwards
       let startDay: number = 0;
       if (!days) {
-        const values = await db.oneOrNone(
+        const values = await idb.oneOrNone(
           `SELECT MIN(timestamp) as earliest FROM fill_events_2`
         );
         if (values) {

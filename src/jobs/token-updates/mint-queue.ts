@@ -1,7 +1,7 @@
 import axios from "axios";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
-import { db, pgp } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { network } from "@/common/provider";
 import { redis } from "@/common/redis";
@@ -39,7 +39,7 @@ if (config.doBackgroundWork) {
         // of various APIs which depend on these cached values.
 
         // First, check the database for any matching collection
-        const collection: { id: string } | null = await db.oneOrNone(
+        const collection: { id: string } | null = await idb.oneOrNone(
           `
             SELECT "c"."id" FROM "collections" "c"
             WHERE "c"."contract" = $/contract/
@@ -171,7 +171,7 @@ if (config.doBackgroundWork) {
         }
 
         if (queries.length) {
-          await db.none(pgp.helpers.concat(queries));
+          await idb.none(pgp.helpers.concat(queries));
         }
       } catch (error) {
         logger.error(

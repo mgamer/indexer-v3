@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import stringify from "json-stable-stringify";
 
-import { db, pgp } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
 
@@ -69,7 +69,7 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
       });
 
       // For efficiency, skip if data already exists
-      const tokenSetTokensExist = await db.oneOrNone(
+      const tokenSetTokensExist = await idb.oneOrNone(
         `
           SELECT 1 FROM "token_sets_tokens" "tst"
           WHERE "tst"."token_set_id" = $/tokenSetId/
@@ -111,7 +111,7 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
   }
 
   if (queries.length) {
-    await db.none(pgp.helpers.concat(queries));
+    await idb.none(pgp.helpers.concat(queries));
   }
 
   return valid;

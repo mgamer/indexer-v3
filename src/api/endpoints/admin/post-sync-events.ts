@@ -10,7 +10,7 @@ export const postSyncEventsOptions: RouteOptions = {
   description: "Trigger syncing of events.",
   tags: ["api", "x-admin"],
   timeout: {
-    server: 5 * 60 * 1000,
+    server: 2 * 60 * 1000,
   },
   validate: {
     headers: Joi.object({

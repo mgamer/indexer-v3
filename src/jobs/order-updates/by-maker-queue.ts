@@ -1,7 +1,7 @@
 import { AddressZero } from "@ethersproject/constants";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
-import { db, pgp } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
@@ -37,7 +37,7 @@ if (config.doBackgroundWork) {
       try {
         switch (data.kind) {
           case "buy-balance": {
-            const fillabilityStatuses = await db.manyOrNone(
+            const fillabilityStatuses = await idb.manyOrNone(
               `
                 SELECT
                   "o"."id",
@@ -78,7 +78,7 @@ if (config.doBackgroundWork) {
                 { table: "orders" }
               );
 
-              await db.none(
+              await idb.none(
                 `
                   UPDATE "orders" AS "o" SET
                     "fillability_status" = "x"."fillability_status"::order_fillability_status_t,
@@ -106,7 +106,7 @@ if (config.doBackgroundWork) {
           }
 
           case "sell-balance": {
-            const fillabilityStatuses = await db.manyOrNone(
+            const fillabilityStatuses = await idb.manyOrNone(
               `
                 SELECT
                   "o"."id",
@@ -153,7 +153,7 @@ if (config.doBackgroundWork) {
                 { table: "orders" }
               );
 
-              await db.none(
+              await idb.none(
                 `
                   UPDATE "orders" AS "o" SET
                     "fillability_status" = "x"."fillability_status"::order_fillability_status_t,
@@ -189,7 +189,7 @@ if (config.doBackgroundWork) {
               // For "sell" orders we can be sure the associated token set
               // consists of a single token - otherwise we should probably
               // use `DISTINCT ON ("o"."id")`.
-              const result = await db.manyOrNone(
+              const result = await idb.manyOrNone(
                 `
                   UPDATE "orders" AS "o" SET
                     "approval_status" = $/approvalStatus/,

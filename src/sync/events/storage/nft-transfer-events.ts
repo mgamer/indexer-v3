@@ -1,4 +1,4 @@
-import { db, pgp } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { BaseEventParams } from "@/events-sync/parser";
 import * as nftTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/nft-transfers";
@@ -171,14 +171,14 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
       // on the events to have been written to the database at the time
       // they get to run and we have no way to easily enforce this when
       // using the write buffer.
-      await db.none(pgp.helpers.concat(queries));
+      await idb.none(pgp.helpers.concat(queries));
     }
   }
 };
 
 export const removeEvents = async (blockHash: string) => {
   // Atomically delete the transfer events and revert balance updates
-  await db.any(
+  await idb.any(
     `
       WITH "x" AS (
         DELETE FROM "nft_transfer_events"

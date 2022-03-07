@@ -2,7 +2,7 @@ import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
 
-import { db, pgp } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -52,7 +52,7 @@ export const save = async (
       // TODO: We should probably store any missing information
       // for the orders that are cancelled or filled (these can
       // be missing the order details).
-      const orderExists = await db.oneOrNone(
+      const orderExists = await idb.oneOrNone(
         `SELECT 1 FROM "orders" "o" WHERE "o"."id" = $/id/`,
         { id }
       );
@@ -387,7 +387,7 @@ export const save = async (
         table: "orders",
       }
     );
-    await db.none(
+    await idb.none(
       pgp.helpers.insert(orderValues, columns) + " ON CONFLICT DO NOTHING"
     );
 

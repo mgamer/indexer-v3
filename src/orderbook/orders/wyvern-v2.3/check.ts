@@ -1,7 +1,7 @@
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseOrderInfo } from "@reservoir0x/sdk/dist/wyvern-v2.3/builders/base";
 
-import { db } from "@/common/db";
+import { idb } from "@/common/db";
 import { bn, toBuffer } from "@/common/utils";
 import * as utils from "@/orderbook/orders/wyvern-v2.3/utils";
 
@@ -11,7 +11,7 @@ export const offChainCheck = async (
   order: Sdk.WyvernV23.Order,
   info: BaseOrderInfo
 ) => {
-  const localTarget = await db.oneOrNone(
+  const localTarget = await idb.oneOrNone(
     `
       SELECT "c"."kind" FROM "contracts" "c"
       WHERE "c"."address" = $/address/
@@ -27,7 +27,7 @@ export const offChainCheck = async (
 
   if (order.params.side === Sdk.WyvernV23.Types.OrderSide.BUY) {
     // Check: maker has enough balance
-    const balanceResult = await db.oneOrNone(
+    const balanceResult = await idb.oneOrNone(
       `
         SELECT "fb"."amount" FROM "ft_balances" "fb"
         WHERE "fb"."contract" = $/contract/
@@ -52,7 +52,7 @@ export const offChainCheck = async (
     }
 
     // Check: maker has enough balance
-    const balanceResult = await db.oneOrNone(
+    const balanceResult = await idb.oneOrNone(
       `
         SELECT "nb"."amount" FROM "nft_balances" "nb"
         WHERE "nb"."contract" = $/contract/
@@ -70,7 +70,7 @@ export const offChainCheck = async (
     }
 
     // Check: maker has set the proper approval
-    const approvalResult = await db.oneOrNone(
+    const approvalResult = await idb.oneOrNone(
       `
         SELECT "nae"."approved" FROM "nft_approval_events" "nae"
         WHERE "nae"."address" = $/address/

@@ -1,7 +1,7 @@
 import { Request } from "@hapi/hapi";
 import { randomUUID } from "crypto";
 
-import { db } from "@/common/db";
+import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 
@@ -32,7 +32,7 @@ export class ApiKeyManager {
 
     // Create the record in the database
     try {
-      await db.none(
+      await idb.none(
         "insert into api_keys (${this:name}) values (${this:csv})",
         values
       );

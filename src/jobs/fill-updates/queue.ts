@@ -1,6 +1,6 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
-import { db } from "@/common/db";
+import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
@@ -39,7 +39,7 @@ if (config.doBackgroundWork) {
       } = job.data as FillInfo;
 
       try {
-        const result = await db.oneOrNone(
+        const result = await idb.oneOrNone(
           `
             SELECT "o"."token_set_id" FROM "orders" "o"
             WHERE "o"."id" = $/orderId/
@@ -53,7 +53,7 @@ if (config.doBackgroundWork) {
         if (result && result.token_set_id) {
           const components = result.token_set_id.split(":");
           if (components[0] !== "token") {
-            await db.none(
+            await idb.none(
               `
                 UPDATE "token_sets" SET
                   "last_buy_timestamp" = $/timestamp/,
@@ -71,7 +71,7 @@ if (config.doBackgroundWork) {
 
         if (amount === "1") {
           // TODO: We should also handle amounts greater than 1
-          await db.none(
+          await idb.none(
             `
               UPDATE "tokens" SET
                 "last_${orderSide}_timestamp" = $/timestamp/,

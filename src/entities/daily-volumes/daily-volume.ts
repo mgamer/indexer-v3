@@ -1,9 +1,8 @@
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { db, pgp } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 
 export class DailyVolume {
-
   private static lockKey = "daily-volumes-running";
 
   /**
@@ -14,25 +13,34 @@ export class DailyVolume {
    */
   public static async isDaySynced(startTime: number): Promise<boolean> {
     try {
-      const initialRow = await db.oneOrNone(`
+      const initialRow = await idb.oneOrNone(
+        `
             SELECT volume
             FROM "daily_volumes"
             WHERE "collection_id" = '-1'
               AND "timestamp" = $/startTime/
-        `, {
-        startTime
-      });
+        `,
+        {
+          startTime,
+        }
+      );
 
       if (initialRow !== null) {
-        logger.info('daily-volumes', `Daily volumes for ${startTime} already calculated, nothing to do`);
+        logger.info(
+          "daily-volumes",
+          `Daily volumes for ${startTime} already calculated, nothing to do`
+        );
         return true;
       }
     } catch (e) {
-      logger.error("daily-volumes", JSON.stringify({
-        msg: `Couldn't determine if the daily volume for timestamp ${startTime} was already added to the database`,
-        timestamp: startTime,
-        exception: e
-      }));
+      logger.error(
+        "daily-volumes",
+        JSON.stringify({
+          msg: `Couldn't determine if the daily volume for timestamp ${startTime} was already added to the database`,
+          timestamp: startTime,
+          exception: e,
+        })
+      );
 
       throw e;
     }
@@ -51,9 +59,11 @@ export class DailyVolume {
    * @param startTime
    * @param ignoreInsertedRows
    */
-  public static async calculateDay(startTime: number, ignoreInsertedRows: boolean = false): Promise<boolean> {
-
-    logger.info('daily-volumes', `Calculating daily volumes for ${startTime}`);
+  public static async calculateDay(
+    startTime: number,
+    ignoreInsertedRows: boolean = false
+  ): Promise<boolean> {
+    logger.info("daily-volumes", `Calculating daily volumes for ${startTime}`);
     // Don't recalculate if the day was already calculated
     if (!ignoreInsertedRows) {
       try {
@@ -70,7 +80,8 @@ export class DailyVolume {
 
     let results = [];
     try {
-      results = await db.manyOrNone(`
+      results = await idb.manyOrNone(
+        `
           SELECT
               "collection_id",
               sum("fe"."price") AS "volume",              
@@ -82,15 +93,21 @@ export class DailyVolume {
               "fe"."timestamp" >= $/startTime/
               AND "fe"."timestamp" < $/endTime/
           GROUP BY "collection_id"
-        `, {
-        startTime, endTime
-      });
+        `,
+        {
+          startTime,
+          endTime,
+        }
+      );
     } catch (e) {
-      logger.error('daily-volumes', JSON.stringify({
-        msg: `Error while trying to fetch the calculations for the daily volume`,
-        timestamp: startTime,
-        exception: e
-      }));
+      logger.error(
+        "daily-volumes",
+        JSON.stringify({
+          msg: `Error while trying to fetch the calculations for the daily volume`,
+          timestamp: startTime,
+          exception: e,
+        })
+      );
 
       return false;
     }
@@ -100,11 +117,11 @@ export class DailyVolume {
       results.push({
         collection_id: -1,
         volume: 0,
-        rank: -1
+        rank: -1,
       });
 
       const queries: any = [];
-      results.forEach((values) => {
+      results.forEach((values: any) => {
         queries.push({
           query: `
             INSERT INTO 
@@ -125,19 +142,22 @@ export class DailyVolume {
             DO 
                 UPDATE SET volume = $/volume/, rank = $/rank/
             `,
-          values: values
+          values: values,
         });
-      })
+      });
 
       try {
         const concat = pgp.helpers.concat(queries);
-        const result = await db.none(concat);
+        const result = await idb.none(concat);
       } catch (e: any) {
-        logger.error('daily-volumes', JSON.stringify({
-          msg: `Error while inserting/updating daily volumes`,
-          timestamp: startTime,
-          exception: e.message,
-        }));
+        logger.error(
+          "daily-volumes",
+          JSON.stringify({
+            msg: `Error while inserting/updating daily volumes`,
+            timestamp: startTime,
+            exception: e.message,
+          })
+        );
         return false;
       }
     }
@@ -152,34 +172,43 @@ export class DailyVolume {
     // Skip the query when the collection_id = -1
     const date = new Date();
     date.setUTCHours(0, 0, 0, 0);
-    const day1Timestamp  = (date.getTime() / 1000) - 24 * 3600;
-    const day7Timestamp = (date.getTime() / 1000) - 7 * 24 * 3600;
-    const day30Timestamp = (date.getTime() / 1000) - 30 * 24 * 3600;
+    const day1Timestamp = date.getTime() / 1000 - 24 * 3600;
+    const day7Timestamp = date.getTime() / 1000 - 7 * 24 * 3600;
+    const day30Timestamp = date.getTime() / 1000 - 30 * 24 * 3600;
 
-    let day1Results: any = []
-    let day7Results: any = []
-    let day30Results: any = []
-    let allTimeResults: any = []
+    let day1Results: any = [];
+    let day7Results: any = [];
+    let day30Results: any = [];
+    let allTimeResults: any = [];
 
     // Get the previous day data
     try {
-      day1Results = await db.manyOrNone(`
+      day1Results = await idb.manyOrNone(
+        `
           SELECT 
                  collection_id,
                  rank AS $1:name,
                  volume AS $2:name
           FROM daily_volumes
           WHERE timestamp = $3 AND collection_id != '-1'
-      `, ["day1_rank", "day1_volume", day1Timestamp]);
+      `,
+        ["day1_rank", "day1_volume", day1Timestamp]
+      );
     } catch (e: any) {
-      logger.error('daily-volumes', JSON.stringify({
-        msg: `Error while calculating previous day volumes`,
-        exception: e.message,
-      }));
+      logger.error(
+        "daily-volumes",
+        JSON.stringify({
+          msg: `Error while calculating previous day volumes`,
+          exception: e.message,
+        })
+      );
     }
 
     if (!day1Results.length) {
-      logger.error("daily-volumes", "No daily volumes found for the previous day, should be impossible");
+      logger.error(
+        "daily-volumes",
+        "No daily volumes found for the previous day, should be impossible"
+      );
     }
 
     // Get 7, 30, all_time days previous data
@@ -194,36 +223,65 @@ export class DailyVolume {
       `;
 
     try {
-      day7Results = await db.manyOrNone(query, ["day7_rank", "day7_volume", day7Timestamp]);
+      day7Results = await idb.manyOrNone(query, [
+        "day7_rank",
+        "day7_volume",
+        day7Timestamp,
+      ]);
     } catch (e: any) {
-      logger.error('daily-volumes', JSON.stringify({
-        msg: `Error while calculating 7 day daily volumes`,
-        exception: e.message,
-      }));
+      logger.error(
+        "daily-volumes",
+        JSON.stringify({
+          msg: `Error while calculating 7 day daily volumes`,
+          exception: e.message,
+        })
+      );
     }
 
     try {
-      day30Results = await db.manyOrNone(query, ["day30_rank", "day30_volume", day30Timestamp]);
+      day30Results = await idb.manyOrNone(query, [
+        "day30_rank",
+        "day30_volume",
+        day30Timestamp,
+      ]);
     } catch (e: any) {
-      logger.error('daily-volumes', JSON.stringify({
-        msg: `Error while calculating 30 day daily volumes`,
-        exception: e.message,
-      }));
+      logger.error(
+        "daily-volumes",
+        JSON.stringify({
+          msg: `Error while calculating 30 day daily volumes`,
+          exception: e.message,
+        })
+      );
     }
 
     try {
-      allTimeResults = await db.manyOrNone(query, ["all_time_rank", "all_time_volume", 0]);
+      allTimeResults = await idb.manyOrNone(query, [
+        "all_time_rank",
+        "all_time_volume",
+        0,
+      ]);
     } catch (e: any) {
-      logger.error('daily-volumes', JSON.stringify({
-        msg: `Error while calculating all time daily volumes`,
-        exception: e.message,
-      }));
+      logger.error(
+        "daily-volumes",
+        JSON.stringify({
+          msg: `Error while calculating all time daily volumes`,
+          exception: e.message,
+        })
+      );
     }
 
-    const mergedArr = this.mergeArrays(day1Results, day7Results, day30Results, allTimeResults);
+    const mergedArr = this.mergeArrays(
+      day1Results,
+      day7Results,
+      day30Results,
+      allTimeResults
+    );
 
     if (!mergedArr.length) {
-      logger.error("daily-volumes", "No daily volumes found for 1, 7 and 30 days. Should be impossible");
+      logger.error(
+        "daily-volumes",
+        "No daily volumes found for 1, 7 and 30 days. Should be impossible"
+      );
       return true;
     }
 
@@ -244,16 +302,19 @@ export class DailyVolume {
                 all_time_rank = $/all_time_rank/
             WHERE
                 id = $/collection_id/`,
-          values: row
+          values: row,
         });
       });
 
-      await db.none(pgp.helpers.concat(queries));
+      await idb.none(pgp.helpers.concat(queries));
     } catch (e: any) {
-      logger.error('daily-volumes', JSON.stringify({
-        msg: `Error while calculating the daily volumes for insertion into the collections table`,
-        exception: e.message,
-      }));
+      logger.error(
+        "daily-volumes",
+        JSON.stringify({
+          msg: `Error while calculating the daily volumes for insertion into the collections table`,
+          exception: e.message,
+        })
+      );
       return false;
     }
     return true;
@@ -269,32 +330,38 @@ export class DailyVolume {
   public static mergeArrays(day1: any, day7: any, day30: any, allTime: any) {
     const map = new Map();
     day1.forEach((item: any) => map.set(item.collection_id, item));
-    day7.forEach((item: any) => map.set(item.collection_id, {...map.get(item.collection_id), ...item}));
-    day30.forEach((item: any) => map.set(item.collection_id, {...map.get(item.collection_id), ...item}));
-    allTime.forEach((item: any) => map.set(item.collection_id, {...map.get(item.collection_id), ...item}));
+    day7.forEach((item: any) =>
+      map.set(item.collection_id, { ...map.get(item.collection_id), ...item })
+    );
+    day30.forEach((item: any) =>
+      map.set(item.collection_id, { ...map.get(item.collection_id), ...item })
+    );
+    allTime.forEach((item: any) =>
+      map.set(item.collection_id, { ...map.get(item.collection_id), ...item })
+    );
     const mergedArr = Array.from(map.values());
 
     for (let x: number = 0; x < mergedArr.length; x++) {
       const row = mergedArr[x];
 
-      if (!row['day1_volume']) {
-        row['day1_volume'] = 0;
-        row['day1_rank'] = null;
+      if (!row["day1_volume"]) {
+        row["day1_volume"] = 0;
+        row["day1_rank"] = null;
       }
 
-      if (!row['day7_volume']) {
-        row['day7_volume'] = 0;
-        row['day7_rank'] = null;
+      if (!row["day7_volume"]) {
+        row["day7_volume"] = 0;
+        row["day7_rank"] = null;
       }
 
-      if (!row['day30_volume']) {
-        row['day30_volume'] = 0;
-        row['day30_rank'] = null;
+      if (!row["day30_volume"]) {
+        row["day30_volume"] = 0;
+        row["day30_rank"] = null;
       }
 
-      if (!row['all_time_volume']) {
-        row['all_time_volume'] = 0;
-        row['all_time_rank'] = null;
+      if (!row["all_time_volume"]) {
+        row["all_time_volume"] = 0;
+        row["all_time_rank"] = null;
       }
     }
 
@@ -315,7 +382,7 @@ export class DailyVolume {
    * Check if calculations are running
    */
   public static async isJobRunning(): Promise<boolean> {
-    return await redis.get(this.lockKey) ? true : false;
+    return (await redis.get(this.lockKey)) ? true : false;
   }
 
   /**
@@ -332,9 +399,8 @@ export class DailyVolume {
     if (res <= 0) {
       await redis.expire(this.lockKey, 0);
       return true;
-    }  else {
+    } else {
       return false;
     }
   }
-
 }

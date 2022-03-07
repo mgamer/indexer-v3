@@ -1,7 +1,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { db } from "@/common/db";
+import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 
@@ -120,7 +120,7 @@ export const getSalesV1Options: RouteOptions = {
       baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
-      const result = await db.manyOrNone(baseQuery, query).then((result) =>
+      const result = await edb.manyOrNone(baseQuery, query).then((result) =>
         result.map((r) => ({
           token: {
             contract: fromBuffer(r.contract),

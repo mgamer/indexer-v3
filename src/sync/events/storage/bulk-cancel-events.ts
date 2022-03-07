@@ -1,4 +1,4 @@
-import { db, pgp } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { BaseEventParams } from "@/events-sync/parser";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
@@ -83,7 +83,7 @@ export const addEvents = async (events: Event[], backfill = false) => {
   if (query) {
     // No need to buffer through the write queue since there
     // are no chances of database deadlocks in this scenario
-    const result = await db.manyOrNone(query);
+    const result = await idb.manyOrNone(query);
 
     if (!backfill) {
       // TODO: Ideally, we should trigger all further processing
@@ -114,7 +114,7 @@ export const removeEvents = async (blockHash: string) => {
   // Delete the cancel events but skip reverting order status updates
   // since it's not possible to know what to revert to and even if we
   // knew, it might mess up other higher-level order processes.
-  await db.any(
+  await idb.any(
     `DELETE FROM "bulk_cancel_events" WHERE "block_hash" = $/blockHash/`,
     { blockHash: toBuffer(blockHash) }
   );

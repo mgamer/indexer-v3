@@ -1,7 +1,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { db } from "@/common/db";
+import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 
@@ -21,7 +21,7 @@ export const getUserTokensV1Options: RouteOptions = {
     }),
     query: Joi.object({
       community: Joi.string().lowercase(),
-      collection: Joi.string(),
+      collection: Joi.string().lowercase(),
       contract: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
@@ -150,7 +150,7 @@ export const getUserTokensV1Options: RouteOptions = {
       baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
-      const result = await db
+      const result = await edb
         .manyOrNone(baseQuery, { ...query, ...params })
         .then((result) =>
           result.map((r) => ({

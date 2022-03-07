@@ -1,4 +1,4 @@
-import { db, pgp } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { BaseEventParams } from "@/events-sync/parser";
 import { OrderKind } from "@/orderbook/orders";
@@ -119,7 +119,7 @@ export const addEvents = async (events: Event[]) => {
   if (queries.length) {
     // No need to buffer through the write queue since there
     // are no chances of database deadlocks in this scenario
-    await db.none(pgp.helpers.concat(queries));
+    await idb.none(pgp.helpers.concat(queries));
   }
 };
 
@@ -127,7 +127,7 @@ export const removeEvents = async (blockHash: string) => {
   // Delete the fill events but skip reverting order status updates
   // since it is not possible to know what to revert to and even if
   // we knew, it might mess up other higher-level order processes.
-  await db.any(
+  await idb.any(
     `DELETE FROM "fill_events_2" WHERE "block_hash" = $/blockHash/`,
     {
       blockHash: toBuffer(blockHash),

@@ -1,7 +1,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { db } from "@/common/db";
+import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 
@@ -9,11 +9,12 @@ const version = "v1";
 
 export const getTokensV1Options: RouteOptions = {
   description: "List of tokens",
-  notes: "This API is optimized for quickly fetching a list of tokens in a collection, sorted by price, with only the most important information returned. If you need more metadata, use the `tokens/details` API",
+  notes:
+    "This API is optimized for quickly fetching a list of tokens in a collection, sorted by price, with only the most important information returned. If you need more metadata, use the `tokens/details` API",
   tags: ["api", "tokens"],
   validate: {
     query: Joi.object({
-      collection: Joi.string(),
+      collection: Joi.string().lowercase(),
       contract: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
@@ -147,7 +148,7 @@ export const getTokensV1Options: RouteOptions = {
       baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
-      const result = await db.manyOrNone(baseQuery, query).then((result) =>
+      const result = await edb.manyOrNone(baseQuery, query).then((result) =>
         result.map((r) => ({
           contract: fromBuffer(r.contract),
           tokenId: r.token_id,
