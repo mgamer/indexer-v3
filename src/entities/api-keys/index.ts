@@ -69,6 +69,7 @@ export class ApiKeyManager {
       try {
         const apiKey = await redis.hgetall(redisKey);
         if (apiKey) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const log: any = {
             apiKey,
             route: request.route.path,

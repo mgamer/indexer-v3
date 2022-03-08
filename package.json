@@ -14,7 +14,7 @@
     "start": "yarn migrate up; node -r module-alias/register ./dist/index.js",
     "migrate": "ts-node ./node_modules/node-pg-migrate/bin/node-pg-migrate -m ./src/migrations",
     "debug": "yarn build && yarn migrate up; node --inspect -r module-alias/register ./dist/index.js",
-    "lint": "eslint --ext .js,.ts src",
+    "lint": "eslint --max-warnings 0 --ext .js,.ts,.json src",
     "format": "prettier --write \"src/**/*.+(js|ts|json)\"",
     "prepare": "husky install"
   },
