@@ -63,12 +63,9 @@ export class ApiKeyManager {
    *
    * @param key
    */
-  // TODO: Fix `any` types
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public static async getApiKey(key: string): Promise<null | any> {
+  public static async getApiKey(key: string): Promise<null|any> {
     const redisKey = `apikey:${key}`;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const apiKey: any = await redis.hgetall(redisKey);
+    const apiKey: any = await redis.hgetall(redisKey)
 
     if (apiKey && Object.keys(apiKey).length) {
       if (apiKey.empty) {
@@ -78,16 +75,13 @@ export class ApiKeyManager {
       }
     } else {
       // check if it exists in the database
-      const fromDb = await idb.oneOrNone(
-        `SELECT * FROM api_keys WHERE key = $/key/`,
-        { key }
-      );
+      const fromDb = await idb.oneOrNone(`SELECT * FROM api_keys WHERE key = $/key/`, { key });
       if (fromDb) {
         await redis.hset(redisKey, new Map(Object.entries(fromDb)));
         return fromDb;
       } else {
         const map = new Map();
-        map.set("empty", true);
+        map.set('empty', true);
         await redis.hset(redisKey, map);
         await redis.expire(redisKey, 3600 * 24);
       }
@@ -103,34 +97,46 @@ export class ApiKeyManager {
    */
   public static async logUsage(request: Request) {
     const key = request.headers["x-api-key"];
+
+    const log: any = {
+      route: request.route.path,
+      method: request.route.method
+    };
+
+    if (request.payload) {
+      log.payload = request.payload;
+    }
+
+    if (request.params) {
+      log.params = request.params;
+    }
+
+    if (request.query) {
+      log.query = request.query;
+    }
+
+    // Add key information if it exists
     if (key) {
       try {
         const apiKey = await ApiKeyManager.getApiKey(key);
+
+        // There is a key, set that key information
         if (apiKey) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const log: any = {
-            apiKey,
-            route: request.route.path,
-            method: request.route.method,
-          };
-          if (request.payload) {
-            log.payload = request.payload;
-          }
-
-          if (request.params) {
-            log.params = request.params;
-          }
-
-          if (request.query) {
-            log.query = request.query;
-          }
-
-          logger.info("metrics", JSON.stringify(log));
+          log.apiKey = apiKey;
+        } else {
+          // There is a key, but it's null
+          log.apiKey = {};
+          log.apiKey.app_name = key;
         }
-      } catch (e) {
-        logger.error("api-key", `${e}`);
-        // Don't do anything, just continue
+      } catch (e: any) {
+        logger.info("api-key", e.message);
       }
+    } else {
+      // No key, just log No Key as the app name
+      log.apiKey = {}
+      log.apiKey.app_name = "No Key"
     }
+
+    logger.info("metrics", JSON.stringify(log));
   }
 }
