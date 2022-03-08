@@ -18,11 +18,6 @@
     "format": "prettier --write \"src/**/*.+(js|ts|json)\"",
     "prepare": "husky install"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "yarn format && yarn lint"
-    }
-  },
   "dependencies": {
     "@bull-board/hapi": "^3.9.0",
     "@hapi/boom": "^9.1.4",
