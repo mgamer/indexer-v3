@@ -31,7 +31,9 @@ if (config.doBackgroundWork && config.catchup) {
             );
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          // Skip on any errors
+        })
   );
 
   // We should poll Arweave very often in order to get any new pending
@@ -54,6 +56,8 @@ if (config.doBackgroundWork && config.catchup) {
             );
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          // Skip on any errors
+        })
   );
 }

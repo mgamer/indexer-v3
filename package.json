@@ -13,7 +13,14 @@
     "build": "yarn clean; yarn compile",
     "start": "yarn migrate up; node -r module-alias/register ./dist/index.js",
     "migrate": "ts-node ./node_modules/node-pg-migrate/bin/node-pg-migrate -m ./src/migrations",
-    "debug": "yarn build && yarn migrate up; node --inspect -r module-alias/register ./dist/index.js"
+    "debug": "yarn build && yarn migrate up; node --inspect -r module-alias/register ./dist/index.js",
+    "lint": "eslint --ext .js,.ts src",
+    "format": "prettier --write \"src/**/*.+(js|ts|json)\""
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "yarn format && yarn lint"
+    }
   },
   "dependencies": {
     "@bull-board/hapi": "^3.9.0",
@@ -50,9 +57,15 @@
     "@types/node": "^17.0.0",
     "@types/node-cron": "^3.0.0",
     "@types/qs": "^6.9.7",
+    "@typescript-eslint/eslint-plugin": "^5.14.0",
+    "@typescript-eslint/parser": "^5.14.0",
+    "eslint": "^8.10.0",
+    "eslint-config-prettier": "^8.5.0",
+    "husky": "^7.0.4",
     "module-alias": "^2.2.2",
     "node-pg-migrate": "^6.0.0",
     "nodemon": "^2.0.15",
+    "prettier": "^2.5.1",
     "ts-node": "^10.4.0",
     "typescript": "^4.4.4"
   },

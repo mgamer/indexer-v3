@@ -1,14 +1,14 @@
 import crypto from "crypto";
 import stringify from "json-stable-stringify";
 
-import { idb, pgp } from "@/common/db";
+import { PgPromiseQuery, idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
 
 export type TokenSet = {
   id: string;
   schemaHash: string;
-  schema?: any;
+  schema?: object;
   contract: string;
 };
 
@@ -38,7 +38,7 @@ const isValid = (tokenSet: TokenSet) => {
 };
 
 export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
-  const queries: any[] = [];
+  const queries: PgPromiseQuery[] = [];
 
   const valid: TokenSet[] = [];
   for (const tokenSet of tokenSets) {

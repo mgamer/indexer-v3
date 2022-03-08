@@ -1,4 +1,4 @@
-import { Job, Queue, QueueScheduler, Worker } from "bullmq";
+import { Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
@@ -26,7 +26,7 @@ new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
-    async (_job: Job) => {
+    async () => {
       try {
         // We allow syncing of up to `maxBlocks` blocks behind the head
         // of the blockchain. If we lag behind more than that, then all

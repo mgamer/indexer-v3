@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 

@@ -11,8 +11,22 @@ export type Event = {
   baseEventParams: BaseEventParams;
 };
 
+type DbEvent = {
+  address: Buffer;
+  block: number;
+  block_hash: Buffer;
+  tx_hash: Buffer;
+  tx_index: number;
+  log_index: number;
+  timestamp: number;
+  batch_index: number;
+  order_kind: OrderKind;
+  maker: Buffer;
+  min_nonce: string;
+};
+
 export const addEvents = async (events: Event[], backfill = false) => {
-  const bulkCancelValues: any[] = [];
+  const bulkCancelValues: DbEvent[] = [];
   for (const event of events) {
     bulkCancelValues.push({
       address: toBuffer(event.baseEventParams.address),

@@ -83,7 +83,9 @@ if (config.doBackgroundWork && config.catchup) {
             );
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          // Skip on any errors
+        })
   );
 
   // Since we're polling up to the latest block of the chain, we have
@@ -148,6 +150,8 @@ if (config.doBackgroundWork && config.catchup) {
             );
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          // Skip on any errors
+        })
   );
 }

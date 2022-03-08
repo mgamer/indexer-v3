@@ -16,8 +16,28 @@ export type Event = {
   baseEventParams: BaseEventParams;
 };
 
+type DbEvent = {
+  address: Buffer;
+  block: number;
+  block_hash: Buffer;
+  tx_hash: Buffer;
+  tx_index: number;
+  log_index: number;
+  timestamp: number;
+  batch_index: number;
+  order_kind: OrderKind;
+  order_id: string;
+  order_side: "buy" | "sell";
+  maker: Buffer;
+  taker: Buffer;
+  price: string;
+  contract: Buffer;
+  token_id: string;
+  amount: string;
+};
+
 export const addEvents = async (events: Event[]) => {
-  const fillValues: any[] = [];
+  const fillValues: DbEvent[] = [];
   for (const event of events) {
     fillValues.push({
       address: toBuffer(event.baseEventParams.address),

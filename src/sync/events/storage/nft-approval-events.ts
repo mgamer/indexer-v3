@@ -9,8 +9,22 @@ export type Event = {
   baseEventParams: BaseEventParams;
 };
 
+type DbEvent = {
+  address: Buffer;
+  block: number;
+  block_hash: Buffer;
+  tx_hash: Buffer;
+  tx_index: number;
+  log_index: number;
+  timestamp: number;
+  batch_index: number;
+  owner: Buffer;
+  operator: Buffer;
+  approved: boolean;
+};
+
 export const addEvents = async (events: Event[]) => {
-  const approvalValues: any[] = [];
+  const approvalValues: DbEvent[] = [];
   for (const event of events) {
     approvalValues.push({
       address: toBuffer(event.baseEventParams.address),

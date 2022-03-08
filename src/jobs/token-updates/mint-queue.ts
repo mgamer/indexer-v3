@@ -1,7 +1,7 @@
 import axios from "axios";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
-import { idb, pgp } from "@/common/db";
+import { PgPromiseQuery, idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { network } from "@/common/provider";
 import { redis } from "@/common/redis";
@@ -51,7 +51,7 @@ if (config.doBackgroundWork) {
           }
         );
 
-        const queries: any[] = [];
+        const queries: PgPromiseQuery[] = [];
         if (collection) {
           // If the collection is readily available in the database then
           // all we needed to do is to associate it with the token. As a
@@ -97,11 +97,12 @@ if (config.doBackgroundWork) {
             slug: string;
             name: string;
             community: string | null;
-            metadata: any;
-            royalties: any;
+            metadata: object | null;
+            royalties: object | null;
             contract: string;
             tokenIdRange: [string, string] | null;
             tokenSetId: string;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } = (data as any).collection;
 
           const tokenIdRange = collection.tokenIdRange

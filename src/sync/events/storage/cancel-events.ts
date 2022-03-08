@@ -9,8 +9,20 @@ export type Event = {
   baseEventParams: BaseEventParams;
 };
 
+type DbEvent = {
+  address: Buffer;
+  block: number;
+  block_hash: Buffer;
+  tx_hash: Buffer;
+  tx_index: number;
+  log_index: number;
+  timestamp: number;
+  order_kind: OrderKind;
+  order_id: string;
+};
+
 export const addEvents = async (events: Event[]) => {
-  const cancelValues: any[] = [];
+  const cancelValues: DbEvent[] = [];
   for (const event of events) {
     cancelValues.push({
       address: toBuffer(event.baseEventParams.address),

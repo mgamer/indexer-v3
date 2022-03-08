@@ -26,9 +26,12 @@ if (config.doBackgroundWork) {
           }
         })
         .catch((e) => {
-          logger.error("daily-volumes", JSON.stringify({
-            msg: e.message
-          }));
+          logger.error(
+            "daily-volumes",
+            JSON.stringify({
+              msg: e.message,
+            })
+          );
         })
   );
 }

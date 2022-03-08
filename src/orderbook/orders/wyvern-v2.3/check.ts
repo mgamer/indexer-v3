@@ -61,7 +61,7 @@ export const offChainCheck = async (
       `,
       {
         contract: toBuffer(info.contract),
-        tokenId: (info as any).tokenId,
+        tokenId: (info as BaseOrderInfo & { tokenId: string }).tokenId,
         owner: toBuffer(order.params.maker),
       }
     );

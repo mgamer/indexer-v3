@@ -1,4 +1,4 @@
-import { Job, Queue, QueueScheduler, Worker } from "bullmq";
+import { Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { syncArweave } from "@/arweave-sync/index";
@@ -24,7 +24,7 @@ new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
-    async (_job: Job) => {
+    async () => {
       try {
         // The code below assumes we cannot have more than 100 (or whatever
         // is the query size limit for Arweave's gql endpoint) transactions

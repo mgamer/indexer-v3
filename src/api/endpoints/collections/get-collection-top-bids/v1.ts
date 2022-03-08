@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
@@ -38,7 +40,7 @@ export const getCollectionTopBidsV1Options: RouteOptions = {
     const params = request.params as any;
 
     try {
-      let baseQuery = `
+      const baseQuery = `
         SELECT
           "t"."top_buy_value" AS "value",
           COUNT(*) AS "quantity"

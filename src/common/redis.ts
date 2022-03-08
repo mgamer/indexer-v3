@@ -1,3 +1,4 @@
+import { BulkJobOptions } from "bullmq";
 import Redis from "ioredis";
 import Redlock from "redlock";
 
@@ -13,3 +14,12 @@ export const redis = new Redis(config.redisUrl, {
 
 // https://redis.io/topics/distlock
 export const redlock = new Redlock([redis.duplicate()], { retryCount: 0 });
+
+// Common types
+
+export type BullMQBulkJob = {
+  name: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any;
+  opts?: BulkJobOptions;
+};

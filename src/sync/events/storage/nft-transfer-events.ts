@@ -12,14 +12,35 @@ export type Event = {
   baseEventParams: BaseEventParams;
 };
 
+type DbEvent = {
+  address: Buffer;
+  block: number;
+  block_hash: Buffer;
+  tx_hash: Buffer;
+  tx_index: number;
+  log_index: number;
+  timestamp: number;
+  batch_index: number;
+  from: Buffer;
+  to: Buffer;
+  token_id: string;
+  amount: string;
+};
+
 export const addEvents = async (events: Event[], backfill: boolean) => {
   // Keep track of all unique contracts and tokens
   const uniqueContracts = new Set<string>();
   const uniqueTokens = new Set<string>();
 
-  const transferValues: any[] = [];
-  const contractValues: any[] = [];
-  const tokenValues: any[] = [];
+  const transferValues: DbEvent[] = [];
+  const contractValues: {
+    address: Buffer;
+    kind: "erc721" | "erc1155";
+  }[] = [];
+  const tokenValues: {
+    contract: Buffer;
+    token_id: string;
+  }[] = [];
   for (const event of events) {
     transferValues.push({
       address: toBuffer(event.baseEventParams.address),

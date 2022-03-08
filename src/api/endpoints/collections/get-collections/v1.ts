@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
@@ -130,11 +132,11 @@ export const getCollectionsV1Options: RouteOptions = {
       // Sorting
       if (query.sortBy) {
         switch (query.sortBy) {
-          case "1_day_volume":
+          case "1DayVolume":
             baseQuery += ` ORDER BY "c"."day1_volume" DESC`;
             break;
 
-          case "all_time_volume":
+          case "allTimeVolume":
           default:
             baseQuery += ` ORDER BY "c"."all_time_volume" DESC`;
             break;

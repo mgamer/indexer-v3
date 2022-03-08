@@ -41,6 +41,7 @@ export const start = async (): Promise<void> => {
       validate: {
         failAction: (_request, _h, error) => {
           // Remove any irrelevant information from the response
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           delete (error as any).output.payload.validation;
           throw error;
         },
@@ -92,6 +93,7 @@ export const start = async (): Promise<void> => {
         documentationPath: "/",
         info: {
           title: "Reservoir API",
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
           version: require("../../package.json").version,
           description: apiDescription,
         },

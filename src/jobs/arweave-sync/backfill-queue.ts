@@ -2,7 +2,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { syncArweave } from "@/arweave-sync/index";
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
+import { BullMQBulkJob, redis } from "@/common/redis";
 import { config } from "@/config/index";
 
 const QUEUE_NAME = "arweave-sync-backfill";
@@ -66,7 +66,7 @@ export const addToQueue = async (
   const blocksPerBatch = options?.blocksPerBatch ?? 4;
 
   // Sync in reverse to handle more recent events first
-  const jobs: any[] = [];
+  const jobs: BullMQBulkJob[] = [];
   for (let to = toBlock; to >= fromBlock; to -= blocksPerBatch) {
     const from = Math.max(fromBlock, to - blocksPerBatch + 1);
     jobs.push({

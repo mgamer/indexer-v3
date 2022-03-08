@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
@@ -50,7 +52,7 @@ export const postSyncDailyVolumes: RouteOptions = {
 
       // If no days are set, lets take the earliest fill_event that we have in the database
       // we calculate from that time onwards
-      let startDay: number = 0;
+      let startDay = 0;
       if (!days) {
         const values = await idb.oneOrNone(
           `SELECT MIN(timestamp) as earliest FROM fill_events_2`
@@ -72,11 +74,9 @@ export const postSyncDailyVolumes: RouteOptions = {
         };
       }
 
-      let jobs = 0;
       // Trigger a sync job for each day
       for (let x: number = startDay; x < currentDay; x = x + 3600 * 24) {
         await dailyVolumes.addToQueue(x, true);
-        jobs++;
       }
 
       return { message: "Request accepted" };

@@ -60,6 +60,8 @@ if (config.doBackgroundWork) {
             );
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          // Skip on any errors
+        })
   );
 }

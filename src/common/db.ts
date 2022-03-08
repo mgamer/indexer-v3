@@ -23,3 +23,10 @@ export const idb = pgp({
   query_timeout: 3 * 60 * 1000,
   statement_timeout: 3 * 60 * 1000,
 });
+
+// Common types
+
+export type PgPromiseQuery = {
+  query: string;
+  values?: object;
+};

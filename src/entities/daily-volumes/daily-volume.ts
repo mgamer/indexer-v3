@@ -1,6 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+// TODO: Get rid of all the `any` types
+
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { idb, pgp } from "@/common/db";
+import { PgPromiseQuery, idb, pgp } from "@/common/db";
 
 export class DailyVolume {
   private static lockKey = "daily-volumes-running";
@@ -61,7 +65,7 @@ export class DailyVolume {
    */
   public static async calculateDay(
     startTime: number,
-    ignoreInsertedRows: boolean = false
+    ignoreInsertedRows = false
   ): Promise<boolean> {
     logger.info("daily-volumes", `Calculating daily volumes for ${startTime}`);
     // Don't recalculate if the day was already calculated
@@ -120,7 +124,7 @@ export class DailyVolume {
         rank: -1,
       });
 
-      const queries: any = [];
+      const queries: PgPromiseQuery[] = [];
       results.forEach((values: any) => {
         queries.push({
           query: `
@@ -148,7 +152,7 @@ export class DailyVolume {
 
       try {
         const concat = pgp.helpers.concat(queries);
-        const result = await idb.none(concat);
+        await idb.none(concat);
       } catch (e: any) {
         logger.error(
           "daily-volumes",
@@ -341,7 +345,7 @@ export class DailyVolume {
     );
     const mergedArr = Array.from(map.values());
 
-    for (let x: number = 0; x < mergedArr.length; x++) {
+    for (let x = 0; x < mergedArr.length; x++) {
       const row = mergedArr[x];
 
       if (!row["day1_volume"]) {

@@ -8,7 +8,11 @@ import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
-import { OrderMetadata, defaultSchemaHash } from "@/orderbook/orders/utils";
+import {
+  DbOrder,
+  OrderMetadata,
+  defaultSchemaHash,
+} from "@/orderbook/orders/utils";
 import { offChainCheck } from "@/orderbook/orders/wyvern-v2.3/check";
 import * as tokenSet from "@/orderbook/token-sets";
 
@@ -27,7 +31,7 @@ export const save = async (
   relayToArweave?: boolean
 ): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
-  const orderValues: any[] = [];
+  const orderValues: DbOrder[] = [];
 
   const arweaveData: {
     order: Sdk.WyvernV23.Order;
@@ -147,6 +151,7 @@ export const save = async (
       let approvalStatus = "approved";
       try {
         await offChainCheck(order, info);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         // Keep any orders that can potentially get valid in the future
         if (error.message === "no-approval") {
@@ -180,7 +185,8 @@ export const save = async (
         }
 
         case "single-token": {
-          const tokenId = (info as any).tokenId;
+          const typedInfo = info as typeof info & { tokenId: string };
+          const tokenId = typedInfo.tokenId;
           if (tokenId) {
             [{ id: tokenSetId }] = await tokenSet.singleToken.save([
               {
@@ -196,7 +202,8 @@ export const save = async (
         }
 
         case "single-token-v2": {
-          const tokenId = (info as any).tokenId;
+          const typedInfo = info as typeof info & { tokenId: string };
+          const tokenId = typedInfo.tokenId;
           if (tokenId) {
             [{ id: tokenSetId }] = await tokenSet.singleToken.save([
               {
@@ -212,7 +219,8 @@ export const save = async (
         }
 
         case "token-list": {
-          const merkleRoot = (info as any).merkleRoot;
+          const typedInfo = info as typeof info & { merkleRoot: string };
+          const merkleRoot = typedInfo.merkleRoot;
           if (merkleRoot) {
             // Skip saving the token set since we don't know the underlying tokens
             tokenSetId = `list:${info.contract}:${merkleRoot}`;
@@ -222,8 +230,12 @@ export const save = async (
         }
 
         case "token-range": {
-          const startTokenId = (info as any).startTokenId;
-          const endTokenId = (info as any).endTokenId;
+          const typedInfo = info as typeof info & {
+            startTokenId: string;
+            endTokenId: string;
+          };
+          const startTokenId = typedInfo.startTokenId;
+          const endTokenId = typedInfo.endTokenId;
           if (startTokenId && endTokenId) {
             [{ id: tokenSetId }] = await tokenSet.tokenRange.save([
               {

@@ -8,7 +8,10 @@ import * as tokenList from "@/orderbook/token-sets/token-list";
 // - `wyvern-v2.3` orders
 // - `list` token sets
 
-export const processTransactionData = async (transactionData: any) => {
+export const processTransactionData = async (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  transactionData: { kind: string; data: any }[]
+) => {
   const orderInfos: orderbookOrders.GenericOrderInfo[] = [];
   const tokenSets: tokenList.TokenSet[] = [];
 

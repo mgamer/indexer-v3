@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { idb, pgp } from "@/common/db";
+import { PgPromiseQuery, idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { toBuffer } from "@/common/utils";
@@ -40,7 +42,7 @@ export const postFixCacheOptions: RouteOptions = {
       const kind = payload.kind;
       const contracts = payload.contracts;
 
-      const queries: any[] = [];
+      const queries: PgPromiseQuery[] = [];
       switch (kind) {
         case "tokens-floor-sell": {
           for (const contract of contracts) {

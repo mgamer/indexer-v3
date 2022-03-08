@@ -10,8 +10,21 @@ export type Event = {
   baseEventParams: BaseEventParams;
 };
 
+type DbEvent = {
+  address: Buffer;
+  block: number;
+  block_hash: Buffer;
+  tx_hash: Buffer;
+  tx_index: number;
+  log_index: number;
+  timestamp: number;
+  from: Buffer;
+  to: Buffer;
+  amount: string;
+};
+
 export const addEvents = async (events: Event[], backfill: boolean) => {
-  const transferValues: any[] = [];
+  const transferValues: DbEvent[] = [];
   for (const event of events) {
     transferValues.push({
       address: toBuffer(event.baseEventParams.address),

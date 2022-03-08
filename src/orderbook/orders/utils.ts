@@ -40,3 +40,25 @@ export const getOrderSourceMetadata = (
     }
   }
 };
+
+// Underlying database model for an order
+export type DbOrder = {
+  id: string;
+  kind: "wyvern-v2.3";
+  side: "buy" | "sell";
+  fillability_status: string;
+  approval_status: string;
+  token_set_id: string;
+  token_set_schema_hash: Buffer;
+  maker: Buffer;
+  taker: Buffer;
+  price: string;
+  value: string;
+  valid_between: string;
+  nonce: string;
+  source_id: Buffer | null;
+  fee_bps: number;
+  fee_breakdown: object | null;
+  raw_data: object;
+  expiration: string;
+};

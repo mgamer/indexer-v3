@@ -1,7 +1,7 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
+import { BullMQBulkJob, redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { EventDataKind } from "@/events-sync/data";
 import { syncEvents } from "@/events-sync/index";
@@ -68,7 +68,7 @@ export const addToQueue = async (
   const prioritized = options?.prioritized ?? false;
 
   // Sync in reverse to handle more recent events first
-  const jobs: any[] = [];
+  const jobs: BullMQBulkJob[] = [];
   for (let to = toBlock; to >= fromBlock; to -= blocksPerBatch) {
     const from = Math.max(fromBlock, to - blocksPerBatch + 1);
     jobs.push({

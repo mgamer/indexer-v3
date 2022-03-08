@@ -5,7 +5,6 @@ import * as v001 from "@/arweave-sync/common/v001";
 import { arweaveGateway, network } from "@/common/provider";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { config } from "@/config/index";
 
 type Transaction = {
   version: string;
@@ -121,6 +120,7 @@ export const syncArweave = async (options: {
         continue;
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let data: any;
       if (pending) {
         // https://discordapp.com/channels/357957786904166400/358038065974870018/945399371426582579
