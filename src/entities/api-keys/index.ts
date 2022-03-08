@@ -63,9 +63,12 @@ export class ApiKeyManager {
    *
    * @param key
    */
-  public static async getApiKey(key: string): Promise<null|any> {
+  // TODO: Fix `any` types
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public static async getApiKey(key: string): Promise<null | any> {
     const redisKey = `apikey:${key}`;
-    const apiKey: any = await redis.hgetall(redisKey)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const apiKey: any = await redis.hgetall(redisKey);
 
     if (apiKey && Object.keys(apiKey).length) {
       if (apiKey.empty) {
@@ -75,13 +78,16 @@ export class ApiKeyManager {
       }
     } else {
       // check if it exists in the database
-      const fromDb = await idb.oneOrNone(`SELECT * FROM api_keys WHERE key = $/key/`, { key });
+      const fromDb = await idb.oneOrNone(
+        `SELECT * FROM api_keys WHERE key = $/key/`,
+        { key }
+      );
       if (fromDb) {
         await redis.hset(redisKey, new Map(Object.entries(fromDb)));
         return fromDb;
       } else {
         const map = new Map();
-        map.set('empty', true);
+        map.set("empty", true);
         await redis.hset(redisKey, map);
         await redis.expire(redisKey, 3600 * 24);
       }
