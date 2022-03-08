@@ -97,33 +97,46 @@ export class ApiKeyManager {
    */
   public static async logUsage(request: Request) {
     const key = request.headers["x-api-key"];
+
+    const log: any = {
+      route: request.route.path,
+      method: request.route.method
+    };
+
+    if (request.payload) {
+      log.payload = request.payload;
+    }
+
+    if (request.params) {
+      log.params = request.params;
+    }
+
+    if (request.query) {
+      log.query = request.query;
+    }
+
+    // Add key information if it exists
     if (key) {
       try {
         const apiKey = await ApiKeyManager.getApiKey(key);
+
+        // There is a key, set that key information
         if (apiKey) {
-          const log: any = {
-            apiKey,
-            route: request.route.path,
-            method: request.route.method,
-          };
-          if (request.payload) {
-            log.payload = request.payload;
-          }
-
-          if (request.params) {
-            log.params = request.params;
-          }
-
-          if (request.query) {
-            log.query = request.query;
-          }
-
-          logger.info("metrics", JSON.stringify(log));
+          log.apiKey = apiKey;
+        } else {
+          // There is a key, but it's null
+          log.apiKey = {};
+          log.apiKey.app_name = key;
         }
-      } catch (e) {
-        logger.error("api-key", `${e}`);
-        // Don't do anything, just continue
+      } catch (e: any) {
+        logger.info("api-key", e.message);
       }
+    } else {
+      // No key, just log No Key as the app name
+      log.apiKey = {}
+      log.apiKey.app_name = "No Key"
     }
+
+    logger.info("metrics", JSON.stringify(log));
   }
 }
