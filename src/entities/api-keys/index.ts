@@ -60,7 +60,6 @@ export class ApiKeyManager {
    * In case the details are not in redis (new redis, api key somehow disappeared from redis) we try to fetch it from
    * the database. In case we couldn't find the key in the database, the key must be wrong. To avoid us doing the
    * lookup constantly in the database, we set a temporary hash key in redis with one value { empty: true }
-   * We also expire that key. Someone with bad intentions might just pass spam keys, hence the expiration on that key
    *
    * @param key
    */
@@ -84,7 +83,7 @@ export class ApiKeyManager {
         const map = new Map();
         map.set('empty', true);
         await redis.hset(redisKey, map);
-        await redis.expire(redisKey, 3600 * 24); // just to protect against people with bad intentions
+        await redis.expire(redisKey, 3600 * 24);
       }
     }
 
