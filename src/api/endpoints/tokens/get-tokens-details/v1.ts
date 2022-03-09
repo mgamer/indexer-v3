@@ -129,6 +129,17 @@ export const getTokensDetailsV1Options: RouteOptions = {
               AND "nb"."amount" > 0
             LIMIT 1
           ) AS "owner",
+          (
+            SELECT
+              array_agg(json_build_object('key', "ak"."key", 'value', "a"."value"))
+            FROM "token_attributes" "ta"
+            JOIN "attributes" "a"
+              ON "ta"."attribute_id" = "a"."id"
+            JOIN "attribute_keys" "ak"
+              ON "a"."attribute_key_id" = "ak"."id"
+            WHERE "ta"."contract" = "t"."contract"
+              AND "ta"."token_id" = "t"."token_id"
+          ) AS "attributes",
           "t"."floor_sell_id",
           "t"."floor_sell_value",
           "t"."floor_sell_maker",
@@ -242,8 +253,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
               timestamp: r.last_sell_timestamp,
             },
             owner: fromBuffer(r.owner),
-            // TODO: Integrate attributes once available
-            attributes: [],
+            attributes: r.attributes || [],
           },
           market: {
             floorAsk: {
