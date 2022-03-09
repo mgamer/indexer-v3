@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+// TODO: Fix `any` types
+
 import { Request } from "@hapi/hapi";
 import { randomUUID } from "crypto";
 
@@ -63,9 +67,9 @@ export class ApiKeyManager {
    *
    * @param key
    */
-  public static async getApiKey(key: string): Promise<null|any> {
+  public static async getApiKey(key: string): Promise<null | any> {
     const redisKey = `apikey:${key}`;
-    const apiKey: any = await redis.hgetall(redisKey)
+    const apiKey: any = await redis.hgetall(redisKey);
 
     if (apiKey && Object.keys(apiKey).length) {
       if (apiKey.empty) {
@@ -75,13 +79,16 @@ export class ApiKeyManager {
       }
     } else {
       // check if it exists in the database
-      const fromDb = await idb.oneOrNone(`SELECT * FROM api_keys WHERE key = $/key/`, { key });
+      const fromDb = await idb.oneOrNone(
+        `SELECT * FROM api_keys WHERE key = $/key/`,
+        { key }
+      );
       if (fromDb) {
         await redis.hset(redisKey, new Map(Object.entries(fromDb)));
         return fromDb;
       } else {
         const map = new Map();
-        map.set('empty', true);
+        map.set("empty", true);
         await redis.hset(redisKey, map);
         await redis.expire(redisKey, 3600 * 24);
       }
@@ -100,7 +107,7 @@ export class ApiKeyManager {
 
     const log: any = {
       route: request.route.path,
-      method: request.route.method
+      method: request.route.method,
     };
 
     if (request.payload) {
@@ -133,8 +140,8 @@ export class ApiKeyManager {
       }
     } else {
       // No key, just log No Key as the app name
-      log.apiKey = {}
-      log.apiKey.app_name = "No Key"
+      log.apiKey = {};
+      log.apiKey.app_name = "No Key";
     }
 
     logger.info("metrics", JSON.stringify(log));

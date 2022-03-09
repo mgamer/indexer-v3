@@ -40,26 +40,16 @@ if (config.doBackgroundWork) {
 
       try {
         // Token metadata
-        await idb.none(
+        const result = await idb.oneOrNone(
           `
-            INSERT INTO "tokens" (
-              "contract",
-              "token_id",
-              "name",
-              "description",
-              "image"
-            ) VALUES (
-              $/contract/,
-              $/tokenId/,
-              $/name/,
-              $/description/,
-              $/image/
-            )
-            ON CONFLICT ("contract", "token_id") DO UPDATE SET
+            UPDATE "tokens" SET
               "name" = $/name/,
               "description" = $/description/,
               "image" = $/image/,
               "updated_at" = now()
+            WHERE "contract" = $/contract/
+              AND "token_id" = $/tokenId/
+            RETURNING 1
           `,
           {
             contract: toBuffer(contract),
@@ -69,6 +59,10 @@ if (config.doBackgroundWork) {
             image: imageUrl || null,
           }
         );
+        if (!result) {
+          // Skip if there is no associated entry in the `tokens` table
+          return;
+        }
 
         // Delete all previous attributes of the token
         await idb.none(
