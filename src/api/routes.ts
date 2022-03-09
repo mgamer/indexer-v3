@@ -151,6 +151,12 @@ export const setupRoutes = (server: Server) => {
     options: tokensEndpoints.getUserTokensV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/users/{user}/tokens/v2",
+    options: tokensEndpoints.getUserTokensV2Options,
+  });
+
   // Transfers
 
   server.route({
