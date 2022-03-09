@@ -5,7 +5,7 @@ CREATE TABLE "api_keys" (
   "app_name" TEXT NOT NULL,
   "website" TEXT NOT NULL,
   "email" TEXT NOT NULL,
-  "created_at" TIMESTAMPTZ DEFAULT NOW(),
+  "created_at" TIMESTAMPTZ DEFAULT now(),
   "active" BOOLEAN NOT NULL DEFAULT TRUE
 );
 

@@ -392,8 +392,6 @@ export const save = async (
         { name: "fee_breakdown", mod: ":json" },
         "raw_data",
         { name: "expiration", mod: ":raw" },
-        { name: "created_at", init: () => "now()", mod: ":raw" },
-        { name: "updated_at", init: () => "now()", mod: ":raw" },
       ],
       {
         table: "orders",

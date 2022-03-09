@@ -1,84 +1,73 @@
 -- Up Migration
-create table daily_volumes
-(
-    collection_id text    not null,
-    timestamp     integer not null,
-    volume        numeric(78) not null,
-    rank          integer not null,
-    constraint daily_volumes_pk
-        primary key (collection_id, timestamp)
+
+CREATE TABLE "daily_volumes" (
+  "collection_id" TEXT NOT NULL,
+  "timestamp" INT NOT NULL,
+  "volume" NUMERIC(78, 0) NOT NULL,
+  "rank" INT NOT NULL
 );
 
-alter table collections
-    add day1_volume numeric(78) default 0;
+ALTER TABLE "daily_volumes"
+  ADD CONSTRAINT "daily_volumes_pk"
+  PRIMARY KEY ("collection_id", "timestamp");
 
-alter table collections
-    add day1_rank int default null;
+ALTER TABLE "collections"
+  ADD "day1_volume" NUMERIC(78, 0) DEFAULT 0;
 
-alter table collections
-    add day7_volume numeric(78) default 0;
+ALTER TABLE "collections"
+  ADD "day1_rank" INT;
 
-alter table collections
-    add day7_rank int default null;
+ALTER TABLE "collections"
+  ADD "day7_volume" NUMERIC(78, 0) DEFAULT 0;
 
-alter table collections
-    add day30_volume numeric(78) default 0;
+ALTER TABLE "collections"
+  ADD "day7_rank" INT;
 
-alter table collections
-    add day30_rank int default null;
+ALTER TABLE "collections"
+  ADD "day30_volume" NUMERIC(78, 0) DEFAULT 0;
 
-alter table collections
-    add all_time_volume numeric(78) default 0;
+ALTER TABLE "collections"
+  ADD "day30_rank" INT;
 
-alter table collections
-    add all_time_rank int default null;
+ALTER TABLE "collections"
+  ADD "all_time_volume" NUMERIC(78, 0) DEFAULT 0;
 
-create index fill_events_2_timestamp_index
-    on fill_events_2 (timestamp);
+ALTER TABLE "collections"
+  ADD "all_time_rank" INT;
 
-drop index collections_name_index;
+CREATE INDEX "fill_events_2_timestamp_index"
+  ON "fill_events_2" ("timestamp");
 
-create index collections_name_all_time_volume_index
-    on collections (name, all_time_volume desc);
+CREATE INDEX "collections_day1_volume_index"
+  ON "collections" ("day1_volume" DESC);
 
-create index collections_name_day1_volume_index
-    on collections (name, day1_volume desc);
-
-create index collections_day1_volume_index
-    on collections (day1_volume desc);
-
-create index collections_all_time_volume_index
-    on collections (all_time_volume desc);
+CREATE INDEX "collections_all_time_volume_index"
+  ON "collections" ("all_time_volume" DESC);
 
 -- Down Migration
-drop table daily_volumes;
 
-alter table collections
-drop column day1_volume;
+DROP TABLE "daily_volumes";
 
-alter table collections
-drop column day1_rank;
+ALTER TABLE "collections"
+  DROP COLUMN "all_time_volume";
 
-alter table collections
-drop column day7_volume;
+ALTER TABLE "collections"
+  DROP COLUMN "all_time_rank";
 
-alter table collections
-drop column day7_rank;
+ALTER TABLE "collections"
+  DROP COLUMN "day30_volume";
 
-alter table collections
-drop column day30_volume;
+ALTER TABLE "collections"
+  DROP COLUMN "day30_rank";
 
-alter table collections
-drop column day30_rank;
+  ALTER TABLE "collections"
+  DROP COLUMN "day7_volume";
 
-alter table collections
-drop column all_time_volume;
+ALTER TABLE "collections"
+  DROP COLUMN "day7_rank";
 
-alter table collections
-drop column all_time_rank;
+ALTER TABLE "collections"
+  DROP COLUMN "day1_volume";
 
-drop index fill_events_2_timestamp_index;
-
-create index collections_name_index
-    on collections (name);
-
+ALTER TABLE "collections"
+  DROP COLUMN "day1_rank";

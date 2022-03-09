@@ -43,8 +43,8 @@ CREATE TABLE "orders" (
   "fee_breakdown" JSONB,
   "raw_data" JSONB,
   "expiration" TIMESTAMPTZ,
-  "created_at" TIMESTAMPTZ,
-  "updated_at" TIMESTAMPTZ
+  "created_at" TIMESTAMPTZ DEFAULT now(),
+  "updated_at" TIMESTAMPTZ DEFAULT now()
 );
 
 ALTER TABLE "orders"

@@ -5,6 +5,7 @@ import "@/jobs/arweave-sync";
 import "@/jobs/cache-check";
 import "@/jobs/events-sync";
 import "@/jobs/fill-updates";
+import "@/jobs/metadata-index";
 import "@/jobs/order-fixes";
 import "@/jobs/order-updates";
 import "@/jobs/orderbook";
@@ -20,6 +21,8 @@ import * as eventsSyncRealtime from "@/jobs/events-sync/realtime-queue";
 import * as eventsSyncFtTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/ft-transfers";
 import * as eventsSyncNftTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/nft-transfers";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
+import * as metadataIndexFast from "@/jobs/metadata-index/fast-queue";
+import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
 import * as orderFixes from "@/jobs/order-fixes/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
@@ -36,6 +39,8 @@ export const allJobQueues = [
   eventsSyncFtTransfersWriteBuffer.queue,
   eventsSyncNftTransfersWriteBuffer.queue,
   fillUpdates.queue,
+  metadataIndexFast.queue,
+  metadataIndexWrite.queue,
   orderFixes.queue,
   orderUpdatesById.queue,
   orderUpdatesByMaker.queue,

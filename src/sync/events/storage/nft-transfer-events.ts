@@ -160,24 +160,14 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }
 
   if (tokenValues.length) {
-    const columns = new pgp.helpers.ColumnSet(
-      [
-        "contract",
-        "token_id",
-        { name: "created_at", init: () => "now()", mod: ":raw" },
-        { name: "updated_at", init: () => "now()", mod: ":raw" },
-      ],
-      {
-        table: "tokens",
-      }
-    );
+    const columns = new pgp.helpers.ColumnSet(["contract", "token_id"], {
+      table: "tokens",
+    });
 
     queries.push(`
       INSERT INTO "tokens" (
         "contract",
-        "token_id",
-        "created_at",
-        "updated_at"
+        "token_id"
       ) VALUES ${pgp.helpers.values(tokenValues, columns)}
       ON CONFLICT DO NOTHING
     `);
