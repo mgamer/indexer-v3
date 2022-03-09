@@ -76,17 +76,13 @@ export const addEvents = async (events: Event[]) => {
         "id",
         "kind",
         "fillability_status",
-        "expiration",
-        "created_at",
-        "updated_at"
-      ) ( 
+        "expiration"
+      ) (
         SELECT
           "x"."order_id",
           "x"."order_kind",
           'cancelled'::order_fillability_status_t,
-          to_timestamp("x"."timestamp") AS "expiration",
-          now(),
-          now()
+          to_timestamp("x"."timestamp") AS "expiration"
         FROM "x"
       )
       ON CONFLICT ("id") DO

@@ -157,8 +157,7 @@ if (config.doBackgroundWork) {
                   "price",
                   "previous_price",
                   "tx_hash",
-                  "tx_timestamp",
-                  "created_at"
+                  "tx_timestamp"
                 )
                 SELECT
                   $/kind/ AS "kind",
@@ -169,8 +168,7 @@ if (config.doBackgroundWork) {
                   "w"."new_floor_sell_value" AS "price",
                   "w"."old_floor_sell_value" AS "previous_price",
                   $/txHash/ AS "tx_hash",
-                  $/txTimestamp/ AS "tx_timestamp",
-                  now() AS "created_at"
+                  $/txTimestamp/ AS "tx_timestamp"
                 FROM "w"
               `,
               {

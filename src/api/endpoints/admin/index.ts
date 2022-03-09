@@ -1,3 +1,4 @@
+export * from "@/api/endpoints/admin/post-fast-metadata-index";
 export * from "@/api/endpoints/admin/post-fix-cache";
 export * from "@/api/endpoints/admin/post-fix-orders";
 export * from "@/api/endpoints/admin/post-sync-arweave";

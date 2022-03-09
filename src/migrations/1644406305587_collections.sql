@@ -11,8 +11,8 @@ CREATE TABLE "collections" (
   "token_id_range" NUMRANGE NOT NULL,
   "token_set_id" TEXT,
   "token_count" INT NOT NULL DEFAULT 0,
-  "created_at" TIMESTAMPTZ,
-  "updated_at" TIMESTAMPTZ
+  "created_at" TIMESTAMPTZ DEFAULT now(),
+  "updated_at" TIMESTAMPTZ DEFAULT now()
 );
 
 ALTER TABLE "collections"
@@ -34,12 +34,6 @@ CREATE EXTENSION pg_trgm;
 CREATE INDEX "collections_name_index"
   ON "collections"
   USING GIN ("name" gin_trgm_ops);
-
-CREATE INDEX "collections_day1_volume_index"
-  ON "collections" ("day1_volume" DESC);
-
-CREATE INDEX "collections_all_time_volume_index"
-  ON "collections" ("all_time_volume" DESC);
 
 CREATE EXTENSION tsm_system_rows;
 

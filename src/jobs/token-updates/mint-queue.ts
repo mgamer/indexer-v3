@@ -119,9 +119,7 @@ if (config.doBackgroundWork) {
                 "royalties",
                 "contract",
                 "token_id_range",
-                "token_set_id",
-                "created_at",
-                "updated_at"
+                "token_set_id"
               ) VALUES (
                 $/id/,
                 $/slug/,
@@ -131,9 +129,7 @@ if (config.doBackgroundWork) {
                 $/royalties:json/,
                 $/contract/,
                 $/tokenIdRange:raw/,
-                $/tokenSetId/,
-                now(),
-                now()
+                $/tokenSetId/
               ) ON CONFLICT DO NOTHING
             `,
             values: {

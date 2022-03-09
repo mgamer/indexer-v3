@@ -15,6 +15,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/fast-metadata-index",
+    options: adminEndpoints.postFastMetadataIndexOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/fix-cache",
     options: adminEndpoints.postFixCacheOptions,
   });

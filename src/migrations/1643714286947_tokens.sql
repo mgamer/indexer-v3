@@ -18,8 +18,8 @@ CREATE TABLE "tokens" (
   "last_sell_value" NUMERIC(78, 0),
   "last_buy_timestamp" INT,
   "last_buy_value" NUMERIC(78, 0),
-  "created_at" TIMESTAMPTZ NOT NULL,
-  "updated_at" TIMESTAMPTZ NOT NULL
+  "created_at" TIMESTAMPTZ DEFAULT now(),
+  "updated_at" TIMESTAMPTZ DEFAULT now()
 );
 
 ALTER TABLE "tokens"

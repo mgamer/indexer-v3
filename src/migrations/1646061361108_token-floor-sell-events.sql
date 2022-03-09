@@ -22,7 +22,7 @@ CREATE TABLE "token_floor_sell_events" (
   "previous_price" NUMERIC(78, 0),
   "tx_hash" BYTEA,
   "tx_timestamp" INT,
-  "created_at" TIMESTAMPTZ NOT NULL
+  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 ALTER TABLE "token_floor_sell_events"
