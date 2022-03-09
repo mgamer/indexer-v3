@@ -8,5 +8,4 @@ export const formatEth = (wei: BigNumberish) =>
 
 export const fromBuffer = (buffer: Buffer) => "0x" + buffer.toString("hex");
 
-export const toBuffer = (hexValue: string) =>
-  Buffer.from(hexValue.slice(2), "hex");
+export const toBuffer = (hexValue: string) => Buffer.from(hexValue.slice(2), "hex");
