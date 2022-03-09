@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
-import PgPromise from "pg-promise";
 
 const version = "v2";
 
@@ -111,7 +112,7 @@ export const getUserTokensV2Options: RouteOptions = {
       }
 
       if (query.hasOffer) {
-          conditions.push(`tokens.top_buy_value IS NOT NULL`);
+        conditions.push(`tokens.top_buy_value IS NOT NULL`);
       }
 
       if (conditions.length) {
@@ -143,13 +144,15 @@ export const getUserTokensV2Options: RouteOptions = {
               },
               topBid: {
                 id: r.top_buy_id,
-                value: r.top_buy_value ? formatEth(r.top_buy_value) : null
+                value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
               },
             },
             ownership: {
               tokenCount: String(r.token_count),
               onSaleCount: String(r.on_sale_count),
-              floorSellValue: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+              floorSellValue: r.floor_sell_value
+                ? formatEth(r.floor_sell_value)
+                : null,
             },
           }))
         );

@@ -23,6 +23,10 @@ ALTER TABLE "attribute_keys"
 CREATE UNIQUE INDEX "attribute_keys_collection_id_key_unique_index"
   ON "attribute_keys" ("collection_id", "key");
 
+CREATE INDEX "attribute_keys_collection_id_rank_key_index"
+  ON "attribute_keys" ("collection_id", "rank" DESC)
+  WHERE ("rank" IS NOT NULL);
+
 CREATE TABLE "attributes" (
   "id" BIGSERIAL NOT NULL,
   "attribute_key_id" INT NOT NULL,
