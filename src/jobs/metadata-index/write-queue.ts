@@ -88,7 +88,7 @@ if (config.doBackgroundWork) {
             `,
             {
               collection,
-              key,
+              key: String(key),
             }
           );
 
@@ -112,7 +112,7 @@ if (config.doBackgroundWork) {
               `,
               {
                 collection,
-                key,
+                key: String(key),
                 kind,
                 rank: rank || null,
               }
@@ -133,7 +133,7 @@ if (config.doBackgroundWork) {
             `,
             {
               attributeKeyId: attributeKeyResult.id,
-              value,
+              value: String(value),
             }
           );
 
@@ -159,7 +159,7 @@ if (config.doBackgroundWork) {
               `,
               {
                 attributeKeyId: attributeKeyResult.id,
-                value,
+                value: String(value),
                 collection,
               }
             );
