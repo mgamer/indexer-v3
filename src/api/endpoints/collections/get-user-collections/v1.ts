@@ -35,7 +35,14 @@ export const getUserCollectionsV1Options: RouteOptions = {
           collection: Joi.object({
             id: Joi.string(),
             name: Joi.string().allow(null, ""),
-            metadata: Joi.any().allow(null),
+            metadata: Joi.object({
+              imageUrl: Joi.string().allow(null),
+              discordUrl: Joi.string().allow(null),
+              description: Joi.string().allow(null),
+              externalUrl: Joi.string().allow(null),
+              bannerImageUrl: Joi.string().allow(null),
+              twitterUsername: Joi.string().allow(null),
+            }),
             floorAskPrice: Joi.number().unsafe().allow(null),
             topBidValue: Joi.number().unsafe().allow(null),
           }),
@@ -109,7 +116,9 @@ export const getUserCollectionsV1Options: RouteOptions = {
               id: r.id,
               name: r.name,
               metadata: r.metadata,
-              floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+              floorAskPrice: r.floor_sell_value
+                ? formatEth(r.floor_sell_value)
+                : null,
               topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
             },
             ownership: {
