@@ -25,6 +25,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}:[0-9]+$/),
       tokenSetId: Joi.string().lowercase(),
+      attributes: Joi.object().unknown(),
       onSale: Joi.boolean(),
       sortBy: Joi.string()
         .valid("tokenId", "floorAskPrice", "topBidValue")
@@ -34,7 +35,8 @@ export const getTokensDetailsV1Options: RouteOptions = {
       limit: Joi.number().integer().min(1).max(50).default(20),
     })
       .or("collection", "contract", "token", "tokenSetId")
-      .oxor("collection", "contract", "token", "tokenSetId"),
+      .oxor("collection", "contract", "token", "tokenSetId")
+      .with("attributes", "collection"),
   },
   response: {
     schema: Joi.object({
@@ -193,6 +195,32 @@ export const getTokensDetailsV1Options: RouteOptions = {
       }
       if (query.tokenSetId) {
         conditions.push(`"tst"."token_set_id" = $/tokenSetId/`);
+      }
+      if (query.attributes) {
+        const attributes: { key: string; value: string }[] = [];
+        Object.entries(query.attributes).forEach(([key, values]) => {
+          (Array.isArray(values) ? values : [values]).forEach((value) =>
+            attributes.push({ key, value })
+          );
+        });
+
+        for (let i = 0; i < attributes.length; i++) {
+          (query as any)[`key${i}`] = attributes[i].key;
+          (query as any)[`value${i}`] = attributes[i].value;
+          conditions.push(`
+            EXISTS (
+              SELECT FROM "token_attributes" "ta"
+              JOIN "attributes" "a"
+                ON "ta"."attribute_id" = "a"."id"
+              JOIN "attribute_keys" "ak"
+                ON "a"."attribute_key_id" = "ak"."id"
+              WHERE "ta"."contract" = "t"."contract"
+                AND "ta"."token_id" = "t"."token_id"
+                AND "ak"."key" = $/key${i}/
+                AND "a"."value" = $/value${i}/
+            )
+          `);
+        }
       }
       if (query.onSale === true) {
         conditions.push(`"t"."floor_sell_value" IS NOT NULL`);
