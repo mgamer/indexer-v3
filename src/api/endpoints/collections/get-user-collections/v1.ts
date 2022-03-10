@@ -61,47 +61,41 @@ export const getUserCollectionsV1Options: RouteOptions = {
 
     try {
       let baseQuery = `
-        SELECT
-          "c"."id",
-          SUM("nb"."amount") AS "token_count",
-          COUNT(*) FILTER (WHERE "t"."floor_sell_value" IS NOT NULL) AS "on_sale_count",
-          COUNT(*) FILTER (WHERE "t"."top_buy_value" IS NOT NULL) AS "liquid_count",
-          (
-            SELECT MIN("t"."floor_sell_value") FROM "tokens" "t"
-            WHERE "t"."collection_id" = "c"."id"
-          ) AS "floor_sell_value",
-          (
-            SELECT MAX("ts"."top_buy_value") FROM "token_sets" "ts"
-            WHERE "ts"."id" = "c"."token_set_id"
-          ) AS "top_buy_value"
-        FROM "tokens" "t"
-        JOIN "collections" "c"
-          ON "t"."collection_id" = "c"."id"
-        JOIN "nft_balances" "nb"
-          ON "t"."contract" = "nb"."contract"
-          AND "t"."token_id" = "nb"."token_id"
-          AND "nb"."owner" = $/user/
-          AND "nb"."amount" > 0
+        SELECT  collections.id,
+                collections.name,
+                collections.metadata,
+                SUM(nft_balances.amount) AS token_count,
+                MAX(tokens.top_buy_value) AS top_buy_value,
+                MIN(tokens.floor_sell_value) AS floor_sell_value,
+                SUM(CASE WHEN tokens.floor_sell_value IS NULL THEN 0 ELSE 1 END) AS on_sale_count,
+                SUM(CASE WHEN tokens.top_buy_value IS NULL THEN 0 ELSE 1 END) AS liquid_count
+        FROM nft_balances
+        JOIN tokens ON nft_balances.contract = tokens.contract AND nft_balances.token_id = tokens.token_id
+        JOIN collections ON nft_balances.contract = collections.contract
       `;
 
       // Filters
       (params as any).user = toBuffer(params.user);
-      const conditions: string[] = [];
+      const conditions: string[] = [
+        `nft_balances.owner = $/user/`,
+        `nft_balances.amount > 0`,
+      ];
+
       if (query.community) {
-        conditions.push(`"c"."community" = $/community/`);
+        conditions.push(`collections.community = $/community/`);
       }
       if (query.collection) {
-        conditions.push(`"c"."id" = $/collection/`);
+        conditions.push(`collections.id = $/collection/`);
       }
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
 
       // Grouping
-      baseQuery += ` GROUP BY "c"."id", "nb"."owner"`;
+      baseQuery += ` GROUP BY collections.id, nft_balances.owner`;
 
       // Sorting
-      baseQuery += ` ORDER BY SUM("nb"."amount") DESC, "nb"."owner"`;
+      baseQuery += ` ORDER BY collections.id ASC`;
 
       // Pagination
       baseQuery += ` OFFSET $/offset/`;
@@ -115,9 +109,7 @@ export const getUserCollectionsV1Options: RouteOptions = {
               id: r.id,
               name: r.name,
               metadata: r.metadata,
-              floorAskPrice: r.floor_sell_value
-                ? formatEth(r.floor_sell_value)
-                : null,
+              floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
               topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
             },
             ownership: {
