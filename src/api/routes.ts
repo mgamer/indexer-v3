@@ -2,7 +2,7 @@ import { Server } from "@hapi/hapi";
 
 import * as adminEndpoints from "@/api/endpoints/admin";
 import * as apiKeysEndpoints from "@/api/endpoints/api-keys";
-import * as attributeEndpoints from "@/api/endpoints/attributes";
+import * as attributesEndpoints from "@/api/endpoints/attributes";
 import * as eventsEndpoints from "@/api/endpoints/events";
 import * as collectionsEndpoints from "@/api/endpoints/collections";
 import * as healthEndpoints from "@/api/endpoints/health";
@@ -63,7 +63,13 @@ export const setupRoutes = (server: Server) => {
   server.route({
     method: "GET",
     path: "/attributes/v1",
-    options: attributeEndpoints.getAttributesV1Options,
+    options: attributesEndpoints.getAttributesV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/collections/{collection}/attributes/v1",
+    options: attributesEndpoints.getCollectionAttributesV1Options,
   });
 
   // Collections

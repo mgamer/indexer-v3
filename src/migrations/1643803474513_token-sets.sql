@@ -5,9 +5,7 @@ CREATE TABLE "token_sets" (
   "schema_hash" BYTEA NOT NULL,
   "schema" JSONB,
   "metadata" JSONB,
-  "collection_id" TEXT,
-  "attribute_key" TEXT,
-  "attribute_value" TEXT,
+  "attribute_id" BIGINT,
   "top_buy_id" TEXT,
   "top_buy_value" NUMERIC(78, 0),
   "top_buy_maker" BYTEA,
@@ -18,6 +16,10 @@ CREATE TABLE "token_sets" (
 ALTER TABLE "token_sets"
   ADD CONSTRAINT "token_sets_pk"
   PRIMARY KEY ("id", "schema_hash");
+
+CREATE INDEX "token_sets_attribute_id_top_buy_value_index"
+  ON "token_sets" ("attribute_id", "top_buy_value" DESC NULLS LAST)
+  WHERE ("attribute_id" IS NOT NULL);
 
 CREATE TABLE "token_sets_tokens" (
   "token_set_id" TEXT NOT NULL,
