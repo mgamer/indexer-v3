@@ -33,10 +33,15 @@ if (config.doBackgroundWork) {
       try {
         switch (kind) {
           case "wyvern-v2.3": {
-            await orders.wyvernV23.save(
+            const result = await orders.wyvernV23.save(
               [info as orders.wyvernV23.OrderInfo],
               relayToArweave
             );
+            logger.info(
+              QUEUE_NAME,
+              `Order save result: ${JSON.stringify(result)}`
+            );
+
             break;
           }
         }
