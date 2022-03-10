@@ -4,6 +4,7 @@ import * as adminEndpoints from "@/api/endpoints/admin";
 import * as apiKeysEndpoints from "@/api/endpoints/api-keys";
 import * as attributesEndpoints from "@/api/endpoints/attributes";
 import * as eventsEndpoints from "@/api/endpoints/events";
+import * as executeEndpoints from "@/api/endpoints/execute";
 import * as collectionsEndpoints from "@/api/endpoints/collections";
 import * as healthEndpoints from "@/api/endpoints/health";
 import * as ordersEndpoints from "@/api/endpoints/orders";
@@ -104,6 +105,14 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/events/tokens/floor-ask/v1",
     options: eventsEndpoints.getTokensFloorAskV1Options,
+  });
+
+  // Execute
+
+  server.route({
+    method: "GET",
+    path: "/execute/list/v1",
+    options: executeEndpoints.getExecuteListV1Options,
   });
 
   // Orders
