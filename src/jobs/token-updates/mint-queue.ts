@@ -38,7 +38,7 @@ if (config.doBackgroundWork) {
         // otherwise the tokens might be missing from the result
         // of various APIs which depend on these cached values.
 
-        // First, check the database for any matching collection
+        // First, check the database for any matching collection.
         const collection: { id: string } | null = await idb.oneOrNone(
           `
             SELECT "c"."id" FROM "collections" "c"
@@ -86,9 +86,36 @@ if (config.doBackgroundWork) {
               collectionId: collection.id,
             },
           });
+
+          // We also need to include the new token to any collection-wide token set.
+          queries.push({
+            query: `
+              WITH "x" AS (
+                SELECT DISTINCT
+                  "ts"."id"
+                FROM "token_sets" "ts"
+                WHERE "ts"."collection_id" = $/collection/
+              )
+              INSERT INTO "token_sets_tokens" (
+                "token_set_id",
+                "contract",
+                "token_id"
+              ) (
+                SELECT
+                  "x"."id",
+                  $/contract/,
+                  $/tokenId/
+                FROM "x"
+              ) ON CONFLICT DO NOTHING
+            `,
+            values: {
+              contract: toBuffer(contract),
+              tokenId,
+              collection: collection.id,
+            },
+          });
         } else {
-          // Otherwise, we have to fetch the collection metadata
-          // and definition from the upstream service.
+          // Otherwise, we fetch the collection metadata from upstream.
           const url = `${config.metadataApiBaseUrl}/v3/${network}/collection?contract=${contract}&tokenId=${tokenId}`;
 
           const { data } = await axios.get(url);
