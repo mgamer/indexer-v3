@@ -24,9 +24,7 @@ export const getSalesV3Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}:[0-9]+$/),
       limit: Joi.number().integer().min(1).max(100).default(20),
-      block: Joi.number().integer().min(0).default(0),
-      log_index: Joi.number().integer().min(0).default(0),
-      batch_index: Joi.number().integer().min(0).default(0),
+      continuation: Joi.string().pattern(/^(\d+)_(\d+)_(\d+)$/),
     })
       .oxor("contract", "token")
       .or("contract", "token"),
@@ -65,6 +63,9 @@ export const getSalesV3Options: RouteOptions = {
           batch_index: Joi.number(),
         })
       ),
+      continuation: Joi.string()
+        .pattern(/^(\d+)_(\d+)_(\d+)$/)
+        .allow(null),
     }).label(`getSales${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
@@ -97,7 +98,12 @@ export const getSalesV3Options: RouteOptions = {
       collectionFilter = `tokens.collection_id = $/collection/`;
     }
 
-    if (query.block || query.log_index || query.batch_index) {
+    if (query.continuation) {
+      const [block, log_index, batch_index] = query.continuation.split("_");
+      (query as any).block = block;
+      (query as any).log_index = log_index;
+      (query as any).batch_index = batch_index;
+
       paginationFilter = `AND CONCAT(fill_events_2.block, fill_events_2.log_index, fill_events_2.batch_index) < CONCAT($/block/, $/log_index/, $/batch_index/)`;
     }
 
@@ -131,8 +137,19 @@ export const getSalesV3Options: RouteOptions = {
         JOIN collections on fill_events_2_data.contract = collections.contract
       `;
 
-      const result = await edb.manyOrNone(baseQuery, query).then((result) =>
-        result.map((r) => ({
+      const rawResult = await edb.manyOrNone(baseQuery, query);
+
+      let continuation = null;
+      if (rawResult.length === query.limit) {
+        continuation =
+          rawResult[rawResult.length - 1].block +
+          "_" +
+          rawResult[rawResult.length - 1].log_index +
+          "_" +
+          rawResult[rawResult.length - 1].batch_index;
+      }
+
+      const result = rawResult.map((r) => ({
           token: {
             contract: fromBuffer(r.contract),
             tokenId: r.token_id,
@@ -153,10 +170,12 @@ export const getSalesV3Options: RouteOptions = {
           block: r.block,
           log_index: r.log_index,
           batch_index: r.batch_index,
-        }))
-      );
+      }));
 
-      return { sales: result };
+      return {
+        sales: result,
+        continuation,
+      };
     } catch (error) {
       logger.error(`get-sales-${version}-handler`, `Handler failure: ${error}`);
       throw error;
