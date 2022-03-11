@@ -148,24 +148,24 @@ export const getSalesV3Options: RouteOptions = {
       }
 
       const result = rawResult.map((r) => ({
-          token: {
-            contract: fromBuffer(r.contract),
-            tokenId: r.token_id,
-            name: r.name,
-            image: r.mage,
-            collection: {
-              id: r.collection_id,
-              name: r.collection_name,
-            },
+        token: {
+          contract: fromBuffer(r.contract),
+          tokenId: r.token_id,
+          name: r.name,
+          image: r.mage,
+          collection: {
+            id: r.collection_id,
+            name: r.collection_name,
           },
-          orderSide: r.order_side === "sell" ? "ask" : "bid",
-          from: fromBuffer(r.maker),
-          to: fromBuffer(r.taker),
-          amount: String(r.amount),
-          txHash: fromBuffer(r.tx_hash),
-          timestamp: r.timestamp,
-          price: r.price ? formatEth(r.price) : null,
-          block: r.block,
+        },
+        orderSide: r.order_side === "sell" ? "ask" : "bid",
+        from: fromBuffer(r.maker),
+        to: fromBuffer(r.taker),
+        amount: String(r.amount),
+        txHash: fromBuffer(r.tx_hash),
+        timestamp: r.timestamp,
+        price: r.price ? formatEth(r.price) : null,
+        block: r.block,
       }));
 
       return {
