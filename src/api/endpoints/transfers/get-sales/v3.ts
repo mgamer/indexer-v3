@@ -59,8 +59,6 @@ export const getSalesV3Options: RouteOptions = {
           timestamp: Joi.number(),
           price: Joi.number().unsafe().allow(null),
           block: Joi.number(),
-          log_index: Joi.number(),
-          batch_index: Joi.number(),
         })
       ),
       continuation: Joi.string()
