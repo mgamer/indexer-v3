@@ -64,11 +64,11 @@ if (config.doBackgroundWork) {
                   "c"."contract",
                   "c"."token_id_range"
                 FROM "collections" "c"
-                WHERE "c"."id" = $/collectionId/
+                WHERE "c"."id" = $/collection/
               ),
               "y" AS (
                 UPDATE "tokens" AS "t" SET
-                  "collection_id" = $/collectionId/,
+                  "collection_id" = $/collection/,
                   "updated_at" = now()
                 FROM "x"
                 WHERE "t"."contract" = "x"."contract"
@@ -78,12 +78,12 @@ if (config.doBackgroundWork) {
               )
               UPDATE "collections" SET
                 "token_count" = "token_count" + (SELECT COUNT(*) FROM "y")
-              WHERE "id" = $/collectionId/
+              WHERE "id" = $/collection/
             `,
             values: {
               contract: toBuffer(contract),
               tokenId,
-              collectionId: collection.id,
+              collection: collection.id,
             },
           });
 
@@ -177,19 +177,19 @@ if (config.doBackgroundWork) {
           queries.push({
             query: `
               WITH "x" AS (
-                UPDATE "tokens" SET "collection_id" = $/collectionId/
+                UPDATE "tokens" SET "collection_id" = $/collection/
                 WHERE "contract" = $/contract/
                   AND "token_id" <@ $/tokenIdRange:raw/
                 RETURNING 1
               )
               UPDATE "collections" SET
                 "token_count" = (SELECT COUNT(*) FROM "x")
-              WHERE "id" = $/collectionId/
+              WHERE "id" = $/collection/
             `,
             values: {
               contract: toBuffer(collection.contract),
               tokenIdRange,
-              collectionId: collection.id,
+              collection: collection.id,
             },
           });
         }
