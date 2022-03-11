@@ -102,7 +102,7 @@ export const getSalesV3Options: RouteOptions = {
       (query as any).log_index = log_index;
       (query as any).batch_index = batch_index;
 
-      paginationFilter = `AND CONCAT(fill_events_2.block, fill_events_2.log_index, fill_events_2.batch_index) < CONCAT($/block/, $/log_index/, $/batch_index/)`;
+      paginationFilter = `AND (fill_events_2.block, fill_events_2.log_index, fill_events_2.batch_index) < ($/block/, $/log_index/, $/batch_index/)`;
     }
 
     try {
@@ -166,8 +166,6 @@ export const getSalesV3Options: RouteOptions = {
           timestamp: r.timestamp,
           price: r.price ? formatEth(r.price) : null,
           block: r.block,
-          log_index: r.log_index,
-          batch_index: r.batch_index,
       }));
 
       return {
