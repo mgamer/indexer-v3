@@ -207,6 +207,12 @@ export const setupRoutes = (server: Server) => {
     options: transfersEndpoints.getTransfersV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/transfers/v2",
+    options: transfersEndpoints.getTransfersV2Options,
+  });
+
   // Health
 
   // Both readyz and livez endpoints point to the same handler, maybe at some point we want to separate the logic

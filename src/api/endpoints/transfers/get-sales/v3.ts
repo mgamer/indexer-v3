@@ -12,7 +12,7 @@ const version = "v3";
 export const getSalesV3Options: RouteOptions = {
   description: "Historical sales",
   notes:
-    "Get recent sales for a contract or token. For pagination API expect to receive the block, log_index, batch_index from previous result",
+    "Get recent sales for a contract or token. For pagination API expect to receive the continuation from previous result",
   tags: ["api", "events"],
   validate: {
     query: Joi.object({
