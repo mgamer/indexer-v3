@@ -59,7 +59,6 @@ const isValid = async (tokenSet: TokenSet) => {
       const tokens = await idb.manyOrNone(
         `
           SELECT
-            "ta"."contract",
             "ta"."token_id"
           FROM "token_attributes" "ta"
           JOIN "attributes" "a"

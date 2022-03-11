@@ -240,8 +240,6 @@ export const getExecuteListV1Options: RouteOptions = {
                   body: {
                     order: {
                       kind: "wyvern-v2.3",
-                      orderbook: query.orderbook,
-                      source: query.source,
                       data: {
                         ...order.params,
                         v: query.v,
@@ -249,6 +247,8 @@ export const getExecuteListV1Options: RouteOptions = {
                         s: query.s,
                       },
                     },
+                    orderbook: query.orderbook,
+                    source: query.source,
                   },
                 },
           },

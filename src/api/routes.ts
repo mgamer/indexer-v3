@@ -111,6 +111,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/execute/bid/v1",
+    options: executeEndpoints.getExecuteBidV1Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/execute/cancel/v1",
     options: executeEndpoints.getExecuteCancelV1Options,
   });
