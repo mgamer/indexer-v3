@@ -58,7 +58,7 @@ export const getExecuteListV1Options: RouteOptions = {
           kind: Joi.string()
             .valid("request", "signature", "transaction")
             .required(),
-          data: Joi.any(),
+          data: Joi.object(),
         })
       ),
       query: Joi.object(),
