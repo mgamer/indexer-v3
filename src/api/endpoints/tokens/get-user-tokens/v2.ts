@@ -126,9 +126,6 @@ export const getUserTokensV2Options: RouteOptions = {
       baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
-      // PgPromise.as.format(baseQuery, params);
-      // console.log(query);
-
       const result = await edb
         .manyOrNone(baseQuery, { ...query, ...params })
         .then((result) =>
