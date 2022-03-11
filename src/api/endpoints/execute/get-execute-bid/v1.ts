@@ -167,20 +167,24 @@ export const getExecuteBidV1Options: RouteOptions = {
         {
           action: "Wrapping ETH",
           description: "Wrapping ETH required to make offer",
+          kind: "transaction",
         },
         {
           action: "Approve WETH contract",
           description:
             "A one-time setup transaction to enable trading with WETH",
+          kind: "transaction",
         },
         {
           action: "Authorize offer",
           description: "A free off-chain signature to create the offer",
+          kind: "signature",
         },
         {
           action: "Submit offer",
           description:
             "Post your offer to the order book for others to discover it",
+          kind: "request",
         },
       ];
 
@@ -190,26 +194,22 @@ export const getExecuteBidV1Options: RouteOptions = {
         steps: [
           {
             ...steps[0],
-            status: wrapEthTx ? "incomplete" : "complete",
-            kind: "transaction",
+            status: !wrapEthTx ? "complete" : "incomplete",
             data: wrapEthTx,
           },
           {
             ...steps[1],
-            status: approvalTx ? "complete" : "incomplete",
-            kind: "transaction",
+            status: !approvalTx ? "complete" : "incomplete",
             data: approvalTx,
           },
           {
             ...steps[2],
             status: hasSignature ? "complete" : "incomplete",
-            kind: "signature",
             data: hasSignature ? undefined : order.getSignatureData(),
           },
           {
             ...steps[3],
             status: "incomplete",
-            kind: "request",
             data: !hasSignature
               ? undefined
               : {

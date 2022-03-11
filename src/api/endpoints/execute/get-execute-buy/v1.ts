@@ -86,10 +86,12 @@ export const getExecuteBuyV1Options: RouteOptions = {
           action: "Confirm purchase",
           description:
             "To purchase this item you must confirm the transaction and pay the gas fee",
+          kind: "transaction",
         },
         {
           action: "Confirmation",
           description: "Verify that the item was successfully purchased",
+          kind: "confirmation",
         },
       ];
 
@@ -101,26 +103,6 @@ export const getExecuteBuyV1Options: RouteOptions = {
             bestOrderResult.raw_data
           );
 
-          const buildMatchingArgs: any = {
-            tokenId,
-          };
-          if (order.params.kind?.includes("token-list")) {
-            // When filling an attribute order, we also need to pass
-            // in the full list of tokens the order is made on (that
-            // is, the underlying token set tokens).
-            const tokens = await edb.manyOrNone(
-              `
-                SELECT
-                  "tst"."token_id"
-                FROM "token_sets_tokens" "tst"
-                WHERE "tst"."token_set_id" = $/tokenSetId/
-              `,
-              { tokenSetId: bestOrderResult.tokenSetId }
-            );
-
-            buildMatchingArgs.tokenIds = tokens.map(({ token_id }) => token_id);
-          }
-
           // Check the taker's Eth balance.
           const balance = await baseProvider.getBalance(query.taker);
           if (bn(balance).lt(order.params.basePrice)) {
@@ -129,12 +111,16 @@ export const getExecuteBuyV1Options: RouteOptions = {
           }
 
           // Create matching order.
-          const buyOrder = order.buildMatching(query.taker, buildMatchingArgs);
+          const buyOrder = order.buildMatching(query.taker, { tokenId });
 
           const exchange = new Sdk.WyvernV23.Exchange(config.chainId);
           fillTx = exchange.matchTransaction(query.taker, buyOrder, order);
 
           break;
+        }
+
+        default: {
+          throw Boom.notImplemented("Unsupported order kind");
         }
       }
 
@@ -147,13 +133,11 @@ export const getExecuteBuyV1Options: RouteOptions = {
           {
             ...steps[0],
             status: "incomplete",
-            kind: "transaction",
             data: fillTx,
           },
           {
             ...steps[1],
             status: "incomplete",
-            kind: "confirmation",
             data: {
               endpoint: `/orders/executed/v1?id=${bestOrderResult.id}`,
               method: "GET",

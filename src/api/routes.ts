@@ -133,6 +133,12 @@ export const setupRoutes = (server: Server) => {
     options: executeEndpoints.getExecuteListV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/execute/sell/v1",
+    options: executeEndpoints.getExecuteSellV1Options,
+  });
+
   // Orders
 
   server.route({

@@ -73,12 +73,14 @@ export const getExecuteCancelV1Options: RouteOptions = {
           description: `To cancel this ${
             side === "sell" ? "listing" : "offer"
           } you must confirm the transaction and pay the gas fee`,
+          kind: "transaction",
         },
         {
           action: "Confirmation",
           description: `Verify that the ${
             side === "sell" ? "listing" : "offer"
           } was successfully cancelled`,
+          kind: "confirmation",
         },
       ];
 
@@ -103,13 +105,11 @@ export const getExecuteCancelV1Options: RouteOptions = {
               {
                 ...steps[0],
                 status: "incomplete",
-                kind: "transaction",
                 data: cancelTx,
               },
               {
                 ...steps[1],
                 status: "incomplete",
-                kind: "confirmation",
                 data: {
                   endpoint: `/orders/executed/v1?id=${order.prefixHash()}`,
                   method: "GET",
@@ -120,7 +120,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
         }
 
         default: {
-          throw Boom.badData("Unsupported order kind");
+          throw Boom.notImplemented("Unsupported order kind");
         }
       }
     } catch (error) {
