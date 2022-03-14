@@ -176,7 +176,9 @@ export const getExecuteSellV1Options: RouteOptions = {
 
           // Check the order's fillability.
           try {
-            await offChainCheck(sellOrder, sellOrderInfo);
+            await offChainCheck(sellOrder, {
+              onChainSellApprovalRecheck: true,
+            });
           } catch (error: any) {
             switch (error.message) {
               case "no-balance": {

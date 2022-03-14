@@ -158,7 +158,9 @@ if (config.doBackgroundWork) {
                   let fillabilityStatus = "fillable";
                   let approvalStatus = "approved";
                   try {
-                    await wyvernV23Check.offChainCheck(order, order.getInfo()!);
+                    await wyvernV23Check.offChainCheck(order, {
+                      onChainSellApprovalRecheck: true,
+                    });
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   } catch (error: any) {
                     if (error.message === "no-balance") {
