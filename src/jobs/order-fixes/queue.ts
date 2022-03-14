@@ -222,9 +222,9 @@ if (config.doBackgroundWork) {
             );
 
             if (result) {
-              for (const { id } of result) {
-                await addToQueue([{ by: "id", data: { id } }]);
-              }
+              await addToQueue(
+                result.map(({ id }) => ({ by: "id", data: { id } }))
+              );
             }
 
             break;
@@ -251,9 +251,9 @@ if (config.doBackgroundWork) {
             );
 
             if (result) {
-              for (const { id } of result) {
-                await addToQueue([{ by: "id", data: { id } }]);
-              }
+              await addToQueue(
+                result.map(({ id }) => ({ by: "id", data: { id } }))
+              );
             }
 
             break;
