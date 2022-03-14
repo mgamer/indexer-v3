@@ -147,7 +147,7 @@ export const save = async (
       let fillabilityStatus = "fillable";
       let approvalStatus = "approved";
       try {
-        await offChainCheck(order, info);
+        await offChainCheck(order, { onChainSellApprovalRecheck: true });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         // Keep any orders that can potentially get valid in the future
