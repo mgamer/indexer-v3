@@ -318,7 +318,7 @@ export const getStatsV1Options: RouteOptions = {
               market: {
                 floorAsk: {
                   id: r.floor_sell_id,
-                  value: r.floor_sell_value
+                  price: r.floor_sell_value
                     ? formatEth(r.floor_sell_value)
                     : null,
                   maker: r.floor_sell_maker
