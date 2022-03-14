@@ -111,8 +111,32 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/execute/bid/v1",
+    options: executeEndpoints.getExecuteBidV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/execute/buy/v1",
+    options: executeEndpoints.getExecuteBuyV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/execute/cancel/v1",
+    options: executeEndpoints.getExecuteCancelV1Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/execute/list/v1",
     options: executeEndpoints.getExecuteListV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/execute/sell/v1",
+    options: executeEndpoints.getExecuteSellV1Options,
   });
 
   // Orders
@@ -131,8 +155,20 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/orders/executed/v1",
+    options: ordersEndpoints.getOrderExecutedV1Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/liquidity/users/v1",
     options: ordersEndpoints.getUsersLiquidityV1Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/order/v1",
+    options: ordersEndpoints.postOrderV1Options,
   });
 
   server.route({

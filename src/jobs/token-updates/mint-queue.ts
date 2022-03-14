@@ -38,7 +38,7 @@ if (config.doBackgroundWork) {
         // otherwise the tokens might be missing from the result
         // of various APIs which depend on these cached values.
 
-        // First, check the database for any matching collection
+        // First, check the database for any matching collection.
         const collection: { id: string } | null = await idb.oneOrNone(
           `
             SELECT "c"."id" FROM "collections" "c"
@@ -64,11 +64,11 @@ if (config.doBackgroundWork) {
                   "c"."contract",
                   "c"."token_id_range"
                 FROM "collections" "c"
-                WHERE "c"."id" = $/collectionId/
+                WHERE "c"."id" = $/collection/
               ),
               "y" AS (
                 UPDATE "tokens" AS "t" SET
-                  "collection_id" = $/collectionId/,
+                  "collection_id" = $/collection/,
                   "updated_at" = now()
                 FROM "x"
                 WHERE "t"."contract" = "x"."contract"
@@ -78,17 +78,44 @@ if (config.doBackgroundWork) {
               )
               UPDATE "collections" SET
                 "token_count" = "token_count" + (SELECT COUNT(*) FROM "y")
-              WHERE "id" = $/collectionId/
+              WHERE "id" = $/collection/
             `,
             values: {
               contract: toBuffer(contract),
               tokenId,
-              collectionId: collection.id,
+              collection: collection.id,
+            },
+          });
+
+          // We also need to include the new token to any collection-wide token set.
+          queries.push({
+            query: `
+              WITH "x" AS (
+                SELECT DISTINCT
+                  "ts"."id"
+                FROM "token_sets" "ts"
+                WHERE "ts"."collection_id" = $/collection/
+              )
+              INSERT INTO "token_sets_tokens" (
+                "token_set_id",
+                "contract",
+                "token_id"
+              ) (
+                SELECT
+                  "x"."id",
+                  $/contract/,
+                  $/tokenId/
+                FROM "x"
+              ) ON CONFLICT DO NOTHING
+            `,
+            values: {
+              contract: toBuffer(contract),
+              tokenId,
+              collection: collection.id,
             },
           });
         } else {
-          // Otherwise, we have to fetch the collection metadata
-          // and definition from the upstream service.
+          // Otherwise, we fetch the collection metadata from upstream.
           const url = `${config.metadataApiBaseUrl}/v3/${network}/collection?contract=${contract}&tokenId=${tokenId}`;
 
           const { data } = await axios.get(url);
@@ -150,19 +177,19 @@ if (config.doBackgroundWork) {
           queries.push({
             query: `
               WITH "x" AS (
-                UPDATE "tokens" SET "collection_id" = $/collectionId/
+                UPDATE "tokens" SET "collection_id" = $/collection/
                 WHERE "contract" = $/contract/
                   AND "token_id" <@ $/tokenIdRange:raw/
                 RETURNING 1
               )
               UPDATE "collections" SET
                 "token_count" = (SELECT COUNT(*) FROM "x")
-              WHERE "id" = $/collectionId/
+              WHERE "id" = $/collection/
             `,
             values: {
               contract: toBuffer(collection.contract),
               tokenIdRange,
-              collectionId: collection.id,
+              collection: collection.id,
             },
           });
         }
