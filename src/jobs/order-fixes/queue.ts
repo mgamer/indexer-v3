@@ -231,13 +231,15 @@ if (config.doBackgroundWork) {
           }
 
           case "contract": {
-            // Trigger a fix for all of a contract's potentially valid orders.
-            // WARNING! In order to have this executed efficiently we might to
-            // have an additional index on the `orders` table (for now missing
-            // due to efficiency reasons):
-            // CREATE INDEX CONCURRENTLY orders_token_set_id_index
-            //   ON "orders" ("token_set_id")
-            //   WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance')
+            // Trigger a fix for all of the contract's potentially valid orders.
+            // WARNING! In order to have this executed efficiently we should set
+            // an additional index on the `orders` table (for now missing due to
+            // maintenance overhead):
+            // ```
+            //   CREATE INDEX CONCURRENTLY "orders_token_set_id_index"
+            //     ON "orders" ("token_set_id")
+            //     WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
+            // ```
 
             const result = await idb.manyOrNone(
               `
