@@ -76,7 +76,7 @@ CREATE INDEX "orders_created_at_id_side_index"
 
 CREATE INDEX "orders_maker_side_token_set_id_expiration"
   ON "orders" ("maker", "side", "token_set_id", "expiration" DESC)
-  WHERE ("fillability_status" != 'fillable' OR "approval_status" != 'approved')
+  WHERE ("fillability_status" != 'fillable' OR "approval_status" != 'approved');
 
 -- https://www.lob.com/blog/supercharge-your-postgresql-performance
 -- https://klotzandrew.com/blog/posgres-per-table-autovacuum-management
