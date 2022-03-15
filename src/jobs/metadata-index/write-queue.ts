@@ -65,7 +65,7 @@ if (config.doBackgroundWork) {
         }
 
         // Delete all previous attributes of the token.
-        const foo = await idb.manyOrNone(
+        await idb.none(
           `
             WITH x AS (
               DELETE FROM token_attributes
@@ -84,7 +84,6 @@ if (config.doBackgroundWork) {
             tokenId,
           }
         );
-        logger.info("debug", JSON.stringify(foo));
 
         // Token attributes
         for (const { key, value, kind, rank } of attributes) {
