@@ -64,6 +64,26 @@ if (config.doBackgroundWork) {
           return;
         }
 
+        // Delete all previous attributes of the token.
+        await idb.none(
+          `
+            WITH x AS (
+              DELETE FROM token_attributes
+              WHERE token_attributes.contract = $/contract/
+                AND token_attributes.token_id = $/tokenId/
+              RETURNING token_attributes.attribute_id
+            )
+            UPDATE attributes SET
+              token_count = token_count - 1
+            FROM x
+            WHERE attributes.id = x.attribute_id
+          `,
+          {
+            contract: toBuffer(contract),
+            tokenId,
+          }
+        );
+
         // Token attributes
         for (const { key, value, kind, rank } of attributes) {
           // Fetch the attribute key from the database (will succeed in the common case)
