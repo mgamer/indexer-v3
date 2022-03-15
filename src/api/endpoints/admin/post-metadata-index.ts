@@ -59,7 +59,7 @@ export const postMetadataIndexOptions: RouteOptions = {
         `
           UPDATE collections SET index_metadata = TRUE
           WHERE collections.id = $/collection/
-            AND collections.index_metadata != TRUE
+            AND collections.index_metadata IS DISTINCT FROM TRUE
         `,
         { collection }
       );
