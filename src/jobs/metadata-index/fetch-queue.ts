@@ -23,7 +23,7 @@ export const queue = new Queue(QUEUE_NAME, {
     },
     removeOnComplete: 10000,
     removeOnFail: 10000,
-    timeout: 120000,
+    timeout: 2 * 60 * 1000,
   },
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
@@ -140,7 +140,9 @@ if (config.doBackgroundWork) {
         }
 
         if (url) {
-          const metadataResult = await axios.get(url).then(({ data }) => data);
+          const metadataResult = await axios
+            .get(url, { timeout: 2 * 60 * 1000 })
+            .then(({ data }) => data);
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const metadata: TokenMetadata[] = (metadataResult as any).metadata;
