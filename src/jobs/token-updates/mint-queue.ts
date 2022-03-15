@@ -7,6 +7,7 @@ import { network } from "@/common/provider";
 import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 
 const QUEUE_NAME = "token-updates-mint-queue";
 
@@ -39,9 +40,15 @@ if (config.doBackgroundWork) {
         // of various APIs which depend on these cached values.
 
         // First, check the database for any matching collection.
-        const collection: { id: string } | null = await idb.oneOrNone(
+        const collection: {
+          id: string;
+          index_metadata: boolean | null;
+        } | null = await idb.oneOrNone(
           `
-            SELECT "c"."id" FROM "collections" "c"
+            SELECT
+              "c"."id",
+              "c"."index_metadata"
+            FROM "collections" "c"
             WHERE "c"."contract" = $/contract/
               AND "c"."token_id_range" @> $/tokenId/::NUMERIC(78, 0)
           `,
@@ -114,6 +121,20 @@ if (config.doBackgroundWork) {
               collection: collection.id,
             },
           });
+
+          if (collection.index_metadata) {
+            await metadataIndexFetch.addToQueue([
+              {
+                kind: "single-token",
+                data: {
+                  method: "rarible",
+                  contract,
+                  tokenId,
+                  collection: collection.id,
+                },
+              },
+            ]);
+          }
         } else {
           // Otherwise, we fetch the collection metadata from upstream.
           const url = `${config.metadataApiBaseUrl}/v3/${network}/collection?contract=${contract}&tokenId=${tokenId}`;
