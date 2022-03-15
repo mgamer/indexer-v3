@@ -18,8 +18,8 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/admin/fast-metadata-index",
-    options: adminEndpoints.postFastMetadataIndexOptions,
+    path: "/admin/index-metadata",
+    options: adminEndpoints.postMetadataIndexOptions,
   });
 
   server.route({
