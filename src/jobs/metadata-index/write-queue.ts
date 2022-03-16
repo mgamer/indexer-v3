@@ -39,16 +39,27 @@ if (config.doBackgroundWork) {
       } = job.data as TokenMetadataInfo;
 
       try {
-        // Token metadata
+        // Prepare the attributes for caching in the `tokens` table.
+        const attrs: string[] = [];
+        const attrsParams: { [key: string]: string } = {};
+        for (let i = 0; i < attributes.length; i++) {
+          attrs.push(`ARRAY[$/attribute${i}/, NULL]`);
+          attrsParams[
+            `attribute${i}`
+          ] = `${attributes[i].key},${attributes[i].value}`;
+        }
+
+        // Update the token's metadata.
         const result = await idb.oneOrNone(
           `
-            UPDATE "tokens" SET
-              "name" = $/name/,
-              "description" = $/description/,
-              "image" = $/image/,
-              "updated_at" = now()
-            WHERE "contract" = $/contract/
-              AND "token_id" = $/tokenId/
+            UPDATE tokens SET
+              name = $/name/,
+              description = $/description/,
+              image = $/image/,
+              attributes = $/attributes:raw/,
+              updated_at = now()
+            WHERE tokens.contract = $/contract/
+              AND tokens.token_id = $/tokenId/
             RETURNING 1
           `,
           {
@@ -57,6 +68,8 @@ if (config.doBackgroundWork) {
             name: name || null,
             description: description || null,
             image: imageUrl || null,
+            attributes: attrs.length ? `HSTORE(${attrs.join(", ")})` : "NULL",
+            ...attrsParams,
           }
         );
         if (!result) {
