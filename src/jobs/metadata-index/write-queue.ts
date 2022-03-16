@@ -91,7 +91,6 @@ if (config.doBackgroundWork) {
               token_count = token_count - 1
             FROM x
             WHERE attributes.id = x.attribute_id
-            RETURNING x.attribute_id
           `,
           {
             contract: toBuffer(contract),
