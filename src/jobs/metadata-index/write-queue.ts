@@ -43,7 +43,7 @@ if (config.doBackgroundWork) {
         const attrs: string[] = [];
         const attrsParams: { [key: string]: string } = {};
         for (let i = 0; i < attributes.length; i++) {
-          attrs.push(`ARRAY[$/attribute${i}/, NULL]`);
+          attrs.push(`[$/attribute${i}/, NULL]`);
           attrsParams[
             `attribute${i}`
           ] = `${attributes[i].key},${attributes[i].value}`;
@@ -56,7 +56,9 @@ if (config.doBackgroundWork) {
               name = $/name/,
               description = $/description/,
               image = $/image/,
-              attributes = $/attributes:raw/,
+              attributes = ${
+                attrs.length ? `HSTORE(ARRAY[${attrs.join(", ")}])` : "NULL"
+              },
               updated_at = now()
             WHERE tokens.contract = $/contract/
               AND tokens.token_id = $/tokenId/
@@ -68,7 +70,6 @@ if (config.doBackgroundWork) {
             name: name || null,
             description: description || null,
             image: imageUrl || null,
-            attributes: attrs.length ? `HSTORE(${attrs.join(", ")})` : "NULL",
             ...attrsParams,
           }
         );
