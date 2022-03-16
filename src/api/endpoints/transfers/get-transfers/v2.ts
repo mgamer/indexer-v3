@@ -23,7 +23,7 @@ export const getTransfersV2Options: RouteOptions = {
         .pattern(/^0x[a-f0-9]{40}:[0-9]+$/),
       collection: Joi.string().lowercase(),
       limit: Joi.number().integer().min(1).max(100).default(20),
-      continuation: Joi.number().integer().default(0),
+      continuation: Joi.string().pattern(/^(\d+)_(\d+)_(\d+)$/),
     })
       .oxor("contract", "token", "collection")
       .or("contract", "token", "collection"),
@@ -58,7 +58,9 @@ export const getTransfersV2Options: RouteOptions = {
           price: Joi.number().unsafe().allow(null),
         })
       ),
-      continuation: Joi.number().allow(null),
+      continuation: Joi.string()
+        .pattern(/^(\d+)_(\d+)_(\d+)$/)
+        .allow(null),
     }).label(`getTransfers${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
@@ -86,6 +88,8 @@ export const getTransfersV2Options: RouteOptions = {
           nft_transfer_events.tx_hash,
           nft_transfer_events."timestamp",
           nft_transfer_events.block,
+          nft_transfer_events.log_index,
+          nft_transfer_events.batch_index,
           (
             SELECT fill_events_2.price
             FROM fill_events_2
@@ -130,9 +134,16 @@ export const getTransfersV2Options: RouteOptions = {
           (query as any).contract = toBuffer(query.collection);
         }
       }
+
       if (query.continuation) {
-        conditions.push(`nft_transfer_events.block < $/continuation/`);
+        const [block, logIndex, batchIndex] = query.continuation.split("_");
+        (query as any).block = block;
+        (query as any).logIndex = logIndex;
+        (query as any).batchIndex = batchIndex;
+
+        conditions.push(`(nft_transfer_events.block, nft_transfer_events.log_index, nft_transfer_events.batch_index) < ($/block/, $/logIndex/, $/batchIndex/)`);
       }
+
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
@@ -147,7 +158,12 @@ export const getTransfersV2Options: RouteOptions = {
 
       let continuation = null;
       if (rawResult.length === query.limit) {
-        continuation = rawResult[rawResult.length - 1].block;
+        continuation =
+          rawResult[rawResult.length - 1].block +
+          "_" +
+          rawResult[rawResult.length - 1].log_index +
+          "_" +
+          rawResult[rawResult.length - 1].batch_index;
       }
 
       const result = rawResult.map((r) => ({
