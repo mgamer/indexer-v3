@@ -33,7 +33,7 @@ export const getStatsV1Options: RouteOptions = {
         market: Joi.object({
           floorAsk: Joi.object({
             id: Joi.string().allow(null),
-            value: Joi.number().unsafe().allow(null),
+            price: Joi.number().unsafe().allow(null),
             maker: Joi.string()
               .lowercase()
               .pattern(/^0x[a-f0-9]{40}$/)

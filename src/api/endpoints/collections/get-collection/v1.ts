@@ -127,7 +127,6 @@ export const getCollectionV1Options: RouteOptions = {
             LIMIT 4
           ) AS "sample_images"          
         FROM "collections" "c"
-        LIMIT 1
       `;
 
       // If `collectionOrSlug` matches a contract address then we
@@ -138,6 +137,8 @@ export const getCollectionV1Options: RouteOptions = {
       } else {
         baseQuery += ` WHERE "c"."slug" = $/collectionOrSlug/`;
       }
+
+      baseQuery += ` LIMIT 1`;
 
       baseQuery = `
         WITH "x" AS (${baseQuery})
