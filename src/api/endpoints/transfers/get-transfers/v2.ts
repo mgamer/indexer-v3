@@ -141,7 +141,9 @@ export const getTransfersV2Options: RouteOptions = {
         (query as any).logIndex = logIndex;
         (query as any).batchIndex = batchIndex;
 
-        conditions.push(`(nft_transfer_events.block, nft_transfer_events.log_index, nft_transfer_events.batch_index) < ($/block/, $/logIndex/, $/batchIndex/)`);
+        conditions.push(
+          `(nft_transfer_events.block, nft_transfer_events.log_index, nft_transfer_events.batch_index) < ($/block/, $/logIndex/, $/batchIndex/)`
+        );
       }
 
       if (conditions.length) {
