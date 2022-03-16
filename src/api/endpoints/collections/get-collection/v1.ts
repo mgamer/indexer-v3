@@ -127,6 +127,7 @@ export const getCollectionV1Options: RouteOptions = {
             LIMIT 4
           ) AS "sample_images"          
         FROM "collections" "c"
+        LIMIT 1
       `;
 
       // If `collectionOrSlug` matches a contract address then we
