@@ -16,18 +16,18 @@ export const getSalesV3Options: RouteOptions = {
   tags: ["api", "events"],
   validate: {
     query: Joi.object({
-      // TODO: Look into optimizing filtering by collection
       contract: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
       token: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}:[0-9]+$/),
+      collection: Joi.string(),
       limit: Joi.number().integer().min(1).max(100).default(20),
       continuation: Joi.string().pattern(/^(\d+)_(\d+)_(\d+)$/),
     })
-      .oxor("contract", "token")
-      .or("contract", "token"),
+      .oxor("contract", "token", "collection")
+      .or("contract", "token", "collection"),
   },
   response: {
     schema: Joi.object({
@@ -58,7 +58,6 @@ export const getSalesV3Options: RouteOptions = {
             .pattern(/^0x[a-f0-9]{64}$/),
           timestamp: Joi.number(),
           price: Joi.number().unsafe().allow(null),
-          block: Joi.number(),
         })
       ),
       continuation: Joi.string()
@@ -75,15 +74,14 @@ export const getSalesV3Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const query = request.query as any;
+
     let paginationFilter = "";
     let tokenFilter = "";
-    let collectionFilter = "";
 
     // Filters
     if (query.contract) {
       (query as any).contract = toBuffer(query.contract);
     }
-
     if (query.token) {
       const [contract, tokenId] = query.token.split(":");
 
@@ -91,48 +89,78 @@ export const getSalesV3Options: RouteOptions = {
       (query as any).tokenId = tokenId;
       tokenFilter = `AND token_id = $/tokenId/`;
     }
-
     if (query.collection) {
-      collectionFilter = `tokens.collection_id = $/collection/`;
+      if (query.collection.match(/^0x[a-f0-9]{40}:\d+:\d+$/g)) {
+        const [contract, startTokenId, endTokenId] =
+          query.collection.split(":");
+
+        (query as any).contract = toBuffer(contract);
+        (query as any).startTokenId = startTokenId;
+        (query as any).endTokenId = endTokenId;
+        tokenFilter = `
+          AND token_id >= $/startTokenId/ AND token_id <= $/endTokenId/
+        `;
+      } else {
+        (query as any).contract = toBuffer(query.collection);
+      }
     }
 
     if (query.continuation) {
-      const [block, log_index, batch_index] = query.continuation.split("_");
+      const [block, logIndex, batchIndex] = query.continuation.split("_");
       (query as any).block = block;
-      (query as any).log_index = log_index;
-      (query as any).batch_index = batch_index;
+      (query as any).logIndex = logIndex;
+      (query as any).batchIndex = batchIndex;
 
-      paginationFilter = `AND (fill_events_2.block, fill_events_2.log_index, fill_events_2.batch_index) < ($/block/, $/log_index/, $/batch_index/)`;
+      paginationFilter = `
+        AND (fill_events_2.block, fill_events_2.log_index, fill_events_2.batch_index) < ($/block/, $/logIndex/, $/batchIndex/)
+      `;
     }
 
     try {
       const baseQuery = `
-        SELECT fill_events_2_data.contract, fill_events_2_data.token_id,
-               fill_events_2_data.order_side, fill_events_2_data.maker, fill_events_2_data.taker,
-               fill_events_2_data.amount, fill_events_2_data.tx_hash, fill_events_2_data."timestamp",
-               fill_events_2_data.price, fill_events_2_data.block, fill_events_2_data.log_index,
-               fill_events_2_data.batch_index, tokens_data.name, tokens_data.image, tokens_data.collection_id,
-               collections.name AS collection_name
+        SELECT
+          fill_events_2_data.*,
+          tokens_data.name,
+          tokens_data.image,
+          tokens_data.collection_id,
+          tokens_data.collection_name
         FROM (
-          SELECT  fill_events_2.contract, fill_events_2.token_id,
-                  fill_events_2.order_side, fill_events_2.maker, fill_events_2.taker,
-                  fill_events_2.amount, fill_events_2.tx_hash, fill_events_2."timestamp",
-                  fill_events_2.price, fill_events_2.block, fill_events_2.log_index,
-                  fill_events_2.batch_index
+          SELECT
+            fill_events_2.contract,
+            fill_events_2.token_id,
+            fill_events_2.order_side,
+            fill_events_2.maker,
+            fill_events_2.taker,
+            fill_events_2.amount,
+            fill_events_2.tx_hash,
+            fill_events_2."timestamp",
+            fill_events_2.price,
+            fill_events_2.block,
+            fill_events_2.log_index,
+            fill_events_2.batch_index
           FROM fill_events_2
           WHERE fill_events_2.contract = $/contract/
-          ${tokenFilter}
-          ${paginationFilter}
-          ORDER BY fill_events_2.block DESC, fill_events_2.log_index DESC, fill_events_2.batch_index DESC
+            ${tokenFilter}
+            ${paginationFilter}
+          ORDER BY
+            fill_events_2.block DESC,
+            fill_events_2.log_index DESC,
+            fill_events_2.batch_index DESC
           LIMIT $/limit/
         ) AS fill_events_2_data
         JOIN LATERAL (
-          SELECT tokens.name, tokens.image, tokens.collection_id
+          SELECT
+            tokens.name,
+            tokens.image,
+            tokens.collection_id,
+            collections.name AS collection_name
           FROM tokens
-          WHERE fill_events_2_data.token_id = tokens.token_id AND fill_events_2_data.contract = tokens.contract
-          ${collectionFilter}
+          JOIN collections
+            ON tokens.collection_id = collections.id
+          WHERE fill_events_2_data.token_id = tokens.token_id
+            AND fill_events_2_data.contract = tokens.contract
+
         ) tokens_data ON TRUE
-        JOIN collections on fill_events_2_data.contract = collections.contract
       `;
 
       const rawResult = await edb.manyOrNone(baseQuery, query);
@@ -165,7 +193,6 @@ export const getSalesV3Options: RouteOptions = {
         txHash: fromBuffer(r.tx_hash),
         timestamp: r.timestamp,
         price: r.price ? formatEth(r.price) : null,
-        block: r.block,
       }));
 
       return {

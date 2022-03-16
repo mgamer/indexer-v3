@@ -15,18 +15,18 @@ export const getTransfersV2Options: RouteOptions = {
   tags: ["api", "events"],
   validate: {
     query: Joi.object({
-      collection: Joi.string().lowercase(),
       contract: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
       token: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}:[0-9]+$/),
+      collection: Joi.string().lowercase(),
       limit: Joi.number().integer().min(1).max(100).default(20),
       continuation: Joi.number().integer().default(0),
     })
-      .oxor("contract", "token")
-      .or("contract", "token"),
+      .oxor("contract", "token", "collection")
+      .or("contract", "token", "collection"),
   },
   response: {
     schema: Joi.object({
@@ -74,34 +74,39 @@ export const getTransfersV2Options: RouteOptions = {
     try {
       let baseQuery = `
         SELECT
-          nft_transfer_events.address, nft_transfer_events.token_id,
-          tokens.name, tokens.image, tokens.collection_id,
-          collections.name as collection_name, nft_transfer_events."from",
-          nft_transfer_events."to", nft_transfer_events.amount, nft_transfer_events.tx_hash,
-          nft_transfer_events."timestamp", nft_transfer_events.block,
+          nft_transfer_events.address,
+          nft_transfer_events.token_id,
+          tokens.name,
+          tokens.image,
+          tokens.collection_id,
+          collections.name as collection_name,
+          nft_transfer_events."from",
+          nft_transfer_events."to",
+          nft_transfer_events.amount,
+          nft_transfer_events.tx_hash,
+          nft_transfer_events."timestamp",
+          nft_transfer_events.block,
           (
             SELECT fill_events_2.price
             FROM fill_events_2
             WHERE fill_events_2.tx_hash = nft_transfer_events.tx_hash
-            AND fill_events_2.log_index = nft_transfer_events.log_index + 1
+              AND fill_events_2.log_index = nft_transfer_events.log_index + 1
             LIMIT 1
           ) AS price
         FROM nft_transfer_events
-        JOIN tokens ON nft_transfer_events.address = tokens.contract AND nft_transfer_events.token_id = tokens.token_id
-        JOIN collections ON tokens.collection_id = collections.id
+        JOIN tokens
+          ON nft_transfer_events.address = tokens.contract
+          AND nft_transfer_events.token_id = tokens.token_id
+        JOIN collections
+          ON tokens.collection_id = collections.id
       `;
 
       // Filters
       const conditions: string[] = [];
-      if (query.collection) {
-        conditions.push(`collections.id = $/collection/`);
-      }
-
       if (query.contract) {
         (query as any).contract = toBuffer(query.contract);
         conditions.push(`nft_transfer_events."address" = $/contract/`);
       }
-
       if (query.token) {
         const [contract, tokenId] = query.token.split(":");
 
@@ -110,11 +115,24 @@ export const getTransfersV2Options: RouteOptions = {
         conditions.push(`tokens."contract" = $/contract/`);
         conditions.push(`tokens."token_id" = $/tokenId/`);
       }
+      if (query.collection) {
+        if (query.collection.match(/^0x[a-f0-9]{40}:\d+:\d+$/g)) {
+          const [contract, startTokenId, endTokenId] =
+            query.collection.split(":");
 
+          (query as any).contract = toBuffer(contract);
+          (query as any).startTokenId = startTokenId;
+          (query as any).endTokenId = endTokenId;
+          conditions.push(`tokens."contract" = $/contract/`);
+          conditions.push(`tokens."token_id" >= $/startTokenId/`);
+          conditions.push(`tokens."token_id" <= $/endTokenId/`);
+        } else {
+          (query as any).contract = toBuffer(query.collection);
+        }
+      }
       if (query.continuation) {
         conditions.push(`nft_transfer_events.block < $/continuation/`);
       }
-
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
