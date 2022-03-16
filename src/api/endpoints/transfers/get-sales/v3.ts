@@ -23,6 +23,7 @@ export const getSalesV3Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}:[0-9]+$/),
       collection: Joi.string(),
+      attributes: Joi.object().unknown(),
       limit: Joi.number().integer().min(1).max(100).default(20),
       continuation: Joi.string().pattern(/^(\d+)_(\d+)_(\d+)$/),
     })
@@ -77,6 +78,8 @@ export const getSalesV3Options: RouteOptions = {
 
     let paginationFilter = "";
     let tokenFilter = "";
+    let tokenJoins = "";
+    let collectionFilter = "";
 
     // Filters
     if (query.contract) {
@@ -87,22 +90,53 @@ export const getSalesV3Options: RouteOptions = {
 
       (query as any).contract = toBuffer(contract);
       (query as any).tokenId = tokenId;
-      tokenFilter = `AND token_id = $/tokenId/`;
+      tokenFilter = `fill_events_2.contract = $/contract/ AND fill_events_2.token_id = $/tokenId/`;
     }
     if (query.collection) {
-      if (query.collection.match(/^0x[a-f0-9]{40}:\d+:\d+$/g)) {
-        const [contract, startTokenId, endTokenId] =
-          query.collection.split(":");
+      let attributesFilter = "";
+      if (query.attributes) {
+        tokenJoins = `
+          JOIN tokens
+            ON fill_events_2.contract = tokens.contract
+            AND fill_events_2.token_id = tokens.token_id
+        `;
 
-        (query as any).contract = toBuffer(contract);
-        (query as any).startTokenId = startTokenId;
-        (query as any).endTokenId = endTokenId;
-        tokenFilter = `
-          AND token_id >= $/startTokenId/ AND token_id <= $/endTokenId/
+        const attributes: { key: string; value: string }[] = [];
+        Object.entries(query.attributes).forEach(([key, values]) => {
+          (Array.isArray(values) ? values : [values]).forEach((value) =>
+            attributes.push({ key, value })
+          );
+        });
+
+        for (let i = 0; i < attributes.length; i++) {
+          (query as any)[
+            `attribute${i}`
+          ] = `${attributes[i].key},${attributes[i].value}`;
+          attributesFilter += `
+            AND tokens.attributes ? $/attribute${i}/
+          `;
+        }
+      }
+
+      if (query.collection.match(/^0x[a-f0-9]{40}:\d+:\d+$/g)) {
+        tokenJoins = `
+          JOIN tokens
+            ON fill_events_2.contract = tokens.contract
+            AND fill_events_2.token_id = tokens.token_id
+        `;
+        collectionFilter = `
+          tokens.collection_id = $/collection/
         `;
       } else {
-        (query as any).contract = toBuffer(query.collection);
+        if (attributesFilter === "") {
+          (query as any).contract = toBuffer(query.collection);
+          collectionFilter = `fill_events_2.contract = $/contract/`;
+        } else {
+          collectionFilter = `tokens.collection_id = $/collection/`;
+        }
       }
+
+      collectionFilter += ` ${attributesFilter}`;
     }
 
     if (query.continuation) {
@@ -139,7 +173,9 @@ export const getSalesV3Options: RouteOptions = {
             fill_events_2.log_index,
             fill_events_2.batch_index
           FROM fill_events_2
-          WHERE fill_events_2.contract = $/contract/
+            ${tokenJoins}
+          WHERE
+            ${collectionFilter}
             ${tokenFilter}
             ${paginationFilter}
           ORDER BY
@@ -159,7 +195,6 @@ export const getSalesV3Options: RouteOptions = {
             ON tokens.collection_id = collections.id
           WHERE fill_events_2_data.token_id = tokens.token_id
             AND fill_events_2_data.contract = tokens.contract
-
         ) tokens_data ON TRUE
       `;
 
