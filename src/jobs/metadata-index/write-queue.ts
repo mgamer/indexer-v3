@@ -79,6 +79,9 @@ if (config.doBackgroundWork) {
         }
 
         // Delete all previous attributes of the token.
+        // TODO: Token reindexing seems to mess up the `token_count`
+        // cached inside each attribute. We should investigate what
+        // causes it (probably concurrent writes) and fix the issue.
         await idb.none(
           `
             WITH x AS (
