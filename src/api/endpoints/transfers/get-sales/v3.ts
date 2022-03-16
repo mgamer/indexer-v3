@@ -84,6 +84,7 @@ export const getSalesV3Options: RouteOptions = {
     // Filters
     if (query.contract) {
       (query as any).contract = toBuffer(query.contract);
+      tokenFilter = `fill_events_2.contract = $/contract/`;
     }
     if (query.token) {
       const [contract, tokenId] = query.token.split(":");

@@ -117,7 +117,7 @@ export const getTransfersV2Options: RouteOptions = {
 
         (query as any).contract = toBuffer(contract);
         (query as any).tokenId = tokenId;
-        conditions.push(`nft_transfer_events."contract" = $/contract/`);
+        conditions.push(`nft_transfer_events."address" = $/contract/`);
         conditions.push(`nft_transfer_events."token_id" = $/tokenId/`);
       }
       if (query.collection) {
