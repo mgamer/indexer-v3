@@ -7,7 +7,7 @@ import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 
-const version = "v1";
+const version = "v2";
 
 export const getTokensV2Options: RouteOptions = {
   description: "List of tokens v2",
@@ -166,14 +166,11 @@ export const getTokensV2Options: RouteOptions = {
                   ("t"."top_buy_value", "t"."token_id") < ($/topBuyValue:raw/, $/tokenId:raw/)
                   OR (t.top_buy_value is null)
                  `);
-                (query as any).topBuyValue =
-                  contArr[0] !== "null"
-                    ? contArr[0]
-                    : "1000000000000000000000000";
+                (query as any).topBuyValue = contArr[0];
                 (query as any).tokenId = contArr[1];
               } else {
                 conditions.push(
-                  `(t.top_buy_value is null AND t.token_id > $/tokenId/)`
+                  `(t.top_buy_value is null AND t.token_id < $/tokenId/)`
                 );
                 (query as any).tokenId = contArr[1];
               }
@@ -186,10 +183,7 @@ export const getTokensV2Options: RouteOptions = {
                   OR (t.floor_sell_value is null)
                 )
                 `);
-                (query as any).floorSellValue =
-                  contArr[0] !== "null"
-                    ? contArr[0]
-                    : "1000000000000000000000000";
+                (query as any).floorSellValue = contArr[0];
                 (query as any).tokenId = contArr[1];
               } else {
                 conditions.push(
