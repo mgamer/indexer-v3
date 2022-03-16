@@ -108,6 +108,7 @@ export const getSalesV3Options: RouteOptions = {
           );
         });
 
+        attributesFilter += `AND tokens.collection_id = $/collection/`;
         for (let i = 0; i < attributes.length; i++) {
           (query as any)[
             `attribute${i}`
@@ -124,16 +125,21 @@ export const getSalesV3Options: RouteOptions = {
             ON fill_events_2.contract = tokens.contract
             AND fill_events_2.token_id = tokens.token_id
         `;
+
+        const [contract, startTokenId, endTokenId] =
+          query.collection.split(":");
+
+        (query as any).contract = toBuffer(contract);
+        (query as any).startTokenId = startTokenId;
+        (query as any).endTokenId = endTokenId;
         collectionFilter = `
-          tokens.collection_id = $/collection/
+          fill_events_2."contract" = $/contract/
+          AND fill_events_2."token_id" >= $/startTokenId/
+          AND fill_events_2."token_id" <= $/endTokenId/
         `;
       } else {
-        if (attributesFilter === "") {
-          (query as any).contract = toBuffer(query.collection);
-          collectionFilter = `fill_events_2.contract = $/contract/`;
-        } else {
-          collectionFilter = `tokens.collection_id = $/collection/`;
-        }
+        (query as any).contract = toBuffer(query.collection);
+        collectionFilter = `fill_events_2.contract = $/contract/`;
       }
 
       collectionFilter += ` ${attributesFilter}`;

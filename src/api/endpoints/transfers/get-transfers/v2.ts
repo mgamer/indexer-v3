@@ -22,6 +22,7 @@ export const getTransfersV2Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}:[0-9]+$/),
       collection: Joi.string().lowercase(),
+      attributes: Joi.object().unknown(),
       limit: Joi.number().integer().min(1).max(100).default(20),
       continuation: Joi.string().pattern(/^(\d+)_(\d+)_(\d+)$/),
     })
@@ -116,10 +117,29 @@ export const getTransfersV2Options: RouteOptions = {
 
         (query as any).contract = toBuffer(contract);
         (query as any).tokenId = tokenId;
-        conditions.push(`tokens."contract" = $/contract/`);
-        conditions.push(`tokens."token_id" = $/tokenId/`);
+        conditions.push(`nft_transfer_events."contract" = $/contract/`);
+        conditions.push(`nft_transfer_events."token_id" = $/tokenId/`);
       }
       if (query.collection) {
+        if (query.attributes) {
+          const attributes: { key: string; value: string }[] = [];
+          Object.entries(query.attributes).forEach(([key, values]) => {
+            (Array.isArray(values) ? values : [values]).forEach((value) =>
+              attributes.push({ key, value })
+            );
+          });
+
+          conditions.push(`tokens.collection_id = $/collection/`);
+          for (let i = 0; i < attributes.length; i++) {
+            (query as any)[
+              `attribute${i}`
+            ] = `${attributes[i].key},${attributes[i].value}`;
+            conditions.push(`
+              tokens.attributes ? $/attribute${i}/
+            `);
+          }
+        }
+
         if (query.collection.match(/^0x[a-f0-9]{40}:\d+:\d+$/g)) {
           const [contract, startTokenId, endTokenId] =
             query.collection.split(":");
@@ -127,11 +147,12 @@ export const getTransfersV2Options: RouteOptions = {
           (query as any).contract = toBuffer(contract);
           (query as any).startTokenId = startTokenId;
           (query as any).endTokenId = endTokenId;
-          conditions.push(`tokens."contract" = $/contract/`);
-          conditions.push(`tokens."token_id" >= $/startTokenId/`);
-          conditions.push(`tokens."token_id" <= $/endTokenId/`);
+          conditions.push(`nft_transfer_events."address" = $/contract/`);
+          conditions.push(`nft_transfer_events."token_id" >= $/startTokenId/`);
+          conditions.push(`nft_transfer_events."token_id" <= $/endTokenId/`);
         } else {
           (query as any).contract = toBuffer(query.collection);
+          conditions.push(`nft_transfer_events."address" = $/contract/`);
         }
       }
 
