@@ -10,7 +10,7 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getTokensV2Options: RouteOptions = {
-  description: "List of tokens",
+  description: "List of tokens v2",
   notes:
     "This API is optimized for quickly fetching a list of tokens in a collection, sorted by price, with only the most important information returned. If you need more metadata, use the `tokens/details` API",
   tags: ["api", "tokens"],
