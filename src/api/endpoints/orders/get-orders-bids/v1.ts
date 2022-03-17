@@ -143,7 +143,7 @@ export const getOrdersBidsV1Options: RouteOptions = {
           case "inactive": {
             // Potentially-valid orders
             conditions.push(
-              `"o"."fillability_status" = 'no-balance' OR ("o"."fillability_status" = 'fillable' AND "o"."approval_status" = 'approved')`
+              `"o"."fillability_status" = 'no-balance' OR ("o"."fillability_status" = 'fillable' AND "o"."approval_status" != 'approved')`
             );
             break;
           }
