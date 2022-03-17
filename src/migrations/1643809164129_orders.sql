@@ -39,6 +39,7 @@ CREATE TABLE "orders" (
   "valid_between" TSTZRANGE,
   "nonce" NUMERIC(78, 0),
   "source_id" BYTEA,
+  "contract" BYTEA,
   "fee_bps" INT,
   "fee_breakdown" JSONB,
   "raw_data" JSONB,
@@ -56,7 +57,7 @@ CREATE INDEX "orders_token_set_id_side_value_maker_index"
   INCLUDE ("id")
   WHERE ("fillability_status" = 'fillable' AND "approval_status" = 'approved');
 
-CREATE INDEX "orders_maker_side__token_set_id_index"
+CREATE INDEX "orders_maker_side_token_set_id_index"
   ON "orders" ("maker", "side", "token_set_id")
   INCLUDE ("id")
   WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
