@@ -36,11 +36,11 @@ CREATE INDEX "tokens_contract_floor_sell_value_index"
 CREATE INDEX "tokens_contract_top_buy_value_index"
   ON "tokens" ("contract", "top_buy_value" DESC NULLS LAST);
 
-CREATE INDEX "tokens_collection_id_floor_sell_value_index"
-  ON "tokens" ("collection_id", "floor_sell_value");
+CREATE INDEX tokens_collection_id_floor_sell_value_token_id_index
+    on tokens (collection_id, floor_sell_value ASC NULLS LAST, token_id);
 
-CREATE INDEX "tokens_collection_id_top_buy_value_index"
-  ON "tokens" ("collection_id", "top_buy_value" DESC NULLS LAST);
+CREATE INDEX tokens_collection_id_top_buy_value_token_id_index
+    on tokens (collection_id, top_buy_value DESC NULLS LAST, token_id DESC);
 
 CREATE INDEX "tokens_top_buy_maker_collection_id_index"
   ON "tokens" ("top_buy_maker", "collection_id")
