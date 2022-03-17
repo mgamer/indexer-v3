@@ -95,6 +95,28 @@ export const getTokensV2Options: RouteOptions = {
         `;
       }
 
+      if (query.attributes) {
+        const attributes: { key: string; value: string }[] = [];
+        Object.entries(query.attributes).forEach(([key, values]) => {
+          (Array.isArray(values) ? values : [values]).forEach((value) =>
+            attributes.push({ key, value })
+          );
+        });
+
+        for (let i = 0; i < attributes.length; i++) {
+          (query as any)[`key${i}`] = attributes[i].key;
+          (query as any)[`value${i}`] = attributes[i].value;
+          baseQuery += `
+            JOIN "token_attributes" "ta${i}"
+              ON "t"."contract" = "ta${i}"."contract"
+              AND "t"."token_id" = "ta${i}"."token_id"
+              AND "ta${i}"."collection_id" = $/collection/
+              AND "ta${i}"."key" = $/key${i}/
+              AND "ta${i}"."value" = $/value${i}/
+          `;
+        }
+      }
+
       // Filters
       const conditions: string[] = [];
       if (query.collection) {
@@ -114,24 +136,6 @@ export const getTokensV2Options: RouteOptions = {
       }
       if (query.tokenSetId) {
         conditions.push(`"tst"."token_set_id" = $/tokenSetId/`);
-      }
-
-      if (query.attributes) {
-        const attributes: { key: string; value: string }[] = [];
-        Object.entries(query.attributes).forEach(([key, values]) => {
-          (Array.isArray(values) ? values : [values]).forEach((value) =>
-            attributes.push({ key, value })
-          );
-        });
-
-        for (let i = 0; i < attributes.length; i++) {
-          (query as any)[
-            `attribute${i}`
-          ] = `${attributes[i].key},${attributes[i].value}`;
-          conditions.push(`
-            "t"."attributes" ? $/attribute${i}/
-          `);
-        }
       }
 
       // Continue with the next page, this depends on the sorting used
