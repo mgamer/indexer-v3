@@ -27,8 +27,8 @@ export const getOrdersBidsV1Options: RouteOptions = {
       continuation: Joi.string().pattern(/^\d+(.\d+)?_0x[a-f0-9]{64}$/),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     })
-      .or("token", "tokenSet", "maker")
-      .oxor("token", "tokenSet", "maker")
+      .or("token", "tokenSetId", "maker")
+      .oxor("token", "tokenSetId", "maker")
       .with("status", "maker"),
   },
   response: {
@@ -188,8 +188,6 @@ export const getOrdersBidsV1Options: RouteOptions = {
 
       // Pagination
       baseQuery += ` LIMIT $/limit/`;
-
-      console.log(baseQuery);
 
       const rawResult = await edb.manyOrNone(baseQuery, query);
 
