@@ -45,9 +45,9 @@ CREATE TABLE "token_attributes" (
   "contract" BYTEA NOT NULL,
   "token_id" NUMERIC(78, 0) NOT NULL,
   "attribute_id" BIGINT NOT NULL,
-  "collection_id" TEXT,
-  "key" TEXT,
-  "value" TEXT
+  "collection_id" TEXT NOT NULL,
+  "key" TEXT NOT NULL,
+  "value" TEXT NOT NULL
 );
 
 ALTER TABLE "token_attributes"
