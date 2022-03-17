@@ -109,7 +109,6 @@ export const getSalesV3Options: RouteOptions = {
             JOIN token_attributes ta${i}
               ON fill_events_2.contract = ta${i}.contract
               AND fill_events_2.token_id = ta${i}.token_id
-              AND ta${i}.collection_id = $/collection/
               AND ta${i}.key = $/key${i}/
               AND ta${i}.value = $/value${i}/
           `;

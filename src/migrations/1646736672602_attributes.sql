@@ -54,9 +54,8 @@ ALTER TABLE "token_attributes"
   ADD CONSTRAINT "token_attributes_pk"
   PRIMARY KEY ("contract", "token_id", "attribute_id");
 
-CREATE INDEX "token_attributes_collection_id_key_value_index"
-  ON "token_attributes" ("collection_id", "key", "value")
-  INCLUDE ("contract", "token_id");
+CREATE INDEX "token_attributes_contract_token_id_key_value_index"
+  ON "token_attributes" ("contract", "token_id", "key", "value");
 
 -- Down Migration
 

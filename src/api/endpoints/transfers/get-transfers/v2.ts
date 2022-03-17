@@ -136,7 +136,6 @@ export const getTransfersV2Options: RouteOptions = {
               JOIN token_attributes ta${i}
                 ON nft_transfer_events.address = ta${i}.contract
                 AND nft_transfer_events.token_id = ta${i}.token_id
-                AND ta${i}.collection_id = $/collection/
                 AND ta${i}.key = $/key${i}/
                 AND ta${i}.value = $/value${i}/
             `;

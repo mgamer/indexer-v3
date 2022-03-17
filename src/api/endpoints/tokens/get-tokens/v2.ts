@@ -110,7 +110,6 @@ export const getTokensV2Options: RouteOptions = {
             JOIN "token_attributes" "ta${i}"
               ON "t"."contract" = "ta${i}"."contract"
               AND "t"."token_id" = "ta${i}"."token_id"
-              AND "ta${i}"."collection_id" = $/collection/
               AND "ta${i}"."key" = $/key${i}/
               AND "ta${i}"."value" = $/value${i}/
           `;
