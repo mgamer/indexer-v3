@@ -254,7 +254,8 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 20 }
+    // No concurrency here to avoid any possible deadlocks.
+    { connection: redis.duplicate() }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
