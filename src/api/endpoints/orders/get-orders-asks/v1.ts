@@ -23,9 +23,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
       maker: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
-      status: Joi.string()
-        .valid("active", "inactive", "expired")
-        .default("active"),
+      status: Joi.string().valid("active", "inactive", "expired"),
       continuation: Joi.string().pattern(/^\d+(.\d+)?_0x[a-f0-9]{64}$/),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     })
@@ -141,21 +139,32 @@ export const getOrdersAsksV1Options: RouteOptions = {
         conditions.push(`"o"."token_set_id" = $/tokenSetId/`);
       }
       if (query.maker) {
-        if (query.status === "active") {
-          // Valid orders
-          conditions.push(
-            `"o"."fillability_status" = 'fillable' AND "o"."approval_status" = 'approved'`
-          );
-        } else if (query.status === "inactive") {
-          // Potentially-valid orders
-          conditions.push(
-            `"o"."fillability_status" = 'no-balance' OR ("o"."fillability_status" = 'fillable' AND "o"."approval_status" = 'approved')`
-          );
-        } else if (query.status === "expired") {
-          // Invalid orders
-          conditions.push(
-            `"o"."fillability_status" != 'fillable' AND "o"."fillability_status" != 'no-balance'`
-          );
+        switch (query.status) {
+          case "inactive": {
+            // Potentially-valid orders
+            conditions.push(
+              `"o"."fillability_status" = 'no-balance' OR ("o"."fillability_status" = 'fillable' AND "o"."approval_status" = 'approved')`
+            );
+            break;
+          }
+
+          case "expired": {
+            // Invalid orders
+            conditions.push(
+              `"o"."fillability_status" != 'fillable' AND "o"."fillability_status" != 'no-balance'`
+            );
+            break;
+          }
+
+          case "active":
+          default: {
+            // Valid orders
+            conditions.push(
+              `"o"."fillability_status" = 'fillable' AND "o"."approval_status" = 'approved'`
+            );
+
+            break;
+          }
         }
 
         (query as any).maker = toBuffer(query.maker);
