@@ -201,11 +201,17 @@ if (config.doBackgroundWork) {
                 INSERT INTO "token_attributes" (
                   "contract",
                   "token_id",
-                  "attribute_id"
+                  "attribute_id",
+                  "collection_id",
+                  "key",
+                  "value"
                 ) VALUES (
                   $/contract/,
                   $/tokenId/,
-                  $/attributeId/
+                  $/attributeId/,
+                  $/collection/,
+                  $/key/,
+                  $/value/
                 )
                 ON CONFLICT DO NOTHING
                 RETURNING 1
@@ -218,16 +224,20 @@ if (config.doBackgroundWork) {
               contract: toBuffer(contract),
               tokenId,
               attributeId: attributeResult.id,
+              collection,
+              key: String(key),
+              value: String(value),
             }
           );
         }
 
-        // Mark the token as indexed
+        // Mark the token as having metadata indexed.
         await idb.none(
           `
-            UPDATE "tokens" SET "metadata_indexed" = TRUE
-            WHERE "contract" = $/contract/
-              AND "token_id" = $/tokenId/
+            UPDATE tokens SET metadata_indexed = TRUE
+            WHERE tokens.contract = $/contract/
+              AND tokens.token_id = $/tokenId/
+              AND tokens.metadata_indexed IS DISTINCT FROM TRUE
           `,
           {
             contract: toBuffer(contract),

@@ -44,12 +44,19 @@ ALTER TABLE "attributes"
 CREATE TABLE "token_attributes" (
   "contract" BYTEA NOT NULL,
   "token_id" NUMERIC(78, 0) NOT NULL,
-  "attribute_id" BIGINT NOT NULL
+  "attribute_id" BIGINT NOT NULL,
+  "collection_id" TEXT,
+  "key" TEXT,
+  "value" TEXT
 );
 
 ALTER TABLE "token_attributes"
   ADD CONSTRAINT "token_attributes_pk"
   PRIMARY KEY ("contract", "token_id", "attribute_id");
+
+CREATE INDEX "token_attributes_collection_id_key_value_index"
+  ON "token_attributes" ("collection_id", "key", "value")
+  INCLUDE ("contract", "token_id");
 
 -- Down Migration
 
