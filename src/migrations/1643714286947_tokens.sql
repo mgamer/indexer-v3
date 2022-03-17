@@ -33,6 +33,9 @@ ALTER TABLE "tokens"
 CREATE INDEX "tokens_contract_floor_sell_value_index"
   ON "tokens" ("contract", "floor_sell_value");
 
+  CREATE INDEX "tokens_collection_id_contract_token_id_index"
+  ON "tokens" (collection_id COLLATE pg_catalog."default" ASC NULLS LAST, contract ASC NULLS LAST, token_id ASC NULLS LAST)
+
 CREATE INDEX "tokens_contract_top_buy_value_index"
   ON "tokens" ("contract", "top_buy_value" DESC NULLS LAST);
 
@@ -45,6 +48,10 @@ CREATE INDEX tokens_collection_id_top_buy_value_token_id_index
 CREATE INDEX "tokens_top_buy_maker_collection_id_index"
   ON "tokens" ("top_buy_maker", "collection_id")
   INCLUDE ("top_buy_value");
+
+CREATE INDEX "tokens_contract_token_id_index"
+  ON "tokens" ("contract", "token_id")
+  INCLUDE ("floor_sale_value", "top_buy_value");
 
 CREATE INDEX "tokens_collection_id_attributes_index"
   ON "tokens"
