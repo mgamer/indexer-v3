@@ -258,6 +258,10 @@ export const addToQueue = async (tokenMetadataInfos: TokenMetadataInfo[]) => {
     tokenMetadataInfos.map((tokenMetadataInfo) => ({
       name: `${tokenMetadataInfo.contract}-${tokenMetadataInfo.tokenId}`,
       data: tokenMetadataInfo,
+      opts: {
+        // Deterministic job id so that we don't perform duplicated work
+        jobId: `${tokenMetadataInfo.contract}-${tokenMetadataInfo.tokenId}`,
+      },
     }))
   );
 };

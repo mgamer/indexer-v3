@@ -243,6 +243,10 @@ export const addToQueue = async (mintInfos: MintInfo[]) => {
     mintInfos.map((mintInfo) => ({
       name: `${mintInfo.contract}-${mintInfo.tokenId}`,
       data: mintInfo,
+      opts: {
+        // Deterministic job id so that we don't perform duplicated work
+        jobId: `${mintInfo.contract}-${mintInfo.tokenId}`,
+      },
     }))
   );
 };

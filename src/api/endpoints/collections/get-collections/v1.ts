@@ -50,6 +50,7 @@ export const getCollectionsV1Options: RouteOptions = {
           slug: Joi.string(),
           name: Joi.string().allow(null, ""),
           metadata: Joi.any().allow(null),
+          sampleImages: Joi.array().items(Joi.string().allow(null, "")),
           tokenCount: Joi.string(),
           tokenSetId: Joi.string().allow(null),
           royalties: Joi.object({
@@ -92,58 +93,62 @@ export const getCollectionsV1Options: RouteOptions = {
     try {
       let baseQuery = `
         SELECT
-          "c"."id",
-          "c"."slug",
-          "c"."name",
-          "c"."metadata",
-          "c"."royalties",
-          "c"."token_set_id",
-          "c"."token_count",
+          collections.id,
+          collections.slug,
+          collections.name,
+          collections.metadata,
+          collections.royalties,
+          collections.token_set_id,
+          collections.token_count,
           (
-            SELECT MIN("t"."floor_sell_value") FROM "tokens" "t"
-            WHERE "t"."collection_id" = "c"."id"
-          ) AS "floor_sell_value",
-          "c"."day1_rank",
-          "c"."day1_volume",
-          "c"."day7_rank",
-          "c"."day7_volume",
-          "c"."day30_rank",
-          "c"."day30_volume",
-          "c"."all_time_rank",
-          "c"."all_time_volume"
-        FROM "collections" "c"
+            SELECT array(
+              SELECT tokens.image FROM tokens
+              WHERE tokens.collection_id = collections.id
+              LIMIT 4
+            )
+          ) AS sample_images,
+          (
+            SELECT MIN(tokens.floor_sell_value) FROM tokens
+            WHERE tokens.collection_id = collections.id
+          ) AS floor_sell_value,
+          collections.day1_rank,
+          collections.day1_volume,
+          collections.day7_rank,
+          collections.day7_volume,
+          collections.day30_rank,
+          collections.day30_volume,
+          collections.all_time_rank,
+          collections.all_time_volume
+        FROM collections
       `;
 
       // Filters
       const conditions: string[] = [];
       if (query.community) {
-        conditions.push(`"c"."community" = $/community/`);
+        conditions.push(`collections.community = $/community/`);
       }
       if (query.contract) {
         query.contract = toBuffer(query.contract);
-        conditions.push(`"c"."contract" = $/contract/`);
+        conditions.push(`collections.contract = $/contract/`);
       }
       if (query.name) {
         query.name = `%${query.name}%`;
-        conditions.push(`"c"."name" ILIKE $/name/`);
+        conditions.push(`collections.name ILIKE $/name/`);
       }
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
 
-      // Grouping
-      baseQuery += ` GROUP BY "c"."id"`;
-
       // Sorting
       if (query.sortBy) {
         switch (query.sortBy) {
           case "1DayVolume":
-            baseQuery += ` ORDER BY "c"."day1_volume" DESC`;
+            baseQuery += ` ORDER BY collections.day1_volume DESC`;
             break;
 
           case "allTimeVolume":
           default:
-            baseQuery += ` ORDER BY "c"."all_time_volume" DESC`;
+            baseQuery += ` ORDER BY collections.all_time_volume DESC`;
             break;
         }
       }
@@ -153,20 +158,20 @@ export const getCollectionsV1Options: RouteOptions = {
       baseQuery += ` LIMIT $/limit/`;
 
       baseQuery = `
-        WITH "x" AS (${baseQuery})
+        WITH x AS (${baseQuery})
         SELECT
-          "x".*,
-          "y".*
-        FROM "x"
+          x.*,
+          y.*
+        FROM x
         LEFT JOIN LATERAL (
           SELECT
-            "ts"."top_buy_value",
-            "ts"."top_buy_maker"
-          FROM "token_sets" "ts"
-          WHERE "ts"."id" = "x"."token_set_id"
-          ORDER BY "ts"."top_buy_value" DESC
+            token_sets.top_buy_value,
+            token_sets.top_buy_maker
+          FROM token_sets
+          WHERE token_sets.id = x.token_set_id
+          ORDER BY token_sets.top_buy_value DESC
           LIMIT 1
-        ) "y" ON TRUE
+        ) y ON TRUE
       `;
 
       const result = await edb.manyOrNone(baseQuery, query).then((result) =>
@@ -175,6 +180,7 @@ export const getCollectionsV1Options: RouteOptions = {
           slug: r.slug,
           name: r.name,
           metadata: r.metadata,
+          sampleImages: r.sample_images || [],
           tokenCount: String(r.token_count),
           tokenSetId: r.token_set_id,
           royalties: r.royalties ? r.royalties[0] : null,
