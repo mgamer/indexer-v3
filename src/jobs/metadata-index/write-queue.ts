@@ -78,29 +78,6 @@ if (config.doBackgroundWork) {
           return;
         }
 
-        // Delete all previous attributes of the token.
-        // TODO: Token reindexing seems to mess up the `token_count`
-        // cached inside each attribute. We should investigate what
-        // causes it (probably concurrent writes) and fix the issue.
-        await idb.none(
-          `
-            WITH x AS (
-              DELETE FROM token_attributes
-              WHERE token_attributes.contract = $/contract/
-                AND token_attributes.token_id = $/tokenId/
-              RETURNING token_attributes.attribute_id
-            )
-            UPDATE attributes SET
-              token_count = token_count - 1
-            FROM x
-            WHERE attributes.id = x.attribute_id
-          `,
-          {
-            contract: toBuffer(contract),
-            tokenId,
-          }
-        );
-
         // Token attributes
         for (const { key, value, kind, rank } of attributes) {
           // Fetch the attribute key from the database (will succeed in the common case)
@@ -254,8 +231,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    // No concurrency here to avoid any possible deadlocks.
-    { connection: redis.duplicate() }
+    { connection: redis.duplicate(), concurrency: 20 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
