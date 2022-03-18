@@ -35,6 +35,9 @@ export const getCollectionsV1Options: RouteOptions = {
         .description(
           "Search for collections that match a string, e.g. `bored`"
         ),
+      slug: Joi.string()
+        .lowercase()
+        .description("Filter to a particular slug, e.g. `boredapeyachtclub`"),
       sortBy: Joi.string()
         .valid("1DayVolume", "allTimeVolume")
         .default("allTimeVolume"),
@@ -134,6 +137,9 @@ export const getCollectionsV1Options: RouteOptions = {
       if (query.name) {
         query.name = `%${query.name}%`;
         conditions.push(`collections.name ILIKE $/name/`);
+      }
+      if (query.slug) {
+        conditions.push(`collections.slug = $/slug/`);
       }
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
