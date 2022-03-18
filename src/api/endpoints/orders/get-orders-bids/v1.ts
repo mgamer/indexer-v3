@@ -13,17 +13,36 @@ export const getOrdersBidsV1Options: RouteOptions = {
   description: "Bulk bids access",
   notes:
     "This API is designed for efficiently ingesting large volumes of orders, for external processing",
-  tags: ["api", "orders"],
+  tags: ["api", "4. NFT API"],
+  plugins: {
+    "hapi-swagger": {
+      order: 42,
+    },
+  },
   validate: {
     query: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}:\d+$/),
-      tokenSetId: Joi.string().lowercase(),
+        .pattern(/^0x[a-f0-9]{40}:\d+$/)
+        .description(
+          "Filter to a token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+        ),
+      tokenSetId: Joi.string()
+        .lowercase()
+        .description(
+          "Filter to a particular set, e.g. `contract:0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        ),
       maker: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/),
-      status: Joi.string().valid("active", "inactive", "expired"),
+        .pattern(/^0x[a-f0-9]{40}$/)
+        .description(
+          "Filter to a particular user, e.g. `0x4d04eb67a2d1e01c71fad0366e0c200207a75487`"
+        ),
+      status: Joi.string()
+        .valid("active", "inactive", "expired")
+        .description(
+          "`active` = currently valid, `inactive` = temporarily invalid, `expired` = permanently invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
+        ),
       continuation: Joi.string().pattern(/^\d+(.\d+)?_0x[a-f0-9]{64}$/),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     })

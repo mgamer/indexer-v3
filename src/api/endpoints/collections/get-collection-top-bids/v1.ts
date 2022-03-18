@@ -13,10 +13,20 @@ export const getCollectionTopBidsV1Options: RouteOptions = {
   description: "Top bids for all tokens in a collection",
   notes:
     "When users are placing collection or trait bids, this API can be used to show them where the bid is in the context of other bids, and how many tokens it will be the top bid for.",
-  tags: ["api", "liquidity"],
+  tags: ["api", "4. NFT API"],
+  plugins: {
+    "hapi-swagger": {
+      order: 16,
+    },
+  },
   validate: {
     params: Joi.object({
-      collection: Joi.string().lowercase().required(),
+      collection: Joi.string()
+        .lowercase()
+        .required()
+        .description(
+          "Filter to a particular collection, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        ),
     }),
   },
   response: {

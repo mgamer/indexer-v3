@@ -14,17 +14,38 @@ export const getTokensV1Options: RouteOptions = {
   notes:
     "This API is optimized for quickly fetching a list of tokens in a collection, sorted by price, with only the most important information returned. If you need more metadata, use the `tokens/details` API",
   tags: ["api", "x-deprecated"],
+  plugins: {
+    "hapi-swagger": {
+      deprecated: true,
+    },
+  },
   validate: {
     query: Joi.object({
-      collection: Joi.string().lowercase(),
+      collection: Joi.string()
+        .lowercase()
+        .description(
+          "Filter to a particular collection, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        ),
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/),
+        .pattern(/^0x[a-f0-9]{40}$/)
+        .description(
+          "Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        ),
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}:[0-9]+$/),
-      tokenSetId: Joi.string().lowercase(),
-      onSale: Joi.boolean(),
+        .pattern(/^0x[a-f0-9]{40}:[0-9]+$/)
+        .description(
+          "Filter to a particular token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+        ),
+      tokenSetId: Joi.string()
+        .lowercase()
+        .description(
+          "Filter to a particular set, e.g. `contract:0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        ),
+      onSale: Joi.boolean().description(
+        "Limit to tokens that are listed for sale"
+      ),
       sortBy: Joi.string()
         .valid("tokenId", "floorAskPrice", "topBidValue")
         .default("floorAskPrice"),

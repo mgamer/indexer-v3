@@ -15,10 +15,14 @@ export const getUsersLiquidityV1Options: RouteOptions = {
   description: "User liquidity rankings",
   notes:
     "This API calculates the total liquidity created by users, based on the number of tokens they are top bidder for.",
-  tags: ["api", "liquidity"],
+  tags: ["api", "5. Misc"],
   validate: {
     query: Joi.object({
-      collection: Joi.string().lowercase(),
+      collection: Joi.string()
+        .lowercase()
+        .description(
+          "Filter to a particular collection, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        ),
       user: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),

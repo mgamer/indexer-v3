@@ -12,14 +12,30 @@ const version = "v1";
 export const getStatsV1Options: RouteOptions = {
   description:
     "Get aggregate stats for a particular set (collection, attribute or single token)",
-  tags: ["api", "stats"],
+  tags: ["api", "4. NFT API"],
+  plugins: {
+    "hapi-swagger": {
+      order: 53,
+    },
+  },
   validate: {
     query: Joi.object({
-      collection: Joi.string().lowercase(),
+      collection: Joi.string()
+        .lowercase()
+        .description(
+          "Filter to a particular collection, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        ),
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}:[0-9]+$/),
-      attributes: Joi.object().unknown(),
+        .pattern(/^0x[a-f0-9]{40}:[0-9]+$/)
+        .description(
+          "Filter to a particular token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+        ),
+      attributes: Joi.object()
+        .unknown()
+        .description(
+          "Filter to a particular attribute, e.g. `attributes[Type]=Original`"
+        ),
     })
       .oxor("collection", "token")
       .or("collection", "token"),

@@ -13,14 +13,26 @@ export const getOrdersV1Options: RouteOptions = {
   description: "List of valid orders.",
   notes:
     "Access orders with various filters applied. If you need orders created by a single user, use the positions API instead.",
-  tags: ["api", "orders"],
+  tags: ["api", "x-deprecated"],
+  plugins: {
+    "hapi-swagger": {
+      deprecated: true,
+    },
+  },
   validate: {
     query: Joi.object({
       id: Joi.string(),
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}:[0-9]+$/),
-      tokenSetId: Joi.string().lowercase(),
+        .pattern(/^0x[a-f0-9]{40}:[0-9]+$/)
+        .description(
+          "Filter to a particular token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+        ),
+      tokenSetId: Joi.string()
+        .lowercase()
+        .description(
+          "Filter to a particular set, e.g. `contract:0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        ),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(50).default(20),
     })

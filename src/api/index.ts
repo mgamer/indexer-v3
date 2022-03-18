@@ -60,10 +60,10 @@ export const start = async (): Promise<void> => {
     routes: { prefix: "/admin/bullmq" },
   });
 
-  const apiDescription = `
-    You are viewing the reference docs for the Reservoir API.
-    For a more complete overview with guides and examples, check out the <a href='https://reservoirprotocol.github.io'>Reservoir Protocol Docs</a>.
-  `;
+  const apiDescription =
+    "You are viewing the reference docs for the Reservoir API.\
+    \
+    For a more complete overview with guides and examples, check out the <a href='https://reservoirprotocol.github.io'>Reservoir Protocol Docs</a>.";
 
   await server.register([
     {
@@ -91,12 +91,34 @@ export const start = async (): Promise<void> => {
         cors: true,
         tryItOutEnabled: true,
         documentationPath: "/",
+        sortEndpoints: "ordered",
         info: {
           title: "Reservoir API",
           // eslint-disable-next-line @typescript-eslint/no-var-requires
           version: require("../../package.json").version,
           description: apiDescription,
         },
+        tags: [
+          {
+            name: "1. Order Book",
+            description:
+              "Read & write from Reservoir's open, aggregated order book",
+          },
+          {
+            name: "2. Aggregator",
+            description:
+              "Access normalized pricing and sales data, to feed into your own system",
+          },
+          {
+            name: "3. Router",
+            description:
+              "Simple APIs to create and fill liquidity from any supported exchange protocol",
+          },
+          {
+            name: "4. NFT API",
+            description: "Build a complete application with rich NFT endpoints",
+          },
+        ],
       },
     },
   ]);
