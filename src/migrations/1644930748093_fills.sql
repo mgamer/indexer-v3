@@ -27,6 +27,9 @@ ALTER TABLE "fill_events_2"
 CREATE INDEX "fill_events_2_block_hash_index"
   ON "fill_events_2" ("block_hash");
 
+CREATE INDEX "fill_events_2_block_index"
+  ON "fill_events_2" ("block" DESC);
+
 CREATE INDEX "fill_events_2_contract_block_index"
   ON "fill_events_2" ("contract", "block" DESC);
 
