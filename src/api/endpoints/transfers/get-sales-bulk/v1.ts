@@ -65,10 +65,10 @@ export const getSalesBulkV1Options: RouteOptions = {
       continuation: Joi.string()
         .pattern(/^(\d+)_(\d+)_(\d+)$/)
         .allow(null),
-    }).label(`getSales${version.toUpperCase()}Response`),
+    }).label(`getSalesBulk${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
-        `get-sales-${version}-handler`,
+        `get-sales-bulk-${version}-handler`,
         `Wrong response schema: ${error}`
       );
       throw error;
@@ -165,7 +165,10 @@ export const getSalesBulkV1Options: RouteOptions = {
         continuation,
       };
     } catch (error) {
-      logger.error(`get-sales-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(
+        `get-sales-bulk-${version}-handler`,
+        `Handler failure: ${error}`
+      );
       throw error;
     }
   },

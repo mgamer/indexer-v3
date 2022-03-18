@@ -67,10 +67,10 @@ export const getAttributesExploreV1Options: RouteOptions = {
           }),
         })
       ),
-    }).label(`getCollectionAttributes${version.toUpperCase()}Response`),
+    }).label(`getAttributesExplore${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
-        `get-collection-attributes-${version}-handler`,
+        `get-attributes-explore-${version}-handler`,
         `Wrong response schema: ${error}`
       );
 
@@ -220,7 +220,7 @@ export const getAttributesExploreV1Options: RouteOptions = {
       return { attributes: result };
     } catch (error) {
       logger.error(
-        `get-collection-attributes-${version}-handler`,
+        `get-attributes-explore-${version}-handler`,
         `Handler failure: ${error}`
       );
       throw error;

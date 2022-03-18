@@ -41,10 +41,10 @@ export const getAttributesAllV1Options: RouteOptions = {
           ),
         })
       ),
-    }).label(`getAttributes${version.toUpperCase()}Response`),
+    }).label(`getAttributesAll${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
-        `get-attributes-${version}-handler`,
+        `get-attributes-all-${version}-handler`,
         `Wrong response schema: ${error}`
       );
 
@@ -80,7 +80,7 @@ export const getAttributesAllV1Options: RouteOptions = {
       return { attributes: result };
     } catch (error) {
       logger.error(
-        `get-attributes-${version}-handler`,
+        `get-attributes-all-${version}-handler`,
         `Handler failure: ${error}`
       );
       throw error;
