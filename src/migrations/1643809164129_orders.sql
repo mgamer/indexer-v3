@@ -75,10 +75,14 @@ CREATE INDEX "orders_created_at_id_side_index"
   ON "orders" ("created_at", "id", "side")
   WHERE ("fillability_status" = 'fillable' AND "approval_status" = 'approved');
 
-CREATE INDEX "orders_maker_side_fillability_status_created_at_id_index"
-  ON "orders" ("maker", "side", "fillability_status", "created_at" DESC, "id" DESC)
+CREATE INDEX "orders_expired_maker_side_created_at_id_index"
+  ON "orders" ("maker", "side", "created_at" DESC, "id" DESC)
+  WHERE ("fillability_status" != 'fillable' AND "fillability_status" != 'no-balance' AND "maker" IS NOT NULL);
+
+CREATE INDEX "orders_not_expired_maker_side_created_at_id_index"
+  ON "orders" ("maker", "side", "created_at" DESC, "id" DESC)
   INCLUDE ("approval_status")
-  WHERE ("maker" IS NOT NULL);
+  WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
 
 -- https://www.lob.com/blog/supercharge-your-postgresql-performance
 -- https://klotzandrew.com/blog/posgres-per-table-autovacuum-management
