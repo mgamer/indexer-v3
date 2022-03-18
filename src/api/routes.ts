@@ -96,7 +96,19 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/collections/v2",
+    options: collectionsEndpoints.getCollectionsV2Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/collections/{collectionOrSlug}/v1",
+    options: collectionsEndpoints.getCollectionDeprecatedV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/collection/v1",
     options: collectionsEndpoints.getCollectionV1Options,
   });
 

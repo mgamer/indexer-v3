@@ -9,7 +9,7 @@ import { formatEth, fromBuffer } from "@/common/utils";
 
 const version = "v1";
 
-export const getCollectionV1Options: RouteOptions = {
+export const getCollectionDeprecatedV1Options: RouteOptions = {
   description: "Single collection",
   notes:
     "Get detailed information about a single collection, including real-time stats.",
@@ -17,15 +17,13 @@ export const getCollectionV1Options: RouteOptions = {
   plugins: {
     "hapi-swagger": {
       order: 12,
+      deprecated: true,
     },
   },
   validate: {
-    query: Joi.object({
-      id: Joi.string().lowercase(),
-      slug: Joi.string().lowercase(),
-    })
-      .or("id", "slug")
-      .oxor("id", "slug"),
+    params: Joi.object({
+      collectionOrSlug: Joi.string().lowercase().required(),
+    }),
   },
   response: {
     schema: Joi.object({
@@ -37,9 +35,6 @@ export const getCollectionV1Options: RouteOptions = {
         sampleImages: Joi.array().items(Joi.string().allow(null, "")),
         tokenCount: Joi.string(),
         onSaleCount: Joi.string(),
-        primaryContract: Joi.string()
-          .lowercase()
-          .pattern(/^0x[a-f0-9]{40}$/),
         tokenSetId: Joi.string().allow(null),
         royalties: Joi.object({
           recipient: Joi.string().allow(null, ""),
@@ -97,17 +92,17 @@ export const getCollectionV1Options: RouteOptions = {
           allTime: Joi.number().unsafe().allow(null),
         }),
       }).allow(null),
-    }).label(`getCollection${version.toUpperCase()}Response`),
+    }).label(`getCollectionDeprecated${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
-        `get-collection-${version}-handler`,
+        `get-collection-deprecated-${version}-handler`,
         `Wrong response schema: ${error}`
       );
       throw error;
     },
   },
   handler: async (request: Request) => {
-    const query = request.query as any;
+    const params = request.params as any;
 
     try {
       let baseQuery = `
@@ -117,7 +112,6 @@ export const getCollectionV1Options: RouteOptions = {
           "c"."name",
           "c"."metadata",
           "c"."royalties",
-          "c"."contract",
           "c"."token_set_id",
           "c"."day1_rank",
           "c"."day1_volume",
@@ -137,14 +131,17 @@ export const getCollectionV1Options: RouteOptions = {
             SELECT "t"."image" FROM "tokens" "t"
             WHERE "t"."collection_id" = "c"."id"
             LIMIT 4
-          ) AS "sample_images"          
+          ) AS "sample_images"
         FROM "collections" "c"
       `;
 
-      if (query.id) {
-        baseQuery += ` WHERE "c"."id" = $/id/`;
-      } else if (query.slug) {
-        baseQuery += ` WHERE "c"."slug" = $/slug/`;
+      // If `collectionOrSlug` matches a contract address then we
+      // assume the search is by collection id, otherwise it must
+      // be a search by slug.
+      if (params.collectionOrSlug.match(/0x[a-f0-9]{40}/g)) {
+        baseQuery += ` WHERE "c"."id" = $/collectionOrSlug/`;
+      } else {
+        baseQuery += ` WHERE "c"."slug" = $/collectionOrSlug/`;
       }
 
       baseQuery += ` LIMIT 1`;
@@ -200,7 +197,7 @@ export const getCollectionV1Options: RouteOptions = {
         ) "z" ON TRUE
       `;
 
-      const result = await edb.oneOrNone(baseQuery, query).then((r) =>
+      const result = await edb.oneOrNone(baseQuery, params).then((r) =>
         !r
           ? null
           : {
@@ -211,7 +208,6 @@ export const getCollectionV1Options: RouteOptions = {
               sampleImages: r.sample_images || [],
               tokenCount: String(r.token_count),
               onSaleCount: String(r.on_sale_count),
-              primaryContract: fromBuffer(r.contract),
               tokenSetId: r.token_set_id,
               royalties: r.royalties ? r.royalties[0] : null,
               lastBuy: {
@@ -270,7 +266,7 @@ export const getCollectionV1Options: RouteOptions = {
       return { collection: result };
     } catch (error) {
       logger.error(
-        `get-collection-${version}-handler`,
+        `get-collection-deprecated-${version}-handler`,
         `Handler failure: ${error}`
       );
       throw error;
