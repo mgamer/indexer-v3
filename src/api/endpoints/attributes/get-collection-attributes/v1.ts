@@ -129,7 +129,7 @@ export const getCollectionAttributesV1Options: RouteOptions = {
         `"ak"."rank" IS NOT NULL`,
       ];
       if (query.attributeKey) {
-        conditions.push(`"a"."key" = $/attributeKey/`);
+        conditions.push(`"ak"."key" = $/attributeKey/`);
       }
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
