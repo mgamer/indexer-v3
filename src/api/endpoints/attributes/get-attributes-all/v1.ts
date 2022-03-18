@@ -52,7 +52,7 @@ export const getAttributesAllV1Options: RouteOptions = {
     },
   },
   handler: async (request: Request) => {
-    const query = request.query as any;
+    const params = request.params as any;
 
     try {
       const baseQuery = `
@@ -69,7 +69,7 @@ export const getAttributesAllV1Options: RouteOptions = {
         ORDER BY "ak"."rank" DESC
       `;
 
-      const result = await edb.manyOrNone(baseQuery, query).then((result) =>
+      const result = await edb.manyOrNone(baseQuery, params).then((result) =>
         result.map((r) => ({
           key: r.key,
           kind: r.kind,
