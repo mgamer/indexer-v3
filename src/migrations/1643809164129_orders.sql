@@ -75,6 +75,10 @@ CREATE INDEX "orders_contract_created_at_index"
   ON "orders" ("contract", "created_at" DESC)
   WHERE ("contract" IS NOT NULL);
 
+CREATE INDEX "orders_source_created_at_index"
+  ON "orders" ("source_id", "created_at" DESC)
+  WHERE ("contract" IS NOT NULL);
+
 CREATE INDEX "orders_expired_maker_side_created_at_id_index"
   ON "orders" ("maker", "side", "created_at" DESC, "id" DESC)
   WHERE ("fillability_status" != 'fillable' AND "fillability_status" != 'no-balance' AND "maker" IS NOT NULL);

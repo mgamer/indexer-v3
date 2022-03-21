@@ -86,7 +86,7 @@ export const getTokensDetailsV2Options: RouteOptions = {
               value: Joi.number().unsafe().allow(null),
               timestamp: Joi.number().unsafe().allow(null),
             },
-            owner: Joi.string().required(),
+            owner: Joi.string().allow(null),
             attributes: Joi.array().items(
               Joi.object({
                 key: Joi.string(),
@@ -373,7 +373,7 @@ export const getTokensDetailsV2Options: RouteOptions = {
             value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
             timestamp: r.last_sell_timestamp,
           },
-          owner: fromBuffer(r.owner),
+          owner: r.owner ? fromBuffer(r.owner) : null,
           attributes: r.attributes || [],
         },
         market: {
