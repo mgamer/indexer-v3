@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { AddressZero } from "@ethersproject/constants";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { formatEth, fromBuffer } from "@/common/utils";
+import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 
 const version = "v1";
 
@@ -21,11 +22,17 @@ export const getOrdersAllV1Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      side: Joi.string().lowercase().valid("buy", "sell"),
-      sortDirection: Joi.string().lowercase().valid("asc", "desc"),
+      contract: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}$/),
+      source: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}$/),
       continuation: Joi.string().pattern(/^\d+(.\d+)?_0x[a-f0-9]{64}$/),
       limit: Joi.number().integer().min(1).max(1000).default(50),
-    }),
+    })
+      .or("contract", "source")
+      .oxor("contract", "source"),
   },
   response: {
     schema: Joi.object({
@@ -34,8 +41,6 @@ export const getOrdersAllV1Options: RouteOptions = {
           id: Joi.string().required(),
           kind: Joi.string().required(),
           side: Joi.string().valid("buy", "sell").required(),
-          fillabilityStatus: Joi.string().required(),
-          approvalStatus: Joi.string().required(),
           tokenSetId: Joi.string().required(),
           tokenSetSchemaHash: Joi.string()
             .lowercase()
@@ -95,8 +100,6 @@ export const getOrdersAllV1Options: RouteOptions = {
           "o"."id",
           "o"."kind",
           "o"."side",
-          "o"."fillability_status",
-          "o"."approval_status",
           "o"."token_set_id",
           "o"."token_set_schema_hash",
           "o"."maker",
@@ -122,12 +125,18 @@ export const getOrdersAllV1Options: RouteOptions = {
       `;
 
       // Filters
-      const conditions: string[] = [
-        `"o"."fillability_status" = 'fillable'`,
-        `"o"."approval_status" = 'approved'`,
-      ];
-      if (query.side) {
-        conditions.push(`"o"."side" = $/side/`);
+      const conditions: string[] = [`"o"."contract" IS NOT NULL`];
+      if (query.contract) {
+        (query as any).contract = toBuffer(query.contract);
+        conditions.push(`"o"."contract" = $/contract/`);
+      }
+      if (query.source) {
+        if (query.source === AddressZero) {
+          conditions.push(`"o"."source_id" IS NULL`);
+        } else {
+          (query as any).source = toBuffer(query.source);
+          conditions.push(`"o"."source_id" = $/source/`);
+        }
       }
       if (query.continuation) {
         const [createdAt, id] = query.continuation.split("_");
@@ -135,9 +144,7 @@ export const getOrdersAllV1Options: RouteOptions = {
         (query as any).id = id;
 
         conditions.push(
-          `("o"."created_at", "o"."id") ${
-            (query.sortDirection || "asc") === "asc" ? ">" : "<"
-          } (to_timestamp($/createdAt/), $/id/)`
+          `("o"."created_at", "o"."id") < (to_timestamp($/createdAt/), $/id/)`
         );
       }
 
@@ -146,11 +153,7 @@ export const getOrdersAllV1Options: RouteOptions = {
       }
 
       // Sorting
-      baseQuery += `
-        ORDER BY
-          "o"."created_at" ${query.sortDirection || "ASC"},
-          "o"."id" ${query.sortDirection || "ASC"}
-      `;
+      baseQuery += ` ORDER BY "o"."created_at" DESC, "o"."id" DESC`;
 
       // Pagination
       baseQuery += ` LIMIT $/limit/`;
@@ -169,8 +172,6 @@ export const getOrdersAllV1Options: RouteOptions = {
         id: r.id,
         kind: r.kind,
         side: r.side,
-        fillabilityStatus: r.fillability_status,
-        approvalStatus: r.approval_status,
         tokenSetId: r.token_set_id,
         tokenSetSchemaHash: fromBuffer(r.token_set_schema_hash),
         maker: fromBuffer(r.maker),
