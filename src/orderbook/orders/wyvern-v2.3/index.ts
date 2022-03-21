@@ -36,6 +36,7 @@ export const save = async (
   const arweaveData: {
     order: Sdk.WyvernV23.Order;
     schemaHash?: string;
+    source?: string;
   }[] = [];
 
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
@@ -280,12 +281,12 @@ export const save = async (
       );
 
       // Handle: source and fees breakdown
-      let sourceId: string | undefined;
+      let source: string | undefined;
       let feeBreakdown: object[] | undefined;
       switch (order.params.feeRecipient) {
         // OpenSea
         case "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073": {
-          sourceId = order.params.feeRecipient;
+          source = order.params.feeRecipient;
           feeBreakdown = [
             {
               kind: "marketplace",
@@ -307,6 +308,7 @@ export const save = async (
         }
 
         default: {
+          source = metadata.source;
           feeBreakdown = [
             {
               kind: "royalty",
@@ -337,7 +339,7 @@ export const save = async (
         value,
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
         nonce: order.params.nonce,
-        source_id: sourceId ? toBuffer(sourceId) : null,
+        source_id: source ? toBuffer(source) : null,
         contract: toBuffer(info.contract),
         fee_bps: feeBps,
         fee_breakdown: feeBreakdown || null,
@@ -351,7 +353,7 @@ export const save = async (
       });
 
       if (relayToArweave) {
-        arweaveData.push({ order, schemaHash });
+        arweaveData.push({ order, schemaHash, source });
       }
     } catch (error) {
       logger.error(
