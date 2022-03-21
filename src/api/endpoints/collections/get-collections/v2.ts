@@ -16,7 +16,7 @@ export const getCollectionsV2Options: RouteOptions = {
   tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {
-      order: 11,
+      order: 12,
     },
   },
   validate: {

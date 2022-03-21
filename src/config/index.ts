@@ -14,6 +14,7 @@ export const config = {
   databaseUrl: String(process.env.DATABASE_URL),
   redisUrl: String(process.env.REDIS_URL),
 
+  master: Boolean(Number(process.env.MASTER)),
   catchup: Boolean(Number(process.env.CATCHUP)),
   doBackgroundWork: Boolean(Number(process.env.DO_BACKGROUND_WORK)),
   onChainOrderCheck: Boolean(Number(process.env.ON_CHAIN_ORDER_CHECK)),

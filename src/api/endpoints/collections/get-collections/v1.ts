@@ -13,10 +13,11 @@ export const getCollectionsV1Options: RouteOptions = {
   description: "List of collections",
   notes:
     "Useful for getting multiple collections to show in a marketplace, or search for particular collections.",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 11,
+      deprecated: true,
     },
   },
   validate: {

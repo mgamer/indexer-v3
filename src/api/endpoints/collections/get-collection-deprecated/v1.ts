@@ -13,7 +13,7 @@ export const getCollectionDeprecatedV1Options: RouteOptions = {
   description: "Single collection",
   notes:
     "Get detailed information about a single collection, including real-time stats.",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 12,

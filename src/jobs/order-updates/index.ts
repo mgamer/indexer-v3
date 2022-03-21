@@ -32,6 +32,10 @@ if (config.doBackgroundWork) {
           logger.info(`expired-orders-check`, "Invalidating expired orders");
 
           try {
+            // TODO: Instead of updating everything in one go we should execute
+            // smaller batches and use keyset pagination to iterate through all
+            // of the expired orders (keyset pagination is amazing).
+
             const expiredOrders: { id: string }[] = await idb.manyOrNone(`
               UPDATE "orders" SET
                 "fillability_status" = 'expired',

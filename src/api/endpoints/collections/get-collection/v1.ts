@@ -16,13 +16,19 @@ export const getCollectionV1Options: RouteOptions = {
   tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {
-      order: 12,
+      order: 11,
     },
   },
   validate: {
     query: Joi.object({
-      id: Joi.string().lowercase(),
-      slug: Joi.string().lowercase(),
+      id: Joi.string()
+        .lowercase()
+        .description(
+          "Filter to a particular collection, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        ),
+      slug: Joi.string()
+        .lowercase()
+        .description("Filter to a particular slug, e.g. `boredapeyachtclub`"),
     })
       .or("id", "slug")
       .oxor("id", "slug"),

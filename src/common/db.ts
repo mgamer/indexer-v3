@@ -20,8 +20,8 @@ export const idb = pgp({
   keepAlive: true,
   max: 20,
   connectionTimeoutMillis: 30 * 1000,
-  query_timeout: 3 * 60 * 1000,
-  statement_timeout: 3 * 60 * 1000,
+  query_timeout: 5 * 60 * 1000,
+  statement_timeout: 5 * 60 * 1000,
 });
 
 // Common types
