@@ -39,11 +39,17 @@ export const getOwnersV1Options: RouteOptions = {
         .description(
           "Filter to a particular token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
+      attributes: Joi.object()
+        .unknown()
+        .description(
+          "Filter to a particular attribute, e.g. `attributes[Type]=Original`"
+        ),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     })
       .oxor("collection", "contract", "token")
-      .or("collection", "contract", "token"),
+      .or("collection", "contract", "token")
+      .with("attributes", "collection"),
   },
   response: {
     schema: Joi.object({
@@ -73,8 +79,30 @@ export const getOwnersV1Options: RouteOptions = {
 
     let nftBalancesFilter = "";
     let tokensFilter = "";
+    let attributesJoin = "";
 
     if (query.collection) {
+      if (query.attributes) {
+        const attributes: { key: string; value: string }[] = [];
+        Object.entries(query.attributes).forEach(([key, values]) => {
+          (Array.isArray(values) ? values : [values]).forEach((value) =>
+            attributes.push({ key, value })
+          );
+        });
+
+        for (let i = 0; i < attributes.length; i++) {
+          (query as any)[`key${i}`] = attributes[i].key;
+          (query as any)[`value${i}`] = attributes[i].value;
+          attributesJoin += `
+            JOIN token_attributes ta${i}
+              ON nft_balances.contract = ta${i}.contract
+              AND nft_balances.token_id = ta${i}.token_id
+              AND ta${i}.key = $/key${i}/
+              AND ta${i}.value = $/value${i}/
+          `;
+        }
+      }
+
       // If the collection passed is identical the contract
       if (/^0x[a-f0-9]{40}$/.test(query.collection)) {
         (query as any).contract = toBuffer(query.collection);
@@ -110,6 +138,7 @@ export const getOwnersV1Options: RouteOptions = {
         WITH x AS (
           SELECT owner, SUM(amount) AS token_count
           FROM nft_balances
+          ${attributesJoin}
           WHERE ${nftBalancesFilter}
           AND amount > 0
           GROUP BY owner
@@ -126,6 +155,7 @@ export const getOwnersV1Options: RouteOptions = {
           SUM(nft_balances.amount) * MAX(tokens.top_buy_value) AS total_buy_value
         FROM nft_balances
         JOIN tokens ON nft_balances.contract = tokens.contract AND nft_balances.token_id = tokens.token_id
+        ${attributesJoin}
         WHERE ${tokensFilter}
         AND nft_balances.owner IN (SELECT owner FROM x)
         GROUP BY nft_balances.owner
