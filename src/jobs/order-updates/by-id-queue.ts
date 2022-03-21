@@ -123,7 +123,7 @@ if (config.doBackgroundWork) {
                       AND "o"."side" = 'sell'
                       AND "o"."fillability_status" = 'fillable'
                       AND "o"."approval_status" = 'approved'
-                    ORDER BY "o"."value"
+                    ORDER BY "o"."value", "o"."fee_bps"
                     LIMIT 1
                   ) "y" ON TRUE
                 ),

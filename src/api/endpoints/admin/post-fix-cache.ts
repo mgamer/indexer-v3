@@ -69,7 +69,7 @@ export const postFixCacheOptions: RouteOptions = {
                     AND "o"."fillability_status" = 'fillable'
                     AND "o"."approval_status" = 'approved'
                   WHERE "t"."contract" = $/contract/
-                  ORDER BY "t"."contract", "t"."token_id", "o"."value"
+                  ORDER BY "t"."contract", "t"."token_id", "o"."value", "o"."fee_bps"
                 ) "x"
                 WHERE "t"."contract" = "x"."contract"
                   AND "t"."token_id" = "x"."token_id"
