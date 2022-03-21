@@ -46,7 +46,8 @@ export const getTransfersV2Options: RouteOptions = {
       continuation: Joi.string().pattern(/^(\d+)_(\d+)_(\d+)$/),
     })
       .oxor("contract", "token", "collection")
-      .or("contract", "token", "collection"),
+      .or("contract", "token", "collection")
+      .with("attributes", "collection"),
   },
   response: {
     schema: Joi.object({
