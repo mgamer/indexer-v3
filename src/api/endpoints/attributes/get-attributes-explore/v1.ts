@@ -26,7 +26,9 @@ export const getAttributesExploreV1Options: RouteOptions = {
         ),
     }),
     query: Joi.object({
-      attributeKey: Joi.string(),
+      attributeKey: Joi.string().description(
+        "Filter to a particular attribute key, e.g. `Composition`"
+      ),
       sortBy: Joi.string()
         .valid("floorAskPrice", "topBidValue")
         .default("floorAskPrice"),
