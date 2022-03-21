@@ -113,6 +113,8 @@ export const postOrderV1Options: RouteOptions = {
                 hash: sdkOrder.hash(),
               };
 
+              logger.info("debug", JSON.stringify(osOrder));
+
               // Post order to OpenSea
               await axios
                 .post(
