@@ -81,7 +81,7 @@ if (config.doBackgroundWork) {
                   "top_buy_value" = "x"."value",
                   "top_buy_maker" = "x"."maker"
                 FROM "x"
-                WHERE "ts"."id" = "x"."order_id"
+                WHERE "ts"."id" = "x"."token_set_id"
                   AND "ts"."top_buy_id" IS DISTINCT FROM "x"."order_id"
               `,
               { tokenSetId }
