@@ -1,10 +1,9 @@
 import { generateMerkleTree } from "@reservoir0x/sdk/dist/wyvern-v2/builders/token-list/utils";
-import crypto from "crypto";
-import stringify from "json-stable-stringify";
 
 import { PgPromiseQuery, idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { fromBuffer, toBuffer } from "@/common/utils";
+import { generateSchemaHash } from "@/orderbook/orders/utils";
 
 export type TokenSet = {
   id: string;
@@ -51,12 +50,7 @@ const isValid = async (tokenSet: TokenSet) => {
       // Detect the token set's items from the schema.
 
       // Validate the schema against the schema hash.
-      const schemaHash =
-        "0x" +
-        crypto
-          .createHash("sha256")
-          .update(stringify(tokenSet.schema))
-          .digest("hex");
+      const schemaHash = generateSchemaHash(tokenSet.schema);
       if (schemaHash !== tokenSet.schemaHash) {
         return false;
       }
@@ -78,7 +72,7 @@ const isValid = async (tokenSet: TokenSet) => {
             ON attributes.attribute_key_id = attribute_keys.id
           WHERE attribute_keys.collection_id = $/collection/
             AND attribute_keys.key = $/key/
-            AND attribute_keys.value = $/value/
+            AND attributes.value = $/value/
         `,
         {
           collection: tokenSet.schema!.data.collection,
@@ -141,12 +135,14 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
       if (schema) {
         const attributeResult = await idb.oneOrNone(
           `
-            SELECT "a"."id" FROM "attributes" "a"
-            JOIN "attribute_keys" "ak"
-              ON "a"."attribute_key_id" = "ak"."id"
-            WHERE "ak"."collection_id" = $/collection/
-              AND "ak"."key" = $/key/
-              AND "a"."value" = $/value/
+            SELECT
+              attributes.id
+            FROM attributes
+            JOIN attribute_keys
+              ON attributes.attribute_key_id = attribute_keys.id
+            WHERE attribute_keys.collection_id = $/collection/
+              AND attribute_keys.key = $/key/
+              AND attributes.value = $/value/
           `,
           {
             collection: schema.data.collection,
@@ -158,23 +154,25 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
           continue;
         }
 
-        attributeId = attributeResult.attribute_id;
+        attributeId = attributeResult.id;
       }
 
       queries.push({
         query: `
-          INSERT INTO "token_sets" (
-            "id",
-            "schema_hash",
-            "schema",
-            "attribute_id"
+          INSERT INTO token_sets (
+            id,
+            schema_hash,
+            schema,
+            attribute_id
           ) VALUES (
             $/id/,
             $/schemaHash/,
             $/schema:json/,
             $/attributeId/
           )
-          ON CONFLICT DO NOTHING
+          ON CONFLICT (id, schema_hash) DO UPDATE
+          SET attribute_id = $/attributeId/
+          WHERE token_sets.attribute_id IS DISTINCT FROM $/attributeId/
         `,
         values: {
           id,

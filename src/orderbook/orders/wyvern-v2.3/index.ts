@@ -11,7 +11,7 @@ import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import {
   DbOrder,
   OrderMetadata,
-  defaultSchemaHash,
+  generateSchemaHash,
 } from "@/orderbook/orders/utils";
 import { offChainCheck } from "@/orderbook/orders/wyvern-v2.3/check";
 import * as tokenSet from "@/orderbook/token-sets";
@@ -166,7 +166,8 @@ export const save = async (
 
       // Check and save: associated token set
       let tokenSetId: string | undefined;
-      const schemaHash = metadata.schemaHash || defaultSchemaHash;
+      const schemaHash =
+        metadata.schemaHash ?? generateSchemaHash(metadata.schema);
 
       const orderKind = order.params.kind?.split("-").slice(1).join("-");
       switch (orderKind) {

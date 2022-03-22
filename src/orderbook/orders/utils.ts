@@ -1,4 +1,6 @@
 import { HashZero } from "@ethersproject/constants";
+import crypto from "crypto";
+import stringify from "json-stable-stringify";
 
 import { config } from "@/config/index";
 
@@ -25,7 +27,11 @@ export type OrderMetadata = {
   source?: string;
 };
 
-export const defaultSchemaHash = HashZero;
+const defaultSchemaHash = HashZero;
+export const generateSchemaHash = (schema?: object) =>
+  schema
+    ? "0x" + crypto.createHash("sha256").update(stringify(schema)).digest("hex")
+    : defaultSchemaHash;
 
 // For now, we hardcode the order's source metadata
 export const getOrderSourceMetadata = (
