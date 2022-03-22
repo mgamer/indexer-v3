@@ -69,7 +69,7 @@ export const getUserTokensV2Options: RouteOptions = {
           ownership: Joi.object({
             tokenCount: Joi.string(),
             onSaleCount: Joi.string(),
-            floorSellValue: Joi.number().unsafe().allow(null),
+            floorAskPrice: Joi.number().unsafe().allow(null),
           }),
         })
       ),
@@ -157,7 +157,7 @@ export const getUserTokensV2Options: RouteOptions = {
             ownership: {
               tokenCount: String(r.token_count),
               onSaleCount: String(r.on_sale_count),
-              floorSellValue: r.floor_sell_value
+              floorAskPrice: r.floor_sell_value
                 ? formatEth(r.floor_sell_value)
                 : null,
             },
