@@ -106,7 +106,7 @@ export const getUserTokensV2Options: RouteOptions = {
     try {
       const baseQuery = `
         SELECT  b.contract, b.token_id, b.token_count, t.name,
-               t.image, t.collection_id, t.floor_sell_id, t.top_buy_id,
+               t.image, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.top_buy_id,
                t.top_buy_value, t.total_buy_value, c.name as collection_name,
                (
                     CASE WHEN t.floor_sell_value IS NOT NULL
