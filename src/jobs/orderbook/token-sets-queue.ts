@@ -27,13 +27,11 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { id, schemaHash, schema, contract, tokenIds } =
+      const { id, schemaHash, schema, items } =
         job.data as tokenListSet.TokenSet;
 
       try {
-        await tokenListSet.save([
-          { id, schemaHash, schema, contract, tokenIds },
-        ]);
+        await tokenListSet.save([{ id, schemaHash, schema, items }]);
       } catch (error) {
         logger.error(
           QUEUE_NAME,

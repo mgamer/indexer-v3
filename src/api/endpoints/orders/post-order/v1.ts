@@ -95,7 +95,7 @@ export const postOrderV1Options: RouteOptions = {
               }
 
               const osOrder = {
-                ...order.params,
+                ...sdkOrder.params,
                 makerProtocolFee: "0",
                 takerProtocolFee: "0",
                 makerReferrerFee: "0",
