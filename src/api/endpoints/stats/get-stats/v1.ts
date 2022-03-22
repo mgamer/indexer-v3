@@ -222,7 +222,7 @@ export const getStatsV1Options: RouteOptions = {
             WHERE "ts"."attribute_id" = (
                 SELECT "a"."id" FROM "attributes" "a"
                 JOIN "attribute_keys" "ak"
-                  ON "a"."attribute_key_id" = "a"."id"
+                  ON "a"."attribute_key_id" = "ak"."id"
                 WHERE "ak"."collection_id" = $/collection/
                   AND "ak"."key" = $/key0/
                   AND "a"."value" = $/value0/
