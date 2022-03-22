@@ -40,7 +40,7 @@ export const getOrderSourceMetadata = (
   tokenId: string
 ) => {
   switch (sourceId) {
-    // OpenSea
+    // opensea.io
     case "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073": {
       return {
         id: sourceId,
@@ -50,6 +50,16 @@ export const getOrderSourceMetadata = (
           config.chainId === 1
             ? `https://opensea.io/assets/${contract}/${tokenId}`
             : `https://testnets.opensea.io/assets/${contract}/${tokenId}`,
+      };
+    }
+
+    // forgotten.market
+    case "0xfdfda3d504b1431ea0fd70084b1bfa39fa99dcc4": {
+      return {
+        id: sourceId,
+        name: "Forgotten Market",
+        icon: "https://forgotten.market/static/img/favicon.ico",
+        url: `https://forgotten.market/${contract}/${tokenId}`,
       };
     }
 
