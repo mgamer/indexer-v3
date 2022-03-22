@@ -220,8 +220,13 @@ export const save = async (
           const typedInfo = info as typeof info & { merkleRoot: string };
           const merkleRoot = typedInfo.merkleRoot;
           if (merkleRoot) {
-            // Skip saving the token set since we don't know the underlying tokens
-            tokenSetId = `list:${info.contract}:${merkleRoot}`;
+            [{ id: tokenSetId }] = await tokenSet.tokenList.save([
+              {
+                id: `list:${info.contract}:${merkleRoot}`,
+                schemaHash,
+                schema: metadata.schema,
+              },
+            ]);
           }
 
           break;

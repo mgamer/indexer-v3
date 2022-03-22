@@ -1,11 +1,10 @@
-import { keccak256 } from "@ethersproject/solidity";
 import { generateMerkleTree } from "@reservoir0x/sdk/dist/wyvern-v2/builders/token-list/utils";
 import crypto from "crypto";
 import stringify from "json-stable-stringify";
 
 import { PgPromiseQuery, idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
-import { toBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 
 export type TokenSet = {
   id: string;
@@ -22,24 +21,36 @@ export type TokenSet = {
       ];
     };
   };
-  contract: string;
-  tokenIds: string[];
+  items?: {
+    contract: string;
+    tokenIds: string[];
+  };
 };
 
 const isValid = async (tokenSet: TokenSet) => {
   try {
-    // Verify that the token set id matches the underlying tokens
-    const merkleTree = generateMerkleTree(tokenSet.tokenIds);
-    const merkleRoot = keccak256(
-      ["address", "bytes32"],
-      [tokenSet.contract, merkleTree.getHexRoot()]
-    );
-    if (tokenSet.id !== `list:${tokenSet.contract}:${merkleRoot}`) {
+    if (!tokenSet.items && !tokenSet.schema) {
+      // In case we have no associated items or schema, we just skip the token set.
       return false;
     }
 
+    let itemsId: string | undefined;
+    if (tokenSet.items) {
+      // Generate the token set id corresponding to the passed items.
+      const merkleTree = generateMerkleTree(tokenSet.items.tokenIds);
+      itemsId = `list:${tokenSet.items.contract}:${merkleTree.getHexRoot()}`;
+
+      // Make sure the passed tokens match the token set id.
+      if (itemsId !== tokenSet.id) {
+        return false;
+      }
+    }
+
+    let schemaId: string | undefined;
     if (tokenSet.schema) {
-      // If we have the schema, then validate it against the schema hash
+      // Detect the token set's items from the schema.
+
+      // Validate the schema against the schema hash.
       const schemaHash =
         "0x" +
         crypto
@@ -50,42 +61,57 @@ const isValid = async (tokenSet: TokenSet) => {
         return false;
       }
 
-      // TODO: Support multiple attributes
+      // TODO: Add support for multiple attributes.
       if (tokenSet.schema.data.attributes.length !== 1) {
         return false;
       }
 
-      // Make sure the schema matches the token set definition
       const tokens = await idb.manyOrNone(
         `
           SELECT
-            "ta"."token_id"
-          FROM "token_attributes" "ta"
-          JOIN "attributes" "a"
-            ON "ta"."attribute_id" = "a"."id"
-          JOIN "attribute_keys" "ak"
-            ON "a"."attribute_key_id" = "ak"."id"
-          WHERE "ak"."collection_id" = $/collection/
-            AND "ak"."key" = $/key/
-            AND "a"."value" = $/value/
+            token_attributes.contract,
+            token_attributes.token_id
+          FROM token_attributes
+          JOIN attributes
+            ON token_attributes.attribute_id = attributes.id
+          JOIN attribute_keys
+            ON attributes.attribute_key_id = attribute_keys.id
+          WHERE attribute_keys.collection_id = $/collection/
+            AND attribute_keys.key = $/key/
+            AND attribute_keys.value = $/value/
         `,
         {
-          collection: tokenSet.schema.data.collection,
-          key: tokenSet.schema.data.attributes[0].key,
-          value: tokenSet.schema.data.attributes[0].value,
+          collection: tokenSet.schema!.data.collection,
+          key: tokenSet.schema!.data.attributes[0].key,
+          value: tokenSet.schema!.data.attributes[0].value,
         }
       );
-      if (!tokens) {
+      if (!tokens || !tokens.length) {
         return false;
       }
 
-      // Make sure the current attributes match the merkle root
-      const merkleTree = generateMerkleTree(
-        tokens.map(({ token_id }) => token_id)
-      );
-      if (merkleTree.getHexRoot() !== merkleRoot) {
+      // All tokens will share the same underlying contract.
+      const contract = fromBuffer(tokens[0].contract);
+      const tokenIds = tokens.map(({ token_id }) => token_id);
+
+      // Generate the token set id corresponding to the passed schema.
+      const merkleTree = generateMerkleTree(tokenIds);
+      schemaId = `list:${contract}:${merkleTree.getHexRoot()}`;
+
+      // Make sure the passed schema matches the token set id.
+      if (schemaId !== tokenSet.id) {
         return false;
       }
+
+      // Populate the items field from the schema.
+      if (!itemsId) {
+        tokenSet.items = { contract, tokenIds };
+      }
+    }
+
+    if (!itemsId && !schemaId) {
+      // Skip if we couldn't detect any valid items or schema.
+      return false;
     }
   } catch {
     return false;
@@ -103,8 +129,13 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
       continue;
     }
 
-    const { id, schemaHash, schema, contract, tokenIds } = tokenSet;
+    const { id, schemaHash, schema, items } = tokenSet;
     try {
+      if (!items) {
+        // This should never happen.
+        continue;
+      }
+
       // If the token set has a schema, get the associated attribute
       let attributeId: string | null = null;
       if (schema) {
@@ -169,9 +200,9 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
             table: "token_sets_tokens",
           }
         );
-        const values = tokenIds.map((tokenId) => ({
+        const values = items.tokenIds.map((tokenId) => ({
           token_set_id: id,
-          contract: toBuffer(contract),
+          contract: toBuffer(items.contract),
           token_id: tokenId,
         }));
 
