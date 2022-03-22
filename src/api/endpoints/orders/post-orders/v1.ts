@@ -22,7 +22,7 @@ export const postOrdersV1Options: RouteOptions = {
       orders: Joi.array().items(
         Joi.object({
           kind: Joi.string().lowercase().valid("wyvern-v2.3").required(),
-          data: Joi.any().required(),
+          data: Joi.object().required(),
         })
       ),
     }),

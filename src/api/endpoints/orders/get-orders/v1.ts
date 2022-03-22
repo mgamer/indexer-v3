@@ -80,7 +80,7 @@ export const getOrdersV1Options: RouteOptions = {
           expiration: Joi.number().required(),
           createdAt: Joi.string().required(),
           updatedAt: Joi.string().required(),
-          rawData: Joi.any(),
+          rawData: Joi.object(),
         })
       ),
     }).label(`getOrders${version.toUpperCase()}Response`),
