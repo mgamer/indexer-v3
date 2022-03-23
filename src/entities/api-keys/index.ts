@@ -122,6 +122,18 @@ export class ApiKeyManager {
       log.query = request.query;
     }
 
+    if (request.info.remoteAddress) {
+      log.remoteAddress = request.info.remoteAddress;
+    }
+
+    if (request.info.referrer) {
+      log.referrer = request.info.referrer;
+    }
+
+    if (request.info.hostname) {
+      log.hostname = request.info.hostname;
+    }
+
     // Add key information if it exists
     if (key) {
       try {
