@@ -76,7 +76,7 @@ CREATE INDEX "orders_contract_created_at_index"
   WHERE ("contract" IS NOT NULL);
 
 CREATE INDEX "orders_source_created_at_index"
-  ON "orders" ("source_id", "created_at" DESC)
+  ON "orders" (coalesce("source_id", '\x00'), "created_at" DESC)
   WHERE ("contract" IS NOT NULL);
 
 CREATE INDEX "orders_expired_maker_side_created_at_id_index"

@@ -101,7 +101,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
                 .allow(null),
               validFrom: Joi.number().unsafe().allow(null),
               validUntil: Joi.number().unsafe().allow(null),
-              source: Joi.any(),
+              source: Joi.object().allow(null),
             },
             topBid: Joi.object({
               id: Joi.string().allow(null),

@@ -28,7 +28,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { collection, contract, tokenId, name, description, imageUrl, attributes } =
+      const { collection, contract, tokenId, name, description, imageUrl, mediaUrl, attributes } =
         job.data as TokenMetadataInfo;
 
       try {
@@ -47,6 +47,7 @@ if (config.doBackgroundWork) {
               name = $/name/,
               description = $/description/,
               image = $/image/,
+              media = $/media/,
               attributes = ${attrs.length ? `HSTORE(ARRAY[${attrs.join(", ")}])` : "NULL"},
               updated_at = now()
             WHERE tokens.contract = $/contract/
@@ -59,6 +60,7 @@ if (config.doBackgroundWork) {
             name: name || null,
             description: description || null,
             image: imageUrl || null,
+            media: mediaUrl || null,
             ...attrsParams,
           }
         );
@@ -232,6 +234,7 @@ export type TokenMetadataInfo = {
   name?: string;
   description?: string;
   imageUrl?: string;
+  mediaUrl?: string;
   attributes: {
     key: string;
     value: string;

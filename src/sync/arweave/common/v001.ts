@@ -36,8 +36,10 @@ export const processTransactionData = async (
             id: data.id,
             schemaHash: data.schemaHash,
             schema: data.schema,
-            contract: data.contract,
-            tokenIds: data.tokenIds,
+            items: {
+              contract: data.contract,
+              tokenIds: data.tokenIds,
+            },
           });
           break;
         }

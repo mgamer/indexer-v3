@@ -67,7 +67,7 @@ export const getUserTokensV2Options: RouteOptions = {
           ownership: Joi.object({
             tokenCount: Joi.string(),
             onSaleCount: Joi.string(),
-            floorSellValue: Joi.number().unsafe().allow(null),
+            floorAskPrice: Joi.number().unsafe().allow(null),
           }),
         })
       ),
@@ -101,7 +101,7 @@ export const getUserTokensV2Options: RouteOptions = {
     try {
       const baseQuery = `
         SELECT  b.contract, b.token_id, b.token_count, t.name,
-               t.image, t.collection_id, t.floor_sell_id, t.top_buy_id,
+               t.image, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.top_buy_id,
                t.top_buy_value, t.total_buy_value, c.name as collection_name,
                (
                     CASE WHEN t.floor_sell_value IS NOT NULL
@@ -150,7 +150,7 @@ export const getUserTokensV2Options: RouteOptions = {
           ownership: {
             tokenCount: String(r.token_count),
             onSaleCount: String(r.on_sale_count),
-            floorSellValue: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+            floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
           },
         }))
       );

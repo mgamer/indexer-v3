@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { AddressZero } from "@ethersproject/constants";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
@@ -47,6 +48,12 @@ export const getTokensDetailsV2Options: RouteOptions = {
       attributes: Joi.object()
         .unknown()
         .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
+      source: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}$/)
+        .description(
+          "Filter to a particular source, e.g. `0x5b3256965e7c3cf26e11fcaf296dfc8807c01073`"
+        ),
       sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice"),
       limit: Joi.number().integer().min(1).max(50).default(20),
       continuation: Joi.string().pattern(/^((\d+|null)_\d+|\d+)$/), // 485_34, null_45 or 25 allowed
@@ -100,7 +107,7 @@ export const getTokensDetailsV2Options: RouteOptions = {
                 .allow(null),
               validFrom: Joi.number().unsafe().allow(null),
               validUntil: Joi.number().unsafe().allow(null),
-              source: Joi.any(),
+              source: Joi.object().allow(null),
             },
             topBid: Joi.object({
               id: Joi.string().allow(null),
@@ -229,6 +236,18 @@ export const getTokensDetailsV2Options: RouteOptions = {
       }
       if (query.tokenSetId) {
         conditions.push(`"tst"."token_set_id" = $/tokenSetId/`);
+      }
+      if (query.source) {
+        if (query.source === AddressZero) {
+          conditions.push(
+            `"t"."floor_sell_value" IS NOT NULL AND coalesce("os"."source_id", '\\x00') = '\\x00'`
+          );
+        } else {
+          (query as any).source = toBuffer(query.source);
+          conditions.push(
+            `"t"."floor_sell_value" IS NOT NULL AND coalesce("os"."source_id", '\\x00') = $/source/`
+          );
+        }
       }
 
       // Continue with the next page, this depends on the sorting used

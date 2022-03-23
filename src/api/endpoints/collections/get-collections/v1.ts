@@ -49,7 +49,7 @@ export const getCollectionsV1Options: RouteOptions = {
           id: Joi.string(),
           slug: Joi.string(),
           name: Joi.string().allow(null, ""),
-          metadata: Joi.any().allow(null),
+          metadata: Joi.object().allow(null),
           sampleImages: Joi.array().items(Joi.string().allow(null, "")),
           tokenCount: Joi.string(),
           tokenSetId: Joi.string().allow(null),

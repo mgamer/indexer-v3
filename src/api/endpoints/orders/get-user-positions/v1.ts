@@ -40,8 +40,33 @@ export const getUserPositionsV1Options: RouteOptions = {
         Joi.object({
           set: {
             id: Joi.string(),
-            schema: Joi.any(),
-            metadata: Joi.any(),
+            metadata: Joi.alternatives(
+              Joi.object({
+                kind: "token",
+                data: Joi.object({
+                  collectionName: Joi.string().allow("", null),
+                  tokenName: Joi.string().allow("", null),
+                  image: Joi.string().allow("", null),
+                }),
+              }),
+              Joi.object({
+                kind: "collection",
+                data: Joi.object({
+                  collectionName: Joi.string().allow("", null),
+                  image: Joi.string().allow("", null),
+                }),
+              }),
+              Joi.object({
+                kind: "attribute",
+                data: Joi.object({
+                  collectionName: Joi.string().allow("", null),
+                  attributes: Joi.array().items(
+                    Joi.object({ key: Joi.string(), value: Joi.string() })
+                  ),
+                  image: Joi.string().allow("", null),
+                }),
+              })
+            ).allow(null),
             sampleImages: Joi.array().items(Joi.string().allow(null, "")),
             image: Joi.string().allow(null, ""),
             floorAskPrice: Joi.number().unsafe().allow(null),
@@ -66,44 +91,105 @@ export const getUserPositionsV1Options: RouteOptions = {
     const query = request.query as any;
 
     try {
+      const metadataBuildQuery = `
+        (
+          CASE
+            WHEN orders.token_set_id LIKE 'token:%' THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'token',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'tokenName', tokens.name,
+                    'image', tokens.image
+                  )
+                )
+              FROM tokens
+              JOIN collections
+                ON tokens.collection_id = collections.id
+              WHERE tokens.contract = decode(substring(split_part(orders.token_set_id, ':', 2) from 3), 'hex')
+                AND tokens.token_id = (split_part(orders.token_set_id, ':', 3)::NUMERIC(78, 0)))
+
+            WHEN orders.token_set_id LIKE 'contract:%' THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'collection',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'image', (collections.metadata ->> 'imageUrl')::TEXT
+                  )
+                )
+              FROM collections
+              WHERE collections.id = substring(orders.token_set_id from 10))
+
+            WHEN orders.token_set_id LIKE 'range:%' THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'collection',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'image', (collections.metadata ->> 'imageUrl')::TEXT
+                  )
+                )
+              FROM collections
+              WHERE collections.id = substring(orders.token_set_id from 7))
+
+            WHEN orders.token_set_id LIKE 'list:%' THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'attribute',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'attributes', ARRAY[json_build_object('key', attribute_keys.key, 'value', attributes.value)],
+                    'image', (collections.metadata ->> 'imageUrl')::TEXT
+                  )
+                )
+              FROM token_sets
+              JOIN attributes
+                ON token_sets.attribute_id = attributes.id
+              JOIN attribute_keys
+                ON attributes.attribute_key_id = attribute_keys.id
+              JOIN collections
+                ON attribute_keys.collection_id = collections.id
+              WHERE token_sets.id = orders.token_set_id)
+
+            ELSE NULL
+          END
+        ) AS metadata
+      `;
+
       let baseQuery: string;
 
       (params as any).user = toBuffer(params.user);
       if (query.status === "valid") {
         baseQuery = `
-          SELECT DISTINCT ON ("o"."token_set_id")
-            "o"."id",
-            "o"."token_set_id",
-            "o"."value",
-            coalesce(nullif(date_part('epoch', "o"."expiration"), 'Infinity'), 0) AS "expiration",
-            (COUNT(*) OVER (PARTITION BY "o"."token_set_id")) AS "total_valid",
-            "ts"."schema",
-            "ts"."metadata"
-          FROM "orders" "o"
-          JOIN "token_sets" "ts"
-            ON "o"."token_set_id" = "ts"."id"
-          WHERE ("o"."fillability_status" = 'fillable' AND "o"."approval_status" = 'approved')
-            AND "o"."side" = $/side/
-            AND "o"."maker" = $/user/
-          ORDER BY "o"."token_set_id", "o"."value"
+          SELECT DISTINCT ON (orders.token_set_id)
+            orders.id,
+            orders.token_set_id,
+            orders.value,
+            coalesce(nullif(date_part('epoch', orders.expiration), 'Infinity'), 0) AS expiration,
+            (COUNT(*) OVER (PARTITION BY orders.token_set_id)) AS total_valid,
+            ${metadataBuildQuery}
+          FROM orders
+          WHERE (orders.fillability_status = 'fillable' AND orders.approval_status = 'approved')
+            AND orders.side = $/side/
+            AND orders.maker = $/user/
+          ORDER BY orders.token_set_id, orders.value
         `;
       } else if (query.status === "invalid") {
         baseQuery = `
-          SELECT DISTINCT ON ("o"."token_set_id")
-            "o"."id",
-            "o"."token_set_id",
-            "o"."value",
-            coalesce(nullif(date_part('epoch', "o"."expiration"), 'Infinity'), 0) AS "expiration",
-            0 AS "total_valid",
-            "ts"."schema",
-            "ts"."metadata"
-          FROM "orders" "o"
-          JOIN "token_sets" "ts"
-            ON "o"."token_set_id" = "ts"."id"
-          WHERE ("o"."fillability_status" != 'fillable' OR "o"."approval_status" != 'approved')
-            AND "o"."side" = $/side/
-            AND "o"."maker" = $/user/
-          ORDER BY "o"."token_set_id", "o"."expiration" DESC
+          SELECT DISTINCT ON (orders.token_set_id)
+            orders.id,
+            orders.token_set_id,
+            orders.value,
+            coalesce(nullif(date_part('epoch', orders.expiration), 'Infinity'), 0) AS expiration,
+            0 AS total_valid,
+            ${metadataBuildQuery}
+          FROM orders
+          WHERE (orders.fillability_status != 'fillable' OR orders.approval_status != 'approved')
+            AND orders.side = $/side/
+            AND orders.maker = $/user/
+          ORDER BY orders.token_set_id, orders.expiration DESC
         `;
       }
 
@@ -148,7 +234,6 @@ export const getUserPositionsV1Options: RouteOptions = {
         result.map((r) => ({
           set: {
             id: r.token_set_id,
-            schema: r.schema,
             metadata: r.metadata,
             sampleImages: r.sample_images || [],
             floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,

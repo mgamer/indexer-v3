@@ -114,6 +114,18 @@ export class ApiKeyManager {
       log.query = request.query;
     }
 
+    if (request.headers["x-forwarded-for"]) {
+      log.remoteAddress = request.headers["x-forwarded-for"];
+    }
+
+    if (request.info.referrer) {
+      log.referrer = request.info.referrer;
+    }
+
+    if (request.headers["host"]) {
+      log.hostname = request.headers["host"];
+    }
+
     // Add key information if it exists
     if (key) {
       try {

@@ -1,9 +1,7 @@
-import crypto from "crypto";
-import stringify from "json-stable-stringify";
-
 import { PgPromiseQuery, idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
+import { generateSchemaHash } from "@/orderbook/orders/utils";
 
 export type TokenSet = {
   id: string;
@@ -19,13 +17,9 @@ const isValid = (tokenSet: TokenSet) => {
       return false;
     }
 
-    if (tokenSet.schema) {
-      // If we have the schema, then validate it against the schema hash
-      const schemaHash =
-        "0x" + crypto.createHash("sha256").update(stringify(tokenSet.schema)).digest("hex");
-      if (schemaHash !== tokenSet.schemaHash) {
-        return false;
-      }
+    const schemaHash = generateSchemaHash(tokenSet.schema);
+    if (schemaHash !== tokenSet.schemaHash) {
+      return false;
     }
   } catch {
     return false;

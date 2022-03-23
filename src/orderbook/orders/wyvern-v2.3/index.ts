@@ -8,7 +8,7 @@ import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
-import { DbOrder, OrderMetadata, defaultSchemaHash } from "@/orderbook/orders/utils";
+import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import { offChainCheck } from "@/orderbook/orders/wyvern-v2.3/check";
 import * as tokenSet from "@/orderbook/token-sets";
 
@@ -161,7 +161,7 @@ export const save = async (
 
       // Check and save: associated token set
       let tokenSetId: string | undefined;
-      const schemaHash = metadata.schemaHash || defaultSchemaHash;
+      const schemaHash = metadata.schemaHash ?? generateSchemaHash(metadata.schema);
 
       const orderKind = order.params.kind?.split("-").slice(1).join("-");
       switch (orderKind) {
@@ -215,8 +215,13 @@ export const save = async (
           const typedInfo = info as typeof info & { merkleRoot: string };
           const merkleRoot = typedInfo.merkleRoot;
           if (merkleRoot) {
-            // Skip saving the token set since we don't know the underlying tokens
-            tokenSetId = `list:${info.contract}:${merkleRoot}`;
+            [{ id: tokenSetId }] = await tokenSet.tokenList.save([
+              {
+                id: `list:${info.contract}:${merkleRoot}`,
+                schemaHash,
+                schema: metadata.schema,
+              },
+            ]);
           }
 
           break;
@@ -276,7 +281,7 @@ export const save = async (
       let source: string | undefined;
       let feeBreakdown: object[] | undefined;
       switch (order.params.feeRecipient) {
-        // OpenSea
+        // opensea.io
         case "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073": {
           source = order.params.feeRecipient;
           feeBreakdown = [
@@ -293,6 +298,31 @@ export const save = async (
               // TODO: We should extract royalties out of the associated collection
               recipient: null,
               bps: feeBps - 250,
+            });
+          }
+
+          break;
+        }
+
+        // forgotten.market
+        case "0xfdfda3d504b1431ea0fd70084b1bfa39fa99dcc4":
+        case "0xcfd61fb650da1dd7b8f7bc7ad0d105b40bbd3882":
+        case "0x94f0e012b7bb033f32029fbcc4f1d29ff1cfc30a": {
+          source = "0xfdfda3d504b1431ea0fd70084b1bfa39fa99dcc4";
+          feeBreakdown = [
+            {
+              kind: "marketplace",
+              recipient: order.params.feeRecipient,
+              bps: 100,
+            },
+          ];
+
+          if (feeBps > 100) {
+            feeBreakdown.push({
+              kind: "royalty",
+              // TODO: We should extract royalties out of the associated collection
+              recipient: null,
+              bps: feeBps - 100,
             });
           }
 
