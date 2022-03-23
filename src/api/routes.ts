@@ -126,7 +126,7 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/collections/refresh",
+    path: "/collections/refresh/v1",
     options: collectionsEndpoints.postCollectionsRefreshV1Options,
   });
 
@@ -288,7 +288,7 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/tokens/refresh",
+    path: "/tokens/refresh/v1",
     options: tokensEndpoints.postTokensRefreshV1Options,
   });
 
