@@ -132,10 +132,10 @@ export const getOrdersAllV1Options: RouteOptions = {
       }
       if (query.source) {
         if (query.source === AddressZero) {
-          conditions.push(`"o"."source_id" IS NULL`);
+          conditions.push(`coalesce("o"."source_id", '\\x00') = '\\x00'`);
         } else {
           (query as any).source = toBuffer(query.source);
-          conditions.push(`"o"."source_id" = $/source/`);
+          conditions.push(`coalesce("o"."source_id", '\\x00') = $/source/`);
         }
       }
       if (query.continuation) {
