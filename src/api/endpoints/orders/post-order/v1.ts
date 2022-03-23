@@ -26,10 +26,7 @@ export const postOrderV1Options: RouteOptions = {
         kind: Joi.string().lowercase().valid("wyvern-v2.3").required(),
         data: Joi.object().required(),
       }),
-      orderbook: Joi.string()
-        .lowercase()
-        .valid("reservoir", "opensea")
-        .default("reservoir"),
+      orderbook: Joi.string().lowercase().valid("reservoir", "opensea").default("reservoir"),
       source: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
@@ -80,10 +77,7 @@ export const postOrderV1Options: RouteOptions = {
             }
 
             case "opensea": {
-              const sdkOrder = new Sdk.WyvernV23.Order(
-                config.chainId,
-                order.data
-              );
+              const sdkOrder = new Sdk.WyvernV23.Order(config.chainId, order.data);
               const orderInfo = sdkOrder.getInfo();
               if (!orderInfo) {
                 throw Boom.badData("Could not parse order");
@@ -106,9 +100,7 @@ export const postOrderV1Options: RouteOptions = {
                     id: (orderInfo as any).tokenId,
                     address: orderInfo.contract,
                   },
-                  schema: sdkOrder.params.kind?.startsWith("erc721")
-                    ? "ERC721"
-                    : "ERC1155",
+                  schema: sdkOrder.params.kind?.startsWith("erc721") ? "ERC721" : "ERC1155",
                 },
                 hash: sdkOrder.hash(),
               };
@@ -137,9 +129,7 @@ export const postOrderV1Options: RouteOptions = {
                   if (error.response) {
                     logger.error(
                       `post-orders-${version}-handler`,
-                      `Failed to post order to OpenSea: ${JSON.stringify(
-                        error.response.data
-                      )}`
+                      `Failed to post order to OpenSea: ${JSON.stringify(error.response.data)}`
                     );
                   }
 
@@ -160,10 +150,7 @@ export const postOrderV1Options: RouteOptions = {
 
       return { message: "Request accepted" };
     } catch (error) {
-      logger.error(
-        `post-orders-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`post-orders-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

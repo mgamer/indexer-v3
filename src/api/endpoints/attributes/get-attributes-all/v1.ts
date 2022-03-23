@@ -30,9 +30,7 @@ export const getAttributesAllV1Options: RouteOptions = {
       attributes: Joi.array().items(
         Joi.object({
           key: Joi.string().required(),
-          kind: Joi.string()
-            .valid("string", "number", "date", "range")
-            .required(),
+          kind: Joi.string().valid("string", "number", "date", "range").required(),
           values: Joi.array().items(
             Joi.object({
               value: Joi.string().required(),
@@ -43,10 +41,7 @@ export const getAttributesAllV1Options: RouteOptions = {
       ),
     }).label(`getAttributesAll${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-attributes-all-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-attributes-all-${version}-handler`, `Wrong response schema: ${error}`);
 
       throw error;
     },
@@ -79,10 +74,7 @@ export const getAttributesAllV1Options: RouteOptions = {
 
       return { attributes: result };
     } catch (error) {
-      logger.error(
-        `get-attributes-all-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-attributes-all-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

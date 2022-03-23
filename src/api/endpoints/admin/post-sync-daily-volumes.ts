@@ -7,7 +7,7 @@ import Joi from "joi";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import { DailyVolume } from "@/entities/daily-volumes/daily-volume";
+import { DailyVolume } from "../../../models/daily-volumes/daily-volume";
 import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
 
 export const postSyncDailyVolumes: RouteOptions = {
@@ -27,9 +27,7 @@ export const postSyncDailyVolumes: RouteOptions = {
         .integer()
         .positive()
         .default(0)
-        .description(
-          "If no days are passed, will automatically resync from beginning of time."
-        ),
+        .description("If no days are passed, will automatically resync from beginning of time."),
     }),
   },
   handler: async (request: Request) => {
@@ -54,9 +52,7 @@ export const postSyncDailyVolumes: RouteOptions = {
       // we calculate from that time onwards
       let startDay = 0;
       if (!days) {
-        const values = await idb.oneOrNone(
-          `SELECT MIN(timestamp) as earliest FROM fill_events_2`
-        );
+        const values = await idb.oneOrNone(`SELECT MIN(timestamp) as earliest FROM fill_events_2`);
         if (values) {
           const earliestDate = new Date(values.earliest);
           earliestDate.setUTCHours(0, 0, 0, 0);

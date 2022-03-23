@@ -29,9 +29,7 @@ export const getAttributesExploreV1Options: RouteOptions = {
       attributeKey: Joi.string().description(
         "Filter to a particular attribute key, e.g. `Composition`"
       ),
-      sortBy: Joi.string()
-        .valid("floorAskPrice", "topBidValue")
-        .default("floorAskPrice"),
+      sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice"),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(200).default(20),
     }),
@@ -71,10 +69,7 @@ export const getAttributesExploreV1Options: RouteOptions = {
       ),
     }).label(`getAttributesExplore${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-attributes-explore-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-attributes-explore-${version}-handler`, `Wrong response schema: ${error}`);
 
       throw error;
     },
@@ -190,41 +185,34 @@ export const getAttributesExploreV1Options: RouteOptions = {
       baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
-      const result = await edb
-        .manyOrNone(baseQuery, { ...query, ...params })
-        .then((result) =>
-          result.map((r) => ({
-            key: r.key,
-            value: r.value,
-            tokenCount: Number(r.token_count),
-            sampleImages: r.sample_images || [],
-            lastBuys: (r.last_buys || []).map(({ value, timestamp }: any) => ({
-              value: formatEth(value),
-              timestamp: Number(timestamp),
-            })),
-            lastSells: (r.last_sells || []).map(
-              ({ value, timestamp }: any) => ({
-                value: formatEth(value),
-                timestamp: Number(timestamp),
-              })
-            ),
-            floorAskPrices: (r.floor_sell_values || []).map(formatEth),
-            topBid: {
-              id: r.top_buy_id,
-              value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-              maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
-              validFrom: r.top_buy_valid_from,
-              validUntil: r.top_buy_value ? r.top_buy_valid_until : null,
-            },
-          }))
-        );
+      const result = await edb.manyOrNone(baseQuery, { ...query, ...params }).then((result) =>
+        result.map((r) => ({
+          key: r.key,
+          value: r.value,
+          tokenCount: Number(r.token_count),
+          sampleImages: r.sample_images || [],
+          lastBuys: (r.last_buys || []).map(({ value, timestamp }: any) => ({
+            value: formatEth(value),
+            timestamp: Number(timestamp),
+          })),
+          lastSells: (r.last_sells || []).map(({ value, timestamp }: any) => ({
+            value: formatEth(value),
+            timestamp: Number(timestamp),
+          })),
+          floorAskPrices: (r.floor_sell_values || []).map(formatEth),
+          topBid: {
+            id: r.top_buy_id,
+            value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+            maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
+            validFrom: r.top_buy_valid_from,
+            validUntil: r.top_buy_value ? r.top_buy_valid_until : null,
+          },
+        }))
+      );
 
       return { attributes: result };
     } catch (error) {
-      logger.error(
-        `get-attributes-explore-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-attributes-explore-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

@@ -4,8 +4,7 @@ import { RouteOptions } from "@hapi/hapi";
 import { HealthCheck } from "@/common/healthcheck";
 
 export const getLiveOptions: RouteOptions = {
-  description:
-    "The live health check, checks if all necessary services are reachable.",
+  description: "The live health check, checks if all necessary services are reachable.",
   handler: async () => {
     if (await HealthCheck.check()) {
       return true;

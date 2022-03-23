@@ -52,12 +52,6 @@ export const processTransactionData = async (
     orderbookTokenSets.addToQueue(tokenSets),
   ]);
 
-  logger.info(
-    "process-tranaction-data-v0.0.1",
-    `Got ${orderInfos.length} orders from Arweave`
-  );
-  logger.info(
-    "process-tranaction-data-v0.0.1",
-    `Got ${tokenSets.length} token sets from Arweave`
-  );
+  logger.info("process-tranaction-data-v0.0.1", `Got ${orderInfos.length} orders from Arweave`);
+  logger.info("process-tranaction-data-v0.0.1", `Got ${tokenSets.length} token sets from Arweave`);
 };

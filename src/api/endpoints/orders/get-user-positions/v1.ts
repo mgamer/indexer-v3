@@ -25,9 +25,7 @@ export const getUserPositionsV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/)
         .required()
-        .description(
-          "Wallet to see results for e.g. `0xf296178d553c8ec21a2fbd2c5dda8ca9ac905a00`"
-        ),
+        .description("Wallet to see results for e.g. `0xf296178d553c8ec21a2fbd2c5dda8ca9ac905a00`"),
     }),
     query: Joi.object({
       side: Joi.string().lowercase().valid("buy", "sell").required(),
@@ -59,10 +57,7 @@ export const getUserPositionsV1Options: RouteOptions = {
       ),
     }).label(`getUserPositions${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-user-positions-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-user-positions-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -149,35 +144,28 @@ export const getUserPositionsV1Options: RouteOptions = {
       baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
-      const result = await edb
-        .manyOrNone(baseQuery, { ...query, ...params })
-        .then((result) =>
-          result.map((r) => ({
-            set: {
-              id: r.token_set_id,
-              schema: r.schema,
-              metadata: r.metadata,
-              sampleImages: r.sample_images || [],
-              floorAskPrice: r.floor_sell_value
-                ? formatEth(r.floor_sell_value)
-                : null,
-              topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-            },
-            primaryOrder: {
-              value: r.value ? formatEth(r.value) : null,
-              expiration: r.expiration,
-              id: r.id,
-            },
-            totalValid: Number(r.total_valid),
-          }))
-        );
+      const result = await edb.manyOrNone(baseQuery, { ...query, ...params }).then((result) =>
+        result.map((r) => ({
+          set: {
+            id: r.token_set_id,
+            schema: r.schema,
+            metadata: r.metadata,
+            sampleImages: r.sample_images || [],
+            floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+            topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+          },
+          primaryOrder: {
+            value: r.value ? formatEth(r.value) : null,
+            expiration: r.expiration,
+            id: r.id,
+          },
+          totalValid: Number(r.total_valid),
+        }))
+      );
 
       return { positions: result };
     } catch (error) {
-      logger.error(
-        `get-users-positions-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-users-positions-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

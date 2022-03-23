@@ -47,9 +47,7 @@ export const getExecuteBidV1Options: RouteOptions = {
       weiPrice: Joi.string()
         .pattern(/^[0-9]+$/)
         .required(),
-      orderbook: Joi.string()
-        .valid("reservoir", "opensea")
-        .default("reservoir"),
+      orderbook: Joi.string().valid("reservoir", "opensea").default("reservoir"),
       automatedRoyalties: Joi.boolean().default(true),
       fee: Joi.alternatives(Joi.string(), Joi.number()),
       feeRecipient: Joi.string()
@@ -75,19 +73,14 @@ export const getExecuteBidV1Options: RouteOptions = {
           action: Joi.string().required(),
           description: Joi.string().required(),
           status: Joi.string().valid("complete", "incomplete").required(),
-          kind: Joi.string()
-            .valid("request", "signature", "transaction")
-            .required(),
+          kind: Joi.string().valid("request", "signature", "transaction").required(),
           data: Joi.object(),
         })
       ),
       query: Joi.object(),
     }).label(`getExecuteBid${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-execute-bid-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-execute-bid-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -111,9 +104,7 @@ export const getExecuteBidV1Options: RouteOptions = {
         });
       } else if (collection && attributeKey && attributeValue) {
         if (query.orderbook !== "reservoir") {
-          throw Boom.notImplemented(
-            "Attribute bids are not supported outside of Reservoir"
-          );
+          throw Boom.notImplemented("Attribute bids are not supported outside of Reservoir");
         }
 
         order = await wyvernV23BuyAttribute.build({
@@ -128,9 +119,7 @@ export const getExecuteBidV1Options: RouteOptions = {
         });
       } else if (collection) {
         if (query.orderbook !== "reservoir") {
-          throw Boom.notImplemented(
-            "Collection bids are not supported outside of Reservoir"
-          );
+          throw Boom.notImplemented("Collection bids are not supported outside of Reservoir");
         }
 
         order = await wyvernV23BuyCollection.build({
@@ -183,8 +172,7 @@ export const getExecuteBidV1Options: RouteOptions = {
         },
         {
           action: "Approve WETH contract",
-          description:
-            "A one-time setup transaction to enable trading with WETH",
+          description: "A one-time setup transaction to enable trading with WETH",
           kind: "transaction",
         },
         {
@@ -194,8 +182,7 @@ export const getExecuteBidV1Options: RouteOptions = {
         },
         {
           action: "Submit offer",
-          description:
-            "Post your offer to the order book for others to discover it",
+          description: "Post your offer to the order book for others to discover it",
           kind: "request",
         },
       ];
@@ -261,10 +248,7 @@ export const getExecuteBidV1Options: RouteOptions = {
         },
       };
     } catch (error) {
-      logger.error(
-        `get-execute-bid-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-execute-bid-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

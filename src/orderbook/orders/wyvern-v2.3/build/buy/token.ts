@@ -31,11 +31,7 @@ export const build = async (options: BuildOrderOptions) => {
       return undefined;
     }
 
-    const buildInfo = await utils.getBuildInfo(
-      options,
-      collectionResult.collection_id,
-      "buy"
-    );
+    const buildInfo = await utils.getBuildInfo(options, collectionResult.collection_id, "buy");
     if (!buildInfo) {
       // Skip if we cannot generate the build information
       return undefined;
@@ -61,10 +57,7 @@ export const build = async (options: BuildOrderOptions) => {
 
     return builder?.build(buildInfo.params);
   } catch (error) {
-    logger.error(
-      "wyvern-v2.3-build-buy-token-order",
-      `Failed to build order: ${error}`
-    );
+    logger.error("wyvern-v2.3-build-buy-token-order", `Failed to build order: ${error}`);
     return undefined;
   }
 };

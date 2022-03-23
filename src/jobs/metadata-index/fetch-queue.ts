@@ -101,9 +101,7 @@ if (config.doBackgroundWork && config.master) {
                 searchParams.append("tokenIds", tokenId);
               }
 
-              url = `${
-                config.metadataApiBaseUrl
-              }/v3/${network}/tokens?${searchParams.toString()}`;
+              url = `${config.metadataApiBaseUrl}/v3/${network}/tokens?${searchParams.toString()}`;
 
               callback = async () => {
                 if (tokens.length === limit) {
@@ -134,9 +132,7 @@ if (config.doBackgroundWork && config.master) {
           searchParams.append("contract", data.contract);
           searchParams.append("tokenIds", data.tokenId);
 
-          url = `${
-            config.metadataApiBaseUrl
-          }/v3/${network}/tokens?${searchParams.toString()}`;
+          url = `${config.metadataApiBaseUrl}/v3/${network}/tokens?${searchParams.toString()}`;
         }
 
         if (url) {
@@ -159,9 +155,7 @@ if (config.doBackgroundWork && config.master) {
       } catch (error) {
         logger.error(
           QUEUE_NAME,
-          `Failed to process metadata index info ${JSON.stringify(
-            job.data
-          )}: ${error}`
+          `Failed to process metadata index info ${JSON.stringify(job.data)}: ${error}`
         );
         throw error;
       }

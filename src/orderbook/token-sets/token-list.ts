@@ -41,11 +41,7 @@ const isValid = async (tokenSet: TokenSet) => {
     if (tokenSet.schema) {
       // If we have the schema, then validate it against the schema hash
       const schemaHash =
-        "0x" +
-        crypto
-          .createHash("sha256")
-          .update(stringify(tokenSet.schema))
-          .digest("hex");
+        "0x" + crypto.createHash("sha256").update(stringify(tokenSet.schema)).digest("hex");
       if (schemaHash !== tokenSet.schemaHash) {
         return false;
       }
@@ -80,9 +76,7 @@ const isValid = async (tokenSet: TokenSet) => {
       }
 
       // Make sure the current attributes match the merkle root
-      const merkleTree = generateMerkleTree(
-        tokens.map(({ token_id }) => token_id)
-      );
+      const merkleTree = generateMerkleTree(tokens.map(({ token_id }) => token_id));
       if (merkleTree.getHexRoot() !== merkleRoot) {
         return false;
       }
@@ -163,12 +157,9 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
         { tokenSetId: id }
       );
       if (!tokenSetTokensExist) {
-        const columns = new pgp.helpers.ColumnSet(
-          ["token_set_id", "contract", "token_id"],
-          {
-            table: "token_sets_tokens",
-          }
-        );
+        const columns = new pgp.helpers.ColumnSet(["token_set_id", "contract", "token_id"], {
+          table: "token_sets_tokens",
+        });
         const values = tokenIds.map((tokenId) => ({
           token_set_id: id,
           contract: toBuffer(contract),

@@ -36,9 +36,7 @@ export const getExecuteListV1Options: RouteOptions = {
       weiPrice: Joi.string()
         .pattern(/^[0-9]+$/)
         .required(),
-      orderbook: Joi.string()
-        .valid("reservoir", "opensea")
-        .default("reservoir"),
+      orderbook: Joi.string().valid("reservoir", "opensea").default("reservoir"),
       automatedRoyalties: Joi.boolean().default(true),
       fee: Joi.alternatives(Joi.string(), Joi.number()),
       feeRecipient: Joi.string()
@@ -60,19 +58,14 @@ export const getExecuteListV1Options: RouteOptions = {
           action: Joi.string().required(),
           description: Joi.string().required(),
           status: Joi.string().valid("complete", "incomplete").required(),
-          kind: Joi.string()
-            .valid("request", "signature", "transaction")
-            .required(),
+          kind: Joi.string().valid("request", "signature", "transaction").required(),
           data: Joi.object(),
         })
       ),
       query: Joi.object(),
     }).label(`getExecuteList${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-execute-list-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-execute-list-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -114,8 +107,7 @@ export const getExecuteListV1Options: RouteOptions = {
         },
         {
           action: "Submit listing",
-          description:
-            "Post your listing to the order book for others to discover it",
+          description: "Post your listing to the order book for others to discover it",
           kind: "request",
         },
       ];
@@ -137,9 +129,7 @@ export const getExecuteListV1Options: RouteOptions = {
               baseProvider,
               config.chainId
             );
-            const proxyRegistrationTx = proxyRegistry.registerProxyTransaction(
-              query.maker
-            );
+            const proxyRegistrationTx = proxyRegistry.registerProxyTransaction(query.maker);
 
             return {
               steps: [
@@ -168,20 +158,12 @@ export const getExecuteListV1Options: RouteOptions = {
             // Generate an approval transaction
 
             const userProxy = await wyvernV23Utils.getUserProxy(query.maker);
-            const kind = order.params.kind?.startsWith("erc721")
-              ? "erc721"
-              : "erc1155";
+            const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
 
             const approvalTx = (
               kind === "erc721"
-                ? new Sdk.Common.Helpers.Erc721(
-                    baseProvider,
-                    orderInfo.contract
-                  )
-                : new Sdk.Common.Helpers.Erc1155(
-                    baseProvider,
-                    orderInfo.contract
-                  )
+                ? new Sdk.Common.Helpers.Erc721(baseProvider, orderInfo.contract)
+                : new Sdk.Common.Helpers.Erc1155(baseProvider, orderInfo.contract)
             ).approveTransaction(query.maker, userProxy!);
 
             return {
@@ -258,10 +240,7 @@ export const getExecuteListV1Options: RouteOptions = {
         },
       };
     } catch (error) {
-      logger.error(
-        `get-execute-list-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-execute-list-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-import { DailyVolume } from "@/entities/daily-volumes/daily-volume";
+import { DailyVolume } from "../../models/daily-volumes/daily-volume";
 
 const QUEUE_NAME = "calculate-daily-volumes";
 
@@ -58,10 +58,7 @@ if (config.doBackgroundWork) {
  * @param startTime When startTime is null, we assume we want to calculate the previous day volume.
  * @param ignoreInsertedRows When set to true, we force an update/insert of daily_volume rows, even when they already exist
  */
-export const addToQueue = async (
-  startTime?: number | null,
-  ignoreInsertedRows = true
-) => {
+export const addToQueue = async (startTime?: number | null, ignoreInsertedRows = true) => {
   let dayBeginning = new Date();
 
   if (!startTime) {

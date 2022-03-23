@@ -8,11 +8,7 @@ import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
-import {
-  DbOrder,
-  OrderMetadata,
-  defaultSchemaHash,
-} from "@/orderbook/orders/utils";
+import { DbOrder, OrderMetadata, defaultSchemaHash } from "@/orderbook/orders/utils";
 import { offChainCheck } from "@/orderbook/orders/wyvern-v2.3/check";
 import * as tokenSet from "@/orderbook/token-sets";
 
@@ -54,10 +50,9 @@ export const save = async (
       }
 
       // Check: order doesn't already exist
-      const orderExists = await idb.oneOrNone(
-        `SELECT 1 FROM "orders" "o" WHERE "o"."id" = $/id/`,
-        { id }
-      );
+      const orderExists = await idb.oneOrNone(`SELECT 1 FROM "orders" "o" WHERE "o"."id" = $/id/`, {
+        id,
+      });
       if (orderExists) {
         return results.push({
           id,
@@ -275,10 +270,7 @@ export const save = async (
       }
 
       // Handle: fees
-      const feeBps = Math.max(
-        order.params.makerRelayerFee,
-        order.params.takerRelayerFee
-      );
+      const feeBps = Math.max(order.params.makerRelayerFee, order.params.takerRelayerFee);
 
       // Handle: source and fees breakdown
       let source: string | undefined;
@@ -358,18 +350,14 @@ export const save = async (
     } catch (error) {
       logger.error(
         "orders-wyvern-v2.3-save",
-        `Failed to handle order with params ${JSON.stringify(
-          orderParams
-        )}: ${error}`
+        `Failed to handle order with params ${JSON.stringify(orderParams)}: ${error}`
       );
     }
   };
 
   // Process all orders concurrently
   const limit = pLimit(20);
-  await Promise.all(
-    orderInfos.map((orderInfo) => limit(() => handleOrder(orderInfo)))
-  );
+  await Promise.all(orderInfos.map((orderInfo) => limit(() => handleOrder(orderInfo))));
 
   if (orderValues.length) {
     const columns = new pgp.helpers.ColumnSet(
@@ -398,9 +386,7 @@ export const save = async (
         table: "orders",
       }
     );
-    await idb.none(
-      pgp.helpers.insert(orderValues, columns) + " ON CONFLICT DO NOTHING"
-    );
+    await idb.none(pgp.helpers.insert(orderValues, columns) + " ON CONFLICT DO NOTHING");
 
     await ordersUpdateById.addToQueue(
       results

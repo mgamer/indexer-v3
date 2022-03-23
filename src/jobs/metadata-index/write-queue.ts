@@ -28,15 +28,8 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const {
-        collection,
-        contract,
-        tokenId,
-        name,
-        description,
-        imageUrl,
-        attributes,
-      } = job.data as TokenMetadataInfo;
+      const { collection, contract, tokenId, name, description, imageUrl, attributes } =
+        job.data as TokenMetadataInfo;
 
       try {
         // Prepare the attributes for caching in the `tokens` table.
@@ -44,9 +37,7 @@ if (config.doBackgroundWork) {
         const attrsParams: { [key: string]: string } = {};
         for (let i = 0; i < attributes.length; i++) {
           attrs.push(`[$/attribute${i}/, NULL]`);
-          attrsParams[
-            `attribute${i}`
-          ] = `${attributes[i].key},${attributes[i].value}`;
+          attrsParams[`attribute${i}`] = `${attributes[i].key},${attributes[i].value}`;
         }
 
         // Update the token's metadata.
@@ -56,9 +47,7 @@ if (config.doBackgroundWork) {
               name = $/name/,
               description = $/description/,
               image = $/image/,
-              attributes = ${
-                attrs.length ? `HSTORE(ARRAY[${attrs.join(", ")}])` : "NULL"
-              },
+              attributes = ${attrs.length ? `HSTORE(ARRAY[${attrs.join(", ")}])` : "NULL"},
               updated_at = now()
             WHERE tokens.contract = $/contract/
               AND tokens.token_id = $/tokenId/
@@ -224,9 +213,7 @@ if (config.doBackgroundWork) {
       } catch (error) {
         logger.error(
           QUEUE_NAME,
-          `Failed to process token metadata info ${JSON.stringify(
-            job.data
-          )}: ${error}`
+          `Failed to process token metadata info ${JSON.stringify(job.data)}: ${error}`
         );
         throw error;
       }

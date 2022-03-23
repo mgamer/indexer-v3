@@ -25,9 +25,7 @@ export const getUserCollectionsV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/)
         .required()
-        .description(
-          "Wallet to see results for e.g. `0xf296178d553c8ec21a2fbd2c5dda8ca9ac905a00`"
-        ),
+        .description("Wallet to see results for e.g. `0xf296178d553c8ec21a2fbd2c5dda8ca9ac905a00`"),
     }),
     query: Joi.object({
       community: Joi.string()
@@ -69,10 +67,7 @@ export const getUserCollectionsV1Options: RouteOptions = {
       ),
     }).label(`getUserCollections${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-user-collections-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-user-collections-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -97,10 +92,7 @@ export const getUserCollectionsV1Options: RouteOptions = {
 
       // Filters
       (params as any).user = toBuffer(params.user);
-      const conditions: string[] = [
-        `nft_balances.owner = $/user/`,
-        `nft_balances.amount > 0`,
-      ];
+      const conditions: string[] = [`nft_balances.owner = $/user/`, `nft_balances.amount > 0`];
 
       if (query.community) {
         conditions.push(`collections.community = $/community/`);
@@ -122,33 +114,26 @@ export const getUserCollectionsV1Options: RouteOptions = {
       baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
-      const result = await edb
-        .manyOrNone(baseQuery, { ...params, ...query })
-        .then((result) =>
-          result.map((r) => ({
-            collection: {
-              id: r.id,
-              name: r.name,
-              metadata: r.metadata,
-              floorAskPrice: r.floor_sell_value
-                ? formatEth(r.floor_sell_value)
-                : null,
-              topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-            },
-            ownership: {
-              tokenCount: String(r.token_count),
-              onSaleCount: String(r.on_sale_count),
-              liquidCount: String(r.liquid_count),
-            },
-          }))
-        );
+      const result = await edb.manyOrNone(baseQuery, { ...params, ...query }).then((result) =>
+        result.map((r) => ({
+          collection: {
+            id: r.id,
+            name: r.name,
+            metadata: r.metadata,
+            floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+            topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+          },
+          ownership: {
+            tokenCount: String(r.token_count),
+            onSaleCount: String(r.on_sale_count),
+            liquidCount: String(r.liquid_count),
+          },
+        }))
+      );
 
       return { collections: result };
     } catch (error) {
-      logger.error(
-        `get-user-collections-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-user-collections-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

@@ -4,7 +4,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import { ApiKeyManager } from "@/entities/api-keys";
+import { ApiKeyManager } from "../../../models/api-keys";
 
 export const postApiKey: RouteOptions = {
   description: "Instantly create a new API key",
@@ -19,14 +19,8 @@ export const postApiKey: RouteOptions = {
   validate: {
     payload: Joi.object({
       appName: Joi.string().required().description("The name of the app"),
-      email: Joi.string()
-        .email()
-        .required()
-        .description("Your e-mail address so we can reach you"),
-      website: Joi.string()
-        .uri()
-        .required()
-        .description("The website of your project"),
+      email: Joi.string().email().required().description("Your e-mail address so we can reach you"),
+      website: Joi.string().uri().required().description("The website of your project"),
     }),
   },
   response: {

@@ -11,13 +11,12 @@ import { setupRoutes } from "@/api/routes";
 import { logger } from "@/common/logger";
 import { network } from "@/common/provider";
 import { config } from "@/config/index";
-import { ApiKeyManager } from "@/entities/api-keys";
+import { ApiKeyManager } from "../models/api-keys";
 import { allJobQueues } from "@/jobs/index";
 
 let server: Hapi.Server;
 
-export const inject = (options: Hapi.ServerInjectOptions) =>
-  server.inject(options);
+export const inject = (options: Hapi.ServerInjectOptions) => server.inject(options);
 
 export const start = async (): Promise<void> => {
   server = Hapi.server({
@@ -85,9 +84,7 @@ export const start = async (): Promise<void> => {
           },
         },
         schemes: ["https", "http"],
-        host: `${
-          network === "mainnet" ? "api" : "api-rinkeby"
-        }.reservoir.tools`,
+        host: `${network === "mainnet" ? "api" : "api-rinkeby"}.reservoir.tools`,
         cors: true,
         tryItOutEnabled: true,
         documentationPath: "/",
@@ -101,13 +98,11 @@ export const start = async (): Promise<void> => {
         tags: [
           {
             name: "1. Order Book",
-            description:
-              "Read & write from Reservoir's open, aggregated order book",
+            description: "Read & write from Reservoir's open, aggregated order book",
           },
           {
             name: "2. Aggregator",
-            description:
-              "Access normalized pricing and sales data, to feed into your own system",
+            description: "Access normalized pricing and sales data, to feed into your own system",
           },
           {
             name: "3. Router",

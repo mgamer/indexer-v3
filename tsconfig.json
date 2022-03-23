@@ -18,9 +18,10 @@
       "@/arweave-sync/*": ["sync/arweave/*"],
       "@/common/*": ["common/*"],
       "@/config/*": ["config/*"],
-      "@/entities/*": ["entities/*"],
       "@/jobs/*": ["jobs/*"],
       "@/orderbook/*": ["orderbook/*"],
+      "@/utils/*": ["utils/*"],
+      "@/models/*": ["models/*"],
       "@/events-sync/*": ["sync/events/*"]
     }
   },

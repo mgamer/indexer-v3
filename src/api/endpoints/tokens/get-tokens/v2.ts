@@ -45,12 +45,8 @@ export const getTokensV2Options: RouteOptions = {
         ),
       attributes: Joi.object()
         .unknown()
-        .description(
-          "Filter to a particular attribute, e.g. `attributes[Type]=Original`"
-        ),
-      sortBy: Joi.string()
-        .valid("floorAskPrice", "topBidValue")
-        .default("floorAskPrice"),
+        .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
+      sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice"),
       limit: Joi.number().integer().min(1).max(50).default(20),
       continuation: Joi.string().pattern(/^((\d+|null)_\d+|\d+)$/), // 485_34, null_45 or 25 allowed
     })
@@ -84,10 +80,7 @@ export const getTokensV2Options: RouteOptions = {
         .allow(null),
     }).label(`getTokens${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-tokens-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-tokens-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -186,9 +179,7 @@ export const getTokensV2Options: RouteOptions = {
                 (query as any).topBuyValue = contArr[0];
                 (query as any).tokenId = contArr[1];
               } else {
-                conditions.push(
-                  `(t.top_buy_value is null AND t.token_id < $/tokenId/)`
-                );
+                conditions.push(`(t.top_buy_value is null AND t.token_id < $/tokenId/)`);
                 (query as any).tokenId = contArr[1];
               }
               break;
@@ -203,9 +194,7 @@ export const getTokensV2Options: RouteOptions = {
                 (query as any).floorSellValue = contArr[0];
                 (query as any).tokenId = contArr[1];
               } else {
-                conditions.push(
-                  `(t.floor_sell_value is null AND t.token_id > $/tokenId/)`
-                );
+                conditions.push(`(t.floor_sell_value is null AND t.token_id > $/tokenId/)`);
                 (query as any).tokenId = contArr[1];
               }
               break;
@@ -259,12 +248,10 @@ export const getTokensV2Options: RouteOptions = {
         if (query.collection || query.attributes) {
           switch (query.sortBy) {
             case "topBidValue":
-              continuation =
-                rawResult[rawResult.length - 1].top_buy_value || "null";
+              continuation = rawResult[rawResult.length - 1].top_buy_value || "null";
               break;
             case "floorAskPrice":
-              continuation =
-                rawResult[rawResult.length - 1].floor_sell_value || "null";
+              continuation = rawResult[rawResult.length - 1].floor_sell_value || "null";
               break;
             default:
               break;
@@ -285,9 +272,7 @@ export const getTokensV2Options: RouteOptions = {
           id: r.collection_id,
           name: r.collection_name,
         },
-        floorAskPrice: r.floor_sell_value
-          ? formatEth(r.floor_sell_value)
-          : null,
+        floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
         topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
       }));
 
@@ -296,10 +281,7 @@ export const getTokensV2Options: RouteOptions = {
         continuation,
       };
     } catch (error) {
-      logger.error(
-        `get-tokens-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-tokens-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

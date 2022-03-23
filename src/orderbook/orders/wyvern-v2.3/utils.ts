@@ -7,9 +7,7 @@ import { baseProvider } from "@/common/provider";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
-export const getUserProxy = async (
-  owner: string
-): Promise<string | undefined> => {
+export const getUserProxy = async (owner: string): Promise<string | undefined> => {
   try {
     // First, try to get the user proxy from the local database
     let proxy = await idb
@@ -24,10 +22,7 @@ export const getUserProxy = async (
 
     if (!proxy) {
       // If that doesn't work out, then query the user proxy on-chain
-      proxy = await new Sdk.WyvernV23.Helpers.ProxyRegistry(
-        baseProvider,
-        config.chainId
-      )
+      proxy = await new Sdk.WyvernV23.Helpers.ProxyRegistry(baseProvider, config.chainId)
         .getProxy(owner)
         .then((p) => p.toLowerCase());
 
@@ -55,10 +50,7 @@ export const getUserProxy = async (
 
     return proxy;
   } catch (error) {
-    logger.error(
-      "wyvern-v2.3-get-user-proxy",
-      `Failed to get user proxy: ${error}`
-    );
+    logger.error("wyvern-v2.3-get-user-proxy", `Failed to get user proxy: ${error}`);
     return undefined;
   }
 };

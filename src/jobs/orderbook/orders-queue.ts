@@ -37,19 +37,13 @@ if (config.doBackgroundWork) {
               [info as orders.wyvernV23.OrderInfo],
               relayToArweave
             );
-            logger.info(
-              QUEUE_NAME,
-              `Order save result: ${JSON.stringify(result)}`
-            );
+            logger.info(QUEUE_NAME, `Order save result: ${JSON.stringify(result)}`);
 
             break;
           }
         }
       } catch (error) {
-        logger.error(
-          QUEUE_NAME,
-          `Failed to process order ${job.data}: ${error}`
-        );
+        logger.error(QUEUE_NAME, `Failed to process order ${job.data}: ${error}`);
         throw error;
       }
     },

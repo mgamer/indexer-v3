@@ -52,10 +52,7 @@ export const getExecuteSellV1Options: RouteOptions = {
       query: Joi.object(),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-execute-sell-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-execute-sell-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -97,8 +94,7 @@ export const getExecuteSellV1Options: RouteOptions = {
         },
         {
           action: "Approve WETH contract",
-          description:
-            "A one-time setup transaction to enable trading with WETH",
+          description: "A one-time setup transaction to enable trading with WETH",
           kind: "transaction",
         },
         {
@@ -109,8 +105,7 @@ export const getExecuteSellV1Options: RouteOptions = {
         },
         {
           action: "Accept offer",
-          description:
-            "To sell this item you must confirm the transaction and pay the gas fee",
+          description: "To sell this item you must confirm the transaction and pay the gas fee",
           kind: "transaction",
         },
         {
@@ -122,10 +117,7 @@ export const getExecuteSellV1Options: RouteOptions = {
 
       switch (bestOrderResult.kind) {
         case "wyvern-v2.3": {
-          const order = new Sdk.WyvernV23.Order(
-            config.chainId,
-            bestOrderResult.raw_data
-          );
+          const order = new Sdk.WyvernV23.Order(config.chainId, bestOrderResult.raw_data);
 
           const buildMatchingArgs: any = {
             tokenId,
@@ -157,10 +149,7 @@ export const getExecuteSellV1Options: RouteOptions = {
           // When accepting a buy order, the seller needs to approve
           // Weth as well since the fee will be taken from the maker
           // (that's a really bad design :().
-          const weth = new Sdk.Common.Helpers.Weth(
-            baseProvider,
-            config.chainId
-          );
+          const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
           const wethApproval = await weth.getAllowance(
             query.taker,
             Sdk.WyvernV23.Addresses.TokenTransferProxy[config.chainId]
@@ -168,9 +157,7 @@ export const getExecuteSellV1Options: RouteOptions = {
 
           if (
             bn(wethApproval).lt(
-              bn(order.params.basePrice)
-                .mul(order.params.takerRelayerFee)
-                .div(10000)
+              bn(order.params.basePrice).mul(order.params.takerRelayerFee).div(10000)
             )
           ) {
             wethApprovalTx = weth.approveTransaction(
@@ -198,8 +185,7 @@ export const getExecuteSellV1Options: RouteOptions = {
                   baseProvider,
                   config.chainId
                 );
-                const proxyRegistrationTx =
-                  proxyRegistry.registerProxyTransaction(query.maker);
+                const proxyRegistrationTx = proxyRegistry.registerProxyTransaction(query.maker);
 
                 return {
                   steps: [
@@ -231,23 +217,13 @@ export const getExecuteSellV1Options: RouteOptions = {
               case "no-approval": {
                 // Generate an approval transaction
 
-                const userProxy = await wyvernV23Utils.getUserProxy(
-                  query.maker
-                );
-                const kind = order.params.kind?.startsWith("erc721")
-                  ? "erc721"
-                  : "erc1155";
+                const userProxy = await wyvernV23Utils.getUserProxy(query.maker);
+                const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
 
                 nftApprovalTx = (
                   kind === "erc721"
-                    ? new Sdk.Common.Helpers.Erc721(
-                        baseProvider,
-                        sellOrderInfo.contract
-                      )
-                    : new Sdk.Common.Helpers.Erc1155(
-                        baseProvider,
-                        sellOrderInfo.contract
-                      )
+                    ? new Sdk.Common.Helpers.Erc721(baseProvider, sellOrderInfo.contract)
+                    : new Sdk.Common.Helpers.Erc1155(baseProvider, sellOrderInfo.contract)
                 ).approveTransaction(query.maker, userProxy!);
 
                 break;
@@ -256,11 +232,7 @@ export const getExecuteSellV1Options: RouteOptions = {
           }
 
           const exchange = new Sdk.WyvernV23.Exchange(config.chainId);
-          const fillTx = exchange.matchTransaction(
-            query.taker,
-            order,
-            sellOrder
-          );
+          const fillTx = exchange.matchTransaction(query.taker, order, sellOrder);
 
           return {
             steps: [
@@ -300,10 +272,7 @@ export const getExecuteSellV1Options: RouteOptions = {
         }
       }
     } catch (error) {
-      logger.error(
-        `get-execute-sell-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-execute-sell-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

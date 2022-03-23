@@ -27,6 +27,8 @@
     "@hapi/inert": "^6.0.4",
     "@hapi/vision": "^6.1.0",
     "@reservoir0x/sdk": "0.0.31",
+    "@types/date-fns": "^2.6.0",
+    "@types/lodash": "^4.14.180",
     "arweave": "^1.10.23",
     "bullmq": "^1.75.1",
     "dd-trace": "^1.5.1",
@@ -74,7 +76,8 @@
     "@/arweave-sync": "dist/sync/arweave",
     "@/common": "dist/common",
     "@/config": "dist/config",
-    "@/entities": "dist/entities",
+    "@/models": "dist/models",
+    "@/utils": "dist/utils",
     "@/jobs": "dist/jobs",
     "@/orderbook": "dist/orderbook",
     "@/events-sync": "dist/sync/events"

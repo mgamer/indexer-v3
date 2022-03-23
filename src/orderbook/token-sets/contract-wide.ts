@@ -22,11 +22,7 @@ const isValid = (tokenSet: TokenSet) => {
     if (tokenSet.schema) {
       // If we have the schema, then validate it against the schema hash
       const schemaHash =
-        "0x" +
-        crypto
-          .createHash("sha256")
-          .update(stringify(tokenSet.schema))
-          .digest("hex");
+        "0x" + crypto.createHash("sha256").update(stringify(tokenSet.schema)).digest("hex");
       if (schemaHash !== tokenSet.schemaHash) {
         return false;
       }

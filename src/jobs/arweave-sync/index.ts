@@ -25,10 +25,7 @@ if (config.doBackgroundWork && config.catchup) {
           try {
             await arweaveSyncRealtime.addToQueue();
           } catch (error) {
-            logger.error(
-              "arweave-sync-catchup",
-              `Failed to catch up Arweave data: ${error}`
-            );
+            logger.error("arweave-sync-catchup", `Failed to catch up Arweave data: ${error}`);
           }
         })
         .catch(() => {
@@ -50,10 +47,7 @@ if (config.doBackgroundWork && config.catchup) {
           try {
             await arweaveSyncPending.addToQueue();
           } catch (error) {
-            logger.error(
-              "arweave-sync-pending",
-              `Failed to sync pending Arweave data: ${error}`
-            );
+            logger.error("arweave-sync-pending", `Failed to sync pending Arweave data: ${error}`);
           }
         })
         .catch(() => {

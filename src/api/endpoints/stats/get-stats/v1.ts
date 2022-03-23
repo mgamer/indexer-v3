@@ -10,8 +10,7 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getStatsV1Options: RouteOptions = {
-  description:
-    "Get aggregate stats for a particular set (collection, attribute or single token)",
+  description: "Get aggregate stats for a particular set (collection, attribute or single token)",
   tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {
@@ -33,9 +32,7 @@ export const getStatsV1Options: RouteOptions = {
         ),
       attributes: Joi.object()
         .unknown()
-        .description(
-          "Filter to a particular attribute, e.g. `attributes[Type]=Original`"
-        ),
+        .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
     })
       .oxor("collection", "token")
       .or("collection", "token"),
@@ -83,10 +80,7 @@ export const getStatsV1Options: RouteOptions = {
       }).allow(null),
     }).label(`getStats${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-stats-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-stats-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -179,8 +173,7 @@ export const getStatsV1Options: RouteOptions = {
           FROM "tokens" "t"
         `;
         if (conditions.length) {
-          filterQuery +=
-            " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
+          filterQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
         }
 
         const sellQuery = `
@@ -334,16 +327,10 @@ export const getStatsV1Options: RouteOptions = {
               market: {
                 floorAsk: {
                   id: r.floor_sell_id,
-                  price: r.floor_sell_value
-                    ? formatEth(r.floor_sell_value)
-                    : null,
-                  maker: r.floor_sell_maker
-                    ? fromBuffer(r.floor_sell_maker)
-                    : null,
+                  price: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+                  maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
                   validFrom: r.floor_sell_valid_from,
-                  validUntil: r.floor_sell_value
-                    ? r.floor_sell_valid_until
-                    : null,
+                  validUntil: r.floor_sell_value ? r.floor_sell_valid_until : null,
                   token: {
                     contract: r.contract ? fromBuffer(r.contract) : null,
                     tokenId: r.token_id,

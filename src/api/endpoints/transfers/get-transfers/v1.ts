@@ -76,10 +76,7 @@ export const getTransfersV1Options: RouteOptions = {
       ),
     }).label(`getTransfers${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-transfers-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-transfers-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -165,10 +162,7 @@ export const getTransfersV1Options: RouteOptions = {
 
       return { transfers: result };
     } catch (error) {
-      logger.error(
-        `get-transfers-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-transfers-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

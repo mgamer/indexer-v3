@@ -27,9 +27,7 @@ import "@/jobs/events-sync/write-buffers/nft-transfers";
 
 const LATEST_BLOCKS_CACHE_KEY = "events-sync-latest-blocks";
 
-export const saveLatestBlocks = async (
-  blockInfos: { block: number; hash: string }[]
-) => {
+export const saveLatestBlocks = async (blockInfos: { block: number; hash: string }[]) => {
   try {
     for (const { block, hash } of blockInfos) {
       // Use a sorted set scored by the negated block number
@@ -38,26 +36,14 @@ export const saveLatestBlocks = async (
     }
 
     // Get the latest block number
-    const result = await redis.zrange(
-      LATEST_BLOCKS_CACHE_KEY,
-      0,
-      0,
-      "WITHSCORES"
-    );
+    const result = await redis.zrange(LATEST_BLOCKS_CACHE_KEY, 0, 0, "WITHSCORES");
     if (result.length) {
       // Only keep the latest 60 blocks
       const latestBlockNegated = Number(result[1]);
-      await redis.zremrangebyscore(
-        LATEST_BLOCKS_CACHE_KEY,
-        latestBlockNegated + 60,
-        "+inf"
-      );
+      await redis.zremrangebyscore(LATEST_BLOCKS_CACHE_KEY, latestBlockNegated + 60, "+inf");
     }
   } catch (error) {
-    logger.error(
-      "events-sync-save-latest-blocks",
-      `Failed to save latest blocks: ${error}`
-    );
+    logger.error("events-sync-save-latest-blocks", `Failed to save latest blocks: ${error}`);
   }
 };
 
@@ -77,10 +63,7 @@ if (config.doBackgroundWork && config.catchup) {
           try {
             await realtimeEventsSync.addToQueue();
           } catch (error) {
-            logger.error(
-              "events-sync-catchup",
-              `Failed to catch up events: ${error}`
-            );
+            logger.error("events-sync-catchup", `Failed to catch up events: ${error}`);
           }
         })
         .catch(() => {
@@ -105,18 +88,12 @@ if (config.doBackgroundWork && config.catchup) {
             // hash against the latest upstream block hash
             const wrongBlocks = new Map<number, string>();
             try {
-              const blockInfos = await redis.zrange(
-                LATEST_BLOCKS_CACHE_KEY,
-                0,
-                60,
-                "WITHSCORES"
-              );
+              const blockInfos = await redis.zrange(LATEST_BLOCKS_CACHE_KEY, 0, 60, "WITHSCORES");
               for (let i = 0; i < blockInfos.length; i += 2) {
                 const blockHash = blockInfos[i];
                 const block = -Number(blockInfos[i + 1]);
 
-                const upstreamBlockHash = (await baseProvider.getBlock(block))
-                  .hash;
+                const upstreamBlockHash = (await baseProvider.getBlock(block)).hash;
                 if (blockHash !== upstreamBlockHash) {
                   wrongBlocks.set(block, blockHash);
 
@@ -127,10 +104,7 @@ if (config.doBackgroundWork && config.catchup) {
                 }
               }
             } catch (error) {
-              logger.error(
-                "events-sync-orphan-check",
-                `Failed to retrieve block hashes: ${error}`
-              );
+              logger.error("events-sync-orphan-check", `Failed to retrieve block hashes: ${error}`);
             }
 
             // Fix any orphaned blocks

@@ -34,19 +34,13 @@ export const getOrderExecutedV1Options: RouteOptions = {
         { id: query.id }
       );
 
-      if (
-        data?.fillability_status === "filled" ||
-        data?.fillability_status === "cancelled"
-      ) {
+      if (data?.fillability_status === "filled" || data?.fillability_status === "cancelled") {
         return { message: "Order is executed" };
       }
 
       throw Boom.badData("Order not yet executed");
     } catch (error) {
-      logger.error(
-        `get-order-executed-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-order-executed-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

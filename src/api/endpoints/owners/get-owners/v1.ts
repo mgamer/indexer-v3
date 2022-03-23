@@ -41,9 +41,7 @@ export const getOwnersV1Options: RouteOptions = {
         ),
       attributes: Joi.object()
         .unknown()
-        .description(
-          "Filter to a particular attribute, e.g. `attributes[Type]=Original`"
-        ),
+        .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     })
@@ -67,10 +65,7 @@ export const getOwnersV1Options: RouteOptions = {
       ),
     }).label(`getOwners${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-owners-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-owners-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -111,8 +106,7 @@ export const getOwnersV1Options: RouteOptions = {
         tokensFilter = `tokens.contract = $/contract/`;
       } else {
         // This is a range collection
-        const [contract, startTokenId, endTokenId] =
-          query.collection.split(":");
+        const [contract, startTokenId, endTokenId] = query.collection.split(":");
         (query as any).contract = toBuffer(contract);
         (query as any).startTokenId = startTokenId;
         (query as any).endTokenId = endTokenId;
@@ -168,23 +162,16 @@ export const getOwnersV1Options: RouteOptions = {
           ownership: {
             tokenCount: String(r.token_count),
             onSaleCount: String(r.on_sale_count),
-            floorAskPrice: r.floor_sell_value
-              ? formatEth(r.floor_sell_value)
-              : null,
+            floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
             topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-            totalBidValue: r.total_buy_value
-              ? formatEth(r.total_buy_value)
-              : null,
+            totalBidValue: r.total_buy_value ? formatEth(r.total_buy_value) : null,
           },
         }))
       );
 
       return { owners: result };
     } catch (error) {
-      logger.error(
-        `get-owners-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-owners-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

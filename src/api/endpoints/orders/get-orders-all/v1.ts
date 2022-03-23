@@ -84,10 +84,7 @@ export const getOrdersAllV1Options: RouteOptions = {
         .allow(null),
     }).label(`getOrdersAll${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-orders-all-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-orders-all-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -143,9 +140,7 @@ export const getOrdersAllV1Options: RouteOptions = {
         (query as any).createdAt = createdAt;
         (query as any).id = id;
 
-        conditions.push(
-          `("o"."created_at", "o"."id") < (to_timestamp($/createdAt/), $/id/)`
-        );
+        conditions.push(`("o"."created_at", "o"."id") < (to_timestamp($/createdAt/), $/id/)`);
       }
 
       if (conditions.length) {
@@ -163,9 +158,7 @@ export const getOrdersAllV1Options: RouteOptions = {
       let continuation = null;
       if (rawResult.length === query.limit) {
         continuation =
-          rawResult[rawResult.length - 1].created_at +
-          "_" +
-          rawResult[rawResult.length - 1].id;
+          rawResult[rawResult.length - 1].created_at + "_" + rawResult[rawResult.length - 1].id;
       }
 
       const result = rawResult.map((r) => ({
@@ -181,8 +174,7 @@ export const getOrdersAllV1Options: RouteOptions = {
         value:
           r.side === "buy"
             ? formatEth(r.value)
-            : formatEth(r.value) -
-              (formatEth(r.value) * Number(r.fee_bps)) / 10000,
+            : formatEth(r.value) - (formatEth(r.value) * Number(r.fee_bps)) / 10000,
         validFrom: Number(r.valid_from),
         validUntil: Number(r.valid_until),
         sourceId: r.source_id ? fromBuffer(r.source_id) : null,
@@ -199,10 +191,7 @@ export const getOrdersAllV1Options: RouteOptions = {
         continuation,
       };
     } catch (error) {
-      logger.error(
-        `get-orders-all-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-orders-all-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

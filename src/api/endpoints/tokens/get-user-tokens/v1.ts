@@ -77,10 +77,7 @@ export const getUserTokensV1Options: RouteOptions = {
       ),
     }).label(`getUserTokens${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-user-tokens-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-user-tokens-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -129,10 +126,7 @@ export const getUserTokensV1Options: RouteOptions = {
 
       // Filters
       (params as any).user = toBuffer(params.user);
-      const conditions: string[] = [
-        `"nb"."owner" = $/user/`,
-        `"nb"."amount" > 0`,
-      ];
+      const conditions: string[] = [`"nb"."owner" = $/user/`, `"nb"."amount" > 0`];
       if (query.community) {
         conditions.push(`"c"."community" = $/community/`);
       }
@@ -166,42 +160,35 @@ export const getUserTokensV1Options: RouteOptions = {
       baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
-      const result = await edb
-        .manyOrNone(baseQuery, { ...query, ...params })
-        .then((result) =>
-          result.map((r) => ({
-            token: {
-              contract: fromBuffer(r.contract),
-              tokenId: r.token_id,
-              name: r.name,
-              image: r.image,
-              collection: {
-                id: r.collection_id,
-                name: r.collection_name,
-              },
-              topBid: {
-                id: r.top_buy_id,
-                value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-                schema: r.top_buy_schema,
-              },
+      const result = await edb.manyOrNone(baseQuery, { ...query, ...params }).then((result) =>
+        result.map((r) => ({
+          token: {
+            contract: fromBuffer(r.contract),
+            tokenId: r.token_id,
+            name: r.name,
+            image: r.image,
+            collection: {
+              id: r.collection_id,
+              name: r.collection_name,
             },
-            ownership: {
-              tokenCount: String(r.token_count),
-              onSaleCount: String(r.on_sale_count),
-              floorSellValue: r.floor_sell_value
-                ? formatEth(r.floor_sell_value)
-                : null,
-              acquiredAt: Number(r.acquired_at),
+            topBid: {
+              id: r.top_buy_id,
+              value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+              schema: r.top_buy_schema,
             },
-          }))
-        );
+          },
+          ownership: {
+            tokenCount: String(r.token_count),
+            onSaleCount: String(r.on_sale_count),
+            floorSellValue: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+            acquiredAt: Number(r.acquired_at),
+          },
+        }))
+      );
 
       return { tokens: result };
     } catch (error) {
-      logger.error(
-        `get-user-tokens-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-user-tokens-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },
