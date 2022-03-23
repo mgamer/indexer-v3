@@ -51,7 +51,9 @@ if (config.doBackgroundWork && config.master) {
       const { kind, data } = job.data as MetadataIndexInfo;
 
       try {
-        let callback: () => Promise<void> = async () => {
+        let callback: (result: {
+          continuation?: string;
+        }) => Promise<void> = async () => {
           // This callback is to be called after the current job executed
           // successfully. It's needed to allow triggering any other jobs
           // that act as a continuation of the current one. By default it
@@ -121,11 +123,29 @@ if (config.doBackgroundWork && config.master) {
             }
           } else if (data.method === "rarible") {
             const searchParams = new URLSearchParams();
-            searchParams.append("collection", data.collection);
+            searchParams.append("method", data.method);
+            searchParams.append("contract", data.collection);
+            if (data.continuation) {
+              searchParams.append("continuation", data.continuation);
+            }
 
             url = `${
               config.metadataApiBaseUrl
-            }/v3/${network}/rarible-full-collection?${searchParams.toString()}`;
+            }/v4/${network}/metadata/token?${searchParams.toString()}`;
+
+            callback = async ({ continuation }) => {
+              if (continuation) {
+                await addToQueue([
+                  {
+                    kind,
+                    data: {
+                      ...data,
+                      continuation,
+                    },
+                  },
+                ]);
+              }
+            };
           }
         } else if (kind === "single-token") {
           const searchParams = new URLSearchParams();
@@ -151,7 +171,7 @@ if (config.doBackgroundWork && config.master) {
             }))
           );
 
-          await callback();
+          await callback(metadataResult);
         }
       } catch (error) {
         logger.error(
