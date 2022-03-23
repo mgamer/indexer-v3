@@ -36,6 +36,7 @@ if (config.doBackgroundWork && config.master) {
     name?: string;
     description?: string;
     imageUrl?: string;
+    mediaUrl?: string;
     attributes: {
       key: string;
       value: string;

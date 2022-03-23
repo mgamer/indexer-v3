@@ -35,6 +35,7 @@ if (config.doBackgroundWork) {
         name,
         description,
         imageUrl,
+        mediaUrl,
         attributes,
       } = job.data as TokenMetadataInfo;
 
@@ -56,6 +57,7 @@ if (config.doBackgroundWork) {
               name = $/name/,
               description = $/description/,
               image = $/image/,
+              media = $/media/,
               attributes = ${
                 attrs.length ? `HSTORE(ARRAY[${attrs.join(", ")}])` : "NULL"
               },
@@ -70,6 +72,7 @@ if (config.doBackgroundWork) {
             name: name || null,
             description: description || null,
             image: imageUrl || null,
+            media: mediaUrl || null,
             ...attrsParams,
           }
         );
@@ -245,6 +248,7 @@ export type TokenMetadataInfo = {
   name?: string;
   description?: string;
   imageUrl?: string;
+  mediaUrl?: string;
   attributes: {
     key: string;
     value: string;
