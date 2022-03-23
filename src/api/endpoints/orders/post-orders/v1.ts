@@ -33,10 +33,7 @@ export const postOrdersV1Options: RouteOptions = {
     try {
       const orders = payload.orders;
 
-      logger.info(
-        `post-orders-${version}-handler`,
-        `Got ${orders.length} orders`
-      );
+      logger.info(`post-orders-${version}-handler`, `Got ${orders.length} orders`);
 
       const wyvernV23OrderInfos: wyvernV23.OrderInfo[] = [];
       for (const { kind, data } of orders) {
@@ -62,10 +59,7 @@ export const postOrdersV1Options: RouteOptions = {
 
       return { message: "Request accepted" };
     } catch (error) {
-      logger.error(
-        `post-orders-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`post-orders-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

@@ -31,10 +31,7 @@ if (config.doBackgroundWork) {
       const { fromBlock, toBlock, backfill, eventDataKinds } = job.data;
 
       try {
-        logger.info(
-          QUEUE_NAME,
-          `Events backfill syncing block range [${fromBlock}, ${toBlock}]`
-        );
+        logger.info(QUEUE_NAME, `Events backfill syncing block range [${fromBlock}, ${toBlock}]`);
 
         await syncEvents(fromBlock, toBlock, { backfill, eventDataKinds });
       } catch (error) {

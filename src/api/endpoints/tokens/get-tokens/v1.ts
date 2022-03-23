@@ -43,9 +43,7 @@ export const getTokensV1Options: RouteOptions = {
         .description(
           "Filter to a particular set, e.g. `contract:0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
-      onSale: Joi.boolean().description(
-        "Limit to tokens that are listed for sale"
-      ),
+      onSale: Joi.boolean().description("Limit to tokens that are listed for sale"),
       sortBy: Joi.string()
         .valid("tokenId", "floorAskPrice", "topBidValue")
         .default("floorAskPrice"),
@@ -79,10 +77,7 @@ export const getTokensV1Options: RouteOptions = {
       ),
     }).label(`getTokens${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-tokens-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-tokens-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -145,9 +140,7 @@ export const getTokensV1Options: RouteOptions = {
       // Sorting
       switch (query.sortBy) {
         case "tokenId": {
-          baseQuery += ` ORDER BY "t"."token_id" ${
-            query.sortDirection || "ASC"
-          }`;
+          baseQuery += ` ORDER BY "t"."token_id" ${query.sortDirection || "ASC"}`;
           break;
         }
 
@@ -181,19 +174,14 @@ export const getTokensV1Options: RouteOptions = {
             id: r.collection_id,
             name: r.collection_name,
           },
-          floorAskPrice: r.floor_sell_value
-            ? formatEth(r.floor_sell_value)
-            : null,
+          floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
           topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
         }))
       );
 
       return { tokens: result };
     } catch (error) {
-      logger.error(
-        `get-tokens-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-tokens-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

@@ -26,9 +26,7 @@ export class ApiKeyManager {
    *
    * @param values
    */
-  public async create(
-    values: ApiKeyRecord
-  ): Promise<NewApiKeyResponse | boolean> {
+  public async create(values: ApiKeyRecord): Promise<NewApiKeyResponse | boolean> {
     // Create a new key if none was set
     if (!values.key) {
       values.key = randomUUID();
@@ -36,10 +34,7 @@ export class ApiKeyManager {
 
     // Create the record in the database
     try {
-      await idb.none(
-        "insert into api_keys (${this:name}) values (${this:csv})",
-        values
-      );
+      await idb.none("insert into api_keys (${this:name}) values (${this:csv})", values);
     } catch (e) {
       logger.error("api-key", `Unable to create a new apikeys record: ${e}`);
       return false;
@@ -79,10 +74,7 @@ export class ApiKeyManager {
       }
     } else {
       // check if it exists in the database
-      const fromDb = await idb.oneOrNone(
-        `SELECT * FROM api_keys WHERE key = $/key/`,
-        { key }
-      );
+      const fromDb = await idb.oneOrNone(`SELECT * FROM api_keys WHERE key = $/key/`, { key });
       if (fromDb) {
         await redis.hset(redisKey, new Map(Object.entries(fromDb)));
         return fromDb;

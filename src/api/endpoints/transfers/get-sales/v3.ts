@@ -40,9 +40,7 @@ export const getSalesV3Options: RouteOptions = {
         ),
       attributes: Joi.object()
         .unknown()
-        .description(
-          "Filter to a particular attribute, e.g. `attributes[Type]=Original`"
-        ),
+        .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
       limit: Joi.number().integer().min(1).max(100).default(20),
       continuation: Joi.string().pattern(/^(\d+)_(\d+)_(\d+)$/),
     })
@@ -86,10 +84,7 @@ export const getSalesV3Options: RouteOptions = {
         .allow(null),
     }).label(`getSales${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-sales-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-sales-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -136,8 +131,7 @@ export const getSalesV3Options: RouteOptions = {
       }
 
       if (query.collection.match(/^0x[a-f0-9]{40}:\d+:\d+$/g)) {
-        const [contract, startTokenId, endTokenId] =
-          query.collection.split(":");
+        const [contract, startTokenId, endTokenId] = query.collection.split(":");
 
         (query as any).contract = toBuffer(contract);
         (query as any).startTokenId = startTokenId;

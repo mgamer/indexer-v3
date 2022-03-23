@@ -20,9 +20,7 @@ export const postFixCacheOptions: RouteOptions = {
       "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     payload: Joi.object({
-      kind: Joi.string()
-        .valid("tokens-floor-sell", "tokens-top-buy")
-        .required(),
+      kind: Joi.string().valid("tokens-floor-sell", "tokens-top-buy").required(),
       contracts: Joi.array().items(
         Joi.string()
           .lowercase()

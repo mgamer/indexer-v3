@@ -39,10 +39,7 @@ export const getCollectionTopBidsV1Options: RouteOptions = {
       ),
     }).label(`getCollectionTopBids${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-collection-top-bids-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-collection-top-bids-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -70,10 +67,7 @@ export const getCollectionTopBidsV1Options: RouteOptions = {
 
       return { topBids: result };
     } catch (error) {
-      logger.error(
-        `get-collection-top-bids-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-collection-top-bids-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

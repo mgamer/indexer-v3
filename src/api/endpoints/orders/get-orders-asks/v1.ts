@@ -24,9 +24,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
       token: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}:\d+$/)
-        .description(
-          "Filter to a token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
-        ),
+        .description("Filter to a token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"),
       tokenSetId: Joi.string()
         .lowercase()
         .description(
@@ -102,10 +100,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
         .allow(null),
     }).label(`getOrdersAsks${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-orders-asks-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-orders-asks-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -194,9 +189,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
         (query as any).createdAt = createdAt;
         (query as any).id = id;
 
-        conditions.push(
-          `("o"."created_at", "o"."id") < (to_timestamp($/createdAt/), $/id/)`
-        );
+        conditions.push(`("o"."created_at", "o"."id") < (to_timestamp($/createdAt/), $/id/)`);
       }
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
@@ -213,9 +206,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
       let continuation = null;
       if (rawResult.length === query.limit) {
         continuation =
-          rawResult[rawResult.length - 1].created_at +
-          "_" +
-          rawResult[rawResult.length - 1].id;
+          rawResult[rawResult.length - 1].created_at + "_" + rawResult[rawResult.length - 1].id;
       }
 
       const result = rawResult.map((r) => ({
@@ -233,8 +224,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
         value:
           r.side === "buy"
             ? formatEth(r.value)
-            : formatEth(r.value) -
-              (formatEth(r.value) * Number(r.fee_bps)) / 10000,
+            : formatEth(r.value) - (formatEth(r.value) * Number(r.fee_bps)) / 10000,
         validFrom: Number(r.valid_from),
         validUntil: Number(r.valid_until),
         sourceId: r.source_id ? fromBuffer(r.source_id) : null,
@@ -251,10 +241,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
         continuation,
       };
     } catch (error) {
-      logger.error(
-        `get-orders-asks-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-orders-asks-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

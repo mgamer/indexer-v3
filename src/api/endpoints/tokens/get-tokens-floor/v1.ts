@@ -10,8 +10,7 @@ import { formatEth, toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getTokensFloorV1Options: RouteOptions = {
-  description:
-    "Get the current best price of every on sale token in a collection",
+  description: "Get the current best price of every on sale token in a collection",
   notes:
     "This API will return the best price of every token in a collection that is currently on sale",
   tags: ["api", "2. Aggregator"],
@@ -42,10 +41,7 @@ export const getTokensFloorV1Options: RouteOptions = {
       tokens: Joi.object().pattern(/^[0-9]+$/, Joi.number().unsafe()),
     }).label(`getTokensFloor${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-tokens-floor-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-tokens-floor-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -76,17 +72,12 @@ export const getTokensFloorV1Options: RouteOptions = {
       const result = await edb
         .manyOrNone(baseQuery, query)
         .then((result) =>
-          Object.fromEntries(
-            result.map((r) => [r.token_id, formatEth(r.floor_sell_value)])
-          )
+          Object.fromEntries(result.map((r) => [r.token_id, formatEth(r.floor_sell_value)]))
         );
 
       return { tokens: result };
     } catch (error) {
-      logger.error(
-        `get-tokens-floor-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-tokens-floor-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

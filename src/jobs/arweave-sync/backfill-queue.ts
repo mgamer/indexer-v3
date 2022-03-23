@@ -30,10 +30,7 @@ if (config.doBackgroundWork) {
       const { fromBlock, toBlock } = job.data;
 
       try {
-        logger.info(
-          QUEUE_NAME,
-          `Arweave backfill syncing block range [${fromBlock}, ${toBlock}]`
-        );
+        logger.info(QUEUE_NAME, `Arweave backfill syncing block range [${fromBlock}, ${toBlock}]`);
 
         let { lastCursor, done } = await syncArweave({ fromBlock, toBlock });
         while (!done) {

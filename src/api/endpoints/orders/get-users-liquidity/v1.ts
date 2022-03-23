@@ -46,10 +46,7 @@ export const getUsersLiquidityV1Options: RouteOptions = {
       ),
     }).label(`getUsersLiquidity${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-users-liquidity-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-users-liquidity-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -119,10 +116,7 @@ export const getUsersLiquidityV1Options: RouteOptions = {
 
       return { liquidity: result };
     } catch (error) {
-      logger.error(
-        `get-users-liquidity-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-users-liquidity-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

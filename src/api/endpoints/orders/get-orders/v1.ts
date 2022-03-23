@@ -85,10 +85,7 @@ export const getOrdersV1Options: RouteOptions = {
       ),
     }).label(`getOrders${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-orders-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-orders-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -180,8 +177,7 @@ export const getOrdersV1Options: RouteOptions = {
           value:
             r.side === "buy"
               ? formatEth(r.value)
-              : formatEth(r.value) -
-                (formatEth(r.value) * Number(r.fee_bps)) / 10000,
+              : formatEth(r.value) - (formatEth(r.value) * Number(r.fee_bps)) / 10000,
           validFrom: Number(r.valid_from),
           validUntil: Number(r.valid_until),
           sourceId: r.source_id ? fromBuffer(r.source_id) : null,
@@ -196,10 +192,7 @@ export const getOrdersV1Options: RouteOptions = {
 
       return { orders: result };
     } catch (error) {
-      logger.error(
-        `get-orders-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-orders-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

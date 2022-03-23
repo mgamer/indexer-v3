@@ -124,6 +124,12 @@ export const setupRoutes = (server: Server) => {
     options: collectionsEndpoints.getUserCollectionsV1Options,
   });
 
+  server.route({
+    method: "POST",
+    path: "/collections/refresh/v1",
+    options: collectionsEndpoints.postCollectionsRefreshV1Options,
+  });
+
   // Events
 
   server.route({
@@ -278,6 +284,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/users/{user}/tokens/v2",
     options: tokensEndpoints.getUserTokensV2Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/tokens/refresh/v1",
+    options: tokensEndpoints.postTokensRefreshV1Options,
   });
 
   // Transfers

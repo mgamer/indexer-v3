@@ -44,9 +44,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
         .description(
           "Filter to a particular set, e.g. `contract:0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
-      onSale: Joi.boolean().description(
-        "Limit to tokens that are listed for sale"
-      ),
+      onSale: Joi.boolean().description("Limit to tokens that are listed for sale"),
       sortBy: Joi.string()
         .valid("tokenId", "floorAskPrice", "topBidValue")
         .default("floorAskPrice"),
@@ -120,10 +118,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
       ),
     }).label(`getTokensDetails${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-tokens-details-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-tokens-details-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -225,9 +220,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
         });
 
         for (let i = 0; i < attributes.length; i++) {
-          (query as any)[
-            `attribute${i}`
-          ] = `${attributes[i].key},${attributes[i].value}`;
+          (query as any)[`attribute${i}`] = `${attributes[i].key},${attributes[i].value}`;
           conditions.push(`
             "t"."attributes" ? $/attribute${i}/
           `);
@@ -245,9 +238,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
       // Sorting
       switch (query.sortBy) {
         case "tokenId": {
-          baseQuery += ` ORDER BY "t"."token_id" ${
-            query.sortDirection || "ASC"
-          }`;
+          baseQuery += ` ORDER BY "t"."token_id" ${query.sortDirection || "ASC"}`;
           break;
         }
 
@@ -303,9 +294,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
               validUntil: r.floor_sell_value ? r.floor_sell_valid_until : null,
               source: r.floor_sell_id
                 ? getOrderSourceMetadata(
-                    r.floor_sell_source_id
-                      ? fromBuffer(r.floor_sell_source_id)
-                      : null,
+                    r.floor_sell_source_id ? fromBuffer(r.floor_sell_source_id) : null,
                     fromBuffer(r.contract),
                     r.token_id
                   )
@@ -324,10 +313,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
 
       return { tokens: result };
     } catch (error) {
-      logger.error(
-        `get-tokens-details-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-tokens-details-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

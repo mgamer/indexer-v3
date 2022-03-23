@@ -11,8 +11,7 @@ const version = "v1";
 
 export const getCollectionDeprecatedV1Options: RouteOptions = {
   description: "Single collection",
-  notes:
-    "Get detailed information about a single collection, including real-time stats.",
+  notes: "Get detailed information about a single collection, including real-time stats.",
   tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
@@ -220,16 +219,10 @@ export const getCollectionDeprecatedV1Options: RouteOptions = {
               },
               floorAsk: {
                 id: r.floor_sell_id,
-                price: r.floor_sell_value
-                  ? formatEth(r.floor_sell_value)
-                  : null,
-                maker: r.floor_sell_maker
-                  ? fromBuffer(r.floor_sell_maker)
-                  : null,
+                price: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+                maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
                 validFrom: r.floor_sell_valid_from,
-                validUntil: r.floor_sell_value
-                  ? r.floor_sell_valid_until
-                  : null,
+                validUntil: r.floor_sell_value ? r.floor_sell_valid_until : null,
                 token: r.floor_sell_value && {
                   contract: r.floor_sell_token_contract
                     ? fromBuffer(r.floor_sell_token_contract)
@@ -256,19 +249,14 @@ export const getCollectionDeprecatedV1Options: RouteOptions = {
                 "1day": r.day1_volume ? formatEth(r.day1_volume) : null,
                 "7day": r.day7_volume ? formatEth(r.day7_volume) : null,
                 "30day": r.day30_volume ? formatEth(r.day30_volume) : null,
-                allTime: r.all_time_volume
-                  ? formatEth(r.all_time_volume)
-                  : null,
+                allTime: r.all_time_volume ? formatEth(r.all_time_volume) : null,
               },
             }
       );
 
       return { collection: result };
     } catch (error) {
-      logger.error(
-        `get-collection-deprecated-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-collection-deprecated-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

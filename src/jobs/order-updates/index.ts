@@ -49,19 +49,14 @@ if (config.doBackgroundWork) {
               expiredOrders.map(
                 ({ id }) =>
                   ({
-                    context: `expired-orders-check-${Math.floor(
-                      Date.now() / 1000
-                    )}-${id}`,
+                    context: `expired-orders-check-${Math.floor(Date.now() / 1000)}-${id}`,
                     id,
                     trigger: { kind: "expiry" },
                   } as orderUpdatesById.OrderInfo)
               )
             );
           } catch (error) {
-            logger.error(
-              `expired-orders-check`,
-              `Failed to handle expired orders: ${error}`
-            );
+            logger.error(`expired-orders-check`, `Failed to handle expired orders: ${error}`);
           }
         })
         .catch(() => {

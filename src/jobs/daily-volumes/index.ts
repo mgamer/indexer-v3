@@ -19,10 +19,7 @@ if (config.doBackgroundWork) {
           try {
             await dailyVolumes.addToQueue();
           } catch (error) {
-            logger.error(
-              "daily-volumes",
-              `Failed to calculate daily volumes: ${error}`
-            );
+            logger.error("daily-volumes", `Failed to calculate daily volumes: ${error}`);
           }
         })
         .catch((e) => {

@@ -67,10 +67,7 @@ export const getSalesBulkV1Options: RouteOptions = {
         .allow(null),
     }).label(`getSalesBulk${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-sales-bulk-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-sales-bulk-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -165,10 +162,7 @@ export const getSalesBulkV1Options: RouteOptions = {
         continuation,
       };
     } catch (error) {
-      logger.error(
-        `get-sales-bulk-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-sales-bulk-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

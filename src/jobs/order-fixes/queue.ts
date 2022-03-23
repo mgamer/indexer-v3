@@ -152,10 +152,7 @@ if (config.doBackgroundWork) {
             if (result) {
               switch (result.kind) {
                 case "wyvern-v2.3": {
-                  const order = new Sdk.WyvernV23.Order(
-                    config.chainId,
-                    result.raw_data
-                  );
+                  const order = new Sdk.WyvernV23.Order(config.chainId, result.raw_data);
 
                   // Check whether the order is not fillable or not approved.
                   let fillabilityStatus = "fillable";
@@ -222,9 +219,7 @@ if (config.doBackgroundWork) {
             );
 
             if (result) {
-              await addToQueue(
-                result.map(({ id }) => ({ by: "id", data: { id } }))
-              );
+              await addToQueue(result.map(({ id }) => ({ by: "id", data: { id } })));
             }
 
             break;
@@ -253,9 +248,7 @@ if (config.doBackgroundWork) {
             );
 
             if (result) {
-              await addToQueue(
-                result.map(({ id }) => ({ by: "id", data: { id } }))
-              );
+              await addToQueue(result.map(({ id }) => ({ by: "id", data: { id } })));
             }
 
             break;
@@ -264,9 +257,7 @@ if (config.doBackgroundWork) {
       } catch (error) {
         logger.error(
           QUEUE_NAME,
-          `Failed to handle order fix info ${JSON.stringify(
-            job.data
-          )}: ${error}`
+          `Failed to handle order fix info ${JSON.stringify(job.data)}: ${error}`
         );
         throw error;
       }

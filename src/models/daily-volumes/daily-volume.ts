@@ -227,11 +227,7 @@ export class DailyVolume {
       `;
 
     try {
-      day7Results = await idb.manyOrNone(query, [
-        "day7_rank",
-        "day7_volume",
-        day7Timestamp,
-      ]);
+      day7Results = await idb.manyOrNone(query, ["day7_rank", "day7_volume", day7Timestamp]);
     } catch (e: any) {
       logger.error(
         "daily-volumes",
@@ -243,11 +239,7 @@ export class DailyVolume {
     }
 
     try {
-      day30Results = await idb.manyOrNone(query, [
-        "day30_rank",
-        "day30_volume",
-        day30Timestamp,
-      ]);
+      day30Results = await idb.manyOrNone(query, ["day30_rank", "day30_volume", day30Timestamp]);
     } catch (e: any) {
       logger.error(
         "daily-volumes",
@@ -259,11 +251,7 @@ export class DailyVolume {
     }
 
     try {
-      allTimeResults = await idb.manyOrNone(query, [
-        "all_time_rank",
-        "all_time_volume",
-        0,
-      ]);
+      allTimeResults = await idb.manyOrNone(query, ["all_time_rank", "all_time_volume", 0]);
     } catch (e: any) {
       logger.error(
         "daily-volumes",
@@ -274,12 +262,7 @@ export class DailyVolume {
       );
     }
 
-    const mergedArr = this.mergeArrays(
-      day1Results,
-      day7Results,
-      day30Results,
-      allTimeResults
-    );
+    const mergedArr = this.mergeArrays(day1Results, day7Results, day30Results, allTimeResults);
 
     if (!mergedArr.length) {
       logger.error(

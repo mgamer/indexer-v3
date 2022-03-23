@@ -50,10 +50,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
       query: Joi.object(),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-execute-buy-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-execute-buy-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -89,8 +86,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
       const steps = [
         {
           action: "Confirm purchase",
-          description:
-            "To purchase this item you must confirm the transaction and pay the gas fee",
+          description: "To purchase this item you must confirm the transaction and pay the gas fee",
           kind: "transaction",
         },
         {
@@ -103,10 +99,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
       let fillTx: TxData | undefined;
       switch (bestOrderResult.kind) {
         case "wyvern-v2.3": {
-          const order = new Sdk.WyvernV23.Order(
-            config.chainId,
-            bestOrderResult.raw_data
-          );
+          const order = new Sdk.WyvernV23.Order(config.chainId, bestOrderResult.raw_data);
 
           // Check the taker's Eth balance.
           const balance = await baseProvider.getBalance(query.taker);
@@ -151,10 +144,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
         ],
       };
     } catch (error) {
-      logger.error(
-        `get-execute-buy-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-execute-buy-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

@@ -32,9 +32,7 @@ export const getCollectionsV2Options: RouteOptions = {
         ),
       name: Joi.string()
         .lowercase()
-        .description(
-          "Search for collections that match a string, e.g. `bored`"
-        ),
+        .description("Search for collections that match a string, e.g. `bored`"),
       slug: Joi.string()
         .lowercase()
         .description("Filter to a particular slug, e.g. `boredapeyachtclub`"),
@@ -75,10 +73,7 @@ export const getCollectionsV2Options: RouteOptions = {
       ),
     }).label(`getCollections${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-collections-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-collections-${version}-handler`, `Wrong response schema: ${error}`);
 
       throw error;
     },
@@ -190,27 +185,20 @@ export const getCollectionsV2Options: RouteOptions = {
           tokenCount: String(r.token_count),
           primaryContract: fromBuffer(r.contract),
           tokenSetId: r.token_set_id,
-          floorAskPrice: r.floor_sell_value
-            ? formatEth(r.floor_sell_value)
-            : null,
+          floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
           topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
           topBidMaker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
           "1dayVolume": r.day1_volume ? formatEth(r.day1_volume) : null,
           "7dayVolume": r.day7_volume ? formatEth(r.day7_volume) : null,
           "30dayVolume": r.day30_volume ? formatEth(r.day30_volume) : null,
-          allTimeVolume: r.all_time_volume
-            ? formatEth(r.all_time_volume)
-            : null,
+          allTimeVolume: r.all_time_volume ? formatEth(r.all_time_volume) : null,
           allTimeRank: r.all_time_rank,
         }))
       );
 
       return { collections: result };
     } catch (error) {
-      logger.error(
-        `get-collections-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-collections-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

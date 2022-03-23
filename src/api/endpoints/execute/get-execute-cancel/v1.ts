@@ -45,10 +45,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
       query: Joi.object(),
     }).label(`getExecuteCancel${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-execute-cancel-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-execute-cancel-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -91,18 +88,13 @@ export const getExecuteCancelV1Options: RouteOptions = {
 
       switch (orderResult.kind) {
         case "wyvern-v2.3": {
-          const order = new Sdk.WyvernV23.Order(
-            config.chainId,
-            orderResult.raw_data
-          );
+          const order = new Sdk.WyvernV23.Order(config.chainId, orderResult.raw_data);
 
           const exchange = new Sdk.WyvernV23.Exchange(config.chainId);
           const cancelTx = exchange.cancelTransaction(query.maker, order);
 
           const steps = generateSteps(
-            order.params.side === Sdk.WyvernV23.Types.OrderSide.SELL
-              ? "sell"
-              : "buy"
+            order.params.side === Sdk.WyvernV23.Types.OrderSide.SELL ? "sell" : "buy"
           );
 
           return {
@@ -129,10 +121,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
         }
       }
     } catch (error) {
-      logger.error(
-        `get-execute-cancel-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-execute-cancel-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

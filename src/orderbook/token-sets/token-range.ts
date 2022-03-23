@@ -16,8 +16,7 @@ export type TokenSet = {
 const isValid = (tokenSet: TokenSet) => {
   try {
     if (
-      tokenSet.id !==
-      `range:${tokenSet.contract}:${tokenSet.startTokenId}:${tokenSet.endTokenId}`
+      tokenSet.id !== `range:${tokenSet.contract}:${tokenSet.startTokenId}:${tokenSet.endTokenId}`
     ) {
       return false;
     }
@@ -42,8 +41,7 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
       continue;
     }
 
-    const { id, schemaHash, schema, contract, startTokenId, endTokenId } =
-      tokenSet;
+    const { id, schemaHash, schema, contract, startTokenId, endTokenId } = tokenSet;
     try {
       // Make sure an associated collection exists
       const collectionResult = await idb.oneOrNone(

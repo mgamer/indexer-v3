@@ -47,18 +47,14 @@ export const getTokensDetailsV2Options: RouteOptions = {
         ),
       attributes: Joi.object()
         .unknown()
-        .description(
-          "Filter to a particular attribute, e.g. `attributes[Type]=Original`"
-        ),
+        .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
       source: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/)
         .description(
           "Filter to a particular source, e.g. `0x5b3256965e7c3cf26e11fcaf296dfc8807c01073`"
         ),
-      sortBy: Joi.string()
-        .valid("floorAskPrice", "topBidValue")
-        .default("floorAskPrice"),
+      sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice"),
       limit: Joi.number().integer().min(1).max(50).default(20),
       continuation: Joi.string().pattern(/^((\d+|null)_\d+|\d+)$/), // 485_34, null_45 or 25 allowed
     })
@@ -131,10 +127,7 @@ export const getTokensDetailsV2Options: RouteOptions = {
         .allow(null),
     }).label(`getTokensDetails${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-tokens-details-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-tokens-details-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -283,9 +276,7 @@ export const getTokensDetailsV2Options: RouteOptions = {
                 (query as any).topBuyValue = contArr[0];
                 (query as any).tokenId = contArr[1];
               } else {
-                conditions.push(
-                  `(t.top_buy_value is null AND t.token_id < $/tokenId/)`
-                );
+                conditions.push(`(t.top_buy_value is null AND t.token_id < $/tokenId/)`);
                 (query as any).tokenId = contArr[1];
               }
               break;
@@ -300,9 +291,7 @@ export const getTokensDetailsV2Options: RouteOptions = {
                 (query as any).floorSellValue = contArr[0];
                 (query as any).tokenId = contArr[1];
               } else {
-                conditions.push(
-                  `(t.floor_sell_value is null AND t.token_id > $/tokenId/)`
-                );
+                conditions.push(`(t.floor_sell_value is null AND t.token_id > $/tokenId/)`);
                 (query as any).tokenId = contArr[1];
               }
               break;
@@ -356,12 +345,10 @@ export const getTokensDetailsV2Options: RouteOptions = {
         if (query.collection || query.attributes) {
           switch (query.sortBy) {
             case "topBidValue":
-              continuation =
-                rawResult[rawResult.length - 1].top_buy_value || "null";
+              continuation = rawResult[rawResult.length - 1].top_buy_value || "null";
               break;
             case "floorAskPrice":
-              continuation =
-                rawResult[rawResult.length - 1].floor_sell_value || "null";
+              continuation = rawResult[rawResult.length - 1].floor_sell_value || "null";
               break;
             default:
               break;
@@ -404,9 +391,7 @@ export const getTokensDetailsV2Options: RouteOptions = {
             validUntil: r.floor_sell_value ? r.floor_sell_valid_until : null,
             source: r.floor_sell_id
               ? getOrderSourceMetadata(
-                  r.floor_sell_source_id
-                    ? fromBuffer(r.floor_sell_source_id)
-                    : null,
+                  r.floor_sell_source_id ? fromBuffer(r.floor_sell_source_id) : null,
                   fromBuffer(r.contract),
                   r.token_id
                 )
@@ -427,10 +412,7 @@ export const getTokensDetailsV2Options: RouteOptions = {
         continuation,
       };
     } catch (error) {
-      logger.error(
-        `get-tokens-details-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-tokens-details-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

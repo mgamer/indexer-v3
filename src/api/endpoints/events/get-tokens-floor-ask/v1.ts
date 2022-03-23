@@ -79,10 +79,7 @@ export const getTokensFloorAskV1Options: RouteOptions = {
         .allow(null),
     }).label(`getTokensFloorAsk${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-tokens-floor-ask-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-tokens-floor-ask-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -161,9 +158,7 @@ export const getTokensFloorAskV1Options: RouteOptions = {
       let continuation = null;
       if (rawResult.length === query.limit) {
         continuation =
-          rawResult[rawResult.length - 1].created_at +
-          "_" +
-          rawResult[rawResult.length - 1].id;
+          rawResult[rawResult.length - 1].created_at + "_" + rawResult[rawResult.length - 1].id;
       }
 
       const result = rawResult.map((r) => ({
@@ -184,10 +179,7 @@ export const getTokensFloorAskV1Options: RouteOptions = {
         continuation,
       };
     } catch (error) {
-      logger.error(
-        `get-orders-${version}-handler`,
-        `Handler failure: ${error}`
-      );
+      logger.error(`get-orders-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

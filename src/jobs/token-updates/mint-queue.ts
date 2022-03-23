@@ -1,13 +1,12 @@
-import axios from "axios";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { PgPromiseQuery, idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
-import { network } from "@/common/provider";
 import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
+import MetadataApi from "@/utils/metadata-api";
 
 const QUEUE_NAME = "token-updates-mint-queue";
 
@@ -137,21 +136,7 @@ if (config.doBackgroundWork) {
           }
         } else {
           // Otherwise, we fetch the collection metadata from upstream.
-          const url = `${config.metadataApiBaseUrl}/v3/${network}/collection?contract=${contract}&tokenId=${tokenId}`;
-
-          const { data } = await axios.get(url);
-          const collection: {
-            id: string;
-            slug: string;
-            name: string;
-            community: string | null;
-            metadata: object | null;
-            royalties: object | null;
-            contract: string;
-            tokenIdRange: [string, string] | null;
-            tokenSetId: string;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } = (data as any).collection;
+          const collection = await MetadataApi.getCollectionMetadata(contract, tokenId);
 
           const tokenIdRange = collection.tokenIdRange
             ? `numrange(${collection.tokenIdRange[0]}, ${collection.tokenIdRange[1]}, '[]')`

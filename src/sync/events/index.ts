@@ -103,8 +103,7 @@ export const syncEvents = async (
 
           if (!options?.backfill) {
             // Save the block (and its hash) in order to detect orphans
-            blockHashToNumber[baseEventParams.blockHash] =
-              baseEventParams.block;
+            blockHashToNumber[baseEventParams.blockHash] = baseEventParams.block;
           }
 
           // Find first matching event:
@@ -477,8 +476,7 @@ export const syncEvents = async (
                 const event = nftTransferEvents[nftTransferEvents.length - 1];
                 if (
                   event.baseEventParams.txHash === baseEventParams.txHash &&
-                  event.baseEventParams.logIndex ===
-                    baseEventParams.logIndex - 1 &&
+                  event.baseEventParams.logIndex === baseEventParams.logIndex - 1 &&
                   // Only single token fills are supported and recognized
                   event.baseEventParams.batchIndex === 1
                 ) {
@@ -496,10 +494,7 @@ export const syncEvents = async (
               for (const event of currentTxEvents.slice(0, -1).reverse()) {
                 // Skip once we detect another fill in the same transaction
                 // (this will happen if filling through an aggregator).
-                if (
-                  event.log.topics[0] ===
-                  getEventData([eventData.kind])[0].topic
-                ) {
+                if (event.log.topics[0] === getEventData([eventData.kind])[0].topic) {
                   break;
                 }
 
@@ -516,8 +511,7 @@ export const syncEvents = async (
                   const to = parsed.args["to"].toLowerCase();
                   const amount = parsed.args["amount"].toString();
                   if (
-                    ((maker === from && taker === to) ||
-                      (maker === to && taker === from)) &&
+                    ((maker === from && taker === to) || (maker === to && taker === from)) &&
                     amount <= price
                   ) {
                     paymentToken = event.log.address.toLowerCase();

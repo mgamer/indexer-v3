@@ -40,10 +40,8 @@ export const parseEvent = (
   } else if (block === to.block) {
     timestamp = to.timestamp;
   } else {
-    const averageBlockTime =
-      (to.timestamp - from.timestamp) / (to.block - from.block);
-    timestamp =
-      from.timestamp + Math.round(averageBlockTime * (block - from.block));
+    const averageBlockTime = (to.timestamp - from.timestamp) / (to.block - from.block);
+    timestamp = from.timestamp + Math.round(averageBlockTime * (block - from.block));
   }
 
   return {

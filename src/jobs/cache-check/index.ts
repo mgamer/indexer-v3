@@ -19,20 +19,18 @@ if (config.doBackgroundWork) {
   cron.schedule(
     "*/5 * * * *",
     async () =>
-      await redlock
-        .acquire(["cache-check-lock"], (5 * 60 - 5) * 1000)
-        .then(async () => {
-          logger.info("cache-check", "Checking cache consistency");
+      await redlock.acquire(["cache-check-lock"], (5 * 60 - 5) * 1000).then(async () => {
+        logger.info("cache-check", "Checking cache consistency");
 
-          try {
-            // Randomly check the tokens `floor_sell` caches
-            {
-              const results: {
-                id: string;
-                contract: Buffer;
-                is_wrong: boolean;
-              }[] = await idb.manyOrNone(
-                `
+        try {
+          // Randomly check the tokens `floor_sell` caches
+          {
+            const results: {
+              id: string;
+              contract: Buffer;
+              is_wrong: boolean;
+            }[] = await idb.manyOrNone(
+              `
                   SELECT * FROM (
                     SELECT
                       "c"."id",
@@ -69,39 +67,39 @@ if (config.doBackgroundWork) {
                     ) AS "is_wrong"
                   ) "z" ON TRUE
                 `
-              );
-              for (const { id, contract, is_wrong } of results) {
-                if (is_wrong) {
-                  logger.error(
-                    "cache-check",
-                    `Detected wrong tokens "floor_sell" cache for collection ${id}`
-                  );
+            );
+            for (const { id, contract, is_wrong } of results) {
+              if (is_wrong) {
+                logger.error(
+                  "cache-check",
+                  `Detected wrong tokens "floor_sell" cache for collection ${id}`
+                );
 
-                  // Automatically trigger a fix for the wrong cache
-                  await inject({
-                    method: "POST",
-                    url: "/admin/fix-cache",
-                    headers: {
-                      "Content-Type": "application/json",
-                      "X-Admin-Api-Key": config.adminApiKey,
-                    },
-                    payload: {
-                      kind: "tokens-floor-sell",
-                      contracts: [fromBuffer(contract)],
-                    },
-                  });
-                }
+                // Automatically trigger a fix for the wrong cache
+                await inject({
+                  method: "POST",
+                  url: "/admin/fix-cache",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "X-Admin-Api-Key": config.adminApiKey,
+                  },
+                  payload: {
+                    kind: "tokens-floor-sell",
+                    contracts: [fromBuffer(contract)],
+                  },
+                });
               }
             }
+          }
 
-            // Randomly check the tokens `top_buy` caches
-            {
-              const results: {
-                id: string;
-                contract: Buffer;
-                is_wrong: boolean;
-              }[] = await idb.manyOrNone(
-                `
+          // Randomly check the tokens `top_buy` caches
+          {
+            const results: {
+              id: string;
+              contract: Buffer;
+              is_wrong: boolean;
+            }[] = await idb.manyOrNone(
+              `
                   SELECT * FROM (
                     SELECT
                       "c"."id",
@@ -145,36 +143,33 @@ if (config.doBackgroundWork) {
                     ) AS "is_wrong"
                   ) "z" ON TRUE
                 `
-              );
-              for (const { id, contract, is_wrong } of results) {
-                if (is_wrong) {
-                  logger.error(
-                    "cache-check",
-                    `Detected wrong tokens "top_buy" cache for collection ${id}`
-                  );
+            );
+            for (const { id, contract, is_wrong } of results) {
+              if (is_wrong) {
+                logger.error(
+                  "cache-check",
+                  `Detected wrong tokens "top_buy" cache for collection ${id}`
+                );
 
-                  // Automatically trigger a fix for the wrong cache
-                  await inject({
-                    method: "POST",
-                    url: "/admin/fix-cache",
-                    headers: {
-                      "Content-Type": "application/json",
-                      "X-Admin-Api-Key": config.adminApiKey,
-                    },
-                    payload: {
-                      kind: "tokens-top-buy",
-                      contracts: [fromBuffer(contract)],
-                    },
-                  });
-                }
+                // Automatically trigger a fix for the wrong cache
+                await inject({
+                  method: "POST",
+                  url: "/admin/fix-cache",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "X-Admin-Api-Key": config.adminApiKey,
+                  },
+                  payload: {
+                    kind: "tokens-top-buy",
+                    contracts: [fromBuffer(contract)],
+                  },
+                });
               }
             }
-          } catch (error) {
-            logger.error(
-              "cache-check",
-              `Failed to check cache consistency: ${error}`
-            );
           }
-        })
+        } catch (error) {
+          logger.error("cache-check", `Failed to check cache consistency: ${error}`);
+        }
+      })
   );
 }

@@ -76,10 +76,7 @@ export const getSalesV1Options: RouteOptions = {
       ),
     }).label(`getSales${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(
-        `get-sales-${version}-handler`,
-        `Wrong response schema: ${error}`
-      );
+      logger.error(`get-sales-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },

@@ -28,15 +28,8 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const {
-        orderId,
-        orderSide,
-        contract,
-        tokenId,
-        amount,
-        price,
-        timestamp,
-      } = job.data as FillInfo;
+      const { orderId, orderSide, contract, tokenId, amount, price, timestamp } =
+        job.data as FillInfo;
 
       try {
         const result = await idb.oneOrNone(

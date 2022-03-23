@@ -192,12 +192,9 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
         { tokenSetId: id }
       );
       if (!tokenSetTokensExist) {
-        const columns = new pgp.helpers.ColumnSet(
-          ["token_set_id", "contract", "token_id"],
-          {
-            table: "token_sets_tokens",
-          }
-        );
+        const columns = new pgp.helpers.ColumnSet(["token_set_id", "contract", "token_id"], {
+          table: "token_sets_tokens",
+        });
         const values = items.tokenIds.map((tokenId) => ({
           token_set_id: id,
           contract: toBuffer(items.contract),

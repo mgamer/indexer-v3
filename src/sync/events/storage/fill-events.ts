@@ -143,10 +143,7 @@ export const removeEvents = async (blockHash: string) => {
   // Delete the fill events but skip reverting order status updates
   // since it is not possible to know what to revert to and even if
   // we knew, it might mess up other higher-level order processes.
-  await idb.any(
-    `DELETE FROM "fill_events_2" WHERE "block_hash" = $/blockHash/`,
-    {
-      blockHash: toBuffer(blockHash),
-    }
-  );
+  await idb.any(`DELETE FROM "fill_events_2" WHERE "block_hash" = $/blockHash/`, {
+    blockHash: toBuffer(blockHash),
+  });
 };
