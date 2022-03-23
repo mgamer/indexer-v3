@@ -78,8 +78,8 @@ export class CollectionsEntity {
     this.id = params.id;
     this.slug = params.slug;
     this.name = params.name;
-    this.metadata = fromBuffer(params.metadata);
-    this.royalties = fromBuffer(params.royalties);
+    this.metadata = params.metadata ? fromBuffer(params.metadata) : params.metadata;
+    this.royalties = params.royalties ? fromBuffer(params.royalties) : params.royalties;
     this.community = params.community;
     this.contract = fromBuffer(params.contract);
     this.tokenIdRange = params.token_id_range;
