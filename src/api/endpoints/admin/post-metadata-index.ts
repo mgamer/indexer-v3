@@ -21,7 +21,7 @@ export const postMetadataIndexOptions: RouteOptions = {
     }).options({ allowUnknown: true }),
     payload: Joi.object({
       method: Joi.string().valid("opensea", "rarible").default("rarible"),
-      collection: Joi.string().required(),
+      collections: Joi.array().items(Joi.string().required()),
     }),
   },
   handler: async (request: Request) => {
@@ -33,37 +33,39 @@ export const postMetadataIndexOptions: RouteOptions = {
 
     try {
       const method = payload.method;
-      const collection = payload.collection;
+      const collections = payload.collections;
 
-      // Make sure the collection exists.
-      const result = await idb.oneOrNone(
-        `
-          SELECT
-            collections.id
-          FROM collections
-          WHERE collections.id = $/collection/
-        `,
-        { collection }
-      );
-      if (!result?.id) {
-        throw Boom.badRequest("Unknown collection");
+      for (const collection of collections) {
+        // Make sure the collection exists.
+        const result = await idb.oneOrNone(
+          `
+            SELECT
+              collections.id
+            FROM collections
+            WHERE collections.id = $/collection/
+          `,
+          { collection }
+        );
+        if (!result?.id) {
+          throw Boom.badRequest("Unknown collection");
+        }
+
+        // Queue the collection for indexing.
+        await metadataIndexFetch.addToQueue(
+          [{ kind: "full-collection", data: { method, collection } }],
+          true
+        );
+
+        // Mark the collection as requiring metadata indexing.
+        await idb.none(
+          `
+            UPDATE collections SET index_metadata = TRUE
+            WHERE collections.id = $/collection/
+              AND collections.index_metadata IS DISTINCT FROM TRUE
+          `,
+          { collection }
+        );
       }
-
-      // Queue the collection for indexing.
-      await metadataIndexFetch.addToQueue(
-        [{ kind: "full-collection", data: { method, collection } }],
-        true
-      );
-
-      // Mark the collection as requiring metadata indexing.
-      await idb.none(
-        `
-          UPDATE collections SET index_metadata = TRUE
-          WHERE collections.id = $/collection/
-            AND collections.index_metadata IS DISTINCT FROM TRUE
-        `,
-        { collection }
-      );
 
       return { message: "Success" };
     } catch (error) {
