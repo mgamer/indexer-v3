@@ -51,7 +51,7 @@ export const postMetadataIndexOptions: RouteOptions = {
           { collection }
         );
         if (!result?.id) {
-          throw Boom.badRequest("Unknown collection");
+          continue;
         }
 
         // Queue the collection for indexing.
