@@ -66,10 +66,10 @@ if (config.doBackgroundWork) {
   );
 
   cron.schedule(
-    "*/10 * * * *",
+    "*/1 * * * *",
     async () =>
       await redlock
-        .acquire(["dynamic-orders-update-lock"], 10 * 60 * 1000)
+        .acquire(["dynamic-orders-update-lock"], 1 * 60 * 1000)
         .then(async () => {
           logger.info(`dynamic-orders-update`, "Updating dynamic orders");
 
