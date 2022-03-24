@@ -23,7 +23,7 @@ export const queue = new Queue(QUEUE_NAME, {
     },
     removeOnComplete: 10000,
     removeOnFail: 10000,
-    timeout: 3 * 60 * 1000,
+    timeout: 60 * 1000,
   },
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
@@ -51,9 +51,7 @@ if (config.doBackgroundWork && config.master) {
       const { kind, data } = job.data as MetadataIndexInfo;
 
       try {
-        let callback: (result: {
-          continuation?: string;
-        }) => Promise<void> = async () => {
+        let callback: (result: { continuation?: string }) => Promise<void> = async () => {
           // This callback is to be called after the current job executed
           // successfully. It's needed to allow triggering any other jobs
           // that act as a continuation of the current one. By default it
@@ -133,14 +131,15 @@ if (config.doBackgroundWork && config.master) {
               config.metadataApiBaseUrl
             }/v4/${network}/metadata/token?${searchParams.toString()}`;
 
-            callback = async ({ continuation }) => {
-              if (continuation) {
+            callback = async (result) => {
+              logger.info("debug", `Result: ${JSON.stringify(result)}`);
+              if (result.continuation) {
                 await addToQueue([
                   {
                     kind,
                     data: {
                       ...data,
-                      continuation,
+                      continuation: result.continuation,
                     },
                   },
                 ]);
@@ -158,7 +157,7 @@ if (config.doBackgroundWork && config.master) {
 
         if (url) {
           const metadataResult = await axios
-            .get(url, { timeout: 3 * 60 * 1000 })
+            .get(url, { timeout: 60 * 1000 })
             .then(({ data }) => data);
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
