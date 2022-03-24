@@ -28,8 +28,8 @@ export const queue = new Queue(QUEUE_NAME, {
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
-// MASTER ONLY
-if (config.doBackgroundWork && config.master) {
+// BACKGROUND WORKER ONLY
+if (config.doBackgroundWork) {
   type TokenMetadata = {
     contract: string;
     tokenId: string;
@@ -179,7 +179,7 @@ if (config.doBackgroundWork && config.master) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 1 }
+    { connection: redis.duplicate(), concurrency: 2 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
