@@ -126,6 +126,10 @@ export class ApiKeyManager {
       log.remoteAddress = request.headers["x-forwarded-for"];
     }
 
+    if (request.headers["origin"]) {
+      log.origin = request.headers["origin"];
+    }
+
     if (request.info.referrer) {
       log.referrer = request.info.referrer;
     }
