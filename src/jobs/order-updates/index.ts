@@ -99,11 +99,12 @@ if (config.doBackgroundWork) {
               const values: any[] = [];
               for (const { id, raw_data } of dynamicOrders) {
                 const order = new Sdk.WyvernV23.Order(config.chainId, raw_data);
+                const newPrice = order.getMatchingPrice().toString();
                 values.push({
                   id,
+                  price: newPrice,
                   // TODO: We should have a generic method for deriving the `value` from `price`.
-                  price: order.getMatchingPrice(),
-                  value: order.getMatchingPrice(),
+                  value: newPrice,
                 });
               }
 
