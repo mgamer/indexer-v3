@@ -24,6 +24,10 @@ export const postMetadataIndexOptions: RouteOptions = {
       collections: Joi.array().items(Joi.string().required()),
     }),
   },
+  payload: {
+    // 5 MB
+    maxBytes: 5 * 1048576,
+  },
   handler: async (request: Request) => {
     if (request.headers["x-admin-api-key"] !== config.adminApiKey) {
       throw Boom.unauthorized("Wrong or missing admin API key");
