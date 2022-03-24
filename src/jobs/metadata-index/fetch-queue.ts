@@ -132,7 +132,6 @@ if (config.doBackgroundWork && config.master) {
             }/v4/${network}/metadata/token?${searchParams.toString()}`;
 
             callback = async (result) => {
-              logger.info("debug", `Result: ${JSON.stringify(result)}`);
               if (result.continuation) {
                 await addToQueue([
                   {
