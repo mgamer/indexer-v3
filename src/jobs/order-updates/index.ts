@@ -107,9 +107,16 @@ if (config.doBackgroundWork) {
                 });
               }
 
-              const columns = new pgp.helpers.ColumnSet(["id", "price", "value"], {
-                table: "orders",
-              });
+              const columns = new pgp.helpers.ColumnSet(
+                [
+                  "id",
+                  { name: "price", cast: "numeric(78, 0)" },
+                  { name: "value", cast: "numeric(78, 0)" },
+                ],
+                {
+                  table: "orders",
+                }
+              );
               if (values.length) {
                 await idb.none(pgp.helpers.update(values, columns));
               }
