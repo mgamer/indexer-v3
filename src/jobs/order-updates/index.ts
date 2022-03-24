@@ -110,7 +110,7 @@ if (config.doBackgroundWork) {
 
               const columns = new pgp.helpers.ColumnSet(
                 [
-                  "id",
+                  "?id",
                   { name: "price", cast: "numeric(78, 0)" },
                   { name: "value", cast: "numeric(78, 0)" },
                 ],
@@ -119,7 +119,7 @@ if (config.doBackgroundWork) {
                 }
               );
               if (values.length) {
-                await idb.none(pgp.helpers.update(values, columns));
+                await idb.none(pgp.helpers.update(values, columns) + " WHERE t.id = v.id");
               }
 
               await orderUpdatesById.addToQueue(
