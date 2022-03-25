@@ -6,7 +6,14 @@ import Joi from "joi";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import {
+  base64Regex,
+  buildContinuation,
+  formatEth,
+  fromBuffer,
+  splitContinuation,
+  toBuffer,
+} from "@/common/utils";
 
 const version = "v1";
 
@@ -28,7 +35,10 @@ export const getOrdersAllV1Options: RouteOptions = {
       source: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
-      continuation: Joi.string().pattern(/^\d+(.\d+)?_0x[a-f0-9]{64}$/),
+      continuation: Joi.alternatives().try(
+        Joi.string().pattern(/^\d+(.\d+)?_0x[a-f0-9]{64}$/),
+        Joi.string().pattern(base64Regex)
+      ),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     })
       .or("contract", "source")
@@ -79,9 +89,7 @@ export const getOrdersAllV1Options: RouteOptions = {
           rawData: Joi.object(),
         })
       ),
-      continuation: Joi.string()
-        .pattern(/^\d+(.\d+)?_0x[a-f0-9]{64}$/)
-        .allow(null),
+      continuation: Joi.string().pattern(base64Regex).allow(null),
     }).label(`getOrdersAll${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-orders-all-${version}-handler`, `Wrong response schema: ${error}`);
@@ -135,8 +143,12 @@ export const getOrdersAllV1Options: RouteOptions = {
           conditions.push(`coalesce("o"."source_id", '\\x00') = $/source/`);
         }
       }
+
       if (query.continuation) {
-        const [createdAt, id] = query.continuation.split("_");
+        const [createdAt, id] = splitContinuation(
+          query.continuation,
+          /^\d+(.\d+)?_0x[a-f0-9]{64}$/
+        );
         (query as any).createdAt = createdAt;
         (query as any).id = id;
 
@@ -157,8 +169,9 @@ export const getOrdersAllV1Options: RouteOptions = {
 
       let continuation = null;
       if (rawResult.length === query.limit) {
-        continuation =
-          rawResult[rawResult.length - 1].created_at + "_" + rawResult[rawResult.length - 1].id;
+        continuation = buildContinuation(
+          rawResult[rawResult.length - 1].created_at + "_" + rawResult[rawResult.length - 1].id
+        );
       }
 
       const result = rawResult.map((r) => ({
