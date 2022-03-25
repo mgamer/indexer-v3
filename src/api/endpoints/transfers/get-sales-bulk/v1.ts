@@ -5,7 +5,14 @@ import Joi from "joi";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import {
+  base64Regex,
+  buildContinuation,
+  formatEth,
+  fromBuffer,
+  splitContinuation,
+  toBuffer,
+} from "@/common/utils";
 
 const version = "v1";
 
@@ -34,7 +41,10 @@ export const getSalesBulkV1Options: RouteOptions = {
           "Filter to a particular token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
       limit: Joi.number().integer().min(1).max(1000).default(100),
-      continuation: Joi.string().pattern(/^(\d+)_(\d+)_(\d+)$/),
+      continuation: Joi.alternatives().try(
+        Joi.string().pattern(/^(\d+)_(\d+)_(\d+)$/),
+        Joi.string().pattern(base64Regex)
+      ),
     }),
   },
   response: {
@@ -62,9 +72,7 @@ export const getSalesBulkV1Options: RouteOptions = {
           price: Joi.number().unsafe().allow(null),
         })
       ),
-      continuation: Joi.string()
-        .pattern(/^(\d+)_(\d+)_(\d+)$/)
-        .allow(null),
+      continuation: Joi.string().pattern(base64Regex).allow(null),
     }).label(`getSalesBulk${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-sales-bulk-${version}-handler`, `Wrong response schema: ${error}`);
@@ -91,7 +99,10 @@ export const getSalesBulkV1Options: RouteOptions = {
     }
 
     if (query.continuation) {
-      const [block, logIndex, batchIndex] = query.continuation.split("_");
+      const [block, logIndex, batchIndex] = splitContinuation(
+        query.continuation,
+        /^(\d+)_(\d+)_(\d+)$/
+      );
       (query as any).block = block;
       (query as any).logIndex = logIndex;
       (query as any).batchIndex = batchIndex;
@@ -135,12 +146,13 @@ export const getSalesBulkV1Options: RouteOptions = {
 
       let continuation = null;
       if (rawResult.length === query.limit) {
-        continuation =
+        continuation = buildContinuation(
           rawResult[rawResult.length - 1].block +
-          "_" +
-          rawResult[rawResult.length - 1].log_index +
-          "_" +
-          rawResult[rawResult.length - 1].batch_index;
+            "_" +
+            rawResult[rawResult.length - 1].log_index +
+            "_" +
+            rawResult[rawResult.length - 1].batch_index
+        );
       }
 
       const result = rawResult.map((r) => ({

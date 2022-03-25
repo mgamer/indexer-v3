@@ -5,7 +5,14 @@ import Joi from "joi";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import {
+  base64Regex,
+  buildContinuation,
+  formatEth,
+  fromBuffer,
+  splitContinuation,
+  toBuffer,
+} from "@/common/utils";
 
 const version = "v1";
 
@@ -41,7 +48,10 @@ export const getOrdersBidsV1Options: RouteOptions = {
         .description(
           "`active` = currently valid, `inactive` = temporarily invalid, `expired` = permanently invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
         ),
-      continuation: Joi.string().pattern(/^\d+(.\d+)?_0x[a-f0-9]{64}$/),
+      continuation: Joi.alternatives().try(
+        Joi.string().pattern(/^\d+(.\d+)?_0x[a-f0-9]{64}$/),
+        Joi.string().pattern(base64Regex)
+      ),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     })
       .or("token", "tokenSetId", "maker")
@@ -95,9 +105,7 @@ export const getOrdersBidsV1Options: RouteOptions = {
           rawData: Joi.object(),
         })
       ),
-      continuation: Joi.string()
-        .pattern(/^\d+(.\d+)?_0x[a-f0-9]{64}$/)
-        .allow(null),
+      continuation: Joi.string().pattern(base64Regex).allow(null),
     }).label(`getOrdersBids${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-orders-bids-${version}-handler`, `Wrong response schema: ${error}`);
@@ -185,7 +193,10 @@ export const getOrdersBidsV1Options: RouteOptions = {
         conditions.push(`"o"."maker" = $/maker/`);
       }
       if (query.continuation) {
-        const [createdAt, id] = query.continuation.split("_");
+        const [createdAt, id] = splitContinuation(
+          query.continuation,
+          /^\d+(.\d+)?_0x[a-f0-9]{64}$/
+        );
         (query as any).createdAt = createdAt;
         (query as any).id = id;
 
@@ -205,8 +216,9 @@ export const getOrdersBidsV1Options: RouteOptions = {
 
       let continuation = null;
       if (rawResult.length === query.limit) {
-        continuation =
-          rawResult[rawResult.length - 1].created_at + "_" + rawResult[rawResult.length - 1].id;
+        continuation = buildContinuation(
+          rawResult[rawResult.length - 1].created_at + "_" + rawResult[rawResult.length - 1].id
+        );
       }
 
       const result = rawResult.map((r) => ({

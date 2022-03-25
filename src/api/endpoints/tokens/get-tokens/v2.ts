@@ -5,7 +5,14 @@ import Joi from "joi";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import {
+  base64Regex,
+  buildContinuation,
+  formatEth,
+  fromBuffer,
+  splitContinuation,
+  toBuffer,
+} from "@/common/utils";
 
 const version = "v2";
 
@@ -48,7 +55,10 @@ export const getTokensV2Options: RouteOptions = {
         .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
       sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice"),
       limit: Joi.number().integer().min(1).max(50).default(20),
-      continuation: Joi.string().pattern(/^((\d+|null)_\d+|\d+)$/), // 485_34, null_45 or 25 allowed
+      continuation: Joi.alternatives().try(
+        Joi.string().pattern(/^((\d+|null)_\d+|\d+)$/),
+        Joi.string().pattern(base64Regex)
+      ),
     })
       .or("collection", "contract", "token", "tokenSetId")
       .oxor("collection", "contract", "token", "tokenSetId")
@@ -75,9 +85,7 @@ export const getTokensV2Options: RouteOptions = {
           floorAskPrice: Joi.number().unsafe().allow(null),
         })
       ),
-      continuation: Joi.string()
-        .pattern(/^((\d+|null)_\d+|\d+)$/)
-        .allow(null),
+      continuation: Joi.string().pattern(base64Regex).allow(null),
     }).label(`getTokens${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-tokens-${version}-handler`, `Wrong response schema: ${error}`);
@@ -155,7 +163,7 @@ export const getTokensV2Options: RouteOptions = {
 
       // Continue with the next page, this depends on the sorting used
       if (query.continuation && !query.token) {
-        const contArr = query.continuation.split("_");
+        const contArr = splitContinuation(query.continuation, /^((\d+|null)_\d+|\d+)$/);
 
         if (query.collection || query.attributes) {
           if (contArr.length !== 2) {
@@ -261,6 +269,8 @@ export const getTokensV2Options: RouteOptions = {
         } else {
           continuation = rawResult[rawResult.length - 1].token_id;
         }
+
+        continuation = buildContinuation(continuation);
       }
 
       const result = rawResult.map((r) => ({
