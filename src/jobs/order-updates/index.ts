@@ -66,10 +66,10 @@ if (config.doBackgroundWork) {
   );
 
   cron.schedule(
-    "*/1 * * * *",
+    "*/10 * * * *",
     async () =>
       await redlock
-        .acquire(["dynamic-orders-update-lock"], 1 * 60 * 1000)
+        .acquire(["dynamic-orders-update-lock"], 10 * 60 * 1000)
         .then(async () => {
           logger.info(`dynamic-orders-update`, "Updating dynamic orders");
 
@@ -128,7 +128,7 @@ if (config.doBackgroundWork) {
                     ({
                       context: `dynamic-orders-update-${Math.floor(Date.now() / 1000)}-${id}`,
                       id,
-                      trigger: { kind: "revalidation" },
+                      trigger: { kind: "reprice" },
                     } as orderUpdatesById.OrderInfo)
                 )
               );
