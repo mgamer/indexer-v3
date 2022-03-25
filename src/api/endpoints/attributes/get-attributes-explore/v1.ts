@@ -170,7 +170,7 @@ export const getAttributesExploreV1Options: RouteOptions = {
       // Sorting
       switch (query.sortBy) {
         case "floorAskPrice": {
-          baseQuery += ` ORDER BY "x"."floor_sell_value"`;
+          baseQuery += ` ORDER BY "x"."floor_sell_value" DESC NULLS LAST`;
           break;
         }
 
