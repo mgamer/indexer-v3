@@ -15,6 +15,7 @@ import * as tokenSet from "@/orderbook/token-sets";
 export type OrderInfo = {
   orderParams: Sdk.WyvernV23.Types.OrderParams;
   metadata: OrderMetadata;
+  logKey?: string;
 };
 
 type SaveResult = {
