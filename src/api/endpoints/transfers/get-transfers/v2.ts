@@ -5,7 +5,14 @@ import Joi from "joi";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import {
+  base64Regex,
+  buildContinuation,
+  formatEth,
+  fromBuffer,
+  splitContinuation,
+  toBuffer,
+} from "@/common/utils";
 
 const version = "v2";
 
@@ -41,7 +48,10 @@ export const getTransfersV2Options: RouteOptions = {
         .unknown()
         .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
       limit: Joi.number().integer().min(1).max(100).default(20),
-      continuation: Joi.string().pattern(/^(\d+)_(\d+)_(\d+)$/),
+      continuation: Joi.alternatives().try(
+        Joi.string().pattern(/^(\d+)_(\d+)_(\d+)$/),
+        Joi.string().pattern(base64Regex)
+      ),
     })
       .oxor("contract", "token", "collection")
       .or("contract", "token", "collection")
@@ -77,9 +87,7 @@ export const getTransfersV2Options: RouteOptions = {
           price: Joi.number().unsafe().allow(null),
         })
       ),
-      continuation: Joi.string()
-        .pattern(/^(\d+)_(\d+)_(\d+)$/)
-        .allow(null),
+      continuation: Joi.string().pattern(base64Regex).allow(null),
     }).label(`getTransfers${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-transfers-${version}-handler`, `Wrong response schema: ${error}`);
@@ -173,7 +181,10 @@ export const getTransfersV2Options: RouteOptions = {
       }
 
       if (query.continuation) {
-        const [block, logIndex, batchIndex] = query.continuation.split("_");
+        const [block, logIndex, batchIndex] = splitContinuation(
+          query.continuation,
+          /^(\d+)_(\d+)_(\d+)$/
+        );
         (query as any).block = block;
         (query as any).logIndex = logIndex;
         (query as any).batchIndex = batchIndex;
@@ -197,12 +208,13 @@ export const getTransfersV2Options: RouteOptions = {
 
       let continuation = null;
       if (rawResult.length === query.limit) {
-        continuation =
+        continuation = buildContinuation(
           rawResult[rawResult.length - 1].block +
-          "_" +
-          rawResult[rawResult.length - 1].log_index +
-          "_" +
-          rawResult[rawResult.length - 1].batch_index;
+            "_" +
+            rawResult[rawResult.length - 1].log_index +
+            "_" +
+            rawResult[rawResult.length - 1].batch_index
+        );
       }
 
       const result = rawResult.map((r) => ({
