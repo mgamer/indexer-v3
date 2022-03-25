@@ -56,7 +56,7 @@ export const postOrdersV1Options: RouteOptions = {
           kind: "wyvern-v2.3",
           info: orderInfo,
           relayToArweave: true,
-          logKey,
+          logKey: orderInfo.logKey,
         }))
       );
 
