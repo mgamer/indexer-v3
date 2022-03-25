@@ -42,6 +42,7 @@ CREATE TABLE "orders" (
   "contract" BYTEA,
   "fee_bps" INT,
   "fee_breakdown" JSONB,
+  "dynamic" BOOLEAN,
   "raw_data" JSONB,
   "expiration" TIMESTAMPTZ,
   "created_at" TIMESTAMPTZ DEFAULT now(),
@@ -87,6 +88,10 @@ CREATE INDEX "orders_not_expired_maker_side_created_at_id_index"
   ON "orders" ("maker", "side", "created_at" DESC, "id" DESC)
   INCLUDE ("approval_status")
   WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
+
+CREATE INDEX "orders_dynamic_index"
+  ON "orders" ("id")
+  WHERE ("dynamic" AND ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance'));
 
 -- https://www.lob.com/blog/supercharge-your-postgresql-performance
 -- https://klotzandrew.com/blog/posgres-per-table-autovacuum-management

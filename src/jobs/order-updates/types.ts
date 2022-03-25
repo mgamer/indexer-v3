@@ -1,4 +1,4 @@
-// Possible kinds of triggers that could result in recomputing `floor_sell` caches
+// Possible kinds of triggers that could result in new floor ask prices.
 export type TriggerKind =
   | "new-order"
   | "expiry"
@@ -6,4 +6,5 @@ export type TriggerKind =
   | "cancel"
   | "balance-change"
   | "approval-change"
-  | "revalidation";
+  | "revalidation"
+  | "reprice";

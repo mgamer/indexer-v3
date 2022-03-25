@@ -31,7 +31,7 @@ export const getAttributesExploreV1Options: RouteOptions = {
       ),
       sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice"),
       offset: Joi.number().integer().min(0).max(10000).default(0),
-      limit: Joi.number().integer().min(1).max(200).default(20),
+      limit: Joi.number().integer().min(1).max(5000).default(20),
     }),
   },
   response: {
@@ -170,7 +170,7 @@ export const getAttributesExploreV1Options: RouteOptions = {
       // Sorting
       switch (query.sortBy) {
         case "floorAskPrice": {
-          baseQuery += ` ORDER BY "x"."floor_sell_value"`;
+          baseQuery += ` ORDER BY "x"."floor_sell_value" DESC NULLS LAST`;
           break;
         }
 

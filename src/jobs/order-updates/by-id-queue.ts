@@ -135,7 +135,10 @@ if (config.doBackgroundWork) {
                   FROM "z"
                   WHERE "t"."contract" = "z"."contract"
                     AND "t"."token_id" = "z"."token_id"
-                    AND "t"."floor_sell_id" IS DISTINCT FROM "z"."order_id"
+                    AND (
+                      "t"."floor_sell_id" IS DISTINCT FROM "z"."order_id"
+                      OR "t"."floor_sell_value" IS DISTINCT FROM "z"."value"
+                    )
                   RETURNING
                     "z"."contract",
                     "z"."token_id",

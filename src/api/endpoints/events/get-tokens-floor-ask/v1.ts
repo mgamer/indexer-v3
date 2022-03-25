@@ -53,7 +53,8 @@ export const getTokensFloorAskV1Options: RouteOptions = {
             "balance-change",
             "approval-change",
             "bootstrap",
-            "revalidation"
+            "revalidation",
+            "reprice"
           ),
           contract: Joi.string()
             .lowercase()

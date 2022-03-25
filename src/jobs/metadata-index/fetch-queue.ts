@@ -1,5 +1,6 @@
 import { AddressZero } from "@ethersproject/constants";
 import axios from "axios";
+import _ from "lodash";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
@@ -28,8 +29,8 @@ export const queue = new Queue(QUEUE_NAME, {
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
-// MASTER ONLY
-if (config.doBackgroundWork && config.master) {
+// BACKGROUND WORKER ONLY
+if (config.doBackgroundWork) {
   type TokenMetadata = {
     contract: string;
     tokenId: string;
@@ -107,15 +108,18 @@ if (config.doBackgroundWork && config.master) {
               callback = async () => {
                 if (tokens.length === limit) {
                   const last = tokens[tokens.length - 1];
-                  await addToQueue([
-                    {
-                      kind,
-                      data: {
-                        ...data,
-                        continuation: `${last.contract}_${last.tokenId}`,
+                  await addToQueue(
+                    [
+                      {
+                        kind,
+                        data: {
+                          ...data,
+                          continuation: `${last.contract}_${last.tokenId}`,
+                        },
                       },
-                    },
-                  ]);
+                    ],
+                    !_.isUndefined(job.opts.priority)
+                  );
                 }
               };
             }
@@ -133,15 +137,18 @@ if (config.doBackgroundWork && config.master) {
 
             callback = async (result) => {
               if (result.continuation) {
-                await addToQueue([
-                  {
-                    kind,
-                    data: {
-                      ...data,
-                      continuation: result.continuation,
+                await addToQueue(
+                  [
+                    {
+                      kind,
+                      data: {
+                        ...data,
+                        continuation: result.continuation,
+                      },
                     },
-                  },
-                ]);
+                  ],
+                  !_.isUndefined(job.opts.priority)
+                );
               }
             };
           }
@@ -179,7 +186,7 @@ if (config.doBackgroundWork && config.master) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 1 }
+    { connection: redis.duplicate(), concurrency: 2 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
