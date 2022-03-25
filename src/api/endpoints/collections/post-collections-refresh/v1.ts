@@ -14,11 +14,11 @@ import * as Boom from "@hapi/boom";
 const version = "v1";
 
 export const postCollectionsRefreshV1Options: RouteOptions = {
-  description: "Refresh the given collection orders and metadata",
+  description: "Public API for anyone to refresh a collection's orders and metadata",
   tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {
-      order: 4,
+      order: 61,
     },
   },
   validate: {

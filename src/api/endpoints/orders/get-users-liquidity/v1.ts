@@ -15,7 +15,12 @@ export const getUsersLiquidityV1Options: RouteOptions = {
   description: "User liquidity rankings",
   notes:
     "This API calculates the total liquidity created by users, based on the number of tokens they are top bidder for.",
-  tags: ["api", "5. Misc"],
+  tags: ["api", "4. NFT API"],
+  plugins: {
+    "hapi-swagger": {
+      order: 55,
+    },
+  },
   validate: {
     query: Joi.object({
       collection: Joi.string()

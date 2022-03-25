@@ -10,7 +10,7 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v2";
 
 export const getUserTokensV2Options: RouteOptions = {
-  description: "User tokens",
+  description: "Get tokens held by a user, along with ownership information",
   notes:
     "Get tokens held by a user, along with ownership information such as associated orders and date acquired.",
   tags: ["api", "4. NFT API"],

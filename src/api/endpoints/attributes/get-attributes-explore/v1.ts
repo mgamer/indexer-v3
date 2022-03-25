@@ -10,7 +10,7 @@ import { formatEth, fromBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getAttributesExploreV1Options: RouteOptions = {
-  description: "List of collection attributes",
+  description: "Get detailed aggregate about attributes in a collection, e.g. trait floors",
   tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {

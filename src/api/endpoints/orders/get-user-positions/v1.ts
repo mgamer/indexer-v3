@@ -10,7 +10,7 @@ import { formatEth, toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getUserPositionsV1Options: RouteOptions = {
-  description: "User positions",
+  description: "Get a summary of a users bids and asks",
   notes:
     "Get aggregate user liquidity, grouped by collection. Useful for showing a summary of liquidity being provided (orders made).",
   tags: ["api", "4. NFT API"],

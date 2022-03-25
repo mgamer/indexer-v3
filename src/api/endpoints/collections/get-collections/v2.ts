@@ -10,7 +10,7 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v2";
 
 export const getCollectionsV2Options: RouteOptions = {
-  description: "List of collections",
+  description: "Get a filtered list of collections",
   notes:
     "Useful for getting multiple collections to show in a marketplace, or search for particular collections.",
   tags: ["api", "4. NFT API"],
@@ -179,7 +179,7 @@ export const getCollectionsV2Options: RouteOptions = {
           id: r.id,
           slug: r.slug,
           name: r.name,
-          image: r.image,
+          image: r.image || (r.sample_images?.length ? r.sample_images[0] : null),
           banner: r.banner,
           sampleImages: r.sample_images || [],
           tokenCount: String(r.token_count),

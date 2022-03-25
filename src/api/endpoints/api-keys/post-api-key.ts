@@ -9,8 +9,8 @@ import { ApiKeyManager } from "../../../models/api-keys";
 export const postApiKey: RouteOptions = {
   description: "Instantly create a new API key",
   notes:
-    "The API key can be used optionally in every route, set it as a request header **x-api-key**.",
-  tags: ["api", "5. Misc"],
+    "The optional API key can be used in every route, by setting it as a request header **x-api-key**.\n\n<a href='https://reservoirprotocol.github.io/docs/api/hosted-api'>Learn more</a> about API Keys and Rate Limiting",
+  tags: ["api", "0. Auth"],
   plugins: {
     "hapi-swagger": {
       payloadType: "form",
@@ -18,8 +18,13 @@ export const postApiKey: RouteOptions = {
   },
   validate: {
     payload: Joi.object({
-      appName: Joi.string().required().description("The name of the app"),
-      email: Joi.string().email().required().description("Your e-mail address so we can reach you"),
+      appName: Joi.string().required().description("The name of your app"),
+      email: Joi.string()
+        .email()
+        .required()
+        .description(
+          "An e-mail address where you can be reached, in case of issues, to avoid service disruption"
+        ),
       website: Joi.string().uri().required().description("The website of your project"),
     }),
   },

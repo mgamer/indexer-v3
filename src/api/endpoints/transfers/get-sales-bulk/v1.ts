@@ -19,7 +19,7 @@ const version = "v1";
 export const getSalesBulkV1Options: RouteOptions = {
   description: "Get bulk access to historical sales",
   notes:
-    "Get recent sales for a contract or token. For pagination API expect to receive the continuation from previous result",
+    "Note: this API is optimized for bulk access, and offers minimal filters/metadata. If you need more flexibility, try the `NFT API > Sales` endpoint",
   tags: ["api", "2. Aggregator"],
   plugins: {
     "hapi-swagger": {

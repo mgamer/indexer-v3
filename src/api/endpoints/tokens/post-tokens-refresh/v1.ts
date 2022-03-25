@@ -15,11 +15,11 @@ import * as Boom from "@hapi/boom";
 const version = "v1";
 
 export const postTokensRefreshV1Options: RouteOptions = {
-  description: "Refresh the given token orders and metadata",
+  description: "Public API for anyone to refresh a token's orders and metadata",
   tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {
-      order: 4,
+      order: 62,
     },
   },
   validate: {

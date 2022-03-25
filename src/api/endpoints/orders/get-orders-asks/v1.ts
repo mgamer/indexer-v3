@@ -17,7 +17,7 @@ import {
 const version = "v1";
 
 export const getOrdersAsksV1Options: RouteOptions = {
-  description: "Bulk asks access",
+  description: "Get a list of asks (listings), filtered by token, collection or maker",
   notes:
     "This API is designed for efficiently ingesting large volumes of orders, for external processing",
   tags: ["api", "4. NFT API"],
