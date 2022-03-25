@@ -220,7 +220,7 @@ export const getSalesV3Options: RouteOptions = {
       const rawResult = await edb.manyOrNone(baseQuery, query);
 
       let continuation = null;
-      if (rawResult.length === query.limit) {
+      if (rawResult.length === query.limit - 1) {
         continuation = buildContinuation(
           rawResult[rawResult.length - 1].block +
             "_" +
