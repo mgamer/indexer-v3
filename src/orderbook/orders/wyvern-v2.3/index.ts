@@ -260,18 +260,19 @@ export const save = async (
       const side = order.params.side === 0 ? "buy" : "sell";
 
       // Handle: price and value
+      const price = order.getMatchingPrice().toString();
       let value: string;
       if (side === "buy") {
         // For buy orders, we set the value as `price - fee` since it
         // is best for UX to show the user exactly what they're going
         // to receive on offer acceptance.
         const fee = order.params.takerRelayerFee;
-        value = bn(order.params.basePrice)
-          .sub(bn(order.params.basePrice).mul(bn(fee)).div(10000))
+        value = bn(price)
+          .sub(bn(price).mul(bn(fee)).div(10000))
           .toString();
       } else {
         // For sell orders, the value is the same as the price
-        value = order.params.basePrice;
+        value = price;
       }
 
       // Handle: fees
@@ -357,7 +358,7 @@ export const save = async (
         token_set_schema_hash: toBuffer(schemaHash),
         maker: toBuffer(order.params.maker),
         taker: toBuffer(order.params.taker),
-        price: order.params.basePrice,
+        price,
         value,
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
         nonce: order.params.nonce,
@@ -365,6 +366,7 @@ export const save = async (
         contract: toBuffer(info.contract),
         fee_bps: feeBps,
         fee_breakdown: feeBreakdown || null,
+        dynamic: order.isDutchAuction() ? true : null,
         raw_data: order.params,
         expiration: validTo,
       });
@@ -409,6 +411,7 @@ export const save = async (
         "contract",
         "fee_bps",
         { name: "fee_breakdown", mod: ":json" },
+        "dynamic",
         "raw_data",
         { name: "expiration", mod: ":raw" },
       ],

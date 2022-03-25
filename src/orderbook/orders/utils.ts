@@ -94,6 +94,7 @@ export type DbOrder = {
   contract: Buffer;
   fee_bps: number;
   fee_breakdown: object | null;
+  dynamic: boolean | null;
   raw_data: object;
   expiration: string;
 };

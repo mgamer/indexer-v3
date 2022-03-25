@@ -1,6 +1,7 @@
+import * as Sdk from "@reservoir0x/sdk";
 import cron from "node-cron";
 
-import { idb } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redlock } from "@/common/redis";
 import { config } from "@/config/index";
@@ -57,6 +58,89 @@ if (config.doBackgroundWork) {
             );
           } catch (error) {
             logger.error(`expired-orders-check`, `Failed to handle expired orders: ${error}`);
+          }
+        })
+        .catch(() => {
+          // Skip on any errors
+        })
+  );
+
+  cron.schedule(
+    "*/10 * * * *",
+    async () =>
+      await redlock
+        .acquire(["dynamic-orders-update-lock"], 10 * 60 * 1000)
+        .then(async () => {
+          logger.info(`dynamic-orders-update`, "Updating dynamic orders");
+
+          try {
+            let continuation: string | undefined;
+            const limit = 1000;
+
+            let done = false;
+            while (!done) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const dynamicOrders: { id: string; raw_data: any }[] = await idb.manyOrNone(
+                `
+                  SELECT
+                    orders.id,
+                    orders.raw_data
+                  FROM orders
+                  WHERE orders.dynamic
+                    AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                    ${continuation ? "AND orders.id > $/continuation/" : ""}
+                  ORDER BY orders.id
+                  LIMIT ${limit}
+                `,
+                { continuation }
+              );
+
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const values: any[] = [];
+              for (const { id, raw_data } of dynamicOrders) {
+                const order = new Sdk.WyvernV23.Order(config.chainId, raw_data);
+                const newPrice = order.getMatchingPrice().toString();
+                values.push({
+                  id,
+                  price: newPrice,
+                  // TODO: We should have a generic method for deriving the `value` from `price`.
+                  value: newPrice,
+                });
+              }
+
+              const columns = new pgp.helpers.ColumnSet(
+                [
+                  "?id",
+                  { name: "price", cast: "numeric(78, 0)" },
+                  { name: "value", cast: "numeric(78, 0)" },
+                ],
+                {
+                  table: "orders",
+                }
+              );
+              if (values.length) {
+                await idb.none(pgp.helpers.update(values, columns) + " WHERE t.id = v.id");
+              }
+
+              await orderUpdatesById.addToQueue(
+                dynamicOrders.map(
+                  ({ id }) =>
+                    ({
+                      context: `dynamic-orders-update-${Math.floor(Date.now() / 1000)}-${id}`,
+                      id,
+                      trigger: { kind: "reprice" },
+                    } as orderUpdatesById.OrderInfo)
+                )
+              );
+
+              if (dynamicOrders.length >= limit) {
+                continuation = dynamicOrders[dynamicOrders.length - 1].id;
+              } else {
+                done = true;
+              }
+            }
+          } catch (error) {
+            logger.error(`dynamic-orders-update`, `Failed to handle dynamic orders: ${error}`);
           }
         })
         .catch(() => {
