@@ -67,15 +67,18 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       await OpenseaIndexerApi.fastContractSync(collection.contract);
 
       // Refresh the collection tokens metadata
-      await metadataIndexFetch.addToQueue([
-        {
-          kind: "full-collection",
-          data: {
-            method: "opensea",
-            collection: collection.id,
+      await metadataIndexFetch.addToQueue(
+        [
+          {
+            kind: "full-collection",
+            data: {
+              method: "opensea",
+              collection: collection.id,
+            },
           },
-        },
-      ]);
+        ],
+        true
+      );
 
       // Refresh the collection metadata
       await Collections.updateCollectionMetadata(collection.contract, "1");

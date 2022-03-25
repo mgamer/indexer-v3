@@ -1,5 +1,6 @@
 import { AddressZero } from "@ethersproject/constants";
 import axios from "axios";
+import _ from "lodash";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
@@ -107,15 +108,18 @@ if (config.doBackgroundWork) {
               callback = async () => {
                 if (tokens.length === limit) {
                   const last = tokens[tokens.length - 1];
-                  await addToQueue([
-                    {
-                      kind,
-                      data: {
-                        ...data,
-                        continuation: `${last.contract}_${last.tokenId}`,
+                  await addToQueue(
+                    [
+                      {
+                        kind,
+                        data: {
+                          ...data,
+                          continuation: `${last.contract}_${last.tokenId}`,
+                        },
                       },
-                    },
-                  ]);
+                    ],
+                    !_.isUndefined(job.opts.priority)
+                  );
                 }
               };
             }
@@ -133,15 +137,18 @@ if (config.doBackgroundWork) {
 
             callback = async (result) => {
               if (result.continuation) {
-                await addToQueue([
-                  {
-                    kind,
-                    data: {
-                      ...data,
-                      continuation: result.continuation,
+                await addToQueue(
+                  [
+                    {
+                      kind,
+                      data: {
+                        ...data,
+                        continuation: result.continuation,
+                      },
                     },
-                  },
-                ]);
+                  ],
+                  !_.isUndefined(job.opts.priority)
+                );
               }
             };
           }
