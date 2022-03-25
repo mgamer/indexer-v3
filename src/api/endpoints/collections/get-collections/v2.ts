@@ -179,7 +179,7 @@ export const getCollectionsV2Options: RouteOptions = {
           id: r.id,
           slug: r.slug,
           name: r.name,
-          image: r.image,
+          image: r.image || (r.sample_images?.length ? r.sample_images[0] : null),
           banner: r.banner,
           sampleImages: r.sample_images || [],
           tokenCount: String(r.token_count),

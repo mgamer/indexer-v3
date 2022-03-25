@@ -209,7 +209,11 @@ export const getCollectionV1Options: RouteOptions = {
               id: r.id,
               slug: r.slug,
               name: r.name,
-              metadata: r.metadata,
+              metadata: {
+                ...r.metadata,
+                imageUrl:
+                  r.metadata?.imageUrl || (r.sample_images?.length ? r.sample_images[0] : null),
+              },
               sampleImages: r.sample_images || [],
               tokenCount: String(r.token_count),
               onSaleCount: String(r.on_sale_count),
