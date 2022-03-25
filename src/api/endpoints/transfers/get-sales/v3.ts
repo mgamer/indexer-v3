@@ -10,9 +10,9 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v3";
 
 export const getSalesV3Options: RouteOptions = {
-  description: "Historical sales",
+  description: "Get recent sales for a contract or token",
   notes:
-    "Get recent sales for a contract or token. For pagination API expect to receive the continuation from previous result",
+    "Note: this API is returns rich metadata, and has advanced filters, so is only designed for small amounts of recent sales. If you want access to sales in bulk, use the `Aggregator > Bulk Sales` API.",
   tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {

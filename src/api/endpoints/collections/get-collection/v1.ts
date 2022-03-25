@@ -10,7 +10,7 @@ import { formatEth, fromBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getCollectionV1Options: RouteOptions = {
-  description: "Single collection",
+  description: "Get detailed information about a single collection",
   notes: "Get detailed information about a single collection, including real-time stats.",
   tags: ["api", "4. NFT API"],
   plugins: {

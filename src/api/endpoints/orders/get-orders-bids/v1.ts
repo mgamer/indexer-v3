@@ -10,7 +10,7 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getOrdersBidsV1Options: RouteOptions = {
-  description: "Bulk bids access",
+  description: "Get a list of bids (offers), filtered by token, collection or maker",
   notes:
     "This API is designed for efficiently ingesting large volumes of orders, for external processing",
   tags: ["api", "4. NFT API"],

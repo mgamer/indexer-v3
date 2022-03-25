@@ -10,7 +10,7 @@ import { formatEth, toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getUserCollectionsV1Options: RouteOptions = {
-  description: "User collections",
+  description: "Get aggregate stats for a user, grouped by collection",
   notes:
     "Get aggregate stats for a user, grouped by collection. Useful for showing total portfolio information.",
   tags: ["api", "4. NFT API"],
