@@ -50,6 +50,7 @@ if (config.doBackgroundWork) {
       const { method, collection } = job.data;
       const count = method == "rarible" ? 50 : 20;
       const queryParams = new URLSearchParams();
+      queryParams.append("method", method);
 
       // Get the tokens from the list
       const pendingRefreshTokens = new PendingRefreshTokens(method);
@@ -57,7 +58,6 @@ if (config.doBackgroundWork) {
 
       // Build the query string
       for (const token of tokens) {
-        queryParams.append("method", method);
         queryParams.append("token", token);
       }
 
