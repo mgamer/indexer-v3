@@ -1,16 +1,15 @@
 import { AddressZero } from "@ethersproject/constants";
-import axios from "axios";
 import _ from "lodash";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { network } from "@/common/provider";
 import { redis } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
+import { PendingRefreshTokens } from "@/models/pending-refresh-tokens";
+import * as metadataIndexProcess from "@/jobs/metadata-index/process-queue";
 
 const QUEUE_NAME = "metadata-index-fetch-queue";
 
@@ -31,166 +30,77 @@ new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
-  type TokenMetadata = {
-    contract: string;
-    tokenId: string;
-    name?: string;
-    description?: string;
-    imageUrl?: string;
-    mediaUrl?: string;
-    attributes: {
-      key: string;
-      value: string;
-      kind: "string" | "number" | "date" | "range";
-      rank?: number;
-    }[];
-  };
-
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
       const { kind, data } = job.data as MetadataIndexInfo;
+      const prioritized = !_.isUndefined(job.opts.priority);
+      const limit = 1000;
+      let tokens: string[] = [];
 
-      try {
-        let callback: (result: { continuation?: string }) => Promise<void> = async () => {
-          // This callback is to be called after the current job executed
-          // successfully. It's needed to allow triggering any other jobs
-          // that act as a continuation of the current one. By default it
-          // is empty since not all indexing methods need it.
-        };
+      if (kind === "full-collection") {
+        // Get batch of tokens for the collection
+        const [contract, tokenId] = data.continuation
+          ? data.continuation.split(":")
+          : [AddressZero, "0"];
+        tokens = await getTokensForCollection(data.collection, contract, tokenId, limit);
 
-        let url: string | undefined;
-        if (kind === "full-collection") {
-          if (data.method === "opensea") {
-            let contractContinuation = toBuffer(AddressZero);
-            let tokenIdContinuation = "0";
-            if (data.continuation) {
-              const [contract, tokenId] = data.continuation.split("_");
-              contractContinuation = toBuffer(contract);
-              tokenIdContinuation = tokenId;
-            }
-
-            const limit = 20;
-            const tokens = await idb
-              .manyOrNone(
-                `
-                  SELECT
-                    tokens.contract,
-                    tokens.token_id
-                  FROM tokens
-                  WHERE tokens.collection_id = $/collection/
-                    AND (tokens.contract, tokens.token_id) > ($/contract/, $/tokenId/)
-                  LIMIT ${limit}
-                `,
-                {
-                  collection: data.collection,
-                  contract: contractContinuation,
-                  tokenId: tokenIdContinuation,
-                }
-              )
-              .then((result) =>
-                result.map((r) => ({
-                  contract: fromBuffer(r.contract),
-                  tokenId: r.token_id,
-                }))
-              );
-
-            if (tokens && tokens.length) {
-              const searchParams = new URLSearchParams();
-              searchParams.append("method", data.method);
-              searchParams.append("contract", tokens[0].contract);
-              for (const { tokenId } of tokens) {
-                searchParams.append("tokenIds", tokenId);
-              }
-
-              url = `${config.metadataApiBaseUrl}/v3/${network}/tokens?${searchParams.toString()}`;
-
-              callback = async () => {
-                if (tokens.length === limit) {
-                  const last = tokens[tokens.length - 1];
-                  await addToQueue(
-                    [
-                      {
-                        kind,
-                        data: {
-                          ...data,
-                          continuation: `${last.contract}_${last.tokenId}`,
-                        },
-                      },
-                    ],
-                    !_.isUndefined(job.opts.priority)
-                  );
-                }
-              };
-            }
-          } else if (data.method === "rarible") {
-            const searchParams = new URLSearchParams();
-            searchParams.append("method", data.method);
-            searchParams.append("contract", data.collection);
-            if (data.continuation) {
-              searchParams.append("continuation", data.continuation);
-            }
-
-            url = `${
-              config.metadataApiBaseUrl
-            }/v4/${network}/metadata/token?${searchParams.toString()}`;
-
-            callback = async (result) => {
-              if (result.continuation) {
-                await addToQueue(
-                  [
-                    {
-                      kind,
-                      data: {
-                        ...data,
-                        continuation: result.continuation,
-                      },
-                    },
-                  ],
-                  !_.isUndefined(job.opts.priority)
-                );
-              }
-            };
-          }
-        } else if (kind === "single-token") {
-          const searchParams = new URLSearchParams();
-          searchParams.append("method", data.method);
-          searchParams.append("contract", data.contract);
-          searchParams.append("tokenIds", data.tokenId);
-
-          url = `${config.metadataApiBaseUrl}/v3/${network}/tokens?${searchParams.toString()}`;
-        }
-
-        if (url) {
-          const metadataResult = await axios
-            .get(url, { timeout: 60 * 1000 })
-            .then(({ data }) => data);
-
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const metadata: TokenMetadata[] = (metadataResult as any).metadata;
-
-          await metadataIndexWrite.addToQueue(
-            metadata.map((m) => ({
-              ...m,
-              collection: data.collection,
-            }))
+        // If there are potentially more tokens to refresh
+        if (!_.isEmpty(tokens) && _.size(tokens) == limit) {
+          const lastToken = _.last(tokens);
+          await addToQueue(
+            [
+              {
+                kind,
+                data: {
+                  ...data,
+                  continuation: lastToken,
+                },
+              },
+            ],
+            prioritized
           );
-
-          await callback(metadataResult);
         }
-      } catch (error) {
-        logger.error(
-          QUEUE_NAME,
-          `Failed to process metadata index info ${JSON.stringify(job.data)}: ${error}`
-        );
-        throw error;
+      } else if (kind === "single-token") {
+        // Create the single token from the params
+        tokens.push(`${data.contract}:${data.tokenId}`);
       }
+
+      // Add the tokens to the list
+      const pendingRefreshTokens = new PendingRefreshTokens(data.method);
+      await pendingRefreshTokens.add(tokens, prioritized);
+
+      // Trigger a job to process the queue
+      await metadataIndexProcess.addToQueue(data.method, data.collection);
     },
-    { connection: redis.duplicate(), concurrency: 2 }
+    { connection: redis.duplicate(), concurrency: 3 }
   );
+
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
+}
+
+async function getTokensForCollection(
+  collection: string,
+  contract: string,
+  tokenId: string,
+  limit: number
+) {
+  const tokens = await idb.manyOrNone(
+    `SELECT tokens.contract, tokens.token_id
+              FROM tokens
+              WHERE tokens.collection_id = $/collection/
+              AND (tokens.contract, tokens.token_id) > ($/contract/, $/tokenId/)
+              LIMIT ${limit}`,
+    {
+      collection: collection,
+      contract: toBuffer(contract),
+      tokenId: tokenId,
+    }
+  );
+
+  return tokens.map((t) => `${fromBuffer(t.contract)}:${t.token_id}`);
 }
 
 // We support the following metadata indexing methods.
