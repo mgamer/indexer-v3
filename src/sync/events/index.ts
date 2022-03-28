@@ -691,12 +691,12 @@ export const syncEvents = async (
     });
 };
 
-export const unsyncEvents = async (blockHash: string) =>
+export const unsyncEvents = async (block: number, blockHash: string) =>
   Promise.all([
-    es.bulkCancels.removeEvents(blockHash),
-    es.cancels.removeEvents(blockHash),
-    es.fills.removeEvents(blockHash),
-    es.ftTransfers.removeEvents(blockHash),
-    es.nftApprovals.removeEvents(blockHash),
-    es.nftTransfers.removeEvents(blockHash),
+    es.bulkCancels.removeEvents(block, blockHash),
+    es.cancels.removeEvents(block, blockHash),
+    es.fills.removeEvents(block, blockHash),
+    es.ftTransfers.removeEvents(block, blockHash),
+    es.nftApprovals.removeEvents(block, blockHash),
+    es.nftTransfers.removeEvents(block, blockHash),
   ]);

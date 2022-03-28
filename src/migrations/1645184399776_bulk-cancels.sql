@@ -18,8 +18,8 @@ ALTER TABLE "bulk_cancel_events"
   ADD CONSTRAINT "bulk_cancel_events_pk"
   PRIMARY KEY ("tx_hash", "log_index", "batch_index");
 
-CREATE INDEX "bulk_cancel_events_block_hash_index"
-  ON "bulk_cancel_events" ("block_hash");
+CREATE INDEX "bulk_cancel_events_block_block_hash_index"
+  ON "bulk_cancel_events" ("block", "block_hash");
 
 -- Down Migration
 
