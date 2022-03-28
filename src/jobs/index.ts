@@ -22,6 +22,7 @@ import * as eventsSyncFtTransfersWriteBuffer from "@/jobs/events-sync/write-buff
 import * as eventsSyncNftTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/nft-transfers";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
+import * as metadataIndexProcess from "@/jobs/metadata-index/process-queue";
 import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
 import * as orderFixes from "@/jobs/order-fixes/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
@@ -40,6 +41,7 @@ export const allJobQueues = [
   eventsSyncNftTransfersWriteBuffer.queue,
   fillUpdates.queue,
   metadataIndexFetch.queue,
+  metadataIndexProcess.queue,
   metadataIndexWrite.queue,
   orderFixes.queue,
   orderUpdatesById.queue,
