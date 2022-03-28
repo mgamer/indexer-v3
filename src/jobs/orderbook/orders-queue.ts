@@ -28,7 +28,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { kind, info, relayToArweave, logKey } = job.data as GenericOrderInfo;
+      const { kind, info, relayToArweave } = job.data as GenericOrderInfo;
 
       try {
         switch (kind) {
@@ -37,10 +37,7 @@ if (config.doBackgroundWork) {
               [info as orders.wyvernV23.OrderInfo],
               relayToArweave
             );
-            logger.info(
-              QUEUE_NAME,
-              `Order save result${logKey ? " (" + logKey + ")" : ""}: ${JSON.stringify(result)}`
-            );
+            logger.info(QUEUE_NAME, `Order save result: ${JSON.stringify(result)}`);
 
             break;
           }
@@ -61,7 +58,6 @@ export type GenericOrderInfo = {
   kind: "wyvern-v2.3";
   info: orders.wyvernV23.OrderInfo;
   relayToArweave?: boolean;
-  logKey?: string;
 };
 
 export const addToQueue = async (orderInfos: GenericOrderInfo[]) => {

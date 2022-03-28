@@ -23,7 +23,6 @@ export const postOrdersV1Options: RouteOptions = {
         Joi.object({
           kind: Joi.string().lowercase().valid("wyvern-v2.3").required(),
           data: Joi.object().required(),
-          logKey: Joi.string(),
         })
       ),
     }),
@@ -37,13 +36,12 @@ export const postOrdersV1Options: RouteOptions = {
       logger.info(`post-orders-${version}-handler`, `Got ${orders.length} orders`);
 
       const wyvernV23OrderInfos: wyvernV23.OrderInfo[] = [];
-      for (const { kind, data, logKey } of orders) {
+      for (const { kind, data } of orders) {
         switch (kind) {
           case "wyvern-v2.3": {
             wyvernV23OrderInfos.push({
               orderParams: data,
               metadata: {},
-              logKey,
             });
 
             break;
@@ -56,7 +54,6 @@ export const postOrdersV1Options: RouteOptions = {
           kind: "wyvern-v2.3",
           info: orderInfo,
           relayToArweave: true,
-          logKey: orderInfo.logKey,
         }))
       );
 
