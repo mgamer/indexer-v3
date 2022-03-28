@@ -187,13 +187,13 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }
 };
 
-export const removeEvents = async (blockHash: string) => {
+export const removeEvents = async (block: number, blockHash: string) => {
   // Atomically delete the transfer events and revert balance updates
   await idb.any(
     `
       WITH "x" AS (
         DELETE FROM "nft_transfer_events"
-        WHERE "block_hash" = $/blockHash/
+        WHERE "block" = $/block/ AND "block_hash" = $/blockHash/
         RETURNING
           "address",
           "token_id",
@@ -224,6 +224,9 @@ export const removeEvents = async (blockHash: string) => {
       ON CONFLICT ("contract", "token_id", "owner") DO
       UPDATE SET "amount" = "nft_balances"."amount" + EXCLUDED."amount"
     `,
-    { blockHash: toBuffer(blockHash) }
+    {
+      block,
+      blockHash: toBuffer(blockHash),
+    }
   );
 };

@@ -1,3 +1,4 @@
+export * from "@/api/endpoints/admin/post-fix-blocks";
 export * from "@/api/endpoints/admin/post-fix-cache";
 export * from "@/api/endpoints/admin/post-metadata-index";
 export * from "@/api/endpoints/admin/post-fix-orders";

@@ -85,10 +85,18 @@ export const addEvents = async (events: Event[]) => {
   }
 };
 
-export const removeEvents = async (blockHash: string) => {
+export const removeEvents = async (block: number, blockHash: string) => {
   // Delete the approval events but skip reverting order status updates
   // since it might mess up other higher-level order processes.
-  await idb.any(`DELETE FROM "nft_approval_events" WHERE "block_hash" = $/blockHash/`, {
-    blockHash: toBuffer(blockHash),
-  });
+  await idb.any(
+    `
+      DELETE FROM nft_approval_events
+      WHERE block = $/block/
+        AND block_hash = $/blockHash/
+    `,
+    {
+      block,
+      blockHash: toBuffer(blockHash),
+    }
+  );
 };

@@ -38,9 +38,9 @@ export const saveLatestBlocks = async (blockInfos: { block: number; hash: string
     // Get the latest block number
     const result = await redis.zrange(LATEST_BLOCKS_CACHE_KEY, 0, 0, "WITHSCORES");
     if (result.length) {
-      // Only keep the latest 60 blocks
+      // Only keep the latest 100 blocks
       const latestBlockNegated = Number(result[1]);
-      await redis.zremrangebyscore(LATEST_BLOCKS_CACHE_KEY, latestBlockNegated + 60, "+inf");
+      await redis.zremrangebyscore(LATEST_BLOCKS_CACHE_KEY, latestBlockNegated + 100, "+inf");
     }
   } catch (error) {
     logger.error("events-sync-save-latest-blocks", `Failed to save latest blocks: ${error}`);
@@ -76,10 +76,10 @@ if (config.doBackgroundWork && config.catchup) {
   // while, we have to check the latest blocks and make sure they are
   // still in the canonical chain.
   cron.schedule(
-    "*/1 * * * *",
+    "*/30 * * * * *",
     async () =>
       await redlock
-        .acquire(["events-sync-orphan-check-lock"], (60 - 5) * 1000)
+        .acquire(["events-sync-orphan-check-lock"], (30 - 5) * 1000)
         .then(async () => {
           logger.info("events-sync-orphan-check", "Checking orphaned blocks");
 
@@ -88,7 +88,7 @@ if (config.doBackgroundWork && config.catchup) {
             // hash against the latest upstream block hash
             const wrongBlocks = new Map<number, string>();
             try {
-              const blockInfos = await redis.zrange(LATEST_BLOCKS_CACHE_KEY, 0, 60, "WITHSCORES");
+              const blockInfos = await redis.zrange(LATEST_BLOCKS_CACHE_KEY, 0, 100, "WITHSCORES");
               for (let i = 0; i < blockInfos.length; i += 2) {
                 const blockHash = blockInfos[i];
                 const block = -Number(blockInfos[i + 1]);
@@ -112,7 +112,7 @@ if (config.doBackgroundWork && config.catchup) {
               await backfillEventsSync.addToQueue(block, block, {
                 prioritized: true,
               });
-              await unsyncEvents(blockHash);
+              await unsyncEvents(block, blockHash);
 
               // Remove the fixed block from the cached latest blocks
               await redis.zrem(LATEST_BLOCKS_CACHE_KEY, blockHash);

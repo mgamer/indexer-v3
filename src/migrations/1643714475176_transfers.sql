@@ -19,8 +19,8 @@ ALTER TABLE "nft_transfer_events"
   ADD CONSTRAINT "nft_transfer_events_pk"
   PRIMARY KEY ("tx_hash", "log_index", "batch_index");
 
-CREATE INDEX "nft_transfer_events_block_hash_index"
-  ON "nft_transfer_events" ("block_hash");
+CREATE INDEX "nft_transfer_events_block_block_hash_index"
+  ON "nft_transfer_events" ("block", "block_hash");
 
 CREATE INDEX "nft_transfer_events_address_block_index"
   ON "nft_transfer_events" ("address", "block" DESC);
@@ -45,8 +45,8 @@ ALTER TABLE "ft_transfer_events"
   ADD CONSTRAINT "ft_transfer_events_pk"
   PRIMARY KEY ("tx_hash", "log_index");
 
-CREATE INDEX "ft_transfer_events_block_hash_index"
-  ON "ft_transfer_events" ("block_hash");
+CREATE INDEX "ft_transfer_events_block_block_hash_index"
+  ON "ft_transfer_events" ("block", "block_hash");
 
 -- Down Migration
 

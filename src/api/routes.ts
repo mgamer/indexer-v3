@@ -24,6 +24,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/fix-blocks",
+    options: adminEndpoints.postFixBlocksOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/fix-cache",
     options: adminEndpoints.postFixCacheOptions,
   });

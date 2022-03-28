@@ -117,13 +117,13 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }
 };
 
-export const removeEvents = async (blockHash: string) => {
+export const removeEvents = async (block: number, blockHash: string) => {
   // Atomically delete the transfer events and revert balance updates
   await idb.any(
     `
       WITH "x" AS (
         DELETE FROM "ft_transfer_events"
-        WHERE "block_hash" = $/blockHash/
+        WHERE "block" = $/block/ AND "block_hash" = $/blockHash/
         RETURNING
           "address",
           ARRAY["from", "to"] AS "owners",
@@ -150,6 +150,9 @@ export const removeEvents = async (blockHash: string) => {
       ON CONFLICT ("contract", "owner") DO
       UPDATE SET "amount" = "ft_balances"."amount" + "excluded"."amount"
     `,
-    { blockHash: toBuffer(blockHash) }
+    {
+      block,
+      blockHash: toBuffer(blockHash),
+    }
   );
 };
