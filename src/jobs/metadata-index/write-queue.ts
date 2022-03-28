@@ -245,9 +245,11 @@ export type TokenMetadataInfo = {
 
 export const addToQueue = async (tokenMetadataInfos: TokenMetadataInfo[]) => {
   await queue.addBulk(
-    tokenMetadataInfos.map((tokenMetadataInfo) => ({
-      name: `${tokenMetadataInfo.contract}-${tokenMetadataInfo.tokenId}`,
-      data: tokenMetadataInfo,
-    }))
+    tokenMetadataInfos
+      .map((tokenMetadataInfo) => ({
+        name: `${tokenMetadataInfo.contract}-${tokenMetadataInfo.tokenId}`,
+        data: tokenMetadataInfo,
+      }))
+      .filter(({ data }) => data.collection && data.contract && data.tokenId && data.attributes)
   );
 };
