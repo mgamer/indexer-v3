@@ -29,6 +29,25 @@ export const addPendingOrdersWyvernV23 = async (
   }
 };
 
+export const addPendingOrdersLooksRare = async (
+  data: { order: Sdk.LooksRare.Order; schemaHash?: string; source?: string }[]
+) => {
+  if (config.arweaveRelayerKey && data.length) {
+    await redis.rpush(
+      PENDING_DATA_KEY,
+      ...data.map(({ order, schemaHash }) =>
+        JSON.stringify({
+          kind: "looks-rare",
+          data: {
+            ...order.params,
+            schemaHash,
+          },
+        })
+      )
+    );
+  }
+};
+
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork && config.arweaveRelayerKey) {
   cron.schedule(

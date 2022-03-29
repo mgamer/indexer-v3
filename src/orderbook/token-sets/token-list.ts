@@ -1,4 +1,4 @@
-import { generateMerkleTree } from "@reservoir0x/sdk/dist/wyvern-v2/builders/token-list/utils";
+import { Common } from "@reservoir0x/sdk";
 
 import { PgPromiseQuery, idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
@@ -36,7 +36,7 @@ const isValid = async (tokenSet: TokenSet) => {
     let itemsId: string | undefined;
     if (tokenSet.items) {
       // Generate the token set id corresponding to the passed items.
-      const merkleTree = generateMerkleTree(tokenSet.items.tokenIds);
+      const merkleTree = Common.Helpers.generateMerkleTree(tokenSet.items.tokenIds);
       itemsId = `list:${tokenSet.items.contract}:${merkleTree.getHexRoot()}`;
 
       // Make sure the passed tokens match the token set id.
@@ -89,7 +89,7 @@ const isValid = async (tokenSet: TokenSet) => {
       const tokenIds = tokens.map(({ token_id }) => token_id);
 
       // Generate the token set id corresponding to the passed schema.
-      const merkleTree = generateMerkleTree(tokenIds);
+      const merkleTree = Common.Helpers.generateMerkleTree(tokenIds);
       schemaId = `list:${contract}:${merkleTree.getHexRoot()}`;
 
       // Make sure the passed schema matches the token set id.

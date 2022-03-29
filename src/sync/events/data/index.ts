@@ -3,6 +3,7 @@ import { Interface } from "@ethersproject/abi";
 import * as erc721 from "@/events-sync/data/erc721";
 import * as erc1155 from "@/events-sync/data/erc1155";
 import * as weth from "@/events-sync/data/weth";
+import * as looksRare from "@/events-sync/data/looks-rare";
 import * as wyvernV2 from "@/events-sync/data/wyvern-v2";
 import * as wyvernV23 from "@/events-sync/data/wyvern-v2.3";
 
@@ -22,7 +23,11 @@ export type EventDataKind =
   | "wyvern-v2-orders-matched"
   | "wyvern-v2.3-orders-matched"
   | "wyvern-v2.3-order-cancelled"
-  | "wyvern-v2.3-nonce-incremented";
+  | "wyvern-v2.3-nonce-incremented"
+  | "looks-rare-cancel-all-orders"
+  | "looks-rare-cancel-multiple-orders"
+  | "looks-rare-taker-ask"
+  | "looks-rare-taker-bid";
 
 export type EventData = {
   kind: EventDataKind;
@@ -42,6 +47,10 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       weth.transfer,
       weth.deposit,
       weth.withdrawal,
+      looksRare.cancelAllOrders,
+      looksRare.cancelMultipleOrders,
+      looksRare.takerAsk,
+      looksRare.takerBid,
       wyvernV2.ordersMatched,
       wyvernV23.orderCancelled,
       wyvernV23.ordersMatched,
