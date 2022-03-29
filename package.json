@@ -1,6 +1,6 @@
 {
   "name": "reservoir-indexer",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "description": "Reservoir Protocol Indexer",
   "main": "./dist/index.js",
   "repository": "https://github.com/reservoirprotocol/indexer-v3",
@@ -18,7 +18,8 @@
     "lint-check": "eslint --max-warnings 0 --ext .js,.ts,.json src",
     "format-check": "prettier --check \"src/**/*.+(js|ts|json)\"",
     "format": "prettier --write \"src/**/*.+(js|ts|json)\"",
-    "postinstall": "husky install"
+    "postinstall": "husky install",
+    "release": "standard-version"
   },
   "dependencies": {
     "@bull-board/hapi": "^3.9.0",
@@ -68,6 +69,7 @@
     "node-pg-migrate": "^6.0.0",
     "nodemon": "^2.0.15",
     "prettier": "^2.5.1",
+    "standard-version": "^9.3.2",
     "ts-node": "^10.4.0",
     "typescript": "^4.4.4"
   },
