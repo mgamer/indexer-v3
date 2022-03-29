@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.2.0 (2022-03-29)
+
+
+### Features
+
+* better documentation ([#247](https://github.com/reservoirprotocol/indexer-v3/issues/247)) ([095d705](https://github.com/reservoirprotocol/indexer-v3/commit/095d705055596a559900421314829028e0421cf8))
+
 ### 5.1.2 (2022-03-29)
 
 ### 5.1.1 (2022-03-29)
