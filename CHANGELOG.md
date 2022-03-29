@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.2.1 (2022-03-29)
+
+
+### Bug Fixes
+
+* user tokens artblocks ([11cf0f3](https://github.com/reservoirprotocol/indexer-v3/commit/11cf0f3490008ba32e26b95efe262be2c352780e))
+
 ## 5.2.0 (2022-03-29)
 
 
