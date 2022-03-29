@@ -91,6 +91,14 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return wyvernV23.ordersMatched;
     case "wyvern-v2.3-nonce-incremented":
       return wyvernV23.nonceIncremented;
+    case "looks-rare-cancel-all-orders":
+      return looksRare.cancelAllOrders;
+    case "looks-rare-cancel-multiple-orders":
+      return looksRare.cancelMultipleOrders;
+    case "looks-rare-taker-ask":
+      return looksRare.takerAsk;
+    case "looks-rare-taker-bid":
+      return looksRare.takerBid;
     default:
       return undefined;
   }
