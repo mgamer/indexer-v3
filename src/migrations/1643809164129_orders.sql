@@ -2,7 +2,8 @@
 
 CREATE TYPE "order_kind_t" AS ENUM (
   'wyvern-v2',
-  'wyvern-v2.3'
+  'wyvern-v2.3',
+  'looks-rare'
 );
 
 CREATE TYPE "order_side_t" AS ENUM (

@@ -1,6 +1,7 @@
 -- Up Migration
 
 CREATE EXTENSION hstore;
+CREATE EXTENSION btree_gist;
 
 CREATE TABLE "tokens" (
   "contract" BYTEA NOT NULL,
@@ -52,7 +53,7 @@ CREATE INDEX "tokens_top_buy_maker_collection_id_index"
 
 CREATE INDEX "tokens_contract_token_id_index"
   ON "tokens" ("contract", "token_id")
-  INCLUDE ("floor_sale_value", "top_buy_value");
+  INCLUDE ("floor_sell_value", "top_buy_value");
 
 CREATE INDEX "tokens_collection_id_attributes_index"
   ON "tokens"

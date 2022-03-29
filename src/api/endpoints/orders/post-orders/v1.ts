@@ -5,7 +5,6 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
-import * as wyvernV23 from "@/orderbook/orders/wyvern-v2.3";
 
 const version = "v1";
 
@@ -21,9 +20,8 @@ export const postOrdersV1Options: RouteOptions = {
     payload: Joi.object({
       orders: Joi.array().items(
         Joi.object({
-          kind: Joi.string().lowercase().valid("wyvern-v2.3").required(),
+          kind: Joi.string().lowercase().valid("looks-rare", "wyvern-v2.3").required(),
           data: Joi.object().required(),
-          logKey: Joi.string(),
         })
       ),
     }),
@@ -36,29 +34,19 @@ export const postOrdersV1Options: RouteOptions = {
 
       logger.info(`post-orders-${version}-handler`, `Got ${orders.length} orders`);
 
-      const wyvernV23OrderInfos: wyvernV23.OrderInfo[] = [];
-      for (const { kind, data, logKey } of orders) {
-        switch (kind) {
-          case "wyvern-v2.3": {
-            wyvernV23OrderInfos.push({
-              orderParams: data,
-              metadata: {},
-              logKey,
-            });
-
-            break;
-          }
-        }
+      const orderInfos: orderbookOrders.GenericOrderInfo[] = [];
+      for (const { kind, data } of orders) {
+        orderInfos.push({
+          kind,
+          info: {
+            orderParams: data,
+            metadata: {},
+          },
+          relayToArweave: true,
+        });
       }
 
-      await orderbookOrders.addToQueue(
-        wyvernV23OrderInfos.map((orderInfo) => ({
-          kind: "wyvern-v2.3",
-          info: orderInfo,
-          relayToArweave: true,
-          logKey: orderInfo.logKey,
-        }))
-      );
+      await orderbookOrders.addToQueue(orderInfos);
 
       return { message: "Request accepted" };
     } catch (error) {

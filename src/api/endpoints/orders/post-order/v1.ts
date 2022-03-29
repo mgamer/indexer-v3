@@ -128,7 +128,7 @@ export const postOrderV1Options: RouteOptions = {
                 .catch((error) => {
                   if (error.response) {
                     logger.error(
-                      `post-orders-${version}-handler`,
+                      `post-order-${version}-handler`,
                       `Failed to post order to OpenSea: ${JSON.stringify(error.response.data)}`
                     );
                   }
@@ -150,7 +150,7 @@ export const postOrderV1Options: RouteOptions = {
 
       return { message: "Request accepted" };
     } catch (error) {
-      logger.error(`post-orders-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(`post-order-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

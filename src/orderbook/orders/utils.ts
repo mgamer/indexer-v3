@@ -78,7 +78,7 @@ export const getOrderSourceMetadata = (
 // Underlying database model for an order
 export type DbOrder = {
   id: string;
-  kind: "wyvern-v2.3";
+  kind: "wyvern-v2.3" | "looks-rare";
   side: "buy" | "sell";
   fillability_status: string;
   approval_status: string;

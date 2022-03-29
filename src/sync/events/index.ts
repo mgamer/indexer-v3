@@ -15,15 +15,6 @@ import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 
-// TODO: All event tables have as primary key (blockHash, txHash, logIndex).
-// While this is the correct way to do it in order to protect against chain
-// reorgs we might as well do without the block hash (since the exact block
-// at which an event occured is less important for us than the fact that it
-// did occur). Removing the block hash from the primary key will definitely
-// result in a write/update speed up. We already have an example of the new
-// design in the `fill_events_2` table - ideally we should port every event
-// table to it.
-
 export const syncEvents = async (
   fromBlock: number,
   toBlock: number,
@@ -75,6 +66,7 @@ export const syncEvents = async (
       const nftApprovalEvents: es.nftApprovals.Event[] = [];
       const nftTransferEvents: es.nftTransfers.Event[] = [];
       const bulkCancelEvents: es.bulkCancels.Event[] = [];
+      const nonceCancelEvents: es.nonceCancels.Event[] = [];
       const cancelEvents: es.cancels.Event[] = [];
       const fillEvents: es.fills.Event[] = [];
 
@@ -445,6 +437,166 @@ export const syncEvents = async (
               break;
             }
 
+            case "looks-rare-cancel-all-orders": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const maker = parsedLog.args["user"].toLowerCase();
+              const newMinNonce = parsedLog.args["newMinNonce"].toString();
+
+              bulkCancelEvents.push({
+                orderKind: "wyvern-v2.3",
+                maker,
+                minNonce: newMinNonce,
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "looks-rare-cancel-multiple-orders": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const maker = parsedLog.args["user"].toLowerCase();
+              const orderNonces = parsedLog.args["orderNonces"].map(String);
+
+              let batchIndex = 1;
+              for (const orderNonce of orderNonces) {
+                nonceCancelEvents.push({
+                  orderKind: "looks-rare",
+                  maker,
+                  nonce: orderNonce,
+                  baseEventParams: {
+                    ...baseEventParams,
+                    batchIndex: batchIndex++,
+                  },
+                });
+              }
+
+              break;
+            }
+
+            case "looks-rare-taker-ask": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const orderId = parsedLog.args["orderHash"].toLowerCase();
+              const orderNonce = parsedLog.args["orderNonce"].toString();
+              const maker = parsedLog.args["maker"].toLowerCase();
+              const taker = parsedLog.args["taker"].toLowerCase();
+              const currency = parsedLog.args["currency"].toLowerCase();
+              const price = parsedLog.args["price"].toLowerCase();
+              const contract = parsedLog.args["collection"].toLowerCase();
+              const tokenId = parsedLog.args["tokenId"].toString();
+              const amount = parsedLog.args["amount"].toString();
+
+              if (![Sdk.Common.Addresses.Weth[config.chainId]].includes(currency)) {
+                // Skip if the payment token is not supported
+                break;
+              }
+
+              fillEvents.push({
+                orderKind: "looks-rare",
+                orderId,
+                orderSide: "sell",
+                maker,
+                taker,
+                price,
+                contract,
+                tokenId,
+                amount,
+                baseEventParams,
+              });
+
+              // Cancel all the other orders of the maker having the same nonce.
+              nonceCancelEvents.push({
+                orderKind: "looks-rare",
+                maker,
+                nonce: orderNonce,
+                baseEventParams,
+              });
+
+              orderInfos.push({
+                context: `filled-${orderId}`,
+                id: orderId,
+                trigger: {
+                  kind: "sale",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+              });
+
+              fillInfos.push({
+                context: orderId,
+                orderId: orderId,
+                orderSide: "sell",
+                contract,
+                tokenId,
+                amount,
+                price,
+                timestamp: baseEventParams.timestamp,
+              });
+
+              break;
+            }
+
+            case "looks-rare-taker-bid": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const orderId = parsedLog.args["orderHash"].toLowerCase();
+              const orderNonce = parsedLog.args["orderNonce"].toString();
+              const maker = parsedLog.args["maker"].toLowerCase();
+              const taker = parsedLog.args["taker"].toLowerCase();
+              const currency = parsedLog.args["currency"].toLowerCase();
+              const price = parsedLog.args["price"].toLowerCase();
+              const contract = parsedLog.args["collection"].toLowerCase();
+              const tokenId = parsedLog.args["tokenId"].toString();
+              const amount = parsedLog.args["amount"].toString();
+
+              if (![Sdk.Common.Addresses.Weth[config.chainId]].includes(currency)) {
+                // Skip if the payment token is not supported
+                break;
+              }
+
+              fillEvents.push({
+                orderKind: "looks-rare",
+                orderId,
+                orderSide: "buy",
+                maker,
+                taker,
+                price,
+                contract,
+                tokenId,
+                amount,
+                baseEventParams,
+              });
+
+              // Cancel all the other orders of the maker having the same nonce.
+              nonceCancelEvents.push({
+                orderKind: "looks-rare",
+                maker,
+                nonce: orderNonce,
+                baseEventParams,
+              });
+
+              orderInfos.push({
+                context: `filled-${orderId}`,
+                id: orderId,
+                trigger: {
+                  kind: "sale",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+              });
+
+              fillInfos.push({
+                context: orderId,
+                orderId: orderId,
+                orderSide: "buy",
+                contract,
+                tokenId,
+                amount,
+                price,
+                timestamp: baseEventParams.timestamp,
+              });
+
+              break;
+            }
+
             // Wyvern V2 is now decomissioned, but we still keep handling
             // its fill event in order to get access to historical sales.
             // This is only relevant when backfilling though.
@@ -657,10 +809,12 @@ export const syncEvents = async (
         }
       }
 
+      // WARNING! Ordering matters (fills should come in front of cancels).
       await Promise.all([
+        es.fills.addEvents(fillEvents),
+        es.nonceCancels.addEvents(nonceCancelEvents, backfill),
         es.bulkCancels.addEvents(bulkCancelEvents, backfill),
         es.cancels.addEvents(cancelEvents),
-        es.fills.addEvents(fillEvents),
         es.ftTransfers.addEvents(ftTransferEvents, backfill),
         es.nftApprovals.addEvents(nftApprovalEvents),
         es.nftTransfers.addEvents(nftTransferEvents, backfill),
@@ -693,9 +847,10 @@ export const syncEvents = async (
 
 export const unsyncEvents = async (block: number, blockHash: string) =>
   Promise.all([
-    es.bulkCancels.removeEvents(block, blockHash),
-    es.cancels.removeEvents(block, blockHash),
     es.fills.removeEvents(block, blockHash),
+    es.bulkCancels.removeEvents(block, blockHash),
+    es.nonceCancels.removeEvents(block, blockHash),
+    es.cancels.removeEvents(block, blockHash),
     es.ftTransfers.removeEvents(block, blockHash),
     es.nftApprovals.removeEvents(block, blockHash),
     es.nftTransfers.removeEvents(block, blockHash),
