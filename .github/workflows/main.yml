@@ -28,10 +28,7 @@ jobs:
         with:
           node-version: 16
       
-      - name: Configure committer
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "<>"
-
-      - name: Bump version
-        uses: qzb/standard-version@v1
+      - name: Standard Version
+        # You may pin to the exact commit or the version.
+        # uses: qzb/standard-version-action@a7d1f3c8e81f96976e1af5f6df576a55b4398d2b
+        uses: qzb/standard-version-action@v1.0.5
