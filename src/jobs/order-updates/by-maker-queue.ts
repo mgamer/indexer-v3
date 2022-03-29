@@ -1,4 +1,5 @@
 import { AddressZero } from "@ethersproject/constants";
+import * as Sdk from "@reservoir0x/sdk";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { idb, pgp } from "@/common/db";
@@ -198,15 +199,64 @@ if (config.doBackgroundWork) {
           }
 
           case "sell-approval": {
-            // We must detect which exchange the approval is for (if any)
+            // We must detect which exchange the approval is for (if any).
+
+            // For "sell" orders we can be sure the associated token set
+            // consists of a single token - otherwise we should probably
+            // use `DISTINCT ON ("o"."id")` - relevant to queries below.
+
+            let result: { id: string }[] = [];
+
+            // LooksRare
+            if (
+              [
+                Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId],
+                Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId],
+              ].includes(data.operator)
+            ) {
+              const kind =
+                data.operator === Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]
+                  ? "erc721"
+                  : "erc1155";
+
+              result = await idb.manyOrNone(
+                `
+                  UPDATE "orders" AS "o" SET
+                    "approval_status" = $/approvalStatus/,
+                    "expiration" = to_timestamp($/expiration/),
+                    "updated_at" = now()
+                  FROM (
+                    SELECT
+                      "o"."id"
+                    FROM "orders" "o"
+                    JOIN "token_sets_tokens" "tst"
+                      ON "o"."token_set_id" = "tst"."token_set_id"
+                    JOIN "contracts" "c"
+                      ON "tst"."contract" = "c"."address"
+                    WHERE "tst"."contract" = $/contract/
+                      AND "c"."kind" = '${kind}'
+                      AND "o"."kind" = 'looks-rare'
+                      AND "o"."maker" = $/maker/
+                      AND "o"."side" = 'sell'
+                      AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
+                      AND "o"."approval_status" != $/approvalStatus/
+                  ) "x"
+                  WHERE "o"."id" = "x"."id"
+                  RETURNING "o"."id"
+                `,
+                {
+                  maker: toBuffer(maker),
+                  contract: toBuffer(data.contract),
+                  approvalStatus: data.approved ? "approved" : "no-approval",
+                  expiration: trigger.txTimestamp,
+                }
+              );
+            }
 
             // Wyvern v2.3
             const proxy = await wyvernV23Utils.getUserProxy(maker);
             if (proxy && proxy === data.operator) {
-              // For "sell" orders we can be sure the associated token set
-              // consists of a single token - otherwise we should probably
-              // use `DISTINCT ON ("o"."id")`.
-              const result = await idb.manyOrNone(
+              result = await idb.manyOrNone(
                 `
                   UPDATE "orders" AS "o" SET
                     "approval_status" = $/approvalStatus/,
@@ -235,16 +285,16 @@ if (config.doBackgroundWork) {
                   expiration: trigger.txTimestamp,
                 }
               );
-
-              // Re-check all affected orders
-              await orderUpdatesById.addToQueue(
-                result.map(({ id }) => ({
-                  context: `${context}-${id}`,
-                  id,
-                  trigger,
-                }))
-              );
             }
+
+            // Re-check all affected orders
+            await orderUpdatesById.addToQueue(
+              result.map(({ id }) => ({
+                context: `${context}-${id}`,
+                id,
+                trigger,
+              }))
+            );
 
             break;
           }

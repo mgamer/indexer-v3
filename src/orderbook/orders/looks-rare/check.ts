@@ -25,7 +25,7 @@ export const offChainCheck = async (
       SELECT kind FROM contracts
       WHERE contracts.address = $/address/
     `,
-    { address: order.params.collection }
+    { address: toBuffer(order.params.collection) }
   );
 
   // Check: order has a valid target
