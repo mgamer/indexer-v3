@@ -23,6 +23,11 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
       
+      - uses: actions/setup-node@v1
+        name: Set up Node.js
+        with:
+          node-version: 16
+      
       - name: Configure committer
         run: |
           git config user.name "GitHub Actions Bot"
