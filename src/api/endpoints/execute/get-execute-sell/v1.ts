@@ -11,6 +11,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as wyvernV23Utils from "@/orderbook/orders/wyvern-v2.3/utils";
 import { offChainCheck } from "@/orderbook/orders/wyvern-v2.3/check";
 
@@ -228,6 +229,10 @@ export const getExecuteSellV1Options: RouteOptions = {
 
                 break;
               }
+
+              default: {
+                throw Boom.badData("Could not generate matching order");
+              }
             }
           }
 
@@ -245,6 +250,100 @@ export const getExecuteSellV1Options: RouteOptions = {
                 status: !wethApprovalTx ? "complete" : "incomplete",
                 data: wethApprovalTx,
               },
+              {
+                ...steps[2],
+                status: !nftApprovalTx ? "complete" : "incomplete",
+                data: nftApprovalTx,
+              },
+              {
+                ...steps[3],
+                status: "incomplete",
+                data: fillTx,
+              },
+              {
+                ...steps[4],
+                status: "incomplete",
+                data: {
+                  endpoint: `/orders/executed/v1?id=${bestOrderResult.id}`,
+                  method: "GET",
+                },
+              },
+            ],
+          };
+        }
+
+        case "looks-rare": {
+          const order = new Sdk.LooksRare.Order(config.chainId, bestOrderResult.raw_data);
+
+          // Create matching order.
+          const sellOrder = order.buildMatching(query.taker, { tokenId });
+
+          let nftApprovalTx: TxData | undefined;
+
+          // Check: order has a valid target
+          const kind = await commonHelpers.getContractKind(order.params.collection);
+          if (!kind) {
+            throw new Error("invalid-target");
+          }
+
+          const operator =
+            kind === "erc721"
+              ? Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]
+              : Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId];
+
+          // Check the order's fillability.
+          try {
+            // Check: maker has enough balance
+            const nftBalance = await commonHelpers.getNftBalance(
+              order.params.collection,
+              order.params.tokenId,
+              order.params.signer
+            );
+            if (nftBalance.lt(1)) {
+              throw new Error("no-balance");
+            }
+
+            // Check: maker has set the proper approval
+            const nftApproval = await commonHelpers.getNftApproval(
+              order.params.collection,
+              order.params.signer,
+              operator
+            );
+            if (!nftApproval) {
+              // Re-validate the approval on-chain to handle some edge-cases
+              if (!(await contract.isApproved(order.params.signer, operator))) {
+                throw new Error("no-approval");
+              }
+            }
+          } catch (error: any) {
+            switch (error.message) {
+              case "no-balance": {
+                // We cannot do anything if the user doesn't own the sold token.
+                throw Boom.badData("Taker does not own the sold token");
+              }
+
+              case "no-approval": {
+                // Generate an approval transaction
+                nftApprovalTx = (
+                  kind === "erc721"
+                    ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.collection)
+                    : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.collection)
+                ).approveTransaction(query.maker, operator);
+
+                break;
+              }
+
+              default: {
+                throw Boom.badData("Could not generate matching order");
+              }
+            }
+          }
+
+          const exchange = new Sdk.LooksRare.Exchange(config.chainId);
+          const fillTx = exchange.matchTransaction(query.taker, order, sellOrder);
+
+          return {
+            steps: [
               {
                 ...steps[2],
                 status: !nftApprovalTx ? "complete" : "incomplete",
