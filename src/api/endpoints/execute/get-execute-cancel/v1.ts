@@ -116,6 +116,33 @@ export const getExecuteCancelV1Options: RouteOptions = {
           };
         }
 
+        case "looks-rare": {
+          const order = new Sdk.LooksRare.Order(config.chainId, orderResult.raw_data);
+
+          const exchange = new Sdk.LooksRare.Exchange(config.chainId);
+          const cancelTx = exchange.cancelTransaction(query.maker, order);
+
+          const steps = generateSteps(order.params.isOrderAsk ? "sell" : "buy");
+
+          return {
+            steps: [
+              {
+                ...steps[0],
+                status: "incomplete",
+                data: cancelTx,
+              },
+              {
+                ...steps[1],
+                status: "incomplete",
+                data: {
+                  endpoint: `/orders/executed/v1?id=${order.hash()}`,
+                  method: "GET",
+                },
+              },
+            ],
+          };
+        }
+
         default: {
           throw Boom.notImplemented("Unsupported order kind");
         }
