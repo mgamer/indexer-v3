@@ -96,23 +96,41 @@ export const getExecuteBuyV1Options: RouteOptions = {
         },
       ];
 
+      const checkTakerEthBalance = async (taker: string, price: string) => {
+        // Check the taker's Eth balance.
+        const balance = await baseProvider.getBalance(taker);
+        if (bn(balance).lt(price)) {
+          // We cannot do anything if the taker doesn't have sufficient balance.
+          throw Boom.badData("Taker does not have sufficient balance");
+        }
+      };
+
       let fillTx: TxData | undefined;
       switch (bestOrderResult.kind) {
         case "wyvern-v2.3": {
           const order = new Sdk.WyvernV23.Order(config.chainId, bestOrderResult.raw_data);
 
-          // Check the taker's Eth balance.
-          const balance = await baseProvider.getBalance(query.taker);
-          if (bn(balance).lt(order.params.basePrice)) {
-            // We cannot do anything if the taker doesn't have sufficient balance.
-            throw Boom.badData("Taker does not have sufficient balance");
-          }
+          await checkTakerEthBalance(query.taker, order.params.basePrice);
 
           // Create matching order.
           const buyOrder = order.buildMatching(query.taker, { tokenId });
 
           const exchange = new Sdk.WyvernV23.Exchange(config.chainId);
           fillTx = exchange.matchTransaction(query.taker, buyOrder, order);
+
+          break;
+        }
+
+        case "looks-rare": {
+          const order = new Sdk.LooksRare.Order(config.chainId, bestOrderResult.raw_data);
+
+          await checkTakerEthBalance(query.taker, order.params.price);
+
+          // Create matching order.
+          const buyOrder = order.buildMatching(query.taker, { tokenId });
+
+          const exchange = new Sdk.LooksRare.Exchange(config.chainId);
+          fillTx = exchange.matchTransaction(query.taker, order, buyOrder);
 
           break;
         }

@@ -1,9 +1,8 @@
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseOrderInfo } from "@reservoir0x/sdk/dist/wyvern-v2.3/builders/base";
 
-import { idb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
-import { bn, toBuffer } from "@/common/utils";
+import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as utils from "@/orderbook/orders/wyvern-v2.3/utils";
 
 // TODO: Add support for on-chain check
@@ -26,59 +25,29 @@ export const offChainCheck = async (
     throw new Error("unknown-format");
   }
 
-  const localTarget = await idb.oneOrNone(
-    `
-      SELECT "c"."kind" FROM "contracts" "c"
-      WHERE "c"."address" = $/address/
-    `,
-    { address: toBuffer(info.contract) }
-  );
-
   // Check: order has a valid target
-  const contractKind = order.params.kind?.split("-")[0];
-  if (!localTarget || localTarget.kind !== contractKind) {
+  const kind = await commonHelpers.getContractKind(info.contract);
+  if (!kind || kind !== order.params.kind?.split("-")[0]) {
     throw new Error("invalid-target");
   }
 
   // Check: order has a valid nonce
-  const nonceResult = await idb.oneOrNone(
-    `
-      SELECT coalesce(
-        (
-          SELECT min_nonce FROM bulk_cancel_events
-          WHERE order_kind = 'wyvern-v2.3'
-            AND maker = $/maker/
-          ORDER BY min_nonce DESC
-          LIMIT 1
-        ),
-        0
-      ) AS nonce
-    `,
-    { maker: toBuffer(order.params.maker) }
-  );
-  if (!nonceResult || nonceResult.nonce !== order.params.nonce) {
+  const minNonce = await commonHelpers.getMinNonce("looks-rare", order.params.maker);
+  if (!minNonce.eq(order.params.nonce)) {
     throw new Error("invalid-nonce");
   }
 
   if (order.params.side === Sdk.WyvernV23.Types.OrderSide.BUY) {
     // Check: maker has enough balance
-    const balanceResult = await idb.oneOrNone(
-      `
-        SELECT "fb"."amount" FROM "ft_balances" "fb"
-        WHERE "fb"."contract" = $/contract/
-          AND "fb"."owner" = $/owner/
-      `,
-      {
-        contract: toBuffer(order.params.paymentToken),
-        owner: toBuffer(order.params.maker),
-      }
+    const ftBalance = await commonHelpers.getFtBalance(
+      order.params.paymentToken,
+      order.params.maker
     );
-    if (!balanceResult || bn(balanceResult.amount).lt(order.params.basePrice)) {
+    if (ftBalance.lt(order.getMatchingPrice())) {
       throw new Error("no-balance");
     }
 
-    // Check: maker has set the proper approval
-    // TODO: above check
+    // TODO: Check: maker has set the proper approval
   } else {
     // Check: maker has initialized a proxy
     const proxy = await utils.getUserProxy(order.params.maker);
@@ -87,40 +56,22 @@ export const offChainCheck = async (
     }
 
     // Check: maker has enough balance
-    const balanceResult = await idb.oneOrNone(
-      `
-        SELECT "nb"."amount" FROM "nft_balances" "nb"
-        WHERE "nb"."contract" = $/contract/
-          AND "nb"."token_id" = $/tokenId/
-          AND "nb"."owner" = $/owner/
-      `,
-      {
-        contract: toBuffer(info.contract),
-        tokenId: (info as BaseOrderInfo & { tokenId: string }).tokenId,
-        owner: toBuffer(order.params.maker),
-      }
+    const nftBalance = await commonHelpers.getNftBalance(
+      info.contract,
+      (info as BaseOrderInfo & { tokenId: string }).tokenId,
+      order.params.maker
     );
-    if (!balanceResult || bn(balanceResult.amount).lt(1)) {
+    if (nftBalance.lt(1)) {
       throw new Error("no-balance");
     }
 
     // Check: maker has set the proper approval
-    const approvalResult = await idb.oneOrNone(
-      `
-        SELECT "nae"."approved" FROM "nft_approval_events" "nae"
-        WHERE "nae"."address" = $/address/
-          AND "nae"."owner" = $/owner/
-          AND "nae"."operator" = $/operator/
-        ORDER BY "nae"."block" DESC
-        LIMIT 1
-      `,
-      {
-        address: toBuffer(info.contract),
-        owner: toBuffer(order.params.maker),
-        operator: toBuffer(proxy),
-      }
+    const nftApproval = await commonHelpers.getNftApproval(
+      info.contract,
+      order.params.maker,
+      proxy
     );
-    if (!approvalResult || !approvalResult.approved) {
+    if (!nftApproval) {
       if (options?.onChainSellApprovalRecheck) {
         // Re-validate the approval on-chain to handle some edge-cases
         const contract = order.params.kind?.includes("erc721")
