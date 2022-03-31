@@ -270,6 +270,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/tokens/v3",
+    options: tokensEndpoints.getTokensV3Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/tokens/details/v1",
     options: tokensEndpoints.getTokensDetailsV1Options,
   });
@@ -278,6 +284,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/tokens/details/v2",
     options: tokensEndpoints.getTokensDetailsV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/tokens/details/v3",
+    options: tokensEndpoints.getTokensDetailsV3Options,
   });
 
   server.route({

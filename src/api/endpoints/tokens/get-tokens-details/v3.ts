@@ -15,14 +15,15 @@ import {
   toBuffer,
 } from "@/common/utils";
 import { getOrderSourceMetadata } from "@/orderbook/orders/utils";
+import _ from "lodash";
 
-const version = "v2";
+const version = "v3";
 
-export const getTokensDetailsV2Options: RouteOptions = {
+export const getTokensDetailsV3Options: RouteOptions = {
   description: "Get one or more tokens with full details",
   notes:
     "Get a list of tokens with full metadata. This is useful for showing a single token page, or scenarios that require more metadata. If you don't need this metadata, you should use the <a href='#/tokens/getTokensV1'>tokens</a> API, which is much faster.",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {
       order: 22,
@@ -41,12 +42,22 @@ export const getTokensDetailsV2Options: RouteOptions = {
         .description(
           "Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
-      token: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-f0-9]{40}:[0-9]+$/)
-        .description(
-          "Filter to a particular token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+      tokens: Joi.alternatives().try(
+        Joi.array().items(
+          Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-f0-9]{40}:[0-9]+$/)
+            .description(
+              "Filter to a particular tokens, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+            )
         ),
+        Joi.string()
+          .lowercase()
+          .pattern(/^0x[a-f0-9]{40}:[0-9]+$/)
+          .description(
+            "Filter to a particular tokens, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+          )
+      ),
       tokenSetId: Joi.string()
         .lowercase()
         .description(
@@ -68,8 +79,8 @@ export const getTokensDetailsV2Options: RouteOptions = {
         Joi.string().pattern(base64Regex)
       ),
     })
-      .or("collection", "contract", "token", "tokenSetId")
-      .oxor("collection", "contract", "token", "tokenSetId")
+      .or("collection", "contract", "tokens", "tokenSetId")
+      .oxor("collection", "contract", "tokens", "tokenSetId")
       .with("attributes", "collection"),
   },
   response: {
@@ -90,6 +101,8 @@ export const getTokensDetailsV2Options: RouteOptions = {
             collection: Joi.object({
               id: Joi.string().allow(null),
               name: Joi.string().allow(null, ""),
+              image: Joi.string().allow(null, ""),
+              slug: Joi.string().allow(null, ""),
             }),
             lastBuy: {
               value: Joi.number().unsafe().allow(null),
@@ -152,6 +165,8 @@ export const getTokensDetailsV2Options: RouteOptions = {
           "t"."image",
           "t"."collection_id",
           "c"."name" as "collection_name",
+          ("c".metadata ->> 'imageUrl')::TEXT AS "collection_image",
+          "c"."slug",
           "t"."last_buy_value",
           "t"."last_buy_timestamp",
           "t"."last_sell_value",
@@ -230,21 +245,37 @@ export const getTokensDetailsV2Options: RouteOptions = {
       if (query.collection) {
         conditions.push(`"t"."collection_id" = $/collection/`);
       }
+
       if (query.contract) {
         (query as any).contract = toBuffer(query.contract);
         conditions.push(`"t"."contract" = $/contract/`);
       }
-      if (query.token) {
-        const [contract, tokenId] = query.token.split(":");
 
-        (query as any).contract = toBuffer(contract);
-        (query as any).tokenId = tokenId;
-        conditions.push(`"t"."contract" = $/contract/`);
-        conditions.push(`"t"."token_id" = $/tokenId/`);
+      if (query.tokens) {
+        if (!_.isArray(query.tokens)) {
+          query.tokens = [query.tokens];
+        }
+
+        for (const token of query.tokens) {
+          const [contract, tokenId] = token.split(":");
+          const tokensFilter = `('${_.replace(contract, "0x", "\\x")}', '${tokenId}')`;
+
+          if (_.isUndefined((query as any).tokensFilter)) {
+            (query as any).tokensFilter = [];
+          }
+
+          (query as any).tokensFilter.push(tokensFilter);
+        }
+
+        (query as any).tokensFilter = _.join((query as any).tokensFilter, ",");
+
+        conditions.push(`("t"."contract", "t"."token_id") IN ($/tokensFilter:raw/)`);
       }
+
       if (query.tokenSetId) {
         conditions.push(`"tst"."token_set_id" = $/tokenSetId/`);
       }
+
       if (query.source) {
         if (query.source === AddressZero) {
           conditions.push(
@@ -380,6 +411,8 @@ export const getTokensDetailsV2Options: RouteOptions = {
           collection: {
             id: r.collection_id,
             name: r.collection_name,
+            image: r.collection_image,
+            slug: r.slug,
           },
           lastBuy: {
             value: r.last_buy_value ? formatEth(r.last_buy_value) : null,
