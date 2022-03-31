@@ -443,7 +443,7 @@ export const syncEvents = async (
               const newMinNonce = parsedLog.args["newMinNonce"].toString();
 
               bulkCancelEvents.push({
-                orderKind: "wyvern-v2.3",
+                orderKind: "looks-rare",
                 maker,
                 minNonce: newMinNonce,
                 baseEventParams,
