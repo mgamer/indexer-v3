@@ -160,6 +160,22 @@ export const save = async (
 
       const side = order.params.isOrderAsk ? "sell" : "buy";
 
+      // Handle: fees
+      let feeBps = 200;
+
+      // Handle: royalties
+      const royaltiesResult = await idb.oneOrNone(
+        `
+          SELECT collections.royalties FROM collections
+          WHERE collections.contract = $/contract/
+          LIMIT 1
+        `,
+        { contract: toBuffer(order.params.collection) }
+      );
+      for (const { bps } of royaltiesResult?.royalties || []) {
+        feeBps += Number(bps);
+      }
+
       // Handle: price and value
       const price = order.params.price;
       let value: string;
@@ -168,18 +184,15 @@ export const save = async (
         // is best for UX to show the user exactly what they're going
         // to receive on offer acceptance.
         value = bn(price)
-          .sub(bn(price).mul(bn(200)).div(10000))
+          .sub(bn(price).mul(bn(feeBps)).div(10000))
           .toString();
       } else {
         // For sell orders, the value is the same as the price
         value = price;
       }
 
-      // Handle: fees
-      const feeBps = 200;
-
       // Handle: source and fees breakdown
-      const source = "0x5924a28caaf1cc016617874a2f0c3710d881f3c1";
+      const source = metadata.source ?? "0x5924a28caaf1cc016617874a2f0c3710d881f3c1";
       const feeBreakdown = [
         {
           kind: "marketplace",
