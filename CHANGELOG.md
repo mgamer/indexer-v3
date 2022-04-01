@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.3.1 (2022-03-31)
+
+## 5.3.0 (2022-03-31)
+
+
+### Features
+
+* support multiple tokens in token/tokens details ([#253](https://github.com/reservoirprotocol/indexer-v3/issues/253)) ([9c0219f](https://github.com/reservoirprotocol/indexer-v3/commit/9c0219fb3b05bb5aad65a9231741bbec30b37d59))
+
 ### 5.2.1 (2022-03-29)
 
 
