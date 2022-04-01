@@ -56,6 +56,11 @@ if (config.doBackgroundWork) {
       const pendingRefreshTokens = new PendingRefreshTokens(method);
       const tokens = await pendingRefreshTokens.get(count);
 
+      // If no more tokens
+      if (_.isEmpty(tokens)) {
+        return;
+      }
+
       // Build the query string
       for (const token of tokens) {
         queryParams.append("token", token);
