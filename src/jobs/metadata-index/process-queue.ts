@@ -30,7 +30,7 @@ export const queue = new Queue(QUEUE_NAME, {
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
 // BACKGROUND WORKER ONLY
-if (config.doBackgroundWork) {
+if (!config.doBackgroundWork) {
   type TokenMetadata = {
     contract: string;
     tokenId: string;
