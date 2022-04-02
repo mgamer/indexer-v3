@@ -42,20 +42,20 @@ export const getTokensV3Options: RouteOptions = {
         ),
       tokens: Joi.alternatives().try(
         Joi.array()
-          .max(20)
+          .max(50)
           .items(
             Joi.string()
               .lowercase()
               .pattern(/^0x[a-f0-9]{40}:[0-9]+$/)
-              .description(
-                "Filter to a particular tokens, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
-              )
+          )
+          .description(
+            "Filter to one or more tokens, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
           ),
         Joi.string()
           .lowercase()
           .pattern(/^0x[a-f0-9]{40}:[0-9]+$/)
           .description(
-            "Filter to a particular tokens, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+            "Filter to one or more tokens, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
           )
       ),
       tokenSetId: Joi.string()
