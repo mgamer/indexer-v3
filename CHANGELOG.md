@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.3.3 (2022-04-01)
+
+
+### Bug Fixes
+
+* check token result ([d00118a](https://github.com/reservoirprotocol/indexer-v3/commit/d00118a445693130fca791e6c58340cc7ca9a8b7))
+
+### 5.3.2 (2022-04-01)
+
 ### 5.3.1 (2022-03-31)
 
 ## 5.3.0 (2022-03-31)
