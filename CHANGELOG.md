@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.5.2 (2022-04-02)
+
+
+### Bug Fixes
+
+* allow getting up to 50 tokens by id ([42ef098](https://github.com/reservoirprotocol/indexer-v3/commit/42ef098ec0280132bd4f51817a99948b6f5313bc))
+
 ### 5.5.1 (2022-04-02)
 
 ## 5.5.0 (2022-04-02)
