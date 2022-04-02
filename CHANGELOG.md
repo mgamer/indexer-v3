@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.4.0 (2022-04-02)
+
+
+### Features
+
+* don't mix collections when refreshing data ([#254](https://github.com/reservoirprotocol/indexer-v3/issues/254)) ([e7ec960](https://github.com/reservoirprotocol/indexer-v3/commit/e7ec960101bcbdeca0ebe5100f355f2a7fa137a8))
+
 ### 5.3.3 (2022-04-01)
 
 
