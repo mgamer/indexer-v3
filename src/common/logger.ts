@@ -5,7 +5,9 @@ import { config } from "@/config/index";
 
 import { networkInterfaces } from "os";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const nets: any = networkInterfaces();
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const results: any = {};
 
 for (const name of Object.keys(nets)) {
