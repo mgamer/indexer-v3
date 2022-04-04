@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import axios from "axios";
 import _ from "lodash";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
@@ -47,18 +49,26 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { method, collection } = job.data;
+      const { method } = job.data;
       const count = method == "rarible" ? 50 : 20;
       const queryParams = new URLSearchParams();
       queryParams.append("method", method);
 
       // Get the tokens from the list
       const pendingRefreshTokens = new PendingRefreshTokens(method);
-      const tokens = await pendingRefreshTokens.get(count);
+      const refreshTokens = await pendingRefreshTokens.get(count);
+      const tokenToCollections = {};
 
-      // Build the query string
-      for (const token of tokens) {
-        queryParams.append("token", token);
+      // If no more tokens
+      if (_.isEmpty(refreshTokens)) {
+        return;
+      }
+
+      // Build the query string and store the collection for each token
+      for (const refreshToken of refreshTokens) {
+        queryParams.append("token", `${refreshToken.contract}:${refreshToken.tokenId}`);
+        (tokenToCollections as any)[`${refreshToken.contract}:${refreshToken.tokenId}`] =
+          refreshToken.collection;
       }
 
       // Get the metadata for the tokens
@@ -74,13 +84,13 @@ if (config.doBackgroundWork) {
       await metadataIndexWrite.addToQueue(
         metadata.map((m) => ({
           ...m,
-          collection,
+          collection: (tokenToCollections as any)[`${m.contract}:${m.tokenId}`],
         }))
       );
 
       // If there are potentially more tokens to process trigger another job
-      if (_.size(tokens) == count) {
-        await addToQueue(method, collection);
+      if (_.size(refreshTokens) == count) {
+        await addToQueue(method);
       }
     },
     { connection: redis.duplicate(), concurrency: 2 }
@@ -91,6 +101,6 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (method: string, collection: string) => {
-  await queue.add(randomUUID(), { method, collection });
+export const addToQueue = async (method: string) => {
+  await queue.add(randomUUID(), { method });
 };

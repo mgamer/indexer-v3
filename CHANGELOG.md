@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.5.3 (2022-04-04)
+
+### 5.5.2 (2022-04-02)
+
+
+### Bug Fixes
+
+* allow getting up to 50 tokens by id ([42ef098](https://github.com/reservoirprotocol/indexer-v3/commit/42ef098ec0280132bd4f51817a99948b6f5313bc))
+
+### 5.5.1 (2022-04-02)
+
+## 5.5.0 (2022-04-02)
+
+
+### Features
+
+* disable queue ([bfd04ce](https://github.com/reservoirprotocol/indexer-v3/commit/bfd04ce850e4439bfb0ae297b142b0cb4f8669cd))
+
+## 5.4.0 (2022-04-02)
+
+
+### Features
+
+* don't mix collections when refreshing data ([#254](https://github.com/reservoirprotocol/indexer-v3/issues/254)) ([e7ec960](https://github.com/reservoirprotocol/indexer-v3/commit/e7ec960101bcbdeca0ebe5100f355f2a7fa137a8))
+
+### 5.3.3 (2022-04-01)
+
+
+### Bug Fixes
+
+* check token result ([d00118a](https://github.com/reservoirprotocol/indexer-v3/commit/d00118a445693130fca791e6c58340cc7ca9a8b7))
+
 ### 5.3.2 (2022-04-01)
 
 ### 5.3.1 (2022-03-31)

@@ -40,6 +40,12 @@ export const getSalesBulkV1Options: RouteOptions = {
         .description(
           "Filter to a particular token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
+      startTimestamp: Joi.number().description(
+        "Get events after a particular unix timestamp (inclusive)"
+      ),
+      endTimestamp: Joi.number().description(
+        "Get events before a particular unix timestamp (inclusive)"
+      ),
       limit: Joi.number().integer().min(1).max(1000).default(100),
       continuation: Joi.alternatives().try(
         Joi.string().pattern(/^(\d+)_(\d+)_(\d+)$/),
@@ -82,20 +88,21 @@ export const getSalesBulkV1Options: RouteOptions = {
   handler: async (request: Request) => {
     const query = request.query as any;
 
-    let paginationFilter = "";
-    let tokenFilter = "";
-
     // Filters
+    const conditions: string[] = [];
     if (query.contract) {
       (query as any).contract = toBuffer(query.contract);
-      tokenFilter = `WHERE fill_events_2.contract = $/contract/`;
+      conditions.push(`fill_events_2.contract = $/contract/`);
     }
+
     if (query.token) {
       const [contract, tokenId] = query.token.split(":");
 
       (query as any).contract = toBuffer(contract);
       (query as any).tokenId = tokenId;
-      tokenFilter = `WHERE fill_events_2.contract = $/contract/ AND fill_events_2.token_id = $/tokenId/`;
+      conditions.push(
+        `fill_events_2.contract = $/contract/ AND fill_events_2.token_id = $/tokenId/`
+      );
     }
 
     if (query.continuation) {
@@ -107,10 +114,27 @@ export const getSalesBulkV1Options: RouteOptions = {
       (query as any).logIndex = logIndex;
       (query as any).batchIndex = batchIndex;
 
-      paginationFilter = `
-        ${tokenFilter == "" ? "WHERE " : " AND "}
+      conditions.push(`
         (fill_events_2.block, fill_events_2.log_index, fill_events_2.batch_index) < ($/block/, $/logIndex/, $/batchIndex/)
-      `;
+      `);
+    }
+
+    // We default in the code so that these values don't appear in the docs
+    if (!query.startTimestamp) {
+      query.startTimestamp = 0;
+    }
+    if (!query.endTimestamp) {
+      query.endTimestamp = 9999999999;
+    }
+
+    conditions.push(`
+      (fill_events_2.timestamp >= $/startTimestamp/ AND
+      fill_events_2.timestamp <= $/endTimestamp/)
+    `);
+
+    let conditionsRendered = "";
+    if (conditions.length) {
+      conditionsRendered = "WHERE " + conditions.join(" AND ");
     }
 
     try {
@@ -132,8 +156,7 @@ export const getSalesBulkV1Options: RouteOptions = {
             fill_events_2.log_index,
             fill_events_2.batch_index
           FROM fill_events_2
-            ${tokenFilter}
-            ${paginationFilter}
+            ${conditionsRendered}            
           ORDER BY
             fill_events_2.block DESC,
             fill_events_2.log_index DESC,

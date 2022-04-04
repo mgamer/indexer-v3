@@ -48,6 +48,12 @@ export const getSalesV3Options: RouteOptions = {
       attributes: Joi.object()
         .unknown()
         .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
+      startTimestamp: Joi.number().description(
+        "Get events after a particular unix timestamp (inclusive)"
+      ),
+      endTimestamp: Joi.number().description(
+        "Get events before a particular unix timestamp (inclusive)"
+      ),
       limit: Joi.number().integer().min(1).max(100).default(20),
       continuation: Joi.alternatives().try(
         Joi.string().pattern(/^(\d+)_(\d+)_(\d+)$/),
@@ -169,6 +175,19 @@ export const getSalesV3Options: RouteOptions = {
       `;
     }
 
+    // We default in the code so that these values don't appear in the docs
+    if (!query.startTimestamp) {
+      query.startTimestamp = 0;
+    }
+    if (!query.endTimestamp) {
+      query.endTimestamp = 9999999999;
+    }
+
+    const timestampFilter = `
+      AND (fill_events_2.timestamp >= $/startTimestamp/ AND
+      fill_events_2.timestamp <= $/endTimestamp/)
+    `;
+
     try {
       const baseQuery = `
         SELECT
@@ -197,6 +216,7 @@ export const getSalesV3Options: RouteOptions = {
             ${collectionFilter}
             ${tokenFilter}
             ${paginationFilter}
+            ${timestampFilter}
           ORDER BY
             fill_events_2.block DESC,
             fill_events_2.log_index DESC,
