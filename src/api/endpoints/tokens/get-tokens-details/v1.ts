@@ -6,7 +6,7 @@ import Joi from "joi";
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
-import { getOrderSourceMetadata } from "@/orderbook/orders/utils";
+import { Sources } from "@/models/sources";
 
 const version = "v1";
 
@@ -263,55 +263,65 @@ export const getTokensDetailsV1Options: RouteOptions = {
       baseQuery += ` LIMIT $/limit/`;
 
       const result = await edb.manyOrNone(baseQuery, query).then((result) =>
-        result.map((r) => ({
-          token: {
-            contract: fromBuffer(r.contract),
-            tokenId: r.token_id,
-            name: r.name,
-            description: r.description,
-            image: r.image,
-            collection: {
-              id: r.collection_id,
-              name: r.collection_name,
+        result.map(async (r) => {
+          const sources = new Sources();
+          const source = r.floor_sell_source_id
+            ? await sources.get(
+                fromBuffer(r.floor_sell_source_id),
+                fromBuffer(r.contract),
+                r.token_id
+              )
+            : null;
+
+          return {
+            token: {
+              contract: fromBuffer(r.contract),
+              tokenId: r.token_id,
+              name: r.name,
+              description: r.description,
+              image: r.image,
+              collection: {
+                id: r.collection_id,
+                name: r.collection_name,
+              },
+              lastBuy: {
+                value: r.last_buy_value ? formatEth(r.last_buy_value) : null,
+                timestamp: r.last_buy_timestamp,
+              },
+              lastSell: {
+                value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
+                timestamp: r.last_sell_timestamp,
+              },
+              owner: fromBuffer(r.owner),
+              attributes: r.attributes || [],
             },
-            lastBuy: {
-              value: r.last_buy_value ? formatEth(r.last_buy_value) : null,
-              timestamp: r.last_buy_timestamp,
+            market: {
+              floorAsk: {
+                id: r.floor_sell_id,
+                price: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+                maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
+                validFrom: r.floor_sell_valid_from,
+                validUntil: r.floor_sell_value ? r.floor_sell_valid_until : null,
+                source: {
+                  id: source?.metadata.id,
+                  name: source?.metadata.name,
+                  icon: source?.metadata.icon,
+                  url: source?.metadata.url,
+                },
+              },
+              topBid: {
+                id: r.top_buy_id,
+                value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+                maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
+                validFrom: r.top_buy_valid_from,
+                validUntil: r.top_buy_value ? r.top_buy_valid_until : null,
+              },
             },
-            lastSell: {
-              value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
-              timestamp: r.last_sell_timestamp,
-            },
-            owner: fromBuffer(r.owner),
-            attributes: r.attributes || [],
-          },
-          market: {
-            floorAsk: {
-              id: r.floor_sell_id,
-              price: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-              maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
-              validFrom: r.floor_sell_valid_from,
-              validUntil: r.floor_sell_value ? r.floor_sell_valid_until : null,
-              source: r.floor_sell_id
-                ? getOrderSourceMetadata(
-                    r.floor_sell_source_id ? fromBuffer(r.floor_sell_source_id) : null,
-                    fromBuffer(r.contract),
-                    r.token_id
-                  )
-                : null,
-            },
-            topBid: {
-              id: r.top_buy_id,
-              value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-              maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
-              validFrom: r.top_buy_valid_from,
-              validUntil: r.top_buy_value ? r.top_buy_valid_until : null,
-            },
-          },
-        }))
+          };
+        })
       );
 
-      return { tokens: result };
+      return { tokens: await Promise.all(result) };
     } catch (error) {
       logger.error(`get-tokens-details-${version}-handler`, `Handler failure: ${error}`);
       throw error;
