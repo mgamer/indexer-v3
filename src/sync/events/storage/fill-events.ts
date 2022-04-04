@@ -5,7 +5,7 @@ import { OrderKind } from "@/orderbook/orders";
 
 export type Event = {
   orderKind: OrderKind;
-  orderId: string;
+  orderId?: string;
   orderSide: "buy" | "sell";
   maker: string;
   taker: string;
@@ -26,7 +26,7 @@ type DbEvent = {
   timestamp: number;
   batch_index: number;
   order_kind: OrderKind;
-  order_id: string;
+  order_id: string | null;
   order_side: "buy" | "sell";
   maker: Buffer;
   taker: Buffer;
@@ -49,7 +49,7 @@ export const addEvents = async (events: Event[]) => {
       timestamp: event.baseEventParams.timestamp,
       batch_index: event.baseEventParams.batchIndex,
       order_kind: event.orderKind,
-      order_id: event.orderId,
+      order_id: event.orderId || null,
       order_side: event.orderSide,
       maker: toBuffer(event.maker),
       taker: toBuffer(event.taker),
@@ -88,47 +88,66 @@ export const addEvents = async (events: Event[]) => {
 
     // Atomically insert the fill events and update order statuses
     queries.push(`
-      WITH "x" AS (
-        INSERT INTO "fill_events_2" (
-          "address",
-          "block",
-          "block_hash",
-          "tx_hash",
-          "tx_index",
-          "log_index",
-          "timestamp",
-          "batch_index",
-          "order_kind",
-          "order_id",
-          "order_side",
-          "maker",
-          "taker",
-          "price",
-          "contract",
-          "token_id",
-          "amount"
+      WITH x AS (
+        INSERT INTO fill_events_2 (
+          address,
+          block,
+          block_hash,
+          tx_hash,
+          tx_index,
+          log_index,
+          timestamp,
+          batch_index,
+          order_kind,
+          order_id,
+          order_side,
+          maker,
+          taker,
+          price,
+          contract,
+          token_id,
+          amount
         ) VALUES ${pgp.helpers.values(fillValues, columns)}
         ON CONFLICT DO NOTHING
-        RETURNING "order_kind", "order_id", "timestamp"
+        RETURNING
+          fill_events_2.order_kind,
+          fill_events_2.order_id,
+          fill_events_2.timestamp,
+          fill_events_2.amount
       )
-      INSERT INTO "orders" (
-        "id",
-        "kind",
-        "fillability_status",
-        "expiration"
+      INSERT INTO orders (
+        id,
+        kind,
+        quantity_filled,
+        fillability_status,
+        expiration
       ) (
         SELECT
-          "x"."order_id",
-          "x"."order_kind",
+          x.order_id,
+          x.order_kind,
+          x.amount,
           'filled'::order_fillability_status_t,
-          to_timestamp("x"."timestamp") AS "expiration"
-        FROM "x"
+          to_timestamp(x.timestamp)
+        FROM x
+        WHERE x.order_id IS NOT NULL
       )
-      ON CONFLICT ("id") DO
+      ON CONFLICT (id) DO
       UPDATE SET
-        "fillability_status" = 'filled',
-        "expiration" = EXCLUDED."expiration",
-        "updated_at" = now()
+        fillability_status = (
+          CASE
+            WHEN quantity_remaining <= EXCLUDED.amount THEN 'filled'
+            ELSE fillability_status
+          END
+        ),
+        quantity_remaining = quantity_remaining - EXCLUDED.amount,
+        quantity_filled = quantity_filled + EXCLUDED.amount,
+        expiration = (
+          CASE
+            WHEN quantity_remaining <= EXCLUDED.amount THEN EXCLUDED.expiration
+            ELSE expiration
+          END
+        ),
+        updated_at = now()
     `);
   }
 

@@ -4,6 +4,7 @@ import * as erc721 from "@/events-sync/data/erc721";
 import * as erc1155 from "@/events-sync/data/erc1155";
 import * as weth from "@/events-sync/data/weth";
 import * as looksRare from "@/events-sync/data/looks-rare";
+import * as openDao from "@/events-sync/data/opendao";
 import * as wyvernV2 from "@/events-sync/data/wyvern-v2";
 import * as wyvernV23 from "@/events-sync/data/wyvern-v2.3";
 
@@ -27,7 +28,11 @@ export type EventDataKind =
   | "looks-rare-cancel-all-orders"
   | "looks-rare-cancel-multiple-orders"
   | "looks-rare-taker-ask"
-  | "looks-rare-taker-bid";
+  | "looks-rare-taker-bid"
+  | "opendao-erc721-order-cancelled"
+  | "opendao-erc1155-order-cancelled"
+  | "opendao-erc721-order-filled"
+  | "opendao-erc1155-order-filled";
 
 export type EventData = {
   kind: EventDataKind;
@@ -55,6 +60,10 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       wyvernV23.orderCancelled,
       wyvernV23.ordersMatched,
       wyvernV23.nonceIncremented,
+      openDao.erc721OrderCancelled,
+      openDao.erc1155OrderCancelled,
+      openDao.erc721OrderFilled,
+      openDao.erc1155OrderFilled,
     ];
   } else {
     return (
@@ -99,6 +108,14 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return looksRare.takerAsk;
     case "looks-rare-taker-bid":
       return looksRare.takerBid;
+    case "opendao-erc721-order-cancelled":
+      return openDao.erc721OrderCancelled;
+    case "opendao-erc1155-order-cancelled":
+      return openDao.erc1155OrderCancelled;
+    case "opendao-erc721-order-filled":
+      return openDao.erc721OrderFilled;
+    case "opendao-erc1155-order-filled":
+      return openDao.erc1155OrderFilled;
     default:
       return undefined;
   }

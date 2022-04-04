@@ -57,11 +57,11 @@ if (config.doBackgroundWork) {
                   "o"."id",
                   "o"."fillability_status" AS "old_status",
                   (CASE
-                    WHEN "fb"."amount" >= "o"."price" THEN 'fillable'
+                    WHEN "fb"."amount" >= ("o"."price" * "o"."quantity_remaining") THEN 'fillable'
                     ELSE 'no-balance'
                   END)::order_fillability_status_t AS "new_status",
                   (CASE
-                    WHEN "fb"."amount" >= "o"."price" THEN upper("o"."valid_between")
+                    WHEN "fb"."amount" >= ("o"."price" * "o"."quantity_remaining") THEN upper("o"."valid_between")
                     ELSE to_timestamp($/timestamp/)
                   END)::timestamptz AS "expiration"
                 FROM "orders" "o"
@@ -128,11 +128,11 @@ if (config.doBackgroundWork) {
                   "o"."id",
                   "o"."fillability_status" AS "old_status",
                   (CASE
-                    WHEN "nb"."amount" > 0 THEN 'fillable'
+                    WHEN "nb"."amount" >= "o"."quantity_remaining" THEN 'fillable'
                     ELSE 'no-balance'
                   END)::order_fillability_status_t AS "new_status",
                   (CASE
-                    WHEN "nb"."amount" > 0 THEN upper("o"."valid_between")
+                    WHEN "nb"."amount" >= "o"."quantity_remaining" THEN upper("o"."valid_between")
                     ELSE to_timestamp($/timestamp/)
                   END)::timestamptz AS "expiration"
                 FROM "orders" "o"
@@ -205,7 +205,44 @@ if (config.doBackgroundWork) {
             // consists of a single token - otherwise we should probably
             // use `DISTINCT ON ("o"."id")` - relevant to queries below.
 
-            let result: { id: string }[] = [];
+            const result: { id: string }[] = [];
+
+            // OpenDao
+            if (data.operator === Sdk.OpenDao.Addresses.Exchange[config.chainId]) {
+              for (const orderKind of ["opendao-erc721", "opendao-erc1155"]) {
+                result.push(
+                  ...(await idb.manyOrNone(
+                    `
+                      UPDATE "orders" AS "o" SET
+                        "approval_status" = $/approvalStatus/,
+                        "expiration" = to_timestamp($/expiration/),
+                        "updated_at" = now()
+                      FROM (
+                        SELECT
+                          "o"."id"
+                        FROM "orders" "o"
+                        JOIN "token_sets_tokens" "tst"
+                          ON "o"."token_set_id" = "tst"."token_set_id"
+                        WHERE "tst"."contract" = $/contract/
+                          AND "o"."kind" = '${orderKind}'
+                          AND "o"."maker" = $/maker/
+                          AND "o"."side" = 'sell'
+                          AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
+                          AND "o"."approval_status" != $/approvalStatus/
+                      ) "x"
+                      WHERE "o"."id" = "x"."id"
+                      RETURNING "o"."id"
+                    `,
+                    {
+                      maker: toBuffer(maker),
+                      contract: toBuffer(data.contract),
+                      approvalStatus: data.approved ? "approved" : "no-approval",
+                      expiration: trigger.txTimestamp,
+                    }
+                  ))
+                );
+              }
+            }
 
             // LooksRare
             if (
@@ -219,71 +256,75 @@ if (config.doBackgroundWork) {
                   ? "erc721"
                   : "erc1155";
 
-              result = await idb.manyOrNone(
-                `
-                  UPDATE "orders" AS "o" SET
-                    "approval_status" = $/approvalStatus/,
-                    "expiration" = to_timestamp($/expiration/),
-                    "updated_at" = now()
-                  FROM (
-                    SELECT
-                      "o"."id"
-                    FROM "orders" "o"
-                    JOIN "token_sets_tokens" "tst"
-                      ON "o"."token_set_id" = "tst"."token_set_id"
-                    JOIN "contracts" "c"
-                      ON "tst"."contract" = "c"."address"
-                    WHERE "tst"."contract" = $/contract/
-                      AND "c"."kind" = '${kind}'
-                      AND "o"."kind" = 'looks-rare'
-                      AND "o"."maker" = $/maker/
-                      AND "o"."side" = 'sell'
-                      AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-                      AND "o"."approval_status" != $/approvalStatus/
-                  ) "x"
-                  WHERE "o"."id" = "x"."id"
-                  RETURNING "o"."id"
-                `,
-                {
-                  maker: toBuffer(maker),
-                  contract: toBuffer(data.contract),
-                  approvalStatus: data.approved ? "approved" : "no-approval",
-                  expiration: trigger.txTimestamp,
-                }
+              result.push(
+                ...(await idb.manyOrNone(
+                  `
+                    UPDATE "orders" AS "o" SET
+                      "approval_status" = $/approvalStatus/,
+                      "expiration" = to_timestamp($/expiration/),
+                      "updated_at" = now()
+                    FROM (
+                      SELECT
+                        "o"."id"
+                      FROM "orders" "o"
+                      JOIN "token_sets_tokens" "tst"
+                        ON "o"."token_set_id" = "tst"."token_set_id"
+                      JOIN "contracts" "c"
+                        ON "tst"."contract" = "c"."address"
+                      WHERE "tst"."contract" = $/contract/
+                        AND "c"."kind" = '${kind}'
+                        AND "o"."kind" = 'looks-rare'
+                        AND "o"."maker" = $/maker/
+                        AND "o"."side" = 'sell'
+                        AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
+                        AND "o"."approval_status" != $/approvalStatus/
+                    ) "x"
+                    WHERE "o"."id" = "x"."id"
+                    RETURNING "o"."id"
+                  `,
+                  {
+                    maker: toBuffer(maker),
+                    contract: toBuffer(data.contract),
+                    approvalStatus: data.approved ? "approved" : "no-approval",
+                    expiration: trigger.txTimestamp,
+                  }
+                ))
               );
             }
 
             // Wyvern v2.3
             const proxy = await wyvernV23Utils.getUserProxy(maker);
             if (proxy && proxy === data.operator) {
-              result = await idb.manyOrNone(
-                `
-                  UPDATE "orders" AS "o" SET
-                    "approval_status" = $/approvalStatus/,
-                    "expiration" = to_timestamp($/expiration/),
-                    "updated_at" = now()
-                  FROM (
-                    SELECT
-                      "o"."id"
-                    FROM "orders" "o"
-                    JOIN "token_sets_tokens" "tst"
-                      ON "o"."token_set_id" = "tst"."token_set_id"
-                    WHERE "tst"."contract" = $/contract/
-                      AND "o"."kind" = 'wyvern-v2.3'
-                      AND "o"."maker" = $/maker/
-                      AND "o"."side" = 'sell'
-                      AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-                      AND "o"."approval_status" != $/approvalStatus/
-                  ) "x"
-                  WHERE "o"."id" = "x"."id"
-                  RETURNING "o"."id"
-                `,
-                {
-                  maker: toBuffer(maker),
-                  contract: toBuffer(data.contract),
-                  approvalStatus: data.approved ? "approved" : "no-approval",
-                  expiration: trigger.txTimestamp,
-                }
+              result.push(
+                ...(await idb.manyOrNone(
+                  `
+                    UPDATE "orders" AS "o" SET
+                      "approval_status" = $/approvalStatus/,
+                      "expiration" = to_timestamp($/expiration/),
+                      "updated_at" = now()
+                    FROM (
+                      SELECT
+                        "o"."id"
+                      FROM "orders" "o"
+                      JOIN "token_sets_tokens" "tst"
+                        ON "o"."token_set_id" = "tst"."token_set_id"
+                      WHERE "tst"."contract" = $/contract/
+                        AND "o"."kind" = 'wyvern-v2.3'
+                        AND "o"."maker" = $/maker/
+                        AND "o"."side" = 'sell'
+                        AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
+                        AND "o"."approval_status" != $/approvalStatus/
+                    ) "x"
+                    WHERE "o"."id" = "x"."id"
+                    RETURNING "o"."id"
+                  `,
+                  {
+                    maker: toBuffer(maker),
+                    contract: toBuffer(data.contract),
+                    approvalStatus: data.approved ? "approved" : "no-approval",
+                    expiration: trigger.txTimestamp,
+                  }
+                ))
               );
             }
 
