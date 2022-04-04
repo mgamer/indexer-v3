@@ -130,10 +130,6 @@ export class ApiKeyManager {
       log.hostname = request.headers["host"];
     }
 
-    if (request.server.info) {
-      log.serverInfo = request.server.info;
-    }
-
     // Add key information if it exists
     if (key) {
       try {
