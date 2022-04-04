@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.6.0 (2022-04-04)
+
+
+### Features
+
+* use opensea for metadata ([42b5dd4](https://github.com/reservoirprotocol/indexer-v3/commit/42b5dd4fba0f4f1e71b5f5d1d72c9bd7c09d611d))
+
 ### 5.5.3 (2022-04-04)
 
 ### 5.5.2 (2022-04-02)
