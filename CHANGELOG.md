@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.6.1 (2022-04-04)
+
+
+### Bug Fixes
+
+* allow empty collection metadata entries ([fed892d](https://github.com/reservoirprotocol/indexer-v3/commit/fed892d42cdf3e85ddc2ed0c813001e7c12e6bee))
+
 ## 5.6.0 (2022-04-04)
 
 
