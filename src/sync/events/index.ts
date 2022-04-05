@@ -861,6 +861,21 @@ export const syncEvents = async (
               const erc721Token = parsedLog.args["erc721Token"].toLowerCase();
               const erc721TokenId = parsedLog.args["erc721TokenId"].toString();
 
+              logger.info(
+                "debug",
+                JSON.stringify({
+                  direction,
+                  maker,
+                  taker,
+                  nonce,
+                  erc20Token,
+                  erc20TokenAmount,
+                  erc721Token,
+                  erc721TokenId,
+                  baseEventParams,
+                })
+              );
+
               if (
                 ![
                   Sdk.OpenDao.Addresses.Eth[config.chainId],
@@ -965,6 +980,22 @@ export const syncEvents = async (
               const erc1155Token = parsedLog.args["erc1155Token"].toLowerCase();
               const erc1155TokenId = parsedLog.args["erc1155TokenId"].toString();
               const erc1155FillAmount = parsedLog.args["erc1155FillAmount"].toString();
+
+              logger.info(
+                "debug",
+                JSON.stringify({
+                  direction,
+                  maker,
+                  taker,
+                  nonce,
+                  erc20Token,
+                  erc20FillAmount,
+                  erc1155Token,
+                  erc1155TokenId,
+                  erc1155FillAmount,
+                  baseEventParams,
+                })
+              );
 
               if (
                 ![

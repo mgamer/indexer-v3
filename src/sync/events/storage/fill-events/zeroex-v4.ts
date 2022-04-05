@@ -1,5 +1,4 @@
 import { idb, pgp } from "@/common/db";
-import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
 import { DbEvent, Event } from "@/events-sync/storage/fill-events";
 
@@ -50,8 +49,6 @@ export const addEventsZeroExV4 = async (events: Event[]) => {
       ],
       { table: "fill_events_2" }
     );
-
-    logger.info("debug", JSON.stringify(pgp.helpers.values(fillValues, columns)));
 
     // Atomically insert the fill events and update order statuses
     await idb.none(`
