@@ -101,15 +101,15 @@ export const addEventsZeroExV4 = async (events: Event[]) => {
           UPDATE SET
             fillability_status = (
               CASE
-                WHEN orders.quantity_remaining <= EXCLUDED.amount THEN 'filled'
+                WHEN orders.quantity_remaining <= EXCLUDED.quantity_filled THEN 'filled'
                 ELSE fillability_status
               END
             ),
-            quantity_remaining = orders.quantity_remaining - EXCLUDED.amount,
-            quantity_filled = orders.quantity_filled + EXCLUDED.amount,
+            quantity_remaining = orders.quantity_remaining - EXCLUDED.quantity_filled,
+            quantity_filled = orders.quantity_filled + EXCLUDED.quantity_filled,
             expiration = (
               CASE
-                WHEN orders.quantity_remaining <= EXCLUDED.amount THEN EXCLUDED.expiration
+                WHEN orders.quantity_remaining <= EXCLUDED.quantity_filled THEN EXCLUDED.expiration
                 ELSE expiration
               END
             ),
