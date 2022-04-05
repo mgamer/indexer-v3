@@ -2,7 +2,6 @@ import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuildParams } from "@reservoir0x/sdk/dist/wyvern-v2.3/builders/base";
 
 import { edb } from "@/common/db";
-import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 
@@ -45,8 +44,6 @@ export const getBuildInfo = async (
     salt: options.salt,
     nonce: (await exchange.getNonce(baseProvider, options.maker)).toString(),
   };
-
-  logger.info("debug", JSON.stringify(buildParams));
 
   if (options.automatedRoyalties) {
     const royaltiesResult = await edb.oneOrNone(

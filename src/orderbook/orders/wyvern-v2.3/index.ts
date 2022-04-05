@@ -153,7 +153,6 @@ export const save = async (
         } else if (error.message === "no-balance") {
           fillabilityStatus = "no-balance";
         } else {
-          logger.error("orders-wyvern-v2.3-save", `Failed to check order fillability: ${error}`);
           return results.push({
             id,
             status: "not-fillable",
