@@ -72,7 +72,7 @@ export const save = async (
         });
       }
 
-      // Check: buy order has Weth as payment token
+      // Check: order has Weth as payment token
       if (order.params.currency !== Sdk.Common.Addresses.Weth[config.chainId]) {
         return results.push({
           id,
