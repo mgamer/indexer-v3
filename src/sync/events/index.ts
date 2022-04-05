@@ -835,7 +835,7 @@ export const syncEvents = async (
             case "opendao-erc1155-order-cancelled": {
               const parsedLog = eventData.abi.parseLog(log);
               const maker = parsedLog.args["maker"].toLowerCase();
-              const nonce = parsedLog.args["nonce"].toLowerCase();
+              const nonce = parsedLog.args["nonce"].toString();
 
               nonceCancelEvents.push({
                 orderKind:
@@ -857,9 +857,9 @@ export const syncEvents = async (
               const taker = parsedLog.args["taker"].toLowerCase();
               const nonce = parsedLog.args["nonce"].toString();
               const erc20Token = parsedLog.args["erc20Token"].toLowerCase();
-              const erc20TokenAmount = parsedLog.args["erc20TokenAmount"].toLowerCase();
+              const erc20TokenAmount = parsedLog.args["erc20TokenAmount"].toString();
               const erc721Token = parsedLog.args["erc721Token"].toLowerCase();
-              const erc721TokenId = parsedLog.args["erc721TokenId"].toLowerCase();
+              const erc721TokenId = parsedLog.args["erc721TokenId"].toString();
 
               if (
                 ![
@@ -961,9 +961,9 @@ export const syncEvents = async (
               const taker = parsedLog.args["taker"].toLowerCase();
               const nonce = parsedLog.args["nonce"].toString();
               const erc20Token = parsedLog.args["erc20Token"].toLowerCase();
-              const erc20TokenAmount = parsedLog.args["erc20TokenAmount"].toLowerCase();
+              const erc20TokenAmount = parsedLog.args["erc20TokenAmount"].toString();
               const erc1155Token = parsedLog.args["erc1155Token"].toLowerCase();
-              const erc1155TokenId = parsedLog.args["erc1155TokenId"].toLowerCase();
+              const erc1155TokenId = parsedLog.args["erc1155TokenId"].toString();
               const erc1155FillAmount = parsedLog.args["erc1155FillAmount"].toString();
 
               if (
