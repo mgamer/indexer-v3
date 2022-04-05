@@ -15,7 +15,7 @@ export const offChainCheck = async (order: Sdk.OpenDao.Order) => {
 
   // Check: order's nonce was not individually cancelled
   const nonceCancelled = await commonHelpers.isNonceCancelled(
-    "opendao",
+    `opendao-${kind}`,
     order.params.maker,
     order.params.nonce
   );
