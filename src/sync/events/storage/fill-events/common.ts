@@ -89,6 +89,7 @@ export const addEvents = async (events: Event[]) => {
           'filled'::order_fillability_status_t,
           to_timestamp("x"."timestamp") AS "expiration"
         FROM "x"
+        WHERE "x"."order_id" IS NOT NULL
       )
       ON CONFLICT ("id") DO
       UPDATE SET
