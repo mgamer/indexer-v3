@@ -58,6 +58,12 @@ export const setupRoutes = (server: Server) => {
     options: adminEndpoints.postSyncDailyVolumes,
   });
 
+  server.route({
+    method: "POST",
+    path: "/admin/set-community",
+    options: adminEndpoints.postSetCollectionCommunity,
+  });
+
   // Api keys
 
   server.route({
