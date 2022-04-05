@@ -126,6 +126,7 @@ export const save = async (
         } else if (error.message === "no-balance") {
           fillabilityStatus = "no-balance";
         } else {
+          logger.info("debug", `error: ${error}`);
           return results.push({
             id,
             status: "not-fillable",
