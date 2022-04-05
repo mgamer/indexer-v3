@@ -366,6 +366,35 @@ export const getExecuteSellV1Options: RouteOptions = {
           };
         }
 
+        case "opendao-erc721":
+        case "opendao-erc1155": {
+          const order = new Sdk.OpenDao.Order(config.chainId, bestOrderResult.raw_data);
+
+          // Create matching order.
+          const sellOrder = order.buildMatching({ tokenId });
+
+          const exchange = new Sdk.OpenDao.Exchange(config.chainId);
+          const fillTx = exchange.matchTransaction(query.taker, order, sellOrder);
+
+          return {
+            steps: [
+              {
+                ...steps[3],
+                status: "incomplete",
+                data: fillTx,
+              },
+              {
+                ...steps[4],
+                status: "incomplete",
+                data: {
+                  endpoint: `/orders/executed/v1?id=${bestOrderResult.id}`,
+                  method: "GET",
+                },
+              },
+            ],
+          };
+        }
+
         default: {
           throw Boom.notImplemented("Unsupported order kind");
         }

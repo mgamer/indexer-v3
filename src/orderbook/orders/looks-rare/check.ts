@@ -50,6 +50,9 @@ export const offChainCheck = async (
 
     // TODO: Check: maker has set the proper approval
   } else {
+    let hasBalance = true;
+    let hasApproval = true;
+
     // Check: maker has enough balance
     const nftBalance = await commonHelpers.getNftBalance(
       order.params.collection,
@@ -57,7 +60,7 @@ export const offChainCheck = async (
       order.params.signer
     );
     if (nftBalance.lt(1)) {
-      throw new Error("no-balance");
+      hasBalance = false;
     }
 
     const operator =
@@ -79,11 +82,19 @@ export const offChainCheck = async (
             ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.collection)
             : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.collection);
         if (!(await contract.isApproved(order.params.signer, operator))) {
-          throw new Error("no-approval");
+          hasApproval = false;
         }
       } else {
-        throw new Error("no-approval");
+        hasApproval = false;
       }
+    }
+
+    if (!hasBalance && !hasApproval) {
+      throw new Error("no-balance-no-approval");
+    } else if (!hasBalance) {
+      throw new Error("no-balance");
+    } else if (!hasApproval) {
+      throw new Error("no-approval");
     }
   }
 };

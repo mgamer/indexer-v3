@@ -23,10 +23,7 @@ export const offChainCheck = async (order: Sdk.OpenDao.Order) => {
     throw new Error("invalid-nonce");
   }
 
-  let feeAmount = bn(0);
-  for (const { amount } of order.params.fees) {
-    feeAmount = feeAmount.add(amount);
-  }
+  const feeAmount = order.getFeeAmount();
   if (order.params.direction === Sdk.OpenDao.Types.TradeDirection.BUY) {
     // Check: maker has enough balance
     const ftBalance = await commonHelpers.getFtBalance(order.params.erc20Token, order.params.maker);
@@ -36,6 +33,9 @@ export const offChainCheck = async (order: Sdk.OpenDao.Order) => {
 
     // TODO: Check: maker has set the proper approval
   } else {
+    let hasBalance = true;
+    let hasApproval = true;
+
     // Check: maker has enough balance
     const nftBalance = await commonHelpers.getNftBalance(
       order.params.nft,
@@ -43,7 +43,7 @@ export const offChainCheck = async (order: Sdk.OpenDao.Order) => {
       order.params.maker
     );
     if (nftBalance.lt(order.params.nftAmount ?? 1)) {
-      throw new Error("no-balance");
+      hasBalance = false;
     }
 
     const operator = Sdk.OpenDao.Addresses.Exchange[config.chainId];
@@ -55,6 +55,14 @@ export const offChainCheck = async (order: Sdk.OpenDao.Order) => {
       operator
     );
     if (!nftApproval) {
+      hasApproval = false;
+    }
+
+    if (!hasBalance && !hasApproval) {
+      throw new Error("no-balance-no-approval");
+    } else if (!hasBalance) {
+      throw new Error("no-balance");
+    } else if (!hasApproval) {
       throw new Error("no-approval");
     }
   }

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { BigNumberish } from "@ethersproject/bignumber";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
@@ -96,7 +97,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
         },
       ];
 
-      const checkTakerEthBalance = async (taker: string, price: string) => {
+      const checkTakerEthBalance = async (taker: string, price: BigNumberish) => {
         // Check the taker's Eth balance.
         const balance = await baseProvider.getBalance(taker);
         if (bn(balance).lt(price)) {
@@ -130,6 +131,24 @@ export const getExecuteBuyV1Options: RouteOptions = {
           const buyOrder = order.buildMatching(query.taker, { tokenId });
 
           const exchange = new Sdk.LooksRare.Exchange(config.chainId);
+          fillTx = exchange.matchTransaction(query.taker, order, buyOrder);
+
+          break;
+        }
+
+        case "opendao-erc721":
+        case "opendao-erc1155": {
+          const order = new Sdk.OpenDao.Order(config.chainId, bestOrderResult.raw_data);
+
+          await checkTakerEthBalance(
+            query.taker,
+            bn(order.params.erc20TokenAmount).add(order.getFeeAmount())
+          );
+
+          // Create matching order.
+          const buyOrder = order.buildMatching({ tokenId });
+
+          const exchange = new Sdk.OpenDao.Exchange(config.chainId);
           fillTx = exchange.matchTransaction(query.taker, order, buyOrder);
 
           break;
