@@ -29,7 +29,8 @@ export class Sources {
   public static async add(sourceId: string, metadata: object) {
     const query = `INSERT INTO sources (source_id, metadata)
                    VALUES ( $/sourceId/, $/metadata:json/)
-                   ON CONFLICT DO NOTHING`;
+                   ON CONFLICT (source_id) DO UPDATE
+                   SET metadata = $/metadata:json/`;
 
     const values = {
       sourceId,
