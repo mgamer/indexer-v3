@@ -4,6 +4,8 @@ import { config } from "@/config/index";
 import { idb } from "@/common/db";
 import { SourcesEntity, SourcesEntityParams } from "@/models/sources/sources-entity";
 
+import { default as sources } from "./sources.json";
+
 export class Sources {
   public static getDefaultSource(sourceId: string): SourcesEntity {
     return new SourcesEntity({
@@ -18,17 +20,23 @@ export class Sources {
     });
   }
 
-  public async getAll() {
-    const sources: SourcesEntityParams[] | null = await idb.manyOrNone(
-      `SELECT *
-             FROM sources`
-    );
+  public static async syncSources() {
+    _.forEach(sources, (metadata, sourceId) => {
+      Sources.add(sourceId, metadata);
+    });
+  }
 
-    if (sources) {
-      return _.map(sources, (source) => new SourcesEntity(source));
-    }
+  public static async add(sourceId: string, metadata: object) {
+    const query = `INSERT INTO sources (source_id, metadata)
+                   VALUES ( $/sourceId/, $/metadata:json/)
+                   ON CONFLICT DO NOTHING`;
 
-    return null;
+    const values = {
+      sourceId,
+      metadata: metadata,
+    };
+
+    await idb.none(query, values);
   }
 
   public async get(sourceId: string, contract?: string, tokenId?: string) {
