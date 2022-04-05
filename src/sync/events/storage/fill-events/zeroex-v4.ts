@@ -95,7 +95,7 @@ export const addEventsZeroExV4 = async (events: Event[]) => {
               'filled'::order_fillability_status_t,
               to_timestamp(x.timestamp)
             FROM x
-            WHERE x.order_id IS NOT NULL
+            WHERE x.order_id IS DISTINCT FROM NULL
           )
           ON CONFLICT (id) DO
           UPDATE SET
