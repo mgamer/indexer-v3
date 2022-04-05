@@ -48,6 +48,25 @@ export const addPendingOrdersLooksRare = async (
   }
 };
 
+export const addPendingOrdersOpenDao = async (
+  data: { order: Sdk.OpenDao.Order; schemaHash?: string; source?: string }[]
+) => {
+  if (config.arweaveRelayerKey && data.length) {
+    await redis.rpush(
+      PENDING_DATA_KEY,
+      ...data.map(({ order, schemaHash }) =>
+        JSON.stringify({
+          kind: "opendao",
+          data: {
+            ...order.params,
+            schemaHash,
+          },
+        })
+      )
+    );
+  }
+};
+
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork && config.arweaveRelayerKey) {
   cron.schedule(
