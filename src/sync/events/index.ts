@@ -1026,7 +1026,7 @@ export const syncEvents = async (
                       WHERE orders.kind = 'opendao-erc1155'
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
-                        AND ($/value/ - 1 <= orders.value AND orders.value <= $/value/ + 1)
+                        AND (($/value/::NUMERIC(78, 0) - 1::NUMERIC(78, 0)) <= orders.value AND orders.value <= ($/value/::NUMERIC(78, 0) + 1::NUMERIC(78, 0)))
                         AND orders.token_set_id = $/tokenSetId/
                         AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
                       LIMIT 1
