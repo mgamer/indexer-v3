@@ -126,7 +126,7 @@ if (config.doBackgroundWork) {
               {
                 kind: "single-token",
                 data: {
-                  method: "rarible",
+                  method: "opensea",
                   contract,
                   tokenId,
                   collection: collection.id,
