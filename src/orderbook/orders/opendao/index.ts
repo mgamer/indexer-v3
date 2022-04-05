@@ -121,7 +121,10 @@ export const save = async (
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         // Keep any orders that can potentially get valid in the future
-        if (error.message === "no-approval") {
+        if (error.message === "no-balance-no-approval") {
+          fillabilityStatus = "no-balance";
+          approvalStatus = "no-approval";
+        } else if (error.message === "no-approval") {
           approvalStatus = "no-approval";
         } else if (error.message === "no-balance") {
           fillabilityStatus = "no-balance";
@@ -177,10 +180,7 @@ export const save = async (
       const side = order.params.direction === Sdk.OpenDao.Types.TradeDirection.BUY ? "buy" : "sell";
 
       // Handle: fees
-      let feeAmount = bn(0);
-      for (const { amount } of order.params.fees) {
-        feeAmount = feeAmount.add(amount);
-      }
+      const feeAmount = order.getFeeAmount();
 
       // Handle: price and value
       const price = bn(order.params.erc20TokenAmount).add(feeAmount).toString();
