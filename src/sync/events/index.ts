@@ -981,22 +981,6 @@ export const syncEvents = async (
               const erc1155TokenId = parsedLog.args["erc1155TokenId"].toString();
               const erc1155FillAmount = parsedLog.args["erc1155FillAmount"].toString();
 
-              logger.info(
-                "debug",
-                JSON.stringify({
-                  direction,
-                  maker,
-                  taker,
-                  nonce,
-                  erc20Token,
-                  erc20FillAmount,
-                  erc1155Token,
-                  erc1155TokenId,
-                  erc1155FillAmount,
-                  baseEventParams,
-                })
-              );
-
               if (
                 ![
                   Sdk.OpenDao.Addresses.Eth[config.chainId],
@@ -1044,6 +1028,23 @@ export const syncEvents = async (
                     }
                   });
               }
+
+              logger.info(
+                "debug",
+                JSON.stringify({
+                  direction,
+                  maker,
+                  taker,
+                  nonce,
+                  erc20Token,
+                  erc20FillAmount,
+                  erc1155Token,
+                  erc1155TokenId,
+                  erc1155FillAmount,
+                  baseEventParams,
+                  orderId,
+                })
+              );
 
               // Custom handling to support partial filling
               fillEventsZeroExV4.push({
