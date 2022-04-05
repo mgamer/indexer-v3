@@ -5,7 +5,6 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 import _ from "lodash";
 
-import { Sources } from "@/models/sources";
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
@@ -16,6 +15,7 @@ import {
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
+import { Sources } from "@/models/sources";
 
 const version = "v3";
 

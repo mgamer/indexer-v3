@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.7.1 (2022-04-05)
+
+## 5.7.0 (2022-04-05)
+
+
+### Features
+
+* allow up to 500 owners ([92c2235](https://github.com/reservoirprotocol/indexer-v3/commit/92c2235e1b1c88180e950e4d488437aeb2a3b453))
+
+### 5.6.2 (2022-04-04)
+
+### 5.6.1 (2022-04-04)
+
+
+### Bug Fixes
+
+* allow empty collection metadata entries ([fed892d](https://github.com/reservoirprotocol/indexer-v3/commit/fed892d42cdf3e85ddc2ed0c813001e7c12e6bee))
+
+## 5.6.0 (2022-04-04)
+
+
+### Features
+
+* use opensea for metadata ([42b5dd4](https://github.com/reservoirprotocol/indexer-v3/commit/42b5dd4fba0f4f1e71b5f5d1d72c9bd7c09d611d))
+
 ### 5.5.3 (2022-04-04)
 
 ### 5.5.2 (2022-04-02)
