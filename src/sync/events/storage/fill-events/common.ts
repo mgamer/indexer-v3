@@ -1,40 +1,6 @@
 import { idb, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
-import { BaseEventParams } from "@/events-sync/parser";
-import { OrderKind } from "@/orderbook/orders";
-
-export type Event = {
-  orderKind: OrderKind;
-  orderId: string;
-  orderSide: "buy" | "sell";
-  maker: string;
-  taker: string;
-  price: string;
-  contract: string;
-  tokenId: string;
-  amount: string;
-  baseEventParams: BaseEventParams;
-};
-
-type DbEvent = {
-  address: Buffer;
-  block: number;
-  block_hash: Buffer;
-  tx_hash: Buffer;
-  tx_index: number;
-  log_index: number;
-  timestamp: number;
-  batch_index: number;
-  order_kind: OrderKind;
-  order_id: string;
-  order_side: "buy" | "sell";
-  maker: Buffer;
-  taker: Buffer;
-  price: string;
-  contract: Buffer;
-  token_id: string;
-  amount: string;
-};
+import { DbEvent, Event } from "@/events-sync/storage/fill-events";
 
 export const addEvents = async (events: Event[]) => {
   const fillValues: DbEvent[] = [];
@@ -49,7 +15,7 @@ export const addEvents = async (events: Event[]) => {
       timestamp: event.baseEventParams.timestamp,
       batch_index: event.baseEventParams.batchIndex,
       order_kind: event.orderKind,
-      order_id: event.orderId,
+      order_id: event.orderId || null,
       order_side: event.orderSide,
       maker: toBuffer(event.maker),
       taker: toBuffer(event.taker),

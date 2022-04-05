@@ -32,33 +32,35 @@ if (config.doBackgroundWork) {
         job.data as FillInfo;
 
       try {
-        const result = await idb.oneOrNone(
-          `
-            SELECT "o"."token_set_id" FROM "orders" "o"
-            WHERE "o"."id" = $/orderId/
-          `,
-          { orderId }
-        );
+        if (orderId) {
+          const result = await idb.oneOrNone(
+            `
+              SELECT "o"."token_set_id" FROM "orders" "o"
+              WHERE "o"."id" = $/orderId/
+            `,
+            { orderId }
+          );
 
-        // If we can detect that the order was on a complex token set
-        // (eg. not single token), then update the last buy caches of
-        // that particular token set.
-        if (result && result.token_set_id) {
-          const components = result.token_set_id.split(":");
-          if (components[0] !== "token") {
-            await idb.none(
-              `
-                UPDATE "token_sets" SET
-                  "last_buy_timestamp" = $/timestamp/,
-                  "last_buy_value" = $/price/
-                WHERE "id" = $/tokenSetId/
-              `,
-              {
-                tokenSetId: result.token_set_id,
-                timestamp,
-                price,
-              }
-            );
+          // If we can detect that the order was on a complex token set
+          // (eg. not single token), then update the last buy caches of
+          // that particular token set.
+          if (result && result.token_set_id) {
+            const components = result.token_set_id.split(":");
+            if (components[0] !== "token") {
+              await idb.none(
+                `
+                  UPDATE "token_sets" SET
+                    "last_buy_timestamp" = $/timestamp/,
+                    "last_buy_value" = $/price/
+                  WHERE "id" = $/tokenSetId/
+                `,
+                {
+                  tokenSetId: result.token_set_id,
+                  timestamp,
+                  price,
+                }
+              );
+            }
           }
         }
 
@@ -107,7 +109,7 @@ export type FillInfo = {
   // as possible it's also important to not have the contexts too
   // distinctive in order to avoid doing duplicative work.
   context: string;
-  orderId: string;
+  orderId?: string;
   orderSide: "buy" | "sell";
   contract: string;
   tokenId: string;
