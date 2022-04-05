@@ -149,6 +149,9 @@ export const getCollectionV1Options: RouteOptions = {
         baseQuery += ` WHERE "c"."slug" = $/slug/`;
       }
 
+      // Sorting
+      baseQuery += ` ORDER BY "c"."all_time_volume" DESC`;
+
       baseQuery += ` LIMIT 1`;
 
       baseQuery = `
