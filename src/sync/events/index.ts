@@ -18,6 +18,10 @@ import { idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 
 // TODO: Split into multiple files (by exchange).
+// TODO: For simplicity, don't use bulk inserts/upserts for realtime
+// processing (this will make things so much more flexible). However
+// for backfill procesing, we should still use bulk operations so as
+// to be performant enough.
 
 export const syncEvents = async (
   fromBlock: number,
@@ -1023,7 +1027,7 @@ export const syncEvents = async (
 
               if (orderId) {
                 orderInfos.push({
-                  context: `filled-${orderId}`,
+                  context: `filled-${orderId}-${baseEventParams.txHash}`,
                   id: orderId,
                   trigger: {
                     kind: "sale",
