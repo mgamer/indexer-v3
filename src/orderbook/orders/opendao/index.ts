@@ -183,16 +183,19 @@ export const save = async (
       const feeAmount = order.getFeeAmount();
 
       // Handle: price and value
-      const price = bn(order.params.erc20TokenAmount).add(feeAmount).toString();
-      let value: string;
+      let price = bn(order.params.erc20TokenAmount).add(feeAmount);
+      let value = price;
       if (side === "buy") {
         // For buy orders, we set the value as `price - fee` since it
         // is best for UX to show the user exactly what they're going
         // to receive on offer acceptance.
-        value = bn(price).sub(feeAmount).toString();
-      } else {
-        // For sell orders, the value is the same as the price.
-        value = price;
+        value = bn(price).sub(feeAmount);
+      }
+
+      // The price and value are for a single item
+      if (order.params.kind?.startsWith("erc1155")) {
+        price = price.div(order.params.nftAmount!);
+        value = value.div(order.params.nftAmount!);
       }
 
       const feeBps = feeAmount.mul(10000).div(price);
@@ -232,8 +235,8 @@ export const save = async (
         token_set_schema_hash: toBuffer(schemaHash),
         maker: toBuffer(order.params.maker),
         taker: toBuffer(AddressZero),
-        price,
-        value,
+        price: price.toString(),
+        value: value.toString(),
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
         nonce: order.params.nonce,
         source_id: source ? toBuffer(source) : null,

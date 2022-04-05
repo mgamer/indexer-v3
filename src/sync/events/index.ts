@@ -15,7 +15,7 @@ import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 import { idb } from "@/common/db";
-import { toBuffer } from "@/common/utils";
+import { bn, toBuffer } from "@/common/utils";
 
 // TODO: Split into multiple files (by exchange).
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
@@ -877,7 +877,7 @@ export const syncEvents = async (
                 // (it only includes the nonce, but we can potentially have multiple
                 // different orders sharing the same nonce off-chain), we attempt to
                 // detect the order id which got filled by checking the database for
-                // orders which have the exact nonce/price/token-set combination (it
+                // orders which have the exact nonce/value/token-set combination (it
                 // doesn't cover all cases, but it's good enough for now).
                 await idb
                   .oneOrNone(
@@ -888,7 +888,7 @@ export const syncEvents = async (
                       WHERE orders.kind = 'opendao-erc721'
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
-                        AND orders.price = $/price/
+                        AND orders.value = $/value/
                         AND orders.token_set_id = $/tokenSetId/
                         AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
                       LIMIT 1
@@ -896,7 +896,7 @@ export const syncEvents = async (
                     {
                       maker: toBuffer(maker),
                       nonce,
-                      price: erc20TokenAmount,
+                      value: erc20TokenAmount,
                       tokenSetId: `token:${erc721Token}:${erc721TokenId}`,
                     }
                   )
@@ -961,7 +961,7 @@ export const syncEvents = async (
               const taker = parsedLog.args["taker"].toLowerCase();
               const nonce = parsedLog.args["nonce"].toString();
               const erc20Token = parsedLog.args["erc20Token"].toLowerCase();
-              const erc20TokenAmount = parsedLog.args["erc20TokenAmount"].toString();
+              const erc20FillAmount = parsedLog.args["erc20FillAmount"].toString();
               const erc1155Token = parsedLog.args["erc1155Token"].toLowerCase();
               const erc1155TokenId = parsedLog.args["erc1155TokenId"].toString();
               const erc1155FillAmount = parsedLog.args["erc1155FillAmount"].toString();
@@ -976,13 +976,15 @@ export const syncEvents = async (
                 break;
               }
 
+              const value = bn(erc20FillAmount).div(erc1155FillAmount).toString();
+
               let orderId: string | undefined;
               if (!backfill) {
                 // Since the event doesn't include the exact order which got matched
                 // (it only includes the nonce, but we can potentially have multiple
                 // different orders sharing the same nonce off-chain), we attempt to
                 // detect the order id which got filled by checking the database for
-                // orders which have the exact nonce/price/token-set combination (it
+                // orders which have the exact nonce/value/token-set combination (it
                 // doesn't cover all cases, but it's good enough for now).
                 await idb
                   .oneOrNone(
@@ -993,7 +995,7 @@ export const syncEvents = async (
                       WHERE orders.kind = 'opendao-erc1155'
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
-                        AND orders.price = $/price/
+                        AND ($/value/ - 1 <= orders.value AND orders.value <= $/value/ + 1)
                         AND orders.token_set_id = $/tokenSetId/
                         AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
                       LIMIT 1
@@ -1001,7 +1003,7 @@ export const syncEvents = async (
                     {
                       maker: toBuffer(maker),
                       nonce,
-                      price: erc20TokenAmount,
+                      value,
                       tokenSetId: `token:${erc1155Token}:${erc1155TokenId}`,
                     }
                   )
@@ -1019,7 +1021,7 @@ export const syncEvents = async (
                 orderSide: direction === 0 ? "sell" : "buy",
                 maker,
                 taker,
-                price: erc20TokenAmount,
+                price: erc20FillAmount,
                 contract: erc1155Token,
                 tokenId: erc1155TokenId,
                 amount: erc1155FillAmount,
@@ -1045,7 +1047,7 @@ export const syncEvents = async (
                 contract: erc1155Token,
                 tokenId: erc1155TokenId,
                 amount: erc1155FillAmount,
-                price: erc20TokenAmount,
+                price: value,
                 timestamp: baseEventParams.timestamp,
               });
 
