@@ -1,40 +1,6 @@
 import { idb, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
-import { BaseEventParams } from "@/events-sync/parser";
-import { OrderKind } from "@/orderbook/orders";
-
-export type Event = {
-  orderKind: OrderKind;
-  orderId?: string;
-  orderSide: "buy" | "sell";
-  maker: string;
-  taker: string;
-  price: string;
-  contract: string;
-  tokenId: string;
-  amount: string;
-  baseEventParams: BaseEventParams;
-};
-
-type DbEvent = {
-  address: Buffer;
-  block: number;
-  block_hash: Buffer;
-  tx_hash: Buffer;
-  tx_index: number;
-  log_index: number;
-  timestamp: number;
-  batch_index: number;
-  order_kind: OrderKind;
-  order_id: string | null;
-  order_side: "buy" | "sell";
-  maker: Buffer;
-  taker: Buffer;
-  price: string;
-  contract: Buffer;
-  token_id: string;
-  amount: string;
-};
+import { DbEvent, Event } from "@/events-sync/storage/fill-events";
 
 export const addEvents = async (events: Event[]) => {
   const fillValues: DbEvent[] = [];
@@ -88,66 +54,47 @@ export const addEvents = async (events: Event[]) => {
 
     // Atomically insert the fill events and update order statuses
     queries.push(`
-      WITH x AS (
-        INSERT INTO fill_events_2 (
-          address,
-          block,
-          block_hash,
-          tx_hash,
-          tx_index,
-          log_index,
-          timestamp,
-          batch_index,
-          order_kind,
-          order_id,
-          order_side,
-          maker,
-          taker,
-          price,
-          contract,
-          token_id,
-          amount
+      WITH "x" AS (
+        INSERT INTO "fill_events_2" (
+          "address",
+          "block",
+          "block_hash",
+          "tx_hash",
+          "tx_index",
+          "log_index",
+          "timestamp",
+          "batch_index",
+          "order_kind",
+          "order_id",
+          "order_side",
+          "maker",
+          "taker",
+          "price",
+          "contract",
+          "token_id",
+          "amount"
         ) VALUES ${pgp.helpers.values(fillValues, columns)}
         ON CONFLICT DO NOTHING
-        RETURNING
-          fill_events_2.order_kind,
-          fill_events_2.order_id,
-          fill_events_2.timestamp,
-          fill_events_2.amount
+        RETURNING "order_kind", "order_id", "timestamp"
       )
-      INSERT INTO orders (
-        id,
-        kind,
-        quantity_filled,
-        fillability_status,
-        expiration
+      INSERT INTO "orders" (
+        "id",
+        "kind",
+        "fillability_status",
+        "expiration"
       ) (
         SELECT
-          x.order_id,
-          x.order_kind,
-          x.amount,
+          "x"."order_id",
+          "x"."order_kind",
           'filled'::order_fillability_status_t,
-          to_timestamp(x.timestamp)
-        FROM x
-        WHERE x.order_id IS NOT NULL
+          to_timestamp("x"."timestamp") AS "expiration"
+        FROM "x"
       )
-      ON CONFLICT (id) DO
+      ON CONFLICT ("id") DO
       UPDATE SET
-        fillability_status = (
-          CASE
-            WHEN quantity_remaining <= EXCLUDED.amount THEN 'filled'
-            ELSE fillability_status
-          END
-        ),
-        quantity_remaining = quantity_remaining - EXCLUDED.amount,
-        quantity_filled = quantity_filled + EXCLUDED.amount,
-        expiration = (
-          CASE
-            WHEN quantity_remaining <= EXCLUDED.amount THEN EXCLUDED.expiration
-            ELSE expiration
-          END
-        ),
-        updated_at = now()
+        "fillability_status" = 'filled',
+        "expiration" = EXCLUDED."expiration",
+        "updated_at" = now()
     `);
   }
 

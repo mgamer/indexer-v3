@@ -73,6 +73,7 @@ export const syncEvents = async (
       const nonceCancelEvents: es.nonceCancels.Event[] = [];
       const cancelEvents: es.cancels.Event[] = [];
       const fillEvents: es.fills.Event[] = [];
+      const fillEventsZeroExV4: es.fills.Event[] = [];
 
       // Keep track of all events within the currently processing transaction
       let currentTx: string | undefined;
@@ -1006,7 +1007,8 @@ export const syncEvents = async (
                   });
               }
 
-              fillEvents.push({
+              // Custom handling to support partial filling
+              fillEventsZeroExV4.push({
                 orderKind: "opendao-erc1155",
                 orderId,
                 orderSide: direction === 0 ? "sell" : "buy",
@@ -1016,14 +1018,6 @@ export const syncEvents = async (
                 contract: erc1155Token,
                 tokenId: erc1155TokenId,
                 amount: erc1155FillAmount,
-                baseEventParams,
-              });
-
-              // Cancel all the other orders of the maker having the same nonce.
-              nonceCancelEvents.push({
-                orderKind: "opendao-erc1155",
-                maker,
-                nonce,
                 baseEventParams,
               });
 
@@ -1062,6 +1056,7 @@ export const syncEvents = async (
       // WARNING! Ordering matters (fills should come in front of cancels).
       await Promise.all([
         es.fills.addEvents(fillEvents),
+        es.fills.addEventsZeroExV4(fillEvents),
         es.nonceCancels.addEvents(nonceCancelEvents, backfill),
         es.bulkCancels.addEvents(bulkCancelEvents, backfill),
         es.cancels.addEvents(cancelEvents),
