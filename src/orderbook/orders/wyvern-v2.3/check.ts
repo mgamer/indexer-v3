@@ -32,7 +32,7 @@ export const offChainCheck = async (
   }
 
   // Check: order has a valid nonce
-  const minNonce = await commonHelpers.getMinNonce("looks-rare", order.params.maker);
+  const minNonce = await commonHelpers.getMinNonce("wyvern-v2.3", order.params.maker);
   if (!minNonce.eq(order.params.nonce)) {
     throw new Error("invalid-nonce");
   }

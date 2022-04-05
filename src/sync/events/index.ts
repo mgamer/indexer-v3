@@ -14,6 +14,15 @@ import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
+import { idb } from "@/common/db";
+import { toBuffer } from "@/common/utils";
+
+// TODO: Split into multiple files (by exchange).
+// TODO: For simplicity, don't use bulk inserts/upserts for realtime
+// processing (this will make things so much more flexible). However
+// for backfill procesing, we should still use bulk operations so as
+// to be performant enough. This might imply separate code to handle
+// backfill vs realtime events.
 
 export const syncEvents = async (
   fromBlock: number,
@@ -69,6 +78,7 @@ export const syncEvents = async (
       const nonceCancelEvents: es.nonceCancels.Event[] = [];
       const cancelEvents: es.cancels.Event[] = [];
       const fillEvents: es.fills.Event[] = [];
+      const fillEventsZeroExV4: es.fills.Event[] = [];
 
       // Keep track of all events within the currently processing transaction
       let currentTx: string | undefined;
@@ -110,6 +120,8 @@ export const syncEvents = async (
           );
 
           switch (eventData?.kind) {
+            // Erc721
+
             case "erc721-transfer": {
               const parsedLog = eventData.abi.parseLog(log);
               const from = parsedLog.args["from"].toLowerCase();
@@ -166,6 +178,8 @@ export const syncEvents = async (
 
               break;
             }
+
+            // Erc1155
 
             case "erc1155-transfer-single": {
               const parsedLog = eventData.abi.parseLog(log);
@@ -289,6 +303,8 @@ export const syncEvents = async (
               break;
             }
 
+            // Erc721/Erc1155 common
+
             case "erc721/1155-approval-for-all": {
               const parsedLog = eventData.abi.parseLog(log);
               const owner = parsedLog.args["owner"].toLowerCase();
@@ -326,6 +342,8 @@ export const syncEvents = async (
 
               break;
             }
+
+            // Erc20
 
             case "erc20-transfer": {
               const parsedLog = eventData.abi.parseLog(log);
@@ -372,6 +390,8 @@ export const syncEvents = async (
 
               break;
             }
+
+            // Weth
 
             case "weth-deposit": {
               const parsedLog = eventData.abi.parseLog(log);
@@ -436,6 +456,8 @@ export const syncEvents = async (
 
               break;
             }
+
+            // LooksRare
 
             case "looks-rare-cancel-all-orders": {
               const parsedLog = eventData.abi.parseLog(log);
@@ -596,6 +618,8 @@ export const syncEvents = async (
 
               break;
             }
+
+            // WyvernV2/WyvernV2.3
 
             // Wyvern V2 is now decomissioned, but we still keep handling
             // its fill event in order to get access to historical sales.
@@ -801,6 +825,231 @@ export const syncEvents = async (
                 minNonce: newNonce,
                 baseEventParams,
               });
+
+              break;
+            }
+
+            // OpenDao
+
+            case "opendao-erc721-order-cancelled":
+            case "opendao-erc1155-order-cancelled": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const maker = parsedLog.args["maker"].toLowerCase();
+              const nonce = parsedLog.args["nonce"].toLowerCase();
+
+              nonceCancelEvents.push({
+                orderKind:
+                  eventData?.kind === "opendao-erc721-order-cancelled"
+                    ? "opendao-erc721"
+                    : "opendao-erc1155",
+                maker,
+                nonce,
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "opendao-erc721-order-filled": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const direction = parsedLog.args["direction"];
+              const maker = parsedLog.args["maker"].toLowerCase();
+              const taker = parsedLog.args["taker"].toLowerCase();
+              const nonce = parsedLog.args["nonce"].toString();
+              const erc20Token = parsedLog.args["erc20Token"].toLowerCase();
+              const erc20TokenAmount = parsedLog.args["erc20TokenAmount"].toLowerCase();
+              const erc721Token = parsedLog.args["erc721Token"].toLowerCase();
+              const erc721TokenId = parsedLog.args["erc721TokenId"].toLowerCase();
+
+              if (
+                ![
+                  Sdk.OpenDao.Addresses.Eth[config.chainId],
+                  Sdk.Common.Addresses.Weth[config.chainId],
+                ].includes(erc20Token)
+              ) {
+                // Skip if the payment token is not supported
+                break;
+              }
+
+              let orderId: string | undefined;
+              if (!backfill) {
+                // Since the event doesn't include the exact order which got matched
+                // (it only includes the nonce, but we can potentially have multiple
+                // different orders sharing the same nonce off-chain), we attempt to
+                // detect the order id which got filled by checking the database for
+                // orders which have the exact nonce/price/token-set combination (it
+                // doesn't cover all cases, but it's good enough for now).
+                await idb
+                  .oneOrNone(
+                    `
+                      SELECT
+                        orders.id
+                      FROM orders
+                      WHERE orders.kind = 'opendao-erc721'
+                        AND orders.maker = $/maker/
+                        AND orders.nonce = $/nonce/
+                        AND orders.price = $/price/
+                        AND orders.token_set_id = $/tokenSetId/
+                        AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                      LIMIT 1
+                    `,
+                    {
+                      maker: toBuffer(maker),
+                      nonce,
+                      price: erc20TokenAmount,
+                      tokenSetId: `token:${erc721Token}:${erc721TokenId}`,
+                    }
+                  )
+                  .then((result) => {
+                    if (result) {
+                      orderId = result.id;
+                    }
+                  });
+              }
+
+              fillEvents.push({
+                orderKind: "opendao-erc721",
+                orderId,
+                orderSide: direction === 0 ? "sell" : "buy",
+                maker,
+                taker,
+                price: erc20TokenAmount,
+                contract: erc721Token,
+                tokenId: erc721TokenId,
+                amount: "1",
+                baseEventParams,
+              });
+
+              // Cancel all the other orders of the maker having the same nonce.
+              nonceCancelEvents.push({
+                orderKind: "opendao-erc721",
+                maker,
+                nonce,
+                baseEventParams,
+              });
+
+              if (orderId) {
+                orderInfos.push({
+                  context: `filled-${orderId}`,
+                  id: orderId,
+                  trigger: {
+                    kind: "sale",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
+                });
+              }
+
+              fillInfos.push({
+                context: orderId || `${maker}-${nonce}`,
+                orderId: orderId,
+                orderSide: direction === 0 ? "sell" : "buy",
+                contract: erc721Token,
+                tokenId: erc721TokenId,
+                amount: "1",
+                price: erc20TokenAmount,
+                timestamp: baseEventParams.timestamp,
+              });
+
+              break;
+            }
+
+            case "opendao-erc1155-order-filled": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const direction = parsedLog.args["direction"];
+              const maker = parsedLog.args["maker"].toLowerCase();
+              const taker = parsedLog.args["taker"].toLowerCase();
+              const nonce = parsedLog.args["nonce"].toString();
+              const erc20Token = parsedLog.args["erc20Token"].toLowerCase();
+              const erc20TokenAmount = parsedLog.args["erc20TokenAmount"].toLowerCase();
+              const erc1155Token = parsedLog.args["erc1155Token"].toLowerCase();
+              const erc1155TokenId = parsedLog.args["erc1155TokenId"].toLowerCase();
+              const erc1155FillAmount = parsedLog.args["erc1155FillAmount"].toString();
+
+              if (
+                ![
+                  Sdk.OpenDao.Addresses.Eth[config.chainId],
+                  Sdk.Common.Addresses.Weth[config.chainId],
+                ].includes(erc20Token)
+              ) {
+                // Skip if the payment token is not supported
+                break;
+              }
+
+              let orderId: string | undefined;
+              if (!backfill) {
+                // Since the event doesn't include the exact order which got matched
+                // (it only includes the nonce, but we can potentially have multiple
+                // different orders sharing the same nonce off-chain), we attempt to
+                // detect the order id which got filled by checking the database for
+                // orders which have the exact nonce/price/token-set combination (it
+                // doesn't cover all cases, but it's good enough for now).
+                await idb
+                  .oneOrNone(
+                    `
+                      SELECT
+                        orders.id
+                      FROM orders
+                      WHERE orders.kind = 'opendao-erc1155'
+                        AND orders.maker = $/maker/
+                        AND orders.nonce = $/nonce/
+                        AND orders.price = $/price/
+                        AND orders.token_set_id = $/tokenSetId/
+                        AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                      LIMIT 1
+                    `,
+                    {
+                      maker: toBuffer(maker),
+                      nonce,
+                      price: erc20TokenAmount,
+                      tokenSetId: `token:${erc1155Token}:${erc1155TokenId}`,
+                    }
+                  )
+                  .then((result) => {
+                    if (result) {
+                      orderId = result.id;
+                    }
+                  });
+              }
+
+              // Custom handling to support partial filling
+              fillEventsZeroExV4.push({
+                orderKind: "opendao-erc1155",
+                orderId,
+                orderSide: direction === 0 ? "sell" : "buy",
+                maker,
+                taker,
+                price: erc20TokenAmount,
+                contract: erc1155Token,
+                tokenId: erc1155TokenId,
+                amount: erc1155FillAmount,
+                baseEventParams,
+              });
+
+              if (orderId) {
+                orderInfos.push({
+                  context: `filled-${orderId}-${baseEventParams.txHash}`,
+                  id: orderId,
+                  trigger: {
+                    kind: "sale",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
+                });
+              }
+
+              fillInfos.push({
+                context: orderId || `${maker}-${nonce}`,
+                orderId: orderId,
+                orderSide: direction === 0 ? "sell" : "buy",
+                contract: erc1155Token,
+                tokenId: erc1155TokenId,
+                amount: erc1155FillAmount,
+                price: erc20TokenAmount,
+                timestamp: baseEventParams.timestamp,
+              });
+
+              break;
             }
           }
         } catch (error) {
@@ -812,6 +1061,7 @@ export const syncEvents = async (
       // WARNING! Ordering matters (fills should come in front of cancels).
       await Promise.all([
         es.fills.addEvents(fillEvents),
+        es.fills.addEventsZeroExV4(fillEventsZeroExV4),
         es.nonceCancels.addEvents(nonceCancelEvents, backfill),
         es.bulkCancels.addEvents(bulkCancelEvents, backfill),
         es.cancels.addEvents(cancelEvents),

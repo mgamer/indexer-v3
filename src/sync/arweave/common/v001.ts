@@ -6,6 +6,9 @@ import * as tokenList from "@/orderbook/token-sets/token-list";
 // Version 0.0.1 of Reservoir Protocol Arweave data:
 // - `wyvern-v2` legacy orders (not supported anymore)
 // - `wyvern-v2.3` orders
+// - `looks-rare` orders
+// - `opendao` orders
+// - `zeroex-v4` orders
 // - `list` token sets
 
 export const processTransactionData = async (
@@ -18,9 +21,11 @@ export const processTransactionData = async (
   for (const { kind, data } of transactionData) {
     try {
       switch (kind) {
-        case "wyvern-v2.3": {
+        case "wyvern-v2.3":
+        case "looks-rare":
+        case "opendao": {
           orderInfos.push({
-            kind: "wyvern-v2.3",
+            kind,
             info: {
               orderParams: data,
               metadata: {
