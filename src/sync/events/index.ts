@@ -21,7 +21,8 @@ import { toBuffer } from "@/common/utils";
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
 // processing (this will make things so much more flexible). However
 // for backfill procesing, we should still use bulk operations so as
-// to be performant enough.
+// to be performant enough. This might imply separate code to handle
+// backfill vs realtime events.
 
 export const syncEvents = async (
   fromBlock: number,
