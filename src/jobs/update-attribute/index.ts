@@ -35,13 +35,17 @@ if (config.doBackgroundWork) {
         tokenAttributesIds.push(tokenAttribute.attributeId);
       }
 
+      logger.info(QUEUE_NAME, `Attribute IDs ${JSON.stringify(tokenAttributesIds)}`);
+
       // If this is a new sale
       if (_.isNull(previousPrice) && !_.isNull(price)) {
+        logger.info(QUEUE_NAME, `Increment sales ${JSON.stringify(job.data)}`);
         await Attributes.incrementOnSaleCount(tokenAttributesIds, 1);
       }
 
       // The sale was filled
       if (!_.isNull(previousPrice) && _.isNull(price)) {
+        logger.info(QUEUE_NAME, `Decrement sales ${JSON.stringify(job.data)}`);
         await Attributes.incrementOnSaleCount(tokenAttributesIds, -1);
       }
 
