@@ -8,6 +8,8 @@ import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { TriggerKind } from "@/jobs/order-updates/types";
 
+import * as updateAttribute from "@/jobs/update-attribute";
+
 const QUEUE_NAME = "order-updates-by-id";
 
 export const queue = new Queue(QUEUE_NAME, {
@@ -93,7 +95,7 @@ if (config.doBackgroundWork) {
 
           if (data.side === "sell") {
             // Atomically update the cache and trigger an api event if needed
-            await idb.none(
+            const sellOrderResult = await idb.one(
               `
                 WITH "z" AS (
                   SELECT
@@ -173,6 +175,7 @@ if (config.doBackgroundWork) {
                   $/txHash/ AS "tx_hash",
                   $/txTimestamp/ AS "tx_timestamp"
                 FROM "w"
+                RETURNING contract, token_id AS tokenId, price, previous_price AS previousPrice
               `,
               {
                 id,
@@ -181,6 +184,9 @@ if (config.doBackgroundWork) {
                 txTimestamp: trigger.txTimestamp || null,
               }
             );
+
+            logger.info(QUEUE_NAME, `Add to update attributes ${sellOrderResult}`);
+            await updateAttribute.addToQueue(sellOrderResult);
           } else if (data.side === "buy") {
             // TODO: Use keyset pagination (via multiple jobs) to handle token
             // cache updates in batches - only relevant for orders that are on
