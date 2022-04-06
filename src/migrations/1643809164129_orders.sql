@@ -3,7 +3,9 @@
 CREATE TYPE "order_kind_t" AS ENUM (
   'wyvern-v2',
   'wyvern-v2.3',
-  'looks-rare'
+  'looks-rare',
+  'opendao-erc721',
+  'opendao-erc1155'
 );
 
 CREATE TYPE "order_side_t" AS ENUM (
@@ -37,6 +39,8 @@ CREATE TABLE "orders" (
   "taker" BYTEA,
   "price" NUMERIC(78, 0),
   "value" NUMERIC(78, 0),
+  "quantity_filled" NUMERIC(78, 0) DEFAULT 0,
+  "quantity_remaining" NUMERIC(78, 0) DEFAULT 1,
   "valid_between" TSTZRANGE,
   "nonce" NUMERIC(78, 0),
   "source_id" BYTEA,

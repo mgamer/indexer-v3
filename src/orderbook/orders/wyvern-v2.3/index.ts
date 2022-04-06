@@ -144,11 +144,14 @@ export const save = async (
       let fillabilityStatus = "fillable";
       let approvalStatus = "approved";
       try {
-        await offChainCheck(order, { onChainSellApprovalRecheck: true });
+        await offChainCheck(order, { onChainApprovalRecheck: true });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         // Keep any orders that can potentially get valid in the future
-        if (error.message === "no-approval") {
+        if (error.message === "no-balance-no-approval") {
+          fillabilityStatus = "no-balance";
+          approvalStatus = "no-approval";
+        } else if (error.message === "no-approval") {
           approvalStatus = "no-approval";
         } else if (error.message === "no-balance") {
           fillabilityStatus = "no-balance";

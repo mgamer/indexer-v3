@@ -4,9 +4,11 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { toBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { TriggerKind } from "@/jobs/order-updates/types";
+
+import * as updateAttribute from "@/jobs/update-attribute";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -93,7 +95,7 @@ if (config.doBackgroundWork) {
 
           if (data.side === "sell") {
             // Atomically update the cache and trigger an api event if needed
-            await idb.none(
+            const sellOrderResult = await idb.oneOrNone(
               `
                 WITH "z" AS (
                   SELECT
@@ -173,6 +175,7 @@ if (config.doBackgroundWork) {
                   $/txHash/ AS "tx_hash",
                   $/txTimestamp/ AS "tx_timestamp"
                 FROM "w"
+                RETURNING contract, token_id AS tokenId, price, previous_price AS previousPrice
               `,
               {
                 id,
@@ -181,6 +184,11 @@ if (config.doBackgroundWork) {
                 txTimestamp: trigger.txTimestamp || null,
               }
             );
+
+            if (sellOrderResult) {
+              sellOrderResult.contract = fromBuffer(sellOrderResult.contract); // Convert contract to string
+              await updateAttribute.addToQueue(sellOrderResult);
+            }
           } else if (data.side === "buy") {
             // TODO: Use keyset pagination (via multiple jobs) to handle token
             // cache updates in batches - only relevant for orders that are on

@@ -171,7 +171,7 @@ export const getExecuteSellV1Options: RouteOptions = {
           // Check the order's fillability.
           try {
             await offChainCheck(sellOrder, {
-              onChainSellApprovalRecheck: true,
+              onChainApprovalRecheck: true,
             });
           } catch (error: any) {
             switch (error.message) {
@@ -350,6 +350,35 @@ export const getExecuteSellV1Options: RouteOptions = {
                 status: !nftApprovalTx ? "complete" : "incomplete",
                 data: nftApprovalTx,
               },
+              {
+                ...steps[3],
+                status: "incomplete",
+                data: fillTx,
+              },
+              {
+                ...steps[4],
+                status: "incomplete",
+                data: {
+                  endpoint: `/orders/executed/v1?id=${bestOrderResult.id}`,
+                  method: "GET",
+                },
+              },
+            ],
+          };
+        }
+
+        case "opendao-erc721":
+        case "opendao-erc1155": {
+          const order = new Sdk.OpenDao.Order(config.chainId, bestOrderResult.raw_data);
+
+          // Create matching order.
+          const sellOrder = order.buildMatching({ tokenId, amount: 1 });
+
+          const exchange = new Sdk.OpenDao.Exchange(config.chainId);
+          const fillTx = exchange.matchTransaction(query.taker, order, sellOrder);
+
+          return {
+            steps: [
               {
                 ...steps[3],
                 status: "incomplete",
