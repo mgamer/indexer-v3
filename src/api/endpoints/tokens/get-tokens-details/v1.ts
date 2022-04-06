@@ -265,13 +265,9 @@ export const getTokensDetailsV1Options: RouteOptions = {
       const sources = await Sources.getInstance();
 
       const result = await edb.manyOrNone(baseQuery, query).then((result) =>
-        result.map(async (r) => {
+        result.map((r) => {
           const source = r.floor_sell_source_id
-            ? await sources.get(
-                fromBuffer(r.floor_sell_source_id),
-                fromBuffer(r.contract),
-                r.token_id
-              )
+            ? sources.get(fromBuffer(r.floor_sell_source_id), fromBuffer(r.contract), r.token_id)
             : null;
 
           return {
@@ -322,7 +318,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
         })
       );
 
-      return { tokens: await Promise.all(result) };
+      return { tokens: result };
     } catch (error) {
       logger.error(`get-tokens-details-${version}-handler`, `Handler failure: ${error}`);
       throw error;

@@ -319,13 +319,14 @@ export const getOrdersBidsV1Options: RouteOptions = {
       const result = rawResult.map(async (r) => {
         const sources = await Sources.getInstance();
         let source: SourcesEntity | undefined;
+
         if (r.source_id) {
           let contract: string | undefined;
           let tokenId: string | undefined;
           if (r.token_set_id?.startsWith("token:")) {
             [contract, tokenId] = r.token_set_id.split(":").slice(1);
           }
-          source = await sources.get(fromBuffer(r.source_id), contract, tokenId);
+          source = sources.get(fromBuffer(r.source_id), contract, tokenId);
         }
 
         return {
