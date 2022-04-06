@@ -903,7 +903,11 @@ export const syncEvents = async (
                       WHERE orders.kind = 'opendao-erc721'
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
-                        AND orders.value = $/value/
+                        AND (
+                          (orders.side = 'buy' AND orders.value = $/value/)
+                          OR
+                          (orders.side = 'sell' AND orders.value >= $/value/)
+                        )
                         AND orders.token_set_id = $/tokenSetId/
                         AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
                       LIMIT 1
@@ -1010,7 +1014,11 @@ export const syncEvents = async (
                       WHERE orders.kind = 'opendao-erc1155'
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
-                        AND (($/value/::NUMERIC(78, 0) - 1::NUMERIC(78, 0)) <= orders.value AND orders.value <= ($/value/::NUMERIC(78, 0) + 1::NUMERIC(78, 0)))
+                        (
+                          (orders.side = 'buy' AND ($/value/::NUMERIC(78, 0) - 1::NUMERIC(78, 0)) <= orders.value AND orders.value <= ($/value/::NUMERIC(78, 0) + 1::NUMERIC(78, 0)))
+                          OR
+                          (orders.side = 'sell' AND orders.value >= $/value/)
+                        )
                         AND orders.token_set_id = $/tokenSetId/
                         AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
                       LIMIT 1
