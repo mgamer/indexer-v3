@@ -1,5 +1,3 @@
-import _ from "lodash";
-
 import { HashZero } from "@ethersproject/constants";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
@@ -97,7 +95,7 @@ if (config.doBackgroundWork) {
 
           if (data.side === "sell") {
             // Atomically update the cache and trigger an api event if needed
-            let sellOrderResult = await idb.oneOrNone(
+            const sellOrderResult = await idb.oneOrNone(
               `
                 WITH "z" AS (
                   SELECT
@@ -177,7 +175,7 @@ if (config.doBackgroundWork) {
                   $/txHash/ AS "tx_hash",
                   $/txTimestamp/ AS "tx_timestamp"
                 FROM "w"
-                RETURNING contract, token_id, price, previous_price
+                RETURNING contract, token_id AS "tokenId", price, previous_price AS "previousPrice"
               `,
               {
                 id,
@@ -189,7 +187,6 @@ if (config.doBackgroundWork) {
 
             if (sellOrderResult) {
               sellOrderResult.contract = fromBuffer(sellOrderResult.contract); // Convert contract to string
-              sellOrderResult = _.mapKeys(sellOrderResult, (v, k) => _.camelCase(k)); // Convert the keys to Camel case
               await updateAttribute.addToQueue(sellOrderResult);
             }
           } else if (data.side === "buy") {
