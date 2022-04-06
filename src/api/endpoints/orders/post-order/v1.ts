@@ -8,7 +8,7 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import * as wyvernV23 from "@/orderbook/orders/wyvern-v2.3";
+import * as orders from "@/orderbook/orders";
 
 const version = "v1";
 
@@ -23,7 +23,7 @@ export const postOrderV1Options: RouteOptions = {
   validate: {
     payload: Joi.object({
       order: Joi.object({
-        kind: Joi.string().lowercase().valid("wyvern-v2.3").required(),
+        kind: Joi.string().lowercase().valid("wyvern-v2.3", "opendao").required(),
         data: Joi.object().required(),
       }),
       orderbook: Joi.string().lowercase().valid("reservoir", "opensea").default("reservoir"),
@@ -47,10 +47,32 @@ export const postOrderV1Options: RouteOptions = {
       const attribute = payload.attribute;
 
       switch (order.kind) {
+        case "opendao": {
+          if (orderbook !== "reservoir") {
+            throw new Error("Unsupported orderbook");
+          }
+          if (attribute) {
+            throw new Error("Unsupported metadata");
+          }
+
+          const orderInfo: orders.openDao.OrderInfo = {
+            orderParams: order.data,
+            metadata: {
+              source,
+            },
+          };
+          const [result] = await orders.openDao.save([orderInfo]);
+          if (result.status === "success") {
+            return { message: "Success" };
+          } else {
+            throw Boom.badRequest(result.status);
+          }
+        }
+
         case "wyvern-v2.3": {
           switch (orderbook) {
             case "reservoir": {
-              const orderInfo: wyvernV23.OrderInfo = {
+              const orderInfo: orders.wyvernV23.OrderInfo = {
                 orderParams: order.data,
                 metadata: {
                   schema: attribute && {
@@ -68,7 +90,7 @@ export const postOrderV1Options: RouteOptions = {
                   source,
                 },
               };
-              const [result] = await wyvernV23.save([orderInfo]);
+              const [result] = await orders.wyvernV23.save([orderInfo]);
               if (result.status === "success") {
                 return { message: "Success" };
               } else {
