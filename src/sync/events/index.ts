@@ -886,6 +886,8 @@ export const syncEvents = async (
                 break;
               }
 
+              const orderSide = direction === 0 ? "sell" : "buy";
+
               let orderId: string | undefined;
               if (!backfill) {
                 // Since the event doesn't include the exact order which got matched
@@ -903,20 +905,16 @@ export const syncEvents = async (
                       WHERE orders.kind = 'opendao-erc721'
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
-                        AND (
-                          (orders.side = 'buy' AND orders.value = $/value/)
-                          OR
-                          (orders.side = 'sell' AND orders.value >= $/value/)
-                        )
-                        AND orders.token_set_id = $/tokenSetId/
+                        AND orders.side = $/side/
+                        AND orders.contract = $/contract/
                         AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
                       LIMIT 1
                     `,
                     {
                       maker: toBuffer(maker),
                       nonce,
-                      value: erc20TokenAmount,
-                      tokenSetId: `token:${erc721Token}:${erc721TokenId}`,
+                      side: orderSide,
+                      contract: erc721Token,
                     }
                   )
                   .then((result) => {
@@ -929,7 +927,7 @@ export const syncEvents = async (
               fillEvents.push({
                 orderKind: "opendao-erc721",
                 orderId,
-                orderSide: direction === 0 ? "sell" : "buy",
+                orderSide,
                 maker,
                 taker,
                 price: erc20TokenAmount,
@@ -962,7 +960,7 @@ export const syncEvents = async (
               fillInfos.push({
                 context: orderId || `${maker}-${nonce}`,
                 orderId: orderId,
-                orderSide: direction === 0 ? "sell" : "buy",
+                orderSide,
                 contract: erc721Token,
                 tokenId: erc721TokenId,
                 amount: "1",
