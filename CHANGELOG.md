@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.12.0 (2022-04-06)
+
+
+### Features
+
+* add 5s cache to tokens floor route ([ae4a173](https://github.com/reservoirprotocol/indexer-v3/commit/ae4a17390c5cbea7f36b78ea87e72b058f7757f4))
+
 ### 5.11.1 (2022-04-06)
 
 ## 5.11.0 (2022-04-06)
