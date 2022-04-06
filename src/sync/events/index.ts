@@ -999,12 +999,7 @@ export const syncEvents = async (
 
               let orderId: string | undefined;
               if (!backfill) {
-                // Since the event doesn't include the exact order which got matched
-                // (it only includes the nonce, but we can potentially have multiple
-                // different orders sharing the same nonce off-chain), we attempt to
-                // detect the order id which got filled by checking the database for
-                // orders which have the exact nonce/value/token-set combination (it
-                // doesn't cover all cases, but it's good enough for now).
+                // For erc1155 orders we only allow unique maker/nonce orders.
                 await idb
                   .oneOrNone(
                     `
@@ -1014,12 +1009,6 @@ export const syncEvents = async (
                       WHERE orders.kind = 'opendao-erc1155'
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
-                        (
-                          (orders.side = 'buy' AND ($/value/::NUMERIC(78, 0) - 1::NUMERIC(78, 0)) <= orders.value AND orders.value <= ($/value/::NUMERIC(78, 0) + 1::NUMERIC(78, 0)))
-                          OR
-                          (orders.side = 'sell' AND orders.value >= $/value/)
-                        )
-                        AND orders.token_set_id = $/tokenSetId/
                         AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
                       LIMIT 1
                     `,
