@@ -146,7 +146,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
           );
 
           // Create matching order.
-          const buyOrder = order.buildMatching({ tokenId });
+          const buyOrder = order.buildMatching({ tokenId, amount: 1 });
 
           const exchange = new Sdk.OpenDao.Exchange(config.chainId);
           fillTx = exchange.matchTransaction(query.taker, order, buyOrder);
