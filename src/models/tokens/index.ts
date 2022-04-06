@@ -57,7 +57,7 @@ export class Tokens {
   }
 
   public static async getTokenAttributes(contract: string, tokenId: string) {
-    const query = `SELECT attribute_id AS attributeId, key, token_attributes.value, attribute_key_id AS attributeKeyId
+    const query = `SELECT attribute_id AS "attributeId", key, token_attributes.value, attribute_key_id AS "attributeKeyId"
                    FROM token_attributes
                    JOIN attributes ON token_attributes.attribute_id = attributes.id
                    WHERE contract = $/contract/
