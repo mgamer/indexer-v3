@@ -2,6 +2,57 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.12.0 (2022-04-06)
+
+
+### Features
+
+* add 5s cache to tokens floor route ([ae4a173](https://github.com/reservoirprotocol/indexer-v3/commit/ae4a17390c5cbea7f36b78ea87e72b058f7757f4))
+
+### 5.11.1 (2022-04-06)
+
+## 5.11.0 (2022-04-06)
+
+
+### Features
+
+* wip ([990be72](https://github.com/reservoirprotocol/indexer-v3/commit/990be7298c2b5e4477c9d596b3ff6c36abc19848))
+
+## 5.10.0 (2022-04-06)
+
+
+### Features
+
+* wip ([0962345](https://github.com/reservoirprotocol/indexer-v3/commit/096234577e52ffd5937dfdc061f0c43db8204039))
+
+### 5.9.2 (2022-04-06)
+
+### 5.9.1 (2022-04-06)
+
+## 5.9.0 (2022-04-05)
+
+
+### Features
+
+* remove source from details v1 ([b7cf2fc](https://github.com/reservoirprotocol/indexer-v3/commit/b7cf2fc0d9b4c63e09889cc8a4b37184556b5723))
+
+### 5.8.2 (2022-04-05)
+
+### 5.8.1 (2022-04-05)
+
+## 5.8.0 (2022-04-05)
+
+
+### Features
+
+* allow to update sources ([c5753b2](https://github.com/reservoirprotocol/indexer-v3/commit/c5753b230218bb7fb25d25e14033bd80cc32bca7))
+
+### 5.7.4 (2022-04-05)
+
+### 5.7.3 (2022-04-05)
+
+### 5.7.2 (2022-04-05)
+
 ### 5.7.1 (2022-04-05)
 
 ## 5.7.0 (2022-04-05)

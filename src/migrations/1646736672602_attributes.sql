@@ -13,7 +13,10 @@ CREATE TABLE "attribute_keys" (
   "key" TEXT NOT NULL,
   "kind" "attribute_key_kind_t" NOT NULL,
   "rank" INT,
-  "attribute_count" INT NOT NULL DEFAULT 0
+  "attribute_count" INT NOT NULL DEFAULT 0,
+  "on_sale_count" INT NOT NULL DEFAULT 0,
+  "floor_sell_value" NUMERIC(78, 0),
+  "top_buy_value" NUMERIC(78, 0)
 );
 
 ALTER TABLE "attribute_keys"
