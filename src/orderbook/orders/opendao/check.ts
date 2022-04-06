@@ -1,12 +1,25 @@
 import * as Sdk from "@reservoir0x/sdk";
 
+import { baseProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 
 // TODO: Add support for on-chain check
 
-export const offChainCheck = async (order: Sdk.OpenDao.Order) => {
+export const offChainCheck = async (
+  order: Sdk.OpenDao.Order,
+  options?: {
+    // Some NFTs pre-approve common exchanges so that users don't
+    // spend gas approving them. In such cases we will be missing
+    // these pre-approvals from the local database and validation
+    // purely from off-chain state can be inaccurate. In order to
+    // handle this, we allow the option to double validate orders
+    // on-chain in case off-chain validation returns the order as
+    // being invalid.
+    onChainApprovalRecheck?: boolean;
+  }
+) => {
   // Check: order has a valid target
   const kind = await commonHelpers.getContractKind(order.params.nft);
   if (!kind || kind !== order.params.kind?.split("-")[0]) {
@@ -24,18 +37,31 @@ export const offChainCheck = async (order: Sdk.OpenDao.Order) => {
   }
 
   const feeAmount = order.getFeeAmount();
+
+  let hasBalance = true;
+  let hasApproval = true;
   if (order.params.direction === Sdk.OpenDao.Types.TradeDirection.BUY) {
     // Check: maker has enough balance
     const ftBalance = await commonHelpers.getFtBalance(order.params.erc20Token, order.params.maker);
     if (ftBalance.lt(bn(order.params.erc20TokenAmount).add(feeAmount))) {
-      throw new Error("no-balance");
+      hasBalance = false;
     }
 
-    // TODO: Check: maker has set the proper approval
+    // TODO: Integrate off-chain approval checking
+    if (options?.onChainApprovalRecheck) {
+      const erc20 = new Sdk.Common.Helpers.Erc20(baseProvider, order.params.erc20Token);
+      if (
+        bn(
+          await erc20.getAllowance(
+            order.params.maker,
+            Sdk.OpenDao.Addresses.Exchange[config.chainId]
+          )
+        ).lt(bn(order.params.erc20TokenAmount).add(feeAmount))
+      ) {
+        hasApproval = false;
+      }
+    }
   } else {
-    let hasBalance = true;
-    let hasApproval = true;
-
     // Check: maker has enough balance
     const nftBalance = await commonHelpers.getNftBalance(
       order.params.nft,
@@ -57,13 +83,13 @@ export const offChainCheck = async (order: Sdk.OpenDao.Order) => {
     if (!nftApproval) {
       hasApproval = false;
     }
+  }
 
-    if (!hasBalance && !hasApproval) {
-      throw new Error("no-balance-no-approval");
-    } else if (!hasBalance) {
-      throw new Error("no-balance");
-    } else if (!hasApproval) {
-      throw new Error("no-approval");
-    }
+  if (!hasBalance && !hasApproval) {
+    throw new Error("no-balance-no-approval");
+  } else if (!hasBalance) {
+    throw new Error("no-balance");
+  } else if (!hasApproval) {
+    throw new Error("no-approval");
   }
 };

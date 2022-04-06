@@ -1,7 +1,8 @@
 import * as Sdk from "@reservoir0x/sdk";
 
-import { config } from "@/config/index";
 import { baseProvider } from "@/common/provider";
+import { bn } from "@/common/utils";
+import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 
 // TODO: Add support for on-chain check
@@ -16,7 +17,7 @@ export const offChainCheck = async (
     // handle this, we allow the option to double validate orders
     // on-chain in case off-chain validation returns the order as
     // being invalid.
-    onChainSellApprovalRecheck?: boolean;
+    onChainApprovalRecheck?: boolean;
   }
 ) => {
   // Check: order has a valid target
@@ -41,18 +42,30 @@ export const offChainCheck = async (
     throw new Error("invalid-nonce");
   }
 
+  let hasBalance = true;
+  let hasApproval = true;
   if (!order.params.isOrderAsk) {
     // Check: maker has enough balance
     const ftBalance = await commonHelpers.getFtBalance(order.params.currency, order.params.signer);
     if (ftBalance.lt(order.params.price)) {
-      throw new Error("no-balance");
+      hasBalance = true;
     }
 
-    // TODO: Check: maker has set the proper approval
+    // TODO: Integrate off-chain approval checking
+    if (options?.onChainApprovalRecheck) {
+      const erc20 = new Sdk.Common.Helpers.Erc20(baseProvider, order.params.currency);
+      if (
+        bn(
+          await erc20.getAllowance(
+            order.params.signer,
+            Sdk.LooksRare.Addresses.Exchange[config.chainId]
+          )
+        ).lt(order.params.price)
+      ) {
+        hasApproval = false;
+      }
+    }
   } else {
-    let hasBalance = true;
-    let hasApproval = true;
-
     // Check: maker has enough balance
     const nftBalance = await commonHelpers.getNftBalance(
       order.params.collection,
@@ -75,7 +88,7 @@ export const offChainCheck = async (
       operator
     );
     if (!nftApproval) {
-      if (options?.onChainSellApprovalRecheck) {
+      if (options?.onChainApprovalRecheck) {
         // Re-validate the approval on-chain to handle some edge-cases
         const contract =
           kind === "erc721"
@@ -88,13 +101,13 @@ export const offChainCheck = async (
         hasApproval = false;
       }
     }
+  }
 
-    if (!hasBalance && !hasApproval) {
-      throw new Error("no-balance-no-approval");
-    } else if (!hasBalance) {
-      throw new Error("no-balance");
-    } else if (!hasApproval) {
-      throw new Error("no-approval");
-    }
+  if (!hasBalance && !hasApproval) {
+    throw new Error("no-balance-no-approval");
+  } else if (!hasBalance) {
+    throw new Error("no-balance");
+  } else if (!hasApproval) {
+    throw new Error("no-approval");
   }
 };

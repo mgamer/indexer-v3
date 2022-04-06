@@ -2,6 +2,8 @@ import * as Sdk from "@reservoir0x/sdk";
 import { BaseOrderInfo } from "@reservoir0x/sdk/dist/wyvern-v2.3/builders/base";
 
 import { baseProvider } from "@/common/provider";
+import { bn } from "@/common/utils";
+import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as utils from "@/orderbook/orders/wyvern-v2.3/utils";
 
@@ -16,8 +18,9 @@ export const offChainCheck = async (
     // purely from off-chain state can be inaccurate. In order to
     // handle this, we allow the option to double validate orders
     // on-chain in case off-chain validation returns the order as
-    // being invalid.
-    onChainSellApprovalRecheck?: boolean;
+    // being invalid. We use the this option to validate approval
+    // of buy orders as well.
+    onChainApprovalRecheck?: boolean;
   }
 ) => {
   const info = order.getInfo();
@@ -37,6 +40,8 @@ export const offChainCheck = async (
     throw new Error("invalid-nonce");
   }
 
+  let hasBalance = true;
+  let hasApproval = true;
   if (order.params.side === Sdk.WyvernV23.Types.OrderSide.BUY) {
     // Check: maker has enough balance
     const ftBalance = await commonHelpers.getFtBalance(
@@ -44,14 +49,24 @@ export const offChainCheck = async (
       order.params.maker
     );
     if (ftBalance.lt(order.getMatchingPrice())) {
-      throw new Error("no-balance");
+      hasBalance = false;
     }
 
-    // TODO: Check: maker has set the proper approval
+    // TODO: Integrate off-chain approval checking
+    if (options?.onChainApprovalRecheck) {
+      const erc20 = new Sdk.Common.Helpers.Erc20(baseProvider, order.params.paymentToken);
+      if (
+        bn(
+          await erc20.getAllowance(
+            order.params.maker,
+            Sdk.WyvernV23.Addresses.TokenTransferProxy[config.chainId]
+          )
+        ).lt(order.params.basePrice)
+      ) {
+        hasApproval = false;
+      }
+    }
   } else {
-    let hasBalance = true;
-    let hasApproval = true;
-
     // Check: maker has initialized a proxy
     const proxy = await utils.getUserProxy(order.params.maker);
     if (!proxy) {
@@ -75,7 +90,7 @@ export const offChainCheck = async (
       proxy
     );
     if (!nftApproval) {
-      if (options?.onChainSellApprovalRecheck) {
+      if (options?.onChainApprovalRecheck) {
         // Re-validate the approval on-chain to handle some edge-cases
         const contract = order.params.kind?.includes("erc721")
           ? new Sdk.Common.Helpers.Erc721(baseProvider, info.contract)
@@ -87,13 +102,13 @@ export const offChainCheck = async (
         hasApproval = false;
       }
     }
+  }
 
-    if (!hasBalance && !hasApproval) {
-      throw new Error("no-balance-no-approval");
-    } else if (!hasBalance) {
-      throw new Error("no-balance");
-    } else if (!hasApproval) {
-      throw new Error("no-approval");
-    }
+  if (!hasBalance && !hasApproval) {
+    throw new Error("no-balance-no-approval");
+  } else if (!hasBalance) {
+    throw new Error("no-balance");
+  } else if (!hasApproval) {
+    throw new Error("no-approval");
   }
 };

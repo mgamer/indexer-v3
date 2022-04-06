@@ -151,6 +151,8 @@ if (config.doBackgroundWork) {
 
             if (result) {
               switch (result.kind) {
+                // TODO: Integrate the other order types.
+
                 case "wyvern-v2.3": {
                   const order = new Sdk.WyvernV23.Order(config.chainId, result.raw_data);
 
@@ -159,7 +161,7 @@ if (config.doBackgroundWork) {
                   let approvalStatus = "approved";
                   try {
                     await wyvernV23Check.offChainCheck(order, {
-                      onChainSellApprovalRecheck: true,
+                      onChainApprovalRecheck: true,
                     });
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   } catch (error: any) {
