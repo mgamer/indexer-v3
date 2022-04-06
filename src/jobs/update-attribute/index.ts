@@ -28,6 +28,8 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       logger.info(QUEUE_NAME, `Update attributes ${JSON.stringify(job.data)}`);
       const { contract, tokenId, price, previousPrice } = job.data as UpdateAttributeInfo;
+
+      logger.info(QUEUE_NAME, `contract=${contract}, tokenId=${tokenId}`);
       const tokenAttributes = await Tokens.getTokenAttributes(contract, tokenId);
       const tokenAttributesIds = [];
 
