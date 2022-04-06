@@ -56,7 +56,7 @@ if (config.doBackgroundWork) {
         // Check for new floor price
         const attributes = await Attributes.getAttributes(tokenAttributesIds);
         for (const attribute of attributes) {
-          if (price < attribute.floorSellValue) {
+          if (_.isNull(attribute.floorSellValue) || price < attribute.floorSellValue) {
             await Attributes.update(attribute.id, { floorSellValue: price });
             logger.info(QUEUE_NAME, `New price ${price} for attribute id ${attribute.id}`);
           }
