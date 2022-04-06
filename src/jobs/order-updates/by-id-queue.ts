@@ -4,7 +4,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { toBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { TriggerKind } from "@/jobs/order-updates/types";
 
@@ -185,6 +185,7 @@ if (config.doBackgroundWork) {
               }
             );
 
+            sellOrderResult.contract = fromBuffer(sellOrderResult.contract); // Convert contract to string
             logger.info(QUEUE_NAME, `Add to update attributes ${JSON.stringify(sellOrderResult)}`);
             await updateAttribute.addToQueue(sellOrderResult);
           } else if (data.side === "buy") {
