@@ -67,7 +67,7 @@ export const save = async (
         const nonceExists = await idb.oneOrNone(
           `
             SELECT 1 FROM orders
-            WHERE order_kind = 'opendao-erc1155'
+            WHERE orders.kind = 'opendao-erc1155'
               AND orders.maker = $/maker/
               AND orders.nonce = $/nonce/
           `,
@@ -87,7 +87,7 @@ export const save = async (
         const nonceExists = await idb.oneOrNone(
           `
             SELECT 1 FROM orders
-            WHERE order_kind = 'opendao-erc721'
+            WHERE orders.kind = 'opendao-erc721'
               AND orders.maker = $/maker/
               AND orders.nonce = $/nonce/
               AND orders.contract = $/contract/
@@ -132,7 +132,7 @@ export const save = async (
 
       // Check: sell order has Eth as payment token
       if (
-        order.params.direction === Sdk.OpenDao.Types.TradeDirection.BUY &&
+        order.params.direction === Sdk.OpenDao.Types.TradeDirection.SELL &&
         order.params.erc20Token !== Sdk.OpenDao.Addresses.Eth[config.chainId]
       ) {
         return results.push({
