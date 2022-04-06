@@ -185,7 +185,7 @@ if (config.doBackgroundWork) {
               }
             );
 
-            logger.info(QUEUE_NAME, `Add to update attributes ${sellOrderResult}`);
+            logger.info(QUEUE_NAME, `Add to update attributes ${JSON.stringify(sellOrderResult)}`);
             await updateAttribute.addToQueue(sellOrderResult);
           } else if (data.side === "buy") {
             // TODO: Use keyset pagination (via multiple jobs) to handle token
