@@ -95,7 +95,7 @@ if (config.doBackgroundWork) {
 
           if (data.side === "sell") {
             // Atomically update the cache and trigger an api event if needed
-            const sellOrderResult = await idb.one(
+            const sellOrderResult = await idb.oneOrNone(
               `
                 WITH "z" AS (
                   SELECT
@@ -185,9 +185,14 @@ if (config.doBackgroundWork) {
               }
             );
 
-            sellOrderResult.contract = fromBuffer(sellOrderResult.contract); // Convert contract to string
-            logger.info(QUEUE_NAME, `Add to update attributes ${JSON.stringify(sellOrderResult)}`);
-            await updateAttribute.addToQueue(sellOrderResult);
+            if (sellOrderResult) {
+              sellOrderResult.contract = fromBuffer(sellOrderResult.contract); // Convert contract to string
+              logger.info(
+                QUEUE_NAME,
+                `Add to update attributes ${JSON.stringify(sellOrderResult)}`
+              );
+              await updateAttribute.addToQueue(sellOrderResult);
+            }
           } else if (data.side === "buy") {
             // TODO: Use keyset pagination (via multiple jobs) to handle token
             // cache updates in batches - only relevant for orders that are on
