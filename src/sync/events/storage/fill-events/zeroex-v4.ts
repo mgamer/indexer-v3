@@ -2,6 +2,7 @@ import { idb, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { DbEvent, Event } from "@/events-sync/storage/fill-events";
 
+// To be used only for erc1155 orders
 export const addEventsZeroExV4 = async (events: Event[]) => {
   const fillValues: DbEvent[] = [];
   for (const event of events) {
@@ -52,79 +53,66 @@ export const addEventsZeroExV4 = async (events: Event[]) => {
 
     // Atomically insert the fill events and update order statuses
     await idb.none(`
-      WITH
-        x AS (
-          INSERT INTO fill_events_2 (
-            address,
-            block,
-            block_hash,
-            tx_hash,
-            tx_index,
-            log_index,
-            timestamp,
-            batch_index,
-            order_kind,
-            order_id,
-            order_side,
-            maker,
-            taker,
-            price,
-            contract,
-            token_id,
-            amount
-          ) VALUES ${pgp.helpers.values(fillValues, columns)}
-          ON CONFLICT DO NOTHING
-          RETURNING
-            fill_events_2.order_kind,
-            fill_events_2.order_id,
-            fill_events_2.timestamp,
-            fill_events_2.amount
+      WITH x AS (
+        INSERT INTO fill_events_2 (
+          address,
+          block,
+          block_hash,
+          tx_hash,
+          tx_index,
+          log_index,
+          timestamp,
+          batch_index,
+          order_kind,
+          order_id,
+          order_side,
+          maker,
+          taker,
+          price,
+          contract,
+          token_id,
+          amount
+        ) VALUES ${pgp.helpers.values(fillValues, columns)}
+        ON CONFLICT DO NOTHING
+        RETURNING
+          fill_events_2.order_kind,
+          fill_events_2.order_id,
+          fill_events_2.timestamp,
+          fill_events_2.amount
+      )
+      INSERT INTO orders (
+        id,
+        kind,
+        quantity_filled,
+        fillability_status,
+        expiration
+      ) (
+        SELECT
+          x.order_id,
+          x.order_kind,
+          x.amount,
+          'filled'::order_fillability_status_t,
+          to_timestamp(x.timestamp)
+        FROM x
+        WHERE x.order_id IS NOT NULL
+      )
+      ON CONFLICT (id) DO
+      UPDATE SET
+        fillability_status = (
+          CASE
+            WHEN orders.quantity_remaining <= EXCLUDED.quantity_filled THEN 'filled'
+            ELSE orders.fillability_status
+          END
         ),
-        y AS (
-          INSERT INTO orders (
-            id,
-            kind,
-            quantity_filled,
-            fillability_status,
-            expiration
-          ) (
-            SELECT
-              x.order_id,
-              x.order_kind,
-              x.amount,
-              'filled'::order_fillability_status_t,
-              to_timestamp(x.timestamp)
-            FROM x
-            WHERE x.order_id IS NOT NULL
-          )
-          ON CONFLICT (id) DO
-          UPDATE SET
-            fillability_status = (
-              CASE
-                WHEN orders.quantity_remaining <= EXCLUDED.quantity_filled THEN 'filled'
-                ELSE orders.fillability_status
-              END
-            ),
-            quantity_remaining = orders.quantity_remaining - EXCLUDED.quantity_filled,
-            quantity_filled = orders.quantity_filled + EXCLUDED.quantity_filled,
-            expiration = (
-              CASE
-                WHEN orders.quantity_remaining <= EXCLUDED.quantity_filled THEN EXCLUDED.expiration
-                ELSE orders.expiration
-              END
-            ),
-            updated_at = now()
-          RETURNING orders.kind, orders.maker, orders.nonce, orders.fillability_status, orders.expiration
-        )
-        UPDATE orders SET
-          fillability_status = 'cancelled',
-          expiration = y.expiration,
-          updated_at = now()
-        FROM y
-        WHERE orders.kind = y.kind
-          AND orders.maker = y.maker
-          AND orders.nonce = y.nonce
-          AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+        quantity_remaining = orders.quantity_remaining - EXCLUDED.quantity_filled,
+        quantity_filled = orders.quantity_filled + EXCLUDED.quantity_filled,
+        expiration = (
+          CASE
+            WHEN orders.quantity_remaining <= EXCLUDED.quantity_filled THEN EXCLUDED.expiration
+            ELSE orders.expiration
+          END
+        ),
+        updated_at = now()
     `);
   }
 };
