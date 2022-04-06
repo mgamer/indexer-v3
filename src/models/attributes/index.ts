@@ -11,8 +11,8 @@ import {
 export class Attributes {
   public static async incrementOnSaleCount(attributesId: number[], incrementBy: number) {
     const query = `UPDATE attributes
-                   SET on_sale_count = on_sale_count + $/incrementBy/
-                   WHERE IN ($/attributesId:raw/)`;
+                   SET on_sale_count = CASE WHEN on_sale_count <= 0 THEN 0 ELSE on_sale_count + $/incrementBy/ END 
+                   WHERE id IN ($/attributesId:raw/)`;
 
     return await idb.none(query, {
       attributesId: _.join(attributesId, ","),
