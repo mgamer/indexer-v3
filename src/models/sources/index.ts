@@ -5,7 +5,7 @@ import { config } from "@/config/index";
 import { idb } from "@/common/db";
 import { SourcesEntity, SourcesEntityParams } from "@/models/sources/sources-entity";
 
-// import { default as sources } from "./sources.json";
+import { default as sources } from "./sources.json";
 
 export class Sources {
   private static instance: Sources;
@@ -47,11 +47,11 @@ export class Sources {
     });
   }
 
-  // public static async syncSources() {
-  //   _.forEach(sources, (metadata, sourceId) => {
-  //     Sources.add(sourceId, metadata);
-  //   });
-  // }
+  public static async syncSources() {
+    _.forEach(sources, (metadata, sourceId) => {
+      Sources.add(sourceId, metadata);
+    });
+  }
 
   public static async add(sourceId: string, metadata: object) {
     const query = `INSERT INTO sources (source_id, metadata)
