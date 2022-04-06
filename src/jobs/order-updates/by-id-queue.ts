@@ -187,10 +187,6 @@ if (config.doBackgroundWork) {
 
             if (sellOrderResult) {
               sellOrderResult.contract = fromBuffer(sellOrderResult.contract); // Convert contract to string
-              logger.info(
-                QUEUE_NAME,
-                `Add to update attributes ${JSON.stringify(sellOrderResult)}`
-              );
               await updateAttribute.addToQueue(sellOrderResult);
             }
           } else if (data.side === "buy") {
