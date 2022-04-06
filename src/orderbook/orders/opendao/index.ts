@@ -52,6 +52,64 @@ export const save = async (
         });
       }
 
+      // Handle: get order kind
+      const kind = await commonHelpers.getContractKind(order.params.nft);
+      if (!kind) {
+        return results.push({
+          id,
+          status: "unknown-order-kind",
+        });
+      }
+
+      const side = order.params.direction === Sdk.OpenDao.Types.TradeDirection.BUY ? "buy" : "sell";
+
+      // Check: order has unique nonce
+      if (kind === "erc1155") {
+        // For erc1155, enforce uniqueness of maker/nonce.
+        const nonceExists = await idb.oneOrNone(
+          `
+            SELECT 1 FROM orders
+            WHERE order_kind = 'opendao-erc1155'
+              AND orders.maker = $/maker/
+              AND orders.nonce = $/nonce/
+          `,
+          {
+            maker: toBuffer(order.params.maker),
+            nonce: order.params.nonce,
+          }
+        );
+        if (nonceExists) {
+          return results.push({
+            id,
+            status: "duplicated-nonce",
+          });
+        }
+      } else {
+        // For erc721, enforce uniqueness of maker/nonce/side/contract.
+        const nonceExists = await idb.oneOrNone(
+          `
+            SELECT 1 FROM orders
+            WHERE order_kind = 'opendao-erc721'
+              AND orders.maker = $/maker/
+              AND orders.nonce = $/nonce/
+              AND orders.side = $/side/
+              AND orders.contract = $/contract/
+          `,
+          {
+            maker: toBuffer(order.params.maker),
+            nonce: order.params.nonce,
+            side,
+            contract: toBuffer(order.params.nft),
+          }
+        );
+        if (nonceExists) {
+          return results.push({
+            id,
+            status: "duplicated-nonce",
+          });
+        }
+      }
+
       const currentTime = Math.floor(Date.now() / 1000);
 
       // Check: order is not expired
@@ -177,8 +235,6 @@ export const save = async (
         });
       }
 
-      const side = order.params.direction === Sdk.OpenDao.Types.TradeDirection.BUY ? "buy" : "sell";
-
       // Handle: fees
       const feeAmount = order.getFeeAmount();
 
@@ -213,15 +269,6 @@ export const save = async (
         recipient,
         bps: bn(amount).mul(10000).div(price).toNumber(),
       }));
-
-      // Handle: get order kind
-      const kind = await commonHelpers.getContractKind(order.params.nft);
-      if (!kind) {
-        return results.push({
-          id,
-          status: "unknown-order-kind",
-        });
-      }
 
       const validFrom = `date_trunc('seconds', to_timestamp(0))`;
       const validTo = `date_trunc('seconds', to_timestamp(${order.params.expiry}))`;
