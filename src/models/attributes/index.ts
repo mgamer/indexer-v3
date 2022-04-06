@@ -13,7 +13,7 @@ import PgPromise from "pg-promise";
 export class Attributes {
   public static async incrementOnSaleCount(attributesId: number[], incrementBy: number) {
     const query = `UPDATE attributes
-                   SET on_sale_count = CASE WHEN on_sale_count <= 0 THEN 0 ELSE on_sale_count + $/incrementBy/ END 
+                   SET on_sale_count = CASE WHEN on_sale_count + $/incrementBy/ <= 0 THEN 0 ELSE on_sale_count + $/incrementBy/ END 
                    WHERE id IN ($/attributesId:raw/)`;
 
     logger.info(
