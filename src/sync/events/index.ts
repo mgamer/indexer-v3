@@ -905,16 +905,16 @@ export const syncEvents = async (
                       WHERE orders.kind = 'opendao-erc721'
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
-                        AND orders.side = $/side/
                         AND orders.contract = $/contract/
+                        AND orders.price = $/price/
                         AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
                       LIMIT 1
                     `,
                     {
                       maker: toBuffer(maker),
                       nonce,
-                      side: orderSide,
-                      contract: erc721Token,
+                      contract: toBuffer(erc721Token),
+                      price: erc20TokenAmount,
                     }
                   )
                   .then((result) => {
