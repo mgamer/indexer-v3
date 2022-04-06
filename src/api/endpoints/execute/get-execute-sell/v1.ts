@@ -170,7 +170,7 @@ export const getExecuteSellV1Options: RouteOptions = {
           // Check the order's fillability.
           try {
             await offChainCheck(sellOrder, {
-              onChainSellApprovalRecheck: true,
+              onChainApprovalRecheck: true,
             });
           } catch (error: any) {
             switch (error.message) {
