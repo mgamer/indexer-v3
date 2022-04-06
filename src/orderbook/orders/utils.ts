@@ -44,6 +44,7 @@ export type DbOrder = {
   taker: Buffer;
   price: string;
   value: string;
+  quantity_remaining?: string;
   valid_between: string;
   nonce: string;
   source_id: Buffer | null;
