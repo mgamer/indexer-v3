@@ -6,6 +6,7 @@ import Joi from "joi";
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { Sources } from "@/models/sources";
 
 const version = "v1";
 
@@ -261,8 +262,18 @@ export const getTokensDetailsV1Options: RouteOptions = {
       baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
+      const sources = await Sources.getInstance();
+
       const result = await edb.manyOrNone(baseQuery, query).then((result) =>
         result.map(async (r) => {
+          const source = r.floor_sell_source_id
+            ? await sources.get(
+                fromBuffer(r.floor_sell_source_id),
+                fromBuffer(r.contract),
+                r.token_id
+              )
+            : null;
+
           return {
             token: {
               contract: fromBuffer(r.contract),
@@ -292,7 +303,12 @@ export const getTokensDetailsV1Options: RouteOptions = {
                 maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
                 validFrom: r.floor_sell_valid_from,
                 validUntil: r.floor_sell_value ? r.floor_sell_valid_until : null,
-                source: null,
+                source: {
+                  id: source?.metadata.id,
+                  name: source?.metadata.name,
+                  icon: source?.metadata.icon,
+                  url: source?.metadata.url,
+                },
               },
               topBid: {
                 id: r.top_buy_id,

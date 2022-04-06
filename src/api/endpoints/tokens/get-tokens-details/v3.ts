@@ -402,9 +402,9 @@ export const getTokensDetailsV3Options: RouteOptions = {
 
         continuation = buildContinuation(continuation);
       }
+      const sources = await Sources.getInstance();
 
       const result = rawResult.map(async (r) => {
-        const sources = new Sources();
         const source = r.floor_sell_source_id
           ? await sources.get(
               fromBuffer(r.floor_sell_source_id),
