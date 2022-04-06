@@ -61,8 +61,6 @@ export const save = async (
         });
       }
 
-      const side = order.params.direction === Sdk.OpenDao.Types.TradeDirection.BUY ? "buy" : "sell";
-
       // Check: order has unique nonce
       if (kind === "erc1155") {
         // For erc1155, enforce uniqueness of maker/nonce.
@@ -85,21 +83,21 @@ export const save = async (
           });
         }
       } else {
-        // For erc721, enforce uniqueness of maker/nonce/side/contract.
+        // For erc721, enforce uniqueness of maker/nonce/contract/price.
         const nonceExists = await idb.oneOrNone(
           `
             SELECT 1 FROM orders
             WHERE order_kind = 'opendao-erc721'
               AND orders.maker = $/maker/
               AND orders.nonce = $/nonce/
-              AND orders.side = $/side/
               AND orders.contract = $/contract/
+              AND orders.price = $/price/
           `,
           {
             maker: toBuffer(order.params.maker),
             nonce: order.params.nonce,
-            side,
             contract: toBuffer(order.params.nft),
+            price: order.params.erc20TokenAmount,
           }
         );
         if (nonceExists) {
@@ -237,6 +235,8 @@ export const save = async (
 
       // Handle: fees
       const feeAmount = order.getFeeAmount();
+
+      const side = order.params.direction === Sdk.OpenDao.Types.TradeDirection.BUY ? "buy" : "sell";
 
       // Handle: price and value
       let price = bn(order.params.erc20TokenAmount).add(feeAmount);
