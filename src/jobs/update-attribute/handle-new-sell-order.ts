@@ -52,7 +52,7 @@ if (config.doBackgroundWork) {
         await resyncAttributeCache.addToQueue(contract, tokenId);
       }
 
-      // The sale was filled
+      // The sale ended
       if (!_.isNull(previousPrice) && _.isNull(price)) {
         logger.info(QUEUE_NAME, `Decrement sales ${JSON.stringify(job.data)}`);
         await Attributes.incrementOnSaleCount(tokenAttributesIds, -1);
@@ -76,11 +76,13 @@ if (config.doBackgroundWork) {
       // Check for new sell floor price
       if (!_.isNull(price)) {
         // Check for new sell floor price
-        const attributes = await Attributes.getAttributes(tokenAttributesIds);
-        for (const attribute of attributes) {
-          if (_.isNull(attribute.floorSellValue) || price < attribute.floorSellValue) {
-            await Attributes.update(attribute.id, { floorSellValue: price });
-            logger.info(QUEUE_NAME, `New price ${price} for attribute id ${attribute.id}`);
+        for (const tokenAttribute of tokenAttributes) {
+          if (_.isNull(tokenAttribute.floorSellValue) || price < tokenAttribute.floorSellValue) {
+            await Attributes.update(tokenAttribute.attributeId, { floorSellValue: price });
+            logger.info(
+              QUEUE_NAME,
+              `New price ${price} for attribute id ${tokenAttribute.attributeId}`
+            );
           }
         }
       }
