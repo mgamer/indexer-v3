@@ -85,7 +85,7 @@ export class Tokens {
   ) {
     const query = `SELECT COUNT(*) AS "onSaleCount", MIN(floor_sell_value) AS "floorSellValue"
                    FROM token_attributes
-                   JOIN tokens ON token_attributes.contract = tokens.contract AND token_attributes.token_id  = tokens.token_id
+                   JOIN tokens ON token_attributes.contract = tokens.contract AND token_attributes.token_id = tokens.token_id
                    WHERE token_attributes.collection_id = $/collection/
                    AND key = $/attributeKey/
                    AND value = $/attributeValue/
