@@ -7,22 +7,12 @@ import {
   AttributesEntity,
   AttributesEntityUpdateParams,
 } from "@/models/attributes/attributes-entity";
-import { logger } from "@/common/logger";
-import PgPromise from "pg-promise";
 
 export class Attributes {
   public static async incrementOnSaleCount(attributesId: number[], incrementBy: number) {
     const query = `UPDATE attributes
                    SET on_sale_count = CASE WHEN on_sale_count + $/incrementBy/ <= 0 THEN 0 ELSE on_sale_count + $/incrementBy/ END 
                    WHERE id IN ($/attributesId:raw/)`;
-
-    logger.info(
-      "update-attribute-queue",
-      PgPromise.as.format(query, {
-        attributesId: _.join(attributesId, ","),
-        incrementBy,
-      })
-    );
 
     return await idb.none(query, {
       attributesId: _.join(attributesId, ","),
@@ -62,11 +52,6 @@ export class Attributes {
     const query = `UPDATE attributes
                    SET ${updateString}
                    WHERE id = $/attributeId/`;
-
-    logger.info(
-      "update-attributes",
-      `Update query ${PgPromise.as.format(query, replacementValues)}`
-    );
 
     return await idb.none(query, replacementValues);
   }

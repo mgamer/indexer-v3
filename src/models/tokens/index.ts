@@ -4,8 +4,6 @@ import { idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { TokensEntity, TokensEntityParams, TokensEntityUpdateParams } from "./tokens-entity";
 import _ from "lodash";
-import { logger } from "@/common/logger";
-import PgPromise from "pg-promise";
 
 export type TokenAttributes = {
   attributeId: number;
@@ -96,15 +94,6 @@ export class Tokens {
       attributeKey,
       attributeValue,
     });
-
-    logger.info(
-      "get-attributes-data",
-      `Update query ${PgPromise.as.format(query, {
-        collection,
-        attributeKey,
-        attributeValue,
-      })}, result = ${JSON.stringify(result)}`
-    );
 
     if (result) {
       return { floorSellValue: result.floorSellValue, onSaleCount: result.onSaleCount };
