@@ -46,7 +46,7 @@ if (config.doBackgroundWork) {
         refreshTokens = await getTokensForCollection(data.collection, contract, tokenId, limit);
 
         // If no more tokens found
-        if (!_.isEmpty(refreshTokens)) {
+        if (_.isEmpty(refreshTokens)) {
           logger.warn(QUEUE_NAME, `No tokens found for collection: ${data.collection}`);
           return;
         }
