@@ -63,6 +63,11 @@ export class Attributes {
                    SET ${updateString}
                    WHERE id = $/attributeId/`;
 
+    logger.info(
+      "update-attributes",
+      `Decrement sales ${PgPromise.as.format(query, replacementValues)}`
+    );
+
     return await idb.none(query, replacementValues);
   }
 }
