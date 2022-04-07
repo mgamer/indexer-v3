@@ -50,10 +50,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
         .description(
           "`active` = currently valid, `inactive` = temporarily invalid, `expired` = permanently invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
         ),
-      continuation: Joi.alternatives().try(
-        Joi.string().pattern(/^\d+(.\d+)?_0x[a-f0-9]{64}$/),
-        Joi.string().pattern(base64Regex)
-      ),
+      continuation: Joi.string().pattern(base64Regex),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     })
       .or("token", "tokenSetId", "maker")

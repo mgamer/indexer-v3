@@ -47,10 +47,7 @@ export const getSalesBulkV1Options: RouteOptions = {
         "Get events before a particular unix timestamp (inclusive)"
       ),
       limit: Joi.number().integer().min(1).max(1000).default(100),
-      continuation: Joi.alternatives().try(
-        Joi.string().pattern(/^(\d+)_(\d+)_(\d+)$/),
-        Joi.string().pattern(base64Regex)
-      ),
+      continuation: Joi.string().pattern(base64Regex),
     }),
   },
   response: {
