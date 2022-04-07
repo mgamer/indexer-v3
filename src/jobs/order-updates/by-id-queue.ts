@@ -190,6 +190,8 @@ if (config.doBackgroundWork) {
               }
             );
 
+            logger.info(QUEUE_NAME, `New event ${JSON.stringify(sellOrderResult)}`);
+
             if (sellOrderResult) {
               sellOrderResult.contract = fromBuffer(sellOrderResult.contract); // Convert contract to string
               await updateAttribute.addToQueue(sellOrderResult);
