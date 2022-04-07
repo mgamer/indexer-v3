@@ -30,8 +30,8 @@ if (config.doBackgroundWork) {
       for (const tokenAttribute of tokenAttributes) {
         const { floorSellValue, onSaleCount } = await Tokens.getSellFloorValueAndOnSaleCount(
           tokenAttribute.collectionId,
-          tokenAttribute.value,
-          tokenAttribute.key
+          tokenAttribute.key,
+          tokenAttribute.value
         );
 
         await Attributes.update(tokenAttribute.attributeId, {
