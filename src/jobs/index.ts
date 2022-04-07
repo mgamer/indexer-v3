@@ -33,6 +33,7 @@ import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
 import * as tokenUpdatesMintQueue from "@/jobs/token-updates/mint-queue";
 import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
+import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
 import * as resyncAttributeCache from "@/jobs/update-attribute/resync-attribute-cache";
 
 export const allJobQueues = [
@@ -54,5 +55,6 @@ export const allJobQueues = [
   tokenUpdatesMintQueue.queue,
   dailyVolumes.queue,
   handleNewSellOrder.queue,
+  handleNewBuyOrder.queue,
   resyncAttributeCache.queue,
 ];
