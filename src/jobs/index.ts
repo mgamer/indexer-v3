@@ -32,7 +32,8 @@ import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
 import * as tokenUpdatesMintQueue from "@/jobs/token-updates/mint-queue";
 import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
-import * as updateAttribute from "@/jobs/update-attribute";
+import * as handleNewOrder from "@/jobs/update-attribute/handle-new-order";
+import * as resyncSaleCount from "@/jobs/update-attribute/resync-sale-count";
 
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
@@ -52,5 +53,6 @@ export const allJobQueues = [
   orderbookTokenSets.queue,
   tokenUpdatesMintQueue.queue,
   dailyVolumes.queue,
-  updateAttribute.queue,
+  handleNewOrder.queue,
+  resyncSaleCount.queue,
 ];
