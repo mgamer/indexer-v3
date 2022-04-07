@@ -4,9 +4,12 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { toBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { TriggerKind } from "@/jobs/order-updates/types";
+
+import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
+import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -54,7 +57,7 @@ if (config.doBackgroundWork) {
 
           // Recompute `top_buy` for token sets that are not single token
           if (side === "buy" && !tokenSetId.startsWith("token")) {
-            await idb.none(
+            const buyOrderResult = await idb.oneOrNone(
               `
                 WITH "x" AS (
                   SELECT
@@ -79,13 +82,19 @@ if (config.doBackgroundWork) {
                 UPDATE "token_sets" AS "ts" SET
                   "top_buy_id" = "x"."order_id",
                   "top_buy_value" = "x"."value",
-                  "top_buy_maker" = "x"."maker"
+                  "top_buy_maker" = "x"."maker",
+                  "attribute_id" = "ts"."attribute_id"
                 FROM "x"
                 WHERE "ts"."id" = "x"."token_set_id"
-                  AND "ts"."top_buy_id" IS DISTINCT FROM "x"."order_id"
+                AND "ts"."top_buy_id" IS DISTINCT FROM "x"."order_id"
+                RETURNING attribute_id AS "attributeId", top_buy_value AS "topBuyValue"
               `,
               { tokenSetId }
             );
+
+            if (buyOrderResult) {
+              await handleNewBuyOrder.addToQueue(buyOrderResult);
+            }
           }
 
           // TODO: Research if splitting the single token updates in multiple
@@ -93,7 +102,7 @@ if (config.doBackgroundWork) {
 
           if (data.side === "sell") {
             // Atomically update the cache and trigger an api event if needed
-            await idb.none(
+            const sellOrderResult = await idb.oneOrNone(
               `
                 WITH "z" AS (
                   SELECT
@@ -107,9 +116,9 @@ if (config.doBackgroundWork) {
                       "tst"."contract",
                       "tst"."token_id"
                     FROM "orders" "o"
-                    JOIN "token_sets_tokens" "tst"
-                      ON "o"."token_set_id" = "tst"."token_set_id"
+                    JOIN "token_sets_tokens" "tst" ON "o"."token_set_id" = "tst"."token_set_id"
                     WHERE "o"."id" = $/id/
+                    LIMIT 1
                   ) "x" LEFT JOIN LATERAL (
                     SELECT
                       "o"."id" as "order_id",
@@ -173,6 +182,7 @@ if (config.doBackgroundWork) {
                   $/txHash/ AS "tx_hash",
                   $/txTimestamp/ AS "tx_timestamp"
                 FROM "w"
+                RETURNING contract, token_id AS "tokenId", price, previous_price AS "previousPrice"
               `,
               {
                 id,
@@ -181,6 +191,11 @@ if (config.doBackgroundWork) {
                 txTimestamp: trigger.txTimestamp || null,
               }
             );
+
+            if (sellOrderResult) {
+              sellOrderResult.contract = fromBuffer(sellOrderResult.contract); // Convert contract to string
+              await handleNewSellOrder.addToQueue(sellOrderResult);
+            }
           } else if (data.side === "buy") {
             // TODO: Use keyset pagination (via multiple jobs) to handle token
             // cache updates in batches - only relevant for orders that are on
