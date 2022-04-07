@@ -65,7 +65,7 @@ export class Attributes {
 
     logger.info(
       "update-attributes",
-      `Decrement sales ${PgPromise.as.format(query, replacementValues)}`
+      `Update query ${PgPromise.as.format(query, replacementValues)}`
     );
 
     return await idb.none(query, replacementValues);
