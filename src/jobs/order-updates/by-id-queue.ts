@@ -81,7 +81,8 @@ if (config.doBackgroundWork) {
                 UPDATE "token_sets" AS "ts" SET
                   "top_buy_id" = "x"."order_id",
                   "top_buy_value" = "x"."value",
-                  "top_buy_maker" = "x"."maker"
+                  "top_buy_maker" = "x"."maker",
+                  "attribute_id" = "ts"."attribute_id"
                 FROM "x"
                 WHERE "ts"."id" = "x"."token_set_id"
                 AND "ts"."top_buy_id" IS DISTINCT FROM "x"."order_id"
