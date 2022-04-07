@@ -23,7 +23,7 @@ export const postOrderV1Options: RouteOptions = {
   validate: {
     payload: Joi.object({
       order: Joi.object({
-        kind: Joi.string().lowercase().valid("wyvern-v2.3", "opendao").required(),
+        kind: Joi.string().lowercase().valid("wyvern-v2.3", "721ex").required(),
         data: Joi.object().required(),
       }),
       orderbook: Joi.string().lowercase().valid("reservoir", "opensea").default("reservoir"),
@@ -47,7 +47,7 @@ export const postOrderV1Options: RouteOptions = {
       const attribute = payload.attribute;
 
       switch (order.kind) {
-        case "opendao": {
+        case "721ex": {
           if (orderbook !== "reservoir") {
             throw new Error("Unsupported orderbook");
           }
