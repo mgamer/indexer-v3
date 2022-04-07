@@ -47,12 +47,12 @@ if (config.doBackgroundWork) {
 
         // If no more tokens found
         if (_.isEmpty(refreshTokens)) {
-          logger.warn(QUEUE_NAME, `No tokens found for collection: ${data.collection}`);
+          logger.warn(QUEUE_NAME, `No more tokens found for collection: ${data.collection}`);
           return;
         }
 
         // If there are potentially more tokens to refresh
-        if (!_.isEmpty(refreshTokens) && _.size(refreshTokens) == limit) {
+        if (_.size(refreshTokens) == limit) {
           const lastToken = refreshTokens[limit - 1];
           const continuation = `${lastToken.contract}:${lastToken.tokenId}`;
           logger.info(QUEUE_NAME, `Trigger token sync continuation: ${continuation}`);
