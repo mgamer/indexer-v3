@@ -26,17 +26,20 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      logger.info(QUEUE_NAME, `Update attributes ${JSON.stringify(job.data)}`);
       const { contract, tokenId, price, previousPrice } = job.data as UpdateAttributeInfo;
-
-      logger.info(QUEUE_NAME, `contract=${contract}, tokenId=${tokenId}`);
       const tokenAttributes = await Tokens.getTokenAttributes(contract, tokenId);
-      const tokenAttributesIds = [];
-
-      for (const tokenAttribute of tokenAttributes) {
-        tokenAttributesIds.push(tokenAttribute.attributeId);
+      if (_.isEmpty(tokenAttributes)) {
+        logger.info(
+          QUEUE_NAME,
+          `No attributes found for contract = ${contract}, tokenId = ${tokenId}`
+        );
+        return;
       }
 
+      const tokenAttributesIds = _.map(
+        tokenAttributes,
+        (tokenAttribute) => tokenAttribute.attributeId
+      );
       logger.info(QUEUE_NAME, `Attribute IDs ${JSON.stringify(tokenAttributesIds)}`);
 
       // If this is a new sale
@@ -49,11 +52,23 @@ if (config.doBackgroundWork) {
       if (!_.isNull(previousPrice) && _.isNull(price)) {
         logger.info(QUEUE_NAME, `Decrement sales ${JSON.stringify(job.data)}`);
         await Attributes.incrementOnSaleCount(tokenAttributesIds, -1);
+
+        // Recalculate sell floor price for all relevant attributes
+        for (const tokenAttribute of tokenAttributes) {
+          const newFloorSellValue = await Tokens.getSellFloorValue(
+            tokenAttribute.collectionId,
+            tokenAttribute.value,
+            tokenAttribute.key
+          );
+          await Attributes.update(tokenAttribute.attributeId, {
+            floorSellValue: newFloorSellValue,
+          });
+        }
       }
 
-      // Check for new floor price
+      // Check for new sell floor price
       if (!_.isNull(price)) {
-        // Check for new floor price
+        // Check for new sell floor price
         const attributes = await Attributes.getAttributes(tokenAttributesIds);
         for (const attribute of attributes) {
           if (_.isNull(attribute.floorSellValue) || price < attribute.floorSellValue) {

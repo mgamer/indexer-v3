@@ -10,6 +10,7 @@ export type TokenAttributes = {
   key: string;
   value: string;
   attributeKeyId: number;
+  collectionId: string;
 };
 
 export class Tokens {
@@ -55,7 +56,8 @@ export class Tokens {
   }
 
   public static async getTokenAttributes(contract: string, tokenId: string) {
-    const query = `SELECT attribute_id AS "attributeId", key, token_attributes.value, attribute_key_id AS "attributeKeyId"
+    const query = `SELECT attribute_id AS "attributeId", key, token_attributes.value, attribute_key_id AS "attributeKeyId",
+                          collection_id AS "collectionId"
                    FROM token_attributes
                    JOIN attributes ON token_attributes.attribute_id = attributes.id
                    WHERE contract = $/contract/
@@ -65,5 +67,31 @@ export class Tokens {
       contract: toBuffer(contract),
       tokenId,
     })) as TokenAttributes[];
+  }
+
+  public static async getSellFloorValue(
+    collection: string,
+    attributeKey: string,
+    attributeValue: string
+  ) {
+    const query = `SELECT MIN(floor_sell_value) AS "floorSellValue"
+                   FROM token_attributes
+                   JOIN tokens ON token_attributes.contract = tokens.contract AND token_attributes.token_id  = tokens.token_id
+                   WHERE token_attributes.collection_id = $/collection/
+                   AND key = $/attributeKey/
+                   AND value = $/attributeValue/
+                   AND floor_sell_value IS NOT NULL`;
+
+    const newSellFloorValue = await idb.oneOrNone(query, {
+      collection,
+      attributeKey,
+      attributeValue,
+    });
+
+    if (newSellFloorValue) {
+      return newSellFloorValue.floorSellValue;
+    }
+
+    return null;
   }
 }
