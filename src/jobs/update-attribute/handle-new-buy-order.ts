@@ -1,11 +1,11 @@
+import { randomUUID } from "crypto";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 import { Attributes } from "@/models/attributes";
-import { Tokens } from "@/models/tokens";
 
-const QUEUE_NAME = "resync-on-sale-count-queue";
+const QUEUE_NAME = "handle-new-buy-order-queue";
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
@@ -23,21 +23,10 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { contract, tokenId } = job.data;
-      const tokenAttributes = await Tokens.getTokenAttributes(contract, tokenId);
-
-      // Recalculate the number of tokens on sale for each attribute
-      for (const tokenAttribute of tokenAttributes) {
-        const onSaleCount = await Tokens.getOnSaleCount(
-          tokenAttribute.collectionId,
-          tokenAttribute.value,
-          tokenAttribute.key
-        );
-
-        await Attributes.update(tokenAttribute.attributeId, {
-          onSaleCount,
-        });
-      }
+      const { attributeId, topBuyValue } = job.data as HandleBuyOrderParams;
+      await Attributes.update(attributeId, {
+        topBuyValue,
+      });
     },
     {
       connection: redis.duplicate(),
@@ -50,6 +39,11 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (contract: string, tokenId: string) => {
-  await queue.add(`${contract}:${tokenId}`, { contract, tokenId }, { delay: 60 * 60 * 1000 });
+export type HandleBuyOrderParams = {
+  attributeId: number;
+  topBuyValue: number | null;
+};
+
+export const addToQueue = async (params: HandleBuyOrderParams) => {
+  await queue.add(randomUUID(), params);
 };

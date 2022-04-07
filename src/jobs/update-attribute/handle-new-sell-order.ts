@@ -8,9 +8,9 @@ import { logger } from "@/common/logger";
 import { Attributes } from "@/models/attributes";
 import { Tokens } from "@/models/tokens";
 
-import * as resyncSaleCount from "@/jobs/update-attribute/resync-sale-count";
+import * as resyncAttributeCache from "@/jobs/update-attribute/resync-attribute-cache";
 
-const QUEUE_NAME = "handle-new-order-queue";
+const QUEUE_NAME = "handle-new-sell-order-queue";
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
@@ -28,7 +28,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { contract, tokenId, price, previousPrice } = job.data as HandleOrderParams;
+      const { contract, tokenId, price, previousPrice } = job.data as HandleSellOrderParams;
       const tokenAttributes = await Tokens.getTokenAttributes(contract, tokenId);
       if (_.isEmpty(tokenAttributes)) {
         logger.info(
@@ -49,25 +49,26 @@ if (config.doBackgroundWork) {
       if (_.isNull(previousPrice) && !_.isNull(price)) {
         logger.info(QUEUE_NAME, `Increment sales ${JSON.stringify(job.data)}`);
         await Attributes.incrementOnSaleCount(tokenAttributesIds, 1);
-        await resyncSaleCount.addToQueue(contract, tokenId);
+        await resyncAttributeCache.addToQueue(contract, tokenId);
       }
 
       // The sale was filled
       if (!_.isNull(previousPrice) && _.isNull(price)) {
         logger.info(QUEUE_NAME, `Decrement sales ${JSON.stringify(job.data)}`);
         await Attributes.incrementOnSaleCount(tokenAttributesIds, -1);
-        await resyncSaleCount.addToQueue(contract, tokenId);
+        await resyncAttributeCache.addToQueue(contract, tokenId);
 
         // Recalculate sell floor price for all relevant attributes
         for (const tokenAttribute of tokenAttributes) {
-          const newFloorSellValue = await Tokens.getSellFloorValue(
+          const { floorSellValue, onSaleCount } = await Tokens.getSellFloorValueAndOnSaleCount(
             tokenAttribute.collectionId,
             tokenAttribute.value,
             tokenAttribute.key
           );
 
           await Attributes.update(tokenAttribute.attributeId, {
-            floorSellValue: newFloorSellValue,
+            floorSellValue,
+            onSaleCount,
           });
         }
       }
@@ -95,13 +96,13 @@ if (config.doBackgroundWork) {
   });
 }
 
-export type HandleOrderParams = {
+export type HandleSellOrderParams = {
   contract: string;
   tokenId: string;
   price: number | null;
   previousPrice: number | null;
 };
 
-export const addToQueue = async (handleOrderParams: HandleOrderParams) => {
-  await queue.add(randomUUID(), handleOrderParams);
+export const addToQueue = async (params: HandleSellOrderParams) => {
+  await queue.add(randomUUID(), params);
 };
