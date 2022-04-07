@@ -8,7 +8,7 @@ import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { TriggerKind } from "@/jobs/order-updates/types";
 
-import * as updateAttribute from "@/jobs/update-attribute";
+import * as handleNewOrder from "@/jobs/update-attribute/handle-new-order";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -85,13 +85,20 @@ if (config.doBackgroundWork) {
                 FROM "x"
                 WHERE "ts"."id" = "x"."token_set_id"
                 AND "ts"."top_buy_id" IS DISTINCT FROM "x"."order_id"
-                RETURNING attribute_id AS "attributeId"
+                RETURNING attribute_id AS "attributeId", top_buy_value AS "topBuyValue"
               `,
               { tokenSetId }
             );
 
+            logger.info(
+              QUEUE_NAME,
+              `New sale buy trigger=${JSON.stringify(trigger)} buyOrderResult=${JSON.stringify(
+                buyOrderResult
+              )}`
+            );
+
             if (buyOrderResult) {
-              await updateAttribute.addToQueue(buyOrderResult);
+              await handleNewOrder.addToQueue(buyOrderResult);
             }
           }
 
@@ -114,9 +121,9 @@ if (config.doBackgroundWork) {
                       "tst"."contract",
                       "tst"."token_id"
                     FROM "orders" "o"
-                    JOIN "token_sets_tokens" "tst"
-                      ON "o"."token_set_id" = "tst"."token_set_id"
+                    JOIN "token_sets_tokens" "tst" ON "o"."token_set_id" = "tst"."token_set_id"
                     WHERE "o"."id" = $/id/
+                    LIMIT 1
                   ) "x" LEFT JOIN LATERAL (
                     SELECT
                       "o"."id" as "order_id",
@@ -192,14 +199,14 @@ if (config.doBackgroundWork) {
 
             logger.info(
               QUEUE_NAME,
-              `New event trigger=${JSON.stringify(trigger)} sellOrderResult=${JSON.stringify(
+              `New sale event trigger=${JSON.stringify(trigger)} sellOrderResult=${JSON.stringify(
                 sellOrderResult
               )}`
             );
 
             if (sellOrderResult) {
               sellOrderResult.contract = fromBuffer(sellOrderResult.contract); // Convert contract to string
-              await updateAttribute.addToQueue(sellOrderResult);
+              await handleNewOrder.addToQueue(sellOrderResult);
             }
           } else if (data.side === "buy") {
             // TODO: Use keyset pagination (via multiple jobs) to handle token
