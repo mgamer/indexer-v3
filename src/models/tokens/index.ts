@@ -70,17 +70,17 @@ export class Tokens {
   }
 
   /**
-   * Return the lowest sell price for the given attribute
+   * Return the lowest sell price and number of tokens on sale for the given attribute
    * @param collection
    * @param attributeKey
    * @param attributeValue
    */
-  public static async getSellFloorValue(
+  public static async getSellFloorValueAndOnSaleCount(
     collection: string,
     attributeKey: string,
     attributeValue: string
   ) {
-    const query = `SELECT MIN(floor_sell_value) AS "floorSellValue"
+    const query = `SELECT COUNT(*) AS "onSaleCount", MIN(floor_sell_value) AS "floorSellValue"
                    FROM token_attributes
                    JOIN tokens ON token_attributes.contract = tokens.contract AND token_attributes.token_id  = tokens.token_id
                    WHERE token_attributes.collection_id = $/collection/
@@ -88,48 +88,16 @@ export class Tokens {
                    AND value = $/attributeValue/
                    AND floor_sell_value IS NOT NULL`;
 
-    const newSellFloorValue = await idb.oneOrNone(query, {
+    const result = await idb.oneOrNone(query, {
       collection,
       attributeKey,
       attributeValue,
     });
 
-    if (newSellFloorValue) {
-      return newSellFloorValue.floorSellValue;
+    if (result) {
+      return { floorSellValue: result.floorSellValue, onSaleCount: result.onSaleCount };
     }
 
-    return null;
-  }
-
-  /**
-   * Return the number of tokens on sale for the given attribute
-   * @param collection
-   * @param attributeKey
-   * @param attributeValue
-   */
-  public static async getOnSaleCount(
-    collection: string,
-    attributeKey: string,
-    attributeValue: string
-  ) {
-    const query = `SELECT COUNT(*) AS "onSaleCount"
-                   FROM token_attributes
-                   JOIN tokens ON token_attributes.contract = tokens.contract AND token_attributes.token_id  = tokens.token_id
-                   WHERE token_attributes.collection_id = $/collection/
-                   AND key = $/attributeKey/
-                   AND value = $/attributeValue/
-                   AND floor_sell_value IS NOT NULL`;
-
-    const newSellFloorValue = await idb.oneOrNone(query, {
-      collection,
-      attributeKey,
-      attributeValue,
-    });
-
-    if (newSellFloorValue) {
-      return Number(newSellFloorValue.floorSellValue);
-    }
-
-    return 0;
+    return { floorSellValue: null, onSaleCount: 0 };
   }
 }

@@ -8,7 +8,8 @@ import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { TriggerKind } from "@/jobs/order-updates/types";
 
-import * as handleNewOrder from "@/jobs/update-attribute/handle-new-order";
+import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
+import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -99,7 +100,7 @@ if (config.doBackgroundWork) {
             );
 
             if (buyOrderResult) {
-              await handleNewOrder.addToQueue(buyOrderResult);
+              await handleNewBuyOrder.addToQueue(buyOrderResult);
             }
           }
 
@@ -207,7 +208,7 @@ if (config.doBackgroundWork) {
 
             if (sellOrderResult) {
               sellOrderResult.contract = fromBuffer(sellOrderResult.contract); // Convert contract to string
-              await handleNewOrder.addToQueue(sellOrderResult);
+              await handleNewSellOrder.addToQueue(sellOrderResult);
             }
           } else if (data.side === "buy") {
             // TODO: Use keyset pagination (via multiple jobs) to handle token
