@@ -55,10 +55,7 @@ export const getSalesV3Options: RouteOptions = {
         "Get events before a particular unix timestamp (inclusive)"
       ),
       limit: Joi.number().integer().min(1).max(100).default(20),
-      continuation: Joi.alternatives().try(
-        Joi.string().pattern(/^(\d+)_(\d+)_(\d+)$/),
-        Joi.string().pattern(base64Regex)
-      ),
+      continuation: Joi.string().pattern(base64Regex),
     })
       .oxor("contract", "token", "collection")
       .or("contract", "token", "collection")

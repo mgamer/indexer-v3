@@ -44,10 +44,7 @@ export const getTokensFloorAskV1Options: RouteOptions = {
         "Get events before a particular unix timestamp (inclusive)"
       ),
       sortDirection: Joi.string().valid("asc", "desc").default("desc"),
-      continuation: Joi.alternatives().try(
-        Joi.string().pattern(/^\d+(.\d+)?_\d+$/),
-        Joi.string().pattern(base64Regex)
-      ),
+      continuation: Joi.string().pattern(base64Regex),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     }).oxor("contract", "token"),
   },
