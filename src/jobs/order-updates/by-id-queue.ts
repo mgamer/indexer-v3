@@ -56,7 +56,7 @@ if (config.doBackgroundWork) {
 
           // Recompute `top_buy` for token sets that are not single token
           if (side === "buy" && !tokenSetId.startsWith("token")) {
-            await idb.none(
+            const buyOrderResult = await idb.oneOrNone(
               `
                 WITH "x" AS (
                   SELECT
@@ -84,10 +84,15 @@ if (config.doBackgroundWork) {
                   "top_buy_maker" = "x"."maker"
                 FROM "x"
                 WHERE "ts"."id" = "x"."token_set_id"
-                  AND "ts"."top_buy_id" IS DISTINCT FROM "x"."order_id"
+                AND "ts"."top_buy_id" IS DISTINCT FROM "x"."order_id"
+                RETURNING attribute_id AS "attributeId"
               `,
               { tokenSetId }
             );
+
+            if (buyOrderResult) {
+              await updateAttribute.addToQueue(buyOrderResult);
+            }
           }
 
           // TODO: Research if splitting the single token updates in multiple
