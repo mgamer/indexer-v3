@@ -318,7 +318,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
         })
       );
 
-      return { tokens: result };
+      return { tokens: await Promise.all(result) };
     } catch (error) {
       logger.error(`get-tokens-details-${version}-handler`, `Handler failure: ${error}`);
       throw error;

@@ -399,6 +399,7 @@ export const getTokensDetailsV3Options: RouteOptions = {
 
         continuation = buildContinuation(continuation);
       }
+
       const sources = await Sources.getInstance();
 
       const result = rawResult.map((r) => {
@@ -456,7 +457,7 @@ export const getTokensDetailsV3Options: RouteOptions = {
       });
 
       return {
-        tokens: result,
+        tokens: await Promise.all(result),
         continuation,
       };
     } catch (error) {

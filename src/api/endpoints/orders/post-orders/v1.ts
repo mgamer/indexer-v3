@@ -20,7 +20,7 @@ export const postOrdersV1Options: RouteOptions = {
     payload: Joi.object({
       orders: Joi.array().items(
         Joi.object({
-          kind: Joi.string().lowercase().valid("looks-rare", "wyvern-v2.3").required(),
+          kind: Joi.string().lowercase().valid("looks-rare", "721ex", "wyvern-v2.3").required(),
           data: Joi.object().required(),
         })
       ),
@@ -37,7 +37,7 @@ export const postOrdersV1Options: RouteOptions = {
       const orderInfos: orderbookOrders.GenericOrderInfo[] = [];
       for (const { kind, data } of orders) {
         orderInfos.push({
-          kind,
+          kind: kind === "721ex" ? "opendao" : kind,
           info: {
             orderParams: data,
             metadata: {},

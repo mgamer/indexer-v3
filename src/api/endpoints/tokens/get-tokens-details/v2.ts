@@ -422,7 +422,7 @@ export const getTokensDetailsV2Options: RouteOptions = {
       });
 
       return {
-        tokens: result,
+        tokens: await Promise.all(result),
         continuation,
       };
     } catch (error) {

@@ -42,7 +42,7 @@ export const getBuildInfo = async (
     listingTime: options.listingTime,
     expirationTime: options.expirationTime,
     salt: options.salt,
-    nonce: await exchange.getNonce(baseProvider, options.maker),
+    nonce: (await exchange.getNonce(baseProvider, options.maker)).toString(),
   };
 
   if (options.automatedRoyalties) {

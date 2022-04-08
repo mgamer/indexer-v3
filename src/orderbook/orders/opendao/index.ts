@@ -8,12 +8,13 @@ import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
+import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
-import { offChainCheck } from "@/orderbook/orders/looks-rare/check";
+import { offChainCheck } from "@/orderbook/orders/opendao/check";
 import * as tokenSet from "@/orderbook/token-sets";
 
 export type OrderInfo = {
-  orderParams: Sdk.LooksRare.Types.MakerOrderParams;
+  orderParams: Sdk.OpenDao.Types.BaseOrder;
   metadata: OrderMetadata;
 };
 
@@ -30,18 +31,18 @@ export const save = async (
   const orderValues: DbOrder[] = [];
 
   const arweaveData: {
-    order: Sdk.LooksRare.Order;
+    order: Sdk.OpenDao.Order;
     schemaHash?: string;
     source?: string;
   }[] = [];
 
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
-      const order = new Sdk.LooksRare.Order(config.chainId, orderParams);
+      const order = new Sdk.OpenDao.Order(config.chainId, orderParams);
       const id = order.hash();
 
       // Check: order doesn't already exist
-      const orderExists = await idb.oneOrNone(`SELECT 1 FROM "orders" "o" WHERE "o"."id" = $/id/`, {
+      const orderExists = await idb.oneOrNone(`SELECT 1 FROM orders WHERE orders.id = $/id/`, {
         id,
       });
       if (orderExists) {
@@ -51,20 +52,66 @@ export const save = async (
         });
       }
 
-      const currentTime = Math.floor(Date.now() / 1000);
-
-      // Check: order has a valid listing time
-      const listingTime = order.params.startTime;
-      if (listingTime - 5 * 60 >= currentTime) {
-        // TODO: Add support for not-yet-valid orders
+      // Handle: get order kind
+      const kind = await commonHelpers.getContractKind(order.params.nft);
+      if (!kind) {
         return results.push({
           id,
-          status: "invalid-listing-time",
+          status: "unknown-order-kind",
         });
       }
 
+      // Check: order has unique nonce
+      if (kind === "erc1155") {
+        // For erc1155, enforce uniqueness of maker/nonce.
+        const nonceExists = await idb.oneOrNone(
+          `
+            SELECT 1 FROM orders
+            WHERE orders.kind = 'opendao-erc1155'
+              AND orders.maker = $/maker/
+              AND orders.nonce = $/nonce/
+          `,
+          {
+            maker: toBuffer(order.params.maker),
+            nonce: order.params.nonce,
+          }
+        );
+        if (nonceExists) {
+          return results.push({
+            id,
+            status: "duplicated-nonce",
+          });
+        }
+      } else {
+        // For erc721, enforce uniqueness of maker/nonce/contract/price.
+        const nonceExists = await idb.oneOrNone(
+          `
+            SELECT 1 FROM orders
+            WHERE orders.kind = 'opendao-erc721'
+              AND orders.maker = $/maker/
+              AND orders.nonce = $/nonce/
+              AND orders.contract = $/contract/
+              AND orders.price = $/price/
+          `,
+          {
+            maker: toBuffer(order.params.maker),
+            nonce: order.params.nonce,
+            contract: toBuffer(order.params.nft),
+            price: order.params.erc20TokenAmount,
+          }
+        );
+        if (nonceExists) {
+          return results.push({
+            id,
+            status: "duplicated-nonce",
+          });
+        }
+      }
+
+      const currentTime = Math.floor(Date.now() / 1000);
+
       // Check: order is not expired
-      const expirationTime = order.params.endTime;
+      const expirationTime = order.params.expiry;
       if (currentTime >= expirationTime) {
         return results.push({
           id,
@@ -72,11 +119,33 @@ export const save = async (
         });
       }
 
-      // Check: order has Weth as payment token
-      if (order.params.currency !== Sdk.Common.Addresses.Weth[config.chainId]) {
+      // Check: buy order has Weth as payment token
+      if (
+        order.params.direction === Sdk.OpenDao.Types.TradeDirection.BUY &&
+        order.params.erc20Token !== Sdk.Common.Addresses.Weth[config.chainId]
+      ) {
         return results.push({
           id,
           status: "unsupported-payment-token",
+        });
+      }
+
+      // Check: sell order has Eth as payment token
+      if (
+        order.params.direction === Sdk.OpenDao.Types.TradeDirection.SELL &&
+        order.params.erc20Token !== Sdk.OpenDao.Addresses.Eth[config.chainId]
+      ) {
+        return results.push({
+          id,
+          status: "unsupported-payment-token",
+        });
+      }
+
+      // Check: order is not private
+      if (order.params.taker !== AddressZero) {
+        return results.push({
+          id,
+          status: "unsupported-taker",
         });
       }
 
@@ -116,6 +185,7 @@ export const save = async (
         } else if (error.message === "no-balance") {
           fillabilityStatus = "no-balance";
         } else {
+          logger.info("debug", `error: ${error}`);
           return results.push({
             id,
             status: "not-fillable",
@@ -128,25 +198,27 @@ export const save = async (
       const schemaHash = metadata.schemaHash ?? generateSchemaHash(metadata.schema);
 
       switch (order.params.kind) {
-        case "contract-wide": {
-          [{ id: tokenSetId }] = await tokenSet.contractWide.save([
-            {
-              id: `contract:${order.params.collection}`,
-              schemaHash,
-              contract: order.params.collection,
-            },
-          ]);
+        // TODO: Add support for contract/range orders
+        // case "contract-wide": {
+        //   [{ id: tokenSetId }] = await tokenSet.contractWide.save([
+        //     {
+        //       id: `contract:${order.params.collection}`,
+        //       schemaHash,
+        //       contract: order.params.collection,
+        //     },
+        //   ]);
 
-          break;
-        }
+        //   break;
+        // }
 
-        case "single-token": {
+        case "erc721-single-token":
+        case "erc1155-single-token": {
           [{ id: tokenSetId }] = await tokenSet.singleToken.save([
             {
-              id: `token:${order.params.collection}:${order.params.tokenId}`,
+              id: `token:${order.params.nft}:${order.params.nftId}`,
               schemaHash,
-              contract: order.params.collection,
-              tokenId: order.params.tokenId,
+              contract: order.params.nft,
+              tokenId: order.params.nftId,
             },
           ]);
 
@@ -161,68 +233,63 @@ export const save = async (
         });
       }
 
-      const side = order.params.isOrderAsk ? "sell" : "buy";
-
       // Handle: fees
-      let feeBps = 200;
+      const feeAmount = order.getFeeAmount();
 
-      // Handle: royalties
-      const royaltiesResult = await idb.oneOrNone(
-        `
-          SELECT collections.royalties FROM collections
-          WHERE collections.contract = $/contract/
-          LIMIT 1
-        `,
-        { contract: toBuffer(order.params.collection) }
-      );
-      for (const { bps } of royaltiesResult?.royalties || []) {
-        feeBps += Number(bps);
-      }
+      const side = order.params.direction === Sdk.OpenDao.Types.TradeDirection.BUY ? "buy" : "sell";
 
       // Handle: price and value
-      const price = order.params.price;
-      let value: string;
+      let price = bn(order.params.erc20TokenAmount).add(feeAmount);
+      let value = price;
       if (side === "buy") {
         // For buy orders, we set the value as `price - fee` since it
         // is best for UX to show the user exactly what they're going
         // to receive on offer acceptance.
-        value = bn(price)
-          .sub(bn(price).mul(bn(feeBps)).div(10000))
-          .toString();
-      } else {
-        // For sell orders, the value is the same as the price
-        value = price;
+        value = bn(price).sub(feeAmount);
+      }
+
+      // The price and value are for a single item
+      if (order.params.kind?.startsWith("erc1155")) {
+        price = price.div(order.params.nftAmount!);
+        value = value.div(order.params.nftAmount!);
+      }
+
+      const feeBps = feeAmount.mul(10000).div(price);
+      if (feeBps.gt(10000)) {
+        return results.push({
+          id,
+          status: "fees-too-high",
+        });
       }
 
       // Handle: source and fees breakdown
-      const source = metadata.source ?? "0x5924a28caaf1cc016617874a2f0c3710d881f3c1";
-      const feeBreakdown = [
-        {
-          kind: "marketplace",
-          recipient: "0x5924a28caaf1cc016617874a2f0c3710d881f3c1",
-          bps: 200,
-        },
-      ];
+      const source = metadata.source ?? Sdk.OpenDao.Addresses.Exchange[config.chainId];
+      const feeBreakdown = order.params.fees.map(({ recipient, amount }) => ({
+        kind: "royalty",
+        recipient,
+        bps: bn(amount).mul(10000).div(price).toNumber(),
+      }));
 
-      const validFrom = `date_trunc('seconds', to_timestamp(${order.params.startTime}))`;
-      const validTo = `date_trunc('seconds', to_timestamp(${order.params.endTime}))`;
+      const validFrom = `date_trunc('seconds', to_timestamp(0))`;
+      const validTo = `date_trunc('seconds', to_timestamp(${order.params.expiry}))`;
       orderValues.push({
         id,
-        kind: "looks-rare",
+        kind: `opendao-${kind}`,
         side,
         fillability_status: fillabilityStatus,
         approval_status: approvalStatus,
         token_set_id: tokenSetId,
         token_set_schema_hash: toBuffer(schemaHash),
-        maker: toBuffer(order.params.signer),
+        maker: toBuffer(order.params.maker),
         taker: toBuffer(AddressZero),
-        price,
-        value,
+        price: price.toString(),
+        value: value.toString(),
+        quantity_remaining: order.params.nftAmount,
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
         nonce: order.params.nonce,
         source_id: source ? toBuffer(source) : null,
-        contract: toBuffer(order.params.collection),
-        fee_bps: feeBps,
+        contract: toBuffer(order.params.nft),
+        fee_bps: feeBps.toNumber(),
         fee_breakdown: feeBreakdown || null,
         dynamic: null,
         raw_data: order.params,
@@ -239,7 +306,7 @@ export const save = async (
       }
     } catch (error) {
       logger.error(
-        "orders-looks-rare-save",
+        "orders-opendao-save",
         `Failed to handle order with params ${JSON.stringify(orderParams)}: ${error}`
       );
     }
@@ -263,6 +330,7 @@ export const save = async (
         "taker",
         "price",
         "value",
+        "quantity_remaining",
         { name: "valid_between", mod: ":raw" },
         "nonce",
         "source_id",
@@ -295,7 +363,7 @@ export const save = async (
     );
 
     if (relayToArweave) {
-      await arweaveRelay.addPendingOrdersLooksRare(arweaveData);
+      await arweaveRelay.addPendingOrdersOpenDao(arweaveData);
     }
   }
 
