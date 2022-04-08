@@ -30,7 +30,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { contract, tokenId } = job.data as MintInfo;
+      const { contract, tokenId, mintedTimestamp } = job.data as MintInfo;
 
       try {
         // TODO: For newly minted tokens we should also populate
@@ -152,7 +152,8 @@ if (config.doBackgroundWork) {
                 "royalties",
                 "contract",
                 "token_id_range",
-                "token_set_id"
+                "token_set_id",
+                "minted_timestamp"
               ) VALUES (
                 $/id/,
                 $/slug/,
@@ -162,7 +163,8 @@ if (config.doBackgroundWork) {
                 $/royalties:json/,
                 $/contract/,
                 $/tokenIdRange:raw/,
-                $/tokenSetId/
+                $/tokenSetId/,
+                $/mintedTimestamp/
               ) ON CONFLICT DO NOTHING
             `,
             values: {
@@ -175,6 +177,7 @@ if (config.doBackgroundWork) {
               contract: toBuffer(collection.contract),
               tokenIdRange,
               tokenSetId: collection.tokenSetId,
+              mintedTimestamp,
             },
           });
 
@@ -221,6 +224,7 @@ if (config.doBackgroundWork) {
 export type MintInfo = {
   contract: string;
   tokenId: string;
+  mintedTimestamp: number;
 };
 
 export const addToQueue = async (mintInfos: MintInfo[]) => {
