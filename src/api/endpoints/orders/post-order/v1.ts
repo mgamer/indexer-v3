@@ -9,6 +9,7 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import * as orders from "@/orderbook/orders";
+import { parseOpenSeaOrder } from "@/orderbook/orders/wyvern-v2.3/opensea";
 
 const version = "v1";
 
@@ -23,7 +24,10 @@ export const postOrderV1Options: RouteOptions = {
   validate: {
     payload: Joi.object({
       order: Joi.object({
-        kind: Joi.string().lowercase().valid("wyvern-v2.3", "721ex", "zeroex-v4").required(),
+        kind: Joi.string()
+          .lowercase()
+          .valid("opensea", "wyvern-v2.3", "721ex", "zeroex-v4")
+          .required(),
         data: Joi.object().required(),
       }),
       orderbook: Joi.string().lowercase().valid("reservoir", "opensea").default("reservoir"),
@@ -47,6 +51,24 @@ export const postOrderV1Options: RouteOptions = {
       const attribute = payload.attribute;
 
       switch (order.kind) {
+        case "opensea": {
+          const parsedOrder = await parseOpenSeaOrder(order.data);
+          if (!parsedOrder) {
+            throw Boom.badRequest("Invalid/unsupported order");
+          }
+
+          const orderInfo: orders.wyvernV23.OrderInfo = {
+            orderParams: parsedOrder.params,
+            metadata: {},
+          };
+          const [result] = await orders.wyvernV23.save([orderInfo]);
+          if (result.status === "success") {
+            return { message: "Success" };
+          } else {
+            throw Boom.badRequest(result.status);
+          }
+        }
+
         case "721ex": {
           if (orderbook !== "reservoir") {
             throw new Error("Unsupported orderbook");
