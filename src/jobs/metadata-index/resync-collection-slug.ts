@@ -81,7 +81,12 @@ if (config.doBackgroundWork) {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
 
-  redlock.acquire(["slug-resync"], 60 * 24 * 7 * 1000).then(() => addToQueue());
+  redlock
+    .acquire(["slug-resync"], 60 * 24 * 7 * 1000)
+    .then(() => addToQueue())
+    .catch(() => {
+      // Skip on any errors
+    });
 }
 
 export const addToQueue = async (continuation = "") => {
