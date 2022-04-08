@@ -5,7 +5,6 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 import _ from "lodash";
 
-import { Sources } from "@/models/sources";
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
@@ -400,7 +399,7 @@ export const getTokensDetailsV3Options: RouteOptions = {
 
         continuation = buildContinuation(continuation);
       }
-      
+
       const sources = await Sources.getInstance();
 
       const result = rawResult.map((r) => {
