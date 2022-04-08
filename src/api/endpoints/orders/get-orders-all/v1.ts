@@ -31,10 +31,10 @@ export const getOrdersAllV1Options: RouteOptions = {
     query: Joi.object({
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/),
+        .pattern(/^0x[a-fA-F0-9]{40}$/),
       source: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/),
+        .pattern(/^0x[a-fA-F0-9]{40}$/),
       continuation: Joi.string().pattern(base64Regex),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     })
@@ -51,22 +51,23 @@ export const getOrdersAllV1Options: RouteOptions = {
           tokenSetId: Joi.string().required(),
           tokenSetSchemaHash: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{64}$/)
+            .pattern(/^0x[a-fA-F0-9]{64}$/)
             .required(),
           maker: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{40}$/)
+            .pattern(/^0x[a-fA-F0-9]{40}$/)
             .required(),
           taker: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{40}$/)
+            .pattern(/^0x[a-fA-F0-9]{40}$/)
             .required(),
           price: Joi.number().unsafe().required(),
           value: Joi.number().unsafe().required(),
           validFrom: Joi.number().required(),
           validUntil: Joi.number().required(),
           sourceId: Joi.string()
-            .pattern(/^0x[a-f0-9]{40}$/)
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}$/)
             .allow(null),
           feeBps: Joi.number().allow(null),
           feeBreakdown: Joi.array()
@@ -74,7 +75,8 @@ export const getOrdersAllV1Options: RouteOptions = {
               Joi.object({
                 kind: Joi.string(),
                 recipient: Joi.string()
-                  .pattern(/^0x[a-f0-9]{40}$/)
+                  .lowercase()
+                  .pattern(/^0x[a-fA-F0-9]{40}$/)
                   .allow(null),
                 bps: Joi.number(),
               })

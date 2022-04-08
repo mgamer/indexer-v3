@@ -29,7 +29,7 @@ export const postOrderV1Options: RouteOptions = {
       orderbook: Joi.string().lowercase().valid("reservoir", "opensea").default("reservoir"),
       source: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/),
+        .pattern(/^0x[a-fA-F0-9]{40}$/),
       attribute: Joi.object({
         collection: Joi.string().required(),
         key: Joi.string().required(),

@@ -28,11 +28,11 @@ export const getExecuteBuyV1Options: RouteOptions = {
     query: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}:[0-9]+$/)
+        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
         .required(),
       taker: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/)
+        .pattern(/^0x[a-fA-F0-9]{40}$/)
         .required(),
       maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
       maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),

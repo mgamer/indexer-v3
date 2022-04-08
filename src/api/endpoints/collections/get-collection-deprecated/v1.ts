@@ -52,14 +52,14 @@ export const getCollectionDeprecatedV1Options: RouteOptions = {
           price: Joi.number().unsafe().allow(null),
           maker: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{40}$/)
+            .pattern(/^0x[a-fA-F0-9]{40}$/)
             .allow(null),
           validFrom: Joi.number().unsafe().allow(null),
           validUntil: Joi.number().unsafe().allow(null),
           token: Joi.object({
             contract: Joi.string()
               .lowercase()
-              .pattern(/^0x[a-f0-9]{40}$/)
+              .pattern(/^0x[a-fA-F0-9]{40}$/)
               .allow(null),
             tokenId: Joi.string()
               .pattern(/^[0-9]+$/)
@@ -73,7 +73,7 @@ export const getCollectionDeprecatedV1Options: RouteOptions = {
           value: Joi.number().unsafe().allow(null),
           maker: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{40}$/)
+            .pattern(/^0x[a-fA-F0-9]{40}$/)
             .allow(null),
           validFrom: Joi.number().unsafe().allow(null),
           validUntil: Joi.number().unsafe().allow(null),
