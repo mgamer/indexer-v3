@@ -7,6 +7,8 @@ import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 
+import * as metadataIndexProcess from "@/jobs/metadata-index/process-queue";
+
 const QUEUE_NAME = "metadata-index-process-queue-empty";
 
 export const queue = new Queue(QUEUE_NAME, {
@@ -30,7 +32,7 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { method } = job.data;
-      const result = await queue.remove(method); // Allow more jobs to be added
+      const result = await metadataIndexProcess.queue.remove(method); // Allow more jobs to be added
 
       if (result == 0) {
         await addToQueue(method);
