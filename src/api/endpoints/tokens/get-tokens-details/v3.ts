@@ -16,6 +16,7 @@ import {
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
+import { Sources } from "@/models/sources";
 
 const version = "v3";
 
@@ -76,10 +77,7 @@ export const getTokensDetailsV3Options: RouteOptions = {
         ),
       sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice"),
       limit: Joi.number().integer().min(1).max(50).default(20),
-      continuation: Joi.alternatives().try(
-        Joi.string().pattern(/^((\d+|null)_\d+|\d+)$/),
-        Joi.string().pattern(base64Regex)
-      ),
+      continuation: Joi.string().pattern(base64Regex),
     })
       .or("collection", "contract", "tokens", "tokenSetId")
       .oxor("collection", "contract", "tokens", "tokenSetId")
@@ -402,15 +400,12 @@ export const getTokensDetailsV3Options: RouteOptions = {
 
         continuation = buildContinuation(continuation);
       }
+      
+      const sources = await Sources.getInstance();
 
-      const result = rawResult.map(async (r) => {
-        const sources = new Sources();
+      const result = rawResult.map((r) => {
         const source = r.floor_sell_source_id
-          ? await sources.get(
-              fromBuffer(r.floor_sell_source_id),
-              fromBuffer(r.contract),
-              r.token_id
-            )
+          ? sources.get(fromBuffer(r.floor_sell_source_id), fromBuffer(r.contract), r.token_id)
           : null;
 
         return {

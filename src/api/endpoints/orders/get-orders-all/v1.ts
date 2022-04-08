@@ -35,10 +35,7 @@ export const getOrdersAllV1Options: RouteOptions = {
       source: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
-      continuation: Joi.alternatives().try(
-        Joi.string().pattern(/^\d+(.\d+)?_0x[a-f0-9]{64}$/),
-        Joi.string().pattern(base64Regex)
-      ),
+      continuation: Joi.string().pattern(base64Regex),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     })
       .or("contract", "source")

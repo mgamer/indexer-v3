@@ -46,20 +46,24 @@ if (config.doBackgroundWork) {
         refreshTokens = await getTokensForCollection(data.collection, contract, tokenId, limit);
 
         // If no more tokens found
-        if (!_.isEmpty(refreshTokens)) {
+        if (_.isEmpty(refreshTokens)) {
+          logger.warn(QUEUE_NAME, `No more tokens found for collection: ${data.collection}`);
           return;
         }
 
         // If there are potentially more tokens to refresh
-        if (!_.isEmpty(refreshTokens) && _.size(refreshTokens) == limit) {
+        if (_.size(refreshTokens) == limit) {
           const lastToken = refreshTokens[limit - 1];
+          const continuation = `${lastToken.contract}:${lastToken.tokenId}`;
+          logger.info(QUEUE_NAME, `Trigger token sync continuation: ${continuation}`);
+
           await addToQueue(
             [
               {
                 kind,
                 data: {
                   ...data,
-                  continuation: `${lastToken.contract}:${lastToken.tokenId}`,
+                  continuation,
                 },
               },
             ],
@@ -77,7 +81,11 @@ if (config.doBackgroundWork) {
 
       // Add the tokens to the list
       const pendingRefreshTokens = new PendingRefreshTokens(data.method);
-      await pendingRefreshTokens.add(refreshTokens, prioritized);
+      const pendingCount = await pendingRefreshTokens.add(refreshTokens, prioritized);
+      logger.info(
+        QUEUE_NAME,
+        `There are ${pendingCount} tokens pending to refresh for ${data.method}`
+      );
 
       // Trigger a job to process the queue
       await metadataIndexProcess.addToQueue(data.method);

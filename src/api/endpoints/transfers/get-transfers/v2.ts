@@ -48,10 +48,7 @@ export const getTransfersV2Options: RouteOptions = {
         .unknown()
         .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
       limit: Joi.number().integer().min(1).max(100).default(20),
-      continuation: Joi.alternatives().try(
-        Joi.string().pattern(/^(\d+)_(\d+)_(\d+)$/),
-        Joi.string().pattern(base64Regex)
-      ),
+      continuation: Joi.string().pattern(base64Regex),
     })
       .oxor("contract", "token", "collection")
       .or("contract", "token", "collection")

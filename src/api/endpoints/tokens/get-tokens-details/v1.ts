@@ -262,15 +262,12 @@ export const getTokensDetailsV1Options: RouteOptions = {
       baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
+      const sources = await Sources.getInstance();
+
       const result = await edb.manyOrNone(baseQuery, query).then((result) =>
-        result.map(async (r) => {
-          const sources = new Sources();
+        result.map((r) => {
           const source = r.floor_sell_source_id
-            ? await sources.get(
-                fromBuffer(r.floor_sell_source_id),
-                fromBuffer(r.contract),
-                r.token_id
-              )
+            ? sources.get(fromBuffer(r.floor_sell_source_id), fromBuffer(r.contract), r.token_id)
             : null;
 
           return {

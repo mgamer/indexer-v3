@@ -2,6 +2,115 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.15.0 (2022-04-07)
+
+
+### Features
+
+* update queue export ([46d1c52](https://github.com/reservoirprotocol/indexer-v3/commit/46d1c52dafeefedd864599bc3240ce6269391801))
+
+### 5.14.4 (2022-04-07)
+
+### 5.14.3 (2022-04-07)
+
+### 5.14.2 (2022-04-07)
+
+### 5.14.1 (2022-04-07)
+
+## 5.14.0 (2022-04-07)
+
+
+### Features
+
+* fix log ([7087a2f](https://github.com/reservoirprotocol/indexer-v3/commit/7087a2f5342ee925ddbe03f9b6b98cb354c2f42f))
+
+### 5.13.1 (2022-04-07)
+
+## 5.13.0 (2022-04-07)
+
+
+### Features
+
+* added logs ([f88a28c](https://github.com/reservoirprotocol/indexer-v3/commit/f88a28cbf00b01150ebd9646582dd18b3a0755b7))
+
+### 5.12.1 (2022-04-06)
+
+## 5.12.0 (2022-04-06)
+
+
+### Features
+
+* add 5s cache to tokens floor route ([ae4a173](https://github.com/reservoirprotocol/indexer-v3/commit/ae4a17390c5cbea7f36b78ea87e72b058f7757f4))
+
+### 5.11.1 (2022-04-06)
+
+## 5.11.0 (2022-04-06)
+
+
+### Features
+
+* wip ([990be72](https://github.com/reservoirprotocol/indexer-v3/commit/990be7298c2b5e4477c9d596b3ff6c36abc19848))
+
+## 5.10.0 (2022-04-06)
+
+
+### Features
+
+* wip ([0962345](https://github.com/reservoirprotocol/indexer-v3/commit/096234577e52ffd5937dfdc061f0c43db8204039))
+
+### 5.9.2 (2022-04-06)
+
+### 5.9.1 (2022-04-06)
+
+## 5.9.0 (2022-04-05)
+
+
+### Features
+
+* remove source from details v1 ([b7cf2fc](https://github.com/reservoirprotocol/indexer-v3/commit/b7cf2fc0d9b4c63e09889cc8a4b37184556b5723))
+
+### 5.8.2 (2022-04-05)
+
+### 5.8.1 (2022-04-05)
+
+## 5.8.0 (2022-04-05)
+
+
+### Features
+
+* allow to update sources ([c5753b2](https://github.com/reservoirprotocol/indexer-v3/commit/c5753b230218bb7fb25d25e14033bd80cc32bca7))
+
+### 5.7.4 (2022-04-05)
+
+### 5.7.3 (2022-04-05)
+
+### 5.7.2 (2022-04-05)
+
+### 5.7.1 (2022-04-05)
+
+## 5.7.0 (2022-04-05)
+
+
+### Features
+
+* allow up to 500 owners ([92c2235](https://github.com/reservoirprotocol/indexer-v3/commit/92c2235e1b1c88180e950e4d488437aeb2a3b453))
+
+### 5.6.2 (2022-04-04)
+
+### 5.6.1 (2022-04-04)
+
+
+### Bug Fixes
+
+* allow empty collection metadata entries ([fed892d](https://github.com/reservoirprotocol/indexer-v3/commit/fed892d42cdf3e85ddc2ed0c813001e7c12e6bee))
+
+## 5.6.0 (2022-04-04)
+
+
+### Features
+
+* use opensea for metadata ([42b5dd4](https://github.com/reservoirprotocol/indexer-v3/commit/42b5dd4fba0f4f1e71b5f5d1d72c9bd7c09d611d))
+
 ### 5.5.3 (2022-04-04)
 
 ### 5.5.2 (2022-04-02)

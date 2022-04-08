@@ -31,7 +31,10 @@ CREATE TABLE "attributes" (
   "id" BIGSERIAL NOT NULL,
   "attribute_key_id" INT NOT NULL,
   "value" TEXT NOT NULL,
-  "token_count" INT NOT NULL DEFAULT 0
+  "token_count" INT NOT NULL DEFAULT 0,
+  "on_sale_count" INT NOT NULL DEFAULT 0,
+  "floor_sell_value" NUMERIC(78, 0),
+  "top_buy_value" NUMERIC(78, 0)
 );
 
 CREATE UNIQUE INDEX "attributes_attribute_key_id_value_unique_index"

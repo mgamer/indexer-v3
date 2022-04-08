@@ -122,6 +122,7 @@ export const getExecuteSellV1Options: RouteOptions = {
 
           const buildMatchingArgs: any = {
             tokenId,
+            nonce: await commonHelpers.getMinNonce("wyvern-v2.3", query.taker),
           };
           if (order.params.kind?.includes("token-list")) {
             // When filling an attribute order, we also need to pass

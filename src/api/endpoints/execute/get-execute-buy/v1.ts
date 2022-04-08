@@ -12,6 +12,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import * as commonHelpers from "@/orderbook/orders/common/helpers";
 
 const version = "v1";
 
@@ -114,7 +115,10 @@ export const getExecuteBuyV1Options: RouteOptions = {
           await checkTakerEthBalance(query.taker, order.params.basePrice);
 
           // Create matching order.
-          const buyOrder = order.buildMatching(query.taker, { tokenId });
+          const buyOrder = order.buildMatching(query.taker, {
+            tokenId,
+            nonce: await commonHelpers.getMinNonce("wyvern-v2.3", query.taker),
+          });
 
           const exchange = new Sdk.WyvernV23.Exchange(config.chainId);
           fillTx = exchange.matchTransaction(query.taker, buyOrder, order);
