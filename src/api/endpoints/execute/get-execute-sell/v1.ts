@@ -396,6 +396,35 @@ export const getExecuteSellV1Options: RouteOptions = {
           };
         }
 
+        case "zeroex-v4-erc721":
+        case "zeroex-v4-erc1155": {
+          const order = new Sdk.ZeroExV4.Order(config.chainId, bestOrderResult.raw_data);
+
+          // Create matching order.
+          const sellOrder = order.buildMatching({ tokenId, amount: 1 });
+
+          const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
+          const fillTx = exchange.matchTransaction(query.taker, order, sellOrder);
+
+          return {
+            steps: [
+              {
+                ...steps[3],
+                status: "incomplete",
+                data: fillTx,
+              },
+              {
+                ...steps[4],
+                status: "incomplete",
+                data: {
+                  endpoint: `/orders/executed/v1?id=${bestOrderResult.id}`,
+                  method: "GET",
+                },
+              },
+            ],
+          };
+        }
+
         default: {
           throw Boom.notImplemented("Unsupported order kind");
         }

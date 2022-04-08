@@ -20,7 +20,10 @@ export const postOrdersV1Options: RouteOptions = {
     payload: Joi.object({
       orders: Joi.array().items(
         Joi.object({
-          kind: Joi.string().lowercase().valid("looks-rare", "721ex", "wyvern-v2.3").required(),
+          kind: Joi.string()
+            .lowercase()
+            .valid("looks-rare", "721ex", "wyvern-v2.3", "zeroex-v4")
+            .required(),
           data: Joi.object().required(),
         })
       ),

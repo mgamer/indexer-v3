@@ -4,6 +4,7 @@ import { AddressZero } from "@ethersproject/constants";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
+import { TxData } from "@reservoir0x/sdk/dist/utils";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
@@ -14,11 +15,14 @@ import { config } from "@/config/index";
 import * as openDaoSellToken from "@/orderbook/orders/opendao/build/sell/token";
 import * as openDaoCheck from "@/orderbook/orders/opendao/check";
 
+// ZeroExV4
+import * as zeroExV4SellToken from "@/orderbook/orders/opendao/build/sell/token";
+import * as zeroExV4Check from "@/orderbook/orders/opendao/check";
+
 // Wyvern v2.3
 import * as wyvernV23SellToken from "@/orderbook/orders/wyvern-v2.3/build/sell/token";
 import * as wyvernV23Utils from "@/orderbook/orders/wyvern-v2.3/utils";
 import * as wyvernV23Check from "@/orderbook/orders/wyvern-v2.3/check";
-import { TxData } from "@reservoir0x/sdk/dist/utils";
 
 const version = "v1";
 
@@ -43,7 +47,7 @@ export const getExecuteListV1Options: RouteOptions = {
       weiPrice: Joi.string()
         .pattern(/^[0-9]+$/)
         .required(),
-      orderKind: Joi.string().valid("wyvern-v2.3", "721ex").default("wyvern-v2.3"),
+      orderKind: Joi.string().valid("wyvern-v2.3", "721ex", "zeroex-v4").default("wyvern-v2.3"),
       orderbook: Joi.string().valid("reservoir", "opensea", "721ex").default("reservoir"),
       automatedRoyalties: Joi.boolean().default(true),
       fee: Joi.alternatives(Joi.string(), Joi.number()),
@@ -339,6 +343,105 @@ export const getExecuteListV1Options: RouteOptions = {
                   body: {
                     order: {
                       kind: "721ex",
+                      data: {
+                        ...order.params,
+                        v: query.v,
+                        r: query.r,
+                        s: query.s,
+                      },
+                    },
+                    orderbook: query.orderbook,
+                    source: query.source,
+                  },
+                },
+              },
+            ],
+          };
+        }
+
+        case "zeroex-v4": {
+          if (!["reservoir"].includes(query.orderbook)) {
+            throw Boom.badRequest("Unsupported orderbook");
+          }
+
+          const steps = [
+            {
+              action: "Approve NFT contract",
+              description:
+                "Each NFT collection you want to trade requires a one-time approval transaction",
+              kind: "transaction",
+            },
+            {
+              action: "Authorize listing",
+              description: "A free off-chain signature to create the listing",
+              kind: "signature",
+            },
+            {
+              action: "Submit listing",
+              description: "Post your listing to the order book for others to discover it",
+              kind: "request",
+            },
+          ];
+
+          const order = await zeroExV4SellToken.build({
+            ...query,
+            contract,
+            tokenId,
+          });
+
+          if (!order) {
+            throw Boom.internal("Failed to generate order");
+          }
+
+          let approvalTx: TxData | undefined;
+
+          // Check the order's fillability
+          try {
+            await zeroExV4Check.offChainCheck(order, { onChainApprovalRecheck: true });
+          } catch (error: any) {
+            switch (error.message) {
+              case "no-balance-no-approval":
+              case "no-balance": {
+                // We cannot do anything if the user doesn't own the listed token
+                throw Boom.badData("Maker does not own the listed token");
+              }
+
+              case "no-approval": {
+                // Generate an approval transaction
+
+                const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
+
+                approvalTx = (
+                  kind === "erc721"
+                    ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.nft)
+                    : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.nft)
+                ).approveTransaction(query.maker, Sdk.ZeroExV4.Addresses.Exchange[config.chainId]);
+
+                break;
+              }
+            }
+          }
+
+          return {
+            steps: [
+              {
+                ...steps[0],
+                status: approvalTx ? "incomplete" : "complete",
+              },
+              {
+                ...steps[1],
+                status: "incomplete",
+                data: order.getSignatureData(),
+              },
+              {
+                ...steps[2],
+                status: "incomplete",
+                data: {
+                  endpoint: "/order/v1",
+                  method: "POST",
+                  body: {
+                    order: {
+                      kind: "zeroex-v4",
                       data: {
                         ...order.params,
                         v: query.v,

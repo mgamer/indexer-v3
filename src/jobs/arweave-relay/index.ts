@@ -48,6 +48,25 @@ export const addPendingOrdersLooksRare = async (
   }
 };
 
+export const addPendingOrdersZeroExV4 = async (
+  data: { order: Sdk.ZeroExV4.Order; schemaHash?: string; source?: string }[]
+) => {
+  if (config.arweaveRelayerKey && data.length) {
+    await redis.rpush(
+      PENDING_DATA_KEY,
+      ...data.map(({ order, schemaHash }) =>
+        JSON.stringify({
+          kind: "zeroex-v4",
+          data: {
+            ...order.params,
+            schemaHash,
+          },
+        })
+      )
+    );
+  }
+};
+
 export const addPendingOrdersOpenDao = async (
   data: { order: Sdk.OpenDao.Order; schemaHash?: string; source?: string }[]
 ) => {
