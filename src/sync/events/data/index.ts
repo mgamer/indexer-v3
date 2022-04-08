@@ -7,6 +7,7 @@ import * as looksRare from "@/events-sync/data/looks-rare";
 import * as openDao from "@/events-sync/data/opendao";
 import * as wyvernV2 from "@/events-sync/data/wyvern-v2";
 import * as wyvernV23 from "@/events-sync/data/wyvern-v2.3";
+import * as zeroExV4 from "@/events-sync/data/zeroex-v4";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -29,6 +30,10 @@ export type EventDataKind =
   | "looks-rare-cancel-multiple-orders"
   | "looks-rare-taker-ask"
   | "looks-rare-taker-bid"
+  | "zeroex-v4-erc721-order-cancelled"
+  | "zeroex-v4-erc1155-order-cancelled"
+  | "zeroex-v4-erc721-order-filled"
+  | "zeroex-v4-erc1155-order-filled"
   | "opendao-erc721-order-cancelled"
   | "opendao-erc1155-order-cancelled"
   | "opendao-erc721-order-filled"
@@ -60,6 +65,10 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       wyvernV23.orderCancelled,
       wyvernV23.ordersMatched,
       wyvernV23.nonceIncremented,
+      zeroExV4.erc721OrderCancelled,
+      zeroExV4.erc1155OrderCancelled,
+      zeroExV4.erc721OrderFilled,
+      zeroExV4.erc1155OrderFilled,
       openDao.erc721OrderCancelled,
       openDao.erc1155OrderCancelled,
       openDao.erc721OrderFilled,
@@ -108,6 +117,14 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return looksRare.takerAsk;
     case "looks-rare-taker-bid":
       return looksRare.takerBid;
+    case "zeroex-v4-erc721-order-cancelled":
+      return openDao.erc721OrderCancelled;
+    case "zeroex-v4-erc1155-order-cancelled":
+      return openDao.erc1155OrderCancelled;
+    case "zeroex-v4-erc721-order-filled":
+      return openDao.erc721OrderFilled;
+    case "zeroex-v4-erc1155-order-filled":
+      return openDao.erc1155OrderFilled;
     case "opendao-erc721-order-cancelled":
       return openDao.erc721OrderCancelled;
     case "opendao-erc1155-order-cancelled":
