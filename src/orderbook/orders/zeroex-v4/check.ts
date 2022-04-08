@@ -20,6 +20,8 @@ export const offChainCheck = async (
     onChainApprovalRecheck?: boolean;
   }
 ) => {
+  // TODO: We should also check the remaining quantity for partially filled orders.
+
   // Check: order has a valid target
   const kind = await commonHelpers.getContractKind(order.params.nft);
   if (!kind || kind !== order.params.kind?.split("-")[0]) {
