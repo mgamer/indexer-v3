@@ -61,6 +61,16 @@ if (config.doBackgroundWork) {
 
             break;
           }
+
+          case "zeroex-v4": {
+            const result = await orders.openDao.save(
+              [info as orders.zeroExV4.OrderInfo],
+              relayToArweave
+            );
+            logger.info(QUEUE_NAME, `[zeroex-v4] Order save result: ${JSON.stringify(result)}`);
+
+            break;
+          }
         }
       } catch (error) {
         logger.error(QUEUE_NAME, `Failed to process order ${job.data}: ${error}`);
@@ -88,6 +98,11 @@ export type GenericOrderInfo =
   | {
       kind: "opendao";
       info: orders.openDao.OrderInfo;
+      relayToArweave?: boolean;
+    }
+  | {
+      kind: "zeroex-v4";
+      info: orders.zeroExV4.OrderInfo;
       relayToArweave?: boolean;
     };
 

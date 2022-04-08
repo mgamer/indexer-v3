@@ -158,6 +158,24 @@ export const getExecuteBuyV1Options: RouteOptions = {
           break;
         }
 
+        case "zeroex-v4-erc721":
+        case "zeroex-v4-erc1155": {
+          const order = new Sdk.ZeroExV4.Order(config.chainId, bestOrderResult.raw_data);
+
+          await checkTakerEthBalance(
+            query.taker,
+            bn(order.params.erc20TokenAmount).add(order.getFeeAmount())
+          );
+
+          // Create matching order.
+          const buyOrder = order.buildMatching({ tokenId, amount: 1 });
+
+          const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
+          fillTx = exchange.matchTransaction(query.taker, order, buyOrder);
+
+          break;
+        }
+
         default: {
           throw Boom.notImplemented("Unsupported order kind");
         }

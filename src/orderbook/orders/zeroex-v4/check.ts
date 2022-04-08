@@ -8,7 +8,7 @@ import * as commonHelpers from "@/orderbook/orders/common/helpers";
 // TODO: Add support for on-chain check
 
 export const offChainCheck = async (
-  order: Sdk.OpenDao.Order,
+  order: Sdk.ZeroExV4.Order,
   options?: {
     // Some NFTs pre-approve common exchanges so that users don't
     // spend gas approving them. In such cases we will be missing
@@ -30,7 +30,7 @@ export const offChainCheck = async (
 
   // Check: order's nonce was not individually cancelled
   const nonceCancelled = await commonHelpers.isNonceCancelled(
-    `opendao-${kind}`,
+    `zeroex-v4-${kind}`,
     order.params.maker,
     order.params.nonce
   );
@@ -42,7 +42,7 @@ export const offChainCheck = async (
 
   let hasBalance = true;
   let hasApproval = true;
-  if (order.params.direction === Sdk.OpenDao.Types.TradeDirection.BUY) {
+  if (order.params.direction === Sdk.ZeroExV4.Types.TradeDirection.BUY) {
     // Check: maker has enough balance
     const ftBalance = await commonHelpers.getFtBalance(order.params.erc20Token, order.params.maker);
     if (ftBalance.lt(bn(order.params.erc20TokenAmount).add(feeAmount))) {
@@ -56,7 +56,7 @@ export const offChainCheck = async (
         bn(
           await erc20.getAllowance(
             order.params.maker,
-            Sdk.OpenDao.Addresses.Exchange[config.chainId]
+            Sdk.ZeroExV4.Addresses.Exchange[config.chainId]
           )
         ).lt(bn(order.params.erc20TokenAmount).add(feeAmount))
       ) {
@@ -74,7 +74,7 @@ export const offChainCheck = async (
       hasBalance = false;
     }
 
-    const operator = Sdk.OpenDao.Addresses.Exchange[config.chainId];
+    const operator = Sdk.ZeroExV4.Addresses.Exchange[config.chainId];
 
     // Check: maker has set the proper approval
     const nftApproval = await commonHelpers.getNftApproval(

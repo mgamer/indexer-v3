@@ -34,7 +34,13 @@ export const generateSchemaHash = (schema?: object) =>
 // Underlying database model for an order
 export type DbOrder = {
   id: string;
-  kind: "wyvern-v2.3" | "looks-rare" | "opendao-erc721" | "opendao-erc1155";
+  kind:
+    | "wyvern-v2.3"
+    | "looks-rare"
+    | "zeroex-v4-erc721"
+    | "zeroex-v4-erc1155"
+    | "opendao-erc721"
+    | "opendao-erc1155";
   side: "buy" | "sell";
   fillability_status: string;
   approval_status: string;
