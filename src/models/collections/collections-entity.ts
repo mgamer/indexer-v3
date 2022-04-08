@@ -48,6 +48,7 @@ export type CollectionsEntityParams = {
   all_time_rank: number;
   index_metadata: boolean;
   last_metadata_sync: string;
+  minted_timestamp: number;
 };
 
 export class CollectionsEntity {
@@ -73,6 +74,7 @@ export class CollectionsEntity {
   allTimeRank: number;
   indexMetadata: boolean;
   lastMetadataSync: string;
+  mintedTimestamp: number;
 
   constructor(params: CollectionsEntityParams) {
     this.id = params.id;
@@ -97,5 +99,6 @@ export class CollectionsEntity {
     this.allTimeRank = params.all_time_rank;
     this.indexMetadata = params.index_metadata;
     this.lastMetadataSync = params.last_metadata_sync;
+    this.mintedTimestamp = params.minted_timestamp;
   }
 }
