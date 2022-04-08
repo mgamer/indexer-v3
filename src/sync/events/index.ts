@@ -3,19 +3,19 @@ import { AddressZero, HashZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 
 import { logger } from "@/common/logger";
+import { idb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
+import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { EventDataKind, getEventData } from "@/events-sync/data";
 import * as es from "@/events-sync/storage";
 import { parseEvent } from "@/events-sync/parser";
-
 import * as eventsSync from "@/jobs/events-sync/index";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
-import { idb } from "@/common/db";
-import { bn, toBuffer } from "@/common/utils";
+import { OrderKind } from "@/orderbook/orders";
 
 // TODO: Split into multiple files (by exchange).
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
@@ -829,8 +829,10 @@ export const syncEvents = async (
               break;
             }
 
-            // OpenDao
+            // ZeroExV4 + OpenDao
 
+            case "zeroex-v4-erc721-order-cancelled":
+            case "zeroex-v4-erc1155-order-cancelled":
             case "opendao-erc721-order-cancelled":
             case "opendao-erc1155-order-cancelled": {
               const parsedLog = eventData.abi.parseLog(log);
@@ -838,10 +840,7 @@ export const syncEvents = async (
               const nonce = parsedLog.args["nonce"].toString();
 
               nonceCancelEvents.push({
-                orderKind:
-                  eventData?.kind === "opendao-erc721-order-cancelled"
-                    ? "opendao-erc721"
-                    : "opendao-erc1155",
+                orderKind: eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind,
                 maker,
                 nonce,
                 baseEventParams,
@@ -850,6 +849,7 @@ export const syncEvents = async (
               break;
             }
 
+            case "zeroex-v4-erc721-order-filled":
             case "opendao-erc721-order-filled": {
               const parsedLog = eventData.abi.parseLog(log);
               const direction = parsedLog.args["direction"];
@@ -861,24 +861,9 @@ export const syncEvents = async (
               const erc721Token = parsedLog.args["erc721Token"].toLowerCase();
               const erc721TokenId = parsedLog.args["erc721TokenId"].toString();
 
-              logger.info(
-                "debug",
-                JSON.stringify({
-                  direction,
-                  maker,
-                  taker,
-                  nonce,
-                  erc20Token,
-                  erc20TokenAmount,
-                  erc721Token,
-                  erc721TokenId,
-                  baseEventParams,
-                })
-              );
-
               if (
                 ![
-                  Sdk.OpenDao.Addresses.Eth[config.chainId],
+                  Sdk.ZeroExV4.Addresses.Eth[config.chainId],
                   Sdk.Common.Addresses.Weth[config.chainId],
                 ].includes(erc20Token)
               ) {
@@ -886,6 +871,7 @@ export const syncEvents = async (
                 break;
               }
 
+              const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
               const orderSide = direction === 0 ? "sell" : "buy";
 
               let orderId: string | undefined;
@@ -902,7 +888,7 @@ export const syncEvents = async (
                       SELECT
                         orders.id
                       FROM orders
-                      WHERE orders.kind = 'opendao-erc721'
+                      WHERE orders.kind = '${orderKind}'
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
                         AND orders.contract = $/contract/
@@ -925,7 +911,7 @@ export const syncEvents = async (
               }
 
               fillEvents.push({
-                orderKind: "opendao-erc721",
+                orderKind,
                 orderId,
                 orderSide,
                 maker,
@@ -939,7 +925,7 @@ export const syncEvents = async (
 
               // Cancel all the other orders of the maker having the same nonce.
               nonceCancelEvents.push({
-                orderKind: "opendao-erc721",
+                orderKind,
                 maker,
                 nonce,
                 baseEventParams,
@@ -971,6 +957,7 @@ export const syncEvents = async (
               break;
             }
 
+            case "zeroex-v4-erc1155-order-filled":
             case "opendao-erc1155-order-filled": {
               const parsedLog = eventData.abi.parseLog(log);
               const direction = parsedLog.args["direction"];
@@ -985,7 +972,7 @@ export const syncEvents = async (
 
               if (
                 ![
-                  Sdk.OpenDao.Addresses.Eth[config.chainId],
+                  Sdk.ZeroExV4.Addresses.Eth[config.chainId],
                   Sdk.Common.Addresses.Weth[config.chainId],
                 ].includes(erc20Token)
               ) {
@@ -993,6 +980,7 @@ export const syncEvents = async (
                 break;
               }
 
+              const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
               const value = bn(erc20FillAmount).div(erc1155FillAmount).toString();
 
               let orderId: string | undefined;
@@ -1004,7 +992,7 @@ export const syncEvents = async (
                       SELECT
                         orders.id
                       FROM orders
-                      WHERE orders.kind = 'opendao-erc1155'
+                      WHERE orders.kind = '${orderKind}'
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
                         AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
@@ -1024,26 +1012,9 @@ export const syncEvents = async (
                   });
               }
 
-              logger.info(
-                "debug",
-                JSON.stringify({
-                  direction,
-                  maker,
-                  taker,
-                  nonce,
-                  erc20Token,
-                  erc20FillAmount,
-                  erc1155Token,
-                  erc1155TokenId,
-                  erc1155FillAmount,
-                  baseEventParams,
-                  orderId,
-                })
-              );
-
               // Custom handling to support partial filling
               fillEventsZeroExV4.push({
-                orderKind: "opendao-erc1155",
+                orderKind,
                 orderId,
                 orderSide: direction === 0 ? "sell" : "buy",
                 maker,
