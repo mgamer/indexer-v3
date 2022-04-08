@@ -26,6 +26,8 @@ export const getOrderExecutedV1Options: RouteOptions = {
     const query = request.query as any;
 
     try {
+      // TODO: We should support checking partially fillable orders.
+
       const data = await edb.oneOrNone(
         `
           SELECT fillability_status FROM orders
