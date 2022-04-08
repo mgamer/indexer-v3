@@ -1,3 +1,5 @@
+import _ from "lodash";
+
 import { HashZero } from "@ethersproject/constants";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
@@ -93,7 +95,9 @@ if (config.doBackgroundWork) {
             );
 
             for (const result of buyOrderResult) {
-              await handleNewBuyOrder.addToQueue(result);
+              if (!_.isNull(result.attributeId)) {
+                await handleNewBuyOrder.addToQueue(result);
+              }
             }
           }
 
