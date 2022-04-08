@@ -27,6 +27,8 @@ export const getExecuteCancelV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/)
         .required(),
+      maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
+      maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),
     }),
   },
   response: {
@@ -102,7 +104,11 @@ export const getExecuteCancelV1Options: RouteOptions = {
               {
                 ...steps[0],
                 status: "incomplete",
-                data: cancelTx,
+                data: {
+                  ...cancelTx,
+                  maxFeePerGas: query.maxFeePerGas,
+                  maxPriorityFeePerGas: query.maxPriorityFeePerGas,
+                },
               },
               {
                 ...steps[1],
@@ -129,7 +135,11 @@ export const getExecuteCancelV1Options: RouteOptions = {
               {
                 ...steps[0],
                 status: "incomplete",
-                data: cancelTx,
+                data: {
+                  ...cancelTx,
+                  maxFeePerGas: query.maxFeePerGas,
+                  maxPriorityFeePerGas: query.maxPriorityFeePerGas,
+                },
               },
               {
                 ...steps[1],
@@ -159,7 +169,11 @@ export const getExecuteCancelV1Options: RouteOptions = {
               {
                 ...steps[0],
                 status: "incomplete",
-                data: cancelTx,
+                data: {
+                  ...cancelTx,
+                  maxFeePerGas: query.maxFeePerGas,
+                  maxPriorityFeePerGas: query.maxPriorityFeePerGas,
+                },
               },
               {
                 ...steps[1],
@@ -189,7 +203,11 @@ export const getExecuteCancelV1Options: RouteOptions = {
               {
                 ...steps[0],
                 status: "incomplete",
-                data: cancelTx,
+                data: {
+                  ...cancelTx,
+                  maxFeePerGas: query.maxFeePerGas,
+                  maxPriorityFeePerGas: query.maxPriorityFeePerGas,
+                },
               },
               {
                 ...steps[1],
