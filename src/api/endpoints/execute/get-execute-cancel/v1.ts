@@ -143,6 +143,66 @@ export const getExecuteCancelV1Options: RouteOptions = {
           };
         }
 
+        case "opendao-erc721":
+        case "opendao-erc1155": {
+          const order = new Sdk.OpenDao.Order(config.chainId, orderResult.raw_data);
+
+          const exchange = new Sdk.OpenDao.Exchange(config.chainId);
+          const cancelTx = exchange.cancelTransaction(query.maker, order);
+
+          const steps = generateSteps(
+            order.params.direction === Sdk.OpenDao.Types.TradeDirection.SELL ? "sell" : "buy"
+          );
+
+          return {
+            steps: [
+              {
+                ...steps[0],
+                status: "incomplete",
+                data: cancelTx,
+              },
+              {
+                ...steps[1],
+                status: "incomplete",
+                data: {
+                  endpoint: `/orders/executed/v1?id=${order.hash()}`,
+                  method: "GET",
+                },
+              },
+            ],
+          };
+        }
+
+        case "zeroex-v4-erc721":
+        case "zeroex-v4-erc1155": {
+          const order = new Sdk.ZeroExV4.Order(config.chainId, orderResult.raw_data);
+
+          const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
+          const cancelTx = exchange.cancelTransaction(query.maker, order);
+
+          const steps = generateSteps(
+            order.params.direction === Sdk.ZeroExV4.Types.TradeDirection.SELL ? "sell" : "buy"
+          );
+
+          return {
+            steps: [
+              {
+                ...steps[0],
+                status: "incomplete",
+                data: cancelTx,
+              },
+              {
+                ...steps[1],
+                status: "incomplete",
+                data: {
+                  endpoint: `/orders/executed/v1?id=${order.hash()}`,
+                  method: "GET",
+                },
+              },
+            ],
+          };
+        }
+
         default: {
           throw Boom.notImplemented("Unsupported order kind");
         }
