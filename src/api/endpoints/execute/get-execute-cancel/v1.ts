@@ -25,7 +25,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
       id: Joi.string().required(),
       maker: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/)
+        .pattern(/^0x[a-fA-F0-9]{40}$/)
         .required(),
     }),
   },

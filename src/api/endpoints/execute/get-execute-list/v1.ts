@@ -27,11 +27,11 @@ export const getExecuteListV1Options: RouteOptions = {
     query: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}:[0-9]+$/)
+        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
         .required(),
       maker: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/)
+        .pattern(/^0x[a-fA-F0-9]{40}$/)
         .required(),
       weiPrice: Joi.string()
         .pattern(/^[0-9]+$/)
@@ -41,14 +41,18 @@ export const getExecuteListV1Options: RouteOptions = {
       fee: Joi.alternatives(Joi.string(), Joi.number()),
       feeRecipient: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/)
+        .pattern(/^0x[a-fA-F0-9]{40}$/)
         .disallow(AddressZero),
       listingTime: Joi.alternatives(Joi.string(), Joi.number()),
       expirationTime: Joi.alternatives(Joi.string(), Joi.number()),
       salt: Joi.string(),
       v: Joi.number(),
-      r: Joi.string().pattern(/^0x[a-f0-9]{64}$/),
-      s: Joi.string().pattern(/^0x[a-f0-9]{64}$/),
+      r: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-fA-F0-9]{64}$/),
+      s: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-fA-F0-9]{64}$/),
     }),
   },
   response: {
