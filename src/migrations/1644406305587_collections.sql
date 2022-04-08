@@ -13,7 +13,8 @@ CREATE TABLE "collections" (
   "token_set_id" TEXT,
   "token_count" INT NOT NULL DEFAULT 0,
   "created_at" TIMESTAMPTZ DEFAULT now(),
-  "updated_at" TIMESTAMPTZ DEFAULT now()
+  "updated_at" TIMESTAMPTZ DEFAULT now(),
+  "minted_timestamp" INT
 );
 
 ALTER TABLE "collections"

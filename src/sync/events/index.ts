@@ -173,6 +173,7 @@ export const syncEvents = async (
                 mintInfos.push({
                   contract: baseEventParams.address,
                   tokenId,
+                  mintedTimestamp: baseEventParams.timestamp,
                 });
               }
 
@@ -233,6 +234,7 @@ export const syncEvents = async (
                 mintInfos.push({
                   contract: baseEventParams.address,
                   tokenId,
+                  mintedTimestamp: baseEventParams.timestamp,
                 });
               }
 
@@ -296,6 +298,7 @@ export const syncEvents = async (
                   mintInfos.push({
                     contract: baseEventParams.address,
                     tokenId: tokenIds[i],
+                    mintedTimestamp: baseEventParams.timestamp,
                   });
                 }
               }
