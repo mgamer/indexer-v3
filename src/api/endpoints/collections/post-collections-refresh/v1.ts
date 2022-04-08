@@ -63,6 +63,10 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
         throw Boom.tooEarly(`Next available sync ${formatISO9075(nextAvailableSync)} UTC`);
       }
 
+      // Update the last sync date
+      const currentUtcTime = new Date().toISOString();
+      await Collections.update(payload.collection, { lastMetadataSync: currentUtcTime });
+
       // Refresh contract orders from OpenSea
       await OpenseaIndexerApi.fastContractSync(collection.contract);
 
@@ -82,10 +86,6 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
 
       // Refresh the collection metadata
       await Collections.updateCollectionMetadata(collection.contract, "1");
-
-      // Update the last sync date
-      const currentUtcTime = new Date().toISOString();
-      await Collections.update(payload.collection, { lastMetadataSync: currentUtcTime });
 
       logger.info(
         `post-collections-refresh-${version}-handler`,
