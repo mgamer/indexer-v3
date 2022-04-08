@@ -30,7 +30,7 @@ export const getUsersLiquidityV1Options: RouteOptions = {
         ),
       user: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/),
+        .pattern(/^0x[a-fA-F0-9]{40}$/),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     })
@@ -41,7 +41,9 @@ export const getUsersLiquidityV1Options: RouteOptions = {
     schema: Joi.object({
       liquidity: Joi.array().items(
         Joi.object({
-          user: Joi.string().pattern(/^0x[a-f0-9]{40}$/),
+          user: Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}$/),
           rank: Joi.number().required(),
           tokenCount: Joi.string().required(),
           liquidity: Joi.number().unsafe().required(),

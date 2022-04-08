@@ -28,13 +28,13 @@ export const getTransfersV1Options: RouteOptions = {
         ),
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/)
+        .pattern(/^0x[a-fA-F0-9]{40}$/)
         .description(
           "Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}:[0-9]+$/)
+        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
         .description(
           "Filter to a particular token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
@@ -51,7 +51,7 @@ export const getTransfersV1Options: RouteOptions = {
           token: Joi.object({
             contract: Joi.string()
               .lowercase()
-              .pattern(/^0x[a-f0-9]{40}$/),
+              .pattern(/^0x[a-fA-F0-9]{40}$/),
             tokenId: Joi.string().pattern(/^[0-9]+$/),
             name: Joi.string().allow(null, ""),
             image: Joi.string().allow(null, ""),
@@ -62,10 +62,10 @@ export const getTransfersV1Options: RouteOptions = {
           }),
           from: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{40}$/),
+            .pattern(/^0x[a-fA-F0-9]{40}$/),
           to: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{40}$/),
+            .pattern(/^0x[a-fA-F0-9]{40}$/),
           amount: Joi.string(),
           txHash: Joi.string()
             .lowercase()
