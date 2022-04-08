@@ -91,6 +91,8 @@ if (config.doBackgroundWork) {
       // If there are potentially more tokens to process trigger another job
       if (_.size(refreshTokens) == count) {
         await addToQueue(method);
+      } else {
+        await queue.remove(method); // Allow more jobs to be added
       }
     },
     { connection: redis.duplicate(), concurrency: 2 }
