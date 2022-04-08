@@ -34,6 +34,8 @@ export const getExecuteBuyV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/)
         .required(),
+      maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
+      maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),
     }),
   },
   response: {
@@ -190,7 +192,11 @@ export const getExecuteBuyV1Options: RouteOptions = {
           {
             ...steps[0],
             status: "incomplete",
-            data: fillTx,
+            data: {
+              ...fillTx,
+              maxFeePerGas: query.maxFeePerGas,
+              maxPriorityFeePerGas: query.maxPriorityFeePerGas,
+            },
           },
           {
             ...steps[1],
