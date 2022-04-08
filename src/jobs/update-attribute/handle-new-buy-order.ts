@@ -27,6 +27,8 @@ if (config.doBackgroundWork) {
       await Attributes.update(attributeId, {
         topBuyValue,
       });
+
+      logger.info(QUEUE_NAME, `New top bid ${topBuyValue} for attribute id ${attributeId}`);
     },
     {
       connection: redis.duplicate(),

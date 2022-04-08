@@ -92,13 +92,6 @@ if (config.doBackgroundWork) {
               { tokenSetId }
             );
 
-            logger.info(
-              QUEUE_NAME,
-              `New sale buy trigger=${JSON.stringify(trigger)} buyOrderResult=${JSON.stringify(
-                buyOrderResult
-              )}`
-            );
-
             if (buyOrderResult) {
               await handleNewBuyOrder.addToQueue(buyOrderResult);
             }
@@ -197,13 +190,6 @@ if (config.doBackgroundWork) {
                 txHash: trigger.txHash ? toBuffer(trigger.txHash) : null,
                 txTimestamp: trigger.txTimestamp || null,
               }
-            );
-
-            logger.info(
-              QUEUE_NAME,
-              `New sale event trigger=${JSON.stringify(trigger)} sellOrderResult=${JSON.stringify(
-                sellOrderResult
-              )}`
             );
 
             if (sellOrderResult) {
