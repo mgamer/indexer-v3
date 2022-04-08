@@ -1,3 +1,5 @@
+import _ from "lodash";
+
 import { HashZero } from "@ethersproject/constants";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
@@ -92,10 +94,10 @@ if (config.doBackgroundWork) {
               { tokenSetId }
             );
 
-            logger.info(QUEUE_NAME, `buyOrderResult=${JSON.stringify(buyOrderResult)}`);
-
             for (const result of buyOrderResult) {
-              await handleNewBuyOrder.addToQueue(result);
+              if (!_.isNull(result.attributeId)) {
+                await handleNewBuyOrder.addToQueue(result);
+              }
             }
           }
 
