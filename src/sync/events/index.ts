@@ -170,6 +170,10 @@ export const syncEvents = async (
               });
 
               if (from === AddressZero) {
+                logger.info(
+                  "sync-events",
+                  `kind=${eventData?.kind}, txHasah=${baseEventParams.txHash}, contract=${baseEventParams.address}, timestamp=${baseEventParams.timestamp}`
+                );
                 mintInfos.push({
                   contract: baseEventParams.address,
                   tokenId,
@@ -231,6 +235,10 @@ export const syncEvents = async (
               });
 
               if (from === AddressZero) {
+                logger.info(
+                  "sync-events",
+                  `kind=${eventData?.kind}, txHasah=${baseEventParams.txHash}, contract=${baseEventParams.address}, timestamp=${baseEventParams.timestamp}`
+                );
                 mintInfos.push({
                   contract: baseEventParams.address,
                   tokenId,
@@ -295,6 +303,10 @@ export const syncEvents = async (
                 });
 
                 if (from === AddressZero) {
+                  logger.info(
+                    "sync-events",
+                    `kind=${eventData?.kind}, txHasah=${baseEventParams.txHash}, contract=${baseEventParams.address}, timestamp=${baseEventParams.timestamp}`
+                  );
                   mintInfos.push({
                     contract: baseEventParams.address,
                     tokenId: tokenIds[i],
