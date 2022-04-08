@@ -35,6 +35,8 @@ export const getExecuteSellV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/)
         .required(),
+      maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
+      maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),
     }),
   },
   response: {
@@ -259,7 +261,11 @@ export const getExecuteSellV1Options: RouteOptions = {
               {
                 ...steps[3],
                 status: "incomplete",
-                data: fillTx,
+                data: {
+                  ...fillTx,
+                  maxFeePerGas: query.maxFeePerGas,
+                  maxPriorityFeePerGas: query.maxPriorityFeePerGas,
+                },
               },
               {
                 ...steps[4],
@@ -353,7 +359,11 @@ export const getExecuteSellV1Options: RouteOptions = {
               {
                 ...steps[3],
                 status: "incomplete",
-                data: fillTx,
+                data: {
+                  ...fillTx,
+                  maxFeePerGas: query.maxFeePerGas,
+                  maxPriorityFeePerGas: query.maxPriorityFeePerGas,
+                },
               },
               {
                 ...steps[4],
@@ -382,7 +392,11 @@ export const getExecuteSellV1Options: RouteOptions = {
               {
                 ...steps[3],
                 status: "incomplete",
-                data: fillTx,
+                data: {
+                  ...fillTx,
+                  maxFeePerGas: query.maxFeePerGas,
+                  maxPriorityFeePerGas: query.maxPriorityFeePerGas,
+                },
               },
               {
                 ...steps[4],
@@ -411,7 +425,11 @@ export const getExecuteSellV1Options: RouteOptions = {
               {
                 ...steps[3],
                 status: "incomplete",
-                data: fillTx,
+                data: {
+                  ...fillTx,
+                  maxFeePerGas: query.maxFeePerGas,
+                  maxPriorityFeePerGas: query.maxPriorityFeePerGas,
+                },
               },
               {
                 ...steps[4],
