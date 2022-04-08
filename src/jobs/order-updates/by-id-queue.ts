@@ -92,6 +92,8 @@ if (config.doBackgroundWork) {
               { tokenSetId }
             );
 
+            logger.info(QUEUE_NAME, `buyOrderResult=${JSON.stringify(buyOrderResult)}`);
+
             for (const result of buyOrderResult) {
               await handleNewBuyOrder.addToQueue(result);
             }
