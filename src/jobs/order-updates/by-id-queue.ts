@@ -57,7 +57,7 @@ if (config.doBackgroundWork) {
 
           // Recompute `top_buy` for token sets that are not single token
           if (side === "buy" && !tokenSetId.startsWith("token")) {
-            const buyOrderResult = await idb.oneOrNone(
+            const buyOrderResult = await idb.manyOrNone(
               `
                 WITH "x" AS (
                   SELECT
@@ -92,8 +92,8 @@ if (config.doBackgroundWork) {
               { tokenSetId }
             );
 
-            if (buyOrderResult) {
-              await handleNewBuyOrder.addToQueue(buyOrderResult);
+            for (const result of buyOrderResult) {
+              await handleNewBuyOrder.addToQueue(result);
             }
           }
 
