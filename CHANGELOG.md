@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.19.0 (2022-04-08)
+
+
+### Features
+
+* added collection slug resync ([0edaa62](https://github.com/reservoirprotocol/indexer-v3/commit/0edaa621a1a94b8e5fcc01ccaa365e272ffb688d))
+
 ### 5.18.1 (2022-04-08)
 
 ## 5.18.0 (2022-04-08)
