@@ -10,6 +10,7 @@ import { network } from "@/common/provider";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { PendingRefreshTokens } from "@/models/pending-refresh-tokens";
+import * as metadataIndexProcessEmpty from "@/jobs/metadata-index/process-queue-empty";
 import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
 
 const QUEUE_NAME = "metadata-index-process-queue";
@@ -92,7 +93,7 @@ if (config.doBackgroundWork) {
       if (_.size(refreshTokens) == count) {
         await addToQueue(method);
       } else {
-        await queue.remove(method); // Allow more jobs to be added
+        await metadataIndexProcessEmpty.addToQueue(method);
       }
     },
     { connection: redis.duplicate(), concurrency: 2 }
