@@ -7,7 +7,7 @@ import Joi from "joi";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { toBuffer } from "@/common/utils";
+import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
 const version = "v1";
@@ -106,8 +106,12 @@ export const getExecuteCancelV1Options: RouteOptions = {
                 status: "incomplete",
                 data: {
                   ...cancelTx,
-                  maxFeePerGas: query.maxFeePerGas,
-                  maxPriorityFeePerGas: query.maxPriorityFeePerGas,
+                  maxFeePerGas: query.maxFeePerGas
+                    ? bn(query.maxFeePerGas).toHexString()
+                    : undefined,
+                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                    ? bn(query.maxPriorityFeePerGas).toHexString()
+                    : undefined,
                 },
               },
               {
@@ -137,8 +141,12 @@ export const getExecuteCancelV1Options: RouteOptions = {
                 status: "incomplete",
                 data: {
                   ...cancelTx,
-                  maxFeePerGas: query.maxFeePerGas,
-                  maxPriorityFeePerGas: query.maxPriorityFeePerGas,
+                  maxFeePerGas: query.maxFeePerGas
+                    ? bn(query.maxFeePerGas).toHexString()
+                    : undefined,
+                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                    ? bn(query.maxPriorityFeePerGas).toHexString()
+                    : undefined,
                 },
               },
               {
@@ -171,8 +179,12 @@ export const getExecuteCancelV1Options: RouteOptions = {
                 status: "incomplete",
                 data: {
                   ...cancelTx,
-                  maxFeePerGas: query.maxFeePerGas,
-                  maxPriorityFeePerGas: query.maxPriorityFeePerGas,
+                  maxFeePerGas: query.maxFeePerGas
+                    ? bn(query.maxFeePerGas).toHexString()
+                    : undefined,
+                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                    ? bn(query.maxPriorityFeePerGas).toHexString()
+                    : undefined,
                 },
               },
               {
@@ -205,8 +217,12 @@ export const getExecuteCancelV1Options: RouteOptions = {
                 status: "incomplete",
                 data: {
                   ...cancelTx,
-                  maxFeePerGas: query.maxFeePerGas,
-                  maxPriorityFeePerGas: query.maxPriorityFeePerGas,
+                  maxFeePerGas: query.maxFeePerGas
+                    ? bn(query.maxFeePerGas).toHexString()
+                    : undefined,
+                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                    ? bn(query.maxPriorityFeePerGas).toHexString()
+                    : undefined,
                 },
               },
               {
