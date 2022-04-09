@@ -194,8 +194,10 @@ export const getExecuteBuyV1Options: RouteOptions = {
             status: "incomplete",
             data: {
               ...fillTx,
-              maxFeePerGas: query.maxFeePerGas,
-              maxPriorityFeePerGas: query.maxPriorityFeePerGas,
+              maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
+              maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                ? bn(query.maxPriorityFeePerGas).toHexString()
+                : undefined,
             },
           },
           {
