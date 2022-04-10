@@ -57,6 +57,9 @@ export const getExecuteBidV1Options: RouteOptions = {
         .required(),
       orderKind: Joi.string().valid("wyvern-v2.3", "721ex", "zeroex-v4").default("wyvern-v2.3"),
       orderbook: Joi.string().valid("reservoir", "opensea").default("reservoir"),
+      source: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-f0-9]{40}$/),
       automatedRoyalties: Joi.boolean().default(true),
       fee: Joi.alternatives(Joi.string(), Joi.number()),
       feeRecipient: Joi.string()
