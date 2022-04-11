@@ -51,7 +51,7 @@ export class Collections {
     const collection = await MetadataApi.getCollectionMetadata(contract, tokenId);
 
     const query = `UPDATE collections
-                   SET metadata = $/metadata:json/, name = $/name/, royalties = $/royalties:json/
+                   SET metadata = $/metadata:json/, name = $/name/, royalties = $/royalties:json/, slug = $/slug/
                    WHERE id = $/id/`;
 
     const values = {
@@ -59,6 +59,7 @@ export class Collections {
       metadata: collection.metadata,
       name: collection.name,
       royalties: collection.royalties,
+      slug: collection.slug,
     };
 
     await idb.none(query, values);

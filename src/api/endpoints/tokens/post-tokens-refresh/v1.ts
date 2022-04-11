@@ -26,7 +26,7 @@ export const postTokensRefreshV1Options: RouteOptions = {
     payload: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}:[0-9]+$/)
+        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
         .description(
           "Refresh the given token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         )
@@ -64,6 +64,10 @@ export const postTokensRefreshV1Options: RouteOptions = {
         throw Boom.tooEarly(`Next available sync ${formatISO9075(nextAvailableSync)} UTC`);
       }
 
+      // Update the last sync date
+      const currentUtcTime = new Date().toISOString();
+      await Tokens.update(contract, tokenId, { lastMetadataSync: currentUtcTime });
+
       // Refresh orders from OpenSea
       await OpenseaIndexerApi.fastTokenSync(payload.token);
 
@@ -83,10 +87,6 @@ export const postTokensRefreshV1Options: RouteOptions = {
           },
         ]);
       }
-
-      // Update the last sync date
-      const currentUtcTime = new Date().toISOString();
-      await Tokens.update(contract, tokenId, { lastMetadataSync: currentUtcTime });
 
       logger.info(
         `post-tokens-refresh-${version}-handler`,

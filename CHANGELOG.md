@@ -2,6 +2,76 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.19.3 (2022-04-10)
+
+### 5.19.2 (2022-04-09)
+
+### 5.19.1 (2022-04-08)
+
+## 5.19.0 (2022-04-08)
+
+
+### Features
+
+* added collection slug resync ([0edaa62](https://github.com/reservoirprotocol/indexer-v3/commit/0edaa621a1a94b8e5fcc01ccaa365e272ffb688d))
+
+### 5.18.1 (2022-04-08)
+
+## 5.18.0 (2022-04-08)
+
+
+### Features
+
+* remove logs ([a625a17](https://github.com/reservoirprotocol/indexer-v3/commit/a625a17f51da88e6d050d6898d5ca3ad126ca802))
+
+### 5.17.7 (2022-04-08)
+
+### 5.17.6 (2022-04-08)
+
+### 5.17.5 (2022-04-08)
+
+### 5.17.4 (2022-04-08)
+
+### 5.17.3 (2022-04-08)
+
+### 5.17.2 (2022-04-08)
+
+### 5.17.1 (2022-04-08)
+
+## 5.17.0 (2022-04-08)
+
+
+### Features
+
+* update refresh date ([8385ce4](https://github.com/reservoirprotocol/indexer-v3/commit/8385ce4cd141159c0c83fa51d5eec8a5054e9196))
+
+### 5.16.4 (2022-04-08)
+
+### 5.16.3 (2022-04-08)
+
+### 5.16.2 (2022-04-08)
+
+### 5.16.1 (2022-04-08)
+
+## 5.16.0 (2022-04-08)
+
+
+### Features
+
+* added log ([933041c](https://github.com/reservoirprotocol/indexer-v3/commit/933041cb6dd1c5890c42ca624515c122b3dfe3a7))
+
+### 5.15.6 (2022-04-08)
+
+### 5.15.5 (2022-04-08)
+
+### 5.15.4 (2022-04-08)
+
+### 5.15.3 (2022-04-08)
+
+### 5.15.2 (2022-04-08)
+
+### 5.15.1 (2022-04-08)
+
 ## 5.15.0 (2022-04-07)
 
 

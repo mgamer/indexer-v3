@@ -32,7 +32,7 @@ export const getOrdersBidsV1Options: RouteOptions = {
     query: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}:\d+$/)
+        .pattern(/^0x[a-fA-F0-9]{40}:\d+$/)
         .description("Filter to a token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"),
       tokenSetId: Joi.string()
         .lowercase()
@@ -41,7 +41,7 @@ export const getOrdersBidsV1Options: RouteOptions = {
         ),
       maker: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/)
+        .pattern(/^0x[a-fA-F0-9]{40}$/)
         .description(
           "Filter to a particular user, e.g. `0x4d04eb67a2d1e01c71fad0366e0c200207a75487`"
         ),
@@ -69,15 +69,15 @@ export const getOrdersBidsV1Options: RouteOptions = {
           tokenSetId: Joi.string().required(),
           tokenSetSchemaHash: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{64}$/)
+            .pattern(/^0x[a-fA-F0-9]{64}$/)
             .required(),
           maker: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{40}$/)
+            .pattern(/^0x[a-fA-F0-9]{40}$/)
             .required(),
           taker: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{40}$/)
+            .pattern(/^0x[a-fA-F0-9]{40}$/)
             .required(),
           price: Joi.number().unsafe().required(),
           value: Joi.number().unsafe().required(),
@@ -117,7 +117,8 @@ export const getOrdersBidsV1Options: RouteOptions = {
               Joi.object({
                 kind: Joi.string(),
                 recipient: Joi.string()
-                  .pattern(/^0x[a-f0-9]{40}$/)
+                  .lowercase()
+                  .pattern(/^0x[a-fA-F0-9]{40}$/)
                   .allow(null),
                 bps: Joi.number(),
               })

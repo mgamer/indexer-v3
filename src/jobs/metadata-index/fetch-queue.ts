@@ -88,7 +88,7 @@ if (config.doBackgroundWork) {
       );
 
       // Trigger a job to process the queue
-      await metadataIndexProcess.addToQueue(data.method);
+      await metadataIndexProcess.addToQueue(data.method, data.method);
     },
     { connection: redis.duplicate(), concurrency: 3 }
   );
