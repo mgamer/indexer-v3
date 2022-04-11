@@ -20,27 +20,43 @@ export const getOrderExecutedV1Options: RouteOptions = {
   validate: {
     query: Joi.object({
       id: Joi.string().required(),
+      checkRecentEvents: Joi.boolean().default(false),
     }),
   },
   handler: async (request: Request) => {
     const query = request.query as any;
 
     try {
-      // TODO: We should support checking partially fillable orders.
+      if (query.checkRecentEvents) {
+        const data = await edb.oneOrNone(
+          `
+            SELECT 1 FROM fill_events_2
+            WHERE fill_events_2.timestamp > floor(extract(epoch FROM now() - interval '3 minutes'))::INT
+              AND fill_events_2.order_id = $/id/
+          `,
+          { id: query.id }
+        );
 
-      const data = await edb.oneOrNone(
-        `
-          SELECT fillability_status FROM orders
-          WHERE id = $/id/
-        `,
-        { id: query.id }
-      );
+        if (data) {
+          return { message: "Order is executed" };
+        }
 
-      if (data?.fillability_status === "filled" || data?.fillability_status === "cancelled") {
-        return { message: "Order is executed" };
+        throw Boom.badData("Order not yet executed");
+      } else {
+        const data = await edb.oneOrNone(
+          `
+            SELECT fillability_status FROM orders
+            WHERE id = $/id/
+          `,
+          { id: query.id }
+        );
+
+        if (data?.fillability_status === "filled" || data?.fillability_status === "cancelled") {
+          return { message: "Order is executed" };
+        }
+
+        throw Boom.badData("Order not yet executed");
       }
-
-      throw Boom.badData("Order not yet executed");
     } catch (error) {
       logger.error(`get-order-executed-${version}-handler`, `Handler failure: ${error}`);
       throw error;
