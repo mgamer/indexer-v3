@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.20.0 (2022-04-11)
+
+
+### Features
+
+* disable slug resync ([4287492](https://github.com/reservoirprotocol/indexer-v3/commit/428749280ba0115476bd20b1f8e4af079ec2586e))
+
 ### 5.19.6 (2022-04-11)
 
 ### 5.19.5 (2022-04-11)
