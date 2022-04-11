@@ -10,7 +10,7 @@ import Joi from "joi";
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn, toBuffer } from "@/common/utils";
+import { bn, formatEth, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 
@@ -34,6 +34,8 @@ export const getExecuteBuyV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .required(),
+      quantity: Joi.number().integer().positive().default(1),
+      onlyQuote: Joi.boolean().default(false),
       maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
       maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),
     }),
@@ -51,6 +53,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
           data: Joi.object(),
         })
       ),
+      quote: Joi.number().unsafe(),
       query: Joi.object(),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
@@ -62,30 +65,14 @@ export const getExecuteBuyV1Options: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const [contract, tokenId] = query.token.split(":");
-
-      const bestOrderResult = await edb.oneOrNone(
-        `
-          SELECT
-            "o"."id",
-            "o"."kind",
-            "o"."token_set_id",
-            "o"."raw_data"
-          FROM "tokens" "t"
-          JOIN "orders" "o"
-            ON "t"."floor_sell_id" = "o"."id"
-          WHERE "t"."contract" = $/contract/
-            AND "t"."token_id" = $/tokenId/
-        `,
-        {
-          contract: toBuffer(contract),
-          tokenId,
+      const checkTakerEthBalance = async (taker: string, price: BigNumberish) => {
+        // Check the taker's Eth balance.
+        const balance = await baseProvider.getBalance(taker);
+        if (bn(balance).lt(price)) {
+          // We cannot do anything if the taker doesn't have sufficient balance.
+          throw Boom.badData("Taker does not have sufficient balance");
         }
-      );
-
-      if (!bestOrderResult) {
-        throw Boom.badRequest("No liquidity available");
-      }
+      };
 
       const steps = [
         {
@@ -100,91 +87,241 @@ export const getExecuteBuyV1Options: RouteOptions = {
         },
       ];
 
-      const checkTakerEthBalance = async (taker: string, price: BigNumberish) => {
-        // Check the taker's Eth balance.
-        const balance = await baseProvider.getBalance(taker);
-        if (bn(balance).lt(price)) {
-          // We cannot do anything if the taker doesn't have sufficient balance.
-          throw Boom.badData("Taker does not have sufficient balance");
-        }
-      };
-
       let fillTx: TxData | undefined;
-      switch (bestOrderResult.kind) {
-        case "wyvern-v2.3": {
-          const order = new Sdk.WyvernV23.Order(config.chainId, bestOrderResult.raw_data);
+      let quote: number | undefined;
+      let confirmationQuery: string;
 
-          await checkTakerEthBalance(query.taker, order.params.basePrice);
+      if (query.quantity === 1) {
+        const [contract, tokenId] = query.token.split(":");
 
-          // Create matching order.
-          const buyOrder = order.buildMatching(query.taker, {
+        const bestOrderResult = await edb.oneOrNone(
+          `
+            SELECT
+              "o"."id",
+              "o"."kind",
+              "o"."token_set_id",
+              "o"."price",
+              "o"."raw_data"
+            FROM "tokens" "t"
+            JOIN "orders" "o"
+              ON "t"."floor_sell_id" = "o"."id"
+            WHERE "t"."contract" = $/contract/
+              AND "t"."token_id" = $/tokenId/
+          `,
+          {
+            contract: toBuffer(contract),
             tokenId,
-            nonce: await commonHelpers.getMinNonce("wyvern-v2.3", query.taker),
-          });
+          }
+        );
 
-          const exchange = new Sdk.WyvernV23.Exchange(config.chainId);
-          fillTx = exchange.matchTransaction(query.taker, buyOrder, order);
-
-          break;
+        if (!bestOrderResult) {
+          throw Boom.badRequest("No liquidity available");
         }
 
-        case "looks-rare": {
-          const order = new Sdk.LooksRare.Order(config.chainId, bestOrderResult.raw_data);
+        confirmationQuery = `?id=${bestOrderResult.id}`;
 
-          await checkTakerEthBalance(query.taker, order.params.price);
-
-          // Create matching order.
-          const buyOrder = order.buildMatching(query.taker, { tokenId });
-
-          const exchange = new Sdk.LooksRare.Exchange(config.chainId);
-          fillTx = exchange.matchTransaction(query.taker, order, buyOrder);
-
-          break;
+        quote = formatEth(bestOrderResult.price);
+        if (query.onlyQuote) {
+          return { quote };
         }
 
-        case "opendao-erc721":
-        case "opendao-erc1155": {
-          const order = new Sdk.OpenDao.Order(config.chainId, bestOrderResult.raw_data);
+        switch (bestOrderResult.kind) {
+          case "wyvern-v2.3": {
+            const order = new Sdk.WyvernV23.Order(config.chainId, bestOrderResult.raw_data);
 
-          await checkTakerEthBalance(
-            query.taker,
-            bn(order.params.erc20TokenAmount).add(order.getFeeAmount())
+            await checkTakerEthBalance(query.taker, order.params.basePrice);
+
+            // Create matching order.
+            const buyOrder = order.buildMatching(query.taker, {
+              tokenId,
+              nonce: await commonHelpers.getMinNonce("wyvern-v2.3", query.taker),
+            });
+
+            const exchange = new Sdk.WyvernV23.Exchange(config.chainId);
+            fillTx = exchange.matchTransaction(query.taker, buyOrder, order);
+
+            break;
+          }
+
+          case "looks-rare": {
+            const order = new Sdk.LooksRare.Order(config.chainId, bestOrderResult.raw_data);
+
+            await checkTakerEthBalance(query.taker, order.params.price);
+
+            // Create matching order.
+            const buyOrder = order.buildMatching(query.taker, { tokenId });
+
+            const exchange = new Sdk.LooksRare.Exchange(config.chainId);
+            fillTx = exchange.matchTransaction(query.taker, order, buyOrder);
+
+            break;
+          }
+
+          case "opendao-erc721":
+          case "opendao-erc1155": {
+            const order = new Sdk.OpenDao.Order(config.chainId, bestOrderResult.raw_data);
+
+            await checkTakerEthBalance(
+              query.taker,
+              bn(order.params.erc20TokenAmount).add(order.getFeeAmount())
+            );
+
+            // Create matching order.
+            const buyOrder = order.buildMatching({ tokenId, amount: 1 });
+
+            const exchange = new Sdk.OpenDao.Exchange(config.chainId);
+            fillTx = exchange.matchTransaction(query.taker, order, buyOrder);
+
+            // Custom checking for partially fillable orders
+            if (bestOrderResult.kind === "opendao-erc1155") {
+              confirmationQuery = `?id=${bestOrderResult.id}&checkRecentEvents=true`;
+            }
+
+            break;
+          }
+
+          case "zeroex-v4-erc721":
+          case "zeroex-v4-erc1155": {
+            const order = new Sdk.ZeroExV4.Order(config.chainId, bestOrderResult.raw_data);
+
+            await checkTakerEthBalance(
+              query.taker,
+              bn(order.params.erc20TokenAmount).add(order.getFeeAmount())
+            );
+
+            // Create matching order.
+            const buyOrder = order.buildMatching({ tokenId, amount: 1 });
+
+            const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
+            fillTx = exchange.matchTransaction(query.taker, order, buyOrder);
+
+            // Custom checking for partially fillable orders
+            if (bestOrderResult.kind === "zeroex-v4-erc1155") {
+              confirmationQuery = `?id=${bestOrderResult.id}&checkRecentEvents=true`;
+            }
+
+            break;
+          }
+
+          default: {
+            throw Boom.notImplemented("Unsupported order kind");
+          }
+        }
+
+        if (!fillTx) {
+          throw Boom.internal("Could not generate buy transaction");
+        }
+      } else {
+        // For now, we only support batch filling ZeroEx V4 and OpenDao orders.
+
+        if (config.chainId === 1) {
+          const bestOrdersResult = await edb.manyOrNone(
+            `
+              SELECT
+                x.price,
+                x.quantity_remaining,
+                x.raw_data
+              FROM (
+                SELECT
+                  orders.*,
+                  SUM(orders.quantity_remaining) OVER (ORDER BY PRICE) - orders.quantity_remaining AS quantity
+                FROM orders
+                WHERE orders.token_set_id = $/tokenSetId/
+                  AND orders.fillability_status = 'fillable'
+                  AND orders.approval_status = 'approved'
+                  AND orders.kind = 'zeroex-v4-erc1155'
+              ) x WHERE x.quantity <= $/quantity/
+            `,
+            {
+              tokenSetId: `token:${query.token}`,
+              quantity: query.quantity,
+            }
           );
 
-          // Create matching order.
-          const buyOrder = order.buildMatching({ tokenId, amount: 1 });
+          if (!bestOrdersResult?.length) {
+            throw Boom.badRequest("No liquidity available");
+          }
 
-          const exchange = new Sdk.OpenDao.Exchange(config.chainId);
-          fillTx = exchange.matchTransaction(query.taker, order, buyOrder);
+          let totalPrice = bn(0);
 
-          break;
-        }
+          const sellOrders: Sdk.ZeroExV4.Order[] = [];
+          const matchParams: Sdk.ZeroExV4.Types.MatchParams[] = [];
+          for (const { quantity_remaining, raw_data } of bestOrdersResult) {
+            const order = new Sdk.ZeroExV4.Order(config.chainId, raw_data);
+            sellOrders.push(order);
 
-        case "zeroex-v4-erc721":
-        case "zeroex-v4-erc1155": {
-          const order = new Sdk.ZeroExV4.Order(config.chainId, bestOrderResult.raw_data);
+            matchParams.push(order.buildMatching({ amount: quantity_remaining }));
 
-          await checkTakerEthBalance(
-            query.taker,
-            bn(order.params.erc20TokenAmount).add(order.getFeeAmount())
-          );
-
-          // Create matching order.
-          const buyOrder = order.buildMatching({ tokenId, amount: 1 });
+            totalPrice = totalPrice.add(order.params.erc20TokenAmount);
+          }
 
           const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
-          fillTx = exchange.matchTransaction(query.taker, order, buyOrder);
+          fillTx = exchange.batchBuyTransaction(query.taker, sellOrders, matchParams);
+          quote = formatEth(bn(fillTx.value!));
 
-          break;
+          // Custom checking for partially fillable orders
+          confirmationQuery = `?id=${sellOrders[0].hash()}&checkRecentEvents=true`;
+
+          if (query.onlyQuote) {
+            return { quote };
+          }
+
+          await checkTakerEthBalance(query.taker, bn(fillTx.value!));
+        } else {
+          const bestOrdersResult = await edb.manyOrNone(
+            `
+              SELECT
+                x.price,
+                x.quantity_remaining,
+                x.raw_data
+              FROM (
+                SELECT
+                  orders.*,
+                  SUM(orders.quantity_remaining) OVER (ORDER BY PRICE) - orders.quantity_remaining AS quantity
+                FROM orders
+                WHERE orders.token_set_id = $/tokenSetId/
+                  AND orders.side = 'sell'
+                  AND orders.fillability_status = 'fillable'
+                  AND orders.approval_status = 'approved'
+                  AND orders.kind = 'opendao-erc1155'
+              ) x WHERE x.quantity <= $/quantity/
+            `,
+            {
+              tokenSetId: `token:${query.token}`,
+              quantity: query.quantity,
+            }
+          );
+
+          if (!bestOrdersResult?.length) {
+            throw Boom.badRequest("No liquidity available");
+          }
+
+          let totalPrice = bn(0);
+
+          const sellOrders: Sdk.OpenDao.Order[] = [];
+          const matchParams: Sdk.OpenDao.Types.MatchParams[] = [];
+          for (const { quantity_remaining, raw_data } of bestOrdersResult) {
+            const order = new Sdk.OpenDao.Order(config.chainId, raw_data);
+            sellOrders.push(order);
+
+            matchParams.push(order.buildMatching({ amount: quantity_remaining }));
+
+            totalPrice = totalPrice.add(order.params.erc20TokenAmount);
+          }
+
+          const exchange = new Sdk.OpenDao.Exchange(config.chainId);
+          fillTx = exchange.batchBuyTransaction(query.taker, sellOrders, matchParams);
+          quote = formatEth(bn(fillTx.value!));
+
+          // Custom checking for partially fillable orders
+          confirmationQuery = `?id=${sellOrders[0].hash()}&checkRecentEvents=true`;
+
+          if (query.onlyQuote) {
+            return { quote };
+          }
+
+          await checkTakerEthBalance(query.taker, bn(fillTx.value!));
         }
-
-        default: {
-          throw Boom.notImplemented("Unsupported order kind");
-        }
-      }
-
-      if (!fillTx) {
-        throw Boom.internal("Could not generate buy transaction");
       }
 
       return {
@@ -204,11 +341,12 @@ export const getExecuteBuyV1Options: RouteOptions = {
             ...steps[1],
             status: "incomplete",
             data: {
-              endpoint: `/orders/executed/v1?id=${bestOrderResult.id}`,
+              endpoint: `/orders/executed/v1${confirmationQuery}`,
               method: "GET",
             },
           },
         ],
+        quote,
       };
     } catch (error) {
       logger.error(`get-execute-buy-${version}-handler`, `Handler failure: ${error}`);
