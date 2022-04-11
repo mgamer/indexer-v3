@@ -47,8 +47,10 @@ export const getExecuteListV1Options: RouteOptions = {
       weiPrice: Joi.string()
         .pattern(/^[0-9]+$/)
         .required(),
-      orderKind: Joi.string().valid("wyvern-v2.3", "721ex", "zeroex-v4").default("wyvern-v2.3"),
-      orderbook: Joi.string().valid("reservoir", "opensea", "721ex").default("reservoir"),
+      orderKind: Joi.string()
+        .valid("721ex", "looks-rare", "wyvern-v2.3", "zeroex-v4")
+        .default("wyvern-v2.3"),
+      orderbook: Joi.string().valid("opensea", "reservoir").default("reservoir"),
       source: Joi.string()
         .lowercase()
         .pattern(/^0x[a-f0-9]{40}$/),
@@ -64,7 +66,7 @@ export const getExecuteListV1Options: RouteOptions = {
       v: Joi.number(),
       r: Joi.string().pattern(/^0x[a-f0-9]{64}$/),
       s: Joi.string().pattern(/^0x[a-f0-9]{64}$/),
-    }),
+    }).with("feeRecipient", "fee"),
   },
   response: {
     schema: Joi.object({
@@ -94,6 +96,9 @@ export const getExecuteListV1Options: RouteOptions = {
         case "wyvern-v2.3": {
           if (!["reservoir", "opensea"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
+          }
+          if (query.automatedRoyalties && query.feeRecipient) {
+            throw Boom.badRequest("Exchange does not supported multiple fee recipients");
           }
 
           const order = await wyvernV23SellToken.build({
