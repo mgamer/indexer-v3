@@ -54,6 +54,7 @@ export type DbOrder = {
   valid_between: string;
   nonce: string;
   source_id: Buffer | null;
+  source_id_int?: number | null;
   contract: Buffer;
   fee_bps: number;
   fee_breakdown: object | null;

@@ -285,11 +285,13 @@ export const save = async (
 
       // Handle: source and fees breakdown
       let source: string | undefined;
+      let sourceId: number | undefined;
       let feeBreakdown: object[] | undefined;
       switch (order.params.feeRecipient) {
         // opensea.io
         case "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073": {
           source = order.params.feeRecipient;
+          sourceId = 1;
           feeBreakdown = [
             {
               kind: "marketplace",
@@ -315,6 +317,7 @@ export const save = async (
         case "0xcfd61fb650da1dd7b8f7bc7ad0d105b40bbd3882":
         case "0x94f0e012b7bb033f32029fbcc4f1d29ff1cfc30a": {
           source = "0xfdfda3d504b1431ea0fd70084b1bfa39fa99dcc4";
+          sourceId = 2;
           feeBreakdown = [
             {
               kind: "marketplace",
@@ -368,6 +371,7 @@ export const save = async (
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
         nonce: order.params.nonce,
         source_id: source ? toBuffer(source) : null,
+        source_id_int: sourceId ? sourceId : null,
         contract: toBuffer(info.contract),
         fee_bps: feeBps,
         fee_breakdown: feeBreakdown || null,
@@ -415,6 +419,7 @@ export const save = async (
         { name: "valid_between", mod: ":raw" },
         "nonce",
         "source_id",
+        "source_id_int",
         "contract",
         "fee_bps",
         { name: "fee_breakdown", mod: ":json" },
