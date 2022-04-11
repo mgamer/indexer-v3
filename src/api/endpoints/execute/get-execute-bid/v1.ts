@@ -80,7 +80,8 @@ export const getExecuteBidV1Options: RouteOptions = {
       .or("token", "collection")
       .oxor("token", "collection")
       .with("attributeValue", "attributeKey")
-      .with("attributeKey", "collection"),
+      .with("attributeKey", "collection")
+      .with("feeRecipient", "fee"),
   },
   response: {
     schema: Joi.object({
@@ -113,6 +114,9 @@ export const getExecuteBidV1Options: RouteOptions = {
         case "wyvern-v2.3": {
           if (!["reservoir", "opensea"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
+          }
+          if (query.automatedRoyalties && query.feeRecipient) {
+            throw Boom.badRequest("Exchange does not supported multiple fee recipients");
           }
 
           let order: Sdk.WyvernV23.Order | undefined;
@@ -275,7 +279,6 @@ export const getExecuteBidV1Options: RouteOptions = {
           if (!["reservoir"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
-
           if (collection || attributeKey || attributeValue) {
             throw Boom.notImplemented(
               "Collection and attribute bids are not yet supported for 721ex"
@@ -396,7 +399,6 @@ export const getExecuteBidV1Options: RouteOptions = {
           if (!["reservoir"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
-
           if (collection || attributeKey || attributeValue) {
             throw Boom.notImplemented(
               "Collection and attribute bids are not yet supported for 721ex"
