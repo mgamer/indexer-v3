@@ -50,12 +50,14 @@ export const getOrdersBidsV1Options: RouteOptions = {
         .description(
           "`active` = currently valid, `inactive` = temporarily invalid, `expired` = permanently invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
         ),
+      sortBy: Joi.string().valid("price", "createdAt"),
       continuation: Joi.string().pattern(base64Regex),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     })
       .or("token", "tokenSetId", "maker")
       .oxor("token", "tokenSetId", "maker")
-      .with("status", "maker"),
+      .with("status", "maker")
+      .with("sortBy", "token"),
   },
   response: {
     schema: Joi.object({
@@ -285,21 +287,31 @@ export const getOrdersBidsV1Options: RouteOptions = {
         conditions.push(`orders.maker = $/maker/`);
       }
       if (query.continuation) {
-        const [createdAt, id] = splitContinuation(
+        const [priceOrCreatedAt, id] = splitContinuation(
           query.continuation,
           /^\d+(.\d+)?_0x[a-f0-9]{64}$/
         );
-        (query as any).createdAt = createdAt;
+        (query as any).priceOrCreatedAt = priceOrCreatedAt;
         (query as any).id = id;
 
-        conditions.push(`(orders.created_at, orders.id) < (to_timestamp($/createdAt/), $/id/)`);
+        if (query.sortBy === "price") {
+          conditions.push(`(orders.price, orders.id) < ($/priceOrCreatedAt/, $/id/)`);
+        } else {
+          conditions.push(
+            `(orders.created_at, orders.id) < (to_timestamp($/priceOrCreatedAt/), $/id/)`
+          );
+        }
       }
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
 
       // Sorting
-      baseQuery += ` ORDER BY orders.created_at DESC, orders.id DESC`;
+      if (query.sortBy === "price") {
+        baseQuery += ` ORDER BY orders.price DESC, orders.id DESC`;
+      } else {
+        baseQuery += ` ORDER BY orders.created_at DESC, orders.id DESC`;
+      }
 
       // Pagination
       baseQuery += ` LIMIT $/limit/`;
@@ -308,9 +320,15 @@ export const getOrdersBidsV1Options: RouteOptions = {
 
       let continuation = null;
       if (rawResult.length === query.limit) {
-        continuation = buildContinuation(
-          rawResult[rawResult.length - 1].created_at + "_" + rawResult[rawResult.length - 1].id
-        );
+        if (query.sortBy === "price") {
+          continuation = buildContinuation(
+            rawResult[rawResult.length - 1].price + "_" + rawResult[rawResult.length - 1].id
+          );
+        } else {
+          continuation = buildContinuation(
+            rawResult[rawResult.length - 1].created_at + "_" + rawResult[rawResult.length - 1].id
+          );
+        }
       }
 
       const result = rawResult.map(async (r) => {
