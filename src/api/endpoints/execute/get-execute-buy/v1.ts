@@ -224,13 +224,13 @@ export const getExecuteBuyV1Options: RouteOptions = {
               FROM (
                 SELECT
                   orders.*,
-                  SUM(orders.quantity_remaining) OVER (ORDER BY PRICE) - orders.quantity_remaining AS quantity
+                  SUM(orders.quantity_remaining) OVER (ORDER BY price, id) - orders.quantity_remaining AS quantity
                 FROM orders
                 WHERE orders.token_set_id = $/tokenSetId/
                   AND orders.fillability_status = 'fillable'
                   AND orders.approval_status = 'approved'
                   AND orders.kind = 'zeroex-v4-erc1155'
-              ) x WHERE x.quantity <= $/quantity/
+              ) x WHERE x.quantity < $/quantity/
             `,
             {
               tokenSetId: `token:${query.token}`,
@@ -242,7 +242,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
             throw Boom.badRequest("No liquidity available");
           }
 
-          let totalPrice = bn(0);
+          let quantityToFill = Number(query.quantity);
 
           const sellOrders: Sdk.ZeroExV4.Order[] = [];
           const matchParams: Sdk.ZeroExV4.Types.MatchParams[] = [];
@@ -250,9 +250,10 @@ export const getExecuteBuyV1Options: RouteOptions = {
             const order = new Sdk.ZeroExV4.Order(config.chainId, raw_data);
             sellOrders.push(order);
 
-            matchParams.push(order.buildMatching({ amount: quantity_remaining }));
+            const fill = Math.min(Number(quantity_remaining), quantityToFill);
+            matchParams.push(order.buildMatching({ amount: fill }));
 
-            totalPrice = totalPrice.add(order.params.erc20TokenAmount);
+            quantityToFill -= fill;
           }
 
           const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
@@ -277,14 +278,14 @@ export const getExecuteBuyV1Options: RouteOptions = {
               FROM (
                 SELECT
                   orders.*,
-                  SUM(orders.quantity_remaining) OVER (ORDER BY PRICE) - orders.quantity_remaining AS quantity
+                  SUM(orders.quantity_remaining) OVER (ORDER BY price, id) - orders.quantity_remaining AS quantity
                 FROM orders
                 WHERE orders.token_set_id = $/tokenSetId/
                   AND orders.side = 'sell'
                   AND orders.fillability_status = 'fillable'
                   AND orders.approval_status = 'approved'
                   AND orders.kind = 'opendao-erc1155'
-              ) x WHERE x.quantity <= $/quantity/
+              ) x WHERE x.quantity < $/quantity/
             `,
             {
               tokenSetId: `token:${query.token}`,
@@ -296,7 +297,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
             throw Boom.badRequest("No liquidity available");
           }
 
-          let totalPrice = bn(0);
+          let quantityToFill = Number(query.quantity);
 
           const sellOrders: Sdk.OpenDao.Order[] = [];
           const matchParams: Sdk.OpenDao.Types.MatchParams[] = [];
@@ -304,9 +305,10 @@ export const getExecuteBuyV1Options: RouteOptions = {
             const order = new Sdk.OpenDao.Order(config.chainId, raw_data);
             sellOrders.push(order);
 
-            matchParams.push(order.buildMatching({ amount: quantity_remaining }));
+            const fill = Math.min(Number(quantity_remaining), quantityToFill);
+            matchParams.push(order.buildMatching({ amount: fill }));
 
-            totalPrice = totalPrice.add(order.params.erc20TokenAmount);
+            quantityToFill -= fill;
           }
 
           const exchange = new Sdk.OpenDao.Exchange(config.chainId);
