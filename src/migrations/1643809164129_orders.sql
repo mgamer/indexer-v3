@@ -46,6 +46,7 @@ CREATE TABLE "orders" (
   "valid_between" TSTZRANGE,
   "nonce" NUMERIC(78, 0),
   "source_id" BYTEA,
+  "source_id_int" INT,
   "contract" BYTEA,
   "fee_bps" INT,
   "fee_breakdown" JSONB,
