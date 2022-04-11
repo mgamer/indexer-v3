@@ -39,7 +39,7 @@ if (config.doBackgroundWork) {
       const query = `SELECT id, source_id, source_id_int
                      FROM orders
                      ${continuationFilter}
-                     ORDER BY slug ASC
+                     ORDER BY id ASC
                      LIMIT ${limit}`;
 
       const orders = await idb.manyOrNone(query);
