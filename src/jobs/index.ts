@@ -36,6 +36,7 @@ import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
 import * as resyncAttributeCache from "@/jobs/update-attribute/resync-attribute-cache";
+import * as resyncOrdersSource from "@/jobs/orderbook/resync-orders-source";
 
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
@@ -59,4 +60,5 @@ export const allJobQueues = [
   handleNewSellOrder.queue,
   handleNewBuyOrder.queue,
   resyncAttributeCache.queue,
+  resyncOrdersSource.queue,
 ];
