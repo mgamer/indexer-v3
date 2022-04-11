@@ -38,7 +38,7 @@ export const getTokensDetailsV3Options: RouteOptions = {
         ),
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/)
+        .pattern(/^0x[a-fA-F0-9]{40}$/)
         .description(
           "Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
@@ -48,14 +48,14 @@ export const getTokensDetailsV3Options: RouteOptions = {
           .items(
             Joi.string()
               .lowercase()
-              .pattern(/^0x[a-f0-9]{40}:[0-9]+$/)
+              .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
           )
           .description(
             "Filter to one or more tokens, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
           ),
         Joi.string()
           .lowercase()
-          .pattern(/^0x[a-f0-9]{40}:[0-9]+$/)
+          .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
           .description(
             "Filter to one or more tokens, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
           )
@@ -70,7 +70,7 @@ export const getTokensDetailsV3Options: RouteOptions = {
         .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
       source: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/)
+        .pattern(/^0x[a-fA-F0-9]{40}$/)
         .description(
           "Filter to a particular source, e.g. `0x5b3256965e7c3cf26e11fcaf296dfc8807c01073`"
         ),
@@ -89,7 +89,7 @@ export const getTokensDetailsV3Options: RouteOptions = {
           token: Joi.object({
             contract: Joi.string()
               .lowercase()
-              .pattern(/^0x[a-f0-9]{40}$/)
+              .pattern(/^0x[a-fA-F0-9]{40}$/)
               .required(),
             tokenId: Joi.string()
               .pattern(/^[0-9]+$/)
@@ -125,7 +125,7 @@ export const getTokensDetailsV3Options: RouteOptions = {
               price: Joi.number().unsafe().allow(null),
               maker: Joi.string()
                 .lowercase()
-                .pattern(/^0x[a-f0-9]{40}$/)
+                .pattern(/^0x[a-fA-F0-9]{40}$/)
                 .allow(null),
               validFrom: Joi.number().unsafe().allow(null),
               validUntil: Joi.number().unsafe().allow(null),
@@ -136,7 +136,7 @@ export const getTokensDetailsV3Options: RouteOptions = {
               value: Joi.number().unsafe().allow(null),
               maker: Joi.string()
                 .lowercase()
-                .pattern(/^0x[a-f0-9]{40}$/)
+                .pattern(/^0x[a-fA-F0-9]{40}$/)
                 .allow(null),
               validFrom: Joi.number().unsafe().allow(null),
               validUntil: Joi.number().unsafe().allow(null),
@@ -457,7 +457,7 @@ export const getTokensDetailsV3Options: RouteOptions = {
       });
 
       return {
-        tokens: await Promise.all(result),
+        tokens: result,
         continuation,
       };
     } catch (error) {

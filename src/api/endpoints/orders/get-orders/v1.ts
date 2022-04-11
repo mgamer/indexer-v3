@@ -24,7 +24,7 @@ export const getOrdersV1Options: RouteOptions = {
       id: Joi.string(),
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}:[0-9]+$/)
+        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
         .description(
           "Filter to a particular token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
@@ -52,18 +52,19 @@ export const getOrdersV1Options: RouteOptions = {
           tokenSetSchemaHash: Joi.string().required(),
           maker: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{40}$/)
+            .pattern(/^0x[a-fA-F0-9]{40}$/)
             .required(),
           taker: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{40}$/)
+            .pattern(/^0x[a-fA-F0-9]{40}$/)
             .required(),
           price: Joi.number().unsafe().required(),
           value: Joi.number().unsafe().required(),
           validFrom: Joi.number().required(),
           validUntil: Joi.number().required(),
           sourceId: Joi.string()
-            .pattern(/^0x[a-f0-9]{40}$/)
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}$/)
             .allow(null),
           feeBps: Joi.number().allow(null),
           feeBreakdown: Joi.array()
@@ -71,7 +72,8 @@ export const getOrdersV1Options: RouteOptions = {
               Joi.object({
                 kind: Joi.string(),
                 recipient: Joi.string()
-                  .pattern(/^0x[a-f0-9]{40}$/)
+                  .lowercase()
+                  .pattern(/^0x[a-fA-F0-9]{40}$/)
                   .allow(null),
                 bps: Joi.number(),
               })

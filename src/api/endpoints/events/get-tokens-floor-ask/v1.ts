@@ -30,10 +30,10 @@ export const getTokensFloorAskV1Options: RouteOptions = {
     query: Joi.object({
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}/),
+        .pattern(/^0x[a-fA-F0-9]{40}/),
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}:[0-9]+$/)
+        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
         .description(
           "Filter to a particular token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
@@ -65,18 +65,18 @@ export const getTokensFloorAskV1Options: RouteOptions = {
           ),
           contract: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{40}/),
+            .pattern(/^0x[a-fA-F0-9]{40}/),
           tokenId: Joi.string().pattern(/^[0-9]+$/),
           orderId: Joi.string().allow(null),
           maker: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{40}/)
+            .pattern(/^0x[a-fA-F0-9]{40}/)
             .allow(null),
           price: Joi.number().unsafe().allow(null),
           previousPrice: Joi.number().unsafe().allow(null),
           txHash: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{64}/)
+            .pattern(/^0x[a-fA-F0-9]{64}/)
             .allow(null),
           txTimestamp: Joi.number().allow(null),
           createdAt: Joi.string(),

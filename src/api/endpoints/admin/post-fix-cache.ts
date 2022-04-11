@@ -24,7 +24,7 @@ export const postFixCacheOptions: RouteOptions = {
       contracts: Joi.array().items(
         Joi.string()
           .lowercase()
-          .pattern(/^0x[a-f0-9]{40}$/)
+          .pattern(/^0x[a-fA-F0-9]{40}$/)
           .required()
       ),
     }),

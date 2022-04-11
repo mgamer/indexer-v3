@@ -32,7 +32,7 @@ export const getTokensFloorV1Options: RouteOptions = {
         ),
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/)
+        .pattern(/^0x[a-fA-F0-9]{40}$/)
         .description(
           "Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),

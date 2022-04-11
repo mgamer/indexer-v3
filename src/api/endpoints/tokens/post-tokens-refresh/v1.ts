@@ -26,7 +26,7 @@ export const postTokensRefreshV1Options: RouteOptions = {
     payload: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}:[0-9]+$/)
+        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
         .description(
           "Refresh the given token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         )

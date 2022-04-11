@@ -26,7 +26,7 @@ export const getCollectionsV2Options: RouteOptions = {
         .description("Filter to a particular community, e.g. `artblocks`"),
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/)
+        .pattern(/^0x[a-fA-F0-9]{40}$/)
         .description(
           "Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
@@ -57,12 +57,12 @@ export const getCollectionsV2Options: RouteOptions = {
           tokenSetId: Joi.string().allow(null),
           primaryContract: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{40}$/),
+            .pattern(/^0x[a-fA-F0-9]{40}$/),
           floorAskPrice: Joi.number().unsafe().allow(null),
           topBidValue: Joi.number().unsafe().allow(null),
           topBidMaker: Joi.string()
             .lowercase()
-            .pattern(/^0x[a-f0-9]{40}$/)
+            .pattern(/^0x[a-fA-F0-9]{40}$/)
             .allow(null),
           "1dayVolume": Joi.number().unsafe().allow(null),
           "7dayVolume": Joi.number().unsafe().allow(null),
