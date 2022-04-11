@@ -21,6 +21,7 @@ export type OrderInfo = {
 type SaveResult = {
   id: string;
   status: string;
+  unfillable?: boolean;
 };
 
 export const save = async (
@@ -299,6 +300,8 @@ export const save = async (
       results.push({
         id,
         status: "success",
+        unfillable:
+          fillabilityStatus !== "fillable" || approvalStatus !== "approved" ? true : undefined,
       });
 
       if (relayToArweave) {
@@ -349,7 +352,7 @@ export const save = async (
 
     await ordersUpdateById.addToQueue(
       results
-        .filter((r) => r.status === "success")
+        .filter((r) => r.status === "success" && !r.unfillable)
         .map(
           ({ id }) =>
             ({
