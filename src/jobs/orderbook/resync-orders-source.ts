@@ -30,6 +30,7 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { continuation } = job.data;
       const limit = 2000;
+      const updateValues = {};
       let continuationFilter = "";
 
       if (continuation != "") {
@@ -46,6 +47,10 @@ if (config.doBackgroundWork) {
 
       if (orders) {
         for (const order of orders) {
+          if (_.isNull(order.source_id)) {
+            continue;
+          }
+
           const sourceId = fromBuffer(order.source_id);
           let sourceIdInt;
 
@@ -63,20 +68,26 @@ if (config.doBackgroundWork) {
               break;
           }
 
-          try {
-            const query = `UPDATE orders
-                           SET source_id_int = $/sourceIdInt/
-                           WHERE id = $/id/`;
+          (updateValues as any)[order.id] = sourceIdInt;
+        }
 
-            const values = {
-              id: order.id,
-              sourceIdInt,
-            };
+        let updateValuesString = "";
 
-            await idb.none(query, values);
-          } catch (error) {
-            logger.error(QUEUE_NAME, `${error}`);
-          }
+        _.forEach(updateValues, (source, id) => {
+          updateValuesString += `('${id}', ${source}),`;
+        });
+
+        updateValuesString = _.trimEnd(updateValuesString, ",");
+
+        try {
+          const updateQuery = `UPDATE orders
+                             SET source_id_int = x.sourceIdColumn
+                             FROM (VALUES ${updateValuesString}) AS x(idColumn, sourceIdColumn)
+                             WHERE x.idColumn = orders.id`;
+
+          await idb.none(updateQuery);
+        } catch (error) {
+          logger.error(QUEUE_NAME, `${error}`);
         }
 
         if (_.size(orders) == limit) {
@@ -98,7 +109,7 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire(["order-resync"], 60 * 24 * 30 * 1000)
+    .acquire(["order-resync"], 60 * 60 * 24 * 30 * 1000)
     .then(() => addToQueue())
     .catch(() => {
       // Skip on any errors
