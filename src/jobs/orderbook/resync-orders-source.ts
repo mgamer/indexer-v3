@@ -79,6 +79,16 @@ if (config.doBackgroundWork) {
 
         updateValuesString = _.trimEnd(updateValuesString, ",");
 
+        if (_.size(orders) == limit) {
+          const lastOrder = _.last(orders);
+          logger.info(
+            QUEUE_NAME,
+            `Updated ${_.size(updateValues)} orders, lastOrder=${JSON.stringify(lastOrder)}`
+          );
+
+          await addToQueue(lastOrder.id);
+        }
+
         try {
           const updateQuery = `UPDATE orders
                              SET source_id_int = x.sourceIdColumn
@@ -89,19 +99,9 @@ if (config.doBackgroundWork) {
         } catch (error) {
           logger.error(QUEUE_NAME, `${error}`);
         }
-
-        if (_.size(orders) == limit) {
-          const lastOrder = _.last(orders);
-          logger.info(
-            QUEUE_NAME,
-            `Updated ${limit} orders, lastOrder=${JSON.stringify(lastOrder)}`
-          );
-
-          await addToQueue(lastOrder.id);
-        }
       }
     },
-    { connection: redis.duplicate(), concurrency: 1 }
+    { connection: redis.duplicate(), concurrency: 2 }
   );
 
   worker.on("error", (error) => {
