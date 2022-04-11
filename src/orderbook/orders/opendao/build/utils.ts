@@ -62,6 +62,13 @@ export const getBuildInfo = async (
     }
   }
 
+  if (options.fee && options.feeRecipient) {
+    buildParams.fees!.push({
+      recipient: options.feeRecipient,
+      amount: bn(options.fee).mul(options.weiPrice).div(10000).toString(),
+    });
+  }
+
   return {
     params: buildParams,
     kind: collectionResult.kind,
