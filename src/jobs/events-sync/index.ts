@@ -1,7 +1,7 @@
 import cron from "node-cron";
 
 import { logger } from "@/common/logger";
-import { baseProvider } from "@/common/provider";
+import { baseProvider, safeWebSocketSubscription } from "@/common/provider";
 import { redlock, redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { unsyncEvents } from "@/events-sync/index";
@@ -128,4 +128,24 @@ if (config.doBackgroundWork && config.catchup) {
           // Skip on any errors
         })
   );
+
+  // ONLY MASTER
+  if (config.master) {
+    // Besides the manual polling of events via the above cron job
+    // we're also integrating WebSocket subscriptions to fetch the
+    // latest events as soon as they're hapenning on-chain. We are
+    // still keeping the manual polling though to ensure no events
+    // are being missed.
+    safeWebSocketSubscription(async (provider) => {
+      provider.on("block", async (block) => {
+        logger.info("events-sync-catchup", `Detected new block ${block}`);
+
+        try {
+          await realtimeEventsSync.addToQueue();
+        } catch (error) {
+          logger.error("events-sync-catchup", `Failed to catch up events: ${error}`);
+        }
+      });
+    });
+  }
 }
