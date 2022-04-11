@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.21.0 (2022-04-11)
+
+
+### Features
+
+* added script to resync orders source ([07ec3f6](https://github.com/reservoirprotocol/indexer-v3/commit/07ec3f6b1906ef3dcd37816fda39db6eff2d5e72))
+
 ### 5.20.2 (2022-04-11)
 
 ### 5.20.1 (2022-04-11)
