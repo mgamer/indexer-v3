@@ -64,6 +64,10 @@ export const postTokensRefreshV1Options: RouteOptions = {
         throw Boom.tooEarly(`Next available sync ${formatISO9075(nextAvailableSync)} UTC`);
       }
 
+      // Update the last sync date
+      const currentUtcTime = new Date().toISOString();
+      await Tokens.update(contract, tokenId, { lastMetadataSync: currentUtcTime });
+
       // Refresh orders from OpenSea
       await OpenseaIndexerApi.fastTokenSync(payload.token);
 
@@ -83,10 +87,6 @@ export const postTokensRefreshV1Options: RouteOptions = {
           },
         ]);
       }
-
-      // Update the last sync date
-      const currentUtcTime = new Date().toISOString();
-      await Tokens.update(contract, tokenId, { lastMetadataSync: currentUtcTime });
 
       logger.info(
         `post-tokens-refresh-${version}-handler`,
