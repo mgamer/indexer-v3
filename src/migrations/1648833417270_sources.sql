@@ -1,7 +1,5 @@
 -- Up Migration
 
-DROP TABLE IF EXISTS "sources"; -- Remove old sources table
-
 CREATE TABLE "sources_v2" (
   "id" SERIAL PRIMARY KEY,
   "name" TEXT NOT NULL,

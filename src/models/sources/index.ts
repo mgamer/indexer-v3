@@ -11,10 +11,12 @@ export class Sources {
   private static instance: Sources;
 
   public sources: object;
+  public sourcesByNames: object;
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {
     this.sources = {};
+    this.sourcesByNames = {};
   }
 
   private async loadData() {
@@ -22,6 +24,7 @@ export class Sources {
 
     for (const source of sources) {
       (this.sources as any)[source.id] = new SourcesEntity(source);
+      (this.sourcesByNames as any)[source.metadata.name] = new SourcesEntity(source);
     }
   }
 
@@ -34,11 +37,11 @@ export class Sources {
     return this.instance;
   }
 
-  public static getDefaultSource(id: number): SourcesEntity {
+  public static getDefaultSource(): SourcesEntity {
     return new SourcesEntity({
-      id,
+      id: 0,
       metadata: {
-        id: "",
+        id: "0",
         name: "Reservoir",
         icon: "https://www.reservoir.market/reservoir.svg",
         urlMainnet: "https://www.reservoir.market/collections/${contract}/${tokenId}",
@@ -74,7 +77,7 @@ export class Sources {
     if (id in this.sources) {
       sourceEntity = (this.sources as any)[id];
     } else {
-      sourceEntity = Sources.getDefaultSource(id);
+      sourceEntity = Sources.getDefaultSource();
     }
 
     if (config.chainId == 1) {
@@ -97,6 +100,18 @@ export class Sources {
 
         sourceEntity.metadata.url = _.replace(sourceEntity.metadata.url, "${tokenId}", tokenId);
       }
+    }
+
+    return sourceEntity;
+  }
+
+  public getByName(name: string) {
+    let sourceEntity;
+
+    if (name in this.sourcesByNames) {
+      sourceEntity = (this.sourcesByNames as any)[name];
+    } else {
+      sourceEntity = Sources.getDefaultSource();
     }
 
     return sourceEntity;

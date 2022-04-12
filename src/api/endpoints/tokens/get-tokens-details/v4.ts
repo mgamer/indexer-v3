@@ -14,17 +14,18 @@ import {
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
+import { Sources } from "@/models/sources";
 
-const version = "v3";
+const version = "v4";
 
-export const getTokensV3Options: RouteOptions = {
-  description: "List of tokens, with basic details, optimized for speed",
+export const getTokensDetailsV4Options: RouteOptions = {
+  description: "Get one or more tokens with full details",
   notes:
-    "This API is optimized for quickly fetching a list of tokens in a collection, sorted by price, with only the most important information returned. If you need more metadata, use the `tokens/details` API",
-  tags: ["api", "x-deprecated"],
+    "Get a list of tokens with full metadata. This is useful for showing a single token page, or scenarios that require more metadata. If you don't need this metadata, you should use the <a href='#/tokens/getTokensV1'>tokens</a> API, which is much faster.",
+  tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {
-      order: 21,
+      order: 22,
     },
   },
   validate: {
@@ -66,6 +67,7 @@ export const getTokensV3Options: RouteOptions = {
       attributes: Joi.object()
         .unknown()
         .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
+      source: Joi.string(),
       sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice"),
       limit: Joi.number().integer().min(1).max(50).default(20),
       continuation: Joi.string().pattern(base64Regex),
@@ -78,29 +80,68 @@ export const getTokensV3Options: RouteOptions = {
     schema: Joi.object({
       tokens: Joi.array().items(
         Joi.object({
-          contract: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/)
-            .required(),
-          tokenId: Joi.string()
-            .pattern(/^[0-9]+$/)
-            .required(),
-          name: Joi.string().allow(null, ""),
-          image: Joi.string().allow(null, ""),
-          collection: Joi.object({
-            id: Joi.string().allow(null),
+          token: Joi.object({
+            contract: Joi.string()
+              .lowercase()
+              .pattern(/^0x[a-fA-F0-9]{40}$/)
+              .required(),
+            tokenId: Joi.string()
+              .pattern(/^[0-9]+$/)
+              .required(),
             name: Joi.string().allow(null, ""),
+            description: Joi.string().allow(null, ""),
             image: Joi.string().allow(null, ""),
-            slug: Joi.string().allow(null, ""),
+            collection: Joi.object({
+              id: Joi.string().allow(null),
+              name: Joi.string().allow(null, ""),
+              image: Joi.string().allow(null, ""),
+              slug: Joi.string().allow(null, ""),
+            }),
+            lastBuy: {
+              value: Joi.number().unsafe().allow(null),
+              timestamp: Joi.number().unsafe().allow(null),
+            },
+            lastSell: {
+              value: Joi.number().unsafe().allow(null),
+              timestamp: Joi.number().unsafe().allow(null),
+            },
+            owner: Joi.string().allow(null),
+            attributes: Joi.array().items(
+              Joi.object({
+                key: Joi.string(),
+                value: Joi.string(),
+              })
+            ),
           }),
-          topBidValue: Joi.number().unsafe().allow(null),
-          floorAskPrice: Joi.number().unsafe().allow(null),
+          market: Joi.object({
+            floorAsk: {
+              id: Joi.string().allow(null),
+              price: Joi.number().unsafe().allow(null),
+              maker: Joi.string()
+                .lowercase()
+                .pattern(/^0x[a-fA-F0-9]{40}$/)
+                .allow(null),
+              validFrom: Joi.number().unsafe().allow(null),
+              validUntil: Joi.number().unsafe().allow(null),
+              source: Joi.string().allow(null, ""),
+            },
+            topBid: Joi.object({
+              id: Joi.string().allow(null),
+              value: Joi.number().unsafe().allow(null),
+              maker: Joi.string()
+                .lowercase()
+                .pattern(/^0x[a-fA-F0-9]{40}$/)
+                .allow(null),
+              validFrom: Joi.number().unsafe().allow(null),
+              validUntil: Joi.number().unsafe().allow(null),
+            }),
+          }),
         })
       ),
       continuation: Joi.string().pattern(base64Regex).allow(null),
-    }).label(`getTokens${version.toUpperCase()}Response`),
+    }).label(`getTokensDetails${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(`get-tokens-${version}-handler`, `Wrong response schema: ${error}`);
+      logger.error(`get-tokens-details-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -113,14 +154,52 @@ export const getTokensV3Options: RouteOptions = {
           "t"."contract",
           "t"."token_id",
           "t"."name",
+          "t"."description",
           "t"."image",
           "t"."collection_id",
           "c"."name" as "collection_name",
           ("c".metadata ->> 'imageUrl')::TEXT AS "collection_image",
           "c"."slug",
+          "t"."last_buy_value",
+          "t"."last_buy_timestamp",
+          "t"."last_sell_value",
+          "t"."last_sell_timestamp",
+          (
+            SELECT "nb"."owner" FROM "nft_balances" "nb"
+            WHERE "nb"."contract" = "t"."contract"
+              AND "nb"."token_id" = "t"."token_id"
+              AND "nb"."amount" > 0
+            LIMIT 1
+          ) AS "owner",
+          (
+            SELECT
+              array_agg(json_build_object('key', "ta"."key", 'value', "ta"."value"))
+            FROM "token_attributes" "ta"
+            WHERE "ta"."contract" = "t"."contract"
+              AND "ta"."token_id" = "t"."token_id"
+          ) AS "attributes",
+          "t"."floor_sell_id",
           "t"."floor_sell_value",
-          "t"."top_buy_value"
+          "t"."floor_sell_maker",
+          DATE_PART('epoch', LOWER("os"."valid_between")) AS "floor_sell_valid_from",
+          COALESCE(
+            NULLIF(date_part('epoch', UPPER("os"."valid_between")), 'Infinity'),
+            0
+          ) AS "floor_sell_valid_until",
+          "os"."source_id_int" AS "floor_sell_source_id",
+          "t"."top_buy_id",
+          "t"."top_buy_value",
+          "t"."top_buy_maker",
+          DATE_PART('epoch', LOWER("ob"."valid_between")) AS "top_buy_valid_from",
+          COALESCE(
+            NULLIF(DATE_PART('epoch', UPPER("ob"."valid_between")), 'Infinity'),
+            0
+          ) AS "top_buy_valid_until"
         FROM "tokens" "t"
+        LEFT JOIN "orders" "os"
+          ON "t"."floor_sell_id" = "os"."id"
+        LEFT JOIN "orders" "ob"
+          ON "t"."top_buy_id" = "ob"."id"
         JOIN "collections" "c"
           ON "t"."collection_id" = "c"."id"
       `;
@@ -159,6 +238,7 @@ export const getTokensV3Options: RouteOptions = {
       if (query.collection) {
         conditions.push(`"t"."collection_id" = $/collection/`);
       }
+
       if (query.contract) {
         (query as any).contract = toBuffer(query.contract);
         conditions.push(`"t"."contract" = $/contract/`);
@@ -189,8 +269,17 @@ export const getTokensV3Options: RouteOptions = {
         conditions.push(`"tst"."token_set_id" = $/tokenSetId/`);
       }
 
+      if (query.source) {
+        const sources = await Sources.getInstance();
+        const source = sources.getByName(query.source);
+        (query as any).sourceId = source.id;
+        conditions.push(
+          `"t"."floor_sell_value" IS NOT NULL AND "os"."source_id_int" = $/sourceId/`
+        );
+      }
+
       // Continue with the next page, this depends on the sorting used
-      if (query.continuation && !query.tokens) {
+      if (query.continuation && !query.token) {
         const contArr = splitContinuation(query.continuation, /^((\d+|null)_\d+|\d+)$/);
 
         if (query.collection || query.attributes) {
@@ -301,27 +390,63 @@ export const getTokensV3Options: RouteOptions = {
         continuation = buildContinuation(continuation);
       }
 
-      const result = rawResult.map((r) => ({
-        contract: fromBuffer(r.contract),
-        tokenId: r.token_id,
-        name: r.name,
-        image: r.image,
-        collection: {
-          id: r.collection_id,
-          name: r.collection_name,
-          image: r.collection_image,
-          slug: r.slug,
-        },
-        floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-        topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-      }));
+      const sources = await Sources.getInstance();
+
+      const result = rawResult.map((r) => {
+        const source = r.floor_sell_source_id
+          ? sources.get(r.floor_sell_source_id, fromBuffer(r.contract), r.token_id)
+          : null;
+
+        return {
+          token: {
+            contract: fromBuffer(r.contract),
+            tokenId: r.token_id,
+            name: r.name,
+            description: r.description,
+            image: r.image,
+            collection: {
+              id: r.collection_id,
+              name: r.collection_name,
+              image: r.collection_image,
+              slug: r.slug,
+            },
+            lastBuy: {
+              value: r.last_buy_value ? formatEth(r.last_buy_value) : null,
+              timestamp: r.last_buy_timestamp,
+            },
+            lastSell: {
+              value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
+              timestamp: r.last_sell_timestamp,
+            },
+            owner: r.owner ? fromBuffer(r.owner) : null,
+            attributes: r.attributes || [],
+          },
+          market: {
+            floorAsk: {
+              id: r.floor_sell_id,
+              price: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+              maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
+              validFrom: r.floor_sell_valid_from,
+              validUntil: r.floor_sell_value ? r.floor_sell_valid_until : null,
+              source: source?.name,
+            },
+            topBid: {
+              id: r.top_buy_id,
+              value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+              maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
+              validFrom: r.top_buy_valid_from,
+              validUntil: r.top_buy_value ? r.top_buy_valid_until : null,
+            },
+          },
+        };
+      });
 
       return {
-        tokens: result,
+        tokens: await Promise.all(result),
         continuation,
       };
     } catch (error) {
-      logger.error(`get-tokens-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(`get-tokens-details-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

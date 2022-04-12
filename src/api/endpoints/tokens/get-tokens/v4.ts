@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { Sources } from "@/models/sources";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 import _ from "lodash";
@@ -15,13 +16,13 @@ import {
   toBuffer,
 } from "@/common/utils";
 
-const version = "v3";
+const version = "v4";
 
-export const getTokensV3Options: RouteOptions = {
+export const getTokensV4Options: RouteOptions = {
   description: "List of tokens, with basic details, optimized for speed",
   notes:
     "This API is optimized for quickly fetching a list of tokens in a collection, sorted by price, with only the most important information returned. If you need more metadata, use the `tokens/details` API",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {
       order: 21,
@@ -93,6 +94,7 @@ export const getTokensV3Options: RouteOptions = {
             image: Joi.string().allow(null, ""),
             slug: Joi.string().allow(null, ""),
           }),
+          source: Joi.string().allow(null, ""),
           topBidValue: Joi.number().unsafe().allow(null),
           floorAskPrice: Joi.number().unsafe().allow(null),
         })
@@ -116,11 +118,14 @@ export const getTokensV3Options: RouteOptions = {
           "t"."image",
           "t"."collection_id",
           "c"."name" as "collection_name",
+          "os"."source_id_int",
           ("c".metadata ->> 'imageUrl')::TEXT AS "collection_image",
           "c"."slug",
           "t"."floor_sell_value",
           "t"."top_buy_value"
         FROM "tokens" "t"
+        LEFT JOIN "orders" "os"
+          ON "t"."floor_sell_id" = "os"."id"
         JOIN "collections" "c"
           ON "t"."collection_id" = "c"."id"
       `;
@@ -301,20 +306,29 @@ export const getTokensV3Options: RouteOptions = {
         continuation = buildContinuation(continuation);
       }
 
-      const result = rawResult.map((r) => ({
-        contract: fromBuffer(r.contract),
-        tokenId: r.token_id,
-        name: r.name,
-        image: r.image,
-        collection: {
-          id: r.collection_id,
-          name: r.collection_name,
-          image: r.collection_image,
-          slug: r.slug,
-        },
-        floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-        topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-      }));
+      const sources = await Sources.getInstance();
+
+      const result = rawResult.map((r) => {
+        const source = r.floor_sell_source_id
+          ? sources.get(r.floor_sell_source_id, fromBuffer(r.contract), r.token_id)
+          : null;
+
+        return {
+          contract: fromBuffer(r.contract),
+          tokenId: r.token_id,
+          name: r.name,
+          image: r.image,
+          collection: {
+            id: r.collection_id,
+            name: r.collection_name,
+            image: r.collection_image,
+            slug: r.slug,
+          },
+          source: source?.name,
+          floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+          topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+        };
+      });
 
       return {
         tokens: result,
