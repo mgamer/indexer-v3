@@ -8,6 +8,7 @@ export interface BaseOrderBuildOptions {
   contract: string;
   weiPrice: string;
   orderbook: "reservoir";
+  nonce?: string;
   fee?: number;
   feeRecipient?: string;
   expirationTime?: number;
@@ -50,15 +51,18 @@ export const getBuildInfo = async (
     fees: [],
     amount: collectionResult.kind === "erc1155" ? "1" : undefined,
     expiry: options.expirationTime,
+    nonce: options.nonce,
   };
 
   if (options.automatedRoyalties) {
     // Include the royalties
     for (const { recipient, bps } of collectionResult.royalties) {
-      buildParams.fees!.push({
-        recipient,
-        amount: bn(bps).mul(options.weiPrice).div(10000).toString(),
-      });
+      if (recipient && Number(bps) > 0) {
+        buildParams.fees!.push({
+          recipient,
+          amount: bn(bps).mul(options.weiPrice).div(10000).toString(),
+        });
+      }
     }
   }
 
