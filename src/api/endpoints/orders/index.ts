@@ -1,5 +1,6 @@
 export * from "@/api/endpoints/orders/get-order-executed/v1";
 export * from "@/api/endpoints/orders/get-orders/v1";
+export * from "@/api/endpoints/orders/get-orders/v2";
 export * from "@/api/endpoints/orders/get-orders-all/v1";
 export * from "@/api/endpoints/orders/get-orders-all/v2";
 export * from "@/api/endpoints/orders/get-orders-bids/v1";
