@@ -13,10 +13,11 @@ import {
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
+import { Sources } from "@/models/sources";
 
-const version = "v1";
+const version = "v2";
 
-export const getTokensFloorAskV1Options: RouteOptions = {
+export const getTokensFloorAskV2Options: RouteOptions = {
   description: "Get updates any time the best price of a token changes",
   notes:
     "Every time the best price of a token changes (i.e. the 'floor ask'), an event is generated. This API is designed to be polled at high frequency, in order to keep an external system in sync with accurate prices for any token.\n\nThere are multiple event types, which describe what caused the change in price:\n\n- `new-order` > new listing at a lower price\n\n- `expiry` > the previous best listing expired\n\n- `sale` > the previous best listing was filled\n\n- `cancel` > the previous best listing was cancelled\n\n- `balance-change` > the best listing was invalidated due to no longer owning the NFT\n\n- `approval-change` > the best listing was invalidated due to revoked approval\n\n- `revalidation` > manual revalidation of orders (e.g. after a bug fixed) \n\n- `bootstrap` > initial loading of data, so that all tokens have a price associated\n\nSome considerations to keep in mind\n\n- Due to the complex nature of monitoring off-chain liquidity across multiple marketplaces, including dealing with block re-orgs, events should be considered 'relative' to the perspective of the indexer, ie _when they were discovered_, rather than _when they happened_. A more deterministic historical record of price changes is in development, but in the meantime, this method is sufficent for keeping an external system in sync with the best available prices.\n\n- Events are only generated if the best price changes. So if a new order or sale happens without changing the best price, no event is generated. This is more common with 1155 tokens, which have multiple owners and more depth. For this reason, if you need sales data, use the Sales API.",
@@ -24,7 +25,6 @@ export const getTokensFloorAskV1Options: RouteOptions = {
   plugins: {
     "hapi-swagger": {
       order: 1,
-      deprecated: true,
     },
   },
   validate: {
@@ -53,34 +53,43 @@ export const getTokensFloorAskV1Options: RouteOptions = {
     schema: Joi.object({
       events: Joi.array().items(
         Joi.object({
-          kind: Joi.string().valid(
-            "new-order",
-            "expiry",
-            "sale",
-            "cancel",
-            "balance-change",
-            "approval-change",
-            "bootstrap",
-            "revalidation",
-            "reprice"
-          ),
-          contract: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}/),
-          tokenId: Joi.string().pattern(/^[0-9]+$/),
-          orderId: Joi.string().allow(null),
-          maker: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}/)
-            .allow(null),
-          price: Joi.number().unsafe().allow(null),
-          previousPrice: Joi.number().unsafe().allow(null),
-          txHash: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{64}/)
-            .allow(null),
-          txTimestamp: Joi.number().allow(null),
-          createdAt: Joi.string(),
+          token: Joi.object({
+            contract: Joi.string()
+              .lowercase()
+              .pattern(/^0x[a-fA-F0-9]{40}/),
+            tokenId: Joi.string().pattern(/^[0-9]+$/),
+          }),
+          floorAsk: Joi.object({
+            orderId: Joi.string().allow(null),
+            maker: Joi.string()
+              .lowercase()
+              .pattern(/^0x[a-fA-F0-9]{40}/)
+              .allow(null),
+            price: Joi.number().unsafe().allow(null),
+            validUntil: Joi.number().unsafe().allow(null),
+            source: Joi.string().allow(null, ""),
+          }),
+          event: Joi.object({
+            id: Joi.number().unsafe(),
+            kind: Joi.string().valid(
+              "new-order",
+              "expiry",
+              "sale",
+              "cancel",
+              "balance-change",
+              "approval-change",
+              "bootstrap",
+              "revalidation",
+              "reprice"
+            ),
+            previousPrice: Joi.number().unsafe().allow(null),
+            txHash: Joi.string()
+              .lowercase()
+              .pattern(/^0x[a-fA-F0-9]{64}/)
+              .allow(null),
+            txTimestamp: Joi.number().allow(null),
+            createdAt: Joi.string(),
+          }),
         })
       ),
       continuation: Joi.string().pattern(base64Regex).allow(null),
@@ -96,18 +105,25 @@ export const getTokensFloorAskV1Options: RouteOptions = {
     try {
       let baseQuery = `
         SELECT
-          "e"."id",
-          "e"."kind",
-          "e"."contract",
-          "e"."token_id",
-          "e"."order_id",
-          "e"."maker",
-          "e"."price",
-          "e"."previous_price",
-          "e"."tx_hash",
-          "e"."tx_timestamp",
-          extract(epoch from "e"."created_at") AS "created_at"
-        FROM "token_floor_sell_events" "e"
+          orders.source_id,
+          coalesce(
+            nullif(date_part('epoch', upper(orders.valid_between)), 'Infinity'),
+            0
+          ) AS valid_until,
+          token_floor_sell_events.id,
+          token_floor_sell_events.kind,
+          token_floor_sell_events.contract,
+          token_floor_sell_events.token_id,
+          token_floor_sell_events.order_id,
+          token_floor_sell_events.maker,
+          token_floor_sell_events.price,
+          token_floor_sell_events.previous_price,
+          token_floor_sell_events.tx_hash,
+          token_floor_sell_events.tx_timestamp,
+          extract(epoch from token_floor_sell_events.created_at) AS created_at
+        FROM token_floor_sell_events
+        LEFT JOIN orders
+          ON token_floor_sell_events.order_id = orders.id
       `;
 
       // We default in the code so that these values don't appear in the docs
@@ -120,20 +136,20 @@ export const getTokensFloorAskV1Options: RouteOptions = {
 
       // Filters
       const conditions: string[] = [
-        `"e"."created_at" >= to_timestamp($/startTimestamp/)`,
-        `"e"."created_at" <= to_timestamp($/endTimestamp/)`,
+        `token_floor_sell_events.created_at >= to_timestamp($/startTimestamp/)`,
+        `token_floor_sell_events.created_at <= to_timestamp($/endTimestamp/)`,
       ];
       if (query.contract) {
         (query as any).contract = toBuffer(query.contract);
-        conditions.push(`"e"."contract" = $/contract/`);
+        conditions.push(`token_floor_sell_events.contract = $/contract/`);
       }
       if (query.token) {
         const [contract, tokenId] = query.token.split(":");
 
         (query as any).contract = toBuffer(contract);
         (query as any).tokenId = tokenId;
-        conditions.push(`"e"."contract" = $/contract/`);
-        conditions.push(`"e"."token_id" = $/tokenId/`);
+        conditions.push(`token_floor_sell_events.contract = $/contract/`);
+        conditions.push(`token_floor_sell_events.token_id = $/tokenId/`);
       }
       if (query.continuation) {
         const [createdAt, id] = splitContinuation(query.continuation, /^\d+(.\d+)?_\d+$/);
@@ -141,7 +157,7 @@ export const getTokensFloorAskV1Options: RouteOptions = {
         (query as any).id = id;
 
         conditions.push(
-          `("e"."created_at", "e"."id") ${
+          `(token_floor_sell_events.created_at, token_floor_sell_events.id) ${
             query.sortDirection === "asc" ? ">" : "<"
           } (to_timestamp($/createdAt/), $/id/)`
         );
@@ -153,8 +169,8 @@ export const getTokensFloorAskV1Options: RouteOptions = {
       // Sorting
       baseQuery += `
         ORDER BY
-          "e"."created_at" ${query.sortDirection},
-          "e"."id" ${query.sortDirection}
+          token_floor_sell_events.created_at ${query.sortDirection},
+          token_floor_sell_events.id ${query.sortDirection}
       `;
 
       // Pagination
@@ -169,17 +185,27 @@ export const getTokensFloorAskV1Options: RouteOptions = {
         );
       }
 
+      const sources = await Sources.getInstance();
       const result = rawResult.map((r) => ({
-        kind: r.kind,
-        contract: fromBuffer(r.contract),
-        tokenId: r.token_id,
-        orderId: r.order_id,
-        maker: r.maker ? fromBuffer(r.maker) : null,
-        price: r.price ? formatEth(r.price) : null,
-        previousPrice: r.previous_price ? formatEth(r.previous_price) : null,
-        txHash: r.tx_hash ? fromBuffer(r.tx_hash) : null,
-        txTimestamp: r.tx_timestamp ? Number(r.tx_timestamp) : null,
-        createdAt: new Date(r.created_at * 1000).toISOString(),
+        token: {
+          contract: fromBuffer(r.contract),
+          tokenId: r.token_id,
+        },
+        floorAsk: {
+          orderId: r.order_id,
+          maker: r.maker ? fromBuffer(r.maker) : null,
+          price: r.price ? formatEth(r.price) : null,
+          validUntil: r.price ? Number(r.valid_until) : null,
+          source: r.source_id ? sources.get(fromBuffer(r.source_id))?.metadata?.name : null,
+        },
+        event: {
+          id: r.id,
+          previousPrice: r.previous_price ? formatEth(r.previous_price) : null,
+          kind: r.kind,
+          txHash: r.tx_hash ? fromBuffer(r.tx_hash) : null,
+          txTimestamp: r.tx_timestamp ? Number(r.tx_timestamp) : null,
+          createdAt: new Date(r.created_at * 1000).toISOString(),
+        },
       }));
 
       return {
