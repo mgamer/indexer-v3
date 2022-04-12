@@ -1,11 +1,11 @@
 export type SourcesEntityParams = {
-  source_id: string;
+  id: number;
   metadata: SourcesMetadata;
 };
 
 export type SourcesMetadata = {
   id: string;
-  name?: string;
+  name: string;
   icon?: string | null;
   url?: string | null;
   urlMainnet?: string | null;
@@ -13,11 +13,13 @@ export type SourcesMetadata = {
 };
 
 export class SourcesEntity {
-  sourceId: string;
+  id: number;
+  name: string;
   metadata: SourcesMetadata;
 
   constructor(params: SourcesEntityParams) {
-    this.sourceId = params.source_id;
+    this.id = params.id;
+    this.name = params.metadata.name;
     this.metadata = params.metadata;
   }
 }

@@ -18,10 +18,10 @@ export class Sources {
   }
 
   private async loadData() {
-    const sources: SourcesEntityParams[] | null = await idb.manyOrNone(`SELECT * FROM sources`);
+    const sources: SourcesEntityParams[] | null = await idb.manyOrNone(`SELECT * FROM sources_v2`);
 
     for (const source of sources) {
-      (this.sources as any)[source.source_id] = new SourcesEntity(source);
+      (this.sources as any)[source.id] = new SourcesEntity(source);
     }
   }
 
@@ -34,11 +34,11 @@ export class Sources {
     return this.instance;
   }
 
-  public static getDefaultSource(sourceId: string): SourcesEntity {
+  public static getDefaultSource(id: number): SourcesEntity {
     return new SourcesEntity({
-      source_id: sourceId,
+      id,
       metadata: {
-        id: sourceId,
+        id: "",
         name: "Reservoir",
         icon: "https://www.reservoir.market/reservoir.svg",
         urlMainnet: "https://www.reservoir.market/collections/${contract}/${tokenId}",
@@ -48,32 +48,33 @@ export class Sources {
   }
 
   public static async syncSources() {
-    _.forEach(sources, (metadata, sourceId) => {
-      Sources.add(sourceId, metadata);
+    _.forEach(sources, (metadata, id) => {
+      Sources.add(Number(id), metadata);
     });
   }
 
-  public static async add(sourceId: string, metadata: object) {
-    const query = `INSERT INTO sources (source_id, metadata)
-                   VALUES ( $/sourceId/, $/metadata:json/)
-                   ON CONFLICT (source_id) DO UPDATE
-                   SET metadata = $/metadata:json/`;
+  public static async add(id: number, metadata: object) {
+    const query = `INSERT INTO sources_v2 (id, name, metadata)
+                   VALUES ( $/id/, $/name/, $/metadata:json/)
+                   ON CONFLICT (id) DO UPDATE
+                   SET metadata = $/metadata:json/, name = $/name/`;
 
     const values = {
-      sourceId,
+      id,
+      name: (metadata as any).name,
       metadata: metadata,
     };
 
     await idb.none(query, values);
   }
 
-  public get(sourceId: string, contract?: string, tokenId?: string) {
+  public get(id: number, contract?: string, tokenId?: string) {
     let sourceEntity;
 
-    if (sourceId in this.sources) {
-      sourceEntity = (this.sources as any)[sourceId];
+    if (id in this.sources) {
+      sourceEntity = (this.sources as any)[id];
     } else {
-      sourceEntity = Sources.getDefaultSource(sourceId);
+      sourceEntity = Sources.getDefaultSource(id);
     }
 
     if (config.chainId == 1) {
@@ -101,13 +102,13 @@ export class Sources {
     return sourceEntity;
   }
 
-  public async set(sourceId: string, metadata: object) {
-    const query = `UPDATE sources
+  public async set(id: string, metadata: object) {
+    const query = `UPDATE sources_v2
                    SET metadata = $/metadata:json/
-                   WHERE source_id = $/sourceId/`;
+                   WHERE id = $/id/`;
 
     const values = {
-      id: sourceId,
+      id,
       metadata: metadata,
     };
 

@@ -165,7 +165,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
             NULLIF(date_part('epoch', UPPER("os"."valid_between")), 'Infinity'),
             0
           ) AS "floor_sell_valid_until",
-          "os"."source_id" AS "floor_sell_source_id",
+          "os"."source_id_int" AS "floor_sell_source_id",
           "t"."top_buy_id",
           "t"."top_buy_value",
           "t"."top_buy_maker",
@@ -267,7 +267,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
       const result = await edb.manyOrNone(baseQuery, query).then((result) =>
         result.map((r) => {
           const source = r.floor_sell_source_id
-            ? sources.get(fromBuffer(r.floor_sell_source_id), fromBuffer(r.contract), r.token_id)
+            ? sources.get(r.floor_sell_source_id, fromBuffer(r.contract), r.token_id)
             : null;
 
           return {
