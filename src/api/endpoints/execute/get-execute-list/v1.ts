@@ -63,6 +63,7 @@ export const getExecuteListV1Options: RouteOptions = {
       listingTime: Joi.alternatives(Joi.string(), Joi.number()),
       expirationTime: Joi.alternatives(Joi.string(), Joi.number()),
       salt: Joi.string(),
+      nonce: Joi.string(),
       v: Joi.number(),
       r: Joi.string().pattern(/^0x[a-f0-9]{64}$/),
       s: Joi.string().pattern(/^0x[a-f0-9]{64}$/),
@@ -331,6 +332,8 @@ export const getExecuteListV1Options: RouteOptions = {
             }
           }
 
+          const hasSignature = query.v && query.r && query.s;
+
           return {
             steps: [
               {
@@ -339,31 +342,38 @@ export const getExecuteListV1Options: RouteOptions = {
               },
               {
                 ...steps[1],
-                status: "incomplete",
-                data: order.getSignatureData(),
+                status: hasSignature ? "complete" : "incomplete",
+                data: hasSignature ? undefined : order.getSignatureData(),
               },
               {
                 ...steps[2],
                 status: "incomplete",
-                data: {
-                  endpoint: "/order/v1",
-                  method: "POST",
-                  body: {
-                    order: {
-                      kind: "721ex",
-                      data: {
-                        ...order.params,
-                        v: query.v,
-                        r: query.r,
-                        s: query.s,
+                data: !hasSignature
+                  ? undefined
+                  : {
+                      endpoint: "/order/v1",
+                      method: "POST",
+                      body: {
+                        order: {
+                          kind: "721ex",
+                          data: {
+                            ...order.params,
+                            v: query.v,
+                            r: query.r,
+                            s: query.s,
+                          },
+                        },
+                        orderbook: query.orderbook,
+                        source: query.source,
                       },
                     },
-                    orderbook: query.orderbook,
-                    source: query.source,
-                  },
-                },
               },
             ],
+            query: {
+              ...query,
+              expirationTime: order.params.expiry,
+              nonce: order.params.nonce,
+            },
           };
         }
 
@@ -430,6 +440,8 @@ export const getExecuteListV1Options: RouteOptions = {
             }
           }
 
+          const hasSignature = query.v && query.r && query.s;
+
           return {
             steps: [
               {
@@ -438,31 +450,38 @@ export const getExecuteListV1Options: RouteOptions = {
               },
               {
                 ...steps[1],
-                status: "incomplete",
-                data: order.getSignatureData(),
+                status: hasSignature ? "complete" : "incomplete",
+                data: hasSignature ? undefined : order.getSignatureData(),
               },
               {
                 ...steps[2],
                 status: "incomplete",
-                data: {
-                  endpoint: "/order/v1",
-                  method: "POST",
-                  body: {
-                    order: {
-                      kind: "zeroex-v4",
-                      data: {
-                        ...order.params,
-                        v: query.v,
-                        r: query.r,
-                        s: query.s,
+                data: !hasSignature
+                  ? undefined
+                  : {
+                      endpoint: "/order/v1",
+                      method: "POST",
+                      body: {
+                        order: {
+                          kind: "zeroex-v4",
+                          data: {
+                            ...order.params,
+                            v: query.v,
+                            r: query.r,
+                            s: query.s,
+                          },
+                        },
+                        orderbook: query.orderbook,
+                        source: query.source,
                       },
                     },
-                    orderbook: query.orderbook,
-                    source: query.source,
-                  },
-                },
               },
             ],
+            query: {
+              ...query,
+              expirationTime: order.params.expiry,
+              nonce: order.params.nonce,
+            },
           };
         }
       }
