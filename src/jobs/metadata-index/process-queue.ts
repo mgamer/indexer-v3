@@ -7,10 +7,9 @@ import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
 import { network } from "@/common/provider";
-import { redis } from "@/common/redis";
+import { redis, extendLock, releaseLock } from "@/common/redis";
 import { config } from "@/config/index";
 import { PendingRefreshTokens } from "@/models/pending-refresh-tokens";
-import * as metadataIndexProcessEmpty from "@/jobs/metadata-index/process-queue-empty";
 import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
 
 const QUEUE_NAME = "metadata-index-process-queue";
@@ -91,9 +90,11 @@ if (config.doBackgroundWork) {
 
       // If there are potentially more tokens to process trigger another job
       if (_.size(refreshTokens) == count) {
-        await addToQueue(method);
+        if (await extendLock(getLockName(method), 60 * 5)) {
+          await addToQueue(method);
+        }
       } else {
-        await metadataIndexProcessEmpty.addToQueue(method);
+        await releaseLock(getLockName(method));
       }
     },
     { connection: redis.duplicate(), concurrency: 2 }
@@ -104,6 +105,10 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (method: string, jobId?: string) => {
-  await queue.add(randomUUID(), { method }, { jobId });
+export const getLockName = (method: string) => {
+  return `${QUEUE_NAME}:${method}`;
+};
+
+export const addToQueue = async (method: string) => {
+  await queue.add(randomUUID(), { method });
 };
