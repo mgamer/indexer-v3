@@ -339,6 +339,7 @@ export const getExecuteListV1Options: RouteOptions = {
               {
                 ...steps[0],
                 status: approvalTx ? "incomplete" : "complete",
+                data: approvalTx,
               },
               {
                 ...steps[1],
@@ -447,6 +448,7 @@ export const getExecuteListV1Options: RouteOptions = {
               {
                 ...steps[0],
                 status: approvalTx ? "incomplete" : "complete",
+                data: approvalTx,
               },
               {
                 ...steps[1],
