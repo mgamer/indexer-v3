@@ -16,16 +16,16 @@ import {
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 
-const version = "v1";
+const version = "v2";
 
-export const getOrdersAsksV1Options: RouteOptions = {
-  description: "Get a list of asks (listings), filtered by token, collection or maker",
+export const getOrdersBidsV2Options: RouteOptions = {
+  description: "Get a list of bids (offers), filtered by token, collection or maker",
   notes:
     "This API is designed for efficiently ingesting large volumes of orders, for external processing",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {
-      order: 41,
+      order: 42,
     },
   },
   validate: {
@@ -112,7 +112,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
               }),
             })
           ).allow(null),
-          source: Joi.object().allow(null),
+          source: Joi.string().allow(null),
           feeBps: Joi.number().allow(null),
           feeBreakdown: Joi.array()
             .items(
@@ -133,9 +133,9 @@ export const getOrdersAsksV1Options: RouteOptions = {
         })
       ),
       continuation: Joi.string().pattern(base64Regex).allow(null),
-    }).label(`getOrdersAsks${version.toUpperCase()}Response`),
+    }).label(`getOrdersBids${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(`get-orders-asks-${version}-handler`, `Wrong response schema: ${error}`);
+      logger.error(`get-orders-bids-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -243,7 +243,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
       `;
 
       // Filters
-      const conditions: string[] = [`orders.side = 'sell'`];
+      const conditions: string[] = [`orders.side = 'buy'`];
       if (query.token || query.tokenSetId) {
         // Valid orders
         conditions.push(
@@ -296,7 +296,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
         (query as any).id = id;
 
         if (query.sortBy === "price") {
-          conditions.push(`(orders.price, orders.id) > ($/priceOrCreatedAt/, $/id/)`);
+          conditions.push(`(orders.price, orders.id) < ($/priceOrCreatedAt/, $/id/)`);
         } else {
           conditions.push(
             `(orders.created_at, orders.id) < (to_timestamp($/priceOrCreatedAt/), $/id/)`
@@ -309,7 +309,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
 
       // Sorting
       if (query.sortBy === "price") {
-        baseQuery += ` ORDER BY orders.price, orders.id`;
+        baseQuery += ` ORDER BY orders.price DESC, orders.id DESC`;
       } else {
         baseQuery += ` ORDER BY orders.created_at DESC, orders.id DESC`;
       }
@@ -335,6 +335,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
       const result = rawResult.map(async (r) => {
         const sources = await Sources.getInstance();
         let source: SourcesEntity | undefined;
+
         if (r.source_id_int) {
           let contract: string | undefined;
           let tokenId: string | undefined;
@@ -363,12 +364,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
           validFrom: Number(r.valid_from),
           validUntil: Number(r.valid_until),
           metadata: r.metadata,
-          source: {
-            id: source?.metadata.id,
-            name: source?.metadata.name,
-            icon: source?.metadata.icon,
-            url: source?.metadata.url,
-          },
+          source: source?.name,
           feeBps: Number(r.fee_bps),
           feeBreakdown: r.fee_breakdown,
           expiration: Number(r.expiration),
@@ -383,7 +379,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
         continuation,
       };
     } catch (error) {
-      logger.error(`get-orders-asks-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(`get-orders-bids-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

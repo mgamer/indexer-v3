@@ -16,9 +16,9 @@ import {
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 
-const version = "v1";
+const version = "v2";
 
-export const getOrdersAsksV1Options: RouteOptions = {
+export const getOrdersAsksV2Options: RouteOptions = {
   description: "Get a list of asks (listings), filtered by token, collection or maker",
   notes:
     "This API is designed for efficiently ingesting large volumes of orders, for external processing",
@@ -112,12 +112,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
               }),
             })
           ).allow(null),
-          source: Joi.object({
-            id: Joi.number().allow(null),
-            name: Joi.string().allow(null, ""),
-            icon: Joi.string().allow(null, ""),
-            url: Joi.string().allow(null, ""),
-          }).allow(null),
+          source: Joi.string().allow(null, ""),
           feeBps: Joi.number().allow(null),
           feeBreakdown: Joi.array()
             .items(
@@ -368,12 +363,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
           validFrom: Number(r.valid_from),
           validUntil: Number(r.valid_until),
           metadata: r.metadata,
-          source: {
-            id: source?.metadata.id,
-            name: source?.metadata.name,
-            icon: source?.metadata.icon,
-            url: source?.metadata.url,
-          },
+          source: source?.name,
           feeBps: Number(r.fee_bps),
           feeBreakdown: r.fee_breakdown,
           expiration: Number(r.expiration),
