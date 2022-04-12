@@ -101,7 +101,7 @@ if (config.doBackgroundWork) {
         }
       }
     },
-    { connection: redis.duplicate(), concurrency: 2 }
+    { connection: redis.duplicate(), concurrency: 1 }
   );
 
   worker.on("error", (error) => {
