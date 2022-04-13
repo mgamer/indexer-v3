@@ -80,12 +80,12 @@ CREATE INDEX "orders_kind_maker_nonce_index"
   ON "orders" ("kind", "maker", "nonce")
   WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
 
-CREATE INDEX "orders_contract_created_at_index"
-  ON "orders" ("contract", "created_at" DESC)
+CREATE INDEX "orders_side_contract_created_at_index"
+  ON "orders" ("side", "contract", "created_at" DESC)
   WHERE ("contract" IS NOT NULL);
 
-CREATE INDEX "orders_source_created_at_index"
-  ON "orders" (coalesce("source_id", '\x00'), "created_at" DESC)
+CREATE INDEX "orders_side_source_created_at_index"
+  ON "orders" ("side", coalesce("source_id", '\x00'), "created_at" DESC)
   WHERE ("contract" IS NOT NULL);
 
 CREATE INDEX "orders_expired_maker_side_created_at_id_index"
