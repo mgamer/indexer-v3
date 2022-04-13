@@ -14,6 +14,7 @@ import {
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
+import { Sources } from "@/models/sources";
 
 const version = "v1";
 
@@ -32,9 +33,10 @@ export const getOrdersAllV1Options: RouteOptions = {
       contract: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/),
-      source: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/),
+      source: Joi.string(),
+      side: Joi.string().valid("sell", "buy").default("sell"),
+      includeMetadata: Joi.boolean().default(false),
+      includeRawData: Joi.boolean().default(false),
       continuation: Joi.string().pattern(base64Regex),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     })
@@ -65,10 +67,7 @@ export const getOrdersAllV1Options: RouteOptions = {
           value: Joi.number().unsafe().required(),
           validFrom: Joi.number().required(),
           validUntil: Joi.number().required(),
-          sourceId: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/)
-            .allow(null),
+          source: Joi.string().allow(null, ""),
           feeBps: Joi.number().allow(null),
           feeBreakdown: Joi.array()
             .items(
@@ -85,7 +84,8 @@ export const getOrdersAllV1Options: RouteOptions = {
           expiration: Joi.number().required(),
           createdAt: Joi.string().required(),
           updatedAt: Joi.string().required(),
-          rawData: Joi.object(),
+          metadata: Joi.object().allow(null),
+          rawData: Joi.object().allow(null),
         })
       ),
       continuation: Joi.string().pattern(base64Regex).allow(null),
@@ -99,47 +99,115 @@ export const getOrdersAllV1Options: RouteOptions = {
     const query = request.query as any;
 
     try {
+      const metadataBuildQuery = `
+        (
+          CASE
+            WHEN orders.token_set_id LIKE 'token:%' THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'token',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'tokenName', tokens.name,
+                    'image', tokens.image
+                  )
+                )
+              FROM tokens
+              JOIN collections
+                ON tokens.collection_id = collections.id
+              WHERE tokens.contract = decode(substring(split_part(orders.token_set_id, ':', 2) from 3), 'hex')
+                AND tokens.token_id = (split_part(orders.token_set_id, ':', 3)::NUMERIC(78, 0)))
+
+            WHEN orders.token_set_id LIKE 'contract:%' THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'collection',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'image', (collections.metadata ->> 'imageUrl')::TEXT
+                  )
+                )
+              FROM collections
+              WHERE collections.id = substring(orders.token_set_id from 10))
+
+            WHEN orders.token_set_id LIKE 'range:%' THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'collection',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'image', (collections.metadata ->> 'imageUrl')::TEXT
+                  )
+                )
+              FROM collections
+              WHERE collections.id = substring(orders.token_set_id from 7))
+
+            WHEN orders.token_set_id LIKE 'list:%' THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'attribute',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'attributes', ARRAY[json_build_object('key', attribute_keys.key, 'value', attributes.value)],
+                    'image', (collections.metadata ->> 'imageUrl')::TEXT
+                  )
+                )
+              FROM token_sets
+              JOIN attributes
+                ON token_sets.attribute_id = attributes.id
+              JOIN attribute_keys
+                ON attributes.attribute_key_id = attribute_keys.id
+              JOIN collections
+                ON attribute_keys.collection_id = collections.id
+              WHERE token_sets.id = orders.token_set_id)
+
+            ELSE NULL
+          END
+        ) AS metadata
+      `;
+
       let baseQuery = `
         SELECT
-          "o"."id",
-          "o"."kind",
-          "o"."side",
-          "o"."token_set_id",
-          "o"."token_set_schema_hash",
-          "o"."maker",
-          "o"."taker",
-          "o"."price",
-          "o"."value",
-          DATE_PART('epoch', LOWER("o"."valid_between")) AS "valid_from",
+          orders.id,
+          orders.kind,
+          orders.side,
+          orders.token_set_id,
+          orders.token_set_schema_hash,
+          orders.maker,
+          orders.taker,
+          orders.price,
+          orders.value,
+          DATE_PART('epoch', LOWER(orders.valid_between)) AS valid_from,
           COALESCE(
-            NULLIF(DATE_PART('epoch', UPPER("o"."valid_between")), 'Infinity'),
+            NULLIF(DATE_PART('epoch', UPPER(orders.valid_between)), 'Infinity'),
             0
-          ) AS "valid_until",
-          "o"."source_id",
-          "o"."fee_bps",
-          "o"."fee_breakdown",
+          ) AS valid_until,
+          orders.source_id,
+          orders.fee_bps,
+          orders.fee_breakdown,
           COALESCE(
-            NULLIF(DATE_PART('epoch', "o"."expiration"), 'Infinity'),
+            NULLIF(DATE_PART('epoch', orders.expiration), 'Infinity'),
             0
-          ) AS "expiration",
-          extract(epoch from "o"."created_at") AS "created_at",
-          "o"."updated_at",
-          "o"."raw_data"
-        FROM "orders" "o"
+          ) AS expiration,
+          extract(epoch from orders.created_at) AS created_at,
+          ${query.includeRawData ? `orders.raw_data,` : ""}
+          ${query.includeMetadata ? `${metadataBuildQuery},` : ""}
+          orders.updated_at
+        FROM orders
       `;
 
       // Filters
-      const conditions: string[] = [`"o"."contract" IS NOT NULL`];
+      const conditions: string[] = [`orders.contract IS NOT NULL`, `orders.side = $/side/`];
       if (query.contract) {
         (query as any).contract = toBuffer(query.contract);
-        conditions.push(`"o"."contract" = $/contract/`);
+        conditions.push(`orders.contract = $/contract/`);
       }
       if (query.source) {
         if (query.source === AddressZero) {
-          conditions.push(`coalesce("o"."source_id", '\\x00') = '\\x00'`);
+          conditions.push(`coalesce(orders.source_id, '\\x00') = '\\x00'`);
         } else {
           (query as any).source = toBuffer(query.source);
-          conditions.push(`coalesce("o"."source_id", '\\x00') = $/source/`);
+          conditions.push(`coalesce(orders.source_id, '\\x00') = $/source/`);
         }
       }
 
@@ -151,7 +219,7 @@ export const getOrdersAllV1Options: RouteOptions = {
         (query as any).createdAt = createdAt;
         (query as any).id = id;
 
-        conditions.push(`("o"."created_at", "o"."id") < (to_timestamp($/createdAt/), $/id/)`);
+        conditions.push(`(orders.created_at, orders.id) < (to_timestamp($/createdAt/), $/id/)`);
       }
 
       if (conditions.length) {
@@ -159,7 +227,7 @@ export const getOrdersAllV1Options: RouteOptions = {
       }
 
       // Sorting
-      baseQuery += ` ORDER BY "o"."created_at" DESC, "o"."id" DESC`;
+      baseQuery += ` ORDER BY orders.created_at DESC, orders.id DESC`;
 
       // Pagination
       baseQuery += ` LIMIT $/limit/`;
@@ -173,6 +241,7 @@ export const getOrdersAllV1Options: RouteOptions = {
         );
       }
 
+      const sources = await Sources.getInstance();
       const result = rawResult.map((r) => ({
         id: r.id,
         kind: r.kind,
@@ -189,13 +258,14 @@ export const getOrdersAllV1Options: RouteOptions = {
             : formatEth(r.value) - (formatEth(r.value) * Number(r.fee_bps)) / 10000,
         validFrom: Number(r.valid_from),
         validUntil: Number(r.valid_until),
-        sourceId: r.source_id ? fromBuffer(r.source_id) : null,
+        source: r.source_id ? sources.get(fromBuffer(r.source_id))?.metadata?.name : null,
         feeBps: Number(r.fee_bps),
         feeBreakdown: r.fee_breakdown,
         expiration: Number(r.expiration),
         createdAt: new Date(r.created_at * 1000).toISOString(),
         updatedAt: new Date(r.updated_at).toISOString(),
-        rawData: r.raw_data,
+        rawData: r.raw_data ?? undefined,
+        metadata: r.metadata ?? undefined,
       }));
 
       return {
