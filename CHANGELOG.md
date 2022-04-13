@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.23.1 (2022-04-12)
+
+## 5.23.0 (2022-04-12)
+
+
+### Features
+
+* better locking on metadata queue ([76688e2](https://github.com/reservoirprotocol/indexer-v3/commit/76688e2cf8fe27b9e0882d086574ee23069ce958))
+
 ## 5.22.0 (2022-04-12)
 
 

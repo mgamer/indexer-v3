@@ -1,4 +1,5 @@
 import { BulkJobOptions } from "bullmq";
+import { randomUUID } from "crypto";
 import Redis from "ioredis";
 import Redlock from "redlock";
 
@@ -22,4 +23,20 @@ export type BullMQBulkJob = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any;
   opts?: BulkJobOptions;
+};
+
+export const acquireLock = async (name: string, expirationInSeconds: number) => {
+  const id = randomUUID();
+  const acquired = await redis.set(name, id, "EX", expirationInSeconds, "NX");
+  return acquired === "OK";
+};
+
+export const extendLock = async (name: string, expirationInSeconds: number) => {
+  const id = randomUUID();
+  const extended = await redis.set(name, id, "EX", expirationInSeconds, "XX");
+  return extended === "OK";
+};
+
+export const releaseLock = async (name: string) => {
+  await redis.del(name);
 };

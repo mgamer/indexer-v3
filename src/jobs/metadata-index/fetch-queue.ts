@@ -5,7 +5,7 @@ import { randomUUID } from "crypto";
 
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
+import { redis, acquireLock } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { PendingRefreshTokens, RefreshTokens } from "@/models/pending-refresh-tokens";
@@ -87,8 +87,10 @@ if (config.doBackgroundWork) {
         `There are ${pendingCount} tokens pending to refresh for ${data.method}`
       );
 
-      // Trigger a job to process the queue
-      await metadataIndexProcess.addToQueue(data.method, data.method);
+      if (await acquireLock(metadataIndexProcess.getLockName(data.method), 60 * 5)) {
+        // Trigger a job to process the queue
+        await metadataIndexProcess.addToQueue(data.method);
+      }
     },
     { connection: redis.duplicate(), concurrency: 3 }
   );
