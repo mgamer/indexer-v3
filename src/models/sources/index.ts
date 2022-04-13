@@ -24,12 +24,12 @@ export class Sources {
     this.sourcesByAddress = {};
   }
 
-  private async loadData() {
+  private async loadData(forceDbLoad = false) {
     // Try to load from cache
     const sourcesCache = await redis.get(Sources.getCacheKey());
     let sources: SourcesEntityParams[];
 
-    if (_.isNull(sourcesCache)) {
+    if (_.isNull(sourcesCache) || forceDbLoad) {
       // If no cache load from DB
       sources = await idb.manyOrNone(`SELECT * FROM sources_v2`);
       await redis.set(Sources.getCacheKey(), JSON.stringify(sources), "EX", 60 * 60 * 24);
@@ -108,7 +108,7 @@ export class Sources {
     const source = await idb.oneOrNone(query, values);
     const sourcesEntity = new SourcesEntity(source);
 
-    await redis.del(Sources.getCacheKey()); // Remove the cache
+    await Sources.instance.loadData(true); // reload the cache
 
     (this.sources as any)[source.id] = sourcesEntity;
     (this.sourcesByNames as any)[source.name] = sourcesEntity;
