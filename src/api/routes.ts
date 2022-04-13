@@ -228,32 +228,14 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/orders/all/v2",
-    options: ordersEndpoints.getOrdersAllV2Options,
-  });
-
-  server.route({
-    method: "GET",
     path: "/orders/asks/v1",
     options: ordersEndpoints.getOrdersAsksV1Options,
   });
 
   server.route({
     method: "GET",
-    path: "/orders/asks/v2",
-    options: ordersEndpoints.getOrdersAsksV2Options,
-  });
-
-  server.route({
-    method: "GET",
     path: "/orders/bids/v1",
     options: ordersEndpoints.getOrdersBidsV1Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/orders/bids/v2",
-    options: ordersEndpoints.getOrdersBidsV2Options,
   });
 
   server.route({
@@ -278,6 +260,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/order/v1",
     options: ordersEndpoints.postOrderV1Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/order/v2",
+    options: ordersEndpoints.postOrderV2Options,
   });
 
   server.route({

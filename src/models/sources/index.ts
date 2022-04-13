@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import _ from "lodash";
 
+import { randomBytes } from "crypto";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { idb } from "@/common/db";
@@ -63,8 +64,6 @@ export class Sources {
       address: AddressZero,
       name: "Reservoir",
       metadata: {
-        address: AddressZero,
-        name: "Reservoir",
         icon: "https://www.reservoir.market/reservoir.svg",
         urlMainnet: "https://www.reservoir.market/collections/${contract}/${tokenId}",
         urlRinkeby: "https://www.reservoir.fun/collections/${contract}/${tokenId}",
@@ -73,25 +72,49 @@ export class Sources {
   }
 
   public static async syncSources() {
-    _.forEach(sourcesFromJson, (metadata, id) => {
-      Sources.add(Number(id), metadata);
+    _.forEach(sourcesFromJson, (item, id) => {
+      Sources.addFromJson(Number(id), item.name, item.address, item.data);
     });
   }
 
-  public static async add(id: number, metadata: object) {
+  public static async addFromJson(id: number, name: string, address: string, metadata: object) {
     const query = `INSERT INTO sources_v2 (id, name, address, metadata)
-                   VALUES ( $/id/, $/name/, $/address/, $/metadata:json/)
+                   VALUES ($/id/, $/name/, $/address/, $/metadata:json/)
                    ON CONFLICT (id) DO UPDATE
                    SET metadata = $/metadata:json/, name = $/name/`;
 
     const values = {
       id,
-      name: (metadata as any).name,
-      address: (metadata as any).address,
-      metadata: metadata,
+      name,
+      address,
+      metadata,
     };
 
     await idb.none(query, values);
+  }
+
+  public async create(name: string, address: string, metadata: object = {}) {
+    const query = `INSERT INTO sources_v2 (name, address, metadata)
+                   VALUES ($/name/, $/address/, $/metadata:json/)
+                   ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+                   RETURNING *`;
+
+    const values = {
+      name,
+      address,
+      metadata,
+    };
+
+    const source = await idb.oneOrNone(query, values);
+    const sourcesEntity = new SourcesEntity(source);
+
+    await redis.del(Sources.getCacheKey()); // Remove the cache
+
+    (this.sources as any)[source.id] = sourcesEntity;
+    (this.sourcesByNames as any)[source.name] = sourcesEntity;
+    (this.sourcesByAddress as any)[source.address] = sourcesEntity;
+
+    return sourcesEntity;
   }
 
   public get(id: number) {
@@ -106,62 +129,72 @@ export class Sources {
     return sourceEntity;
   }
 
-  public getByName(name: string) {
+  public getByName(name: string, returnDefault = true) {
     let sourceEntity;
 
     if (name in this.sourcesByNames) {
       sourceEntity = (this.sourcesByNames as any)[name];
-    } else {
+    } else if (returnDefault) {
       sourceEntity = Sources.getDefaultSource();
     }
 
     return sourceEntity;
   }
 
-  public getByAddress(address: string, contract?: string, tokenId?: string) {
+  public getByAddress(address: string, contract?: string, tokenId?: string, returnDefault = true) {
     let sourceEntity;
 
     if (address in this.sourcesByAddress) {
       sourceEntity = (this.sourcesByAddress as any)[address];
-    } else {
+    } else if (returnDefault) {
       sourceEntity = Sources.getDefaultSource();
     }
 
-    if (config.chainId == 1) {
-      if (sourceEntity.metadata.urlMainnet && contract && tokenId) {
-        sourceEntity.metadata.url = _.replace(
-          sourceEntity.metadata.urlMainnet,
-          "${contract}",
-          contract
-        );
+    if (!sourceEntity) {
+      if (config.chainId == 1) {
+        if (sourceEntity.metadata.urlMainnet && contract && tokenId) {
+          sourceEntity.metadata.url = _.replace(
+            sourceEntity.metadata.urlMainnet,
+            "${contract}",
+            contract
+          );
 
-        sourceEntity.metadata.url = _.replace(sourceEntity.metadata.url, "${tokenId}", tokenId);
-      }
-    } else {
-      if (sourceEntity.metadata.urlRinkeby && contract && tokenId) {
-        sourceEntity.metadata.url = _.replace(
-          sourceEntity.metadata.urlRinkeby,
-          "${contract}",
-          contract
-        );
+          sourceEntity.metadata.url = _.replace(sourceEntity.metadata.url, "${tokenId}", tokenId);
+        }
+      } else {
+        if (sourceEntity.metadata.urlRinkeby && contract && tokenId) {
+          sourceEntity.metadata.url = _.replace(
+            sourceEntity.metadata.urlRinkeby,
+            "${contract}",
+            contract
+          );
 
-        sourceEntity.metadata.url = _.replace(sourceEntity.metadata.url, "${tokenId}", tokenId);
+          sourceEntity.metadata.url = _.replace(sourceEntity.metadata.url, "${tokenId}", tokenId);
+        }
       }
     }
 
     return sourceEntity;
   }
 
-  public async set(id: string, metadata: object) {
-    const query = `UPDATE sources_v2
-                   SET metadata = $/metadata:json/
-                   WHERE id = $/id/`;
+  public async getOrInsert(source: string) {
+    let sourceEntity;
 
-    const values = {
-      id,
-      metadata: metadata,
-    };
+    if (source.match(/^0x[a-fA-F0-9]{40}$/)) {
+      sourceEntity = this.getByAddress(source, undefined, undefined, false); // This is an address
 
-    await idb.none(query, values);
+      if (!sourceEntity) {
+        sourceEntity = await this.create(source, source);
+      }
+    } else {
+      sourceEntity = this.getByName(source, false); // This is a name
+
+      if (!sourceEntity) {
+        const address = randomBytes(32).toString("hex");
+        sourceEntity = await this.create(source, address);
+      }
+    }
+
+    return sourceEntity;
   }
 }

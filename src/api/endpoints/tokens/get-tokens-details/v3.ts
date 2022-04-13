@@ -443,7 +443,7 @@ export const getTokensDetailsV3Options: RouteOptions = {
               validFrom: r.floor_sell_valid_from,
               validUntil: r.floor_sell_value ? r.floor_sell_valid_until : null,
               source: {
-                id: source?.metadata.address,
+                id: source?.address,
                 name: source?.metadata.name,
                 icon: source?.metadata.icon,
                 url: source?.metadata.url,

@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { AddressZero } from "@ethersproject/constants";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
@@ -22,7 +21,7 @@ export const getOrdersAllV1Options: RouteOptions = {
   description: "Bulk access to raw orders",
   notes:
     "This API is designed for efficiently ingesting large volumes of orders, for external processing",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "1. Order Book"],
   plugins: {
     "hapi-swagger": {
       order: 1,
@@ -202,13 +201,12 @@ export const getOrdersAllV1Options: RouteOptions = {
         (query as any).contract = toBuffer(query.contract);
         conditions.push(`orders.contract = $/contract/`);
       }
+
       if (query.source) {
-        if (query.source === AddressZero) {
-          conditions.push(`coalesce(orders.source_id, '\\x00') = '\\x00'`);
-        } else {
-          (query as any).source = toBuffer(query.source);
-          conditions.push(`coalesce(orders.source_id, '\\x00') = $/source/`);
-        }
+        const sources = await Sources.getInstance();
+        const source = sources.getByName(query.source);
+        (query as any).sourceAddress = source.address;
+        conditions.push(`"o"."source_id" = $/sourceAddress/`);
       }
 
       if (query.continuation) {
@@ -258,7 +256,7 @@ export const getOrdersAllV1Options: RouteOptions = {
             : formatEth(r.value) - (formatEth(r.value) * Number(r.fee_bps)) / 10000,
         validFrom: Number(r.valid_from),
         validUntil: Number(r.valid_until),
-        source: r.source_id ? sources.get(fromBuffer(r.source_id))?.metadata?.name : null,
+        source: r.source_id ? sources.getByAddress(fromBuffer(r.source_id))?.metadata?.name : null,
         feeBps: Number(r.fee_bps),
         feeBreakdown: r.fee_breakdown,
         expiration: Number(r.expiration),

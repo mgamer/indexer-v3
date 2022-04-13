@@ -123,7 +123,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
                 .allow(null),
               validFrom: Joi.number().unsafe().allow(null),
               validUntil: Joi.number().unsafe().allow(null),
-              source: Joi.string().allow(null, ""),
+              source: Joi.object().allow(null),
             },
             topBid: Joi.object({
               id: Joi.string().allow(null),
@@ -186,7 +186,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
             NULLIF(date_part('epoch', UPPER("os"."valid_between")), 'Infinity'),
             0
           ) AS "floor_sell_valid_until",
-          "os"."source_id_int" AS "floor_sell_source_id",
+          "os"."source_id" AS "floor_sell_source_id",
           "t"."top_buy_id",
           "t"."top_buy_value",
           "t"."top_buy_maker",
@@ -272,9 +272,9 @@ export const getTokensDetailsV4Options: RouteOptions = {
       if (query.source) {
         const sources = await Sources.getInstance();
         const source = sources.getByName(query.source);
-        (query as any).sourceId = source.id;
+        (query as any).sourceAddress = source.address;
         conditions.push(
-          `"t"."floor_sell_value" IS NOT NULL AND "os"."source_id_int" = $/sourceId/`
+          `"t"."floor_sell_value" IS NOT NULL AND "os"."source_id" = $/sourceAddress/`
         );
       }
 
@@ -393,7 +393,13 @@ export const getTokensDetailsV4Options: RouteOptions = {
       const sources = await Sources.getInstance();
 
       const result = rawResult.map((r) => {
-        const source = r.floor_sell_source_id ? sources.get(r.floor_sell_source_id) : null;
+        const source = r.floor_sell_source_id
+          ? sources.getByAddress(
+              fromBuffer(r.floor_sell_source_id),
+              fromBuffer(r.contract),
+              r.token_id
+            )
+          : null;
 
         return {
           token: {
@@ -426,7 +432,12 @@ export const getTokensDetailsV4Options: RouteOptions = {
               maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
               validFrom: r.floor_sell_valid_from,
               validUntil: r.floor_sell_value ? r.floor_sell_valid_until : null,
-              source: source?.name,
+              source: {
+                id: source?.address,
+                name: source?.metadata.name,
+                icon: source?.metadata.icon,
+                url: source?.metadata.url,
+              },
             },
             topBid: {
               id: r.top_buy_id,

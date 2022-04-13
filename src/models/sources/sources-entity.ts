@@ -6,8 +6,6 @@ export type SourcesEntityParams = {
 };
 
 export type SourcesMetadata = {
-  address: string;
-  name: string;
   icon?: string | null;
   url?: string | null;
   urlMainnet?: string | null;
@@ -22,8 +20,8 @@ export class SourcesEntity {
 
   constructor(params: SourcesEntityParams) {
     this.id = params.id;
-    this.name = params.metadata.name;
-    this.address = params.metadata.address;
+    this.name = params.name;
+    this.address = params.address;
     this.metadata = params.metadata;
   }
 }
