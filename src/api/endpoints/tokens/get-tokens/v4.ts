@@ -118,7 +118,7 @@ export const getTokensV4Options: RouteOptions = {
           "t"."image",
           "t"."collection_id",
           "c"."name" as "collection_name",
-          "os"."source_id_int",
+          "os"."source_id",
           ("c".metadata ->> 'imageUrl')::TEXT AS "collection_image",
           "c"."slug",
           "t"."floor_sell_value",
@@ -309,7 +309,7 @@ export const getTokensV4Options: RouteOptions = {
       const sources = await Sources.getInstance();
 
       const result = rawResult.map((r) => {
-        const source = r.floor_sell_source_id ? sources.get(r.floor_sell_source_id) : null;
+        const source = r.source_id ? sources.getByAddress(fromBuffer(r.source_id)) : null;
 
         return {
           contract: fromBuffer(r.contract),

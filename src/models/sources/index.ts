@@ -150,7 +150,7 @@ export class Sources {
       sourceEntity = Sources.getDefaultSource();
     }
 
-    if (!sourceEntity) {
+    if (sourceEntity) {
       if (config.chainId == 1) {
         if (sourceEntity.metadata.urlMainnet && contract && tokenId) {
           sourceEntity.metadata.url = _.replace(
