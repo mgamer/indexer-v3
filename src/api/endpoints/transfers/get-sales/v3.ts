@@ -13,6 +13,7 @@ import {
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
+import { Sources } from "@/models/sources";
 
 const version = "v3";
 
@@ -77,6 +78,7 @@ export const getSalesV3Options: RouteOptions = {
               name: Joi.string().allow(null, ""),
             }),
           }),
+          orderSource: Joi.string().allow(null, ""),
           orderSide: Joi.string().valid("ask", "bid"),
           from: Joi.string()
             .lowercase()
@@ -195,6 +197,7 @@ export const getSalesV3Options: RouteOptions = {
           tokens_data.collection_name
         FROM (
           SELECT
+            orders.source_id,
             fill_events_2.contract,
             fill_events_2.token_id,
             fill_events_2.order_side,
@@ -208,6 +211,8 @@ export const getSalesV3Options: RouteOptions = {
             fill_events_2.log_index,
             fill_events_2.batch_index
           FROM fill_events_2
+          LEFT JOIN orders
+            ON fill_events_2.order_id = orders.id
             ${tokenJoins}
           WHERE
             ${collectionFilter}
@@ -247,6 +252,7 @@ export const getSalesV3Options: RouteOptions = {
         );
       }
 
+      const sources = await Sources.getInstance();
       const result = rawResult.map((r) => ({
         token: {
           contract: fromBuffer(r.contract),
@@ -258,6 +264,7 @@ export const getSalesV3Options: RouteOptions = {
             name: r.collection_name,
           },
         },
+        orderSource: r.source_id ? sources.get(fromBuffer(r.source_id))?.metadata?.name : null,
         orderSide: r.order_side === "sell" ? "ask" : "bid",
         from: fromBuffer(r.maker),
         to: fromBuffer(r.taker),
