@@ -393,9 +393,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
       const sources = await Sources.getInstance();
 
       const result = rawResult.map((r) => {
-        const source = r.floor_sell_source_id
-          ? sources.get(r.floor_sell_source_id, fromBuffer(r.contract), r.token_id)
-          : null;
+        const source = r.floor_sell_source_id ? sources.get(r.floor_sell_source_id) : null;
 
         return {
           token: {

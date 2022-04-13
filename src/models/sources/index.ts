@@ -75,35 +75,13 @@ export class Sources {
     await idb.none(query, values);
   }
 
-  public get(id: number, contract?: string, tokenId?: string) {
+  public get(id: number) {
     let sourceEntity;
 
     if (id in this.sources) {
       sourceEntity = (this.sources as any)[id];
     } else {
       sourceEntity = Sources.getDefaultSource();
-    }
-
-    if (config.chainId == 1) {
-      if (sourceEntity.metadata.urlMainnet && contract && tokenId) {
-        sourceEntity.metadata.url = _.replace(
-          sourceEntity.metadata.urlMainnet,
-          "${contract}",
-          contract
-        );
-
-        sourceEntity.metadata.url = _.replace(sourceEntity.metadata.url, "${tokenId}", tokenId);
-      }
-    } else {
-      if (sourceEntity.metadata.urlRinkeby && contract && tokenId) {
-        sourceEntity.metadata.url = _.replace(
-          sourceEntity.metadata.urlRinkeby,
-          "${contract}",
-          contract
-        );
-
-        sourceEntity.metadata.url = _.replace(sourceEntity.metadata.url, "${tokenId}", tokenId);
-      }
     }
 
     return sourceEntity;
