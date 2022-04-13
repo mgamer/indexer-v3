@@ -337,12 +337,7 @@ export const getOrdersBidsV2Options: RouteOptions = {
         let source: SourcesEntity | undefined;
 
         if (r.source_id_int) {
-          let contract: string | undefined;
-          let tokenId: string | undefined;
-          if (r.token_set_id?.startsWith("token:")) {
-            [contract, tokenId] = r.token_set_id.split(":").slice(1);
-          }
-          source = sources.get(r.source_id_int, contract, tokenId);
+          source = sources.get(r.source_id_int);
         }
 
         return {

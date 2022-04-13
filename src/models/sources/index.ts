@@ -4,6 +4,7 @@ import _ from "lodash";
 import { config } from "@/config/index";
 import { idb } from "@/common/db";
 import { SourcesEntity, SourcesEntityParams } from "@/models/sources/sources-entity";
+import { AddressZero } from "@ethersproject/constants";
 
 import { default as sources } from "./sources.json";
 
@@ -12,11 +13,13 @@ export class Sources {
 
   public sources: object;
   public sourcesByNames: object;
+  public sourcesByAddress: object;
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {
     this.sources = {};
     this.sourcesByNames = {};
+    this.sourcesByAddress = {};
   }
 
   private async loadData() {
@@ -25,6 +28,7 @@ export class Sources {
     for (const source of sources) {
       (this.sources as any)[source.id] = new SourcesEntity(source);
       (this.sourcesByNames as any)[source.metadata.name] = new SourcesEntity(source);
+      (this.sourcesByAddress as any)[source.metadata.address] = new SourcesEntity(source);
     }
   }
 
@@ -41,7 +45,7 @@ export class Sources {
     return new SourcesEntity({
       id: 0,
       metadata: {
-        id: "0",
+        address: AddressZero,
         name: "Reservoir",
         icon: "https://www.reservoir.market/reservoir.svg",
         urlMainnet: "https://www.reservoir.market/collections/${contract}/${tokenId}",
@@ -112,6 +116,40 @@ export class Sources {
       sourceEntity = (this.sourcesByNames as any)[name];
     } else {
       sourceEntity = Sources.getDefaultSource();
+    }
+
+    return sourceEntity;
+  }
+
+  public getByAddress(address: string, contract?: string, tokenId?: string) {
+    let sourceEntity;
+
+    if (address in this.sourcesByAddress) {
+      sourceEntity = (this.sourcesByAddress as any)[address];
+    } else {
+      sourceEntity = Sources.getDefaultSource();
+    }
+
+    if (config.chainId == 1) {
+      if (sourceEntity.metadata.urlMainnet && contract && tokenId) {
+        sourceEntity.metadata.url = _.replace(
+          sourceEntity.metadata.urlMainnet,
+          "${contract}",
+          contract
+        );
+
+        sourceEntity.metadata.url = _.replace(sourceEntity.metadata.url, "${tokenId}", tokenId);
+      }
+    } else {
+      if (sourceEntity.metadata.urlRinkeby && contract && tokenId) {
+        sourceEntity.metadata.url = _.replace(
+          sourceEntity.metadata.urlRinkeby,
+          "${contract}",
+          contract
+        );
+
+        sourceEntity.metadata.url = _.replace(sourceEntity.metadata.url, "${tokenId}", tokenId);
+      }
     }
 
     return sourceEntity;

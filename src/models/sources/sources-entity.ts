@@ -4,7 +4,7 @@ export type SourcesEntityParams = {
 };
 
 export type SourcesMetadata = {
-  id: string;
+  address: string;
   name: string;
   icon?: string | null;
   url?: string | null;
@@ -15,11 +15,13 @@ export type SourcesMetadata = {
 export class SourcesEntity {
   id: number;
   name: string;
+  address: string;
   metadata: SourcesMetadata;
 
   constructor(params: SourcesEntityParams) {
     this.id = params.id;
     this.name = params.metadata.name;
+    this.address = params.metadata.address;
     this.metadata = params.metadata;
   }
 }

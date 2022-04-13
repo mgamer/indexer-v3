@@ -342,6 +342,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/tokens/details/v4",
+    options: tokensEndpoints.getTokensDetailsV4Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/tokens/floor/v1",
     options: tokensEndpoints.getTokensFloorV1Options,
   });

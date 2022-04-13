@@ -5,6 +5,7 @@ export * from "@/api/endpoints/tokens/get-tokens/v4";
 export * from "@/api/endpoints/tokens/get-tokens-details/v1";
 export * from "@/api/endpoints/tokens/get-tokens-details/v2";
 export * from "@/api/endpoints/tokens/get-tokens-details/v3";
+export * from "@/api/endpoints/tokens/get-tokens-details/v4";
 export * from "@/api/endpoints/tokens/get-tokens-floor/v1";
 export * from "@/api/endpoints/tokens/get-user-tokens/v1";
 export * from "@/api/endpoints/tokens/get-user-tokens/v2";
