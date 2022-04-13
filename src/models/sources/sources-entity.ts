@@ -1,5 +1,7 @@
 export type SourcesEntityParams = {
   id: number;
+  name: string;
+  address: string;
   metadata: SourcesMetadata;
 };
 

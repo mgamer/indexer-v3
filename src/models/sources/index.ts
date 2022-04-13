@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import _ from "lodash";
 
+import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { idb } from "@/common/db";
 import { SourcesEntity, SourcesEntityParams } from "@/models/sources/sources-entity";
 import { AddressZero } from "@ethersproject/constants";
 
-import { default as sources } from "./sources.json";
+import { default as sourcesFromJson } from "./sources.json";
 
 export class Sources {
   private static instance: Sources;
@@ -23,13 +24,28 @@ export class Sources {
   }
 
   private async loadData() {
-    const sources: SourcesEntityParams[] | null = await idb.manyOrNone(`SELECT * FROM sources_v2`);
+    // Try to load from cache
+    const sourcesCache = await redis.get(Sources.getCacheKey());
+    let sources: SourcesEntityParams[];
+
+    if (_.isNull(sourcesCache)) {
+      // If no cache load from DB
+      sources = await idb.manyOrNone(`SELECT * FROM sources_v2`);
+      await redis.set(Sources.getCacheKey(), JSON.stringify(sources), "EX", 60 * 60 * 24);
+    } else {
+      // Parse the cache data
+      sources = JSON.parse(sourcesCache);
+    }
 
     for (const source of sources) {
       (this.sources as any)[source.id] = new SourcesEntity(source);
-      (this.sourcesByNames as any)[source.metadata.name] = new SourcesEntity(source);
-      (this.sourcesByAddress as any)[source.metadata.address] = new SourcesEntity(source);
+      (this.sourcesByNames as any)[source.name] = new SourcesEntity(source);
+      (this.sourcesByAddress as any)[source.address] = new SourcesEntity(source);
     }
+  }
+
+  public static getCacheKey() {
+    return "sources";
   }
 
   public static async getInstance() {
@@ -44,6 +60,8 @@ export class Sources {
   public static getDefaultSource(): SourcesEntity {
     return new SourcesEntity({
       id: 0,
+      address: AddressZero,
+      name: "Reservoir",
       metadata: {
         address: AddressZero,
         name: "Reservoir",
@@ -55,20 +73,21 @@ export class Sources {
   }
 
   public static async syncSources() {
-    _.forEach(sources, (metadata, id) => {
+    _.forEach(sourcesFromJson, (metadata, id) => {
       Sources.add(Number(id), metadata);
     });
   }
 
   public static async add(id: number, metadata: object) {
-    const query = `INSERT INTO sources_v2 (id, name, metadata)
-                   VALUES ( $/id/, $/name/, $/metadata:json/)
+    const query = `INSERT INTO sources_v2 (id, name, address, metadata)
+                   VALUES ( $/id/, $/name/, $/address/, $/metadata:json/)
                    ON CONFLICT (id) DO UPDATE
                    SET metadata = $/metadata:json/, name = $/name/`;
 
     const values = {
       id,
       name: (metadata as any).name,
+      address: (metadata as any).address,
       metadata: metadata,
     };
 
