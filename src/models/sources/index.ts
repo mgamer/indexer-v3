@@ -9,6 +9,7 @@ import { SourcesEntity, SourcesEntityParams } from "@/models/sources/sources-ent
 import { AddressZero } from "@ethersproject/constants";
 
 import { default as sourcesFromJson } from "./sources.json";
+import { logger } from "@/common/logger";
 
 export class Sources {
   private static instance: Sources;
@@ -40,8 +41,8 @@ export class Sources {
 
     for (const source of sources) {
       (this.sources as any)[source.id] = new SourcesEntity(source);
-      (this.sourcesByNames as any)[_.lowerCase(source.name)] = new SourcesEntity(source);
-      (this.sourcesByAddress as any)[_.lowerCase(source.address)] = new SourcesEntity(source);
+      (this.sourcesByNames as any)[_.toLower(source.name)] = new SourcesEntity(source);
+      (this.sourcesByAddress as any)[_.toLower(source.address)] = new SourcesEntity(source);
     }
   }
 
@@ -109,10 +110,7 @@ export class Sources {
     const sourcesEntity = new SourcesEntity(source);
 
     await Sources.instance.loadData(true); // reload the cache
-
-    (this.sources as any)[source.id] = sourcesEntity;
-    (this.sourcesByNames as any)[source.name] = sourcesEntity;
-    (this.sourcesByAddress as any)[source.address] = sourcesEntity;
+    logger.info("sources", `New source ${name} - ${address} was added`);
 
     return sourcesEntity;
   }
@@ -132,8 +130,8 @@ export class Sources {
   public getByName(name: string, returnDefault = true) {
     let sourceEntity;
 
-    if (_.lowerCase(name) in this.sourcesByNames) {
-      sourceEntity = (this.sourcesByNames as any)[_.lowerCase(name)];
+    if (_.toLower(name) in this.sourcesByNames) {
+      sourceEntity = (this.sourcesByNames as any)[_.toLower(name)];
     } else if (returnDefault) {
       sourceEntity = Sources.getDefaultSource();
     }
@@ -144,8 +142,8 @@ export class Sources {
   public getByAddress(address: string, contract?: string, tokenId?: string, returnDefault = true) {
     let sourceEntity;
 
-    if (_.lowerCase(address) in this.sourcesByAddress) {
-      sourceEntity = (this.sourcesByAddress as any)[_.lowerCase(address)];
+    if (_.toLower(address) in this.sourcesByAddress) {
+      sourceEntity = (this.sourcesByAddress as any)[_.toLower(address)];
     } else if (returnDefault) {
       sourceEntity = Sources.getDefaultSource();
     }

@@ -12,6 +12,7 @@ import * as ownersEndpoints from "@/api/endpoints/owners";
 import * as statsEndpoints from "@/api/endpoints/stats";
 import * as tokensEndpoints from "@/api/endpoints/tokens";
 import * as transfersEndpoints from "@/api/endpoints/transfers";
+import * as redirectsEndpoints from "@/api/endpoints/redirects";
 
 export const setupRoutes = (server: Server) => {
   // Admin
@@ -400,6 +401,13 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/transfers/v2",
     options: transfersEndpoints.getTransfersV2Options,
+  });
+
+  // Redirects
+  server.route({
+    method: "GET",
+    path: "/redirect/logo/v1",
+    options: redirectsEndpoints.getRedirectLogoV1Options,
   });
 
   // Health
