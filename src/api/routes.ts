@@ -156,6 +156,12 @@ export const setupRoutes = (server: Server) => {
     options: eventsEndpoints.getTokensFloorAskV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/events/tokens/floor-ask/v2",
+    options: eventsEndpoints.getTokensFloorAskV2Options,
+  });
+
   // Execute
 
   server.route({
