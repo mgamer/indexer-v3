@@ -133,7 +133,7 @@ export class Sources {
     let sourceEntity;
 
     if (_.lowerCase(name) in this.sourcesByNames) {
-      sourceEntity = (this.sourcesByNames as any)[name];
+      sourceEntity = (this.sourcesByNames as any)[_.lowerCase(name)];
     } else if (returnDefault) {
       sourceEntity = Sources.getDefaultSource();
     }
@@ -145,7 +145,7 @@ export class Sources {
     let sourceEntity;
 
     if (_.lowerCase(address) in this.sourcesByAddress) {
-      sourceEntity = (this.sourcesByAddress as any)[address];
+      sourceEntity = (this.sourcesByAddress as any)[_.lowerCase(address)];
     } else if (returnDefault) {
       sourceEntity = Sources.getDefaultSource();
     }
