@@ -11,6 +11,7 @@ import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import { offChainCheck } from "@/orderbook/orders/looks-rare/check";
 import * as tokenSet from "@/orderbook/token-sets";
+import { Sources } from "@/models/sources";
 
 export type OrderInfo = {
   orderParams: Sdk.LooksRare.Types.MakerOrderParams;
@@ -40,6 +41,7 @@ export const save = async (
     try {
       const order = new Sdk.LooksRare.Order(config.chainId, orderParams);
       const id = order.hash();
+      const sources = await Sources.getInstance();
 
       // Check: order doesn't already exist
       const orderExists = await idb.oneOrNone(`SELECT 1 FROM "orders" "o" WHERE "o"."id" = $/id/`, {
@@ -222,7 +224,7 @@ export const save = async (
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
         nonce: order.params.nonce,
         source_id: source ? toBuffer(source) : null,
-        source_id_int: source ? 3 : null,
+        source_id_int: source ? sources.getByName("LooksRare").id : null,
         contract: toBuffer(order.params.collection),
         fee_bps: feeBps,
         fee_breakdown: feeBreakdown || null,

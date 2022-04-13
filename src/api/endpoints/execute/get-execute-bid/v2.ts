@@ -23,11 +23,11 @@ import * as wyvernV23BuyAttribute from "@/orderbook/orders/wyvern-v2.3/build/buy
 import * as wyvernV23BuyCollection from "@/orderbook/orders/wyvern-v2.3/build/buy/collection";
 import * as wyvernV23BuyToken from "@/orderbook/orders/wyvern-v2.3/build/buy/token";
 
-const version = "v1";
+const version = "v2";
 
-export const getExecuteBidV1Options: RouteOptions = {
+export const getExecuteBidV2Options: RouteOptions = {
   description: "Create a bid on any token, collection or trait",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "3. Router"],
   plugins: {
     "hapi-swagger": {
       order: 2,
@@ -57,9 +57,7 @@ export const getExecuteBidV1Options: RouteOptions = {
         .required(),
       orderKind: Joi.string().valid("wyvern-v2.3", "721ex", "zeroex-v4").default("wyvern-v2.3"),
       orderbook: Joi.string().valid("reservoir", "opensea").default("reservoir"),
-      source: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/),
+      source: Joi.string(),
       automatedRoyalties: Joi.boolean().default(true),
       fee: Joi.alternatives(Joi.string(), Joi.number()),
       feeRecipient: Joi.string()

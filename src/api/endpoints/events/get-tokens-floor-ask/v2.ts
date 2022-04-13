@@ -196,7 +196,9 @@ export const getTokensFloorAskV2Options: RouteOptions = {
           maker: r.maker ? fromBuffer(r.maker) : null,
           price: r.price ? formatEth(r.price) : null,
           validUntil: r.price ? Number(r.valid_until) : null,
-          source: r.source_id ? sources.get(fromBuffer(r.source_id))?.metadata?.name : null,
+          source: r.source_id
+            ? sources.getByAddress(fromBuffer(r.source_id))?.metadata?.name
+            : null,
         },
         event: {
           id: r.id,

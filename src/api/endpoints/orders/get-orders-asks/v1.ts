@@ -341,7 +341,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
           if (r.token_set_id?.startsWith("token:")) {
             [contract, tokenId] = r.token_set_id.split(":").slice(1);
           }
-          source = sources.get(fromBuffer(r.source_id), contract, tokenId);
+          source = sources.getByAddress(fromBuffer(r.source_id), contract, tokenId);
         }
 
         return {
@@ -364,8 +364,8 @@ export const getOrdersAsksV1Options: RouteOptions = {
           validUntil: Number(r.valid_until),
           metadata: r.metadata,
           source: {
-            id: source?.metadata.id,
-            name: source?.metadata.name,
+            id: source?.address,
+            name: source?.name,
             icon: source?.metadata.icon,
             url: source?.metadata.url,
           },

@@ -186,7 +186,9 @@ export const getSalesBulkV1Options: RouteOptions = {
           contract: fromBuffer(r.contract),
           tokenId: r.token_id,
         },
-        orderSource: r.source_id ? sources.get(fromBuffer(r.source_id))?.metadata?.name : null,
+        orderSource: r.source_id
+          ? sources.getByAddress(fromBuffer(r.source_id))?.metadata?.name
+          : null,
         orderSide: r.order_side === "sell" ? "ask" : "bid",
         from: fromBuffer(r.maker),
         to: fromBuffer(r.taker),

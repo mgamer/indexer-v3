@@ -24,11 +24,11 @@ import * as wyvernV23SellToken from "@/orderbook/orders/wyvern-v2.3/build/sell/t
 import * as wyvernV23Utils from "@/orderbook/orders/wyvern-v2.3/utils";
 import * as wyvernV23Check from "@/orderbook/orders/wyvern-v2.3/check";
 
-const version = "v1";
+const version = "v2";
 
-export const getExecuteListV1Options: RouteOptions = {
+export const getExecuteListV2Options: RouteOptions = {
   description: "List a token for sale",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "3. Router"],
   plugins: {
     "hapi-swagger": {
       order: 1,
@@ -51,9 +51,7 @@ export const getExecuteListV1Options: RouteOptions = {
         .valid("721ex", "looks-rare", "wyvern-v2.3", "zeroex-v4")
         .default("wyvern-v2.3"),
       orderbook: Joi.string().valid("opensea", "reservoir").default("reservoir"),
-      source: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/),
+      source: Joi.string(),
       automatedRoyalties: Joi.boolean().default(true),
       fee: Joi.alternatives(Joi.string(), Joi.number()),
       feeRecipient: Joi.string()
