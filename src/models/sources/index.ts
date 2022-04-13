@@ -190,7 +190,7 @@ export class Sources {
       sourceEntity = this.getByName(source, false); // This is a name
 
       if (!sourceEntity) {
-        const address = randomBytes(32).toString("hex");
+        const address = "0x" + randomBytes(20).toString("hex");
         sourceEntity = await this.create(source, address);
       }
     }
