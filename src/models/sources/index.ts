@@ -40,8 +40,8 @@ export class Sources {
 
     for (const source of sources) {
       (this.sources as any)[source.id] = new SourcesEntity(source);
-      (this.sourcesByNames as any)[source.name] = new SourcesEntity(source);
-      (this.sourcesByAddress as any)[source.address] = new SourcesEntity(source);
+      (this.sourcesByNames as any)[_.lowerCase(source.name)] = new SourcesEntity(source);
+      (this.sourcesByAddress as any)[_.lowerCase(source.address)] = new SourcesEntity(source);
     }
   }
 
@@ -132,7 +132,7 @@ export class Sources {
   public getByName(name: string, returnDefault = true) {
     let sourceEntity;
 
-    if (name in this.sourcesByNames) {
+    if (_.lowerCase(name) in this.sourcesByNames) {
       sourceEntity = (this.sourcesByNames as any)[name];
     } else if (returnDefault) {
       sourceEntity = Sources.getDefaultSource();
@@ -144,7 +144,7 @@ export class Sources {
   public getByAddress(address: string, contract?: string, tokenId?: string, returnDefault = true) {
     let sourceEntity;
 
-    if (address in this.sourcesByAddress) {
+    if (_.lowerCase(address) in this.sourcesByAddress) {
       sourceEntity = (this.sourcesByAddress as any)[address];
     } else if (returnDefault) {
       sourceEntity = Sources.getDefaultSource();
