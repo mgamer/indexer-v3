@@ -14,7 +14,7 @@ export const getOrdersV2Options: RouteOptions = {
   description: "List of valid orders.",
   notes:
     "Access orders with various filters applied. If you need orders created by a single user, use the positions API instead.",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "1. Order Book"],
   plugins: {
     "hapi-swagger": {
       deprecated: true,
@@ -111,7 +111,7 @@ export const getOrdersV2Options: RouteOptions = {
             NULLIF(DATE_PART('epoch', UPPER("o"."valid_between")), 'Infinity'),
             0
           ) AS "valid_until",
-          "o"."source_id_int",
+          "o"."source_id",
           "o"."fee_bps",
           "o"."fee_breakdown",
           COALESCE(
@@ -165,7 +165,7 @@ export const getOrdersV2Options: RouteOptions = {
 
       const result = await edb.manyOrNone(baseQuery, query).then((result) =>
         result.map((r) => {
-          const source = r.source_id_int ? sources.get(r.source_id_int).name : null;
+          const source = r.source_id ? sources.getByAddress(fromBuffer(r.source_id)).name : null;
 
           return {
             id: r.id,
