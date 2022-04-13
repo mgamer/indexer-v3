@@ -13,6 +13,7 @@ import {
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
+import { Sources } from "@/models/sources";
 
 const version = "v1";
 
@@ -60,6 +61,7 @@ export const getSalesBulkV1Options: RouteOptions = {
               .pattern(/^0x[a-fA-F0-9]{40}$/),
             tokenId: Joi.string().pattern(/^[0-9]+$/),
           }),
+          orderSource: Joi.string().allow(null, ""),
           orderSide: Joi.string().valid("ask", "bid"),
           from: Joi.string()
             .lowercase()
@@ -140,6 +142,7 @@ export const getSalesBulkV1Options: RouteOptions = {
           fill_events_2_data.*
         FROM (
           SELECT
+            orders.source_id,
             fill_events_2.contract,
             fill_events_2.token_id,
             fill_events_2.order_side,
@@ -153,6 +156,8 @@ export const getSalesBulkV1Options: RouteOptions = {
             fill_events_2.log_index,
             fill_events_2.batch_index
           FROM fill_events_2
+          LEFT JOIN orders
+            ON fill_events_2.order_id = orders.id
             ${conditionsRendered}            
           ORDER BY
             fill_events_2.block DESC,
@@ -175,11 +180,13 @@ export const getSalesBulkV1Options: RouteOptions = {
         );
       }
 
+      const sources = await Sources.getInstance();
       const result = rawResult.map((r) => ({
         token: {
           contract: fromBuffer(r.contract),
           tokenId: r.token_id,
         },
+        orderSource: r.source_id ? sources.get(fromBuffer(r.source_id))?.metadata?.name : null,
         orderSide: r.order_side === "sell" ? "ask" : "bid",
         from: fromBuffer(r.maker),
         to: fromBuffer(r.taker),
