@@ -205,7 +205,7 @@ export const getOrdersAllV1Options: RouteOptions = {
       if (query.source) {
         const sources = await Sources.getInstance();
         const source = sources.getByName(query.source);
-        (query as any).sourceAddress = source.address;
+        (query as any).sourceAddress = toBuffer(source.address);
         conditions.push(`"o"."source_id" = $/sourceAddress/`);
       }
 
