@@ -8,8 +8,8 @@ export type SourcesEntityParams = {
 export type SourcesMetadata = {
   icon?: string | null;
   url?: string | null;
-  urlMainnet?: string | null;
-  urlRinkeby?: string | null;
+  tokenUrlMainnet?: string | null;
+  tokenUrlRinkeby?: string | null;
 };
 
 export class SourcesEntity {
