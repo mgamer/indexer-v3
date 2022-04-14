@@ -12,6 +12,7 @@ import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import { offChainCheck } from "@/orderbook/orders/opendao/check";
 import * as tokenSet from "@/orderbook/token-sets";
+import { Sources } from "@/models/sources";
 
 export type OrderInfo = {
   orderParams: Sdk.OpenDao.Types.BaseOrder;
@@ -264,7 +265,17 @@ export const save = async (
       }
 
       // Handle: source and fees breakdown
-      const source = metadata.source ?? Sdk.OpenDao.Addresses.Exchange[config.chainId];
+      let source: string | undefined;
+      let sourceId: number | null = null;
+
+      // If source was passed
+      if (metadata.source) {
+        const sources = await Sources.getInstance();
+        const sourceEntity = await sources.getOrInsert(metadata.source);
+        source = sourceEntity.address;
+        sourceId = sourceEntity.id;
+      }
+
       const feeBreakdown = order.params.fees.map(({ recipient, amount }) => ({
         kind: "royalty",
         recipient,
@@ -289,6 +300,7 @@ export const save = async (
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
         nonce: order.params.nonce,
         source_id: source ? toBuffer(source) : null,
+        source_id_int: sourceId,
         contract: toBuffer(order.params.nft),
         fee_bps: feeBps.toNumber(),
         fee_breakdown: feeBreakdown || null,
@@ -337,6 +349,7 @@ export const save = async (
         { name: "valid_between", mod: ":raw" },
         "nonce",
         "source_id",
+        "source_id_int",
         "contract",
         "fee_bps",
         { name: "fee_breakdown", mod: ":json" },

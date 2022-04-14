@@ -1,23 +1,27 @@
 export type SourcesEntityParams = {
-  source_id: string;
+  id: number;
+  name: string;
+  address: string;
   metadata: SourcesMetadata;
 };
 
 export type SourcesMetadata = {
-  id: string;
-  name?: string;
   icon?: string | null;
   url?: string | null;
-  urlMainnet?: string | null;
-  urlRinkeby?: string | null;
+  tokenUrlMainnet?: string | null;
+  tokenUrlRinkeby?: string | null;
 };
 
 export class SourcesEntity {
-  sourceId: string;
+  id: number;
+  name: string;
+  address: string;
   metadata: SourcesMetadata;
 
   constructor(params: SourcesEntityParams) {
-    this.sourceId = params.source_id;
+    this.id = params.id;
+    this.name = params.name;
+    this.address = params.address;
     this.metadata = params.metadata;
   }
 }

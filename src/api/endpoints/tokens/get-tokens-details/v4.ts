@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { AddressZero } from "@ethersproject/constants";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 import _ from "lodash";
@@ -17,9 +16,9 @@ import {
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
 
-const version = "v3";
+const version = "v4";
 
-export const getTokensDetailsV3Options: RouteOptions = {
+export const getTokensDetailsV4Options: RouteOptions = {
   description: "Get one or more tokens with full details",
   notes:
     "Get a list of tokens with full metadata. This is useful for showing a single token page, or scenarios that require more metadata. If you don't need this metadata, you should use the <a href='#/tokens/getTokensV1'>tokens</a> API, which is much faster.",
@@ -68,12 +67,7 @@ export const getTokensDetailsV3Options: RouteOptions = {
       attributes: Joi.object()
         .unknown()
         .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
-      source: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .description(
-          "Filter to a particular source, e.g. `0x5b3256965e7c3cf26e11fcaf296dfc8807c01073`"
-        ),
+      source: Joi.string(),
       sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice"),
       limit: Joi.number().integer().min(1).max(50).default(20),
       continuation: Joi.string().pattern(base64Regex),
@@ -280,16 +274,12 @@ export const getTokensDetailsV3Options: RouteOptions = {
       }
 
       if (query.source) {
-        if (query.source === AddressZero) {
-          conditions.push(
-            `"t"."floor_sell_value" IS NOT NULL AND coalesce("os"."source_id", '\\x00') = '\\x00'`
-          );
-        } else {
-          (query as any).source = toBuffer(query.source);
-          conditions.push(
-            `"t"."floor_sell_value" IS NOT NULL AND coalesce("os"."source_id", '\\x00') = $/source/`
-          );
-        }
+        const sources = await Sources.getInstance();
+        const source = sources.getByName(query.source);
+        (query as any).sourceAddress = source.address;
+        conditions.push(
+          `"t"."floor_sell_value" IS NOT NULL AND "os"."source_id" = $/sourceAddress/`
+        );
       }
 
       // Continue with the next page, this depends on the sorting used

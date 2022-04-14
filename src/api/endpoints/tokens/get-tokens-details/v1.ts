@@ -271,7 +271,11 @@ export const getTokensDetailsV1Options: RouteOptions = {
       const result = await edb.manyOrNone(baseQuery, query).then((result) =>
         result.map((r) => {
           const source = r.floor_sell_source_id
-            ? sources.get(fromBuffer(r.floor_sell_source_id), fromBuffer(r.contract), r.token_id)
+            ? sources.getByAddress(
+                fromBuffer(r.floor_sell_source_id),
+                fromBuffer(r.contract),
+                r.token_id
+              )
             : null;
 
           return {
@@ -305,8 +309,8 @@ export const getTokensDetailsV1Options: RouteOptions = {
                 validFrom: r.floor_sell_valid_from,
                 validUntil: r.floor_sell_value ? r.floor_sell_valid_until : null,
                 source: {
-                  id: source?.metadata.id,
-                  name: source?.metadata.name,
+                  id: source?.address,
+                  name: source?.name,
                   icon: source?.metadata.icon,
                   url: source?.metadata.url,
                 },
