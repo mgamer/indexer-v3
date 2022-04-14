@@ -410,6 +410,12 @@ export const setupRoutes = (server: Server) => {
     options: redirectsEndpoints.getRedirectLogoV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/redirect/token/v1",
+    options: redirectsEndpoints.getRedirectTokenV1Options,
+  });
+
   // Health
 
   // Both readyz and livez endpoints point to the same handler, maybe at some point we want to separate the logic

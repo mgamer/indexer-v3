@@ -66,8 +66,8 @@ export class Sources {
       name: "Reservoir",
       metadata: {
         icon: "https://www.reservoir.market/reservoir.svg",
-        urlMainnet: "https://www.reservoir.market/collections/${contract}/${tokenId}",
-        urlRinkeby: "https://www.reservoir.fun/collections/${contract}/${tokenId}",
+        tokenUrlMainnet: "https://www.reservoir.market/collections/${contract}/${tokenId}",
+        tokenUrlRinkeby: "https://www.reservoir.fun/collections/${contract}/${tokenId}",
       },
     });
   }
@@ -148,28 +148,8 @@ export class Sources {
       sourceEntity = Sources.getDefaultSource();
     }
 
-    if (sourceEntity) {
-      if (config.chainId == 1) {
-        if (sourceEntity.metadata.urlMainnet && contract && tokenId) {
-          sourceEntity.metadata.url = _.replace(
-            sourceEntity.metadata.urlMainnet,
-            "${contract}",
-            contract
-          );
-
-          sourceEntity.metadata.url = _.replace(sourceEntity.metadata.url, "${tokenId}", tokenId);
-        }
-      } else {
-        if (sourceEntity.metadata.urlRinkeby && contract && tokenId) {
-          sourceEntity.metadata.url = _.replace(
-            sourceEntity.metadata.urlRinkeby,
-            "${contract}",
-            contract
-          );
-
-          sourceEntity.metadata.url = _.replace(sourceEntity.metadata.url, "${tokenId}", tokenId);
-        }
-      }
+    if (sourceEntity && contract && tokenId) {
+      sourceEntity.metadata.url = this.getTokenUrl(sourceEntity, contract, tokenId);
     }
 
     return sourceEntity;
@@ -194,5 +174,29 @@ export class Sources {
     }
 
     return sourceEntity;
+  }
+
+  public getTokenUrl(sourceEntity: SourcesEntity, contract: string, tokenId: string) {
+    if (config.chainId == 1) {
+      if (sourceEntity.metadata.tokenUrlMainnet && contract && tokenId) {
+        sourceEntity.metadata.url = _.replace(
+          sourceEntity.metadata.tokenUrlMainnet,
+          "${contract}",
+          contract
+        );
+
+        return _.replace(sourceEntity.metadata.url, "${tokenId}", tokenId);
+      }
+    } else {
+      if (sourceEntity.metadata.tokenUrlRinkeby && contract && tokenId) {
+        sourceEntity.metadata.url = _.replace(
+          sourceEntity.metadata.tokenUrlRinkeby,
+          "${contract}",
+          contract
+        );
+
+        return _.replace(sourceEntity.metadata.url, "${tokenId}", tokenId);
+      }
+    }
   }
 }
