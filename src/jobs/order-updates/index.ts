@@ -71,7 +71,9 @@ if (config.doBackgroundWork) {
               );
 
               if (expiredOrders.length >= 1000) {
-                await lock.extend((15 - 5) * 1000);
+                await lock.extend((15 - 5) * 1000).catch(() => {
+                  /* Empty */
+                });
               } else {
                 done = true;
               }
