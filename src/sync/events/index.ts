@@ -867,6 +867,7 @@ export const syncEvents = async (
               if (
                 ![
                   Sdk.ZeroExV4.Addresses.Eth[config.chainId],
+                  Sdk.OpenDao.Addresses.Eth[config.chainId],
                   Sdk.Common.Addresses.Weth[config.chainId],
                 ].includes(erc20Token)
               ) {
@@ -976,6 +977,7 @@ export const syncEvents = async (
               if (
                 ![
                   Sdk.ZeroExV4.Addresses.Eth[config.chainId],
+                  Sdk.OpenDao.Addresses.Eth[config.chainId],
                   Sdk.Common.Addresses.Weth[config.chainId],
                 ].includes(erc20Token)
               ) {
@@ -1004,8 +1006,6 @@ export const syncEvents = async (
                     {
                       maker: toBuffer(maker),
                       nonce,
-                      value,
-                      tokenSetId: `token:${erc1155Token}:${erc1155TokenId}`,
                     }
                   )
                   .then((result) => {
