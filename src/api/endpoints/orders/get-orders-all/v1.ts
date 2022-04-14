@@ -205,8 +205,8 @@ export const getOrdersAllV1Options: RouteOptions = {
       if (query.source) {
         const sources = await Sources.getInstance();
         const source = sources.getByName(query.source);
-        (query as any).sourceAddress = source.address;
-        conditions.push(`"o"."source_id" = $/sourceAddress/`);
+        (query as any).sourceAddress = toBuffer(source.address);
+        conditions.push(`coalesce(orders.source_id, '\\x00'::BYTEA) = $/sourceAddress/`);
       }
 
       if (query.continuation) {

@@ -276,7 +276,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
       if (query.source) {
         const sources = await Sources.getInstance();
         const source = sources.getByName(query.source);
-        (query as any).sourceAddress = source.address;
+        (query as any).sourceAddress = toBuffer(source.address);
         conditions.push(
           `"t"."floor_sell_value" IS NOT NULL AND "os"."source_id" = $/sourceAddress/`
         );
