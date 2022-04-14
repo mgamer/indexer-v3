@@ -86,7 +86,7 @@ if (config.doBackgroundWork) {
             `Updated ${_.size(updateValues)} orders, lastOrder=${JSON.stringify(lastOrder)}`
           );
 
-          // await addToQueue(lastOrder.id);
+          await addToQueue(lastOrder.id);
         }
 
         try {
@@ -110,7 +110,7 @@ if (config.doBackgroundWork) {
 
   redlock
     .acquire(["order-resync"], 60 * 60 * 24 * 30 * 1000)
-    .then(() => addToQueue())
+    .then(() => addToQueue("0x161bef793621fd20cfdc504c47bd2741ead061f778cda0a4347c92f25c5a9741"))
     .catch(() => {
       // Skip on any errors
     });
