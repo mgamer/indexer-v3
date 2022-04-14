@@ -25,59 +25,44 @@ import "@/jobs/order-updates/by-maker-queue";
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
   cron.schedule(
-    "*/15 * * * * *",
+    "*/10 * * * * *",
     async () =>
       await redlock
-        .acquire(["expired-orders-check-lock"], (15 - 5) * 1000)
-        .then(async (lock) => {
+        .acquire(["expired-orders-check-lock"], (10 - 5) * 1000)
+        .then(async () => {
           logger.info(`expired-orders-check`, "Invalidating expired orders");
 
           try {
-            // TODO: Instead of updating everything in one go we should execute
-            // smaller batches and use keyset pagination to iterate through all
-            // of the expired orders (keyset pagination is amazing).
-
-            let done = false;
-            while (!done) {
-              const expiredOrders: { id: string }[] = await idb.manyOrNone(
-                `
-                  WITH x AS (
-                    SELECT
-                      orders.id,
-                      upper(orders.valid_between) AS expiration
-                    FROM orders
-                    WHERE upper(orders.valid_between) < now()
-                      AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
-                    LIMIT 1000
-                  )
-                  UPDATE orders SET
-                    fillability_status = 'expired',
-                    expiration = x.expiration
-                  FROM x
-                  WHERE orders.id = x.id
-                  RETURNING orders.id
-                `
-              );
-
-              await orderUpdatesById.addToQueue(
-                expiredOrders.map(
-                  ({ id }) =>
-                    ({
-                      context: `expired-orders-check-${Math.floor(Date.now() / 1000)}-${id}`,
-                      id,
-                      trigger: { kind: "expiry" },
-                    } as orderUpdatesById.OrderInfo)
+            const expiredOrders: { id: string }[] = await idb.manyOrNone(
+              `
+                WITH x AS (
+                  SELECT
+                    orders.id,
+                    upper(orders.valid_between) AS expiration
+                  FROM orders
+                  WHERE upper(orders.valid_between) < now()
+                    AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                  LIMIT 2000
                 )
-              );
+                UPDATE orders SET
+                  fillability_status = 'expired',
+                  expiration = x.expiration
+                FROM x
+                WHERE orders.id = x.id
+                RETURNING orders.id
+              `
+            );
 
-              if (expiredOrders.length >= 1000) {
-                await lock.extend((15 - 5) * 1000).catch(() => {
-                  /* Empty */
-                });
-              } else {
-                done = true;
-              }
-            }
+            await orderUpdatesById.addToQueue(
+              expiredOrders.map(
+                ({ id }) =>
+                  ({
+                    context: `expired-orders-check-${Math.floor(Date.now() / 1000)}-${id}`,
+                    id,
+                    trigger: { kind: "expiry" },
+                  } as orderUpdatesById.OrderInfo)
+              )
+            );
           } catch (error) {
             logger.error(`expired-orders-check`, `Failed to handle expired orders: ${error}`);
           }
