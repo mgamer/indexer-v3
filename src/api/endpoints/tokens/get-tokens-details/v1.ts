@@ -71,6 +71,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
             name: Joi.string().allow(null, ""),
             description: Joi.string().allow(null, ""),
             image: Joi.string().allow(null, ""),
+            kind: Joi.string().allow(null, ""),
             collection: Joi.object({
               id: Joi.string().allow(null),
               name: Joi.string().allow(null, ""),
@@ -135,6 +136,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
           "t"."image",
           "t"."collection_id",
           "c"."name" as "collection_name",
+          "con"."kind",
           "t"."last_buy_value",
           "t"."last_buy_timestamp",
           "t"."last_sell_value",
@@ -181,6 +183,8 @@ export const getTokensDetailsV1Options: RouteOptions = {
           ON "t"."top_buy_id" = "ob"."id"
         JOIN "collections" "c"
           ON "t"."collection_id" = "c"."id"
+        JOIN "contracts" "con"
+          ON "t"."contract" = "con"."address"
       `;
 
       if (query.tokenSetId) {
@@ -277,6 +281,7 @@ export const getTokensDetailsV1Options: RouteOptions = {
               name: r.name,
               description: r.description,
               image: r.image,
+              kind: r.kind,
               collection: {
                 id: r.collection_id,
                 name: r.collection_name,
