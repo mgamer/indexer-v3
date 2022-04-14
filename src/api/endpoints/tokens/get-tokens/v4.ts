@@ -67,6 +67,7 @@ export const getTokensV4Options: RouteOptions = {
       attributes: Joi.object()
         .unknown()
         .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
+      source: Joi.string(),
       sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice"),
       limit: Joi.number().integer().min(1).max(50).default(20),
       continuation: Joi.string().pattern(base64Regex),
@@ -192,6 +193,15 @@ export const getTokensV4Options: RouteOptions = {
 
       if (query.tokenSetId) {
         conditions.push(`"tst"."token_set_id" = $/tokenSetId/`);
+      }
+
+      if (query.source) {
+        const sources = await Sources.getInstance();
+        const source = sources.getByName(query.source);
+        (query as any).sourceAddress = toBuffer(source.address);
+        conditions.push(
+          `"t"."floor_sell_value" IS NOT NULL AND "os"."source_id" = $/sourceAddress/`
+        );
       }
 
       // Continue with the next page, this depends on the sorting used
