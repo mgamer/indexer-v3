@@ -29,7 +29,7 @@ if (config.doBackgroundWork) {
     async () =>
       await redlock
         .acquire(["expired-orders-check-lock"], (15 - 5) * 1000)
-        .then(async () => {
+        .then(async (lock) => {
           logger.info(`expired-orders-check`, "Invalidating expired orders");
 
           try {
@@ -37,14 +37,25 @@ if (config.doBackgroundWork) {
             // smaller batches and use keyset pagination to iterate through all
             // of the expired orders (keyset pagination is amazing).
 
-            const expiredOrders: { id: string }[] = await idb.manyOrNone(`
-              UPDATE "orders" SET
-                "fillability_status" = 'expired',
-                "expiration" = UPPER("valid_between")
-              WHERE UPPER("valid_between") < NOW()
-                AND ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance')
-              RETURNING "id"
-            `);
+            const expiredOrders: { id: string }[] = await idb.manyOrNone(
+              `
+                WITH x AS (
+                  SELECT
+                    orders.id,
+                    upper(orders.valid_between) AS expiration
+                  FROM orders
+                  WHERE upper(orders.valid_between) < now()
+                    AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                  LIMIT 1000
+                )
+                UPDATE orders SET
+                  fillability_status = 'expired',
+                  expiration = x.expiration
+                FROM x
+                WHERE orders.id = x.id
+                RETURNING orders.id
+              `
+            );
 
             await orderUpdatesById.addToQueue(
               expiredOrders.map(
@@ -56,6 +67,10 @@ if (config.doBackgroundWork) {
                   } as orderUpdatesById.OrderInfo)
               )
             );
+
+            if (expiredOrders.length >= 1000) {
+              await lock.extend((15 - 5) * 1000);
+            }
           } catch (error) {
             logger.error(`expired-orders-check`, `Failed to handle expired orders: ${error}`);
           }
