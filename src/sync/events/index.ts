@@ -974,8 +974,6 @@ export const syncEvents = async (
               const erc1155TokenId = parsedLog.args["erc1155TokenId"].toString();
               const erc1155FillAmount = parsedLog.args["erc1155FillAmount"].toString();
 
-              logger.info("debug", `Here: ${eventData.kind}`);
-
               if (
                 ![
                   Sdk.ZeroExV4.Addresses.Eth[config.chainId],
@@ -1015,8 +1013,6 @@ export const syncEvents = async (
                       orderId = result.id;
                     }
                   });
-
-                logger.info("debug", `Here 2: ${orderKind}, ${maker}, ${nonce}, ${orderId}`);
               }
 
               // Custom handling to support partial filling
