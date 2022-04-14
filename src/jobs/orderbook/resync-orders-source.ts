@@ -86,7 +86,7 @@ if (config.doBackgroundWork) {
             `Updated ${_.size(updateValues)} orders, lastOrder=${JSON.stringify(lastOrder)}`
           );
 
-          await addToQueue(lastOrder.id);
+          // await addToQueue(lastOrder.id);
         }
 
         try {
