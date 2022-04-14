@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.25.1 (2022-04-14)
+
+## 5.25.0 (2022-04-14)
+
+
+### Features
+
+* resume order source backfill ([56e91bf](https://github.com/reservoirprotocol/indexer-v3/commit/56e91bfe542ccc9ec909f512ddf64cb905d7b6e1))
+
 ### 5.24.2 (2022-04-14)
 
 ### 5.24.1 (2022-04-14)
