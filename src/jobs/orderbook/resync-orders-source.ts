@@ -28,13 +28,17 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { continuation } = job.data;
+      const { continuation, maxId } = job.data;
       const limit = 2000;
       const updateValues = {};
       let continuationFilter = "";
 
       if (continuation != "") {
         continuationFilter = `WHERE id > '${continuation}'`;
+
+        if (maxId != "") {
+          continuationFilter = ` AND id < '${maxId}'`;
+        }
       }
 
       const query = `SELECT id, source_id, source_id_int
@@ -86,7 +90,7 @@ if (config.doBackgroundWork) {
             `Updated ${_.size(updateValues)} orders, lastOrder=${JSON.stringify(lastOrder)}`
           );
 
-          await addToQueue(lastOrder.id);
+          // await addToQueue(lastOrder.id);
         }
 
         try {
@@ -110,12 +114,66 @@ if (config.doBackgroundWork) {
 
   redlock
     .acquire(["order-resync"], 60 * 60 * 24 * 30 * 1000)
-    .then(() => addToQueue("0x161df0120ff559733e0caf208682c21141c5aa89ba500d15c981aa447bb4bb72"))
+    .then(async () => {
+      await addToQueue(
+        "0x23addf16270ee3ce65c23c013762cb6162727f4dcdf98aecea6a7b39e5f6a889",
+        "0x3000000000000000000000000000000000000000"
+      );
+      await addToQueue(
+        "0x3000000000000000000000000000000000000000",
+        "0x4000000000000000000000000000000000000000"
+      );
+      await addToQueue(
+        "0x4000000000000000000000000000000000000000",
+        "0x5000000000000000000000000000000000000000"
+      );
+      await addToQueue(
+        "0x5000000000000000000000000000000000000000",
+        "0x6000000000000000000000000000000000000000"
+      );
+      await addToQueue(
+        "0x6000000000000000000000000000000000000000",
+        "0x7000000000000000000000000000000000000000"
+      );
+      await addToQueue(
+        "0x7000000000000000000000000000000000000000",
+        "0x8000000000000000000000000000000000000000"
+      );
+      await addToQueue(
+        "0x8000000000000000000000000000000000000000",
+        "0x9000000000000000000000000000000000000000"
+      );
+      await addToQueue(
+        "0x9000000000000000000000000000000000000000",
+        "0xA000000000000000000000000000000000000000"
+      );
+      await addToQueue(
+        "0xA000000000000000000000000000000000000000",
+        "0xB000000000000000000000000000000000000000"
+      );
+      await addToQueue(
+        "0xB000000000000000000000000000000000000000",
+        "0xC000000000000000000000000000000000000000"
+      );
+      await addToQueue(
+        "0xC000000000000000000000000000000000000000",
+        "0xD000000000000000000000000000000000000000"
+      );
+      await addToQueue(
+        "0xD000000000000000000000000000000000000000",
+        "0xE000000000000000000000000000000000000000"
+      );
+      await addToQueue(
+        "0xE000000000000000000000000000000000000000",
+        "0xF000000000000000000000000000000000000000"
+      );
+      await addToQueue("0xF000000000000000000000000000000000000000");
+    })
     .catch(() => {
       // Skip on any errors
     });
 }
 
-export const addToQueue = async (continuation = "") => {
-  await queue.add(randomUUID(), { continuation });
+export const addToQueue = async (continuation = "", maxId = "") => {
+  await queue.add(randomUUID(), { continuation, maxId });
 };
