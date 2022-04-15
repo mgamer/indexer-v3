@@ -50,7 +50,7 @@ export const getBuildInfo = async (
     price: options.weiPrice,
     fees: [],
     amount: collectionResult.kind === "erc1155" ? "1" : undefined,
-    expiry: options.expirationTime ? options.expirationTime : undefined,
+    expiry: Number(options.expirationTime) === 0 ? undefined : options.expirationTime,
     nonce: options.nonce,
   };
 
