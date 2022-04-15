@@ -90,7 +90,7 @@ if (config.doBackgroundWork) {
             `Updated ${_.size(updateValues)} orders, lastOrder=${JSON.stringify(lastOrder)}`
           );
 
-          // await addToQueue(lastOrder.id);
+          await addToQueue(lastOrder.id, maxId);
         }
 
         try {
@@ -116,7 +116,7 @@ if (config.doBackgroundWork) {
     .acquire(["order-resync"], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       await addToQueue(
-        "0x23addf16270ee3ce65c23c013762cb6162727f4dcdf98aecea6a7b39e5f6a889",
+        "0x23c3fed99dfccc34c18f53ea7a4bff1786481cadb3a1ea46113b842e4918ed6a",
         "0x3000000000000000000000000000000000000000"
       );
       await addToQueue(
