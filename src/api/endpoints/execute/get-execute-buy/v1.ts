@@ -285,11 +285,13 @@ export const getExecuteBuyV1Options: RouteOptions = {
                   AND orders.fillability_status = 'fillable'
                   AND orders.approval_status = 'approved'
                   AND orders.kind = 'opendao-erc1155'
+                  AND orders.maker != $/taker/
               ) x WHERE x.quantity < $/quantity/
             `,
             {
               tokenSetId: `token:${query.token}`,
               quantity: query.quantity,
+              taker: toBuffer(query.taker),
             }
           );
 
