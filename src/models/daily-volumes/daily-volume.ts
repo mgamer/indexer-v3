@@ -397,6 +397,13 @@ export class DailyVolume {
     const currentPeriod = date.getTime() / 1000 - timeDiff; // The last 1, 7, 30 days
     const previousPeriod = currentPeriod - timeDiff; // The period before the last 1, 7, 30 days
 
+    logger.info(
+      "daily-volumes",
+      JSON.stringify({
+        msg: `running calculateVolumeChange for period ${days}`,
+      })
+    );
+
     const query = `
         SELECT 
                collection_id,               
@@ -462,6 +469,13 @@ export class DailyVolume {
       return false;
     }
 
+    logger.info(
+      "daily-volumes",
+      JSON.stringify({
+        msg: `Finished calculateVolumeChange for period ${days}`,
+      })
+    );
+
     return true;
   }
 
@@ -478,6 +492,13 @@ export class DailyVolume {
 
     const timeDiff = period * 24 * 3600;
     const dayToFetch = date.getTime() / 1000 - timeDiff;
+
+    logger.info(
+      "daily-volumes",
+      JSON.stringify({
+        msg: `Running cacheFloorSalePrice for period ${period}`,
+      })
+    );
 
     const query = `
         SELECT 
@@ -537,6 +558,13 @@ export class DailyVolume {
       );
       return false;
     }
+
+    logger.info(
+      "daily-volumes",
+      JSON.stringify({
+        msg: `Finished cacheFloorSalePrice for period ${period}`,
+      })
+    );
 
     return true;
   }
