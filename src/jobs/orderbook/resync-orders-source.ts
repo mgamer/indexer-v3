@@ -37,7 +37,7 @@ if (config.doBackgroundWork) {
         continuationFilter = `WHERE id > '${continuation}'`;
 
         if (maxId != "") {
-          continuationFilter = ` AND id < '${maxId}'`;
+          continuationFilter += ` AND id < '${maxId}'`;
         }
       }
 
