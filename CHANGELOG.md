@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.26.0 (2022-04-15)
+
+
+### Features
+
+* pause queue ([bc347ea](https://github.com/reservoirprotocol/indexer-v3/commit/bc347ea7d0f5369581a2d80153b406d45520facf))
+
 ### 5.25.5 (2022-04-15)
 
 ### 5.25.4 (2022-04-15)
