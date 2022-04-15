@@ -84,4 +84,36 @@ export class Collections {
 
     return await idb.none(query, replacementValues);
   }
+
+  public static async getCollectionsMintedBetween(from: number, to: number, limit = 2000) {
+    const query = `SELECT *
+                   FROM collections
+                   WHERE minted_timestamp > ${from}
+                   AND minted_timestamp < ${to}
+                   ORDER BY minted_timestamp ASC
+                   LIMIT ${limit}`;
+
+    const collections = await idb.manyOrNone(query);
+
+    if (!_.isEmpty(collections)) {
+      return _.map(collections, (collection) => new CollectionsEntity(collection));
+    }
+
+    return [];
+  }
+
+  public static async getTopCollectionsByVolume(limit = 500) {
+    const query = `SELECT *
+                   FROM collections
+                   ORDER BY day1_volume DESC
+                   LIMIT ${limit}`;
+
+    const collections = await idb.manyOrNone(query);
+
+    if (!_.isEmpty(collections)) {
+      return _.map(collections, (collection) => new CollectionsEntity(collection));
+    }
+
+    return [];
+  }
 }

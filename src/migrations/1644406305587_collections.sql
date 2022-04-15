@@ -38,6 +38,10 @@ CREATE INDEX "collections_name_index"
   ON "collections"
   USING GIN ("name" gin_trgm_ops);
 
+CREATE INDEX "collections_minted_timestamp_index"
+    ON collections USING btree
+    (minted_timestamp DESC NULLS LAST);
+
 CREATE EXTENSION tsm_system_rows;
 
 -- Down Migration
