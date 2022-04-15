@@ -111,6 +111,11 @@ export const getExecuteBidV1Options: RouteOptions = {
       const attributeKey = query.attributeKey;
       const attributeValue = query.attributeValue;
 
+      // On Rinkeby, proxy ZeroEx V4 to 721ex
+      if (query.orderKind === "zeroex-v4" && config.chainId === 4) {
+        query.orderKind = "721ex";
+      }
+
       switch (query.orderKind) {
         case "wyvern-v2.3": {
           if (!["reservoir", "opensea"].includes(query.orderbook)) {
