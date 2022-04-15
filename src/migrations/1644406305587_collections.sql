@@ -14,6 +14,7 @@ CREATE TABLE "collections" (
   "token_count" INT NOT NULL DEFAULT 0,
   "created_at" TIMESTAMPTZ DEFAULT now(),
   "updated_at" TIMESTAMPTZ DEFAULT now(),
+  "last_metadata_sync" TIMESTAMPTZ,
   "minted_timestamp" INT
 );
 

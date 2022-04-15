@@ -136,10 +136,14 @@ if (config.doBackgroundWork) {
                 WITH "x" AS (
                   INSERT INTO "attributes" (
                     "attribute_key_id",
-                    "value"
+                    "value",
+                    "sell_updated_at",
+                    "buy_updated_at"
                   ) VALUES (
                     $/attributeKeyId/,
-                    $/value/
+                    $/value/,
+                    NOW(),
+                    NOW()
                   )
                   ON CONFLICT DO NOTHING
                   RETURNING "id"
