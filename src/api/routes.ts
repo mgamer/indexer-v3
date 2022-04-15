@@ -319,6 +319,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/tokens/bootstrap/v1",
+    options: tokensEndpoints.getTokensBootstrapV1Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/tokens/details/v1",
     options: tokensEndpoints.getTokensDetailsV1Options,
   });
