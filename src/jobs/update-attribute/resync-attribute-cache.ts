@@ -37,6 +37,7 @@ if (config.doBackgroundWork) {
         await Attributes.update(tokenAttribute.attributeId, {
           floorSellValue,
           onSaleCount,
+          sellUpdatedAt: new Date().toISOString(),
         });
       }
     },

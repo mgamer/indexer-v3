@@ -3,6 +3,8 @@ export type AttributesEntityUpdateParams = {
   onSaleCount?: number;
   floorSellValue?: number | null;
   topBuyValue?: number | null;
+  sellUpdatedAt?: string | null;
+  buyUpdatedAt?: string | null;
 };
 
 export type AttributesEntityParams = {
@@ -13,6 +15,8 @@ export type AttributesEntityParams = {
   on_sale_count: number;
   floor_sell_value: number;
   top_buy_value: number;
+  sell_updated_at: string;
+  buy_updated_at: string;
 };
 
 export class AttributesEntity {
@@ -23,6 +27,8 @@ export class AttributesEntity {
   onSaleCount: number;
   floorSellValue: number;
   topBuyValue: number;
+  sellUpdatedAt: string;
+  buyUpdatedAt: string;
 
   constructor(params: AttributesEntityParams) {
     this.id = params.id;
@@ -32,5 +38,7 @@ export class AttributesEntity {
     this.onSaleCount = params.on_sale_count;
     this.floorSellValue = params.floor_sell_value;
     this.topBuyValue = params.top_buy_value;
+    this.sellUpdatedAt = params.sell_updated_at;
+    this.buyUpdatedAt = params.buy_updated_at;
   }
 }

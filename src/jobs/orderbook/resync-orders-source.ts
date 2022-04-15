@@ -110,7 +110,7 @@ if (config.doBackgroundWork) {
 
   redlock
     .acquire(["order-resync"], 60 * 60 * 24 * 30 * 1000)
-    .then(() => addToQueue())
+    .then(() => addToQueue("0x161df0120ff559733e0caf208682c21141c5aa89ba500d15c981aa447bb4bb72"))
     .catch(() => {
       // Skip on any errors
     });

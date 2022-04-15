@@ -50,7 +50,9 @@ CREATE TABLE "token_attributes" (
   "attribute_id" BIGINT NOT NULL,
   "collection_id" TEXT NOT NULL,
   "key" TEXT NOT NULL,
-  "value" TEXT NOT NULL
+  "value" TEXT NOT NULL,
+  "sell_updated_at" TIMESTAMPTZ,
+  "buy_updated_at" TIMESTAMPTZ
 );
 
 ALTER TABLE "token_attributes"
