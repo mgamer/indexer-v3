@@ -264,9 +264,7 @@ export const getSalesV3Options: RouteOptions = {
             name: r.collection_name,
           },
         },
-        orderSource: r.source_id
-          ? sources.getByAddress(fromBuffer(r.source_id))?.metadata?.name
-          : null,
+        orderSource: r.source_id ? sources.getByAddress(fromBuffer(r.source_id))?.name : null,
         orderSide: r.order_side === "sell" ? "ask" : "bid",
         from: fromBuffer(r.maker),
         to: fromBuffer(r.taker),
