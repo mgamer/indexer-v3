@@ -102,7 +102,7 @@ export class Collections {
     return [];
   }
 
-  public static async getTopCollectionsByVolume(limit = 500) {
+  public static async getTopCollectionsByVolume(limit = 50) {
     const query = `SELECT *
                    FROM collections
                    ORDER BY day1_volume DESC
