@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.28.1 (2022-04-16)
+
+
+### Bug Fixes
+
+* stop collection refresh ([e6dd4fb](https://github.com/reservoirprotocol/indexer-v3/commit/e6dd4fb8925e97612250a33d9f5acbd22126e1ee))
+
 ## 5.28.0 (2022-04-16)
 
 
