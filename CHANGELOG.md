@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.27.0 (2022-04-16)
+
+
+### Features
+
+* update backoff ([9b146b9](https://github.com/reservoirprotocol/indexer-v3/commit/9b146b9ced4296a3ea5db9ee8be60b45b705243a))
+
 ### 5.26.4 (2022-04-15)
 
 ### 5.26.3 (2022-04-15)
