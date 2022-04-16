@@ -19,8 +19,8 @@ export const queue = new Queue(QUEUE_NAME, {
   defaultJobOptions: {
     attempts: 10,
     backoff: {
-      type: "exponential",
-      delay: 20000,
+      type: "fixed",
+      delay: 5000,
     },
     removeOnComplete: 10000,
     removeOnFail: 10000,
