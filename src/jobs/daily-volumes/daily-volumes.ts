@@ -33,6 +33,7 @@ if (config.doBackgroundWork) {
           "daily-volumes",
           `All daily volumes are finished processing, updating the collections table`
         );
+
         const updated = await DailyVolume.updateCollections();
 
         if (updated) {

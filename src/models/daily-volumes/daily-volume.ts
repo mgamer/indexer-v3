@@ -89,7 +89,9 @@ export class DailyVolume {
           SELECT
               "collection_id",
               sum("fe"."price") AS "volume",              
-              RANK() OVER (ORDER BY SUM(price) DESC, "collection_id") "rank"
+              RANK() OVER (ORDER BY SUM(price) DESC, "collection_id") "rank",
+              min(fe.price) AS "floor_sell_value",
+              count(fe.price) AS "sales_count"
           FROM "fill_events_2" "fe"
               JOIN "tokens" "t" ON "fe"."token_id" = "t"."token_id" AND "fe"."contract" = "t"."contract"
               JOIN "collections" "c" ON "t"."collection_id" = "c"."id"
@@ -118,10 +120,13 @@ export class DailyVolume {
 
     // If we have results, we can now insert them into the daily_volumes table and update collections
     if (results.length) {
+      // Add a row for this day, that will mark that this day has already been calculated
       results.push({
         collection_id: -1,
         volume: 0,
         rank: -1,
+        floor_sell_value: 0,
+        sales_count: 0,
       });
 
       const queries: PgPromiseQuery[] = [];
@@ -134,17 +139,25 @@ export class DailyVolume {
                  collection_id, 
                  timestamp, 
                  rank, 
-                 volume
+                 volume,
+                 floor_sell_value,
+                 sales_count
                 )
             VALUES (
                 $/collection_id/, 
                 ${startTime}, 
                 $/rank/, 
-                $/volume/
+                $/volume/,
+                $/floor_sell_value/,
+                $/sales_count/
             )
             ON CONFLICT ON CONSTRAINT daily_volumes_pk
             DO 
-                UPDATE SET volume = $/volume/, rank = $/rank/
+                UPDATE SET 
+                    volume = $/volume/, 
+                    rank = $/rank/, 
+                    floor_sell_value = $/floor_sell_value/, 
+                    sales_count = $/sales_count/
             `,
           values: values,
         });
@@ -194,11 +207,12 @@ export class DailyVolume {
           SELECT 
                  collection_id,
                  rank AS $1:name,
-                 volume AS $2:name
+                 volume AS $2:name,
+                 floor_sell_value as $3:name
           FROM daily_volumes
-          WHERE timestamp = $3 AND collection_id != '-1'
+          WHERE timestamp = $4 AND collection_id != '-1'
       `,
-        ["day1_rank", "day1_volume", day1Timestamp]
+        ["day1_rank", "day1_volume", "day1_floor_sell_value", day1Timestamp]
       );
     } catch (e: any) {
       logger.error(
@@ -224,14 +238,20 @@ export class DailyVolume {
         SELECT 
                collection_id,
                RANK() OVER (ORDER BY SUM(volume) DESC, "collection_id") $1:name,
-               SUM(volume) AS $2:name
+               SUM(volume) AS $2:name,
+               MIN(floor_sell_value) AS $3:name
         FROM daily_volumes
-        WHERE timestamp >= $3 AND collection_id != '-1'
+        WHERE timestamp >= $4 AND collection_id != '-1'
         GROUP BY collection_id
       `;
 
     try {
-      day7Results = await idb.manyOrNone(query, ["day7_rank", "day7_volume", day7Timestamp]);
+      day7Results = await idb.manyOrNone(query, [
+        "day7_rank",
+        "day7_volume",
+        "day7_floor_sell_value",
+        day7Timestamp,
+      ]);
     } catch (e: any) {
       logger.error(
         "daily-volumes",
@@ -245,7 +265,12 @@ export class DailyVolume {
     }
 
     try {
-      day30Results = await idb.manyOrNone(query, ["day30_rank", "day30_volume", day30Timestamp]);
+      day30Results = await idb.manyOrNone(query, [
+        "day30_rank",
+        "day30_volume",
+        "day30_floor_sell_value",
+        day30Timestamp,
+      ]);
     } catch (e: any) {
       logger.error(
         "daily-volumes",
@@ -259,7 +284,12 @@ export class DailyVolume {
     }
 
     try {
-      allTimeResults = await idb.manyOrNone(query, ["all_time_rank", "all_time_volume", 0]);
+      allTimeResults = await idb.manyOrNone(query, [
+        "all_time_rank",
+        "all_time_volume",
+        "all_time_floor_sell_value",
+        0,
+      ]);
     } catch (e: any) {
       logger.error(
         "daily-volumes",
@@ -315,6 +345,227 @@ export class DailyVolume {
       );
       return false;
     }
+
+    try {
+      if (!(await DailyVolume.calculateVolumeChange(1))) {
+        return false;
+      }
+      if (!(await DailyVolume.calculateVolumeChange(7))) {
+        return false;
+      }
+      if (!(await DailyVolume.calculateVolumeChange(30))) {
+        return false;
+      }
+
+      if (!(await DailyVolume.cacheFloorSalePrice(1))) {
+        return false;
+      }
+      if (!(await DailyVolume.cacheFloorSalePrice(7))) {
+        return false;
+      }
+      if (!(await DailyVolume.cacheFloorSalePrice(30))) {
+        return false;
+      }
+    } catch (e: any) {
+      logger.error(
+        "daily-volumes",
+        JSON.stringify({
+          msg: `Error while calculating volume changes`,
+          exception: e.message,
+        })
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Once a day calculate the volume changes in percentages from the previous period
+   * We will calculate day 1, day 7 and day 30 percentage changes
+   * The calculation is a sliding window, so for example for 7 day we take the last 7 days and divide them by the
+   * 7 days before that
+   *
+   * @param days The amount of days you want to calculate volume changes for, this should be 1, 7 or 30
+   */
+  public static async calculateVolumeChange(days: number): Promise<boolean> {
+    const date = new Date();
+    date.setUTCHours(0, 0, 0, 0);
+
+    const timeDiff = days * 24 * 3600;
+
+    const currentPeriod = date.getTime() / 1000 - timeDiff; // The last 1, 7, 30 days
+    const previousPeriod = currentPeriod - timeDiff; // The period before the last 1, 7, 30 days
+
+    logger.info(
+      "daily-volumes",
+      JSON.stringify({
+        msg: `running calculateVolumeChange for period ${days}`,
+      })
+    );
+
+    const query = `
+        SELECT 
+               collection_id,               
+               SUM(volume) AS $1:name              
+        FROM daily_volumes
+        WHERE timestamp >= $2 
+            AND timestamp < $3 
+            AND collection_id != '-1'
+        GROUP BY collection_id
+      `;
+
+    let results: any = [];
+    try {
+      results = await idb.manyOrNone(query, [
+        `prev_day${days}_volume`,
+        previousPeriod,
+        currentPeriod,
+      ]);
+    } catch (e: any) {
+      logger.error(
+        "daily-volumes",
+        JSON.stringify({
+          msg: `Error while calculating the previous period volume`,
+          exception: e.message,
+        })
+      );
+
+      return false;
+    }
+
+    if (!results.length) {
+      logger.error(
+        "daily-volumes",
+        JSON.stringify({
+          msg: `No previous period data found for day${days} with timestamps between ${previousPeriod} and ${currentPeriod}`,
+        })
+      );
+
+      return true;
+    }
+
+    const queries: any = [];
+    results.forEach((row: any) => {
+      queries.push({
+        query: `
+            UPDATE collections
+            SET day${days}_volume_change = day${days}_volume / NULLIF($/prev_day${days}_volume/::numeric, 0)                
+            WHERE id = $/collection_id/`,
+        values: row,
+      });
+    });
+
+    try {
+      await idb.none(pgp.helpers.concat(queries));
+    } catch (e: any) {
+      logger.error(
+        "daily-volumes",
+        JSON.stringify({
+          msg: `Error while updating the previous period volume in the collections table`,
+          exception: e.message,
+        })
+      );
+      return false;
+    }
+
+    logger.info(
+      "daily-volumes",
+      JSON.stringify({
+        msg: `Finished calculateVolumeChange for period ${days}`,
+      })
+    );
+
+    return true;
+  }
+
+  /**
+   * Cache the floor sale price of all collections of a specific previous period into the collections table
+   * For example if you pass period: 7 it will take the floor_sale_price 7 days ago and fetch that
+   * floor_sale_price from daily_volumes, and then update that collection's day7_floor_sale_price
+   *
+   * @param period The previous period you want to fetch and update into collections, can be 1/7/30
+   */
+  public static async cacheFloorSalePrice(period: number): Promise<boolean> {
+    const date = new Date();
+    date.setUTCHours(0, 0, 0, 0);
+
+    const timeDiff = period * 24 * 3600;
+    const dayToFetch = date.getTime() / 1000 - timeDiff;
+
+    logger.info(
+      "daily-volumes",
+      JSON.stringify({
+        msg: `Running cacheFloorSalePrice for period ${period}`,
+      })
+    );
+
+    const query = `
+        SELECT 
+               collection_id,               
+               floor_sell_value
+        FROM daily_volumes
+        WHERE timestamp = $1              
+            AND collection_id != '-1'        
+      `;
+
+    let results: any = [];
+    try {
+      results = await idb.manyOrNone(query, [dayToFetch]);
+    } catch (e: any) {
+      logger.error(
+        "daily-volumes",
+        JSON.stringify({
+          msg: `Error fetching the floor_sell_value of day ${dayToFetch}`,
+          exception: e.message,
+        })
+      );
+
+      return false;
+    }
+
+    if (!results.length) {
+      logger.error(
+        "daily-volumes",
+        JSON.stringify({
+          msg: `No floor_sell_value found for day ${dayToFetch}`,
+        })
+      );
+
+      return true;
+    }
+
+    const queries: any = [];
+    results.forEach((row: any) => {
+      queries.push({
+        query: `
+            UPDATE collections
+            SET day${period}_floor_sell_value = $/floor_sell_value/                              
+            WHERE id = $/collection_id/`,
+        values: row,
+      });
+    });
+
+    try {
+      await idb.none(pgp.helpers.concat(queries));
+    } catch (e: any) {
+      logger.error(
+        "daily-volumes",
+        JSON.stringify({
+          msg: `Error while updating the floor_sell_value of period ${period} in the collections table`,
+          exception: e.message,
+        })
+      );
+      return false;
+    }
+
+    logger.info(
+      "daily-volumes",
+      JSON.stringify({
+        msg: `Finished cacheFloorSalePrice for period ${period}`,
+      })
+    );
+
     return true;
   }
 
