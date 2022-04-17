@@ -2,7 +2,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
-import { redis, redlock } from "@/common/redis";
+import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { DailyVolume } from "../../models/daily-volumes/daily-volume";
 
@@ -24,7 +24,7 @@ if (config.doBackgroundWork) {
       // Get the startTime and endTime of the day we want to calculate
       const startTime = job.data.startTime;
       const ignoreInsertedRows = job.data.ignoreInsertedRows;
-      let retry = job.data.retry;
+      //let retry = job.data.retry;
 
       await DailyVolume.calculateDay(startTime, ignoreInsertedRows);
 
@@ -34,31 +34,28 @@ if (config.doBackgroundWork) {
           `All daily volumes are finished processing, updating the collections table`
         );
 
-        await redlock.acquire(["daily-volumes-update-collection"], 3600).then(async () => {
-          const updated = await DailyVolume.updateCollections();
+        /*const updated = await DailyVolume.updateCollections();
 
-          if (updated) {
-            logger.info("daily-volumes", `Finished updating the collections table`);
+        if (updated) {
+          logger.info("daily-volumes", `Finished updating the collections table`);
+        } else {
+          if (retry < 5) {
+            retry++;
+            logger.info(
+              "daily-volumes",
+              `Something went wrong with updating the collections, will retry in a couple of minutes, retry ${retry}`
+            );
+
+            await addToQueue(startTime, true, retry);
           } else {
-            if (retry < 5) {
-              retry++;
-              logger.info(
-                "daily-volumes",
-                `Something went wrong with updating the collections, will retry in a couple of minutes, retry ${retry}`
-              );
-
-              await addToQueue(startTime, true, retry);
-            } else {
-              logger.info(
-                "daily-volumes",
-                `Something went wrong with retrying during updating the collection, stopping...`
-              );
-            }
+            logger.info(
+              "daily-volumes",
+              `Something went wrong with retrying during updating the collection, stopping...`
+            );
           }
-
-          return true;
-        });
+        }*/
       }
+
       return true;
     },
     { connection: redis.duplicate(), concurrency: 1 }
