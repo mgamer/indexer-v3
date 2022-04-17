@@ -623,7 +623,7 @@ export class DailyVolume {
    * @param jobs
    */
   public static async initiateLock(jobs: number): Promise<boolean> {
-    const res = await redis.set(this.lockKey, jobs, ["NX", "EX"], "3600");
+    const res = await redis.set(this.lockKey, jobs, ["NX", "EX"], "14400");
     return res ? true : false;
   }
 
