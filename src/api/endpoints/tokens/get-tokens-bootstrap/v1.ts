@@ -41,7 +41,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
           "Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
       continuation: Joi.string().pattern(base64Regex),
-      limit: Joi.number().integer().min(1).max(100).default(50),
+      limit: Joi.number().integer().min(1).max(1000).default(1000),
     })
       .or("collection", "contract")
       .oxor("collection", "contract"),
@@ -117,7 +117,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
       }
 
       // Sorting
-      baseQuery += ` ORDER BY "t"."contract", "t"."token_id"`;
+      baseQuery += ` ORDER BY "t"."floor_sell_value"`;
 
       // Pagination
       baseQuery += ` LIMIT $/limit/`;
