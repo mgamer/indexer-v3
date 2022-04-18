@@ -81,7 +81,7 @@ if (config.doBackgroundWork) {
                   SELECT
                     collections.floor_sell_value
                   FROM collections
-                  WHERE collection_id = $/collection/
+                  WHERE id = $/collection/
                 ) AS old_floor_sell_value,
                 collections.floor_sell_maker,
                 collections.floor_sell_source_id,
