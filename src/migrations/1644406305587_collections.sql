@@ -15,7 +15,13 @@ CREATE TABLE "collections" (
   "created_at" TIMESTAMPTZ DEFAULT now(),
   "updated_at" TIMESTAMPTZ DEFAULT now(),
   "last_metadata_sync" TIMESTAMPTZ,
-  "minted_timestamp" INT
+  "minted_timestamp" INT,
+  "floor_sell_id" TEXT,
+  "floor_sell_value" NUMERIC(78, 0),
+  "floor_sell_maker" BYTEA,
+  "floor_sell_source_id" BYTEA,
+  "floor_sell_source_id_int" INT,
+  "floor_sell_valid_between" TSTZRANGE
 );
 
 ALTER TABLE "collections"

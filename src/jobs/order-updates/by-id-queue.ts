@@ -10,6 +10,7 @@ import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { TriggerKind } from "@/jobs/order-updates/types";
 
+import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
 
@@ -186,7 +187,13 @@ if (config.doBackgroundWork) {
                   $/txHash/ AS "tx_hash",
                   $/txTimestamp/ AS "tx_timestamp"
                 FROM "w"
-                RETURNING contract, token_id AS "tokenId", price, previous_price AS "previousPrice"
+                RETURNING
+                  "kind",
+                  "contract",
+                  "token_id" AS "tokenId",
+                  "previous_price" AS "previousPrice",
+                  "tx_hash" AS "txHash",
+                  "tx_timestamp" AS "txTimestamp"
               `,
               {
                 id,
@@ -197,8 +204,15 @@ if (config.doBackgroundWork) {
             );
 
             if (sellOrderResult) {
-              sellOrderResult.contract = fromBuffer(sellOrderResult.contract); // Convert contract to string
+              // Update attributes floor
+              sellOrderResult.contract = fromBuffer(sellOrderResult.contract);
               await handleNewSellOrder.addToQueue(sellOrderResult);
+
+              // Update collection floor
+              sellOrderResult.txHash = sellOrderResult.txHash
+                ? fromBuffer(sellOrderResult.txHash)
+                : null;
+              await collectionUpdatesFloorAsk.addToQueue(sellOrderResult);
             }
           } else if (data.side === "buy") {
             // TODO: Use keyset pagination (via multiple jobs) to handle token
