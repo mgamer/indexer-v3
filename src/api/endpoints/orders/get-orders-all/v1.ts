@@ -38,9 +38,7 @@ export const getOrdersAllV1Options: RouteOptions = {
       includeRawData: Joi.boolean().default(false),
       continuation: Joi.string().pattern(base64Regex),
       limit: Joi.number().integer().min(1).max(1000).default(50),
-    })
-      .or("contract", "source")
-      .oxor("contract", "source"),
+    }).oxor("contract", "source"),
   },
   response: {
     schema: Joi.object({

@@ -80,6 +80,10 @@ CREATE INDEX "orders_kind_maker_nonce_index"
   ON "orders" ("kind", "maker", "nonce")
   WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
 
+CREATE INDEX "orders_side_created_at_index"
+  ON "orders" ("side", "created_at" DESC)
+  WHERE ("contract" IS NOT NULL);
+
 CREATE INDEX "orders_side_contract_created_at_index"
   ON "orders" ("side", "contract", "created_at" DESC)
   WHERE ("contract" IS NOT NULL);
