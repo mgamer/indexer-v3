@@ -98,6 +98,7 @@ export class DailyVolume {
           WHERE
               "fe"."timestamp" >= $/startTime/
               AND "fe"."timestamp" < $/endTime/
+              AND fe.price > 0
           GROUP BY "collection_id"
         `,
         {
