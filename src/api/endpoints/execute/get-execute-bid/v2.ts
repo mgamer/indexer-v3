@@ -48,6 +48,7 @@ export const getExecuteBidV2Options: RouteOptions = {
         ),
       attributeKey: Joi.string(),
       attributeValue: Joi.string(),
+      quantity: Joi.number(),
       maker: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)

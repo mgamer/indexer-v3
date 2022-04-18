@@ -85,7 +85,7 @@ export const getExecuteSellV1Options: RouteOptions = {
       );
 
       if (!bestOrderResult) {
-        throw Boom.badRequest("No liquidity available");
+        throw Boom.badRequest("No available orders");
       }
 
       const steps = [

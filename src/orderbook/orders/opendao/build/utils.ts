@@ -8,6 +8,7 @@ export interface BaseOrderBuildOptions {
   contract: string;
   weiPrice: string;
   orderbook: "reservoir";
+  quantity?: number;
   nonce?: string;
   fee?: number;
   feeRecipient?: string;
@@ -49,7 +50,7 @@ export const getBuildInfo = async (
     maker: options.maker,
     price: options.weiPrice,
     fees: [],
-    amount: collectionResult.kind === "erc1155" ? "1" : undefined,
+    amount: collectionResult.kind === "erc1155" ? options.quantity ?? "1" : undefined,
     expiry: Number(options.expirationTime) === 0 ? undefined : options.expirationTime,
     nonce: options.nonce,
   };

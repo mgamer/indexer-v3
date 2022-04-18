@@ -115,7 +115,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
         );
 
         if (!bestOrderResult) {
-          throw Boom.badRequest("No liquidity available");
+          throw Boom.badRequest("No available orders");
         }
 
         confirmationQuery = `?id=${bestOrderResult.id}`;
@@ -239,7 +239,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
           );
 
           if (!bestOrdersResult?.length) {
-            throw Boom.badRequest("No liquidity available");
+            throw Boom.badRequest("No available orders");
           }
 
           let quantityToFill = Number(query.quantity);
@@ -296,7 +296,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
           );
 
           if (!bestOrdersResult?.length) {
-            throw Boom.badRequest("No liquidity available");
+            throw Boom.badRequest("No available orders");
           }
 
           let quantityToFill = Number(query.quantity);
