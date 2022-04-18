@@ -54,6 +54,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{40}$/),
           tokenId: Joi.string().pattern(/^[0-9]+$/),
+          image: Joi.string().allow(null, ""),
           orderId: Joi.string(),
           maker: Joi.string()
             .lowercase()
@@ -79,6 +80,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
         SELECT
           "t"."contract",
           "t"."token_id",
+          "t"."image",
           "t"."floor_sell_id",
           "t"."floor_sell_value",
           "t"."floor_sell_maker",
@@ -136,6 +138,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
         return {
           contract: fromBuffer(r.contract),
           tokenId: r.token_id,
+          image: r.image,
           orderId: r.floor_sell_id,
           maker: fromBuffer(r.floor_sell_maker),
           price: formatEth(r.floor_sell_value),
