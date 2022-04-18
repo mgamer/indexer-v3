@@ -215,7 +215,7 @@ if (config.doBackgroundWork) {
               sellOrderResult.txHash = sellOrderResult.txHash
                 ? fromBuffer(sellOrderResult.txHash)
                 : null;
-              await collectionUpdatesFloorAsk.addToQueue(sellOrderResult);
+              await collectionUpdatesFloorAsk.addToQueue([sellOrderResult]);
             }
           } else if (data.side === "buy") {
             // TODO: Use keyset pagination (via multiple jobs) to handle token
