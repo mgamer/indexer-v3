@@ -24,7 +24,7 @@ if (config.doBackgroundWork) {
       // Get the startTime and endTime of the day we want to calculate
       const startTime = job.data.startTime;
       const ignoreInsertedRows = job.data.ignoreInsertedRows;
-      //let retry = job.data.retry;
+      let retry = job.data.retry;
 
       await DailyVolume.calculateDay(startTime, ignoreInsertedRows);
 
@@ -34,7 +34,7 @@ if (config.doBackgroundWork) {
           `All daily volumes are finished processing, updating the collections table`
         );
 
-        /*const updated = await DailyVolume.updateCollections();
+        const updated = await DailyVolume.updateCollections();
 
         if (updated) {
           logger.info("daily-volumes", `Finished updating the collections table`);
@@ -53,7 +53,7 @@ if (config.doBackgroundWork) {
               `Something went wrong with retrying during updating the collection, stopping...`
             );
           }
-        }*/
+        }
       }
 
       return true;

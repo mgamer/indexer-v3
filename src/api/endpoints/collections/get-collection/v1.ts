@@ -101,6 +101,16 @@ export const getCollectionV1Options: RouteOptions = {
           "30day": Joi.number().unsafe().allow(null),
           allTime: Joi.number().unsafe().allow(null),
         }),
+        volumeChange: {
+          "1day": Joi.number().unsafe().allow(null),
+          "7day": Joi.number().unsafe().allow(null),
+          "30day": Joi.number().unsafe().allow(null),
+        },
+        floorSale: {
+          "1day": Joi.number().unsafe().allow(null),
+          "7day": Joi.number().unsafe().allow(null),
+          "30day": Joi.number().unsafe().allow(null),
+        },
       }).allow(null),
     }).label(`getCollection${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
@@ -129,6 +139,12 @@ export const getCollectionV1Options: RouteOptions = {
           "c"."day30_volume",
           "c"."all_time_rank",
           "c"."all_time_volume",
+          "c"."day1_volume_change",
+          "c"."day7_volume_change",
+          "c"."day30_volume_change",
+          "c"."day1_floor_sell_value",
+          "c"."day7_floor_sell_value",
+          "c"."day30_floor_sell_value",               
           "c"."token_count",
           (
             SELECT COUNT(*) FROM "tokens" "t"
@@ -264,6 +280,16 @@ export const getCollectionV1Options: RouteOptions = {
                 "7day": r.day7_volume ? formatEth(r.day7_volume) : null,
                 "30day": r.day30_volume ? formatEth(r.day30_volume) : null,
                 allTime: r.all_time_volume ? formatEth(r.all_time_volume) : null,
+              },
+              volumeChange: {
+                "1day": r.day1_volume_change,
+                "7day": r.day7_volume_change,
+                "30day": r.day30_volume_change,
+              },
+              floorSale: {
+                "1day": r.day1_floor_sell_value ? formatEth(r.day1_floor_sell_value) : null,
+                "7day": r.day7_floor_sell_value ? formatEth(r.day7_floor_sell_value) : null,
+                "30day": r.day30_floor_sell_value ? formatEth(r.day30_floor_sell_value) : null,
               },
             }
       );
