@@ -26,6 +26,7 @@ if (config.doBackgroundWork) {
       const { attributeId, topBuyValue } = job.data as HandleBuyOrderParams;
       await Attributes.update(attributeId, {
         topBuyValue,
+        buyUpdatedAt: new Date().toISOString(),
       });
 
       logger.info(QUEUE_NAME, `New top bid ${topBuyValue} for attribute id ${attributeId}`);

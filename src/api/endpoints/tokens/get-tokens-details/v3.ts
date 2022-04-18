@@ -466,7 +466,7 @@ export const getTokensDetailsV3Options: RouteOptions = {
       });
 
       return {
-        tokens: await Promise.all(result),
+        tokens: result,
         continuation,
       };
     } catch (error) {

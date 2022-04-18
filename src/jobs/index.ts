@@ -13,6 +13,7 @@ import "@/jobs/orderbook";
 import "@/jobs/token-updates";
 import "@/jobs/daily-volumes";
 import "@/jobs/update-attribute";
+import "@/jobs/collections-refresh";
 
 // Export all job queues for monitoring through the UI.
 
@@ -38,6 +39,7 @@ import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-ord
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
 import * as resyncAttributeCache from "@/jobs/update-attribute/resync-attribute-cache";
 import * as resyncOrdersSource from "@/jobs/orderbook/resync-orders-source";
+import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refresh";
 
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
@@ -62,4 +64,5 @@ export const allJobQueues = [
   handleNewBuyOrder.queue,
   resyncAttributeCache.queue,
   resyncOrdersSource.queue,
+  collectionsRefresh.queue,
 ];

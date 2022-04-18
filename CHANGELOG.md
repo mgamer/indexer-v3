@@ -2,6 +2,49 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.26.3 (2022-04-15)
+
+### 5.26.2 (2022-04-15)
+
+### 5.26.1 (2022-04-15)
+
+## 5.26.0 (2022-04-15)
+
+
+### Features
+
+* pause queue ([bc347ea](https://github.com/reservoirprotocol/indexer-v3/commit/bc347ea7d0f5369581a2d80153b406d45520facf))
+
+### 5.25.5 (2022-04-15)
+
+### 5.25.4 (2022-04-15)
+
+### 5.25.3 (2022-04-15)
+
+### 5.25.2 (2022-04-14)
+
+### 5.25.1 (2022-04-14)
+
+## 5.25.0 (2022-04-14)
+
+
+### Features
+
+* resume order source backfill ([56e91bf](https://github.com/reservoirprotocol/indexer-v3/commit/56e91bfe542ccc9ec909f512ddf64cb905d7b6e1))
+
+### 5.24.2 (2022-04-14)
+
+### 5.24.1 (2022-04-14)
+
+## 5.24.0 (2022-04-14)
+
+
+### Features
+
+* stop order source backfill ([a26c1d7](https://github.com/reservoirprotocol/indexer-v3/commit/a26c1d79c7291959a995d836b34a93bdc335a999))
+
+### 5.23.10 (2022-04-14)
+
 ### 5.23.9 (2022-04-14)
 
 ### 5.23.8 (2022-04-14)

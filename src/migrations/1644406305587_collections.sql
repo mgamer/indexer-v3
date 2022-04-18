@@ -14,6 +14,7 @@ CREATE TABLE "collections" (
   "token_count" INT NOT NULL DEFAULT 0,
   "created_at" TIMESTAMPTZ DEFAULT now(),
   "updated_at" TIMESTAMPTZ DEFAULT now(),
+  "last_metadata_sync" TIMESTAMPTZ,
   "minted_timestamp" INT,
   "floor_sell_id" TEXT,
   "floor_sell_value" NUMERIC(78, 0),
@@ -42,6 +43,10 @@ CREATE EXTENSION pg_trgm;
 CREATE INDEX "collections_name_index"
   ON "collections"
   USING GIN ("name" gin_trgm_ops);
+
+CREATE INDEX "collections_minted_timestamp_index"
+    ON collections USING btree
+    (minted_timestamp DESC NULLS LAST);
 
 CREATE EXTENSION tsm_system_rows;
 
