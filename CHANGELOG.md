@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.29.0 (2022-04-18)
+
+
+### Features
+
+* add caching to floor ask v2 ([de24603](https://github.com/reservoirprotocol/indexer-v3/commit/de24603f566c590108d7e72584a1d98861c5f79d))
+
 ### 5.28.4 (2022-04-17)
 
 ### 5.28.3 (2022-04-17)
