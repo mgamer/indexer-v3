@@ -3,6 +3,7 @@
 import "@/jobs/arweave-relay";
 import "@/jobs/arweave-sync";
 import "@/jobs/cache-check";
+import "@/jobs/collection-updates";
 import "@/jobs/events-sync";
 import "@/jobs/fill-updates";
 import "@/jobs/metadata-index";
@@ -17,6 +18,7 @@ import "@/jobs/update-attribute";
 
 import * as arweaveSyncBackfill from "@/jobs/arweave-sync/backfill-queue";
 import * as arweaveSyncRealtime from "@/jobs/arweave-sync/realtime-queue";
+import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
 import * as eventsSyncRealtime from "@/jobs/events-sync/realtime-queue";
 import * as eventsSyncFtTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/ft-transfers";
@@ -40,6 +42,7 @@ import * as resyncOrdersSource from "@/jobs/orderbook/resync-orders-source";
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
   arweaveSyncRealtime.queue,
+  collectionUpdatesFloorAsk.queue,
   eventsSyncBackfill.queue,
   eventsSyncRealtime.queue,
   eventsSyncFtTransfersWriteBuffer.queue,
