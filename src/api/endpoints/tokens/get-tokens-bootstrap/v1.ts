@@ -5,14 +5,7 @@ import Joi from "joi";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
-import {
-  base64Regex,
-  buildContinuation,
-  formatEth,
-  fromBuffer,
-  splitContinuation,
-  toBuffer,
-} from "@/common/utils";
+import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { Sources } from "@/models/sources";
 
 const version = "v1";
@@ -40,8 +33,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
         .description(
           "Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
-      continuation: Joi.string().pattern(base64Regex),
-      limit: Joi.number().integer().min(1).max(1000).default(1000),
+      limit: Joi.number().integer().min(1).max(5000).default(5000),
     })
       .or("collection", "contract")
       .oxor("collection", "contract"),
@@ -63,7 +55,6 @@ export const getTokensBootstrapV1Options: RouteOptions = {
           source: Joi.string().allow(null, ""),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex).allow(null),
     }).label(`getTokensBootstrap${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-tokens-bootstrap-${version}-handler`, `Wrong response schema: ${error}`);
@@ -100,18 +91,6 @@ export const getTokensBootstrapV1Options: RouteOptions = {
         (query as any).contract = toBuffer(query.contract);
         conditions.push(`"t"."contract" = $/contract/`);
       }
-      if (query.continuation) {
-        const [contract, tokenId] = splitContinuation(
-          query.continuation,
-          /^0x[0-9a-fA-F]{40}_\d+$/
-        );
-        (query as any).continuationContract = toBuffer(contract);
-        (query as any).continuationTokenId = tokenId;
-
-        conditions.push(
-          `"t"."contract" = $/continuationContract/ AND "t"."token_id" > $/continuationTokenId/`
-        );
-      }
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
@@ -141,13 +120,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
         })
       );
 
-      let continuation: string | undefined;
-      if (result.length && result.length >= query.limit) {
-        const lastResult = result[result.length - 1];
-        continuation = buildContinuation(`${lastResult.contract}_${lastResult.tokenId}`);
-      }
-
-      return { tokens: result, continuation };
+      return { tokens: result };
     } catch (error) {
       logger.error(`get-tokens-bootstrap-${version}-handler`, `Handler failure: ${error}`);
       throw error;
