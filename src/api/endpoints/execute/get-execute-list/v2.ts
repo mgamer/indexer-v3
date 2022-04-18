@@ -40,6 +40,7 @@ export const getExecuteListV2Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
         .required(),
+      quantity: Joi.number(),
       maker: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
