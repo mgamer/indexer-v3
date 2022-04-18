@@ -65,7 +65,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
           source: Joi.string().allow(null, ""),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex).allow(null),
+      continuation: Joi.string().pattern(base64Regex),
     }).label(`getTokensBootstrap${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-tokens-bootstrap-${version}-handler`, `Wrong response schema: ${error}`);
@@ -85,7 +85,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
           "t"."floor_sell_value",
           "t"."floor_sell_maker",
           "os"."source_id" AS "floor_sell_source_id",
-          lower("os"."valid_between") AS "floor_sell_valid_from",
+          date_part('epoch', lower("os"."valid_between")) AS "floor_sell_valid_from",
           coalesce(
             nullif(date_part('epoch', upper("os"."valid_between")), 'Infinity'),
             0

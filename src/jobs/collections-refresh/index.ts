@@ -6,7 +6,7 @@ import { config } from "@/config/index";
 import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refresh";
 
 // BACKGROUND WORKER ONLY
-if (config.doBackgroundWork) {
+if (config.doBackgroundWork && 1 + 1 === 3) {
   cron.schedule(
     "30 23 * * *",
     async () =>

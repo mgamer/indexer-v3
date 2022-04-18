@@ -18,6 +18,10 @@ import { Sources } from "@/models/sources";
 const version = "v1";
 
 export const getSalesBulkV1Options: RouteOptions = {
+  cache: {
+    privacy: "public",
+    expiresIn: 5000,
+  },
   description: "Get bulk access to historical sales",
   notes:
     "Note: this API is optimized for bulk access, and offers minimal filters/metadata. If you need more flexibility, try the `NFT API > Sales` endpoint",
