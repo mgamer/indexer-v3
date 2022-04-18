@@ -5,7 +5,14 @@ import Joi from "joi";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import {
+  base64Regex,
+  buildContinuation,
+  formatEth,
+  fromBuffer,
+  splitContinuation,
+  toBuffer,
+} from "@/common/utils";
 import { Sources } from "@/models/sources";
 
 const version = "v1";
@@ -77,7 +84,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
           "t"."floor_sell_value",
           "t"."floor_sell_maker",
           "os"."source_id" AS "floor_sell_source_id",
-          lower("os"."valid_between") AS "floor_sell_valid_from",
+          date_part('epoch', lower("os"."valid_between")) AS "floor_sell_valid_from",
           coalesce(
             nullif(date_part('epoch', upper("os"."valid_between")), 'Infinity'),
             0
