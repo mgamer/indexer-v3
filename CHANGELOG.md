@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.30.0 (2022-04-18)
+
+
+### Features
+
+* add caching to bulk sales ([c734426](https://github.com/reservoirprotocol/indexer-v3/commit/c7344265fbca7fc68ed6d7b2a60774390fceedf7))
+
 ## 5.29.0 (2022-04-18)
 
 
