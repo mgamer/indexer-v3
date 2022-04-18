@@ -18,7 +18,7 @@ const main = async () => {
     try {
       let done = false;
       let i = 0;
-      let collectionCont = "0x0000000000000000000000000000000000000000";
+      let collectionCont = "0xbbe23e96c48030dc5d4906e73c4876c254100d33";
       while (!done) {
         // eslint-disable-next-line no-console
         console.log(`iter ${i} - ${collectionCont}`);
@@ -58,8 +58,8 @@ const main = async () => {
           done = true;
         }
       }
-    } catch {
-      logger.info("debug", `Error`);
+    } catch (error) {
+      logger.info("debug", `Error ${error}`);
     }
   }
 };

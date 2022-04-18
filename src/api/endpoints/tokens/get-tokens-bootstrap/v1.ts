@@ -65,6 +65,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
           source: Joi.string().allow(null, ""),
         })
       ),
+      continuation: Joi.string().pattern(base64Regex),
     }).label(`getTokensBootstrap${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-tokens-bootstrap-${version}-handler`, `Wrong response schema: ${error}`);
