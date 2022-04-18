@@ -5,14 +5,7 @@ import Joi from "joi";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
-import {
-  base64Regex,
-  buildContinuation,
-  formatEth,
-  fromBuffer,
-  splitContinuation,
-  toBuffer,
-} from "@/common/utils";
+import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { Sources } from "@/models/sources";
 
 const version = "v1";
@@ -65,7 +58,6 @@ export const getTokensBootstrapV1Options: RouteOptions = {
           source: Joi.string().allow(null, ""),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex).allow(null),
     }).label(`getTokensBootstrap${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-tokens-bootstrap-${version}-handler`, `Wrong response schema: ${error}`);

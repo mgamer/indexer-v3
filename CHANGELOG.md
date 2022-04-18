@@ -2,6 +2,57 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.30.4 (2022-04-18)
+
+### 5.30.3 (2022-04-18)
+
+### 5.30.2 (2022-04-18)
+
+### 5.30.1 (2022-04-18)
+
+## 5.30.0 (2022-04-18)
+
+
+### Features
+
+* add caching to bulk sales ([c734426](https://github.com/reservoirprotocol/indexer-v3/commit/c7344265fbca7fc68ed6d7b2a60774390fceedf7))
+
+## 5.29.0 (2022-04-18)
+
+
+### Features
+
+* add caching to floor ask v2 ([de24603](https://github.com/reservoirprotocol/indexer-v3/commit/de24603f566c590108d7e72584a1d98861c5f79d))
+
+### 5.28.4 (2022-04-17)
+
+### 5.28.3 (2022-04-17)
+
+### 5.28.2 (2022-04-17)
+
+### 5.28.1 (2022-04-16)
+
+
+### Bug Fixes
+
+* stop collection refresh ([e6dd4fb](https://github.com/reservoirprotocol/indexer-v3/commit/e6dd4fb8925e97612250a33d9f5acbd22126e1ee))
+
+## 5.28.0 (2022-04-16)
+
+
+### Features
+
+* get top 50 collections ([0b426bd](https://github.com/reservoirprotocol/indexer-v3/commit/0b426bd3ba98a2eb71a06673eb88848d5eb9a6a2))
+
+## 5.27.0 (2022-04-16)
+
+
+### Features
+
+* update backoff ([9b146b9](https://github.com/reservoirprotocol/indexer-v3/commit/9b146b9ced4296a3ea5db9ee8be60b45b705243a))
+
+### 5.26.4 (2022-04-15)
+
 ### 5.26.3 (2022-04-15)
 
 ### 5.26.2 (2022-04-15)
