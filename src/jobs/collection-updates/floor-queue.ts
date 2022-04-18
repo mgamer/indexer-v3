@@ -75,8 +75,10 @@ if (config.doBackgroundWork) {
                 LIMIT 1
               ) x
               WHERE collections.id = $/collection/
-                AND collections.floor_sell_id IS DISTINCT FROM x.floor_sell_id
-                AND collections.floor_sell_value > x.floor_sell_value
+                AND (
+                  collections.floor_sell_id IS DISTINCT FROM x.floor_sell_id
+                  OR collections.floor_sell_value IS DISTINCT FROM x.floor_sell_value
+                )
               RETURNING
                 collections.floor_sell_id,
                 collections.floor_sell_value,
