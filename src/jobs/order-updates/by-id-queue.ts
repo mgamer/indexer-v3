@@ -203,9 +203,6 @@ if (config.doBackgroundWork) {
               }
             );
 
-            if (trigger.kind === "new-order")
-              logger.info("debug", `Result: ${JSON.stringify(sellOrderResult)}`);
-
             if (sellOrderResult) {
               // Update attributes floor
               sellOrderResult.contract = fromBuffer(sellOrderResult.contract);
