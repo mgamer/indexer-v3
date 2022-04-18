@@ -187,7 +187,7 @@ export const getTokensFloorAskV1Options: RouteOptions = {
         continuation,
       };
     } catch (error) {
-      logger.error(`get-orders-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(`get-tokens-floor-ask-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

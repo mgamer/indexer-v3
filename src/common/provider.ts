@@ -1,6 +1,7 @@
 import { StaticJsonRpcProvider, WebSocketProvider } from "@ethersproject/providers";
 import Arweave from "arweave";
 
+import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 
 // Optimizations:
@@ -15,6 +16,13 @@ export const safeWebSocketSubscription = (
   callback: (provider: WebSocketProvider) => Promise<void>
 ) => {
   const webSocketProvider = new WebSocketProvider(config.baseNetworkWsUrl);
+  webSocketProvider.on("error", (error) => {
+    logger.error("websocket-provider", `WebSocker subscription failed: ${error}`);
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  webSocketProvider._websocket.on("error", (error: any) => {
+    logger.error("websocket-provider", `WebSocker subscription failed: ${error}`);
+  });
 
   let pingTimeout: NodeJS.Timeout | undefined;
   let keepAliveInterval: NodeJS.Timer | undefined;

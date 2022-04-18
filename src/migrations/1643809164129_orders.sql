@@ -80,6 +80,10 @@ CREATE INDEX "orders_kind_maker_nonce_index"
   ON "orders" ("kind", "maker", "nonce")
   WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
 
+CREATE INDEX "orders_side_created_at_index"
+  ON "orders" ("side", "created_at" DESC)
+  WHERE ("contract" IS NOT NULL);
+
 CREATE INDEX "orders_side_contract_created_at_index"
   ON "orders" ("side", "contract", "created_at" DESC)
   WHERE ("contract" IS NOT NULL);
@@ -101,12 +105,15 @@ CREATE INDEX "orders_dynamic_index"
   ON "orders" ("id")
   WHERE ("dynamic" AND ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance'));
 
--- https://www.lob.com/blog/supercharge-your-postgresql-performance
--- https://klotzandrew.com/blog/posgres-per-table-autovacuum-management
-ALTER TABLE "orders" SET (autovacuum_vacuum_scale_factor = 0.0);
-ALTER TABLE "orders" SET (autovacuum_vacuum_threshold = 5000);
-ALTER TABLE "orders" SET (autovacuum_analyze_scale_factor = 0.0);
-ALTER TABLE "orders" SET (autovacuum_analyze_threshold = 5000);
+-- https://stackoverflow.com/questions/51818949/is-there-any-adverse-effect-on-db-if-i-set-autovacuum-scale-factor-to-zero-for-c
+-- https://www.cybertec-postgresql.com/en/tuning-autovacuum-postgresql/
+ALTER TABLE "orders" SET (
+  autovacuum_vacuum_cost_delay=0,
+  autovacuum_vacuum_cost_limit=2000,
+  autovacuum_vacuum_scale_factor=0.01,
+  autovacuum_analyze_scale_factor=0.0,
+  autovacuum_analyze_threshold=100000
+);
 
 -- Down Migration
 

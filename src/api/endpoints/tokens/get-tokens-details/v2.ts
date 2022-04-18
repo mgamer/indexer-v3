@@ -431,7 +431,7 @@ export const getTokensDetailsV2Options: RouteOptions = {
       });
 
       return {
-        tokens: await Promise.all(result),
+        tokens: result,
         continuation,
       };
     } catch (error) {

@@ -33,7 +33,8 @@ export const getTokensBootstrapV1Options: RouteOptions = {
         .description(
           "Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
-      limit: Joi.number().integer().min(1).max(5000).default(5000),
+      continuation: Joi.string().pattern(base64Regex),
+      limit: Joi.number().integer().min(1).max(500).default(500),
     })
       .or("collection", "contract")
       .oxor("collection", "contract"),
@@ -46,10 +47,12 @@ export const getTokensBootstrapV1Options: RouteOptions = {
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{40}$/),
           tokenId: Joi.string().pattern(/^[0-9]+$/),
+          image: Joi.string().allow(null, ""),
           orderId: Joi.string(),
           maker: Joi.string()
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{40}$/),
+          validFrom: Joi.number().unsafe(),
           validUntil: Joi.number().unsafe(),
           price: Joi.number().unsafe(),
           source: Joi.string().allow(null, ""),
@@ -69,10 +72,12 @@ export const getTokensBootstrapV1Options: RouteOptions = {
         SELECT
           "t"."contract",
           "t"."token_id",
+          "t"."image",
           "t"."floor_sell_id",
           "t"."floor_sell_value",
           "t"."floor_sell_maker",
           "os"."source_id" AS "floor_sell_source_id",
+          lower("os"."valid_between") AS "floor_sell_valid_from",
           coalesce(
             nullif(date_part('epoch', upper("os"."valid_between")), 'Infinity'),
             0
@@ -91,6 +96,19 @@ export const getTokensBootstrapV1Options: RouteOptions = {
         (query as any).contract = toBuffer(query.contract);
         conditions.push(`"t"."contract" = $/contract/`);
       }
+      if (query.continuation) {
+        const [contract, tokenId, floorSellValue] = splitContinuation(
+          query.continuation,
+          /^0x[0-9a-fA-F]{40}_\d+_\d+$/
+        );
+        (query as any).continuationContract = toBuffer(contract);
+        (query as any).continuationTokenId = tokenId;
+        (query as any).continuationFloorSellValue = floorSellValue;
+
+        conditions.push(
+          `("t"."contract", "t"."token_id", "t"."floor_sell_value") > ($/continuationContract/, $/continuationTokenId/, $/continuationFloorSellValue/)`
+        );
+      }
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
@@ -101,26 +119,36 @@ export const getTokensBootstrapV1Options: RouteOptions = {
       // Pagination
       baseQuery += ` LIMIT $/limit/`;
 
+      const rawResult = await edb.manyOrNone(baseQuery, query);
+
       const sources = await Sources.getInstance();
-      const result = await edb.manyOrNone(baseQuery, query).then((result) =>
-        result.map((r) => {
-          const source = r.floor_sell_source_id
-            ? sources.getByAddress(fromBuffer(r.floor_sell_source_id))
-            : null;
+      const result = rawResult.map((r) => {
+        const source = r.floor_sell_source_id
+          ? sources.getByAddress(fromBuffer(r.floor_sell_source_id))
+          : null;
 
-          return {
-            contract: fromBuffer(r.contract),
-            tokenId: r.token_id,
-            orderId: r.floor_sell_id,
-            maker: fromBuffer(r.floor_sell_maker),
-            price: formatEth(r.floor_sell_value),
-            validUntil: Number(r.floor_sell_valid_until),
-            source: source ? source.name : null,
-          };
-        })
-      );
+        return {
+          contract: fromBuffer(r.contract),
+          tokenId: r.token_id,
+          image: r.image,
+          orderId: r.floor_sell_id,
+          maker: fromBuffer(r.floor_sell_maker),
+          price: formatEth(r.floor_sell_value),
+          validFrom: Number(r.floor_sell_valid_from),
+          validUntil: Number(r.floor_sell_valid_until),
+          source: source ? source.name : null,
+        };
+      });
 
-      return { tokens: result };
+      let continuation: string | undefined;
+      if (rawResult.length && rawResult.length >= query.limit) {
+        const lastResult = rawResult[rawResult.length - 1];
+        continuation = buildContinuation(
+          `${fromBuffer(lastResult.contract)}_${lastResult.token_id}_${lastResult.floor_sell_value}`
+        );
+      }
+
+      return { tokens: result, continuation };
     } catch (error) {
       logger.error(`get-tokens-bootstrap-${version}-handler`, `Handler failure: ${error}`);
       throw error;
