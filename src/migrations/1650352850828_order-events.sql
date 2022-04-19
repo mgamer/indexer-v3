@@ -33,6 +33,9 @@ ALTER TABLE "order_events"
 CREATE INDEX "order_events_created_at_id_index"
   ON "order_events"("created_at", "id");
 
+CREATE INDEX "order_events_contract_created_at_id_index"
+  ON "order_events"("contract", "created_at", "id");
+
 -- Down Migration
 
 DROP TABLE "order_events";
