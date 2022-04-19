@@ -275,6 +275,61 @@ if (config.doBackgroundWork) {
               { id }
             );
           }
+
+          // Insert a corresponding order event.
+          await idb.none(
+            `
+              INSERT INTO order_events (
+                kind,
+                status,
+                contract,
+                token_id,
+                order_id,
+                order_source_id,
+                order_source_id_int,
+                order_valid_between,
+                order_quantity_remaining,
+                maker,
+                price,
+                tx_hash,
+                tx_timestamp
+              ) (
+                SELECT
+                  $/kind/::token_floor_sell_events_kind_t,
+                  (
+                    CASE
+                      WHEN orders.fillability_status = 'filled' THEN 'filled'
+                      WHEN orders.fillability_status = 'cancelled' THEN 'cancelled'
+                      WHEN orders.fillability_status = 'expired' THEN 'expired'
+                      WHEN orders.fillability_status = 'no-balance' THEN 'inactive'
+                      WHEN orders.approval_status = 'no-approval' THEN 'inactive'
+                      ELSE 'active'
+                    END
+                  )::order_event_status_t,
+                  token_sets_tokens.contract,
+                  token_sets_tokens.token_id,
+                  orders.source_id,
+                  orders.source_id_int,
+                  orders.valid_between,
+                  orders.quantity_remaining,
+                  orders.maker,
+                  orders.value,
+                  $/txHash/,
+                  $/txTimestamp/
+                FROM orders
+                JOIN token_sets_tokens
+                  ON orders.token_set_id = token_sets_tokens.token_set_id
+                WHERE orders.id = $/id/
+                LIMIT 1
+              )
+            `,
+            {
+              id,
+              kind: trigger.kind,
+              txHash: trigger.txHash ? toBuffer(trigger.txHash) : null,
+              txTimestamp: trigger.txTimestamp || null,
+            }
+          );
         }
       } catch (error) {
         logger.error(
