@@ -308,6 +308,7 @@ if (config.doBackgroundWork) {
                   )::order_event_status_t,
                   token_sets_tokens.contract,
                   token_sets_tokens.token_id,
+                  orders.id,
                   orders.source_id,
                   orders.source_id_int,
                   orders.valid_between,
