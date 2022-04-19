@@ -295,7 +295,7 @@ if (config.doBackgroundWork) {
                 tx_timestamp
               ) (
                 SELECT
-                  $/kind/::token_floor_sell_events_kind_t,
+                  $/kind/,
                   (
                     CASE
                       WHEN orders.fillability_status = 'filled' THEN 'filled'
