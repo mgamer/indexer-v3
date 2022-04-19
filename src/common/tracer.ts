@@ -1,10 +1,9 @@
 import tracer from "dd-trace";
 
-import { network } from "@/common/provider";
 import { config } from "@/config/index";
 
 if (process.env.DATADOG_AGENT_URL) {
-  const service = `indexer-${config.version}-${network}`;
+  const service = `indexer-${config.version}-${config.chainId === 1 ? "mainnet" : "rinkeby"}`;
 
   tracer.init({
     logInjection: true,
