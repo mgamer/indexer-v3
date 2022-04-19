@@ -49,6 +49,11 @@ export const getCollectionsFloorAskV1Options: RouteOptions = {
           }),
           floorAsk: Joi.object({
             orderId: Joi.string().allow(null),
+            contract: Joi.string()
+              .lowercase()
+              .pattern(/^0x[a-fA-F0-9]{40}/)
+              .allow(null),
+            tokenId: Joi.string().pattern(/^\d+$/).allow(null),
             maker: Joi.string()
               .lowercase()
               .pattern(/^0x[a-fA-F0-9]{40}/)
@@ -173,6 +178,8 @@ export const getCollectionsFloorAskV1Options: RouteOptions = {
         },
         floorAsk: {
           orderId: r.order_id,
+          contract: r.contract ? fromBuffer(r.contract) : null,
+          tokenId: r.token_id,
           maker: r.maker ? fromBuffer(r.maker) : null,
           price: r.price ? formatEth(r.price) : null,
           validUntil: r.price ? Number(r.valid_until) : null,
