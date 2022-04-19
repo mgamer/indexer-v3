@@ -2,9 +2,10 @@ import axios from "axios";
 import { gql, request } from "graphql-request";
 
 import * as v001 from "@/arweave-sync/common/v001";
-import { arweaveGateway, network } from "@/common/provider";
+import { arweaveGateway } from "@/common/provider";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
+import { config } from "@/config/index";
 
 type Transaction = {
   version: string;
@@ -35,7 +36,7 @@ export const syncArweave = async (options: {
       transactions(
         tags: [
           { name: "App-Name", values: ["Reservoir Protocol"] },
-          { name: "Network", values: ["${network}"] }
+          { name: "Network", values: ["${config.chainId === 1 ? "mainnet" : "rinkeby"}"] }
         ]
         first: ${batchSize}
         sort: ${pending ? "HEIGHT_DESC" : "HEIGHT_ASC"}

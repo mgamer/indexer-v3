@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { config } from "../config";
 import axios from "axios";
 
-import { network } from "@/common/provider";
+import { config } from "@/config/index";
 
 export class MetadataApi {
   static async getCollectionMetadata(contract: string, tokenId: string) {
-    const url = `${config.metadataApiBaseUrl}/v3/${network}/collection?contract=${contract}&tokenId=${tokenId}`;
+    const url = `${config.metadataApiBaseUrl}/v3/${
+      config.chainId === 1 ? "mainnet" : "rinkeby"
+    }/collection?contract=${contract}&tokenId=${tokenId}`;
 
     const { data } = await axios.get(url);
 
