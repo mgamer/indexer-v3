@@ -6,7 +6,6 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
-import { network } from "@/common/provider";
 import { redis, extendLock, releaseLock } from "@/common/redis";
 import { config } from "@/config/index";
 import { PendingRefreshTokens } from "@/models/pending-refresh-tokens";
@@ -72,9 +71,9 @@ if (config.doBackgroundWork) {
       }
 
       // Get the metadata for the tokens
-      const url = `${
-        config.metadataApiBaseUrl
-      }/v4/${network}/metadata/token?${queryParams.toString()}`;
+      const url = `${config.metadataApiBaseUrl}/v4/${
+        config.chainId === 1 ? "mainnet" : "rinkeby"
+      }/metadata/token?${queryParams.toString()}`;
 
       const metadataResult = await axios.get(url, { timeout: 60 * 1000 }).then(({ data }) => data);
 

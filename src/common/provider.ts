@@ -7,8 +7,6 @@ import { config } from "@/config/index";
 // Optimizations:
 // - use static providers to avoid redundant `eth_chainId` calls
 
-export const network = config.chainId === 1 ? "mainnet" : "rinkeby";
-
 export const baseProvider = new StaticJsonRpcProvider(config.baseNetworkHttpUrl, config.chainId);
 
 // https://github.com/ethers-io/ethers.js/issues/1053#issuecomment-808736570
