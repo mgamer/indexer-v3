@@ -111,8 +111,8 @@ if (config.doBackgroundWork) {
             SELECT
               $/kind/::token_floor_sell_event_kind_t,
               $/collection/,
-              $/contract/,
-              $/tokenId/,
+              z.contract,
+              z.token_id,
               y.floor_sell_id,
               y.floor_sell_source_id,
               y.floor_sell_source_id_int,
@@ -123,6 +123,16 @@ if (config.doBackgroundWork) {
               $/txHash/,
               $/txTimestamp/
             FROM y
+            JOIN LATERAL (
+              SELECT
+                token_sets_tokens.contract,
+                token_sets_tokens.token_id
+              FROM token_sets_tokens
+              JOIN orders
+                ON token_sets_tokens.token_set_id = orders.token_set_id
+              WHERE orders.id = y.floor_sell_id
+              LIMIT 1
+            ) z ON TRUE
           `,
           {
             kind,
