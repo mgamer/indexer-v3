@@ -170,6 +170,9 @@ if (config.doBackgroundWork) {
                       fillabilityStatus = "no-balance";
                     } else if (error.message === "no-approval") {
                       approvalStatus = "no-approval";
+                    } else if (error.message === "no-balance-no-approval") {
+                      fillabilityStatus = "no-balance";
+                      approvalStatus = "no-approval";
                     }
                   }
                   break;
@@ -188,6 +191,9 @@ if (config.doBackgroundWork) {
                       fillabilityStatus = "no-balance";
                     } else if (error.message === "no-approval") {
                       approvalStatus = "no-approval";
+                    } else if (error.message === "no-balance-no-approval") {
+                      fillabilityStatus = "no-balance";
+                      approvalStatus = "no-approval";
                     }
                   }
                   break;
@@ -204,6 +210,9 @@ if (config.doBackgroundWork) {
                     if (error.message === "no-balance") {
                       fillabilityStatus = "no-balance";
                     } else if (error.message === "no-approval") {
+                      approvalStatus = "no-approval";
+                    } else if (error.message === "no-balance-no-approval") {
+                      fillabilityStatus = "no-balance";
                       approvalStatus = "no-approval";
                     }
                   }
@@ -223,6 +232,9 @@ if (config.doBackgroundWork) {
                     if (error.message === "no-balance") {
                       fillabilityStatus = "no-balance";
                     } else if (error.message === "no-approval") {
+                      approvalStatus = "no-approval";
+                    } else if (error.message === "no-balance-no-approval") {
+                      fillabilityStatus = "no-balance";
                       approvalStatus = "no-approval";
                     }
                   }
