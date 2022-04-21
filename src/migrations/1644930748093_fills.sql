@@ -27,11 +27,14 @@ ALTER TABLE "fill_events_2"
 CREATE INDEX "fill_events_2_block_block_hash_index"
   ON "fill_events_2" ("block", "block_hash");
 
-CREATE INDEX "fill_events_2_contract_block_index"
-  ON "fill_events_2" ("contract", "block" DESC);
+CREATE INDEX "fill_events_2_timestamp_index"
+  ON "fill_events_2" ("timestamp", "log_index", "batch_index");
 
-CREATE INDEX "fill_events_2_contract_token_id_block_index"
-  ON "fill_events_2" ("contract", "token_id", "block" DESC);
+CREATE INDEX "fill_events_2_contract_timestamp_index"
+  ON "fill_events_2" ("contract", "timestamp", "log_index", "batch_index");
+
+CREATE INDEX "fill_events_2_contract_token_id_timestamp_index"
+  ON "fill_events_2" ("contract", "token_id", "timestamp", "log_index", "batch_index");
 
 -- Down Migration
 
