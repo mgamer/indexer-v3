@@ -19,12 +19,20 @@ export const postFixOrdersOptions: RouteOptions = {
       "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     payload: Joi.object({
-      by: Joi.string().valid("id", "maker", "contract", "all").required(),
+      by: Joi.string().valid("id", "maker", "token", "contract", "all").required(),
       id: Joi.string().when("by", {
         is: "id",
         then: Joi.required(),
         otherwise: Joi.forbidden(),
       }),
+      token: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-fA-F0-9]{40}:\d+$/)
+        .when("by", {
+          is: "token",
+          then: Joi.required(),
+          otherwise: Joi.forbidden(),
+        }),
       maker: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
@@ -64,6 +72,8 @@ export const postFixOrdersOptions: RouteOptions = {
         await orderFixes.addToQueue([{ by, data: { maker: payload.maker } }]);
       } else if (by === "contract") {
         await orderFixes.addToQueue([{ by, data: { contract: payload.contract } }]);
+      } else if (by === "token") {
+        await orderFixes.addToQueue([{ by, data: { token: payload.token } }]);
       } else if (by === "all") {
         await orderFixes.addToQueue([
           {
