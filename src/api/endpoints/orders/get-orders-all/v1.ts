@@ -254,7 +254,7 @@ export const getOrdersAllV1Options: RouteOptions = {
             : formatEth(r.value) - (formatEth(r.value) * Number(r.fee_bps)) / 10000,
         validFrom: Number(r.valid_from),
         validUntil: Number(r.valid_until),
-        source: r.source_id ? sources.getByAddress(fromBuffer(r.source_id))?.metadata?.name : null,
+        source: r.source_id ? sources.getByAddress(fromBuffer(r.source_id))?.name : null,
         feeBps: Number(r.fee_bps),
         feeBreakdown: r.fee_breakdown,
         expiration: Number(r.expiration),
