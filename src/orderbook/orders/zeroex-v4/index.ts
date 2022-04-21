@@ -269,6 +269,9 @@ export const save = async (
       let source: string | undefined;
       let sourceId: number | null = null;
 
+      // Handle: orderbook
+      const orderbook = "reservoir";
+
       // If source was passed
       if (metadata.source) {
         const sources = await Sources.getInstance();
@@ -302,6 +305,7 @@ export const save = async (
         nonce: order.params.nonce,
         source_id: source ? toBuffer(source) : null,
         source_id_int: sourceId,
+        orderbook: orderbook ?? null,
         contract: toBuffer(order.params.nft),
         fee_bps: feeBps.toNumber(),
         fee_breakdown: feeBreakdown || null,
@@ -351,6 +355,7 @@ export const save = async (
         "nonce",
         "source_id",
         "source_id_int",
+        "orderbook",
         "contract",
         "fee_bps",
         { name: "fee_breakdown", mod: ":json" },

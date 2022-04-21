@@ -276,6 +276,9 @@ export const save = async (
         sourceId = sourceEntity.id;
       }
 
+      // Handle: orderbook
+      const orderbook = "reservoir";
+
       const feeBreakdown = order.params.fees.map(({ recipient, amount }) => ({
         kind: "royalty",
         recipient,
@@ -301,6 +304,7 @@ export const save = async (
         nonce: order.params.nonce,
         source_id: source ? toBuffer(source) : null,
         source_id_int: sourceId,
+        orderbook: orderbook ?? null,
         contract: toBuffer(order.params.nft),
         fee_bps: feeBps.toNumber(),
         fee_breakdown: feeBreakdown || null,
@@ -350,6 +354,7 @@ export const save = async (
         "nonce",
         "source_id",
         "source_id_int",
+        "orderbook",
         "contract",
         "fee_bps",
         { name: "fee_breakdown", mod: ":json" },

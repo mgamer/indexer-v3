@@ -207,6 +207,12 @@ export const save = async (
         },
       ];
 
+      // Handle: orderbook
+      let orderbook = "reservoir";
+      if (source === "0x5924a28caaf1cc016617874a2f0c3710d881f3c1") {
+        orderbook = "looks-rare";
+      }
+
       const validFrom = `date_trunc('seconds', to_timestamp(${order.params.startTime}))`;
       const validTo = `date_trunc('seconds', to_timestamp(${order.params.endTime}))`;
       orderValues.push({
@@ -225,6 +231,7 @@ export const save = async (
         nonce: order.params.nonce,
         source_id: source ? toBuffer(source) : null,
         source_id_int: source ? sources.getByName("LooksRare").id : null,
+        orderbook: orderbook ?? null,
         contract: toBuffer(order.params.collection),
         fee_bps: feeBps,
         fee_breakdown: feeBreakdown || null,
@@ -273,6 +280,7 @@ export const save = async (
         "nonce",
         "source_id",
         "source_id_int",
+        "orderbook",
         "contract",
         "fee_bps",
         { name: "fee_breakdown", mod: ":json" },
