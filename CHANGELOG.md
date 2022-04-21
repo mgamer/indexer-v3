@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.30.23 (2022-04-21)
+
 ### 5.30.22 (2022-04-21)
 
 ### 5.30.21 (2022-04-21)
