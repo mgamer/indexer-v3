@@ -133,7 +133,8 @@ export class ApiKeyManager {
     // Add key information if it exists
     if (key) {
       try {
-        const apiKey = await ApiKeyManager.getApiKey(key);
+        //  const apiKey = await ApiKeyManager.getApiKey(key);
+        const apiKey = null;
 
         // There is a key, set that key information
         if (apiKey) {
