@@ -161,16 +161,16 @@ export const getSalesV3Options: RouteOptions = {
     }
 
     if (query.continuation) {
-      const [block, logIndex, batchIndex] = splitContinuation(
+      const [timestamp, logIndex, batchIndex] = splitContinuation(
         query.continuation,
         /^(\d+)_(\d+)_(\d+)$/
       );
-      (query as any).block = block;
+      (query as any).block = timestamp;
       (query as any).logIndex = logIndex;
       (query as any).batchIndex = batchIndex;
 
       paginationFilter = `
-        AND (fill_events_2.block, fill_events_2.log_index, fill_events_2.batch_index) < ($/block/, $/logIndex/, $/batchIndex/)
+        AND (fill_events_2.timestamp, fill_events_2.log_index, fill_events_2.batch_index) < ($/timestamp/, $/logIndex/, $/batchIndex/)
       `;
     }
 
@@ -220,7 +220,7 @@ export const getSalesV3Options: RouteOptions = {
             ${paginationFilter}
             ${timestampFilter}
           ORDER BY
-            fill_events_2.block DESC,
+            fill_events_2.timestamp DESC,
             fill_events_2.log_index DESC,
             fill_events_2.batch_index DESC
           LIMIT $/limit/
