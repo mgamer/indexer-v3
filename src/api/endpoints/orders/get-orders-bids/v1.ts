@@ -217,10 +217,19 @@ export const getOrdersBidsV1Options: RouteOptions = {
           orders.id,
           orders.kind,
           orders.side,
-          orders.fillability_status,
-          orders.approval_status,
+          (
+            CASE
+              WHEN orders.fillability_status = 'filled' THEN 'filled'
+              WHEN orders.fillability_status = 'cancelled' THEN 'cancelled'
+              WHEN orders.fillability_status = 'expired' THEN 'expired'
+              WHEN orders.fillability_status = 'no-balance' THEN 'inactive'
+              WHEN orders.approval_status = 'no-approval' THEN 'inactive'
+              ELSE 'active'
+            END
+          ) AS status,
           orders.token_set_id,
           orders.token_set_schema_hash,
+          orders.contract,
           orders.maker,
           orders.taker,
           orders.price,
@@ -351,10 +360,10 @@ export const getOrdersBidsV1Options: RouteOptions = {
           id: r.id,
           kind: r.kind,
           side: r.side,
-          fillabilityStatus: r.fillability_status,
-          approvalStatus: r.approval_status,
+          status: r.status,
           tokenSetId: r.token_set_id,
           tokenSetSchemaHash: fromBuffer(r.token_set_schema_hash),
+          contract: fromBuffer(r.contract),
           maker: fromBuffer(r.maker),
           taker: fromBuffer(r.taker),
           price: formatEth(r.price),
