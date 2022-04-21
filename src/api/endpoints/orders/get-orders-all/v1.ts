@@ -52,6 +52,9 @@ export const getOrdersAllV1Options: RouteOptions = {
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{64}$/)
             .required(),
+          contract: Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}$/),
           maker: Joi.string()
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{40}$/)
@@ -78,6 +81,7 @@ export const getOrdersAllV1Options: RouteOptions = {
               })
             )
             .allow(null),
+          status: Joi.string(),
           expiration: Joi.number().required(),
           createdAt: Joi.string().required(),
           updatedAt: Joi.string().required(),
@@ -170,6 +174,7 @@ export const getOrdersAllV1Options: RouteOptions = {
           orders.side,
           orders.token_set_id,
           orders.token_set_schema_hash,
+          orders.contract,
           orders.maker,
           orders.taker,
           orders.price,
@@ -187,6 +192,16 @@ export const getOrdersAllV1Options: RouteOptions = {
             0
           ) AS expiration,
           extract(epoch from orders.created_at) AS created_at,
+          (
+            CASE
+              WHEN orders.fillability_status = 'filled' THEN 'filled'
+              WHEN orders.fillability_status = 'cancelled' THEN 'cancelled'
+              WHEN orders.fillability_status = 'expired' THEN 'expired'
+              WHEN orders.fillability_status = 'no-balance' THEN 'inactive'
+              WHEN orders.approval_status = 'no-approval' THEN 'inactive'
+              ELSE 'active'
+            END
+          ) AS status,
           ${query.includeRawData ? `orders.raw_data,` : ""}
           ${query.includeMetadata ? `${metadataBuildQuery},` : ""}
           orders.updated_at
@@ -244,6 +259,7 @@ export const getOrdersAllV1Options: RouteOptions = {
         side: r.side,
         tokenSetId: r.token_set_id,
         tokenSetSchemaHash: fromBuffer(r.token_set_schema_hash),
+        contract: fromBuffer(r.contract),
         maker: fromBuffer(r.maker),
         taker: fromBuffer(r.taker),
         price: formatEth(r.price),
@@ -258,6 +274,7 @@ export const getOrdersAllV1Options: RouteOptions = {
         feeBps: Number(r.fee_bps),
         feeBreakdown: r.fee_breakdown,
         expiration: Number(r.expiration),
+        status: r.status,
         createdAt: new Date(r.created_at * 1000).toISOString(),
         updatedAt: new Date(r.updated_at).toISOString(),
         rawData: r.raw_data ?? undefined,

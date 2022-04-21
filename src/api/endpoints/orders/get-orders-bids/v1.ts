@@ -66,13 +66,15 @@ export const getOrdersBidsV1Options: RouteOptions = {
           id: Joi.string().required(),
           kind: Joi.string().required(),
           side: Joi.string().valid("buy", "sell").required(),
-          fillabilityStatus: Joi.string().required(),
-          approvalStatus: Joi.string().required(),
+          status: Joi.string(),
           tokenSetId: Joi.string().required(),
           tokenSetSchemaHash: Joi.string()
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{64}$/)
             .required(),
+          contract: Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}$/),
           maker: Joi.string()
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{40}$/)
