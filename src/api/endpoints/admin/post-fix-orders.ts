@@ -72,6 +72,8 @@ export const postFixOrdersOptions: RouteOptions = {
         await orderFixes.addToQueue([{ by, data: { maker: payload.maker } }]);
       } else if (by === "contract") {
         await orderFixes.addToQueue([{ by, data: { contract: payload.contract } }]);
+      } else if (by === "token") {
+        await orderFixes.addToQueue([{ by, data: { token: payload.token } }]);
       } else if (by === "all") {
         await orderFixes.addToQueue([
           {
