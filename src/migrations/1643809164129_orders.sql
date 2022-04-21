@@ -29,6 +29,12 @@ CREATE TYPE "order_approval_status_t" AS ENUM (
   'disabled'
 );
 
+CREATE TYPE "order_orderbook_t" AS ENUM (
+  'reservoir',
+  'opensea',
+  'looks-rare'
+);
+
 CREATE TABLE "orders" (
   "id" TEXT NOT NULL,
   "kind" "order_kind_t" NOT NULL,
@@ -52,6 +58,7 @@ CREATE TABLE "orders" (
   "fee_breakdown" JSONB,
   "dynamic" BOOLEAN,
   "raw_data" JSONB,
+  "orderbook" "order_orderbook_t",
   "expiration" TIMESTAMPTZ,
   "created_at" TIMESTAMPTZ DEFAULT now(),
   "updated_at" TIMESTAMPTZ DEFAULT now()
