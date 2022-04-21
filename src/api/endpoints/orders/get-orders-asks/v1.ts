@@ -66,13 +66,14 @@ export const getOrdersAsksV1Options: RouteOptions = {
           id: Joi.string().required(),
           kind: Joi.string().required(),
           side: Joi.string().valid("buy", "sell").required(),
-          fillabilityStatus: Joi.string().required(),
-          approvalStatus: Joi.string().required(),
           tokenSetId: Joi.string().required(),
           tokenSetSchemaHash: Joi.string()
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{64}$/)
             .required(),
+          contract: Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}$/),
           maker: Joi.string()
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{40}$/)
@@ -112,6 +113,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
               }),
             })
           ).allow(null),
+          status: Joi.string(),
           source: Joi.object().allow(null),
           feeBps: Joi.number().allow(null),
           feeBreakdown: Joi.array()
@@ -215,10 +217,9 @@ export const getOrdersAsksV1Options: RouteOptions = {
           orders.id,
           orders.kind,
           orders.side,
-          orders.fillability_status,
-          orders.approval_status,
           orders.token_set_id,
           orders.token_set_schema_hash,
+          orders.contract,
           orders.maker,
           orders.taker,
           orders.price,
@@ -236,6 +237,16 @@ export const getOrdersAsksV1Options: RouteOptions = {
             0
           ) AS expiration,
           extract(epoch from orders.created_at) AS created_at,
+          (
+            CASE
+              WHEN orders.fillability_status = 'filled' THEN 'filled'
+              WHEN orders.fillability_status = 'cancelled' THEN 'cancelled'
+              WHEN orders.fillability_status = 'expired' THEN 'expired'
+              WHEN orders.fillability_status = 'no-balance' THEN 'inactive'
+              WHEN orders.approval_status = 'no-approval' THEN 'inactive'
+              ELSE 'active'
+            END
+          ) AS status,
           orders.updated_at,
           orders.raw_data,
           ${metadataBuildQuery}
@@ -348,10 +359,10 @@ export const getOrdersAsksV1Options: RouteOptions = {
           id: r.id,
           kind: r.kind,
           side: r.side,
-          fillabilityStatus: r.fillability_status,
-          approvalStatus: r.approval_status,
+          status: r.status,
           tokenSetId: r.token_set_id,
           tokenSetSchemaHash: fromBuffer(r.token_set_schema_hash),
+          contract: fromBuffer(r.contract),
           maker: fromBuffer(r.maker),
           taker: fromBuffer(r.taker),
           price: formatEth(r.price),
