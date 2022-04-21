@@ -9,7 +9,11 @@ import { redis } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
+
+import * as looksRareCheck from "@/orderbook/orders/looks-rare/check";
+import * as opendaoCheck from "@/orderbook/orders/opendao/check";
 import * as wyvernV23Check from "@/orderbook/orders/wyvern-v2.3/check";
+import * as zeroExV4 from "@/orderbook/orders/zeroex-v4/check";
 
 const QUEUE_NAME = "order-fixes";
 
@@ -150,15 +154,47 @@ if (config.doBackgroundWork) {
             );
 
             if (result) {
+              let fillabilityStatus = "fillable";
+              let approvalStatus = "approved";
+
               switch (result.kind) {
-                // TODO: Integrate the other order types.
+                case "looks-rare": {
+                  const order = new Sdk.LooksRare.Order(config.chainId, result.raw_data);
+                  try {
+                    await looksRareCheck.offChainCheck(order, {
+                      onChainApprovalRecheck: true,
+                    });
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  } catch (error: any) {
+                    if (error.message === "no-balance") {
+                      fillabilityStatus = "no-balance";
+                    } else if (error.message === "no-approval") {
+                      approvalStatus = "no-approval";
+                    }
+                  }
+                  break;
+                }
+
+                case "opendao-erc721":
+                case "opendao-erc1155": {
+                  const order = new Sdk.OpenDao.Order(config.chainId, result.raw_data);
+                  try {
+                    await opendaoCheck.offChainCheck(order, {
+                      onChainApprovalRecheck: true,
+                    });
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  } catch (error: any) {
+                    if (error.message === "no-balance") {
+                      fillabilityStatus = "no-balance";
+                    } else if (error.message === "no-approval") {
+                      approvalStatus = "no-approval";
+                    }
+                  }
+                  break;
+                }
 
                 case "wyvern-v2.3": {
                   const order = new Sdk.WyvernV23.Order(config.chainId, result.raw_data);
-
-                  // Check whether the order is not fillable or not approved.
-                  let fillabilityStatus = "fillable";
-                  let approvalStatus = "approved";
                   try {
                     await wyvernV23Check.offChainCheck(order, {
                       onChainApprovalRecheck: true,
@@ -172,38 +208,74 @@ if (config.doBackgroundWork) {
                     }
                   }
 
-                  const fixResult = await idb.oneOrNone(
-                    `
-                      UPDATE "orders" AS "o" SET
-                        "fillability_status" = $/fillabilityStatus/,
-                        "approval_status" = $/approvalStatus/
-                      WHERE "o"."id" = $/id/
-                        AND ("o"."fillability_status" != $/fillabilityStatus/ OR "o"."approval_status" != $/approvalStatus/)
-                      RETURNING "o"."id"
-                    `,
-                    {
-                      id: data.id,
-                      fillabilityStatus,
-                      approvalStatus,
+                  break;
+                }
+
+                case "zeroex-v4-erc721":
+                case "zeroex-v4-erc1155": {
+                  const order = new Sdk.ZeroExV4.Order(config.chainId, result.raw_data);
+                  try {
+                    await zeroExV4.offChainCheck(order, {
+                      onChainApprovalRecheck: true,
+                    });
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  } catch (error: any) {
+                    if (error.message === "no-balance") {
+                      fillabilityStatus = "no-balance";
+                    } else if (error.message === "no-approval") {
+                      approvalStatus = "no-approval";
                     }
-                  );
-
-                  if (fixResult) {
-                    // Update any wrong caches.
-                    await orderUpdatesById.addToQueue([
-                      {
-                        context: `revalidation-${Date.now()}-${fixResult.id}`,
-                        id: fixResult.id,
-                        trigger: {
-                          kind: "revalidation",
-                        },
-                      } as orderUpdatesById.OrderInfo,
-                    ]);
                   }
-
                   break;
                 }
               }
+
+              const fixResult = await idb.oneOrNone(
+                `
+                  UPDATE "orders" AS "o" SET
+                    "fillability_status" = $/fillabilityStatus/,
+                    "approval_status" = $/approvalStatus/
+                  WHERE "o"."id" = $/id/
+                    AND ("o"."fillability_status" != $/fillabilityStatus/ OR "o"."approval_status" != $/approvalStatus/)
+                  RETURNING "o"."id"
+                `,
+                {
+                  id: data.id,
+                  fillabilityStatus,
+                  approvalStatus,
+                }
+              );
+
+              if (fixResult) {
+                // Update any wrong caches.
+                await orderUpdatesById.addToQueue([
+                  {
+                    context: `revalidation-${Date.now()}-${fixResult.id}`,
+                    id: fixResult.id,
+                    trigger: {
+                      kind: "revalidation",
+                    },
+                  } as orderUpdatesById.OrderInfo,
+                ]);
+              }
+            }
+
+            break;
+          }
+
+          case "token": {
+            // Trigger a fix for all potentially valid orders on the token.
+            const result = await idb.manyOrNone(
+              `
+                SELECT "o"."id" FROM "orders" "o"
+                WHERE "o"."token_set_id" = $/tokenSetId/
+                  AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
+              `,
+              { tokenSetId: `token:${data.token}` }
+            );
+
+            if (result) {
+              await addToQueue(result.map(({ id }) => ({ by: "id", data: { id } })));
             }
 
             break;
@@ -283,6 +355,12 @@ export type OrderFixInfo =
       by: "id";
       data: {
         id: string;
+      };
+    }
+  | {
+      by: "token";
+      data: {
+        token: string;
       };
     }
   | {
