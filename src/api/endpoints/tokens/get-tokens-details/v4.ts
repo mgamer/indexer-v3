@@ -183,12 +183,9 @@ export const getTokensDetailsV4Options: RouteOptions = {
           "t"."floor_sell_id",
           "t"."floor_sell_value",
           "t"."floor_sell_maker",
-          DATE_PART('epoch', LOWER("os"."valid_between")) AS "floor_sell_valid_from",
-          COALESCE(
-            NULLIF(date_part('epoch', UPPER("os"."valid_between")), 'Infinity'),
-            0
-          ) AS "floor_sell_valid_until",
-          "os"."source_id" AS "floor_sell_source_id",
+          "t"."floor_sell_valid_from",
+          "t"."floor_sell_valid_until",
+          "t"."floor_sell_source_id",
           "t"."top_buy_id",
           "t"."top_buy_value",
           "t"."top_buy_maker",
@@ -198,8 +195,6 @@ export const getTokensDetailsV4Options: RouteOptions = {
             0
           ) AS "top_buy_valid_until"
         FROM "tokens" "t"
-        LEFT JOIN "orders" "os"
-          ON "t"."floor_sell_id" = "os"."id"
         LEFT JOIN "orders" "ob"
           ON "t"."top_buy_id" = "ob"."id"
         JOIN "collections" "c"
@@ -277,9 +272,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
         const sources = await Sources.getInstance();
         const source = sources.getByName(query.source);
         (query as any).sourceAddress = toBuffer(source.address);
-        conditions.push(
-          `"t"."floor_sell_value" IS NOT NULL AND "os"."source_id" = $/sourceAddress/`
-        );
+        conditions.push(`"t"."floor_sell_source_id" = $/sourceAddress/`);
       }
 
       // Continue with the next page, this depends on the sorting used
