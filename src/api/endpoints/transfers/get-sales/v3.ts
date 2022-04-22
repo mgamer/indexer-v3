@@ -164,7 +164,7 @@ export const getSalesV3Options: RouteOptions = {
         query.continuation,
         /^(\d+)_(\d+)_(\d+)$/
       );
-      (query as any).block = timestamp;
+      (query as any).timestamp = timestamp;
       (query as any).logIndex = logIndex;
       (query as any).batchIndex = batchIndex;
 
@@ -243,7 +243,7 @@ export const getSalesV3Options: RouteOptions = {
       let continuation = null;
       if (rawResult.length === query.limit) {
         continuation = buildContinuation(
-          rawResult[rawResult.length - 1].block +
+          rawResult[rawResult.length - 1].timestamp +
             "_" +
             rawResult[rawResult.length - 1].log_index +
             "_" +

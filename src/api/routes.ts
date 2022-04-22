@@ -155,6 +155,11 @@ export const setupRoutes = (server: Server) => {
     options: collectionsEndpoints.postCollectionsRefreshV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/collections/daily-volumes/v1",
+    options: collectionsEndpoints.getDailyVolumesV1Options,
+  });
   // Events
 
   server.route({

@@ -7,6 +7,7 @@ import "@/jobs/index";
 import { start } from "@/api/index";
 import { logger } from "@/common/logger";
 import { idb } from "./common/db";
+import { config } from "./config";
 
 process.on("unhandledRejection", (error) => {
   logger.error("process", `Unhandled rejection: ${error}`);
@@ -14,7 +15,7 @@ process.on("unhandledRejection", (error) => {
 });
 
 const main = async () => {
-  if (!process.env.MASTER) {
+  if (!config.master) {
     return;
   }
 
