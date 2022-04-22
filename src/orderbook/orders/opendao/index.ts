@@ -276,8 +276,8 @@ export const save = async (
         sourceId = sourceEntity.id;
       }
 
-      // Handle: orderbook
-      const orderbook = "reservoir";
+      // Handle: native Reservoir orders
+      const isReservoir = true;
 
       const feeBreakdown = order.params.fees.map(({ recipient, amount }) => ({
         kind: "royalty",
@@ -304,7 +304,7 @@ export const save = async (
         nonce: order.params.nonce,
         source_id: source ? toBuffer(source) : null,
         source_id_int: sourceId,
-        orderbook: orderbook ?? null,
+        is_reservoir: isReservoir ? isReservoir : null,
         contract: toBuffer(order.params.nft),
         fee_bps: feeBps.toNumber(),
         fee_breakdown: feeBreakdown || null,

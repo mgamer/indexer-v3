@@ -207,10 +207,10 @@ export const save = async (
         },
       ];
 
-      // Handle: orderbook
-      let orderbook = "reservoir";
+      // Handle: native Reservoir orders
+      let isReservoir = true;
       if (source === "0x5924a28caaf1cc016617874a2f0c3710d881f3c1") {
-        orderbook = "looks-rare";
+        isReservoir = false;
       }
 
       const validFrom = `date_trunc('seconds', to_timestamp(${order.params.startTime}))`;
@@ -231,7 +231,7 @@ export const save = async (
         nonce: order.params.nonce,
         source_id: source ? toBuffer(source) : null,
         source_id_int: source ? sources.getByName("LooksRare").id : null,
-        orderbook: orderbook ?? null,
+        is_reservoir: isReservoir ? isReservoir : null,
         contract: toBuffer(order.params.collection),
         fee_bps: feeBps,
         fee_breakdown: feeBreakdown || null,

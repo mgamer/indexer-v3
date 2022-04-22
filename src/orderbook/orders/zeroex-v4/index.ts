@@ -269,8 +269,8 @@ export const save = async (
       let source: string | undefined;
       let sourceId: number | null = null;
 
-      // Handle: orderbook
-      const orderbook = "reservoir";
+      // Handle: native Reservoir orders
+      const isReservoir = true;
 
       // If source was passed
       if (metadata.source) {
@@ -305,7 +305,7 @@ export const save = async (
         nonce: order.params.nonce,
         source_id: source ? toBuffer(source) : null,
         source_id_int: sourceId,
-        orderbook: orderbook ?? null,
+        is_reservoir: isReservoir ? isReservoir : null,
         contract: toBuffer(order.params.nft),
         fee_bps: feeBps.toNumber(),
         fee_breakdown: feeBreakdown || null,

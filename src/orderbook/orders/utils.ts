@@ -55,7 +55,7 @@ export type DbOrder = {
   nonce: string;
   source_id: Buffer | null;
   source_id_int?: number | null;
-  orderbook?: string | null;
+  is_reservoir?: boolean | null;
   contract: Buffer;
   fee_bps: number;
   fee_breakdown: object | null;
