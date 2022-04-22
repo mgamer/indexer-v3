@@ -176,7 +176,7 @@ export const getSalesBulkV1Options: RouteOptions = {
       let continuation = null;
       if (rawResult.length === query.limit) {
         continuation = buildContinuation(
-          rawResult[rawResult.length - 1].block +
+          rawResult[rawResult.length - 1].timestamp +
             "_" +
             rawResult[rawResult.length - 1].log_index +
             "_" +
