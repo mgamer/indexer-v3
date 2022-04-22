@@ -21,7 +21,10 @@ const main = async () => {
   try {
     let floorSellId = "0x0000000000000000000000000000000000000000000000000000000000000000";
     let done = false;
+    let i = 0;
     while (!done) {
+      // eslint-disable-next-line no-console
+      console.log(`${i++}`);
       const result = await idb.manyOrNone(
         `
           WITH x AS (
