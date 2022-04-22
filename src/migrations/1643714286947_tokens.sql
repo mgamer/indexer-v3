@@ -43,6 +43,13 @@ CREATE INDEX "tokens_contract_floor_sell_value_index"
 CREATE INDEX "tokens_collection_id_contract_token_id_index"
   ON "tokens" ("collection_id", "contract", "token_id");
 
+CREATE INDEX "tokens_collection_id_source_id_floor_sell_value_index"
+  ON "tokens" ("collection_id", "source_id", "floor_sell_value");
+
+CREATE INDEX "tokens_collection_id_floor_sell_value_index"
+  ON "tokens" ("collection_id", "floor_sell_value")
+  WHERE ("floor_sell_is_reservoir");
+
 CREATE INDEX "tokens_contract_top_buy_value_index"
   ON "tokens" ("contract", "top_buy_value" DESC NULLS LAST);
 
