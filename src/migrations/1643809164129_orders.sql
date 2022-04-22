@@ -81,18 +81,6 @@ CREATE INDEX "orders_kind_maker_nonce_index"
   ON "orders" ("kind", "maker", "nonce")
   WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
 
-CREATE INDEX "orders_side_created_at_index"
-  ON "orders" ("side", "created_at" DESC)
-  WHERE ("contract" IS NOT NULL);
-
-CREATE INDEX "orders_side_contract_created_at_index"
-  ON "orders" ("side", "contract", "created_at" DESC)
-  WHERE ("contract" IS NOT NULL);
-
-CREATE INDEX "orders_side_source_created_at_index"
-  ON "orders" ("side", coalesce("source_id", '\x00'), "created_at" DESC)
-  WHERE ("contract" IS NOT NULL);
-
 CREATE INDEX "orders_expired_maker_side_created_at_id_index"
   ON "orders" ("maker", "side", "created_at" DESC, "id" DESC)
   WHERE ("fillability_status" != 'fillable' AND "fillability_status" != 'no-balance' AND "maker" IS NOT NULL);
@@ -105,6 +93,22 @@ CREATE INDEX "orders_not_expired_maker_side_created_at_id_index"
 CREATE INDEX "orders_dynamic_index"
   ON "orders" ("id")
   WHERE ("dynamic" AND ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance'));
+
+CREATE INDEX "orders_side_created_at_id_index"
+  ON "orders" ("side", "created_at" DESC, "id" DESC)
+  WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
+
+CREATE INDEX "orders_side_source_id_created_at_id_index"
+  ON "orders" ("side", "source_id", "created_at" DESC, "id" DESC)
+  WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
+
+CREATE INDEX "orders_side_is_reservoir_created_at_id_index"
+  ON "orders" ("side", "created_at" DESC, "id" DESC)
+  WHERE ("is_reservoir" AND ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance'));
+
+CREATE INDEX "orders_side_contract_created_at_id_index"
+  ON "orders" ("side", "contract", "created_at" DESC, "id" DESC)
+  WHERE ("fillability_status" = 'fillable' AND "approval_status" = 'approved');
 
 -- https://stackoverflow.com/questions/51818949/is-there-any-adverse-effect-on-db-if-i-set-autovacuum-scale-factor-to-zero-for-c
 -- https://www.cybertec-postgresql.com/en/tuning-autovacuum-postgresql/
