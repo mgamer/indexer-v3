@@ -364,10 +364,10 @@ export const save = async (
         }
       }
 
-      // Handle: orderbook
-      let orderbook = "reservoir";
+      // Handle: native Reservoir orders
+      let isReservoir = true;
       if (source === "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073") {
-        orderbook = "opensea";
+        isReservoir = false;
       }
 
       const validFrom = `date_trunc('seconds', to_timestamp(${order.params.listingTime}))`;
@@ -390,7 +390,7 @@ export const save = async (
         nonce: order.params.nonce,
         source_id: source ? toBuffer(source) : null,
         source_id_int: sourceId,
-        orderbook: orderbook ?? null,
+        is_reservoir: isReservoir ? isReservoir : null,
         contract: toBuffer(info.contract),
         fee_bps: feeBps,
         fee_breakdown: feeBreakdown || null,
@@ -439,7 +439,7 @@ export const save = async (
         "nonce",
         "source_id",
         "source_id_int",
-        "orderbook",
+        "is_reservoir",
         "contract",
         "fee_bps",
         { name: "fee_breakdown", mod: ":json" },

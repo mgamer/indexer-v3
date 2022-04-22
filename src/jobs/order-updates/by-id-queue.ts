@@ -115,7 +115,11 @@ if (config.doBackgroundWork) {
                     "x"."token_id",
                     "y"."order_id",
                     "y"."value",
-                    "y"."maker"
+                    "y"."maker",
+                    "y"."valid_between",
+                    "y"."source_id",
+                    "y"."source_id_int",
+                    "y"."is_reservoir"
                   FROM (
                     SELECT
                       "tst"."contract",
@@ -145,7 +149,21 @@ if (config.doBackgroundWork) {
                   UPDATE "tokens" AS "t" SET
                     "floor_sell_id" = "z"."order_id",
                     "floor_sell_value" = "z"."value",
-                    "floor_sell_maker" = "z"."maker"
+                    "floor_sell_maker" = "z"."maker",
+                    "floor_sell_valid_from" = least(
+                      2147483647::NUMERIC,
+                      date_part('epoch', lower("z"."valid_between"))
+                    )::INT,
+                    "floor_sell_valid_to" = least(
+                      2147483647::NUMERIC,
+                      coalesce(
+                        nullif(date_part('epoch', upper("z"."valid_between")), 'Infinity'),
+                        0
+                      )
+                    )::INT,
+                    "floor_sell_source_id" = "z"."source_id",
+                    "floor_sell_source_id_int" = "z"."source_id_int",
+                    "floor_sell_is_reservoir" = "z"."is_reservoir"
                   FROM "z"
                   WHERE "t"."contract" = "z"."contract"
                     AND "t"."token_id" = "z"."token_id"
