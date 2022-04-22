@@ -112,15 +112,13 @@ export const getSalesV3Options: RouteOptions = {
     if (query.contract) {
       (query as any).contract = toBuffer(query.contract);
       tokenFilter = `fill_events_2.contract = $/contract/`;
-    }
-    if (query.token) {
+    } else if (query.token) {
       const [contract, tokenId] = query.token.split(":");
 
       (query as any).contract = toBuffer(contract);
       (query as any).tokenId = tokenId;
       tokenFilter = `fill_events_2.contract = $/contract/ AND fill_events_2.token_id = $/tokenId/`;
-    }
-    if (query.collection) {
+    } else if (query.collection) {
       if (query.attributes) {
         const attributes: { key: string; value: string }[] = [];
         Object.entries(query.attributes).forEach(([key, values]) => {
@@ -157,6 +155,8 @@ export const getSalesV3Options: RouteOptions = {
         (query as any).contract = toBuffer(query.collection);
         collectionFilter = `fill_events_2.contract = $/contract/`;
       }
+    } else {
+      collectionFilter = "TRUE";
     }
 
     if (query.continuation) {
