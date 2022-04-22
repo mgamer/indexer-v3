@@ -59,7 +59,6 @@ export const getSalesV3Options: RouteOptions = {
       continuation: Joi.string().pattern(base64Regex),
     })
       .oxor("contract", "token", "collection")
-      .or("contract", "token", "collection")
       .with("attributes", "collection"),
   },
   response: {

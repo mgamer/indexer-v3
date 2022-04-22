@@ -68,6 +68,7 @@ export const getTokensV4Options: RouteOptions = {
         .unknown()
         .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
       source: Joi.string(),
+      native: Joi.boolean(),
       sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice"),
       limit: Joi.number().integer().min(1).max(50).default(20),
       continuation: Joi.string().pattern(base64Regex),
@@ -119,14 +120,12 @@ export const getTokensV4Options: RouteOptions = {
           "t"."image",
           "t"."collection_id",
           "c"."name" as "collection_name",
-          "os"."source_id",
+          "t"."floor_sell_source_id",
           ("c".metadata ->> 'imageUrl')::TEXT AS "collection_image",
           "c"."slug",
           "t"."floor_sell_value",
           "t"."top_buy_value"
         FROM "tokens" "t"
-        LEFT JOIN "orders" "os"
-          ON "t"."floor_sell_id" = "os"."id"
         JOIN "collections" "c"
           ON "t"."collection_id" = "c"."id"
       `;
@@ -199,9 +198,11 @@ export const getTokensV4Options: RouteOptions = {
         const sources = await Sources.getInstance();
         const source = sources.getByName(query.source);
         (query as any).sourceAddress = toBuffer(source.address);
-        conditions.push(
-          `"t"."floor_sell_value" IS NOT NULL AND "os"."source_id" = $/sourceAddress/`
-        );
+        conditions.push(`"t"."floor_sell_source_id" = $/sourceAddress/`);
+      }
+
+      if (query.native) {
+        conditions.push(`"t"."floor_sell_is_reservoir"`);
       }
 
       // Continue with the next page, this depends on the sorting used
@@ -319,7 +320,9 @@ export const getTokensV4Options: RouteOptions = {
       const sources = await Sources.getInstance();
 
       const result = rawResult.map((r) => {
-        const source = r.source_id ? sources.getByAddress(fromBuffer(r.source_id)) : null;
+        const source = r.floor_sell_source_id
+          ? sources.getByAddress(fromBuffer(r.floor_sell_source_id))
+          : null;
 
         return {
           contract: fromBuffer(r.contract),

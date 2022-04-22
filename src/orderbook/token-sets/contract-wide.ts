@@ -42,14 +42,15 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
       // Make sure an associated collection exists
       const collectionResult = await idb.oneOrNone(
         `
-          SELECT "id" FROM "collections"
+          SELECT "token_count" FROM "collections"
           WHERE "id" = $/id/
         `,
         {
           id: contract,
         }
       );
-      if (!collectionResult) {
+      if (!collectionResult || Number(collectionResult.token_count) > 50000) {
+        // We don't support collection orders on large collections.
         continue;
       }
 
