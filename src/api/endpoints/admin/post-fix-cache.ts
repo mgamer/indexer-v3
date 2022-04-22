@@ -49,14 +49,32 @@ export const postFixCacheOptions: RouteOptions = {
                 UPDATE "tokens" "t" SET
                   "floor_sell_id" = "x"."id",
                   "floor_sell_value" = "x"."value",
-                  "floor_sell_maker" = "x"."maker"
+                  "floor_sell_maker" = "x"."maker",
+                  "floor_sell_valid_from" = least(
+                    2147483647::NUMERIC,
+                    date_part('epoch', lower("x"."valid_between"))
+                  )::INT,
+                  "floor_sell_valid_to" = least(
+                    2147483647::NUMERIC,
+                    coalesce(
+                      nullif(date_part('epoch', upper("x"."valid_between")), 'Infinity'),
+                      0
+                    )
+                  )::INT,
+                  "floor_sell_source_id" = "x"."source_id",
+                  "floor_sell_source_id_int" = "x"."source_id_int",
+                  "floor_sell_is_reservoir" = "x"."is_reservoir"
                 FROM (
                   SELECT DISTINCT ON ("t"."contract", "t"."token_id")
                     "t"."contract",
                     "t"."token_id",
                     "o"."id",
                     "o"."value",
-                    "o"."maker"
+                    "o"."maker",
+                    "o"."valid_between",
+                    "o"."source_id",
+                    "o"."source_id_int",
+                    "o"."is_reservoir"
                   FROM "tokens" "t"
                   LEFT JOIN "token_sets_tokens" "tst"
                     ON "t"."contract" = "tst"."contract"
