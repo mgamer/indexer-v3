@@ -280,7 +280,7 @@ export const save = async (
         "nonce",
         "source_id",
         "source_id_int",
-        "orderbook",
+        "is_reservoir",
         "contract",
         "fee_bps",
         { name: "fee_breakdown", mod: ":json" },
