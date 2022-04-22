@@ -132,7 +132,11 @@ if (config.doBackgroundWork) {
                     SELECT
                       "o"."id" as "order_id",
                       "o"."value",
-                      "o"."maker"
+                      "o"."maker",
+                      "o"."valid_between",
+                      "o"."source_id",
+                      "o"."source_id_int",
+                      "o"."is_reservoir"
                     FROM "orders" "o"
                     JOIN "token_sets_tokens" "tst"
                       ON "o"."token_set_id" = "tst"."token_set_id"
