@@ -84,15 +84,10 @@ export const getTokensBootstrapV1Options: RouteOptions = {
           "t"."floor_sell_id",
           "t"."floor_sell_value",
           "t"."floor_sell_maker",
-          "os"."source_id" AS "floor_sell_source_id",
-          date_part('epoch', lower("os"."valid_between")) AS "floor_sell_valid_from",
-          coalesce(
-            nullif(date_part('epoch', upper("os"."valid_between")), 'Infinity'),
-            0
-          ) AS "floor_sell_valid_until"
+          "t"."floor_sell_source_id",
+          "t"."floor_sell_valid_from",
+          "t"."floor_sell_valid_to"
         FROM "tokens" "t"
-        LEFT JOIN "orders" "os"
-          ON "t"."floor_sell_id" = "os"."id"
       `;
 
       // Filters
@@ -143,7 +138,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
           maker: fromBuffer(r.floor_sell_maker),
           price: formatEth(r.floor_sell_value),
           validFrom: Number(r.floor_sell_valid_from),
-          validUntil: Number(r.floor_sell_valid_until),
+          validUntil: Number(r.floor_sell_valid_to),
           source: source ? source.name : null,
         };
       });
