@@ -29,16 +29,15 @@ export const getOrdersAllV1Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      contract: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/),
+      id: Joi.string(),
       source: Joi.string(),
+      native: Joi.boolean(),
       side: Joi.string().valid("sell", "buy").default("sell"),
       includeMetadata: Joi.boolean().default(false),
       includeRawData: Joi.boolean().default(false),
       continuation: Joi.string().pattern(base64Regex),
       limit: Joi.number().integer().min(1).max(1000).default(50),
-    }).oxor("contract", "source"),
+    }).oxor("id", "source", "native"),
   },
   response: {
     schema: Joi.object({
@@ -209,28 +208,34 @@ export const getOrdersAllV1Options: RouteOptions = {
       `;
 
       // Filters
-      const conditions: string[] = [`orders.contract IS NOT NULL`, `orders.side = $/side/`];
-      if (query.contract) {
-        (query as any).contract = toBuffer(query.contract);
-        conditions.push(`orders.contract = $/contract/`);
-      }
-
-      if (query.source) {
-        const sources = await Sources.getInstance();
-        const source = sources.getByName(query.source);
-        (query as any).sourceAddress = toBuffer(source.address);
-        conditions.push(`coalesce(orders.source_id, '\\x00'::BYTEA) = $/sourceAddress/`);
-      }
-
-      if (query.continuation) {
-        const [createdAt, id] = splitContinuation(
-          query.continuation,
-          /^\d+(.\d+)?_0x[a-f0-9]{64}$/
+      const conditions: string[] = [];
+      if (query.id) {
+        conditions.push(`orders.id = $/id/`);
+      } else {
+        conditions.push(`orders.side = $/side/`);
+        conditions.push(
+          `orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance'`
         );
-        (query as any).createdAt = createdAt;
-        (query as any).id = id;
 
-        conditions.push(`(orders.created_at, orders.id) < (to_timestamp($/createdAt/), $/id/)`);
+        if (query.source) {
+          const sources = await Sources.getInstance();
+          const source = sources.getByName(query.source);
+          (query as any).sourceAddress = toBuffer(source.address);
+          conditions.push(`orders.source_id = $/sourceAddress/`);
+        }
+        if (query.native) {
+          conditions.push(`orders.is_reservoir`);
+        }
+        if (query.continuation) {
+          const [createdAt, id] = splitContinuation(
+            query.continuation,
+            /^\d+(.\d+)?_0x[a-f0-9]{64}$/
+          );
+          (query as any).createdAt = createdAt;
+          (query as any).id = id;
+
+          conditions.push(`(orders.created_at, orders.id) < (to_timestamp($/createdAt/), $/id/)`);
+        }
       }
 
       if (conditions.length) {

@@ -34,12 +34,13 @@ export const getOrdersAsksV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}:\d+$/)
         .description("Filter to a token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"),
-      tokenSetId: Joi.string()
-        .lowercase()
-        .description(
-          "Filter to a particular set, e.g. `contract:0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
-        ),
       maker: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .description(
+          "Filter to a particular user, e.g. `0x4d04eb67a2d1e01c71fad0366e0c200207a75487`"
+        ),
+      contract: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .description(
@@ -54,8 +55,8 @@ export const getOrdersAsksV1Options: RouteOptions = {
       continuation: Joi.string().pattern(base64Regex),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     })
-      .or("token", "tokenSetId", "maker")
-      .oxor("token", "tokenSetId", "maker")
+      .or("token", "contract", "maker")
+      .oxor("token", "contract", "maker")
       .with("status", "maker")
       .with("sortBy", "token"),
   },
@@ -255,16 +256,23 @@ export const getOrdersAsksV1Options: RouteOptions = {
 
       // Filters
       const conditions: string[] = [`orders.side = 'sell'`];
-      if (query.token || query.tokenSetId) {
+      if (query.token) {
         // Valid orders
         conditions.push(
           `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`
         );
 
-        if (query.token) {
-          (query as any).tokenSetId = `token:${query.token}`;
-        }
+        (query as any).tokenSetId = `token:${query.token}`;
         conditions.push(`orders.token_set_id = $/tokenSetId/`);
+      }
+      if (query.contract) {
+        // Valid orders
+        conditions.push(
+          `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`
+        );
+
+        (query as any).contract = toBuffer(query.contract);
+        conditions.push(`orders.contract = $/contract/`);
       }
       if (query.maker) {
         switch (query.status) {
