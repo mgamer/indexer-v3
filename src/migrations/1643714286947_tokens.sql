@@ -1,8 +1,5 @@
 -- Up Migration
 
-CREATE EXTENSION hstore;
-CREATE EXTENSION btree_gist;
-
 CREATE TABLE "tokens" (
   "contract" BYTEA NOT NULL,
   "token_id" NUMERIC(78, 0) NOT NULL,
@@ -44,7 +41,7 @@ CREATE INDEX "tokens_collection_id_contract_token_id_index"
   ON "tokens" ("collection_id", "contract", "token_id");
 
 CREATE INDEX "tokens_collection_id_source_id_floor_sell_value_index"
-  ON "tokens" ("collection_id", "source_id", "floor_sell_value");
+  ON "tokens" ("collection_id", "floor_sell_source_id", "floor_sell_value");
 
 CREATE INDEX "tokens_collection_id_floor_sell_value_index"
   ON "tokens" ("collection_id", "floor_sell_value")
@@ -66,12 +63,6 @@ CREATE INDEX "tokens_top_buy_maker_collection_id_index"
 CREATE INDEX "tokens_contract_token_id_index"
   ON "tokens" ("contract", "token_id")
   INCLUDE ("floor_sell_value", "top_buy_value");
-
-CREATE INDEX "tokens_collection_id_attributes_index"
-  ON "tokens"
-  USING GIST ("collection_id", "attributes" gist_hstore_ops(siglen=32))
-  INCLUDE ("contract", "token_id")
-  WHERE ("attributes" IS NOT NULL);
 
 -- https://www.lob.com/blog/supercharge-your-postgresql-performance
 -- https://klotzandrew.com/blog/posgres-per-table-autovacuum-management
