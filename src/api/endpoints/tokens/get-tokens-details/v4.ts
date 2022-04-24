@@ -74,7 +74,8 @@ export const getTokensDetailsV4Options: RouteOptions = {
     })
       .or("collection", "contract", "tokens", "tokenSetId")
       .oxor("collection", "contract", "tokens", "tokenSetId")
-      .with("attributes", "collection"),
+      .with("attributes", "collection")
+      .with("source", "collection"),
   },
   response: {
     schema: Joi.object({
