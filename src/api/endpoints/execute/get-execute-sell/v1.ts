@@ -13,7 +13,7 @@ import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as wyvernV23Utils from "@/orderbook/orders/wyvern-v2.3/utils";
-import { offChainCheck } from "@/orderbook/orders/wyvern-v2.3/check";
+import * as wyvernV23Check from "@/orderbook/orders/wyvern-v2.3/check";
 
 const version = "v1";
 
@@ -53,7 +53,7 @@ export const getExecuteSellV1Options: RouteOptions = {
         })
       ),
       query: Joi.object(),
-    }).label(`getExecuteBuy${version.toUpperCase()}Response`),
+    }).label(`getExecuteSell${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-execute-sell-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
@@ -172,7 +172,7 @@ export const getExecuteSellV1Options: RouteOptions = {
 
           // Check the order's fillability.
           try {
-            await offChainCheck(sellOrder, {
+            await wyvernV23Check.offChainCheck(sellOrder, {
               onChainApprovalRecheck: true,
             });
           } catch (error: any) {
@@ -304,27 +304,18 @@ export const getExecuteSellV1Options: RouteOptions = {
 
           // Check the order's fillability.
           try {
-            // Check: maker has enough balance
-            const nftBalance = await commonHelpers.getNftBalance(
-              order.params.collection,
-              order.params.tokenId,
-              order.params.signer
-            );
+            const [contract, tokenId] = query.token.split(":");
+
+            // Check: taker has enough balance
+            const nftBalance = await commonHelpers.getNftBalance(contract, tokenId, query.taker);
             if (nftBalance.lt(1)) {
               throw new Error("no-balance");
             }
 
             // Check: maker has set the proper approval
-            const nftApproval = await commonHelpers.getNftApproval(
-              order.params.collection,
-              order.params.signer,
-              operator
-            );
+            const nftApproval = await commonHelpers.getNftApproval(contract, query.taker, operator);
             if (!nftApproval) {
-              // Re-validate the approval on-chain to handle some edge-cases
-              if (!(await contract.isApproved(order.params.signer, operator))) {
-                throw new Error("no-approval");
-              }
+              throw new Error("no-approval");
             }
           } catch (error: any) {
             switch (error.message) {
@@ -339,7 +330,7 @@ export const getExecuteSellV1Options: RouteOptions = {
                   kind === "erc721"
                     ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.collection)
                     : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.collection)
-                ).approveTransaction(query.maker, operator);
+                ).approveTransaction(query.taker, operator);
 
                 break;
               }
