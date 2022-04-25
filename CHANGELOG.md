@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.34.0 (2022-04-25)
+
+
+### Features
+
+* update user collections API ([b669f69](https://github.com/reservoirprotocol/indexer-v3/commit/b669f6943948404d0257a7a9fbfb418de3c311c1))
+
 ## 5.33.0 (2022-04-25)
 
 
