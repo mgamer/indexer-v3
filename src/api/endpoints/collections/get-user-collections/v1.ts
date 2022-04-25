@@ -86,8 +86,8 @@ export const getUserCollectionsV1Options: RouteOptions = {
                 SUM(CASE WHEN tokens.floor_sell_value IS NULL THEN 0 ELSE 1 END) AS on_sale_count,
                 SUM(CASE WHEN tokens.top_buy_value IS NULL THEN 0 ELSE 1 END) AS liquid_count
         FROM nft_balances
-        JOIN tokens ON nft_balances.contract = tokens.contract AND nft_balances.token_id = tokens.token_id
-        JOIN collections ON nft_balances.contract = collections.contract
+        LEFT JOIN tokens ON nft_balances.contract = tokens.contract AND nft_balances.token_id = tokens.token_id
+        LEFT JOIN collections ON nft_balances.contract = collections.contract
       `;
 
       // Filters
