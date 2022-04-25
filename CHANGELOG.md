@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.33.0 (2022-04-25)
+
+
+### Features
+
+* update metadata timeing update ([2b6da7d](https://github.com/reservoirprotocol/indexer-v3/commit/2b6da7dd22ce92f47a06a20a7ea6e36c07284bb3))
+
 ## 5.32.0 (2022-04-25)
 
 
