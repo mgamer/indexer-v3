@@ -8,7 +8,7 @@ import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refr
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
   cron.schedule(
-    "25 14 * * *",
+    "30 23 * * *",
     async () =>
       await redlock
         .acquire(["daily-collections-metadata-refresh"], 5000)
