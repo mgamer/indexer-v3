@@ -74,6 +74,7 @@ export const getUserCollectionsV1Options: RouteOptions = {
   handler: async (request: Request) => {
     const params = request.params as any;
     const query = request.query as any;
+    const collections = [] as any;
 
     try {
       let baseQuery = `
@@ -114,28 +115,27 @@ export const getUserCollectionsV1Options: RouteOptions = {
       baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
-      const result = await edb.manyOrNone(baseQuery, { ...params, ...query }).then((result) =>
-        result.map((r) => {
-          if (!_.isNull(r.id)) {
-            return {
-              collection: {
-                id: r.id,
-                name: r.name,
-                metadata: r.metadata,
-                floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-                topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-              },
-              ownership: {
-                tokenCount: String(r.token_count),
-                onSaleCount: String(r.on_sale_count),
-                liquidCount: String(r.liquid_count),
-              },
-            };
-          }
-        })
-      );
+      const result = await edb.manyOrNone(baseQuery, { ...params, ...query });
+      _.forEach(result, (r) => {
+        if (!_.isNull(r.id)) {
+          collections.push({
+            collection: {
+              id: r.id,
+              name: r.name,
+              metadata: r.metadata,
+              floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+              topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+            },
+            ownership: {
+              tokenCount: String(r.token_count),
+              onSaleCount: String(r.on_sale_count),
+              liquidCount: String(r.liquid_count),
+            },
+          });
+        }
+      });
 
-      return { collections: result };
+      return { collections };
     } catch (error) {
       logger.error(`get-user-collections-${version}-handler`, `Handler failure: ${error}`);
       throw error;
