@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.37.0 (2022-04-26)
+
+
+### Features
+
+* use collection update queue ([ab03442](https://github.com/reservoirprotocol/indexer-v3/commit/ab03442e4bb9d9b48dc9096d4a9fb25afc148c4a))
+
 ### 5.36.3 (2022-04-26)
 
 ### 5.36.2 (2022-04-26)
