@@ -74,7 +74,6 @@ export const getUserCollectionsV1Options: RouteOptions = {
   handler: async (request: Request) => {
     const params = request.params as any;
     const query = request.query as any;
-    const collections = [] as any;
 
     try {
       let baseQuery = `
@@ -87,8 +86,8 @@ export const getUserCollectionsV1Options: RouteOptions = {
                 SUM(CASE WHEN tokens.floor_sell_value IS NULL THEN 0 ELSE 1 END) AS on_sale_count,
                 SUM(CASE WHEN tokens.top_buy_value IS NULL THEN 0 ELSE 1 END) AS liquid_count
         FROM nft_balances
-        LEFT JOIN tokens ON nft_balances.contract = tokens.contract AND nft_balances.token_id = tokens.token_id
-        LEFT JOIN collections ON nft_balances.contract = collections.contract
+        JOIN tokens ON nft_balances.contract = tokens.contract AND nft_balances.token_id = tokens.token_id
+        JOIN collections ON tokens.collection_id = collections.id
       `;
 
       // Filters
@@ -116,24 +115,20 @@ export const getUserCollectionsV1Options: RouteOptions = {
       baseQuery += ` LIMIT $/limit/`;
 
       const result = await edb.manyOrNone(baseQuery, { ...params, ...query });
-      _.forEach(result, (r) => {
-        if (!_.isNull(r.id)) {
-          collections.push({
-            collection: {
-              id: r.id,
-              name: r.name,
-              metadata: r.metadata,
-              floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-              topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-            },
-            ownership: {
-              tokenCount: String(r.token_count),
-              onSaleCount: String(r.on_sale_count),
-              liquidCount: String(r.liquid_count),
-            },
-          });
-        }
-      });
+      const collections = _.map(result, (r) => ({
+        collection: {
+          id: r.id,
+          name: r.name,
+          metadata: r.metadata,
+          floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+          topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+        },
+        ownership: {
+          tokenCount: String(r.token_count),
+          onSaleCount: String(r.on_sale_count),
+          liquidCount: String(r.liquid_count),
+        },
+      }));
 
       return { collections };
     } catch (error) {
