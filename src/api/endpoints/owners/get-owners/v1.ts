@@ -42,7 +42,7 @@ export const getOwnersV1Options: RouteOptions = {
       attributes: Joi.object()
         .unknown()
         .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
-      offset: Joi.number().integer().min(0).max(10000).default(0),
+      offset: Joi.number().integer().min(0).default(0),
       limit: Joi.number().integer().min(1).max(500).default(20),
     })
       .oxor("collection", "contract", "token")
