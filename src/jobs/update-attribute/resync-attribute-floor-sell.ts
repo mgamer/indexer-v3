@@ -30,7 +30,7 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { continuation } = job.data;
-      const limit = 5;
+      const limit = 500;
       const updateValues = {};
       let continuationFilter = "";
 
