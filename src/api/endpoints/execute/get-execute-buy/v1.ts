@@ -36,6 +36,9 @@ export const getExecuteBuyV1Options: RouteOptions = {
         .required(),
       quantity: Joi.number().integer().positive().default(1),
       onlyQuote: Joi.boolean().default(false),
+      referrer: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-fA-F0-9]{40}$/),
       maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
       maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),
     }),

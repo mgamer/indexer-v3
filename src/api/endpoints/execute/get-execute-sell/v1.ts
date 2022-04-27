@@ -35,6 +35,9 @@ export const getExecuteSellV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .required(),
+      referrer: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-fA-F0-9]{40}$/),
       maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
       maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),
     }),
