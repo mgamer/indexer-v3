@@ -31,7 +31,6 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { continuation } = job.data;
       const limit = 500;
-      const updateValues = {};
       let continuationFilter = "";
 
       if (continuation != "") {
@@ -63,15 +62,12 @@ if (config.doBackgroundWork) {
         const tokens = await idb.manyOrNone(tokensQuery, { collectionsIds });
 
         _.forEach(tokens, (token) => {
-          resyncAttributeCache.addToQueue(fromBuffer(token.contract), token.token_id);
+          resyncAttributeCache.addToQueue(fromBuffer(token.contract), token.token_id, 0);
         });
 
         if (_.size(collections) == limit) {
           const lastCollection = _.last(collections);
-          logger.info(
-            QUEUE_NAME,
-            `Updated ${_.size(updateValues)} orders, lastOrder=${JSON.stringify(lastCollection)}`
-          );
+          logger.info(QUEUE_NAME, `Updated up to lastCollection=${JSON.stringify(lastCollection)}`);
 
           await addToQueue(lastCollection.id);
         }
