@@ -9,6 +9,7 @@ import { logger } from "@/common/logger";
 import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
 import { Collections } from "@/models/collections";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
+import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as Boom from "@hapi/boom";
 
 const version = "v1";
@@ -85,7 +86,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       );
 
       // Refresh the collection metadata
-      await Collections.updateCollectionMetadata(collection.contract, "1");
+      await collectionUpdatesMetadata.addToQueue(collection.contract);
 
       logger.info(
         `post-collections-refresh-${version}-handler`,

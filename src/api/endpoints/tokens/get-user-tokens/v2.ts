@@ -58,6 +58,7 @@ export const getUserTokensV2Options: RouteOptions = {
             collection: Joi.object({
               id: Joi.string().allow(null),
               name: Joi.string().allow(null, ""),
+              imageUrl: Joi.string().allow(null),
             }),
             topBid: Joi.object({
               id: Joi.string().allow(null),
@@ -100,9 +101,9 @@ export const getUserTokensV2Options: RouteOptions = {
 
     try {
       const baseQuery = `
-        SELECT  b.contract, b.token_id, b.token_count, t.name,
+        SELECT b.contract, b.token_id, b.token_count, t.name,
                t.image, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.top_buy_id,
-               t.top_buy_value, t.total_buy_value, c.name as collection_name,
+               t.top_buy_value, t.total_buy_value, c.name as collection_name, c.metadata,
                (
                     CASE WHEN t.floor_sell_value IS NOT NULL
                     THEN 1
@@ -141,6 +142,7 @@ export const getUserTokensV2Options: RouteOptions = {
             collection: {
               id: r.collection_id,
               name: r.collection_name,
+              imageUrl: r.metadata?.imageUrl,
             },
             topBid: {
               id: r.top_buy_id,

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
+import _ from "lodash";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
@@ -87,7 +87,7 @@ export const getUserCollectionsV1Options: RouteOptions = {
                 SUM(CASE WHEN tokens.top_buy_value IS NULL THEN 0 ELSE 1 END) AS liquid_count
         FROM nft_balances
         JOIN tokens ON nft_balances.contract = tokens.contract AND nft_balances.token_id = tokens.token_id
-        JOIN collections ON nft_balances.contract = collections.contract
+        JOIN collections ON tokens.collection_id = collections.id
       `;
 
       // Filters
@@ -114,24 +114,23 @@ export const getUserCollectionsV1Options: RouteOptions = {
       baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
-      const result = await edb.manyOrNone(baseQuery, { ...params, ...query }).then((result) =>
-        result.map((r) => ({
-          collection: {
-            id: r.id,
-            name: r.name,
-            metadata: r.metadata,
-            floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-            topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-          },
-          ownership: {
-            tokenCount: String(r.token_count),
-            onSaleCount: String(r.on_sale_count),
-            liquidCount: String(r.liquid_count),
-          },
-        }))
-      );
+      const result = await edb.manyOrNone(baseQuery, { ...params, ...query });
+      const collections = _.map(result, (r) => ({
+        collection: {
+          id: r.id,
+          name: r.name,
+          metadata: r.metadata,
+          floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+          topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+        },
+        ownership: {
+          tokenCount: String(r.token_count),
+          onSaleCount: String(r.on_sale_count),
+          liquidCount: String(r.liquid_count),
+        },
+      }));
 
-      return { collections: result };
+      return { collections };
     } catch (error) {
       logger.error(`get-user-collections-${version}-handler`, `Handler failure: ${error}`);
       throw error;

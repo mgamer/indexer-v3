@@ -213,6 +213,7 @@ if (config.doBackgroundWork) {
                   "kind",
                   "contract",
                   "token_id" AS "tokenId",
+                  "price",
                   "previous_price" AS "previousPrice",
                   "tx_hash" AS "txHash",
                   "tx_timestamp" AS "txTimestamp"
