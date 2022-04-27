@@ -12,7 +12,7 @@ import { idb } from "@/common/db";
 import * as resyncAttributeCache from "@/jobs/update-attribute/resync-attribute-cache";
 import { fromBuffer } from "@/common/utils";
 
-const QUEUE_NAME = "resync-orders-source-queue";
+const QUEUE_NAME = "resync-attribute-floor-value-queue";
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
