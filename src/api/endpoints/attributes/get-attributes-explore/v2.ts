@@ -101,8 +101,8 @@ export const getAttributesExploreV2Options: RouteOptions = {
             JOIN LATERAL (
                 SELECT
                     (
-                        (array_agg(tokens."floor_sell_value" ORDER BY tokens."floor_sell_value")
-                         FILTER (WHERE tokens."floor_sell_value" IS NOT NULL)
+                        (array_agg(tokens.floor_sell_value ORDER BY tokens.floor_sell_value)
+                         FILTER (WHERE tokens.floor_sell_value IS NOT NULL)
                         )::text[]
                     )[1:21] AS "floor_sell_values"
                 FROM token_attributes
@@ -111,9 +111,9 @@ export const getAttributesExploreV2Options: RouteOptions = {
                 GROUP BY token_attributes.attribute_id
             ) "last_sales_info" ON TRUE
             JOIN LATERAL (
-                SELECT (array_agg(DISTINCT(x.image))) AS "sample_images"
+                SELECT (array_agg(DISTINCT(x.image)))[1:4] AS "sample_images"
                 FROM (
-                    SELECT tokens.image
+                    SELECT image
                     FROM token_attributes
                     JOIN tokens ON token_attributes.contract = tokens.contract AND token_attributes.token_id = tokens.token_id
                     WHERE token_attributes.attribute_id = attributes.id
