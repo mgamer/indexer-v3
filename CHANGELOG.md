@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.39.0 (2022-04-27)
+
+
+### Features
+
+* sort user collection by all_time_volume ([222f8d9](https://github.com/reservoirprotocol/indexer-v3/commit/222f8d92b36791590904f8c2ba1c9ee11b1babe8))
+
 ### 5.38.3 (2022-04-26)
 
 ### 5.38.2 (2022-04-26)
