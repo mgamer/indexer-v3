@@ -57,7 +57,7 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (contract: string, tokenId: string) => {
+export const addToQueue = async (contract: string, tokenId: string, delay = 60 * 60 * 1000) => {
   const token = `${contract}:${tokenId}`;
-  await queue.add(token, { contract, tokenId }, { jobId: token, delay: 60 * 60 * 1000 });
+  await queue.add(token, { contract, tokenId }, { jobId: token, delay });
 };
