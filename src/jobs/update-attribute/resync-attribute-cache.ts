@@ -39,6 +39,11 @@ if (config.doBackgroundWork) {
           onSaleCount,
           sellUpdatedAt: new Date().toISOString(),
         });
+
+        logger.info(
+          QUEUE_NAME,
+          `Updated collection=${tokenAttribute.collectionId}, key=${tokenAttribute.key}, value=${tokenAttribute.value}`
+        );
       }
     },
     {
