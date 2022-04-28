@@ -10,7 +10,6 @@ import { config } from "@/config/index";
 
 import { idb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
-import { Tokens } from "@/models/tokens";
 
 const QUEUE_NAME = "resync-attribute-sample-image-queue";
 
@@ -52,7 +51,7 @@ if (config.doBackgroundWork) {
         );
 
         const tokensQuery = `
-            SELECT DISTINCT ON (key, value) key, value, tokens.contract, tokens.token_id
+            SELECT DISTINCT ON (key, value) key, value, tokens.contract, tokens.token_id, token_attributes.attribute_id
             FROM collections
             JOIN tokens ON collections.contract = tokens.contract
             JOIN token_attributes ON tokens.contract = token_attributes.contract AND token_attributes.token_id = tokens.token_id
@@ -62,13 +61,7 @@ if (config.doBackgroundWork) {
         const tokens = await idb.manyOrNone(tokensQuery, { collectionsIds });
 
         for (const token of tokens) {
-          const tokenAttributes = await Tokens.getTokenAttributes(
-            fromBuffer(token.contract),
-            token.token_id
-          );
-
-          for (const tokenAttribute of tokenAttributes) {
-            const sampleImageQuery = `
+          const sampleImageQuery = `
                 SELECT (array_agg(DISTINCT(x.image)))[1:4] AS "sampleImages"
                 FROM (
                     SELECT image
@@ -79,26 +72,26 @@ if (config.doBackgroundWork) {
                 ) AS x
             `;
 
-            const images = await idb.oneOrNone(sampleImageQuery, {
-              attributeId: tokenAttribute.attributeId,
-            });
+          const images = await idb.oneOrNone(sampleImageQuery, {
+            attributeId: token.attribute_id,
+          });
 
-            const query = `UPDATE attributes
-                           SET sample_images = $/images/
-                           WHERE id = $/attributeId/`;
+          const query = `UPDATE attributes
+                         SET sample_images = $/images/
+                         FROM (VALUES)
+                         WHERE id = $/attributeId/`;
 
-            await idb.none(query, {
-              attributeId: tokenAttribute.attributeId,
-              images: images.sampleImages,
-            });
+          await idb.none(query, {
+            attributeId: token.attribute_id,
+            images: images.sampleImages,
+          });
 
-            logger.info(
-              QUEUE_NAME,
-              `Updated images for contract=${fromBuffer(token.contract)}, token=${
-                token.token_id
-              }, attribute=${tokenAttribute.attributeId}`
-            );
-          }
+          logger.info(
+            QUEUE_NAME,
+            `Updated images for contract=${fromBuffer(token.contract)}, token=${
+              token.token_id
+            }, attribute=${token.attribute_id}`
+          );
         }
 
         if (_.size(collections) == limit) {
