@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.40.0 (2022-04-28)
+
+
+### Features
+
+* optimize explore v2 query ([f4a96b5](https://github.com/reservoirprotocol/indexer-v3/commit/f4a96b5601e293f47793b9e4ad31884f5008d980))
+
 ### 5.39.2 (2022-04-27)
 
 ### 5.39.1 (2022-04-27)
