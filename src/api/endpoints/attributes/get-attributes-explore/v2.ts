@@ -88,7 +88,7 @@ export const getAttributesExploreV2Options: RouteOptions = {
     }
 
     // If the client asks for multiple floor prices
-    let recentFloorValuesQuery = `SELECT 0 AS "floor_sell_values"`;
+    let recentFloorValuesQuery = `SELECT NULL AS "floor_sell_values"`;
     if (query.maxFloorAskPrices > 1) {
       recentFloorValuesQuery = `
          SELECT
