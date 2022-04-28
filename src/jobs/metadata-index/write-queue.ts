@@ -166,6 +166,17 @@ if (config.doBackgroundWork) {
             throw new Error(`Could not fetch/save attribute "${value}"`);
           }
 
+          let sampleImageUpdate = "";
+          if (imageUrl) {
+            sampleImageUpdate = `
+            ,sample_images = CASE WHEN (sample_images IS NULL OR array_length(sample_images, 1) < 4) AND array_position(sample_images, $/image/) IS NULL
+                    THEN array_prepend($/image/, sample_images)
+                 WHEN (array_length(sample_images, 1) >= 4) AND array_position(sample_images, $/image/) IS NULL
+                    THEN array_prepend($/image/, array_remove(sample_images, sample_images[4]))
+                 ELSE sample_images
+            END`;
+          }
+
           // Associate the attribute with the token
           await idb.none(
             `
@@ -189,12 +200,8 @@ if (config.doBackgroundWork) {
                 RETURNING 1
               )
               UPDATE attributes
-              SET token_count = token_count + (SELECT COUNT(*) FROM "x"),
-                  sample_images = CASE WHEN (sample_images IS NULL OR array_length(sample_images, 1) < 4)
-                                            AND array_position(sample_images, $/image/) IS NULL
-                                    THEN array_append(sample_images, $/image/)
-                                    ELSE sample_images
-                                  END
+              SET token_count = token_count + (SELECT COUNT(*) FROM "x")
+                  ${sampleImageUpdate}
               WHERE id = $/attributeId/
             `,
             {
