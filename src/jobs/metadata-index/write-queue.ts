@@ -190,7 +190,11 @@ if (config.doBackgroundWork) {
               )
               UPDATE attributes
               SET token_count = token_count + (SELECT COUNT(*) FROM "x"),
-                  sample_images = CASE WHEN sample_images IS NULL OR array_length(sample_images, 1) < 4 THEN array_append(sample_images, $/image/) ELSE sample_images END
+                  sample_images = CASE WHEN (sample_images IS NULL OR array_length(sample_images, 1) < 4)
+                                            AND array_position(sample_images, $/image/) IS NULL
+                                    THEN array_append(sample_images, $/image/)
+                                    ELSE sample_images
+                                  END
               WHERE id = $/attributeId/
             `,
             {
