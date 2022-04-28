@@ -78,7 +78,6 @@ if (config.doBackgroundWork) {
 
           const query = `UPDATE attributes
                          SET sample_images = $/images/
-                         FROM (VALUES)
                          WHERE id = $/attributeId/`;
 
           await idb.none(query, {
