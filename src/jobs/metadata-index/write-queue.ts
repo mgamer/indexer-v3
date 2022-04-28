@@ -188,14 +188,16 @@ if (config.doBackgroundWork) {
                 ON CONFLICT DO NOTHING
                 RETURNING 1
               )
-              UPDATE "attributes" SET
-                "token_count" = "token_count" + (SELECT COUNT(*) FROM "x")
-              WHERE "id" = $/attributeId/
+              UPDATE attributes
+              SET token_count = token_count + (SELECT COUNT(*) FROM "x"),
+                  sample_images = CASE WHEN sample_images IS NULL OR array_length(sample_images, 1) < 4 THEN array_append(sample_images, $/image/) ELSE sample_images END
+              WHERE id = $/attributeId/
             `,
             {
               contract: toBuffer(contract),
               tokenId,
               attributeId: attributeResult.id,
+              image: imageUrl || null,
               collection,
               key: String(key),
               value: String(value),
