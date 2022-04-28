@@ -155,7 +155,7 @@ export const getAttributesExploreV2Options: RouteOptions = {
         floorAskPrices:
           query.maxFloorAskPrices > 1
             ? (r.floor_sell_values || []).map(formatEth)
-            : [formatEth(r.floor_sell_value)],
+            : [formatEth(r.floor_sell_value || 0)],
         topBid: {
           id: r.top_buy_id,
           value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
