@@ -66,6 +66,7 @@ if (config.doBackgroundWork) {
             fromBuffer(token.contract),
             token.token_id
           );
+
           for (const tokenAttribute of tokenAttributes) {
             const sampleImageQuery = `
                 SELECT (array_agg(DISTINCT(x.image)))[1:4] AS "sampleImages"
@@ -90,6 +91,13 @@ if (config.doBackgroundWork) {
               attributeId: tokenAttribute.attributeId,
               images: images.sampleImages,
             });
+
+            logger.info(
+              QUEUE_NAME,
+              `Updated images for contract=${fromBuffer(token.contract)}, token=${
+                token.token_id
+              }, attribute=${tokenAttribute.attributeId}`
+            );
           }
         }
 
