@@ -108,7 +108,7 @@ export const getUserCollectionsV1Options: RouteOptions = {
       baseQuery += ` GROUP BY collections.id, nft_balances.owner`;
 
       // Sorting
-      baseQuery += ` ORDER BY collections.id ASC`;
+      baseQuery += ` ORDER BY collections.all_time_volume DESC`;
 
       // Pagination
       baseQuery += ` OFFSET $/offset/`;

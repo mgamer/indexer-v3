@@ -57,6 +57,7 @@ if (config.doBackgroundWork) {
             JOIN tokens ON collections.contract = tokens.contract
             JOIN token_attributes ON tokens.contract = token_attributes.contract AND token_attributes.token_id = tokens.token_id
             WHERE collections.id IN ('$/collectionsIds:raw/')
+            AND tokens.floor_sell_value IS NOT NULL
         `;
 
         const tokens = await idb.manyOrNone(tokensQuery, { collectionsIds });

@@ -30,6 +30,12 @@ export const getAttributesExploreV2Options: RouteOptions = {
       attributeKey: Joi.string().description(
         "Filter to a particular attribute key, e.g. `Composition`"
       ),
+      maxFloorAskPrices: Joi.number()
+        .integer()
+        .min(1)
+        .max(20)
+        .default(1)
+        .description("Max floor prices to return"),
       sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice"),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(5000).default(20),
@@ -81,9 +87,26 @@ export const getAttributesExploreV2Options: RouteOptions = {
       }
     }
 
+    // If the client asks for multiple floor prices
+    let recentFloorValuesQuery = `SELECT NULL AS "floor_sell_values"`;
+    if (query.maxFloorAskPrices > 1) {
+      recentFloorValuesQuery = `
+         SELECT
+            (
+                (array_agg(tokens.floor_sell_value ORDER BY tokens.floor_sell_value)
+                 FILTER (WHERE tokens.floor_sell_value IS NOT NULL)
+                )::text[]
+            )[1:${query.maxFloorAskPrices}] AS "floor_sell_values"
+        FROM token_attributes
+        JOIN tokens ON token_attributes.contract = tokens.contract AND token_attributes.token_id = tokens.token_id
+        WHERE token_attributes.attribute_id = attributes.id
+        GROUP BY token_attributes.attribute_id
+      `;
+    }
+
     try {
       const attributesQuery = `
-            SELECT attributes.id, floor_sell_value, token_count, key, value, last_sales_info.*, top_buy_info.*, sample_images_info.*
+            SELECT attributes.id, floor_sell_value, token_count, key, value, recent_floor_values_info.*, top_buy_info.*, sample_images_info.*
             FROM attributes
             JOIN attribute_keys ON attributes.attribute_key_id = attribute_keys.id
             LEFT JOIN LATERAL (
@@ -99,17 +122,8 @@ export const getAttributesExploreV2Options: RouteOptions = {
                 LIMIT 1
             ) "top_buy_info" ON TRUE
             JOIN LATERAL (
-                SELECT
-                    (
-                        (array_agg(tokens.floor_sell_value ORDER BY tokens.floor_sell_value)
-                         FILTER (WHERE tokens.floor_sell_value IS NOT NULL)
-                        )::text[]
-                    )[1:21] AS "floor_sell_values"
-                FROM token_attributes
-                JOIN tokens ON token_attributes.contract = tokens.contract AND token_attributes.token_id = tokens.token_id
-                WHERE token_attributes.attribute_id = attributes.id
-                GROUP BY token_attributes.attribute_id
-            ) "last_sales_info" ON TRUE
+                ${recentFloorValuesQuery}
+            ) "recent_floor_values_info" ON TRUE
             JOIN LATERAL (
                 SELECT (array_agg(DISTINCT(x.image)))[1:4] AS "sample_images"
                 FROM (
@@ -138,7 +152,10 @@ export const getAttributesExploreV2Options: RouteOptions = {
         value: r.value,
         tokenCount: Number(r.token_count),
         sampleImages: r.sample_images || [],
-        floorAskPrices: (r.floor_sell_values || []).map(formatEth),
+        floorAskPrices:
+          query.maxFloorAskPrices > 1
+            ? (r.floor_sell_values || []).map(formatEth)
+            : [formatEth(r.floor_sell_value)],
         topBid: {
           id: r.top_buy_id,
           value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
