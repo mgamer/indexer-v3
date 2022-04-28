@@ -160,6 +160,7 @@ export const setupRoutes = (server: Server) => {
     path: "/collections/daily-volumes/v1",
     options: collectionsEndpoints.getDailyVolumesV1Options,
   });
+
   // Events
 
   server.route({
@@ -204,6 +205,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/execute/buy/v1",
     options: executeEndpoints.getExecuteBuyV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/execute/buy/v2",
+    options: executeEndpoints.getExecuteBuyV2Options,
   });
 
   server.route({
