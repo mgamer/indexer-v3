@@ -288,44 +288,44 @@ export const getExecuteSellV2Options: RouteOptions = {
             ]
           ),
         };
-
-        const steps = [
-          {
-            action: "Accept offer",
-            description: "To sell this item you must confirm the transaction and pay the gas fee",
-            kind: "transaction",
-          },
-          {
-            action: "Confirmation",
-            description: "Verify that the offer was successfully accepted",
-            kind: "confirmation",
-          },
-        ];
-
-        return {
-          steps: [
-            {
-              ...steps[0],
-              status: "incomplete",
-              data: {
-                ...fillTx,
-                maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
-                maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                  ? bn(query.maxPriorityFeePerGas).toHexString()
-                  : undefined,
-              },
-            },
-            {
-              ...steps[1],
-              status: "incomplete",
-              data: {
-                endpoint: `/orders/executed/v1?id=${bestOrderResult.id}`,
-                method: "GET",
-              },
-            },
-          ],
-        };
       }
+
+      const steps = [
+        {
+          action: "Accept offer",
+          description: "To sell this item you must confirm the transaction and pay the gas fee",
+          kind: "transaction",
+        },
+        {
+          action: "Confirmation",
+          description: "Verify that the offer was successfully accepted",
+          kind: "confirmation",
+        },
+      ];
+
+      return {
+        steps: [
+          {
+            ...steps[0],
+            status: "incomplete",
+            data: {
+              ...fillTx,
+              maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
+              maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                ? bn(query.maxPriorityFeePerGas).toHexString()
+                : undefined,
+            },
+          },
+          {
+            ...steps[1],
+            status: "incomplete",
+            data: {
+              endpoint: `/orders/executed/v1?id=${bestOrderResult.id}`,
+              method: "GET",
+            },
+          },
+        ],
+      };
     } catch (error) {
       logger.error(`get-execute-sell-${version}-handler`, `Handler failure: ${error}`);
       throw error;
