@@ -7,6 +7,7 @@ import * as eventsEndpoints from "@/api/endpoints/events";
 import * as executeEndpoints from "@/api/endpoints/execute";
 import * as collectionsEndpoints from "@/api/endpoints/collections";
 import * as healthEndpoints from "@/api/endpoints/health";
+import * as oracleEndpoints from "@/api/endpoints/oracle";
 import * as ordersEndpoints from "@/api/endpoints/orders";
 import * as ownersEndpoints from "@/api/endpoints/owners";
 import * as statsEndpoints from "@/api/endpoints/stats";
@@ -247,6 +248,14 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/execute/sell/v2",
     options: executeEndpoints.getExecuteSellV2Options,
+  });
+  
+  // Oracle
+
+  server.route({
+    method: "GET",
+    path: "/oracle/collections/{collection}/floor-ask/v1",
+    options: oracleEndpoints.getCollectionFloorAskOracleV1Options,
   });
 
   // Orders

@@ -7,6 +7,9 @@ export const config = {
   arweaveRelayerKey: process.env.ARWEAVE_RELAYER_KEY
     ? String(process.env.ARWEAVE_RELAYER_KEY)
     : undefined,
+  oraclePrivateKey: process.env.ORACLE_PRIVATE_KEY
+    ? String(process.env.ORACLE_PRIVATE_KEY)
+    : undefined,
 
   baseNetworkHttpUrl: String(process.env.BASE_NETWORK_HTTP_URL),
   baseNetworkWsUrl: String(process.env.BASE_NETWORK_WS_URL),
