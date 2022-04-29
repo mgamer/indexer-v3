@@ -97,12 +97,16 @@ if (config.doBackgroundWork) {
           const lastCollection = _.last(collections);
           logger.info(QUEUE_NAME, `Updated up to lastCollection=${JSON.stringify(lastCollection)}`);
 
-          await addToQueue(lastCollection.id);
+          job.data.cursor = lastCollection.id;
         }
       }
     },
     { connection: redis.duplicate(), concurrency: 3 }
   );
+
+  // worker.on("completed", async (job) => {
+  //   await addToQueue(job.data.cursor);
+  // });
 
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
