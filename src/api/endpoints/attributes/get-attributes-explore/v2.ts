@@ -106,7 +106,7 @@ export const getAttributesExploreV2Options: RouteOptions = {
 
     try {
       const attributesQuery = `
-            SELECT attributes.id, floor_sell_value, token_count, key, value, recent_floor_values_info.*, top_buy_info.*, sample_images_info.*
+            SELECT attributes.id, floor_sell_value, token_count, key, value, sample_images, recent_floor_values_info.*, top_buy_info.*
             FROM attributes
             JOIN attribute_keys ON attributes.attribute_key_id = attribute_keys.id
             LEFT JOIN LATERAL (
@@ -124,16 +124,6 @@ export const getAttributesExploreV2Options: RouteOptions = {
             JOIN LATERAL (
                 ${recentFloorValuesQuery}
             ) "recent_floor_values_info" ON TRUE
-            JOIN LATERAL (
-                SELECT (array_agg(DISTINCT(x.image)))[1:4] AS "sample_images"
-                FROM (
-                    SELECT image
-                    FROM token_attributes
-                    JOIN tokens ON token_attributes.contract = tokens.contract AND token_attributes.token_id = tokens.token_id
-                    WHERE token_attributes.attribute_id = attributes.id
-                    LIMIT 4
-                ) AS x
-            ) "sample_images_info" ON TRUE
             WHERE attribute_keys.collection_id = $/collection/
             ${attributeKeyFilter}
             ${sortBy}
@@ -155,7 +145,7 @@ export const getAttributesExploreV2Options: RouteOptions = {
         floorAskPrices:
           query.maxFloorAskPrices > 1
             ? (r.floor_sell_values || []).map(formatEth)
-            : [formatEth(r.floor_sell_value)],
+            : [formatEth(r.floor_sell_value || 0)],
         topBid: {
           id: r.top_buy_id,
           value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
