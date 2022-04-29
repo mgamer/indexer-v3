@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.42.0 (2022-04-29)
+
+
+### Features
+
+* fix backfill ([498061e](https://github.com/reservoirprotocol/indexer-v3/commit/498061e4cac711e49d3f2d42c00466813bd9df6a))
+
 ### 5.41.3 (2022-04-29)
 
 ### 5.41.2 (2022-04-28)
