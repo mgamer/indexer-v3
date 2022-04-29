@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { defaultAbiCoder } from "@ethersproject/abi";
+import { splitSignature } from "@ethersproject/bytes";
+import { keccak256 } from "@ethersproject/solidity";
+import { Wallet } from "@ethersproject/wallet";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
@@ -7,6 +11,7 @@ import Joi from "joi";
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, formatEth } from "@/common/utils";
+import { config } from "@/config/index";
 
 const version = "v1";
 
@@ -24,12 +29,30 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
       collection: Joi.string().lowercase().required(),
     }),
     query: Joi.object({
+      contractName: Joi.string().required(),
+      contractVersion: Joi.number().integer().positive().required(),
+      verifyingContract: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .required(),
       kind: Joi.string().valid("spot", "twap", "lower", "upper").default("spot"),
     }),
   },
   response: {
     schema: Joi.object({
       price: Joi.number().unsafe().required(),
+      packet: Joi.object({
+        request: Joi.string().required(),
+        deadline: Joi.number().required(),
+        payload: Joi.string().required(),
+        v: Joi.number(),
+        r: Joi.string()
+          .lowercase()
+          .pattern(/^0x[a-fA-F0-9]{64}$/),
+        s: Joi.string()
+          .lowercase()
+          .pattern(/^0x[a-fA-F0-9]{64}$/),
+      }),
     }).label(`getCollectionFloorAskOracle${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
@@ -120,8 +143,63 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
         }
       }
 
+      let request: string;
+      if (params.collection.includes(":")) {
+        const [contract, startTokenId, endTokenId] = params.collection.split(":");
+        request = keccak256(
+          ["string", "string", "address", "uint256", "uint256"],
+          [query.kind, "range", contract, startTokenId, endTokenId]
+        );
+      } else {
+        request = keccak256(
+          ["string", "string", "address"],
+          [query.kind, "contract", params.collection]
+        );
+      }
+
+      // "TrustUs" packet
+      const packet: {
+        request: string;
+        deadline: number;
+        payload: string;
+        v?: number;
+        r?: string;
+        s?: string;
+      } = {
+        request,
+        deadline: Math.floor(Date.now() / 1000) + 5 * 60,
+        payload: defaultAbiCoder.encode(["uint256"], [price]),
+      };
+
+      if (config.oraclePrivateKey) {
+        const wallet = new Wallet(config.oraclePrivateKey);
+
+        const { v, r, s } = splitSignature(
+          await wallet._signTypedData(
+            {
+              name: query.contractName,
+              version: query.contractVersion,
+              chainId: config.chainId,
+              verifyingContract: query.verifyingContract,
+            },
+            {
+              VerifyPacket: [
+                { name: "request", type: "bytes32" },
+                { name: "deadline", type: "uint256" },
+                { name: "payload", type: "bytes" },
+              ],
+            },
+            packet
+          )
+        );
+        packet.v = v;
+        packet.r = r;
+        packet.s = s;
+      }
+
       return {
         price: formatEth(price),
+        packet,
       };
     } catch (error) {
       logger.error(
