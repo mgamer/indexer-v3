@@ -5,7 +5,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
-import { redis, redlock } from "@/common/redis";
+import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 
 import { idb } from "@/common/db";
@@ -104,22 +104,9 @@ if (config.doBackgroundWork) {
     { connection: redis.duplicate(), concurrency: 3 }
   );
 
-  worker.on("completed", async (job) => {
-    await addToQueue(job.data.cursor);
-  });
-
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
-
-  redlock
-    .acquire(["sample-image-resync1"], 60 * 60 * 24 * 30 * 1000)
-    .then(async () => {
-      await addToQueue("0x493c7314a8b63635b09b252d929fedb53075be58");
-    })
-    .catch(() => {
-      // Skip on any errors
-    });
 }
 
 export const addToQueue = async (continuation = "") => {
