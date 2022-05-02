@@ -414,6 +414,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
             status: "incomplete",
             data: {
               ...fillTx,
+              gasLimit: "0x" + Number(1000000).toString(16),
               maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
               maxPriorityFeePerGas: query.maxPriorityFeePerGas
                 ? bn(query.maxPriorityFeePerGas).toHexString()
