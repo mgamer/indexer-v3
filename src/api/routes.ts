@@ -134,6 +134,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/collections/v4",
+    options: collectionsEndpoints.getCollectionsV4Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/collections/{collectionOrSlug}/v1",
     options: collectionsEndpoints.getCollectionDeprecatedV1Options,
   });
@@ -469,8 +475,32 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/redirect/sources/{source}/logo/v2",
+    options: redirectsEndpoints.getRedirectLogoV2Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/redirect/token/v1",
     options: redirectsEndpoints.getRedirectTokenV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/redirect/sources/{source}/tokens/{token}/link/v2",
+    options: redirectsEndpoints.getRedirectTokenV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/redirect/tokens/{token}/image/v1",
+    options: redirectsEndpoints.getRedirectTokenImageV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/redirect/collections/{collection}/image/v1",
+    options: redirectsEndpoints.getRedirectCollectionImageV1Options,
   });
 
   // Health

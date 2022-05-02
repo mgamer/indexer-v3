@@ -1,5 +1,6 @@
 // Define the fields we can update
 export type AttributesEntityUpdateParams = {
+  tokenCount?: number;
   onSaleCount?: number;
   floorSellValue?: number | null;
   topBuyValue?: number | null;

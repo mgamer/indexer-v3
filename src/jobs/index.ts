@@ -39,7 +39,8 @@ import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
 import * as resyncAttributeCache from "@/jobs/update-attribute/resync-attribute-cache";
-import * as resyncAttributeFloorSell from "@/jobs/update-attribute/resync-attribute-floor-sell";
+import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attribute-key-counts";
+import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
 import * as resyncOrdersSource from "@/jobs/orderbook/resync-orders-source";
 import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refresh";
 
@@ -66,7 +67,8 @@ export const allJobQueues = [
   handleNewSellOrder.queue,
   handleNewBuyOrder.queue,
   resyncAttributeCache.queue,
-  resyncAttributeFloorSell.queue,
   resyncOrdersSource.queue,
+  resyncAttributeKeyCounts.queue,
+  resyncAttributeValueCounts.queue,
   collectionsRefresh.queue,
 ];

@@ -6,27 +6,27 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import { Sources } from "@/models/sources";
 
-const version = "v1";
+const version = "v2";
 
-export const getRedirectLogoV1Options: RouteOptions = {
+export const getRedirectLogoV2Options: RouteOptions = {
   description: "Redirect response to the given source logo",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "5. Redirects"],
   plugins: {
     "hapi-swagger": {
       order: 53,
     },
   },
   validate: {
-    query: Joi.object({
+    params: Joi.object({
       source: Joi.string().required(),
     }),
   },
   handler: async (request: Request, response) => {
-    const query = request.query as any;
+    const params = request.params as any;
     const sources = await Sources.getInstance();
 
     try {
-      const source = await sources.getByName(query.source);
+      const source = await sources.getByName(params.source);
       return response.redirect(source.metadata.icon);
     } catch (error) {
       logger.error(`get-redirect-logo-${version}-handler`, `Handler failure: ${error}`);
