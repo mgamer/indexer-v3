@@ -98,6 +98,11 @@ export const getExecuteSellV2Options: RouteOptions = {
       let tx: TxData | undefined;
       let exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND;
 
+      const router = new Sdk.Common.Helpers.RouterV1(
+        baseProvider,
+        Sdk.Common.Addresses.Router[config.chainId]
+      );
+
       switch (bestOrderResult.kind) {
         case "wyvern-v2.3": {
           const order = new Sdk.WyvernV23.Order(config.chainId, bestOrderResult.raw_data);
@@ -124,7 +129,7 @@ export const getExecuteSellV2Options: RouteOptions = {
           }
 
           // Create matching order.
-          const sellOrder = order.buildMatching(query.taker, buildMatchingArgs);
+          const sellOrder = order.buildMatching(router.contract.address, buildMatchingArgs);
 
           // Check the order's fillability.
           try {
@@ -235,11 +240,6 @@ export const getExecuteSellV2Options: RouteOptions = {
         throw Boom.internal("Could not generate sell transaction");
       }
 
-      const router = new Sdk.Common.Helpers.RouterV1(
-        baseProvider,
-        Sdk.Common.Addresses.Router[config.chainId]
-      );
-
       let fillTx: TxData;
       if (bestOrderResult.token_kind === "erc721") {
         fillTx = {
@@ -310,6 +310,7 @@ export const getExecuteSellV2Options: RouteOptions = {
             status: "incomplete",
             data: {
               ...fillTx,
+              gasLimit: "0x" + Number(1000000).toString(16),
               maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
               maxPriorityFeePerGas: query.maxPriorityFeePerGas
                 ? bn(query.maxPriorityFeePerGas).toHexString()

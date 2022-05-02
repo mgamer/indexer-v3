@@ -149,9 +149,10 @@ export const getExecuteBuyV2Options: RouteOptions = {
             await checkTakerEthBalance(query.taker, order.params.basePrice, query.referrerFeeBps);
 
             // Create matching order.
-            const buyOrder = order.buildMatching(query.taker, {
+            const buyOrder = order.buildMatching(router.contract.address, {
               tokenId,
               nonce: await commonHelpers.getMinNonce("wyvern-v2.3", query.taker),
+              recipient: query.taker,
             });
 
             const exchange = new Sdk.WyvernV23.Exchange(config.chainId);
