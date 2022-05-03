@@ -70,6 +70,7 @@ export const getTokensFloorAskV2Options: RouteOptions = {
               .pattern(/^0x[a-fA-F0-9]{40}/)
               .allow(null),
             price: Joi.number().unsafe().allow(null),
+            validFrom: Joi.number().unsafe().allow(null),
             validUntil: Joi.number().unsafe().allow(null),
             source: Joi.string().allow(null, ""),
           }),
@@ -110,6 +111,7 @@ export const getTokensFloorAskV2Options: RouteOptions = {
       let baseQuery = `
         SELECT
           orders.source_id,
+          date_part('epoch', lower(orders.valid_between)) AS valid_from,
           coalesce(
             nullif(date_part('epoch', upper(orders.valid_between)), 'Infinity'),
             0
@@ -199,6 +201,7 @@ export const getTokensFloorAskV2Options: RouteOptions = {
           orderId: r.order_id,
           maker: r.maker ? fromBuffer(r.maker) : null,
           price: r.price ? formatEth(r.price) : null,
+          validFrom: r.price ? Number(r.valid_from) : null,
           validUntil: r.price ? Number(r.valid_until) : null,
           source: r.source_id ? sources.getByAddress(fromBuffer(r.source_id))?.name : null,
         },
