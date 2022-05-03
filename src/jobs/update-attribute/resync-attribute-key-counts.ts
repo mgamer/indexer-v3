@@ -12,7 +12,7 @@ export const queue = new Queue(QUEUE_NAME, {
   defaultJobOptions: {
     attempts: 10,
     removeOnComplete: true,
-    removeOnFail: 100,
+    removeOnFail: 1000,
   },
 });
 
