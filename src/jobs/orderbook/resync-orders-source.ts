@@ -90,7 +90,7 @@ if (config.doBackgroundWork) {
             `Updated ${_.size(updateValues)} orders, lastOrder=${JSON.stringify(lastOrder)}`
           );
 
-          await addToQueue(lastOrder.id, maxId);
+          // await addToQueue(lastOrder.id, maxId);
         }
 
         try {
@@ -105,7 +105,7 @@ if (config.doBackgroundWork) {
         }
       }
     },
-    { connection: redis.duplicate(), concurrency: 3 }
+    { connection: redis.duplicate(), concurrency: 4 }
   );
 
   worker.on("error", (error) => {
