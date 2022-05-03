@@ -60,30 +60,20 @@ if (config.doBackgroundWork) {
         const queries: PgPromiseQuery[] = [];
         if (collection) {
           // If the collection is readily available in the database then
-          // all we needed to do is to associate it with the token. As a
-          // safety measure, we also associate all the other tokens that
-          // match it and have no collection yet.
+          // all we needed to do is to associate it with the token.
           queries.push({
             query: `
               WITH "x" AS (
-                SELECT
-                  "c"."contract",
-                  "c"."token_id_range"
-                FROM "collections" "c"
-                WHERE "c"."id" = $/collection/
-              ),
-              "y" AS (
                 UPDATE "tokens" AS "t" SET
                   "collection_id" = $/collection/,
                   "updated_at" = now()
-                FROM "x"
-                WHERE "t"."contract" = "x"."contract"
-                  AND "t"."token_id" <@ "x"."token_id_range"
+                WHERE "t"."contract" = $/contract/
+                  AND "t"."token_id" = $/tokenId/
                   AND "t"."collection_id" IS NULL
                 RETURNING 1
               )
               UPDATE "collections" SET
-                "token_count" = "token_count" + (SELECT COUNT(*) FROM "y")
+                "token_count" = "token_count" + (SELECT COUNT(*) FROM "x")
               WHERE "id" = $/collection/
             `,
             values: {

@@ -179,6 +179,7 @@ export const setupRoutes = (server: Server) => {
     path: "/collections/daily-volumes/v1",
     options: collectionsEndpoints.getDailyVolumesV1Options,
   });
+
   // Events
 
   server.route({
@@ -227,6 +228,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/execute/buy/v2",
+    options: executeEndpoints.getExecuteBuyV2Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/execute/cancel/v1",
     options: executeEndpoints.getExecuteCancelV1Options,
   });
@@ -247,6 +254,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/execute/sell/v1",
     options: executeEndpoints.getExecuteSellV1Options,
+  });
+  
+  server.route({
+    method: "GET",
+    path: "/execute/sell/v2",
+    options: executeEndpoints.getExecuteSellV2Options,
   });
 
   // Oracle
