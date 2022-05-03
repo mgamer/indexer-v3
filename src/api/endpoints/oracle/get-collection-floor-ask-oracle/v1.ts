@@ -18,9 +18,10 @@ const version = "v1";
 export const getCollectionFloorAskOracleV1Options: RouteOptions = {
   description:
     "Get a standardized 'TrustUs' signature of any collection's floor price (spot or twap)",
-  tags: ["api", "2. Aggregator"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
+      deprecated: true,
       order: 1,
     },
   },
