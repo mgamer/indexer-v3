@@ -11,8 +11,9 @@ import Joi from "joi";
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn, formatEth, toBuffer } from "@/common/utils";
+import { bn, formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { Sources } from "@/models/sources";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 
 const version = "v2";
@@ -27,9 +28,19 @@ export const getExecuteBuyV2Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      token: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+      token: Joi.alternatives()
+        .try(
+          Joi.array()
+            .max(50)
+            .items(
+              Joi.string()
+                .lowercase()
+                .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+            ),
+          Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+        )
         .required(),
       taker: Joi.string()
         .lowercase()
@@ -60,6 +71,14 @@ export const getExecuteBuyV2Options: RouteOptions = {
         })
       ),
       quote: Joi.number().unsafe(),
+      path: Joi.array().items(
+        Joi.object({
+          contract: Joi.string(),
+          tokenId: Joi.string(),
+          source: Joi.string().allow(null),
+          quote: Joi.number().unsafe(),
+        })
+      ),
       query: Joi.object(),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
@@ -93,321 +112,386 @@ export const getExecuteBuyV2Options: RouteOptions = {
         },
       ];
 
-      let fillTx: TxData | undefined;
-      let quote: number | undefined;
-      let confirmationQuery: string;
+      if (!Array.isArray(query.token)) {
+        query.token = [query.token];
+      }
 
-      const [contract, tokenId] = query.token.split(":");
+      const data: string[] = [];
+      const values: string[] = [];
+      const quotes: number[] = [];
+      const path: any[] = [];
+
+      const sources = await Sources.getInstance();
+
       const router = new Sdk.Common.Helpers.RouterV1(
         baseProvider,
         Sdk.Common.Addresses.Router[config.chainId]
       );
 
-      if (query.quantity === 1) {
-        const bestOrderResult = await edb.oneOrNone(
-          `
-            SELECT
-              "o"."id",
-              "o"."kind",
-              "c"."kind" AS "token_kind",
-              "o"."token_set_id",
-              "o"."price",
-              "o"."raw_data"
-            FROM "tokens" "t"
-            JOIN "orders" "o"
-              ON "t"."floor_sell_id" = "o"."id"
-            JOIN "contracts" "c"
-              ON "t"."contract" = "c"."address"
-            WHERE "t"."contract" = $/contract/
-              AND "t"."token_id" = $/tokenId/
-          `,
-          {
-            contract: toBuffer(contract),
-            tokenId,
-          }
-        );
+      // For each token to be bought, generate its fill transaction.
+      let confirmationQuery: string;
+      for (const token of query.token) {
+        let fillTx: TxData | undefined;
+        let quote: number | undefined;
 
-        if (!bestOrderResult) {
-          throw Boom.badRequest("No available orders");
-        }
+        const [contract, tokenId] = token.split(":");
 
-        confirmationQuery = `?id=${bestOrderResult.id}`;
-
-        quote = formatEth(bestOrderResult.price);
-        if (query.onlyQuote) {
-          return { quote };
-        }
-
-        let tx: TxData | undefined;
-        let exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND | undefined;
-
-        switch (bestOrderResult.kind) {
-          case "wyvern-v2.3": {
-            const order = new Sdk.WyvernV23.Order(config.chainId, bestOrderResult.raw_data);
-
-            await checkTakerEthBalance(query.taker, order.params.basePrice, query.referrerFeeBps);
-
-            // Create matching order.
-            const buyOrder = order.buildMatching(router.contract.address, {
+        if (query.quantity === 1) {
+          const bestOrderResult = await edb.oneOrNone(
+            `
+              SELECT
+                "o"."id",
+                "o"."kind",
+                "c"."kind" AS "token_kind",
+                "o"."token_set_id",
+                "o"."price",
+                "o"."raw_data",
+                "o"."source_id"
+              FROM "tokens" "t"
+              JOIN "orders" "o"
+                ON "t"."floor_sell_id" = "o"."id"
+              JOIN "contracts" "c"
+                ON "t"."contract" = "c"."address"
+              WHERE "t"."contract" = $/contract/
+                AND "t"."token_id" = $/tokenId/
+            `,
+            {
+              contract: toBuffer(contract),
               tokenId,
-              nonce: await commonHelpers.getMinNonce("wyvern-v2.3", query.taker),
-              recipient: query.taker,
-            });
+            }
+          );
 
-            const exchange = new Sdk.WyvernV23.Exchange(config.chainId);
-            tx = exchange.matchTransaction(query.taker, buyOrder, order);
-            exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.WYVERN_V23;
-
-            break;
+          if (!bestOrderResult) {
+            throw Boom.badRequest("No available orders");
           }
 
-          case "looks-rare": {
-            const order = new Sdk.LooksRare.Order(config.chainId, bestOrderResult.raw_data);
+          confirmationQuery = `?id=${bestOrderResult.id}`;
 
-            await checkTakerEthBalance(query.taker, order.params.price, query.referrerFeeBps);
-
-            // Create matching order.
-            const buyOrder = order.buildMatching(query.taker, { tokenId });
-
-            const exchange = new Sdk.LooksRare.Exchange(config.chainId);
-            tx = exchange.matchTransaction(query.taker, order, buyOrder);
-            exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.LOOKS_RARE;
-
-            break;
+          quote = formatEth(bestOrderResult.price);
+          quotes.push(quote);
+          path.push({
+            contract,
+            tokenId,
+            source: bestOrderResult.source_id
+              ? sources.getByAddress(fromBuffer(bestOrderResult.source_id))?.name
+              : null,
+            quote,
+          });
+          if (query.onlyQuote) {
+            continue;
           }
 
-          case "opendao-erc721":
-          case "opendao-erc1155": {
-            const order = new Sdk.OpenDao.Order(config.chainId, bestOrderResult.raw_data);
+          let tx: TxData | undefined;
+          let exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND | undefined;
 
-            await checkTakerEthBalance(
-              query.taker,
-              bn(order.params.erc20TokenAmount).add(order.getFeeAmount()),
-              query.referrerFeeBps
-            );
+          switch (bestOrderResult.kind) {
+            case "wyvern-v2.3": {
+              const order = new Sdk.WyvernV23.Order(config.chainId, bestOrderResult.raw_data);
 
-            // Create matching order.
-            const buyOrder = order.buildMatching({ tokenId, amount: 1 });
+              await checkTakerEthBalance(query.taker, order.params.basePrice, query.referrerFeeBps);
 
-            const exchange = new Sdk.OpenDao.Exchange(config.chainId);
-            tx = exchange.matchTransaction(query.taker, order, buyOrder);
-            exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4;
+              // Create matching order.
+              const buyOrder = order.buildMatching(router.contract.address, {
+                tokenId,
+                nonce: await commonHelpers.getMinNonce("wyvern-v2.3", query.taker),
+                recipient: query.taker,
+              });
 
-            // Custom checking for partially fillable orders
-            if (bestOrderResult.kind === "opendao-erc1155") {
-              confirmationQuery = `?id=${bestOrderResult.id}&checkRecentEvents=true`;
+              const exchange = new Sdk.WyvernV23.Exchange(config.chainId);
+              tx = exchange.matchTransaction(query.taker, buyOrder, order);
+              exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.WYVERN_V23;
+
+              break;
             }
 
-            break;
+            case "looks-rare": {
+              const order = new Sdk.LooksRare.Order(config.chainId, bestOrderResult.raw_data);
+
+              await checkTakerEthBalance(query.taker, order.params.price, query.referrerFeeBps);
+
+              // Create matching order.
+              const buyOrder = order.buildMatching(query.taker, { tokenId });
+
+              const exchange = new Sdk.LooksRare.Exchange(config.chainId);
+              tx = exchange.matchTransaction(query.taker, order, buyOrder);
+              exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.LOOKS_RARE;
+
+              break;
+            }
+
+            case "opendao-erc721":
+            case "opendao-erc1155": {
+              const order = new Sdk.OpenDao.Order(config.chainId, bestOrderResult.raw_data);
+
+              await checkTakerEthBalance(
+                query.taker,
+                bn(order.params.erc20TokenAmount).add(order.getFeeAmount()),
+                query.referrerFeeBps
+              );
+
+              // Create matching order.
+              const buyOrder = order.buildMatching({ tokenId, amount: 1 });
+
+              const exchange = new Sdk.OpenDao.Exchange(config.chainId);
+              tx = exchange.matchTransaction(query.taker, order, buyOrder);
+              exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4;
+
+              // Custom checking for partially fillable orders
+              if (bestOrderResult.kind === "opendao-erc1155") {
+                confirmationQuery = `?id=${bestOrderResult.id}&checkRecentEvents=true`;
+              }
+
+              break;
+            }
+
+            case "zeroex-v4-erc721":
+            case "zeroex-v4-erc1155": {
+              const order = new Sdk.ZeroExV4.Order(config.chainId, bestOrderResult.raw_data);
+
+              await checkTakerEthBalance(
+                query.taker,
+                bn(order.params.erc20TokenAmount).add(order.getFeeAmount()),
+                query.referrerFeeBps
+              );
+
+              // Create matching order.
+              const buyOrder = order.buildMatching({ tokenId, amount: 1 });
+
+              const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
+              tx = exchange.matchTransaction(query.taker, order, buyOrder);
+              exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4;
+
+              // Custom checking for partially fillable orders
+              if (bestOrderResult.kind === "zeroex-v4-erc1155") {
+                confirmationQuery = `?id=${bestOrderResult.id}&checkRecentEvents=true`;
+              }
+
+              break;
+            }
+
+            default: {
+              throw Boom.notImplemented("Unsupported order kind");
+            }
           }
 
-          case "zeroex-v4-erc721":
-          case "zeroex-v4-erc1155": {
-            const order = new Sdk.ZeroExV4.Order(config.chainId, bestOrderResult.raw_data);
+          if (bestOrderResult.token_kind === "erc721") {
+            fillTx = {
+              from: tx.from,
+              to: router.contract.address,
+              data: router.contract.interface.encodeFunctionData("singleERC721ListingFill", [
+                query.referrer,
+                tx.data,
+                exchangeKind,
+                contract,
+                tokenId,
+                query.taker,
+                query.referrerFeeBps,
+              ]),
+              value: bn(tx.value!)
+                .add(bn(tx.value!).mul(query.referrerFeeBps).div(10000))
+                .toHexString(),
+            };
+          } else if (bestOrderResult.token_kind === "erc1155") {
+            fillTx = {
+              from: tx.from,
+              to: router.contract.address,
+              data: router.contract.interface.encodeFunctionData("singleERC1155ListingFill", [
+                query.referrer,
+                tx.data,
+                exchangeKind,
+                contract,
+                tokenId,
+                1,
+                query.taker,
+                query.referrerFeeBps,
+              ]),
+              value: bn(tx.value!)
+                .add(bn(tx.value!).mul(query.referrerFeeBps).div(10000))
+                .toHexString(),
+            };
+          }
+        } else {
+          // For now, we only support batch filling ZeroEx V4 and OpenDao orders.
 
-            await checkTakerEthBalance(
-              query.taker,
-              bn(order.params.erc20TokenAmount).add(order.getFeeAmount()),
-              query.referrerFeeBps
+          let tx: TxData | undefined;
+          const amounts: number[] = [];
+          if (config.chainId === 1) {
+            const bestOrdersResult = await edb.manyOrNone(
+              `
+                SELECT
+                  x.price,
+                  x.quantity_remaining,
+                  x.raw_data
+                FROM (
+                  SELECT
+                    orders.*,
+                    SUM(orders.quantity_remaining) OVER (ORDER BY price, id) - orders.quantity_remaining AS quantity
+                  FROM orders
+                  WHERE orders.token_set_id = $/tokenSetId/
+                    AND orders.fillability_status = 'fillable'
+                    AND orders.approval_status = 'approved'
+                    AND orders.kind = 'zeroex-v4-erc1155'
+                ) x WHERE x.quantity < $/quantity/
+              `,
+              {
+                tokenSetId: `token:${query.token}`,
+                quantity: query.quantity,
+              }
             );
 
-            // Create matching order.
-            const buyOrder = order.buildMatching({ tokenId, amount: 1 });
+            if (!bestOrdersResult?.length) {
+              throw Boom.badRequest("No available orders");
+            }
+
+            let quantityToFill = Number(query.quantity);
+
+            const sellOrders: Sdk.ZeroExV4.Order[] = [];
+            const matchParams: Sdk.ZeroExV4.Types.MatchParams[] = [];
+            for (const { quantity_remaining, raw_data } of bestOrdersResult) {
+              const order = new Sdk.ZeroExV4.Order(config.chainId, raw_data);
+              sellOrders.push(order);
+
+              const fill = Math.min(Number(quantity_remaining), quantityToFill);
+              matchParams.push(order.buildMatching({ amount: fill }));
+
+              quantityToFill -= fill;
+              amounts.push(fill);
+            }
 
             const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
-            tx = exchange.matchTransaction(query.taker, order, buyOrder);
-            exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4;
+            tx = exchange.batchBuyTransaction(query.taker, sellOrders, matchParams);
+            quote = formatEth(bn(tx.value!));
+            quotes.push(quote);
 
             // Custom checking for partially fillable orders
-            if (bestOrderResult.kind === "zeroex-v4-erc1155") {
-              confirmationQuery = `?id=${bestOrderResult.id}&checkRecentEvents=true`;
+            confirmationQuery = `?id=${sellOrders[0].hash()}&checkRecentEvents=true`;
+
+            if (query.onlyQuote) {
+              continue;
             }
 
-            break;
-          }
-
-          default: {
-            throw Boom.notImplemented("Unsupported order kind");
-          }
-        }
-
-        if (bestOrderResult.token_kind === "erc721") {
-          fillTx = {
-            from: tx.from,
-            to: router.contract.address,
-            data: router.contract.interface.encodeFunctionData("singleERC721ListingFill", [
-              query.referrer,
-              tx.data,
-              exchangeKind,
-              contract,
-              tokenId,
-              query.taker,
-              query.referrerFeeBps,
-            ]),
-            value: bn(tx.value!)
-              .add(bn(tx.value!).mul(query.referrerFeeBps).div(10000))
-              .toHexString(),
-          };
-        } else if (bestOrderResult.token_kind === "erc1155") {
-          fillTx = {
-            from: tx.from,
-            to: router.contract.address,
-            data: router.contract.interface.encodeFunctionData("singleERC1155ListingFill", [
-              query.referrer,
-              tx.data,
-              exchangeKind,
-              contract,
-              tokenId,
-              1,
-              query.taker,
-              query.referrerFeeBps,
-            ]),
-            value: bn(tx.value!)
-              .add(bn(tx.value!).mul(query.referrerFeeBps).div(10000))
-              .toHexString(),
-          };
-        }
-      } else {
-        // For now, we only support batch filling ZeroEx V4 and OpenDao orders.
-
-        let tx: TxData | undefined;
-        const amounts: number[] = [];
-        if (config.chainId === 1) {
-          const bestOrdersResult = await edb.manyOrNone(
-            `
-              SELECT
-                x.price,
-                x.quantity_remaining,
-                x.raw_data
-              FROM (
+            await checkTakerEthBalance(query.taker, bn(tx.value!), query.referrerFeeBps);
+          } else {
+            const bestOrdersResult = await edb.manyOrNone(
+              `
                 SELECT
-                  orders.*,
-                  SUM(orders.quantity_remaining) OVER (ORDER BY price, id) - orders.quantity_remaining AS quantity
-                FROM orders
-                WHERE orders.token_set_id = $/tokenSetId/
-                  AND orders.fillability_status = 'fillable'
-                  AND orders.approval_status = 'approved'
-                  AND orders.kind = 'zeroex-v4-erc1155'
-              ) x WHERE x.quantity < $/quantity/
-            `,
-            {
-              tokenSetId: `token:${query.token}`,
-              quantity: query.quantity,
+                  x.price,
+                  x.quantity_remaining,
+                  x.raw_data
+                FROM (
+                  SELECT
+                    orders.*,
+                    SUM(orders.quantity_remaining) OVER (ORDER BY price, id) - orders.quantity_remaining AS quantity
+                  FROM orders
+                  WHERE orders.token_set_id = $/tokenSetId/
+                    AND orders.side = 'sell'
+                    AND orders.fillability_status = 'fillable'
+                    AND orders.approval_status = 'approved'
+                    AND orders.kind = 'opendao-erc1155'
+                    AND orders.maker != $/taker/
+                ) x WHERE x.quantity < $/quantity/
+              `,
+              {
+                tokenSetId: `token:${query.token}`,
+                quantity: query.quantity,
+                taker: toBuffer(query.taker),
+              }
+            );
+
+            if (!bestOrdersResult?.length) {
+              throw Boom.badRequest("No available orders");
             }
-          );
 
-          if (!bestOrdersResult?.length) {
-            throw Boom.badRequest("No available orders");
+            let quantityToFill = Number(query.quantity);
+
+            const sellOrders: Sdk.OpenDao.Order[] = [];
+            const matchParams: Sdk.OpenDao.Types.MatchParams[] = [];
+            for (const { quantity_remaining, raw_data } of bestOrdersResult) {
+              const order = new Sdk.OpenDao.Order(config.chainId, raw_data);
+              sellOrders.push(order);
+
+              const fill = Math.min(Number(quantity_remaining), quantityToFill);
+              matchParams.push(order.buildMatching({ amount: fill }));
+
+              quantityToFill -= fill;
+              amounts.push(fill);
+            }
+
+            const exchange = new Sdk.OpenDao.Exchange(config.chainId);
+            tx = exchange.batchBuyTransaction(query.taker, sellOrders, matchParams);
+            quote = formatEth(bn(tx.value!));
+            quotes.push(quote);
+
+            // Custom checking for partially fillable orders
+            confirmationQuery = `?id=${sellOrders[0].hash()}&checkRecentEvents=true`;
+
+            if (query.onlyQuote) {
+              continue;
+            }
+
+            await checkTakerEthBalance(query.taker, bn(tx.value!), query.referrerFeeBps);
           }
 
-          let quantityToFill = Number(query.quantity);
+          fillTx = {
+            from: tx.from,
+            to: router.contract.address,
+            data: router.contract.interface.encodeFunctionData("batchERC1155ListingFill", [
+              query.referrer,
+              tx.data,
+              Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4,
+              amounts.map(() => contract),
+              amounts.map(() => tokenId),
+              amounts,
+              query.taker,
+              query.referrerFeeBps,
+            ]),
+            value: bn(tx.value!)
+              .add(bn(tx.value!).mul(query.referrerFeeBps).div(10000))
+              .toHexString(),
+          };
+        }
 
-          const sellOrders: Sdk.ZeroExV4.Order[] = [];
-          const matchParams: Sdk.ZeroExV4.Types.MatchParams[] = [];
-          for (const { quantity_remaining, raw_data } of bestOrdersResult) {
-            const order = new Sdk.ZeroExV4.Order(config.chainId, raw_data);
-            sellOrders.push(order);
+        if (!fillTx) {
+          throw Boom.internal("Could not generate buy transaction");
+        }
 
-            const fill = Math.min(Number(quantity_remaining), quantityToFill);
-            matchParams.push(order.buildMatching({ amount: fill }));
-
-            quantityToFill -= fill;
-            amounts.push(fill);
-          }
-
-          const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
-          tx = exchange.batchBuyTransaction(query.taker, sellOrders, matchParams);
-          quote = formatEth(bn(tx.value!));
-
-          // Custom checking for partially fillable orders
-          confirmationQuery = `?id=${sellOrders[0].hash()}&checkRecentEvents=true`;
-
+        if (query.token.length === 1) {
           if (query.onlyQuote) {
             return { quote };
           }
 
-          await checkTakerEthBalance(query.taker, bn(tx.value!), query.referrerFeeBps);
+          return {
+            steps: [
+              {
+                ...steps[0],
+                status: "incomplete",
+                data: {
+                  ...fillTx,
+                  gasLimit: "0x" + Number(1000000).toString(16),
+                  maxFeePerGas: query.maxFeePerGas
+                    ? bn(query.maxFeePerGas).toHexString()
+                    : undefined,
+                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                    ? bn(query.maxPriorityFeePerGas).toHexString()
+                    : undefined,
+                },
+              },
+              {
+                ...steps[1],
+                status: "incomplete",
+                data: {
+                  endpoint: `/orders/executed/v1${confirmationQuery}`,
+                  method: "GET",
+                },
+              },
+            ],
+            quote,
+            path,
+          };
         } else {
-          const bestOrdersResult = await edb.manyOrNone(
-            `
-              SELECT
-                x.price,
-                x.quantity_remaining,
-                x.raw_data
-              FROM (
-                SELECT
-                  orders.*,
-                  SUM(orders.quantity_remaining) OVER (ORDER BY price, id) - orders.quantity_remaining AS quantity
-                FROM orders
-                WHERE orders.token_set_id = $/tokenSetId/
-                  AND orders.side = 'sell'
-                  AND orders.fillability_status = 'fillable'
-                  AND orders.approval_status = 'approved'
-                  AND orders.kind = 'opendao-erc1155'
-                  AND orders.maker != $/taker/
-              ) x WHERE x.quantity < $/quantity/
-            `,
-            {
-              tokenSetId: `token:${query.token}`,
-              quantity: query.quantity,
-              taker: toBuffer(query.taker),
-            }
-          );
-
-          if (!bestOrdersResult?.length) {
-            throw Boom.badRequest("No available orders");
-          }
-
-          let quantityToFill = Number(query.quantity);
-
-          const sellOrders: Sdk.OpenDao.Order[] = [];
-          const matchParams: Sdk.OpenDao.Types.MatchParams[] = [];
-          for (const { quantity_remaining, raw_data } of bestOrdersResult) {
-            const order = new Sdk.OpenDao.Order(config.chainId, raw_data);
-            sellOrders.push(order);
-
-            const fill = Math.min(Number(quantity_remaining), quantityToFill);
-            matchParams.push(order.buildMatching({ amount: fill }));
-
-            quantityToFill -= fill;
-            amounts.push(fill);
-          }
-
-          const exchange = new Sdk.OpenDao.Exchange(config.chainId);
-          tx = exchange.batchBuyTransaction(query.taker, sellOrders, matchParams);
-          quote = formatEth(bn(tx.value!));
-
-          // Custom checking for partially fillable orders
-          confirmationQuery = `?id=${sellOrders[0].hash()}&checkRecentEvents=true`;
-
-          if (query.onlyQuote) {
-            return { quote };
-          }
-
-          await checkTakerEthBalance(query.taker, bn(tx.value!), query.referrerFeeBps);
+          data.push(fillTx.data);
+          values.push(fillTx.value!.toString());
         }
-
-        fillTx = {
-          from: tx.from,
-          to: router.contract.address,
-          data: router.contract.interface.encodeFunctionData("batchERC1155ListingFill", [
-            query.referrer,
-            tx.data,
-            Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4,
-            amounts.map(() => contract),
-            amounts.map(() => tokenId),
-            amounts,
-            query.taker,
-            query.referrerFeeBps,
-          ]),
-          value: bn(tx.value!)
-            .add(bn(tx.value!).mul(query.referrerFeeBps).div(10000))
-            .toHexString(),
-        };
-      }
-
-      if (!fillTx) {
-        throw Boom.internal("Could not generate buy transaction");
       }
 
       return {
@@ -416,7 +500,14 @@ export const getExecuteBuyV2Options: RouteOptions = {
             ...steps[0],
             status: "incomplete",
             data: {
-              ...fillTx,
+              from: query.taker,
+              to: router.contract.address,
+              data: router.contract.interface.encodeFunctionData("multiListingFill", [
+                data,
+                values,
+                true,
+              ]),
+              value: values.reduce((a, b) => bn(a).add(b), bn(0)).toString(),
               gasLimit: "0x" + Number(1000000).toString(16),
               maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
               maxPriorityFeePerGas: query.maxPriorityFeePerGas
@@ -428,12 +519,13 @@ export const getExecuteBuyV2Options: RouteOptions = {
             ...steps[1],
             status: "incomplete",
             data: {
-              endpoint: `/orders/executed/v1${confirmationQuery}`,
+              endpoint: `/orders/executed/v1${confirmationQuery!}`,
               method: "GET",
             },
           },
         ],
-        quote,
+        quote: quotes.reduce((a, b) => a + b, 0),
+        path,
       };
     } catch (error) {
       logger.error(`get-execute-buy-${version}-handler`, `Handler failure: ${error}`);
