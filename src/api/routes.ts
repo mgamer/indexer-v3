@@ -255,7 +255,7 @@ export const setupRoutes = (server: Server) => {
     path: "/execute/sell/v1",
     options: executeEndpoints.getExecuteSellV1Options,
   });
-  
+
   server.route({
     method: "GET",
     path: "/execute/sell/v2",
