@@ -55,6 +55,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
     const query = request.query as any;
 
     try {
+      // Fetch the order to get cancelled.
       const orderResult = await edb.oneOrNone(
         `
           SELECT "kind", "raw_data" FROM "orders"
@@ -67,10 +68,13 @@ export const getExecuteCancelV1Options: RouteOptions = {
           maker: toBuffer(query.maker),
         }
       );
+
+      // Return early in case no order was found.
       if (!orderResult) {
         throw Boom.badData("No matching order");
       }
 
+      // Set up generic cancellation steps.
       const generateSteps = (side: "buy" | "sell") => [
         {
           action: side === "sell" ? "Submit cancellation" : "Cancel offer",
@@ -92,13 +96,13 @@ export const getExecuteCancelV1Options: RouteOptions = {
         case "wyvern-v2.3": {
           const order = new Sdk.WyvernV23.Order(config.chainId, orderResult.raw_data);
 
+          // Generate exchange-specific cancellation transaction.
           const exchange = new Sdk.WyvernV23.Exchange(config.chainId);
           const cancelTx = exchange.cancelTransaction(query.maker, order);
 
           const steps = generateSteps(
             order.params.side === Sdk.WyvernV23.Types.OrderSide.SELL ? "sell" : "buy"
           );
-
           return {
             steps: [
               {
@@ -129,11 +133,11 @@ export const getExecuteCancelV1Options: RouteOptions = {
         case "looks-rare": {
           const order = new Sdk.LooksRare.Order(config.chainId, orderResult.raw_data);
 
+          // Generate exchange-specific cancellation transaction.
           const exchange = new Sdk.LooksRare.Exchange(config.chainId);
           const cancelTx = exchange.cancelTransaction(query.maker, order);
 
           const steps = generateSteps(order.params.isOrderAsk ? "sell" : "buy");
-
           return {
             steps: [
               {
@@ -165,13 +169,13 @@ export const getExecuteCancelV1Options: RouteOptions = {
         case "opendao-erc1155": {
           const order = new Sdk.OpenDao.Order(config.chainId, orderResult.raw_data);
 
+          // Generate exchange-specific cancellation transaction.
           const exchange = new Sdk.OpenDao.Exchange(config.chainId);
           const cancelTx = exchange.cancelTransaction(query.maker, order);
 
           const steps = generateSteps(
             order.params.direction === Sdk.OpenDao.Types.TradeDirection.SELL ? "sell" : "buy"
           );
-
           return {
             steps: [
               {
@@ -203,13 +207,13 @@ export const getExecuteCancelV1Options: RouteOptions = {
         case "zeroex-v4-erc1155": {
           const order = new Sdk.ZeroExV4.Order(config.chainId, orderResult.raw_data);
 
+          // Generate exchange-specific cancellation transaction.
           const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
           const cancelTx = exchange.cancelTransaction(query.maker, order);
 
           const steps = generateSteps(
             order.params.direction === Sdk.ZeroExV4.Types.TradeDirection.SELL ? "sell" : "buy"
           );
-
           return {
             steps: [
               {
