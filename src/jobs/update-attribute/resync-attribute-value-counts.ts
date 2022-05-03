@@ -26,12 +26,15 @@ if (config.doBackgroundWork) {
       const attributeValueCount = await Tokens.getTokenAttributesValueCount(collection, key, value);
 
       if (!attributeValueCount) {
-        await Attributes.delete(attributeValueCount.attributeId);
+        const attribute = await Attributes.getAttributeByCollectionKeyValue(collection, key, value);
+        if (attribute) {
+          await Attributes.delete(attribute.id);
 
-        logger.info(
-          QUEUE_NAME,
-          `Deleted from collection=${collection}, key=${key}, value=${value} attributeId=${attributeValueCount.attributeId}, count=${attributeValueCount.count}`
-        );
+          logger.info(
+            QUEUE_NAME,
+            `Deleted from collection=${collection}, key=${key}, value=${value} attributeId=${attribute.id}`
+          );
+        }
       } else {
         await Attributes.update(attributeValueCount.attributeId, {
           tokenCount: attributeValueCount.count,
