@@ -190,7 +190,9 @@ export const getExecuteBuyV2Options: RouteOptions = {
             const buyOrder = order.buildMatching({ tokenId, amount: 1 });
 
             const exchange = new Sdk.OpenDao.Exchange(config.chainId);
-            tx = exchange.matchTransaction(query.taker, order, buyOrder);
+            tx = exchange.matchTransaction(query.taker, order, buyOrder, {
+              noDirectTransfer: true,
+            });
             exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4;
 
             // Custom checking for partially fillable orders
@@ -215,7 +217,9 @@ export const getExecuteBuyV2Options: RouteOptions = {
             const buyOrder = order.buildMatching({ tokenId, amount: 1 });
 
             const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
-            tx = exchange.matchTransaction(query.taker, order, buyOrder);
+            tx = exchange.matchTransaction(query.taker, order, buyOrder, {
+              noDirectTransfer: true,
+            });
             exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4;
 
             // Custom checking for partially fillable orders
