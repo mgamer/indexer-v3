@@ -216,7 +216,7 @@ export const getExecuteSellV2Options: RouteOptions = {
           const sellOrder = order.buildMatching({ tokenId, amount: 1 });
 
           const exchange = new Sdk.OpenDao.Exchange(config.chainId);
-          tx = exchange.matchTransaction(router.contract.address, order, sellOrder);
+          tx = exchange.matchTransaction(query.taker, order, sellOrder);
           exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4;
 
           break;
@@ -230,7 +230,7 @@ export const getExecuteSellV2Options: RouteOptions = {
           const sellOrder = order.buildMatching({ tokenId, amount: 1 });
 
           const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
-          tx = exchange.matchTransaction(router.contract.address, order, sellOrder);
+          tx = exchange.matchTransaction(query.taker, order, sellOrder);
           exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4;
 
           break;
