@@ -47,7 +47,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const payload = request.payload as any;
-    const refreshCoolDownMin = 60; // How many minutes between each refresh
+    let refreshCoolDownMin = 60; // How many minutes between each refresh
 
     try {
       const collection = await Collections.getById(payload.collection);
@@ -55,6 +55,11 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       // If no collection found
       if (_.isNull(collection)) {
         throw Boom.badRequest(`Collection ${payload.collection} not found`);
+      }
+
+      // For big collections allow refresh once a day
+      if (collection.tokenCount > 1000000) {
+        refreshCoolDownMin = 60 * 24;
       }
 
       // Check when the last sync was performed
