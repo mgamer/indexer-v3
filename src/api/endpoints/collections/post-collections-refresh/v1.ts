@@ -58,7 +58,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       }
 
       // For big collections allow refresh once a day
-      if (collection.tokenCount > 1000000) {
+      if (collection.tokenCount > 500000) {
         refreshCoolDownMin = 60 * 24;
       }
 
