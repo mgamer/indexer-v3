@@ -109,14 +109,13 @@ export const getExecuteSellV2Options: RouteOptions = {
       // The quote is the best offer's price.
       const quote = formatEth(bestOrderResult.price);
       if (query.onlyQuote) {
+        // Skip generating any transactions if only the quote was requested.
         return { quote };
       }
 
-      // Data needed for filling through the router.
+      // Build the proper router fill transaction given the offer's kind (eg. underlying exchange).
       let tx: TxData;
       let exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND;
-
-      // Build the proper fill transaction given the offer's kind (eg. underlying exchange).
       switch (bestOrderResult.kind) {
         case "wyvern-v2.3": {
           const order = new Sdk.WyvernV23.Order(config.chainId, bestOrderResult.raw_data);
@@ -215,9 +214,9 @@ export const getExecuteSellV2Options: RouteOptions = {
 
       // Wrap the exchange-specific fill transaction via the router.
       // We are using the `onReceived` hooks for single-tx filling.
-      let fillTx: TxData;
+      let routerTx: TxData;
       if (bestOrderResult.token_kind === "erc721") {
-        fillTx = {
+        routerTx = {
           from: query.taker,
           to: contract,
           data: new Sdk.Common.Helpers.Erc721(
@@ -241,7 +240,7 @@ export const getExecuteSellV2Options: RouteOptions = {
           ),
         };
       } else {
-        fillTx = {
+        routerTx = {
           from: query.taker,
           to: contract,
           data: new Sdk.Common.Helpers.Erc1155(
@@ -288,7 +287,7 @@ export const getExecuteSellV2Options: RouteOptions = {
             ...steps[0],
             status: "incomplete",
             data: {
-              ...fillTx,
+              ...routerTx,
               maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
               maxPriorityFeePerGas: query.maxPriorityFeePerGas
                 ? bn(query.maxPriorityFeePerGas).toHexString()
