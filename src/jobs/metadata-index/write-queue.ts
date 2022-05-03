@@ -1,10 +1,13 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
+import _ from "lodash";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attribute-key-counts";
+import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
 
 const QUEUE_NAME = "metadata-index-write-queue";
 
@@ -68,6 +71,24 @@ if (config.doBackgroundWork) {
           // Skip if there is no associated entry in the `tokens` table
           return;
         }
+
+        // Clear the current token attributes
+        const attributesToRefresh = await idb.manyOrNone(
+          `DELETE FROM token_attributes
+                 WHERE contract = $/contract/
+                 AND token_id = $/tokenId/
+                 RETURNING key, value`,
+          {
+            contract: toBuffer(contract),
+            tokenId,
+          }
+        );
+
+        // Schedule attribute refresh
+        _.forEach(attributesToRefresh, (attribute) => {
+          resyncAttributeKeyCounts.addToQueue(collection, attribute.key);
+          resyncAttributeValueCounts.addToQueue(collection, attribute.key, attribute.value);
+        });
 
         // Token attributes
         for (const { key, value, kind, rank } of attributes) {

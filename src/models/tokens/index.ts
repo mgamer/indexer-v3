@@ -70,6 +70,36 @@ export class Tokens {
     })) as TokenAttributes[];
   }
 
+  public static async getTokenAttributesKeyCount(collection: string, key: string) {
+    const query = `SELECT count(DISTINCT value) AS count
+                   FROM token_attributes
+                   WHERE collection_id = $/collection/
+                   and key = $/key/
+                   GROUP BY key`;
+
+    return await idb
+      .one(query, {
+        collection,
+        key,
+      })
+      .then((result) => result.count);
+  }
+
+  public static async getTokenAttributesValueCount(collection: string, key: string, value: string) {
+    const query = `SELECT attribute_id AS "attributeId", count(*) AS count
+                   FROM token_attributes
+                   WHERE collection_id = $/collection/
+                   AND key = $/key/
+                   AND value = $/value/
+                   GROUP BY key, value, attribute_id`;
+
+    return await idb.one(query, {
+      collection,
+      key,
+      value,
+    });
+  }
+
   /**
    * Return the lowest sell price and number of tokens on sale for the given attribute
    * @param collection

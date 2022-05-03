@@ -55,4 +55,15 @@ export class Attributes {
 
     return await idb.none(query, replacementValues);
   }
+
+  public static async delete(attributeId: number) {
+    const replacementValues = {
+      attributeId,
+    };
+
+    const query = `DELETE FROM attributes
+                   WHERE id = $/attributeId/`;
+
+    return await idb.none(query, replacementValues);
+  }
 }
