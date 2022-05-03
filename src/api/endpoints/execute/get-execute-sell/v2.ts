@@ -171,7 +171,7 @@ export const getExecuteSellV2Options: RouteOptions = {
           const order = new Sdk.LooksRare.Order(config.chainId, bestOrderResult.raw_data);
 
           // Create matching order.
-          const sellOrder = order.buildMatching(query.taker, { tokenId });
+          const sellOrder = order.buildMatching(router.contract.address, { tokenId });
 
           // Check: order has a valid target
           const kind = await commonHelpers.getContractKind(order.params.collection);
@@ -216,7 +216,7 @@ export const getExecuteSellV2Options: RouteOptions = {
           const sellOrder = order.buildMatching({ tokenId, amount: 1 });
 
           const exchange = new Sdk.OpenDao.Exchange(config.chainId);
-          tx = exchange.matchTransaction(query.taker, order, sellOrder);
+          tx = exchange.matchTransaction(router.contract.address, order, sellOrder);
           exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4;
 
           break;
@@ -230,7 +230,7 @@ export const getExecuteSellV2Options: RouteOptions = {
           const sellOrder = order.buildMatching({ tokenId, amount: 1 });
 
           const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
-          tx = exchange.matchTransaction(query.taker, order, sellOrder);
+          tx = exchange.matchTransaction(router.contract.address, order, sellOrder);
           exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4;
 
           break;
