@@ -13,7 +13,6 @@ import { baseProvider } from "@/common/provider";
 import { bn, formatEth, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
-import * as wyvernV23Check from "@/orderbook/orders/wyvern-v2.3/check";
 
 const version = "v2";
 
@@ -39,6 +38,7 @@ export const getExecuteSellV2Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .default(AddressZero),
+      onlyQuote: Joi.boolean().default(false),
       maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
       maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),
     }),
@@ -70,6 +70,7 @@ export const getExecuteSellV2Options: RouteOptions = {
     try {
       const [contract, tokenId] = query.token.split(":");
 
+      // Fetch the best offer on the current token.
       const bestOrderResult = await edb.oneOrNone(
         `
           SELECT
@@ -94,26 +95,35 @@ export const getExecuteSellV2Options: RouteOptions = {
         }
       );
 
+      // Return early in case no offer is available.
       if (!bestOrderResult) {
         throw Boom.badRequest("No available orders");
       }
 
-      let tx: TxData | undefined;
-      let exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND;
-
-      const quote = formatEth(bestOrderResult.price);
-
+      // Filling will be done through the router.
       const router = new Sdk.Common.Helpers.RouterV1(
         baseProvider,
         Sdk.Common.Addresses.Router[config.chainId]
       );
 
+      // The quote is the best offer's price.
+      const quote = formatEth(bestOrderResult.price);
+      if (query.onlyQuote) {
+        return { quote };
+      }
+
+      // Data needed for filling through the router.
+      let tx: TxData;
+      let exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND;
+
+      // Build the proper fill transaction given the offer's kind (eg. underlying exchange).
       switch (bestOrderResult.kind) {
         case "wyvern-v2.3": {
           const order = new Sdk.WyvernV23.Order(config.chainId, bestOrderResult.raw_data);
 
           const buildMatchingArgs: any = {
             tokenId,
+            // Properly handle batch cancellations.
             nonce: await commonHelpers.getMinNonce("wyvern-v2.3", query.taker),
           };
           if (order.params.kind?.includes("token-list")) {
@@ -133,33 +143,10 @@ export const getExecuteSellV2Options: RouteOptions = {
             buildMatchingArgs.tokenIds = tokens.map(({ token_id }) => token_id);
           }
 
-          // Create matching order.
+          // Create sell order to match with the offer (note that the router is the taker).
           const sellOrder = order.buildMatching(router.contract.address, buildMatchingArgs);
 
-          // Check the order's fillability.
-          try {
-            await wyvernV23Check.offChainCheck(sellOrder, {
-              onChainApprovalRecheck: true,
-            });
-          } catch (error: any) {
-            switch (error.message) {
-              case "no-balance-no-approval":
-              case "no-balance": {
-                // We cannot do anything if the user doesn't own the sold token.
-                throw Boom.badData("Taker does not own the sold token");
-              }
-
-              case "no-approval":
-              case "no-user-proxy": {
-                break;
-              }
-
-              default: {
-                throw Boom.badData("Could not generate matching order");
-              }
-            }
-          }
-
+          // Generate exchange-specific fill transaction.
           const exchange = new Sdk.WyvernV23.Exchange(config.chainId);
           tx = exchange.matchTransaction(query.taker, order, sellOrder);
           exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.WYVERN_V23;
@@ -170,37 +157,10 @@ export const getExecuteSellV2Options: RouteOptions = {
         case "looks-rare": {
           const order = new Sdk.LooksRare.Order(config.chainId, bestOrderResult.raw_data);
 
-          // Create matching order.
+          // Create sell order to match with the offer (note that the router is the taker).
           const sellOrder = order.buildMatching(router.contract.address, { tokenId });
 
-          // Check: order has a valid target
-          const kind = await commonHelpers.getContractKind(order.params.collection);
-          if (!kind) {
-            throw new Error("invalid-target");
-          }
-
-          // Check the order's fillability.
-          try {
-            const [contract, tokenId] = query.token.split(":");
-
-            // Check: taker has enough balance
-            const nftBalance = await commonHelpers.getNftBalance(contract, tokenId, query.taker);
-            if (nftBalance.lt(1)) {
-              throw new Error("no-balance");
-            }
-          } catch (error: any) {
-            switch (error.message) {
-              case "no-balance": {
-                // We cannot do anything if the user doesn't own the sold token.
-                throw Boom.badData("Taker does not own the sold token");
-              }
-
-              default: {
-                throw Boom.badData("Could not generate matching order");
-              }
-            }
-          }
-
+          // Generate exchange-specific fill transaction.
           const exchange = new Sdk.LooksRare.Exchange(config.chainId);
           tx = exchange.matchTransaction(query.taker, order, sellOrder);
           exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.LOOKS_RARE;
@@ -212,11 +172,13 @@ export const getExecuteSellV2Options: RouteOptions = {
         case "opendao-erc1155": {
           const order = new Sdk.OpenDao.Order(config.chainId, bestOrderResult.raw_data);
 
-          // Create matching order.
+          // Create sell order to match with the offer.
           const sellOrder = order.buildMatching({ tokenId, amount: 1 });
 
+          // Generate exchange-specific fill transaction.
           const exchange = new Sdk.OpenDao.Exchange(config.chainId);
           tx = exchange.matchTransaction(query.taker, order, sellOrder, {
+            // Using the `onReceived` hooks would fail when filling through the router.
             noDirectTransfer: true,
           });
           exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4;
@@ -228,11 +190,13 @@ export const getExecuteSellV2Options: RouteOptions = {
         case "zeroex-v4-erc1155": {
           const order = new Sdk.ZeroExV4.Order(config.chainId, bestOrderResult.raw_data);
 
-          // Create matching order.
+          // Create sell order to match with the offer.
           const sellOrder = order.buildMatching({ tokenId, amount: 1 });
 
+          // Generate exchange-specific fill transaction.
           const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
           tx = exchange.matchTransaction(query.taker, order, sellOrder, {
+            // Using the `onReceived` hooks would fail when filling through the router.
             noDirectTransfer: true,
           });
           exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4;
@@ -246,13 +210,15 @@ export const getExecuteSellV2Options: RouteOptions = {
       }
 
       if (!tx) {
-        throw Boom.internal("Could not generate sell transaction");
+        throw Boom.internal("Could not generate transaction(s)");
       }
 
+      // Wrap the exchange-specific fill transaction via the router.
+      // We are using the `onReceived` hooks for single-tx filling.
       let fillTx: TxData;
       if (bestOrderResult.token_kind === "erc721") {
         fillTx = {
-          from: tx.from,
+          from: query.taker,
           to: contract,
           data: new Sdk.Common.Helpers.Erc721(
             baseProvider,
@@ -276,7 +242,7 @@ export const getExecuteSellV2Options: RouteOptions = {
         };
       } else {
         fillTx = {
-          from: tx.from,
+          from: query.taker,
           to: contract,
           data: new Sdk.Common.Helpers.Erc1155(
             baseProvider,
@@ -287,6 +253,7 @@ export const getExecuteSellV2Options: RouteOptions = {
               query.taker,
               router.contract.address,
               tokenId,
+              // TODO: Support selling any quantities.
               1,
               router.contract.interface.encodeFunctionData("singleERC1155BidFill", [
                 query.referrer,
@@ -301,6 +268,7 @@ export const getExecuteSellV2Options: RouteOptions = {
         };
       }
 
+      // Set up generic filling steps.
       const steps = [
         {
           action: "Accept offer",
@@ -321,7 +289,6 @@ export const getExecuteSellV2Options: RouteOptions = {
             status: "incomplete",
             data: {
               ...fillTx,
-              gasLimit: "0x" + Number(1000000).toString(16),
               maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
               maxPriorityFeePerGas: query.maxPriorityFeePerGas
                 ? bn(query.maxPriorityFeePerGas).toHexString()
