@@ -147,6 +147,8 @@ export const getExecuteListV2Options: RouteOptions = {
             },
           ];
 
+          let approvalTx: TxData | undefined;
+
           // Check the order's fillability
           try {
             await wyvernV23Check.offChainCheck(order, { onChainApprovalRecheck: true });
@@ -196,33 +198,11 @@ export const getExecuteListV2Options: RouteOptions = {
                 const userProxy = await wyvernV23Utils.getUserProxy(query.maker);
                 const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
 
-                const approvalTx = (
+                approvalTx = (
                   kind === "erc721"
                     ? new Sdk.Common.Helpers.Erc721(baseProvider, orderInfo.contract)
                     : new Sdk.Common.Helpers.Erc1155(baseProvider, orderInfo.contract)
                 ).approveTransaction(query.maker, userProxy!);
-
-                return {
-                  steps: [
-                    {
-                      ...steps[0],
-                      status: "complete",
-                    },
-                    {
-                      ...steps[1],
-                      status: "incomplete",
-                      data: approvalTx,
-                    },
-                    {
-                      ...steps[2],
-                      status: "incomplete",
-                    },
-                    {
-                      ...steps[3],
-                      status: "incomplete",
-                    },
-                  ],
-                };
               }
             }
           }
@@ -237,7 +217,8 @@ export const getExecuteListV2Options: RouteOptions = {
               },
               {
                 ...steps[1],
-                status: "complete",
+                status: !approvalTx ? "complete" : "incomplete",
+                data: !approvalTx ? undefined : approvalTx,
               },
               {
                 ...steps[2],
