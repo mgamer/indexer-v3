@@ -11,6 +11,7 @@ import { Collections } from "@/models/collections";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as Boom from "@hapi/boom";
+import * as orderFixes from "@/jobs/order-fixes/queue";
 
 const version = "v1";
 
@@ -87,6 +88,9 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
 
       // Refresh the collection metadata
       await collectionUpdatesMetadata.addToQueue(collection.contract);
+
+      // Revalidate the contract orders
+      await orderFixes.addToQueue([{ by: "contract", data: { contract: collection.contract } }]);
 
       logger.info(
         `post-collections-refresh-${version}-handler`,
