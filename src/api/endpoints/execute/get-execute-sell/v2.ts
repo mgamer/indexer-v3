@@ -75,6 +75,7 @@ export const getExecuteSellV2Options: RouteOptions = {
           SELECT
             "o"."id",
             "o"."kind",
+            "o"."price",
             "c"."kind" AS "token_kind",
             "o"."token_set_id",
             "o"."raw_data"
@@ -170,7 +171,7 @@ export const getExecuteSellV2Options: RouteOptions = {
           const order = new Sdk.LooksRare.Order(config.chainId, bestOrderResult.raw_data);
 
           // Create matching order.
-          const sellOrder = order.buildMatching(query.taker, { tokenId });
+          const sellOrder = order.buildMatching(router.contract.address, { tokenId });
 
           // Check: order has a valid target
           const kind = await commonHelpers.getContractKind(order.params.collection);
