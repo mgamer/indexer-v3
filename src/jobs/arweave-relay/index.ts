@@ -89,9 +89,9 @@ export const addPendingOrdersOpenDao = async (
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork && config.arweaveRelayerKey) {
   cron.schedule(
-    "*/1 * * * *",
+    "*/5 * * * *",
     async () =>
-      await redlock.acquire(["arweave-relay-lock"], (60 - 5) * 1000).then(async () => {
+      await redlock.acquire(["arweave-relay-lock"], (60 * 5 - 5) * 1000).then(async () => {
         logger.info("arweave-relay", "Relaying pending data");
 
         try {
