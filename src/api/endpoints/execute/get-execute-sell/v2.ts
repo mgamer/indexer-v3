@@ -10,7 +10,7 @@ import Joi from "joi";
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn, toBuffer } from "@/common/utils";
+import { bn, formatEth, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as wyvernV23Check from "@/orderbook/orders/wyvern-v2.3/check";
@@ -56,6 +56,7 @@ export const getExecuteSellV2Options: RouteOptions = {
           data: Joi.object(),
         })
       ),
+      quote: Joi.number().unsafe(),
       query: Joi.object(),
     }).label(`getExecuteSell${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
@@ -98,6 +99,8 @@ export const getExecuteSellV2Options: RouteOptions = {
 
       let tx: TxData | undefined;
       let exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND;
+
+      const quote = formatEth(bestOrderResult.price);
 
       const router = new Sdk.Common.Helpers.RouterV1(
         baseProvider,
@@ -260,6 +263,7 @@ export const getExecuteSellV2Options: RouteOptions = {
                 tx.data,
                 exchangeKind,
                 contract,
+                query.taker,
                 true,
               ]),
             ]
@@ -284,6 +288,7 @@ export const getExecuteSellV2Options: RouteOptions = {
                 tx.data,
                 exchangeKind,
                 contract,
+                query.taker,
                 true,
               ]),
             ]
@@ -327,6 +332,7 @@ export const getExecuteSellV2Options: RouteOptions = {
             },
           },
         ],
+        quote,
       };
     } catch (error) {
       logger.error(`get-execute-sell-${version}-handler`, `Handler failure: ${error}`);
