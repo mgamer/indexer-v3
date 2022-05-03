@@ -77,12 +77,10 @@ export class Tokens {
                    and key = $/key/
                    GROUP BY key`;
 
-    return await idb
-      .one(query, {
-        collection,
-        key,
-      })
-      .then((result) => result.count);
+    return await idb.oneOrNone(query, {
+      collection,
+      key,
+    });
   }
 
   public static async getTokenAttributesValueCount(collection: string, key: string, value: string) {
@@ -93,7 +91,7 @@ export class Tokens {
                    AND value = $/value/
                    GROUP BY key, value, attribute_id`;
 
-    return await idb.one(query, {
+    return await idb.oneOrNone(query, {
       collection,
       key,
       value,

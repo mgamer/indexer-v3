@@ -25,7 +25,7 @@ if (config.doBackgroundWork) {
       const { collection, key, value } = job.data;
       const attributeValueCount = await Tokens.getTokenAttributesValueCount(collection, key, value);
 
-      if (attributeValueCount.count == 0) {
+      if (!attributeValueCount) {
         await Attributes.delete(attributeValueCount.attributeId);
 
         logger.info(
