@@ -8,12 +8,12 @@ import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 
-import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
+import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import { sub, set, getUnixTime, add } from "date-fns";
 import { Collections } from "@/models/collections";
 import { CollectionsEntity } from "@/models/collections/collections-entity";
 
-const QUEUE_NAME = "collections-refresh-metadata-queue";
+const QUEUE_NAME = "collections-refresh-queue";
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
@@ -21,6 +21,7 @@ export const queue = new Queue(QUEUE_NAME, {
     attempts: 10,
     removeOnComplete: 1000,
     removeOnFail: 1000,
+    timeout: 120000,
   },
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
@@ -31,7 +32,6 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async () => {
       let collections: CollectionsEntity[] = [];
-      const method = "opensea";
 
       // Get all collections minted 24 hours ago
       const yesterday = sub(new Date(), {
@@ -63,9 +63,8 @@ if (config.doBackgroundWork) {
 
       // Queue the collection for indexing.
       _.map(collections, async (collection) => {
-        await metadataIndexFetch.addToQueue([
-          { kind: "full-collection", data: { method, collection: collection.id } },
-        ]);
+        // Refresh the collection metadata
+        await collectionUpdatesMetadata.addToQueue(collection.contract);
       });
     },
     { connection: redis.duplicate(), concurrency: 1 }

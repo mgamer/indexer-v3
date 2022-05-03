@@ -6,18 +6,18 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import { Sources } from "@/models/sources";
 
-const version = "v1";
+const version = "v2";
 
-export const getRedirectTokenV1Options: RouteOptions = {
+export const getRedirectTokenV2Options: RouteOptions = {
   description: "Redirect response to the given source token page",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "5. Redirects"],
   plugins: {
     "hapi-swagger": {
       order: 53,
     },
   },
   validate: {
-    query: Joi.object({
+    params: Joi.object({
       source: Joi.string().required(),
       token: Joi.string()
         .lowercase()
@@ -29,12 +29,12 @@ export const getRedirectTokenV1Options: RouteOptions = {
     }),
   },
   handler: async (request: Request, response) => {
-    const query = request.query as any;
+    const params = request.params as any;
     const sources = await Sources.getInstance();
 
     try {
-      const source = await sources.getByName(query.source);
-      const [contract, tokenId] = query.token.split(":");
+      const source = await sources.getByName(params.source);
+      const [contract, tokenId] = params.token.split(":");
       const tokenUrl = sources.getTokenUrl(source, contract, tokenId);
 
       return response.redirect(tokenUrl);

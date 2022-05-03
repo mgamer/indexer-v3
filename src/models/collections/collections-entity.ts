@@ -25,11 +25,20 @@ export type CollectionsEntityUpdateParams = {
   lastMetadataSync?: string;
 };
 
+export type CollectionsMetadata = {
+  imageUrl?: string | undefined;
+  discordUrl?: string | undefined;
+  description?: string | undefined;
+  externalUrl?: string | undefined;
+  bannerImageUrl?: string | undefined;
+  twitterUsername?: string | undefined;
+};
+
 export type CollectionsEntityParams = {
   id: string;
   slug: string;
   name: string;
-  metadata: Buffer;
+  metadata: CollectionsMetadata;
   royalties: Buffer;
   community: string;
   contract: Buffer;
@@ -55,7 +64,7 @@ export class CollectionsEntity {
   id: string;
   slug: string;
   name: string;
-  metadata: string;
+  metadata: CollectionsMetadata;
   royalties: string;
   community: string;
   contract: string;
@@ -80,7 +89,7 @@ export class CollectionsEntity {
     this.id = params.id;
     this.slug = params.slug;
     this.name = params.name;
-    this.metadata = params.metadata ? fromBuffer(params.metadata) : params.metadata;
+    this.metadata = params.metadata;
     this.royalties = params.royalties ? fromBuffer(params.royalties) : params.royalties;
     this.community = params.community;
     this.contract = fromBuffer(params.contract);

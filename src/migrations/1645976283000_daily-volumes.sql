@@ -35,9 +35,6 @@ ALTER TABLE "collections"
 ALTER TABLE "collections"
   ADD "all_time_rank" INT;
 
-CREATE INDEX "fill_events_2_timestamp_index"
-  ON "fill_events_2" ("timestamp");
-
 CREATE INDEX "collections_day1_volume_index"
   ON "collections" ("day1_volume" DESC);
 

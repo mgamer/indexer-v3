@@ -20,6 +20,7 @@ import "@/jobs/collections-refresh";
 import * as arweaveSyncBackfill from "@/jobs/arweave-sync/backfill-queue";
 import * as arweaveSyncRealtime from "@/jobs/arweave-sync/realtime-queue";
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
+import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
 import * as eventsSyncRealtime from "@/jobs/events-sync/realtime-queue";
 import * as eventsSyncFtTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/ft-transfers";
@@ -38,6 +39,7 @@ import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
 import * as resyncAttributeCache from "@/jobs/update-attribute/resync-attribute-cache";
+import * as resyncAttributeFloorSell from "@/jobs/update-attribute/resync-attribute-floor-sell";
 import * as resyncOrdersSource from "@/jobs/orderbook/resync-orders-source";
 import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refresh";
 
@@ -45,6 +47,7 @@ export const allJobQueues = [
   arweaveSyncBackfill.queue,
   arweaveSyncRealtime.queue,
   collectionUpdatesFloorAsk.queue,
+  collectionUpdatesMetadata.queue,
   eventsSyncBackfill.queue,
   eventsSyncRealtime.queue,
   eventsSyncFtTransfersWriteBuffer.queue,
@@ -63,6 +66,7 @@ export const allJobQueues = [
   handleNewSellOrder.queue,
   handleNewBuyOrder.queue,
   resyncAttributeCache.queue,
+  resyncAttributeFloorSell.queue,
   resyncOrdersSource.queue,
   collectionsRefresh.queue,
 ];

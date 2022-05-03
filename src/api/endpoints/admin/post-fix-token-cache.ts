@@ -9,8 +9,8 @@ import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { toBuffer } from "@/common/utils";
 
-export const postFixCacheOptions: RouteOptions = {
-  description: "Trigger fixing any cache inconsistencies for array of contracts.",
+export const postFixTokenCacheOptions: RouteOptions = {
+  description: "Trigger fixing any cache inconsistencies for specific token.",
   tags: ["api", "x-admin"],
   timeout: {
     server: 2 * 60 * 1000,
@@ -21,12 +21,10 @@ export const postFixCacheOptions: RouteOptions = {
     }).options({ allowUnknown: true }),
     payload: Joi.object({
       kind: Joi.string().valid("tokens-floor-sell", "tokens-top-buy").required(),
-      contracts: Joi.array().items(
-        Joi.string()
-          .lowercase()
-          .pattern(/^0x[a-fA-F0-9]{40}$/)
-          .required()
-      ),
+      token: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+        .required(),
     }),
   },
   handler: async (request: Request) => {
@@ -38,14 +36,13 @@ export const postFixCacheOptions: RouteOptions = {
 
     try {
       const kind = payload.kind;
-      const contracts = payload.contracts;
+      const [contract, tokenId] = payload.token.split(":");
 
       const queries: PgPromiseQuery[] = [];
       switch (kind) {
         case "tokens-floor-sell": {
-          for (const contract of contracts) {
-            queries.push({
-              query: `
+          queries.push({
+            query: `
                 UPDATE "tokens" "t" SET
                   "floor_sell_id" = "x"."id",
                   "floor_sell_value" = "x"."value",
@@ -85,25 +82,25 @@ export const postFixCacheOptions: RouteOptions = {
                     AND "o"."fillability_status" = 'fillable'
                     AND "o"."approval_status" = 'approved'
                   WHERE "t"."contract" = $/contract/
+                  AND "t".token_id = $/tokenId/
                   ORDER BY "t"."contract", "t"."token_id", "o"."value", "o"."fee_bps"
                 ) "x"
                 WHERE "t"."contract" = "x"."contract"
                   AND "t"."token_id" = "x"."token_id"
                   AND "t"."floor_sell_id" IS DISTINCT FROM "x"."id"
               `,
-              values: {
-                contract: toBuffer(contract),
-              },
-            });
-          }
+            values: {
+              contract: toBuffer(contract),
+              tokenId,
+            },
+          });
 
           break;
         }
 
         case "tokens-top-buy": {
-          for (const contract of contracts) {
-            queries.push({
-              query: `
+          queries.push({
+            query: `
                 UPDATE "tokens" "t" SET
                   "top_buy_id" = "x"."id",
                   "top_buy_value" = "x"."value",
@@ -132,17 +129,18 @@ export const postFixCacheOptions: RouteOptions = {
                         AND "nb"."amount" > 0
                     )
                   WHERE "t"."contract" = $/contract/
+                  AND "t".token_id = $/tokenId/
                   ORDER BY "t"."contract", "t"."token_id", "o"."value" DESC NULLS LAST
                 ) "x"
                 WHERE "t"."contract" = "x"."contract"
                   AND "t"."token_id" = "x"."token_id"
                   AND "t"."top_buy_id" IS DISTINCT FROM "x"."id"
               `,
-              values: {
-                contract: toBuffer(contract),
-              },
-            });
-          }
+            values: {
+              contract: toBuffer(contract),
+              tokenId,
+            },
+          });
 
           break;
         }
@@ -154,7 +152,7 @@ export const postFixCacheOptions: RouteOptions = {
 
       return { message: "Success" };
     } catch (error) {
-      logger.error("post-fix-cache-handler", `Handler failure: ${error}`);
+      logger.error("post-fix-token-cache-handler", `Handler failure: ${error}`);
       throw error;
     }
   },

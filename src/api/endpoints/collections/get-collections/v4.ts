@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import _ from "lodash";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
@@ -7,13 +8,13 @@ import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 
-const version = "v3";
+const version = "v4";
 
-export const getCollectionsV3Options: RouteOptions = {
+export const getCollectionsV4Options: RouteOptions = {
   description: "Get a filtered list of collections",
   notes:
     "Useful for getting multiple collections to show in a marketplace, or search for particular collections.",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {
       order: 12,
@@ -39,12 +40,14 @@ export const getCollectionsV3Options: RouteOptions = {
       sortBy: Joi.string()
         .valid("1DayVolume", "7DayVolume", "30DayVolume", "allTimeVolume")
         .default("allTimeVolume"),
-      offset: Joi.number().integer().min(0).max(10000).default(0),
+      includeTopBid: Joi.boolean().default(false),
       limit: Joi.number().integer().min(1).max(20).default(20),
+      continuation: Joi.string(),
     }).or("community", "contract", "name", "sortBy"),
   },
   response: {
     schema: Joi.object({
+      continuation: Joi.string().allow(null),
       collections: Joi.array().items(
         Joi.object({
           id: Joi.string(),
@@ -100,6 +103,7 @@ export const getCollectionsV3Options: RouteOptions = {
     },
   },
   handler: async (request: Request) => {
+    let collections = [] as any;
     const query = request.query as any;
 
     try {
@@ -124,10 +128,7 @@ export const getCollectionsV3Options: RouteOptions = {
               LIMIT 4
             )
           ) AS sample_images,
-          (
-            SELECT MIN(tokens.floor_sell_value) FROM tokens
-            WHERE tokens.collection_id = collections.id
-          ) AS floor_sell_value,
+          collections.floor_sell_value,
           collections.day1_volume,
           collections.day7_volume,
           collections.day30_volume,
@@ -150,54 +151,69 @@ export const getCollectionsV3Options: RouteOptions = {
       if (query.community) {
         conditions.push(`collections.community = $/community/`);
       }
+
       if (query.contract) {
         query.contract = toBuffer(query.contract);
         conditions.push(`collections.contract = $/contract/`);
       }
+
       if (query.name) {
         query.name = `%${query.name}%`;
         conditions.push(`collections.name ILIKE $/name/`);
       }
+
       if (query.slug) {
         conditions.push(`collections.slug = $/slug/`);
       }
+
+      let orderBy = ` ORDER BY collections.all_time_volume DESC NULLS LAST`;
+
+      // Sorting
+      switch (query.sortBy) {
+        case "1DayVolume":
+          if (query.continuation) {
+            conditions.push(`collections.day1_volume < $/continuation/`);
+          }
+
+          orderBy = ` ORDER BY collections.day1_volume DESC NULLS LAST`;
+          break;
+
+        case "7DayVolume":
+          if (query.continuation) {
+            conditions.push(`collections.day7_volume < $/continuation/`);
+          }
+
+          orderBy = ` ORDER BY collections.day7_volume DESC NULLS LAST`;
+          break;
+
+        case "30DayVolume":
+          if (query.continuation) {
+            conditions.push(`collections.day30_volume < $/continuation/`);
+          }
+
+          orderBy = ` ORDER BY collections.day30_volume DESC NULLS LAST`;
+          break;
+
+        case "allTimeVolume":
+        default:
+          if (query.continuation) {
+            conditions.push(`collections.all_time_volume < $/continuation/`);
+          }
+          break;
+      }
+
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
 
-      // Sorting
-      if (query.sortBy) {
-        switch (query.sortBy) {
-          case "1DayVolume":
-            baseQuery += ` ORDER BY collections.day1_volume DESC NULLS LAST`;
-            break;
-
-          case "7DayVolume":
-            baseQuery += ` ORDER BY collections.day7_volume DESC NULLS LAST`;
-            break;
-
-          case "30DayVolume":
-            baseQuery += ` ORDER BY collections.day30_volume DESC NULLS LAST`;
-            break;
-
-          case "allTimeVolume":
-          default:
-            baseQuery += ` ORDER BY collections.all_time_volume DESC NULLS LAST`;
-            break;
-        }
-      }
+      baseQuery += orderBy;
 
       // Pagination
-      baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
-      baseQuery = `
-        WITH x AS (${baseQuery})
-        SELECT
-          x.*,
-          y.*
-        FROM x
-        LEFT JOIN LATERAL (
+      let topBidQuery = "";
+      if (query.includeTopBid) {
+        topBidQuery = `LEFT JOIN LATERAL (
           SELECT
             token_sets.top_buy_value,
             token_sets.top_buy_maker
@@ -205,53 +221,96 @@ export const getCollectionsV3Options: RouteOptions = {
           WHERE token_sets.id = x.token_set_id
           ORDER BY token_sets.top_buy_value DESC
           LIMIT 1
-        ) y ON TRUE
+        ) y ON TRUE`;
+      }
+
+      baseQuery = `
+        WITH x AS (${baseQuery})
+        SELECT *
+        FROM x
+        ${topBidQuery}
       `;
 
-      const result = await edb.manyOrNone(baseQuery, query).then((result) =>
-        result.map((r) => ({
-          id: r.id,
-          slug: r.slug,
-          name: r.name,
-          image: r.image || (r.sample_images?.length ? r.sample_images[0] : null),
-          banner: r.banner,
-          discordUrl: r.discord_url,
-          externalUrl: r.external_url,
-          twitterUsername: r.twitter_username,
-          description: r.description,
-          sampleImages: r.sample_images || [],
-          tokenCount: String(r.token_count),
-          primaryContract: fromBuffer(r.contract),
-          tokenSetId: r.token_set_id,
-          floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-          topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-          topBidMaker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
-          rank: {
-            "1day": r.day1_rank,
-            "7day": r.day7_rank,
-            "30day": r.day30_rank,
-            allTime: r.all_time_rank,
-          },
-          volume: {
-            "1day": r.day1_volume ? formatEth(r.day1_volume) : null,
-            "7day": r.day7_volume ? formatEth(r.day7_volume) : null,
-            "30day": r.day30_volume ? formatEth(r.day30_volume) : null,
-            allTime: r.all_time_volume ? formatEth(r.all_time_volume) : null,
-          },
-          volumeChange: {
-            "1day": r.day1_volume_change,
-            "7day": r.day7_volume_change,
-            "30day": r.day30_volume_change,
-          },
-          floorSale: {
-            "1day": r.day1_floor_sell_value ? formatEth(r.day1_floor_sell_value) : null,
-            "7day": r.day7_floor_sell_value ? formatEth(r.day7_floor_sell_value) : null,
-            "30day": r.day30_floor_sell_value ? formatEth(r.day30_floor_sell_value) : null,
-          },
-        }))
-      );
+      const result = await edb.manyOrNone(baseQuery, query);
 
-      return { collections: result };
+      if (result) {
+        collections = result.map((r) => {
+          const response = {
+            id: r.id,
+            slug: r.slug,
+            name: r.name,
+            image: r.image || (r.sample_images?.length ? r.sample_images[0] : null),
+            banner: r.banner,
+            discordUrl: r.discord_url,
+            externalUrl: r.external_url,
+            twitterUsername: r.twitter_username,
+            description: r.description,
+            sampleImages: r.sample_images || [],
+            tokenCount: String(r.token_count),
+            primaryContract: fromBuffer(r.contract),
+            tokenSetId: r.token_set_id,
+            floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+            rank: {
+              "1day": r.day1_rank,
+              "7day": r.day7_rank,
+              "30day": r.day30_rank,
+              allTime: r.all_time_rank,
+            },
+            volume: {
+              "1day": r.day1_volume ? formatEth(r.day1_volume) : null,
+              "7day": r.day7_volume ? formatEth(r.day7_volume) : null,
+              "30day": r.day30_volume ? formatEth(r.day30_volume) : null,
+              allTime: r.all_time_volume ? formatEth(r.all_time_volume) : null,
+            },
+            volumeChange: {
+              "1day": r.day1_volume_change,
+              "7day": r.day7_volume_change,
+              "30day": r.day30_volume_change,
+            },
+            floorSale: {
+              "1day": r.day1_floor_sell_value ? formatEth(r.day1_floor_sell_value) : null,
+              "7day": r.day7_floor_sell_value ? formatEth(r.day7_floor_sell_value) : null,
+              "30day": r.day30_floor_sell_value ? formatEth(r.day30_floor_sell_value) : null,
+            },
+          };
+
+          if (query.includeTopBid) {
+            (response as any).topBidValue = r.top_buy_value ? formatEth(r.top_buy_value) : null;
+            (response as any).topBidMaker = r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null;
+          }
+
+          return response;
+        });
+      }
+
+      // Set the continuation
+      let continuation = null;
+      if (result.length === query.limit) {
+        const lastCollection = _.last(result);
+
+        if (lastCollection) {
+          switch (query.sortBy) {
+            case "1DayVolume":
+              continuation = lastCollection.day1_volume;
+              break;
+
+            case "7DayVolume":
+              continuation = lastCollection.day7_volume;
+              break;
+
+            case "30DayVolume":
+              continuation = lastCollection.day30_volume;
+              break;
+
+            case "allTimeVolume":
+            default:
+              continuation = lastCollection.all_time_volume;
+              break;
+          }
+        }
+      }
+
+      return { collections, continuation };
     } catch (error) {
       logger.error(`get-collections-${version}-handler`, `Handler failure: ${error}`);
       throw error;

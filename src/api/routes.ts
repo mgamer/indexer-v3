@@ -7,6 +7,7 @@ import * as eventsEndpoints from "@/api/endpoints/events";
 import * as executeEndpoints from "@/api/endpoints/execute";
 import * as collectionsEndpoints from "@/api/endpoints/collections";
 import * as healthEndpoints from "@/api/endpoints/health";
+import * as oracleEndpoints from "@/api/endpoints/oracle";
 import * as ordersEndpoints from "@/api/endpoints/orders";
 import * as ownersEndpoints from "@/api/endpoints/owners";
 import * as statsEndpoints from "@/api/endpoints/stats";
@@ -33,6 +34,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/admin/fix-cache",
     options: adminEndpoints.postFixCacheOptions,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/admin/fix-token-cache",
+    options: adminEndpoints.postFixTokenCacheOptions,
   });
 
   server.route({
@@ -105,6 +112,12 @@ export const setupRoutes = (server: Server) => {
     options: attributesEndpoints.getAttributesExploreV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/collections/{collection}/attributes/explore/v2",
+    options: attributesEndpoints.getAttributesExploreV2Options,
+  });
+
   // Collections
 
   server.route({
@@ -123,6 +136,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/collections/v3",
     options: collectionsEndpoints.getCollectionsV3Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/collections/v4",
+    options: collectionsEndpoints.getCollectionsV4Options,
   });
 
   server.route({
@@ -236,11 +255,19 @@ export const setupRoutes = (server: Server) => {
     path: "/execute/sell/v1",
     options: executeEndpoints.getExecuteSellV1Options,
   });
-
+  
   server.route({
     method: "GET",
     path: "/execute/sell/v2",
     options: executeEndpoints.getExecuteSellV2Options,
+  });
+
+  // Oracle
+
+  server.route({
+    method: "GET",
+    path: "/oracle/collections/{collection}/floor-ask/v1",
+    options: oracleEndpoints.getCollectionFloorAskOracleV1Options,
   });
 
   // Orders
@@ -454,8 +481,32 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/redirect/sources/{source}/logo/v2",
+    options: redirectsEndpoints.getRedirectLogoV2Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/redirect/token/v1",
     options: redirectsEndpoints.getRedirectTokenV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/redirect/sources/{source}/tokens/{token}/link/v2",
+    options: redirectsEndpoints.getRedirectTokenV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/redirect/tokens/{token}/image/v1",
+    options: redirectsEndpoints.getRedirectTokenImageV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/redirect/collections/{collection}/image/v1",
+    options: redirectsEndpoints.getRedirectCollectionImageV1Options,
   });
 
   // Health

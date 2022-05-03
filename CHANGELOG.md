@@ -2,6 +2,155 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.43.3 (2022-05-03)
+
+### 5.43.2 (2022-05-02)
+
+### 5.43.1 (2022-05-02)
+
+## 5.43.0 (2022-05-01)
+
+
+### Features
+
+* stop backfill ([fd6615d](https://github.com/reservoirprotocol/indexer-v3/commit/fd6615db0530baf1cb5f1446ff0718be68f2dba0))
+
+### 5.42.4 (2022-05-01)
+
+### 5.42.3 (2022-04-30)
+
+### 5.42.2 (2022-04-30)
+
+### 5.42.1 (2022-04-29)
+
+## 5.42.0 (2022-04-29)
+
+
+### Features
+
+* fix backfill ([498061e](https://github.com/reservoirprotocol/indexer-v3/commit/498061e4cac711e49d3f2d42c00466813bd9df6a))
+
+### 5.41.3 (2022-04-29)
+
+### 5.41.2 (2022-04-28)
+
+### 5.41.1 (2022-04-28)
+
+## 5.41.0 (2022-04-28)
+
+
+### Features
+
+* update backfill ([eb2fb4b](https://github.com/reservoirprotocol/indexer-v3/commit/eb2fb4b81385979329fc29a103e1a8ed78cd50a4))
+
+### 5.40.2 (2022-04-28)
+
+### 5.40.1 (2022-04-28)
+
+## 5.40.0 (2022-04-28)
+
+
+### Features
+
+* optimize explore v2 query ([f4a96b5](https://github.com/reservoirprotocol/indexer-v3/commit/f4a96b5601e293f47793b9e4ad31884f5008d980))
+
+### 5.39.2 (2022-04-27)
+
+### 5.39.1 (2022-04-27)
+
+## 5.39.0 (2022-04-27)
+
+
+### Features
+
+* sort user collection by all_time_volume ([222f8d9](https://github.com/reservoirprotocol/indexer-v3/commit/222f8d92b36791590904f8c2ba1c9ee11b1babe8))
+
+### 5.38.3 (2022-04-26)
+
+### 5.38.2 (2022-04-26)
+
+### 5.38.1 (2022-04-26)
+
+## 5.38.0 (2022-04-26)
+
+
+### Features
+
+* update user collections query ([67cae87](https://github.com/reservoirprotocol/indexer-v3/commit/67cae87b25dd69f621563c36f83b8f123cefd0d8))
+
+## 5.37.0 (2022-04-26)
+
+
+### Features
+
+* use collection update queue ([ab03442](https://github.com/reservoirprotocol/indexer-v3/commit/ab03442e4bb9d9b48dc9096d4a9fb25afc148c4a))
+
+### 5.36.3 (2022-04-26)
+
+### 5.36.2 (2022-04-26)
+
+### 5.36.1 (2022-04-25)
+
+## 5.36.0 (2022-04-25)
+
+
+### Features
+
+* update user collections API ([b548c1b](https://github.com/reservoirprotocol/indexer-v3/commit/b548c1b25e03944bf646f920b22829810c5b577f))
+
+## 5.35.0 (2022-04-25)
+
+
+### Features
+
+* update user collections API ([abd147f](https://github.com/reservoirprotocol/indexer-v3/commit/abd147fb014625731795e74e9f99aa4cd7868d3c))
+
+### 5.34.1 (2022-04-25)
+
+## 5.34.0 (2022-04-25)
+
+
+### Features
+
+* update user collections API ([b669f69](https://github.com/reservoirprotocol/indexer-v3/commit/b669f6943948404d0257a7a9fbfb418de3c311c1))
+
+## 5.33.0 (2022-04-25)
+
+
+### Features
+
+* update metadata timeing update ([2b6da7d](https://github.com/reservoirprotocol/indexer-v3/commit/2b6da7dd22ce92f47a06a20a7ea6e36c07284bb3))
+
+## 5.32.0 (2022-04-25)
+
+
+### Features
+
+* update collection metadata ([5f13334](https://github.com/reservoirprotocol/indexer-v3/commit/5f13334dca2de3d93887427fed3e3acf90da2e8c))
+
+## 5.31.0 (2022-04-24)
+
+
+### Features
+
+* speed up source resync ([96eebae](https://github.com/reservoirprotocol/indexer-v3/commit/96eebae3a1a1506a1db17c575d317c1954799ab4))
+
+### 5.30.35 (2022-04-24)
+
+### 5.30.34 (2022-04-24)
+
+### 5.30.33 (2022-04-24)
+
+### 5.30.32 (2022-04-23)
+
+### 5.30.31 (2022-04-22)
+
+### 5.30.30 (2022-04-22)
+
+### 5.30.29 (2022-04-22)
+
+### 5.30.28 (2022-04-22)
+
 ### 5.30.27 (2022-04-22)
 
 ### 5.30.26 (2022-04-22)
