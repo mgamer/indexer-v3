@@ -98,6 +98,18 @@ export class Tokens {
     });
   }
 
+  public static async countTokensInCollection(collectionId: string) {
+    const query = `SELECT count(*) AS count
+                   FROM tokens
+                   WHERE collection_id = $/collectionId/`;
+
+    return await idb
+      .oneOrNone(query, {
+        collectionId,
+      })
+      .then((result) => (result ? result.count : 0));
+  }
+
   /**
    * Return the lowest sell price and number of tokens on sale for the given attribute
    * @param collection
