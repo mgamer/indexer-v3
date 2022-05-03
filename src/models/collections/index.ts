@@ -9,6 +9,7 @@ import {
 import { toBuffer } from "@/common/utils";
 import MetadataApi from "@/utils/metadata-api";
 import _ from "lodash";
+import { Tokens } from "@/models/tokens";
 
 export class Collections {
   public static async getById(collectionId: string) {
@@ -47,11 +48,13 @@ export class Collections {
     return null;
   }
 
-  public static async updateCollectionMetadata(contract: string, tokenId: string) {
+  public static async updateCollectionCache(contract: string, tokenId: string) {
     const collection = await MetadataApi.getCollectionMetadata(contract, tokenId);
+    const tokenCount = await Tokens.countTokensInCollection(collection.id);
 
     const query = `UPDATE collections
-                   SET metadata = $/metadata:json/, name = $/name/, royalties = $/royalties:json/, slug = $/slug/
+                   SET metadata = $/metadata:json/, name = $/name/, royalties = $/royalties:json/,
+                       slug = $/slug/, token_count = $/tokenCount/
                    WHERE id = $/id/`;
 
     const values = {
@@ -60,6 +63,7 @@ export class Collections {
       name: collection.name,
       royalties: collection.royalties,
       slug: collection.slug,
+      tokenCount,
     };
 
     await idb.none(query, values);

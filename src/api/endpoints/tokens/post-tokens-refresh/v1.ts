@@ -11,6 +11,7 @@ import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
 import { Collections } from "@/models/collections";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as Boom from "@hapi/boom";
+import * as orderFixes from "@/jobs/order-fixes/queue";
 
 const version = "v1";
 
@@ -87,6 +88,9 @@ export const postTokensRefreshV1Options: RouteOptions = {
           },
         ]);
       }
+
+      // Revalidate the token orders
+      await orderFixes.addToQueue([{ by: "token", data: { token: payload.token } }]);
 
       logger.info(
         `post-tokens-refresh-${version}-handler`,
