@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.45.2 (2022-05-03)
+
+### 5.45.1 (2022-05-03)
+
+## 5.45.0 (2022-05-03)
+
+
+### Features
+
+* update the backfill queues ([a202da3](https://github.com/reservoirprotocol/indexer-v3/commit/a202da3bb3bcb9b259bb7defdda5b715e61166fe))
+
+## 5.44.0 (2022-05-03)
+
+
+### Features
+
+* update the backfill queues ([f8ce277](https://github.com/reservoirprotocol/indexer-v3/commit/f8ce277e6b2894d57a6db0c7eb043abc672c910f))
+
+### 5.43.8 (2022-05-03)
+
+### 5.43.7 (2022-05-03)
+
+### 5.43.6 (2022-05-03)
+
+### 5.43.5 (2022-05-03)
+
 ### 5.43.4 (2022-05-03)
 
 ### 5.43.3 (2022-05-03)

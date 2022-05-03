@@ -12,7 +12,7 @@ export const queue = new Queue(QUEUE_NAME, {
   defaultJobOptions: {
     attempts: 10,
     removeOnComplete: true,
-    removeOnFail: 100,
+    removeOnFail: 1000,
   },
 });
 
@@ -25,13 +25,16 @@ if (config.doBackgroundWork) {
       const { collection, key, value } = job.data;
       const attributeValueCount = await Tokens.getTokenAttributesValueCount(collection, key, value);
 
-      if (attributeValueCount.count == 0) {
-        await Attributes.delete(attributeValueCount.attributeId);
+      if (!attributeValueCount) {
+        const attribute = await Attributes.getAttributeByCollectionKeyValue(collection, key, value);
+        if (attribute) {
+          await Attributes.delete(attribute.id);
 
-        logger.info(
-          QUEUE_NAME,
-          `Deleted from collection=${collection}, key=${key}, value=${value} attributeId=${attributeValueCount.attributeId}, count=${attributeValueCount.count}`
-        );
+          logger.info(
+            QUEUE_NAME,
+            `Deleted from collection=${collection}, key=${key}, value=${value} attributeId=${attribute.id}`
+          );
+        }
       } else {
         await Attributes.update(attributeValueCount.attributeId, {
           tokenCount: attributeValueCount.count,

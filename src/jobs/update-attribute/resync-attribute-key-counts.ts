@@ -12,7 +12,7 @@ export const queue = new Queue(QUEUE_NAME, {
   defaultJobOptions: {
     attempts: 10,
     removeOnComplete: true,
-    removeOnFail: 100,
+    removeOnFail: 1000,
   },
 });
 
@@ -26,7 +26,7 @@ if (config.doBackgroundWork) {
       const attributeKeyCount = await Tokens.getTokenAttributesKeyCount(collection, key);
 
       // If there are no more token for the given key delete it
-      if (attributeKeyCount == 0) {
+      if (!attributeKeyCount) {
         await AttributeKeys.delete(collection, key);
 
         logger.info(
@@ -34,11 +34,11 @@ if (config.doBackgroundWork) {
           `Deleted from collection=${collection}, key=${key}, count=${attributeKeyCount}`
         );
       } else {
-        await AttributeKeys.update(collection, key, { attributeCount: attributeKeyCount });
+        await AttributeKeys.update(collection, key, { attributeCount: attributeKeyCount.count });
 
         logger.info(
           QUEUE_NAME,
-          `Updated collection=${collection}, key=${key}, count=${attributeKeyCount}`
+          `Updated collection=${collection}, key=${key}, count=${attributeKeyCount.count}`
         );
       }
     },

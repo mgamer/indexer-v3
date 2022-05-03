@@ -66,4 +66,31 @@ export class Attributes {
 
     return await idb.none(query, replacementValues);
   }
+
+  public static async getAttributeByCollectionKeyValue(
+    collectionId: string,
+    key: string,
+    value: string
+  ) {
+    const replacementValues = {
+      collectionId,
+      key,
+      value,
+    };
+
+    const query = `SELECT attributes.*
+                   FROM attribute_keys
+                   JOIN attributes ON attribute_keys.id = attributes.attribute_key_id
+                   WHERE collection_id = $/collectionId/
+                   AND key = $/key/
+                   AND value = $/value/`;
+
+    const attribute = await idb.oneOrNone(query, replacementValues);
+
+    if (attribute) {
+      return new AttributesEntity(attribute);
+    }
+
+    return null;
+  }
 }

@@ -11,6 +11,7 @@ import { Collections } from "@/models/collections";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as Boom from "@hapi/boom";
+import * as orderFixes from "@/jobs/order-fixes/queue";
 
 const version = "v1";
 
@@ -46,7 +47,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const payload = request.payload as any;
-    const refreshCoolDownMin = 60; // How many minutes between each refresh
+    let refreshCoolDownMin = 60; // How many minutes between each refresh
 
     try {
       const collection = await Collections.getById(payload.collection);
@@ -54,6 +55,11 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       // If no collection found
       if (_.isNull(collection)) {
         throw Boom.badRequest(`Collection ${payload.collection} not found`);
+      }
+
+      // For big collections allow refresh once a day
+      if (collection.tokenCount > 1000000) {
+        refreshCoolDownMin = 60 * 24;
       }
 
       // Check when the last sync was performed
@@ -87,6 +93,9 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
 
       // Refresh the collection metadata
       await collectionUpdatesMetadata.addToQueue(collection.contract);
+
+      // Revalidate the contract orders
+      await orderFixes.addToQueue([{ by: "contract", data: { contract: collection.contract } }]);
 
       logger.info(
         `post-collections-refresh-${version}-handler`,

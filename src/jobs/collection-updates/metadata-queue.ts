@@ -28,7 +28,7 @@ if (config.doBackgroundWork) {
       const { contract } = job.data;
 
       logger.info(QUEUE_NAME, `Refresh collection metadata=${contract}`);
-      await Collections.updateCollectionMetadata(contract, "1");
+      await Collections.updateCollectionCache(contract, "1");
     },
     { connection: redis.duplicate(), concurrency: 1 }
   );
