@@ -16,8 +16,8 @@ import * as openDaoSellToken from "@/orderbook/orders/opendao/build/sell/token";
 import * as openDaoCheck from "@/orderbook/orders/opendao/check";
 
 // ZeroExV4
-import * as zeroExV4SellToken from "@/orderbook/orders/opendao/build/sell/token";
-import * as zeroExV4Check from "@/orderbook/orders/opendao/check";
+import * as zeroExV4SellToken from "@/orderbook/orders/zeroex-v4/build/sell/token";
+import * as zeroExV4Check from "@/orderbook/orders/zeroex-v4/check";
 
 // Wyvern v2.3
 import * as wyvernV23SellToken from "@/orderbook/orders/wyvern-v2.3/build/sell/token";
