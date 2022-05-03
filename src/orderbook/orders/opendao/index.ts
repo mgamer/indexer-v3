@@ -72,6 +72,7 @@ export const save = async (
             WHERE orders.kind = 'opendao-erc1155'
               AND orders.maker = $/maker/
               AND orders.nonce = $/nonce/
+              AND orders.contract IS NOT NULL
           `,
           {
             maker: toBuffer(order.params.maker),
@@ -94,6 +95,7 @@ export const save = async (
               AND orders.nonce = $/nonce/
               AND orders.contract = $/contract/
               AND orders.price = $/price/
+              AND orders.contract IS NOT NULL
           `,
           {
             maker: toBuffer(order.params.maker),
