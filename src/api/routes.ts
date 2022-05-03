@@ -38,6 +38,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/fix-token-cache",
+    options: adminEndpoints.postFixTokenCacheOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/fix-orders",
     options: adminEndpoints.postFixOrdersOptions,
   });
@@ -255,7 +261,7 @@ export const setupRoutes = (server: Server) => {
     path: "/execute/sell/v2",
     options: executeEndpoints.getExecuteSellV2Options,
   });
-  
+
   // Oracle
 
   server.route({

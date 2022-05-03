@@ -75,6 +75,7 @@ export const getExecuteSellV2Options: RouteOptions = {
           SELECT
             "o"."id",
             "o"."kind",
+            "o"."price",
             "c"."kind" AS "token_kind",
             "o"."token_set_id",
             "o"."raw_data"
