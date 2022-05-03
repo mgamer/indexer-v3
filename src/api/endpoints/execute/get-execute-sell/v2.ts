@@ -84,6 +84,7 @@ export const getExecuteSellV2Options: RouteOptions = {
             ON "t"."contract" = "c"."address"
           WHERE "t"."contract" = $/contract/
             AND "t"."token_id" = $/tokenId/
+          LIMIT 1
         `,
         {
           contract: toBuffer(contract),
@@ -244,7 +245,7 @@ export const getExecuteSellV2Options: RouteOptions = {
       if (bestOrderResult.token_kind === "erc721") {
         fillTx = {
           from: tx.from,
-          to: router.contract.address,
+          to: contract,
           data: new Sdk.Common.Helpers.Erc721(
             baseProvider,
             contract
@@ -267,7 +268,7 @@ export const getExecuteSellV2Options: RouteOptions = {
       } else {
         fillTx = {
           from: tx.from,
-          to: router.contract.address,
+          to: contract,
           data: new Sdk.Common.Helpers.Erc1155(
             baseProvider,
             contract
