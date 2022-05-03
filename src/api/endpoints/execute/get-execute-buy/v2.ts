@@ -242,6 +242,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
               exchangeKind,
               contract,
               tokenId,
+              query.taker,
               query.referrerFeeBps,
             ]),
             value: bn(tx.value!)
@@ -259,6 +260,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
               contract,
               tokenId,
               1,
+              query.taker,
               query.referrerFeeBps,
             ]),
             value: bn(tx.value!)
@@ -396,6 +398,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
             amounts.map(() => contract),
             amounts.map(() => tokenId),
             amounts,
+            query.taker,
             query.referrerFeeBps,
           ]),
           value: bn(tx.value!)
