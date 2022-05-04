@@ -98,7 +98,7 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire(["attribute-collection"], 60 * 60 * 24 * 30 * 1000)
+    .acquire(["attribute-key"], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       await addToQueue();
     })
