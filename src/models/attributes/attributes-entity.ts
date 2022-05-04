@@ -18,6 +18,8 @@ export type AttributesEntityParams = {
   top_buy_value: number;
   sell_updated_at: string;
   buy_updated_at: string;
+  collection_id: string;
+  kind: string;
 };
 
 export class AttributesEntity {
@@ -30,6 +32,8 @@ export class AttributesEntity {
   topBuyValue: number;
   sellUpdatedAt: string;
   buyUpdatedAt: string;
+  collectionId: string;
+  kind: string;
 
   constructor(params: AttributesEntityParams) {
     this.id = params.id;
@@ -41,5 +45,7 @@ export class AttributesEntity {
     this.topBuyValue = params.top_buy_value;
     this.sellUpdatedAt = params.sell_updated_at;
     this.buyUpdatedAt = params.buy_updated_at;
+    this.collectionId = params.collection_id;
+    this.kind = params.kind;
   }
 }
