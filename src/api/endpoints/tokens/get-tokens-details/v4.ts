@@ -429,7 +429,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
               id: r.floor_sell_id,
               price: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
               maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
-              validFrom: r.floor_sell_valid_from,
+              validFrom: r.floor_sell_value ? r.floor_sell_valid_from : null,
               validUntil: r.floor_sell_value ? r.floor_sell_valid_to : null,
               source: {
                 id: source?.address,
