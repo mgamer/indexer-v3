@@ -41,6 +41,7 @@ import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order
 import * as resyncAttributeCache from "@/jobs/update-attribute/resync-attribute-cache";
 import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attribute-key-counts";
 import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
+import * as resyncAttributeCollection from "@/jobs/update-attribute/resync-attribute-collection";
 import * as resyncOrdersSource from "@/jobs/orderbook/resync-orders-source";
 import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refresh";
 
@@ -70,5 +71,6 @@ export const allJobQueues = [
   resyncOrdersSource.queue,
   resyncAttributeKeyCounts.queue,
   resyncAttributeValueCounts.queue,
+  resyncAttributeCollection.queue,
   collectionsRefresh.queue,
 ];
