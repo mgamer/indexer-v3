@@ -126,11 +126,14 @@ export type GenericOrderInfo =
       relayToArweave?: boolean;
     };
 
-export const addToQueue = async (orderInfos: GenericOrderInfo[]) => {
+export const addToQueue = async (orderInfos: GenericOrderInfo[], prioritized = false) => {
   await queue.addBulk(
     orderInfos.map((orderInfo) => ({
       name: randomUUID(),
       data: orderInfo,
+      opts: {
+        priority: prioritized ? 1 : undefined,
+      },
     }))
   );
 };
