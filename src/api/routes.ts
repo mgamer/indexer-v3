@@ -44,6 +44,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/invalidate-order",
+    options: adminEndpoints.postInvalidateOrderOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/fix-orders",
     options: adminEndpoints.postFixOrdersOptions,
   });
