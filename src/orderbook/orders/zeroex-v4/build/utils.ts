@@ -55,24 +55,35 @@ export const getBuildInfo = async (
     nonce: options.nonce,
   };
 
+  // Keep track of the total amount of fees.
+  let totalFees = bn(0);
+
   if (options.automatedRoyalties) {
     // Include the royalties
     for (const { recipient, bps } of collectionResult.royalties) {
       if (recipient && Number(bps) > 0) {
+        const fee = bn(bps).mul(options.weiPrice).div(10000).toString();
         buildParams.fees!.push({
           recipient,
-          amount: bn(bps).mul(options.weiPrice).div(10000).toString(),
+          amount: fee,
         });
+
+        totalFees = totalFees.add(fee);
       }
     }
   }
 
   if (options.fee && options.feeRecipient) {
+    const fee = bn(options.fee).mul(options.weiPrice).div(10000).toString();
     buildParams.fees!.push({
       recipient: options.feeRecipient,
-      amount: bn(options.fee).mul(options.weiPrice).div(10000).toString(),
+      amount: fee,
     });
+
+    totalFees = totalFees.add(fee);
   }
+
+  buildParams.price = bn(buildParams.price).sub(totalFees);
 
   return {
     params: buildParams,
