@@ -36,7 +36,8 @@ CREATE TABLE "attributes" (
   "floor_sell_value" NUMERIC(78, 0),
   "top_buy_value" NUMERIC(78, 0),
   "collection_id" TEXT NOT NULL,
-  "kind" "attribute_key_kind_t" NOT NULL
+  "kind" "attribute_key_kind_t" NOT NULL,
+  "key" TEXT NOT NULL
 );
 
 CREATE UNIQUE INDEX "attributes_attribute_key_id_value_unique_index"

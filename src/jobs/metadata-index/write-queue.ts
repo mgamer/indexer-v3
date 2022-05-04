@@ -161,14 +161,16 @@ if (config.doBackgroundWork) {
                     "sell_updated_at",
                     "buy_updated_at",
                     "collection_id",
-                    "kind"
+                    "kind",
+                    "key
                   ) VALUES (
                     $/attributeKeyId/,
                     $/value/,
                     NOW(),
                     NOW(),
                     $/collection/,
-                    $/kind/
+                    $/kind/,
+                    $/key/
                   )
                   ON CONFLICT DO NOTHING
                   RETURNING "id"
@@ -183,6 +185,7 @@ if (config.doBackgroundWork) {
                 value: String(value),
                 collection,
                 kind,
+                key: String(key),
               }
             );
           }
