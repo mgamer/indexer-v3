@@ -17,7 +17,7 @@ export const queue = new Queue(QUEUE_NAME, {
   defaultJobOptions: {
     attempts: 10,
     removeOnComplete: 100,
-    removeOnFail: 100,
+    removeOnFail: 10000,
     timeout: 60 * 1000,
   },
 });
