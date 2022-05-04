@@ -78,9 +78,8 @@ export class Attributes {
       value,
     };
 
-    const query = `SELECT attributes.*
+    const query = `SELECT *
                    FROM attribute_keys
-                   JOIN attributes ON attribute_keys.id = attributes.attribute_key_id
                    WHERE collection_id = $/collectionId/
                    AND key = $/key/
                    AND value = $/value/`;
