@@ -90,7 +90,7 @@ if (config.doBackgroundWork) {
     },
     {
       connection: redis.duplicate(),
-      concurrency: 3,
+      concurrency: 6,
     }
   );
 
