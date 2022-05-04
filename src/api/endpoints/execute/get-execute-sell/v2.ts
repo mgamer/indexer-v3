@@ -172,7 +172,12 @@ export const getExecuteSellV2Options: RouteOptions = {
           const order = new Sdk.OpenDao.Order(config.chainId, bestOrderResult.raw_data);
 
           // Create sell order to match with the offer.
-          const sellOrder = order.buildMatching({ tokenId, amount: 1 });
+          const sellOrder = order.buildMatching({
+            tokenId,
+            amount: 1,
+            // To make it compatible with the router.
+            unwrapNativeToken: false,
+          });
 
           // Generate exchange-specific fill transaction.
           const exchange = new Sdk.OpenDao.Exchange(config.chainId);
@@ -190,7 +195,12 @@ export const getExecuteSellV2Options: RouteOptions = {
           const order = new Sdk.ZeroExV4.Order(config.chainId, bestOrderResult.raw_data);
 
           // Create sell order to match with the offer.
-          const sellOrder = order.buildMatching({ tokenId, amount: 1 });
+          const sellOrder = order.buildMatching({
+            tokenId,
+            amount: 1,
+            // To make it compatible with the router.
+            unwrapNativeToken: false,
+          });
 
           // Generate exchange-specific fill transaction.
           const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
