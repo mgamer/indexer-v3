@@ -49,7 +49,7 @@ export const postOrdersV1Options: RouteOptions = {
         });
       }
 
-      await orderbookOrders.addToQueue(orderInfos);
+      await orderbookOrders.addToQueue(orderInfos, true);
 
       return { message: "Request accepted" };
     } catch (error) {
