@@ -90,7 +90,7 @@ if (config.doBackgroundWork) {
 
   worker.on("completed", async (job) => {
     if (job.data.cursor) {
-      // await addToQueue(job.data.cursor);
+      await addToQueue(job.data.cursor);
     }
   });
 
@@ -99,7 +99,7 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire(["attribute-key"], 60 * 60 * 24 * 30 * 1000)
+    .acquire(["attribute-key1"], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       await addToQueue();
     })
