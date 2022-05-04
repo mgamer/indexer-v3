@@ -10,7 +10,7 @@ const version = "v1";
 
 export const getAttributesAllV1Options: RouteOptions = {
   description: "Get all attributes in a collection",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 13,
