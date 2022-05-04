@@ -473,7 +473,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
         .toString();
       const balance = await baseProvider.getBalance(query.taker);
       if (bn(balance).lt(totalValue)) {
-        throw Boom.badData("Taker does not have sufficient balance");
+        throw Boom.badData("ETH balance too low to proceed with transaction");
       }
 
       if (txs.length == 1) {
