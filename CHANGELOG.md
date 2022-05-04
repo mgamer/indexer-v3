@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.51.0 (2022-05-04)
+
+
+### Features
+
+* stop queue ([440440a](https://github.com/reservoirprotocol/indexer-v3/commit/440440a64100a7c3bbbce81f6a72704f71622746))
+
 ### 5.50.1 (2022-05-04)
 
 ## 5.50.0 (2022-05-04)
