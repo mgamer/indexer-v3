@@ -112,6 +112,10 @@ export const getTokensDetailsV4Options: RouteOptions = {
               Joi.object({
                 key: Joi.string(),
                 value: Joi.string(),
+                tokenCount: Joi.number(),
+                onSaleCount: Joi.number(),
+                floorAskPrice: Joi.number().allow(null),
+                topBidValue: Joi.number().allow(null),
               })
             ),
           }),
@@ -176,10 +180,16 @@ export const getTokensDetailsV4Options: RouteOptions = {
           ) AS "owner",
           (
             SELECT
-              array_agg(json_build_object('key', "ta"."key", 'value', "ta"."value"))
+              array_agg(json_build_object('key', "ta"."key",
+                                          'value', "ta"."value",
+                                          'tokenCount', attributes.token_count,
+                                          'onSaleCount', attributes.on_sale_count,
+                                          'floorAskPrice', attributes.floor_sell_value::text,
+                                          'topBidValue', attributes.top_buy_value::text))
             FROM "token_attributes" "ta"
+            JOIN attributes ON "ta".attribute_id = attributes.id
             WHERE "ta"."contract" = "t"."contract"
-              AND "ta"."token_id" = "t"."token_id"
+            AND "ta"."token_id" = "t"."token_id"
           ) AS "attributes",
           "t"."floor_sell_id",
           "t"."floor_sell_value",
@@ -422,7 +432,20 @@ export const getTokensDetailsV4Options: RouteOptions = {
               timestamp: r.last_sell_timestamp,
             },
             owner: r.owner ? fromBuffer(r.owner) : null,
-            attributes: r.attributes || [],
+            attributes: r.attributes
+              ? _.map(r.attributes, (attribute) => ({
+                  key: attribute.key,
+                  value: attribute.value,
+                  tokenCount: attribute.tokenCount,
+                  onSaleCount: attribute.onSaleCount,
+                  floorAskPrice: attribute.floorAskPrice
+                    ? formatEth(attribute.floorAskPrice)
+                    : attribute.floorAskPrice,
+                  topBidValue: attribute.topBidValue
+                    ? formatEth(attribute.topBidValue)
+                    : attribute.topBidValue,
+                }))
+              : [],
           },
           market: {
             floorAsk: {
