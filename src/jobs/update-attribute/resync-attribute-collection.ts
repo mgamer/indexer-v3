@@ -47,6 +47,7 @@ if (config.doBackgroundWork) {
       if (attributeKeys) {
         for (const attributeKey of attributeKeys) {
           (updateValues as any)[attributeKey.id] = {
+            id: attributeKey.id,
             key: attributeKey.key,
           };
         }
@@ -89,7 +90,7 @@ if (config.doBackgroundWork) {
 
   worker.on("completed", async (job) => {
     if (job.data.cursor) {
-      await addToQueue(job.data.cursor);
+      // await addToQueue(job.data.cursor);
     }
   });
 
