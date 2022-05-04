@@ -1,8 +1,9 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
+import cron from "node-cron";
 
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
+import { redis, redlock } from "@/common/redis";
 import { config } from "@/config/index";
 import * as orders from "@/orderbook/orders";
 
@@ -82,6 +83,25 @@ if (config.doBackgroundWork) {
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
+
+  // Every minute we check the size of the orders queue. This will
+  // ensure we get notified when it's buffering up and potentially
+  // blocking the real-time flow of orders.
+  cron.schedule(
+    "*/1 * * * *",
+    async () =>
+      await redlock
+        .acquire(["orders-queue-size-check-lock"], (60 - 5) * 1000)
+        .then(async () => {
+          const size = await queue.count();
+          if (size >= 10000) {
+            logger.error("orders-queue-size-check", `Orders queue buffering up: size=${size}`);
+          }
+        })
+        .catch(() => {
+          // Skip on any errors
+        })
+  );
 }
 
 export type GenericOrderInfo =
