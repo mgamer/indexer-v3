@@ -99,7 +99,7 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire(["attribute-key1"], 60 * 60 * 24 * 30 * 1000)
+    .acquire(["attribute-key2"], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       await addToQueue();
     })
