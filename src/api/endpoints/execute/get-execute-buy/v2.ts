@@ -199,7 +199,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
               const order = new Sdk.LooksRare.Order(config.chainId, bestOrderResult.raw_data);
 
               // Create buy order to match with the listing.
-              const buyOrder = order.buildMatching(query.taker, { tokenId });
+              const buyOrder = order.buildMatching(router.contract.address, { tokenId });
 
               // Generate exchange-specific fill transaction.
               const exchange = new Sdk.LooksRare.Exchange(config.chainId);
