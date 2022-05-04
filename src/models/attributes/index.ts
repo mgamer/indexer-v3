@@ -79,7 +79,7 @@ export class Attributes {
     };
 
     const query = `SELECT *
-                   FROM attribute_keys
+                   FROM attributes
                    WHERE collection_id = $/collectionId/
                    AND key = $/key/
                    AND value = $/value/`;
