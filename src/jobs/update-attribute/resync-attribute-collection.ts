@@ -5,7 +5,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
+import { redis, redlock } from "@/common/redis";
 import { config } from "@/config/index";
 
 import { idb } from "@/common/db";
@@ -36,7 +36,7 @@ if (config.doBackgroundWork) {
         continuationFilter = `WHERE id > ${Number(continuation)}`;
       }
 
-      const query = `SELECT id, collection_id, kind
+      const query = `SELECT id, key
                      FROM attribute_keys
                      ${continuationFilter}
                      ORDER BY id ASC
@@ -47,15 +47,14 @@ if (config.doBackgroundWork) {
       if (attributeKeys) {
         for (const attributeKey of attributeKeys) {
           (updateValues as any)[attributeKey.id] = {
-            collectionId: attributeKey.collection_id,
-            kind: attributeKey.kind,
+            key: attributeKey.key,
           };
         }
 
         let updateValuesString = "";
 
         _.forEach(attributeKeys, (data) => {
-          updateValuesString += `(${data.id}, '${data.collection_id}', '${data.kind}'),`;
+          updateValuesString += `(${data.id}, '${data.key}'),`;
         });
 
         updateValuesString = _.trimEnd(updateValuesString, ",");
@@ -75,8 +74,8 @@ if (config.doBackgroundWork) {
 
         try {
           const updateQuery = `UPDATE attributes
-                               SET collection_id = x.collectionIdColumn, kind = x.kindColumn::attribute_key_kind_t
-                               FROM (VALUES ${updateValuesString}) AS x(idColumn, collectionIdColumn, kindColumn)
+                               SET key = x.keyColumn
+                               FROM (VALUES ${updateValuesString}) AS x(idColumn, keyColumn)
                                WHERE x.idColumn = attributes.attribute_key_id`;
 
           await idb.none(updateQuery);
@@ -97,6 +96,15 @@ if (config.doBackgroundWork) {
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
+
+  redlock
+    .acquire(["attribute-collection-resync"], 60 * 60 * 24 * 30 * 1000)
+    .then(async () => {
+      await addToQueue();
+    })
+    .catch(() => {
+      // Skip on any errors
+    });
 }
 
 export const addToQueue = async (continuation = "") => {
