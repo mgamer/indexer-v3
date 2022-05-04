@@ -11,7 +11,6 @@ import { Collections } from "@/models/collections";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as Boom from "@hapi/boom";
-import * as orderFixes from "@/jobs/order-fixes/queue";
 
 const version = "v1";
 
@@ -58,7 +57,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       }
 
       // For big collections allow refresh once a day
-      if (collection.tokenCount > 1000000) {
+      if (collection.tokenCount > 500000) {
         refreshCoolDownMin = 60 * 24;
       }
 
@@ -95,7 +94,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       await collectionUpdatesMetadata.addToQueue(collection.contract);
 
       // Revalidate the contract orders
-      await orderFixes.addToQueue([{ by: "contract", data: { contract: collection.contract } }]);
+      // await orderFixes.addToQueue([{ by: "contract", data: { contract: collection.contract } }]);
 
       logger.info(
         `post-collections-refresh-${version}-handler`,

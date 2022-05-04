@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.46.1 (2022-05-03)
+
+## 5.46.0 (2022-05-03)
+
+
+### Features
+
+* resume source resync ([a59c3e8](https://github.com/reservoirprotocol/indexer-v3/commit/a59c3e83c1c65c133eb65248ce1ae41597acb4da))
+
 ### 5.45.2 (2022-05-03)
 
 ### 5.45.1 (2022-05-03)
