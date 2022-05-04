@@ -33,7 +33,7 @@ if (config.doBackgroundWork) {
       let continuationFilter = "";
 
       if (continuation != "") {
-        continuationFilter = `WHERE id > ${continuation}`;
+        continuationFilter = `WHERE id > ${Number(continuation)}`;
       }
 
       const query = `SELECT id, collection_id, kind
@@ -54,8 +54,8 @@ if (config.doBackgroundWork) {
 
         let updateValuesString = "";
 
-        _.forEach(attributeKeys, (data, id) => {
-          updateValuesString += `(${id}, '${data.collection_id}', '${data.kind}'),`;
+        _.forEach(attributeKeys, (data) => {
+          updateValuesString += `(${data.id}, '${data.collection_id}', '${data.kind}'),`;
         });
 
         updateValuesString = _.trimEnd(updateValuesString, ",");
@@ -99,7 +99,7 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire(["attribute-collection-resync"], 60 * 60 * 24 * 30 * 1000)
+    .acquire(["attribute-collection-resync1"], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       await addToQueue();
     })
