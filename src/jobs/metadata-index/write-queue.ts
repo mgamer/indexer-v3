@@ -162,7 +162,7 @@ if (config.doBackgroundWork) {
                     "buy_updated_at",
                     "collection_id",
                     "kind",
-                    "key
+                    "key"
                   ) VALUES (
                     $/attributeKeyId/,
                     $/value/,

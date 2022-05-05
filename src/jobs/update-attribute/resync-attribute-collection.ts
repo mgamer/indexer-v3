@@ -28,8 +28,9 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { continuation } = job.data;
-      const limit = 1000;
+      const limit = 200;
       const updateValues = {};
+      const replacementParams = {};
       let continuationFilter = "";
 
       if (continuation != "") {
@@ -47,6 +48,7 @@ if (config.doBackgroundWork) {
       if (attributeKeys) {
         for (const attributeKey of attributeKeys) {
           (updateValues as any)[attributeKey.id] = {
+            id: attributeKey.id,
             key: attributeKey.key,
           };
         }
@@ -54,7 +56,8 @@ if (config.doBackgroundWork) {
         let updateValuesString = "";
 
         _.forEach(attributeKeys, (data) => {
-          updateValuesString += `(${data.id}, '${data.key}'),`;
+          (replacementParams as any)[`${data.id}`] = data.key;
+          updateValuesString += `(${data.id}, $/${data.id}/),`;
         });
 
         updateValuesString = _.trimEnd(updateValuesString, ",");
@@ -78,7 +81,7 @@ if (config.doBackgroundWork) {
                                FROM (VALUES ${updateValuesString}) AS x(idColumn, keyColumn)
                                WHERE x.idColumn = attributes.attribute_key_id`;
 
-          await idb.none(updateQuery);
+          await idb.none(updateQuery, replacementParams);
         } catch (error) {
           logger.error(QUEUE_NAME, `${error}`);
         }

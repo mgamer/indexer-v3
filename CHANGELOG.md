@@ -2,6 +2,71 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.53.4 (2022-05-05)
+
+### 5.53.3 (2022-05-05)
+
+### 5.53.2 (2022-05-05)
+
+### 5.53.1 (2022-05-05)
+
+## 5.53.0 (2022-05-05)
+
+
+### Features
+
+* cache on collection floor ([64af598](https://github.com/reservoirprotocol/indexer-v3/commit/64af598ad1ab4bb0a6bb8982493eeecafd73ae9d))
+
+### 5.52.3 (2022-05-05)
+
+### 5.52.2 (2022-05-05)
+
+### 5.52.1 (2022-05-04)
+
+## 5.52.0 (2022-05-04)
+
+
+### Features
+
+* resume queue ([84aebef](https://github.com/reservoirprotocol/indexer-v3/commit/84aebef6487d81ee291471e99854ea744c48c638))
+
+## 5.51.0 (2022-05-04)
+
+
+### Features
+
+* stop queue ([440440a](https://github.com/reservoirprotocol/indexer-v3/commit/440440a64100a7c3bbbce81f6a72704f71622746))
+
+### 5.50.1 (2022-05-04)
+
+## 5.50.0 (2022-05-04)
+
+
+### Features
+
+* wip ([d75b63b](https://github.com/reservoirprotocol/indexer-v3/commit/d75b63b2859623d8c2673c577aa92bf790fb7c8f))
+
+## 5.49.0 (2022-05-04)
+
+
+### Features
+
+* wip ([b9e6e26](https://github.com/reservoirprotocol/indexer-v3/commit/b9e6e2614ac6b05675343d9da2e6de1b45e597a4))
+
+### 5.48.8 (2022-05-04)
+
+### 5.48.7 (2022-05-04)
+
+### 5.48.6 (2022-05-04)
+
+### 5.48.5 (2022-05-04)
+
+### 5.48.4 (2022-05-04)
+
+### 5.48.3 (2022-05-04)
+
+### 5.48.2 (2022-05-04)
+
 ### 5.48.1 (2022-05-04)
 
 ## 5.48.0 (2022-05-04)

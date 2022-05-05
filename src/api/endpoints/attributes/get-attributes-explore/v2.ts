@@ -108,7 +108,6 @@ export const getAttributesExploreV2Options: RouteOptions = {
       const attributesQuery = `
             SELECT attributes.id, floor_sell_value, token_count, key, value, sample_images, recent_floor_values_info.*, top_buy_info.*
             FROM attributes
-            JOIN attribute_keys ON attributes.attribute_key_id = attribute_keys.id
             LEFT JOIN LATERAL (
                 SELECT  token_sets.top_buy_id,
                         token_sets.top_buy_value,
@@ -124,7 +123,7 @@ export const getAttributesExploreV2Options: RouteOptions = {
             JOIN LATERAL (
                 ${recentFloorValuesQuery}
             ) "recent_floor_values_info" ON TRUE
-            WHERE attribute_keys.collection_id = $/collection/
+            WHERE attributes.collection_id = $/collection/
             ${attributeKeyFilter}
             ${sortBy}
             OFFSET $/offset/
