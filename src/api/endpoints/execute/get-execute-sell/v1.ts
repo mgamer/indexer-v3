@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { AddressZero } from "@ethersproject/constants";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
@@ -9,11 +10,9 @@ import Joi from "joi";
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn, toBuffer } from "@/common/utils";
+import { bn, formatEth, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
-import * as wyvernV23Utils from "@/orderbook/orders/wyvern-v2.3/utils";
-import * as wyvernV23Check from "@/orderbook/orders/wyvern-v2.3/check";
 
 const version = "v1";
 
@@ -37,7 +36,9 @@ export const getExecuteSellV1Options: RouteOptions = {
         .required(),
       referrer: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/),
+        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .default(AddressZero),
+      onlyQuote: Joi.boolean().default(false),
       maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
       maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),
     }),
@@ -55,6 +56,7 @@ export const getExecuteSellV1Options: RouteOptions = {
           data: Joi.object(),
         })
       ),
+      quote: Joi.number().unsafe(),
       query: Joi.object(),
     }).label(`getExecuteSell${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
@@ -68,18 +70,24 @@ export const getExecuteSellV1Options: RouteOptions = {
     try {
       const [contract, tokenId] = query.token.split(":");
 
+      // Fetch the best offer on the current token.
       const bestOrderResult = await edb.oneOrNone(
         `
           SELECT
             "o"."id",
             "o"."kind",
+            "o"."price",
+            "c"."kind" AS "token_kind",
             "o"."token_set_id",
             "o"."raw_data"
           FROM "tokens" "t"
           JOIN "orders" "o"
             ON "t"."top_buy_id" = "o"."id"
+          JOIN "contracts" "c"
+            ON "t"."contract" = "c"."address"
           WHERE "t"."contract" = $/contract/
             AND "t"."token_id" = $/tokenId/
+          LIMIT 1
         `,
         {
           contract: toBuffer(contract),
@@ -87,46 +95,34 @@ export const getExecuteSellV1Options: RouteOptions = {
         }
       );
 
+      // Return early in case no offer is available.
       if (!bestOrderResult) {
         throw Boom.badRequest("No available orders");
       }
 
-      const steps = [
-        {
-          action: "Initialize wallet",
-          description:
-            "A one-time setup transaction to enable trading with the Wyvern Protocol (used by Open Sea)",
-          kind: "transaction",
-        },
-        {
-          action: "Approve WETH contract",
-          description: "A one-time setup transaction to enable trading with WETH",
-          kind: "transaction",
-        },
-        {
-          action: "Approve NFT contract",
-          description:
-            "Each NFT collection you want to trade requires a one-time approval transaction",
-          kind: "transaction",
-        },
-        {
-          action: "Accept offer",
-          description: "To sell this item you must confirm the transaction and pay the gas fee",
-          kind: "transaction",
-        },
-        {
-          action: "Confirmation",
-          description: "Verify that the offer was successfully accepted",
-          kind: "confirmation",
-        },
-      ];
+      // Filling will be done through the router.
+      const router = new Sdk.Common.Helpers.RouterV1(
+        baseProvider,
+        Sdk.Common.Addresses.Router[config.chainId]
+      );
 
+      // The quote is the best offer's price.
+      const quote = formatEth(bestOrderResult.price);
+      if (query.onlyQuote) {
+        // Skip generating any transactions if only the quote was requested.
+        return { quote };
+      }
+
+      // Build the proper router fill transaction given the offer's kind (eg. underlying exchange).
+      let tx: TxData;
+      let exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND;
       switch (bestOrderResult.kind) {
         case "wyvern-v2.3": {
           const order = new Sdk.WyvernV23.Order(config.chainId, bestOrderResult.raw_data);
 
           const buildMatchingArgs: any = {
             tokenId,
+            // Properly handle batch cancellations.
             nonce: await commonHelpers.getMinNonce("wyvern-v2.3", query.taker),
           };
           if (order.params.kind?.includes("token-list")) {
@@ -146,317 +142,179 @@ export const getExecuteSellV1Options: RouteOptions = {
             buildMatchingArgs.tokenIds = tokens.map(({ token_id }) => token_id);
           }
 
-          // Create matching order.
-          const sellOrder = order.buildMatching(query.taker, buildMatchingArgs);
-          const sellOrderInfo = sellOrder.getInfo()!;
+          // Create sell order to match with the offer (note that the router is the taker).
+          const sellOrder = order.buildMatching(router.contract.address, buildMatchingArgs);
 
-          let nftApprovalTx: TxData | undefined;
-          let wethApprovalTx: TxData | undefined;
-
-          // When accepting a buy order, the seller needs to approve
-          // Weth as well since the fee will be taken from the maker
-          // (that's a really bad design :().
-          const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
-          const wethApproval = await weth.getAllowance(
-            query.taker,
-            Sdk.WyvernV23.Addresses.TokenTransferProxy[config.chainId]
-          );
-
-          if (
-            bn(wethApproval).lt(
-              bn(order.params.basePrice).mul(order.params.takerRelayerFee).div(10000)
-            )
-          ) {
-            wethApprovalTx = weth.approveTransaction(
-              query.taker,
-              Sdk.WyvernV23.Addresses.TokenTransferProxy[config.chainId]
-            );
-          }
-
-          // Check the order's fillability.
-          try {
-            await wyvernV23Check.offChainCheck(sellOrder, {
-              onChainApprovalRecheck: true,
-            });
-          } catch (error: any) {
-            switch (error.message) {
-              case "no-balance": {
-                // We cannot do anything if the user doesn't own the sold token.
-                throw Boom.badData("Taker does not own the sold token");
-              }
-
-              case "no-user-proxy": {
-                // Generate a proxy registration transaction.
-
-                const proxyRegistry = new Sdk.WyvernV23.Helpers.ProxyRegistry(
-                  baseProvider,
-                  config.chainId
-                );
-                const proxyRegistrationTx = proxyRegistry.registerProxyTransaction(query.maker);
-
-                return {
-                  steps: [
-                    {
-                      ...steps[0],
-                      status: "incomplete",
-                      data: proxyRegistrationTx,
-                    },
-                    {
-                      ...steps[1],
-                      status: "incomplete",
-                    },
-                    {
-                      ...steps[2],
-                      status: "incomplete",
-                    },
-                    {
-                      ...steps[3],
-                      status: "incomplete",
-                    },
-                    {
-                      ...steps[4],
-                      status: "incomplete",
-                    },
-                  ],
-                };
-              }
-
-              case "no-approval": {
-                // Generate an approval transaction
-
-                const userProxy = await wyvernV23Utils.getUserProxy(query.maker);
-                const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
-
-                nftApprovalTx = (
-                  kind === "erc721"
-                    ? new Sdk.Common.Helpers.Erc721(baseProvider, sellOrderInfo.contract)
-                    : new Sdk.Common.Helpers.Erc1155(baseProvider, sellOrderInfo.contract)
-                ).approveTransaction(query.maker, userProxy!);
-
-                break;
-              }
-
-              default: {
-                throw Boom.badData("Could not generate matching order");
-              }
-            }
-          }
-
+          // Generate exchange-specific fill transaction.
           const exchange = new Sdk.WyvernV23.Exchange(config.chainId);
-          const fillTx = exchange.matchTransaction(query.taker, order, sellOrder);
+          tx = exchange.matchTransaction(query.taker, order, sellOrder);
+          exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.WYVERN_V23;
 
-          return {
-            steps: [
-              {
-                ...steps[0],
-                status: "complete",
-              },
-              {
-                ...steps[1],
-                status: !wethApprovalTx ? "complete" : "incomplete",
-                data: wethApprovalTx,
-              },
-              {
-                ...steps[2],
-                status: !nftApprovalTx ? "complete" : "incomplete",
-                data: nftApprovalTx,
-              },
-              {
-                ...steps[3],
-                status: "incomplete",
-                data: {
-                  ...fillTx,
-                  maxFeePerGas: query.maxFeePerGas
-                    ? bn(query.maxFeePerGas).toHexString()
-                    : undefined,
-                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                    ? bn(query.maxPriorityFeePerGas).toHexString()
-                    : undefined,
-                },
-              },
-              {
-                ...steps[4],
-                status: "incomplete",
-                data: {
-                  endpoint: `/orders/executed/v1?id=${bestOrderResult.id}`,
-                  method: "GET",
-                },
-              },
-            ],
-          };
+          break;
         }
 
         case "looks-rare": {
           const order = new Sdk.LooksRare.Order(config.chainId, bestOrderResult.raw_data);
 
-          // Create matching order.
-          const sellOrder = order.buildMatching(query.taker, { tokenId });
+          // Create sell order to match with the offer (note that the router is the taker).
+          const sellOrder = order.buildMatching(router.contract.address, { tokenId });
 
-          let nftApprovalTx: TxData | undefined;
-
-          // Check: order has a valid target
-          const kind = await commonHelpers.getContractKind(order.params.collection);
-          if (!kind) {
-            throw new Error("invalid-target");
-          }
-
-          const operator =
-            kind === "erc721"
-              ? Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]
-              : Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId];
-
-          // Check the order's fillability.
-          try {
-            const [contract, tokenId] = query.token.split(":");
-
-            // Check: taker has enough balance
-            const nftBalance = await commonHelpers.getNftBalance(contract, tokenId, query.taker);
-            if (nftBalance.lt(1)) {
-              throw new Error("no-balance");
-            }
-
-            // Check: maker has set the proper approval
-            const nftApproval = await commonHelpers.getNftApproval(contract, query.taker, operator);
-            if (!nftApproval) {
-              throw new Error("no-approval");
-            }
-          } catch (error: any) {
-            switch (error.message) {
-              case "no-balance": {
-                // We cannot do anything if the user doesn't own the sold token.
-                throw Boom.badData("Taker does not own the sold token");
-              }
-
-              case "no-approval": {
-                // Generate an approval transaction
-                nftApprovalTx = (
-                  kind === "erc721"
-                    ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.collection)
-                    : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.collection)
-                ).approveTransaction(query.taker, operator);
-
-                break;
-              }
-
-              default: {
-                throw Boom.badData("Could not generate matching order");
-              }
-            }
-          }
-
+          // Generate exchange-specific fill transaction.
           const exchange = new Sdk.LooksRare.Exchange(config.chainId);
-          const fillTx = exchange.matchTransaction(query.taker, order, sellOrder);
+          tx = exchange.matchTransaction(query.taker, order, sellOrder);
+          exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.LOOKS_RARE;
 
-          return {
-            steps: [
-              {
-                ...steps[2],
-                status: !nftApprovalTx ? "complete" : "incomplete",
-                data: nftApprovalTx,
-              },
-              {
-                ...steps[3],
-                status: "incomplete",
-                data: {
-                  ...fillTx,
-                  maxFeePerGas: query.maxFeePerGas
-                    ? bn(query.maxFeePerGas).toHexString()
-                    : undefined,
-                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                    ? bn(query.maxPriorityFeePerGas).toHexString()
-                    : undefined,
-                },
-              },
-              {
-                ...steps[4],
-                status: "incomplete",
-                data: {
-                  endpoint: `/orders/executed/v1?id=${bestOrderResult.id}`,
-                  method: "GET",
-                },
-              },
-            ],
-          };
+          break;
         }
 
         case "opendao-erc721":
         case "opendao-erc1155": {
           const order = new Sdk.OpenDao.Order(config.chainId, bestOrderResult.raw_data);
 
-          // Create matching order.
-          const sellOrder = order.buildMatching({ tokenId, amount: 1 });
+          // Create sell order to match with the offer.
+          const sellOrder = order.buildMatching({
+            tokenId,
+            amount: 1,
+            // To make it compatible with the router.
+            unwrapNativeToken: false,
+          });
 
+          // Generate exchange-specific fill transaction.
           const exchange = new Sdk.OpenDao.Exchange(config.chainId);
-          const fillTx = exchange.matchTransaction(query.taker, order, sellOrder);
+          tx = exchange.matchTransaction(query.taker, order, sellOrder, {
+            // Using the `onReceived` hooks would fail when filling through the router.
+            noDirectTransfer: true,
+          });
+          exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4;
 
-          return {
-            steps: [
-              {
-                ...steps[3],
-                status: "incomplete",
-                data: {
-                  ...fillTx,
-                  maxFeePerGas: query.maxFeePerGas
-                    ? bn(query.maxFeePerGas).toHexString()
-                    : undefined,
-                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                    ? bn(query.maxPriorityFeePerGas).toHexString()
-                    : undefined,
-                },
-              },
-              {
-                ...steps[4],
-                status: "incomplete",
-                data: {
-                  endpoint: `/orders/executed/v1?id=${bestOrderResult.id}`,
-                  method: "GET",
-                },
-              },
-            ],
-          };
+          break;
         }
 
         case "zeroex-v4-erc721":
         case "zeroex-v4-erc1155": {
           const order = new Sdk.ZeroExV4.Order(config.chainId, bestOrderResult.raw_data);
 
-          // Create matching order.
-          const sellOrder = order.buildMatching({ tokenId, amount: 1 });
+          // Create sell order to match with the offer.
+          const sellOrder = order.buildMatching({
+            tokenId,
+            amount: 1,
+            // To make it compatible with the router.
+            unwrapNativeToken: false,
+          });
 
+          // Generate exchange-specific fill transaction.
           const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
-          const fillTx = exchange.matchTransaction(query.taker, order, sellOrder);
+          tx = exchange.matchTransaction(query.taker, order, sellOrder, {
+            // Using the `onReceived` hooks would fail when filling through the router.
+            noDirectTransfer: true,
+          });
+          exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4;
 
-          return {
-            steps: [
-              {
-                ...steps[3],
-                status: "incomplete",
-                data: {
-                  ...fillTx,
-                  maxFeePerGas: query.maxFeePerGas
-                    ? bn(query.maxFeePerGas).toHexString()
-                    : undefined,
-                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                    ? bn(query.maxPriorityFeePerGas).toHexString()
-                    : undefined,
-                },
-              },
-              {
-                ...steps[4],
-                status: "incomplete",
-                data: {
-                  endpoint: `/orders/executed/v1?id=${bestOrderResult.id}`,
-                  method: "GET",
-                },
-              },
-            ],
-          };
+          break;
         }
 
         default: {
           throw Boom.notImplemented("Unsupported order kind");
         }
       }
+
+      if (!tx) {
+        throw Boom.internal("Could not generate transaction(s)");
+      }
+
+      // Wrap the exchange-specific fill transaction via the router.
+      // We are using the `onReceived` hooks for single-tx filling.
+      let routerTx: TxData;
+      if (bestOrderResult.token_kind === "erc721") {
+        routerTx = {
+          from: query.taker,
+          to: contract,
+          data: new Sdk.Common.Helpers.Erc721(
+            baseProvider,
+            contract
+          ).contract.interface.encodeFunctionData(
+            "safeTransferFrom(address,address,uint256,bytes)",
+            [
+              query.taker,
+              router.contract.address,
+              tokenId,
+              router.contract.interface.encodeFunctionData("singleERC721BidFill", [
+                query.referrer,
+                tx.data,
+                exchangeKind,
+                contract,
+                query.taker,
+                true,
+              ]),
+            ]
+          ),
+        };
+      } else {
+        routerTx = {
+          from: query.taker,
+          to: contract,
+          data: new Sdk.Common.Helpers.Erc1155(
+            baseProvider,
+            contract
+          ).contract.interface.encodeFunctionData(
+            "safeTransferFrom(address,address,uint256,uint256,bytes)",
+            [
+              query.taker,
+              router.contract.address,
+              tokenId,
+              // TODO: Support selling any quantities.
+              1,
+              router.contract.interface.encodeFunctionData("singleERC1155BidFill", [
+                query.referrer,
+                tx.data,
+                exchangeKind,
+                contract,
+                query.taker,
+                true,
+              ]),
+            ]
+          ),
+        };
+      }
+
+      // Set up generic filling steps.
+      const steps = [
+        {
+          action: "Accept offer",
+          description: "To sell this item you must confirm the transaction and pay the gas fee",
+          kind: "transaction",
+        },
+        {
+          action: "Confirmation",
+          description: "Verify that the offer was successfully accepted",
+          kind: "confirmation",
+        },
+      ];
+
+      return {
+        steps: [
+          {
+            ...steps[0],
+            status: "incomplete",
+            data: {
+              ...routerTx,
+              maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
+              maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                ? bn(query.maxPriorityFeePerGas).toHexString()
+                : undefined,
+            },
+          },
+          {
+            ...steps[1],
+            status: "incomplete",
+            data: {
+              endpoint: `/orders/executed/v1?id=${bestOrderResult.id}`,
+              method: "GET",
+            },
+          },
+        ],
+        quote,
+      };
     } catch (error) {
       logger.error(`get-execute-sell-${version}-handler`, `Handler failure: ${error}`);
       throw error;
