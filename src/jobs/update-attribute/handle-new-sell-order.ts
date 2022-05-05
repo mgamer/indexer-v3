@@ -82,7 +82,7 @@ if (config.doBackgroundWork) {
 
             logger.info(
               QUEUE_NAME,
-              `New price ${price} for attribute id ${tokenAttribute.attributeId}`
+              `Old price=${tokenAttribute.floorSellValue}, New price=${price}, key=${tokenAttribute.key}, value=${tokenAttribute.value}, id=${tokenAttribute.attributeId}`
             );
           }
         }
