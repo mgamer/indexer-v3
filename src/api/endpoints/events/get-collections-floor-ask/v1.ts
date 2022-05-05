@@ -19,7 +19,7 @@ const version = "v1";
 export const getCollectionsFloorAskV1Options: RouteOptions = {
   cache: {
     privacy: "public",
-    expiresIn: 5000,
+    expiresIn: 1000,
   },
   description: "Get updates any time the floor price of a collection changes",
   notes:
