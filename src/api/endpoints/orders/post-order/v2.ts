@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { joinSignature } from "@ethersproject/bytes";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
@@ -14,7 +15,7 @@ import { parseOpenSeaOrder } from "@/orderbook/orders/wyvern-v2.3/opensea";
 const version = "v2";
 
 export const postOrderV2Options: RouteOptions = {
-  description: "Publish a single order",
+  description: "Publish a single order.",
   tags: ["api", "1. Order Book"],
   plugins: {
     "hapi-swagger": {
@@ -26,11 +27,14 @@ export const postOrderV2Options: RouteOptions = {
       order: Joi.object({
         kind: Joi.string()
           .lowercase()
-          .valid("opensea", "wyvern-v2.3", "721ex", "zeroex-v4")
+          .valid("opensea", "wyvern-v2.3", "looks-rare", "721ex", "zeroex-v4")
           .required(),
         data: Joi.object().required(),
       }),
-      orderbook: Joi.string().lowercase().valid("reservoir", "opensea").default("reservoir"),
+      orderbook: Joi.string()
+        .lowercase()
+        .valid("reservoir", "opensea", "looks-rare")
+        .default("reservoir"),
       source: Joi.string(),
       attribute: Joi.object({
         collection: Joi.string().required(),
@@ -46,9 +50,11 @@ export const postOrderV2Options: RouteOptions = {
       const order = payload.order;
       const orderbook = payload.orderbook;
       const source = payload.source;
+      // Only relevant/present for attribute bids.
       const attribute = payload.attribute;
 
       switch (order.kind) {
+        // Publish a native OpenSea order.
         case "opensea": {
           const parsedOrder = await parseOpenSeaOrder(order.data);
           if (!parsedOrder) {
@@ -71,6 +77,7 @@ export const postOrderV2Options: RouteOptions = {
           if (orderbook !== "reservoir") {
             throw new Error("Unsupported orderbook");
           }
+          // Attribute orders are not supported.
           if (attribute) {
             throw new Error("Unsupported metadata");
           }
@@ -93,6 +100,7 @@ export const postOrderV2Options: RouteOptions = {
           if (orderbook !== "reservoir") {
             throw new Error("Unsupported orderbook");
           }
+          // Attribute orders are not supported.
           if (attribute) {
             throw new Error("Unsupported metadata");
           }
@@ -112,6 +120,7 @@ export const postOrderV2Options: RouteOptions = {
         }
 
         case "wyvern-v2.3": {
+          // Both Reservoir and OpenSea are supported as orderbooks.
           switch (orderbook) {
             case "reservoir": {
               const orderInfo: orders.wyvernV23.OrderInfo = {
@@ -140,6 +149,7 @@ export const postOrderV2Options: RouteOptions = {
               }
             }
 
+            // Publish to OpenSea's native orderbook.
             case "opensea": {
               const sdkOrder = new Sdk.WyvernV23.Order(config.chainId, order.data);
               const orderInfo = sdkOrder.getInfo();
@@ -147,7 +157,7 @@ export const postOrderV2Options: RouteOptions = {
                 throw Boom.badData("Could not parse order");
               }
 
-              // For now, OpenSea only supports single-token orders
+              // For now, OpenSea only supports single-token orders.
               if (!(orderInfo as any).tokenId) {
                 throw Boom.badData("Unsupported order kind");
               }
@@ -169,7 +179,7 @@ export const postOrderV2Options: RouteOptions = {
                 hash: sdkOrder.hash(),
               };
 
-              // Post order to OpenSea
+              // Post order via OpenSea's APIs.
               await axios
                 .post(
                   `https://${
@@ -185,7 +195,7 @@ export const postOrderV2Options: RouteOptions = {
                           }
                         : {
                             "Content-Type": "application/json",
-                            // The request will fail if passing the API key on Rinkeby
+                            // The request will fail if passing the API key on Rinkeby.
                           },
                   }
                 )
@@ -209,6 +219,73 @@ export const postOrderV2Options: RouteOptions = {
           }
 
           break;
+        }
+
+        case "looks-rare": {
+          // Both Reservoir and LooksRare are supported as orderbooks.
+          switch (orderbook) {
+            case "reservoir": {
+              const orderInfo: orders.looksRare.OrderInfo = {
+                orderParams: order.data,
+                metadata: {
+                  source,
+                },
+              };
+              const [result] = await orders.looksRare.save([orderInfo]);
+              if (result.status === "success") {
+                return { message: "Success" };
+              } else {
+                throw Boom.badRequest(result.status);
+              }
+            }
+
+            // Publish to LooksRare's native orderbook.
+            case "looks-rare": {
+              const sdkOrder = new Sdk.LooksRare.Order(config.chainId, order.data);
+              const lrOrder = {
+                ...sdkOrder.params,
+                signature: joinSignature({
+                  v: sdkOrder.params.v!,
+                  r: sdkOrder.params.r!,
+                  s: sdkOrder.params.s!,
+                }),
+                tokenId: sdkOrder.params.kind === "single-token" ? sdkOrder.params.tokenId : null,
+                // For now, no order kinds have any additional params.
+                params: [""],
+              };
+
+              // Post order via LooksRare's APIs.
+              await axios
+                .post(
+                  `https://${
+                    config.chainId === 4 ? "api-rinkeby." : "api."
+                  }looksrare.org/api/v1/orders`,
+                  JSON.stringify(lrOrder),
+                  {
+                    headers: {
+                      "Content-Type": "application/json",
+                      "X-Api-Key": String(process.env.LOOKSRARE_API_KEY),
+                    },
+                  }
+                )
+                .catch((error) => {
+                  if (error.response) {
+                    logger.error(
+                      `post-order-${version}-handler`,
+                      `Failed to post order to LooksRare: ${JSON.stringify(error.response.data)}`
+                    );
+                  }
+
+                  throw Boom.badRequest(error.response.data);
+                });
+
+              break;
+            }
+
+            default: {
+              throw Boom.badData("Unknown orderbook");
+            }
+          }
         }
       }
 
