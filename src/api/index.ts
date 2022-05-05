@@ -116,6 +116,14 @@ export const start = async (): Promise<void> => {
             name: "4. NFT API",
             description: "Build a complete application with rich NFT endpoints",
           },
+          {
+            name: "5. Redirects",
+            description: "Redirect APIs for different assets",
+          },
+          {
+            name: "6. Search",
+            description: "Search for collections/tokens APIs",
+          },
         ],
       },
     },

@@ -14,6 +14,7 @@ import * as statsEndpoints from "@/api/endpoints/stats";
 import * as tokensEndpoints from "@/api/endpoints/tokens";
 import * as transfersEndpoints from "@/api/endpoints/transfers";
 import * as redirectsEndpoints from "@/api/endpoints/redirects";
+import * as searchEndpoints from "@/api/endpoints/search";
 
 export const setupRoutes = (server: Server) => {
   // Admin
@@ -519,6 +520,13 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/redirect/collections/{collection}/image/v1",
     options: redirectsEndpoints.getRedirectCollectionImageV1Options,
+  });
+
+  // Search
+  server.route({
+    method: "GET",
+    path: "/search/collections/v1",
+    options: searchEndpoints.getSearchCollectionsV1Options,
   });
 
   // Health
