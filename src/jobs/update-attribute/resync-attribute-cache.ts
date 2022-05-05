@@ -41,7 +41,7 @@ if (config.doBackgroundWork) {
 
         logger.info(
           QUEUE_NAME,
-          `Updated collection=${tokenAttribute.collectionId}, key=${tokenAttribute.key}, value=${tokenAttribute.value}`
+          `collection=${tokenAttribute.collectionId}, key=${tokenAttribute.key}, value=${tokenAttribute.value}, floorSellValue=${floorSellValue}, onSaleCount=${onSaleCount}`
         );
       }
     },

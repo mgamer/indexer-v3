@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.55.0 (2022-05-05)
+
+
+### Features
+
+* update token refresh ([35a85aa](https://github.com/reservoirprotocol/indexer-v3/commit/35a85aa01aff14b7eb21d11131177aa99bf21a3a))
+
+### 5.54.2 (2022-05-05)
+
+### 5.54.1 (2022-05-05)
+
 ## 5.54.0 (2022-05-05)
 
 
