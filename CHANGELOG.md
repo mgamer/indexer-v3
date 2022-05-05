@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.57.0 (2022-05-05)
+
+
+### Features
+
+* case prices to number ([6f5bcc9](https://github.com/reservoirprotocol/indexer-v3/commit/6f5bcc935eee945e66393349425cebdaffcd5301))
+
 ## 5.56.0 (2022-05-05)
 
 
