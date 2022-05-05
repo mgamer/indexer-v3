@@ -7,12 +7,12 @@ import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
 
-const version = "v1";
+const version = "v2";
 
-export const getCollectionV1Options: RouteOptions = {
+export const getCollectionV2Options: RouteOptions = {
   description: "Get detailed information about a single collection",
   notes: "Get detailed information about a single collection, including real-time stats.",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {
       order: 11,
@@ -51,10 +51,6 @@ export const getCollectionV1Options: RouteOptions = {
           bps: Joi.number(),
         }),
         lastBuy: {
-          value: Joi.number().unsafe().allow(null),
-          timestamp: Joi.number().allow(null),
-        },
-        lastSell: {
           value: Joi.number().unsafe().allow(null),
           timestamp: Joi.number().allow(null),
         },
@@ -111,6 +107,8 @@ export const getCollectionV1Options: RouteOptions = {
           "7day": Joi.number().unsafe().allow(null),
           "30day": Joi.number().unsafe().allow(null),
         },
+        collectionBidSupported: Joi.boolean(),
+        ownerCount: Joi.number(),
       }).allow(null),
     }).label(`getCollection${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
@@ -175,7 +173,8 @@ export const getCollectionV1Options: RouteOptions = {
         SELECT
           "x".*,
           "y".*,
-          "z".*
+          "z".*,
+          "ow".*
         FROM "x"
         LEFT JOIN LATERAL (
           SELECT
@@ -190,9 +189,7 @@ export const getCollectionV1Options: RouteOptions = {
               COALESCE(
                 NULLIF(DATE_PART('epoch', UPPER("o"."valid_between")), 'Infinity'),
                 0
-              ) AS "floor_sell_valid_until",
-            "t"."last_sell_value",
-            "t"."last_sell_timestamp"
+              ) AS "floor_sell_valid_until"
           FROM "tokens" "t"
           LEFT JOIN "orders" "o"
             ON "t"."floor_sell_id" = "o"."id"
@@ -219,6 +216,12 @@ export const getCollectionV1Options: RouteOptions = {
           ORDER BY "ts"."top_buy_value" DESC NULLS LAST
           LIMIT 1
         ) "z" ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT COUNT(DISTINCT owner) AS "ownerCount"
+          FROM nft_balances
+          WHERE nft_balances.contract = x.contract
+          AND amount > 0
+        ) "ow" ON TRUE
       `;
 
       const result = await edb.oneOrNone(baseQuery, query).then((r) =>
@@ -242,10 +245,6 @@ export const getCollectionV1Options: RouteOptions = {
               lastBuy: {
                 value: r.last_buy_value ? formatEth(r.last_buy_value) : null,
                 timestamp: r.last_buy_timestamp,
-              },
-              lastSell: {
-                value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
-                timestamp: r.last_sell_timestamp,
               },
               floorAsk: {
                 id: r.floor_sell_id,
@@ -291,6 +290,8 @@ export const getCollectionV1Options: RouteOptions = {
                 "7day": r.day7_floor_sell_value ? formatEth(r.day7_floor_sell_value) : null,
                 "30day": r.day30_floor_sell_value ? formatEth(r.day30_floor_sell_value) : null,
               },
+              collectionBidSupported: Number(r.token_count) <= 30000,
+              ownerCount: Number(r.ownerCount),
             }
       );
 
