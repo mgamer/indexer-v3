@@ -28,7 +28,7 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { continuation } = job.data;
-      const limit = 1000;
+      const limit = 200;
       const updateValues = {};
       const replacementParams = {};
       let continuationFilter = "";
@@ -101,7 +101,7 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire(["attribute-key13"], 60 * 60 * 24 * 30 * 1000)
+    .acquire(["attribute-key14"], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       await addToQueue();
     })
