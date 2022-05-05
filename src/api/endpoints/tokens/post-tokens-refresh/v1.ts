@@ -12,6 +12,7 @@ import { Collections } from "@/models/collections";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as Boom from "@hapi/boom";
 import * as orderFixes from "@/jobs/order-fixes/queue";
+import * as resyncAttributeCache from "@/jobs/update-attribute/resync-attribute-cache";
 
 const version = "v1";
 
@@ -91,6 +92,9 @@ export const postTokensRefreshV1Options: RouteOptions = {
 
       // Revalidate the token orders
       await orderFixes.addToQueue([{ by: "token", data: { token: payload.token } }]);
+
+      // Revalidate the token attribute cache
+      await resyncAttributeCache.addToQueue(contract, tokenId, 0);
 
       logger.info(
         `post-tokens-refresh-${version}-handler`,
