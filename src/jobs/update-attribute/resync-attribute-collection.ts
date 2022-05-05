@@ -30,6 +30,7 @@ if (config.doBackgroundWork) {
       const { continuation } = job.data;
       const limit = 1000;
       const updateValues = {};
+      const replacementParams = {};
       let continuationFilter = "";
 
       if (continuation != "") {
@@ -55,7 +56,8 @@ if (config.doBackgroundWork) {
         let updateValuesString = "";
 
         _.forEach(attributeKeys, (data) => {
-          updateValuesString += `(${data.id}, '${data.key}'),`;
+          (replacementParams as any)[`${data.id}`] = data.key;
+          updateValuesString += `(${data.id}, $/${data.id}/),`;
         });
 
         updateValuesString = _.trimEnd(updateValuesString, ",");
@@ -79,7 +81,7 @@ if (config.doBackgroundWork) {
                                FROM (VALUES ${updateValuesString}) AS x(idColumn, keyColumn)
                                WHERE x.idColumn = attributes.attribute_key_id`;
 
-          await idb.none(updateQuery);
+          await idb.none(updateQuery, replacementParams);
         } catch (error) {
           logger.error(QUEUE_NAME, `${error}`);
         }
@@ -99,7 +101,7 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire(["attribute-key2"], 60 * 60 * 24 * 30 * 1000)
+    .acquire(["attribute-key13"], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       await addToQueue();
     })
