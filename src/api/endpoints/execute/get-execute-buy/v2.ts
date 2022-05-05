@@ -27,20 +27,9 @@ export const getExecuteBuyV2Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      token: Joi.alternatives()
-        .try(
-          Joi.array()
-            .max(50)
-            .items(
-              Joi.string()
-                .lowercase()
-                .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
-            ),
-          Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
-        )
-        .required(),
+      token: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/),
       taker: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
@@ -294,149 +283,143 @@ export const getExecuteBuyV2Options: RouteOptions = {
                 .toHexString(),
             };
           }
+        } else {
+          // For now, we only support batch filling ZeroEx V4 and OpenDao orders.
+
+          let tx: TxData | undefined;
+          const amounts: number[] = [];
+          if (config.chainId === 1) {
+            const bestOrdersResult = await edb.manyOrNone(
+              `
+                SELECT
+                  x.price,
+                  x.quantity_remaining,
+                  x.raw_data
+                FROM (
+                  SELECT
+                    orders.*,
+                    SUM(orders.quantity_remaining) OVER (ORDER BY price, id) - orders.quantity_remaining AS quantity
+                  FROM orders
+                  WHERE orders.token_set_id = $/tokenSetId/
+                    AND orders.fillability_status = 'fillable'
+                    AND orders.approval_status = 'approved'
+                    AND orders.kind = 'zeroex-v4-erc1155'
+                ) x WHERE x.quantity < $/quantity/
+              `,
+              {
+                tokenSetId: `token:${query.token}`,
+                quantity: query.quantity,
+              }
+            );
+
+            if (!bestOrdersResult?.length) {
+              throw Boom.badRequest("No available orders");
+            }
+
+            let quantityToFill = Number(query.quantity);
+
+            const sellOrders: Sdk.ZeroExV4.Order[] = [];
+            const matchParams: Sdk.ZeroExV4.Types.MatchParams[] = [];
+            for (const { quantity_remaining, raw_data } of bestOrdersResult) {
+              const order = new Sdk.ZeroExV4.Order(config.chainId, raw_data);
+              sellOrders.push(order);
+
+              const fill = Math.min(Number(quantity_remaining), quantityToFill);
+              matchParams.push(order.buildMatching({ amount: fill }));
+
+              quantityToFill -= fill;
+              amounts.push(fill);
+            }
+
+            const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
+            tx = exchange.batchBuyTransaction(query.taker, sellOrders, matchParams);
+            const quote = formatEth(bn(tx.value!));
+            quotes.push(quote);
+
+            // Custom checking for partially fillable orders
+            confirmationQuery = `?id=${sellOrders[0].hash()}&checkRecentEvents=true`;
+
+            if (query.onlyQuote) {
+              continue;
+            }
+          } else {
+            const bestOrdersResult = await edb.manyOrNone(
+              `
+                SELECT
+                  x.price,
+                  x.quantity_remaining,
+                  x.raw_data
+                FROM (
+                  SELECT
+                    orders.*,
+                    SUM(orders.quantity_remaining) OVER (ORDER BY price, id) - orders.quantity_remaining AS quantity
+                  FROM orders
+                  WHERE orders.token_set_id = $/tokenSetId/
+                    AND orders.side = 'sell'
+                    AND orders.fillability_status = 'fillable'
+                    AND orders.approval_status = 'approved'
+                    AND orders.kind = 'opendao-erc1155'
+                    AND orders.maker != $/taker/
+                ) x WHERE x.quantity < $/quantity/
+              `,
+              {
+                tokenSetId: `token:${query.token}`,
+                quantity: query.quantity,
+                taker: toBuffer(query.taker),
+              }
+            );
+
+            if (!bestOrdersResult?.length) {
+              throw Boom.badRequest("No available orders");
+            }
+
+            let quantityToFill = Number(query.quantity);
+
+            const sellOrders: Sdk.OpenDao.Order[] = [];
+            const matchParams: Sdk.OpenDao.Types.MatchParams[] = [];
+            for (const { quantity_remaining, raw_data } of bestOrdersResult) {
+              const order = new Sdk.OpenDao.Order(config.chainId, raw_data);
+              sellOrders.push(order);
+
+              const fill = Math.min(Number(quantity_remaining), quantityToFill);
+              matchParams.push(order.buildMatching({ amount: fill }));
+
+              quantityToFill -= fill;
+              amounts.push(fill);
+            }
+
+            const exchange = new Sdk.OpenDao.Exchange(config.chainId);
+            tx = exchange.batchBuyTransaction(query.taker, sellOrders, matchParams);
+            const quote = formatEth(bn(tx.value!));
+            quotes.push(quote);
+
+            // Custom checking for partially fillable orders
+            confirmationQuery = `?id=${sellOrders[0].hash()}&checkRecentEvents=true`;
+
+            if (query.onlyQuote) {
+              continue;
+            }
+          }
+
+          // Wrap the exchange-specific fill transaction via the router.
+          routerTx = {
+            from: query.taker,
+            to: router.contract.address,
+            data: router.contract.interface.encodeFunctionData("batchERC1155ListingFill", [
+              query.referrer,
+              tx.data,
+              Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4,
+              amounts.map(() => contract),
+              amounts.map(() => tokenId),
+              amounts,
+              query.taker,
+              query.referrerFeeBps,
+            ]),
+            value: bn(tx.value!)
+              .add(bn(tx.value!).mul(query.referrerFeeBps).div(10000))
+              .toHexString(),
+          };
         }
-
-        // else {
-        //   // For now, we only support batch filling ZeroEx V4 and OpenDao orders.
-
-        //   let tx: TxData | undefined;
-        //   const amounts: number[] = [];
-        //   if (config.chainId === 1) {
-        //     const bestOrdersResult = await edb.manyOrNone(
-        //       `
-        //         SELECT
-        //           x.price,
-        //           x.quantity_remaining,
-        //           x.raw_data
-        //         FROM (
-        //           SELECT
-        //             orders.*,
-        //             SUM(orders.quantity_remaining) OVER (ORDER BY price, id) - orders.quantity_remaining AS quantity
-        //           FROM orders
-        //           WHERE orders.token_set_id = $/tokenSetId/
-        //             AND orders.fillability_status = 'fillable'
-        //             AND orders.approval_status = 'approved'
-        //             AND orders.kind = 'zeroex-v4-erc1155'
-        //         ) x WHERE x.quantity < $/quantity/
-        //       `,
-        //       {
-        //         tokenSetId: `token:${query.token}`,
-        //         quantity: query.quantity,
-        //       }
-        //     );
-
-        //     if (!bestOrdersResult?.length) {
-        //       throw Boom.badRequest("No available orders");
-        //     }
-
-        //     let quantityToFill = Number(query.quantity);
-
-        //     const sellOrders: Sdk.ZeroExV4.Order[] = [];
-        //     const matchParams: Sdk.ZeroExV4.Types.MatchParams[] = [];
-        //     for (const { quantity_remaining, raw_data } of bestOrdersResult) {
-        //       const order = new Sdk.ZeroExV4.Order(config.chainId, raw_data);
-        //       sellOrders.push(order);
-
-        //       const fill = Math.min(Number(quantity_remaining), quantityToFill);
-        //       matchParams.push(order.buildMatching({ amount: fill }));
-
-        //       quantityToFill -= fill;
-        //       amounts.push(fill);
-        //     }
-
-        //     const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
-        //     tx = exchange.batchBuyTransaction(query.taker, sellOrders, matchParams);
-        //     const quote = formatEth(bn(tx.value!));
-        //     quotes.push(quote);
-
-        //     // Custom checking for partially fillable orders
-        //     confirmationQuery = `?id=${sellOrders[0].hash()}&checkRecentEvents=true`;
-
-        //     if (query.onlyQuote) {
-        //       continue;
-        //     }
-
-        //     await checkTakerEthBalance(query.taker, bn(tx.value!), query.referrerFeeBps);
-        //   } else {
-        //     const bestOrdersResult = await edb.manyOrNone(
-        //       `
-        //         SELECT
-        //           x.price,
-        //           x.quantity_remaining,
-        //           x.raw_data
-        //         FROM (
-        //           SELECT
-        //             orders.*,
-        //             SUM(orders.quantity_remaining) OVER (ORDER BY price, id) - orders.quantity_remaining AS quantity
-        //           FROM orders
-        //           WHERE orders.token_set_id = $/tokenSetId/
-        //             AND orders.side = 'sell'
-        //             AND orders.fillability_status = 'fillable'
-        //             AND orders.approval_status = 'approved'
-        //             AND orders.kind = 'opendao-erc1155'
-        //             AND orders.maker != $/taker/
-        //         ) x WHERE x.quantity < $/quantity/
-        //       `,
-        //       {
-        //         tokenSetId: `token:${query.token}`,
-        //         quantity: query.quantity,
-        //         taker: toBuffer(query.taker),
-        //       }
-        //     );
-
-        //     if (!bestOrdersResult?.length) {
-        //       throw Boom.badRequest("No available orders");
-        //     }
-
-        //     let quantityToFill = Number(query.quantity);
-
-        //     const sellOrders: Sdk.OpenDao.Order[] = [];
-        //     const matchParams: Sdk.OpenDao.Types.MatchParams[] = [];
-        //     for (const { quantity_remaining, raw_data } of bestOrdersResult) {
-        //       const order = new Sdk.OpenDao.Order(config.chainId, raw_data);
-        //       sellOrders.push(order);
-
-        //       const fill = Math.min(Number(quantity_remaining), quantityToFill);
-        //       matchParams.push(order.buildMatching({ amount: fill }));
-
-        //       quantityToFill -= fill;
-        //       amounts.push(fill);
-        //     }
-
-        //     const exchange = new Sdk.OpenDao.Exchange(config.chainId);
-        //     tx = exchange.batchBuyTransaction(query.taker, sellOrders, matchParams);
-        //     const quote = formatEth(bn(tx.value!));
-        //     quotes.push(quote);
-
-        //     // Custom checking for partially fillable orders
-        //     confirmationQuery = `?id=${sellOrders[0].hash()}&checkRecentEvents=true`;
-
-        //     if (query.onlyQuote) {
-        //       continue;
-        //     }
-
-        //     await checkTakerEthBalance(query.taker, bn(tx.value!), query.referrerFeeBps);
-        //   }
-
-        //   // Wrap the exchange-specific fill transaction via the router.
-        //   routerTx = {
-        //     from: query.taker,
-        //     to: router.contract.address,
-        //     data: router.contract.interface.encodeFunctionData("batchERC1155ListingFill", [
-        //       query.referrer,
-        //       tx.data,
-        //       Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4,
-        //       amounts.map(() => contract),
-        //       amounts.map(() => tokenId),
-        //       amounts,
-        //       query.taker,
-        //       query.referrerFeeBps,
-        //     ]),
-        //     value: bn(tx.value!)
-        //       .add(bn(tx.value!).mul(query.referrerFeeBps).div(10000))
-        //       .toHexString(),
-        //   };
-        // }
 
         if (!routerTx) {
           throw Boom.internal("Could not generate fill transaction");
