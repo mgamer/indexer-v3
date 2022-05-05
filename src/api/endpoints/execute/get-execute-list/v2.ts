@@ -58,11 +58,24 @@ export const getExecuteListV2Options: RouteOptions = {
       orderbook: Joi.string().valid("opensea", "looks-rare", "reservoir").default("reservoir"),
       source: Joi.string(),
       automatedRoyalties: Joi.boolean().default(true),
-      fee: Joi.alternatives(Joi.string(), Joi.number()),
-      feeRecipient: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .disallow(AddressZero),
+      fee: Joi.alternatives(
+        Joi.string(),
+        Joi.number(),
+        Joi.array().items(Joi.string()),
+        Joi.array().items(Joi.number())
+      ),
+      feeRecipient: Joi.alternatives(
+        Joi.string()
+          .lowercase()
+          .pattern(/^0x[a-fA-F0-9]{40}$/)
+          .disallow(AddressZero),
+        Joi.array().items(
+          Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}$/)
+            .disallow(AddressZero)
+        )
+      ),
       listingTime: Joi.alternatives(Joi.string(), Joi.number()),
       expirationTime: Joi.alternatives(Joi.string(), Joi.number()),
       salt: Joi.string(),
@@ -74,7 +87,9 @@ export const getExecuteListV2Options: RouteOptions = {
       s: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{64}$/),
-    }).with("feeRecipient", "fee"),
+    })
+      .with("feeRecipient", "fee")
+      .with("fee", "feeRecipient"),
   },
   response: {
     schema: Joi.object({
@@ -139,6 +154,9 @@ export const getExecuteListV2Options: RouteOptions = {
           }
           if (query.automatedRoyalties && query.feeRecipient) {
             throw Boom.badRequest("Exchange does not supported multiple fee recipients");
+          }
+          if (Array.isArray(query.fee) || Array.isArray(query.feeRecipient)) {
+            throw Boom.badRequest("Exchange does not support multiple fee recipients");
           }
 
           const order = await wyvernV23SellToken.build({
@@ -268,6 +286,17 @@ export const getExecuteListV2Options: RouteOptions = {
             throw Boom.badRequest("Unsupported orderbook");
           }
 
+          // Make sure the fee information is correctly types.
+          if (query.fee && !Array.isArray(query.fee)) {
+            query.fee = [query.fee];
+          }
+          if (query.feeRecipient && !Array.isArray(query.feeRecipient)) {
+            query.feeRecipient = [query.feeRecipient];
+          }
+          if (query.fee?.length !== query.feeRecipient?.length) {
+            throw Boom.badRequest("Invalid fee information");
+          }
+
           const order = await openDaoSellToken.build({
             ...query,
             contract,
@@ -354,6 +383,17 @@ export const getExecuteListV2Options: RouteOptions = {
           // Exchange-specific checks.
           if (!["reservoir"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
+          }
+
+          // Make sure the fee information is correctly types.
+          if (query.fee && !Array.isArray(query.fee)) {
+            query.fee = [query.fee];
+          }
+          if (query.feeRecipient && !Array.isArray(query.feeRecipient)) {
+            query.feeRecipient = [query.feeRecipient];
+          }
+          if (query.fee?.length !== query.feeRecipient?.length) {
+            throw Boom.badRequest("Invalid fee information");
           }
 
           const order = await zeroExV4SellToken.build({
@@ -443,7 +483,7 @@ export const getExecuteListV2Options: RouteOptions = {
           if (!["reservoir", "looks-rare"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
-          if (query.feeRecipient) {
+          if (query.fee) {
             throw Boom.badRequest("Exchange does not supported a custom fee");
           }
 

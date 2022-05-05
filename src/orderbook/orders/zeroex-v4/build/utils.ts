@@ -10,8 +10,8 @@ export interface BaseOrderBuildOptions {
   orderbook: "reservoir";
   quantity?: number;
   nonce?: string;
-  fee?: number;
-  feeRecipient?: string;
+  fee?: number[];
+  feeRecipient?: string[];
   expirationTime?: number;
   automatedRoyalties?: boolean;
 }
@@ -59,7 +59,7 @@ export const getBuildInfo = async (
   let totalFees = bn(0);
 
   if (options.automatedRoyalties) {
-    // Include the royalties
+    // Include the royalties.
     for (const { recipient, bps } of collectionResult.royalties) {
       if (recipient && Number(bps) > 0) {
         const fee = bn(bps).mul(options.weiPrice).div(10000).toString();
@@ -74,13 +74,14 @@ export const getBuildInfo = async (
   }
 
   if (options.fee && options.feeRecipient) {
-    const fee = bn(options.fee).mul(options.weiPrice).div(10000).toString();
-    buildParams.fees!.push({
-      recipient: options.feeRecipient,
-      amount: fee,
-    });
-
-    totalFees = totalFees.add(fee);
+    for (let i = 0; i < options.fee.length; i++) {
+      const fee = bn(options.fee[i]).mul(options.weiPrice).div(10000).toString();
+      buildParams.fees!.push({
+        recipient: options.feeRecipient[i],
+        amount: fee,
+      });
+      totalFees = totalFees.add(fee);
+    }
   }
 
   buildParams.price = bn(buildParams.price).sub(totalFees);
