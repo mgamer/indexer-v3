@@ -11,6 +11,10 @@ import { fromBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getSearchCollectionsV1Options: RouteOptions = {
+  cache: {
+    privacy: "public",
+    expiresIn: 10000,
+  },
   description: "Search for collections by given name",
   tags: ["api", "6. Search"],
   plugins: {
