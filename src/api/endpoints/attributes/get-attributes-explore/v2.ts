@@ -76,7 +76,7 @@ export const getAttributesExploreV2Options: RouteOptions = {
     let sortBy = "ORDER BY floor_sell_value DESC NULLS LAST";
 
     if (query.attributeKey) {
-      attributeKeyFilter = `AND attribute_keys.key = $/attributeKey/`;
+      attributeKeyFilter = `AND attributes.key = $/attributeKey/`;
     }
 
     // Sorting

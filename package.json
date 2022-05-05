@@ -1,6 +1,6 @@
 {
   "name": "reservoir-indexer",
-  "version": "5.53.4",
+  "version": "5.54.0",
   "description": "Reservoir Protocol Indexer",
   "main": "./dist/index.js",
   "repository": "https://github.com/reservoirprotocol/indexer-v3",
@@ -22,7 +22,7 @@
     "release": "standard-version"
   },
   "dependencies": {
-    "@bull-board/hapi": "^3.9.0",
+    "@bull-board/hapi": "^3.11.0",
     "@hapi/boom": "^9.1.4",
     "@hapi/hapi": "^20.0.0",
     "@hapi/inert": "^6.0.4",

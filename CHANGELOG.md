@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.54.0 (2022-05-05)
+
+
+### Features
+
+* fix explore API ([afdbeb1](https://github.com/reservoirprotocol/indexer-v3/commit/afdbeb17709054a52f08ec891853340cb0f8d887))
+
+### 5.53.5 (2022-05-05)
+
 ### 5.53.4 (2022-05-05)
 
 ### 5.53.3 (2022-05-05)

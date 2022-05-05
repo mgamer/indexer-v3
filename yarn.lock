@@ -23,30 +23,30 @@
     chalk "^2.0.0"
     js-tokens "^4.0.0"
 
-"@bull-board/api@3.10.0":
-  version "3.10.0"
-  resolved "https://registry.yarnpkg.com/@bull-board/api/-/api-3.10.0.tgz#036cb0daed908920acd356c8addc19bcaabda5f2"
-  integrity sha512-VAoTkb7hflJ1lYHGCMyhpZtUK7sqQqpTqqDU/yqn5+BpyVoPdQ+ULsyEuDotbthWLeegSJZ1gN35jLg/NTV71g==
+"@bull-board/api@3.11.0":
+  version "3.11.0"
+  resolved "https://registry.yarnpkg.com/@bull-board/api/-/api-3.11.0.tgz#680a9a488dc503e5aec74df6c17486f009d3bb07"
+  integrity sha512-0fB3aD3NTU3e5WApJbEJWFwDI0RKqw9P9hHVjs7yx6/8C7IXmAH0HjS5vwXUDDyEvs0sKJZuCbWcfwJIk1nGOA==
   dependencies:
     redis-info "^3.0.8"
 
-"@bull-board/hapi@^3.9.0":
-  version "3.10.0"
-  resolved "https://registry.yarnpkg.com/@bull-board/hapi/-/hapi-3.10.0.tgz#906043b9b81f39d2a12b5dc401ee27e3c19b300c"
-  integrity sha512-V7rGc6ZEZHcEFdWdNlyvGvohMFwqWZ+VMVM0KEZQx9V4IsU6eIkdFv2ZnWgGtEE3ewGQ2zuPCfF6pHmzUVRu2Q==
+"@bull-board/hapi@^3.11.0":
+  version "3.11.0"
+  resolved "https://registry.yarnpkg.com/@bull-board/hapi/-/hapi-3.11.0.tgz#4df334c0ae93e20b530e57de49563f48169e6694"
+  integrity sha512-SIdSTVLYBhPrGuBNc/59zopK05VTZAmZavQ45iqs3VNEZLVvNjQUHosdiCqD5+4BZ0dBOfvDVw2bVPwkMGxn3g==
   dependencies:
-    "@bull-board/api" "3.10.0"
-    "@bull-board/ui" "3.10.0"
+    "@bull-board/api" "3.11.0"
+    "@bull-board/ui" "3.11.0"
     "@hapi/inert" "^6.0.5"
     "@hapi/vision" "^6.1.0"
-    ejs "^3.1.6"
+    ejs "^3.1.7"
 
-"@bull-board/ui@3.10.0":
-  version "3.10.0"
-  resolved "https://registry.yarnpkg.com/@bull-board/ui/-/ui-3.10.0.tgz#5217a265e11bc3cfe41ae662fc9434a7769528af"
-  integrity sha512-0TkrMAe6p/j/Zy//YRUzFXW0jlAmBNzX8hVx9nQIYZm+o/gkk6a9PgVkhLsQS7AdWLzSKqB8YTRhkxm/8MjGqw==
+"@bull-board/ui@3.11.0":
+  version "3.11.0"
+  resolved "https://registry.yarnpkg.com/@bull-board/ui/-/ui-3.11.0.tgz#4cd7825adc76c87596326504f6f74a153c272464"
+  integrity sha512-dUOwnH4mJO154FDKiA4j7nkyYCfCq0Bghos5de5orFxjGRBwSAhRQXoSTtl2ZHAOGCZNinXHGTEXFry3G8OWgw==
   dependencies:
-    "@bull-board/api" "3.10.0"
+    "@bull-board/api" "3.11.0"
 
 "@colors/colors@1.5.0":
   version "1.5.0"
@@ -1415,11 +1415,6 @@ assert-options@0.7.0:
   resolved "https://registry.yarnpkg.com/assert-options/-/assert-options-0.7.0.tgz#82c27618d9c0baa5e9da8ef607ee261a44ed6e5e"
   integrity sha512-7q9uNH/Dh8gFgpIIb9ja8PJEWA5AQy3xnBC8jtKs8K/gNVCr1K6kIvlm59HUyYgvM7oEDoLzGgPcGd9FqhtXEQ==
 
-async@0.9.x:
-  version "0.9.2"
-  resolved "https://registry.yarnpkg.com/async/-/async-0.9.2.tgz#aea74d5e61c1f899613bf64bda66d4c78f2fd17d"
-  integrity sha1-rqdNXmHB+JlhO/ZL2mbUx48v0X0=
-
 async@^3.2.3:
   version "3.2.3"
   resolved "https://registry.yarnpkg.com/async/-/async-3.2.3.tgz#ac53dafd3f4720ee9e8a160628f18ea91df196c9"
@@ -1663,7 +1658,7 @@ chalk@^2.0.0, chalk@^2.4.2:
     escape-string-regexp "^1.0.5"
     supports-color "^5.3.0"
 
-chalk@^4.0.0, chalk@^4.1.0:
+chalk@^4.0.0, chalk@^4.0.2, chalk@^4.1.0:
   version "4.1.2"
   resolved "https://registry.yarnpkg.com/chalk/-/chalk-4.1.2.tgz#aac4e2b7734a740867aeb16bf02aad556a1e7a01"
   integrity sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA==
@@ -2290,12 +2285,12 @@ ee-first@1.1.1:
   resolved "https://registry.yarnpkg.com/ee-first/-/ee-first-1.1.1.tgz#590c61156b0ae2f4f0255732a158b266bc56b21d"
   integrity sha1-WQxhFWsK4vTwJVcyoViyZrxWsh0=
 
-ejs@^3.1.6:
-  version "3.1.6"
-  resolved "https://registry.yarnpkg.com/ejs/-/ejs-3.1.6.tgz#5bfd0a0689743bb5268b3550cceeebbc1702822a"
-  integrity sha512-9lt9Zse4hPucPkoP7FHDF0LQAlGyF9JVpnClFLFH3aSSbxmyoqINRpp/9wePWJTUl4KOQwRL72Iw3InHPDkoGw==
+ejs@^3.1.7:
+  version "3.1.7"
+  resolved "https://registry.yarnpkg.com/ejs/-/ejs-3.1.7.tgz#c544d9c7f715783dd92f0bddcf73a59e6962d006"
+  integrity sha512-BIar7R6abbUxDA3bfXrO4DSgwo8I+fB5/1zgujl3HLLjwd6+9iOnrT+t3grn2qbk9vOgBubXOFwX2m9axoFaGw==
   dependencies:
-    jake "^10.6.1"
+    jake "^10.8.5"
 
 elliptic@6.5.4, elliptic@^6.5.4:
   version "6.5.4"
@@ -3437,13 +3432,13 @@ isexe@^2.0.0:
   resolved "https://registry.yarnpkg.com/isexe/-/isexe-2.0.0.tgz#e8fbf374dc556ff8947a10dcb0572d633f2cfa10"
   integrity sha1-6PvzdNxVb/iUehDcsFctYz8s+hA=
 
-jake@^10.6.1:
-  version "10.8.2"
-  resolved "https://registry.yarnpkg.com/jake/-/jake-10.8.2.tgz#ebc9de8558160a66d82d0eadc6a2e58fbc500a7b"
-  integrity sha512-eLpKyrfG3mzvGE2Du8VoPbeSkRry093+tyNjdYaBbJS9v17knImYGNXQCUV0gLxQtF82m3E8iRb/wdSQZLoq7A==
+jake@^10.8.5:
+  version "10.8.5"
+  resolved "https://registry.yarnpkg.com/jake/-/jake-10.8.5.tgz#f2183d2c59382cb274226034543b9c03b8164c46"
+  integrity sha512-sVpxYeuAhWt0OTWITwT98oyV0GsXyMlXCF+3L1SuafBVUIr/uILGRB+NqwkzhgXKvoJpDIpQvqkUALgdmQsQxw==
   dependencies:
-    async "0.9.x"
-    chalk "^2.4.2"
+    async "^3.2.3"
+    chalk "^4.0.2"
     filelist "^1.0.1"
     minimatch "^3.0.4"
 
