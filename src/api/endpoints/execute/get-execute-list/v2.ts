@@ -11,6 +11,10 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 
+// LooksRare
+import * as looksRareSellToken from "@/orderbook/orders/looks-rare/build/sell/token";
+import * as looksRareCheck from "@/orderbook/orders/looks-rare/check";
+
 // OpenDao
 import * as openDaoSellToken from "@/orderbook/orders/opendao/build/sell/token";
 import * as openDaoCheck from "@/orderbook/orders/opendao/check";
@@ -51,7 +55,7 @@ export const getExecuteListV2Options: RouteOptions = {
       orderKind: Joi.string()
         .valid("721ex", "looks-rare", "wyvern-v2.3", "zeroex-v4")
         .default("wyvern-v2.3"),
-      orderbook: Joi.string().valid("opensea", "reservoir").default("reservoir"),
+      orderbook: Joi.string().valid("opensea", "looks-rare", "reservoir").default("reservoir"),
       source: Joi.string(),
       automatedRoyalties: Joi.boolean().default(true),
       fee: Joi.alternatives(Joi.string(), Joi.number()),
@@ -101,8 +105,35 @@ export const getExecuteListV2Options: RouteOptions = {
         query.orderKind = "721ex";
       }
 
+      // Set up generic listing steps.
+      const steps = [
+        {
+          action: "Initialize wallet",
+          description:
+            "A one-time setup transaction to enable trading with the Wyvern Protocol (used by Open Sea)",
+          kind: "transaction",
+        },
+        {
+          action: "Approve NFT contract",
+          description:
+            "Each NFT collection you want to trade requires a one-time approval transaction",
+          kind: "transaction",
+        },
+        {
+          action: "Authorize listing",
+          description: "A free off-chain signature to create the listing",
+          kind: "signature",
+        },
+        {
+          action: "Submit listing",
+          description: "Post your listing to the order book for others to discover it",
+          kind: "request",
+        },
+      ];
+
       switch (query.orderKind) {
         case "wyvern-v2.3": {
+          // Exchange-specific checks.
           if (!["reservoir", "opensea"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
@@ -116,52 +147,28 @@ export const getExecuteListV2Options: RouteOptions = {
             tokenId,
           });
 
-          // Make sure the order was successfully generated
+          // Make sure the order was successfully generated.
           const orderInfo = order?.getInfo();
           if (!order || !orderInfo) {
             throw Boom.internal("Failed to generate order");
           }
 
-          const steps = [
-            {
-              action: "Initialize wallet",
-              description:
-                "A one-time setup transaction to enable trading with the Wyvern Protocol (used by Open Sea)",
-              kind: "transaction",
-            },
-            {
-              action: "Approve NFT contract",
-              description:
-                "Each NFT collection you want to trade requires a one-time approval transaction",
-              kind: "transaction",
-            },
-            {
-              action: "Authorize listing",
-              description: "A free off-chain signature to create the listing",
-              kind: "signature",
-            },
-            {
-              action: "Submit listing",
-              description: "Post your listing to the order book for others to discover it",
-              kind: "request",
-            },
-          ];
-
+          // Will be set if an approval is needed before listing.
           let approvalTx: TxData | undefined;
 
-          // Check the order's fillability
+          // Check the order's fillability.
           try {
             await wyvernV23Check.offChainCheck(order, { onChainApprovalRecheck: true });
           } catch (error: any) {
             switch (error.message) {
               case "no-balance-no-approval":
               case "no-balance": {
-                // We cannot do anything if the user doesn't own the listed token
+                // We cannot do anything if the user doesn't own the listed token.
                 throw Boom.badData("Maker does not own the listed token");
               }
 
               case "no-user-proxy": {
-                // Generate a proxy registration transaction
+                // Generate a proxy registration transaction.
 
                 const proxyRegistry = new Sdk.WyvernV23.Helpers.ProxyRegistry(
                   baseProvider,
@@ -193,11 +200,9 @@ export const getExecuteListV2Options: RouteOptions = {
               }
 
               case "no-approval": {
-                // Generate an approval transaction
-
+                // Generate an approval transaction.
                 const userProxy = await wyvernV23Utils.getUserProxy(query.maker);
                 const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
-
                 approvalTx = (
                   kind === "erc721"
                     ? new Sdk.Common.Helpers.Erc721(baseProvider, orderInfo.contract)
@@ -208,7 +213,6 @@ export const getExecuteListV2Options: RouteOptions = {
           }
 
           const hasSignature = query.v && query.r && query.s;
-
           return {
             steps: [
               {
@@ -259,57 +263,37 @@ export const getExecuteListV2Options: RouteOptions = {
         }
 
         case "721ex": {
+          // Exchange-specific checks.
           if (!["reservoir"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
-
-          const steps = [
-            {
-              action: "Approve NFT contract",
-              description:
-                "Each NFT collection you want to trade requires a one-time approval transaction",
-              kind: "transaction",
-            },
-            {
-              action: "Authorize listing",
-              description: "A free off-chain signature to create the listing",
-              kind: "signature",
-            },
-            {
-              action: "Submit listing",
-              description: "Post your listing to the order book for others to discover it",
-              kind: "request",
-            },
-          ];
 
           const order = await openDaoSellToken.build({
             ...query,
             contract,
             tokenId,
           });
-
           if (!order) {
             throw Boom.internal("Failed to generate order");
           }
 
+          // Will be set if an approval is needed before listing.
           let approvalTx: TxData | undefined;
 
-          // Check the order's fillability
+          // Check the order's fillability.
           try {
             await openDaoCheck.offChainCheck(order, { onChainApprovalRecheck: true });
           } catch (error: any) {
             switch (error.message) {
               case "no-balance-no-approval":
               case "no-balance": {
-                // We cannot do anything if the user doesn't own the listed token
+                // We cannot do anything if the user doesn't own the listed token.
                 throw Boom.badData("Maker does not own the listed token");
               }
 
               case "no-approval": {
-                // Generate an approval transaction
-
+                // Generate an approval transaction.
                 const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
-
                 approvalTx = (
                   kind === "erc721"
                     ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.nft)
@@ -322,21 +306,20 @@ export const getExecuteListV2Options: RouteOptions = {
           }
 
           const hasSignature = query.v && query.r && query.s;
-
           return {
             steps: [
               {
-                ...steps[0],
+                ...steps[1],
                 status: approvalTx ? "incomplete" : "complete",
                 data: approvalTx,
               },
               {
-                ...steps[1],
+                ...steps[2],
                 status: hasSignature ? "complete" : "incomplete",
                 data: hasSignature ? undefined : order.getSignatureData(),
               },
               {
-                ...steps[2],
+                ...steps[3],
                 status: "incomplete",
                 data: !hasSignature
                   ? undefined
@@ -368,57 +351,37 @@ export const getExecuteListV2Options: RouteOptions = {
         }
 
         case "zeroex-v4": {
+          // Exchange-specific checks.
           if (!["reservoir"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
-
-          const steps = [
-            {
-              action: "Approve NFT contract",
-              description:
-                "Each NFT collection you want to trade requires a one-time approval transaction",
-              kind: "transaction",
-            },
-            {
-              action: "Authorize listing",
-              description: "A free off-chain signature to create the listing",
-              kind: "signature",
-            },
-            {
-              action: "Submit listing",
-              description: "Post your listing to the order book for others to discover it",
-              kind: "request",
-            },
-          ];
 
           const order = await zeroExV4SellToken.build({
             ...query,
             contract,
             tokenId,
           });
-
           if (!order) {
             throw Boom.internal("Failed to generate order");
           }
 
+          // Will be set if an approval is needed before listing.
           let approvalTx: TxData | undefined;
 
-          // Check the order's fillability
+          // Check the order's fillability.
           try {
             await zeroExV4Check.offChainCheck(order, { onChainApprovalRecheck: true });
           } catch (error: any) {
             switch (error.message) {
               case "no-balance-no-approval":
               case "no-balance": {
-                // We cannot do anything if the user doesn't own the listed token
+                // We cannot do anything if the user doesn't own the listed token.
                 throw Boom.badData("Maker does not own the listed token");
               }
 
               case "no-approval": {
-                // Generate an approval transaction
-
+                // Generate an approval transaction.
                 const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
-
                 approvalTx = (
                   kind === "erc721"
                     ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.nft)
@@ -431,21 +394,20 @@ export const getExecuteListV2Options: RouteOptions = {
           }
 
           const hasSignature = query.v && query.r && query.s;
-
           return {
             steps: [
               {
-                ...steps[0],
+                ...steps[1],
                 status: approvalTx ? "incomplete" : "complete",
                 data: approvalTx,
               },
               {
-                ...steps[1],
+                ...steps[2],
                 status: hasSignature ? "complete" : "incomplete",
                 data: hasSignature ? undefined : order.getSignatureData(),
               },
               {
-                ...steps[2],
+                ...steps[3],
                 status: "incomplete",
                 data: !hasSignature
                   ? undefined
@@ -471,6 +433,102 @@ export const getExecuteListV2Options: RouteOptions = {
             query: {
               ...query,
               expirationTime: order.params.expiry,
+              nonce: order.params.nonce,
+            },
+          };
+        }
+
+        case "looks-rare": {
+          // Exchange-specific checks.
+          if (!["reservoir", "looks-rare"].includes(query.orderbook)) {
+            throw Boom.badRequest("Unsupported orderbook");
+          }
+          if (query.feeRecipient) {
+            throw Boom.badRequest("Exchange does not supported a custom fee");
+          }
+
+          const order = await looksRareSellToken.build({
+            ...query,
+            contract,
+            tokenId,
+          });
+          if (!order) {
+            throw Boom.internal("Failed to generate order");
+          }
+
+          // Will be set if an approval is needed before listing.
+          let approvalTx: TxData | undefined;
+
+          // Check the order's fillability.
+          try {
+            await looksRareCheck.offChainCheck(order, { onChainApprovalRecheck: true });
+          } catch (error: any) {
+            switch (error.message) {
+              case "no-balance-no-approval":
+              case "no-balance": {
+                // We cannot do anything if the user doesn't own the listed token.
+                throw Boom.badData("Maker does not own the listed token");
+              }
+
+              case "no-approval": {
+                // Generate an approval transaction.
+                const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
+                approvalTx = (
+                  kind === "erc721"
+                    ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.collection)
+                    : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.collection)
+                ).approveTransaction(
+                  query.maker,
+                  kind === "erc721"
+                    ? Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]
+                    : Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId]
+                );
+
+                break;
+              }
+            }
+          }
+
+          const hasSignature = query.v && query.r && query.s;
+          return {
+            steps: [
+              {
+                ...steps[1],
+                status: approvalTx ? "incomplete" : "complete",
+                data: approvalTx,
+              },
+              {
+                ...steps[2],
+                status: hasSignature ? "complete" : "incomplete",
+                data: hasSignature ? undefined : order.getSignatureData(),
+              },
+              {
+                ...steps[3],
+                status: "incomplete",
+                data: !hasSignature
+                  ? undefined
+                  : {
+                      endpoint: "/order/v2",
+                      method: "POST",
+                      body: {
+                        order: {
+                          kind: "looks-rare",
+                          data: {
+                            ...order.params,
+                            v: query.v,
+                            r: query.r,
+                            s: query.s,
+                          },
+                        },
+                        orderbook: query.orderbook,
+                        source: query.source,
+                      },
+                    },
+              },
+            ],
+            query: {
+              ...query,
+              expirationTime: order.params.endTime,
               nonce: order.params.nonce,
             },
           };

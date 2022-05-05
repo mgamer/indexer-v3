@@ -6,7 +6,6 @@ export interface BaseOrderBuildOptions {
   maker: string;
   contract: string;
   weiPrice: string;
-  orderbook: "reservoir";
   listingTime?: number;
   expirationTime?: number;
 }
