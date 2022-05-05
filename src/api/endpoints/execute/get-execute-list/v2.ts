@@ -31,7 +31,7 @@ import * as wyvernV23Check from "@/orderbook/orders/wyvern-v2.3/check";
 const version = "v2";
 
 export const getExecuteListV2Options: RouteOptions = {
-  description: "List a token for sale",
+  description: "List a token for sale.",
   tags: ["api", "3. Router"],
   plugins: {
     "hapi-swagger": {
@@ -100,7 +100,7 @@ export const getExecuteListV2Options: RouteOptions = {
     try {
       const [contract, tokenId] = query.token.split(":");
 
-      // On Rinkeby, proxy ZeroEx V4 to 721ex
+      // On Rinkeby, proxy ZeroEx V4 to 721ex.
       if (query.orderKind === "zeroex-v4" && config.chainId === 4) {
         query.orderKind = "721ex";
       }
