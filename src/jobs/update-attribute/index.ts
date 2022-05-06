@@ -4,3 +4,4 @@ import "@/jobs/update-attribute/resync-attribute-cache";
 import "@/jobs/update-attribute/resync-attribute-key-counts";
 import "@/jobs/update-attribute/resync-attribute-value-counts";
 import "@/jobs/update-attribute/resync-attribute-collection";
+import "@/jobs/update-attribute/resync-attribute-floor-sell";

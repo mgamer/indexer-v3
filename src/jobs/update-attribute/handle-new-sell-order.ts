@@ -74,7 +74,10 @@ if (config.doBackgroundWork) {
       if (!_.isNull(price)) {
         // Check for new sell floor price
         for (const tokenAttribute of tokenAttributes) {
-          if (_.isNull(tokenAttribute.floorSellValue) || price < tokenAttribute.floorSellValue) {
+          if (
+            _.isNull(tokenAttribute.floorSellValue) ||
+            Number(price) < Number(tokenAttribute.floorSellValue)
+          ) {
             await Attributes.update(tokenAttribute.attributeId, {
               floorSellValue: price,
               sellUpdatedAt: new Date().toISOString(),
@@ -82,7 +85,7 @@ if (config.doBackgroundWork) {
 
             logger.info(
               QUEUE_NAME,
-              `New price ${price} for attribute id ${tokenAttribute.attributeId}`
+              `Old price=${tokenAttribute.floorSellValue}, New price=${price}, key=${tokenAttribute.key}, value=${tokenAttribute.value}, id=${tokenAttribute.attributeId}`
             );
           }
         }

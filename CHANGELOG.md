@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.59.1 (2022-05-06)
+
+## 5.59.0 (2022-05-06)
+
+
+### Features
+
+* resync floor value ([590c0be](https://github.com/reservoirprotocol/indexer-v3/commit/590c0be07af5e0acd67833c19bc7c4e4cababd22))
+
+## 5.58.0 (2022-05-06)
+
+
+### Features
+
+* resync floor value ([5d236d3](https://github.com/reservoirprotocol/indexer-v3/commit/5d236d35bfa6f78235e673a0e8c9efb471712bba))
+
+## 5.57.0 (2022-05-05)
+
+
+### Features
+
+* case prices to number ([6f5bcc9](https://github.com/reservoirprotocol/indexer-v3/commit/6f5bcc935eee945e66393349425cebdaffcd5301))
+
+## 5.56.0 (2022-05-05)
+
+
+### Features
+
+* update log ([3f08ce7](https://github.com/reservoirprotocol/indexer-v3/commit/3f08ce72aee3121823b2893a07cb0e82caecbe87))
+
+### 5.55.2 (2022-05-05)
+
+### 5.55.1 (2022-05-05)
+
 ## 5.55.0 (2022-05-05)
 
 
