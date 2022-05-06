@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.59.0 (2022-05-06)
+
+
+### Features
+
+* resync floor value ([590c0be](https://github.com/reservoirprotocol/indexer-v3/commit/590c0be07af5e0acd67833c19bc7c4e4cababd22))
+
 ## 5.58.0 (2022-05-06)
 
 
