@@ -42,6 +42,7 @@ import * as resyncAttributeCache from "@/jobs/update-attribute/resync-attribute-
 import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attribute-key-counts";
 import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
 import * as resyncAttributeCollection from "@/jobs/update-attribute/resync-attribute-collection";
+import * as resyncAttributeFloorSell from "@/jobs/update-attribute/resync-attribute-floor-sell";
 import * as resyncOrdersSource from "@/jobs/orderbook/resync-orders-source";
 import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refresh";
 
@@ -72,5 +73,6 @@ export const allJobQueues = [
   resyncAttributeKeyCounts.queue,
   resyncAttributeValueCounts.queue,
   resyncAttributeCollection.queue,
+  resyncAttributeFloorSell.queue,
   collectionsRefresh.queue,
 ];
