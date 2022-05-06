@@ -14,6 +14,7 @@ import {
   toBuffer,
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
+import crypto from "crypto";
 
 const version = "v3";
 
@@ -65,6 +66,7 @@ export const getSalesV3Options: RouteOptions = {
     schema: Joi.object({
       sales: Joi.array().items(
         Joi.object({
+          id: Joi.string(),
           token: Joi.object({
             contract: Joi.string()
               .lowercase()
@@ -260,6 +262,10 @@ export const getSalesV3Options: RouteOptions = {
 
       const sources = await Sources.getInstance();
       const result = rawResult.map((r) => ({
+        id: crypto
+          .createHash("sha256")
+          .update(`${r.tx_hash}${r.log_index}${r.batch_index}`)
+          .digest("hex"),
         token: {
           contract: fromBuffer(r.contract),
           tokenId: r.token_id,
