@@ -14,9 +14,11 @@ import { config } from "@/config/index";
 
 // OpenDao
 import * as openDaoBuyToken from "@/orderbook/orders/opendao/build/buy/token";
+import * as openDaoBuyCollection from "@/orderbook/orders/opendao/build/buy/collection";
 
 // ZeroExV4
 import * as zeroExV4BuyToken from "@/orderbook/orders/zeroex-v4/build/buy/token";
+import * as zeroExV4BuyCollection from "@/orderbook/orders/zeroex-v4/build/buy/collection";
 
 // Wyvern v2.3
 import * as wyvernV23BuyAttribute from "@/orderbook/orders/wyvern-v2.3/build/buy/attribute";
@@ -26,7 +28,7 @@ import * as wyvernV23BuyToken from "@/orderbook/orders/wyvern-v2.3/build/buy/tok
 const version = "v2";
 
 export const getExecuteBidV2Options: RouteOptions = {
-  description: "Create a bid on any token, collection or trait",
+  description: "Create a bid on any token, collection or trait.",
   tags: ["api", "3. Router"],
   plugins: {
     "hapi-swagger": {
@@ -80,8 +82,10 @@ export const getExecuteBidV2Options: RouteOptions = {
       .or("token", "collection")
       .oxor("token", "collection")
       .with("attributeValue", "attributeKey")
+      .with("attributeKey", "attributeValue")
       .with("attributeKey", "collection")
-      .with("feeRecipient", "fee"),
+      .with("feeRecipient", "fee")
+      .with("fee", "feeRecipient"),
   },
   response: {
     schema: Joi.object({
@@ -110,9 +114,47 @@ export const getExecuteBidV2Options: RouteOptions = {
       const attributeKey = query.attributeKey;
       const attributeValue = query.attributeValue;
 
-      // On Rinkeby, proxy ZeroEx V4 to 721ex
+      // On Rinkeby, proxy ZeroEx V4 to 721ex.
       if (query.orderKind === "zeroex-v4" && config.chainId === 4) {
         query.orderKind = "721ex";
+      }
+
+      // Set up generic bid creation steps.
+      const steps = [
+        {
+          action: "Wrapping ETH",
+          description: "Wrapping ETH required to make offer",
+          kind: "transaction",
+        },
+        {
+          action: "Approve WETH contract",
+          description: "A one-time setup transaction to enable trading with WETH",
+          kind: "transaction",
+        },
+        {
+          action: "Authorize offer",
+          description: "A free off-chain signature to create the offer",
+          kind: "signature",
+        },
+        {
+          action: "Submit offer",
+          description: "Post your offer to the order book for others to discover it",
+          kind: "request",
+        },
+      ];
+
+      // Check the maker's Weth/Eth balance.
+      let wrapEthTx: TxData | undefined;
+      const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
+      const wethBalance = await weth.getBalance(query.maker);
+      if (bn(wethBalance).lt(query.weiPrice)) {
+        const ethBalance = await baseProvider.getBalance(query.maker);
+        if (bn(wethBalance).add(ethBalance).lt(query.weiPrice)) {
+          // We cannot do anything if the maker doesn't have sufficient balance.
+          throw Boom.badData("Maker does not have sufficient balance");
+        } else {
+          wrapEthTx = weth.depositTransaction(query.maker, bn(query.weiPrice).sub(wethBalance));
+        }
       }
 
       switch (query.orderKind) {
@@ -159,30 +201,13 @@ export const getExecuteBidV2Options: RouteOptions = {
             });
           }
 
-          // Make sure the order was successfully generated
+          // Make sure the order was successfully generated.
           const orderInfo = order?.getInfo();
           if (!order || !orderInfo) {
             throw Boom.internal("Failed to generate order");
           }
 
-          // Check the maker's Weth/Eth balance
-          let wrapEthTx: TxData | undefined;
-          const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
-          const wethBalance = await weth.getBalance(query.maker);
-          if (bn(wethBalance).lt(order.params.basePrice)) {
-            const ethBalance = await baseProvider.getBalance(query.maker);
-            if (bn(wethBalance).add(ethBalance).lt(order.params.basePrice)) {
-              // We cannot do anything if the maker doesn't have sufficient balance
-              throw Boom.badData("Maker does not have sufficient balance");
-            } else {
-              wrapEthTx = weth.depositTransaction(
-                query.maker,
-                bn(order.params.basePrice).sub(wethBalance)
-              );
-            }
-          }
-
-          // Check the maker's approval
+          // Check the maker's approval.
           let approvalTx: TxData | undefined;
           const wethApproval = await weth.getAllowance(
             query.maker,
@@ -195,31 +220,7 @@ export const getExecuteBidV2Options: RouteOptions = {
             );
           }
 
-          const steps = [
-            {
-              action: "Wrapping ETH",
-              description: "Wrapping ETH required to make offer",
-              kind: "transaction",
-            },
-            {
-              action: "Approve WETH contract",
-              description: "A one-time setup transaction to enable trading with WETH",
-              kind: "transaction",
-            },
-            {
-              action: "Authorize offer",
-              description: "A free off-chain signature to create the offer",
-              kind: "signature",
-            },
-            {
-              action: "Submit offer",
-              description: "Post your offer to the order book for others to discover it",
-              kind: "request",
-            },
-          ];
-
           const hasSignature = query.v && query.r && query.s;
-
           return {
             steps: [
               {
@@ -284,45 +285,30 @@ export const getExecuteBidV2Options: RouteOptions = {
           if (!["reservoir"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
-          if (collection || attributeKey || attributeValue) {
-            throw Boom.notImplemented(
-              "Collection and attribute bids are not yet supported for 721ex"
-            );
+          if (attributeKey || attributeValue) {
+            throw Boom.notImplemented("Attribute bids are not yet supported for 721ex");
           }
 
-          const [contract, tokenId] = token.split(":");
-          const order = await openDaoBuyToken.build({
-            ...query,
-            contract,
-            tokenId,
-          });
+          let order: Sdk.OpenDao.Order | undefined;
+          if (token) {
+            const [contract, tokenId] = token.split(":");
+            order = await openDaoBuyToken.build({
+              ...query,
+              contract,
+              tokenId,
+            });
+          } else if (collection) {
+            order = await openDaoBuyCollection.build({
+              ...query,
+              collection,
+            });
+          }
 
           if (!order) {
             throw Boom.internal("Failed to generate order");
           }
 
-          // Check the maker's Weth/Eth balance
-          let wrapEthTx: TxData | undefined;
-          const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
-          const wethBalance = await weth.getBalance(query.maker);
-          if (bn(wethBalance).lt(bn(order.params.erc20TokenAmount).add(order.getFeeAmount()))) {
-            const ethBalance = await baseProvider.getBalance(query.maker);
-            if (
-              bn(wethBalance)
-                .add(ethBalance)
-                .lt(bn(order.params.erc20TokenAmount).add(order.getFeeAmount()))
-            ) {
-              // We cannot do anything if the maker doesn't have sufficient balance
-              throw Boom.badData("Maker does not have sufficient balance");
-            } else {
-              wrapEthTx = weth.depositTransaction(
-                query.maker,
-                bn(order.params.erc20TokenAmount).add(order.getFeeAmount()).sub(wethBalance)
-              );
-            }
-          }
-
-          // Check the maker's approval
+          // Check the maker's approval.
           let approvalTx: TxData | undefined;
           const wethApproval = await weth.getAllowance(
             query.maker,
@@ -335,31 +321,7 @@ export const getExecuteBidV2Options: RouteOptions = {
             );
           }
 
-          const steps = [
-            {
-              action: "Wrapping ETH",
-              description: "Wrapping ETH required to make offer",
-              kind: "transaction",
-            },
-            {
-              action: "Approve WETH contract",
-              description: "A one-time setup transaction to enable trading with WETH",
-              kind: "transaction",
-            },
-            {
-              action: "Authorize offer",
-              description: "A free off-chain signature to create the offer",
-              kind: "signature",
-            },
-            {
-              action: "Submit offer",
-              description: "Post your offer to the order book for others to discover it",
-              kind: "request",
-            },
-          ];
-
           const hasSignature = query.v && query.r && query.s;
-
           return {
             steps: [
               {
@@ -413,45 +375,32 @@ export const getExecuteBidV2Options: RouteOptions = {
           if (!["reservoir"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
-          if (collection || attributeKey || attributeValue) {
+          if (attributeKey || attributeValue) {
             throw Boom.notImplemented(
-              "Collection and attribute bids are not yet supported for 721ex"
+              "Collection and attribute bids are not yet supported for zeroex-v4"
             );
           }
 
-          const [contract, tokenId] = token.split(":");
-          const order = await zeroExV4BuyToken.build({
-            ...query,
-            contract,
-            tokenId,
-          });
+          let order: Sdk.ZeroExV4.Order | undefined;
+          if (token) {
+            const [contract, tokenId] = token.split(":");
+            order = await zeroExV4BuyToken.build({
+              ...query,
+              contract,
+              tokenId,
+            });
+          } else if (collection) {
+            order = await zeroExV4BuyCollection.build({
+              ...query,
+              collection,
+            });
+          }
 
           if (!order) {
             throw Boom.internal("Failed to generate order");
           }
 
-          // Check the maker's Weth/Eth balance
-          let wrapEthTx: TxData | undefined;
-          const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
-          const wethBalance = await weth.getBalance(query.maker);
-          if (bn(wethBalance).lt(bn(order.params.erc20TokenAmount).add(order.getFeeAmount()))) {
-            const ethBalance = await baseProvider.getBalance(query.maker);
-            if (
-              bn(wethBalance)
-                .add(ethBalance)
-                .lt(bn(order.params.erc20TokenAmount).add(order.getFeeAmount()))
-            ) {
-              // We cannot do anything if the maker doesn't have sufficient balance
-              throw Boom.badData("Maker does not have sufficient balance");
-            } else {
-              wrapEthTx = weth.depositTransaction(
-                query.maker,
-                bn(order.params.erc20TokenAmount).add(order.getFeeAmount()).sub(wethBalance)
-              );
-            }
-          }
-
-          // Check the maker's approval
+          // Check the maker's approval.
           let approvalTx: TxData | undefined;
           const wethApproval = await weth.getAllowance(
             query.maker,
@@ -464,31 +413,7 @@ export const getExecuteBidV2Options: RouteOptions = {
             );
           }
 
-          const steps = [
-            {
-              action: "Wrapping ETH",
-              description: "Wrapping ETH required to make offer",
-              kind: "transaction",
-            },
-            {
-              action: "Approve WETH contract",
-              description: "A one-time setup transaction to enable trading with WETH",
-              kind: "transaction",
-            },
-            {
-              action: "Authorize offer",
-              description: "A free off-chain signature to create the offer",
-              kind: "signature",
-            },
-            {
-              action: "Submit offer",
-              description: "Post your offer to the order book for others to discover it",
-              kind: "request",
-            },
-          ];
-
           const hasSignature = query.v && query.r && query.s;
-
           return {
             steps: [
               {
