@@ -82,7 +82,8 @@ export class Attributes {
                    FROM attributes
                    WHERE collection_id = $/collectionId/
                    AND key = $/key/
-                   AND value = $/value/`;
+                   AND value = $/value/
+                   LIMIT 1`;
 
     const attribute = await idb.oneOrNone(query, replacementValues);
 

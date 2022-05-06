@@ -26,7 +26,7 @@ export const getSearchCollectionsV1Options: RouteOptions = {
     query: Joi.object({
       name: Joi.string()
         .lowercase()
-        .description("Search for collections that match a string, e.g. `bored`"),
+        .description("Lightweight search for collections that match a string, e.g. `bored`"),
       limit: Joi.number().integer().min(1).max(50).default(20),
     }),
   },
@@ -48,13 +48,17 @@ export const getSearchCollectionsV1Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const query = request.query as any;
-    query.name = `%${query.name}%`;
+    let nameFilter = "";
+    if (query.name) {
+      query.name = `%${query.name}%`;
+      nameFilter = "WHERE name ILIKE $/name/";
+    }
 
     const baseQuery = `
             SELECT id, name, contract, (metadata ->> 'imageUrl')::TEXT AS image
             FROM collections
-            WHERE name ILIKE $/name/
-            ORDER BY collections.all_time_volume DESC NULLS LAST
+            ${nameFilter}
+            ORDER BY all_time_volume DESC
             OFFSET 0
             LIMIT $/limit/`;
 

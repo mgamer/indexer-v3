@@ -122,7 +122,7 @@ export const start = async (): Promise<void> => {
           },
           {
             name: "6. Search",
-            description: "Search for collections/tokens APIs",
+            description: "Lightweight search APIs optimized for searching collections/tokens",
           },
         ],
       },
