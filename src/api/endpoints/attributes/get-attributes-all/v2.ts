@@ -31,16 +31,12 @@ export const getAttributesAllV2Options: RouteOptions = {
         Joi.object({
           key: Joi.string().required(),
           kind: Joi.string().valid("string", "number", "date", "range").required(),
-          values: Joi.alternatives(
-            Joi.array().items(
-              Joi.object({
-                value: Joi.string().required(),
-                count: Joi.number(),
-              })
-            ),
+          minRange: Joi.number().allow(null),
+          maxRange: Joi.number().allow(null),
+          values: Joi.array().items(
             Joi.object({
-              minRange: Joi.number(),
-              maxRange: Joi.number(),
+              value: Joi.string().required(),
+              count: Joi.number(),
             })
           ),
         })
@@ -80,13 +76,9 @@ export const getAttributesAllV2Options: RouteOptions = {
           return {
             key: r.key,
             kind: r.kind,
-            values:
-              r.kind == "range"
-                ? {
-                    minRange: r.min_range,
-                    maxRange: r.max_range,
-                  }
-                : r.values,
+            minRange: r.min_range,
+            maxRange: r.max_range,
+            values: r.values,
           };
         });
       });
