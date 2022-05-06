@@ -395,7 +395,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
               Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4,
               zeroExV4Batch[0].order.params.nft,
               zeroExV4Batch[0].order.params.nftId,
-              zeroExV4Batch[0].order.params.nftAmount ?? 1,
+              zeroExV4Batch[0].matchParams.nftAmount ?? 1,
               query.taker,
               query.referrerFeeBps,
             ]),
@@ -420,7 +420,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
               Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4,
               zeroExV4Batch.map((b) => b.order.params.nft),
               zeroExV4Batch.map((b) => b.order.params.nftId),
-              zeroExV4Batch.map((b) => b.order.params.nftAmount ?? 1),
+              zeroExV4Batch.map((b) => b.matchParams.nftAmount ?? 1),
               query.taker,
               query.referrerFeeBps,
             ]),
@@ -452,7 +452,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
               Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4,
               openDaoBatch[0].order.params.nft,
               openDaoBatch[0].order.params.nftId,
-              openDaoBatch[0].order.params.nftAmount ?? 1,
+              openDaoBatch[0].matchParams.nftAmount ?? 1,
               query.taker,
               query.referrerFeeBps,
             ]),
@@ -477,7 +477,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
               Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4,
               openDaoBatch.map((b) => b.order.params.nft),
               openDaoBatch.map((b) => b.order.params.nftId),
-              openDaoBatch.map((b) => b.order.params.nftAmount ?? 1),
+              openDaoBatch.map((b) => b.matchParams.nftAmount ?? 1),
               query.taker,
               query.referrerFeeBps,
             ]),
@@ -560,7 +560,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
         throw Boom.badData("ETH balance too low to proceed with transaction");
       }
 
-      if (txInfos.length == 1) {
+      if (routerTxs.length == 1) {
         // Do not use multi buy logic when filling a single token.
         return {
           steps: [
@@ -568,7 +568,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
               ...steps[0],
               status: "incomplete",
               data: {
-                ...txInfos[0],
+                ...routerTxs[0],
                 maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
                 maxPriorityFeePerGas: query.maxPriorityFeePerGas
                   ? bn(query.maxPriorityFeePerGas).toHexString()
@@ -598,8 +598,8 @@ export const getExecuteBuyV2Options: RouteOptions = {
                 from: query.taker,
                 to: router.contract.address,
                 data: router.contract.interface.encodeFunctionData("multiListingFill", [
-                  txInfos.map(({ tx }) => tx.data),
-                  txInfos.map(({ tx }) => tx.value!.toString()),
+                  routerTxs.map((tx) => tx.data),
+                  routerTxs.map((tx) => tx.value!.toString()),
                   // TODO: Support partial executions (eg. just skip reverting fills).
                   true,
                 ]),
