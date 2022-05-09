@@ -27,6 +27,9 @@ export const getSearchCollectionsV1Options: RouteOptions = {
       name: Joi.string()
         .lowercase()
         .description("Lightweight search for collections that match a string, e.g. `bored`"),
+      community: Joi.string()
+        .lowercase()
+        .description("Filter to a particular community, e.g. `artblocks`"),
       limit: Joi.number().integer().min(1).max(50).default(20),
     }),
   },
@@ -48,16 +51,26 @@ export const getSearchCollectionsV1Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const query = request.query as any;
-    let nameFilter = "";
+    let whereClause = "";
+    const conditions: string[] = [];
+
     if (query.name) {
       query.name = `%${query.name}%`;
-      nameFilter = "WHERE name ILIKE $/name/";
+      conditions.push(`name ILIKE $/name/`);
+    }
+
+    if (query.community) {
+      conditions.push(`collections.community = $/community/`);
+    }
+
+    if (conditions.length) {
+      whereClause = " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
     }
 
     const baseQuery = `
             SELECT id, name, contract, (metadata ->> 'imageUrl')::TEXT AS image
             FROM collections
-            ${nameFilter}
+            ${whereClause}
             ORDER BY all_time_volume DESC
             OFFSET 0
             LIMIT $/limit/`;
