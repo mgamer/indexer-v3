@@ -128,6 +128,7 @@ export const getCollectionV2Options: RouteOptions = {
           "c"."metadata",
           "c"."royalties",
           "c"."contract",
+          "c"."token_id_range",
           "c"."token_set_id",
           "c"."day1_rank",
           "c"."day1_volume",
@@ -220,6 +221,7 @@ export const getCollectionV2Options: RouteOptions = {
           SELECT COUNT(DISTINCT owner) AS "ownerCount"
           FROM nft_balances
           WHERE nft_balances.contract = x.contract
+            AND nft_balances.token_id <@ x.token_id_range
           AND amount > 0
         ) "ow" ON TRUE
       `;
