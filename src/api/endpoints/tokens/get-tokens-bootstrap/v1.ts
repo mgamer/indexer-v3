@@ -100,16 +100,15 @@ export const getTokensBootstrapV1Options: RouteOptions = {
         conditions.push(`"t"."contract" = $/contract/`);
       }
       if (query.continuation) {
-        const [contract, tokenId, floorSellValue] = splitContinuation(
-          query.continuation,
-          /^0x[0-9a-fA-F]{40}_\d+_\d+$/
-        );
-        (query as any).continuationContract = toBuffer(contract);
-        (query as any).continuationTokenId = tokenId;
+        const [floorSellValue, tokenId] = splitContinuation(query.continuation, /^\d+_\d+$/);
         (query as any).continuationFloorSellValue = floorSellValue;
+        (query as any).continuationTokenId = tokenId;
 
         conditions.push(
-          `("t"."contract", "t"."token_id", "t"."floor_sell_value") > ($/continuationContract/, $/continuationTokenId/, $/continuationFloorSellValue/)`
+          `
+            ("t"."floor_sell_value", "t"."token_id") > ($/continuationFloorSellValue/, $/continuationTokenId/)
+            OR ("t"."floor_sell_value" IS NULL)
+          `
         );
       }
       if (conditions.length) {
@@ -117,7 +116,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
       }
 
       // Sorting
-      baseQuery += ` ORDER BY "t"."floor_sell_value"`;
+      baseQuery += ` ORDER BY "t"."floor_sell_value", "t"."token_id"`;
 
       // Pagination
       baseQuery += ` LIMIT $/limit/`;
@@ -146,9 +145,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
       let continuation: string | undefined;
       if (rawResult.length && rawResult.length >= query.limit) {
         const lastResult = rawResult[rawResult.length - 1];
-        continuation = buildContinuation(
-          `${fromBuffer(lastResult.contract)}_${lastResult.token_id}_${lastResult.floor_sell_value}`
-        );
+        continuation = buildContinuation(`${lastResult.floor_sell_value}_${lastResult.token_id}`);
       }
 
       return { tokens: result, continuation };
