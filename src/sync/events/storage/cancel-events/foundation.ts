@@ -1,27 +1,8 @@
 import { idb, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
-import { BaseEventParams } from "@/events-sync/parser";
-import { OrderKind } from "@/orderbook/orders";
+import { DbEvent, Event } from "@/events-sync/storage/cancel-events";
 
-export type Event = {
-  orderKind: OrderKind;
-  orderId: string;
-  baseEventParams: BaseEventParams;
-};
-
-type DbEvent = {
-  address: Buffer;
-  block: number;
-  block_hash: Buffer;
-  tx_hash: Buffer;
-  tx_index: number;
-  log_index: number;
-  timestamp: number;
-  order_kind: OrderKind;
-  order_id: string;
-};
-
-export const addEvents = async (events: Event[]) => {
+export const addEventsFoundation = async (events: Event[]) => {
   const cancelValues: DbEvent[] = [];
   for (const event of events) {
     cancelValues.push({
@@ -72,24 +53,12 @@ export const addEvents = async (events: Event[]) => {
         ON CONFLICT DO NOTHING
         RETURNING "order_kind", "order_id", "timestamp"
       )
-      INSERT INTO "orders" (
-        "id",
-        "kind",
-        "fillability_status",
-        "expiration"
-      ) (
-        SELECT
-          "x"."order_id",
-          "x"."order_kind",
-          'cancelled'::order_fillability_status_t,
-          to_timestamp("x"."timestamp") AS "expiration"
-        FROM "x"
-      )
-      ON CONFLICT ("id") DO
-      UPDATE SET
+      UPDATE "orders" SET
         "fillability_status" = 'cancelled',
-        "expiration" = EXCLUDED."expiration",
+        "expiration" = to_timestamp("x"."timestamp"),
         "updated_at" = now()
+      WHERE "orders"."id" = "x"."order_id"
+        AND lower("orders"."valid_between") < to_timestamp("x"."timestamp")
     `);
   }
 
@@ -98,21 +67,4 @@ export const addEvents = async (events: Event[]) => {
     // are no chances of database deadlocks in this scenario
     await idb.none(pgp.helpers.concat(queries));
   }
-};
-
-export const removeEvents = async (block: number, blockHash: string) => {
-  // Delete the cancel events but skip reverting order status updates
-  // since it's not possible to know what to revert to and even if we
-  // knew, it might mess up other higher-level order processes.
-  await idb.any(
-    `
-      DELETE FROM cancel_events
-      WHERE block = $/block/
-        AND block_hash = $/blockHash/
-    `,
-    {
-      block,
-      blockHash: toBuffer(blockHash),
-    }
-  );
 };
