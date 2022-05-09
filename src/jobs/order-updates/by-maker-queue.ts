@@ -171,6 +171,7 @@ if (config.doBackgroundWork) {
                 }
               );
 
+              // Foundation needs special rules since it's an escrowed orderbook.
               await idb.none(
                 `
                   UPDATE "orders" AS "o" SET
@@ -182,6 +183,7 @@ if (config.doBackgroundWork) {
                     columns
                   )}) AS "x"("id", "fillability_status", "expiration")
                   WHERE "o"."id" = "x"."id"::text
+                    AND "o"."kind" != 'foundation'::order_kind_t
                 `
               );
             }
