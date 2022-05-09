@@ -18,7 +18,6 @@ export type OrderInfo = {
     price: string;
     txHash: string;
     txTimestamp: number;
-    logIndex: number;
   };
   metadata: OrderMetadata;
 };

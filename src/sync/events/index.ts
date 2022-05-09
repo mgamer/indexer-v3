@@ -482,7 +482,6 @@ export const syncEvents = async (
                   price,
                   txHash: baseEventParams.txHash,
                   txTimestamp: baseEventParams.timestamp,
-                  logIndex: baseEventParams.logIndex,
                 },
                 metadata: {
                   source: "Foundation",
