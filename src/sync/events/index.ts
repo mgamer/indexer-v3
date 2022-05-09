@@ -536,6 +536,12 @@ export const syncEvents = async (
 
               const orderId = keccak256(["address", "uint256"], [contract, tokenId]);
 
+              cancelEvents.push({
+                orderKind: "foundation",
+                orderId,
+                baseEventParams,
+              });
+
               // Only cancel an order if it's older than what we currently
               // have in the database as the active order for that token.
               const result = await idb.oneOrNone(
@@ -548,11 +554,6 @@ export const syncEvents = async (
                 { orderId }
               );
               if (result && Number(result.valid_from) < baseEventParams.timestamp) {
-                cancelEvents.push({
-                  orderKind: "foundation",
-                  orderId,
-                  baseEventParams,
-                });
                 orderInfos.push({
                   context: `cancelled-${orderId}-${baseEventParams.txHash}`,
                   id: orderId,
