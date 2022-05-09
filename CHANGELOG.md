@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.59.8 (2022-05-09)
+
+
+### Bug Fixes
+
+* tokens boostrap continuation handling ([f9e06a3](https://github.com/reservoirprotocol/indexer-v3/commit/f9e06a3b00dfc026dd01ac80edc471801209dfe7))
+
 ### 5.59.7 (2022-05-06)
 
 ### 5.59.6 (2022-05-06)
