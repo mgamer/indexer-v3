@@ -1,5 +1,6 @@
 import { Log } from "@ethersproject/abstract-provider";
 import { AddressZero, HashZero } from "@ethersproject/constants";
+import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
 
 import { logger } from "@/common/logger";
@@ -14,8 +15,10 @@ import * as eventsSync from "@/jobs/events-sync/index";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
+import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 import { OrderKind } from "@/orderbook/orders";
+import * as Foundation from "@/orderbook/orders/foundation";
 
 // TODO: Split into multiple files (by exchange).
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
@@ -79,6 +82,8 @@ export const syncEvents = async (
       const cancelEvents: es.cancels.Event[] = [];
       const fillEvents: es.fills.Event[] = [];
       const fillEventsZeroExV4: es.fills.Event[] = [];
+      const fillEventsFoundation: es.fills.Event[] = [];
+      const foundationOrders: Foundation.OrderInfo[] = [];
 
       // Keep track of all events within the currently processing transaction
       let currentTx: string | undefined;
@@ -456,6 +461,108 @@ export const syncEvents = async (
                   contract: baseEventParams.address,
                 },
               });
+
+              break;
+            }
+
+            // Foundation
+
+            case "foundation-buy-price-set": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const contract = parsedLog.args["nftContract"].toLowerCase();
+              const tokenId = parsedLog.args["tokenId"].toString();
+              const maker = parsedLog.args["seller"].toLowerCase();
+              const price = parsedLog.args["price"].toString();
+
+              foundationOrders.push({
+                orderParams: {
+                  contract,
+                  tokenId,
+                  maker,
+                  price,
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+                metadata: {
+                  source: "Foundation",
+                },
+              });
+
+              break;
+            }
+
+            case "foundation-buy-price-accepted": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const contract = parsedLog.args["nftContract"].toLowerCase();
+              const tokenId = parsedLog.args["tokenId"].toString();
+              const maker = parsedLog.args["seller"].toLowerCase();
+              const taker = parsedLog.args["buyer"].toLowerCase();
+              const protocolFee = parsedLog.args["protocolFee"].toString();
+
+              const orderId = keccak256(["address", "uint256"], [contract, tokenId]);
+
+              // Custom handling to support on-chain orderbook quirks.
+              fillEventsFoundation.push({
+                orderKind: "foundation",
+                orderId,
+                orderSide: "sell",
+                maker,
+                taker,
+                // Deduce the price from the protocol fee (which is 5%).
+                price: bn(protocolFee).mul(10000).div(50).toString(),
+                contract,
+                tokenId,
+                amount: "1",
+                baseEventParams,
+              });
+              orderInfos.push({
+                context: `filled-${orderId}-${baseEventParams.txHash}`,
+                id: orderId,
+                trigger: {
+                  kind: "sale",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+              });
+
+              break;
+            }
+
+            case "foundation-buy-price-invalidated":
+            case "foundation-buy-price-cancelled": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const contract = parsedLog.args["nftContract"].toLowerCase();
+              const tokenId = parsedLog.args["tokenId"].toString();
+
+              const orderId = keccak256(["address", "uint256"], [contract, tokenId]);
+
+              // Only cancel an order if it's older than what we currently
+              // have in the database as the active order for that token.
+              const result = await idb.oneOrNone(
+                `
+                  SELECT
+                    lower(orders.valid_between) AS valid_from
+                  FROM orders
+                  WHERE id = $/orderId/
+                `,
+                { orderId }
+              );
+              if (result && Number(result.valid_from) < baseEventParams.timestamp) {
+                cancelEvents.push({
+                  orderKind: "foundation",
+                  orderId,
+                  baseEventParams,
+                });
+                orderInfos.push({
+                  context: `cancelled-${orderId}-${baseEventParams.txHash}`,
+                  id: orderId,
+                  trigger: {
+                    kind: "cancel",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
+                });
+              }
 
               break;
             }
@@ -1065,6 +1172,7 @@ export const syncEvents = async (
       await Promise.all([
         es.fills.addEvents(fillEvents),
         es.fills.addEventsZeroExV4(fillEventsZeroExV4),
+        es.fills.addEventsFoundation(fillEventsFoundation),
         es.nonceCancels.addEvents(nonceCancelEvents, backfill),
         es.bulkCancels.addEvents(bulkCancelEvents, backfill),
         es.cancels.addEvents(cancelEvents),
@@ -1084,6 +1192,9 @@ export const syncEvents = async (
           orderUpdatesById.addToQueue(orderInfos),
           orderUpdatesByMaker.addToQueue(makerInfos),
           tokenUpdatesMint.addToQueue(mintInfos),
+          orderbookOrders.addToQueue(
+            foundationOrders.map((info) => ({ kind: "foundation", info }))
+          ),
         ]);
 
         // When not backfilling, save all retrieved blocks in order
