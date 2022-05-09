@@ -37,6 +37,40 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       // On Foundation, we can only have a single currently active order per NFT.
       const id = keccak256(["address", "uint256"], [orderParams.contract, orderParams.tokenId]);
 
+      // Ensure that the order is not cancelled.
+      const cancelResult = await idb.oneOrNone(
+        `
+          SELECT 1 FROM cancel_events
+          WHERE order_id = $/id/
+            AND timestamp >= $/timestamp/
+          LIMIT 1
+        `,
+        { id, timestamp: orderParams.txTimestamp }
+      );
+      if (cancelResult) {
+        return results.push({
+          id,
+          status: "redundant",
+        });
+      }
+
+      // Ensure that the order is not filled.
+      const fillResult = await idb.oneOrNone(
+        `
+          SELECT 1 FROM fill_events_2
+          WHERE order_id = $/id/
+            AND timestamp >= $/timestamp/
+          LIMIT 1
+        `,
+        { id, timestamp: orderParams.txTimestamp }
+      );
+      if (fillResult) {
+        return results.push({
+          id,
+          status: "redundant",
+        });
+      }
+
       const orderResult = await idb.oneOrNone(
         `
           SELECT

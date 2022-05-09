@@ -19,6 +19,9 @@ ALTER TABLE "cancel_events"
 CREATE INDEX "cancel_events_block_block_hash_index"
   ON "cancel_events" ("block", "block_hash");
 
+CREATE INDEX "cancel_events_order_id_timestamp_index"
+  ON "cancel_events" ("order_id", "timestamp");
+
 -- Down Migration
 
 DROP TABLE "cancel_events";
