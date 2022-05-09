@@ -36,6 +36,9 @@ CREATE INDEX "fill_events_2_contract_timestamp_index"
 CREATE INDEX "fill_events_2_contract_token_id_timestamp_index"
   ON "fill_events_2" ("contract", "token_id", "timestamp", "log_index", "batch_index");
 
+CREATE INDEX "fill_events_2_order_id_timestamp_index"
+  ON "fill_events_2" ("order_id", "timestamp");
+
 -- Down Migration
 
 DROP TABLE "fill_events_2";
