@@ -1,3 +1,4 @@
+import { defaultAbiCoder } from "@ethersproject/abi";
 import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
@@ -201,22 +202,21 @@ export const save = async (
       let tokenSetId: string | undefined;
       const schemaHash = metadata.schemaHash ?? generateSchemaHash(metadata.schema);
 
-      switch (order.params.kind) {
-        // TODO: Add support for contract/range orders
-        // case "contract-wide": {
-        //   [{ id: tokenSetId }] = await tokenSet.contractWide.save([
-        //     {
-        //       id: `contract:${order.params.collection}`,
-        //       schemaHash,
-        //       contract: order.params.collection,
-        //     },
-        //   ]);
+      const orderKind = order.params.kind?.split("-").slice(1).join("-");
+      switch (orderKind) {
+        case "contract-wide": {
+          [{ id: tokenSetId }] = await tokenSet.contractWide.save([
+            {
+              id: `contract:${order.params.nft}`,
+              schemaHash,
+              contract: order.params.nft,
+            },
+          ]);
 
-        //   break;
-        // }
+          break;
+        }
 
-        case "erc721-single-token":
-        case "erc1155-single-token": {
+        case "single-token": {
           [{ id: tokenSetId }] = await tokenSet.singleToken.save([
             {
               id: `token:${order.params.nft}:${order.params.nftId}`,
@@ -225,6 +225,28 @@ export const save = async (
               tokenId: order.params.nftId,
             },
           ]);
+
+          break;
+        }
+
+        case "token-range": {
+          // TODO: The token range retrieval should be moved into the SDK.
+          const [startTokenId, endTokenId] = defaultAbiCoder.decode(
+            ["uint256", "uint256"],
+            order.params.nftProperties[0].propertyData
+          );
+
+          if (startTokenId && endTokenId) {
+            [{ id: tokenSetId }] = await tokenSet.tokenRange.save([
+              {
+                id: `range:${order.params.nft}:${startTokenId}:${endTokenId}`,
+                schemaHash,
+                contract: order.params.nft,
+                startTokenId,
+                endTokenId,
+              },
+            ]);
+          }
 
           break;
         }

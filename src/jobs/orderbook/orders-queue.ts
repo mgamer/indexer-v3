@@ -33,6 +33,13 @@ if (config.doBackgroundWork) {
 
       try {
         switch (kind) {
+          case "foundation": {
+            const result = await orders.foundation.save([info as orders.foundation.OrderInfo]);
+            logger.info(QUEUE_NAME, `[foundation] Order save result: ${JSON.stringify(result)}`);
+
+            break;
+          }
+
           case "looks-rare": {
             const result = await orders.looksRare.save(
               [info as orders.looksRare.OrderInfo],
@@ -123,6 +130,11 @@ export type GenericOrderInfo =
   | {
       kind: "zeroex-v4";
       info: orders.zeroExV4.OrderInfo;
+      relayToArweave?: boolean;
+    }
+  | {
+      kind: "foundation";
+      info: orders.foundation.OrderInfo;
       relayToArweave?: boolean;
     };
 

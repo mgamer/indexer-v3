@@ -3,6 +3,7 @@ import { Interface } from "@ethersproject/abi";
 import * as erc721 from "@/events-sync/data/erc721";
 import * as erc1155 from "@/events-sync/data/erc1155";
 import * as weth from "@/events-sync/data/weth";
+import * as foundation from "@/events-sync/data/foundation";
 import * as looksRare from "@/events-sync/data/looks-rare";
 import * as openDao from "@/events-sync/data/opendao";
 import * as wyvernV2 from "@/events-sync/data/wyvern-v2";
@@ -37,7 +38,11 @@ export type EventDataKind =
   | "opendao-erc721-order-cancelled"
   | "opendao-erc1155-order-cancelled"
   | "opendao-erc721-order-filled"
-  | "opendao-erc1155-order-filled";
+  | "opendao-erc1155-order-filled"
+  | "foundation-buy-price-set"
+  | "foundation-buy-price-invalidated"
+  | "foundation-buy-price-cancelled"
+  | "foundation-buy-price-accepted";
 
 export type EventData = {
   kind: EventDataKind;
@@ -57,6 +62,10 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       weth.transfer,
       weth.deposit,
       weth.withdrawal,
+      foundation.buyPriceAccepted,
+      foundation.buyPriceCancelled,
+      foundation.buyPriceInvalidated,
+      foundation.buyPriceSet,
       looksRare.cancelAllOrders,
       looksRare.cancelMultipleOrders,
       looksRare.takerAsk,
@@ -79,7 +88,7 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       eventDataKinds
         .map(internalGetEventData)
         .filter(Boolean)
-        // Force TS to remove `undefined`
+        // Force TS to remove `undefined`.
         .map((x) => x!)
     );
   }
@@ -101,6 +110,14 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return weth.deposit;
     case "weth-withdrawal":
       return weth.withdrawal;
+    case "foundation-buy-price-accepted":
+      return foundation.buyPriceAccepted;
+    case "foundation-buy-price-cancelled":
+      return foundation.buyPriceCancelled;
+    case "foundation-buy-price-invalidated":
+      return foundation.buyPriceInvalidated;
+    case "foundation-buy-price-set":
+      return foundation.buyPriceSet;
     case "wyvern-v2-orders-matched":
       return wyvernV2.ordersMatched;
     case "wyvern-v2.3-order-cancelled":
