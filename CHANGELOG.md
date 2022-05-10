@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.62.0 (2022-05-10)
+
+
+### Features
+
+* update docker compose to use specific versions ([7852274](https://github.com/reservoirprotocol/indexer-v3/commit/7852274efc88a71afcb27f6836d71d5287950fd0))
+
 ## 5.61.0 (2022-05-10)
 
 
