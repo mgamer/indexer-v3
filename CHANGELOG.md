@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.60.0 (2022-05-10)
+
+
+### Features
+
+* added allowExitOnIdle ([7eba026](https://github.com/reservoirprotocol/indexer-v3/commit/7eba0263a048e43e711278de3b26e3c04a34c13e))
+
 ### 5.59.17 (2022-05-10)
 
 ### 5.59.16 (2022-05-10)
