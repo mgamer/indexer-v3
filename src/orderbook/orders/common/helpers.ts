@@ -2,6 +2,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 
 import { idb } from "@/common/db";
 import { toBuffer, bn } from "@/common/utils";
+import { config } from "@/config/index";
 
 export const getContractKind = async (
   contract: string
@@ -80,26 +81,53 @@ export const getNftApproval = async (
 };
 
 export const getMinNonce = async (orderKind: string, maker: string): Promise<BigNumber> => {
-  const bulkCancelResult = await idb.oneOrNone(
-    `
-      SELECT coalesce(
-        (
-          SELECT bulk_cancel_events.min_nonce FROM bulk_cancel_events
-          WHERE bulk_cancel_events.order_kind = $/orderKind/
-            AND bulk_cancel_events.maker = $/maker/
-          ORDER BY bulk_cancel_events.min_nonce DESC
-          LIMIT 1
-        ),
-        0
-      ) AS nonce
-    `,
-    {
-      orderKind,
-      maker: toBuffer(maker),
-    }
-  );
+  let bulkCancelResult: { nonce: string } | null;
 
-  return bn(bulkCancelResult.nonce);
+  // WARNING! The Wyvern contract has a bug on Rinkeby where the
+  // emitted event (eg. `NonceIncremented`) is one nonce behind.
+  // Mainnet: ++nonces[msg.sender]
+  // Rinkeby: nonces[msg.sender]++
+  if (config.chainId === 4 && orderKind === "wyvern-v2.3") {
+    bulkCancelResult = await idb.oneOrNone(
+      `
+        SELECT coalesce(
+          (
+            SELECT bulk_cancel_events.min_nonce + 1 FROM bulk_cancel_events
+            WHERE bulk_cancel_events.order_kind = $/orderKind/
+              AND bulk_cancel_events.maker = $/maker/
+            ORDER BY bulk_cancel_events.min_nonce DESC
+            LIMIT 1
+          ),
+          0
+        ) AS nonce
+      `,
+      {
+        orderKind,
+        maker: toBuffer(maker),
+      }
+    );
+  } else {
+    bulkCancelResult = await idb.oneOrNone(
+      `
+        SELECT coalesce(
+          (
+            SELECT bulk_cancel_events.min_nonce FROM bulk_cancel_events
+            WHERE bulk_cancel_events.order_kind = $/orderKind/
+              AND bulk_cancel_events.maker = $/maker/
+            ORDER BY bulk_cancel_events.min_nonce DESC
+            LIMIT 1
+          ),
+          0
+        ) AS nonce
+      `,
+      {
+        orderKind,
+        maker: toBuffer(maker),
+      }
+    );
+  }
+
+  return bn(bulkCancelResult!.nonce);
 };
 
 export const isNonceCancelled = async (
