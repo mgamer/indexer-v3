@@ -95,9 +95,10 @@ if (config.doBackgroundWork) {
           // Fetch the attribute key from the database (will succeed in the common case)
           let attributeKeyResult = await idb.oneOrNone(
             `
-              SELECT "ak"."id" FROM "attribute_keys" "ak"
-              WHERE "ak"."collection_id" = $/collection/
-                AND "ak"."key" = $/key/
+              SELECT attribute_keys.id
+              FROM attribute_keys
+              WHERE attribute_keys.collection_id = $/collection/
+              AND attribute_keys.key = $/key/
             `,
             {
               collection,
@@ -175,10 +176,11 @@ if (config.doBackgroundWork) {
                   ON CONFLICT DO NOTHING
                   RETURNING "id"
                 )
-                UPDATE "attribute_keys" SET
-                  "attribute_count" = "attribute_count" + (SELECT COUNT(*) FROM "x")
-                WHERE "id" = $/attributeKeyId/
-                RETURNING (SELECT "x"."id" FROM "x"), "attribute_count"
+                
+                UPDATE attribute_keys
+                SET attribute_count = "attribute_count" + (SELECT COUNT(*) FROM "x")
+                WHERE id = $/attributeKeyId/
+                RETURNING (SELECT x.id FROM "x"), "attribute_count"
               `,
               {
                 attributeKeyId: attributeKeyResult.id,
