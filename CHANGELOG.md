@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.61.0 (2022-05-10)
+
+
+### Features
+
+* reduce arweave relay bulk limit ([32888df](https://github.com/reservoirprotocol/indexer-v3/commit/32888dfc5a978a007de7049aa764a337a5d5882e))
+
 ## 5.60.0 (2022-05-10)
 
 
