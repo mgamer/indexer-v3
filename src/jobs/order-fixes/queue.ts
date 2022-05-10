@@ -276,12 +276,12 @@ if (config.doBackgroundWork) {
           }
 
           case "token": {
-            // Trigger a fix for all potentially valid orders on the token.
+            // Trigger a fix for all valid orders on the token.
             const result = await idb.manyOrNone(
               `
                 SELECT "o"."id" FROM "orders" "o"
                 WHERE "o"."token_set_id" = $/tokenSetId/
-                  AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
+                  AND ("o"."fillability_status" = 'fillable' AND "o"."approval_status" = 'approved')
               `,
               { tokenSetId: `token:${data.token}` }
             );

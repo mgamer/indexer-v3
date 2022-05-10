@@ -162,9 +162,24 @@ export const getExecuteBuyV1Options: RouteOptions = {
           }
 
           // Build the proper router fill transaction given the listings' kind (eg. underlying exchange).
-          let tx: TxData;
-          let exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND;
+          let tx: TxData | undefined;
+          let exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND | undefined;
           switch (bestOrderResult.kind) {
+            case "foundation": {
+              const exchange = new Sdk.Foundation.Exchange(config.chainId);
+
+              // Foundation is not yet supported via the router, so we just fill natively.
+              routerTx = exchange.fillOrderTx(
+                query.taker,
+                contract,
+                tokenId,
+                bestOrderResult.price,
+                query.referrer
+              );
+
+              break;
+            }
+
             case "wyvern-v2.3": {
               const order = new Sdk.WyvernV23.Order(config.chainId, bestOrderResult.raw_data);
 
@@ -241,6 +256,11 @@ export const getExecuteBuyV1Options: RouteOptions = {
             default: {
               throw Boom.notImplemented("Unsupported order kind");
             }
+          }
+
+          // HACK: Support native fills as well.
+          if (!tx || !exchangeKind) {
+            continue;
           }
 
           // Wrap the exchange-specific fill transaction via the router.
