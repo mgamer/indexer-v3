@@ -69,6 +69,7 @@ export const getTokensFloorAskV2Options: RouteOptions = {
               .lowercase()
               .pattern(/^0x[a-fA-F0-9]{40}/)
               .allow(null),
+            nonce: Joi.string().pattern(/^\d+$/).allow(null),
             price: Joi.number().unsafe().allow(null),
             validFrom: Joi.number().unsafe().allow(null),
             validUntil: Joi.number().unsafe().allow(null),
@@ -116,6 +117,7 @@ export const getTokensFloorAskV2Options: RouteOptions = {
             nullif(date_part('epoch', upper(orders.valid_between)), 'Infinity'),
             0
           ) AS valid_until,
+          orders.nonce,
           token_floor_sell_events.id,
           token_floor_sell_events.kind,
           token_floor_sell_events.contract,
@@ -200,6 +202,7 @@ export const getTokensFloorAskV2Options: RouteOptions = {
         floorAsk: {
           orderId: r.order_id,
           maker: r.maker ? fromBuffer(r.maker) : null,
+          nonce: r.nonce,
           price: r.price ? formatEth(r.price) : null,
           validFrom: r.price ? Number(r.valid_from) : null,
           validUntil: r.price ? Number(r.valid_until) : null,
