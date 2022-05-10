@@ -80,6 +80,7 @@ export const syncEvents = async (
       const bulkCancelEvents: es.bulkCancels.Event[] = [];
       const nonceCancelEvents: es.nonceCancels.Event[] = [];
       const cancelEvents: es.cancels.Event[] = [];
+      const cancelEventsFoundation: es.cancels.Event[] = [];
       const fillEvents: es.fills.Event[] = [];
       const fillEventsZeroExV4: es.fills.Event[] = [];
       const fillEventsFoundation: es.fills.Event[] = [];
@@ -536,34 +537,21 @@ export const syncEvents = async (
 
               const orderId = keccak256(["address", "uint256"], [contract, tokenId]);
 
-              cancelEvents.push({
+              // Custom handling to support on-chain orderbook quirks.
+              cancelEventsFoundation.push({
                 orderKind: "foundation",
                 orderId,
                 baseEventParams,
               });
-
-              // Only cancel an order if it's older than what we currently
-              // have in the database as the active order for that token.
-              const result = await idb.oneOrNone(
-                `
-                  SELECT
-                    lower(orders.valid_between) AS valid_from
-                  FROM orders
-                  WHERE id = $/orderId/
-                `,
-                { orderId }
-              );
-              if (result && Number(result.valid_from) < baseEventParams.timestamp) {
-                orderInfos.push({
-                  context: `cancelled-${orderId}-${baseEventParams.txHash}`,
-                  id: orderId,
-                  trigger: {
-                    kind: "cancel",
-                    txHash: baseEventParams.txHash,
-                    txTimestamp: baseEventParams.timestamp,
-                  },
-                });
-              }
+              orderInfos.push({
+                context: `cancelled-${orderId}-${baseEventParams.txHash}`,
+                id: orderId,
+                trigger: {
+                  kind: "cancel",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+              });
 
               break;
             }
@@ -1177,6 +1165,7 @@ export const syncEvents = async (
         es.nonceCancels.addEvents(nonceCancelEvents, backfill),
         es.bulkCancels.addEvents(bulkCancelEvents, backfill),
         es.cancels.addEvents(cancelEvents),
+        es.cancels.addEventsFoundation(cancelEventsFoundation),
         es.ftTransfers.addEvents(ftTransferEvents, backfill),
         es.nftApprovals.addEvents(nftApprovalEvents),
         es.nftTransfers.addEvents(nftTransferEvents, backfill),
