@@ -57,6 +57,7 @@ export const addEventsFoundation = async (events: Event[]) => {
         "fillability_status" = 'cancelled',
         "expiration" = to_timestamp("x"."timestamp"),
         "updated_at" = now()
+      FROM "x"
       WHERE "orders"."id" = "x"."order_id"
         AND lower("orders"."valid_between") < to_timestamp("x"."timestamp")
     `);
