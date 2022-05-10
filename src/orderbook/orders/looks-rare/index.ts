@@ -205,6 +205,7 @@ export const save = async (
           recipient: "0x5924a28caaf1cc016617874a2f0c3710d881f3c1",
           bps: 200,
         },
+        // TODO: Include royalty fees as well.
       ];
 
       // Handle: native Reservoir orders
