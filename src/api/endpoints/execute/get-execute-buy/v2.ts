@@ -110,15 +110,21 @@ export const getExecuteBuyV2Options: RouteOptions = {
         matchParams: Sdk.OpenDao.Types.MatchParams;
       }[] = [];
 
+      // All individual fill transactions to go through the router.
+      const routerTxs: TxData[] = [];
+
       // While everything else is handled generically.
       const generateNativeFillTx = async (
         kind: "wyvern-v2.3" | "looks-rare" | "zeroex-v4-erc721" | "opendao-erc721",
         rawData: any,
         tokenId: string
-      ): Promise<{
-        tx: TxData;
-        exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND;
-      }> => {
+      ): Promise<
+        | {
+            tx: TxData;
+            exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND;
+          }
+        | undefined
+      > => {
         if (kind === "wyvern-v2.3") {
           const order = new Sdk.WyvernV23.Order(config.chainId, rawData);
 
@@ -160,7 +166,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
             tx: exchange.matchTransaction(query.taker, order, buyOrder),
             exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4,
           };
-        } else {
+        } else if (kind === "opendao-erc721") {
           const order = new Sdk.OpenDao.Order(config.chainId, rawData);
 
           // Create buy order to match with the listing.
@@ -172,6 +178,14 @@ export const getExecuteBuyV2Options: RouteOptions = {
             tx: exchange.matchTransaction(query.taker, order, buyOrder),
             exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4,
           };
+        } else if (kind === "foundation") {
+          // Generate exchange-specific fill transaction.
+          const exchange = new Sdk.Foundation.Exchange(config.chainId);
+
+          // HACK: Until the router supports it, Foundation orders are filled natively.
+          routerTxs.push(
+            exchange.fillOrderTx(query.taker, rawData.contract, rawData.tokenId, rawData.price)
+          );
         }
       };
 
@@ -263,14 +277,17 @@ export const getExecuteBuyV2Options: RouteOptions = {
             const matchParams = order.buildMatching({ amount: 1 });
             openDaoBatch.push({ order, matchParams });
           } else {
-            const { tx, exchangeKind } = await generateNativeFillTx(kind, raw_data, tokenId);
-            txInfos.push({
-              tx,
-              contract,
-              tokenId,
-              exchangeKind,
-              tokenKind: token_kind,
-            });
+            const data = await generateNativeFillTx(kind, raw_data, tokenId);
+            if (data) {
+              const { tx, exchangeKind } = data;
+              txInfos.push({
+                tx,
+                contract,
+                tokenId,
+                exchangeKind,
+                tokenKind: token_kind,
+              });
+            }
           }
 
           confirmationQuery = `?id=${id}&checkRecentEvents=true`;
@@ -351,14 +368,17 @@ export const getExecuteBuyV2Options: RouteOptions = {
               const matchParams = order.buildMatching({ amount: quantityFilled });
               openDaoBatch.push({ order, matchParams });
             } else {
-              const { tx, exchangeKind } = await generateNativeFillTx(kind, raw_data, tokenId);
-              txInfos.push({
-                tx,
-                contract,
-                tokenId,
-                exchangeKind,
-                tokenKind: kindResult.kind,
-              });
+              const data = await generateNativeFillTx(kind, raw_data, tokenId);
+              if (data) {
+                const { tx, exchangeKind } = data;
+                txInfos.push({
+                  tx,
+                  contract,
+                  tokenId,
+                  exchangeKind,
+                  tokenKind: kindResult.kind,
+                });
+              }
             }
 
             confirmationQuery = `?id=${id}&checkRecentEvents=true`;
@@ -370,9 +390,6 @@ export const getExecuteBuyV2Options: RouteOptions = {
           }
         }
       }
-
-      // All individual fill transactions to go through the router.
-      const routerTxs: TxData[] = [];
 
       // TODO: Update when the router will support batch ERC721 filling.
       // Handle ZeroExV4 orders.
