@@ -12,6 +12,7 @@ export const edb = pgp({
   connectionTimeoutMillis: 10 * 1000,
   query_timeout: 10 * 1000,
   statement_timeout: 10 * 1000,
+  allowExitOnIdle: true,
 });
 
 // Database connection for internal processes/APIs
@@ -22,6 +23,7 @@ export const idb = pgp({
   connectionTimeoutMillis: 30 * 1000,
   query_timeout: 5 * 60 * 1000,
   statement_timeout: 5 * 60 * 1000,
+  allowExitOnIdle: true,
 });
 
 // Common types
