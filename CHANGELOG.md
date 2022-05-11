@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.62.1 (2022-05-10)
+
+## 5.62.0 (2022-05-10)
+
+
+### Features
+
+* update docker compose to use specific versions ([7852274](https://github.com/reservoirprotocol/indexer-v3/commit/7852274efc88a71afcb27f6836d71d5287950fd0))
+
+## 5.61.0 (2022-05-10)
+
+
+### Features
+
+* reduce arweave relay bulk limit ([32888df](https://github.com/reservoirprotocol/indexer-v3/commit/32888dfc5a978a007de7049aa764a337a5d5882e))
+
+## 5.60.0 (2022-05-10)
+
+
+### Features
+
+* added allowExitOnIdle ([7eba026](https://github.com/reservoirprotocol/indexer-v3/commit/7eba0263a048e43e711278de3b26e3c04a34c13e))
+
+### 5.59.17 (2022-05-10)
+
 ### 5.59.16 (2022-05-10)
 
 ### 5.59.15 (2022-05-10)

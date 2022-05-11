@@ -259,7 +259,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
           }
 
           // HACK: Support native fills as well.
-          if (!tx || !exchangeKind) {
+          if (!tx) {
             continue;
           }
 
@@ -506,7 +506,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
           quote,
           path,
         };
-      } else {
+      } else if (txs.length > 1) {
         // Use multi buy logic.
         return {
           steps: [

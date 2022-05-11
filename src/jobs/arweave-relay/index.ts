@@ -100,7 +100,7 @@ if (config.doBackgroundWork && config.arweaveRelayerKey) {
           logger.info("arweave-relay", "Relaying pending data");
 
           try {
-            const batchSize = 5000;
+            const batchSize = 1000;
             const batch = await redis.lrange(PENDING_DATA_KEY, 0, batchSize);
             if (batch.length) {
               const wallet = JSON.parse(config.arweaveRelayerKey!);
