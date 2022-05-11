@@ -96,7 +96,10 @@ if (config.doBackgroundWork) {
           let infoUpdate = "info"; // By default no update to the info
           if (kind == "number") {
             infoUpdate = `
-            info || jsonb_object(array['min_range', 'max_range'], array[
+            CASE WHEN info IS NULL THEN 
+                  jsonb_object(array['min_range', 'max_range'], array[$/value/, $/value/]::text[])
+                ELSE
+                  info || jsonb_object(array['min_range', 'max_range'], array[
                         CASE
                             WHEN (info->>'min_range')::numeric > $/value/::numeric THEN $/value/::numeric
                             ELSE (info->>'min_range')::numeric
@@ -105,7 +108,8 @@ if (config.doBackgroundWork) {
                             WHEN (info->>'max_range')::numeric < $/value/::numeric THEN $/value/::numeric
                             ELSE (info->>'max_range')::numeric
                         END
-                    ]::text[])
+                  ]::text[])
+            END
             `;
           }
 
