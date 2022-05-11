@@ -25,5 +25,50 @@
       "tokenUrlMainnet": "https://looksrare.org/collections/${contract}/${tokenId}",
       "tokenUrlRinkeby": "https://rinkeby.looksrare.org/collections/${contract}/${tokenId}"
     }
-  }
+  },
+  "4": {
+    "name": "PleaseBePatientWithMe",
+    "address": "0x7aee8b2d275266c95494d420eef4e73d77036882",
+    "data": {
+      "icon": "https://raw.githubusercontent.com/reservoirprotocol/indexer/v5/src/models/sources/pleasebepatientwithme-logo.png",
+      "tokenUrlMainnet": "https://www.pleasebepatientwith.me/${contract}/${tokenId}",
+      "tokenUrlRinkeby": "https://www.pleasebepatientwith.me/${contract}/${tokenId}"
+    }
+  },
+  "5": {
+    "name": "PleaseBePatientWith.Me",
+    "address": "0x4713dbc943a3f892d3e8ae2778a0aa9b2c1fb0af",
+    "data": {
+      "icon": "https://raw.githubusercontent.com/reservoirprotocol/indexer/v5/src/models/sources/pleasebepatientwithme-logo.png",
+      "tokenUrlMainnet": "https://www.pleasebepatientwith.me/${contract}/${tokenId}",
+      "tokenUrlRinkeby": "https://www.pleasebepatientwith.me/${contract}/${tokenId}"
+    }
+  },
+  "6": {
+    "name": "KNNY",
+    "address": "0x912e86686ff6d8d57a439666b5fe8401de13cf02",
+    "data": {
+      "icon": "https://raw.githubusercontent.com/reservoirprotocol/indexer/v5/src/models/sources/KNNY-logo.png",
+      "tokenUrlMainnet": "https://knny.vercel.app/${contract}/${tokenId}",
+      "tokenUrlRinkeby": "https://knny.vercel.app/${contract}/${tokenId}"
+    }
+  },
+  "12": {
+    "name": "Foundation",
+    "address": "0x6c51c470341fa0e9894ee5e4e227c786c51650b4",
+    "data": {
+      "icon": "https://raw.githubusercontent.com/reservoirprotocol/indexer/v5/src/models/sources/foundation-logo.svg",
+      "tokenUrlMainnet": "https://foundation.app/",
+      "tokenUrlRinkeby": "https://foundation.app/"
+    }
+  },
+    "14": {
+    "name": "gmoney market",
+    "address": "0xec2184ba5c8d6bfbeda759119addc183ba1c3ac2",
+    "data": {
+      "icon": "https://raw.githubusercontent.com/reservoirprotocol/indexer/v5/src/models/sources/gmoney-logo.png",
+      "tokenUrlMainnet": "https://gmoney.market/${contract}/${tokenId}",
+      "tokenUrlRinkeby": "https://gmoney.market/${contract}/${tokenId}"
+    }
+  },
 }
