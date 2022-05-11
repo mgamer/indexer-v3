@@ -70,5 +70,5 @@
       "tokenUrlMainnet": "https://gmoney.market/${contract}/${tokenId}",
       "tokenUrlRinkeby": "https://gmoney.market/${contract}/${tokenId}"
     }
-  },
+  }
 }
