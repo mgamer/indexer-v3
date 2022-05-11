@@ -93,7 +93,7 @@ if (config.doBackgroundWork) {
         // Token attributes
         for (const { key, value, kind, rank } of attributes) {
           // Try to update the attribute keys, if number type update range as well and return the ID
-          let infoUpdate = "NULL";
+          let infoUpdate = "info"; // By default no update to the info
           if (kind == "number") {
             infoUpdate = `
             info || jsonb_object(array['min_range', 'max_range'], array[
