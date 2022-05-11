@@ -93,11 +93,10 @@ if (config.doBackgroundWork) {
         // Token attributes
         for (const { key, value, kind, rank } of attributes) {
           // Try to update the attribute keys, if number type update range as well and return the ID
-          let attributeKeyResult = await idb.oneOrNone(
-            `
-              UPDATE attribute_keys
-              SET info = CASE WHEN kind = 'number' THEN
-                    info || jsonb_object(array['min_range', 'max_range'], array[
+          let infoUpdate = "info"; // By default no update to the info
+          if (kind == "number") {
+            infoUpdate = `
+            info || jsonb_object(array['min_range', 'max_range'], array[
                         CASE
                             WHEN (info->>'min_range')::numeric > $/value/::numeric THEN $/value/::numeric
                             ELSE (info->>'min_range')::numeric
@@ -107,7 +106,13 @@ if (config.doBackgroundWork) {
                             ELSE (info->>'max_range')::numeric
                         END
                     ]::text[])
-                    END
+            `;
+          }
+
+          let attributeKeyResult = await idb.oneOrNone(
+            `
+              UPDATE attribute_keys
+              SET info = ${infoUpdate}
               WHERE collection_id = $/collection/
               AND key = $/key/
               RETURNING id
