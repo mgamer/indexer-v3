@@ -283,6 +283,7 @@ export const getStatsV1Options: RouteOptions = {
           )
           SELECT
             "c"."token_count",
+            "c"."token_set_id",
             (
               SELECT COUNT(*) FROM "tokens"
               WHERE "collection_id" = $/collection/
@@ -311,7 +312,7 @@ export const getStatsV1Options: RouteOptions = {
             FROM "token_sets" "ts"
             LEFT JOIN "orders" "ob"
               ON "ts"."top_buy_id" = "ob"."id"
-            WHERE "ts"."collection_id" = "x"."collection_id"
+            WHERE "ts"."id" = "c"."token_set_id"
             ORDER BY "ts"."top_buy_value" DESC NULLS LAST
             LIMIT 1
           ) "y" ON TRUE
