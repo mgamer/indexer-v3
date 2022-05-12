@@ -134,13 +134,6 @@ if (config.doBackgroundWork) {
               info = { min_range: Number(value), max_range: Number(value) };
             }
 
-            logger.info(
-              QUEUE_NAME,
-              `New attribute key collection=${collection}, key=${key}, kind=${kind}, info=${JSON.stringify(
-                info
-              )}`
-            );
-
             // If no attribute key is available, then save it and refetch
             attributeKeyResult = await idb.oneOrNone(
               `
@@ -167,11 +160,6 @@ if (config.doBackgroundWork) {
                 rank: rank || null,
                 info,
               }
-            );
-          } else {
-            logger.info(
-              QUEUE_NAME,
-              `Updated attribute key collection=${collection}, key=${key}, kind=${kind}`
             );
           }
 
