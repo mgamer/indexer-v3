@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import _ from "lodash";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
@@ -53,33 +54,44 @@ export const getAttributesAllV2Options: RouteOptions = {
 
     try {
       const baseQuery = `
-        SELECT attribute_keys.key, attribute_keys.kind,
-               CASE WHEN attribute_keys.kind = 'range' THEN
-                  MIN(attributes.value)
-               END AS "min_range",
-               CASE WHEN attribute_keys.kind = 'range' THEN
-                  MAX(attributes.value)
-               END AS "max_range",
-               CASE WHEN attribute_keys.kind != 'range' THEN
-                  array_agg(json_build_object('value', attributes.value, 'count', attributes.token_count))
-               END AS "values"
+        SELECT key, kind, rank, array_agg(info) AS "values"
+        FROM attribute_keys
+        WHERE collection_id = $/collection/
+        AND kind = 'number'
+        GROUP BY id
+        
+        UNION
+        
+        SELECT attribute_keys.key, attribute_keys.kind, rank,
+           array_agg(jsonb_build_object('value', attributes.value, 'count', attributes.token_count)) AS "values"
         FROM attribute_keys
         JOIN attributes ON attribute_keys.id = attributes.attribute_key_id
         WHERE attribute_keys.collection_id = $/collection/
-        AND attribute_keys.rank IS NOT NULL
+        AND attribute_keys.kind = 'string'
         GROUP BY attribute_keys.id
-        ORDER BY attribute_keys.rank DESC
+        ORDER BY rank DESC
       `;
 
       const result = await edb.manyOrNone(baseQuery, params).then((result) => {
         return result.map((r) => {
-          return {
-            key: r.key,
-            kind: r.kind,
-            minRange: r.min_range,
-            maxRange: r.max_range,
-            values: r.values,
-          };
+          if (r.kind == "number") {
+            return {
+              key: r.key,
+              kind: r.kind,
+              minRange: _.isArray(r.values)
+                ? Number((_.first(r.values) as any)["min_range"])
+                : null,
+              maxRange: _.isArray(r.values)
+                ? Number((_.first(r.values) as any)["max_range"])
+                : null,
+            };
+          } else {
+            return {
+              key: r.key,
+              kind: r.kind,
+              values: r.values,
+            };
+          }
         });
       });
 
