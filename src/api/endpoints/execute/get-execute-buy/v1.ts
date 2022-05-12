@@ -43,6 +43,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
       referrerFeeBps: Joi.number().integer().positive().min(0).max(10000).default(0),
       maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
       maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),
+      skipBalanceCheck: Joi.boolean().default(false),
     }),
   },
   response: {
@@ -475,7 +476,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
         .reduce((a, b) => bn(a).add(b), bn(0))
         .toString();
       const balance = await baseProvider.getBalance(query.taker);
-      if (bn(balance).lt(totalValue)) {
+      if (!query.skipBalanceCheck && bn(balance).lt(totalValue)) {
         throw Boom.badData("ETH balance too low to proceed with transaction");
       }
 
@@ -541,6 +542,8 @@ export const getExecuteBuyV1Options: RouteOptions = {
           quote,
           path,
         };
+      } else {
+        throw Boom.internal("No transaction could be generated");
       }
     } catch (error) {
       logger.error(`get-execute-buy-${version}-handler`, `Handler failure: ${error}`);
