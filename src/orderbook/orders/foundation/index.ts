@@ -50,6 +50,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       if (cancelResult) {
         return results.push({
           id,
+          txHash: orderParams.txHash,
           status: "redundant",
         });
       }
@@ -67,6 +68,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       if (fillResult) {
         return results.push({
           id,
+          txHash: orderParams.txHash,
           status: "redundant",
         });
       }
@@ -110,6 +112,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           // If a newer order already exists, then we just skip processing.
           return results.push({
             id,
+            txHash: orderParams.txHash,
             status: "redundant",
           });
         }
