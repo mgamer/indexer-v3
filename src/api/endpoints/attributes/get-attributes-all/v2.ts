@@ -31,6 +31,7 @@ export const getAttributesAllV2Options: RouteOptions = {
       attributes: Joi.array().items(
         Joi.object({
           key: Joi.string().required(),
+          attributeCount: Joi.number(),
           kind: Joi.string().valid("string", "number", "date", "range").required(),
           minRange: Joi.number().allow(null),
           maxRange: Joi.number().allow(null),
@@ -54,7 +55,7 @@ export const getAttributesAllV2Options: RouteOptions = {
 
     try {
       const baseQuery = `
-        SELECT key, kind, rank, array_agg(info) AS "values"
+        SELECT key, kind, rank, attribute_count, array_agg(info) AS "values"
         FROM attribute_keys
         WHERE collection_id = $/collection/
         AND kind = 'number'
@@ -62,7 +63,7 @@ export const getAttributesAllV2Options: RouteOptions = {
         
         UNION
         
-        SELECT attribute_keys.key, attribute_keys.kind, rank,
+        SELECT attribute_keys.key, attribute_keys.kind, rank, attribute_count,
            array_agg(jsonb_build_object('value', attributes.value, 'count', attributes.token_count)) AS "values"
         FROM attribute_keys
         JOIN attributes ON attribute_keys.id = attributes.attribute_key_id
@@ -88,6 +89,7 @@ export const getAttributesAllV2Options: RouteOptions = {
           } else {
             return {
               key: r.key,
+              attributeCount: Number(r.attribute_count),
               kind: r.kind,
               values: r.values,
             };
