@@ -203,6 +203,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
         exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND;
         tokenKind: "erc721" | "erc1155";
         maker: string;
+        skipPrecheck?: boolean;
       }[] = [];
       const path: {
         contract: string;
@@ -295,6 +296,11 @@ export const getExecuteBuyV2Options: RouteOptions = {
                 exchangeKind,
                 tokenKind: token_kind,
                 maker: fromBuffer(maker),
+                skipPrecheck:
+                  // Foundation escrows the token, so prechecking will not work.
+                  exchangeKind === Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.FOUNDATION
+                    ? true
+                    : undefined,
               });
             }
           }
@@ -526,24 +532,42 @@ export const getExecuteBuyV2Options: RouteOptions = {
       }
 
       // Handle all the order fills.
-      for (const { tx, contract, tokenId, exchangeKind, tokenKind, maker } of txInfos) {
+      for (const {
+        tx,
+        contract,
+        tokenId,
+        exchangeKind,
+        tokenKind,
+        maker,
+        skipPrecheck,
+      } of txInfos) {
         if (tokenKind === "erc721") {
           routerTxs.push({
             from: tx.from,
             to: router.contract.address,
-            data: router.contract.interface.encodeFunctionData(
-              "singleERC721ListingFillWithPrecheck",
-              [
-                query.referrer,
-                tx.data,
-                exchangeKind,
-                contract,
-                tokenId,
-                query.taker,
-                maker,
-                query.referrerFeeBps,
-              ]
-            ),
+            data: !skipPrecheck
+              ? router.contract.interface.encodeFunctionData(
+                  "singleERC721ListingFillWithPrecheck",
+                  [
+                    query.referrer,
+                    tx.data,
+                    exchangeKind,
+                    contract,
+                    tokenId,
+                    query.taker,
+                    maker,
+                    query.referrerFeeBps,
+                  ]
+                )
+              : router.contract.interface.encodeFunctionData("singleERC721ListingFill", [
+                  query.referrer,
+                  tx.data,
+                  exchangeKind,
+                  contract,
+                  tokenId,
+                  query.taker,
+                  query.referrerFeeBps,
+                ]),
             value: bn(tx.value!)
               // Add the referrer fee.
               .add(bn(tx.value!).mul(query.referrerFeeBps).div(10000))
@@ -553,20 +577,31 @@ export const getExecuteBuyV2Options: RouteOptions = {
           routerTxs.push({
             from: tx.from,
             to: router.contract.address,
-            data: router.contract.interface.encodeFunctionData(
-              "singleERC1155ListingFillWithPrecheck",
-              [
-                query.referrer,
-                tx.data,
-                exchangeKind,
-                contract,
-                tokenId,
-                1,
-                query.taker,
-                maker,
-                query.referrerFeeBps,
-              ]
-            ),
+            data: !skipPrecheck
+              ? router.contract.interface.encodeFunctionData(
+                  "singleERC1155ListingFillWithPrecheck",
+                  [
+                    query.referrer,
+                    tx.data,
+                    exchangeKind,
+                    contract,
+                    tokenId,
+                    1,
+                    query.taker,
+                    maker,
+                    query.referrerFeeBps,
+                  ]
+                )
+              : router.contract.interface.encodeFunctionData("singleERC1155ListingFill", [
+                  query.referrer,
+                  tx.data,
+                  exchangeKind,
+                  contract,
+                  tokenId,
+                  1,
+                  query.taker,
+                  query.referrerFeeBps,
+                ]),
             value: bn(tx.value!)
               // Add the referrer fee.
               .add(bn(tx.value!).mul(query.referrerFeeBps).div(10000))

@@ -21,6 +21,8 @@ const main = async () => {
     ["0x8a90cab2b38dba80c64b7734e58ee1db38b8992e", "erc721"],
     // Ragnarok Meta
     ["0x497a9a79e82e6fc0ff10a16f6f75e6fcd5ae65a8", "erc1155"],
+    // Foundation
+    ["0x3b3ee1931dc30c1957379fac9aba94d1c48a5405", "erc721"],
   ];
 
   for (const [collection, kind] of collections) {
