@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.66.1 (2022-05-13)
+
+## 5.66.0 (2022-05-13)
+
+
+### Features
+
+* added floorSaleChange to collections API ([abb28db](https://github.com/reservoirprotocol/indexer-v3/commit/abb28dbe5dbc9b555d54804b6d35db06e42de214))
+
+### 5.65.6 (2022-05-13)
+
+### 5.65.5 (2022-05-13)
+
+### 5.65.4 (2022-05-13)
+
+### 5.65.3 (2022-05-13)
+
+### 5.65.2 (2022-05-13)
+
+### 5.65.1 (2022-05-13)
+
 ## 5.65.0 (2022-05-12)
 
 

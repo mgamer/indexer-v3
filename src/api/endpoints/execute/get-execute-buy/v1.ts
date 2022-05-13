@@ -120,7 +120,8 @@ export const getExecuteBuyV1Options: RouteOptions = {
                 "o"."token_set_id",
                 "o"."price",
                 "o"."raw_data",
-                "o"."source_id"
+                "o"."source_id",
+                "o"."maker"
               FROM "tokens" "t"
               JOIN "orders" "o"
                 ON "t"."floor_sell_id" = "o"."id"
@@ -162,21 +163,29 @@ export const getExecuteBuyV1Options: RouteOptions = {
             continue;
           }
 
+          // By default, use filling with precheck to save as much gas as possible
+          // in case of failures (eg. early revert). However this is not supported
+          // for exchanges that escrow the tokens (eg. Foundation).
+          let usePrecheck = true;
+
           // Build the proper router fill transaction given the listings' kind (eg. underlying exchange).
           let tx: TxData | undefined;
           let exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND | undefined;
           switch (bestOrderResult.kind) {
             case "foundation": {
+              // Generate exchange-specific fill transaction.
               const exchange = new Sdk.Foundation.Exchange(config.chainId);
-
-              // Foundation is not yet supported via the router, so we just fill natively.
-              routerTx = exchange.fillOrderTx(
+              tx = exchange.fillOrderTx(
                 query.taker,
                 contract,
                 tokenId,
                 bestOrderResult.price,
                 query.referrer
               );
+              exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.FOUNDATION;
+
+              // Foundation escrows the token so precheck will not work.
+              usePrecheck = false;
 
               break;
             }
@@ -269,15 +278,29 @@ export const getExecuteBuyV1Options: RouteOptions = {
             routerTx = {
               from: tx.from,
               to: router.contract.address,
-              data: router.contract.interface.encodeFunctionData("singleERC721ListingFill", [
-                query.referrer,
-                tx.data,
-                exchangeKind,
-                contract,
-                tokenId,
-                query.taker,
-                query.referrerFeeBps,
-              ]),
+              data: usePrecheck
+                ? router.contract.interface.encodeFunctionData(
+                    "singleERC721ListingFillWithPrecheck",
+                    [
+                      query.referrer,
+                      tx.data,
+                      exchangeKind,
+                      contract,
+                      tokenId,
+                      query.taker,
+                      fromBuffer(bestOrderResult.maker),
+                      query.referrerFeeBps,
+                    ]
+                  )
+                : router.contract.interface.encodeFunctionData("singleERC721ListingFill", [
+                    query.referrer,
+                    tx.data,
+                    exchangeKind,
+                    contract,
+                    tokenId,
+                    query.taker,
+                    query.referrerFeeBps,
+                  ]),
               value: bn(tx.value!)
                 // Add the referrer fee.
                 .add(bn(tx.value!).mul(query.referrerFeeBps).div(10000))
@@ -287,17 +310,31 @@ export const getExecuteBuyV1Options: RouteOptions = {
             routerTx = {
               from: tx.from,
               to: router.contract.address,
-              data: router.contract.interface.encodeFunctionData("singleERC1155ListingFill", [
-                query.referrer,
-                tx.data,
-                exchangeKind,
-                contract,
-                tokenId,
-                // TODO: Support buying any quantities.
-                1,
-                query.taker,
-                query.referrerFeeBps,
-              ]),
+              data: usePrecheck
+                ? router.contract.interface.encodeFunctionData(
+                    "singleERC1155ListingFillWithPrecheck",
+                    [
+                      query.referrer,
+                      tx.data,
+                      exchangeKind,
+                      contract,
+                      tokenId,
+                      1,
+                      query.taker,
+                      fromBuffer(bestOrderResult.maker),
+                      query.referrerFeeBps,
+                    ]
+                  )
+                : router.contract.interface.encodeFunctionData("singleERC1155ListingFill", [
+                    query.referrer,
+                    tx.data,
+                    exchangeKind,
+                    contract,
+                    tokenId,
+                    1,
+                    query.taker,
+                    query.referrerFeeBps,
+                  ]),
               value: bn(tx.value!)
                 // Add the referrer fee.
                 .add(bn(tx.value!).mul(query.referrerFeeBps).div(10000))
