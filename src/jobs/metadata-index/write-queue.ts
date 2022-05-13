@@ -92,20 +92,48 @@ if (config.doBackgroundWork) {
 
         // Token attributes
         for (const { key, value, kind, rank } of attributes) {
-          // Fetch the attribute key from the database (will succeed in the common case)
+          // Try to update the attribute keys, if number type update range as well and return the ID
+          let infoUpdate = "info"; // By default no update to the info
+          if (kind == "number") {
+            infoUpdate = `
+            CASE WHEN info IS NULL THEN 
+                  jsonb_object(array['min_range', 'max_range'], array[$/value/, $/value/]::text[])
+                ELSE
+                  info || jsonb_object(array['min_range', 'max_range'], array[
+                        CASE
+                            WHEN (info->>'min_range')::numeric > $/value/::numeric THEN $/value/::numeric
+                            ELSE (info->>'min_range')::numeric
+                        END,
+                        CASE
+                            WHEN (info->>'max_range')::numeric < $/value/::numeric THEN $/value/::numeric
+                            ELSE (info->>'max_range')::numeric
+                        END
+                  ]::text[])
+            END
+            `;
+          }
+
           let attributeKeyResult = await idb.oneOrNone(
             `
-              SELECT "ak"."id" FROM "attribute_keys" "ak"
-              WHERE "ak"."collection_id" = $/collection/
-                AND "ak"."key" = $/key/
+              UPDATE attribute_keys
+              SET info = ${infoUpdate}
+              WHERE collection_id = $/collection/
+              AND key = $/key/
+              RETURNING id
             `,
             {
               collection,
               key: String(key),
+              value,
             }
           );
 
           if (!attributeKeyResult?.id) {
+            let info = null;
+            if (kind == "number") {
+              info = { min_range: Number(value), max_range: Number(value) };
+            }
+
             // If no attribute key is available, then save it and refetch
             attributeKeyResult = await idb.oneOrNone(
               `
@@ -113,12 +141,14 @@ if (config.doBackgroundWork) {
                   "collection_id",
                   "key",
                   "kind",
-                  "rank"
+                  "rank",
+                  "info"
                 ) VALUES (
                   $/collection/,
                   $/key/,
                   $/kind/,
-                  $/rank/
+                  $/rank/,
+                  $/info/
                 )
                 ON CONFLICT DO NOTHING
                 RETURNING "id"
@@ -128,6 +158,7 @@ if (config.doBackgroundWork) {
                 key: String(key),
                 kind,
                 rank: rank || null,
+                info,
               }
             );
           }
@@ -140,9 +171,10 @@ if (config.doBackgroundWork) {
           // Fetch the attribute from the database (will succeed in the common case)
           let attributeResult = await idb.oneOrNone(
             `
-              SELECT "a"."id" FROM "attributes" "a"
-              WHERE "a"."attribute_key_id" = $/attributeKeyId/
-                AND "a"."value" = $/value/
+              SELECT id
+              FROM attributes
+              WHERE attribute_key_id = $/attributeKeyId/
+              AND value = $/value/
             `,
             {
               attributeKeyId: attributeKeyResult.id,
@@ -175,10 +207,11 @@ if (config.doBackgroundWork) {
                   ON CONFLICT DO NOTHING
                   RETURNING "id"
                 )
-                UPDATE "attribute_keys" SET
-                  "attribute_count" = "attribute_count" + (SELECT COUNT(*) FROM "x")
-                WHERE "id" = $/attributeKeyId/
-                RETURNING (SELECT "x"."id" FROM "x"), "attribute_count"
+                
+                UPDATE attribute_keys
+                SET attribute_count = "attribute_count" + (SELECT COUNT(*) FROM "x")
+                WHERE id = $/attributeKeyId/
+                RETURNING (SELECT x.id FROM "x"), "attribute_count"
               `,
               {
                 attributeKeyId: attributeKeyResult.id,

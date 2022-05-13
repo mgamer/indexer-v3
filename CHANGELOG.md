@@ -2,6 +2,64 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.66.0 (2022-05-13)
+
+
+### Features
+
+* added floorSaleChange to collections API ([abb28db](https://github.com/reservoirprotocol/indexer-v3/commit/abb28dbe5dbc9b555d54804b6d35db06e42de214))
+
+### 5.65.6 (2022-05-13)
+
+### 5.65.5 (2022-05-13)
+
+### 5.65.4 (2022-05-13)
+
+### 5.65.3 (2022-05-13)
+
+### 5.65.2 (2022-05-13)
+
+### 5.65.1 (2022-05-13)
+
+## 5.65.0 (2022-05-12)
+
+
+### Features
+
+* update attributes/all ([2c15288](https://github.com/reservoirprotocol/indexer-v3/commit/2c15288b87ad9413bb746c9b45f2cc75e75751b8))
+
+### 5.64.9 (2022-05-12)
+
+### 5.64.8 (2022-05-12)
+
+### 5.64.7 (2022-05-12)
+
+### 5.64.6 (2022-05-12)
+
+### 5.64.5 (2022-05-11)
+
+### 5.64.4 (2022-05-11)
+
+### 5.64.3 (2022-05-11)
+
+### 5.64.2 (2022-05-11)
+
+### 5.64.1 (2022-05-11)
+
+## 5.64.0 (2022-05-11)
+
+
+### Features
+
+* wip ([6839e0a](https://github.com/reservoirprotocol/indexer-v3/commit/6839e0a4e50cd36d47bdb05697fb4df891130fe6))
+
+## 5.63.0 (2022-05-11)
+
+
+### Features
+
+* added attributes to collection/v2 ([61f651d](https://github.com/reservoirprotocol/indexer-v3/commit/61f651d25ccc0ec8a1adfb5360dbf30844b4ebf5))
+
 ### 5.62.1 (2022-05-10)
 
 ## 5.62.0 (2022-05-10)

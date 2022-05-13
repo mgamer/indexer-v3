@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import _ from "lodash";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
@@ -107,8 +108,18 @@ export const getCollectionV2Options: RouteOptions = {
           "7day": Joi.number().unsafe().allow(null),
           "30day": Joi.number().unsafe().allow(null),
         },
+        floorSaleChange: {
+          "1day": Joi.number().unsafe().allow(null),
+        },
         collectionBidSupported: Joi.boolean(),
         ownerCount: Joi.number(),
+        attributes: Joi.array().items(
+          Joi.object({
+            key: Joi.string().allow(null),
+            kind: Joi.string().allow(null),
+            count: Joi.number().allow(null),
+          })
+        ),
       }).allow(null),
     }).label(`getCollection${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
@@ -175,7 +186,8 @@ export const getCollectionV2Options: RouteOptions = {
           "x".*,
           "y".*,
           "z".*,
-          "ow".*
+          "ow".*,
+          attr_key.*
         FROM "x"
         LEFT JOIN LATERAL (
           SELECT
@@ -224,6 +236,12 @@ export const getCollectionV2Options: RouteOptions = {
             AND nft_balances.token_id <@ x.token_id_range
           AND amount > 0
         ) "ow" ON TRUE
+         LEFT JOIN LATERAL (
+           SELECT array_agg(json_build_object('key', key, 'kind', kind, 'count', attribute_count, 'rank', rank)) AS "attributes"
+           FROM attribute_keys
+           WHERE attribute_keys.collection_id = x.id
+           GROUP BY attribute_keys.collection_id
+         ) "attr_key" ON TRUE
       `;
 
       const result = await edb.oneOrNone(baseQuery, query).then((r) =>
@@ -292,8 +310,20 @@ export const getCollectionV2Options: RouteOptions = {
                 "7day": r.day7_floor_sell_value ? formatEth(r.day7_floor_sell_value) : null,
                 "30day": r.day30_floor_sell_value ? formatEth(r.day30_floor_sell_value) : null,
               },
+              floorSaleChange: {
+                "1day": r.day1_floor_sell_value
+                  ? ((Number(r.floor_sell_value) - Number(r.day1_floor_sell_value)) /
+                      r.day1_floor_sell_value) *
+                    100
+                  : null,
+              },
               collectionBidSupported: Number(r.token_count) <= 30000,
               ownerCount: Number(r.ownerCount),
+              attributes: _.map(_.sortBy(r.attributes, ["rank", "key"]), (attribute) => ({
+                key: attribute.key,
+                kind: attribute.kind,
+                count: Number(attribute.count),
+              })),
             }
       );
 

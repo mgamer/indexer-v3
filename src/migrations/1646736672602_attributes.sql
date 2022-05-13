@@ -13,7 +13,8 @@ CREATE TABLE "attribute_keys" (
   "key" TEXT NOT NULL,
   "kind" "attribute_key_kind_t" NOT NULL,
   "rank" INT,
-  "attribute_count" INT NOT NULL DEFAULT 0
+  "attribute_count" INT NOT NULL DEFAULT 0,
+  "info" JSONB
 );
 
 ALTER TABLE "attribute_keys"

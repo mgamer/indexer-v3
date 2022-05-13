@@ -48,6 +48,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
       referrerFeeBps: Joi.number().integer().positive().min(0).max(10000).default(0),
       maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
       maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),
+      skipBalanceCheck: Joi.boolean().default(false),
     })
       .or("token", "tokens")
       .oxor("token", "tokens")
@@ -181,11 +182,16 @@ export const getExecuteBuyV2Options: RouteOptions = {
         } else if (kind === "foundation") {
           // Generate exchange-specific fill transaction.
           const exchange = new Sdk.Foundation.Exchange(config.chainId);
-
-          // HACK: Until the router supports it, Foundation orders are filled natively.
-          routerTxs.push(
-            exchange.fillOrderTx(query.taker, rawData.contract, rawData.tokenId, rawData.price)
-          );
+          return {
+            tx: exchange.fillOrderTx(
+              query.taker,
+              rawData.contract,
+              rawData.tokenId,
+              rawData.price,
+              query.referrer
+            ),
+            exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.FOUNDATION,
+          };
         }
       };
 
@@ -196,6 +202,8 @@ export const getExecuteBuyV2Options: RouteOptions = {
         tokenId: string;
         exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND;
         tokenKind: "erc721" | "erc1155";
+        maker: string;
+        skipPrecheck?: boolean;
       }[] = [];
       const path: {
         contract: string;
@@ -234,7 +242,8 @@ export const getExecuteBuyV2Options: RouteOptions = {
                 contracts.kind AS token_kind,
                 orders.price,
                 orders.raw_data,
-                orders.source_id
+                orders.source_id,
+                orders.maker
               FROM tokens
               JOIN orders
                 ON tokens.floor_sell_id = orders.id
@@ -253,7 +262,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
             throw Boom.badRequest("No available orders");
           }
 
-          const { id, kind, token_kind, price, source_id, raw_data } = bestOrderResult;
+          const { id, kind, token_kind, price, source_id, maker, raw_data } = bestOrderResult;
 
           path.push({
             contract,
@@ -286,6 +295,12 @@ export const getExecuteBuyV2Options: RouteOptions = {
                 tokenId,
                 exchangeKind,
                 tokenKind: token_kind,
+                maker: fromBuffer(maker),
+                skipPrecheck:
+                  // Foundation escrows the token, so prechecking will not work.
+                  exchangeKind === Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.FOUNDATION
+                    ? true
+                    : undefined,
               });
             }
           }
@@ -313,6 +328,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
                 x.price,
                 x.quantity_remaining,
                 x.source_id,
+                x.maker,
                 x.raw_data
               FROM (
                 SELECT
@@ -340,6 +356,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
             quantity_remaining,
             price,
             source_id,
+            maker,
             raw_data,
           } of bestOrdersResult) {
             const quantityFilled = Math.min(Number(quantity_remaining), totalQuantityToFill);
@@ -377,6 +394,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
                   tokenId,
                   exchangeKind,
                   tokenKind: kindResult.kind,
+                  maker: fromBuffer(maker),
                 });
               }
             }
@@ -406,16 +424,20 @@ export const getExecuteBuyV2Options: RouteOptions = {
           routerTxs.push({
             from: query.taker,
             to: router.contract.address,
-            data: router.contract.interface.encodeFunctionData("singleERC1155ListingFill", [
-              query.referrer,
-              tx.data,
-              Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4,
-              zeroExV4Batch[0].order.params.nft,
-              zeroExV4Batch[0].order.params.nftId,
-              zeroExV4Batch[0].matchParams.nftAmount ?? 1,
-              query.taker,
-              query.referrerFeeBps,
-            ]),
+            data: router.contract.interface.encodeFunctionData(
+              "singleERC1155ListingFillWithPrecheck",
+              [
+                query.referrer,
+                tx.data,
+                Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4,
+                zeroExV4Batch[0].order.params.nft,
+                zeroExV4Batch[0].order.params.nftId,
+                zeroExV4Batch[0].matchParams.nftAmount ?? 1,
+                query.taker,
+                zeroExV4Batch[0].order.params.maker,
+                query.referrerFeeBps,
+              ]
+            ),
             value: bn(tx.value!)
               .add(bn(tx.value!).mul(query.referrerFeeBps).div(10000))
               .toHexString(),
@@ -463,16 +485,20 @@ export const getExecuteBuyV2Options: RouteOptions = {
           routerTxs.push({
             from: query.taker,
             to: router.contract.address,
-            data: router.contract.interface.encodeFunctionData("singleERC1155ListingFill", [
-              query.referrer,
-              tx.data,
-              Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4,
-              openDaoBatch[0].order.params.nft,
-              openDaoBatch[0].order.params.nftId,
-              openDaoBatch[0].matchParams.nftAmount ?? 1,
-              query.taker,
-              query.referrerFeeBps,
-            ]),
+            data: router.contract.interface.encodeFunctionData(
+              "singleERC1155ListingFillWithPrecheck",
+              [
+                query.referrer,
+                tx.data,
+                Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4,
+                openDaoBatch[0].order.params.nft,
+                openDaoBatch[0].order.params.nftId,
+                openDaoBatch[0].matchParams.nftAmount ?? 1,
+                query.taker,
+                openDaoBatch[0].order.params.maker,
+                query.referrerFeeBps,
+              ]
+            ),
             value: bn(tx.value!)
               .add(bn(tx.value!).mul(query.referrerFeeBps).div(10000))
               .toHexString(),
@@ -506,20 +532,42 @@ export const getExecuteBuyV2Options: RouteOptions = {
       }
 
       // Handle all the order fills.
-      for (const { tx, contract, tokenId, exchangeKind, tokenKind } of txInfos) {
+      for (const {
+        tx,
+        contract,
+        tokenId,
+        exchangeKind,
+        tokenKind,
+        maker,
+        skipPrecheck,
+      } of txInfos) {
         if (tokenKind === "erc721") {
           routerTxs.push({
             from: tx.from,
             to: router.contract.address,
-            data: router.contract.interface.encodeFunctionData("singleERC721ListingFill", [
-              query.referrer,
-              tx.data,
-              exchangeKind,
-              contract,
-              tokenId,
-              query.taker,
-              query.referrerFeeBps,
-            ]),
+            data: !skipPrecheck
+              ? router.contract.interface.encodeFunctionData(
+                  "singleERC721ListingFillWithPrecheck",
+                  [
+                    query.referrer,
+                    tx.data,
+                    exchangeKind,
+                    contract,
+                    tokenId,
+                    query.taker,
+                    maker,
+                    query.referrerFeeBps,
+                  ]
+                )
+              : router.contract.interface.encodeFunctionData("singleERC721ListingFill", [
+                  query.referrer,
+                  tx.data,
+                  exchangeKind,
+                  contract,
+                  tokenId,
+                  query.taker,
+                  query.referrerFeeBps,
+                ]),
             value: bn(tx.value!)
               // Add the referrer fee.
               .add(bn(tx.value!).mul(query.referrerFeeBps).div(10000))
@@ -529,16 +577,31 @@ export const getExecuteBuyV2Options: RouteOptions = {
           routerTxs.push({
             from: tx.from,
             to: router.contract.address,
-            data: router.contract.interface.encodeFunctionData("singleERC1155ListingFill", [
-              query.referrer,
-              tx.data,
-              exchangeKind,
-              contract,
-              tokenId,
-              1,
-              query.taker,
-              query.referrerFeeBps,
-            ]),
+            data: !skipPrecheck
+              ? router.contract.interface.encodeFunctionData(
+                  "singleERC1155ListingFillWithPrecheck",
+                  [
+                    query.referrer,
+                    tx.data,
+                    exchangeKind,
+                    contract,
+                    tokenId,
+                    1,
+                    query.taker,
+                    maker,
+                    query.referrerFeeBps,
+                  ]
+                )
+              : router.contract.interface.encodeFunctionData("singleERC1155ListingFill", [
+                  query.referrer,
+                  tx.data,
+                  exchangeKind,
+                  contract,
+                  tokenId,
+                  1,
+                  query.taker,
+                  query.referrerFeeBps,
+                ]),
             value: bn(tx.value!)
               // Add the referrer fee.
               .add(bn(tx.value!).mul(query.referrerFeeBps).div(10000))
@@ -573,7 +636,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
         .reduce((a, b) => bn(a).add(b), bn(0))
         .toString();
       const balance = await baseProvider.getBalance(query.taker);
-      if (bn(balance).lt(totalValue)) {
+      if (!query.skipBalanceCheck && bn(balance).lt(totalValue)) {
         throw Boom.badData("ETH balance too low to proceed with transaction");
       }
 
@@ -604,7 +667,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
           quote,
           path,
         };
-      } else {
+      } else if (routerTxs.length > 1) {
         // Use multi buy logic if multiple fill transactions are involved.
         return {
           steps: [
@@ -639,6 +702,8 @@ export const getExecuteBuyV2Options: RouteOptions = {
           quote,
           path,
         };
+      } else {
+        throw Boom.internal("No transaction could be generated");
       }
     } catch (error) {
       logger.error(`get-execute-buy-${version}-handler`, `Handler failure: ${error}`);
