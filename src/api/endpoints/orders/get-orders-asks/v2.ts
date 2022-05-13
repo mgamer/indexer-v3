@@ -69,7 +69,6 @@ export const getOrdersAsksV2Options: RouteOptions = {
       limit: Joi.number().integer().min(1).max(1000).default(50),
     })
       .or("token", "contracts", "maker")
-      .oxor("token", "contracts", "maker")
       .with("status", "maker")
       .with("sortBy", "token"),
   },
@@ -269,22 +268,14 @@ export const getOrdersAsksV2Options: RouteOptions = {
 
       // Filters
       const conditions: string[] = [`orders.side = 'sell'`];
-      if (query.token) {
-        // Valid orders
-        conditions.push(
-          `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`
-        );
+      let orderStatusFilter = `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`;
 
+      if (query.token) {
         (query as any).tokenSetId = `token:${query.token}`;
         conditions.push(`orders.token_set_id = $/tokenSetId/`);
       }
 
       if (query.contracts) {
-        // Valid orders
-        conditions.push(
-          `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`
-        );
-
         if (!_.isArray(query.contracts)) {
           query.contracts = [query.contracts];
         }
@@ -308,27 +299,13 @@ export const getOrdersAsksV2Options: RouteOptions = {
         switch (query.status) {
           case "inactive": {
             // Potentially-valid orders
-            conditions.push(
-              `orders.fillability_status = 'no-balance' OR (orders.fillability_status = 'fillable' AND orders.approval_status != 'approved')`
-            );
+            orderStatusFilter = `orders.fillability_status = 'no-balance' OR (orders.fillability_status = 'fillable' AND orders.approval_status != 'approved')`;
             break;
           }
 
           case "expired": {
             // Invalid orders
-            conditions.push(
-              `orders.fillability_status != 'fillable' AND orders.fillability_status != 'no-balance'`
-            );
-            break;
-          }
-
-          case "active":
-          default: {
-            // Valid orders
-            conditions.push(
-              `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`
-            );
-
+            orderStatusFilter = `orders.fillability_status != 'fillable' AND orders.fillability_status != 'no-balance'`;
             break;
           }
         }
@@ -336,6 +313,9 @@ export const getOrdersAsksV2Options: RouteOptions = {
         (query as any).maker = toBuffer(query.maker);
         conditions.push(`orders.maker = $/maker/`);
       }
+
+      conditions.push(orderStatusFilter);
+
       if (query.continuation) {
         const [priceOrCreatedAt, id] = splitContinuation(
           query.continuation,
