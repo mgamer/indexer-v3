@@ -489,8 +489,6 @@ export const syncEvents = async (
                 },
               });
 
-              logger.info("debug", JSON.stringify(foundationOrders));
-
               break;
             }
 
