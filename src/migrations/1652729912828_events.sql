@@ -15,13 +15,13 @@ CREATE TABLE events (
     CONSTRAINT events_pk PRIMARY KEY (id)
 );
 
-CREATE INDEX events_address_created_at_index
+CREATE INDEX events_address_created_at_type_index
     ON events (address ASC NULLS LAST, created_at DESC NULLS LAST, type);
 
-CREATE INDEX events_collection_id_created_at_index
+CREATE INDEX events_collection_id_created_at_type_index
     ON events (collection_id, created_at DESC NULLS LAST, type);
 
-CREATE INDEX events_collection_id_created_at_index
+CREATE INDEX events_collection_id_created_at_type_index
     ON events (collection_id, token_id, created_at DESC NULLS LAST, type);
 
 -- Down Migration
