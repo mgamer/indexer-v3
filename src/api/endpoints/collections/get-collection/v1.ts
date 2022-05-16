@@ -296,9 +296,7 @@ export const getCollectionV1Options: RouteOptions = {
               },
               floorSaleChange: {
                 "1day": r.day1_floor_sell_value
-                  ? ((Number(r.floor_sell_value) - Number(r.day1_floor_sell_value)) /
-                      r.day1_floor_sell_value) *
-                    100
+                  ? Number(r.floor_sell_value) / Number(r.day1_floor_sell_value)
                   : null,
               },
             }
