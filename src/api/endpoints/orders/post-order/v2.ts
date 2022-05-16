@@ -77,10 +77,6 @@ export const postOrderV2Options: RouteOptions = {
           if (orderbook !== "reservoir") {
             throw new Error("Unsupported orderbook");
           }
-          // Attribute orders are not supported.
-          if (attribute) {
-            throw new Error("Unsupported metadata");
-          }
 
           const orderInfo: orders.openDao.OrderInfo = {
             orderParams: order.data,
