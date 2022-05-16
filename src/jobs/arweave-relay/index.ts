@@ -107,7 +107,7 @@ if (config.doBackgroundWork && config.arweaveRelayerKey) {
             for (let i = 0; i < iterations; i++) {
               batch = [
                 ...batch,
-                ...(await redis.lrange(PENDING_DATA_KEY, i * batchSize, i * (batchSize + 1))),
+                ...(await redis.lrange(PENDING_DATA_KEY, i * batchSize, (i + 1) * batchSize)),
               ];
             }
 
