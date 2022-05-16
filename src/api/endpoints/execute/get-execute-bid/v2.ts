@@ -13,6 +13,7 @@ import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 
 // OpenDao
+import * as openDaoBuyAttribute from "@/orderbook/orders/opendao/build/buy/attribute";
 import * as openDaoBuyToken from "@/orderbook/orders/opendao/build/buy/token";
 import * as openDaoBuyCollection from "@/orderbook/orders/opendao/build/buy/collection";
 
@@ -285,9 +286,6 @@ export const getExecuteBidV2Options: RouteOptions = {
           if (!["reservoir"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
-          if (attributeKey || attributeValue) {
-            throw Boom.notImplemented("Attribute bids are not yet supported for 721ex");
-          }
 
           let order: Sdk.OpenDao.Order | undefined;
           if (token) {
@@ -296,6 +294,17 @@ export const getExecuteBidV2Options: RouteOptions = {
               ...query,
               contract,
               tokenId,
+            });
+          } else if (collection && attributeKey && attributeValue) {
+            order = await openDaoBuyAttribute.build({
+              ...query,
+              collection,
+              attributes: [
+                {
+                  key: attributeKey,
+                  value: attributeValue,
+                },
+              ],
             });
           } else if (collection) {
             order = await openDaoBuyCollection.build({
@@ -376,9 +385,7 @@ export const getExecuteBidV2Options: RouteOptions = {
             throw Boom.badRequest("Unsupported orderbook");
           }
           if (attributeKey || attributeValue) {
-            throw Boom.notImplemented(
-              "Collection and attribute bids are not yet supported for zeroex-v4"
-            );
+            throw Boom.notImplemented("Attribute bids are not yet supported for zeroex-v4");
           }
 
           let order: Sdk.ZeroExV4.Order | undefined;
