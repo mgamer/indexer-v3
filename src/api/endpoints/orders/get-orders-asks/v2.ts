@@ -15,14 +15,15 @@ import {
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
+import _ from "lodash";
 
-const version = "v1";
+const version = "v2";
 
-export const getOrdersAsksV1Options: RouteOptions = {
+export const getOrdersAsksV2Options: RouteOptions = {
   description: "Get a list of asks (listings), filtered by token, collection or maker",
   notes:
     "This API is designed for efficiently ingesting large volumes of orders, for external processing",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {
       order: 41,
@@ -40,12 +41,24 @@ export const getOrdersAsksV1Options: RouteOptions = {
         .description(
           "Filter to a particular user, e.g. `0x4d04eb67a2d1e01c71fad0366e0c200207a75487`"
         ),
-      contract: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .description(
-          "Filter to a particular user, e.g. `0x4d04eb67a2d1e01c71fad0366e0c200207a75487`"
-        ),
+      contracts: Joi.alternatives().try(
+        Joi.array()
+          .max(50)
+          .items(
+            Joi.string()
+              .lowercase()
+              .pattern(/^0x[a-fA-F0-9]{40}$/)
+          )
+          .description(
+            "Filter to one or more contracts, e.g. `0x4d04eb67a2d1e01c71fad0366e0c200207a75487`"
+          ),
+        Joi.string()
+          .lowercase()
+          .pattern(/^0x[a-fA-F0-9]{40}$/)
+          .description(
+            "Filter to one or more tokens, e.g. `0x4d04eb67a2d1e01c71fad0366e0c200207a75487`"
+          )
+      ),
       status: Joi.string()
         .valid("active", "inactive", "expired")
         .description(
@@ -55,8 +68,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
       continuation: Joi.string().pattern(base64Regex),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     })
-      .or("token", "contract", "maker")
-      .oxor("token", "contract", "maker")
+      .or("token", "contracts", "maker")
       .with("status", "maker")
       .with("sortBy", "token"),
   },
@@ -256,49 +268,44 @@ export const getOrdersAsksV1Options: RouteOptions = {
 
       // Filters
       const conditions: string[] = [`orders.side = 'sell'`];
-      if (query.token) {
-        // Valid orders
-        conditions.push(
-          `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`
-        );
+      let orderStatusFilter = `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`;
 
+      if (query.token) {
         (query as any).tokenSetId = `token:${query.token}`;
         conditions.push(`orders.token_set_id = $/tokenSetId/`);
       }
-      if (query.contract) {
-        // Valid orders
-        conditions.push(
-          `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`
-        );
 
-        (query as any).contract = toBuffer(query.contract);
-        conditions.push(`orders.contract = $/contract/`);
+      if (query.contracts) {
+        if (!_.isArray(query.contracts)) {
+          query.contracts = [query.contracts];
+        }
+
+        for (const contract of query.contracts) {
+          const contractsFilter = `'${_.replace(contract, "0x", "\\x")}'`;
+
+          if (_.isUndefined((query as any).contractsFilter)) {
+            (query as any).contractsFilter = [];
+          }
+
+          (query as any).contractsFilter.push(contractsFilter);
+        }
+
+        (query as any).contractsFilter = _.join((query as any).contractsFilter, ",");
+
+        conditions.push(`orders.contract IN ($/contractsFilter:raw/)`);
       }
+
       if (query.maker) {
         switch (query.status) {
           case "inactive": {
             // Potentially-valid orders
-            conditions.push(
-              `orders.fillability_status = 'no-balance' OR (orders.fillability_status = 'fillable' AND orders.approval_status != 'approved')`
-            );
+            orderStatusFilter = `orders.fillability_status = 'no-balance' OR (orders.fillability_status = 'fillable' AND orders.approval_status != 'approved')`;
             break;
           }
 
           case "expired": {
             // Invalid orders
-            conditions.push(
-              `orders.fillability_status != 'fillable' AND orders.fillability_status != 'no-balance'`
-            );
-            break;
-          }
-
-          case "active":
-          default: {
-            // Valid orders
-            conditions.push(
-              `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`
-            );
-
+            orderStatusFilter = `orders.fillability_status != 'fillable' AND orders.fillability_status != 'no-balance'`;
             break;
           }
         }
@@ -306,6 +313,9 @@ export const getOrdersAsksV1Options: RouteOptions = {
         (query as any).maker = toBuffer(query.maker);
         conditions.push(`orders.maker = $/maker/`);
       }
+
+      conditions.push(orderStatusFilter);
+
       if (query.continuation) {
         const [priceOrCreatedAt, id] = splitContinuation(
           query.continuation,

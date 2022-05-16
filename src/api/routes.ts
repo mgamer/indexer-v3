@@ -329,8 +329,20 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/orders/asks/v2",
+    options: ordersEndpoints.getOrdersAsksV2Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/orders/bids/v1",
     options: ordersEndpoints.getOrdersBidsV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/orders/bids/v2",
+    options: ordersEndpoints.getOrdersBidsV2Options,
   });
 
   server.route({

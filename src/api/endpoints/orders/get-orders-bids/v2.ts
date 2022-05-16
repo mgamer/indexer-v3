@@ -15,17 +15,18 @@ import {
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
+import _ from "lodash";
 
-const version = "v1";
+const version = "v2";
 
-export const getOrdersAsksV1Options: RouteOptions = {
-  description: "Get a list of asks (listings), filtered by token, collection or maker",
+export const getOrdersBidsV2Options: RouteOptions = {
+  description: "Get a list of bids (offers), filtered by token, collection or maker",
   notes:
     "This API is designed for efficiently ingesting large volumes of orders, for external processing",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {
-      order: 41,
+      order: 42,
     },
   },
   validate: {
@@ -34,18 +35,35 @@ export const getOrdersAsksV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}:\d+$/)
         .description("Filter to a token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"),
+      tokenSetId: Joi.string()
+        .lowercase()
+        .description(
+          "Filter to a particular set, e.g. `contract:0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        ),
       maker: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .description(
           "Filter to a particular user, e.g. `0x4d04eb67a2d1e01c71fad0366e0c200207a75487`"
         ),
-      contract: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .description(
-          "Filter to a particular user, e.g. `0x4d04eb67a2d1e01c71fad0366e0c200207a75487`"
-        ),
+      contracts: Joi.alternatives().try(
+        Joi.array()
+          .max(50)
+          .items(
+            Joi.string()
+              .lowercase()
+              .pattern(/^0x[a-fA-F0-9]{40}$/)
+          )
+          .description(
+            "Filter to one or more contracts, e.g. `0x4d04eb67a2d1e01c71fad0366e0c200207a75487`"
+          ),
+        Joi.string()
+          .lowercase()
+          .pattern(/^0x[a-fA-F0-9]{40}$/)
+          .description(
+            "Filter to one or more tokens, e.g. `0x4d04eb67a2d1e01c71fad0366e0c200207a75487`"
+          )
+      ),
       status: Joi.string()
         .valid("active", "inactive", "expired")
         .description(
@@ -55,8 +73,8 @@ export const getOrdersAsksV1Options: RouteOptions = {
       continuation: Joi.string().pattern(base64Regex),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     })
-      .or("token", "contract", "maker")
-      .oxor("token", "contract", "maker")
+      .or("token", "tokenSetId", "maker", "contracts")
+      .oxor("token", "tokenSetId")
       .with("status", "maker")
       .with("sortBy", "token"),
   },
@@ -67,6 +85,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
           id: Joi.string().required(),
           kind: Joi.string().required(),
           side: Joi.string().valid("buy", "sell").required(),
+          status: Joi.string(),
           tokenSetId: Joi.string().required(),
           tokenSetSchemaHash: Joi.string()
             .lowercase()
@@ -114,7 +133,6 @@ export const getOrdersAsksV1Options: RouteOptions = {
               }),
             })
           ).allow(null),
-          status: Joi.string(),
           source: Joi.object().allow(null),
           feeBps: Joi.number().allow(null),
           feeBreakdown: Joi.array()
@@ -136,9 +154,9 @@ export const getOrdersAsksV1Options: RouteOptions = {
         })
       ),
       continuation: Joi.string().pattern(base64Regex).allow(null),
-    }).label(`getOrdersAsks${version.toUpperCase()}Response`),
+    }).label(`getOrdersBids${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(`get-orders-asks-${version}-handler`, `Wrong response schema: ${error}`);
+      logger.error(`get-orders-bids-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -218,6 +236,16 @@ export const getOrdersAsksV1Options: RouteOptions = {
           orders.id,
           orders.kind,
           orders.side,
+          (
+            CASE
+              WHEN orders.fillability_status = 'filled' THEN 'filled'
+              WHEN orders.fillability_status = 'cancelled' THEN 'cancelled'
+              WHEN orders.fillability_status = 'expired' THEN 'expired'
+              WHEN orders.fillability_status = 'no-balance' THEN 'inactive'
+              WHEN orders.approval_status = 'no-approval' THEN 'inactive'
+              ELSE 'active'
+            END
+          ) AS status,
           orders.token_set_id,
           orders.token_set_schema_hash,
           orders.contract,
@@ -238,16 +266,6 @@ export const getOrdersAsksV1Options: RouteOptions = {
             0
           ) AS expiration,
           extract(epoch from orders.created_at) AS created_at,
-          (
-            CASE
-              WHEN orders.fillability_status = 'filled' THEN 'filled'
-              WHEN orders.fillability_status = 'cancelled' THEN 'cancelled'
-              WHEN orders.fillability_status = 'expired' THEN 'expired'
-              WHEN orders.fillability_status = 'no-balance' THEN 'inactive'
-              WHEN orders.approval_status = 'no-approval' THEN 'inactive'
-              ELSE 'active'
-            END
-          ) AS status,
           orders.updated_at,
           orders.raw_data,
           ${metadataBuildQuery}
@@ -255,50 +273,47 @@ export const getOrdersAsksV1Options: RouteOptions = {
       `;
 
       // Filters
-      const conditions: string[] = [`orders.side = 'sell'`];
-      if (query.token) {
-        // Valid orders
-        conditions.push(
-          `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`
-        );
+      const conditions: string[] = [`orders.side = 'buy'`];
+      let orderStatusFilter = `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`;
 
-        (query as any).tokenSetId = `token:${query.token}`;
+      if (query.token || query.tokenSetId) {
+        if (query.token) {
+          (query as any).tokenSetId = `token:${query.token}`;
+        }
         conditions.push(`orders.token_set_id = $/tokenSetId/`);
       }
-      if (query.contract) {
-        // Valid orders
-        conditions.push(
-          `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`
-        );
 
-        (query as any).contract = toBuffer(query.contract);
-        conditions.push(`orders.contract = $/contract/`);
+      if (query.contracts) {
+        if (!_.isArray(query.contracts)) {
+          query.contracts = [query.contracts];
+        }
+
+        for (const contract of query.contracts) {
+          const contractsFilter = `'${_.replace(contract, "0x", "\\x")}'`;
+
+          if (_.isUndefined((query as any).contractsFilter)) {
+            (query as any).contractsFilter = [];
+          }
+
+          (query as any).contractsFilter.push(contractsFilter);
+        }
+
+        (query as any).contractsFilter = _.join((query as any).contractsFilter, ",");
+
+        conditions.push(`orders.contract IN ($/contractsFilter:raw/)`);
       }
+
       if (query.maker) {
         switch (query.status) {
           case "inactive": {
             // Potentially-valid orders
-            conditions.push(
-              `orders.fillability_status = 'no-balance' OR (orders.fillability_status = 'fillable' AND orders.approval_status != 'approved')`
-            );
+            orderStatusFilter = `orders.fillability_status = 'no-balance' OR (orders.fillability_status = 'fillable' AND orders.approval_status != 'approved')`;
             break;
           }
 
           case "expired": {
             // Invalid orders
-            conditions.push(
-              `orders.fillability_status != 'fillable' AND orders.fillability_status != 'no-balance'`
-            );
-            break;
-          }
-
-          case "active":
-          default: {
-            // Valid orders
-            conditions.push(
-              `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`
-            );
-
+            orderStatusFilter = `orders.fillability_status != 'fillable' AND orders.fillability_status != 'no-balance'`;
             break;
           }
         }
@@ -306,6 +321,9 @@ export const getOrdersAsksV1Options: RouteOptions = {
         (query as any).maker = toBuffer(query.maker);
         conditions.push(`orders.maker = $/maker/`);
       }
+
+      conditions.push(orderStatusFilter);
+
       if (query.continuation) {
         const [priceOrCreatedAt, id] = splitContinuation(
           query.continuation,
@@ -315,7 +333,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
         (query as any).id = id;
 
         if (query.sortBy === "price") {
-          conditions.push(`(orders.price, orders.id) > ($/priceOrCreatedAt/, $/id/)`);
+          conditions.push(`(orders.price, orders.id) < ($/priceOrCreatedAt/, $/id/)`);
         } else {
           conditions.push(
             `(orders.created_at, orders.id) < (to_timestamp($/priceOrCreatedAt/), $/id/)`
@@ -328,7 +346,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
 
       // Sorting
       if (query.sortBy === "price") {
-        baseQuery += ` ORDER BY orders.price, orders.id`;
+        baseQuery += ` ORDER BY orders.price DESC, orders.id DESC`;
       } else {
         baseQuery += ` ORDER BY orders.created_at DESC, orders.id DESC`;
       }
@@ -354,6 +372,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
       const result = rawResult.map(async (r) => {
         const sources = await Sources.getInstance();
         let source: SourcesEntity | undefined;
+
         if (r.source_id) {
           let contract: string | undefined;
           let tokenId: string | undefined;
@@ -402,7 +421,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
         continuation,
       };
     } catch (error) {
-      logger.error(`get-orders-asks-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(`get-orders-bids-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },
