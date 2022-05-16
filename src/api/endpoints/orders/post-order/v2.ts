@@ -207,7 +207,7 @@ export const postOrderV2Options: RouteOptions = {
                     );
                   }
 
-                  throw Boom.badRequest(error.response.data);
+                  throw Boom.badRequest(JSON.stringify(error.response.data));
                 });
 
               break;
@@ -276,7 +276,7 @@ export const postOrderV2Options: RouteOptions = {
                     );
                   }
 
-                  throw Boom.badRequest(error.response.data);
+                  throw Boom.badRequest(JSON.stringify(error.response.data));
                 });
 
               break;
