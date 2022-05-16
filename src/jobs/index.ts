@@ -35,6 +35,7 @@ import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
 import * as tokenUpdatesMintQueue from "@/jobs/token-updates/mint-queue";
+import * as tokenRefreshCacheQueue from "@/jobs/token-updates/token-refresh-cache";
 import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
@@ -45,6 +46,7 @@ import * as resyncAttributeCollection from "@/jobs/update-attribute/resync-attri
 import * as resyncAttributeFloorSell from "@/jobs/update-attribute/resync-attribute-floor-sell";
 import * as resyncOrdersSource from "@/jobs/orderbook/resync-orders-source";
 import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refresh";
+import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
 
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
@@ -65,6 +67,7 @@ export const allJobQueues = [
   orderbookOrders.queue,
   orderbookTokenSets.queue,
   tokenUpdatesMintQueue.queue,
+  tokenRefreshCacheQueue.queue,
   dailyVolumes.queue,
   handleNewSellOrder.queue,
   handleNewBuyOrder.queue,
@@ -75,4 +78,5 @@ export const allJobQueues = [
   resyncAttributeCollection.queue,
   resyncAttributeFloorSell.queue,
   collectionsRefresh.queue,
+  collectionsRefreshCache.queue,
 ];

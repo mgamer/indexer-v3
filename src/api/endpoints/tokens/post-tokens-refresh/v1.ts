@@ -13,6 +13,7 @@ import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as Boom from "@hapi/boom";
 import * as orderFixes from "@/jobs/order-fixes/queue";
 import * as resyncAttributeCache from "@/jobs/update-attribute/resync-attribute-cache";
+import * as tokenRefreshCacheQueue from "@/jobs/token-updates/token-refresh-cache";
 
 const version = "v1";
 
@@ -95,6 +96,9 @@ export const postTokensRefreshV1Options: RouteOptions = {
 
       // Revalidate the token attribute cache
       await resyncAttributeCache.addToQueue(contract, tokenId, 0);
+
+      // Refresh the token floor sell and top bid
+      await tokenRefreshCacheQueue.addToQueue(contract, tokenId);
 
       logger.info(
         `post-tokens-refresh-${version}-handler`,

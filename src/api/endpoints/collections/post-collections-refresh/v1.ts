@@ -10,6 +10,7 @@ import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
 import { Collections } from "@/models/collections";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
+import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
 import * as Boom from "@hapi/boom";
 
 const version = "v1";
@@ -92,6 +93,9 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
 
       // Refresh the collection metadata
       await collectionUpdatesMetadata.addToQueue(collection.contract);
+
+      // Refresh the contract floor sell and top bid
+      await collectionsRefreshCache.addToQueue(collection.contract);
 
       // Revalidate the contract orders
       // await orderFixes.addToQueue([{ by: "contract", data: { contract: collection.contract } }]);
