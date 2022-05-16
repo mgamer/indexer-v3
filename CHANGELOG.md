@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.66.3 (2022-05-16)
+
+
+### Bug Fixes
+
+* expose external orderbook error messages ([ceb8c30](https://github.com/reservoirprotocol/indexer-v3/commit/ceb8c30a12682f07166be904c8cd592ae3bbb452))
+
 ### 5.66.2 (2022-05-13)
 
 ### 5.66.1 (2022-05-13)
