@@ -17,7 +17,8 @@ export const build = async (options: BuildOrderOptions) => {
       `
         SELECT
           collections.token_set_id,
-          collections.token_count
+          collections.token_count,
+          collections.contract
         FROM collections
         WHERE collections.id = $/collection/
       `,
