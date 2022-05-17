@@ -33,6 +33,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
+      const tokenAttributeCounter = {};
       const { collection, contract, tokenId, name, description, imageUrl, mediaUrl, attributes } =
         job.data as TokenMetadataInfo;
 
@@ -79,7 +80,7 @@ if (config.doBackgroundWork) {
           `DELETE FROM token_attributes
                  WHERE contract = $/contract/
                  AND token_id = $/tokenId/
-                 RETURNING key, value`,
+                 RETURNING key, value, attribute_id`,
           {
             contract: toBuffer(contract),
             tokenId,
@@ -90,9 +91,8 @@ if (config.doBackgroundWork) {
         _.forEach(attributesToRefresh, (attribute) => {
           resyncAttributeKeyCounts.addToQueue(collection, attribute.key);
           resyncAttributeValueCounts.addToQueue(collection, attribute.key, attribute.value);
+          (tokenAttributeCounter as any)[attribute.attribute_id] = -1;
         });
-
-        const tokenAttributeCounter = {};
 
         // Token attributes
         for (const { key, value, kind, rank } of attributes) {
@@ -281,30 +281,32 @@ if (config.doBackgroundWork) {
             }
           );
 
-          if (_.find(tokenAttributeCounter, attributeResult.id)) {
-            ++(tokenAttributeCounter as any)[attributeResult.id];
-          } else {
-            (tokenAttributeCounter as any)[attributeResult.id] = 1;
+          if (!_.isEmpty(tokenAttributeCounter)) {
+            if (_.find(tokenAttributeCounter, attributeResult.id)) {
+              ++(tokenAttributeCounter as any)[attributeResult.id];
+            } else {
+              (tokenAttributeCounter as any)[attributeResult.id] = 1;
+            }
           }
+
+          // Update the attributes token count
+          const replacementParams = {};
+          let updateCountsString = "";
+
+          _.forEach(tokenAttributeCounter, (count, attributeId) => {
+            (replacementParams as any)[`${attributeId}`] = count;
+            updateCountsString += `(${attributeId}, $/${attributeId}/),`;
+          });
+
+          updateCountsString = _.trimEnd(updateCountsString, ",");
+
+          const updateQuery = `UPDATE attributes
+                               SET token_count = token_count + x.countColumn
+                               FROM (VALUES ${updateCountsString}) AS x(idColumn, countColumn)
+                               WHERE x.idColumn = attributes.id`;
+
+          await idb.none(updateQuery, replacementParams);
         }
-
-        // Update the attributes token count
-        const replacementParams = {};
-        let updateCountsString = "";
-
-        _.forEach(tokenAttributeCounter, (count, attributeId) => {
-          (replacementParams as any)[`${attributeId}`] = count;
-          updateCountsString += `(${attributeId}, $/${attributeId}/),`;
-        });
-
-        updateCountsString = _.trimEnd(updateCountsString, ",");
-
-        const updateQuery = `UPDATE attributes
-                             SET token_count = token_count + x.countColumn
-                             FROM (VALUES ${updateCountsString}) AS x(idColumn, countColumn)
-                             WHERE x.idColumn = attributes.id`;
-
-        await idb.none(updateQuery, replacementParams);
 
         // Mark the token as having metadata indexed.
         await idb.none(
