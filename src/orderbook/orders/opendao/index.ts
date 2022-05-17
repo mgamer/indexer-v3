@@ -260,7 +260,8 @@ export const save = async (
           break;
         }
 
-        case "token-list": {
+        case "token-list-bit-vector":
+        case "token-list-packed-list": {
           const typedInfo = info as typeof info & {
             tokenIds: BigNumberish[];
           };
@@ -270,7 +271,7 @@ export const save = async (
           if (merkleRoot) {
             [{ id: tokenSetId }] = await tokenSet.tokenList.save([
               {
-                id: `list:${order.params.nft}:${merkleRoot}`,
+                id: `list:${order.params.nft}:${merkleRoot.getHexRoot()}`,
                 schemaHash,
                 schema: metadata.schema,
               },
