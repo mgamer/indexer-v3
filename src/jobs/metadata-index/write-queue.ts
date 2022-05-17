@@ -281,32 +281,30 @@ if (config.doBackgroundWork) {
             }
           );
 
-          if (!_.isEmpty(tokenAttributeCounter)) {
-            if (_.has(tokenAttributeCounter, attributeResult.id)) {
-              ++(tokenAttributeCounter as any)[attributeResult.id];
-            } else {
-              (tokenAttributeCounter as any)[attributeResult.id] = 1;
-            }
+          if (_.has(tokenAttributeCounter, attributeResult.id)) {
+            ++(tokenAttributeCounter as any)[attributeResult.id];
+          } else {
+            (tokenAttributeCounter as any)[attributeResult.id] = 1;
           }
-
-          // Update the attributes token count
-          const replacementParams = {};
-          let updateCountsString = "";
-
-          _.forEach(tokenAttributeCounter, (count, attributeId) => {
-            (replacementParams as any)[`${attributeId}`] = count;
-            updateCountsString += `(${attributeId}, $/${attributeId}/),`;
-          });
-
-          updateCountsString = _.trimEnd(updateCountsString, ",");
-
-          const updateQuery = `UPDATE attributes
-                               SET token_count = token_count + GREATEST(x.countColumn, 0)
-                               FROM (VALUES ${updateCountsString}) AS x(idColumn, countColumn)
-                               WHERE x.idColumn = attributes.id`;
-
-          await idb.none(updateQuery, replacementParams);
         }
+
+        // Update the attributes token count
+        const replacementParams = {};
+        let updateCountsString = "";
+
+        _.forEach(tokenAttributeCounter, (count, attributeId) => {
+          (replacementParams as any)[`${attributeId}`] = count;
+          updateCountsString += `(${attributeId}, $/${attributeId}/),`;
+        });
+
+        updateCountsString = _.trimEnd(updateCountsString, ",");
+
+        const updateQuery = `UPDATE attributes
+                             SET token_count = token_count + GREATEST(x.countColumn, 0)
+                             FROM (VALUES ${updateCountsString}) AS x(idColumn, countColumn)
+                             WHERE x.idColumn = attributes.id`;
+
+        await idb.none(updateQuery, replacementParams);
 
         // Mark the token as having metadata indexed.
         await idb.none(
