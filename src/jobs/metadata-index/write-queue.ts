@@ -301,7 +301,7 @@ if (config.doBackgroundWork) {
           updateCountsString = _.trimEnd(updateCountsString, ",");
 
           const updateQuery = `UPDATE attributes
-                               SET token_count = GREATEST(token_count + x.countColumn, 0)
+                               SET token_count = token_count + GREATEST(x.countColumn, 0)
                                FROM (VALUES ${updateCountsString}) AS x(idColumn, countColumn)
                                WHERE x.idColumn = attributes.id`;
 
