@@ -42,6 +42,8 @@ export const getUserTokensV2Options: RouteOptions = {
         .description(
           "Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
+      sortBy: Joi.string().valid("acquiredAt"),
+      sortDirection: Joi.string().lowercase().valid("asc", "desc").default("desc"),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     }),
@@ -70,6 +72,7 @@ export const getUserTokensV2Options: RouteOptions = {
             tokenCount: Joi.string(),
             onSaleCount: Joi.string(),
             floorAskPrice: Joi.number().unsafe().allow(null),
+            acquiredAt: Joi.string().allow(null),
           }),
         })
       ),
@@ -100,9 +103,20 @@ export const getUserTokensV2Options: RouteOptions = {
       collectionFilter = `AND t.collection_id = $/collection/`;
     }
 
+    let sortByFilter = "";
+    switch (query.sortBy) {
+      case "acquiredAt": {
+        sortByFilter = `
+            ORDER BY
+              b.acquired_at ${query.sortDirection} NULLS LAST
+          `;
+        break;
+      }
+    }
+
     try {
       const baseQuery = `
-        SELECT b.contract, b.token_id, b.token_count, t.name,
+        SELECT b.contract, b.token_id, b.token_count, b.acquired_at, t.name,
                t.image, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.top_buy_id,
                t.top_buy_value, t.total_buy_value, c.name as collection_name,
                c.metadata, c.floor_sell_value AS "collection_floor_sell_value",
@@ -113,7 +127,7 @@ export const getUserTokensV2Options: RouteOptions = {
                     END
                ) AS on_sale_count
         FROM (
-            SELECT amount AS token_count, token_id, contract
+            SELECT amount AS token_count, token_id, contract, acquired_at
             FROM nft_balances
             WHERE owner =  $/user/
             AND amount > 0
@@ -126,10 +140,10 @@ export const getUserTokensV2Options: RouteOptions = {
             WHERE b.token_id = t.token_id
             AND b.contract = t.contract
             ${collectionFilter}
-            ORDER BY t.top_buy_value DESC NULLS LAST
           ) t ON TRUE
           JOIN collections c ON c.id = t.collection_id
           ${communityFilter}
+        ${sortByFilter}
         OFFSET $/offset/
         LIMIT $/limit/
       `;
@@ -158,6 +172,7 @@ export const getUserTokensV2Options: RouteOptions = {
             tokenCount: String(r.token_count),
             onSaleCount: String(r.on_sale_count),
             floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+            acquiredAt: r.acquired_at ? new Date(r.acquired_at).toISOString() : null,
           },
         }))
       );
