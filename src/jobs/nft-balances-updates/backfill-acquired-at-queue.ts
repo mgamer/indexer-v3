@@ -93,8 +93,8 @@ if (config.doBackgroundWork) {
   redlock
     .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
-      // await redis.set(`${QUEUE_NAME}-enabled`, 1);
-      // await addToQueue();
+      await redis.set(`${QUEUE_NAME}-enabled`, 1);
+      await addToQueue();
     })
     .catch(() => {
       // Skip on any errors
