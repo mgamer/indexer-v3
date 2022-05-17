@@ -69,7 +69,9 @@ export const getTokensV4Options: RouteOptions = {
         .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
       source: Joi.string(),
       native: Joi.boolean(),
-      sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice"),
+      sortBy: Joi.string()
+        .valid("floorAskPrice", "topBidValue", "tokenId")
+        .default("floorAskPrice"),
       limit: Joi.number().integer().min(1).max(50).default(20),
       continuation: Joi.string().pattern(base64Regex),
     })
@@ -209,7 +211,10 @@ export const getTokensV4Options: RouteOptions = {
 
       // Continue with the next page, this depends on the sorting used
       if (query.continuation && !query.tokens) {
-        const contArr = splitContinuation(query.continuation, /^((\d+|null)_\d+|\d+)$/);
+        const contArr = splitContinuation(
+          query.continuation,
+          /^((\d+|null|0x[a-fA-F0-9]+)_\d+|\d+)$/
+        );
 
         if (query.collection || query.attributes) {
           if (contArr.length !== 2) {
@@ -224,7 +229,16 @@ export const getTokensV4Options: RouteOptions = {
             throw new Error("Invalid continuation string used");
           }
           switch (query.sortBy) {
-            case "topBidValue":
+            case "tokenId": {
+              conditions.push(
+                `("t"."contract", "t"."token_id") > ($/contContract/, $/contTokenId/)`
+              );
+              (query as any).contContract = toBuffer(contArr[0]);
+              (query as any).contTokenId = contArr[1];
+              break;
+            }
+
+            case "topBidValue": {
               if (contArr[0] !== "null") {
                 conditions.push(`
                   ("t"."top_buy_value", "t"."token_id") < ($/topBuyValue:raw/, $/tokenId:raw/)
@@ -237,8 +251,10 @@ export const getTokensV4Options: RouteOptions = {
                 (query as any).tokenId = contArr[1];
               }
               break;
+            }
+
             case "floorAskPrice":
-            default:
+            default: {
               if (contArr[0] !== "null") {
                 conditions.push(`(
                   (t.floor_sell_value, "t"."token_id") > ($/floorSellValue/, $/tokenId/)
@@ -252,6 +268,7 @@ export const getTokensV4Options: RouteOptions = {
                 (query as any).tokenId = contArr[1];
               }
               break;
+            }
           }
         } else {
           conditions.push(`"t"."token_id" > $/tokenId/`);
@@ -267,6 +284,11 @@ export const getTokensV4Options: RouteOptions = {
       // Only allow sorting on floorSell and topBid when we filter by collection or attributes
       if (query.collection || query.attributes) {
         switch (query.sortBy) {
+          case "tokenId": {
+            baseQuery += ` ORDER BY "t"."contract", "t"."token_id"`;
+            break;
+          }
+
           case "topBidValue": {
             baseQuery += ` ORDER BY "t"."top_buy_value" DESC NULLS LAST, "t"."token_id" DESC`;
             break;
@@ -301,6 +323,9 @@ export const getTokensV4Options: RouteOptions = {
         // when we have collection/attributes
         if (query.collection || query.attributes) {
           switch (query.sortBy) {
+            case "tokenId":
+              continuation = fromBuffer(rawResult[rawResult.length - 1].contract);
+              break;
             case "topBidValue":
               continuation = rawResult[rawResult.length - 1].top_buy_value || "null";
               break;
