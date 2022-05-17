@@ -367,6 +367,14 @@ export const getExecuteBidV2Options: RouteOptions = {
                             s: query.s,
                           },
                         },
+                        attribute:
+                          collection && attributeKey && attributeValue
+                            ? {
+                                collection,
+                                key: attributeKey,
+                                value: attributeValue,
+                              }
+                            : undefined,
                         orderbook: query.orderbook,
                         source: query.source,
                       },
@@ -465,6 +473,14 @@ export const getExecuteBidV2Options: RouteOptions = {
                             s: query.s,
                           },
                         },
+                        attribute:
+                          collection && attributeKey && attributeValue
+                            ? {
+                                collection,
+                                key: attributeKey,
+                                value: attributeValue,
+                              }
+                            : undefined,
                         orderbook: query.orderbook,
                         source: query.source,
                       },
