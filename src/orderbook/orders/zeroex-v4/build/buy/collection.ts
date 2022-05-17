@@ -3,6 +3,7 @@ import { BaseBuilder } from "@reservoir0x/sdk/dist/zeroex-v4/builders/base";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
+import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as utils from "@/orderbook/orders/zeroex-v4/build/utils";
 
@@ -32,7 +33,14 @@ export const build = async (options: BuildOrderOptions) => {
       return undefined;
     }
 
-    const buildInfo = await utils.getBuildInfo(options, options.collection, "buy");
+    const buildInfo = await utils.getBuildInfo(
+      {
+        ...options,
+        contract: fromBuffer(collectionResult.contract),
+      },
+      options.collection,
+      "buy"
+    );
     if (!buildInfo) {
       // Skip if we cannot generate the build information.
       return undefined;
