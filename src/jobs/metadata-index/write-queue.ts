@@ -282,7 +282,7 @@ if (config.doBackgroundWork) {
           );
 
           if (!_.isEmpty(tokenAttributeCounter)) {
-            if (_.find(tokenAttributeCounter, attributeResult.id)) {
+            if (_.has(tokenAttributeCounter, attributeResult.id)) {
               ++(tokenAttributeCounter as any)[attributeResult.id];
             } else {
               (tokenAttributeCounter as any)[attributeResult.id] = 1;
