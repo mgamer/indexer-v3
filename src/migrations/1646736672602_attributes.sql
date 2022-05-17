@@ -36,6 +36,8 @@ CREATE TABLE "attributes" (
   "on_sale_count" INT NOT NULL DEFAULT 0,
   "floor_sell_value" NUMERIC(78, 0),
   "top_buy_value" NUMERIC(78, 0),
+  "sell_updated_at" TIMESTAMPTZ,
+  "buy_updated_at" TIMESTAMPTZ,
   "collection_id" TEXT NOT NULL,
   "kind" "attribute_key_kind_t" NOT NULL,
   "key" TEXT NOT NULL
@@ -63,9 +65,7 @@ CREATE TABLE "token_attributes" (
   "attribute_id" BIGINT NOT NULL,
   "collection_id" TEXT NOT NULL,
   "key" TEXT NOT NULL,
-  "value" TEXT NOT NULL,
-  "sell_updated_at" TIMESTAMPTZ,
-  "buy_updated_at" TIMESTAMPTZ
+  "value" TEXT NOT NULL
 );
 
 ALTER TABLE "token_attributes"
