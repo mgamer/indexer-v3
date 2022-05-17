@@ -1,5 +1,5 @@
 import * as Sdk from "@reservoir0x/sdk";
-import { BaseBuilder } from "@reservoir0x/sdk/dist/opendao/builders/base";
+import { BaseBuilder } from "@reservoir0x/sdk/dist/zeroex-v4/builders/base";
 import { getBitVectorCalldataSize } from "@reservoir0x/sdk/dist/common/helpers/bit-vector";
 import { getPackedListCalldataSize } from "@reservoir0x/sdk/dist/common/helpers/packed-list";
 
@@ -7,7 +7,7 @@ import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as utils from "@/orderbook/orders/opendao/build/utils";
+import * as utils from "@/orderbook/orders/zeroex-v4/build/utils";
 
 interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
   collection: string;
@@ -109,9 +109,9 @@ export const build = async (options: BuildOrderOptions) => {
       }
 
       if (buildInfo.kind === "erc721") {
-        builder = new Sdk.OpenDao.Builders.TokenList.PackedList(config.chainId);
+        builder = new Sdk.ZeroExV4.Builders.TokenList.PackedList(config.chainId);
       } else if (buildInfo.kind === "erc1155") {
-        builder = new Sdk.OpenDao.Builders.TokenList.PackedList(config.chainId);
+        builder = new Sdk.ZeroExV4.Builders.TokenList.PackedList(config.chainId);
       }
     } else {
       if (bitVectorCost > costThreshold) {
@@ -119,15 +119,15 @@ export const build = async (options: BuildOrderOptions) => {
       }
 
       if (buildInfo.kind === "erc721") {
-        builder = new Sdk.OpenDao.Builders.TokenList.BitVector(config.chainId);
+        builder = new Sdk.ZeroExV4.Builders.TokenList.BitVector(config.chainId);
       } else if (buildInfo.kind === "erc1155") {
-        builder = new Sdk.OpenDao.Builders.TokenList.BitVector(config.chainId);
+        builder = new Sdk.ZeroExV4.Builders.TokenList.BitVector(config.chainId);
       }
     }
 
     return builder?.build(buildInfo.params);
   } catch (error) {
-    logger.error("opendao-build-buy-attribute-order", `Failed to build order: ${error}`);
+    logger.error("zeroex-v4-build-buy-attribute-order", `Failed to build order: ${error}`);
     return undefined;
   }
 };
