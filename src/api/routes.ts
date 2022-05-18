@@ -477,6 +477,14 @@ export const setupRoutes = (server: Server) => {
     options: tokensEndpoints.postTokensRefreshV1Options,
   });
 
+  // Token sets
+
+  server.route({
+    method: "POST",
+    path: "/token-sets/v1",
+    options: tokensEndpoints.postTokenSetsV1Options,
+  });
+
   // Transfers
 
   server.route({
