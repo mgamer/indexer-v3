@@ -299,12 +299,14 @@ if (config.doBackgroundWork) {
 
         updateCountsString = _.trimEnd(updateCountsString, ",");
 
-        const updateQuery = `UPDATE attributes
+        if (updateCountsString !== "") {
+          const updateQuery = `UPDATE attributes
                              SET token_count = token_count + x.countColumn
                              FROM (VALUES ${updateCountsString}) AS x(idColumn, countColumn)
                              WHERE x.idColumn = attributes.id`;
 
-        await idb.none(updateQuery, replacementParams);
+          await idb.none(updateQuery, replacementParams);
+        }
 
         // Mark the token as having metadata indexed.
         await idb.none(
