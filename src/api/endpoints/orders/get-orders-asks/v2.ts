@@ -343,6 +343,9 @@ export const getOrdersAsksV2Options: RouteOptions = {
         baseQuery += ` ORDER BY orders.created_at DESC, orders.id DESC`;
       }
 
+      // HACK: Maximum limit is 100
+      query.limit = Math.min(query.limit, 100);
+
       // Pagination
       baseQuery += ` LIMIT $/limit/`;
 
