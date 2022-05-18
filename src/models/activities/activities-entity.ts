@@ -1,7 +1,7 @@
 import { fromBuffer } from "@/common/utils";
 
 // Define the fields we can update
-export type EventsEntityUpdateParams = {
+export type ActivitiesEntityUpdateParams = {
   createdAt?: string;
   contract?: Buffer;
   collectionId?: string;
@@ -14,7 +14,7 @@ export type EventsEntityUpdateParams = {
 };
 
 // Define the fields need to instantiate the entity
-export type EventsEntityParams = {
+export type ActivitiesEntityParams = {
   id: number;
   created_at: string;
   contract: Buffer;
@@ -27,7 +27,7 @@ export type EventsEntityParams = {
   amount: number;
 };
 
-export class EventsEntity {
+export class ActivitiesEntity {
   id: number;
   createdAt: string;
   collectionId: string;
@@ -39,7 +39,7 @@ export class EventsEntity {
   price: number;
   amount: number;
 
-  constructor(params: EventsEntityParams) {
+  constructor(params: ActivitiesEntityParams) {
     this.id = params.id;
     this.createdAt = params.created_at;
     this.contract = fromBuffer(params.contract);
