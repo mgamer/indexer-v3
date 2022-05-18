@@ -15,11 +15,11 @@ export const safeWebSocketSubscription = (
 ) => {
   const webSocketProvider = new WebSocketProvider(config.baseNetworkWsUrl);
   webSocketProvider.on("error", (error) => {
-    logger.error("websocket-provider", `WebSocker subscription failed: ${error}`);
+    logger.error("websocket-provider", `WebSocket subscription failed: ${error}`);
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   webSocketProvider._websocket.on("error", (error: any) => {
-    logger.error("websocket-provider", `WebSocker subscription failed: ${error}`);
+    logger.error("websocket-provider", `WebSocket subscription failed: ${error}`);
   });
 
   let pingTimeout: NodeJS.Timeout | undefined;

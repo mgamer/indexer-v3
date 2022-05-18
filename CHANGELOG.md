@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.67.8 (2022-05-18)
+
+### 5.67.7 (2022-05-18)
+
+### 5.67.6 (2022-05-18)
+
+### 5.67.5 (2022-05-18)
+
+### 5.67.4 (2022-05-18)
+
+
+### Bug Fixes
+
+* skip update when no attributes are present ([1f1633e](https://github.com/reservoirprotocol/indexer-v3/commit/1f1633ee7c6b34ff6b0b6a294d82791a6f44befe))
+
+### 5.67.3 (2022-05-17)
+
+### 5.67.2 (2022-05-17)
+
+### 5.67.1 (2022-05-17)
+
+## 5.67.0 (2022-05-17)
+
+
+### Features
+
+* fix migration ([e2299e7](https://github.com/reservoirprotocol/indexer-v3/commit/e2299e759546890d8a5487ff86a5a8a1adf927ee))
+
+### 5.66.9 (2022-05-17)
+
+### 5.66.8 (2022-05-16)
+
 ### 5.66.7 (2022-05-16)
 
 ### 5.66.6 (2022-05-16)

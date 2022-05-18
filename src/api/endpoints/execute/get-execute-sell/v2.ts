@@ -173,7 +173,7 @@ export const getExecuteSellV2Options: RouteOptions = {
 
           // Create sell order to match with the offer.
           const sellOrder = order.buildMatching({
-            tokenId,
+            nftId: tokenId,
             amount: 1,
             // To make it compatible with the router.
             unwrapNativeToken: false,
@@ -196,7 +196,7 @@ export const getExecuteSellV2Options: RouteOptions = {
 
           // Create sell order to match with the offer.
           const sellOrder = order.buildMatching({
-            tokenId,
+            nftId: tokenId,
             amount: 1,
             // To make it compatible with the router.
             unwrapNativeToken: false,
