@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.68.0 (2022-05-18)
+
+
+### Features
+
+* fix metadata write query ([d4a4021](https://github.com/reservoirprotocol/indexer-v3/commit/d4a40210af13e06d25f73b0862dc59fd0617b42a))
+
 ### 5.67.8 (2022-05-18)
 
 ### 5.67.7 (2022-05-18)
