@@ -263,8 +263,7 @@ if (config.doBackgroundWork) {
                 $/key/,
                 $/value/
               )
-              ON CONFLICT DO NOTHING
-              RETURNING 1;
+              ON CONFLICT DO NOTHING;
               
               ${sampleImageUpdate}
             `,
