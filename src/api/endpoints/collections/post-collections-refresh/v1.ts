@@ -5,6 +5,7 @@ import _ from "lodash";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
+import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
 import { Collections } from "@/models/collections";
@@ -76,6 +77,26 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
 
       // Refresh contract orders from OpenSea
       await OpenseaIndexerApi.fastContractSync(collection.contract);
+
+      // Update the collection id of any missing tokens
+      await edb.none(
+        `
+          WITH x AS (
+            SELECT
+              collections.contract,
+              collections.token_id_range
+            FROM collections
+            WHERE collections.id = $/collection/
+          )
+          UPDATE tokens SET
+            collection_id = $/collection/
+          FROM x
+          WHERE tokens.contract = x.contract
+            AND tokens.token_id <@ x.token_id_range
+            AND tokens.collection_id IS NULL
+        `,
+        { collection: payload.collection }
+      );
 
       // Refresh the collection tokens metadata
       await metadataIndexFetch.addToQueue(
