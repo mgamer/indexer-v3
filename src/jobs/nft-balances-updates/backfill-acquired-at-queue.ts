@@ -26,7 +26,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async () => {
-      const limit = 2000;
+      const limit = 1000;
 
       try {
         const query = `
