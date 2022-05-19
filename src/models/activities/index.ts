@@ -29,7 +29,7 @@ export class Activities {
         $/fromAddress/,
         $/toAddress/,
         $/price/,
-        $/amount/
+        $/amount/,
         $/metadata:json/
       )
     `;
