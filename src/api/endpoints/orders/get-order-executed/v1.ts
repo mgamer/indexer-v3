@@ -31,7 +31,7 @@ export const getOrderExecutedV1Options: RouteOptions = {
         const data = await edb.oneOrNone(
           `
             SELECT 1 FROM fill_events_2
-            WHERE fill_events_2.timestamp > floor(extract(epoch FROM now() - interval '3 minutes'))::INT
+            WHERE fill_events_2.timestamp > floor(extract(epoch FROM now() - interval '5 minutes'))::INT
               AND fill_events_2.order_id = $/id/
           `,
           { id: query.id }

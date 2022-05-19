@@ -75,19 +75,24 @@ export const getExecuteSellV1Options: RouteOptions = {
       const bestOrderResult = await edb.oneOrNone(
         `
           SELECT
-            "o"."id",
-            "o"."kind",
-            "o"."price",
-            "c"."kind" AS "token_kind",
-            "o"."token_set_id",
-            "o"."raw_data"
-          FROM "tokens" "t"
-          JOIN "orders" "o"
-            ON "t"."top_buy_id" = "o"."id"
-          JOIN "contracts" "c"
-            ON "t"."contract" = "c"."address"
-          WHERE "t"."contract" = $/contract/
-            AND "t"."token_id" = $/tokenId/
+            orders.id,
+            orders.kind,
+            contracts.kind AS token_kind,
+            orders.price,
+            orders.raw_data,
+            orders.source_id,
+            orders.maker
+          FROM orders
+          JOIN contracts
+            ON orders.contract = contracts.address
+          JOIN token_sets_tokens
+            ON orders.token_set_id = token_sets_tokens.token_set_id
+          WHERE token_sets_tokens.contract = $/contract/
+            AND token_sets_tokens.token_id = $/tokenId/
+            AND orders.side = 'buy'
+            AND orders.fillability_status = 'fillable'
+            AND orders.approval_status = 'approved'
+          ORDER BY orders.value DESC
           LIMIT 1
         `,
         {
