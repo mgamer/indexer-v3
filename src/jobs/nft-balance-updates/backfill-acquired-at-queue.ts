@@ -85,7 +85,7 @@ export const addToQueue = async () => {
     randomUUID(),
     {},
     {
-      delay: 1000,
+      delay: 2000,
     }
   );
 };
