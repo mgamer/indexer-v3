@@ -47,6 +47,7 @@ import * as resyncAttributeFloorSell from "@/jobs/update-attribute/resync-attrib
 import * as resyncOrdersSource from "@/jobs/orderbook/resync-orders-source";
 import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refresh";
 import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
+import * as activities from "@/jobs/activities";
 
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
@@ -79,4 +80,5 @@ export const allJobQueues = [
   resyncAttributeFloorSell.queue,
   collectionsRefresh.queue,
   collectionsRefreshCache.queue,
+  activities.queue,
 ];

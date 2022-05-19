@@ -1,3 +1,5 @@
+import _ from "lodash";
+
 import { Log } from "@ethersproject/abstract-provider";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
@@ -19,6 +21,7 @@ import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 import { OrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
+import { ActivityEvent } from "../../../dist/jobs/activities";
 
 // TODO: Split into multiple files (by exchange).
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
@@ -1173,6 +1176,18 @@ export const syncEvents = async (
         es.nftApprovals.addEvents(nftApprovalEvents),
         es.nftTransfers.addEvents(nftTransferEvents, backfill),
       ]);
+
+      // Add all the fill events to the activity queue
+      _.map(_.concat(fillEvents, fillEventsZeroExV4, fillEventsFoundation), (event) => ({
+        event: ActivityEvent.sale,
+        transactionHash: event.baseEventParams.txHash,
+        contract: event.contract,
+        tokenId: event.tokenId,
+        fromAddress: event.maker,
+        toAddress: event.taker,
+        price: event.price,
+        amount: event.amount,
+      }));
 
       if (!backfill) {
         // WARNING! It's very important to guarantee that the previous

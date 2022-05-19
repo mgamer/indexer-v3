@@ -1,7 +1,13 @@
 import { fromBuffer } from "@/common/utils";
 
+export enum ActivityType {
+  sale = "sale",
+  listing = "listsing",
+}
+
 // Define the fields we can update
 export type ActivitiesEntityUpdateParams = {
+  transactionHash: Buffer;
   createdAt?: string;
   contract?: Buffer;
   collectionId?: string;
@@ -17,6 +23,7 @@ export type ActivitiesEntityUpdateParams = {
 export type ActivitiesEntityParams = {
   id: number;
   created_at: string;
+  tx_hash: Buffer;
   contract: Buffer;
   collection_id: string;
   token_id: string;
@@ -30,6 +37,7 @@ export type ActivitiesEntityParams = {
 export class ActivitiesEntity {
   id: number;
   createdAt: string;
+  transactionHash: string;
   collectionId: string;
   contract: string;
   tokenId: string;
@@ -42,6 +50,7 @@ export class ActivitiesEntity {
   constructor(params: ActivitiesEntityParams) {
     this.id = params.id;
     this.createdAt = params.created_at;
+    this.transactionHash = fromBuffer(params.tx_hash);
     this.contract = fromBuffer(params.contract);
     this.collectionId = params.collection_id;
     this.tokenId = params.token_id;

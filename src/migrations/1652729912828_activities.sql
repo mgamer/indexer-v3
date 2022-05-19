@@ -3,15 +3,16 @@
 CREATE TABLE activities (
     id bigserial NOT NULL,
 	  created_at timestamp with time zone DEFAULT NOW(),
+	  tx_hash BYTEA,
     type text NOT NULL,
-    contract bytea,
+    contract BYTEA,
     collection_id text,
-    token_id numeric(78),
-    address bytea,
-    from_address bytea,
-    to_address bytea,
-    price numeric(78),
-    amount numeric(78),
+    token_id NUMERIC(78),
+    address BYTEA,
+    from_address BYTEA,
+    to_address BYTEA,
+    price NUMERIC(78),
+    amount NUMERIC(78),
     CONSTRAINT activities_pk PRIMARY KEY (id)
 );
 

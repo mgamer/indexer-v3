@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import _ from "lodash";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
+import { SaleActivity } from "@/jobs/activities/sale-activity";
 
 const QUEUE_NAME = "activities-queue";
 
@@ -28,6 +30,7 @@ if (config.doBackgroundWork) {
 
       switch (activity.event) {
         case ActivityEvent.sale:
+          await SaleActivity.handleEvent(activity);
           break;
 
         case ActivityEvent.listing:
@@ -49,8 +52,8 @@ export enum ActivityEvent {
 
 export type ActivityInfo = {
   event: ActivityEvent;
+  transactionHash: string;
   contract: string;
-  collectionId: string;
   tokenId: string;
   fromAddress: string;
   toAddress: string;
@@ -58,6 +61,11 @@ export type ActivityInfo = {
   amount: number;
 };
 
-export const addToQueue = async (activity: ActivityInfo) => {
-  await queue.add(randomUUID(), { activity });
+export const addToQueue = async (activities: ActivityInfo[]) => {
+  await queue.addBulk(
+    _.map(activities, (activity) => ({
+      name: randomUUID(),
+      data: activity,
+    }))
+  );
 };
