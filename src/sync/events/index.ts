@@ -21,7 +21,8 @@ import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 import { OrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
-import { ActivityEvent } from "../../../dist/jobs/activities";
+import * as activities from "@/jobs/activities";
+import { ActivityEvent, ActivityInfo } from "@/jobs/activities";
 
 // TODO: Split into multiple files (by exchange).
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
@@ -1178,16 +1179,27 @@ export const syncEvents = async (
       ]);
 
       // Add all the fill events to the activity queue
-      _.map(_.concat(fillEvents, fillEventsZeroExV4, fillEventsFoundation), (event) => ({
-        event: ActivityEvent.sale,
-        transactionHash: event.baseEventParams.txHash,
-        contract: event.contract,
-        tokenId: event.tokenId,
-        fromAddress: event.maker,
-        toAddress: event.taker,
-        price: event.price,
-        amount: event.amount,
-      }));
+      const activitiesInfo: ActivityInfo[] = _.map(
+        _.concat(fillEvents, fillEventsZeroExV4, fillEventsFoundation),
+        (event) => ({
+          event: ActivityEvent.sale,
+          contract: event.contract,
+          tokenId: event.tokenId,
+          fromAddress: event.maker,
+          toAddress: event.taker,
+          price: Number(event.price),
+          amount: Number(event.amount),
+          metadata: {
+            transactionHash: event.baseEventParams.txHash,
+            logIndex: event.baseEventParams.logIndex,
+            batchIndex: event.baseEventParams.batchIndex,
+          },
+        })
+      );
+
+      if (!_.isEmpty(activitiesInfo)) {
+        await activities.addToQueue(activitiesInfo);
+      }
 
       if (!backfill) {
         // WARNING! It's very important to guarantee that the previous

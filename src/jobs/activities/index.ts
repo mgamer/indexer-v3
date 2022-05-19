@@ -8,6 +8,7 @@ import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { SaleActivity } from "@/jobs/activities/sale-activity";
+import { ActivityMetadata } from "@/models/activities/activities-entity";
 
 const QUEUE_NAME = "activities-queue";
 
@@ -52,13 +53,13 @@ export enum ActivityEvent {
 
 export type ActivityInfo = {
   event: ActivityEvent;
-  transactionHash: string;
   contract: string;
   tokenId: string;
   fromAddress: string;
   toAddress: string;
   price: number;
   amount: number;
+  metadata?: ActivityMetadata;
 };
 
 export const addToQueue = async (activities: ActivityInfo[]) => {

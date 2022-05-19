@@ -3,7 +3,7 @@
 CREATE TABLE activities (
     id bigserial NOT NULL,
 	  created_at timestamp with time zone DEFAULT NOW(),
-	  tx_hash BYTEA,
+	  transaction_id text,
     type text NOT NULL,
     contract BYTEA,
     collection_id text,
@@ -13,6 +13,7 @@ CREATE TABLE activities (
     to_address BYTEA,
     price NUMERIC(78),
     amount NUMERIC(78),
+    metadata JSONB,
     CONSTRAINT activities_pk PRIMARY KEY (id)
 );
 
@@ -22,7 +23,7 @@ CREATE INDEX activities_address_created_at_type_index
 CREATE INDEX activities_collection_id_created_at_type_index
     ON activities (collection_id, created_at DESC NULLS LAST, type);
 
-CREATE INDEX activities_collection_id_created_at_type_index
+CREATE INDEX activities_collection_id_token_id_created_at_type_index
     ON activities (collection_id, token_id, created_at DESC NULLS LAST, type);
 
 -- Down Migration

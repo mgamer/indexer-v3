@@ -5,25 +5,39 @@ export enum ActivityType {
   listing = "listsing",
 }
 
+// Define the fields required to create a new activity
+export type ActivitiesEntityInsertParams = {
+  transactionId: string;
+  contract: string;
+  collectionId: string;
+  tokenId: string;
+  address: string;
+  fromAddress: string;
+  toAddress: string;
+  price: number;
+  amount: number;
+  metadata?: ActivityMetadata;
+};
+
 // Define the fields we can update
 export type ActivitiesEntityUpdateParams = {
-  transactionHash: Buffer;
   createdAt?: string;
-  contract?: Buffer;
+  contract?: string;
   collectionId?: string;
   tokenId?: string;
-  address?: Buffer;
-  fromAddress?: Buffer;
-  toAddress?: Buffer;
+  address?: string;
+  fromAddress?: string;
+  toAddress?: string;
   price?: number;
   amount?: number;
+  metadata?: ActivityMetadata;
 };
 
 // Define the fields need to instantiate the entity
 export type ActivitiesEntityParams = {
   id: number;
   created_at: string;
-  tx_hash: Buffer;
+  transaction_id: Buffer;
   contract: Buffer;
   collection_id: string;
   token_id: string;
@@ -32,12 +46,20 @@ export type ActivitiesEntityParams = {
   to_address: Buffer;
   price: number;
   amount: number;
+  metadata: ActivityMetadata;
+};
+
+// Possible fields to be found in the metadata
+export type ActivityMetadata = {
+  transactionHash?: string | undefined;
+  logIndex?: number | undefined;
+  batchIndex?: number | undefined;
 };
 
 export class ActivitiesEntity {
   id: number;
   createdAt: string;
-  transactionHash: string;
+  transactionId: string;
   collectionId: string;
   contract: string;
   tokenId: string;
@@ -46,11 +68,12 @@ export class ActivitiesEntity {
   toAddress: string;
   price: number;
   amount: number;
+  metadata: ActivityMetadata;
 
   constructor(params: ActivitiesEntityParams) {
     this.id = params.id;
     this.createdAt = params.created_at;
-    this.transactionHash = fromBuffer(params.tx_hash);
+    this.transactionId = fromBuffer(params.transaction_id);
     this.contract = fromBuffer(params.contract);
     this.collectionId = params.collection_id;
     this.tokenId = params.token_id;
@@ -59,5 +82,6 @@ export class ActivitiesEntity {
     this.toAddress = fromBuffer(params.to_address);
     this.price = params.price;
     this.amount = params.amount;
+    this.metadata = params.metadata;
   }
 }
