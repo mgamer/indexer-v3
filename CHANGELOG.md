@@ -2,6 +2,46 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.71.0 (2022-05-19)
+
+
+### Features
+
+* added owner to tokens API ([4fd86d1](https://github.com/reservoirprotocol/indexer-v3/commit/4fd86d12083b4a0b90803e69120e484296397681))
+
+### 5.70.3 (2022-05-19)
+
+### 5.70.2 (2022-05-19)
+
+### 5.70.1 (2022-05-19)
+
+## 5.70.0 (2022-05-19)
+
+
+### Features
+
+* check for returned code ([087012a](https://github.com/reservoirprotocol/indexer-v3/commit/087012afdd1c3e191db0bd84e26efacda7a1b195))
+
+### 5.69.2 (2022-05-19)
+
+### 5.69.1 (2022-05-19)
+
+## 5.69.0 (2022-05-19)
+
+
+### Features
+
+* sync metadata requests ([98112a9](https://github.com/reservoirprotocol/indexer-v3/commit/98112a936fb86487037da88e5ebe69808205019c))
+
+### 5.68.1 (2022-05-18)
+
+## 5.68.0 (2022-05-18)
+
+
+### Features
+
+* fix metadata write query ([d4a4021](https://github.com/reservoirprotocol/indexer-v3/commit/d4a40210af13e06d25f73b0862dc59fd0617b42a))
+
 ### 5.67.8 (2022-05-18)
 
 ### 5.67.7 (2022-05-18)
