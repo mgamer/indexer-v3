@@ -26,6 +26,9 @@ CREATE INDEX activities_collection_id_created_at_type_index
 CREATE INDEX activities_collection_id_token_id_created_at_type_index
     ON activities (collection_id, token_id, created_at DESC NULLS LAST, type);
 
+CREATE UNIQUE INDEX activities_transaction_id_unique_index
+    ON activities (transaction_id);
+
 -- Down Migration
 
 DROP TABLE activities;
