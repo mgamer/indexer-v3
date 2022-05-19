@@ -59,8 +59,8 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       }
 
       // For big collections allow refresh once a day
-      if (collection.tokenCount > 500000) {
-        refreshCoolDownMin = 60 * 24;
+      if (collection.tokenCount > 30000) {
+        refreshCoolDownMin = 60 * 48;
       }
 
       // Check when the last sync was performed
