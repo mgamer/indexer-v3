@@ -16,7 +16,6 @@ export class SaleActivity {
     }
 
     const transactionId = Activities.getTransactionId(
-      activity.fromAddress,
       activity.metadata?.transactionHash,
       activity.metadata?.logIndex,
       activity.metadata?.batchIndex
