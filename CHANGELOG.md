@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.73.0 (2022-05-19)
+
+
+### Features
+
+* stop full collections tokens refresh ([3c3aeb6](https://github.com/reservoirprotocol/indexer-v3/commit/3c3aeb67f0f6651ce94aa85ce69994075389da1f))
+
 ## 5.72.0 (2022-05-19)
 
 
