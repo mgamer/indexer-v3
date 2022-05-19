@@ -108,7 +108,7 @@ export const getUserTokensV2Options: RouteOptions = {
       case "acquiredAt": {
         sortByFilter = `
             ORDER BY
-              b.acquired_at ${query.sortDirection} NULLS LAST
+              b.acquired_at ${query.sortDirection}
           `;
         break;
       }
