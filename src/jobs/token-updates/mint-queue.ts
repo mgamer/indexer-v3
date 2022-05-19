@@ -6,6 +6,7 @@ import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
+import * as tokenRefreshCache from "@/jobs/token-updates/token-refresh-cache";
 import MetadataApi from "@/utils/metadata-api";
 
 const QUEUE_NAME = "token-updates-mint-queue";
@@ -33,10 +34,8 @@ if (config.doBackgroundWork) {
       const { contract, tokenId, mintedTimestamp } = job.data as MintInfo;
 
       try {
-        // TODO: For newly minted tokens we should also populate
-        // various cached information (eg. floor sell, top buy),
-        // otherwise the tokens might be missing from the result
-        // of various APIs which depend on these cached values.
+        // Set any cached information (eg. floor sell, top buy).
+        await tokenRefreshCache.addToQueue(contract, tokenId);
 
         // First, check the database for any matching collection.
         const collection: {
