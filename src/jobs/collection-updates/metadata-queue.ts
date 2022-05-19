@@ -31,7 +31,7 @@ if (config.doBackgroundWork) {
         logger.info(QUEUE_NAME, `Refresh collection metadata=${contract}`);
         await Collections.updateCollectionCache(contract, "1");
       } else {
-        await addToQueue(contract);
+        await addToQueue(contract, 1000);
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }
@@ -42,6 +42,6 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (contract: string) => {
-  await queue.add(randomUUID(), { contract });
+export const addToQueue = async (contract: string, delay = 0) => {
+  await queue.add(randomUUID(), { contract }, { delay });
 };
