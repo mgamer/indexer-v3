@@ -79,6 +79,12 @@ export const setupRoutes = (server: Server) => {
     options: adminEndpoints.postSetCollectionCommunity,
   });
 
+  server.route({
+    method: "POST",
+    path: "/admin/simulate-floor",
+    options: adminEndpoints.postSimulateFloor,
+  });
+
   // Api keys
 
   server.route({
