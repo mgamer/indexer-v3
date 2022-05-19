@@ -1,6 +1,5 @@
 import { ActivitiesEntityInsertParams, ActivityType } from "@/models/activities/activities-entity";
 import { idb } from "@/common/db";
-import { randomUUID } from "crypto";
 import { toBuffer } from "@/common/utils";
 
 export class Activities {
@@ -32,10 +31,11 @@ export class Activities {
         $/amount/,
         $/metadata:json/
       )
+      ON CONFLICT DO NOTHING
     `;
 
     await idb.none(query, {
-      transactionId: randomUUID(),
+      transactionId: activity.transactionId,
       type: ActivityType.sale,
       contract: toBuffer(activity.contract),
       collectionId: activity.collectionId,
