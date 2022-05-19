@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.72.0 (2022-05-19)
+
+
+### Features
+
+* update limit on large collections refresh ([6644f4a](https://github.com/reservoirprotocol/indexer-v3/commit/6644f4a8e70321882854b19c985a0c456604d109))
+
 ## 5.71.0 (2022-05-19)
 
 
