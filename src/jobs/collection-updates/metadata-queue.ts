@@ -27,11 +27,10 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { contract } = job.data;
 
-      if (await acquireLock(QUEUE_NAME, 2)) {
+      if (await acquireLock(QUEUE_NAME, 1)) {
         logger.info(QUEUE_NAME, `Refresh collection metadata=${contract}`);
         await Collections.updateCollectionCache(contract, "1");
       } else {
-        logger.info(QUEUE_NAME, `Refresh collection metadata=${contract}`);
         await addToQueue(contract);
       }
     },
