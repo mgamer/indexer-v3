@@ -1,8 +1,16 @@
 import { ActivitiesEntityInsertParams, ActivityType } from "@/models/activities/activities-entity";
 import { idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
+import crypto from "crypto";
 
 export class Activities {
+  public static getTransactionId(transactionHash?: string, logIndex?: number, batchIndex?: number) {
+    return crypto
+      .createHash("sha256")
+      .update(`${transactionHash}${logIndex}${batchIndex}`)
+      .digest("hex");
+  }
+
   public static async add(activity: ActivitiesEntityInsertParams) {
     const query = `
       INSERT INTO activities (

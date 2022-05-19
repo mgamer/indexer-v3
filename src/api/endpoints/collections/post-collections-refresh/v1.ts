@@ -9,7 +9,6 @@ import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
 import { Collections } from "@/models/collections";
-import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
 import * as Boom from "@hapi/boom";
@@ -59,8 +58,8 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       }
 
       // For big collections allow refresh once a day
-      if (collection.tokenCount > 500000) {
-        refreshCoolDownMin = 60 * 24;
+      if (collection.tokenCount > 30000) {
+        refreshCoolDownMin = 60 * 48;
       }
 
       // Check when the last sync was performed
@@ -99,18 +98,18 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       );
 
       // Refresh the collection tokens metadata
-      await metadataIndexFetch.addToQueue(
-        [
-          {
-            kind: "full-collection",
-            data: {
-              method: "opensea",
-              collection: collection.id,
-            },
-          },
-        ],
-        true
-      );
+      // await metadataIndexFetch.addToQueue(
+      //   [
+      //     {
+      //       kind: "full-collection",
+      //       data: {
+      //         method: "opensea",
+      //         collection: collection.id,
+      //       },
+      //     },
+      //   ],
+      //   true
+      // );
 
       // Refresh the collection metadata
       await collectionUpdatesMetadata.addToQueue(collection.contract);

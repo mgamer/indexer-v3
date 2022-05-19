@@ -3,7 +3,6 @@ import { ActivitiesEntityInsertParams } from "@/models/activities/activities-ent
 import { Tokens } from "@/models/tokens";
 import _ from "lodash";
 import { logger } from "@/common/logger";
-import crypto from "crypto";
 import { Activities } from "@/models/activities";
 
 export class SaleActivity {
@@ -16,12 +15,11 @@ export class SaleActivity {
       return;
     }
 
-    const transactionId = crypto
-      .createHash("sha256")
-      .update(
-        `${activity.fromAddress}${activity.metadata?.transactionHash}${activity.metadata?.logIndex}${activity.metadata?.batchIndex}`
-      )
-      .digest("hex");
+    const transactionId = Activities.getTransactionId(
+      activity.metadata?.transactionHash,
+      activity.metadata?.logIndex,
+      activity.metadata?.batchIndex
+    );
 
     const activityParams: ActivitiesEntityInsertParams = {
       transactionId,
