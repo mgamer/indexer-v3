@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.71.0 (2022-05-19)
+
+
+### Features
+
+* added owner to tokens API ([4fd86d1](https://github.com/reservoirprotocol/indexer-v3/commit/4fd86d12083b4a0b90803e69120e484296397681))
+
 ### 5.70.3 (2022-05-19)
 
 ### 5.70.2 (2022-05-19)
