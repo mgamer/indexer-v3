@@ -126,7 +126,6 @@ export const getUserTokensV2Options: RouteOptions = {
             WHERE b.token_id = t.token_id
             AND b.contract = t.contract
             ${collectionFilter}
-            ORDER BY t.top_buy_value DESC NULLS LAST
           ) t ON TRUE
           JOIN collections c ON c.id = t.collection_id
           ${communityFilter}
