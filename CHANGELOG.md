@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.76.0 (2022-05-20)
+
+
+### Features
+
+* allow remove from community ([8cafecb](https://github.com/reservoirprotocol/indexer-v3/commit/8cafecb30353f1809d84da6f0d9a623e25e0ac85))
+
 ### 5.75.4 (2022-05-20)
 
 ### 5.75.3 (2022-05-20)
