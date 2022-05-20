@@ -137,6 +137,7 @@ if (config.doBackgroundWork) {
                       "o"."valid_between",
                       "o"."source_id",
                       "o"."source_id_int",
+                      "o"."nonce",
                       "o"."is_reservoir"
                     FROM "orders" "o"
                     JOIN "token_sets_tokens" "tst"
