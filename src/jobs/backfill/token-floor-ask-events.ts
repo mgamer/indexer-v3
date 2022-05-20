@@ -56,7 +56,8 @@ if (config.doBackgroundWork) {
             FROM x
             WHERE token_floor_sell_events.id = x.id
             RETURNING x.id
-          `
+          `,
+          { id }
         );
 
         if (results.length) {
