@@ -117,6 +117,7 @@ if (config.doBackgroundWork) {
                     "y"."value",
                     "y"."maker",
                     "y"."valid_between",
+                    "y"."nonce",
                     "y"."source_id",
                     "y"."source_id_int",
                     "y"."is_reservoir"
@@ -136,6 +137,7 @@ if (config.doBackgroundWork) {
                       "o"."valid_between",
                       "o"."source_id",
                       "o"."source_id_int",
+                      "o"."nonce",
                       "o"."is_reservoir"
                     FROM "orders" "o"
                     JOIN "token_sets_tokens" "tst"
@@ -182,6 +184,9 @@ if (config.doBackgroundWork) {
                     "z"."order_id" AS "new_floor_sell_id",
                     "z"."maker" AS "new_floor_sell_maker",
                     "z"."value" AS "new_floor_sell_value",
+                    "z"."valid_between" AS "new_floor_sell_valid_between",
+                    "z"."nonce" AS "new_floor_sell_nonce",
+                    "z"."source_id_int" AS "new_floor_sell_source_id_int",
                     (
                       SELECT "t"."floor_sell_value" FROM "tokens" "t"
                       WHERE "t"."contract" = "z"."contract"
@@ -195,6 +200,9 @@ if (config.doBackgroundWork) {
                   "order_id",
                   "maker",
                   "price",
+                  "source_id_int",
+                  "valid_between",
+                  "nonce",
                   "previous_price",
                   "tx_hash",
                   "tx_timestamp"
@@ -206,6 +214,9 @@ if (config.doBackgroundWork) {
                   "w"."new_floor_sell_id" AS "order_id",
                   "w"."new_floor_sell_maker" AS "maker",
                   "w"."new_floor_sell_value" AS "price",
+                  "w"."new_floor_sell_source_id_int" AS "source_id_int",
+                  "w"."new_floor_sell_valid_between" AS "valid_between",
+                  "w"."new_floor_sell_nonce" AS "nonce",
                   "w"."old_floor_sell_value" AS "previous_price",
                   $/txHash/ AS "tx_hash",
                   $/txTimestamp/ AS "tx_timestamp"
