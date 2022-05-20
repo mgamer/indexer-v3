@@ -20,7 +20,7 @@ const version = "v2";
 export const getTokensFloorAskV2Options: RouteOptions = {
   cache: {
     privacy: "public",
-    expiresIn: 1000,
+    expiresIn: 5000,
   },
   description: "Get updates any time the best price of a token changes",
   notes:
