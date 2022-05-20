@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.75.2 (2022-05-20)
+
+
+### Bug Fixes
+
+* allow owner to be null in the tokens api ([5072be0](https://github.com/reservoirprotocol/indexer-v3/commit/5072be0c731c299bd41bc7b05b0351474b289029))
+
 ### 5.75.1 (2022-05-20)
 
 ## 5.75.0 (2022-05-20)
