@@ -13,6 +13,7 @@ import { TriggerKind } from "@/jobs/order-updates/types";
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
+import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -312,7 +313,7 @@ if (config.doBackgroundWork) {
           }
 
           // Insert a corresponding order event.
-          await idb.none(
+          const orderEventResult = await idb.oneOrNone(
             `
               INSERT INTO order_events (
                 kind,
@@ -358,6 +359,10 @@ if (config.doBackgroundWork) {
                 WHERE orders.id = $/id/
                 LIMIT 1
               )
+              RETURNING
+                contract,
+                token_id,
+                maker
             `,
             {
               id,
@@ -366,6 +371,16 @@ if (config.doBackgroundWork) {
               txTimestamp: trigger.txTimestamp || null,
             }
           );
+
+          if (data.side === "sell") {
+            const updateFloorAskPriceInfo = {
+              contract: fromBuffer(orderEventResult.contract),
+              tokenId: orderEventResult.token_id,
+              owner: fromBuffer(orderEventResult.maker),
+            };
+
+            await updateNftBalanceFloorAskPriceQueue.addToQueue([updateFloorAskPriceInfo]);
+          }
         }
       } catch (error) {
         logger.error(
