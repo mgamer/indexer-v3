@@ -23,7 +23,7 @@ CREATE INDEX "nft_balances_contract_owner_index"
   WHERE ("amount" > 0);
 
 CREATE INDEX "nft_balances_owner_acquired_at_index"
-  ON "nft_balances" ("owner", "acquired_at" DESC NULLS LAST)
+  ON "nft_balances" ("owner", "acquired_at" DESC)
   WHERE ("amount" > 0);
 
 -- https://www.lob.com/blog/supercharge-your-postgresql-performance

@@ -26,7 +26,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async () => {
-      const limit = 1000;
+      const limit = 500;
 
       try {
         const query = `
@@ -35,13 +35,18 @@ if (config.doBackgroundWork) {
                           nft_balances.contract,
                           nft_balances.token_id,
                           nft_balances.owner,
-                          to_timestamp(MAX(nft_transfer_events.timestamp)) AS acquired_at
+                          to_timestamp(y.timestamp) AS acquired_at
                         FROM nft_balances
-                        JOIN nft_transfer_events ON nft_balances.contract = nft_transfer_events.address
-                        AND nft_balances.token_id = nft_transfer_events.token_id
-                        AND nft_balances.owner = nft_transfer_events.to
+                        JOIN LATERAL(
+                            SELECT nft_transfer_events."timestamp"
+                            FROM nft_transfer_events
+                            WHERE nft_transfer_events.address = nft_balances.contract
+                            AND nft_transfer_events.token_id = nft_balances.token_id
+                            AND nft_transfer_events.to = nft_balances.owner
+                            ORDER BY nft_transfer_events.block DESC
+                            LIMIT 1
+                        ) y ON TRUE
                         WHERE nft_balances.acquired_at IS NULL AND nft_balances.amount > 0
-                        GROUP BY nft_balances.contract, nft_balances.token_id, nft_balances.owner
                         LIMIT ${limit}
                     )
                     UPDATE nft_balances AS nb
