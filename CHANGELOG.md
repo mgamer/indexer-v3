@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.75.4 (2022-05-20)
+
+### 5.75.3 (2022-05-20)
+
+### 5.75.2 (2022-05-20)
+
+
+### Bug Fixes
+
+* allow owner to be null in the tokens api ([5072be0](https://github.com/reservoirprotocol/indexer-v3/commit/5072be0c731c299bd41bc7b05b0351474b289029))
+
+### 5.75.1 (2022-05-20)
+
+## 5.75.0 (2022-05-20)
+
+
+### Features
+
+* lower rate limit ([b41fd03](https://github.com/reservoirprotocol/indexer-v3/commit/b41fd03abe6a1f53cd943d4feebf2c1bda48818c))
+
+### 5.74.1 (2022-05-20)
+
+## 5.74.0 (2022-05-20)
+
+
+### Features
+
+* lower rate limit ([715e6ae](https://github.com/reservoirprotocol/indexer-v3/commit/715e6ae9cd058f48d11ce65ba5b38f913d60ccb2))
+
+## 5.73.0 (2022-05-19)
+
+
+### Features
+
+* stop full collections tokens refresh ([3c3aeb6](https://github.com/reservoirprotocol/indexer-v3/commit/3c3aeb67f0f6651ce94aa85ce69994075389da1f))
+
 ## 5.72.0 (2022-05-19)
 
 
