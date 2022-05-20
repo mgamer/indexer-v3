@@ -78,17 +78,20 @@ export const postTokensRefreshV1Options: RouteOptions = {
       const collection = await Collections.getByContractAndTokenId(contract, tokenId);
 
       if (collection) {
-        await metadataIndexFetch.addToQueue([
-          {
-            kind: "single-token",
-            data: {
-              method: "opensea",
-              contract,
-              tokenId,
-              collection: collection.id,
+        await metadataIndexFetch.addToQueue(
+          [
+            {
+              kind: "single-token",
+              data: {
+                method: "opensea",
+                contract,
+                tokenId,
+                collection: collection.id,
+              },
             },
-          },
-        ]);
+          ],
+          true
+        );
       }
 
       // Revalidate the token orders

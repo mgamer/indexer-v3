@@ -11,6 +11,7 @@ import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
 import { Collections } from "@/models/collections";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
+import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as Boom from "@hapi/boom";
 
 const version = "v1";
@@ -47,7 +48,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const payload = request.payload as any;
-    let refreshCoolDownMin = 60; // How many minutes between each refresh
+    let refreshCoolDownMin = 60 * 24; // How many minutes between each refresh
 
     try {
       const collection = await Collections.getById(payload.collection);
@@ -98,18 +99,18 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       );
 
       // Refresh the collection tokens metadata
-      // await metadataIndexFetch.addToQueue(
-      //   [
-      //     {
-      //       kind: "full-collection",
-      //       data: {
-      //         method: "opensea",
-      //         collection: collection.id,
-      //       },
-      //     },
-      //   ],
-      //   true
-      // );
+      await metadataIndexFetch.addToQueue(
+        [
+          {
+            kind: "full-collection",
+            data: {
+              method: "opensea",
+              collection: collection.id,
+            },
+          },
+        ],
+        true
+      );
 
       // Refresh the collection metadata
       await collectionUpdatesMetadata.addToQueue(collection.contract);
