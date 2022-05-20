@@ -9,9 +9,7 @@ import { redis, redlock } from "@/common/redis";
 import { config } from "@/config/index";
 
 import { idb } from "@/common/db";
-import * as resyncAttributeCache from "@/jobs/update-attribute/resync-attribute-cache";
 import { fromBuffer, toBuffer } from "@/common/utils";
-import { UpdateFloorAskPriceInfo } from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
 import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
 
 const QUEUE_NAME = "nft-balance-updates-backill-floor-ask-price-queue";
@@ -37,7 +35,9 @@ if (config.doBackgroundWork) {
       let continuationFilter = "";
 
       if (cursor) {
-        continuationFilter = `AND (maker, token_set_id) > ('${cursor.maker}, ${cursor.tokenSetId})'`;
+        continuationFilter = `AND (maker, token_set_id) > ('${toBuffer(cursor.maker)}', '${
+          cursor.tokenSetId
+        }')`;
       }
 
       const sellOrders = await idb.manyOrNone(
