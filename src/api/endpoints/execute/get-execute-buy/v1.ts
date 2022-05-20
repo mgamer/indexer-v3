@@ -114,26 +114,24 @@ export const getExecuteBuyV1Options: RouteOptions = {
           const bestOrderResult = await edb.oneOrNone(
             `
               SELECT
-                "o"."id",
-                "o"."kind",
-                "c"."kind" AS "token_kind",
-                "o"."token_set_id",
-                "o"."price",
-                "o"."raw_data",
-                "o"."source_id",
-                "o"."maker"
-              FROM "tokens" "t"
-              JOIN "orders" "o"
-                ON "t"."floor_sell_id" = "o"."id"
-              JOIN "contracts" "c"
-                ON "t"."contract" = "c"."address"
-              WHERE "t"."contract" = $/contract/
-                AND "t"."token_id" = $/tokenId/
+                orders.id,
+                orders.kind,
+                contracts.kind AS token_kind,
+                orders.price,
+                orders.raw_data,
+                orders.source_id,
+                orders.maker
+              FROM orders
+              JOIN contracts
+                ON orders.contract = contracts.address
+              WHERE orders.token_set_id = $/tokenSetId/
+                AND orders.side = 'sell'
+                AND orders.fillability_status = 'fillable'
+                AND orders.approval_status = 'approved'
+              ORDER BY orders.value
+              LIMIT 1
             `,
-            {
-              contract: toBuffer(contract),
-              tokenId,
-            }
+            { tokenSetId: `token:${contract}:${tokenId}` }
           );
 
           // Return early in case no listing is available.

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import _ from "lodash";
@@ -31,6 +33,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
+      const tokenAttributeCounter = {};
       const { collection, contract, tokenId, name, description, imageUrl, mediaUrl, attributes } =
         job.data as TokenMetadataInfo;
 
@@ -77,7 +80,7 @@ if (config.doBackgroundWork) {
           `DELETE FROM token_attributes
                  WHERE contract = $/contract/
                  AND token_id = $/tokenId/
-                 RETURNING key, value`,
+                 RETURNING key, value, attribute_id`,
           {
             contract: toBuffer(contract),
             tokenId,
@@ -88,6 +91,7 @@ if (config.doBackgroundWork) {
         _.forEach(attributesToRefresh, (attribute) => {
           resyncAttributeKeyCounts.addToQueue(collection, attribute.key);
           resyncAttributeValueCounts.addToQueue(collection, attribute.key, attribute.value);
+          (tokenAttributeCounter as any)[attribute.attribute_id] = -1;
         });
 
         // Token attributes
@@ -231,40 +235,37 @@ if (config.doBackgroundWork) {
           let sampleImageUpdate = "";
           if (imageUrl) {
             sampleImageUpdate = `
-            ,sample_images = CASE WHEN (sample_images IS NULL OR array_length(sample_images, 1) < 4) AND array_position(sample_images, $/image/) IS NULL
-                    THEN array_prepend($/image/, sample_images)
-                 WHEN (array_length(sample_images, 1) >= 4) AND array_position(sample_images, $/image/) IS NULL
-                    THEN array_prepend($/image/, array_remove(sample_images, sample_images[4]))
-                 ELSE sample_images
-            END`;
+              UPDATE attributes
+              SET sample_images = CASE WHEN (sample_images IS NULL OR array_length(sample_images, 1) < 4) AND array_position(sample_images, $/image/) IS NULL
+                      THEN array_prepend($/image/, sample_images)
+                   WHEN (array_length(sample_images, 1) >= 4) AND array_position(sample_images, $/image/) IS NULL
+                      THEN array_prepend($/image/, array_remove(sample_images, sample_images[4]))
+                   ELSE sample_images
+              END
+              WHERE id = $/attributeId/;`;
           }
 
           // Associate the attribute with the token
           await idb.none(
             `
-              WITH "x" AS (
-                INSERT INTO "token_attributes" (
-                  "contract",
-                  "token_id",
-                  "attribute_id",
-                  "collection_id",
-                  "key",
-                  "value"
-                ) VALUES (
-                  $/contract/,
-                  $/tokenId/,
-                  $/attributeId/,
-                  $/collection/,
-                  $/key/,
-                  $/value/
-                )
-                ON CONFLICT DO NOTHING
-                RETURNING 1
+              INSERT INTO "token_attributes" (
+                "contract",
+                "token_id",
+                "attribute_id",
+                "collection_id",
+                "key",
+                "value"
+              ) VALUES (
+                $/contract/,
+                $/tokenId/,
+                $/attributeId/,
+                $/collection/,
+                $/key/,
+                $/value/
               )
-              UPDATE attributes
-              SET token_count = token_count + (SELECT COUNT(*) FROM "x")
-                  ${sampleImageUpdate}
-              WHERE id = $/attributeId/
+              ON CONFLICT DO NOTHING;
+              
+              ${sampleImageUpdate}
             `,
             {
               contract: toBuffer(contract),
@@ -276,6 +277,32 @@ if (config.doBackgroundWork) {
               value: String(value),
             }
           );
+
+          if (_.has(tokenAttributeCounter, attributeResult.id)) {
+            ++(tokenAttributeCounter as any)[attributeResult.id];
+          } else {
+            (tokenAttributeCounter as any)[attributeResult.id] = 1;
+          }
+        }
+
+        // Update the attributes token count
+        const replacementParams = {};
+        let updateCountsString = "";
+
+        _.forEach(tokenAttributeCounter, (count, attributeId) => {
+          (replacementParams as any)[`${attributeId}`] = count;
+          updateCountsString += `(${attributeId}, $/${attributeId}/),`;
+        });
+
+        updateCountsString = _.trimEnd(updateCountsString, ",");
+
+        if (updateCountsString !== "") {
+          const updateQuery = `UPDATE attributes
+                             SET token_count = token_count + x.countColumn
+                             FROM (VALUES ${updateCountsString}) AS x(idColumn, countColumn)
+                             WHERE x.idColumn = attributes.id`;
+
+          await idb.none(updateQuery, replacementParams);
         }
 
         // Mark the token as having metadata indexed.

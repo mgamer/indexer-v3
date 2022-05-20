@@ -5,10 +5,10 @@ import _ from "lodash";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
+import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
 import { Collections } from "@/models/collections";
-import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
 import * as Boom from "@hapi/boom";
@@ -58,8 +58,8 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       }
 
       // For big collections allow refresh once a day
-      if (collection.tokenCount > 500000) {
-        refreshCoolDownMin = 60 * 24;
+      if (collection.tokenCount > 30000) {
+        refreshCoolDownMin = 60 * 48;
       }
 
       // Check when the last sync was performed
@@ -77,19 +77,39 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       // Refresh contract orders from OpenSea
       await OpenseaIndexerApi.fastContractSync(collection.contract);
 
-      // Refresh the collection tokens metadata
-      await metadataIndexFetch.addToQueue(
-        [
-          {
-            kind: "full-collection",
-            data: {
-              method: "opensea",
-              collection: collection.id,
-            },
-          },
-        ],
-        true
+      // Update the collection id of any missing tokens
+      await edb.none(
+        `
+          WITH x AS (
+            SELECT
+              collections.contract,
+              collections.token_id_range
+            FROM collections
+            WHERE collections.id = $/collection/
+          )
+          UPDATE tokens SET
+            collection_id = $/collection/
+          FROM x
+          WHERE tokens.contract = x.contract
+            AND tokens.token_id <@ x.token_id_range
+            AND tokens.collection_id IS NULL
+        `,
+        { collection: payload.collection }
       );
+
+      // Refresh the collection tokens metadata
+      // await metadataIndexFetch.addToQueue(
+      //   [
+      //     {
+      //       kind: "full-collection",
+      //       data: {
+      //         method: "opensea",
+      //         collection: collection.id,
+      //       },
+      //     },
+      //   ],
+      //   true
+      // );
 
       // Refresh the collection metadata
       await collectionUpdatesMetadata.addToQueue(collection.contract);
