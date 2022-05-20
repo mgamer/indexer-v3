@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.77.0 (2022-05-20)
+
+
+### Features
+
+* fix collection filter for user tokens ([8a847ab](https://github.com/reservoirprotocol/indexer-v3/commit/8a847ab8bf18c7ab27334ef0814e24e57b2d9848))
+
 ## 5.76.0 (2022-05-20)
 
 
