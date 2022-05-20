@@ -2,6 +2,7 @@
 
 import "@/jobs/arweave-relay";
 import "@/jobs/arweave-sync";
+import "@/jobs/backfill";
 import "@/jobs/cache-check";
 import "@/jobs/collection-updates";
 import "@/jobs/events-sync";
@@ -19,6 +20,7 @@ import "@/jobs/collections-refresh";
 
 import * as arweaveSyncBackfill from "@/jobs/arweave-sync/backfill-queue";
 import * as arweaveSyncRealtime from "@/jobs/arweave-sync/realtime-queue";
+import * as backfillQueue from "@/jobs/backfill/token-floor-ask-events";
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
@@ -51,6 +53,7 @@ import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
   arweaveSyncRealtime.queue,
+  backfillQueue.queue,
   collectionUpdatesFloorAsk.queue,
   collectionUpdatesMetadata.queue,
   eventsSyncBackfill.queue,
