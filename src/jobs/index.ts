@@ -49,6 +49,8 @@ import * as resyncOrdersSource from "@/jobs/orderbook/resync-orders-source";
 import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refresh";
 import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
 import * as backfillAcquiredAtQueue from "@/jobs/nft-balance-updates/backfill-acquired-at-queue";
+import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
+import * as backfillNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/backfill-floor-ask-price-queue";
 
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
@@ -82,4 +84,6 @@ export const allJobQueues = [
   collectionsRefresh.queue,
   collectionsRefreshCache.queue,
   backfillAcquiredAtQueue.queue,
+  updateNftBalanceFloorAskPriceQueue.queue,
+  backfillNftBalanceFloorAskPriceQueue.queue,
 ];
