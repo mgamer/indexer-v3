@@ -12,7 +12,7 @@ import { idb } from "@/common/db";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
 
-const QUEUE_NAME = "nft-balance-updates-backill-floor-ask-price-queue";
+const QUEUE_NAME = "nft-balance-updates-backfill-floor-ask-price-queue";
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
