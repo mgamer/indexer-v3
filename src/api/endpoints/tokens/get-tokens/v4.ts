@@ -103,7 +103,7 @@ export const getTokensV4Options: RouteOptions = {
           source: Joi.string().allow(null, ""),
           topBidValue: Joi.number().unsafe().allow(null),
           floorAskPrice: Joi.number().unsafe().allow(null),
-          owner: Joi.string(),
+          owner: Joi.string().allow(null, ""),
         })
       ),
       continuation: Joi.string().pattern(base64Regex).allow(null),
@@ -374,7 +374,7 @@ export const getTokensV4Options: RouteOptions = {
           source: source?.name,
           floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
           topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-          owner: fromBuffer(r.owner),
+          owner: r.owner ? fromBuffer(r.owner) : null,
         };
       });
 
