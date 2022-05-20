@@ -185,7 +185,7 @@ if (config.doBackgroundWork) {
                     "z"."value" AS "new_floor_sell_value",
                     "z"."valid_between" AS "new_floor_sell_valid_between",
                     "z"."nonce" AS "new_floor_sell_nonce",
-                    "z"."source_id_int" AS "new_floor_sell_source_id_int"
+                    "z"."source_id_int" AS "new_floor_sell_source_id_int",
                     (
                       SELECT "t"."floor_sell_value" FROM "tokens" "t"
                       WHERE "t"."contract" = "z"."contract"
