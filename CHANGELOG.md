@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.75.0 (2022-05-20)
+
+
+### Features
+
+* lower rate limit ([b41fd03](https://github.com/reservoirprotocol/indexer-v3/commit/b41fd03abe6a1f53cd943d4feebf2c1bda48818c))
+
 ### 5.74.1 (2022-05-20)
 
 ## 5.74.0 (2022-05-20)
