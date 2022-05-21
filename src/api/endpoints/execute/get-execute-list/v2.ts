@@ -10,6 +10,7 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
+import * as commonHelpers from "@/orderbook/orders/common/helpers";
 
 // LooksRare
 import * as looksRareSellToken from "@/orderbook/orders/looks-rare/build/sell/token";
@@ -511,15 +512,19 @@ export const getExecuteListV2Options: RouteOptions = {
               }
 
               case "no-approval": {
+                const contractKind = await commonHelpers.getContractKind(contract);
+                if (!contractKind) {
+                  throw Boom.internal("Missing contract kind");
+                }
+
                 // Generate an approval transaction.
-                const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
                 approvalTx = (
-                  kind === "erc721"
+                  contractKind === "erc721"
                     ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.collection)
                     : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.collection)
                 ).approveTransaction(
                   query.maker,
-                  kind === "erc721"
+                  contractKind === "erc721"
                     ? Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]
                     : Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId]
                 );
@@ -568,6 +573,7 @@ export const getExecuteListV2Options: RouteOptions = {
             ],
             query: {
               ...query,
+              listingTime: order.params.startTime,
               expirationTime: order.params.endTime,
               nonce: order.params.nonce,
             },
