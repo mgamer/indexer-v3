@@ -573,6 +573,7 @@ export const getExecuteListV2Options: RouteOptions = {
             ],
             query: {
               ...query,
+              listingTime: order.params.startTime,
               expirationTime: order.params.endTime,
               nonce: order.params.nonce,
             },
