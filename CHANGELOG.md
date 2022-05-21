@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 5.78.0 (2022-05-20)
+
+
+### Features
+
+* prioritize single token refresh ([6203ddd](https://github.com/reservoirprotocol/indexer-v3/commit/6203ddd862e9a49ad071d9011cadef8cbc8b8e30))
+
+## 5.77.0 (2022-05-20)
+
+
+### Features
+
+* fix collection filter for user tokens ([8a847ab](https://github.com/reservoirprotocol/indexer-v3/commit/8a847ab8bf18c7ab27334ef0814e24e57b2d9848))
+
+## 5.76.0 (2022-05-20)
+
+
+### Features
+
+* allow remove from community ([8cafecb](https://github.com/reservoirprotocol/indexer-v3/commit/8cafecb30353f1809d84da6f0d9a623e25e0ac85))
+
+### 5.75.4 (2022-05-20)
+
+### 5.75.3 (2022-05-20)
+
+### 5.75.2 (2022-05-20)
+
+
+### Bug Fixes
+
+* allow owner to be null in the tokens api ([5072be0](https://github.com/reservoirprotocol/indexer-v3/commit/5072be0c731c299bd41bc7b05b0351474b289029))
+
+### 5.75.1 (2022-05-20)
+
+## 5.75.0 (2022-05-20)
+
+
+### Features
+
+* lower rate limit ([b41fd03](https://github.com/reservoirprotocol/indexer-v3/commit/b41fd03abe6a1f53cd943d4feebf2c1bda48818c))
+
 ### 5.74.1 (2022-05-20)
 
 ## 5.74.0 (2022-05-20)
