@@ -280,7 +280,7 @@ export const postOrderV2Options: RouteOptions = {
                   {
                     headers: {
                       "Content-Type": "application/json",
-                      "X-Api-Key": String(process.env.LOOKSRARE_API_KEY),
+                      "X-Looks-Api-Key": String(process.env.LOOKSRARE_API_KEY),
                     },
                   }
                 )
