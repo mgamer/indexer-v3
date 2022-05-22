@@ -111,4 +111,4 @@ if (config.doBackgroundWork) {
 }
 
 export const addToQueue = async (block: number, delay: number) =>
-  queue.add(`${block}-${delay}`, { block }, { jobId: block.toString(), delay });
+  queue.add(`${block}-${delay}`, { block }, { jobId: `${block}-${delay}`, delay });
