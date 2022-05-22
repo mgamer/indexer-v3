@@ -97,7 +97,7 @@ export const getUserTokensV2Options: RouteOptions = {
     let collectionFilter = "";
     if (query.collection) {
       (params as any).collection = query.collection;
-      collectionFilter = `AND t.collection_id = $/collection/`;
+      collectionFilter = `AND c.id = $/collection/`;
     }
 
     try {
@@ -125,11 +125,10 @@ export const getUserTokensV2Options: RouteOptions = {
             FROM tokens t
             WHERE b.token_id = t.token_id
             AND b.contract = t.contract
-            ${collectionFilter}
-            ORDER BY t.top_buy_value DESC NULLS LAST
           ) t ON TRUE
           JOIN collections c ON c.id = t.collection_id
           ${communityFilter}
+          ${collectionFilter}
         OFFSET $/offset/
         LIMIT $/limit/
       `;

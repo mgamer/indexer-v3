@@ -103,6 +103,7 @@ export const getTokensV4Options: RouteOptions = {
           source: Joi.string().allow(null, ""),
           topBidValue: Joi.number().unsafe().allow(null),
           floorAskPrice: Joi.number().unsafe().allow(null),
+          owner: Joi.string().allow(null, ""),
         })
       ),
       continuation: Joi.string().pattern(base64Regex).allow(null),
@@ -128,7 +129,15 @@ export const getTokensV4Options: RouteOptions = {
           ("c".metadata ->> 'imageUrl')::TEXT AS "collection_image",
           "c"."slug",
           "t"."floor_sell_value",
-          "t"."top_buy_value"
+          "t"."top_buy_value",
+          (
+            SELECT owner
+            FROM "nft_balances" "nb"
+            WHERE nb.contract = "t"."contract"
+            AND nb.token_id = "t"."token_id"
+            AND nb.amount > 0
+            LIMIT 1
+          ) AS "owner"
         FROM "tokens" "t"
         JOIN "collections" "c"
           ON "t"."collection_id" = "c"."id"
@@ -365,6 +374,7 @@ export const getTokensV4Options: RouteOptions = {
           source: source?.name,
           floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
           topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+          owner: r.owner ? fromBuffer(r.owner) : null,
         };
       });
 

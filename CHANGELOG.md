@@ -2,6 +2,146 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.78.8 (2022-05-22)
+
+### 5.78.7 (2022-05-22)
+
+### 5.78.6 (2022-05-22)
+
+### 5.78.5 (2022-05-22)
+
+### 5.78.4 (2022-05-22)
+
+
+### Bug Fixes
+
+* order invalidation sql ([95a6d6b](https://github.com/reservoirprotocol/indexer-v3/commit/95a6d6bb69b852bc14925b39f867b9243747f384))
+
+### 5.78.3 (2022-05-21)
+
+### 5.78.2 (2022-05-21)
+
+### 5.78.1 (2022-05-21)
+
+## 5.78.0 (2022-05-20)
+
+
+### Features
+
+* prioritize single token refresh ([6203ddd](https://github.com/reservoirprotocol/indexer-v3/commit/6203ddd862e9a49ad071d9011cadef8cbc8b8e30))
+
+## 5.77.0 (2022-05-20)
+
+
+### Features
+
+* fix collection filter for user tokens ([8a847ab](https://github.com/reservoirprotocol/indexer-v3/commit/8a847ab8bf18c7ab27334ef0814e24e57b2d9848))
+
+## 5.76.0 (2022-05-20)
+
+
+### Features
+
+* allow remove from community ([8cafecb](https://github.com/reservoirprotocol/indexer-v3/commit/8cafecb30353f1809d84da6f0d9a623e25e0ac85))
+
+### 5.75.4 (2022-05-20)
+
+### 5.75.3 (2022-05-20)
+
+### 5.75.2 (2022-05-20)
+
+
+### Bug Fixes
+
+* allow owner to be null in the tokens api ([5072be0](https://github.com/reservoirprotocol/indexer-v3/commit/5072be0c731c299bd41bc7b05b0351474b289029))
+
+### 5.75.1 (2022-05-20)
+
+## 5.75.0 (2022-05-20)
+
+
+### Features
+
+* lower rate limit ([b41fd03](https://github.com/reservoirprotocol/indexer-v3/commit/b41fd03abe6a1f53cd943d4feebf2c1bda48818c))
+
+### 5.74.1 (2022-05-20)
+
+## 5.74.0 (2022-05-20)
+
+
+### Features
+
+* lower rate limit ([715e6ae](https://github.com/reservoirprotocol/indexer-v3/commit/715e6ae9cd058f48d11ce65ba5b38f913d60ccb2))
+
+## 5.73.0 (2022-05-19)
+
+
+### Features
+
+* stop full collections tokens refresh ([3c3aeb6](https://github.com/reservoirprotocol/indexer-v3/commit/3c3aeb67f0f6651ce94aa85ce69994075389da1f))
+
+## 5.72.0 (2022-05-19)
+
+
+### Features
+
+* update limit on large collections refresh ([6644f4a](https://github.com/reservoirprotocol/indexer-v3/commit/6644f4a8e70321882854b19c985a0c456604d109))
+
+## 5.71.0 (2022-05-19)
+
+
+### Features
+
+* added owner to tokens API ([4fd86d1](https://github.com/reservoirprotocol/indexer-v3/commit/4fd86d12083b4a0b90803e69120e484296397681))
+
+### 5.70.3 (2022-05-19)
+
+### 5.70.2 (2022-05-19)
+
+### 5.70.1 (2022-05-19)
+
+## 5.70.0 (2022-05-19)
+
+
+### Features
+
+* check for returned code ([087012a](https://github.com/reservoirprotocol/indexer-v3/commit/087012afdd1c3e191db0bd84e26efacda7a1b195))
+
+### 5.69.2 (2022-05-19)
+
+### 5.69.1 (2022-05-19)
+
+## 5.69.0 (2022-05-19)
+
+
+### Features
+
+* sync metadata requests ([98112a9](https://github.com/reservoirprotocol/indexer-v3/commit/98112a936fb86487037da88e5ebe69808205019c))
+
+### 5.68.1 (2022-05-18)
+
+## 5.68.0 (2022-05-18)
+
+
+### Features
+
+* fix metadata write query ([d4a4021](https://github.com/reservoirprotocol/indexer-v3/commit/d4a40210af13e06d25f73b0862dc59fd0617b42a))
+
+### 5.67.8 (2022-05-18)
+
+### 5.67.7 (2022-05-18)
+
+### 5.67.6 (2022-05-18)
+
+### 5.67.5 (2022-05-18)
+
+### 5.67.4 (2022-05-18)
+
+
+### Bug Fixes
+
+* skip update when no attributes are present ([1f1633e](https://github.com/reservoirprotocol/indexer-v3/commit/1f1633ee7c6b34ff6b0b6a294d82791a6f44befe))
+
 ### 5.67.3 (2022-05-17)
 
 ### 5.67.2 (2022-05-17)

@@ -49,7 +49,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const payload = request.payload as any;
-    let refreshCoolDownMin = 60; // How many minutes between each refresh
+    let refreshCoolDownMin = 60 * 24; // How many minutes between each refresh
 
     try {
       const collection = await Collections.getById(payload.collection);
@@ -60,8 +60,8 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       }
 
       // For big collections allow refresh once a day
-      if (collection.tokenCount > 500000) {
-        refreshCoolDownMin = 60 * 24;
+      if (collection.tokenCount > 30000) {
+        refreshCoolDownMin = 60 * 48;
       }
 
       // Check when the last sync was performed

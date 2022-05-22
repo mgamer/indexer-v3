@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import _ from "lodash";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { PgPromiseQuery, idb, pgp } from "@/common/db";
@@ -111,17 +114,20 @@ if (config.doBackgroundWork) {
           });
 
           if (collection.index_metadata) {
-            await metadataIndexFetch.addToQueue([
-              {
-                kind: "single-token",
-                data: {
-                  method: "opensea",
-                  contract,
-                  tokenId,
-                  collection: collection.id,
+            await metadataIndexFetch.addToQueue(
+              [
+                {
+                  kind: "single-token",
+                  data: {
+                    method: "opensea",
+                    contract,
+                    tokenId,
+                    collection: collection.id,
+                  },
                 },
-              },
-            ]);
+              ],
+              true
+            );
           }
         } else {
           // Otherwise, we fetch the collection metadata from upstream.
@@ -200,7 +206,10 @@ if (config.doBackgroundWork) {
           QUEUE_NAME,
           `Failed to process mint info ${JSON.stringify(job.data)}: ${error}`
         );
-        throw error;
+
+        if (_.has(error, "code") && (error as any).code != 404) {
+          throw error;
+        }
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }

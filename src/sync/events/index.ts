@@ -1163,6 +1163,9 @@ export const syncEvents = async (
         es.fills.addEvents(fillEvents),
         es.fills.addEventsZeroExV4(fillEventsZeroExV4),
         es.fills.addEventsFoundation(fillEventsFoundation),
+      ]);
+
+      await Promise.all([
         es.nonceCancels.addEvents(nonceCancelEvents, backfill),
         es.bulkCancels.addEvents(bulkCancelEvents, backfill),
         es.cancels.addEvents(cancelEvents),

@@ -242,31 +242,28 @@ if (config.doBackgroundWork) {
                       THEN array_prepend($/image/, array_remove(sample_images, sample_images[4]))
                    ELSE sample_images
               END
-              WHERE id = $/attributeId/ `;
+              WHERE id = $/attributeId/;`;
           }
 
           // Associate the attribute with the token
           await idb.none(
             `
-              WITH "x" AS (
-                INSERT INTO "token_attributes" (
-                  "contract",
-                  "token_id",
-                  "attribute_id",
-                  "collection_id",
-                  "key",
-                  "value"
-                ) VALUES (
-                  $/contract/,
-                  $/tokenId/,
-                  $/attributeId/,
-                  $/collection/,
-                  $/key/,
-                  $/value/
-                )
-                ON CONFLICT DO NOTHING
-                RETURNING 1
+              INSERT INTO "token_attributes" (
+                "contract",
+                "token_id",
+                "attribute_id",
+                "collection_id",
+                "key",
+                "value"
+              ) VALUES (
+                $/contract/,
+                $/tokenId/,
+                $/attributeId/,
+                $/collection/,
+                $/key/,
+                $/value/
               )
+              ON CONFLICT DO NOTHING;
               
               ${sampleImageUpdate}
             `,
