@@ -312,7 +312,11 @@ if (config.doBackgroundWork) {
           }
 
           case "contract": {
+            // Due to missing indexes, this will only fix currently valid orders
+            // and not all potentially valid orders as the other cases above do.
+
             for (const side of ["sell", "buy"]) {
+              // TODO: Use keyset pagination to be able to handle large amounts of orders.
               const result = await idb.manyOrNone(
                 `
                   SELECT "o"."id" FROM "orders" "o"
