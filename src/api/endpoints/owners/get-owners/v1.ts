@@ -136,7 +136,7 @@ export const getOwnersV1Options: RouteOptions = {
           WHERE ${nftBalancesFilter}
           AND amount > 0
           GROUP BY owner
-          ORDER BY token_count DESC
+          ORDER BY token_count DESC, owner
           OFFSET ${query.offset} LIMIT ${query.limit}
         )
         
