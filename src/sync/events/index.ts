@@ -14,6 +14,7 @@ import { EventDataKind, getEventData } from "@/events-sync/data";
 import * as es from "@/events-sync/storage";
 import { parseEvent } from "@/events-sync/parser";
 import * as eventsSync from "@/jobs/events-sync/index";
+import * as blockCheck from "@/jobs/events-sync/block-check-queue";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
@@ -1224,6 +1225,19 @@ export const syncEvents = async (
             hash,
             block,
           }))
+        );
+
+        // Put all fetched blocks on a queue for handling block reorgs.
+        // Recheck each block in 30s, 60s, 5m and 10m.
+        await Promise.all(
+          Object.entries(blockHashToNumber).map(async ([, block]) =>
+            Promise.all([
+              blockCheck.addToQueue(block, 30 * 10000),
+              blockCheck.addToQueue(block, 60 * 10000),
+              blockCheck.addToQueue(block, 5 * 60 * 10000),
+              blockCheck.addToQueue(block, 10 * 60 * 10000),
+            ])
+          )
         );
       }
     });
