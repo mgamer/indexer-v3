@@ -100,7 +100,7 @@ export const getUserTokensV2Options: RouteOptions = {
     let collectionFilter = "";
     if (query.collection) {
       (params as any).collection = query.collection;
-      collectionFilter = `AND t.collection_id = $/collection/`;
+      collectionFilter = `AND c.id = $/collection/`;
     }
 
     let sortByFilter = "";
@@ -138,7 +138,6 @@ export const getUserTokensV2Options: RouteOptions = {
             FROM tokens t
             WHERE b.token_id = t.token_id
             AND b.contract = t.contract
-            ${collectionFilter}
           ) t ON TRUE
           JOIN collections c ON c.id = t.collection_id
           ${communityFilter}

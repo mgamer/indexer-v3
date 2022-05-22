@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.78.8 (2022-05-22)
+
+### 5.78.7 (2022-05-22)
+
+### 5.78.6 (2022-05-22)
+
+### 5.78.5 (2022-05-22)
+
+### 5.78.4 (2022-05-22)
+
+
+### Bug Fixes
+
+* order invalidation sql ([95a6d6b](https://github.com/reservoirprotocol/indexer-v3/commit/95a6d6bb69b852bc14925b39f867b9243747f384))
+
+### 5.78.3 (2022-05-21)
+
+### 5.78.2 (2022-05-21)
+
+### 5.78.1 (2022-05-21)
+
+## 5.78.0 (2022-05-20)
+
+
+### Features
+
+* prioritize single token refresh ([6203ddd](https://github.com/reservoirprotocol/indexer-v3/commit/6203ddd862e9a49ad071d9011cadef8cbc8b8e30))
+
+## 5.77.0 (2022-05-20)
+
+
+### Features
+
+* fix collection filter for user tokens ([8a847ab](https://github.com/reservoirprotocol/indexer-v3/commit/8a847ab8bf18c7ab27334ef0814e24e57b2d9848))
+
+## 5.76.0 (2022-05-20)
+
+
+### Features
+
+* allow remove from community ([8cafecb](https://github.com/reservoirprotocol/indexer-v3/commit/8cafecb30353f1809d84da6f0d9a623e25e0ac85))
+
 ### 5.75.4 (2022-05-20)
 
 ### 5.75.3 (2022-05-20)
