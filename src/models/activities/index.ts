@@ -54,7 +54,7 @@ export class Activities {
       contract: toBuffer(activity.contract),
       collectionId: activity.collectionId,
       tokenId: activity.tokenId,
-      address: toBuffer(activity.fromAddress),
+      address: toBuffer(activity.address),
       fromAddress: toBuffer(activity.fromAddress),
       toAddress: toBuffer(activity.toAddress),
       price: activity.price,

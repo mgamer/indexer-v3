@@ -35,14 +35,11 @@ export class SaleActivity {
       metadata: activity.metadata,
     };
 
-    logger.info("sale-activity", `Add ${JSON.stringify(activityParams)}`);
-
     // One record for the from address
     await Activities.add(activityParams);
 
     // One record for the to address
     activityParams.address = activity.toAddress;
-    logger.info("sale-activity", `Add ${JSON.stringify(activityParams)}`);
     await Activities.add(activityParams);
   }
 }
