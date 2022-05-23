@@ -141,6 +141,7 @@ export const getUserTokensV2Options: RouteOptions = {
           ) t ON TRUE
           JOIN collections c ON c.id = t.collection_id
           ${communityFilter}
+          ${collectionFilter}
         ${sortByFilter}
         OFFSET $/offset/
         LIMIT $/limit/

@@ -1218,14 +1218,14 @@ export const syncEvents = async (
         ]);
 
         // Put all fetched blocks on a queue for handling block reorgs
-        // (recheck each block in 30s, 60s, 5m and 10m).
+        // (recheck each block in 1m, 5m, 10m and 60m).
         await Promise.all(
           Object.entries(blockHashToNumber).map(async ([, block]) =>
             Promise.all([
-              blockCheck.addToQueue(block, 30 * 10000),
               blockCheck.addToQueue(block, 60 * 10000),
               blockCheck.addToQueue(block, 5 * 60 * 10000),
               blockCheck.addToQueue(block, 10 * 60 * 10000),
+              blockCheck.addToQueue(block, 60 * 60 * 10000),
             ])
           )
         );
