@@ -21,6 +21,7 @@ export class SaleActivity {
       activity.metadata?.batchIndex
     );
 
+    // Insert 2 records one for each side of the sale
     const activityParams: ActivitiesEntityInsertParams = {
       transactionId,
       contract: activity.contract,
@@ -34,6 +35,11 @@ export class SaleActivity {
       metadata: activity.metadata,
     };
 
+    // One record for the from address
+    await Activities.add(activityParams);
+
+    // One record for the to address
+    activityParams.address = activity.toAddress;
     await Activities.add(activityParams);
   }
 }
