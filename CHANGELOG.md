@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.78.9 (2022-05-22)
+
+### 5.78.8 (2022-05-22)
+
+### 5.78.7 (2022-05-22)
+
+### 5.78.6 (2022-05-22)
+
+### 5.78.5 (2022-05-22)
+
+### 5.78.4 (2022-05-22)
+
+
+### Bug Fixes
+
+* order invalidation sql ([95a6d6b](https://github.com/reservoirprotocol/indexer-v3/commit/95a6d6bb69b852bc14925b39f867b9243747f384))
+
+### 5.78.3 (2022-05-21)
+
+### 5.78.2 (2022-05-21)
+
+### 5.78.1 (2022-05-21)
+
 ## 5.78.0 (2022-05-20)
 
 
