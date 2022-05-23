@@ -1,7 +1,13 @@
-import { ActivitiesEntityInsertParams, ActivityType } from "@/models/activities/activities-entity";
+import _ from "lodash";
+import crypto from "crypto";
 import { idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
-import crypto from "crypto";
+import {
+  ActivitiesEntity,
+  ActivitiesEntityInsertParams,
+  ActivitiesEntityParams,
+  ActivityType,
+} from "@/models/activities/activities-entity";
 
 export class Activities {
   public static getTransactionId(transactionHash?: string, logIndex?: number, batchIndex?: number) {
@@ -48,12 +54,43 @@ export class Activities {
       contract: toBuffer(activity.contract),
       collectionId: activity.collectionId,
       tokenId: activity.tokenId,
-      address: activity.fromAddress,
-      fromAddress: activity.fromAddress,
-      toAddress: activity.toAddress,
+      address: toBuffer(activity.fromAddress),
+      fromAddress: toBuffer(activity.fromAddress),
+      toAddress: toBuffer(activity.toAddress),
       price: activity.price,
       amount: activity.amount,
       metadata: activity.metadata,
     });
+  }
+
+  public static async getCollectionActivities(
+    collectionId: string,
+    createdBefore: null | string = null,
+    limit = 20
+  ) {
+    let continuation = "";
+    if (!_.isNull(createdBefore)) {
+      continuation = `AND created_at < $/createdBefore/`;
+    }
+
+    const activities: ActivitiesEntityParams[] | null = await idb.manyOrNone(
+      `SELECT *
+             FROM activities
+             WHERE collection_id = $/collectionId/
+             ${continuation}
+             ORDER BY created_at DESC
+             LIMIT $/limit/`,
+      {
+        collectionId,
+        limit,
+        createdBefore,
+      }
+    );
+
+    if (activities) {
+      return _.map(activities, (activity) => new ActivitiesEntity(activity));
+    }
+
+    return null;
   }
 }

@@ -11,3 +11,4 @@ export * from "@/api/endpoints/collections/get-user-collections/v2";
 export * from "@/api/endpoints/collections/post-collections-refresh/v1";
 export * from "@/api/endpoints/collections/daily-volumes/v1";
 export * from "@/api/endpoints/collections/get-collection-owners-distribution/v1";
+export * from "@/api/endpoints/collections/get-collection-activity/v1";
