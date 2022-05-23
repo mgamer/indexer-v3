@@ -10,6 +10,10 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v2";
 
 export const getUserTokensV2Options: RouteOptions = {
+  cache: {
+    privacy: "public",
+    expiresIn: 60000,
+  },
   description: "Get tokens held by a user, along with ownership information",
   notes:
     "Get tokens held by a user, along with ownership information such as associated orders and date acquired.",
@@ -141,6 +145,7 @@ export const getUserTokensV2Options: RouteOptions = {
           ) t ON TRUE
           JOIN collections c ON c.id = t.collection_id
           ${communityFilter}
+          ${collectionFilter}
         ${sortByFilter}
         OFFSET $/offset/
         LIMIT $/limit/
