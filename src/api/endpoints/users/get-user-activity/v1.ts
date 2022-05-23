@@ -12,9 +12,9 @@ import { ActivityType } from "@/models/activities/activities-entity";
 
 const version = "v1";
 
-export const getCollectionActivityV1Options: RouteOptions = {
-  description: "Get activity events for the given collection",
-  notes: "This API can be used to build a feed for a collection",
+export const getUserActivityV1Options: RouteOptions = {
+  description: "Get activity events for the given user",
+  notes: "This API can be used to build a feed for a user",
   tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {
@@ -23,12 +23,12 @@ export const getCollectionActivityV1Options: RouteOptions = {
   },
   validate: {
     params: Joi.object({
-      collection: Joi.string()
+      user: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .required()
         .description(
-          "Filter to a particular collection, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+          "Filter to a particular user, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
     }),
     query: Joi.object({
@@ -55,9 +55,9 @@ export const getCollectionActivityV1Options: RouteOptions = {
           time: Joi.number(),
         })
       ),
-    }).label(`getCollectionActivity${version.toUpperCase()}Response`),
+    }).label(`getUserActivity${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(`get-collection-activity-${version}-handler`, `Wrong response schema: ${error}`);
+      logger.error(`get-user-activity-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -71,8 +71,8 @@ export const getCollectionActivityV1Options: RouteOptions = {
         createdBefore = formatISO9075(query.continuation);
       }
 
-      const activities = await Activities.getCollectionActivities(
-        params.collection,
+      const activities = await Activities.getUserActivities(
+        params.user,
         createdBefore,
         query.types
       );
@@ -82,8 +82,8 @@ export const getCollectionActivityV1Options: RouteOptions = {
         return { activities: [] };
       }
 
-      // Iterate over only distinct transactions
-      const result = _.map(_.uniqBy(activities, "transactionId"), (activity) => ({
+      // Iterate over the activities
+      const result = _.map(activities, (activity) => ({
         type: activity.type,
         tokenId: activity.tokenId,
         fromAddress: activity.fromAddress,
@@ -105,7 +105,7 @@ export const getCollectionActivityV1Options: RouteOptions = {
 
       return { activities: result, continuation };
     } catch (error) {
-      logger.error(`get-collection-activity-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(`get-user-activity-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },
