@@ -2,7 +2,7 @@ import { fromBuffer } from "@/common/utils";
 
 export enum ActivityType {
   sale = "sale",
-  listing = "listsing",
+  listing = "listing",
 }
 
 // Define the fields required to create a new activity
@@ -36,8 +36,9 @@ export type ActivitiesEntityUpdateParams = {
 // Define the fields need to instantiate the entity
 export type ActivitiesEntityParams = {
   id: number;
-  created_at: string;
+  created_at: Date;
   transaction_id: Buffer;
+  type: ActivityType;
   contract: Buffer;
   collection_id: string;
   token_id: string;
@@ -58,10 +59,11 @@ export type ActivityMetadata = {
 
 export class ActivitiesEntity {
   id: number;
-  createdAt: string;
+  createdAt: Date;
   transactionId: string;
-  collectionId: string;
+  type: ActivityType;
   contract: string;
+  collectionId: string;
   tokenId: string;
   address: string;
   fromAddress: string;
@@ -74,6 +76,7 @@ export class ActivitiesEntity {
     this.id = params.id;
     this.createdAt = params.created_at;
     this.transactionId = fromBuffer(params.transaction_id);
+    this.type = params.type;
     this.contract = fromBuffer(params.contract);
     this.collectionId = params.collection_id;
     this.tokenId = params.token_id;

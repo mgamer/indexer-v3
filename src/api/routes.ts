@@ -141,6 +141,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/collections/{collection}/activity",
+    options: collectionsEndpoints.getCollectionActivityV1Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/collections/v1",
     options: collectionsEndpoints.getCollectionsV1Options,
   });
