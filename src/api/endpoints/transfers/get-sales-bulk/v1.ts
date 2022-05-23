@@ -79,6 +79,8 @@ export const getSalesBulkV1Options: RouteOptions = {
           txHash: Joi.string()
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{64}$/),
+          logIndex: Joi.number(),
+          batchIndex: Joi.number(),
           timestamp: Joi.number(),
           price: Joi.number().unsafe().allow(null),
         })
@@ -197,7 +199,7 @@ export const getSalesBulkV1Options: RouteOptions = {
       const result = rawResult.map((r) => ({
         id: crypto
           .createHash("sha256")
-          .update(`${r.tx_hash}${r.log_index}${r.batch_index}`)
+          .update(`${fromBuffer(r.tx_hash)}${r.log_index}${r.batch_index}`)
           .digest("hex"),
         token: {
           contract: fromBuffer(r.contract),
@@ -209,6 +211,8 @@ export const getSalesBulkV1Options: RouteOptions = {
         to: fromBuffer(r.taker),
         amount: String(r.amount),
         txHash: fromBuffer(r.tx_hash),
+        logIndex: r.log_index,
+        batchIndex: r.batch_index,
         timestamp: r.timestamp,
         price: r.price ? formatEth(r.price) : null,
       }));
