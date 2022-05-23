@@ -117,24 +117,25 @@ export const getUserTokensV2Options: RouteOptions = {
     try {
       const baseQuery = `
         SELECT b.contract, b.token_id, b.token_count, b.acquired_at, t.name,
-               t.image, t.collection_id, b.floor_sell_value, t.top_buy_id,
+               t.image, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.top_buy_id,
                t.top_buy_value, t.total_buy_value, c.name as collection_name,
                c.metadata, c.floor_sell_value AS "collection_floor_sell_value",
                (
-                    CASE WHEN b.floor_sell_value IS NOT NULL
+                    CASE WHEN t.floor_sell_value IS NOT NULL
                     THEN 1
                     ELSE 0
                     END
                ) AS on_sale_count
         FROM (
-            SELECT amount AS token_count, token_id, contract, acquired_at, floor_sell_value
+            SELECT amount AS token_count, token_id, contract, acquired_at
             FROM nft_balances
             WHERE owner =  $/user/
             AND amount > 0
           ) AS b
           JOIN LATERAL (
             SELECT t.token_id, t.name, t.image, t.collection_id,
-               t.top_buy_id, t.top_buy_value, b.token_count * t.top_buy_value AS total_buy_value
+               t.floor_sell_id, t.top_buy_id, t.top_buy_value,
+               t.floor_sell_value, b.token_count * t.top_buy_value AS total_buy_value
             FROM tokens t
             WHERE b.token_id = t.token_id
             AND b.contract = t.contract
