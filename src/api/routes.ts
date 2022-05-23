@@ -15,6 +15,7 @@ import * as tokensEndpoints from "@/api/endpoints/tokens";
 import * as transfersEndpoints from "@/api/endpoints/transfers";
 import * as redirectsEndpoints from "@/api/endpoints/redirects";
 import * as searchEndpoints from "@/api/endpoints/search";
+import * as usersEndpoints from "@/api/endpoints/users";
 
 export const setupRoutes = (server: Server) => {
   // Admin
@@ -141,7 +142,7 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/collections/{collection}/activity",
+    path: "/collections/{collection}/activity/v1",
     options: collectionsEndpoints.getCollectionActivityV1Options,
   });
 
@@ -409,7 +410,21 @@ export const setupRoutes = (server: Server) => {
     options: statsEndpoints.getStatsV1Options,
   });
 
+  // Users
+
+  server.route({
+    method: "GET",
+    path: "/users/{user}/activity/v1",
+    options: usersEndpoints.getUserActivityV1Options,
+  });
+
   // Tokens
+
+  server.route({
+    method: "GET",
+    path: "/tokens/{token}/activity/v1",
+    options: tokensEndpoints.getTokenActivityV1Options,
+  });
 
   server.route({
     method: "GET",

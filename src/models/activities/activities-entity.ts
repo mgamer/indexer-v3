@@ -84,7 +84,7 @@ export class ActivitiesEntity {
     this.fromAddress = fromBuffer(params.from_address);
     this.toAddress = fromBuffer(params.to_address);
     this.price = params.price;
-    this.amount = params.amount;
+    this.amount = Number(params.amount);
     this.metadata = params.metadata;
   }
 }

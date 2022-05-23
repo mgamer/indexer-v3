@@ -66,11 +66,18 @@ export class Activities {
   public static async getCollectionActivities(
     collectionId: string,
     createdBefore: null | string = null,
+    types: string[] = [],
     limit = 20
   ) {
     let continuation = "";
+    let typesFilter = "";
+
     if (!_.isNull(createdBefore)) {
       continuation = `AND created_at < $/createdBefore/`;
+    }
+
+    if (!_.isEmpty(types)) {
+      typesFilter = `AND type IN ('$/types:raw/')`;
     }
 
     const activities: ActivitiesEntityParams[] | null = await idb.manyOrNone(
@@ -78,12 +85,97 @@ export class Activities {
              FROM activities
              WHERE collection_id = $/collectionId/
              ${continuation}
+             ${typesFilter}
              ORDER BY created_at DESC
              LIMIT $/limit/`,
       {
         collectionId,
         limit,
         createdBefore,
+        types: _.join(types, "','"),
+      }
+    );
+
+    if (activities) {
+      return _.map(activities, (activity) => new ActivitiesEntity(activity));
+    }
+
+    return null;
+  }
+
+  public static async getTokenActivities(
+    contract: string,
+    tokenId: string,
+    createdBefore: null | string = null,
+    types: string[] = [],
+    limit = 20
+  ) {
+    let continuation = "";
+    let typesFilter = "";
+
+    if (!_.isNull(createdBefore)) {
+      continuation = `AND created_at < $/createdBefore/`;
+    }
+
+    if (!_.isEmpty(types)) {
+      typesFilter = `AND type IN ('$/types:raw/')`;
+    }
+
+    const activities: ActivitiesEntityParams[] | null = await idb.manyOrNone(
+      `SELECT *
+             FROM activities
+             WHERE contract = $/contract/
+             AND token_id = $/tokenId/
+             ${continuation}
+             ${typesFilter}
+             ORDER BY created_at DESC
+             LIMIT $/limit/`,
+      {
+        contract: toBuffer(contract),
+        tokenId,
+        limit,
+        createdBefore,
+        types: _.join(types, "','"),
+      }
+    );
+
+    if (activities) {
+      return _.map(activities, (activity) => new ActivitiesEntity(activity));
+    }
+
+    return null;
+  }
+
+  public static async getUserActivities(
+    user: string,
+    createdBefore: null | string = null,
+    types: string[] = [],
+    limit = 20
+  ) {
+    let continuation = "";
+    let typesFilter = "";
+
+    if (!_.isNull(createdBefore)) {
+      continuation = `AND created_at < $/createdBefore/`;
+    }
+
+    if (!_.isEmpty(types)) {
+      typesFilter = `AND type IN ('$/types:raw/')`;
+    }
+
+    const activities: ActivitiesEntityParams[] | null = await idb.manyOrNone(
+      `SELECT *
+             FROM activities
+             WHERE address = $/user/
+             ${continuation}
+             ${typesFilter}
+             ORDER BY created_at DESC
+             LIMIT $/limit/`,
+      {
+        user: toBuffer(user),
+        limit,
+        createdBefore,
+        types: _.join(types, "','"),
       }
     );
 
