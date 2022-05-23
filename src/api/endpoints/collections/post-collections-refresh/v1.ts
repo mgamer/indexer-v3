@@ -1,17 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { isAfter, add, formatISO9075 } from "date-fns";
-import _ from "lodash";
+import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
+import { isAfter, add, formatISO9075 } from "date-fns";
 import Joi from "joi";
+import _ from "lodash";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
-import { Collections } from "@/models/collections";
-import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
-import * as Boom from "@hapi/boom";
+import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
+import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
+import * as orderFixes from "@/jobs/order-fixes/queue";
+import { Collections } from "@/models/collections";
+import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
 
 const version = "v1";
 
@@ -47,7 +49,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const payload = request.payload as any;
-    let refreshCoolDownMin = 60; // How many minutes between each refresh
+    let refreshCoolDownMin = 60 * 24; // How many minutes between each refresh
 
     try {
       const collection = await Collections.getById(payload.collection);
@@ -98,18 +100,18 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       );
 
       // Refresh the collection tokens metadata
-      // await metadataIndexFetch.addToQueue(
-      //   [
-      //     {
-      //       kind: "full-collection",
-      //       data: {
-      //         method: "opensea",
-      //         collection: collection.id,
-      //       },
-      //     },
-      //   ],
-      //   true
-      // );
+      await metadataIndexFetch.addToQueue(
+        [
+          {
+            kind: "full-collection",
+            data: {
+              method: "opensea",
+              collection: collection.id,
+            },
+          },
+        ],
+        true
+      );
 
       // Refresh the collection metadata
       await collectionUpdatesMetadata.addToQueue(collection.contract);
@@ -118,7 +120,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       await collectionsRefreshCache.addToQueue(collection.contract);
 
       // Revalidate the contract orders
-      // await orderFixes.addToQueue([{ by: "contract", data: { contract: collection.contract } }]);
+      await orderFixes.addToQueue([{ by: "contract", data: { contract: collection.contract } }]);
 
       logger.info(
         `post-collections-refresh-${version}-handler`,

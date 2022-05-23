@@ -312,29 +312,24 @@ if (config.doBackgroundWork) {
           }
 
           case "contract": {
-            // Trigger a fix for all of the contract's potentially valid orders.
-            // WARNING! In order to have this executed efficiently we should set
-            // an additional index on the `orders` table (for now missing due to
-            // maintenance overhead):
-            // ```
-            //   CREATE INDEX CONCURRENTLY "orders_token_set_id_index"
-            //     ON "orders" ("token_set_id")
-            //     WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
-            // ```
+            // Due to missing indexes, this will only fix currently valid orders
+            // and not all potentially valid orders as the other cases above do.
 
-            const result = await idb.manyOrNone(
-              `
-                SELECT "o"."id" FROM "orders" "o"
-                JOIN "token_sets_tokens" "tst"
-                  ON "o"."token_set_id" = "tst"."token_set_id"
-                WHERE "tst"."contract" = $/contract/
-                  AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-              `,
-              { contract: toBuffer(data.contract) }
-            );
+            for (const side of ["sell", "buy"]) {
+              // TODO: Use keyset pagination to be able to handle large amounts of orders.
+              const result = await idb.manyOrNone(
+                `
+                  SELECT "o"."id" FROM "orders" "o"
+                  WHERE "o"."side" = $/side/ AND "o"."contract" = $/contract/
+                    AND ("o"."fillability_status" = 'fillable' AND "o"."approval_status" = 'approved')
+                `,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                { contract: toBuffer((data as any).contract), side }
+              );
 
-            if (result) {
-              await addToQueue(result.map(({ id }) => ({ by: "id", data: { id } })));
+              if (result) {
+                await addToQueue(result.map(({ id }) => ({ by: "id", data: { id } })));
+              }
             }
 
             break;

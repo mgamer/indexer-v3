@@ -24,6 +24,7 @@ import * as backfillQueue from "@/jobs/backfill/token-floor-ask-events";
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
+import * as eventsSyncBlockCheck from "@/jobs/events-sync/block-check-queue";
 import * as eventsSyncRealtime from "@/jobs/events-sync/realtime-queue";
 import * as eventsSyncFtTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/ft-transfers";
 import * as eventsSyncNftTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/nft-transfers";
@@ -58,6 +59,7 @@ export const allJobQueues = [
   collectionUpdatesFloorAsk.queue,
   collectionUpdatesMetadata.queue,
   eventsSyncBackfill.queue,
+  eventsSyncBlockCheck.queue,
   eventsSyncRealtime.queue,
   eventsSyncFtTransfersWriteBuffer.queue,
   eventsSyncNftTransfersWriteBuffer.queue,

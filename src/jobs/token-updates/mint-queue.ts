@@ -114,17 +114,20 @@ if (config.doBackgroundWork) {
           });
 
           if (collection.index_metadata) {
-            await metadataIndexFetch.addToQueue([
-              {
-                kind: "single-token",
-                data: {
-                  method: "opensea",
-                  contract,
-                  tokenId,
-                  collection: collection.id,
+            await metadataIndexFetch.addToQueue(
+              [
+                {
+                  kind: "single-token",
+                  data: {
+                    method: "opensea",
+                    contract,
+                    tokenId,
+                    collection: collection.id,
+                  },
                 },
-              },
-            ]);
+              ],
+              true
+            );
           }
         } else {
           // Otherwise, we fetch the collection metadata from upstream.

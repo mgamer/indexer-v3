@@ -6,6 +6,7 @@ export interface BaseOrderBuildOptions {
   maker: string;
   contract: string;
   weiPrice: string;
+  nonce?: string;
   listingTime?: number;
   expirationTime?: number;
 }
@@ -39,6 +40,7 @@ export const getBuildInfo = async (
     collection: options.contract,
     signer: options.maker,
     price: options.weiPrice,
+    nonce: options.nonce,
     startTime: options.listingTime,
     endTime: options.expirationTime,
   };
