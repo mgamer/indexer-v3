@@ -8,6 +8,7 @@ import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { SaleActivity } from "@/jobs/activities/sale-activity";
+import { TransferActivity } from "@/jobs/activities/transfer-activity";
 import { ActivityMetadata } from "@/models/activities/activities-entity";
 
 const QUEUE_NAME = "activities-queue";
@@ -36,6 +37,10 @@ if (config.doBackgroundWork) {
 
         case ActivityEvent.listing:
           break;
+
+        case ActivityEvent.transfer:
+          await TransferActivity.handleEvent(activity);
+          break;
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }
@@ -49,6 +54,7 @@ if (config.doBackgroundWork) {
 export enum ActivityEvent {
   sale = "sale",
   listing = "listing",
+  transfer = "transfer",
 }
 
 export type ActivityInfo = {

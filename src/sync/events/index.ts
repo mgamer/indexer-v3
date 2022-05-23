@@ -1180,7 +1180,7 @@ export const syncEvents = async (
       ]);
 
       // Add all the fill events to the activity queue
-      const activitiesInfo: ActivityInfo[] = _.map(
+      const fillActivitiesInfo: ActivityInfo[] = _.map(
         _.concat(fillEvents, fillEventsZeroExV4, fillEventsFoundation),
         (event) => ({
           event: ActivityEvent.sale,
@@ -1198,8 +1198,28 @@ export const syncEvents = async (
         })
       );
 
-      if (!_.isEmpty(activitiesInfo)) {
-        await activities.addToQueue(activitiesInfo);
+      if (!_.isEmpty(fillActivitiesInfo)) {
+        await activities.addToQueue(fillActivitiesInfo);
+      }
+
+      // Add all the transfer events to the activity queue
+      const transferActivitiesInfo: ActivityInfo[] = _.map(nftTransferEvents, (event) => ({
+        event: ActivityEvent.transfer,
+        contract: event.baseEventParams.address,
+        tokenId: event.tokenId,
+        fromAddress: event.from,
+        toAddress: event.to,
+        price: 0,
+        amount: Number(event.amount),
+        metadata: {
+          transactionHash: event.baseEventParams.txHash,
+          logIndex: event.baseEventParams.logIndex,
+          batchIndex: event.baseEventParams.batchIndex,
+        },
+      }));
+
+      if (!_.isEmpty(transferActivitiesInfo)) {
+        await activities.addToQueue(transferActivitiesInfo);
       }
 
       if (!backfill) {
