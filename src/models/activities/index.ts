@@ -17,6 +17,11 @@ export class Activities {
   }
 
   public static async add(activity: ActivitiesEntityInsertParams) {
+    let timestamp = "NOW()"; // By default, use the DB timestamp
+    if (activity.timestamp) {
+      timestamp = `'${activity.timestamp}'`;
+    }
+
     const query = `
       INSERT INTO activities (
         transaction_id,
@@ -29,7 +34,8 @@ export class Activities {
         to_address,
         price,
         amount,
-        metadata
+        metadata,
+        created_at
       )
       VALUES (
         $/transactionId/,
@@ -43,6 +49,7 @@ export class Activities {
         $/price/,
         $/amount/,
         $/metadata:json/
+        $/timestamp:raw/
       )
       ON CONFLICT DO NOTHING
     `;
@@ -59,6 +66,7 @@ export class Activities {
       price: activity.price,
       amount: activity.amount,
       metadata: activity.metadata,
+      timestamp,
     });
   }
 

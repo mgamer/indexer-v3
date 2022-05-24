@@ -1190,6 +1190,7 @@ export const syncEvents = async (
           toAddress: event.taker,
           price: Number(event.price),
           amount: Number(event.amount),
+          timestamp: event.baseEventParams.timestamp,
           metadata: {
             transactionHash: event.baseEventParams.txHash,
             logIndex: event.baseEventParams.logIndex,
@@ -1211,6 +1212,7 @@ export const syncEvents = async (
         toAddress: event.to,
         price: 0,
         amount: Number(event.amount),
+        timestamp: event.baseEventParams.timestamp,
         metadata: {
           transactionHash: event.baseEventParams.txHash,
           logIndex: event.baseEventParams.logIndex,
