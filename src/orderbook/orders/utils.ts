@@ -41,7 +41,8 @@ export type DbOrder = {
     | "zeroex-v4-erc1155"
     | "opendao-erc721"
     | "opendao-erc1155"
-    | "foundation";
+    | "foundation"
+    | "x2y2";
   side: "buy" | "sell";
   fillability_status: string;
   approval_status: string;

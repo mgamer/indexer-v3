@@ -1,5 +1,6 @@
 import _ from "lodash";
 
+import { defaultAbiCoder } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
@@ -470,6 +471,103 @@ export const syncEvents = async (
               break;
             }
 
+            // X2Y2
+
+            case "x2y2-order-cancelled": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const orderId = parsedLog.args["itemHash"].toLowerCase();
+
+              cancelEvents.push({
+                orderKind: "x2y2",
+                orderId,
+                baseEventParams,
+              });
+              orderInfos.push({
+                context: `cancelled-${orderId}-${baseEventParams.txHash}`,
+                id: orderId,
+                trigger: {
+                  kind: "cancel",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+              });
+
+              break;
+            }
+
+            case "x2y2-order-inventory": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const orderId = parsedLog.args["itemHash"].toLowerCase();
+              const maker = parsedLog.args["maker"].toLowerCase();
+              const taker = parsedLog.args["taker"].toLowerCase();
+              const currency = parsedLog.args["currency"].toLowerCase();
+              const item = parsedLog.args["item"];
+              const op = parsedLog.args["detail"].op;
+
+              if (
+                ![
+                  Sdk.Common.Addresses.Weth[config.chainId],
+                  Sdk.Common.Addresses.Eth[config.chainId],
+                ].includes(currency)
+              ) {
+                // Skip if the payment token is not supported.
+                break;
+              }
+
+              // 1 - COMPLETE_SELL_OFFER
+              // 2 - COMPLETE_BUY_OFFER
+              // 5 - COMPLETE_AUCTION
+              if (![1, 2, 5].includes(op)) {
+                // Skip any irrelevant events.
+                break;
+              }
+
+              // Decode the sold token (ignoring bundles).
+              let contract: string;
+              let tokenId: string;
+              try {
+                const decodedItems = defaultAbiCoder.decode(
+                  ["(address contract, uint256 tokenId)[]"],
+                  item.data
+                );
+                if (decodedItems[0].length !== 1) {
+                  break;
+                }
+
+                contract = decodedItems[0][0].contract.toLowerCase();
+                tokenId = decodedItems[0][0].tokenId.toString();
+              } catch {
+                break;
+              }
+
+              // Custom handling to support on-chain orderbook quirks.
+              fillEvents.push({
+                orderKind: "x2y2",
+                orderId,
+                orderSide: [1, 5].includes(op) ? "sell" : "buy",
+                maker,
+                taker,
+                // Subtract any fees from the price.
+                price: item.price.toString(),
+                contract,
+                tokenId,
+                // X2Y2 only supports erc721 for now
+                amount: "1",
+                baseEventParams,
+              });
+              orderInfos.push({
+                context: `filled-${orderId}-${baseEventParams.txHash}`,
+                id: orderId,
+                trigger: {
+                  kind: "sale",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+              });
+
+              break;
+            }
+
             // Foundation
 
             case "foundation-buy-price-set": {
@@ -517,6 +615,7 @@ export const syncEvents = async (
                 price: bn(protocolFee).mul(10000).div(50).toString(),
                 contract,
                 tokenId,
+                // Foundation only supports erc721 for now
                 amount: "1",
                 baseEventParams,
               });
