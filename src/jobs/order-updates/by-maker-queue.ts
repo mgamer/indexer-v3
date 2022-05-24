@@ -210,7 +210,7 @@ if (config.doBackgroundWork) {
             const result: { id: string }[] = [];
 
             // OpenDao
-            if (data.operator === Sdk.OpenDao.Addresses.Exchange[config.chainId]) {
+            if (data.operator === Sdk.OpenDao.Addresses.Exchange[config.chainId]?.toLowerCase()) {
               for (const orderKind of ["opendao-erc721", "opendao-erc1155"]) {
                 result.push(
                   ...(await idb.manyOrNone(
@@ -246,15 +246,88 @@ if (config.doBackgroundWork) {
               }
             }
 
+            // ZeroExV4
+            if (data.operator === Sdk.ZeroExV4.Addresses.Exchange[config.chainId]?.toLowerCase()) {
+              for (const orderKind of ["zeroex-v4-erc721", "zeroex-v4-erc1155"]) {
+                result.push(
+                  ...(await idb.manyOrNone(
+                    `
+                      UPDATE "orders" AS "o" SET
+                        "approval_status" = $/approvalStatus/,
+                        "expiration" = to_timestamp($/expiration/),
+                        "updated_at" = now()
+                      FROM (
+                        SELECT
+                          "o"."id"
+                        FROM "orders" "o"
+                        JOIN "token_sets_tokens" "tst"
+                          ON "o"."token_set_id" = "tst"."token_set_id"
+                        WHERE "tst"."contract" = $/contract/
+                          AND "o"."kind" = '${orderKind}'
+                          AND "o"."maker" = $/maker/
+                          AND "o"."side" = 'sell'
+                          AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
+                          AND "o"."approval_status" != $/approvalStatus/
+                      ) "x"
+                      WHERE "o"."id" = "x"."id"
+                      RETURNING "o"."id"
+                    `,
+                    {
+                      maker: toBuffer(maker),
+                      contract: toBuffer(data.contract),
+                      approvalStatus: data.approved ? "approved" : "no-approval",
+                      expiration: trigger.txTimestamp,
+                    }
+                  ))
+                );
+              }
+            }
+
+            // X2Y2
+            if (data.operator === Sdk.X2Y2.Addresses.Exchange[config.chainId]?.toLowerCase()) {
+              result.push(
+                ...(await idb.manyOrNone(
+                  `
+                      UPDATE "orders" AS "o" SET
+                        "approval_status" = $/approvalStatus/,
+                        "expiration" = to_timestamp($/expiration/),
+                        "updated_at" = now()
+                      FROM (
+                        SELECT
+                          "o"."id"
+                        FROM "orders" "o"
+                        JOIN "token_sets_tokens" "tst"
+                          ON "o"."token_set_id" = "tst"."token_set_id"
+                        WHERE "tst"."contract" = $/contract/
+                          AND "o"."kind" = 'x2y2'
+                          AND "o"."maker" = $/maker/
+                          AND "o"."side" = 'sell'
+                          AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
+                          AND "o"."approval_status" != $/approvalStatus/
+                      ) "x"
+                      WHERE "o"."id" = "x"."id"
+                      RETURNING "o"."id"
+                    `,
+                  {
+                    maker: toBuffer(maker),
+                    contract: toBuffer(data.contract),
+                    approvalStatus: data.approved ? "approved" : "no-approval",
+                    expiration: trigger.txTimestamp,
+                  }
+                ))
+              );
+            }
+
             // LooksRare
             if (
               [
-                Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId],
-                Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId],
+                Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]?.toLowerCase(),
+                Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId]?.toLowerCase(),
               ].includes(data.operator)
             ) {
               const kind =
-                data.operator === Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]
+                data.operator ===
+                Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]?.toLowerCase()
                   ? "erc721"
                   : "erc1155";
 

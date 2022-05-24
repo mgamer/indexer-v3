@@ -83,7 +83,18 @@ export const offChainCheck = async (
       operator
     );
     if (!nftApproval) {
-      hasApproval = false;
+      if (options?.onChainApprovalRecheck) {
+        // Re-validate the approval on-chain to handle some edge-cases
+        const contract =
+          kind === "erc721"
+            ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.nft)
+            : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.nft);
+        if (!(await contract.isApproved(order.params.maker, operator))) {
+          hasApproval = false;
+        }
+      } else {
+        hasApproval = false;
+      }
     }
   }
 
