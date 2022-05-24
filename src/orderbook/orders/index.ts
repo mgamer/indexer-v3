@@ -12,4 +12,5 @@ export type OrderKind =
   | "zeroex-v4-erc1155"
   | "opendao-erc721"
   | "opendao-erc1155"
-  | "foundation";
+  | "foundation"
+  | "x2y2";
