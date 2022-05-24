@@ -3,7 +3,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 import { logger } from "@/common/logger";
-import { CollectionSets } from "@/models/CollectionSets";
+import { CollectionSets } from "@/models/collection-sets";
 
 const version = "v1";
 
