@@ -84,8 +84,8 @@ export const getTokenActivityV1Options: RouteOptions = {
         return { activities: [] };
       }
 
-      // Iterate over the activities
-      const result = _.map(activities, (activity) => ({
+      // Return only distinct transactions
+      const result = _.map(_.uniqBy(activities, "transactionId"), (activity) => ({
         type: activity.type,
         tokenId: activity.tokenId,
         fromAddress: activity.fromAddress,

@@ -82,7 +82,7 @@ export const getCollectionActivityV1Options: RouteOptions = {
         return { activities: [] };
       }
 
-      // Iterate over only distinct transactions
+      // Return only distinct transactions
       const result = _.map(_.uniqBy(activities, "transactionId"), (activity) => ({
         type: activity.type,
         tokenId: activity.tokenId,
