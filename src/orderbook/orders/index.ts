@@ -2,6 +2,7 @@ export * as foundation from "@/orderbook/orders/foundation";
 export * as looksRare from "@/orderbook/orders/looks-rare";
 export * as openDao from "@/orderbook/orders/opendao";
 export * as wyvernV23 from "@/orderbook/orders/wyvern-v2.3";
+export * as x2y2 from "@/orderbook/orders/x2y2";
 export * as zeroExV4 from "@/orderbook/orders/zeroex-v4";
 
 export type OrderKind =
