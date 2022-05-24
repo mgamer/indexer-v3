@@ -272,7 +272,7 @@ export const getSalesV3Options: RouteOptions = {
           contract: fromBuffer(r.contract),
           tokenId: r.token_id,
           name: r.name,
-          image: r.mage,
+          image: r.image,
           collection: {
             id: r.collection_id,
             name: r.collection_name,
