@@ -22,7 +22,7 @@ export const offChainCheck = async (
 ) => {
   // Check: order has a valid target
   const kind = await commonHelpers.getContractKind(order.params.nft.token);
-  if (!kind || kind !== order.params.kind?.split("-")[0]) {
+  if (!kind) {
     throw new Error("invalid-target");
   }
 
