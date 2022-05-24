@@ -30,7 +30,9 @@ export const postInvalidateOrderOptions: RouteOptions = {
     try {
       await idb.none(
         `
-          UPDATE orders SET fillability_status = 'cancelled'
+          UPDATE orders SET
+            fillability_status = 'cancelled',
+            approval_status = 'disabled'
           WHERE orders.id = $/id/
         `,
         { id: payload.id }

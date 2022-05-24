@@ -79,6 +79,12 @@ export const setupRoutes = (server: Server) => {
     options: adminEndpoints.postSetCollectionCommunity,
   });
 
+  server.route({
+    method: "POST",
+    path: "/admin/simulate-floor",
+    options: adminEndpoints.postSimulateFloor,
+  });
+
   // Api keys
 
   server.route({
@@ -188,6 +194,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   server.route({
+    method: "GET",
+    path: "/users/{user}/collections/v2",
+    options: collectionsEndpoints.getUserCollectionsV2Options,
+  });
+
+  server.route({
     method: "POST",
     path: "/collections/refresh/v1",
     options: collectionsEndpoints.postCollectionsRefreshV1Options,
@@ -197,6 +209,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/collections/daily-volumes/v1",
     options: collectionsEndpoints.getDailyVolumesV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/collections/{collection}/owners-distribution/v1",
+    options: collectionsEndpoints.getCollectionOwnersDistributionV1Options,
   });
 
   // Events
@@ -317,8 +335,20 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/orders/asks/v2",
+    options: ordersEndpoints.getOrdersAsksV2Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/orders/bids/v1",
     options: ordersEndpoints.getOrdersBidsV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/orders/bids/v2",
+    options: ordersEndpoints.getOrdersBidsV2Options,
   });
 
   server.route({
@@ -451,6 +481,14 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/tokens/refresh/v1",
     options: tokensEndpoints.postTokensRefreshV1Options,
+  });
+
+  // Token sets
+
+  server.route({
+    method: "POST",
+    path: "/token-sets/v1",
+    options: tokensEndpoints.postTokenSetsV1Options,
   });
 
   // Transfers

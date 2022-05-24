@@ -1,16 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { isAfter, add, formatISO9075 } from "date-fns";
-import _ from "lodash";
-import { Request, RouteOptions } from "@hapi/hapi";
-import Joi from "joi";
-
-import { logger } from "@/common/logger";
-import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
-import { Collections } from "@/models/collections";
-import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
-import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as Boom from "@hapi/boom";
+import { Request, RouteOptions } from "@hapi/hapi";
+import { isAfter, add, formatISO9075 } from "date-fns";
+import Joi from "joi";
+import _ from "lodash";
+
+import { edb } from "@/common/db";
+import { logger } from "@/common/logger";
+import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
+import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
+import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
+import * as orderFixes from "@/jobs/order-fixes/queue";
+import { Collections } from "@/models/collections";
+import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
 
 const version = "v1";
 
@@ -46,7 +49,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const payload = request.payload as any;
-    let refreshCoolDownMin = 60; // How many minutes between each refresh
+    let refreshCoolDownMin = 60 * 24; // How many minutes between each refresh
 
     try {
       const collection = await Collections.getById(payload.collection);
@@ -57,8 +60,8 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       }
 
       // For big collections allow refresh once a day
-      if (collection.tokenCount > 500000) {
-        refreshCoolDownMin = 60 * 24;
+      if (collection.tokenCount > 30000) {
+        refreshCoolDownMin = 60 * 48;
       }
 
       // Check when the last sync was performed
@@ -75,6 +78,26 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
 
       // Refresh contract orders from OpenSea
       await OpenseaIndexerApi.fastContractSync(collection.contract);
+
+      // Update the collection id of any missing tokens
+      await edb.none(
+        `
+          WITH x AS (
+            SELECT
+              collections.contract,
+              collections.token_id_range
+            FROM collections
+            WHERE collections.id = $/collection/
+          )
+          UPDATE tokens SET
+            collection_id = $/collection/
+          FROM x
+          WHERE tokens.contract = x.contract
+            AND tokens.token_id <@ x.token_id_range
+            AND tokens.collection_id IS NULL
+        `,
+        { collection: payload.collection }
+      );
 
       // Refresh the collection tokens metadata
       await metadataIndexFetch.addToQueue(
@@ -93,8 +116,11 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       // Refresh the collection metadata
       await collectionUpdatesMetadata.addToQueue(collection.contract);
 
+      // Refresh the contract floor sell and top bid
+      await collectionsRefreshCache.addToQueue(collection.contract);
+
       // Revalidate the contract orders
-      // await orderFixes.addToQueue([{ by: "contract", data: { contract: collection.contract } }]);
+      await orderFixes.addToQueue([{ by: "contract", data: { contract: collection.contract } }]);
 
       logger.info(
         `post-collections-refresh-${version}-handler`,

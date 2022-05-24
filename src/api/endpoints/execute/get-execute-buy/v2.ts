@@ -244,18 +244,17 @@ export const getExecuteBuyV2Options: RouteOptions = {
                 orders.raw_data,
                 orders.source_id,
                 orders.maker
-              FROM tokens
-              JOIN orders
-                ON tokens.floor_sell_id = orders.id
+              FROM orders
               JOIN contracts
-                ON tokens.contract = contracts.address
-              WHERE tokens.contract = $/contract/
-                AND tokens.token_id = $/tokenId/
+                ON orders.contract = contracts.address
+              WHERE orders.token_set_id = $/tokenSetId/
+                AND orders.side = 'sell'
+                AND orders.fillability_status = 'fillable'
+                AND orders.approval_status = 'approved'
+              ORDER BY orders.value
+              LIMIT 1
             `,
-            {
-              contract: toBuffer(contract),
-              tokenId,
-            }
+            { tokenSetId: `token:${contract}:${tokenId}` }
           );
           if (!bestOrderResult) {
             // Return early in case no listing is available.

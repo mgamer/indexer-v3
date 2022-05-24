@@ -89,7 +89,7 @@ export const addPendingOrdersOpenDao = async (
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork && config.arweaveRelayerKey) {
   // Optimize as much as possible AR usage efficiency.
-  const relayInterval = config.chainId === 1 ? 5 : 24 * 60;
+  const relayInterval = config.chainId === 1 ? 3 : 24 * 60;
 
   cron.schedule(
     `*/${relayInterval} * * * *`,
@@ -100,8 +100,17 @@ if (config.doBackgroundWork && config.arweaveRelayerKey) {
           logger.info("arweave-relay", "Relaying pending data");
 
           try {
+            let batch: string[] = [];
+
             const batchSize = 1000;
-            const batch = await redis.lrange(PENDING_DATA_KEY, 0, batchSize);
+            const iterations = 5;
+            for (let i = 0; i < iterations; i++) {
+              batch = [
+                ...batch,
+                ...(await redis.lrange(PENDING_DATA_KEY, i * batchSize, (i + 1) * batchSize)),
+              ];
+            }
+
             if (batch.length) {
               const wallet = JSON.parse(config.arweaveRelayerKey!);
               const transaction = await arweaveGateway.createTransaction(
@@ -127,7 +136,7 @@ if (config.doBackgroundWork && config.arweaveRelayerKey) {
                 `${batch.length} pending data entries relayed via transaction ${transaction.id}`
               );
 
-              await redis.ltrim(PENDING_DATA_KEY, batchSize, -1);
+              await redis.ltrim(PENDING_DATA_KEY, batchSize * iterations, -1);
             } else {
               logger.info("arweave-relay", "No pending data to relay");
             }

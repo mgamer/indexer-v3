@@ -13,6 +13,7 @@ import { TriggerKind } from "@/jobs/order-updates/types";
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
+import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -117,6 +118,7 @@ if (config.doBackgroundWork) {
                     "y"."value",
                     "y"."maker",
                     "y"."valid_between",
+                    "y"."nonce",
                     "y"."source_id",
                     "y"."source_id_int",
                     "y"."is_reservoir"
@@ -136,6 +138,7 @@ if (config.doBackgroundWork) {
                       "o"."valid_between",
                       "o"."source_id",
                       "o"."source_id_int",
+                      "o"."nonce",
                       "o"."is_reservoir"
                     FROM "orders" "o"
                     JOIN "token_sets_tokens" "tst"
@@ -182,6 +185,9 @@ if (config.doBackgroundWork) {
                     "z"."order_id" AS "new_floor_sell_id",
                     "z"."maker" AS "new_floor_sell_maker",
                     "z"."value" AS "new_floor_sell_value",
+                    "z"."valid_between" AS "new_floor_sell_valid_between",
+                    "z"."nonce" AS "new_floor_sell_nonce",
+                    "z"."source_id_int" AS "new_floor_sell_source_id_int",
                     (
                       SELECT "t"."floor_sell_value" FROM "tokens" "t"
                       WHERE "t"."contract" = "z"."contract"
@@ -195,6 +201,9 @@ if (config.doBackgroundWork) {
                   "order_id",
                   "maker",
                   "price",
+                  "source_id_int",
+                  "valid_between",
+                  "nonce",
                   "previous_price",
                   "tx_hash",
                   "tx_timestamp"
@@ -206,6 +215,9 @@ if (config.doBackgroundWork) {
                   "w"."new_floor_sell_id" AS "order_id",
                   "w"."new_floor_sell_maker" AS "maker",
                   "w"."new_floor_sell_value" AS "price",
+                  "w"."new_floor_sell_source_id_int" AS "source_id_int",
+                  "w"."new_floor_sell_valid_between" AS "valid_between",
+                  "w"."new_floor_sell_nonce" AS "nonce",
                   "w"."old_floor_sell_value" AS "previous_price",
                   $/txHash/ AS "tx_hash",
                   $/txTimestamp/ AS "tx_timestamp"
@@ -301,7 +313,7 @@ if (config.doBackgroundWork) {
           }
 
           // Insert a corresponding order event.
-          await idb.none(
+          const orderEventResult = await idb.oneOrNone(
             `
               INSERT INTO order_events (
                 kind,
@@ -347,6 +359,10 @@ if (config.doBackgroundWork) {
                 WHERE orders.id = $/id/
                 LIMIT 1
               )
+              RETURNING
+                contract,
+                token_id,
+                maker
             `,
             {
               id,
@@ -355,6 +371,16 @@ if (config.doBackgroundWork) {
               txTimestamp: trigger.txTimestamp || null,
             }
           );
+
+          if (data.side === "sell") {
+            const updateFloorAskPriceInfo = {
+              contract: fromBuffer(orderEventResult.contract),
+              tokenId: orderEventResult.token_id,
+              owner: fromBuffer(orderEventResult.maker),
+            };
+
+            await updateNftBalanceFloorAskPriceQueue.addToQueue([updateFloorAskPriceInfo]);
+          }
         }
       } catch (error) {
         logger.error(
@@ -364,7 +390,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 10 }
+    { connection: redis.duplicate(), concurrency: 15 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);

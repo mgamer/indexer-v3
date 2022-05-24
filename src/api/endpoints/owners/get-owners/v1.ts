@@ -136,10 +136,9 @@ export const getOwnersV1Options: RouteOptions = {
           WHERE ${nftBalancesFilter}
           AND amount > 0
           GROUP BY owner
-          ORDER BY token_count DESC
+          ORDER BY token_count DESC, owner
           OFFSET ${query.offset} LIMIT ${query.limit}
         )
-        
         SELECT 
           nft_balances.owner,
           SUM(nft_balances.amount) AS token_count,
@@ -152,6 +151,7 @@ export const getOwnersV1Options: RouteOptions = {
         ${attributesJoin}
         WHERE ${tokensFilter}
         AND nft_balances.owner IN (SELECT owner FROM x)
+        AND nft_balances.amount > 0
         GROUP BY nft_balances.owner
         ORDER BY token_count DESC, nft_balances.owner
       `;

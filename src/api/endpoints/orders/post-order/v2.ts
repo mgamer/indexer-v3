@@ -77,14 +77,22 @@ export const postOrderV2Options: RouteOptions = {
           if (orderbook !== "reservoir") {
             throw new Error("Unsupported orderbook");
           }
-          // Attribute orders are not supported.
-          if (attribute) {
-            throw new Error("Unsupported metadata");
-          }
 
           const orderInfo: orders.openDao.OrderInfo = {
             orderParams: order.data,
             metadata: {
+              schema: attribute && {
+                kind: "attribute",
+                data: {
+                  collection: attribute.collection,
+                  attributes: [
+                    {
+                      key: attribute.key,
+                      value: attribute.value,
+                    },
+                  ],
+                },
+              },
               source,
             },
           };
@@ -100,14 +108,22 @@ export const postOrderV2Options: RouteOptions = {
           if (orderbook !== "reservoir") {
             throw new Error("Unsupported orderbook");
           }
-          // Attribute orders are not supported.
-          if (attribute) {
-            throw new Error("Unsupported metadata");
-          }
 
           const orderInfo: orders.zeroExV4.OrderInfo = {
             orderParams: order.data,
             metadata: {
+              schema: attribute && {
+                kind: "attribute",
+                data: {
+                  collection: attribute.collection,
+                  attributes: [
+                    {
+                      key: attribute.key,
+                      value: attribute.value,
+                    },
+                  ],
+                },
+              },
               source,
             },
           };
@@ -207,7 +223,7 @@ export const postOrderV2Options: RouteOptions = {
                     );
                   }
 
-                  throw Boom.badRequest(error.response.data);
+                  throw Boom.badRequest(JSON.stringify(error.response.data));
                 });
 
               break;
@@ -264,7 +280,7 @@ export const postOrderV2Options: RouteOptions = {
                   {
                     headers: {
                       "Content-Type": "application/json",
-                      "X-Api-Key": String(process.env.LOOKSRARE_API_KEY),
+                      "X-Looks-Api-Key": String(process.env.LOOKSRARE_API_KEY),
                     },
                   }
                 )
@@ -276,7 +292,7 @@ export const postOrderV2Options: RouteOptions = {
                     );
                   }
 
-                  throw Boom.badRequest(error.response.data);
+                  throw Boom.badRequest(JSON.stringify(error.response.data));
                 });
 
               break;

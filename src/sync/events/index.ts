@@ -11,7 +11,7 @@ import { config } from "@/config/index";
 import { EventDataKind, getEventData } from "@/events-sync/data";
 import * as es from "@/events-sync/storage";
 import { parseEvent } from "@/events-sync/parser";
-import * as eventsSync from "@/jobs/events-sync/index";
+import * as blockCheck from "@/jobs/events-sync/block-check-queue";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
@@ -1162,6 +1162,9 @@ export const syncEvents = async (
         es.fills.addEvents(fillEvents),
         es.fills.addEventsZeroExV4(fillEventsZeroExV4),
         es.fills.addEventsFoundation(fillEventsFoundation),
+      ]);
+
+      await Promise.all([
         es.nonceCancels.addEvents(nonceCancelEvents, backfill),
         es.bulkCancels.addEvents(bulkCancelEvents, backfill),
         es.cancels.addEvents(cancelEvents),
@@ -1187,13 +1190,17 @@ export const syncEvents = async (
           ),
         ]);
 
-        // When not backfilling, save all retrieved blocks in order
-        // to efficiently check and handle block reorgs.
-        await eventsSync.saveLatestBlocks(
-          Object.entries(blockHashToNumber).map(([hash, block]) => ({
-            hash,
-            block,
-          }))
+        // Put all fetched blocks on a queue for handling block reorgs
+        // (recheck each block in 1m, 5m, 10m and 60m).
+        await Promise.all(
+          Object.entries(blockHashToNumber).map(async ([, block]) =>
+            Promise.all([
+              blockCheck.addToQueue(block, 60 * 10000),
+              blockCheck.addToQueue(block, 5 * 60 * 10000),
+              blockCheck.addToQueue(block, 10 * 60 * 10000),
+              blockCheck.addToQueue(block, 60 * 60 * 10000),
+            ])
+          )
         );
       }
     });

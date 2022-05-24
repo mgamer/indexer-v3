@@ -1,6 +1,7 @@
-import { defaultAbiCoder } from "@ethersproject/abi";
+import { BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
+import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
 import pLimit from "p-limit";
 
 import { idb, pgp } from "@/common/db";
@@ -201,6 +202,14 @@ export const save = async (
       let tokenSetId: string | undefined;
       const schemaHash = metadata.schemaHash ?? generateSchemaHash(metadata.schema);
 
+      const info = order.getInfo();
+      if (!info) {
+        return results.push({
+          id,
+          status: "unknown-info",
+        });
+      }
+
       const orderKind = order.params.kind?.split("-").slice(1).join("-");
       switch (orderKind) {
         case "contract-wide": {
@@ -229,11 +238,12 @@ export const save = async (
         }
 
         case "token-range": {
-          // TODO: The token range retrieval should be moved into the SDK.
-          const [startTokenId, endTokenId] = defaultAbiCoder.decode(
-            ["uint256", "uint256"],
-            order.params.nftProperties[0].propertyData
-          );
+          const typedInfo = info as typeof info & {
+            startTokenId: string;
+            endTokenId: string;
+          };
+          const startTokenId = typedInfo.startTokenId;
+          const endTokenId = typedInfo.endTokenId;
 
           if (startTokenId && endTokenId) {
             [{ id: tokenSetId }] = await tokenSet.tokenRange.save([
@@ -243,6 +253,27 @@ export const save = async (
                 contract: order.params.nft,
                 startTokenId,
                 endTokenId,
+              },
+            ]);
+          }
+
+          break;
+        }
+
+        case "token-list-bit-vector":
+        case "token-list-packed-list": {
+          const typedInfo = info as typeof info & {
+            tokenIds: BigNumberish[];
+          };
+          const tokenIds = typedInfo.tokenIds;
+
+          const merkleRoot = generateMerkleTree(tokenIds);
+          if (merkleRoot) {
+            [{ id: tokenSetId }] = await tokenSet.tokenList.save([
+              {
+                id: `list:${order.params.nft}:${merkleRoot.getHexRoot()}`,
+                schemaHash,
+                schema: metadata.schema,
               },
             ]);
           }

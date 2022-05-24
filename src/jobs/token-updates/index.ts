@@ -4,3 +4,4 @@
 // to a collection when it gets minted.
 
 import "@/jobs/token-updates/mint-queue";
+import "@/jobs/token-updates/token-refresh-cache";

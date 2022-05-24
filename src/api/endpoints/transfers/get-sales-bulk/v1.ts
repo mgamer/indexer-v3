@@ -14,6 +14,7 @@ import {
   toBuffer,
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
+import crypto from "crypto";
 
 const version = "v1";
 
@@ -59,6 +60,7 @@ export const getSalesBulkV1Options: RouteOptions = {
     schema: Joi.object({
       sales: Joi.array().items(
         Joi.object({
+          id: Joi.string(),
           token: Joi.object({
             contract: Joi.string()
               .lowercase()
@@ -77,6 +79,8 @@ export const getSalesBulkV1Options: RouteOptions = {
           txHash: Joi.string()
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{64}$/),
+          logIndex: Joi.number(),
+          batchIndex: Joi.number(),
           timestamp: Joi.number(),
           price: Joi.number().unsafe().allow(null),
         })
@@ -193,6 +197,10 @@ export const getSalesBulkV1Options: RouteOptions = {
 
       const sources = await Sources.getInstance();
       const result = rawResult.map((r) => ({
+        id: crypto
+          .createHash("sha256")
+          .update(`${fromBuffer(r.tx_hash)}${r.log_index}${r.batch_index}`)
+          .digest("hex"),
         token: {
           contract: fromBuffer(r.contract),
           tokenId: r.token_id,
@@ -203,6 +211,8 @@ export const getSalesBulkV1Options: RouteOptions = {
         to: fromBuffer(r.taker),
         amount: String(r.amount),
         txHash: fromBuffer(r.tx_hash),
+        logIndex: r.log_index,
+        batchIndex: r.batch_index,
         timestamp: r.timestamp,
         price: r.price ? formatEth(r.price) : null,
       }));

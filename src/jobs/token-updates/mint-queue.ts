@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import _ from "lodash";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { PgPromiseQuery, idb, pgp } from "@/common/db";
@@ -6,6 +9,7 @@ import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
+import * as tokenRefreshCache from "@/jobs/token-updates/token-refresh-cache";
 import MetadataApi from "@/utils/metadata-api";
 
 const QUEUE_NAME = "token-updates-mint-queue";
@@ -33,10 +37,8 @@ if (config.doBackgroundWork) {
       const { contract, tokenId, mintedTimestamp } = job.data as MintInfo;
 
       try {
-        // TODO: For newly minted tokens we should also populate
-        // various cached information (eg. floor sell, top buy),
-        // otherwise the tokens might be missing from the result
-        // of various APIs which depend on these cached values.
+        // Set any cached information (eg. floor sell, top buy).
+        await tokenRefreshCache.addToQueue(contract, tokenId);
 
         // First, check the database for any matching collection.
         const collection: {
@@ -112,17 +114,20 @@ if (config.doBackgroundWork) {
           });
 
           if (collection.index_metadata) {
-            await metadataIndexFetch.addToQueue([
-              {
-                kind: "single-token",
-                data: {
-                  method: "opensea",
-                  contract,
-                  tokenId,
-                  collection: collection.id,
+            await metadataIndexFetch.addToQueue(
+              [
+                {
+                  kind: "single-token",
+                  data: {
+                    method: "opensea",
+                    contract,
+                    tokenId,
+                    collection: collection.id,
+                  },
                 },
-              },
-            ]);
+              ],
+              true
+            );
           }
         } else {
           // Otherwise, we fetch the collection metadata from upstream.
@@ -201,7 +206,10 @@ if (config.doBackgroundWork) {
           QUEUE_NAME,
           `Failed to process mint info ${JSON.stringify(job.data)}: ${error}`
         );
-        throw error;
+
+        if (_.has(error, "code") && (error as any).code != 404) {
+          throw error;
+        }
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }

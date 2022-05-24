@@ -2,6 +2,7 @@
 
 import "@/jobs/arweave-relay";
 import "@/jobs/arweave-sync";
+import "@/jobs/backfill";
 import "@/jobs/cache-check";
 import "@/jobs/collection-updates";
 import "@/jobs/events-sync";
@@ -14,14 +15,17 @@ import "@/jobs/token-updates";
 import "@/jobs/daily-volumes";
 import "@/jobs/update-attribute";
 import "@/jobs/collections-refresh";
+import "@/jobs/nft-balance-updates";
 
 // Export all job queues for monitoring through the UI.
 
 import * as arweaveSyncBackfill from "@/jobs/arweave-sync/backfill-queue";
 import * as arweaveSyncRealtime from "@/jobs/arweave-sync/realtime-queue";
+import * as backfillQueue from "@/jobs/backfill/token-floor-ask-events";
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
+import * as eventsSyncBlockCheck from "@/jobs/events-sync/block-check-queue";
 import * as eventsSyncRealtime from "@/jobs/events-sync/realtime-queue";
 import * as eventsSyncFtTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/ft-transfers";
 import * as eventsSyncNftTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/nft-transfers";
@@ -35,6 +39,7 @@ import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
 import * as tokenUpdatesMintQueue from "@/jobs/token-updates/mint-queue";
+import * as tokenRefreshCacheQueue from "@/jobs/token-updates/token-refresh-cache";
 import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
@@ -45,13 +50,19 @@ import * as resyncAttributeCollection from "@/jobs/update-attribute/resync-attri
 import * as resyncAttributeFloorSell from "@/jobs/update-attribute/resync-attribute-floor-sell";
 import * as resyncOrdersSource from "@/jobs/orderbook/resync-orders-source";
 import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refresh";
+import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
+import * as backfillAcquiredAtQueue from "@/jobs/nft-balance-updates/backfill-acquired-at-queue";
+import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
+import * as backfillNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/backfill-floor-ask-price-queue";
 
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
   arweaveSyncRealtime.queue,
+  backfillQueue.queue,
   collectionUpdatesFloorAsk.queue,
   collectionUpdatesMetadata.queue,
   eventsSyncBackfill.queue,
+  eventsSyncBlockCheck.queue,
   eventsSyncRealtime.queue,
   eventsSyncFtTransfersWriteBuffer.queue,
   eventsSyncNftTransfersWriteBuffer.queue,
@@ -65,6 +76,7 @@ export const allJobQueues = [
   orderbookOrders.queue,
   orderbookTokenSets.queue,
   tokenUpdatesMintQueue.queue,
+  tokenRefreshCacheQueue.queue,
   dailyVolumes.queue,
   handleNewSellOrder.queue,
   handleNewBuyOrder.queue,
@@ -75,4 +87,8 @@ export const allJobQueues = [
   resyncAttributeCollection.queue,
   resyncAttributeFloorSell.queue,
   collectionsRefresh.queue,
+  collectionsRefreshCache.queue,
+  backfillAcquiredAtQueue.queue,
+  updateNftBalanceFloorAskPriceQueue.queue,
+  backfillNftBalanceFloorAskPriceQueue.queue,
 ];

@@ -4,7 +4,10 @@ CREATE TABLE "nft_balances" (
   "contract" BYTEA NOT NULL,
   "token_id" NUMERIC(78, 0) NOT NULL,
   "owner" BYTEA NOT NULL,
-  "amount" NUMERIC(78, 0) NOT NULL
+  "amount" NUMERIC(78, 0) NOT NULL,
+  "acquired_at" TIMESTAMPTZ,
+  "floor_sell_id" TEXT,
+  "floor_sell_value" NUMERIC(78, 0)
 );
 
 ALTER TABLE "nft_balances"
@@ -19,6 +22,10 @@ CREATE INDEX "nft_balances_owner_contract_token_id_index"
 CREATE INDEX "nft_balances_contract_owner_index"
   ON "nft_balances" ("contract", "owner")
   INCLUDE ("amount")
+  WHERE ("amount" > 0);
+
+CREATE INDEX "nft_balances_owner_acquired_at_index"
+  ON "nft_balances" ("owner", "acquired_at" DESC)
   WHERE ("amount" > 0);
 
 -- https://www.lob.com/blog/supercharge-your-postgresql-performance

@@ -13,10 +13,12 @@ import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 
 // OpenDao
+import * as openDaoBuyAttribute from "@/orderbook/orders/opendao/build/buy/attribute";
 import * as openDaoBuyToken from "@/orderbook/orders/opendao/build/buy/token";
 import * as openDaoBuyCollection from "@/orderbook/orders/opendao/build/buy/collection";
 
 // ZeroExV4
+import * as zeroExV4BuyAttribute from "@/orderbook/orders/zeroex-v4/build/buy/attribute";
 import * as zeroExV4BuyToken from "@/orderbook/orders/zeroex-v4/build/buy/token";
 import * as zeroExV4BuyCollection from "@/orderbook/orders/zeroex-v4/build/buy/collection";
 
@@ -285,9 +287,6 @@ export const getExecuteBidV2Options: RouteOptions = {
           if (!["reservoir"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
-          if (attributeKey || attributeValue) {
-            throw Boom.notImplemented("Attribute bids are not yet supported for 721ex");
-          }
 
           let order: Sdk.OpenDao.Order | undefined;
           if (token) {
@@ -296,6 +295,17 @@ export const getExecuteBidV2Options: RouteOptions = {
               ...query,
               contract,
               tokenId,
+            });
+          } else if (collection && attributeKey && attributeValue) {
+            order = await openDaoBuyAttribute.build({
+              ...query,
+              collection,
+              attributes: [
+                {
+                  key: attributeKey,
+                  value: attributeValue,
+                },
+              ],
             });
           } else if (collection) {
             order = await openDaoBuyCollection.build({
@@ -357,6 +367,14 @@ export const getExecuteBidV2Options: RouteOptions = {
                             s: query.s,
                           },
                         },
+                        attribute:
+                          collection && attributeKey && attributeValue
+                            ? {
+                                collection,
+                                key: attributeKey,
+                                value: attributeValue,
+                              }
+                            : undefined,
                         orderbook: query.orderbook,
                         source: query.source,
                       },
@@ -375,11 +393,6 @@ export const getExecuteBidV2Options: RouteOptions = {
           if (!["reservoir"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
-          if (attributeKey || attributeValue) {
-            throw Boom.notImplemented(
-              "Collection and attribute bids are not yet supported for zeroex-v4"
-            );
-          }
 
           let order: Sdk.ZeroExV4.Order | undefined;
           if (token) {
@@ -388,6 +401,17 @@ export const getExecuteBidV2Options: RouteOptions = {
               ...query,
               contract,
               tokenId,
+            });
+          } else if (collection && attributeKey && attributeValue) {
+            order = await zeroExV4BuyAttribute.build({
+              ...query,
+              collection,
+              attributes: [
+                {
+                  key: attributeKey,
+                  value: attributeValue,
+                },
+              ],
             });
           } else if (collection) {
             order = await zeroExV4BuyCollection.build({
@@ -449,6 +473,14 @@ export const getExecuteBidV2Options: RouteOptions = {
                             s: query.s,
                           },
                         },
+                        attribute:
+                          collection && attributeKey && attributeValue
+                            ? {
+                                collection,
+                                key: attributeKey,
+                                value: attributeValue,
+                              }
+                            : undefined,
                         orderbook: query.orderbook,
                         source: query.source,
                       },
