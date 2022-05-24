@@ -1,5 +1,5 @@
 import { ActivityInfo } from "@/jobs/activities/index";
-import { ActivitiesEntityInsertParams } from "@/models/activities/activities-entity";
+import { ActivitiesEntityInsertParams, ActivityType } from "@/models/activities/activities-entity";
 import { Tokens } from "@/models/tokens";
 import _ from "lodash";
 import { logger } from "@/common/logger";
@@ -23,6 +23,7 @@ export class SaleActivity {
 
     // Insert 2 records one for each side of the sale
     const activityParams: ActivitiesEntityInsertParams = {
+      type: ActivityType[activity.event],
       transactionId,
       contract: activity.contract,
       collectionId: token.collectionId,
