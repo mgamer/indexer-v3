@@ -6,7 +6,6 @@ import {
   ActivitiesEntity,
   ActivitiesEntityInsertParams,
   ActivitiesEntityParams,
-  ActivityType,
 } from "@/models/activities/activities-entity";
 
 export class Activities {
@@ -49,8 +48,8 @@ export class Activities {
     `;
 
     await idb.none(query, {
+      type: activity.type,
       transactionId: activity.transactionId,
-      type: ActivityType.sale,
       contract: toBuffer(activity.contract),
       collectionId: activity.collectionId,
       tokenId: activity.tokenId,

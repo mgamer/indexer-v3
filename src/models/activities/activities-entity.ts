@@ -3,10 +3,12 @@ import { fromBuffer } from "@/common/utils";
 export enum ActivityType {
   sale = "sale",
   listing = "listing",
+  transfer = "transfer",
 }
 
 // Define the fields required to create a new activity
 export type ActivitiesEntityInsertParams = {
+  type: ActivityType;
   transactionId: string;
   contract: string;
   collectionId: string;
