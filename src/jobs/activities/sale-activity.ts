@@ -34,6 +34,7 @@ export class SaleActivity {
       price: activity.price,
       amount: activity.amount,
       metadata: activity.metadata,
+      timestamp: new Date(Number(activity.timestamp)).toISOString(),
     };
 
     // One record for the from address
