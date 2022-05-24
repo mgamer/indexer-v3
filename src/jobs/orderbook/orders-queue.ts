@@ -33,6 +33,13 @@ if (config.doBackgroundWork) {
 
       try {
         switch (kind) {
+          case "x2y2": {
+            const result = await orders.x2y2.save([info as orders.x2y2.OrderInfo]);
+            logger.info(QUEUE_NAME, `[x2y2] Order save result: ${JSON.stringify(result)}`);
+
+            break;
+          }
+
           case "foundation": {
             const result = await orders.foundation.save([info as orders.foundation.OrderInfo]);
             logger.info(QUEUE_NAME, `[foundation] Order save result: ${JSON.stringify(result)}`);
@@ -135,6 +142,11 @@ export type GenericOrderInfo =
   | {
       kind: "foundation";
       info: orders.foundation.OrderInfo;
+      relayToArweave?: boolean;
+    }
+  | {
+      kind: "x2y2";
+      info: orders.x2y2.OrderInfo;
       relayToArweave?: boolean;
     };
 
