@@ -217,6 +217,12 @@ export const setupRoutes = (server: Server) => {
     options: collectionsEndpoints.getCollectionOwnersDistributionV1Options,
   });
 
+  server.route({
+    method: "POST",
+    path: "/collections/create-set/v1",
+    options: collectionsEndpoints.postCreateCollectionsSetV1Options,
+  });
+
   // Events
 
   server.route({

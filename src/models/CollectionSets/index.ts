@@ -1,0 +1,49 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import _ from "lodash";
+import crypto from "crypto";
+import { idb } from "@/common/db";
+
+export class CollectionSets {
+  public static getCollectionsSetId(collectionIds: string[]) {
+    return crypto.createHash("sha256").update(_.sortBy(collectionIds).toString()).digest("hex");
+  }
+
+  public static async add(collectionIds: string[]) {
+    // Sort the collections and create a unique hash
+    const collectionsHash = CollectionSets.getCollectionsSetId(collectionIds);
+
+    let query = `
+      INSERT INTO collections_sets (collections_hash)
+      VALUES ($/collectionsHash/)
+      ON CONFLICT DO NOTHING
+      RETURNING id
+    `;
+
+    const collectionsSetsResult = await idb.oneOrNone(query, {
+      collectionsHash,
+    });
+
+    if (collectionsSetsResult) {
+      const replacementParams = {};
+      let assignCollectionToSetString = "";
+
+      _.forEach(collectionIds, (collectionId) => {
+        (replacementParams as any)[`${collectionId}`] = collectionId;
+        assignCollectionToSetString += `('${collectionsHash}', $/${collectionId}/),`;
+      });
+
+      assignCollectionToSetString = _.trimEnd(assignCollectionToSetString, ",");
+
+      query = `
+        INSERT INTO collections_sets_collections (collections_sets_id, collections_id)
+        VALUES ${assignCollectionToSetString}
+        ON CONFLICT DO NOTHING
+      `;
+
+      await idb.none(query, replacementParams);
+    }
+
+    return collectionsHash;
+  }
+}

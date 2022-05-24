@@ -2,18 +2,18 @@
 
 CREATE TABLE "collections_sets" (
   "id" BIGSERIAL NOT NULL,
-  "community" TEXT
+  "collections_hash" TEXT
 );
 
 ALTER TABLE "collections_sets"
   ADD CONSTRAINT "collections_sets_pk"
   PRIMARY KEY ("id");
 
-CREATE UNIQUE INDEX "collections_sets_community_unique_index"
-  ON "collections_sets" ("community");
+CREATE UNIQUE INDEX "collections_sets_collections_hash_unique_index"
+  ON "collections_sets" ("collections_hash");
 
 CREATE TABLE "collections_sets_collections" (
-  "collections_sets_id" BIGINT NOT NULL,
+  "collections_sets_id" TEXT NOT NULL,
   "collections_id" TEXT NOT NULL
 );
 
