@@ -1201,9 +1201,9 @@ export const syncEvents = async (
         await activities.addToQueue(fillActivitiesInfo);
       }
 
-      // Add all the transfer events to the activity queue
+      // Add all the transfer/mint events to the activity queue
       const transferActivitiesInfo: ActivityInfo[] = _.map(nftTransferEvents, (event) => ({
-        event: ActivityEvent.transfer,
+        event: event.from == AddressZero ? ActivityEvent.mint : ActivityEvent.transfer,
         contract: event.baseEventParams.address,
         tokenId: event.tokenId,
         fromAddress: event.from,

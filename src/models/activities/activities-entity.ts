@@ -4,6 +4,7 @@ export enum ActivityType {
   sale = "sale",
   listing = "listing",
   transfer = "transfer",
+  mint = "mint",
 }
 
 // Define the fields required to create a new activity
