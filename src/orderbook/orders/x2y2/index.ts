@@ -78,7 +78,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       // Check: sell order has Eth as payment token
       if (
         order.params.type === "sell" &&
-        order.params.currency !== Sdk.OpenDao.Addresses.Eth[config.chainId]
+        order.params.currency !== Sdk.Common.Addresses.Eth[config.chainId]
       ) {
         return results.push({
           id,
