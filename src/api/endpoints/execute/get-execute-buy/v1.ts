@@ -170,6 +170,20 @@ export const getExecuteBuyV1Options: RouteOptions = {
           let tx: TxData | undefined;
           let exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND | undefined;
           switch (bestOrderResult.kind) {
+            case "x2y2": {
+              const order = new Sdk.X2Y2.Order(config.chainId, bestOrderResult.raw_data);
+
+              // Generate exchange-specific fill transaction.
+              const exchange = new Sdk.X2Y2.Exchange(
+                config.chainId,
+                String(process.env.X2Y2_API_KEY)
+              );
+              tx = await exchange.fillOrderTx(router.contract.address, order);
+              exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.X2Y2;
+
+              break;
+            }
+
             case "foundation": {
               // Generate exchange-specific fill transaction.
               const exchange = new Sdk.Foundation.Exchange(config.chainId);
@@ -274,7 +288,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
           // Wrap the exchange-specific fill transaction via the router.
           if (bestOrderResult.token_kind === "erc721") {
             routerTx = {
-              from: tx.from,
+              from: query.taker,
               to: router.contract.address,
               data: usePrecheck
                 ? router.contract.interface.encodeFunctionData(
@@ -306,7 +320,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
             };
           } else if (bestOrderResult.token_kind === "erc1155") {
             routerTx = {
-              from: tx.from,
+              from: query.taker,
               to: router.contract.address,
               data: usePrecheck
                 ? router.contract.interface.encodeFunctionData(

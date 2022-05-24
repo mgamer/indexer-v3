@@ -192,6 +192,16 @@ export const getExecuteBuyV2Options: RouteOptions = {
             ),
             exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.FOUNDATION,
           };
+        } else if (kind === "x2y2") {
+          const order = new Sdk.X2Y2.Order(config.chainId, rawData);
+
+          // Generate exchange-specific fill transaction.
+          const exchange = new Sdk.X2Y2.Exchange(config.chainId, String(process.env.X2Y2_API_KEY));
+
+          return {
+            tx: await exchange.fillOrderTx(router.contract.address, order),
+            exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.X2Y2,
+          };
         }
       };
 
@@ -542,7 +552,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
       } of txInfos) {
         if (tokenKind === "erc721") {
           routerTxs.push({
-            from: tx.from,
+            from: query.taker,
             to: router.contract.address,
             data: !skipPrecheck
               ? router.contract.interface.encodeFunctionData(
@@ -574,7 +584,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
           });
         } else {
           routerTxs.push({
-            from: tx.from,
+            from: query.taker,
             to: router.contract.address,
             data: !skipPrecheck
               ? router.contract.interface.encodeFunctionData(
