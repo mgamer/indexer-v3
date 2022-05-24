@@ -70,6 +70,8 @@ export const getTransfersV1Options: RouteOptions = {
           txHash: Joi.string()
             .lowercase()
             .pattern(/^0x[a-f0-9]{64}$/),
+          logIndex: Joi.number(),
+          batchIndex: Joi.number(),
           timestamp: Joi.number(),
           price: Joi.number().unsafe().allow(null),
         })
@@ -155,6 +157,8 @@ export const getTransfersV1Options: RouteOptions = {
           to: fromBuffer(r.to),
           amount: String(r.amount),
           txHash: fromBuffer(r.tx_hash),
+          logIndex: r.log_index,
+          batchIndex: r.batch_index,
           timestamp: r.timestamp,
           price: r.price ? formatEth(r.price) : null,
         }))

@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 5.80.2 (2022-05-23)
+
+### 5.80.1 (2022-05-23)
+
+## 5.80.0 (2022-05-23)
+
+
+### Features
+
+* add log index and batch index to sales / bulk sales / transfers ([ad2bf3c](https://github.com/reservoirprotocol/indexer-v3/commit/ad2bf3c49d7b01b11801767feef8757325f93763))
+
+### 5.79.1 (2022-05-23)
+
 ## 5.79.0 (2022-05-23)
 
 

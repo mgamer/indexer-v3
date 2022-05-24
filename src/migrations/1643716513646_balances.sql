@@ -6,6 +6,8 @@ CREATE TABLE "nft_balances" (
   "owner" BYTEA NOT NULL,
   "amount" NUMERIC(78, 0) NOT NULL,
   "acquired_at" TIMESTAMPTZ,
+  "floor_sell_id" TEXT,
+  "floor_sell_value" NUMERIC(78, 0)
 );
 
 ALTER TABLE "nft_balances"
