@@ -22,6 +22,7 @@ export class Activities {
 
     const query = `
       INSERT INTO activities (
+        subject,
         activity_hash,
         type,
         contract,
@@ -35,6 +36,7 @@ export class Activities {
         metadata
       )
       VALUES (
+        $/subject/,
         $/activityHash/,
         $/type/,
         $/contract/,
@@ -54,6 +56,7 @@ export class Activities {
       queries.push({
         query,
         values: {
+          subject: activity.subject,
           type: activity.type,
           activityHash: activity.activityHash,
           contract: toBuffer(activity.contract),
