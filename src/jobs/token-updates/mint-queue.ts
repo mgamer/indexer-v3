@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import _ from "lodash";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { PgPromiseQuery, idb, pgp } from "@/common/db";
@@ -37,9 +36,6 @@ if (config.doBackgroundWork) {
       const { contract, tokenId, mintedTimestamp } = job.data as MintInfo;
 
       try {
-        // Set any cached information (eg. floor sell, top buy).
-        await tokenRefreshCache.addToQueue(contract, tokenId);
-
         // First, check the database for any matching collection.
         const collection: {
           id: string;
@@ -205,15 +201,15 @@ if (config.doBackgroundWork) {
         if (queries.length) {
           await idb.none(pgp.helpers.concat(queries));
         }
+
+        // Set any cached information (eg. floor sell, top buy).
+        await tokenRefreshCache.addToQueue(contract, tokenId);
       } catch (error) {
         logger.error(
           QUEUE_NAME,
           `Failed to process mint info ${JSON.stringify(job.data)}: ${error}`
         );
-
-        if (_.has(error, "code") && (error as any).code != 404) {
-          throw error;
-        }
+        throw error;
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }
