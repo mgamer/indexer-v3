@@ -19,7 +19,7 @@ export const queue = new Queue(QUEUE_NAME, {
   defaultJobOptions: {
     attempts: 10,
     removeOnComplete: 100,
-    removeOnFail: false,
+    removeOnFail: 1000,
   },
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });

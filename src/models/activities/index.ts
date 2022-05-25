@@ -93,7 +93,7 @@ export class Activities {
              WHERE collection_id = $/collectionId/
              ${continuation}
              ${typesFilter}
-             ORDER BY created_at DESC
+             ORDER BY created_at DESC NULLS LAST
              LIMIT $/limit/`,
       {
         collectionId,
@@ -135,7 +135,7 @@ export class Activities {
              AND token_id = $/tokenId/
              ${continuation}
              ${typesFilter}
-             ORDER BY created_at DESC
+             ORDER BY created_at DESC NULLS LAST
              LIMIT $/limit/`,
       {
         contract: toBuffer(contract),
@@ -176,7 +176,7 @@ export class Activities {
              WHERE address = $/user/
              ${continuation}
              ${typesFilter}
-             ORDER BY created_at DESC
+             ORDER BY created_at DESC NULLS LAST
              LIMIT $/limit/`,
       {
         user: toBuffer(user),
