@@ -23,7 +23,7 @@ import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 import { OrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
 import * as activities from "@/jobs/activities";
-import { ActivityEvent, ActivityInfo } from "@/jobs/activities";
+import { ActivityEvent, EventInfo } from "@/jobs/activities";
 
 // TODO: Split into multiple files (by exchange).
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
@@ -1180,22 +1180,23 @@ export const syncEvents = async (
       ]);
 
       // Add all the fill events to the activity queue
-      const fillActivitiesInfo: ActivityInfo[] = _.map(
+      const fillActivitiesInfo: EventInfo[] = _.map(
         _.concat(fillEvents, fillEventsZeroExV4, fillEventsFoundation),
-        (event) => ({
-          event: ActivityEvent.sale,
-          contract: event.contract,
-          tokenId: event.tokenId,
-          fromAddress: event.maker,
-          toAddress: event.taker,
-          price: Number(event.price),
-          amount: Number(event.amount),
-          metadata: {
-            transactionHash: event.baseEventParams.txHash,
-            logIndex: event.baseEventParams.logIndex,
-            batchIndex: event.baseEventParams.batchIndex,
-          },
-        })
+        (event) =>
+          ({
+            kind: ActivityEvent.fillEvent,
+            data: {
+              contract: event.contract,
+              tokenId: event.tokenId,
+              fromAddress: event.maker,
+              toAddress: event.taker,
+              price: Number(event.price),
+              amount: Number(event.amount),
+              transactionHash: event.baseEventParams.txHash,
+              logIndex: event.baseEventParams.logIndex,
+              batchIndex: event.baseEventParams.batchIndex,
+            },
+          } as EventInfo)
       );
 
       if (!_.isEmpty(fillActivitiesInfo)) {
@@ -1203,20 +1204,23 @@ export const syncEvents = async (
       }
 
       // Add all the transfer/mint events to the activity queue
-      const transferActivitiesInfo: ActivityInfo[] = _.map(nftTransferEvents, (event) => ({
-        event: event.from == AddressZero ? ActivityEvent.mint : ActivityEvent.transfer,
-        contract: event.baseEventParams.address,
-        tokenId: event.tokenId,
-        fromAddress: event.from,
-        toAddress: event.to,
-        price: 0,
-        amount: Number(event.amount),
-        metadata: {
-          transactionHash: event.baseEventParams.txHash,
-          logIndex: event.baseEventParams.logIndex,
-          batchIndex: event.baseEventParams.batchIndex,
-        },
-      }));
+      const transferActivitiesInfo: EventInfo[] = _.map(
+        nftTransferEvents,
+        (event) =>
+          ({
+            kind: ActivityEvent.nftTransferEvent,
+            data: {
+              contract: event.baseEventParams.address,
+              tokenId: event.tokenId,
+              fromAddress: event.from,
+              toAddress: event.to,
+              amount: Number(event.amount),
+              transactionHash: event.baseEventParams.txHash,
+              logIndex: event.baseEventParams.logIndex,
+              batchIndex: event.baseEventParams.batchIndex,
+            },
+          } as EventInfo)
+      );
 
       if (!_.isEmpty(transferActivitiesInfo)) {
         await activities.addToQueue(transferActivitiesInfo);

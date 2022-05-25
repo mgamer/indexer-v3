@@ -20,6 +20,22 @@ export class Attributes {
     });
   }
 
+  public static async getById(attributeId: number) {
+    const query = `SELECT *
+                   FROM attributes
+                   WHERE id = $/attributeId/`;
+
+    const attribute = await idb.oneOrNone(query, {
+      attributeId,
+    });
+
+    if (attribute) {
+      return new AttributesEntity(attribute);
+    }
+
+    return null;
+  }
+
   public static async getAttributes(attributesId: number[]) {
     const query = `SELECT *
                    FROM attributes

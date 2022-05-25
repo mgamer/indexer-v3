@@ -13,6 +13,8 @@ import { TriggerKind } from "@/jobs/order-updates/types";
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
+import { ActivityEvent, EventInfo } from "@/jobs/activities";
+import * as activities from "@/jobs/activities";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -43,11 +45,15 @@ if (config.doBackgroundWork) {
         const data: {
           side: string | null;
           token_set_id: string | null;
+          fillability_status: string | null;
+          approval_status: string | null;
         } | null = await idb.oneOrNone(
           `
             SELECT
               "o"."side",
-              "o"."token_set_id"
+              "o"."token_set_id",
+              "o"."fillability_status",
+              "o"."approval_status"
             FROM "orders" "o"
             WHERE "o"."id" = $/id/
           `,
@@ -312,7 +318,7 @@ if (config.doBackgroundWork) {
           }
 
           // Insert a corresponding order event.
-          await idb.none(
+          const orderEventResult = await idb.oneOrNone(
             `
               INSERT INTO order_events (
                 kind,
@@ -358,6 +364,14 @@ if (config.doBackgroundWork) {
                 WHERE orders.id = $/id/
                 LIMIT 1
               )
+              RETURNING
+                id,
+                contract,
+                token_id,
+                maker,
+                price,
+                order_quantity_remaining AS amount,
+                extract(epoch from order_events.created_at) AS timestamp
             `,
             {
               id,
@@ -366,6 +380,48 @@ if (config.doBackgroundWork) {
               txTimestamp: trigger.txTimestamp || null,
             }
           );
+
+          if (
+            trigger.kind == "cancel" ||
+            (trigger.kind == "new-order" &&
+              data.fillability_status == "fillable" &&
+              data.approval_status == "approved")
+          ) {
+            if (data.side === "sell") {
+              const eventInfo = {
+                kind:
+                  trigger.kind == "new-order"
+                    ? ActivityEvent.newSellOrder
+                    : ActivityEvent.sellOrderCancelled,
+                data: {
+                  orderId: id,
+                  contract: fromBuffer(orderEventResult.contract),
+                  tokenId: orderEventResult.token_id,
+                  maker: fromBuffer(orderEventResult.contract),
+                  price: orderEventResult.price,
+                  amount: orderEventResult.amount,
+                },
+              } as EventInfo;
+
+              await activities.addToQueue([eventInfo]);
+            } else if (data.side === "buy") {
+              const eventInfo = {
+                kind:
+                  trigger.kind == "new-order"
+                    ? ActivityEvent.newBuyOrder
+                    : ActivityEvent.buyOrderCancelled,
+                data: {
+                  orderId: id,
+                  contract: fromBuffer(orderEventResult.contract),
+                  maker: fromBuffer(orderEventResult.contract),
+                  price: Number(orderEventResult.price),
+                  amount: Number(orderEventResult.price),
+                },
+              } as EventInfo;
+
+              await activities.addToQueue([eventInfo]);
+            }
+          }
         }
       } catch (error) {
         logger.error(

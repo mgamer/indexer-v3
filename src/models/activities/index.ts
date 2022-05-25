@@ -10,10 +10,10 @@ import {
 } from "@/models/activities/activities-entity";
 
 export class Activities {
-  public static getActivityHash(transactionHash?: string, logIndex?: number, batchIndex?: number) {
+  public static getActivityHash(...params: string[]) {
     return crypto
       .createHash("sha256")
-      .update(`${transactionHash}${logIndex}${batchIndex}`)
+      .update(`${params.join("")}`)
       .digest("hex");
   }
 
@@ -64,7 +64,7 @@ export class Activities {
           tokenId: activity.tokenId,
           address: toBuffer(activity.address),
           fromAddress: toBuffer(activity.fromAddress),
-          toAddress: toBuffer(activity.toAddress),
+          toAddress: activity.toAddress ? toBuffer(activity.toAddress) : null,
           price: activity.price,
           amount: activity.amount,
           metadata: activity.metadata,

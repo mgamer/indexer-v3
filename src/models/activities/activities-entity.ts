@@ -5,6 +5,9 @@ export enum ActivityType {
   listing = "listing",
   transfer = "transfer",
   mint = "mint",
+  bid = "bid",
+  bid_cancel = "bid_cancel",
+  listing_cancel = "listing_cancel",
 }
 
 export enum ActivitySubject {
@@ -20,10 +23,10 @@ export type ActivitiesEntityInsertParams = {
   activityHash: string;
   contract: string;
   collectionId: string;
-  tokenId: string;
+  tokenId: string | null;
   address: string;
   fromAddress: string;
-  toAddress: string;
+  toAddress: string | null;
   price: number;
   amount: number;
   metadata?: ActivityMetadata;
@@ -63,9 +66,10 @@ export type ActivitiesEntityParams = {
 
 // Possible fields to be found in the metadata
 export type ActivityMetadata = {
-  transactionHash?: string | undefined;
-  logIndex?: number | undefined;
-  batchIndex?: number | undefined;
+  transactionHash?: string;
+  logIndex?: number;
+  batchIndex?: number;
+  orderId?: string;
 };
 
 export class ActivitiesEntity {
