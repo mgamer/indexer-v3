@@ -39,13 +39,11 @@ if (config.doBackgroundWork) {
         // First, check the database for any matching collection.
         const collection: {
           id: string;
-          index_metadata: boolean | null;
           token_set_id: string | null;
         } | null = await idb.oneOrNone(
           `
             SELECT
               "c"."id",
-              "c"."index_metadata",
               "c"."token_set_id"
             FROM "collections" "c"
             WHERE "c"."contract" = $/contract/
@@ -111,23 +109,6 @@ if (config.doBackgroundWork) {
                 tokenSetId: collection.token_set_id,
               },
             });
-          }
-
-          if (collection.index_metadata) {
-            await metadataIndexFetch.addToQueue(
-              [
-                {
-                  kind: "single-token",
-                  data: {
-                    method: "opensea",
-                    contract,
-                    tokenId,
-                    collection: collection.id,
-                  },
-                },
-              ],
-              true
-            );
           }
         } else {
           // Otherwise, we fetch the collection metadata from upstream.
@@ -200,6 +181,23 @@ if (config.doBackgroundWork) {
 
         if (queries.length) {
           await idb.none(pgp.helpers.concat(queries));
+        }
+
+        if (collection?.id) {
+          await metadataIndexFetch.addToQueue(
+            [
+              {
+                kind: "single-token",
+                data: {
+                  method: "opensea",
+                  contract,
+                  tokenId,
+                  collection: collection.id,
+                },
+              },
+            ],
+            true
+          );
         }
 
         // Set any cached information (eg. floor sell, top buy).
