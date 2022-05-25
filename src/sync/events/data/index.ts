@@ -8,6 +8,7 @@ import * as looksRare from "@/events-sync/data/looks-rare";
 import * as openDao from "@/events-sync/data/opendao";
 import * as wyvernV2 from "@/events-sync/data/wyvern-v2";
 import * as wyvernV23 from "@/events-sync/data/wyvern-v2.3";
+import * as x2y2 from "@/events-sync/data/x2y2";
 import * as zeroExV4 from "@/events-sync/data/zeroex-v4";
 
 // All events we're syncing should have an associated `EventData`
@@ -42,7 +43,9 @@ export type EventDataKind =
   | "foundation-buy-price-set"
   | "foundation-buy-price-invalidated"
   | "foundation-buy-price-cancelled"
-  | "foundation-buy-price-accepted";
+  | "foundation-buy-price-accepted"
+  | "x2y2-order-cancelled"
+  | "x2y2-order-inventory";
 
 export type EventData = {
   kind: EventDataKind;
@@ -82,6 +85,8 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       openDao.erc1155OrderCancelled,
       openDao.erc721OrderFilled,
       openDao.erc1155OrderFilled,
+      x2y2.orderCancelled,
+      x2y2.orderInventory,
     ];
   } else {
     return (
@@ -150,6 +155,10 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return openDao.erc721OrderFilled;
     case "opendao-erc1155-order-filled":
       return openDao.erc1155OrderFilled;
+    case "x2y2-order-cancelled":
+      return x2y2.orderCancelled;
+    case "x2y2-order-inventory":
+      return x2y2.orderInventory;
     default:
       return undefined;
   }

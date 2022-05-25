@@ -5,7 +5,7 @@ import { parseEther } from "@ethersproject/units";
 import { TxData } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
 
-import { config } from "@/config/index";
+import { config } from "../config/index";
 
 const SIMULATE_URL = `
   https://api.tenderly.co/api/v1/account/${process.env.TENDERLY_USER}/project/${process.env.TENDERLY_PROJECT}/simulate
