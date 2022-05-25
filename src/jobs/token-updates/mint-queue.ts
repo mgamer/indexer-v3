@@ -44,11 +44,13 @@ if (config.doBackgroundWork) {
         const collection: {
           id: string;
           index_metadata: boolean | null;
+          token_set_id: string | null;
         } | null = await idb.oneOrNone(
           `
             SELECT
               "c"."id",
-              "c"."index_metadata"
+              "c"."index_metadata",
+              "c"."token_set_id"
             FROM "collections" "c"
             WHERE "c"."contract" = $/contract/
               AND "c"."token_id_range" @> $/tokenId/::NUMERIC(78, 0)
@@ -86,32 +88,34 @@ if (config.doBackgroundWork) {
           });
 
           // We also need to include the new token to any collection-wide token set.
-          queries.push({
-            query: `
-              WITH "x" AS (
-                SELECT DISTINCT
-                  "ts"."id"
-                FROM "token_sets" "ts"
-                WHERE "ts"."collection_id" = $/collection/
-              )
-              INSERT INTO "token_sets_tokens" (
-                "token_set_id",
-                "contract",
-                "token_id"
-              ) (
-                SELECT
-                  "x"."id",
-                  $/contract/,
-                  $/tokenId/
-                FROM "x"
-              ) ON CONFLICT DO NOTHING
-            `,
-            values: {
-              contract: toBuffer(contract),
-              tokenId,
-              collection: collection.id,
-            },
-          });
+          if (collection.token_set_id) {
+            queries.push({
+              query: `
+                WITH "x" AS (
+                  SELECT DISTINCT
+                    "ts"."id"
+                  FROM "token_sets" "ts"
+                  WHERE "ts"."id" = $/tokenSetId/
+                )
+                INSERT INTO "token_sets_tokens" (
+                  "token_set_id",
+                  "contract",
+                  "token_id"
+                ) (
+                  SELECT
+                    "x"."id",
+                    $/contract/,
+                    $/tokenId/
+                  FROM "x"
+                ) ON CONFLICT DO NOTHING
+              `,
+              values: {
+                contract: toBuffer(contract),
+                tokenId,
+                tokenSetId: collection.token_set_id,
+              },
+            });
+          }
 
           if (collection.index_metadata) {
             await metadataIndexFetch.addToQueue(
