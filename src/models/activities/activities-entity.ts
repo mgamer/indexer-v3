@@ -7,10 +7,17 @@ export enum ActivityType {
   mint = "mint",
 }
 
+export enum ActivitySubject {
+  user = "user",
+  token = "token",
+  collection = "collection",
+}
+
 // Define the fields required to create a new activity
 export type ActivitiesEntityInsertParams = {
+  subject: ActivitySubject;
   type: ActivityType;
-  transactionId: string;
+  activityHash: string;
   contract: string;
   collectionId: string;
   tokenId: string;
@@ -40,7 +47,8 @@ export type ActivitiesEntityUpdateParams = {
 export type ActivitiesEntityParams = {
   id: number;
   created_at: Date;
-  transaction_id: Buffer;
+  subject: ActivitySubject;
+  activity_hash: string;
   type: ActivityType;
   contract: Buffer;
   collection_id: string;
@@ -63,7 +71,8 @@ export type ActivityMetadata = {
 export class ActivitiesEntity {
   id: number;
   createdAt: Date;
-  transactionId: string;
+  subject: ActivitySubject;
+  activityHash: string;
   type: ActivityType;
   contract: string;
   collectionId: string;
@@ -78,7 +87,8 @@ export class ActivitiesEntity {
   constructor(params: ActivitiesEntityParams) {
     this.id = params.id;
     this.createdAt = params.created_at;
-    this.transactionId = fromBuffer(params.transaction_id);
+    this.subject = params.subject;
+    this.activityHash = params.activity_hash;
     this.type = params.type;
     this.contract = fromBuffer(params.contract);
     this.collectionId = params.collection_id;
