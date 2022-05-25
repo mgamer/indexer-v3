@@ -226,7 +226,7 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/collections/create-set/v1",
+    path: "/collections-sets/v1",
     options: collectionsEndpoints.postCreateCollectionsSetV1Options,
   });
 
