@@ -20,7 +20,6 @@ export type ActivitiesEntityInsertParams = {
   price: number;
   amount: number;
   metadata?: ActivityMetadata;
-  timestamp?: string;
 };
 
 // Define the fields we can update

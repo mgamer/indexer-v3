@@ -72,7 +72,6 @@ export type ActivityInfo = {
   price: number;
   amount: number;
   metadata?: ActivityMetadata;
-  timestamp?: number; // For on-chain events use the blockchain timestamp
 };
 
 export const addToQueue = async (activities: ActivityInfo[]) => {
