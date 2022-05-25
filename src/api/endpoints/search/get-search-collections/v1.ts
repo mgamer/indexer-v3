@@ -7,6 +7,7 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import { edb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
+import { CollectionSets } from "@/models/collection-sets";
 
 const version = "v1";
 
@@ -30,6 +31,9 @@ export const getSearchCollectionsV1Options: RouteOptions = {
       community: Joi.string()
         .lowercase()
         .description("Filter to a particular community, e.g. `artblocks`"),
+      collectionsSetId: Joi.string()
+        .lowercase()
+        .description("Filter to a particular collection set"),
       limit: Joi.number().integer().min(1).max(50).default(20),
     }),
   },
@@ -61,6 +65,15 @@ export const getSearchCollectionsV1Options: RouteOptions = {
 
     if (query.community) {
       conditions.push(`collections.community = $/community/`);
+    }
+
+    if (query.collectionsSetId) {
+      const collectionsIds = await CollectionSets.getCollectionsIds(query.collectionsSetId);
+
+      if (!_.isEmpty(collectionsIds)) {
+        query.collectionsIds = _.join(collectionsIds, "','");
+        conditions.push(`collections.id IN ('$/collectionsIds:raw/')`);
+      }
     }
 
     if (conditions.length) {

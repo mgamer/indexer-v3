@@ -6,6 +6,8 @@ import Joi from "joi";
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { CollectionSets } from "@/models/collection-sets";
+import _ from "lodash";
 
 const version = "v2";
 
@@ -35,6 +37,9 @@ export const getUserTokensV2Options: RouteOptions = {
       community: Joi.string()
         .lowercase()
         .description("Filter to a particular community, e.g. `artblocks`"),
+      collectionsSetId: Joi.string()
+        .lowercase()
+        .description("Filter to a particular collection set"),
       collection: Joi.string()
         .lowercase()
         .description(
@@ -101,6 +106,16 @@ export const getUserTokensV2Options: RouteOptions = {
       communityFilter = `AND c.community = $/community/`;
     }
 
+    let collectionSetFilter = "";
+    if (query.collectionsSetId) {
+      const collectionsIds = await CollectionSets.getCollectionsIds(query.collectionsSetId);
+
+      if (!_.isEmpty(collectionsIds)) {
+        params.collectionsIds = _.join(collectionsIds, "','");
+        collectionSetFilter = `AND c.id IN ('$/collectionsIds:raw/')`;
+      }
+    }
+
     let collectionFilter = "";
     if (query.collection) {
       (params as any).collection = query.collection;
@@ -147,6 +162,7 @@ export const getUserTokensV2Options: RouteOptions = {
           JOIN collections c ON c.id = t.collection_id
           ${communityFilter}
           ${collectionFilter}
+          ${collectionSetFilter}
         ${sortByFilter}
         OFFSET $/offset/
         LIMIT $/limit/
