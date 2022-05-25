@@ -36,7 +36,7 @@ export class CollectionSets {
       assignCollectionToSetString = _.trimEnd(assignCollectionToSetString, ",");
 
       query = `
-        INSERT INTO collections_sets_collections (collections_sets_id, collections_id)
+        INSERT INTO collections_sets_collections (collections_set_id, collection_id)
         VALUES ${assignCollectionToSetString}
         ON CONFLICT DO NOTHING
       `;
@@ -45,5 +45,16 @@ export class CollectionSets {
     }
 
     return collectionsHash;
+  }
+
+  public static async getCollectionsIds(collectionsSetId: string) {
+    const query = `
+      SELECT collection_id
+      FROM collections_sets_collections
+      WHERE collections_set_id = $/collectionsSetId/
+    `;
+
+    const collections = await idb.manyOrNone(query, { collectionsSetId });
+    return _.map(collections, (collection) => collection.collection_id);
   }
 }

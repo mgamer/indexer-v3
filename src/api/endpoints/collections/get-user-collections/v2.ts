@@ -6,6 +6,7 @@ import Joi from "joi";
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { CollectionSets } from "@/models/collection-sets";
 
 const version = "v2";
 
@@ -31,6 +32,9 @@ export const getUserCollectionsV2Options: RouteOptions = {
       community: Joi.string()
         .lowercase()
         .description("Filter to a particular community, e.g. `artblocks`"),
+      collectionsSetId: Joi.string()
+        .lowercase()
+        .description("Filter to a particular collection set"),
       collection: Joi.string()
         .lowercase()
         .description(
@@ -158,9 +162,20 @@ export const getUserCollectionsV2Options: RouteOptions = {
       if (query.community) {
         conditions.push(`collections.community = $/community/`);
       }
+
+      if (query.collectionsSetId) {
+        const collectionsIds = await CollectionSets.getCollectionsIds(query.collectionsSetId);
+
+        if (!_.isEmpty(collectionsIds)) {
+          query.collectionsIds = _.join(collectionsIds, "','");
+          conditions.push(`collections.id IN ('$/collectionsIds:raw/')`);
+        }
+      }
+
       if (query.collection) {
         conditions.push(`collections.id = $/collection/`);
       }
+
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
