@@ -8,7 +8,7 @@ import { CollectionSets } from "@/models/collection-sets";
 const version = "v1";
 
 export const postCreateCollectionsSetV1Options: RouteOptions = {
-  description: "Public API for create collections sets",
+  description: "Public API for anyone to trigger the creation of a new collections set",
   tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {
