@@ -41,16 +41,16 @@ export class MintActivity {
       metadata: activity.metadata,
     };
 
+    // Create a collection activity
+    activitiesParams.push(_.clone(baseActivity));
+
     // Create a token activity
     baseActivity.subject = ActivitySubject.token;
-    activitiesParams.push(baseActivity);
+    activitiesParams.push(_.clone(baseActivity));
 
     // One record for the user
     baseActivity.subject = ActivitySubject.user;
-    activitiesParams.push(baseActivity);
-
-    // Create a collection activity
-    activitiesParams.push(baseActivity);
+    activitiesParams.push(_.clone(baseActivity));
 
     await Activities.add(activitiesParams);
   }
