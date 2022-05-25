@@ -42,19 +42,19 @@ export class TransferActivity {
     };
 
     // Create a collection activity
-    activitiesParams.push(baseActivity);
+    activitiesParams.push(_.clone(baseActivity));
 
     // Create a token activity
     baseActivity.subject = ActivitySubject.token;
-    activitiesParams.push(baseActivity);
+    activitiesParams.push(_.clone(baseActivity));
 
     // One record for the user from address
     baseActivity.subject = ActivitySubject.user;
-    activitiesParams.push(baseActivity);
+    activitiesParams.push(_.clone(baseActivity));
 
     // One record for the user to address
     baseActivity.address = activity.toAddress;
-    activitiesParams.push(baseActivity);
+    activitiesParams.push(_.clone(baseActivity));
 
     await Activities.add(activitiesParams);
   }
