@@ -3,7 +3,8 @@
 CREATE TABLE activities (
     id bigserial NOT NULL,
 	  created_at timestamp with time zone DEFAULT NOW(),
-	  transaction_id text,
+	  subject text,
+	  activity_hash text,
     type text NOT NULL,
     contract BYTEA,
     collection_id text,
@@ -17,17 +18,17 @@ CREATE TABLE activities (
     CONSTRAINT activities_pk PRIMARY KEY (id)
 );
 
-CREATE INDEX activities_address_created_at_type_index
-    ON activities (address, created_at DESC NULLS LAST, type);
+CREATE INDEX activities_subject_address_created_at_type_index
+    ON activities (subject, address, created_at DESC NULLS LAST, type);
 
-CREATE INDEX activities_collection_id_created_at_type_index
-    ON activities (collection_id, created_at DESC NULLS LAST, type);
+CREATE INDEX activities_subject_collection_id_created_at_type_index
+    ON activities (subject, collection_id, created_at DESC NULLS LAST, type);
 
-CREATE INDEX activities_contract_token_id_created_at_type_index
-    ON activities (contract, token_id, created_at DESC NULLS LAST, type);
+CREATE INDEX activities_subject_contract_token_id_created_at_type_index
+    ON activities (subject, contract, token_id, created_at DESC NULLS LAST, type);
 
-CREATE UNIQUE INDEX activities_transaction_id_address_unique_index
-    ON activities (transaction_id, address);
+CREATE UNIQUE INDEX activities_subject_activity_hash_address_unique_index
+    ON activities (subject, activity_hash, address);
 
 -- Down Migration
 

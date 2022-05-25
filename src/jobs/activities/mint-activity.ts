@@ -1,5 +1,9 @@
 import { ActivityInfo } from "@/jobs/activities/index";
-import { ActivitiesEntityInsertParams, ActivityType } from "@/models/activities/activities-entity";
+import {
+  ActivitiesEntityInsertParams,
+  ActivitySubject,
+  ActivityType,
+} from "@/models/activities/activities-entity";
 import { Tokens } from "@/models/tokens";
 import _ from "lodash";
 import { logger } from "@/common/logger";
@@ -7,6 +11,7 @@ import { Activities } from "@/models/activities";
 
 export class MintActivity {
   public static async handleEvent(activity: ActivityInfo) {
+    const activitiesParams: ActivitiesEntityInsertParams[] = [];
     const token = await Tokens.getByContractAndTokenId(activity.contract, activity.tokenId);
 
     // If no token found
@@ -15,16 +20,16 @@ export class MintActivity {
       return;
     }
 
-    const transactionId = Activities.getTransactionId(
+    const activityHash = Activities.getActivityHash(
       activity.metadata?.transactionHash,
       activity.metadata?.logIndex,
       activity.metadata?.batchIndex
     );
 
-    // For mint events only one record is required
-    const activityParams: ActivitiesEntityInsertParams = {
+    const baseActivity = {
+      subject: ActivitySubject.collection,
       type: ActivityType[activity.event],
-      transactionId,
+      activityHash,
       contract: activity.contract,
       collectionId: token.collectionId,
       tokenId: activity.tokenId,
@@ -36,7 +41,17 @@ export class MintActivity {
       metadata: activity.metadata,
     };
 
-    // One record for the from address
-    await Activities.add(activityParams);
+    // Create a token activity
+    baseActivity.subject = ActivitySubject.token;
+    activitiesParams.push(baseActivity);
+
+    // One record for the user
+    baseActivity.subject = ActivitySubject.user;
+    activitiesParams.push(baseActivity);
+
+    // Create a collection activity
+    activitiesParams.push(baseActivity);
+
+    await Activities.add(activitiesParams);
   }
 }

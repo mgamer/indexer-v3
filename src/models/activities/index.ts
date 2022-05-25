@@ -1,25 +1,28 @@
 import _ from "lodash";
 import crypto from "crypto";
-import { idb } from "@/common/db";
+import { PgPromiseQuery, idb, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import {
   ActivitiesEntity,
   ActivitiesEntityInsertParams,
   ActivitiesEntityParams,
+  ActivitySubject,
 } from "@/models/activities/activities-entity";
 
 export class Activities {
-  public static getTransactionId(transactionHash?: string, logIndex?: number, batchIndex?: number) {
+  public static getActivityHash(transactionHash?: string, logIndex?: number, batchIndex?: number) {
     return crypto
       .createHash("sha256")
       .update(`${transactionHash}${logIndex}${batchIndex}`)
       .digest("hex");
   }
 
-  public static async add(activity: ActivitiesEntityInsertParams) {
+  public static async add(activities: ActivitiesEntityInsertParams[]) {
+    const queries: PgPromiseQuery[] = [];
+
     const query = `
       INSERT INTO activities (
-        transaction_id,
+        activity_hash,
         type,
         contract,
         collection_id,
@@ -32,7 +35,7 @@ export class Activities {
         metadata
       )
       VALUES (
-        $/transactionId/,
+        $/activityHash/,
         $/type/,
         $/contract/,
         $/collectionId/,
@@ -47,19 +50,26 @@ export class Activities {
       ON CONFLICT DO NOTHING
     `;
 
-    await idb.none(query, {
-      type: activity.type,
-      transactionId: activity.transactionId,
-      contract: toBuffer(activity.contract),
-      collectionId: activity.collectionId,
-      tokenId: activity.tokenId,
-      address: toBuffer(activity.address),
-      fromAddress: toBuffer(activity.fromAddress),
-      toAddress: toBuffer(activity.toAddress),
-      price: activity.price,
-      amount: activity.amount,
-      metadata: activity.metadata,
-    });
+    for (const activity of activities) {
+      queries.push({
+        query,
+        values: {
+          type: activity.type,
+          activityHash: activity.activityHash,
+          contract: toBuffer(activity.contract),
+          collectionId: activity.collectionId,
+          tokenId: activity.tokenId,
+          address: toBuffer(activity.address),
+          fromAddress: toBuffer(activity.fromAddress),
+          toAddress: toBuffer(activity.toAddress),
+          price: activity.price,
+          amount: activity.amount,
+          metadata: activity.metadata,
+        },
+      });
+    }
+
+    await idb.none(pgp.helpers.concat(queries));
   }
 
   public static async getCollectionActivities(
@@ -82,7 +92,8 @@ export class Activities {
     const activities: ActivitiesEntityParams[] | null = await idb.manyOrNone(
       `SELECT *
              FROM activities
-             WHERE collection_id = $/collectionId/
+             WHERE subject = '${ActivitySubject.collection}'
+             AND collection_id = $/collectionId/
              ${continuation}
              ${typesFilter}
              ORDER BY created_at DESC NULLS LAST
@@ -123,7 +134,8 @@ export class Activities {
     const activities: ActivitiesEntityParams[] | null = await idb.manyOrNone(
       `SELECT *
              FROM activities
-             WHERE contract = $/contract/
+             WHERE subject = '${ActivitySubject.token}'
+             AND contract = $/contract/
              AND token_id = $/tokenId/
              ${continuation}
              ${typesFilter}
@@ -165,7 +177,8 @@ export class Activities {
     const activities: ActivitiesEntityParams[] | null = await idb.manyOrNone(
       `SELECT *
              FROM activities
-             WHERE address = $/user/
+             WHERE subject = '${ActivitySubject.user}'
+             AND address = $/user/
              ${continuation}
              ${typesFilter}
              ORDER BY created_at DESC NULLS LAST

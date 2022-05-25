@@ -19,7 +19,7 @@ export const queue = new Queue(QUEUE_NAME, {
   defaultJobOptions: {
     attempts: 10,
     removeOnComplete: 100,
-    removeOnFail: true,
+    removeOnFail: 20000,
   },
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
@@ -75,7 +75,6 @@ export type ActivityInfo = {
 };
 
 export const addToQueue = async (activities: ActivityInfo[]) => {
-  return true;
   await queue.addBulk(
     _.map(activities, (activity) => ({
       name: randomUUID(),

@@ -1,5 +1,9 @@
 import { ActivityInfo } from "@/jobs/activities/index";
-import { ActivitiesEntityInsertParams, ActivityType } from "@/models/activities/activities-entity";
+import {
+  ActivitiesEntityInsertParams,
+  ActivitySubject,
+  ActivityType,
+} from "@/models/activities/activities-entity";
 import { Tokens } from "@/models/tokens";
 import _ from "lodash";
 import { logger } from "@/common/logger";
@@ -7,6 +11,7 @@ import { Activities } from "@/models/activities";
 
 export class SaleActivity {
   public static async handleEvent(activity: ActivityInfo) {
+    const activitiesParams: ActivitiesEntityInsertParams[] = [];
     const token = await Tokens.getByContractAndTokenId(activity.contract, activity.tokenId);
 
     // If no token found
@@ -15,16 +20,16 @@ export class SaleActivity {
       return;
     }
 
-    const transactionId = Activities.getTransactionId(
+    const activityHash = Activities.getActivityHash(
       activity.metadata?.transactionHash,
       activity.metadata?.logIndex,
       activity.metadata?.batchIndex
     );
 
-    // Insert 2 records one for each side of the sale
-    const activityParams: ActivitiesEntityInsertParams = {
+    const baseActivity = {
+      subject: ActivitySubject.collection,
       type: ActivityType[activity.event],
-      transactionId,
+      activityHash,
       contract: activity.contract,
       collectionId: token.collectionId,
       tokenId: activity.tokenId,
@@ -36,11 +41,21 @@ export class SaleActivity {
       metadata: activity.metadata,
     };
 
-    // One record for the from address
-    await Activities.add(activityParams);
+    // Create a collection activity
+    activitiesParams.push(baseActivity);
 
-    // One record for the to address
-    activityParams.address = activity.toAddress;
-    await Activities.add(activityParams);
+    // Create a token activity
+    baseActivity.subject = ActivitySubject.token;
+    activitiesParams.push(baseActivity);
+
+    // One record for the user from address
+    baseActivity.subject = ActivitySubject.user;
+    activitiesParams.push(baseActivity);
+
+    // One record for the user to address
+    baseActivity.address = activity.toAddress;
+    activitiesParams.push(baseActivity);
+
+    await Activities.add(activitiesParams);
   }
 }
