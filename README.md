@@ -1,6 +1,6 @@
 # Reservoir Protocol Indexer
- 
-Core services for the Reservoir Protocol (eg. blockchain indexing/monitoring, orderbook maintenance, order validation).
+
+Core Reservoir Protocol services (eg. blockchain indexing/monitoring, orderbook maintenance, order validation).
 
 ### Build and run
 
@@ -10,4 +10,14 @@ Install dependencies via `yarn`. Build and start the service via `yarn build` an
 
 ### Setup
 
-When starting from a fresh state, the indexer will start monitoring on-chain data from the current block. This means that past data is not available directly but must be backfilled. For now, the backfills are to be triggered via the indexer's admin APIs.
+When starting from a fresh state, the indexer will begin monitoring on-chain data from the current block. This means that past data is not available directly but must be backfilled. Since order validation depends on past data (eg. balances and approvals) it should be disabled until the indexer is fully backfilled. The backfilling process can be triggered via a simple admin API call:
+
+```
+POST /admin/sync-events
+{
+	"fromBlock": FROM_BLOCK,
+	"toBlock": TO_BLOCK
+}
+```
+
+It's recommended to perform the backfill in batches rather than all at once in order to not bottleneck the system (eg. 4-5 calls each for a batch of 200.000 - 300.000 blocks).
