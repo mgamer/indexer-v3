@@ -11,7 +11,7 @@ import "@/jobs/arweave-sync/pending-queue";
 import "@/jobs/arweave-sync/realtime-queue";
 
 // BACKGROUND WORKER ONLY
-if (config.doBackgroundWork && config.catchup) {
+if (config.doBackgroundWork && config.catchup && !config.disableOrders) {
   // In the same way as we do for syncing events, we poll
   // Arweave periodically to fetch any new blocks.
   cron.schedule(

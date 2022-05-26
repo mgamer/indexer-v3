@@ -44,6 +44,10 @@ export const postOrderV2Options: RouteOptions = {
     }),
   },
   handler: async (request: Request) => {
+    if (config.disableOrders) {
+      throw Boom.badRequest("Order posting is disabled");
+    }
+
     const payload = request.payload as any;
 
     try {
