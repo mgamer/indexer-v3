@@ -737,7 +737,7 @@ export const syncEvents = async (
               fillEvents.push({
                 orderKind: "looks-rare",
                 orderId,
-                orderSide: "sell",
+                orderSide: "buy",
                 maker,
                 taker,
                 price,
@@ -806,7 +806,7 @@ export const syncEvents = async (
               fillEvents.push({
                 orderKind: "looks-rare",
                 orderId,
-                orderSide: "buy",
+                orderSide: "sell",
                 maker,
                 taker,
                 price,
