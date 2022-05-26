@@ -104,7 +104,7 @@ export const addToQueue = async (events: EventInfo[]) => {
   await queue.addBulk(
     _.map(events, (event) => ({
       name: randomUUID(),
-      data: { event },
+      data: event,
     }))
   );
 };
