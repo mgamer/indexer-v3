@@ -128,7 +128,7 @@ if (config.doBackgroundWork) {
                     SELECT
                       "tst"."contract",
                       "tst"."token_id"
-                    FROM "token_sets_tokens"
+                    FROM "token_sets_tokens" "tst"
                     WHERE "token_set_id" = $/tokenSetId/
                   ) "x" LEFT JOIN LATERAL (
                     SELECT
@@ -271,7 +271,7 @@ if (config.doBackgroundWork) {
                     SELECT
                       "tst"."contract",
                       "tst"."token_id"
-                    FROM "token_sets_tokens"
+                    FROM "token_sets_tokens" "tst"
                     WHERE "token_set_id" = $/tokenSetId/
                   ) "x" LEFT JOIN LATERAL (
                     SELECT
