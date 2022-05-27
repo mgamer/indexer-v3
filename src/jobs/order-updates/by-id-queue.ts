@@ -426,7 +426,7 @@ if (config.doBackgroundWork) {
                     tokenId: orderEventResult.token_id,
                     maker: fromBuffer(orderEventResult.maker),
                     price: orderEventResult.price,
-                    amount: orderEventResult.order_quantity_remaining,
+                    amount: orderEventResult.order_quantity_remaining || 0,
                     createdAt: orderEventResult.created_at,
                   },
                 };
@@ -441,7 +441,7 @@ if (config.doBackgroundWork) {
                     contract: fromBuffer(orderEventResult.contract),
                     maker: fromBuffer(orderEventResult.maker),
                     price: orderEventResult.price,
-                    amount: orderEventResult.order_quantity_remaining,
+                    amount: orderEventResult.order_quantity_remaining || 0,
                     createdAt: orderEventResult.created_at,
                   },
                 };
