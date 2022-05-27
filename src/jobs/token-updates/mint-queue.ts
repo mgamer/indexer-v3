@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import _ from "lodash";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { PgPromiseQuery, idb, pgp } from "@/common/db";
@@ -37,18 +36,15 @@ if (config.doBackgroundWork) {
       const { contract, tokenId, mintedTimestamp } = job.data as MintInfo;
 
       try {
-        // Set any cached information (eg. floor sell, top buy).
-        await tokenRefreshCache.addToQueue(contract, tokenId);
-
         // First, check the database for any matching collection.
         const collection: {
           id: string;
-          index_metadata: boolean | null;
+          token_set_id: string | null;
         } | null = await idb.oneOrNone(
           `
             SELECT
               "c"."id",
-              "c"."index_metadata"
+              "c"."token_set_id"
             FROM "collections" "c"
             WHERE "c"."contract" = $/contract/
               AND "c"."token_id_range" @> $/tokenId/::NUMERIC(78, 0)
@@ -86,48 +82,33 @@ if (config.doBackgroundWork) {
           });
 
           // We also need to include the new token to any collection-wide token set.
-          queries.push({
-            query: `
-              WITH "x" AS (
-                SELECT DISTINCT
-                  "ts"."id"
-                FROM "token_sets" "ts"
-                WHERE "ts"."collection_id" = $/collection/
-              )
-              INSERT INTO "token_sets_tokens" (
-                "token_set_id",
-                "contract",
-                "token_id"
-              ) (
-                SELECT
-                  "x"."id",
-                  $/contract/,
-                  $/tokenId/
-                FROM "x"
-              ) ON CONFLICT DO NOTHING
-            `,
-            values: {
-              contract: toBuffer(contract),
-              tokenId,
-              collection: collection.id,
-            },
-          });
-
-          if (collection.index_metadata) {
-            await metadataIndexFetch.addToQueue(
-              [
-                {
-                  kind: "single-token",
-                  data: {
-                    method: "opensea",
-                    contract,
-                    tokenId,
-                    collection: collection.id,
-                  },
-                },
-              ],
-              true
-            );
+          if (collection.token_set_id) {
+            queries.push({
+              query: `
+                WITH "x" AS (
+                  SELECT DISTINCT
+                    "ts"."id"
+                  FROM "token_sets" "ts"
+                  WHERE "ts"."id" = $/tokenSetId/
+                )
+                INSERT INTO "token_sets_tokens" (
+                  "token_set_id",
+                  "contract",
+                  "token_id"
+                ) (
+                  SELECT
+                    "x"."id",
+                    $/contract/,
+                    $/tokenId/
+                  FROM "x"
+                ) ON CONFLICT DO NOTHING
+              `,
+              values: {
+                contract: toBuffer(contract),
+                tokenId,
+                tokenSetId: collection.token_set_id,
+              },
+            });
           }
         } else {
           // Otherwise, we fetch the collection metadata from upstream.
@@ -201,15 +182,32 @@ if (config.doBackgroundWork) {
         if (queries.length) {
           await idb.none(pgp.helpers.concat(queries));
         }
+
+        if (collection?.id) {
+          await metadataIndexFetch.addToQueue(
+            [
+              {
+                kind: "single-token",
+                data: {
+                  method: "opensea",
+                  contract,
+                  tokenId,
+                  collection: collection.id,
+                },
+              },
+            ],
+            true
+          );
+        }
+
+        // Set any cached information (eg. floor sell, top buy).
+        await tokenRefreshCache.addToQueue(contract, tokenId);
       } catch (error) {
         logger.error(
           QUEUE_NAME,
           `Failed to process mint info ${JSON.stringify(job.data)}: ${error}`
         );
-
-        if (_.has(error, "code") && (error as any).code != 404) {
-          throw error;
-        }
+        throw error;
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }

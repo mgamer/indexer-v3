@@ -46,6 +46,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .default(AddressZero),
       referrerFeeBps: Joi.number().integer().positive().min(0).max(10000).default(0),
+      partial: Joi.boolean().default(false),
       maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
       maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),
       skipBalanceCheck: Joi.boolean().default(false),
@@ -191,6 +192,16 @@ export const getExecuteBuyV2Options: RouteOptions = {
               query.referrer
             ),
             exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.FOUNDATION,
+          };
+        } else if (kind === "x2y2") {
+          const order = new Sdk.X2Y2.Order(config.chainId, rawData);
+
+          // Generate exchange-specific fill transaction.
+          const exchange = new Sdk.X2Y2.Exchange(config.chainId, String(process.env.X2Y2_API_KEY));
+
+          return {
+            tx: await exchange.fillOrderTx(router.contract.address, order),
+            exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.X2Y2,
           };
         }
       };
@@ -542,7 +553,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
       } of txInfos) {
         if (tokenKind === "erc721") {
           routerTxs.push({
-            from: tx.from,
+            from: query.taker,
             to: router.contract.address,
             data: !skipPrecheck
               ? router.contract.interface.encodeFunctionData(
@@ -574,7 +585,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
           });
         } else {
           routerTxs.push({
-            from: tx.from,
+            from: query.taker,
             to: router.contract.address,
             data: !skipPrecheck
               ? router.contract.interface.encodeFunctionData(
@@ -679,8 +690,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
                 data: router.contract.interface.encodeFunctionData("multiListingFill", [
                   routerTxs.map((tx) => tx.data),
                   routerTxs.map((tx) => tx.value!.toString()),
-                  // TODO: Support partial executions (eg. just skip reverting fills).
-                  true,
+                  !query.partial,
                 ]),
                 value: totalValue,
                 maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,

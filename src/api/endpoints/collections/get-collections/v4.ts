@@ -7,6 +7,7 @@ import Joi from "joi";
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { CollectionSets } from "@/models/collection-sets";
 
 const version = "v4";
 
@@ -22,6 +23,9 @@ export const getCollectionsV4Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
+      collectionsSetId: Joi.string()
+        .lowercase()
+        .description("Filter to a particular collection set"),
       community: Joi.string()
         .lowercase()
         .description("Filter to a particular community, e.g. `artblocks`"),
@@ -43,7 +47,7 @@ export const getCollectionsV4Options: RouteOptions = {
       includeTopBid: Joi.boolean().default(false),
       limit: Joi.number().integer().min(1).max(20).default(20),
       continuation: Joi.string(),
-    }).or("community", "contract", "name", "sortBy"),
+    }).or("collectionsSetId", "community", "contract", "name", "sortBy"),
   },
   response: {
     schema: Joi.object({
@@ -51,7 +55,7 @@ export const getCollectionsV4Options: RouteOptions = {
       collections: Joi.array().items(
         Joi.object({
           id: Joi.string(),
-          slug: Joi.string(),
+          slug: Joi.string().allow(null, ""),
           name: Joi.string().allow(null, ""),
           image: Joi.string().allow(null, ""),
           banner: Joi.string().allow(null, ""),
@@ -150,6 +154,15 @@ export const getCollectionsV4Options: RouteOptions = {
       const conditions: string[] = [];
       if (query.community) {
         conditions.push(`collections.community = $/community/`);
+      }
+
+      if (query.collectionsSetId) {
+        const collectionsIds = await CollectionSets.getCollectionsIds(query.collectionsSetId);
+
+        if (!_.isEmpty(collectionsIds)) {
+          query.collectionsIds = _.join(collectionsIds, "','");
+          conditions.push(`collections.id IN ('$/collectionsIds:raw/')`);
+        }
       }
 
       if (query.contract) {

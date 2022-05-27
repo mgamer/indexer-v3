@@ -1,15 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import _ from "lodash";
+
 import { idb } from "@/common/db";
+import { toBuffer } from "@/common/utils";
+import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import {
   CollectionsEntity,
   CollectionsEntityParams,
   CollectionsEntityUpdateParams,
-} from "./collections-entity";
-import { toBuffer } from "@/common/utils";
-import MetadataApi from "@/utils/metadata-api";
-import _ from "lodash";
+} from "@/models/collections/collections-entity";
 import { Tokens } from "@/models/tokens";
+import MetadataApi from "@/utils/metadata-api";
 
 export class Collections {
   public static async getById(collectionId: string) {
@@ -139,101 +141,60 @@ export class Collections {
   }
 
   public static async recalculateContractFloorSell(contract: string) {
-    const values = {
-      contract: toBuffer(contract),
-    };
+    const result = await idb.manyOrNone(
+      `
+        SELECT
+          tokens.token_id
+        FROM tokens
+        WHERE tokens.contract = $/contract/
+        LIMIT 10000
+      `,
+      {
+        contract: toBuffer(contract),
+      }
+    );
 
-    const query = `
-      UPDATE "tokens" "t" SET
-        "floor_sell_id" = "x"."id",
-        "floor_sell_value" = "x"."value",
-        "floor_sell_maker" = "x"."maker",
-        "floor_sell_valid_from" = least(
-          2147483647::NUMERIC,
-          date_part('epoch', lower("x"."valid_between"))
-        )::INT,
-        "floor_sell_valid_to" = least(
-          2147483647::NUMERIC,
-          coalesce(
-            nullif(date_part('epoch', upper("x"."valid_between")), 'Infinity'),
-            0
-          )
-        )::INT,
-        "floor_sell_source_id" = "x"."source_id",
-        "floor_sell_source_id_int" = "x"."source_id_int",
-        "floor_sell_is_reservoir" = "x"."is_reservoir"
-      FROM (
-        SELECT DISTINCT ON ("t"."contract", "t"."token_id")
-          "t"."contract",
-          "t"."token_id",
-          "o"."id",
-          "o"."value",
-          "o"."maker",
-          "o"."valid_between",
-          "o"."source_id",
-          "o"."source_id_int",
-          "o"."is_reservoir"
-        FROM "tokens" "t"
-        LEFT JOIN "token_sets_tokens" "tst"
-          ON "t"."contract" = "tst"."contract"
-          AND "t"."token_id" = "tst"."token_id"
-        LEFT JOIN "orders" "o"
-          ON "tst"."token_set_id" = "o"."token_set_id"
-          AND "o"."side" = 'sell'
-          AND "o"."fillability_status" = 'fillable'
-          AND "o"."approval_status" = 'approved'
-        WHERE "t"."contract" = $/contract/
-        ORDER BY "t"."contract", "t"."token_id", "o"."value", "o"."fee_bps"
-      ) "x"
-      WHERE "t"."contract" = "x"."contract"
-        AND "t"."token_id" = "x"."token_id"
-        AND "t"."floor_sell_id" IS DISTINCT FROM "x"."id"
-    `;
-
-    await idb.none(query, values);
+    if (result) {
+      await orderUpdatesById.addToQueue(
+        result.map(({ token_id }) => {
+          const tokenSetId = `token:${contract}:${token_id}`;
+          return {
+            context: `revalidate-sell-${tokenSetId}-${Math.floor(Date.now() / 1000)}`,
+            tokenSetId,
+            side: "sell",
+            trigger: { kind: "revalidation" },
+          };
+        })
+      );
+    }
   }
 
   public static async recalculateContractTopBuy(contract: string) {
-    const values = {
-      contract: toBuffer(contract),
-    };
+    const result = await idb.manyOrNone(
+      `
+        SELECT
+          tokens.token_id
+        FROM tokens
+        WHERE tokens.contract = $/contract/
+        LIMIT 10000
+      `,
+      {
+        contract: toBuffer(contract),
+      }
+    );
 
-    const query = `
-      UPDATE "tokens" "t" SET
-        "top_buy_id" = "x"."id",
-        "top_buy_value" = "x"."value",
-        "top_buy_maker" = "x"."maker"
-      FROM (
-        SELECT DISTINCT ON ("t"."contract", "t"."token_id")
-          "t"."contract",
-          "t"."token_id",
-          "o"."id",
-          "o"."value",
-          "o"."maker"
-        FROM "tokens" "t"
-        LEFT JOIN "token_sets_tokens" "tst"
-          ON "t"."contract" = "tst"."contract"
-          AND "t"."token_id" = "tst"."token_id"
-        LEFT JOIN "orders" "o"
-          ON "tst"."token_set_id" = "o"."token_set_id"
-          AND "o"."side" = 'buy'
-          AND "o"."fillability_status" = 'fillable'
-          AND "o"."approval_status" = 'approved'
-          AND EXISTS(
-            SELECT FROM "nft_balances" "nb"
-            WHERE "nb"."contract" = "t"."contract"
-              AND "nb"."token_id" = "t"."token_id"
-              AND "nb"."owner" != "o"."maker"
-              AND "nb"."amount" > 0
-          )
-        WHERE "t"."contract" = $/contract/
-        ORDER BY "t"."contract", "t"."token_id", "o"."value" DESC NULLS LAST
-      ) "x"
-      WHERE "t"."contract" = "x"."contract"
-        AND "t"."token_id" = "x"."token_id"
-        AND "t"."top_buy_id" IS DISTINCT FROM "x"."id"
-    `;
-
-    await idb.none(query, values);
+    if (result) {
+      await orderUpdatesById.addToQueue(
+        result.map(({ token_id }) => {
+          const tokenSetId = `token:${contract}:${token_id}`;
+          return {
+            context: `revalidate-buy-${tokenSetId}-${Math.floor(Date.now() / 1000)}`,
+            tokenSetId,
+            side: "buy",
+            trigger: { kind: "revalidation" },
+          };
+        })
+      );
+    }
   }
 }

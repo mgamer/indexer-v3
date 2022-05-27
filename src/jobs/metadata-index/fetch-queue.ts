@@ -33,6 +33,11 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
+      // Do nothing if the indexer is running in liquidity-only mode
+      if (config.liquidityOnly) {
+        return;
+      }
+
       const { kind, data } = job.data as MetadataIndexInfo;
       const prioritized = !_.isUndefined(job.opts.priority);
       const limit = 1000;

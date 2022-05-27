@@ -5,7 +5,7 @@ import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 
 import axios from "axios";
-import { genericTaker, simulateBuyTx } from "@/utils/tenderly";
+import { genericTaker, simulateBuyTx } from "../utils/tenderly";
 
 const BASE_URL = "https://api.reservoir.tools";
 

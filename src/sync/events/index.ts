@@ -1,5 +1,4 @@
-import _ from "lodash";
-
+import { defaultAbiCoder } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
@@ -13,7 +12,6 @@ import { config } from "@/config/index";
 import { EventDataKind, getEventData } from "@/events-sync/data";
 import * as es from "@/events-sync/storage";
 import { parseEvent } from "@/events-sync/parser";
-import * as eventsSync from "@/jobs/events-sync/index";
 import * as blockCheck from "@/jobs/events-sync/block-check-queue";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
@@ -98,6 +96,9 @@ export const syncEvents = async (
         address: string;
         logIndex: number;
       }[] = [];
+
+      // Fills going through router contracts are handled in a custom way
+      const reservoirRouter = Sdk.Common.Addresses.Router[config.chainId];
 
       for (const log of logs) {
         try {
@@ -471,6 +472,110 @@ export const syncEvents = async (
               break;
             }
 
+            // X2Y2
+
+            case "x2y2-order-cancelled": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const orderId = parsedLog.args["itemHash"].toLowerCase();
+
+              cancelEvents.push({
+                orderKind: "x2y2",
+                orderId,
+                baseEventParams,
+              });
+              orderInfos.push({
+                context: `cancelled-${orderId}-${baseEventParams.txHash}`,
+                id: orderId,
+                trigger: {
+                  kind: "cancel",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+              });
+
+              break;
+            }
+
+            case "x2y2-order-inventory": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const orderId = parsedLog.args["itemHash"].toLowerCase();
+              const maker = parsedLog.args["maker"].toLowerCase();
+              let taker = parsedLog.args["taker"].toLowerCase();
+              const currency = parsedLog.args["currency"].toLowerCase();
+              const item = parsedLog.args["item"];
+              const op = parsedLog.args["detail"].op;
+
+              if (
+                ![
+                  Sdk.Common.Addresses.Weth[config.chainId],
+                  Sdk.Common.Addresses.Eth[config.chainId],
+                ].includes(currency)
+              ) {
+                // Skip if the payment token is not supported.
+                break;
+              }
+
+              // 1 - COMPLETE_SELL_OFFER
+              // 2 - COMPLETE_BUY_OFFER
+              // 5 - COMPLETE_AUCTION
+              if (![1, 2, 5].includes(op)) {
+                // Skip any irrelevant events.
+                break;
+              }
+
+              // Handle filling through routers
+              if (taker === reservoirRouter) {
+                taker = await baseProvider
+                  .getTransactionReceipt(baseEventParams.txHash)
+                  .then((txReceipt) => txReceipt.from.toLowerCase());
+              }
+
+              // Decode the sold token (ignoring bundles).
+              let contract: string;
+              let tokenId: string;
+              try {
+                const decodedItems = defaultAbiCoder.decode(
+                  ["(address contract, uint256 tokenId)[]"],
+                  item.data
+                );
+                if (decodedItems[0].length !== 1) {
+                  break;
+                }
+
+                contract = decodedItems[0][0].contract.toLowerCase();
+                tokenId = decodedItems[0][0].tokenId.toString();
+              } catch {
+                break;
+              }
+
+              // Custom handling to support on-chain orderbook quirks.
+              fillEvents.push({
+                orderKind: "x2y2",
+                orderId,
+                orderSide: [1, 5].includes(op) ? "sell" : "buy",
+                maker,
+                taker,
+                // Subtract any fees from the price.
+                price: item.price.toString(),
+                contract,
+                tokenId,
+                // X2Y2 only supports erc721 for now
+                amount: "1",
+                baseEventParams,
+              });
+              orderInfos.push({
+                context: `filled-${orderId}-${baseEventParams.txHash}`,
+                id: orderId,
+                trigger: {
+                  kind: "sale",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+              });
+
+              break;
+            }
+
             // Foundation
 
             case "foundation-buy-price-set": {
@@ -502,10 +607,17 @@ export const syncEvents = async (
               const contract = parsedLog.args["nftContract"].toLowerCase();
               const tokenId = parsedLog.args["tokenId"].toString();
               const maker = parsedLog.args["seller"].toLowerCase();
-              const taker = parsedLog.args["buyer"].toLowerCase();
+              let taker = parsedLog.args["buyer"].toLowerCase();
               const protocolFee = parsedLog.args["protocolFee"].toString();
 
               const orderId = keccak256(["address", "uint256"], [contract, tokenId]);
+
+              // Handle filling through routers
+              if (taker === reservoirRouter) {
+                taker = await baseProvider
+                  .getTransactionReceipt(baseEventParams.txHash)
+                  .then((txReceipt) => txReceipt.from.toLowerCase());
+              }
 
               // Custom handling to support on-chain orderbook quirks.
               fillEventsFoundation.push({
@@ -518,6 +630,7 @@ export const syncEvents = async (
                 price: bn(protocolFee).mul(10000).div(50).toString(),
                 contract,
                 tokenId,
+                // Foundation only supports erc721 for now
                 amount: "1",
                 baseEventParams,
               });
@@ -604,7 +717,7 @@ export const syncEvents = async (
               const orderId = parsedLog.args["orderHash"].toLowerCase();
               const orderNonce = parsedLog.args["orderNonce"].toString();
               const maker = parsedLog.args["maker"].toLowerCase();
-              const taker = parsedLog.args["taker"].toLowerCase();
+              let taker = parsedLog.args["taker"].toLowerCase();
               const currency = parsedLog.args["currency"].toLowerCase();
               const price = parsedLog.args["price"].toString();
               const contract = parsedLog.args["collection"].toLowerCase();
@@ -616,10 +729,17 @@ export const syncEvents = async (
                 break;
               }
 
+              // Handle filling through routers
+              if (taker === reservoirRouter) {
+                taker = await baseProvider
+                  .getTransactionReceipt(baseEventParams.txHash)
+                  .then((txReceipt) => txReceipt.from.toLowerCase());
+              }
+
               fillEvents.push({
                 orderKind: "looks-rare",
                 orderId,
-                orderSide: "sell",
+                orderSide: "buy",
                 maker,
                 taker,
                 price,
@@ -666,7 +786,7 @@ export const syncEvents = async (
               const orderId = parsedLog.args["orderHash"].toLowerCase();
               const orderNonce = parsedLog.args["orderNonce"].toString();
               const maker = parsedLog.args["maker"].toLowerCase();
-              const taker = parsedLog.args["taker"].toLowerCase();
+              let taker = parsedLog.args["taker"].toLowerCase();
               const currency = parsedLog.args["currency"].toLowerCase();
               const price = parsedLog.args["price"].toString();
               const contract = parsedLog.args["collection"].toLowerCase();
@@ -678,10 +798,17 @@ export const syncEvents = async (
                 break;
               }
 
+              // Handle filling through routers
+              if (taker === reservoirRouter) {
+                taker = await baseProvider
+                  .getTransactionReceipt(baseEventParams.txHash)
+                  .then((txReceipt) => txReceipt.from.toLowerCase());
+              }
+
               fillEvents.push({
                 orderKind: "looks-rare",
                 orderId,
-                orderSide: "buy",
+                orderSide: "sell",
                 maker,
                 taker,
                 price,
@@ -735,7 +862,7 @@ export const syncEvents = async (
               const buyOrderId = parsedLog.args["buyHash"].toLowerCase();
               const sellOrderId = parsedLog.args["sellHash"].toLowerCase();
               const maker = parsedLog.args["maker"].toLowerCase();
-              const taker = parsedLog.args["taker"].toLowerCase();
+              let taker = parsedLog.args["taker"].toLowerCase();
               const price = parsedLog.args["price"].toString();
 
               // The code below assumes that events are retrieved in chronological
@@ -808,6 +935,13 @@ export const syncEvents = async (
               ) {
                 // Skip if the payment token is not supported
                 break;
+              }
+
+              // Handle filling through routers
+              if (taker === reservoirRouter) {
+                taker = await baseProvider
+                  .getTransactionReceipt(baseEventParams.txHash)
+                  .then((txReceipt) => txReceipt.from.toLowerCase());
               }
 
               const orderKind = eventData.kind.startsWith("wyvern-v2.3")
@@ -958,7 +1092,7 @@ export const syncEvents = async (
               const parsedLog = eventData.abi.parseLog(log);
               const direction = parsedLog.args["direction"];
               const maker = parsedLog.args["maker"].toLowerCase();
-              const taker = parsedLog.args["taker"].toLowerCase();
+              let taker = parsedLog.args["taker"].toLowerCase();
               const nonce = parsedLog.args["nonce"].toString();
               const erc20Token = parsedLog.args["erc20Token"].toLowerCase();
               const erc20TokenAmount = parsedLog.args["erc20TokenAmount"].toString();
@@ -974,6 +1108,13 @@ export const syncEvents = async (
               ) {
                 // Skip if the payment token is not supported
                 break;
+              }
+
+              // Handle filling through routers
+              if (taker === reservoirRouter) {
+                taker = await baseProvider
+                  .getTransactionReceipt(baseEventParams.txHash)
+                  .then((txReceipt) => txReceipt.from.toLowerCase());
               }
 
               const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
@@ -997,7 +1138,7 @@ export const syncEvents = async (
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
                         AND orders.contract = $/contract/
-                        AND orders.price = $/price/
+                        AND orders.value = $/price/
                         AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
                       LIMIT 1
                     `,
@@ -1067,7 +1208,7 @@ export const syncEvents = async (
               const parsedLog = eventData.abi.parseLog(log);
               const direction = parsedLog.args["direction"];
               const maker = parsedLog.args["maker"].toLowerCase();
-              const taker = parsedLog.args["taker"].toLowerCase();
+              let taker = parsedLog.args["taker"].toLowerCase();
               const nonce = parsedLog.args["nonce"].toString();
               const erc20Token = parsedLog.args["erc20Token"].toLowerCase();
               const erc20FillAmount = parsedLog.args["erc20FillAmount"].toString();
@@ -1084,6 +1225,13 @@ export const syncEvents = async (
               ) {
                 // Skip if the payment token is not supported
                 break;
+              }
+
+              // Handle filling through routers
+              if (taker === reservoirRouter) {
+                taker = await baseProvider
+                  .getTransactionReceipt(baseEventParams.txHash)
+                  .then((txReceipt) => txReceipt.from.toLowerCase());
               }
 
               const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
@@ -1241,24 +1389,15 @@ export const syncEvents = async (
           ),
         ]);
 
-        // When not backfilling, save all retrieved blocks in order
-        // to efficiently check and handle block reorgs.
-        await eventsSync.saveLatestBlocks(
-          Object.entries(blockHashToNumber).map(([hash, block]) => ({
-            hash,
-            block,
-          }))
-        );
-
-        // Put all fetched blocks on a queue for handling block reorgs.
-        // Recheck each block in 30s, 60s, 5m and 10m.
+        // Put all fetched blocks on a queue for handling block reorgs
+        // (recheck each block in 1m, 5m, 10m and 60m).
         await Promise.all(
           Object.entries(blockHashToNumber).map(async ([, block]) =>
             Promise.all([
-              blockCheck.addToQueue(block, 30 * 10000),
               blockCheck.addToQueue(block, 60 * 10000),
               blockCheck.addToQueue(block, 5 * 60 * 10000),
               blockCheck.addToQueue(block, 10 * 60 * 10000),
+              blockCheck.addToQueue(block, 60 * 60 * 10000),
             ])
           )
         );

@@ -58,6 +58,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/resync-floor-events",
+    options: adminEndpoints.postResyncFloorEventsOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/sync-arweave",
     options: adminEndpoints.postSyncArweaveOptions,
   });
@@ -222,6 +228,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/collections/{collection}/owners-distribution/v1",
     options: collectionsEndpoints.getCollectionOwnersDistributionV1Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/collections-sets/v1",
+    options: collectionsEndpoints.postCreateCollectionsSetV1Options,
   });
 
   // Events

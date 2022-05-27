@@ -6,7 +6,7 @@ import { EventData } from "@/events-sync/data";
 
 export const ordersMatched: EventData = {
   kind: "wyvern-v2-orders-matched",
-  addresses: { [WyvernV2.Addresses.Exchange[config.chainId]]: true },
+  addresses: { [WyvernV2.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
   topic: "0xc4109843e0b7d514e4c093114b863f8e7d8d9a458c372cd51bfe526b588006c9",
   numTopics: 4,
   abi: new Interface([

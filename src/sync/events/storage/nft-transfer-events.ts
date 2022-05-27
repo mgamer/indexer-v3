@@ -1,5 +1,6 @@
 import { idb, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
+import { config } from "@/config/index";
 import { BaseEventParams } from "@/events-sync/parser";
 import * as nftTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/nft-transfers";
 
@@ -38,6 +39,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
     kind: "erc721" | "erc1155";
   }[] = [];
   const tokenValues: {
+    collection_id: string;
     contract: Buffer;
     token_id: string;
   }[] = [];
@@ -68,6 +70,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
     const tokenId = `${contractId}-${event.tokenId}`;
     if (!uniqueTokens.has(tokenId)) {
       tokenValues.push({
+        collection_id: event.baseEventParams.address,
         contract: toBuffer(event.baseEventParams.address),
         token_id: event.tokenId,
       });
@@ -117,31 +120,37 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           "address",
           "token_id",
           ARRAY["from", "to"] AS "owners",
-          ARRAY[-"amount", "amount"] AS "amount_deltas"
+          ARRAY[-"amount", "amount"] AS "amount_deltas",
+          ARRAY[NULL, to_timestamp("timestamp")] AS "timestamps"
       )
       INSERT INTO "nft_balances" (
         "contract",
         "token_id",
         "owner",
-        "amount"
+        "amount",
+        "acquired_at"
       ) (
         SELECT
           "y"."address",
           "y"."token_id",
           "y"."owner",
-          SUM("y"."amount_delta")
+          SUM("y"."amount_delta"),
+          MIN("y"."timestamp")
         FROM (
           SELECT
             "address",
             "token_id",
             unnest("owners") AS "owner",
-            unnest("amount_deltas") AS "amount_delta"
+            unnest("amount_deltas") AS "amount_delta",
+            unnest("timestamps") AS "timestamp"
           FROM "x"
         ) "y"
         GROUP BY "y"."address", "y"."token_id", "y"."owner"
       )
       ON CONFLICT ("contract", "token_id", "owner") DO
-      UPDATE SET "amount" = "nft_balances"."amount" + "excluded"."amount"
+      UPDATE SET 
+        "amount" = "nft_balances"."amount" + "excluded"."amount", 
+        "acquired_at" = COALESCE("excluded"."acquired_at", "nft_balances"."acquired_at")
     `);
   }
 
@@ -160,17 +169,32 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }
 
   if (tokenValues.length) {
-    const columns = new pgp.helpers.ColumnSet(["contract", "token_id"], {
-      table: "tokens",
-    });
+    if (!config.liquidityOnly) {
+      const columns = new pgp.helpers.ColumnSet(["contract", "token_id"], {
+        table: "tokens",
+      });
 
-    queries.push(`
-      INSERT INTO "tokens" (
-        "contract",
-        "token_id"
-      ) VALUES ${pgp.helpers.values(tokenValues, columns)}
-      ON CONFLICT DO NOTHING
-    `);
+      queries.push(`
+        INSERT INTO "tokens" (
+          "contract",
+          "token_id"
+        ) VALUES ${pgp.helpers.values(tokenValues, columns)}
+        ON CONFLICT DO NOTHING
+      `);
+    } else {
+      const columns = new pgp.helpers.ColumnSet(["collection_id", "contract", "token_id"], {
+        table: "tokens",
+      });
+
+      queries.push(`
+        INSERT INTO "tokens" (
+          "collection_id",
+          "contract",
+          "token_id"
+        ) VALUES ${pgp.helpers.values(tokenValues, columns)}
+        ON CONFLICT DO NOTHING
+      `);
+    }
   }
 
   if (queries.length) {

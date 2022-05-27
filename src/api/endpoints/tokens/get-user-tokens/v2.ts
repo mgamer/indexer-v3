@@ -6,6 +6,8 @@ import Joi from "joi";
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { CollectionSets } from "@/models/collection-sets";
+import _ from "lodash";
 
 const version = "v2";
 
@@ -35,6 +37,9 @@ export const getUserTokensV2Options: RouteOptions = {
       community: Joi.string()
         .lowercase()
         .description("Filter to a particular community, e.g. `artblocks`"),
+      collectionsSetId: Joi.string()
+        .lowercase()
+        .description("Filter to a particular collection set"),
       collection: Joi.string()
         .lowercase()
         .description(
@@ -46,6 +51,8 @@ export const getUserTokensV2Options: RouteOptions = {
         .description(
           "Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
+      sortBy: Joi.string().valid("acquiredAt"),
+      sortDirection: Joi.string().lowercase().valid("asc", "desc").default("desc"),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(20).default(20),
     }),
@@ -74,6 +81,7 @@ export const getUserTokensV2Options: RouteOptions = {
             tokenCount: Joi.string(),
             onSaleCount: Joi.string(),
             floorAskPrice: Joi.number().unsafe().allow(null),
+            acquiredAt: Joi.string().allow(null),
           }),
         })
       ),
@@ -98,15 +106,36 @@ export const getUserTokensV2Options: RouteOptions = {
       communityFilter = `AND c.community = $/community/`;
     }
 
+    let collectionSetFilter = "";
+    if (query.collectionsSetId) {
+      const collectionsIds = await CollectionSets.getCollectionsIds(query.collectionsSetId);
+
+      if (!_.isEmpty(collectionsIds)) {
+        params.collectionsIds = _.join(collectionsIds, "','");
+        collectionSetFilter = `AND c.id IN ('$/collectionsIds:raw/')`;
+      }
+    }
+
     let collectionFilter = "";
     if (query.collection) {
       (params as any).collection = query.collection;
       collectionFilter = `AND c.id = $/collection/`;
     }
 
+    let sortByFilter = "";
+    switch (query.sortBy) {
+      case "acquiredAt": {
+        sortByFilter = `
+            ORDER BY
+              b.acquired_at ${query.sortDirection}
+          `;
+        break;
+      }
+    }
+
     try {
       const baseQuery = `
-        SELECT b.contract, b.token_id, b.token_count, t.name,
+        SELECT b.contract, b.token_id, b.token_count, b.acquired_at, t.name,
                t.image, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.top_buy_id,
                t.top_buy_value, t.total_buy_value, c.name as collection_name,
                c.metadata, c.floor_sell_value AS "collection_floor_sell_value",
@@ -117,7 +146,7 @@ export const getUserTokensV2Options: RouteOptions = {
                     END
                ) AS on_sale_count
         FROM (
-            SELECT amount AS token_count, token_id, contract
+            SELECT amount AS token_count, token_id, contract, acquired_at
             FROM nft_balances
             WHERE owner =  $/user/
             AND amount > 0
@@ -133,6 +162,8 @@ export const getUserTokensV2Options: RouteOptions = {
           JOIN collections c ON c.id = t.collection_id
           ${communityFilter}
           ${collectionFilter}
+          ${collectionSetFilter}
+        ${sortByFilter}
         OFFSET $/offset/
         LIMIT $/limit/
       `;
@@ -161,6 +192,7 @@ export const getUserTokensV2Options: RouteOptions = {
             tokenCount: String(r.token_count),
             onSaleCount: String(r.on_sale_count),
             floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+            acquiredAt: r.acquired_at ? new Date(r.acquired_at).toISOString() : null,
           },
         }))
       );
