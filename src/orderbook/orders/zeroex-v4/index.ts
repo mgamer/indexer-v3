@@ -96,7 +96,7 @@ export const save = async (
               AND orders.maker = $/maker/
               AND orders.nonce = $/nonce/
               AND orders.contract = $/contract/
-              AND orders.price = $/price/
+              AND orders.value = $/price/
               AND orders.contract IS NOT NULL
           `,
           {

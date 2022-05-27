@@ -38,23 +38,25 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { id, trigger } = job.data as OrderInfo;
+      const { id, side, tokenSetId, trigger } = job.data as OrderInfo;
 
       try {
         // Fetch the order's associated token set
         const data: {
           side: string | null;
           token_set_id: string | null;
-        } | null = await idb.oneOrNone(
-          `
-            SELECT
-              "o"."side",
-              "o"."token_set_id"
-            FROM "orders" "o"
-            WHERE "o"."id" = $/id/
-          `,
-          { id }
-        );
+        } | null = id
+          ? await idb.oneOrNone(
+              `
+                SELECT
+                  "o"."side",
+                  "o"."token_set_id"
+                FROM "orders" "o"
+                WHERE "o"."id" = $/id/
+              `,
+              { id }
+            )
+          : { side: side!, token_set_id: tokenSetId! };
 
         if (data && data.side && data.token_set_id) {
           const side = data.side;
@@ -127,10 +129,8 @@ if (config.doBackgroundWork) {
                     SELECT
                       "tst"."contract",
                       "tst"."token_id"
-                    FROM "orders" "o"
-                    JOIN "token_sets_tokens" "tst" ON "o"."token_set_id" = "tst"."token_set_id"
-                    WHERE "o"."id" = $/id/
-                    LIMIT 1
+                    FROM "token_sets_tokens"
+                    WHERE "token_set_id" = $/tokenSetId/
                   ) "x" LEFT JOIN LATERAL (
                     SELECT
                       "o"."id" as "order_id",
@@ -233,7 +233,7 @@ if (config.doBackgroundWork) {
                   "tx_timestamp" AS "txTimestamp"
               `,
               {
-                id,
+                tokenSetId,
                 kind: trigger.kind,
                 txHash: trigger.txHash ? toBuffer(trigger.txHash) : null,
                 txTimestamp: trigger.txTimestamp || null,
@@ -272,10 +272,8 @@ if (config.doBackgroundWork) {
                     SELECT
                       "tst"."contract",
                       "tst"."token_id"
-                    FROM "orders" "o"
-                    JOIN "token_sets_tokens" "tst"
-                      ON "o"."token_set_id" = "tst"."token_set_id"
-                    WHERE "o"."id" = $/id/
+                    FROM "token_sets_tokens"
+                    WHERE "token_set_id" = $/tokenSetId/
                   ) "x" LEFT JOIN LATERAL (
                     SELECT
                       "o"."id" as "order_id",
@@ -310,7 +308,7 @@ if (config.doBackgroundWork) {
                   AND "t"."top_buy_id" IS DISTINCT FROM "z"."order_id"
                 RETURNING "z"."contract", "z"."token_id"
               `,
-              { id }
+              { tokenSetId }
             );
 
             for (const result of buyOrderResult) {
@@ -323,74 +321,76 @@ if (config.doBackgroundWork) {
             }
           }
 
-          // Insert a corresponding order event.
-          const orderEventResult = await idb.oneOrNone(
-            `
-              INSERT INTO order_events (
-                kind,
-                status,
-                contract,
-                token_id,
-                order_id,
-                order_source_id,
-                order_source_id_int,
-                order_valid_between,
-                order_quantity_remaining,
-                maker,
-                price,
-                tx_hash,
-                tx_timestamp
-              ) (
-                SELECT
-                  $/kind/,
-                  (
-                    CASE
-                      WHEN orders.fillability_status = 'filled' THEN 'filled'
-                      WHEN orders.fillability_status = 'cancelled' THEN 'cancelled'
-                      WHEN orders.fillability_status = 'expired' THEN 'expired'
-                      WHEN orders.fillability_status = 'no-balance' THEN 'inactive'
-                      WHEN orders.approval_status = 'no-approval' THEN 'inactive'
-                      ELSE 'active'
-                    END
-                  )::order_event_status_t,
-                  token_sets_tokens.contract,
-                  token_sets_tokens.token_id,
-                  orders.id,
-                  orders.source_id,
-                  orders.source_id_int,
-                  orders.valid_between,
-                  orders.quantity_remaining,
-                  orders.maker,
-                  orders.value,
-                  $/txHash/,
-                  $/txTimestamp/
-                FROM orders
-                JOIN token_sets_tokens
-                  ON orders.token_set_id = token_sets_tokens.token_set_id
-                WHERE orders.id = $/id/
-                LIMIT 1
-              )
-              RETURNING
-                contract,
-                token_id,
-                maker
-            `,
-            {
-              id,
-              kind: trigger.kind,
-              txHash: trigger.txHash ? toBuffer(trigger.txHash) : null,
-              txTimestamp: trigger.txTimestamp || null,
+          if (id) {
+            // Insert a corresponding order event.
+            const orderEventResult = await idb.oneOrNone(
+              `
+                INSERT INTO order_events (
+                  kind,
+                  status,
+                  contract,
+                  token_id,
+                  order_id,
+                  order_source_id,
+                  order_source_id_int,
+                  order_valid_between,
+                  order_quantity_remaining,
+                  maker,
+                  price,
+                  tx_hash,
+                  tx_timestamp
+                ) (
+                  SELECT
+                    $/kind/,
+                    (
+                      CASE
+                        WHEN orders.fillability_status = 'filled' THEN 'filled'
+                        WHEN orders.fillability_status = 'cancelled' THEN 'cancelled'
+                        WHEN orders.fillability_status = 'expired' THEN 'expired'
+                        WHEN orders.fillability_status = 'no-balance' THEN 'inactive'
+                        WHEN orders.approval_status = 'no-approval' THEN 'inactive'
+                        ELSE 'active'
+                      END
+                    )::order_event_status_t,
+                    token_sets_tokens.contract,
+                    token_sets_tokens.token_id,
+                    orders.id,
+                    orders.source_id,
+                    orders.source_id_int,
+                    orders.valid_between,
+                    orders.quantity_remaining,
+                    orders.maker,
+                    orders.value,
+                    $/txHash/,
+                    $/txTimestamp/
+                  FROM orders
+                  JOIN token_sets_tokens
+                    ON orders.token_set_id = token_sets_tokens.token_set_id
+                  WHERE orders.id = $/id/
+                  LIMIT 1
+                )
+                RETURNING
+                  contract,
+                  token_id,
+                  maker
+              `,
+              {
+                id,
+                kind: trigger.kind,
+                txHash: trigger.txHash ? toBuffer(trigger.txHash) : null,
+                txTimestamp: trigger.txTimestamp || null,
+              }
+            );
+
+            if (data.side === "sell") {
+              const updateFloorAskPriceInfo = {
+                contract: fromBuffer(orderEventResult.contract),
+                tokenId: orderEventResult.token_id,
+                owner: fromBuffer(orderEventResult.maker),
+              };
+
+              await updateNftBalanceFloorAskPriceQueue.addToQueue([updateFloorAskPriceInfo]);
             }
-          );
-
-          if (data.side === "sell") {
-            const updateFloorAskPriceInfo = {
-              contract: fromBuffer(orderEventResult.contract),
-              tokenId: orderEventResult.token_id,
-              owner: fromBuffer(orderEventResult.maker),
-            };
-
-            await updateNftBalanceFloorAskPriceQueue.addToQueue([updateFloorAskPriceInfo]);
           }
         }
       } catch (error) {
@@ -420,13 +420,20 @@ export type OrderInfo = {
   // as possible it's also important to not have the contexts too
   // distinctive in order to avoid doing duplicative work.
   context: string;
-  id: string;
   // Information regarding what triggered the job
   trigger: {
     kind: TriggerKind;
     txHash?: string;
     txTimestamp?: number;
   };
+  // When the order id is passed, we recompute the caches of any
+  // tokens corresponding to the order (eg. order's token set).
+  id?: string;
+  // Otherwise we support updating token caches without passing an
+  // explicit order so as to support cases like revalidation where
+  // we don't have an order to check against.
+  tokenSetId?: string;
+  side?: "sell" | "buy";
 };
 
 export const addToQueue = async (orderInfos: OrderInfo[]) => {
@@ -435,7 +442,7 @@ export const addToQueue = async (orderInfos: OrderInfo[]) => {
 
   await queue.addBulk(
     orderInfos.map((orderInfo) => ({
-      name: orderInfo.id,
+      name: orderInfo.id ? orderInfo.id : orderInfo.tokenSetId! + "-" + orderInfo.side!,
       data: orderInfo,
       opts: {
         // We should make sure not to perform any expensive work more
