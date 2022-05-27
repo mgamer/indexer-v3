@@ -41,7 +41,8 @@ export const postResyncFloorEventsOptions: RouteOptions = {
         const tokenCacheResult = await idb.oneOrNone(
           `
             SELECT
-              tokens.floor_sell_id
+              tokens.floor_sell_id,
+              tokens.floor_sell_value
             FROM tokens
             WHERE tokens.contract = $/contract/
               AND tokens.token_id = $/tokenId/
@@ -69,7 +70,7 @@ export const postResyncFloorEventsOptions: RouteOptions = {
           }
         );
 
-        const floorMatches = tokenCacheResult.floor_sell_id == latestEventResult?.order_id;
+        const floorMatches = tokenCacheResult.floor_sell_value == latestEventResult?.price;
         if (!floorMatches) {
           await idb.none(
             `
