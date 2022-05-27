@@ -271,7 +271,7 @@ export const postOrderV2Options: RouteOptions = {
                 }),
                 tokenId: sdkOrder.params.kind === "single-token" ? sdkOrder.params.tokenId : null,
                 // For now, no order kinds have any additional params.
-                params: [""],
+                params: [],
               };
 
               // Post order via LooksRare's APIs.
