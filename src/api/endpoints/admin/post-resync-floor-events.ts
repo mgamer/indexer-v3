@@ -3,12 +3,12 @@
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
+import pLimit from "p-limit";
 
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { toBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 
 export const postResyncFloorEventsOptions: RouteOptions = {
   description: "Trigger fixing any floor events inconsistencies for any particular collection.",
@@ -55,7 +55,8 @@ export const postResyncFloorEventsOptions: RouteOptions = {
         const latestEventResult = await idb.oneOrNone(
           `
             SELECT
-              token_floor_sell_events.order_id
+              token_floor_sell_events.order_id,
+              token_floor_sell_events.price
             FROM token_floor_sell_events
             WHERE token_floor_sell_events.contract = $/contract/
               AND token_floor_sell_events.token_id = $/tokenId/
@@ -70,38 +71,80 @@ export const postResyncFloorEventsOptions: RouteOptions = {
 
         const floorMatches = tokenCacheResult.floor_sell_id == latestEventResult?.order_id;
         if (!floorMatches) {
-          // HACK: If the latest floor ask event doesn't match the token's
-          // cached values, replace the cached values with the ones in the
-          // latest event and trigger a revalidation.
           await idb.none(
             `
-              UPDATE tokens SET
-                floor_sell_id = $/id/
-              WHERE tokens.contract = $/contract/
-                AND tokens.token_id = $/tokenId/
+              WITH x AS (
+                SELECT
+                  orders.id,
+                  orders.maker,
+                  orders.price,
+                  orders.source_id_int,
+                  orders.valid_between,
+                  orders.nonce
+                FROM tokens
+                LEFT JOIN orders
+                  ON tokens.floor_sell_id = orders.id
+                WHERE tokens.contract = $/contract/
+                  AND tokens.token_id = $/tokenId/
+              )
+              INSERT INTO token_floor_sell_events(
+                kind,
+                contract,
+                token_id,
+                order_id,
+                maker,
+                price,
+                source_id_int,
+                valid_between,
+                nonce,
+                previous_price
+              )
+              SELECT
+                'revalidation',
+                $/contract/,
+                $/tokenId/,
+                x.id,
+                x.maker,
+                x.price,
+                x.source_id_int,
+                x.valid_between,
+                x.nonce,
+                $/previousPrice/
+              FROM x
             `,
             {
               contract: toBuffer(contract),
               tokenId,
-              id: latestEventResult?.id || null,
+              previousPrice: latestEventResult?.price || null,
             }
           );
-
-          const tokenSetId = `token:${contract}:${tokenId}`;
-          await orderUpdatesById.addToQueue([
-            {
-              context: `revalidate-sell-${tokenSetId}-${Math.floor(Date.now() / 1000)}`,
-              tokenSetId,
-              side: "sell",
-              trigger: { kind: "revalidation" },
-            },
-          ]);
         }
       };
 
       if (payload.token) {
         const [contract, tokenId] = payload.token.split(":");
         await handleToken(contract, tokenId);
+      } else if (payload.collection) {
+        const tokens = await idb.manyOrNone(
+          `
+            SELECT
+              tokens.contract,
+              tokens.token_id
+            FROM tokens
+            WHERE tokens.collection_id = $/collection/
+            LIMIT 10000
+          `,
+          { collection: payload.collection }
+        );
+
+        if (tokens) {
+          const limit = pLimit(20);
+          await Promise.all(
+            tokens.map(({ contract, token_id }) =>
+              limit(() => handleToken(fromBuffer(contract), token_id))
+            )
+          );
+        }
       }
 
       return { message: "Success" };
