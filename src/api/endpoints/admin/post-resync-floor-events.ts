@@ -43,8 +43,6 @@ export const postResyncFloorEventsOptions: RouteOptions = {
             SELECT
               tokens.floor_sell_id
             FROM tokens
-            LEFT JOIN orders
-              ON
             WHERE tokens.contract = $/contract/
               AND tokens.token_id = $/tokenId/
           `,
@@ -70,9 +68,11 @@ export const postResyncFloorEventsOptions: RouteOptions = {
           }
         );
 
-        const bothHaveNoFloor = !tokenCacheResult.floor_sell_id && !latestEventResult?.order_id;
-        const bothFloorMatch = tokenCacheResult.floor_sell_id === latestEventResult.order_id;
-        if (!(bothHaveNoFloor || bothFloorMatch)) {
+        const floorMatches = tokenCacheResult.floor_sell_id == latestEventResult?.order_id;
+        if (!floorMatches) {
+          // HACK: If the latest floor ask event doesn't match the token's
+          // cached values, replace the cached values with the ones in the
+          // latest event and trigger a revalidation.
           await idb.none(
             `
               UPDATE tokens SET
