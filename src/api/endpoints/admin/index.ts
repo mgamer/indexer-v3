@@ -4,6 +4,7 @@ export * from "@/api/endpoints/admin/post-fix-orders";
 export * from "@/api/endpoints/admin/post-fix-token-cache";
 export * from "@/api/endpoints/admin/post-invalidate-order";
 export * from "@/api/endpoints/admin/post-metadata-index";
+export * from "@/api/endpoints/admin/post-resync-floor-events";
 export * from "@/api/endpoints/admin/post-set-community";
 export * from "@/api/endpoints/admin/post-simulate-floor";
 export * from "@/api/endpoints/admin/post-sync-arweave";
