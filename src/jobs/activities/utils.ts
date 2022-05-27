@@ -19,7 +19,7 @@ export async function getBidInfoByOrderId(orderId: string) {
     `
                 SELECT
                   ts.token_set_id,
-                  ts.attribute_id,
+                  ts.attribute_id
                 FROM orders
                 JOIN token_sets ts
                   ON orders.token_set_id = ts.token_set_id
