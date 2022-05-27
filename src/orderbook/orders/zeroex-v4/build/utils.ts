@@ -60,7 +60,7 @@ export const getBuildInfo = async (
 
   if (options.automatedRoyalties) {
     // Include the royalties.
-    for (const { recipient, bps } of collectionResult.royalties) {
+    for (const { recipient, bps } of collectionResult.royalties || []) {
       if (recipient && Number(bps) > 0) {
         const fee = bn(bps).mul(options.weiPrice).div(10000).toString();
         buildParams.fees!.push({
