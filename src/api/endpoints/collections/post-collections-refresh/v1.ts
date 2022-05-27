@@ -49,7 +49,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const payload = request.payload as any;
-    let refreshCoolDownMin = 60 * 24; // How many minutes between each refresh
+    let refreshCoolDownMin = 60 * 4; // How many minutes between each refresh
 
     try {
       const collection = await Collections.getById(payload.collection);
@@ -59,15 +59,18 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
         throw Boom.badRequest(`Collection ${payload.collection} not found`);
       }
 
-      // For big collections allow refresh once a day
-      if (collection.tokenCount > 30000) {
-        refreshCoolDownMin = 60 * 48;
+      const isLargeCollection = collection.tokenCount > 30000;
+
+      // For large collections allow refresh once a day
+      if (isLargeCollection) {
+        refreshCoolDownMin = 60 * 24;
       }
 
       // Check when the last sync was performed
       const nextAvailableSync = add(new Date(collection.lastMetadataSync), {
         minutes: refreshCoolDownMin,
       });
+
       if (!_.isNull(collection.lastMetadataSync) && isAfter(nextAvailableSync, Date.now())) {
         throw Boom.tooEarly(`Next available sync ${formatISO9075(nextAvailableSync)} UTC`);
       }
@@ -75,9 +78,6 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       // Update the last sync date
       const currentUtcTime = new Date().toISOString();
       await Collections.update(payload.collection, { lastMetadataSync: currentUtcTime });
-
-      // Refresh contract orders from OpenSea
-      await OpenseaIndexerApi.fastContractSync(collection.contract);
 
       // Update the collection id of any missing tokens
       await edb.none(
@@ -99,20 +99,6 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
         { collection: payload.collection }
       );
 
-      // Refresh the collection tokens metadata
-      await metadataIndexFetch.addToQueue(
-        [
-          {
-            kind: "full-collection",
-            data: {
-              method: "opensea",
-              collection: collection.id,
-            },
-          },
-        ],
-        true
-      );
-
       // Refresh the collection metadata
       await collectionUpdatesMetadata.addToQueue(collection.contract);
 
@@ -121,6 +107,26 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
 
       // Revalidate the contract orders
       await orderFixes.addToQueue([{ by: "contract", data: { contract: collection.contract } }]);
+
+      // Do these refresh operation only for small collections
+      if (!isLargeCollection) {
+        // Refresh contract orders from OpenSea
+        await OpenseaIndexerApi.fastContractSync(collection.contract);
+
+        // Refresh the collection tokens metadata
+        await metadataIndexFetch.addToQueue(
+          [
+            {
+              kind: "full-collection",
+              data: {
+                method: "opensea",
+                collection: collection.id,
+              },
+            },
+          ],
+          true
+        );
+      }
 
       logger.info(
         `post-collections-refresh-${version}-handler`,

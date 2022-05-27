@@ -1,14 +1,15 @@
 import _ from "lodash";
 import { idb, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
-import {
-  ActivitiesEntity,
-  ActivitiesEntityInsertParams,
-  ActivitiesEntityParams,
-} from "@/models/activities/activities-entity";
 
-export class Activities {
-  public static async addActivities(activities: ActivitiesEntityInsertParams[]) {
+import {
+  UserActivitiesEntity,
+  UserActivitiesEntityInsertParams,
+  UserActivitiesEntityParams,
+} from "@/models/user_activities/user-activities-entity";
+
+export class UserActivities {
+  public static async addActivities(activities: UserActivitiesEntityInsertParams[]) {
     if (!activities.length) {
       return;
     }
@@ -20,6 +21,7 @@ export class Activities {
         "contract",
         "collection_id",
         "token_id",
+        "address",
         "from_address",
         "to_address",
         "price",
@@ -28,7 +30,7 @@ export class Activities {
         "event_timestamp",
         "metadata",
       ],
-      { table: "activities" }
+      { table: "user_activities" }
     );
 
     const data = activities.map((activity) => ({
@@ -37,6 +39,7 @@ export class Activities {
       contract: toBuffer(activity.contract),
       collection_id: activity.collectionId,
       token_id: activity.tokenId,
+      address: toBuffer(activity.address),
       from_address: toBuffer(activity.fromAddress),
       to_address: activity.toAddress ? toBuffer(activity.toAddress) : null,
       price: activity.price,
@@ -51,8 +54,8 @@ export class Activities {
     await idb.none(query);
   }
 
-  public static async getCollectionActivities(
-    collectionId: string,
+  public static async getActivities(
+    user: string,
     createdBefore: null | string = null,
     types: string[] = [],
     limit = 20
@@ -68,16 +71,16 @@ export class Activities {
       typesFilter = `AND type IN ('$/types:raw/')`;
     }
 
-    const activities: ActivitiesEntityParams[] | null = await idb.manyOrNone(
+    const activities: UserActivitiesEntityParams[] | null = await idb.manyOrNone(
       `SELECT *
-             FROM activities
-             WHERE collection_id = $/collectionId/
+             FROM user_activities
+             WHERE address = $/user/
              ${continuation}
              ${typesFilter}
              ORDER BY event_timestamp DESC NULLS LAST
              LIMIT $/limit/`,
       {
-        collectionId,
+        user: toBuffer(user),
         limit,
         createdBefore,
         types: _.join(types, "','"),
@@ -85,50 +88,7 @@ export class Activities {
     );
 
     if (activities) {
-      return _.map(activities, (activity) => new ActivitiesEntity(activity));
-    }
-
-    return [];
-  }
-
-  public static async getTokenActivities(
-    contract: string,
-    tokenId: string,
-    createdBefore: null | string = null,
-    types: string[] = [],
-    limit = 20
-  ) {
-    let continuation = "";
-    let typesFilter = "";
-
-    if (!_.isNull(createdBefore)) {
-      continuation = `AND event_timestamp < $/createdBefore/`;
-    }
-
-    if (!_.isEmpty(types)) {
-      typesFilter = `AND type IN ('$/types:raw/')`;
-    }
-
-    const activities: ActivitiesEntityParams[] | null = await idb.manyOrNone(
-      `SELECT *
-             FROM activities
-             WHERE contract = $/contract/
-             AND token_id = $/tokenId/
-             ${continuation}
-             ${typesFilter}
-             ORDER BY event_timestamp DESC NULLS LAST
-             LIMIT $/limit/`,
-      {
-        contract: toBuffer(contract),
-        tokenId,
-        limit,
-        createdBefore,
-        types: _.join(types, "','"),
-      }
-    );
-
-    if (activities) {
-      return _.map(activities, (activity) => new ActivitiesEntity(activity));
+      return _.map(activities, (activity) => new UserActivitiesEntity(activity));
     }
 
     return [];

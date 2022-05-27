@@ -6,9 +6,8 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { formatEth } from "@/common/utils";
-import { Activities } from "@/models/activities";
-import { formatISO9075 } from "date-fns";
 import { ActivityType } from "@/models/activities/activities-entity";
+import { UserActivities } from "@/models/user_activities";
 
 const version = "v1";
 
@@ -52,7 +51,7 @@ export const getUserActivityV1Options: RouteOptions = {
           toAddress: Joi.string(),
           price: Joi.number(),
           amount: Joi.number(),
-          time: Joi.number(),
+          timestamp: Joi.number(),
         })
       ),
     }).label(`getUserActivity${version.toUpperCase()}Response`),
@@ -64,21 +63,17 @@ export const getUserActivityV1Options: RouteOptions = {
   handler: async (request: Request) => {
     const params = request.params as any;
     const query = request.query as any;
-    let createdBefore = null;
 
     try {
-      if (query.continuation) {
-        createdBefore = formatISO9075(query.continuation);
-      }
-
-      const activities = await Activities.getUserActivities(
+      const activities = await UserActivities.getActivities(
         params.user,
-        createdBefore,
-        query.types
+        query.continuation,
+        query.types,
+        query.limit
       );
 
       // If no activities found
-      if (_.isNull(activities)) {
+      if (!activities.length) {
         return { activities: [] };
       }
 
@@ -90,7 +85,7 @@ export const getUserActivityV1Options: RouteOptions = {
         toAddress: activity.toAddress,
         price: formatEth(activity.price),
         amount: activity.amount,
-        time: activity.createdAt.getTime(),
+        timestamp: activity.eventTimestamp,
       }));
 
       // Set the continuation node
@@ -99,7 +94,7 @@ export const getUserActivityV1Options: RouteOptions = {
         const lastActivity = _.last(activities);
 
         if (lastActivity) {
-          continuation = lastActivity.createdAt.getTime();
+          continuation = lastActivity.eventTimestamp;
         }
       }
 

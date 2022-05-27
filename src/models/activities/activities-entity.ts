@@ -5,99 +5,83 @@ export enum ActivityType {
   listing = "listing",
   transfer = "transfer",
   mint = "mint",
-}
-
-export enum ActivitySubject {
-  user = "user",
-  token = "token",
-  collection = "collection",
+  bid = "bid",
+  bid_cancel = "bid_cancel",
+  listing_cancel = "listing_cancel",
 }
 
 // Define the fields required to create a new activity
 export type ActivitiesEntityInsertParams = {
-  subject: ActivitySubject;
   type: ActivityType;
-  activityHash: string;
+  hash: string;
   contract: string;
   collectionId: string;
-  tokenId: string;
-  address: string;
+  tokenId: string | null;
   fromAddress: string;
-  toAddress: string;
+  toAddress: string | null;
   price: number;
   amount: number;
-  metadata?: ActivityMetadata;
-};
-
-// Define the fields we can update
-export type ActivitiesEntityUpdateParams = {
-  createdAt?: string;
-  contract?: string;
-  collectionId?: string;
-  tokenId?: string;
-  address?: string;
-  fromAddress?: string;
-  toAddress?: string;
-  price?: number;
-  amount?: number;
+  blockHash: string | null;
+  eventTimestamp: number;
   metadata?: ActivityMetadata;
 };
 
 // Define the fields need to instantiate the entity
 export type ActivitiesEntityParams = {
   id: number;
-  created_at: Date;
-  subject: ActivitySubject;
-  activity_hash: string;
+  hash: string;
   type: ActivityType;
   contract: Buffer;
   collection_id: string;
-  token_id: string;
-  address: Buffer;
+  token_id: string | null;
   from_address: Buffer;
-  to_address: Buffer;
+  to_address: Buffer | null;
   price: number;
   amount: number;
+  block_hash: Buffer | null;
+  event_timestamp: number;
+  created_at: Date;
   metadata: ActivityMetadata;
 };
 
 // Possible fields to be found in the metadata
 export type ActivityMetadata = {
-  transactionHash?: string | undefined;
-  logIndex?: number | undefined;
-  batchIndex?: number | undefined;
+  transactionHash?: string;
+  logIndex?: number;
+  batchIndex?: number;
+  orderId?: string;
 };
 
 export class ActivitiesEntity {
   id: number;
-  createdAt: Date;
-  subject: ActivitySubject;
-  activityHash: string;
+  hash: string;
   type: ActivityType;
   contract: string;
   collectionId: string;
-  tokenId: string;
-  address: string;
+  tokenId: string | null;
   fromAddress: string;
-  toAddress: string;
+  toAddress: string | null;
   price: number;
   amount: number;
+  blockHash: string | null;
+  eventTimestamp: number;
+  createdAt: Date;
   metadata: ActivityMetadata;
 
   constructor(params: ActivitiesEntityParams) {
     this.id = params.id;
-    this.createdAt = params.created_at;
-    this.subject = params.subject;
-    this.activityHash = params.activity_hash;
+    this.hash = params.hash;
     this.type = params.type;
     this.contract = fromBuffer(params.contract);
     this.collectionId = params.collection_id;
     this.tokenId = params.token_id;
-    this.address = fromBuffer(params.address);
     this.fromAddress = fromBuffer(params.from_address);
-    this.toAddress = fromBuffer(params.to_address);
+    this.toAddress = params.to_address ? fromBuffer(params.to_address) : null;
     this.price = params.price;
     this.amount = Number(params.amount);
+    this.blockHash = params.block_hash ? fromBuffer(params.block_hash) : null;
+    this.eventTimestamp = params.event_timestamp;
+    this.createdAt = params.created_at;
     this.metadata = params.metadata;
   }
 }

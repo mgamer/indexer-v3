@@ -15,6 +15,8 @@ import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-ord
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
 import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
 import * as updateNftBalanceTopBidQueue from "@/jobs/nft-balance-updates/update-top-bid-queue";
+import { ActivityEventType, ActivityEventInfo } from "@/jobs/activities";
+import * as activities from "@/jobs/activities";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -45,18 +47,27 @@ if (config.doBackgroundWork) {
         const data: {
           side: string | null;
           token_set_id: string | null;
+          fillability_status: string | null;
+          approval_status: string | null;
         } | null = id
           ? await idb.oneOrNone(
               `
                 SELECT
                   "o"."side",
-                  "o"."token_set_id"
+                  "o"."token_set_id",
+                  "o"."fillability_status",
+                  "o"."approval_status"
                 FROM "orders" "o"
                 WHERE "o"."id" = $/id/
               `,
               { id }
             )
-          : { side: side!, token_set_id: tokenSetId! };
+          : {
+              side: side!,
+              token_set_id: tokenSetId!,
+              fillability_status: null,
+              approval_status: null,
+            };
 
         if (data && data.side && data.token_set_id) {
           const side = data.side;
@@ -372,7 +383,10 @@ if (config.doBackgroundWork) {
                 RETURNING
                   contract,
                   token_id,
-                  maker
+                  maker,
+                  price,
+                  order_quantity_remaining,
+                  created_at
               `,
               {
                 id,
@@ -390,6 +404,52 @@ if (config.doBackgroundWork) {
               };
 
               await updateNftBalanceFloorAskPriceQueue.addToQueue([updateFloorAskPriceInfo]);
+            }
+
+            if (
+              trigger.kind == "cancel" ||
+              (trigger.kind == "new-order" &&
+                data.fillability_status == "fillable" &&
+                data.approval_status == "approved")
+            ) {
+              let eventInfo;
+
+              if (data.side === "sell") {
+                eventInfo = {
+                  kind:
+                    trigger.kind == "new-order"
+                      ? ActivityEventType.newSellOrder
+                      : ActivityEventType.sellOrderCancelled,
+                  data: {
+                    orderId: id,
+                    contract: fromBuffer(orderEventResult.contract),
+                    tokenId: orderEventResult.token_id,
+                    maker: fromBuffer(orderEventResult.maker),
+                    price: orderEventResult.price,
+                    amount: orderEventResult.order_quantity_remaining,
+                    createdAt: orderEventResult.created_at,
+                  },
+                };
+              } else if (data.side === "buy") {
+                eventInfo = {
+                  kind:
+                    trigger.kind == "new-order"
+                      ? ActivityEventType.newBuyOrder
+                      : ActivityEventType.buyOrderCancelled,
+                  data: {
+                    orderId: id,
+                    contract: fromBuffer(orderEventResult.contract),
+                    maker: fromBuffer(orderEventResult.maker),
+                    price: orderEventResult.price,
+                    amount: orderEventResult.order_quantity_remaining,
+                    createdAt: orderEventResult.created_at,
+                  },
+                };
+              }
+
+              if (eventInfo) {
+                await activities.addToQueue([eventInfo as ActivityEventInfo]);
+              }
             }
           }
         }

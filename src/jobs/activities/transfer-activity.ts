@@ -1,61 +1,78 @@
-import { ActivityInfo } from "@/jobs/activities/index";
-import {
-  ActivitiesEntityInsertParams,
-  ActivitySubject,
-  ActivityType,
-} from "@/models/activities/activities-entity";
+import { ActivitiesEntityInsertParams, ActivityType } from "@/models/activities/activities-entity";
 import { Tokens } from "@/models/tokens";
 import _ from "lodash";
 import { logger } from "@/common/logger";
 import { Activities } from "@/models/activities";
+import { AddressZero } from "@ethersproject/constants";
+import { getActivityHash } from "@/jobs/activities/utils";
+import { UserActivitiesEntityInsertParams } from "@/models/user_activities/user-activities-entity";
+import { UserActivities } from "@/models/user_activities";
 
 export class TransferActivity {
-  public static async handleEvent(activity: ActivityInfo) {
-    const activitiesParams: ActivitiesEntityInsertParams[] = [];
-    const token = await Tokens.getByContractAndTokenId(activity.contract, activity.tokenId);
+  public static async handleEvent(data: NftTransferEventData) {
+    const token = await Tokens.getByContractAndTokenId(data.contract, data.tokenId);
 
     // If no token found
     if (_.isNull(token)) {
-      logger.error("transfer-activity", `No token found for ${JSON.stringify(activity)}`);
+      logger.error("transfer-activity", `No token found for ${JSON.stringify(data)}`);
       return;
     }
 
-    const activityHash = Activities.getActivityHash(
-      activity.metadata?.transactionHash,
-      activity.metadata?.logIndex,
-      activity.metadata?.batchIndex
+    const activityHash = getActivityHash(
+      data.transactionHash,
+      data.logIndex.toString(),
+      data.batchIndex.toString()
     );
 
-    const baseActivity = {
-      subject: ActivitySubject.collection,
-      type: ActivityType[activity.event],
-      activityHash,
-      contract: activity.contract,
+    const activity = {
+      type: data.fromAddress == AddressZero ? ActivityType.mint : ActivityType.transfer,
+      hash: activityHash,
+      contract: data.contract,
       collectionId: token.collectionId,
-      tokenId: activity.tokenId,
-      address: activity.fromAddress,
-      fromAddress: activity.fromAddress,
-      toAddress: activity.toAddress,
-      price: activity.price,
-      amount: activity.amount,
-      metadata: activity.metadata,
-    };
+      tokenId: data.tokenId,
+      fromAddress: data.fromAddress,
+      toAddress: data.toAddress,
+      price: 0,
+      amount: data.amount,
+      blockHash: data.blockHash,
+      eventTimestamp: data.timestamp,
+      metadata: {
+        transactionHash: data.transactionHash,
+        logIndex: data.logIndex,
+        batchIndex: data.batchIndex,
+      },
+    } as ActivitiesEntityInsertParams;
 
-    // Create a collection activity
-    activitiesParams.push(_.clone(baseActivity));
-
-    // Create a token activity
-    baseActivity.subject = ActivitySubject.token;
-    activitiesParams.push(_.clone(baseActivity));
-
-    // One record for the user from address
-    baseActivity.subject = ActivitySubject.user;
-    activitiesParams.push(_.clone(baseActivity));
+    const userActivitiesToAdd: UserActivitiesEntityInsertParams[] = [];
 
     // One record for the user to address
-    baseActivity.address = activity.toAddress;
-    activitiesParams.push(_.clone(baseActivity));
+    const toUserActivity = _.clone(activity) as UserActivitiesEntityInsertParams;
+    toUserActivity.address = data.toAddress;
+    userActivitiesToAdd.push(toUserActivity);
 
-    await Activities.add(activitiesParams);
+    if (data.fromAddress != AddressZero) {
+      // One record for the user from address
+      const fromUserActivity = _.clone(activity) as UserActivitiesEntityInsertParams;
+      fromUserActivity.address = data.fromAddress;
+      userActivitiesToAdd.push(fromUserActivity);
+    }
+
+    await Promise.all([
+      Activities.addActivities([activity]),
+      UserActivities.addActivities(userActivitiesToAdd),
+    ]);
   }
 }
+
+export type NftTransferEventData = {
+  contract: string;
+  tokenId: string;
+  fromAddress: string;
+  toAddress: string;
+  amount: number;
+  transactionHash: string;
+  logIndex: number;
+  batchIndex: number;
+  blockHash: string;
+  timestamp: number;
+};
