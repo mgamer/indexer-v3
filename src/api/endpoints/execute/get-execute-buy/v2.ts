@@ -46,6 +46,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .default(AddressZero),
       referrerFeeBps: Joi.number().integer().positive().min(0).max(10000).default(0),
+      partial: Joi.boolean().default(false),
       maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
       maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),
       skipBalanceCheck: Joi.boolean().default(false),
@@ -689,8 +690,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
                 data: router.contract.interface.encodeFunctionData("multiListingFill", [
                   routerTxs.map((tx) => tx.data),
                   routerTxs.map((tx) => tx.value!.toString()),
-                  // TODO: Support partial executions (eg. just skip reverting fills).
-                  true,
+                  !query.partial,
                 ]),
                 value: totalValue,
                 maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
