@@ -13,7 +13,7 @@ import { TriggerKind } from "@/jobs/order-updates/types";
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
-import { ActivityEvent, EventInfo } from "@/jobs/activities";
+import { ActivityEventType, ActivityEventInfo } from "@/jobs/activities";
 import * as activities from "@/jobs/activities";
 
 const QUEUE_NAME = "order-updates-by-id";
@@ -371,7 +371,7 @@ if (config.doBackgroundWork) {
                 maker,
                 price,
                 order_quantity_remaining AS amount,
-                extract(epoch from order_events.created_at) AS timestamp
+                created_at
             `,
             {
               id,
@@ -387,39 +387,43 @@ if (config.doBackgroundWork) {
               data.fillability_status == "fillable" &&
               data.approval_status == "approved")
           ) {
+            let eventInfo;
+
             if (data.side === "sell") {
-              const eventInfo = {
+              eventInfo = {
                 kind:
                   trigger.kind == "new-order"
-                    ? ActivityEvent.newSellOrder
-                    : ActivityEvent.sellOrderCancelled,
+                    ? ActivityEventType.newSellOrder
+                    : ActivityEventType.sellOrderCancelled,
                 data: {
                   orderId: id,
                   contract: fromBuffer(orderEventResult.contract),
                   tokenId: orderEventResult.token_id,
-                  maker: fromBuffer(orderEventResult.contract),
+                  maker: fromBuffer(orderEventResult.maker),
                   price: orderEventResult.price,
                   amount: orderEventResult.amount,
+                  createdAt: orderEventResult.created_at,
                 },
-              } as EventInfo;
-
-              await activities.addToQueue([eventInfo]);
+              };
             } else if (data.side === "buy") {
-              const eventInfo = {
+              eventInfo = {
                 kind:
                   trigger.kind == "new-order"
-                    ? ActivityEvent.newBuyOrder
-                    : ActivityEvent.buyOrderCancelled,
+                    ? ActivityEventType.newBuyOrder
+                    : ActivityEventType.buyOrderCancelled,
                 data: {
                   orderId: id,
                   contract: fromBuffer(orderEventResult.contract),
-                  maker: fromBuffer(orderEventResult.contract),
+                  maker: fromBuffer(orderEventResult.maker),
                   price: Number(orderEventResult.price),
-                  amount: Number(orderEventResult.price),
+                  amount: Number(orderEventResult.amount),
+                  createdAt: orderEventResult.created_at,
                 },
-              } as EventInfo;
+              };
+            }
 
-              await activities.addToQueue([eventInfo]);
+            if (eventInfo) {
+              await activities.addToQueue([eventInfo as ActivityEventInfo]);
             }
           }
         }

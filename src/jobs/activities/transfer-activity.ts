@@ -1,17 +1,15 @@
-import {
-  ActivitiesEntityInsertParams,
-  ActivitySubject,
-  ActivityType,
-} from "@/models/activities/activities-entity";
+import { ActivitiesEntityInsertParams, ActivityType } from "@/models/activities/activities-entity";
 import { Tokens } from "@/models/tokens";
 import _ from "lodash";
 import { logger } from "@/common/logger";
 import { Activities } from "@/models/activities";
 import { AddressZero } from "@ethersproject/constants";
+import { getActivityHash } from "@/jobs/activities/utils";
+import { UserActivitiesEntityInsertParams } from "@/models/user_activities/user-activities-entity";
+import { UserActivities } from "@/models/user_activities";
 
 export class TransferActivity {
   public static async handleEvent(data: NftTransferEventData) {
-    const activitiesParams: ActivitiesEntityInsertParams[] = [];
     const token = await Tokens.getByContractAndTokenId(data.contract, data.tokenId);
 
     // If no token found
@@ -20,49 +18,49 @@ export class TransferActivity {
       return;
     }
 
-    const activityHash = Activities.getActivityHash(
+    const activityHash = getActivityHash(
       data.transactionHash,
       data.logIndex.toString(),
       data.batchIndex.toString()
     );
 
-    const baseActivity = {
-      subject: ActivitySubject.collection,
+    const activity = {
       type: data.fromAddress == AddressZero ? ActivityType.mint : ActivityType.transfer,
-      activityHash,
+      hash: activityHash,
       contract: data.contract,
       collectionId: token.collectionId,
       tokenId: data.tokenId,
-      address: data.fromAddress,
       fromAddress: data.fromAddress,
       toAddress: data.toAddress,
       price: 0,
       amount: data.amount,
+      blockHash: data.blockHash,
+      eventTimestamp: data.timestamp,
       metadata: {
         transactionHash: data.transactionHash,
         logIndex: data.logIndex,
         batchIndex: data.batchIndex,
       },
-    };
+    } as ActivitiesEntityInsertParams;
 
-    // Create a collection activity
-    activitiesParams.push(_.clone(baseActivity));
+    const userActivitiesToAdd: UserActivitiesEntityInsertParams[] = [];
 
-    // Create a token activity
-    baseActivity.subject = ActivitySubject.token;
-    activitiesParams.push(_.clone(baseActivity));
-
-    // One record for the user from address
-    baseActivity.subject = ActivitySubject.user;
-    activitiesParams.push(_.clone(baseActivity));
+    // One record for the user to address
+    const toUserActivity = _.clone(activity) as UserActivitiesEntityInsertParams;
+    toUserActivity.address = data.toAddress;
+    userActivitiesToAdd.push(toUserActivity);
 
     if (data.fromAddress != AddressZero) {
-      // One record for the user to address
-      baseActivity.address = data.toAddress;
-      activitiesParams.push(_.clone(baseActivity));
+      // One record for the user from address
+      const fromUserActivity = _.clone(activity) as UserActivitiesEntityInsertParams;
+      fromUserActivity.address = data.fromAddress;
+      userActivitiesToAdd.push(fromUserActivity);
     }
 
-    await Activities.add(activitiesParams);
+    await Promise.all([
+      Activities.addActivities([activity]),
+      UserActivities.addActivities(userActivitiesToAdd),
+    ]);
   }
 }
 
@@ -75,4 +73,6 @@ export type NftTransferEventData = {
   transactionHash: string;
   logIndex: number;
   batchIndex: number;
+  blockHash: string;
+  timestamp: number;
 };

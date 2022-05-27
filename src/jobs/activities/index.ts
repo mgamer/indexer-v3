@@ -9,7 +9,7 @@ import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { SaleActivity, FillEventData } from "@/jobs/activities/sale-activity";
 import { TransferActivity, NftTransferEventData } from "@/jobs/activities/transfer-activity";
-import { ListingActivity, NewSellOrderData } from "@/jobs/activities/listing-activity";
+import { ListingActivity, NewSellOrderEventData } from "@/jobs/activities/listing-activity";
 import { BidActivity, NewBuyOrderData } from "@/jobs/activities/bid-activity";
 import { BidCancelActivity, BuyOrderCancelledData } from "@/jobs/activities/bid-cancel-activity";
 import {
@@ -34,25 +34,25 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { kind, data } = job.data as EventInfo;
+      const { kind, data } = job.data as ActivityEventInfo;
 
       switch (kind) {
-        case ActivityEvent.fillEvent:
+        case ActivityEventType.fillEvent:
           await SaleActivity.handleEvent(data as FillEventData);
           break;
-        case ActivityEvent.nftTransferEvent:
+        case ActivityEventType.nftTransferEvent:
           await TransferActivity.handleEvent(data as NftTransferEventData);
           break;
-        case ActivityEvent.newSellOrder:
-          await ListingActivity.handleEvent(data as NewSellOrderData);
+        case ActivityEventType.newSellOrder:
+          await ListingActivity.handleEvent(data as NewSellOrderEventData);
           break;
-        case ActivityEvent.newBuyOrder:
+        case ActivityEventType.newBuyOrder:
           await BidActivity.handleEvent(data as NewBuyOrderData);
           break;
-        case ActivityEvent.buyOrderCancelled:
+        case ActivityEventType.buyOrderCancelled:
           await BidCancelActivity.handleEvent(data as BuyOrderCancelledData);
           break;
-        case ActivityEvent.sellOrderCancelled:
+        case ActivityEventType.sellOrderCancelled:
           await ListingCancelActivity.handleEvent(data as SellOrderCancelledData);
           break;
       }
@@ -65,7 +65,7 @@ if (config.doBackgroundWork) {
   });
 }
 
-export enum ActivityEvent {
+export enum ActivityEventType {
   fillEvent = "fillEvent",
   nftTransferEvent = "nftTransferEvent",
   newSellOrder = "newSellOrder",
@@ -74,33 +74,33 @@ export enum ActivityEvent {
   buyOrderCancelled = "buyOrderCancelled",
 }
 
-export type EventInfo =
+export type ActivityEventInfo =
   | {
-      kind: ActivityEvent.newSellOrder;
-      data: NewSellOrderData;
+      kind: ActivityEventType.newSellOrder;
+      data: NewSellOrderEventData;
     }
   | {
-      kind: ActivityEvent.newBuyOrder;
+      kind: ActivityEventType.newBuyOrder;
       data: NewBuyOrderData;
     }
   | {
-      kind: ActivityEvent.nftTransferEvent;
+      kind: ActivityEventType.nftTransferEvent;
       data: NftTransferEventData;
     }
   | {
-      kind: ActivityEvent.fillEvent;
+      kind: ActivityEventType.fillEvent;
       data: FillEventData;
     }
   | {
-      kind: ActivityEvent.sellOrderCancelled;
+      kind: ActivityEventType.sellOrderCancelled;
       data: SellOrderCancelledData;
     }
   | {
-      kind: ActivityEvent.buyOrderCancelled;
+      kind: ActivityEventType.buyOrderCancelled;
       data: BuyOrderCancelledData;
     };
 
-export const addToQueue = async (events: EventInfo[]) => {
+export const addToQueue = async (events: ActivityEventInfo[]) => {
   await queue.addBulk(
     _.map(events, (event) => ({
       name: randomUUID(),

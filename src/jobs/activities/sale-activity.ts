@@ -1,66 +1,58 @@
-import {
-  ActivitiesEntityInsertParams,
-  ActivitySubject,
-  ActivityType,
-} from "@/models/activities/activities-entity";
+import { ActivitiesEntityInsertParams, ActivityType } from "@/models/activities/activities-entity";
 import { Tokens } from "@/models/tokens";
 import _ from "lodash";
 import { logger } from "@/common/logger";
 import { Activities } from "@/models/activities";
-import { AddressZero } from "@ethersproject/constants";
+import { getActivityHash } from "@/jobs/activities/utils";
+import { UserActivitiesEntityInsertParams } from "@/models/user_activities/user-activities-entity";
+import { UserActivities } from "@/models/user_activities";
 
 export class SaleActivity {
-  public static async handleEvent(info: FillEventData) {
-    const activitiesParams: ActivitiesEntityInsertParams[] = [];
-    const token = await Tokens.getByContractAndTokenId(info.contract, info.tokenId);
+  public static async handleEvent(data: FillEventData) {
+    const token = await Tokens.getByContractAndTokenId(data.contract, data.tokenId);
 
     // If no token found
     if (_.isNull(token)) {
-      logger.error("sale-activity", `No token found for ${JSON.stringify(info)}`);
+      logger.error("sale-activity", `No token found for ${JSON.stringify(data)}`);
       return;
     }
 
-    const activityHash = Activities.getActivityHash(
-      info.transactionHash,
-      info.logIndex.toString(),
-      info.batchIndex.toString()
+    const activityHash = getActivityHash(
+      data.transactionHash,
+      data.logIndex.toString(),
+      data.batchIndex.toString()
     );
 
-    const baseActivity = {
-      subject: ActivitySubject.collection,
-      type: info.fromAddress == AddressZero ? ActivityType.mint : ActivityType.transfer,
-      activityHash,
-      contract: info.contract,
+    const activity = {
+      type: ActivityType.sale,
+      hash: activityHash,
+      contract: data.contract,
       collectionId: token.collectionId,
-      tokenId: info.tokenId,
-      address: info.fromAddress,
-      fromAddress: info.fromAddress,
-      toAddress: info.toAddress,
-      price: info.price,
-      amount: info.amount,
+      tokenId: data.tokenId,
+      fromAddress: data.fromAddress,
+      toAddress: data.toAddress,
+      price: 0,
+      amount: data.amount,
+      blockHash: data.blockHash,
+      eventTimestamp: data.timestamp,
       metadata: {
-        transactionHash: info.transactionHash,
-        logIndex: info.logIndex,
-        batchIndex: info.batchIndex,
+        transactionHash: data.transactionHash,
+        logIndex: data.logIndex,
+        batchIndex: data.batchIndex,
       },
-    };
+    } as ActivitiesEntityInsertParams;
 
-    // Create a collection activity
-    activitiesParams.push(_.clone(baseActivity));
+    // One record for the user to address, One record for the user from address
+    const toUserActivity = _.clone(activity) as UserActivitiesEntityInsertParams;
+    const fromUserActivity = _.clone(activity) as UserActivitiesEntityInsertParams;
 
-    // Create a token activity
-    baseActivity.subject = ActivitySubject.token;
-    activitiesParams.push(_.clone(baseActivity));
+    toUserActivity.address = data.toAddress;
+    fromUserActivity.address = data.fromAddress;
 
-    // One record for the user from address
-    baseActivity.subject = ActivitySubject.user;
-    activitiesParams.push(_.clone(baseActivity));
-
-    // One record for the user to address
-    baseActivity.address = info.toAddress;
-    activitiesParams.push(_.clone(baseActivity));
-
-    await Activities.add(activitiesParams);
+    await Promise.all([
+      Activities.addActivities([activity]),
+      UserActivities.addActivities([fromUserActivity, toUserActivity]),
+    ]);
   }
 }
 
@@ -74,4 +66,6 @@ export type FillEventData = {
   transactionHash: string;
   logIndex: number;
   batchIndex: number;
+  blockHash: string;
+  timestamp: number;
 };

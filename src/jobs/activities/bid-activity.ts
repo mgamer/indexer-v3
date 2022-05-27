@@ -1,53 +1,14 @@
-import {
-  ActivitiesEntityInsertParams,
-  ActivitySubject,
-  ActivityType,
-} from "@/models/activities/activities-entity";
-import { Tokens } from "@/models/tokens";
+import { ActivitiesEntityInsertParams, ActivityType } from "@/models/activities/activities-entity";
 import _ from "lodash";
 import { logger } from "@/common/logger";
 import { Activities } from "@/models/activities";
-import { idb } from "@/common/db";
-import { Attributes } from "@/models/attributes";
-import { Collections } from "@/models/collections";
+import { getActivityHash, getBidInfoByOrderId } from "@/jobs/activities/utils";
+import { UserActivitiesEntityInsertParams } from "@/models/user_activities/user-activities-entity";
+import { UserActivities } from "@/models/user_activities";
 
 export class BidActivity {
   public static async handleEvent(data: NewBuyOrderData) {
-    const activitiesParams: ActivitiesEntityInsertParams[] = [];
-
-    let tokenId = null;
-    let collectionId;
-
-    const tokenSetByOrderIdResult = await idb.oneOrNone(
-      `
-                SELECT
-                  ts.token_set_id
-                  ts.attribute_id
-                FROM orders
-                JOIN token_sets ts
-                  ON orders.token_set_id = ts.token_set_id
-                WHERE orders.id = $/orderId/
-                LIMIT 1
-            `,
-      {
-        orderId: data.orderId,
-      }
-    );
-
-    if (tokenSetByOrderIdResult.token_set_id.startsWith("token:")) {
-      [, , tokenId] = tokenSetByOrderIdResult.token_set_id.split(":");
-
-      const token = await Tokens.getByContractAndTokenId(data.contract, tokenId);
-      collectionId = token?.collectionId;
-    } else if (tokenSetByOrderIdResult.token_set_id.startsWith("list:")) {
-      const attribute = await Attributes.getById(tokenSetByOrderIdResult.attribute_id);
-      collectionId = attribute?.collectionId;
-    } else if (tokenSetByOrderIdResult.token_set_id.startsWith("range:")) {
-      const collection = await Collections.getByTokenSetId(tokenSetByOrderIdResult.token_set_id);
-      collectionId = collection?.id;
-    } else {
-      collectionId = data.contract;
-    }
+    const [collectionId, tokenId] = await getBidInfoByOrderId(data.orderId);
 
     // If no collection found
     if (!collectionId) {
@@ -55,39 +16,34 @@ export class BidActivity {
       return;
     }
 
-    const activityHash = Activities.getActivityHash(ActivityType.listing, data.orderId);
+    const activityHash = getActivityHash(ActivityType.listing, data.orderId);
 
-    const baseActivity: ActivitiesEntityInsertParams = {
-      subject: ActivitySubject.collection,
-      type: ActivityType.bid_cancel,
-      activityHash,
+    const activity = {
+      type: ActivityType.bid,
+      hash: activityHash,
       contract: data.contract,
       collectionId: collectionId,
       tokenId: tokenId,
-      address: data.maker,
       fromAddress: data.maker,
       toAddress: null,
       price: data.price,
       amount: data.amount,
+      blockHash: null,
+      eventTimestamp: new Date(data.createdAt).getTime(),
       metadata: {
         orderId: data.orderId,
       },
-    };
+    } as ActivitiesEntityInsertParams;
 
-    // Create a collection activity
-    activitiesParams.push(_.clone(baseActivity));
+    // One record for the user to address, One record for the user from address
+    const fromUserActivity = _.clone(activity) as UserActivitiesEntityInsertParams;
 
-    // One record for the user from address
-    baseActivity.subject = ActivitySubject.user;
-    activitiesParams.push(_.clone(baseActivity));
+    fromUserActivity.address = data.maker;
 
-    if (tokenId) {
-      // Create a token activity
-      baseActivity.subject = ActivitySubject.token;
-      activitiesParams.push(_.clone(baseActivity));
-    }
-
-    await Activities.add(activitiesParams);
+    await Promise.all([
+      Activities.addActivities([activity]),
+      UserActivities.addActivities([fromUserActivity]),
+    ]);
   }
 }
 
@@ -97,4 +53,5 @@ export type NewBuyOrderData = {
   maker: string;
   price: number;
   amount: number;
+  createdAt: string;
 };
