@@ -31,7 +31,7 @@ export class SaleActivity {
       tokenId: data.tokenId,
       fromAddress: data.fromAddress,
       toAddress: data.toAddress,
-      price: 0,
+      price: data.price,
       amount: data.amount,
       blockHash: data.blockHash,
       eventTimestamp: data.timestamp,
