@@ -22,10 +22,24 @@ export const offChainCheck = async (
 ) => {
   // TODO: We should also check the remaining quantity for partially filled orders.
 
+  const id = order.hash();
+
   // Check: order has a valid target
   const kind = await commonHelpers.getContractKind(order.params.nft);
   if (!kind || kind !== order.params.kind?.split("-")[0]) {
     throw new Error("invalid-target");
+  }
+
+  // Check: order is not cancelled
+  const cancelled = await commonHelpers.isOrderCancelled(id);
+  if (cancelled) {
+    throw new Error("cancelled");
+  }
+
+  // Check: order is not filled
+  const quantityFilled = await commonHelpers.getQuantityFilled(id);
+  if (quantityFilled.gte(order.params.nftAmount ?? 1)) {
+    throw new Error("filled");
   }
 
   // Check: order's nonce was not individually cancelled
@@ -35,7 +49,7 @@ export const offChainCheck = async (
     order.params.nonce
   );
   if (nonceCancelled) {
-    throw new Error("invalid-nonce");
+    throw new Error("cancelled");
   }
 
   const feeAmount = order.getFeeAmount();
