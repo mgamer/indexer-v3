@@ -66,6 +66,7 @@ if (config.doBackgroundWork) {
                   try {
                     await looksRareCheck.offChainCheck(order, {
                       onChainApprovalRecheck: true,
+                      checkFilledOrCancelled: true,
                     });
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   } catch (error: any) {
@@ -91,6 +92,7 @@ if (config.doBackgroundWork) {
                   try {
                     await opendaoCheck.offChainCheck(order, {
                       onChainApprovalRecheck: true,
+                      checkFilledOrCancelled: true,
                     });
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   } catch (error: any) {
@@ -115,6 +117,7 @@ if (config.doBackgroundWork) {
                   try {
                     await wyvernV23Check.offChainCheck(order, {
                       onChainApprovalRecheck: true,
+                      checkFilledOrCancelled: true,
                     });
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   } catch (error: any) {
@@ -140,6 +143,7 @@ if (config.doBackgroundWork) {
                   try {
                     await x2y2Check.offChainCheck(order, {
                       onChainApprovalRecheck: true,
+                      checkFilledOrCancelled: true,
                     });
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   } catch (error: any) {
@@ -165,6 +169,7 @@ if (config.doBackgroundWork) {
                   try {
                     await zeroExV4.offChainCheck(order, {
                       onChainApprovalRecheck: true,
+                      checkFilledOrCancelled: true,
                     });
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   } catch (error: any) {
@@ -286,7 +291,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 1 }
+    { connection: redis.duplicate(), concurrency: 20 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);

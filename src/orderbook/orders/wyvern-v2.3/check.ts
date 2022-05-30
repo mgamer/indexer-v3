@@ -21,6 +21,7 @@ export const offChainCheck = async (
     // being invalid. We use the this option to validate approval
     // of buy orders as well.
     onChainApprovalRecheck?: boolean;
+    checkFilledOrCancelled?: boolean;
   }
 ) => {
   const id = order.prefixHash();
@@ -36,16 +37,18 @@ export const offChainCheck = async (
     throw new Error("invalid-target");
   }
 
-  // Check: order is not cancelled
-  const cancelled = await commonHelpers.isOrderCancelled(id);
-  if (cancelled) {
-    throw new Error("cancelled");
-  }
+  if (options?.checkFilledOrCancelled) {
+    // Check: order is not cancelled
+    const cancelled = await commonHelpers.isOrderCancelled(id);
+    if (cancelled) {
+      throw new Error("cancelled");
+    }
 
-  // Check: order is not filled
-  const quantityFilled = await commonHelpers.getQuantityFilled(id);
-  if (quantityFilled.gte(1)) {
-    throw new Error("filled");
+    // Check: order is not filled
+    const quantityFilled = await commonHelpers.getQuantityFilled(id);
+    if (quantityFilled.gte(1)) {
+      throw new Error("filled");
+    }
   }
 
   // Check: order has a valid nonce
