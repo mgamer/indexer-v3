@@ -3,10 +3,13 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
+import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
+import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Collections } from "@/models/collections";
+import * as resyncAttributeCache from "@/jobs/update-attribute/resync-attribute-cache";
 
 const QUEUE_NAME = "collections-refresh-cache";
 
@@ -30,6 +33,23 @@ if (config.doBackgroundWork) {
       // Refresh the contract floor sell and top bid
       await Collections.recalculateContractFloorSell(contract);
       await Collections.recalculateContractTopBuy(contract);
+
+      const result = await idb.manyOrNone(
+        `
+          SELECT
+            tokens.token_id
+          FROM tokens
+          WHERE tokens.contract = $/contract/
+            AND tokens.floor_sell_id IS NOT NULL
+          LIMIT 10000
+        `,
+        { contract: toBuffer(contract) }
+      );
+      if (result) {
+        for (const { token_id } of result) {
+          await resyncAttributeCache.addToQueue(contract, token_id, 0);
+        }
+      }
     },
     { connection: redis.duplicate(), concurrency: 1 }
   );
