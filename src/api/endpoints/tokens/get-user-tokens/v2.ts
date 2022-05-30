@@ -118,8 +118,21 @@ export const getUserTokensV2Options: RouteOptions = {
 
     let collectionFilter = "";
     if (query.collection) {
-      (params as any).collection = query.collection;
-      collectionFilter = `AND c.id = $/collection/`;
+      if (query.collection.match(/^0x[a-f0-9]{40}:\d+:\d+$/g)) {
+        const [contract, startTokenId, endTokenId] = query.collection.split(":");
+
+        (query as any).contract = toBuffer(contract);
+        (query as any).startTokenId = startTokenId;
+        (query as any).endTokenId = endTokenId;
+        collectionFilter = `
+          AND nft_balances.contract = $/contract/
+          AND nft_balances.token_id >= $/startTokenId/
+          AND nft_balances.token_id <= $/endTokenId/
+        `;
+      } else {
+        (query as any).contract = toBuffer(query.collection);
+        collectionFilter = `AND nft_balances.contract = $/contract/`;
+      }
     }
 
     let sortByFilter = "";
@@ -148,8 +161,9 @@ export const getUserTokensV2Options: RouteOptions = {
         FROM (
             SELECT amount AS token_count, token_id, contract, acquired_at
             FROM nft_balances
-            WHERE owner =  $/user/
-            AND amount > 0
+            WHERE owner = $/user/
+              ${collectionFilter}
+              AND amount > 0
           ) AS b
           JOIN LATERAL (
             SELECT t.token_id, t.name, t.image, t.collection_id,
@@ -161,7 +175,6 @@ export const getUserTokensV2Options: RouteOptions = {
           ) t ON TRUE
           JOIN collections c ON c.id = t.collection_id
           ${communityFilter}
-          ${collectionFilter}
           ${collectionSetFilter}
         ${sortByFilter}
         OFFSET $/offset/
