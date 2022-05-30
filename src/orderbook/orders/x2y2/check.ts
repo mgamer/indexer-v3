@@ -18,6 +18,7 @@ export const offChainCheck = async (
     // on-chain in case off-chain validation returns the order as
     // being invalid.
     onChainApprovalRecheck?: boolean;
+    checkFilledOrCancelled?: boolean;
   }
 ) => {
   const id = order.params.itemHash;
@@ -28,16 +29,18 @@ export const offChainCheck = async (
     throw new Error("invalid-target");
   }
 
-  // Check: order is not cancelled
-  const cancelled = await commonHelpers.isOrderCancelled(id);
-  if (cancelled) {
-    throw new Error("cancelled");
-  }
+  if (options?.checkFilledOrCancelled) {
+    // Check: order is not cancelled
+    const cancelled = await commonHelpers.isOrderCancelled(id);
+    if (cancelled) {
+      throw new Error("cancelled");
+    }
 
-  // Check: order is not filled
-  const quantityFilled = await commonHelpers.getQuantityFilled(id);
-  if (quantityFilled.gte(1)) {
-    throw new Error("filled");
+    // Check: order is not filled
+    const quantityFilled = await commonHelpers.getQuantityFilled(id);
+    if (quantityFilled.gte(1)) {
+      throw new Error("filled");
+    }
   }
 
   let hasBalance = true;
