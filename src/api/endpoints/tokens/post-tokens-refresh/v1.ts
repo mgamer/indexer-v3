@@ -98,7 +98,7 @@ export const postTokensRefreshV1Options: RouteOptions = {
       await orderFixes.addToQueue([{ by: "token", data: { token: payload.token } }]);
 
       // Revalidate the token attribute cache
-      await resyncAttributeCache.addToQueue(contract, tokenId, 0);
+      await resyncAttributeCache.addToQueue(contract, tokenId, 10 * 60 * 1000);
 
       // Refresh the token floor sell and top bid
       await tokenRefreshCacheQueue.addToQueue(contract, tokenId);
