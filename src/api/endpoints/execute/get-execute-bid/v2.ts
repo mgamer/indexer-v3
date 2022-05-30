@@ -167,6 +167,9 @@ export const getExecuteBidV2Options: RouteOptions = {
           if (query.automatedRoyalties && query.feeRecipient) {
             throw Boom.badRequest("Exchange does not supported multiple fee recipients");
           }
+          if (Array.isArray(query.fee) || Array.isArray(query.feeRecipient)) {
+            throw Boom.badRequest("Exchange does not support multiple fee recipients");
+          }
 
           let order: Sdk.WyvernV23.Order | undefined;
           if (token) {
@@ -288,6 +291,17 @@ export const getExecuteBidV2Options: RouteOptions = {
             throw Boom.badRequest("Unsupported orderbook");
           }
 
+          // Make sure the fee information is correctly types.
+          if (query.fee && !Array.isArray(query.fee)) {
+            query.fee = [query.fee];
+          }
+          if (query.feeRecipient && !Array.isArray(query.feeRecipient)) {
+            query.feeRecipient = [query.feeRecipient];
+          }
+          if (query.fee?.length !== query.feeRecipient?.length) {
+            throw Boom.badRequest("Invalid fee information");
+          }
+
           let order: Sdk.OpenDao.Order | undefined;
           if (token) {
             const [contract, tokenId] = token.split(":");
@@ -392,6 +406,17 @@ export const getExecuteBidV2Options: RouteOptions = {
         case "zeroex-v4": {
           if (!["reservoir"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
+          }
+
+          // Make sure the fee information is correctly types.
+          if (query.fee && !Array.isArray(query.fee)) {
+            query.fee = [query.fee];
+          }
+          if (query.feeRecipient && !Array.isArray(query.feeRecipient)) {
+            query.feeRecipient = [query.feeRecipient];
+          }
+          if (query.fee?.length !== query.feeRecipient?.length) {
+            throw Boom.badRequest("Invalid fee information");
           }
 
           let order: Sdk.ZeroExV4.Order | undefined;
