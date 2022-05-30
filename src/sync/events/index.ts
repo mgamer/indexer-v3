@@ -772,7 +772,7 @@ export const syncEvents = async (
               fillInfos.push({
                 context: orderId,
                 orderId: orderId,
-                orderSide: "sell",
+                orderSide: "buy",
                 contract,
                 tokenId,
                 amount,
@@ -841,7 +841,7 @@ export const syncEvents = async (
               fillInfos.push({
                 context: orderId,
                 orderId: orderId,
-                orderSide: "buy",
+                orderSide: "sell",
                 contract,
                 tokenId,
                 amount,
