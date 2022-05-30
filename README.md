@@ -20,4 +20,4 @@ POST /admin/sync-events
 }
 ```
 
-It's recommended to perform the backfill in batches rather than all at once in order to not bottleneck the system (eg. 4-5 calls each for a batch of 200.000 - 300.000 blocks).
+It's recommended to perform the backfill in batches rather than all at once in order to not bottleneck the system (eg. 4-5 calls each for a batch of 200.000 - 300.000 blocks). Also, when the backfill is on-going it might be worthwhile to drop various indexes to speed up writes (when the backfill is finalized, the dropped indexes can easily be reconstructed concurrently).
