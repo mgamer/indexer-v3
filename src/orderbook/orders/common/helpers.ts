@@ -151,3 +151,27 @@ export const isNonceCancelled = async (
 
   return nonceCancelResult ? true : false;
 };
+
+export const isOrderCancelled = async (orderId: string): Promise<boolean> => {
+  const cancelResult = await idb.oneOrNone(
+    `
+      SELECT order_id FROM cancel_events
+      WHERE order_id = $/orderId/
+    `,
+    { orderId }
+  );
+
+  return cancelResult ? true : false;
+};
+
+export const getQuantityFilled = async (orderId: string): Promise<BigNumber> => {
+  const fillResult = await idb.oneOrNone(
+    `
+      SELECT SUM(amount) AS quantity_filled FROM fill_events_2
+      WHERE order_id = $/orderId/
+    `,
+    { orderId }
+  );
+
+  return bn(fillResult.quantity_filled);
+};
