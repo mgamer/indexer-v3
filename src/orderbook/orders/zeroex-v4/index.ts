@@ -88,7 +88,7 @@ export const save = async (
           });
         }
       } else {
-        // For erc721, enforce uniqueness of maker/nonce/contract/price.
+        // For erc721, enforce uniqueness of maker/nonce/contract.
         const nonceExists = await idb.oneOrNone(
           `
             SELECT 1 FROM orders
@@ -96,7 +96,6 @@ export const save = async (
               AND orders.maker = $/maker/
               AND orders.nonce = $/nonce/
               AND orders.contract = $/contract/
-              AND orders.value = $/price/
               AND orders.contract IS NOT NULL
           `,
           {
