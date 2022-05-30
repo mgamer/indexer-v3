@@ -173,5 +173,5 @@ export const getQuantityFilled = async (orderId: string): Promise<BigNumber> => 
     { orderId }
   );
 
-  return bn(fillResult.quantity_filled);
+  return bn(fillResult.quantity_filled || 0);
 };
