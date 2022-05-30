@@ -1097,7 +1097,7 @@ export const syncEvents = async (
               let taker = parsedLog.args["taker"].toLowerCase();
               const nonce = parsedLog.args["nonce"].toString();
               const erc20Token = parsedLog.args["erc20Token"].toLowerCase();
-              const erc20TokenAmount = parsedLog.args["erc20TokenAmount"].toString();
+              let erc20TokenAmount = parsedLog.args["erc20TokenAmount"].toString();
               const erc721Token = parsedLog.args["erc721Token"].toLowerCase();
               const erc721TokenId = parsedLog.args["erc721TokenId"].toString();
 
@@ -1134,13 +1134,13 @@ export const syncEvents = async (
                   .oneOrNone(
                     `
                       SELECT
-                        orders.id
+                        orders.id,
+                        orders.price
                       FROM orders
                       WHERE orders.kind = '${orderKind}'
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
                         AND orders.contract = $/contract/
-                        AND orders.value = $/price/
                         AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
                       LIMIT 1
                     `,
@@ -1148,12 +1148,13 @@ export const syncEvents = async (
                       maker: toBuffer(maker),
                       nonce,
                       contract: toBuffer(erc721Token),
-                      price: erc20TokenAmount,
                     }
                   )
                   .then((result) => {
                     if (result) {
                       orderId = result.id;
+                      // Workaround the fact that 0xv4 fill events exclude the fee from the price
+                      erc20TokenAmount = result.price;
                     }
                   });
               }
@@ -1213,7 +1214,7 @@ export const syncEvents = async (
               let taker = parsedLog.args["taker"].toLowerCase();
               const nonce = parsedLog.args["nonce"].toString();
               const erc20Token = parsedLog.args["erc20Token"].toLowerCase();
-              const erc20FillAmount = parsedLog.args["erc20FillAmount"].toString();
+              let erc20FillAmount = parsedLog.args["erc20FillAmount"].toString();
               const erc1155Token = parsedLog.args["erc1155Token"].toLowerCase();
               const erc1155TokenId = parsedLog.args["erc1155TokenId"].toString();
               const erc1155FillAmount = parsedLog.args["erc1155FillAmount"].toString();
@@ -1246,7 +1247,8 @@ export const syncEvents = async (
                   .oneOrNone(
                     `
                       SELECT
-                        orders.id
+                        orders.id,
+                        orders.price
                       FROM orders
                       WHERE orders.kind = '${orderKind}'
                         AND orders.maker = $/maker/
@@ -1262,6 +1264,8 @@ export const syncEvents = async (
                   .then((result) => {
                     if (result) {
                       orderId = result.id;
+                      // Workaround the fact that 0xv4 fill events exclude the fee from the price
+                      erc20FillAmount = bn(result.price).mul(erc1155FillAmount).toString();
                     }
                   });
               }
