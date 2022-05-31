@@ -90,11 +90,11 @@ export class Activities {
     collectionId: string
   ) {
     const query = `
-          UPDATE activities SET
-            collection_id = $/collectionId/
-          WHERE tokens.contract = $/contract/
-            AND tokens.token_id = $/tokenId/
-            AND tokens.collection_id IS NULL
+            UPDATE activities
+            SET collection_id = $/collectionId/
+            WHERE activities.contract = $/contract/
+            AND activities.token_id = $/tokenId/
+            AND activities.collection_id IS NULL
         `;
 
     return await idb.none(query, {
