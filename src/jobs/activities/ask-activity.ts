@@ -1,17 +1,17 @@
 import { ActivitiesEntityInsertParams, ActivityType } from "@/models/activities/activities-entity";
 import { Activities } from "@/models/activities";
 import _ from "lodash";
-import { getActivityHash, getTimeSeconds } from "@/jobs/activities/utils";
+import { getActivityHash } from "@/jobs/activities/utils";
 import { UserActivitiesEntityInsertParams } from "@/models/user_activities/user-activities-entity";
 import { UserActivities } from "@/models/user_activities";
 
-export class ListingActivity {
+export class AskActivity {
   public static async handleEvent(data: NewSellOrderEventData) {
-    const activityHash = getActivityHash(ActivityType.listing, data.orderId);
+    const activityHash = getActivityHash(ActivityType.ask, data.orderId);
 
     const activity = {
       hash: activityHash,
-      type: ActivityType.listing,
+      type: ActivityType.ask,
       contract: data.contract,
       collectionId: data.contract,
       tokenId: data.tokenId,
@@ -20,7 +20,7 @@ export class ListingActivity {
       price: data.price,
       amount: data.amount,
       blockHash: null,
-      eventTimestamp: getTimeSeconds(data.createdAt),
+      eventTimestamp: data.timestamp,
       metadata: {
         orderId: data.orderId,
       },
@@ -45,5 +45,5 @@ export type NewSellOrderEventData = {
   maker: string;
   price: number;
   amount: number;
-  createdAt: string;
+  timestamp: number;
 };

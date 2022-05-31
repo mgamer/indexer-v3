@@ -1,18 +1,21 @@
 import { ActivitiesEntityInsertParams, ActivityType } from "@/models/activities/activities-entity";
 import { Activities } from "@/models/activities";
 import _ from "lodash";
-import { getActivityHash, getTimeSeconds } from "@/jobs/activities/utils";
-import { NewSellOrderEventData } from "@/jobs/activities/listing-activity";
+import { getActivityHash } from "@/jobs/activities/utils";
 import { UserActivitiesEntityInsertParams } from "@/models/user_activities/user-activities-entity";
 import { UserActivities } from "@/models/user_activities";
 
-export class ListingCancelActivity {
+export class AskCancelActivity {
   public static async handleEvent(data: SellOrderCancelledEventData) {
-    const activityHash = getActivityHash(ActivityType.listing_cancel, data.orderId);
+    const activityHash = getActivityHash(
+      data.transactionHash,
+      data.logIndex.toString(),
+      data.batchIndex.toString()
+    );
 
     const activity = {
       hash: activityHash,
-      type: ActivityType.listing_cancel,
+      type: ActivityType.ask_cancel,
       contract: data.contract,
       collectionId: data.contract,
       tokenId: data.tokenId,
@@ -21,9 +24,12 @@ export class ListingCancelActivity {
       price: data.price,
       amount: data.amount,
       blockHash: null,
-      eventTimestamp: getTimeSeconds(data.createdAt),
+      eventTimestamp: data.timestamp,
       metadata: {
         orderId: data.orderId,
+        transactionHash: data.transactionHash,
+        logIndex: data.logIndex,
+        batchIndex: data.batchIndex,
       },
     } as ActivitiesEntityInsertParams;
 
@@ -39,4 +45,16 @@ export class ListingCancelActivity {
   }
 }
 
-export type SellOrderCancelledEventData = NewSellOrderEventData;
+export type SellOrderCancelledEventData = {
+  orderId: string;
+  contract: string;
+  tokenId: string;
+  maker: string;
+  price: number;
+  amount: number;
+  transactionHash: string;
+  logIndex: number;
+  batchIndex: number;
+  blockHash: string;
+  timestamp: number;
+};

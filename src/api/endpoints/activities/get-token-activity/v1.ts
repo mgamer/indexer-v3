@@ -14,7 +14,7 @@ const version = "v1";
 export const getTokenActivityV1Options: RouteOptions = {
   description: "Get activity events for the given token",
   notes: "This API can be used to build a feed for a token",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "7. Activities"],
   plugins: {
     "hapi-swagger": {
       order: 17,
@@ -46,12 +46,21 @@ export const getTokenActivityV1Options: RouteOptions = {
       activities: Joi.array().items(
         Joi.object({
           type: Joi.string(),
-          tokenId: Joi.string(),
           fromAddress: Joi.string(),
-          toAddress: Joi.string(),
+          toAddress: Joi.string().allow(null),
           price: Joi.number(),
           amount: Joi.number(),
           timestamp: Joi.number(),
+          token: Joi.object({
+            tokenId: Joi.string(),
+            tokenName: Joi.string(),
+            tokenImage: Joi.string(),
+          }),
+          collection: Joi.object({
+            collectionId: Joi.string(),
+            collectionName: Joi.string(),
+            collectionImage: Joi.string().allow(null),
+          }),
         })
       ),
     }).label(`getTokenActivity${version.toUpperCase()}Response`),
@@ -81,12 +90,13 @@ export const getTokenActivityV1Options: RouteOptions = {
 
       const result = _.map(activities, (activity) => ({
         type: activity.type,
-        tokenId: activity.tokenId,
         fromAddress: activity.fromAddress,
         toAddress: activity.toAddress,
         price: formatEth(activity.price),
         amount: activity.amount,
         timestamp: activity.eventTimestamp,
+        token: activity.token,
+        collection: activity.collection,
       }));
 
       // Set the continuation node

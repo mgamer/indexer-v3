@@ -7,6 +7,7 @@ import { AddressZero } from "@ethersproject/constants";
 import { getActivityHash } from "@/jobs/activities/utils";
 import { UserActivitiesEntityInsertParams } from "@/models/user_activities/user-activities-entity";
 import { UserActivities } from "@/models/user_activities";
+import * as fixActivitiesMissingCollection from "@/jobs/activities/fix-activities-missing-collection";
 
 export class TransferActivity {
   public static async handleEvent(data: NftTransferEventData) {
@@ -17,18 +18,6 @@ export class TransferActivity {
       logger.error("transfer-activity", `No token found for ${JSON.stringify(data)}`);
       return;
     }
-
-    // If collection information is not available yet
-    // if (!token.collectionId && data.fromAddress == AddressZero) {
-    //   logger.error("transfer-activity", `No collection found for ${JSON.stringify(data)}`);
-    //
-    //   const eventInfo = {
-    //     kind: ActivityEventType.nftTransferEvent,
-    //     data,
-    //   };
-    //
-    //   await addToQueue([eventInfo as ActivityEventInfo]);
-    // }
 
     const activityHash = getActivityHash(
       data.transactionHash,
@@ -63,7 +52,7 @@ export class TransferActivity {
     userActivities.push(toUserActivity);
 
     if (data.fromAddress != AddressZero) {
-      // One record for the user from address
+      // One record for the user from address if not a mint event
       const fromUserActivity = _.clone(activity) as UserActivitiesEntityInsertParams;
       fromUserActivity.address = data.fromAddress;
       userActivities.push(fromUserActivity);
@@ -73,6 +62,12 @@ export class TransferActivity {
       Activities.addActivities([activity]),
       UserActivities.addActivities(userActivities),
     ]);
+
+    // If collection information is not available yet when a mint event
+    if (!token.collectionId && data.fromAddress == AddressZero) {
+      logger.warn("transfer-activity", `No collection found for ${JSON.stringify(data)}`);
+      await fixActivitiesMissingCollection.addToQueue(data.contract, data.tokenId);
+    }
   }
 }
 

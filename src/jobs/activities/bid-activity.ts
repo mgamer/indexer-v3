@@ -2,7 +2,7 @@ import { ActivitiesEntityInsertParams, ActivityType } from "@/models/activities/
 import _ from "lodash";
 import { logger } from "@/common/logger";
 import { Activities } from "@/models/activities";
-import { getActivityHash, getBidInfoByOrderId, getTimeSeconds } from "@/jobs/activities/utils";
+import { getActivityHash, getBidInfoByOrderId } from "@/jobs/activities/utils";
 import { UserActivitiesEntityInsertParams } from "@/models/user_activities/user-activities-entity";
 import { UserActivities } from "@/models/user_activities";
 
@@ -15,7 +15,7 @@ export class BidActivity {
       logger.warn("bid-activity", `No collection found for ${JSON.stringify(data)}`);
     }
 
-    const activityHash = getActivityHash(ActivityType.listing, data.orderId);
+    const activityHash = getActivityHash(ActivityType.ask, data.orderId);
 
     const activity = {
       type: ActivityType.bid,
@@ -28,7 +28,7 @@ export class BidActivity {
       price: data.price,
       amount: data.amount,
       blockHash: null,
-      eventTimestamp: getTimeSeconds(data.createdAt),
+      eventTimestamp: data.timestamp,
       metadata: {
         orderId: data.orderId,
       },
@@ -52,5 +52,5 @@ export type NewBuyOrderEventData = {
   maker: string;
   price: number;
   amount: number;
-  createdAt: string;
+  timestamp: number;
 };

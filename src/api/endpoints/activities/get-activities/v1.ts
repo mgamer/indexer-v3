@@ -7,37 +7,22 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import { formatEth } from "@/common/utils";
 import { Activities } from "@/models/activities";
-import { ActivityType } from "@/models/activities/activities-entity";
 
 const version = "v1";
 
-export const getCollectionActivityV1Options: RouteOptions = {
-  description: "Get activity events for the given collection",
-  notes: "This API can be used to build a feed for a collection",
-  tags: ["api", "4. NFT API"],
+export const getActivityV1Options: RouteOptions = {
+  description: "Get all activity events",
+  notes: "This API can be used to scrape all of the activities",
+  tags: ["api", "7. Activities"],
   plugins: {
     "hapi-swagger": {
       order: 17,
     },
   },
   validate: {
-    params: Joi.object({
-      collection: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .required()
-        .description(
-          "Filter to a particular collection, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
-        ),
-    }),
     query: Joi.object({
-      limit: Joi.number().integer().min(1).max(20).default(20),
+      limit: Joi.number().integer().min(1).max(20).default(1000),
       continuation: Joi.number(),
-      types: Joi.array().items(
-        Joi.string()
-          .lowercase()
-          .valid(..._.values(ActivityType))
-      ),
     }),
   },
   response: {
@@ -45,32 +30,29 @@ export const getCollectionActivityV1Options: RouteOptions = {
       continuation: Joi.number().allow(null),
       activities: Joi.array().items(
         Joi.object({
+          id: Joi.number(),
           type: Joi.string(),
-          tokenId: Joi.string(),
+          contract: Joi.string(),
+          collectionId: Joi.string().allow(null),
+          tokenId: Joi.string().allow(null),
           fromAddress: Joi.string(),
-          toAddress: Joi.string(),
+          toAddress: Joi.string().allow(null),
           price: Joi.number(),
           amount: Joi.number(),
           timestamp: Joi.number(),
         })
       ),
-    }).label(`getCollectionActivity${version.toUpperCase()}Response`),
+    }).label(`getActivity${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(`get-collection-activity-${version}-handler`, `Wrong response schema: ${error}`);
+      logger.error(`get-activity-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
   handler: async (request: Request) => {
-    const params = request.params as any;
     const query = request.query as any;
 
     try {
-      const activities = await Activities.getCollectionActivities(
-        params.collection,
-        query.continuation,
-        query.types,
-        query.limit
-      );
+      const activities = await Activities.getActivities(query.continuation, query.limit);
 
       // If no activities found
       if (!activities.length) {
@@ -78,7 +60,10 @@ export const getCollectionActivityV1Options: RouteOptions = {
       }
 
       const result = _.map(activities, (activity) => ({
+        id: Number(activity.id),
         type: activity.type,
+        contract: activity.contract,
+        collectionId: activity.collectionId,
         tokenId: activity.tokenId,
         fromAddress: activity.fromAddress,
         toAddress: activity.toAddress,
@@ -93,13 +78,13 @@ export const getCollectionActivityV1Options: RouteOptions = {
         const lastActivity = _.last(activities);
 
         if (lastActivity) {
-          continuation = lastActivity.eventTimestamp;
+          continuation = Number(lastActivity.id);
         }
       }
 
       return { activities: result, continuation };
     } catch (error) {
-      logger.error(`get-collection-activity-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(`get-activity-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

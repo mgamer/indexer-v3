@@ -492,6 +492,9 @@ export const syncEvents = async (
                   kind: "cancel",
                   txHash: baseEventParams.txHash,
                   txTimestamp: baseEventParams.timestamp,
+                  logIndex: baseEventParams.logIndex,
+                  batchIndex: baseEventParams.batchIndex,
+                  blockHash: baseEventParams.blockHash,
                 },
               });
 
@@ -670,6 +673,9 @@ export const syncEvents = async (
                   kind: "cancel",
                   txHash: baseEventParams.txHash,
                   txTimestamp: baseEventParams.timestamp,
+                  logIndex: baseEventParams.logIndex,
+                  batchIndex: baseEventParams.batchIndex,
+                  blockHash: baseEventParams.blockHash,
                 },
               });
 
@@ -1048,6 +1054,9 @@ export const syncEvents = async (
                   kind: "cancel",
                   txHash: baseEventParams.txHash,
                   txTimestamp: baseEventParams.timestamp,
+                  logIndex: baseEventParams.logIndex,
+                  batchIndex: baseEventParams.batchIndex,
+                  blockHash: baseEventParams.blockHash,
                 },
               });
 

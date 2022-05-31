@@ -1,13 +1,14 @@
 import { fromBuffer } from "@/common/utils";
+import { CollectionsMetadata } from "@/models/collections/collections-entity";
 
 export enum ActivityType {
   sale = "sale",
-  listing = "listing",
+  ask = "ask",
   transfer = "transfer",
   mint = "mint",
   bid = "bid",
   bid_cancel = "bid_cancel",
-  listing_cancel = "listing_cancel",
+  ask_cancel = "ask_cancel",
 }
 
 // Define the fields required to create a new activity
@@ -42,6 +43,10 @@ export type ActivitiesEntityParams = {
   event_timestamp: number;
   created_at: Date;
   metadata: ActivityMetadata;
+  token_name: string;
+  token_image: string;
+  collection_name: string;
+  collection_metadata: CollectionsMetadata;
 };
 
 // Possible fields to be found in the metadata
@@ -50,6 +55,18 @@ export type ActivityMetadata = {
   logIndex?: number;
   batchIndex?: number;
   orderId?: string;
+};
+
+export type ActivityToken = {
+  tokenId: string | null;
+  tokenName?: string;
+  tokenImage?: string;
+};
+
+export type ActivityCollection = {
+  collectionId: string | null;
+  collectionName?: string;
+  collectionImage?: string;
 };
 
 export class ActivitiesEntity {
@@ -67,6 +84,8 @@ export class ActivitiesEntity {
   eventTimestamp: number;
   createdAt: Date;
   metadata: ActivityMetadata;
+  token?: ActivityToken;
+  collection?: ActivityCollection;
 
   constructor(params: ActivitiesEntityParams) {
     this.id = params.id;
@@ -83,5 +102,15 @@ export class ActivitiesEntity {
     this.eventTimestamp = params.event_timestamp;
     this.createdAt = params.created_at;
     this.metadata = params.metadata;
+    this.token = {
+      tokenId: params.token_id,
+      tokenImage: params.token_image,
+      tokenName: params.token_name,
+    };
+    this.collection = {
+      collectionId: params.collection_id,
+      collectionImage: params.collection_metadata?.imageUrl,
+      collectionName: params.collection_name,
+    };
   }
 }

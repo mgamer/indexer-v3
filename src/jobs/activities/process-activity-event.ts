@@ -9,16 +9,16 @@ import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { SaleActivity, FillEventData } from "@/jobs/activities/sale-activity";
 import { TransferActivity, NftTransferEventData } from "@/jobs/activities/transfer-activity";
-import { ListingActivity, NewSellOrderEventData } from "@/jobs/activities/listing-activity";
+import { AskActivity, NewSellOrderEventData } from "@/jobs/activities/ask-activity";
 import { BidActivity, NewBuyOrderEventData } from "@/jobs/activities/bid-activity";
 import {
   BidCancelActivity,
   BuyOrderCancelledEventData,
 } from "@/jobs/activities/bid-cancel-activity";
 import {
-  ListingCancelActivity,
+  AskCancelActivity,
   SellOrderCancelledEventData,
-} from "@/jobs/activities/listing-cancel-activity";
+} from "@/jobs/activities/ask-cancel-activity";
 
 const QUEUE_NAME = "process-activity-event-queue";
 
@@ -47,7 +47,7 @@ if (config.doBackgroundWork) {
           await TransferActivity.handleEvent(data as NftTransferEventData);
           break;
         case EventKind.newSellOrder:
-          await ListingActivity.handleEvent(data as NewSellOrderEventData);
+          await AskActivity.handleEvent(data as NewSellOrderEventData);
           break;
         case EventKind.newBuyOrder:
           await BidActivity.handleEvent(data as NewBuyOrderEventData);
@@ -56,7 +56,7 @@ if (config.doBackgroundWork) {
           await BidCancelActivity.handleEvent(data as BuyOrderCancelledEventData);
           break;
         case EventKind.sellOrderCancelled:
-          await ListingCancelActivity.handleEvent(data as SellOrderCancelledEventData);
+          await AskCancelActivity.handleEvent(data as SellOrderCancelledEventData);
           break;
       }
     },

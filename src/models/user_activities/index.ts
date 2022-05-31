@@ -74,6 +74,17 @@ export class UserActivities {
     const activities: UserActivitiesEntityParams[] | null = await idb.manyOrNone(
       `SELECT *
              FROM user_activities
+             LEFT JOIN LATERAL (
+                SELECT name AS "token_name", image AS "token_image"
+                FROM tokens
+                WHERE user_activities.contract = tokens.contract
+                AND user_activities.token_id = tokens.token_id
+             ) t ON TRUE
+             LEFT JOIN LATERAL (
+                SELECT name AS "collection_name", metadata AS "collection_metadata"
+                FROM collections
+                WHERE user_activities.collection_id = collections.id
+             ) c ON TRUE
              WHERE address = $/user/
              ${continuation}
              ${typesFilter}
@@ -99,5 +110,25 @@ export class UserActivities {
                    WHERE block_hash = $/blockHash/`;
 
     return await idb.none(query, { blockHash });
+  }
+
+  public static async UpdateMissingCollectionId(
+    contract: string,
+    tokenId: string,
+    collectionId: string
+  ) {
+    const query = `
+          UPDATE user_activities SET
+            collection_id = $/collectionId/
+          WHERE tokens.contract = $/contract/
+            AND tokens.token_id = $/tokenId/
+            AND tokens.collection_id IS NULL
+        `;
+
+    return await idb.none(query, {
+      contract,
+      tokenId,
+      collectionId,
+    });
   }
 }
