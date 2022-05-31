@@ -58,6 +58,26 @@ export class Activities {
     return await idb.none(query, { blockHash });
   }
 
+  public static async updateMissingCollectionId(
+    contract: string,
+    tokenId: string,
+    collectionId: string
+  ) {
+    const query = `
+          UPDATE activities SET
+            collection_id = $/collectionId/
+          WHERE tokens.contract = $/contract/
+            AND tokens.token_id = $/tokenId/
+            AND tokens.collection_id IS NULL
+        `;
+
+    return await idb.none(query, {
+      contract,
+      tokenId,
+      collectionId,
+    });
+  }
+
   public static async getCollectionActivities(
     collectionId: string,
     createdBefore: null | string = null,

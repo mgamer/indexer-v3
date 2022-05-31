@@ -11,10 +11,6 @@ export function getActivityHash(...params: string[]) {
     .digest("hex");
 }
 
-export function getTimeSeconds(dateString: string) {
-  return Math.floor(new Date(dateString).getTime() / 1000);
-}
-
 export async function getBidInfoByOrderId(orderId: string) {
   let tokenId;
   let collectionId;

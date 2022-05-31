@@ -2,8 +2,7 @@ import { ActivitiesEntityInsertParams, ActivityType } from "@/models/activities/
 import _ from "lodash";
 import { logger } from "@/common/logger";
 import { Activities } from "@/models/activities";
-import { getActivityHash, getBidInfoByOrderId, getTimeSeconds } from "@/jobs/activities/utils";
-import { NewBuyOrderEventData } from "@/jobs/activities/bid-activity";
+import { getActivityHash, getBidInfoByOrderId } from "@/jobs/activities/utils";
 import { UserActivitiesEntityInsertParams } from "@/models/user_activities/user-activities-entity";
 import { UserActivities } from "@/models/user_activities";
 
@@ -16,7 +15,11 @@ export class BidCancelActivity {
       logger.warn("bid-activity", `No collection found for ${JSON.stringify(data)}`);
     }
 
-    const activityHash = getActivityHash(ActivityType.bid_cancel, data.orderId);
+    const activityHash = getActivityHash(
+      data.transactionHash,
+      data.logIndex.toString(),
+      data.batchIndex.toString()
+    );
 
     const activity = {
       type: ActivityType.bid_cancel,
@@ -29,9 +32,12 @@ export class BidCancelActivity {
       price: data.price,
       amount: data.amount,
       blockHash: null,
-      eventTimestamp: getTimeSeconds(data.createdAt),
+      eventTimestamp: data.timestamp,
       metadata: {
         orderId: data.orderId,
+        transactionHash: data.transactionHash,
+        logIndex: data.logIndex,
+        batchIndex: data.batchIndex,
       },
     } as ActivitiesEntityInsertParams;
 
@@ -47,4 +53,15 @@ export class BidCancelActivity {
   }
 }
 
-export type BuyOrderCancelledEventData = NewBuyOrderEventData;
+export type BuyOrderCancelledEventData = {
+  orderId: string;
+  contract: string;
+  maker: string;
+  price: number;
+  amount: number;
+  transactionHash: string;
+  logIndex: number;
+  batchIndex: number;
+  blockHash: string;
+  timestamp: number;
+};

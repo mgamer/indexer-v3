@@ -2,12 +2,12 @@ import { fromBuffer } from "@/common/utils";
 
 export enum ActivityType {
   sale = "sale",
-  listing = "listing",
+  ask = "ask",
   transfer = "transfer",
   mint = "mint",
   bid = "bid",
   bid_cancel = "bid_cancel",
-  listing_cancel = "listing_cancel",
+  ask_cancel = "ask_cancel",
 }
 
 // Define the fields required to create a new activity

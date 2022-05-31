@@ -100,4 +100,24 @@ export class UserActivities {
 
     return await idb.none(query, { blockHash });
   }
+
+  public static async UpdateMissingCollectionId(
+    contract: string,
+    tokenId: string,
+    collectionId: string
+  ) {
+    const query = `
+          UPDATE user_activities SET
+            collection_id = $/collectionId/
+          WHERE tokens.contract = $/contract/
+            AND tokens.token_id = $/tokenId/
+            AND tokens.collection_id IS NULL
+        `;
+
+    return await idb.none(query, {
+      contract,
+      tokenId,
+      collectionId,
+    });
+  }
 }
