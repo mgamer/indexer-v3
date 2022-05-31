@@ -49,7 +49,7 @@ export class UserActivities {
       metadata: activity.metadata,
     }));
 
-    const query = pgp.helpers.insert(data, columns) + "ON CONFLICT DO NOTHING";
+    const query = pgp.helpers.insert(data, columns) + " ON CONFLICT DO NOTHING";
 
     await idb.none(query);
   }
@@ -92,5 +92,12 @@ export class UserActivities {
     }
 
     return [];
+  }
+
+  public static async deleteByBlockHash(blockHash: string) {
+    const query = `DELETE FROM user_activities
+                   WHERE block_hash = $/blockHash/`;
+
+    return await idb.none(query, { blockHash });
   }
 }

@@ -17,6 +17,11 @@ export class SaleActivity {
       return;
     }
 
+    // If no collection found
+    if (!token.collectionId) {
+      logger.warn("bid-activity", `No collection found for ${JSON.stringify(data)}`);
+    }
+
     const activityHash = getActivityHash(
       data.transactionHash,
       data.logIndex.toString(),

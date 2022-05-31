@@ -2,18 +2,17 @@ import { ActivitiesEntityInsertParams, ActivityType } from "@/models/activities/
 import _ from "lodash";
 import { logger } from "@/common/logger";
 import { Activities } from "@/models/activities";
-import { getActivityHash, getBidInfoByOrderId } from "@/jobs/activities/utils";
+import { getActivityHash, getBidInfoByOrderId, getTimeSeconds } from "@/jobs/activities/utils";
 import { UserActivitiesEntityInsertParams } from "@/models/user_activities/user-activities-entity";
 import { UserActivities } from "@/models/user_activities";
 
 export class BidActivity {
-  public static async handleEvent(data: NewBuyOrderData) {
+  public static async handleEvent(data: NewBuyOrderEventData) {
     const [collectionId, tokenId] = await getBidInfoByOrderId(data.orderId);
 
     // If no collection found
     if (!collectionId) {
-      logger.error("bid-activity", `No collection found for ${JSON.stringify(data)}`);
-      return;
+      logger.warn("bid-activity", `No collection found for ${JSON.stringify(data)}`);
     }
 
     const activityHash = getActivityHash(ActivityType.listing, data.orderId);
@@ -29,7 +28,7 @@ export class BidActivity {
       price: data.price,
       amount: data.amount,
       blockHash: null,
-      eventTimestamp: new Date(data.createdAt).getTime(),
+      eventTimestamp: getTimeSeconds(data.createdAt),
       metadata: {
         orderId: data.orderId,
       },
@@ -47,7 +46,7 @@ export class BidActivity {
   }
 }
 
-export type NewBuyOrderData = {
+export type NewBuyOrderEventData = {
   orderId: string;
   contract: string;
   maker: string;

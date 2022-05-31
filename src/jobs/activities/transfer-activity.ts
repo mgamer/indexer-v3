@@ -18,6 +18,18 @@ export class TransferActivity {
       return;
     }
 
+    // If collection information is not available yet
+    // if (!token.collectionId && data.fromAddress == AddressZero) {
+    //   logger.error("transfer-activity", `No collection found for ${JSON.stringify(data)}`);
+    //
+    //   const eventInfo = {
+    //     kind: ActivityEventType.nftTransferEvent,
+    //     data,
+    //   };
+    //
+    //   await addToQueue([eventInfo as ActivityEventInfo]);
+    // }
+
     const activityHash = getActivityHash(
       data.transactionHash,
       data.logIndex.toString(),
@@ -43,23 +55,23 @@ export class TransferActivity {
       },
     } as ActivitiesEntityInsertParams;
 
-    const userActivitiesToAdd: UserActivitiesEntityInsertParams[] = [];
+    const userActivities: UserActivitiesEntityInsertParams[] = [];
 
     // One record for the user to address
     const toUserActivity = _.clone(activity) as UserActivitiesEntityInsertParams;
     toUserActivity.address = data.toAddress;
-    userActivitiesToAdd.push(toUserActivity);
+    userActivities.push(toUserActivity);
 
     if (data.fromAddress != AddressZero) {
       // One record for the user from address
       const fromUserActivity = _.clone(activity) as UserActivitiesEntityInsertParams;
       fromUserActivity.address = data.fromAddress;
-      userActivitiesToAdd.push(fromUserActivity);
+      userActivities.push(fromUserActivity);
     }
 
     await Promise.all([
       Activities.addActivities([activity]),
-      UserActivities.addActivities(userActivitiesToAdd),
+      UserActivities.addActivities(userActivities),
     ]);
   }
 }
