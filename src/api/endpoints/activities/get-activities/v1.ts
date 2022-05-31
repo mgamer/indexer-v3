@@ -11,9 +11,9 @@ import { Activities } from "@/models/activities";
 const version = "v1";
 
 export const getActivityV1Options: RouteOptions = {
-  description: "Get activity events",
+  description: "Get all activity events",
   notes: "This API can be used to scrape all of the activities",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "7. Activities"],
   plugins: {
     "hapi-swagger": {
       order: 17,
