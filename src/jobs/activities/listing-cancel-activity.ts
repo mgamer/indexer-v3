@@ -1,18 +1,18 @@
 import { ActivitiesEntityInsertParams, ActivityType } from "@/models/activities/activities-entity";
 import { Activities } from "@/models/activities";
 import _ from "lodash";
-import { getActivityHash } from "@/jobs/activities/utils";
+import { getActivityHash, getTimeSeconds } from "@/jobs/activities/utils";
 import { NewSellOrderEventData } from "@/jobs/activities/listing-activity";
 import { UserActivitiesEntityInsertParams } from "@/models/user_activities/user-activities-entity";
 import { UserActivities } from "@/models/user_activities";
 
 export class ListingCancelActivity {
-  public static async handleEvent(data: SellOrderCancelledData) {
+  public static async handleEvent(data: SellOrderCancelledEventData) {
     const activityHash = getActivityHash(ActivityType.listing_cancel, data.orderId);
 
     const activity = {
       hash: activityHash,
-      type: ActivityType.listing,
+      type: ActivityType.listing_cancel,
       contract: data.contract,
       collectionId: data.contract,
       tokenId: data.tokenId,
@@ -21,7 +21,7 @@ export class ListingCancelActivity {
       price: data.price,
       amount: data.amount,
       blockHash: null,
-      eventTimestamp: new Date(data.createdAt).getTime(),
+      eventTimestamp: getTimeSeconds(data.createdAt),
       metadata: {
         orderId: data.orderId,
       },
@@ -39,4 +39,4 @@ export class ListingCancelActivity {
   }
 }
 
-export type SellOrderCancelledData = NewSellOrderEventData;
+export type SellOrderCancelledEventData = NewSellOrderEventData;

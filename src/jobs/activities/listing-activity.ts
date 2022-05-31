@@ -1,7 +1,7 @@
 import { ActivitiesEntityInsertParams, ActivityType } from "@/models/activities/activities-entity";
 import { Activities } from "@/models/activities";
 import _ from "lodash";
-import { getActivityHash } from "@/jobs/activities/utils";
+import { getActivityHash, getTimeSeconds } from "@/jobs/activities/utils";
 import { UserActivitiesEntityInsertParams } from "@/models/user_activities/user-activities-entity";
 import { UserActivities } from "@/models/user_activities";
 
@@ -20,7 +20,7 @@ export class ListingActivity {
       price: data.price,
       amount: data.amount,
       blockHash: null,
-      eventTimestamp: new Date(data.createdAt).getTime(),
+      eventTimestamp: getTimeSeconds(data.createdAt),
       metadata: {
         orderId: data.orderId,
       },

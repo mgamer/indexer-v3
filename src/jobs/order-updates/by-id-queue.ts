@@ -14,8 +14,7 @@ import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queu
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
 import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
-import { ActivityEventType, ActivityEventInfo } from "@/jobs/activities";
-import * as activities from "@/jobs/activities";
+import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -407,8 +406,8 @@ if (config.doBackgroundWork) {
                 eventInfo = {
                   kind:
                     trigger.kind == "new-order"
-                      ? ActivityEventType.newSellOrder
-                      : ActivityEventType.sellOrderCancelled,
+                      ? processActivityEvent.EventKind.newSellOrder
+                      : processActivityEvent.EventKind.sellOrderCancelled,
                   data: {
                     orderId: id,
                     contract: fromBuffer(orderEventResult.contract),
@@ -423,8 +422,8 @@ if (config.doBackgroundWork) {
                 eventInfo = {
                   kind:
                     trigger.kind == "new-order"
-                      ? ActivityEventType.newBuyOrder
-                      : ActivityEventType.buyOrderCancelled,
+                      ? processActivityEvent.EventKind.newBuyOrder
+                      : processActivityEvent.EventKind.buyOrderCancelled,
                   data: {
                     orderId: id,
                     contract: fromBuffer(orderEventResult.contract),
@@ -437,7 +436,9 @@ if (config.doBackgroundWork) {
               }
 
               if (eventInfo) {
-                await activities.addToQueue([eventInfo as ActivityEventInfo]);
+                await processActivityEvent.addToQueue([
+                  eventInfo as processActivityEvent.EventInfo,
+                ]);
               }
             }
           }

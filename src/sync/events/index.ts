@@ -4,6 +4,7 @@ import { AddressZero, HashZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
 
+import _ from "lodash";
 import { logger } from "@/common/logger";
 import { idb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
@@ -18,10 +19,10 @@ import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
+import * as processActivityEvent from "@/jobs/activities/process-activity-event";
+import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
 import { OrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
-import * as activities from "@/jobs/activities";
-import { ActivityEventType, ActivityEventInfo } from "@/jobs/activities";
 
 // TODO: Split into multiple files (by exchange).
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
@@ -1328,10 +1329,10 @@ export const syncEvents = async (
       ]);
 
       // Add all the fill events to the activity queue
-      const fillActivitiesInfo: ActivityEventInfo[] = _.map(
+      const fillActivitiesInfo: processActivityEvent.EventInfo[] = _.map(
         _.concat(fillEvents, fillEventsZeroExV4, fillEventsFoundation),
         (event) => ({
-          kind: ActivityEventType.fillEvent,
+          kind: processActivityEvent.EventKind.fillEvent,
           data: {
             contract: event.contract,
             tokenId: event.tokenId,
@@ -1349,28 +1350,31 @@ export const syncEvents = async (
       );
 
       if (!_.isEmpty(fillActivitiesInfo)) {
-        await activities.addToQueue(fillActivitiesInfo);
+        await processActivityEvent.addToQueue(fillActivitiesInfo);
       }
 
       // Add all the transfer/mint events to the activity queue
-      const transferActivitiesInfo: ActivityEventInfo[] = _.map(nftTransferEvents, (event) => ({
-        kind: ActivityEventType.nftTransferEvent,
-        data: {
-          contract: event.baseEventParams.address,
-          tokenId: event.tokenId,
-          fromAddress: event.from,
-          toAddress: event.to,
-          amount: Number(event.amount),
-          transactionHash: event.baseEventParams.txHash,
-          logIndex: event.baseEventParams.logIndex,
-          batchIndex: event.baseEventParams.batchIndex,
-          blockHash: event.baseEventParams.blockHash,
-          timestamp: event.baseEventParams.timestamp,
-        },
-      }));
+      const transferActivitiesInfo: processActivityEvent.EventInfo[] = _.map(
+        nftTransferEvents,
+        (event) => ({
+          kind: processActivityEvent.EventKind.nftTransferEvent,
+          data: {
+            contract: event.baseEventParams.address,
+            tokenId: event.tokenId,
+            fromAddress: event.from,
+            toAddress: event.to,
+            amount: Number(event.amount),
+            transactionHash: event.baseEventParams.txHash,
+            logIndex: event.baseEventParams.logIndex,
+            batchIndex: event.baseEventParams.batchIndex,
+            blockHash: event.baseEventParams.blockHash,
+            timestamp: event.baseEventParams.timestamp,
+          },
+        })
+      );
 
       if (!_.isEmpty(transferActivitiesInfo)) {
-        await activities.addToQueue(transferActivitiesInfo);
+        await processActivityEvent.addToQueue(transferActivitiesInfo);
       }
 
       if (!backfill) {
@@ -1405,8 +1409,8 @@ export const syncEvents = async (
     });
 };
 
-export const unsyncEvents = async (block: number, blockHash: string) =>
-  Promise.all([
+export const unsyncEvents = async (block: number, blockHash: string) => {
+  await Promise.all([
     es.fills.removeEvents(block, blockHash),
     es.bulkCancels.removeEvents(block, blockHash),
     es.nonceCancels.removeEvents(block, blockHash),
@@ -1415,3 +1419,6 @@ export const unsyncEvents = async (block: number, blockHash: string) =>
     es.nftApprovals.removeEvents(block, blockHash),
     es.nftTransfers.removeEvents(block, blockHash),
   ]);
+
+  await removeUnsyncedEventsActivities.addToQueue(blockHash);
+};
