@@ -46,12 +46,21 @@ export const getCollectionActivityV1Options: RouteOptions = {
       activities: Joi.array().items(
         Joi.object({
           type: Joi.string(),
-          tokenId: Joi.string(),
           fromAddress: Joi.string(),
-          toAddress: Joi.string(),
+          toAddress: Joi.string().allow(null),
           price: Joi.number(),
           amount: Joi.number(),
           timestamp: Joi.number(),
+          token: Joi.object({
+            tokenId: Joi.string(),
+            tokenName: Joi.string(),
+            tokenImage: Joi.string(),
+          }),
+          collection: Joi.object({
+            collectionId: Joi.string(),
+            collectionName: Joi.string(),
+            collectionImage: Joi.string().allow(null),
+          }),
         })
       ),
     }).label(`getCollectionActivity${version.toUpperCase()}Response`),
@@ -79,12 +88,13 @@ export const getCollectionActivityV1Options: RouteOptions = {
 
       const result = _.map(activities, (activity) => ({
         type: activity.type,
-        tokenId: activity.tokenId,
         fromAddress: activity.fromAddress,
         toAddress: activity.toAddress,
         price: formatEth(activity.price),
         amount: activity.amount,
         timestamp: activity.eventTimestamp,
+        token: activity.token,
+        collection: activity.collection,
       }));
 
       // Set the continuation node
