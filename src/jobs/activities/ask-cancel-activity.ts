@@ -23,7 +23,7 @@ export class AskCancelActivity {
       toAddress: null,
       price: data.price,
       amount: data.amount,
-      blockHash: null,
+      blockHash: data.blockHash,
       eventTimestamp: data.timestamp,
       metadata: {
         orderId: data.orderId,
