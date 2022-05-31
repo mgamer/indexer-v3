@@ -98,7 +98,7 @@ export class Activities {
         `;
 
     return await idb.none(query, {
-      contract,
+      contract: toBuffer(contract),
       tokenId,
       collectionId,
     });
