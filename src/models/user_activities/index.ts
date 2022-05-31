@@ -118,11 +118,11 @@ export class UserActivities {
     collectionId: string
   ) {
     const query = `
-          UPDATE user_activities SET
-            collection_id = $/collectionId/
-          WHERE tokens.contract = $/contract/
-            AND tokens.token_id = $/tokenId/
-            AND tokens.collection_id IS NULL
+            UPDATE user_activities
+            SET collection_id = $/collectionId/
+            WHERE user_activities.contract = $/contract/
+            AND user_activities.token_id = $/tokenId/
+            AND user_activities.collection_id IS NULL
         `;
 
     return await idb.none(query, {
