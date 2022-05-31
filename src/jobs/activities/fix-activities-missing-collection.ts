@@ -18,7 +18,7 @@ export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 10,
-    removeOnComplete: 10000,
+    removeOnComplete: true,
     removeOnFail: 10000,
   },
 });
@@ -56,6 +56,9 @@ if (config.doBackgroundWork) {
 }
 
 export const addToQueue = async (contract: string, tokenId: string, retry = 0) => {
+  const jobId = `${contract}:${tokenId}:${retry}`;
+  const delay = retry ? retry ** 2 * 300 * 1000 : 0;
+
   await queue.add(
     randomUUID(),
     {
@@ -64,7 +67,8 @@ export const addToQueue = async (contract: string, tokenId: string, retry = 0) =
       retry,
     },
     {
-      delay: retry ? retry ** 2 * 300 * 1000 : 0,
+      jobId,
+      delay,
     }
   );
 };
