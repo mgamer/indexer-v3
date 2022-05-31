@@ -1,10 +1,11 @@
+import _ from "lodash";
+
 import { defaultAbiCoder } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
 
-import _ from "lodash";
 import { logger } from "@/common/logger";
 import { idb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
