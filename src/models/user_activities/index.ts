@@ -74,6 +74,17 @@ export class UserActivities {
     const activities: UserActivitiesEntityParams[] | null = await idb.manyOrNone(
       `SELECT *
              FROM user_activities
+             LEFT JOIN LATERAL (
+                SELECT name AS "token_name", image AS "token_image"
+                FROM tokens
+                WHERE user_activities.contract = tokens.contract
+                AND user_activities.token_id = tokens.token_id
+             ) t ON TRUE
+             LEFT JOIN LATERAL (
+                SELECT name AS "collection_name", metadata AS "collection_metadata"
+                FROM collections
+                WHERE user_activities.collection_id = collections.id
+             ) c ON TRUE
              WHERE address = $/user/
              ${continuation}
              ${typesFilter}

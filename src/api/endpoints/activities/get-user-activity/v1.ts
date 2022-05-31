@@ -6,14 +6,14 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { formatEth } from "@/common/utils";
-import { Activities } from "@/models/activities";
 import { ActivityType } from "@/models/activities/activities-entity";
+import { UserActivities } from "@/models/user_activities";
 
 const version = "v1";
 
-export const getTokenActivityV1Options: RouteOptions = {
-  description: "Get activity events for the given token",
-  notes: "This API can be used to build a feed for a token",
+export const getUserActivityV1Options: RouteOptions = {
+  description: "Get activity events for the given user",
+  notes: "This API can be used to build a feed for a user",
   tags: ["api", "4. NFT API"],
   plugins: {
     "hapi-swagger": {
@@ -22,13 +22,13 @@ export const getTokenActivityV1Options: RouteOptions = {
   },
   validate: {
     params: Joi.object({
-      token: Joi.string()
+      user: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .required()
         .description(
-          "Filter to a particular token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
-        )
-        .required(),
+          "Filter to a particular user, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        ),
     }),
     query: Joi.object({
       limit: Joi.number().integer().min(1).max(20).default(20),
@@ -46,17 +46,26 @@ export const getTokenActivityV1Options: RouteOptions = {
       activities: Joi.array().items(
         Joi.object({
           type: Joi.string(),
-          tokenId: Joi.string(),
           fromAddress: Joi.string(),
-          toAddress: Joi.string(),
+          toAddress: Joi.string().allow(null),
           price: Joi.number(),
           amount: Joi.number(),
           timestamp: Joi.number(),
+          token: Joi.object({
+            tokenId: Joi.string(),
+            tokenName: Joi.string(),
+            tokenImage: Joi.string(),
+          }),
+          collection: Joi.object({
+            collectionId: Joi.string(),
+            collectionName: Joi.string(),
+            collectionImage: Joi.string().allow(null),
+          }),
         })
       ),
-    }).label(`getTokenActivity${version.toUpperCase()}Response`),
+    }).label(`getUserActivity${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(`get-token-activity-${version}-handler`, `Wrong response schema: ${error}`);
+      logger.error(`get-user-activity-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -65,10 +74,8 @@ export const getTokenActivityV1Options: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const [contract, tokenId] = params.token.split(":");
-      const activities = await Activities.getTokenActivities(
-        contract,
-        tokenId,
+      const activities = await UserActivities.getActivities(
+        params.user,
         query.continuation,
         query.types,
         query.limit
@@ -79,14 +86,16 @@ export const getTokenActivityV1Options: RouteOptions = {
         return { activities: [] };
       }
 
+      // Iterate over the activities
       const result = _.map(activities, (activity) => ({
         type: activity.type,
-        tokenId: activity.tokenId,
         fromAddress: activity.fromAddress,
         toAddress: activity.toAddress,
         price: formatEth(activity.price),
         amount: activity.amount,
         timestamp: activity.eventTimestamp,
+        token: activity.token,
+        collection: activity.collection,
       }));
 
       // Set the continuation node
@@ -101,7 +110,7 @@ export const getTokenActivityV1Options: RouteOptions = {
 
       return { activities: result, continuation };
     } catch (error) {
-      logger.error(`get-token-activity-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(`get-user-activity-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

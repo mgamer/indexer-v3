@@ -1,4 +1,3 @@
-export * from "@/api/endpoints/tokens/get-token-activity/v1";
 export * from "@/api/endpoints/tokens/get-tokens/v1";
 export * from "@/api/endpoints/tokens/get-tokens/v2";
 export * from "@/api/endpoints/tokens/get-tokens/v3";

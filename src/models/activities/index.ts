@@ -58,6 +58,32 @@ export class Activities {
     return await idb.none(query, { blockHash });
   }
 
+  public static async getActivities(continuation: null | number = null, limit = 20) {
+    let continuationFilter = "";
+
+    if (!_.isNull(continuation)) {
+      continuationFilter = `WHERE id > $/continuation/`;
+    }
+
+    const activities: ActivitiesEntityParams[] | null = await idb.manyOrNone(
+      `SELECT *
+             FROM activities
+             ${continuationFilter}
+             ORDER BY id ASC
+             LIMIT $/limit/`,
+      {
+        limit,
+        continuation,
+      }
+    );
+
+    if (activities) {
+      return _.map(activities, (activity) => new ActivitiesEntity(activity));
+    }
+
+    return [];
+  }
+
   public static async getCollectionActivities(
     collectionId: string,
     createdBefore: null | string = null,
@@ -78,6 +104,17 @@ export class Activities {
     const activities: ActivitiesEntityParams[] | null = await idb.manyOrNone(
       `SELECT *
              FROM activities
+             LEFT JOIN LATERAL (
+                SELECT name AS "token_name", image AS "token_image"
+                FROM tokens
+                WHERE activities.contract = tokens.contract
+                AND activities.token_id = tokens.token_id
+             ) t ON TRUE
+             LEFT JOIN LATERAL (
+                SELECT name AS "collection_name", metadata AS "collection_metadata"
+                FROM collections
+                WHERE activities.collection_id = collections.id
+             ) c ON TRUE
              WHERE collection_id = $/collectionId/
              ${continuation}
              ${typesFilter}
@@ -119,6 +156,17 @@ export class Activities {
     const activities: ActivitiesEntityParams[] | null = await idb.manyOrNone(
       `SELECT *
              FROM activities
+             LEFT JOIN LATERAL (
+                SELECT name AS "token_name", image AS "token_image"
+                FROM tokens
+                WHERE activities.contract = tokens.contract
+                AND activities.token_id = tokens.token_id
+             ) t ON TRUE
+             LEFT JOIN LATERAL (
+                SELECT name AS "collection_name", metadata AS "collection_metadata"
+                FROM collections
+                WHERE activities.collection_id = collections.id
+             ) c ON TRUE
              WHERE contract = $/contract/
              AND token_id = $/tokenId/
              ${continuation}
