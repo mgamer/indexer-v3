@@ -16,7 +16,7 @@ export class BidCancelActivity {
       logger.warn("bid-activity", `No collection found for ${JSON.stringify(data)}`);
     }
 
-    const activityHash = getActivityHash(ActivityType.listing, data.orderId);
+    const activityHash = getActivityHash(ActivityType.bid_cancel, data.orderId);
 
     const activity = {
       type: ActivityType.bid_cancel,
