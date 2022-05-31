@@ -57,8 +57,8 @@ export const getTokenActivityV1Options: RouteOptions = {
             tokenImage: Joi.string(),
           }),
           collection: Joi.object({
-            collectionId: Joi.string(),
-            collectionName: Joi.string(),
+            collectionId: Joi.string().allow(null),
+            collectionName: Joi.string().allow(null),
             collectionImage: Joi.string().allow(null),
           }),
         })
