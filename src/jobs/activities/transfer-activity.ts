@@ -65,7 +65,6 @@ export class TransferActivity {
 
     // If collection information is not available yet when a mint event
     if (!token.collectionId && data.fromAddress == AddressZero) {
-      logger.warn("transfer-activity", `No collection found for ${JSON.stringify(data)}`);
       await fixActivitiesMissingCollection.addToQueue(data.contract, data.tokenId);
     }
   }

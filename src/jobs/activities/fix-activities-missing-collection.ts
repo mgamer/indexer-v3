@@ -41,7 +41,6 @@ if (config.doBackgroundWork) {
           UserActivities.UpdateMissingCollectionId(contract, tokenId, token.collectionId),
         ]);
       } else if (retry < MAX_RETRIES) {
-        logger.info(QUEUE_NAME, `Retrying for ${JSON.stringify(job.data)}`);
         await addToQueue(contract, tokenId, ++retry);
       } else {
         logger.warn(QUEUE_NAME, `Max retries reached for ${JSON.stringify(job.data)}`);
