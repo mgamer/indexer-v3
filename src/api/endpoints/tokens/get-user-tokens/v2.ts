@@ -7,7 +7,6 @@ import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
-import _ from "lodash";
 
 const version = "v2";
 
@@ -100,39 +99,54 @@ export const getUserTokensV2Options: RouteOptions = {
     (params as any).offset = query.offset;
     (params as any).limit = query.limit;
 
-    let communityFilter = "";
-    if (query.community) {
-      (params as any).community = query.community;
-      communityFilter = `AND c.community = $/community/`;
-    }
+    const collectionFilters: string[] = [];
+    const addCollectionToFilter = (id: string) => {
+      const i = collectionFilters.length;
+      if (id.match(/^0x[a-f0-9]{40}:\d+:\d+$/g)) {
+        const [contract, startTokenId, endTokenId] = id.split(":");
 
-    let collectionSetFilter = "";
-    if (query.collectionsSetId) {
-      const collectionsIds = await CollectionSets.getCollectionsIds(query.collectionsSetId);
-
-      if (!_.isEmpty(collectionsIds)) {
-        params.collectionsIds = _.join(collectionsIds, "','");
-        collectionSetFilter = `AND c.id IN ('$/collectionsIds:raw/')`;
-      }
-    }
-
-    let collectionFilter = "";
-    if (query.collection) {
-      if (query.collection.match(/^0x[a-f0-9]{40}:\d+:\d+$/g)) {
-        const [contract, startTokenId, endTokenId] = query.collection.split(":");
-
-        (query as any).contract = toBuffer(contract);
-        (query as any).startTokenId = startTokenId;
-        (query as any).endTokenId = endTokenId;
-        collectionFilter = `
-          AND nft_balances.contract = $/contract/
-          AND nft_balances.token_id >= $/startTokenId/
-          AND nft_balances.token_id <= $/endTokenId/
-        `;
+        (query as any)[`contract${i}`] = toBuffer(contract);
+        (query as any)[`startTokenId${i}`] = startTokenId;
+        (query as any)[`endTokenId${i}`] = endTokenId;
+        collectionFilters.push(`
+          (nft_balances.contract = $/contract${i}/
+          AND nft_balances.token_id >= $/startTokenId${i}/
+          AND nft_balances.token_id <= $/endTokenId${i}/)
+        `);
       } else {
-        (query as any).contract = toBuffer(query.collection);
-        collectionFilter = `AND nft_balances.contract = $/contract/`;
+        (query as any)[`contract${i}`] = toBuffer(id);
+        collectionFilters.push(`(nft_balances.contract = $/contract${i}/)`);
       }
+    };
+
+    if (query.community) {
+      await edb
+        .manyOrNone(
+          `
+          SELECT collections.id FROM collections
+          WHERE collections.community = $/community/
+        `,
+          { community: query.community }
+        )
+        .then((result) => result.forEach(({ id }) => addCollectionToFilter(id)));
+
+      if (!collectionFilters.length) {
+        return { tokens: [] };
+      }
+    }
+
+    if (query.collectionsSetId) {
+      await CollectionSets.getCollectionsIds(query.collectionsSetId).then((result) =>
+        result.forEach(addCollectionToFilter)
+      );
+
+      if (!collectionFilters.length) {
+        return { tokens: [] };
+      }
+    }
+
+    if (query.collection) {
+      addCollectionToFilter(query.collection);
     }
 
     let sortByFilter = "";
@@ -162,7 +176,7 @@ export const getUserTokensV2Options: RouteOptions = {
             SELECT amount AS token_count, token_id, contract, acquired_at
             FROM nft_balances
             WHERE owner = $/user/
-              ${collectionFilter}
+              AND ${collectionFilters.length ? "(" + collectionFilters.join(" OR ") + ")" : "TRUE"}
               AND amount > 0
           ) AS b
           JOIN LATERAL (
@@ -174,8 +188,6 @@ export const getUserTokensV2Options: RouteOptions = {
             AND b.contract = t.contract
           ) t ON TRUE
           JOIN collections c ON c.id = t.collection_id
-          ${communityFilter}
-          ${collectionSetFilter}
         ${sortByFilter}
         OFFSET $/offset/
         LIMIT $/limit/
