@@ -35,9 +35,7 @@ if (config.doBackgroundWork) {
       let continuationFilter = "";
 
       if (cursor) {
-        continuationFilter = `AND (maker, token_set_id) > ('${toBuffer(cursor.maker)}', '${
-          cursor.tokenSetId
-        }')`;
+        continuationFilter = `AND (maker, token_set_id) > ($/maker/, $/tokenSetId/)`;
       }
 
       const sellOrders = await idb.manyOrNone(
@@ -51,8 +49,13 @@ if (config.doBackgroundWork) {
           AND o.approval_status = 'approved'
           ${continuationFilter}
           GROUP BY maker, token_set_id
-          LIMIT ${limit};
-          `
+          LIMIT $/limit/;
+          `,
+        {
+          maker: cursor?.maker ? toBuffer(cursor.maker) : null,
+          tokenSetId: cursor?.tokenSetId,
+          limit,
+        }
       );
 
       if (sellOrders) {
