@@ -12,7 +12,7 @@ const version = "v1";
 export const getOwnersV1Options: RouteOptions = {
   cache: {
     privacy: "public",
-    expiresIn: 60000,
+    expiresIn: 60 * 60 * 1000,
   },
   description: "Get aggregated ownership counts of collections or traits",
   notes:
