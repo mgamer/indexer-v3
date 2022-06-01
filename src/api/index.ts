@@ -28,6 +28,10 @@ export const start = async (): Promise<void> => {
       stripTrailingSlash: true,
     },
     routes: {
+      cache: {
+        privacy: "public",
+        expiresIn: 1000,
+      },
       timeout: {
         server: 10 * 1000,
       },
