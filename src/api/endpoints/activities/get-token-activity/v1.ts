@@ -52,9 +52,9 @@ export const getTokenActivityV1Options: RouteOptions = {
           amount: Joi.number(),
           timestamp: Joi.number(),
           token: Joi.object({
-            tokenId: Joi.string(),
-            tokenName: Joi.string(),
-            tokenImage: Joi.string(),
+            tokenId: Joi.string().allow(null),
+            tokenName: Joi.string().allow(null),
+            tokenImage: Joi.string().allow(null),
           }),
           collection: Joi.object({
             collectionId: Joi.string().allow(null),
