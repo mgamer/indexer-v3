@@ -20,6 +20,10 @@ import { Sources } from "@/models/sources";
 const version = "v3";
 
 export const getTokensDetailsV3Options: RouteOptions = {
+  cache: {
+    privacy: "public",
+    expiresIn: 60000,
+  },
   description: "Get one or more tokens with full details",
   notes:
     "Get a list of tokens with full metadata. This is useful for showing a single token page, or scenarios that require more metadata. If you don't need this metadata, you should use the <a href='#/tokens/getTokensV1'>tokens</a> API, which is much faster.",
