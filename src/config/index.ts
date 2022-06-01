@@ -16,7 +16,7 @@ export const config = {
   openseaIndexerApiBaseUrl: String(process.env.OPENSEA_INDEXER_API_BASE_URL),
 
   // When running in liquidity-only mode, all metadata processes are disabled
-  liquidityOnly: Boolean(process.env.METADATA_API_BASE_URL),
+  liquidityOnly: !process.env.METADATA_API_BASE_URL,
   metadataApiBaseUrl: String(process.env.METADATA_API_BASE_URL),
 
   databaseUrl: String(process.env.DATABASE_URL),

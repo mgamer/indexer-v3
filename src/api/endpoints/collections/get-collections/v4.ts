@@ -12,6 +12,10 @@ import { CollectionSets } from "@/models/collection-sets";
 const version = "v4";
 
 export const getCollectionsV4Options: RouteOptions = {
+  cache: {
+    privacy: "public",
+    expiresIn: 10 * 1000,
+  },
   description: "Get a filtered list of collections",
   notes:
     "Useful for getting multiple collections to show in a marketplace, or search for particular collections.",
@@ -55,7 +59,7 @@ export const getCollectionsV4Options: RouteOptions = {
       collections: Joi.array().items(
         Joi.object({
           id: Joi.string(),
-          slug: Joi.string(),
+          slug: Joi.string().allow(null, ""),
           name: Joi.string().allow(null, ""),
           image: Joi.string().allow(null, ""),
           banner: Joi.string().allow(null, ""),

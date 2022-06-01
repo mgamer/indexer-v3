@@ -10,6 +10,10 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v3";
 
 export const getCollectionsV3Options: RouteOptions = {
+  cache: {
+    privacy: "public",
+    expiresIn: 60000,
+  },
   description: "Get a filtered list of collections",
   notes:
     "Useful for getting multiple collections to show in a marketplace, or search for particular collections.",
@@ -48,7 +52,7 @@ export const getCollectionsV3Options: RouteOptions = {
       collections: Joi.array().items(
         Joi.object({
           id: Joi.string(),
-          slug: Joi.string(),
+          slug: Joi.string().allow(null, ""),
           name: Joi.string().allow(null, ""),
           image: Joi.string().allow(null, ""),
           banner: Joi.string().allow(null, ""),

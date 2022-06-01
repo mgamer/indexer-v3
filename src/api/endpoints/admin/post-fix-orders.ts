@@ -19,7 +19,7 @@ export const postFixOrdersOptions: RouteOptions = {
       "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     payload: Joi.object({
-      by: Joi.string().valid("id", "maker", "token", "contract", "all").required(),
+      by: Joi.string().valid("id", "maker", "token", "contract").required(),
       id: Joi.string().when("by", {
         is: "id",
         then: Joi.required(),
@@ -49,11 +49,6 @@ export const postFixOrdersOptions: RouteOptions = {
           then: Joi.required(),
           otherwise: Joi.forbidden(),
         }),
-      kind: Joi.string().valid("sell-balance").when("by", {
-        is: "all",
-        then: Joi.required(),
-        otherwise: Joi.forbidden(),
-      }),
     }),
   },
   handler: async (request: Request) => {
@@ -74,13 +69,6 @@ export const postFixOrdersOptions: RouteOptions = {
         await orderFixes.addToQueue([{ by, data: { contract: payload.contract } }]);
       } else if (by === "token") {
         await orderFixes.addToQueue([{ by, data: { token: payload.token } }]);
-      } else if (by === "all") {
-        await orderFixes.addToQueue([
-          {
-            by,
-            data: { kind: payload.kind },
-          },
-        ]);
       }
 
       return { message: "Success" };
