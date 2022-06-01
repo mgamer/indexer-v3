@@ -31,7 +31,7 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const cursor = job.data.cursor as CursorInfo;
 
-      const limit = 500;
+      const limit = 200;
       let continuationFilter = "";
 
       if (cursor) {
@@ -113,5 +113,5 @@ export type CursorInfo = {
 };
 
 export const addToQueue = async (cursor?: CursorInfo) => {
-  await queue.add(randomUUID(), { cursor }, { delay: 1000 });
+  await queue.add(randomUUID(), { cursor }, { delay: 2000 });
 };
