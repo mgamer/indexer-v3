@@ -14,8 +14,8 @@ import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queu
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
 import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
-import * as updateNftBalanceTopBidQueue from "@/jobs/nft-balance-updates/update-top-bid-queue";
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
+import * as updateNftBalanceTopBidQueue from "@/jobs/nft-balance-updates/update-top-bid-queue";
 
 const QUEUE_NAME = "order-updates-by-id";
 
