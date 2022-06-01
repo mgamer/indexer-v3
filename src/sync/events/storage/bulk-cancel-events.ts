@@ -79,7 +79,7 @@ export const addEvents = async (events: Event[], backfill = false) => {
           "min_nonce"
         ) VALUES ${pgp.helpers.values(bulkCancelValues, columns)}
         ON CONFLICT DO NOTHING
-        RETURNING "order_kind", "maker", "min_nonce", "tx_hash", "timestamp"
+        RETURNING "order_kind", "maker", "min_nonce", "tx_hash", "timestamp", "log_index", "batch_index", "block_hash"
       )
       UPDATE "orders" AS "o" SET
         "fillability_status" = 'cancelled',
@@ -90,7 +90,7 @@ export const addEvents = async (events: Event[], backfill = false) => {
         AND "o"."maker" = "x"."maker"
         AND "o"."nonce" < "x"."min_nonce"
         AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-      RETURNING "o"."id", "x"."tx_hash", "x"."timestamp"
+      RETURNING "o"."id", "x"."tx_hash", "x"."timestamp", "x"."log_index", "x"."batch_index", "x"."block_hash"
     `;
   }
 
@@ -108,7 +108,7 @@ export const addEvents = async (events: Event[], backfill = false) => {
       // it synchronously is not ideal).
       await orderUpdatesById.addToQueue(
         result.map(
-          ({ id, tx_hash, timestamp }) =>
+          ({ id, tx_hash, timestamp, log_index, batch_index, block_hash }) =>
             ({
               context: `cancelled-${id}`,
               id,
@@ -116,6 +116,9 @@ export const addEvents = async (events: Event[], backfill = false) => {
                 kind: "cancel",
                 txHash: fromBuffer(tx_hash),
                 txTimestamp: timestamp,
+                logIndex: log_index,
+                batchIndex: batch_index,
+                blockHash: fromBuffer(block_hash),
               },
             } as orderUpdatesById.OrderInfo)
         )

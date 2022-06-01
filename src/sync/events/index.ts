@@ -1,3 +1,5 @@
+import _ from "lodash";
+
 import { defaultAbiCoder } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 import { AddressZero, HashZero } from "@ethersproject/constants";
@@ -18,6 +20,8 @@ import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
+import * as processActivityEvent from "@/jobs/activities/process-activity-event";
+import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
 import { OrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
 
@@ -488,6 +492,9 @@ export const syncEvents = async (
                   kind: "cancel",
                   txHash: baseEventParams.txHash,
                   txTimestamp: baseEventParams.timestamp,
+                  logIndex: baseEventParams.logIndex,
+                  batchIndex: baseEventParams.batchIndex,
+                  blockHash: baseEventParams.blockHash,
                 },
               });
 
@@ -666,6 +673,9 @@ export const syncEvents = async (
                   kind: "cancel",
                   txHash: baseEventParams.txHash,
                   txTimestamp: baseEventParams.timestamp,
+                  logIndex: baseEventParams.logIndex,
+                  batchIndex: baseEventParams.batchIndex,
+                  blockHash: baseEventParams.blockHash,
                 },
               });
 
@@ -1044,6 +1054,9 @@ export const syncEvents = async (
                   kind: "cancel",
                   txHash: baseEventParams.txHash,
                   txTimestamp: baseEventParams.timestamp,
+                  logIndex: baseEventParams.logIndex,
+                  batchIndex: baseEventParams.batchIndex,
+                  blockHash: baseEventParams.blockHash,
                 },
               });
 
@@ -1329,6 +1342,55 @@ export const syncEvents = async (
         es.nftTransfers.addEvents(nftTransferEvents, backfill),
       ]);
 
+      // Add all the fill events to the activity queue
+      const fillActivitiesInfo: processActivityEvent.EventInfo[] = _.map(
+        _.concat(fillEvents, fillEventsZeroExV4, fillEventsFoundation),
+        (event) => ({
+          kind: processActivityEvent.EventKind.fillEvent,
+          data: {
+            contract: event.contract,
+            tokenId: event.tokenId,
+            fromAddress: event.maker,
+            toAddress: event.taker,
+            price: Number(event.price),
+            amount: Number(event.amount),
+            transactionHash: event.baseEventParams.txHash,
+            logIndex: event.baseEventParams.logIndex,
+            batchIndex: event.baseEventParams.batchIndex,
+            blockHash: event.baseEventParams.blockHash,
+            timestamp: event.baseEventParams.timestamp,
+          },
+        })
+      );
+
+      if (!_.isEmpty(fillActivitiesInfo)) {
+        await processActivityEvent.addToQueue(fillActivitiesInfo);
+      }
+
+      // Add all the transfer/mint events to the activity queue
+      const transferActivitiesInfo: processActivityEvent.EventInfo[] = _.map(
+        nftTransferEvents,
+        (event) => ({
+          kind: processActivityEvent.EventKind.nftTransferEvent,
+          data: {
+            contract: event.baseEventParams.address,
+            tokenId: event.tokenId,
+            fromAddress: event.from,
+            toAddress: event.to,
+            amount: Number(event.amount),
+            transactionHash: event.baseEventParams.txHash,
+            logIndex: event.baseEventParams.logIndex,
+            batchIndex: event.baseEventParams.batchIndex,
+            blockHash: event.baseEventParams.blockHash,
+            timestamp: event.baseEventParams.timestamp,
+          },
+        })
+      );
+
+      if (!_.isEmpty(transferActivitiesInfo)) {
+        await processActivityEvent.addToQueue(transferActivitiesInfo);
+      }
+
       if (!backfill) {
         // WARNING! It's very important to guarantee that the previous
         // events are persisted to the database before any of the jobs
@@ -1361,8 +1423,8 @@ export const syncEvents = async (
     });
 };
 
-export const unsyncEvents = async (block: number, blockHash: string) =>
-  Promise.all([
+export const unsyncEvents = async (block: number, blockHash: string) => {
+  await Promise.all([
     es.fills.removeEvents(block, blockHash),
     es.bulkCancels.removeEvents(block, blockHash),
     es.nonceCancels.removeEvents(block, blockHash),
@@ -1370,4 +1432,6 @@ export const unsyncEvents = async (block: number, blockHash: string) =>
     es.ftTransfers.removeEvents(block, blockHash),
     es.nftApprovals.removeEvents(block, blockHash),
     es.nftTransfers.removeEvents(block, blockHash),
+    removeUnsyncedEventsActivities.addToQueue(blockHash),
   ]);
+};

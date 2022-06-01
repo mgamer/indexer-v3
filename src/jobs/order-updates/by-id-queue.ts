@@ -14,6 +14,7 @@ import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queu
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
 import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
+import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -44,18 +45,27 @@ if (config.doBackgroundWork) {
         const data: {
           side: string | null;
           token_set_id: string | null;
+          fillability_status: string | null;
+          approval_status: string | null;
         } | null = id
           ? await idb.oneOrNone(
               `
                 SELECT
                   "o"."side",
-                  "o"."token_set_id"
+                  "o"."token_set_id",
+                  "o"."fillability_status",
+                  "o"."approval_status"
                 FROM "orders" "o"
                 WHERE "o"."id" = $/id/
               `,
               { id }
             )
-          : { side: side!, token_set_id: tokenSetId! };
+          : {
+              side: side!,
+              token_set_id: tokenSetId!,
+              fillability_status: null,
+              approval_status: null,
+            };
 
         if (data && data.side && data.token_set_id) {
           const side = data.side;
@@ -361,7 +371,10 @@ if (config.doBackgroundWork) {
                 RETURNING
                   contract,
                   token_id,
-                  maker
+                  maker,
+                  price,
+                  COALESCE(order_quantity_remaining, 1) AS amount,
+                  extract(epoch from order_events.created_at) AS timestamp
               `,
               {
                 id,
@@ -379,6 +392,68 @@ if (config.doBackgroundWork) {
               };
 
               await updateNftBalanceFloorAskPriceQueue.addToQueue([updateFloorAskPriceInfo]);
+            }
+
+            let eventInfo;
+
+            if (trigger.kind == "cancel") {
+              const eventData = {
+                orderId: id,
+                contract: fromBuffer(orderEventResult.contract),
+                tokenId: orderEventResult.token_id,
+                maker: fromBuffer(orderEventResult.maker),
+                price: orderEventResult.price,
+                amount: orderEventResult.amount,
+                transactionHash: trigger.txHash,
+                logIndex: trigger.logIndex,
+                batchIndex: trigger.batchIndex,
+                blockHash: trigger.blockHash,
+                timestamp: trigger.txTimestamp,
+              };
+
+              if (data.side === "sell") {
+                eventInfo = {
+                  kind: processActivityEvent.EventKind.sellOrderCancelled,
+                  data: eventData,
+                };
+              } else if (data.side === "buy") {
+                eventInfo = {
+                  kind: processActivityEvent.EventKind.buyOrderCancelled,
+                  data: eventData,
+                };
+              }
+            }
+
+            if (
+              trigger.kind == "new-order" &&
+              data.fillability_status == "fillable" &&
+              data.approval_status == "approved"
+            ) {
+              const eventData = {
+                orderId: id,
+                contract: fromBuffer(orderEventResult.contract),
+                tokenId: orderEventResult.token_id,
+                maker: fromBuffer(orderEventResult.maker),
+                price: orderEventResult.price,
+                amount: orderEventResult.amount,
+                timestamp: orderEventResult.timestamp,
+              };
+
+              if (data.side === "sell") {
+                eventInfo = {
+                  kind: processActivityEvent.EventKind.newSellOrder,
+                  data: eventData,
+                };
+              } else if (data.side === "buy") {
+                eventInfo = {
+                  kind: processActivityEvent.EventKind.newBuyOrder,
+                  data: eventData,
+                };
+              }
+            }
+
+            if (eventInfo) {
+              await processActivityEvent.addToQueue([eventInfo as processActivityEvent.EventInfo]);
             }
           }
         }
@@ -414,6 +489,9 @@ export type OrderInfo = {
     kind: TriggerKind;
     txHash?: string;
     txTimestamp?: number;
+    logIndex?: number;
+    batchIndex?: number;
+    blockHash?: string;
   };
   // When the order id is passed, we recompute the caches of any
   // tokens corresponding to the order (eg. order's token set).
