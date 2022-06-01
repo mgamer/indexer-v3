@@ -15,6 +15,7 @@ import * as tokensEndpoints from "@/api/endpoints/tokens";
 import * as transfersEndpoints from "@/api/endpoints/transfers";
 import * as redirectsEndpoints from "@/api/endpoints/redirects";
 import * as searchEndpoints from "@/api/endpoints/search";
+import * as activitiesEndpoints from "@/api/endpoints/activities";
 
 export const setupRoutes = (server: Server) => {
   // Admin
@@ -53,6 +54,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/admin/fix-orders",
     options: adminEndpoints.postFixOrdersOptions,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/admin/resync-floor-events",
+    options: adminEndpoints.postResyncFloorEventsOptions,
   });
 
   server.route({
@@ -572,7 +579,34 @@ export const setupRoutes = (server: Server) => {
     options: redirectsEndpoints.getRedirectCollectionImageV1Options,
   });
 
+  // Activity
+
+  server.route({
+    method: "GET",
+    path: "/collections/{collection}/activity/v1",
+    options: activitiesEndpoints.getCollectionActivityV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/tokens/{token}/activity/v1",
+    options: activitiesEndpoints.getTokenActivityV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/users/{user}/activity/v1",
+    options: activitiesEndpoints.getUserActivityV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/activity/v1",
+    options: activitiesEndpoints.getActivityV1Options,
+  });
+
   // Search
+
   server.route({
     method: "GET",
     path: "/search/collections/v1",

@@ -21,8 +21,11 @@ export const offChainCheck = async (
     // being invalid. We use the this option to validate approval
     // of buy orders as well.
     onChainApprovalRecheck?: boolean;
+    checkFilledOrCancelled?: boolean;
   }
 ) => {
+  const id = order.prefixHash();
+
   const info = order.getInfo();
   if (!info) {
     throw new Error("unknown-format");
@@ -34,10 +37,24 @@ export const offChainCheck = async (
     throw new Error("invalid-target");
   }
 
+  if (options?.checkFilledOrCancelled) {
+    // Check: order is not cancelled
+    const cancelled = await commonHelpers.isOrderCancelled(id);
+    if (cancelled) {
+      throw new Error("cancelled");
+    }
+
+    // Check: order is not filled
+    const quantityFilled = await commonHelpers.getQuantityFilled(id);
+    if (quantityFilled.gte(1)) {
+      throw new Error("filled");
+    }
+  }
+
   // Check: order has a valid nonce
   const minNonce = await commonHelpers.getMinNonce("wyvern-v2.3", order.params.maker);
   if (!minNonce.eq(order.params.nonce)) {
-    throw new Error("invalid-nonce");
+    throw new Error("cancelled");
   }
 
   let hasBalance = true;

@@ -13,8 +13,11 @@ export const config = {
 
   baseNetworkHttpUrl: String(process.env.BASE_NETWORK_HTTP_URL),
   baseNetworkWsUrl: String(process.env.BASE_NETWORK_WS_URL),
-  metadataApiBaseUrl: String(process.env.METADATA_API_BASE_URL),
   openseaIndexerApiBaseUrl: String(process.env.OPENSEA_INDEXER_API_BASE_URL),
+
+  // When running in liquidity-only mode, all metadata processes are disabled
+  liquidityOnly: !process.env.METADATA_API_BASE_URL,
+  metadataApiBaseUrl: String(process.env.METADATA_API_BASE_URL),
 
   databaseUrl: String(process.env.DATABASE_URL),
   redisUrl: String(process.env.REDIS_URL),
@@ -22,5 +25,5 @@ export const config = {
   master: Boolean(Number(process.env.MASTER)),
   catchup: Boolean(Number(process.env.CATCHUP)),
   doBackgroundWork: Boolean(Number(process.env.DO_BACKGROUND_WORK)),
-  onChainOrderCheck: Boolean(Number(process.env.ON_CHAIN_ORDER_CHECK)),
+  disableOrders: Boolean(Number(process.env.DISABLE_ORDERS)),
 };

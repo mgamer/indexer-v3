@@ -18,18 +18,35 @@ export const offChainCheck = async (
     // on-chain in case off-chain validation returns the order as
     // being invalid.
     onChainApprovalRecheck?: boolean;
+    checkFilledOrCancelled?: boolean;
   }
 ) => {
+  const id = order.hash();
+
   // Check: order has a valid target
   const kind = await commonHelpers.getContractKind(order.params.collection);
   if (!kind) {
     throw new Error("invalid-target");
   }
 
+  if (options?.checkFilledOrCancelled) {
+    // Check: order is not cancelled
+    const cancelled = await commonHelpers.isOrderCancelled(id);
+    if (cancelled) {
+      throw new Error("cancelled");
+    }
+
+    // Check: order is not filled
+    const quantityFilled = await commonHelpers.getQuantityFilled(id);
+    if (quantityFilled.gte(order.params.amount)) {
+      throw new Error("filled");
+    }
+  }
+
   // Check: order's nonce was not bulk cancelled
   const minNonce = await commonHelpers.getMinNonce("looks-rare", order.params.signer);
   if (minNonce.gt(order.params.nonce)) {
-    throw new Error("invalid-nonce");
+    throw new Error("cancelled");
   }
 
   // Check: order's nonce was not individually cancelled
@@ -39,7 +56,7 @@ export const offChainCheck = async (
     order.params.nonce
   );
   if (nonceCancelled) {
-    throw new Error("invalid-nonce");
+    throw new Error("cancelled");
   }
 
   let hasBalance = true;

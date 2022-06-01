@@ -35,6 +35,10 @@ export const postOrdersV1Options: RouteOptions = {
     }),
   },
   handler: async (request: Request) => {
+    if (config.disableOrders) {
+      throw Boom.badRequest("Order posting is disabled");
+    }
+
     // This is only to support X2Y2 orders which cannot be validated
     // in a trustless way (eg. their APIs do not return the raw data
     // of the orders for anyone to validate).

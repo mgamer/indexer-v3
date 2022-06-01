@@ -5,7 +5,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
+import { redis, redlock } from "@/common/redis";
 import { config } from "@/config/index";
 
 import { idb } from "@/common/db";
@@ -31,13 +31,11 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const cursor = job.data.cursor as CursorInfo;
 
-      const limit = 500;
+      const limit = 200;
       let continuationFilter = "";
 
       if (cursor) {
-        continuationFilter = `AND (maker, token_set_id) > ('${toBuffer(cursor.maker)}', '${
-          cursor.tokenSetId
-        }')`;
+        continuationFilter = `AND (maker, token_set_id) > ($/maker/, $/tokenSetId/)`;
       }
 
       const sellOrders = await idb.manyOrNone(
@@ -51,8 +49,13 @@ if (config.doBackgroundWork) {
           AND o.approval_status = 'approved'
           ${continuationFilter}
           GROUP BY maker, token_set_id
-          LIMIT ${limit};
-          `
+          LIMIT $/limit/;
+          `,
+        {
+          maker: cursor?.maker ? toBuffer(cursor.maker) : null,
+          tokenSetId: cursor?.tokenSetId,
+          limit,
+        }
       );
 
       if (sellOrders) {
@@ -94,14 +97,14 @@ if (config.doBackgroundWork) {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
 
-  // redlock
-  //   .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
-  //   .then(async () => {
-  //     await addToQueue();
-  //   })
-  //   .catch(() => {
-  //     // Skip on any errors
-  //   });
+  redlock
+    .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
+    .then(async () => {
+      await addToQueue();
+    })
+    .catch(() => {
+      // Skip on any errors
+    });
 }
 
 export type CursorInfo = {
@@ -110,5 +113,5 @@ export type CursorInfo = {
 };
 
 export const addToQueue = async (cursor?: CursorInfo) => {
-  await queue.add(randomUUID(), { cursor });
+  await queue.add(randomUUID(), { cursor }, { delay: 2000 });
 };
