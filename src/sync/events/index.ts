@@ -1432,7 +1432,6 @@ export const unsyncEvents = async (block: number, blockHash: string) => {
     es.ftTransfers.removeEvents(block, blockHash),
     es.nftApprovals.removeEvents(block, blockHash),
     es.nftTransfers.removeEvents(block, blockHash),
+    removeUnsyncedEventsActivities.addToQueue(blockHash),
   ]);
-
-  await removeUnsyncedEventsActivities.addToQueue(blockHash);
 };

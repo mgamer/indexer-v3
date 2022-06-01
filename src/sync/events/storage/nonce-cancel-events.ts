@@ -79,7 +79,7 @@ export const addEvents = async (events: Event[], backfill = false) => {
           "nonce"
         ) VALUES ${pgp.helpers.values(nonceCancelValues, columns)}
         ON CONFLICT DO NOTHING
-        RETURNING "order_kind", "maker", "nonce", "tx_hash", "timestamp"
+        RETURNING "order_kind", "maker", "nonce", "tx_hash", "timestamp", "log_index", "batch_index", "block_hash"
       )
       UPDATE "orders" AS "o" SET
         "fillability_status" = 'cancelled',
