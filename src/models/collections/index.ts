@@ -50,6 +50,23 @@ export class Collections {
     return null;
   }
 
+  public static async getByTokenSetId(tokenSetId: string) {
+    const collection: CollectionsEntityParams | null = await idb.oneOrNone(
+      `SELECT *
+              FROM collections
+              WHERE token_set_id = $/tokenSetId/`,
+      {
+        tokenSetId,
+      }
+    );
+
+    if (collection) {
+      return new CollectionsEntity(collection);
+    }
+
+    return null;
+  }
+
   public static async updateCollectionCache(contract: string, tokenId: string) {
     const collection = await MetadataApi.getCollectionMetadata(contract, tokenId);
     const tokenCount = await Tokens.countTokensInCollection(collection.id);
