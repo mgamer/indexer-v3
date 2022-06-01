@@ -10,6 +10,10 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getOwnersV1Options: RouteOptions = {
+  cache: {
+    privacy: "public",
+    expiresIn: 60000,
+  },
   description: "Get aggregated ownership counts of collections or traits",
   notes:
     "Get owners with various filters applied, and a summary of their ownership. Useful for exploring top owners in a collection or attribute.",
