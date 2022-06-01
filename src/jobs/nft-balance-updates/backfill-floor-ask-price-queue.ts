@@ -113,5 +113,5 @@ export type CursorInfo = {
 };
 
 export const addToQueue = async (cursor?: CursorInfo) => {
-  await queue.add(randomUUID(), { cursor }, { delay: 1000 });
+  await queue.add(randomUUID(), { cursor }, { delay: 5000 });
 };
