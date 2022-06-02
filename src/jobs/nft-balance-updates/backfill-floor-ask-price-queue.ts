@@ -48,7 +48,6 @@ if (config.doBackgroundWork) {
           AND o.fillability_status = 'fillable'
           AND o.approval_status = 'approved'
           ${continuationFilter}
-          GROUP BY maker, token_set_id
           LIMIT $/limit/;
           `,
         {
