@@ -38,7 +38,7 @@ if (config.doBackgroundWork) {
         // Update the collection id of any missing activities
         await Promise.all([
           Activities.updateMissingCollectionId(contract, tokenId, token.collectionId),
-          UserActivities.UpdateMissingCollectionId(contract, tokenId, token.collectionId),
+          UserActivities.updateMissingCollectionId(contract, tokenId, token.collectionId),
         ]);
       } else if (retry < MAX_RETRIES) {
         await addToQueue(contract, tokenId, ++retry);
