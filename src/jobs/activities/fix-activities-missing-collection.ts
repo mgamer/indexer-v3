@@ -46,7 +46,7 @@ if (config.doBackgroundWork) {
         logger.warn(QUEUE_NAME, `Max retries reached for ${JSON.stringify(job.data)}`);
       }
     },
-    { connection: redis.duplicate(), concurrency: 1 }
+    { connection: redis.duplicate(), concurrency: 15 }
   );
 
   worker.on("error", (error) => {
