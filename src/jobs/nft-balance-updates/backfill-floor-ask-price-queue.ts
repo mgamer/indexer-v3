@@ -9,7 +9,7 @@ import { redis, redlock } from "@/common/redis";
 import { config } from "@/config/index";
 
 import { idb } from "@/common/db";
-import { fromBuffer, toBuffer } from "@/common/utils";
+import { fromBuffer } from "@/common/utils";
 import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
 
 const QUEUE_NAME = "nft-balance-updates-backfill-floor-ask-price-queue";
@@ -29,35 +29,46 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const cursor = job.data.cursor as CursorInfo;
-
-      const limit = 200;
+      let cursor = job.data.cursor as CursorInfo;
       let continuationFilter = "";
 
+      const limit = (await redis.get(`${QUEUE_NAME}-limit`)) || 200;
+
+      if (!cursor) {
+        const cursorJson = await redis.get(`${QUEUE_NAME}-next-cursor`);
+
+        if (cursorJson) {
+          cursor = JSON.parse(cursorJson);
+        }
+      }
+
       if (cursor) {
-        continuationFilter = `AND (maker, token_set_id) > ($/maker/, $/tokenSetId/)`;
+        continuationFilter = `AND (o.created_at, o.id) < (to_timestamp($/createdAt/), $/id/)`;
       }
 
       const sellOrders = await idb.manyOrNone(
         `
           SELECT
+            o.id,
             o.maker,
-            o.token_set_id
+            o.token_set_id,
+            extract(epoch from o.created_at) created_at
           FROM orders o 
           WHERE o.side = 'sell'
           AND o.fillability_status = 'fillable'
           AND o.approval_status = 'approved'
           ${continuationFilter}
+          ORDER BY o.created_at DESC, o.id DESC
           LIMIT $/limit/;
           `,
         {
-          maker: cursor?.maker ? toBuffer(cursor.maker) : null,
-          tokenSetId: cursor?.tokenSetId,
+          createdAt: cursor?.createdAt,
+          id: cursor?.id,
           limit,
         }
       );
 
-      if (sellOrders) {
+      if (sellOrders.length > 0) {
         const updateFloorAskPriceInfos = [];
 
         for (const sellOrder of sellOrders) {
@@ -72,22 +83,26 @@ if (config.doBackgroundWork) {
 
         await updateNftBalanceFloorAskPriceQueue.addToQueue(updateFloorAskPriceInfos);
 
-        if (_.size(sellOrders) == limit) {
+        if (sellOrders.length == limit) {
           const lastSellOrder = _.last(sellOrders);
 
           const nextCursor = {
-            maker: fromBuffer(lastSellOrder.maker),
-            tokenSetId: lastSellOrder.token_set_id,
+            id: lastSellOrder.id,
+            createdAt: lastSellOrder.created_at,
           };
 
-          logger.info(
-            QUEUE_NAME,
-            `Updated ${limit} records.  nextCursor=${JSON.stringify(nextCursor)}`
-          );
+          await redis.set(`${QUEUE_NAME}-next-cursor`, JSON.stringify(nextCursor));
 
           await addToQueue(nextCursor);
         }
       }
+
+      logger.info(
+        QUEUE_NAME,
+        `Processed ${sellOrders.length} sell orders.  limit=${limit}, cursor=${JSON.stringify(
+          cursor
+        )}`
+      );
     },
     { connection: redis.duplicate(), concurrency: 1 }
   );
@@ -107,8 +122,8 @@ if (config.doBackgroundWork) {
 }
 
 export type CursorInfo = {
-  maker: string;
-  tokenSetId: string;
+  id: string;
+  createdAt: string;
 };
 
 export const addToQueue = async (cursor?: CursorInfo) => {
