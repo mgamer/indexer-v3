@@ -112,7 +112,7 @@ export class UserActivities {
     return await idb.none(query, { blockHash });
   }
 
-  public static async UpdateMissingCollectionId(
+  public static async updateMissingCollectionId(
     contract: string,
     tokenId: string,
     collectionId: string
@@ -126,7 +126,7 @@ export class UserActivities {
         `;
 
     return await idb.none(query, {
-      contract,
+      contract: toBuffer(contract),
       tokenId,
       collectionId,
     });

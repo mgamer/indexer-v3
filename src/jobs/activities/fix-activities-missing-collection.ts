@@ -38,7 +38,7 @@ if (config.doBackgroundWork) {
         // Update the collection id of any missing activities
         await Promise.all([
           Activities.updateMissingCollectionId(contract, tokenId, token.collectionId),
-          UserActivities.UpdateMissingCollectionId(contract, tokenId, token.collectionId),
+          UserActivities.updateMissingCollectionId(contract, tokenId, token.collectionId),
         ]);
       } else if (retry < MAX_RETRIES) {
         await addToQueue(contract, tokenId, ++retry);
@@ -46,7 +46,7 @@ if (config.doBackgroundWork) {
         logger.warn(QUEUE_NAME, `Max retries reached for ${JSON.stringify(job.data)}`);
       }
     },
-    { connection: redis.duplicate(), concurrency: 1 }
+    { connection: redis.duplicate(), concurrency: 15 }
   );
 
   worker.on("error", (error) => {

@@ -25,6 +25,10 @@ CREATE INDEX user_activities_address_event_timestamp_type_index
 CREATE UNIQUE INDEX user_activities_hash_address_unique_index
     ON user_activities (hash, address);
 
+CREATE INDEX user_activities_contract_token_id_missing_collection_id_index
+    ON user_activities (contract, token_id)
+    WHERE ("collection_id" IS NULL);
+
 -- Down Migration
 
 DROP TABLE user_activities;

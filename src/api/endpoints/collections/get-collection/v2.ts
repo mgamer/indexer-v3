@@ -110,6 +110,8 @@ export const getCollectionV2Options: RouteOptions = {
         },
         floorSaleChange: {
           "1day": Joi.number().unsafe().allow(null),
+          "7day": Joi.number().unsafe().allow(null),
+          "30day": Joi.number().unsafe().allow(null),
         },
         collectionBidSupported: Joi.boolean(),
         ownerCount: Joi.number(),
@@ -313,6 +315,12 @@ export const getCollectionV2Options: RouteOptions = {
               floorSaleChange: {
                 "1day": r.day1_floor_sell_value
                   ? Number(r.floor_sell_value) / Number(r.day1_floor_sell_value)
+                  : null,
+                "7day": r.day7_floor_sell_value
+                  ? Number(r.floor_sell_value) / Number(r.day7_floor_sell_value)
+                  : null,
+                "30day": r.day30_floor_sell_value
+                  ? Number(r.floor_sell_value) / Number(r.day30_floor_sell_value)
                   : null,
               },
               collectionBidSupported: Number(r.token_count) <= 30000,

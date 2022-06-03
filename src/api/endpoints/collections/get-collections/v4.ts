@@ -103,6 +103,8 @@ export const getCollectionsV4Options: RouteOptions = {
           },
           floorSaleChange: {
             "1day": Joi.number().unsafe().allow(null),
+            "7day": Joi.number().unsafe().allow(null),
+            "30day": Joi.number().unsafe().allow(null),
           },
         })
       ),
@@ -295,6 +297,12 @@ export const getCollectionsV4Options: RouteOptions = {
             floorSaleChange: {
               "1day": r.day1_floor_sell_value
                 ? Number(r.floor_sell_value) / Number(r.day1_floor_sell_value)
+                : null,
+              "7day": r.day7_floor_sell_value
+                ? Number(r.floor_sell_value) / Number(r.day7_floor_sell_value)
+                : null,
+              "30day": r.day30_floor_sell_value
+                ? Number(r.floor_sell_value) / Number(r.day30_floor_sell_value)
                 : null,
             },
           };
