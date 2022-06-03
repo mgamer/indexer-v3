@@ -20,6 +20,7 @@ export const config = {
   metadataApiBaseUrl: String(process.env.METADATA_API_BASE_URL),
 
   databaseUrl: String(process.env.DATABASE_URL),
+  readReplicaDatabaseUrl: String(process.env.READ_REPLICA_DATABASE_URL || process.env.DATABASE_URL),
   redisUrl: String(process.env.REDIS_URL),
 
   master: Boolean(Number(process.env.MASTER)),

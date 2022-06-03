@@ -3,7 +3,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
@@ -120,7 +120,7 @@ export const getUserTokensV2Options: RouteOptions = {
     };
 
     if (query.community) {
-      await edb
+      await redb
         .manyOrNone(
           `
           SELECT collections.id FROM collections
@@ -193,7 +193,7 @@ export const getUserTokensV2Options: RouteOptions = {
         LIMIT $/limit/
       `;
 
-      const result = await edb.manyOrNone(baseQuery, { ...query, ...params }).then((result) =>
+      const result = await redb.manyOrNone(baseQuery, { ...query, ...params }).then((result) =>
         result.map((r) => ({
           token: {
             contract: fromBuffer(r.contract),

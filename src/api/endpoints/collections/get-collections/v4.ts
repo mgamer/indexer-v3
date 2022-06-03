@@ -4,7 +4,7 @@ import _ from "lodash";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
@@ -253,7 +253,7 @@ export const getCollectionsV4Options: RouteOptions = {
         ${topBidQuery}
       `;
 
-      const result = await edb.manyOrNone(baseQuery, query);
+      const result = await redb.manyOrNone(baseQuery, query);
 
       if (result) {
         collections = result.map((r) => {
