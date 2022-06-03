@@ -38,6 +38,7 @@ CREATE TABLE "attributes" (
   "top_buy_value" NUMERIC(78, 0),
   "sell_updated_at" TIMESTAMPTZ,
   "buy_updated_at" TIMESTAMPTZ,
+  "sample_images" TEXT[],
   "collection_id" TEXT NOT NULL,
   "kind" "attribute_key_kind_t" NOT NULL,
   "key" TEXT NOT NULL
