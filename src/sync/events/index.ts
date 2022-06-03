@@ -100,7 +100,8 @@ export const syncEvents = async (
       }[] = [];
 
       // Fills going through router contracts are handled in a custom way
-      const reservoirRouter = Sdk.Common.Addresses.Router[config.chainId];
+      // TODO: Integrate other router contracts (eg. Gem and Genie)
+      const reservoirRouters = Sdk.Router.Addresses.AllRouters[config.chainId];
 
       for (const log of logs) {
         try {
@@ -529,7 +530,7 @@ export const syncEvents = async (
               }
 
               // Handle filling through routers
-              if (taker === reservoirRouter) {
+              if (reservoirRouters.includes(taker)) {
                 taker = await baseProvider
                   .getTransactionReceipt(baseEventParams.txHash)
                   .then((txReceipt) => txReceipt.from.toLowerCase());
@@ -618,7 +619,7 @@ export const syncEvents = async (
               const orderId = keccak256(["address", "uint256"], [contract, tokenId]);
 
               // Handle filling through routers
-              if (taker === reservoirRouter) {
+              if (reservoirRouters.includes(taker)) {
                 taker = await baseProvider
                   .getTransactionReceipt(baseEventParams.txHash)
                   .then((txReceipt) => txReceipt.from.toLowerCase());
@@ -738,7 +739,7 @@ export const syncEvents = async (
               }
 
               // Handle filling through routers
-              if (taker === reservoirRouter) {
+              if (reservoirRouters.includes(taker)) {
                 taker = await baseProvider
                   .getTransactionReceipt(baseEventParams.txHash)
                   .then((txReceipt) => txReceipt.from.toLowerCase());
@@ -807,7 +808,7 @@ export const syncEvents = async (
               }
 
               // Handle filling through routers
-              if (taker === reservoirRouter) {
+              if (reservoirRouters.includes(taker)) {
                 taker = await baseProvider
                   .getTransactionReceipt(baseEventParams.txHash)
                   .then((txReceipt) => txReceipt.from.toLowerCase());
@@ -946,7 +947,7 @@ export const syncEvents = async (
               }
 
               // Handle filling through routers
-              if (taker === reservoirRouter) {
+              if (reservoirRouters.includes(taker)) {
                 taker = await baseProvider
                   .getTransactionReceipt(baseEventParams.txHash)
                   .then((txReceipt) => txReceipt.from.toLowerCase());
@@ -1122,7 +1123,7 @@ export const syncEvents = async (
               }
 
               // Handle filling through routers
-              if (taker === reservoirRouter) {
+              if (reservoirRouters.includes(taker)) {
                 taker = await baseProvider
                   .getTransactionReceipt(baseEventParams.txHash)
                   .then((txReceipt) => txReceipt.from.toLowerCase());
@@ -1240,7 +1241,7 @@ export const syncEvents = async (
               }
 
               // Handle filling through routers
-              if (taker === reservoirRouter) {
+              if (reservoirRouters.includes(taker)) {
                 taker = await baseProvider
                   .getTransactionReceipt(baseEventParams.txHash)
                   .then((txReceipt) => txReceipt.from.toLowerCase());
