@@ -10,7 +10,7 @@ CREATE TABLE "nft_balances" (
   "floor_sell_value" NUMERIC(78, 0),
   "top_buy_id" TEXT,
   "top_buy_value" NUMERIC(78, 0),
-  "top_buy_maker" BYTEA NOT NULL
+  "top_buy_maker" BYTEA
 );
 
 ALTER TABLE "nft_balances"
