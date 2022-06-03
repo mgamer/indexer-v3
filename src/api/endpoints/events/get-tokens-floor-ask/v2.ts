@@ -111,13 +111,13 @@ export const getTokensFloorAskV2Options: RouteOptions = {
     try {
       let baseQuery = `
         SELECT
-          orders.source_id,
-          date_part('epoch', lower(orders.valid_between)) AS valid_from,
+          token_floor_sell_events.source_id_int,
+          date_part('epoch', lower(token_floor_sell_events.valid_between)) AS valid_from,
           coalesce(
-            nullif(date_part('epoch', upper(orders.valid_between)), 'Infinity'),
+            nullif(date_part('epoch', upper(token_floor_sell_events.valid_between)), 'Infinity'),
             0
           ) AS valid_until,
-          orders.nonce,
+          token_floor_sell_events.nonce,
           token_floor_sell_events.id,
           token_floor_sell_events.kind,
           token_floor_sell_events.contract,
@@ -130,8 +130,6 @@ export const getTokensFloorAskV2Options: RouteOptions = {
           token_floor_sell_events.tx_timestamp,
           extract(epoch from token_floor_sell_events.created_at) AS created_at
         FROM token_floor_sell_events
-        LEFT JOIN orders
-          ON token_floor_sell_events.order_id = orders.id
       `;
 
       // We default in the code so that these values don't appear in the docs
@@ -206,7 +204,7 @@ export const getTokensFloorAskV2Options: RouteOptions = {
           price: r.price ? formatEth(r.price) : null,
           validFrom: r.price ? Number(r.valid_from) : null,
           validUntil: r.price ? Number(r.valid_until) : null,
-          source: r.source_id ? sources.getByAddress(fromBuffer(r.source_id))?.name : null,
+          source: r.source_id_int ? sources.get(Number(r.source_id_int))?.name : null,
         },
         event: {
           id: r.id,
