@@ -48,6 +48,7 @@ export const getAttributesExploreV2Options: RouteOptions = {
           key: Joi.string().required(),
           value: Joi.string().required(),
           tokenCount: Joi.number().required(),
+          onSaleCount: Joi.number().required(),
           sampleImages: Joi.array().items(Joi.string().allow(null, "")),
           floorAskPrices: Joi.array().items(Joi.number().unsafe()),
           topBid: Joi.object({
@@ -106,7 +107,7 @@ export const getAttributesExploreV2Options: RouteOptions = {
 
     try {
       const attributesQuery = `
-            SELECT attributes.id, floor_sell_value, token_count, key, value, sample_images, recent_floor_values_info.*, top_buy_info.*
+            SELECT attributes.id, floor_sell_value, token_count, on_sale_count, key, value, sample_images, recent_floor_values_info.*, top_buy_info.*
             FROM attributes
             LEFT JOIN LATERAL (
                 SELECT  token_sets.top_buy_id,
@@ -140,6 +141,7 @@ export const getAttributesExploreV2Options: RouteOptions = {
         key: r.key,
         value: r.value,
         tokenCount: Number(r.token_count),
+        onSaleCount: Number(r.on_sale_count),
         sampleImages: r.sample_images || [],
         floorAskPrices:
           query.maxFloorAskPrices > 1
