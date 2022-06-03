@@ -4,7 +4,7 @@ import { AddressZero } from "@ethersproject/constants";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
-import { TxData } from "@reservoir0x/sdk/dist/utils";
+import { BidDetails } from "@reservoir0x/sdk/dist/router/types";
 import Joi from "joi";
 
 import { edb } from "@/common/db";
@@ -12,7 +12,6 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, formatEth, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as commonHelpers from "@/orderbook/orders/common/helpers";
 
 const version = "v2";
 
@@ -105,35 +104,20 @@ export const getExecuteSellV2Options: RouteOptions = {
         throw Boom.badRequest("No available orders");
       }
 
-      // Filling will be done through the router.
-      const router = new Sdk.Common.Helpers.RouterV1(
-        baseProvider,
-        Sdk.Common.Addresses.Router[config.chainId]
-      );
-
-      // The quote is the best offer's price.
+      // The quote is the best offer's price
       const quote = formatEth(bestOrderResult.price);
       if (query.onlyQuote) {
-        // Skip generating any transactions if only the quote was requested.
+        // Skip generating any transactions if only the quote was requested
         return { quote };
       }
 
-      // Build the proper router fill transaction given the offer's kind (eg. underlying exchange).
-      let tx: TxData;
-      let exchangeKind: Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND;
+      let bidDetails: BidDetails;
       switch (bestOrderResult.kind) {
         case "wyvern-v2.3": {
-          const order = new Sdk.WyvernV23.Order(config.chainId, bestOrderResult.raw_data);
+          const extraArgs: any = {};
 
-          const buildMatchingArgs: any = {
-            tokenId,
-            // Properly handle batch cancellations.
-            nonce: await commonHelpers.getMinNonce("wyvern-v2.3", query.taker),
-          };
+          const order = new Sdk.WyvernV23.Order(config.chainId, bestOrderResult.raw_data);
           if (order.params.kind?.includes("token-list")) {
-            // When filling an attribute order, we also need to pass
-            // in the full list of tokens the order is made on (that
-            // is, the underlying token set tokens).
             const tokens = await edb.manyOrNone(
               `
                 SELECT
@@ -144,16 +128,20 @@ export const getExecuteSellV2Options: RouteOptions = {
               { tokenSetId: bestOrderResult.tokenSetId }
             );
 
-            buildMatchingArgs.tokenIds = tokens.map(({ token_id }) => token_id);
+            // When filling an attribute order, we also need to pass
+            // in the full list of tokens the order is made on (that
+            // is, the underlying token set tokens).
+            extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
           }
 
-          // Create sell order to match with the offer (note that the router is the taker).
-          const sellOrder = order.buildMatching(router.contract.address, buildMatchingArgs);
-
-          // Generate exchange-specific fill transaction.
-          const exchange = new Sdk.WyvernV23.Exchange(config.chainId);
-          tx = exchange.matchTransaction(query.taker, order, sellOrder);
-          exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.WYVERN_V23;
+          bidDetails = {
+            kind: "wyvern-v2.3",
+            contractKind: bestOrderResult.token_kind,
+            contract,
+            tokenId,
+            extraArgs,
+            order,
+          };
 
           break;
         }
@@ -161,13 +149,13 @@ export const getExecuteSellV2Options: RouteOptions = {
         case "looks-rare": {
           const order = new Sdk.LooksRare.Order(config.chainId, bestOrderResult.raw_data);
 
-          // Create sell order to match with the offer (note that the router is the taker).
-          const sellOrder = order.buildMatching(router.contract.address, { tokenId });
-
-          // Generate exchange-specific fill transaction.
-          const exchange = new Sdk.LooksRare.Exchange(config.chainId);
-          tx = exchange.matchTransaction(query.taker, order, sellOrder);
-          exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.LOOKS_RARE;
+          bidDetails = {
+            kind: "looks-rare",
+            contractKind: bestOrderResult.token_kind,
+            contract,
+            tokenId,
+            order,
+          };
 
           break;
         }
@@ -176,21 +164,13 @@ export const getExecuteSellV2Options: RouteOptions = {
         case "opendao-erc1155": {
           const order = new Sdk.OpenDao.Order(config.chainId, bestOrderResult.raw_data);
 
-          // Create sell order to match with the offer.
-          const sellOrder = order.buildMatching({
-            nftId: tokenId,
-            amount: 1,
-            // To make it compatible with the router.
-            unwrapNativeToken: false,
-          });
-
-          // Generate exchange-specific fill transaction.
-          const exchange = new Sdk.OpenDao.Exchange(config.chainId);
-          tx = exchange.matchTransaction(query.taker, order, sellOrder, {
-            // Using the `onReceived` hooks would fail when filling through the router.
-            noDirectTransfer: true,
-          });
-          exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4;
+          bidDetails = {
+            kind: "opendao",
+            contractKind: bestOrderResult.token_kind,
+            contract,
+            tokenId,
+            order,
+          };
 
           break;
         }
@@ -199,21 +179,13 @@ export const getExecuteSellV2Options: RouteOptions = {
         case "zeroex-v4-erc1155": {
           const order = new Sdk.ZeroExV4.Order(config.chainId, bestOrderResult.raw_data);
 
-          // Create sell order to match with the offer.
-          const sellOrder = order.buildMatching({
-            nftId: tokenId,
-            amount: 1,
-            // To make it compatible with the router.
-            unwrapNativeToken: false,
-          });
-
-          // Generate exchange-specific fill transaction.
-          const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
-          tx = exchange.matchTransaction(query.taker, order, sellOrder, {
-            // Using the `onReceived` hooks would fail when filling through the router.
-            noDirectTransfer: true,
-          });
-          exchangeKind = Sdk.Common.Helpers.ROUTER_EXCHANGE_KIND.ZEROEX_V4;
+          bidDetails = {
+            kind: "zeroex-v4",
+            contractKind: bestOrderResult.token_kind,
+            contract,
+            tokenId,
+            order,
+          };
 
           break;
         }
@@ -223,66 +195,14 @@ export const getExecuteSellV2Options: RouteOptions = {
         }
       }
 
-      if (!tx) {
+      if (!bidDetails) {
         throw Boom.internal("Could not generate transaction(s)");
       }
 
-      // Wrap the exchange-specific fill transaction via the router.
-      // We are using the `onReceived` hooks for single-tx filling.
-      let routerTx: TxData;
-      if (bestOrderResult.token_kind === "erc721") {
-        routerTx = {
-          from: query.taker,
-          to: contract,
-          data: new Sdk.Common.Helpers.Erc721(
-            baseProvider,
-            contract
-          ).contract.interface.encodeFunctionData(
-            "safeTransferFrom(address,address,uint256,bytes)",
-            [
-              query.taker,
-              router.contract.address,
-              tokenId,
-              router.contract.interface.encodeFunctionData("singleERC721BidFill", [
-                query.referrer,
-                tx.data,
-                exchangeKind,
-                contract,
-                query.taker,
-                true,
-              ]),
-            ]
-          ),
-        };
-      } else {
-        routerTx = {
-          from: query.taker,
-          to: contract,
-          data: new Sdk.Common.Helpers.Erc1155(
-            baseProvider,
-            contract
-          ).contract.interface.encodeFunctionData(
-            "safeTransferFrom(address,address,uint256,uint256,bytes)",
-            [
-              query.taker,
-              router.contract.address,
-              tokenId,
-              // TODO: Support selling any quantities.
-              1,
-              router.contract.interface.encodeFunctionData("singleERC1155BidFill", [
-                query.referrer,
-                tx.data,
-                exchangeKind,
-                contract,
-                query.taker,
-                true,
-              ]),
-            ]
-          ),
-        };
-      }
+      const router = new Sdk.Router.Router(config.chainId, baseProvider);
+      const tx = await router.fillBidTx(bidDetails, query.taker, { referrer: query.referrer });
 
-      // Set up generic filling steps.
+      // Set up generic filling steps
       const steps = [
         {
           action: "Accept offer",
@@ -302,7 +222,7 @@ export const getExecuteSellV2Options: RouteOptions = {
             ...steps[0],
             status: "incomplete",
             data: {
-              ...routerTx,
+              ...tx,
               maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
               maxPriorityFeePerGas: query.maxPriorityFeePerGas
                 ? bn(query.maxPriorityFeePerGas).toHexString()
