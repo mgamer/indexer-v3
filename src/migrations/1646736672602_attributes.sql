@@ -41,7 +41,7 @@ CREATE TABLE "attributes" (
   "sample_images" TEXT[],
   "collection_id" TEXT NOT NULL,
   "kind" "attribute_key_kind_t" NOT NULL,
-  "key" TEXT NOT NULL
+  "key" TEXT
 );
 
 CREATE UNIQUE INDEX "attributes_attribute_key_id_value_unique_index"
