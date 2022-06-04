@@ -309,7 +309,7 @@ export const save = async (
         value = value.div(order.params.nftAmount!);
       }
 
-      const feeBps = feeAmount.mul(10000).div(price);
+      const feeBps = price.eq(0) ? bn(0) : feeAmount.mul(10000).div(price);
       if (feeBps.gt(10000)) {
         return results.push({
           id,
@@ -335,7 +335,7 @@ export const save = async (
       const feeBreakdown = order.params.fees.map(({ recipient, amount }) => ({
         kind: "royalty",
         recipient,
-        bps: bn(amount).mul(10000).div(price).toNumber(),
+        bps: price.eq(0) ? bn(0) : bn(amount).mul(10000).div(price).toNumber(),
       }));
 
       const validFrom = `date_trunc('seconds', to_timestamp(0))`;
