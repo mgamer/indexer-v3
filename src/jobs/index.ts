@@ -57,6 +57,7 @@ import * as backfillNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-update
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
 import * as fixActivitiesMissingCollection from "@/jobs/activities/fix-activities-missing-collection";
+import * as exportDataToS3 from "@/jobs/s3-export/export-data-to-s3";
 
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
@@ -97,4 +98,5 @@ export const allJobQueues = [
   processActivityEvent.queue,
   removeUnsyncedEventsActivities.queue,
   fixActivitiesMissingCollection.queue,
+  exportDataToS3.queue,
 ];

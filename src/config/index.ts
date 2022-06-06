@@ -26,4 +26,8 @@ export const config = {
   catchup: Boolean(Number(process.env.CATCHUP)),
   doBackgroundWork: Boolean(Number(process.env.DO_BACKGROUND_WORK)),
   disableOrders: Boolean(Number(process.env.DISABLE_ORDERS)),
+
+  s3ExportAwsAccessKeyId: String(process.env.S3_EXPORT_AWS_ACCESS_KEY_ID),
+  s3ExportAwsSecretAccessKey: String(process.env.S3_EXPORT_AWS_SECRET_ACCESS_KEY),
+  s3ExportBucketName: String(process.env.S3_EXPORT_BUCKET_NAME),
 };
