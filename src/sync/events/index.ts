@@ -22,6 +22,7 @@ import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
+import * as blocksModel from "@/models/blocks";
 import { OrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
 
@@ -40,6 +41,8 @@ export const syncEvents = async (
     eventDataKinds?: EventDataKind[];
   }
 ) => {
+  // --- Handle: synchronous timestamps of events ---
+
   // Fetch the timestamps of the blocks at each side of the range in
   // order to be able to estimate the timestamp of each block within
   // the range (to avoid any further `eth_getBlockByNumber` calls).
@@ -58,6 +61,8 @@ export const syncEvents = async (
       timestamp: toBlockTimestamp,
     },
   };
+
+  // --- Handle: known router contract fills ---
 
   // Fills going through router contracts are to be handled in a
   // custom way so as to properly associate the maker and taker.
@@ -79,16 +84,20 @@ export const syncEvents = async (
     routerToFillSource["0x2af4b707e1dce8fc345f38cfeeaa2421e54976d5"] = "genie";
   }
 
+  // Keep track of all handled blocks
+  const blockHashToNumber: { [hash: string]: number } = {};
+
+  // Keep track of data needed by other processes that will get triggered
   const fillInfos: fillUpdates.FillInfo[] = [];
   const orderInfos: orderUpdatesById.OrderInfo[] = [];
   const makerInfos: orderUpdatesByMaker.MakerInfo[] = [];
   const mintInfos: tokenUpdatesMint.MintInfo[] = [];
 
-  const blockHashToNumber: { [hash: string]: number } = {};
+  // --- Handle: fetch and process events ---
 
+  // When backfilling, certain processes are disabled
   const backfill = Boolean(options?.backfill);
   const eventDatas = getEventData(options?.eventDataKinds);
-
   await baseProvider
     .getLogs({
       // Only keep unique topics (eg. an example of duplicated topics are
@@ -133,8 +142,8 @@ export const syncEvents = async (
             logIndex: baseEventParams.logIndex,
           });
 
+          // Save the block
           if (!options?.backfill) {
-            // Save the block (and its hash) in order to detect orphans
             blockHashToNumber[baseEventParams.blockHash] = baseEventParams.block;
           }
 
@@ -1444,6 +1453,18 @@ export const syncEvents = async (
             foundationOrders.map((info) => ({ kind: "foundation", info }))
           ),
         ]);
+
+        // --- Handle: orphan blocks ---
+
+        for (const [hash, number] of Object.entries(blockHashToNumber)) {
+          // Persist the block
+          await blocksModel.saveBlock({ hash, number });
+
+          // Act right away if the current block is a duplicate
+          if ((await blocksModel.getBlocks(number)).length > 1) {
+            blockCheck.addToQueue(number, 0);
+          }
+        }
 
         // Put all fetched blocks on a queue for handling block reorgs
         // (recheck each block in 1m, 5m, 10m and 60m).
