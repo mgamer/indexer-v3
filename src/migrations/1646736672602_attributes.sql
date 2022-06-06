@@ -40,7 +40,8 @@ CREATE TABLE "attributes" (
   "buy_updated_at" TIMESTAMPTZ,
   "collection_id" TEXT NOT NULL,
   "kind" "attribute_key_kind_t" NOT NULL,
-  "key" TEXT NOT NULL
+  "key" TEXT NOT NULL,
+  "sample_images" TEXT[]
 );
 
 CREATE UNIQUE INDEX "attributes_attribute_key_id_value_unique_index"
