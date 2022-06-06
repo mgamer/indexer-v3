@@ -1462,7 +1462,8 @@ export const syncEvents = async (
 
           // Act right away if the current block is a duplicate
           if ((await blocksModel.getBlocks(number)).length > 1) {
-            blockCheck.addToQueue(number, 0);
+            blockCheck.addToQueue(number, 10 * 1000);
+            blockCheck.addToQueue(number, 30 * 1000);
           }
         }
 
@@ -1471,10 +1472,10 @@ export const syncEvents = async (
         await Promise.all(
           Object.entries(blockHashToNumber).map(async ([, block]) =>
             Promise.all([
-              blockCheck.addToQueue(block, 60 * 10000),
-              blockCheck.addToQueue(block, 5 * 60 * 10000),
-              blockCheck.addToQueue(block, 10 * 60 * 10000),
-              blockCheck.addToQueue(block, 60 * 60 * 10000),
+              blockCheck.addToQueue(block, 60 * 1000),
+              blockCheck.addToQueue(block, 5 * 60 * 1000),
+              blockCheck.addToQueue(block, 10 * 60 * 1000),
+              blockCheck.addToQueue(block, 60 * 60 * 1000),
             ])
           )
         );
