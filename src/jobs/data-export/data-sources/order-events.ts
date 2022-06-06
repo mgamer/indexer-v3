@@ -1,9 +1,9 @@
 import { idb } from "@/common/db";
 import { Sources } from "@/models/sources";
 import { formatEth, fromBuffer } from "@/common/utils";
-import { BaseDataSource } from "@/jobs/s3-export/data-sources/index";
+import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
 
-export class TokenFloorSellEventsDataSource extends BaseDataSource {
+export class OrderEventsDataSource extends BaseDataSource {
   public async getData(cursor: string | null, limit: number) {
     let continuationFilter = "";
 
@@ -13,25 +13,25 @@ export class TokenFloorSellEventsDataSource extends BaseDataSource {
 
     const query = `
             SELECT
-              token_floor_sell_events.source_id_int,
-              date_part('epoch', lower(token_floor_sell_events.valid_between)) AS valid_from,
+              order_events.id,
+              order_events.kind,
+              order_events.status,
+              order_events.contract,
+              order_events.token_id,
+              order_events.order_id,
+              order_events.order_quantity_remaining,
+              order_events.maker,
+              order_events.price,
+              order_events.order_source_id,
               coalesce(
-                nullif(date_part('epoch', upper(token_floor_sell_events.valid_between)), 'Infinity'),
+                nullif(date_part('epoch', upper(order_events.order_valid_between)), 'Infinity'),
                 0
               ) AS valid_until,
-              token_floor_sell_events.nonce,
-              token_floor_sell_events.id,
-              token_floor_sell_events.kind,
-              token_floor_sell_events.contract,
-              token_floor_sell_events.token_id,
-              token_floor_sell_events.order_id,
-              token_floor_sell_events.maker,
-              token_floor_sell_events.price,
-              token_floor_sell_events.previous_price,
-              token_floor_sell_events.tx_hash,
-              token_floor_sell_events.tx_timestamp,
-              extract(epoch from token_floor_sell_events.created_at) AS created_at
-            FROM token_floor_sell_events
+              date_part('epoch', lower(order_events.order_valid_between)) AS valid_from,
+              order_events.tx_hash,
+              order_events.tx_timestamp,
+              extract(epoch from order_events.created_at) AS created_at
+            FROM order_events
             ${continuationFilter}
             ORDER BY id 
             LIMIT $/limit/;
@@ -48,13 +48,13 @@ export class TokenFloorSellEventsDataSource extends BaseDataSource {
       const data = result.map((r) => ({
         id: r.id,
         kind: r.kind,
+        status: r.status,
         contract: fromBuffer(r.contract),
         token_id: r.token_id,
         order_id: r.order_id,
         maker: r.maker ? fromBuffer(r.maker) : null,
         price: r.price ? formatEth(r.price) : null,
-        previous_price: r.previous_price ? formatEth(r.previous_price) : null,
-        nonce: r.nonce,
+        quantity_remaining: Number(r.order_quantity_remaining),
         valid_from: r.valid_from ? Number(r.valid_from) : null,
         valid_until: r.valid_until ? Number(r.valid_until) : null,
         source: r.order_source_id
