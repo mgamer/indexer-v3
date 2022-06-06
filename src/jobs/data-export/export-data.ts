@@ -4,14 +4,14 @@ import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 
-import { OrderEventsDataSource } from "@/jobs/s3-export/data-sources/order-events";
-import { TokenFloorSellEventsDataSource } from "@/jobs/s3-export/data-sources/token-floor-sell-events";
-import { CollectionFloorSellEventsDataSource } from "@/jobs/s3-export/data-sources/collection-floor-sell-events";
+import { OrderEventsDataSource } from "@/jobs/data-export/data-sources/order-events";
+import { TokenFloorSellEventsDataSource } from "@/jobs/data-export/data-sources/token-floor-sell-events";
+import { CollectionFloorSellEventsDataSource } from "@/jobs/data-export/data-sources/collection-floor-sell-events";
 import { idb } from "@/common/db";
 import { randomUUID } from "crypto";
 import AWS from "aws-sdk";
 
-const QUEUE_NAME = "export-data-source-to-s3-queue";
+const QUEUE_NAME = "export-data-queue";
 const QUERY_LIMIT = 1000;
 
 export const queue = new Queue(QUEUE_NAME, {
@@ -58,7 +58,7 @@ if (config.doBackgroundWork) {
 
   worker.on("completed", async (job) => {
     if (job.data.addToQueue) {
-      await addToQueue(job.data.kind);
+      await addToQueue(job.data.kind, job.data.backfill);
     }
   });
 
@@ -68,9 +68,9 @@ if (config.doBackgroundWork) {
 }
 
 export enum DataSourceKind {
-  orderEvents = "orderEvents",
-  tokenFloorSellEvents = "tokenFloorSellEvents",
-  collectionFloorSellEvents = "collectionFloorSellEvents",
+  orderEvents = "order-events",
+  tokenFloorSellEvents = "token-floor-sell-events",
+  collectionFloorSellEvents = "collection-floor-sell-events",
 }
 
 export const addToQueue = async (kind: DataSourceKind, backfill = false) => {
@@ -78,9 +78,10 @@ export const addToQueue = async (kind: DataSourceKind, backfill = false) => {
 };
 
 const getCursorAndSequenceNumber = async (kind: DataSourceKind) => {
-  const query = `SELECT cursor, sequence_number
-                   FROM s3_export_data_sources
-                   WHERE kind = $/kind/`;
+  const query = `SELECT cursor,
+                        sequence_number AS "sequenceNumber"
+                   FROM data_export_tasks
+                   WHERE source = $/kind/`;
 
   return await idb.one(query, {
     kind,
@@ -89,10 +90,10 @@ const getCursorAndSequenceNumber = async (kind: DataSourceKind) => {
 
 const setCursorAndSequenceNumber = async (kind: DataSourceKind, cursor: string | null) => {
   const query = `
-          UPDATE s3_export_data_sources
+          UPDATE data_export_tasks
           SET cursor = $/cursor/,
               sequence_number = sequence_number + 1  
-          WHERE kind = $/kind/
+          WHERE source = $/kind/
         `;
 
   await idb.none(query, {
