@@ -15,6 +15,7 @@ export type Event = {
   contract: string;
   tokenId: string;
   amount: string;
+  fillSource?: string;
   baseEventParams: BaseEventParams;
 };
 
@@ -36,4 +37,5 @@ export type DbEvent = {
   contract: Buffer;
   token_id: string;
   amount: string;
+  fill_source: string | null;
 };

@@ -24,6 +24,7 @@ export const addEventsZeroExV4 = async (events: Event[]) => {
       contract: toBuffer(event.contract),
       token_id: event.tokenId,
       amount: event.amount,
+      fill_source: event.fillSource || null,
     });
   }
 
@@ -47,6 +48,7 @@ export const addEventsZeroExV4 = async (events: Event[]) => {
         "contract",
         "token_id",
         "amount",
+        "fill_source",
       ],
       { table: "fill_events_2" }
     );
@@ -71,7 +73,8 @@ export const addEventsZeroExV4 = async (events: Event[]) => {
           price,
           contract,
           token_id,
-          amount
+          amount,
+          fill_source
         ) VALUES ${pgp.helpers.values(fillValues, columns)}
         ON CONFLICT DO NOTHING
         RETURNING
