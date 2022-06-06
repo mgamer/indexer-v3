@@ -5,7 +5,7 @@ CREATE TABLE "s3_export_data_sources" (
   kind TEXT NOT NULL,
   cursor TEXT,
   sequence_number INT NOT NULL DEFAULT 1,
-  created_at timestamp with time zone DEFAULT NOW(),
+  created_at timestamp with time zone DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX "s3_export_data_sources_kind_unique_index"
