@@ -88,6 +88,7 @@ export const getSalesV3Options: RouteOptions = {
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{40}$/),
           amount: Joi.string(),
+          fillSource: Joi.string().allow(null),
           txHash: Joi.string()
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{64}$/),
@@ -214,6 +215,7 @@ export const getSalesV3Options: RouteOptions = {
             fill_events_2.maker,
             fill_events_2.taker,
             fill_events_2.amount,
+            fill_events_2.fill_source,
             fill_events_2.tx_hash,
             fill_events_2.timestamp,
             fill_events_2.price,
@@ -283,6 +285,7 @@ export const getSalesV3Options: RouteOptions = {
         from: r.order_side === "sell" ? fromBuffer(r.maker) : fromBuffer(r.taker),
         to: r.order_side === "sell" ? fromBuffer(r.taker) : fromBuffer(r.maker),
         amount: String(r.amount),
+        fillSource: r.fill_source ? String(r.fill_source) : null,
         txHash: fromBuffer(r.tx_hash),
         logIndex: r.log_index,
         batchIndex: r.batch_index,
