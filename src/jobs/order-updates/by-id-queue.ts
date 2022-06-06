@@ -15,6 +15,7 @@ import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-ord
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
 import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
+import * as updateNftBalanceTopBidQueue from "@/jobs/nft-balance-updates/update-top-bid-queue";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -268,7 +269,7 @@ if (config.doBackgroundWork) {
             // entries all at once can be quite expensive (eg. queries running
             // for 1-2 minutes) and this doesn't scale.
 
-            await idb.none(
+            const buyOrderResult = await idb.manyOrNone(
               `
                 WITH "z" AS (
                   SELECT
@@ -315,9 +316,19 @@ if (config.doBackgroundWork) {
                 WHERE "t"."contract" = "z"."contract"
                   AND "t"."token_id" = "z"."token_id"
                   AND "t"."top_buy_id" IS DISTINCT FROM "z"."order_id"
+                RETURNING "z"."contract", "z"."token_id"
               `,
               { tokenSetId }
             );
+
+            for (const result of buyOrderResult) {
+              const updateTopBidInfo = {
+                contract: fromBuffer(result.contract),
+                tokenId: result.token_id,
+              };
+
+              await updateNftBalanceTopBidQueue.addToQueue([updateTopBidInfo]);
+            }
           }
 
           if (id) {
