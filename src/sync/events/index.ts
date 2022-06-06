@@ -1,10 +1,9 @@
-import _ from "lodash";
-
 import { defaultAbiCoder } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
+import _ from "lodash";
 
 import { logger } from "@/common/logger";
 import { idb } from "@/common/db";
@@ -14,6 +13,7 @@ import { config } from "@/config/index";
 import { EventDataKind, getEventData } from "@/events-sync/data";
 import * as es from "@/events-sync/storage";
 import { parseEvent } from "@/events-sync/parser";
+import * as syncEventsUtils from "@/events-sync/utils";
 import * as blockCheck from "@/jobs/events-sync/block-check-queue";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
@@ -22,6 +22,7 @@ import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
+import * as blocksModel from "@/models/blocks";
 import { OrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
 
@@ -40,10 +41,11 @@ export const syncEvents = async (
     eventDataKinds?: EventDataKind[];
   }
 ) => {
+  // --- Handle: synchronous timestamps of events ---
+
   // Fetch the timestamps of the blocks at each side of the range in
   // order to be able to estimate the timestamp of each block within
   // the range (to avoid any further `eth_getBlockByNumber` calls).
-
   const [fromBlockTimestamp, toBlockTimestamp] = await Promise.all([
     baseProvider.getBlock(fromBlock),
     baseProvider.getBlock(toBlock),
@@ -60,16 +62,42 @@ export const syncEvents = async (
     },
   };
 
+  // --- Handle: known router contract fills ---
+
+  // Fills going through router contracts are to be handled in a
+  // custom way so as to properly associate the maker and taker.
+  const routerToFillSource: { [address: string]: string } = {};
+
+  // Reservoir
+  for (const address of Object.keys(Sdk.Router.Addresses.AllRouters[config.chainId])) {
+    routerToFillSource[address.toLowerCase()] = "reservoir";
+  }
+
+  // Gem and Genie (source: https://dune.com/sohwak/NFT-Aggregator-(OpenSea-via-GemGenie)-Overview)
+  if (config.chainId === 1) {
+    routerToFillSource["0x0000000031f7382a812c64b604da4fc520afef4b"] = "gem";
+    routerToFillSource["0xf24629fbb477e10f2cf331c2b7452d8596b5c7a5"] = "gem";
+    routerToFillSource["0x83c8f28c26bf6aaca652df1dbbe0e1b56f8baba2"] = "gem";
+    routerToFillSource["0x0000000035634b55f3d99b071b5a354f48e10bef"] = "gem";
+    routerToFillSource["0x00000000a50bb64b4bbeceb18715748dface08af"] = "gem";
+    routerToFillSource["0x0a267cf51ef038fc00e71801f5a524aec06e4f07"] = "genie";
+    routerToFillSource["0x2af4b707e1dce8fc345f38cfeeaa2421e54976d5"] = "genie";
+  }
+
+  // Keep track of all handled blocks
+  const blockHashToNumber: { [hash: string]: number } = {};
+
+  // Keep track of data needed by other processes that will get triggered
   const fillInfos: fillUpdates.FillInfo[] = [];
   const orderInfos: orderUpdatesById.OrderInfo[] = [];
   const makerInfos: orderUpdatesByMaker.MakerInfo[] = [];
   const mintInfos: tokenUpdatesMint.MintInfo[] = [];
 
-  const blockHashToNumber: { [hash: string]: number } = {};
+  // --- Handle: fetch and process events ---
 
+  // When backfilling, certain processes are disabled
   const backfill = Boolean(options?.backfill);
   const eventDatas = getEventData(options?.eventDataKinds);
-
   await baseProvider
     .getLogs({
       // Only keep unique topics (eg. an example of duplicated topics are
@@ -99,10 +127,6 @@ export const syncEvents = async (
         logIndex: number;
       }[] = [];
 
-      // Fills going through router contracts are handled in a custom way
-      // TODO: Integrate other router contracts (eg. Gem and Genie)
-      const reservoirRouters = Sdk.Router.Addresses.AllRouters[config.chainId];
-
       for (const log of logs) {
         try {
           const baseEventParams = parseEvent(log, blockRange);
@@ -118,8 +142,8 @@ export const syncEvents = async (
             logIndex: baseEventParams.logIndex,
           });
 
+          // Save the block
           if (!options?.backfill) {
-            // Save the block (and its hash) in order to detect orphans
             blockHashToNumber[baseEventParams.blockHash] = baseEventParams.block;
           }
 
@@ -530,10 +554,12 @@ export const syncEvents = async (
               }
 
               // Handle filling through routers
-              if (reservoirRouters.includes(taker)) {
-                taker = await baseProvider
-                  .getTransactionReceipt(baseEventParams.txHash)
-                  .then((txReceipt) => txReceipt.from.toLowerCase());
+              let fillSource: string | undefined;
+              if (routerToFillSource[taker]) {
+                fillSource = routerToFillSource[taker];
+                taker = await syncEventsUtils
+                  .fetchTransaction(baseEventParams.txHash)
+                  .then((tx) => tx.from);
               }
 
               // Decode the sold token (ignoring bundles).
@@ -567,6 +593,7 @@ export const syncEvents = async (
                 tokenId,
                 // X2Y2 only supports erc721 for now
                 amount: "1",
+                fillSource,
                 baseEventParams,
               });
               orderInfos.push({
@@ -619,10 +646,12 @@ export const syncEvents = async (
               const orderId = keccak256(["address", "uint256"], [contract, tokenId]);
 
               // Handle filling through routers
-              if (reservoirRouters.includes(taker)) {
-                taker = await baseProvider
-                  .getTransactionReceipt(baseEventParams.txHash)
-                  .then((txReceipt) => txReceipt.from.toLowerCase());
+              let fillSource: string | undefined;
+              if (routerToFillSource[taker]) {
+                fillSource = routerToFillSource[taker];
+                taker = await syncEventsUtils
+                  .fetchTransaction(baseEventParams.txHash)
+                  .then((tx) => tx.from);
               }
 
               // Custom handling to support on-chain orderbook quirks.
@@ -638,6 +667,7 @@ export const syncEvents = async (
                 tokenId,
                 // Foundation only supports erc721 for now
                 amount: "1",
+                fillSource,
                 baseEventParams,
               });
               orderInfos.push({
@@ -739,10 +769,12 @@ export const syncEvents = async (
               }
 
               // Handle filling through routers
-              if (reservoirRouters.includes(taker)) {
-                taker = await baseProvider
-                  .getTransactionReceipt(baseEventParams.txHash)
-                  .then((txReceipt) => txReceipt.from.toLowerCase());
+              let fillSource: string | undefined;
+              if (routerToFillSource[taker]) {
+                fillSource = routerToFillSource[taker];
+                taker = await syncEventsUtils
+                  .fetchTransaction(baseEventParams.txHash)
+                  .then((tx) => tx.from);
               }
 
               fillEvents.push({
@@ -755,6 +787,7 @@ export const syncEvents = async (
                 contract,
                 tokenId,
                 amount,
+                fillSource,
                 baseEventParams,
               });
 
@@ -808,10 +841,12 @@ export const syncEvents = async (
               }
 
               // Handle filling through routers
-              if (reservoirRouters.includes(taker)) {
-                taker = await baseProvider
-                  .getTransactionReceipt(baseEventParams.txHash)
-                  .then((txReceipt) => txReceipt.from.toLowerCase());
+              let fillSource: string | undefined;
+              if (routerToFillSource[taker]) {
+                fillSource = routerToFillSource[taker];
+                taker = await syncEventsUtils
+                  .fetchTransaction(baseEventParams.txHash)
+                  .then((tx) => tx.from);
               }
 
               fillEvents.push({
@@ -824,6 +859,7 @@ export const syncEvents = async (
                 contract,
                 tokenId,
                 amount,
+                fillSource,
                 baseEventParams,
               });
 
@@ -947,10 +983,12 @@ export const syncEvents = async (
               }
 
               // Handle filling through routers
-              if (reservoirRouters.includes(taker)) {
-                taker = await baseProvider
-                  .getTransactionReceipt(baseEventParams.txHash)
-                  .then((txReceipt) => txReceipt.from.toLowerCase());
+              let fillSource: string | undefined;
+              if (routerToFillSource[taker]) {
+                fillSource = routerToFillSource[taker];
+                taker = await syncEventsUtils
+                  .fetchTransaction(baseEventParams.txHash)
+                  .then((tx) => tx.from);
               }
 
               const orderKind = eventData.kind.startsWith("wyvern-v2.3")
@@ -969,6 +1007,7 @@ export const syncEvents = async (
                   contract: associatedNftTransferEvent.baseEventParams.address,
                   tokenId: associatedNftTransferEvent.tokenId,
                   amount: associatedNftTransferEvent.amount,
+                  fillSource,
                   baseEventParams: {
                     ...baseEventParams,
                     batchIndex: batchIndex++,
@@ -1007,6 +1046,7 @@ export const syncEvents = async (
                   contract: associatedNftTransferEvent.baseEventParams.address,
                   tokenId: associatedNftTransferEvent.tokenId,
                   amount: associatedNftTransferEvent.amount,
+                  fillSource,
                   baseEventParams: {
                     ...baseEventParams,
                     batchIndex: batchIndex++,
@@ -1123,10 +1163,12 @@ export const syncEvents = async (
               }
 
               // Handle filling through routers
-              if (reservoirRouters.includes(taker)) {
-                taker = await baseProvider
-                  .getTransactionReceipt(baseEventParams.txHash)
-                  .then((txReceipt) => txReceipt.from.toLowerCase());
+              let fillSource: string | undefined;
+              if (routerToFillSource[taker]) {
+                fillSource = routerToFillSource[taker];
+                taker = await syncEventsUtils
+                  .fetchTransaction(baseEventParams.txHash)
+                  .then((tx) => tx.from);
               }
 
               const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
@@ -1179,6 +1221,7 @@ export const syncEvents = async (
                 contract: erc721Token,
                 tokenId: erc721TokenId,
                 amount: "1",
+                fillSource,
                 baseEventParams,
               });
 
@@ -1241,10 +1284,12 @@ export const syncEvents = async (
               }
 
               // Handle filling through routers
-              if (reservoirRouters.includes(taker)) {
-                taker = await baseProvider
-                  .getTransactionReceipt(baseEventParams.txHash)
-                  .then((txReceipt) => txReceipt.from.toLowerCase());
+              let fillSource: string | undefined;
+              if (routerToFillSource[taker]) {
+                fillSource = routerToFillSource[taker];
+                taker = await syncEventsUtils
+                  .fetchTransaction(baseEventParams.txHash)
+                  .then((tx) => tx.from);
               }
 
               const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
@@ -1291,6 +1336,7 @@ export const syncEvents = async (
                 contract: erc1155Token,
                 tokenId: erc1155TokenId,
                 amount: erc1155FillAmount,
+                fillSource,
                 baseEventParams,
               });
 
@@ -1408,15 +1454,28 @@ export const syncEvents = async (
           ),
         ]);
 
+        // --- Handle: orphan blocks ---
+
+        for (const [hash, number] of Object.entries(blockHashToNumber)) {
+          // Persist the block
+          await blocksModel.saveBlock({ hash, number });
+
+          // Act right away if the current block is a duplicate
+          if ((await blocksModel.getBlocks(number)).length > 1) {
+            blockCheck.addToQueue(number, 10 * 1000);
+            blockCheck.addToQueue(number, 30 * 1000);
+          }
+        }
+
         // Put all fetched blocks on a queue for handling block reorgs
         // (recheck each block in 1m, 5m, 10m and 60m).
         await Promise.all(
           Object.entries(blockHashToNumber).map(async ([, block]) =>
             Promise.all([
-              blockCheck.addToQueue(block, 60 * 10000),
-              blockCheck.addToQueue(block, 5 * 60 * 10000),
-              blockCheck.addToQueue(block, 10 * 60 * 10000),
-              blockCheck.addToQueue(block, 60 * 60 * 10000),
+              blockCheck.addToQueue(block, 60 * 1000),
+              blockCheck.addToQueue(block, 5 * 60 * 1000),
+              blockCheck.addToQueue(block, 10 * 60 * 1000),
+              blockCheck.addToQueue(block, 60 * 60 * 1000),
             ])
           )
         );
