@@ -125,4 +125,14 @@ if (config.doBackgroundWork) {
 }
 
 export const addToQueue = async (block: number, delay: number, force = false) =>
-  queue.add(`${block}-${delay}`, { block, force }, { jobId: `${block}-${delay}`, delay });
+  queue.add(
+    `${block}-${delay}`,
+    {
+      block,
+      force,
+    },
+    {
+      jobId: `${block}-${delay}${force ? "-" + Math.floor(Date.now() / 1000) : ""}`,
+      delay,
+    }
+  );
