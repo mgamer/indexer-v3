@@ -1,5 +1,11 @@
 -- Up Migration
 
+CREATE TYPE fill_source_t AS ENUM (
+  'reservoir',
+  'gem',
+  'genie'
+);
+
 CREATE TABLE "fill_events_2" (
   "address" BYTEA NOT NULL,
   "block" INT NOT NULL,
@@ -17,7 +23,8 @@ CREATE TABLE "fill_events_2" (
   "price" NUMERIC(78, 0) NOT NULL,
   "contract" BYTEA NOT NULL,
   "token_id" NUMERIC(78, 0) NOT NULL,
-  "amount" NUMERIC(78, 0) NOT NULL
+  "amount" NUMERIC(78, 0) NOT NULL,
+  "fill_source" fill_source_t
 );
 
 ALTER TABLE "fill_events_2"
