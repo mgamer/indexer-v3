@@ -448,6 +448,7 @@ export const syncEvents = async (
             }
 
             case "erc20-approval": {
+              logger.info("debug", `Here: ${JSON.stringify(log)}`);
               const parsedLog = eventData.abi.parseLog(log);
               const owner = parsedLog.args["owner"].toLowerCase();
               const spender = parsedLog.args["spender"].toLowerCase();
