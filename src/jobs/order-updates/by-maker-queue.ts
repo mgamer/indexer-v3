@@ -125,10 +125,8 @@ if (config.doBackgroundWork) {
 
           case "buy-approval": {
             const { contract, orderKind, operator } = data;
-            logger.info("debug", `Here 1.8: ${JSON.stringify({ ...data, maker })}`);
 
             if (operator) {
-              logger.info("debug", `Here 2: ${JSON.stringify({ ...data, maker })}`);
               // TODO: Split into multiple batches to support makers with lots of orders
 
               // First, ensure the maker has any orders with the current `operator` as conduit
