@@ -11,6 +11,10 @@ import * as Boom from "@hapi/boom";
 const version = "v1";
 
 export const getRedirectCollectionImageV1Options: RouteOptions = {
+  cache: {
+    privacy: "public",
+    expiresIn: 60000,
+  },
   description: "Redirect response to the given collection image",
   tags: ["api", "5. Redirects"],
   plugins: {

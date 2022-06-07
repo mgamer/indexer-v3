@@ -9,6 +9,10 @@ import { Sources } from "@/models/sources";
 const version = "v1";
 
 export const getRedirectLogoV1Options: RouteOptions = {
+  cache: {
+    privacy: "public",
+    expiresIn: 60000,
+  },
   description: "Redirect response to the given source logo",
   tags: ["api", "x-deprecated"],
   plugins: {
