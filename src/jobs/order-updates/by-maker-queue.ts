@@ -125,6 +125,7 @@ if (config.doBackgroundWork) {
 
           case "buy-approval": {
             const { contract, orderKind, operator } = data;
+            logger.info("debug", `Here 1.8: ${JSON.stringify(data)}`);
 
             if (operator) {
               logger.info("debug", `Here 2: ${JSON.stringify(data)}`);
