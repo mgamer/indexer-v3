@@ -127,6 +127,7 @@ if (config.doBackgroundWork) {
             const { contract, orderKind, operator } = data;
 
             if (operator) {
+              logger.info("debug", `Here 2: ${data}`);
               // TODO: Split into multiple batches to support makers with lots of orders
 
               // First, ensure the maker has any orders with the current `operator` as conduit
