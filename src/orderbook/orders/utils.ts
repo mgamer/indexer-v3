@@ -59,6 +59,7 @@ export type DbOrder = {
   source_id_int?: number | null;
   is_reservoir?: boolean | null;
   contract: Buffer;
+  conduit: Buffer | null;
   fee_bps: number;
   fee_breakdown: object | null;
   dynamic: boolean | null;

@@ -4,8 +4,7 @@ import { baseProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
-
-// TODO: Add support for on-chain check
+import * as onChainData from "@/utils/on-chain-data";
 
 export const offChainCheck = async (
   order: Sdk.LooksRare.Order,
@@ -68,15 +67,16 @@ export const offChainCheck = async (
       hasBalance = true;
     }
 
-    // TODO: Integrate off-chain approval checking
     if (options?.onChainApprovalRecheck) {
-      const erc20 = new Sdk.Common.Helpers.Erc20(baseProvider, order.params.currency);
       if (
         bn(
-          await erc20.getAllowance(
-            order.params.signer,
-            Sdk.LooksRare.Addresses.Exchange[config.chainId]
-          )
+          await onChainData
+            .fetchAndUpdateFtApproval(
+              order.params.currency,
+              order.params.signer,
+              Sdk.LooksRare.Addresses.Exchange[config.chainId]
+            )
+            .then((a) => a.value)
         ).lt(order.params.price)
       ) {
         hasApproval = false;

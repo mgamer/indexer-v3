@@ -5,11 +5,13 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { toBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import { TriggerKind } from "@/jobs/order-updates/types";
 import * as wyvernV23Utils from "@/orderbook/orders/wyvern-v2.3/utils";
+import { OrderKind } from "@/orderbook/orders";
+import { fetchAndUpdateFtApproval } from "@/utils/on-chain-data";
 
 const QUEUE_NAME = "order-updates-by-maker";
 
@@ -121,6 +123,119 @@ if (config.doBackgroundWork) {
             break;
           }
 
+          case "buy-approval": {
+            const { contract, orderKind, operator } = data;
+
+            if (operator) {
+              // TODO: Split into multiple batches to support makers with lots of orders
+
+              // First, ensure the maker has any orders with the current `operator` as conduit
+              const result = await idb.manyOrNone(
+                `
+                  SELECT
+                    orders.id,
+                    orders.price
+                  FROM orders
+                  WHERE orders.maker = $/maker/
+                    AND orders.side = 'buy'
+                    AND orders.conduit = $/conduit/
+                    AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                  LIMIT 1
+                `,
+                {
+                  maker: toBuffer(maker),
+                  conduit: toBuffer(operator),
+                }
+              );
+              if (result.length) {
+                // Refresh approval
+                await fetchAndUpdateFtApproval(contract, maker, operator);
+
+                // Validate or invalidate orders based on the refreshed approval
+                await idb.none(
+                  `
+                    WITH
+                      x AS (
+                        SELECT
+                          orders.id,
+                          orders.price
+                        FROM orders
+                        WHERE orders.maker = $/maker/
+                          AND orders.side = 'buy'
+                          AND orders.conduit = $/conduit/
+                          AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                      ),
+                      y AS (
+                        SELECT
+                          ft_approvals.value
+                        FROM ft_approvals
+                        WHERE ft_approvals.token = $/token/
+                          AND ft_approvals.owner = $/maker/
+                          AND ft_approvals.spender = $/conduit/
+                      )
+                    UPDATE orders SET
+                      approval_status = (
+                        CASE
+                          WHEN orders.price > y.value THEN 'no-approval'
+                          ELSE 'approved'
+                        END
+                      )
+                    FROM x LEFT JOIN y ON TRUE
+                    WHERE orders.id = x.id
+                      AND orders.approval_status != (
+                        CASE
+                          WHEN orders.price > y.value THEN 'no-approval'
+                          ELSE 'approved'
+                        END
+                      )
+                  `,
+                  {
+                    token: toBuffer(contract),
+                    maker: toBuffer(maker),
+                    conduit: toBuffer(operator),
+                  }
+                );
+              }
+            } else if (orderKind) {
+              // Fetch all different conduits for the given order kind
+              const result = await idb.manyOrNone(
+                `
+                  SELECT DISTINCT
+                    orders.conduit
+                  FROM orders
+                  WHERE orders.maker = $/maker/
+                    AND orders.side = 'buy'
+                    AND orders.kind = $/kind/
+                    AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                `,
+                {
+                  token: toBuffer(contract),
+                  maker: toBuffer(maker),
+                  kind: orderKind,
+                }
+              );
+
+              // Trigger a new job to individually handle all maker's conduits
+              await addToQueue(
+                result.map(({ conduit }) => {
+                  conduit = fromBuffer(conduit);
+                  return {
+                    context: `${context}-${conduit}`,
+                    maker,
+                    trigger,
+                    data: {
+                      kind: "buy-approval",
+                      contract,
+                      operator: conduit,
+                    },
+                  };
+                })
+              );
+            }
+
+            break;
+          }
+
           case "sell-balance": {
             const fillabilityStatuses = await idb.manyOrNone(
               `
@@ -201,6 +316,12 @@ if (config.doBackgroundWork) {
           }
 
           case "sell-approval": {
+            // TODO: Backfill orders conduit and use that directly instead of
+            // manually detecting and using the order kind from the operator.
+
+            // TODO: Get latest approval to operator and use that instead of
+            // `approved` field that gets explicitly passed to the job.
+
             // We must detect which exchange the approval is for (if any).
 
             // For "sell" orders we can be sure the associated token set
@@ -455,6 +576,24 @@ export type MakerInfo = {
         contract: string;
       }
     | {
+        kind: "buy-approval";
+        contract: string;
+        // Keeping track of buy approvals is trickier than keeping track of sell approvals,
+        // due to the way the ERC20 standard is designed (eg. when a spender spends allowed
+        // tokens, the allowance is reduced but no associated `Approval` event gets emitted
+        // to be able to fully keep track of it off-chain). For this reason, we don't track
+        // ERC20 approvals off-chain, but fetch them directly from the blockchain when it's
+        // detected than an approval might have changed. There are three scenarios where an
+        // an approval could have changed:
+        // - we detect an ERC20 `Approval` event (in this case `operator` will be set and
+        //   so we recheck the approvals of all orders having that `operator` as conduit)
+        // - a `Transfer` event and a sale occur within the same transaction (in this case
+        //   `orderKind` is going to be set and we recheck the approvals of all the orders
+        //   which have that particular `orderKind`)
+        orderKind?: OrderKind;
+        operator?: string;
+      }
+    | {
         kind: "sell-balance";
         contract: string;
         tokenId: string;
@@ -463,6 +602,8 @@ export type MakerInfo = {
         kind: "sell-approval";
         contract: string;
         operator: string;
+        // TODO: Replace explicitly passing the `approved` field with
+        // fetching the latest approval directly from the database.
         approved: boolean;
       };
 };

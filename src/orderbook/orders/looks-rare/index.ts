@@ -10,6 +10,7 @@ import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import { offChainCheck } from "@/orderbook/orders/looks-rare/check";
+import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
 
@@ -214,6 +215,16 @@ export const save = async (
         isReservoir = false;
       }
 
+      // Handle: conduit
+      let conduit = Sdk.LooksRare.Addresses.Exchange[config.chainId];
+      if (side === "sell") {
+        const contractKind = await commonHelpers.getContractKind(order.params.collection);
+        conduit =
+          contractKind === "erc721"
+            ? Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]
+            : Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId];
+      }
+
       const validFrom = `date_trunc('seconds', to_timestamp(${order.params.startTime}))`;
       const validTo = `date_trunc('seconds', to_timestamp(${order.params.endTime}))`;
       orderValues.push({
@@ -234,6 +245,7 @@ export const save = async (
         source_id_int: source ? sources.getByName("LooksRare").id : null,
         is_reservoir: isReservoir ? isReservoir : null,
         contract: toBuffer(order.params.collection),
+        conduit: toBuffer(conduit),
         fee_bps: feeBps,
         fee_breakdown: feeBreakdown || null,
         dynamic: null,
@@ -283,6 +295,7 @@ export const save = async (
         "source_id_int",
         "is_reservoir",
         "contract",
+        "conduit",
         "fee_bps",
         { name: "fee_breakdown", mod: ":json" },
         "dynamic",

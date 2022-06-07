@@ -4,8 +4,7 @@ import { baseProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
-
-// TODO: Add support for on-chain check
+import * as onChainData from "@/utils/on-chain-data";
 
 export const offChainCheck = async (
   order: Sdk.ZeroExV4.Order,
@@ -66,15 +65,16 @@ export const offChainCheck = async (
       hasBalance = false;
     }
 
-    // TODO: Integrate off-chain approval checking
     if (options?.onChainApprovalRecheck) {
-      const erc20 = new Sdk.Common.Helpers.Erc20(baseProvider, order.params.erc20Token);
       if (
         bn(
-          await erc20.getAllowance(
-            order.params.maker,
-            Sdk.ZeroExV4.Addresses.Exchange[config.chainId]
-          )
+          await onChainData
+            .fetchAndUpdateFtApproval(
+              order.params.erc20Token,
+              order.params.maker,
+              Sdk.ZeroExV4.Addresses.Exchange[config.chainId]
+            )
+            .then((a) => a.value)
         ).lt(bn(order.params.erc20TokenAmount).add(feeAmount))
       ) {
         hasApproval = false;
