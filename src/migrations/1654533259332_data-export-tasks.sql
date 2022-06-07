@@ -5,7 +5,8 @@ CREATE TABLE "data_export_tasks" (
   source TEXT NOT NULL,
   cursor TEXT,
   sequence_number INT NOT NULL DEFAULT 1,
-  created_at timestamp with time zone DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE UNIQUE INDEX "data_export_tasks_source_unique_index"

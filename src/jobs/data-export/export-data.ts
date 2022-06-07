@@ -10,6 +10,7 @@ import { CollectionFloorSellEventsDataSource } from "@/jobs/data-export/data-sou
 import { idb } from "@/common/db";
 import { randomUUID } from "crypto";
 import AWS from "aws-sdk";
+import { OrdersDataSource } from "@/jobs/data-export/data-sources/orders";
 
 const QUEUE_NAME = "export-data-queue";
 const QUERY_LIMIT = 1000;
@@ -32,6 +33,8 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { kind, backfill } = job.data;
+
+      logger.info(QUEUE_NAME, `Export started. kind:${kind}, backfill:${backfill}`);
 
       try {
         const { cursor, sequenceNumber } = await getCursorAndSequenceNumber(kind);
@@ -71,6 +74,7 @@ export enum DataSourceKind {
   orderEvents = "order-events",
   tokenFloorSellEvents = "token-floor-sell-events",
   collectionFloorSellEvents = "collection-floor-sell-events",
+  orders = "orders",
 }
 
 export const addToQueue = async (kind: DataSourceKind, backfill = false) => {
@@ -92,7 +96,8 @@ const setCursorAndSequenceNumber = async (kind: DataSourceKind, cursor: string |
   const query = `
           UPDATE data_export_tasks
           SET cursor = $/cursor/,
-              sequence_number = sequence_number + 1  
+              sequence_number = sequence_number + 1,
+              updated_at = now()
           WHERE source = $/kind/
         `;
 
@@ -110,6 +115,8 @@ const getDataSource = (kind: DataSourceKind) => {
       return new TokenFloorSellEventsDataSource();
     case DataSourceKind.collectionFloorSellEvents:
       return new CollectionFloorSellEventsDataSource();
+    case DataSourceKind.orders:
+      return new OrdersDataSource();
   }
 
   throw new Error(`Unsupported data source ${kind}`);
