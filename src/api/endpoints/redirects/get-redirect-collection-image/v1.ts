@@ -36,7 +36,7 @@ export const getRedirectCollectionImageV1Options: RouteOptions = {
   handler: async (request: Request, response) => {
     const params = request.params as any;
     try {
-      const collection = await Collections.getById(params.collection);
+      const collection = await Collections.getById(params.collection, true);
 
       if (_.isNull(collection)) {
         throw Boom.badData(`Collection ${params.collection} not found`);
