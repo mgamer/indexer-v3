@@ -63,6 +63,7 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       erc721.approvalForAll,
       erc1155.transferSingle,
       erc1155.transferBatch,
+      weth.approval,
       weth.transfer,
       weth.deposit,
       weth.withdrawal,
