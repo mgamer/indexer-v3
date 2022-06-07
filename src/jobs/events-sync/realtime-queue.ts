@@ -50,7 +50,10 @@ if (config.doBackgroundWork) {
         }
 
         const fromBlock = Math.max(localBlock, headBlock - maxBlocks + 1);
-        logger.info(QUEUE_NAME, `Events realtime syncing block range [${fromBlock}, ${headBlock}]`);
+        logger.info(
+          QUEUE_NAME,
+          `Events-v2 realtime syncing block range [${fromBlock}, ${headBlock}]`
+        );
 
         await syncEvents(fromBlock, headBlock);
 
