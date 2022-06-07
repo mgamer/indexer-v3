@@ -466,7 +466,7 @@ export const syncEvents = async (
                 },
                 data: {
                   kind: "buy-approval",
-                  contract: baseEventParams.address,
+                  contract: Sdk.Common.Addresses.Weth[config.chainId],
                   operator: spender,
                 },
               });
@@ -662,7 +662,7 @@ export const syncEvents = async (
                   },
                   data: {
                     kind: "buy-approval",
-                    contract: baseEventParams.address,
+                    contract: Sdk.Common.Addresses.Weth[config.chainId],
                     orderKind: "x2y2",
                   },
                 });
@@ -893,7 +893,7 @@ export const syncEvents = async (
                   },
                   data: {
                     kind: "buy-approval",
-                    contract: baseEventParams.address,
+                    contract: Sdk.Common.Addresses.Weth[config.chainId],
                     orderKind: "looks-rare",
                   },
                 });
@@ -982,7 +982,7 @@ export const syncEvents = async (
                   },
                   data: {
                     kind: "buy-approval",
-                    contract: baseEventParams.address,
+                    contract: Sdk.Common.Addresses.Weth[config.chainId],
                     orderKind: "looks-rare",
                   },
                 });
@@ -1142,7 +1142,7 @@ export const syncEvents = async (
                     },
                     data: {
                       kind: "buy-approval",
-                      contract: baseEventParams.address,
+                      contract: Sdk.Common.Addresses.Weth[config.chainId],
                       orderKind,
                     },
                   });
@@ -1379,7 +1379,7 @@ export const syncEvents = async (
                   },
                   data: {
                     kind: "buy-approval",
-                    contract: baseEventParams.address,
+                    contract: Sdk.Common.Addresses.Weth[config.chainId],
                     orderKind: orderKind,
                   },
                 });
@@ -1503,7 +1503,7 @@ export const syncEvents = async (
                   },
                   data: {
                     kind: "buy-approval",
-                    contract: baseEventParams.address,
+                    contract: Sdk.Common.Addresses.Weth[config.chainId],
                     orderKind: orderKind,
                   },
                 });
