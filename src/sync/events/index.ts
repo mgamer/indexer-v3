@@ -470,6 +470,10 @@ export const syncEvents = async (
                   operator: spender,
                 },
               });
+              logger.info(
+                "debug",
+                `Here 1.5: ${JSON.stringify(makerInfos[makerInfos.length - 1])}`
+              );
 
               break;
             }
