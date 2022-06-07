@@ -153,7 +153,7 @@ if (config.doBackgroundWork) {
                 await fetchAndUpdateFtApproval(contract, maker, operator);
 
                 // Validate or invalidate orders based on the refreshed approval
-                await idb.none(
+                const result = await idb.manyOrNone(
                   `
                     WITH
                       x AS (
@@ -180,7 +180,7 @@ if (config.doBackgroundWork) {
                           WHEN orders.price > y.value THEN 'no-approval'
                           ELSE 'approved'
                         END
-                      )
+                      )::order_approval_status_t
                     FROM x LEFT JOIN y ON TRUE
                     WHERE orders.id = x.id
                       AND orders.approval_status != (
@@ -188,13 +188,23 @@ if (config.doBackgroundWork) {
                           WHEN orders.price > y.value THEN 'no-approval'
                           ELSE 'approved'
                         END
-                      )
+                      )::order_approval_status_t
+                    RETURNING orders.id
                   `,
                   {
                     token: toBuffer(contract),
                     maker: toBuffer(maker),
                     conduit: toBuffer(operator),
                   }
+                );
+
+                // Re-check all affected orders
+                await orderUpdatesById.addToQueue(
+                  result.map(({ id }) => ({
+                    context: `${context}-${id}`,
+                    id,
+                    trigger,
+                  }))
                 );
               }
             } else if (orderKind) {
