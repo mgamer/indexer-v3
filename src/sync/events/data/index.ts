@@ -21,6 +21,7 @@ export type EventDataKind =
   | "erc1155-transfer-single"
   | "erc1155-transfer-batch"
   | "erc721/1155-approval-for-all"
+  | "erc20-approval"
   | "erc20-transfer"
   | "weth-deposit"
   | "weth-withdrawal"
@@ -93,7 +94,7 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       eventDataKinds
         .map(internalGetEventData)
         .filter(Boolean)
-        // Force TS to remove `undefined`.
+        // Force TS to remove `undefined`
         .map((x) => x!)
     );
   }
@@ -109,6 +110,8 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return erc1155.transferBatch;
     case "erc1155-transfer-single":
       return erc1155.transferSingle;
+    case "erc20-approval":
+      return weth.approval;
     case "erc20-transfer":
       return weth.transfer;
     case "weth-deposit":

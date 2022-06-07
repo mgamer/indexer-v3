@@ -45,15 +45,14 @@ export const getBlocks = async (number: number): Promise<Block[]> =>
     .manyOrNone(
       `
         SELECT
-          blocks.hash,
-          blocks.number
+          blocks.hash
         FROM blocks
         WHERE blocks.number = $/number/
       `,
       { number }
     )
     .then((result) =>
-      result.map(({ hash, number }) => ({
+      result.map(({ hash }) => ({
         hash: fromBuffer(hash),
         number,
       }))

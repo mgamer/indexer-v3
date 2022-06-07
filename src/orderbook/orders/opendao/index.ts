@@ -96,7 +96,6 @@ export const save = async (
               AND orders.maker = $/maker/
               AND orders.nonce = $/nonce/
               AND orders.contract = $/contract/
-              AND orders.contract IS NOT NULL
           `,
           {
             maker: toBuffer(order.params.maker),
@@ -359,6 +358,7 @@ export const save = async (
         source_id_int: sourceId,
         is_reservoir: isReservoir ? isReservoir : null,
         contract: toBuffer(order.params.nft),
+        conduit: toBuffer(Sdk.OpenDao.Addresses.Exchange[config.chainId]),
         fee_bps: feeBps.toNumber(),
         fee_breakdown: feeBreakdown || null,
         dynamic: null,
@@ -409,6 +409,7 @@ export const save = async (
         "source_id_int",
         "is_reservoir",
         "contract",
+        "conduit",
         "fee_bps",
         { name: "fee_breakdown", mod: ":json" },
         "dynamic",
