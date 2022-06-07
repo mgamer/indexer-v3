@@ -9,6 +9,10 @@ import { Sources } from "@/models/sources";
 const version = "v2";
 
 export const getRedirectTokenV2Options: RouteOptions = {
+  cache: {
+    privacy: "public",
+    expiresIn: 60000,
+  },
   description: "Redirect response to the given source token page",
   tags: ["api", "5. Redirects"],
   plugins: {

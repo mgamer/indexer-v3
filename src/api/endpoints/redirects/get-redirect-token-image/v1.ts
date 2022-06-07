@@ -11,6 +11,10 @@ import * as Boom from "@hapi/boom";
 const version = "v1";
 
 export const getRedirectTokenImageV1Options: RouteOptions = {
+  cache: {
+    privacy: "public",
+    expiresIn: 60000,
+  },
   description: "Redirect response to the given token image",
   tags: ["api", "5. Redirects"],
   plugins: {
@@ -33,7 +37,7 @@ export const getRedirectTokenImageV1Options: RouteOptions = {
     const params = request.params as any;
     try {
       const [contract, tokenId] = params.token.split(":");
-      const token = await Tokens.getByContractAndTokenId(contract, tokenId);
+      const token = await Tokens.getByContractAndTokenId(contract, tokenId, true);
 
       if (_.isNull(token)) {
         throw Boom.badData(`Token ${params.token} not found`);
