@@ -3,7 +3,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, toBuffer } from "@/common/utils";
 
@@ -73,7 +73,7 @@ export const getTokensFloorV1Options: RouteOptions = {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
 
-      const result = await edb
+      const result = await redb
         .manyOrNone(baseQuery, query)
         .then((result) =>
           Object.fromEntries(result.map((r) => [r.token_id, formatEth(r.floor_sell_value)]))
