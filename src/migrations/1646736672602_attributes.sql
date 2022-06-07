@@ -38,10 +38,10 @@ CREATE TABLE "attributes" (
   "top_buy_value" NUMERIC(78, 0),
   "sell_updated_at" TIMESTAMPTZ,
   "buy_updated_at" TIMESTAMPTZ,
-  "collection_id" TEXT NOT NULL,
-  "kind" "attribute_key_kind_t" NOT NULL,
-  "key" TEXT NOT NULL,
-  "sample_images" TEXT[]
+  "sample_images" TEXT[],
+  "collection_id" TEXT,
+  "kind" "attribute_key_kind_t",
+  "key" TEXT
 );
 
 CREATE UNIQUE INDEX "attributes_attribute_key_id_value_unique_index"
@@ -53,8 +53,11 @@ CREATE INDEX "attributes_collection_id_floor_sell_value_index"
 CREATE INDEX "attributes_collection_id_top_buy_value_index"
   ON "attributes" ("collection_id" ASC NULLS LAST, "top_buy_value" DESC NULLS LAST);
 
-  CREATE INDEX attributes_key_collection_id_floor_sell_value_index
-    ON attributes (key ASC NULLS LAST, collection_id ASC NULLS LAST, floor_sell_value DESC NULLS LAST);
+CREATE INDEX attributes_key_collection_id_floor_sell_value_index
+  ON attributes (key ASC NULLS LAST, collection_id ASC NULLS LAST, floor_sell_value DESC NULLS LAST);
+
+CREATE INDEX attributes_kind_collection_id_index
+  ON attributes (kind, collection_id ASC NULLS LAST);
 
 ALTER TABLE "attributes"
   ADD CONSTRAINT "attributes_pk"
