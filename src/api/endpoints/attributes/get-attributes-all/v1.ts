@@ -3,7 +3,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 
 const version = "v1";
@@ -64,7 +64,7 @@ export const getAttributesAllV1Options: RouteOptions = {
         ORDER BY "ak"."rank" DESC
       `;
 
-      const result = await edb.manyOrNone(baseQuery, params).then((result) =>
+      const result = await redb.manyOrNone(baseQuery, params).then((result) =>
         result.map((r) => ({
           key: r.key,
           kind: r.kind,
