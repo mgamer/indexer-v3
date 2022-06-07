@@ -3,7 +3,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
   base64Regex,
@@ -160,7 +160,7 @@ export const getTokensFloorAskV1Options: RouteOptions = {
       // Pagination
       baseQuery += ` LIMIT $/limit/`;
 
-      const rawResult = await edb.manyOrNone(baseQuery, query);
+      const rawResult = await redb.manyOrNone(baseQuery, query);
 
       let continuation = null;
       if (rawResult.length === query.limit) {
