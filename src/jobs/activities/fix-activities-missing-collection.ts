@@ -30,8 +30,9 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { contract, tokenId, retry } = job.data;
-
       const token = await Tokens.getByContractAndTokenId(contract, tokenId);
+
+      job.data.addToQueue = false;
 
       if (token?.collectionId) {
         // Update the collection id of any missing activities
