@@ -63,7 +63,7 @@ if (config.doBackgroundWork) {
 }
 
 export const addToQueue = async (contract: string, tokenId: string, retry = 0) => {
-  const jobId = `${contract}:${tokenId}:${retry}`;
+  const jobId = `${contract}:${tokenId}`;
   const delay = retry ? retry ** 2 * 300 * 1000 : 0;
 
   await queue.add(
