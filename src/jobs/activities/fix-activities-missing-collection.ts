@@ -51,8 +51,6 @@ if (config.doBackgroundWork) {
 
   worker.on("completed", async (job) => {
     if (job.data.addToQueue) {
-      logger.info(QUEUE_NAME, `Retrying ${JSON.stringify(job.data)}`);
-
       const retry = job.data.retry + 1;
       await addToQueue(job.data.contract, job.data.tokenId, retry);
     }
