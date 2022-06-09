@@ -27,7 +27,6 @@ export const splitContinuation = (cont: string, regEx: RegExp) => {
 
   // If it matches a base64 string, it might be really base64, we don't know until we decode
   if (cont.match(base64Regex)) {
-    //console.log("match");
     const decoded = Buffer.from(cont, "base64").toString("ascii");
     if (decoded.match(regEx)) {
       return decoded.split("_");

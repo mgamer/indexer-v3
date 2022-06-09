@@ -50,6 +50,7 @@ CREATE TABLE "orders" (
   "source_id" BYTEA,
   "source_id_int" INT,
   "contract" BYTEA,
+  "conduit" BYTEA,
   "fee_bps" INT,
   "fee_breakdown" JSONB,
   "dynamic" BOOLEAN,
@@ -79,10 +80,8 @@ CREATE INDEX "orders_upper_valid_between_index"
   INCLUDE ("id")
   WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
 
--- Potentially merge the two next indexes below.
-
-CREATE INDEX "orders_kind_maker_nonce_index"
-  ON "orders" ("kind", "maker", "nonce")
+CREATE INDEX "orders_conduit_index"
+  ON "orders" ("maker", "side", "conduit")
   WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
 
 CREATE INDEX "orders_kind_maker_nonce_full_index"

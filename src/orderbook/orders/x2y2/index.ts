@@ -145,6 +145,13 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle: fees
       const feeBps = 50;
+      const feeBreakdown = [
+        {
+          kind: "royalty",
+          recipient: Sdk.X2Y2.Addresses.FeeManager[config.chainId],
+          bps: feeBps,
+        },
+      ];
 
       // Handle: price and value
       const price = bn(order.params.price);
@@ -159,13 +166,15 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       // Handle: native Reservoir orders
       const isReservoir = false;
 
-      const feeBreakdown = [
-        {
-          kind: "royalty",
-          recipient: Sdk.X2Y2.Addresses.FeeManager[config.chainId],
-          bps: feeBps,
-        },
-      ];
+      // Handle: conduit
+      let conduit = Sdk.X2Y2.Addresses.Exchange[config.chainId];
+      if (order.params.type === "sell") {
+        const contractKind = await commonHelpers.getContractKind(order.params.nft.token);
+        conduit =
+          contractKind === "erc721"
+            ? Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]
+            : Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId];
+      }
 
       const validFrom = `date_trunc('seconds', to_timestamp(0))`;
       const validTo = `date_trunc('seconds', to_timestamp(${order.params.deadline}))`;
@@ -188,6 +197,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         source_id_int: sourceId,
         is_reservoir: isReservoir ? isReservoir : null,
         contract: toBuffer(order.params.nft.token),
+        conduit: toBuffer(conduit),
         fee_bps: feeBps,
         fee_breakdown: feeBreakdown || null,
         dynamic: null,
@@ -234,6 +244,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         "source_id_int",
         "is_reservoir",
         "contract",
+        "conduit",
         "fee_bps",
         { name: "fee_breakdown", mod: ":json" },
         "dynamic",

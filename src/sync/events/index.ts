@@ -127,6 +127,20 @@ export const syncEvents = async (
         logIndex: number;
       }[] = [];
 
+      const currentTxHasWethTransfer = () => {
+        for (const event of currentTxEvents.slice(0, -1).reverse()) {
+          const erc20EventData = getEventData(["erc20-transfer"])[0];
+          if (
+            event.log.topics[0] === erc20EventData.topic &&
+            event.log.topics.length === erc20EventData.numTopics &&
+            erc20EventData.addresses?.[event.log.address.toLowerCase()]
+          ) {
+            return true;
+          }
+        }
+        return false;
+      };
+
       for (const log of logs) {
         try {
           const baseEventParams = parseEvent(log, blockRange);
@@ -433,6 +447,32 @@ export const syncEvents = async (
               break;
             }
 
+            case "erc20-approval": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const owner = parsedLog.args["owner"].toLowerCase();
+              const spender = parsedLog.args["spender"].toLowerCase();
+
+              // Make sure to only handle the same data once per transaction
+              const contextPrefix = `${baseEventParams.txHash}-${baseEventParams.address}`;
+
+              makerInfos.push({
+                context: `${contextPrefix}-${owner}-${spender}-buy-approval`,
+                maker: owner,
+                trigger: {
+                  kind: "approval-change",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+                data: {
+                  kind: "buy-approval",
+                  contract: Sdk.Common.Addresses.Weth[config.chainId],
+                  operator: spender,
+                },
+              });
+
+              break;
+            }
+
             // Weth
 
             case "weth-deposit": {
@@ -605,6 +645,23 @@ export const syncEvents = async (
                   txTimestamp: baseEventParams.timestamp,
                 },
               });
+
+              if (currentTxHasWethTransfer()) {
+                makerInfos.push({
+                  context: `${baseEventParams.txHash}-buy-approval`,
+                  maker,
+                  trigger: {
+                    kind: "approval-change",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
+                  data: {
+                    kind: "buy-approval",
+                    contract: Sdk.Common.Addresses.Weth[config.chainId],
+                    orderKind: "x2y2",
+                  },
+                });
+              }
 
               break;
             }
@@ -820,6 +877,23 @@ export const syncEvents = async (
                 timestamp: baseEventParams.timestamp,
               });
 
+              if (currentTxHasWethTransfer()) {
+                makerInfos.push({
+                  context: `${baseEventParams.txHash}-buy-approval`,
+                  maker,
+                  trigger: {
+                    kind: "approval-change",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
+                  data: {
+                    kind: "buy-approval",
+                    contract: Sdk.Common.Addresses.Weth[config.chainId],
+                    orderKind: "looks-rare",
+                  },
+                });
+              }
+
               break;
             }
 
@@ -891,6 +965,23 @@ export const syncEvents = async (
                 price,
                 timestamp: baseEventParams.timestamp,
               });
+
+              if (currentTxHasWethTransfer()) {
+                makerInfos.push({
+                  context: `${baseEventParams.txHash}-buy-approval`,
+                  maker,
+                  trigger: {
+                    kind: "approval-change",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
+                  data: {
+                    kind: "buy-approval",
+                    contract: Sdk.Common.Addresses.Weth[config.chainId],
+                    orderKind: "looks-rare",
+                  },
+                });
+              }
 
               break;
             }
@@ -1034,6 +1125,23 @@ export const syncEvents = async (
                   price,
                   timestamp: baseEventParams.timestamp,
                 });
+
+                if (currentTxHasWethTransfer()) {
+                  makerInfos.push({
+                    context: `${baseEventParams.txHash}-buy-approval`,
+                    maker,
+                    trigger: {
+                      kind: "approval-change",
+                      txHash: baseEventParams.txHash,
+                      txTimestamp: baseEventParams.timestamp,
+                    },
+                    data: {
+                      kind: "buy-approval",
+                      contract: Sdk.Common.Addresses.Weth[config.chainId],
+                      orderKind,
+                    },
+                  });
+                }
               }
               if (sellOrderId !== HashZero) {
                 fillEvents.push({
@@ -1193,7 +1301,6 @@ export const syncEvents = async (
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
                         AND orders.contract = $/contract/
-                        AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
                       LIMIT 1
                     `,
                     {
@@ -1256,6 +1363,23 @@ export const syncEvents = async (
                 timestamp: baseEventParams.timestamp,
               });
 
+              if (currentTxHasWethTransfer()) {
+                makerInfos.push({
+                  context: `${baseEventParams.txHash}-buy-approval`,
+                  maker,
+                  trigger: {
+                    kind: "approval-change",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
+                  data: {
+                    kind: "buy-approval",
+                    contract: Sdk.Common.Addresses.Weth[config.chainId],
+                    orderKind: orderKind,
+                  },
+                });
+              }
+
               break;
             }
 
@@ -1308,7 +1432,7 @@ export const syncEvents = async (
                       WHERE orders.kind = '${orderKind}'
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
-                        AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                        AND orders.contract IS NOT NULL
                       LIMIT 1
                     `,
                     {
@@ -1362,6 +1486,23 @@ export const syncEvents = async (
                 price: value,
                 timestamp: baseEventParams.timestamp,
               });
+
+              if (currentTxHasWethTransfer()) {
+                makerInfos.push({
+                  context: `${baseEventParams.txHash}-buy-approval`,
+                  maker,
+                  trigger: {
+                    kind: "approval-change",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
+                  data: {
+                    kind: "buy-approval",
+                    contract: Sdk.Common.Addresses.Weth[config.chainId],
+                    orderKind: orderKind,
+                  },
+                });
+              }
 
               break;
             }

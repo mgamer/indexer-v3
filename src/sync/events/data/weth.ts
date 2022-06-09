@@ -18,6 +18,20 @@ export const transfer: EventData = {
   ]),
 };
 
+export const approval: EventData = {
+  kind: "erc20-approval",
+  addresses: { [Common.Addresses.Weth[config.chainId]?.toLowerCase()]: true },
+  topic: "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925",
+  numTopics: 3,
+  abi: new Interface([
+    `event Approval(
+      address indexed owner,
+      address indexed spender,
+      uint256 value
+    )`,
+  ]),
+};
+
 export const deposit: EventData = {
   kind: "weth-deposit",
   addresses: { [Common.Addresses.Weth[config.chainId]?.toLowerCase()]: true },
