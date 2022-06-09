@@ -41,6 +41,8 @@ if (config.doBackgroundWork) {
       const { id, trigger } = job.data as OrderInfo;
       let { side, tokenSetId } = job.data as OrderInfo;
 
+      logger.info(QUEUE_NAME, `Start to handle order info ${JSON.stringify(job.data)}`);
+
       try {
         let order;
 
@@ -55,7 +57,7 @@ if (config.doBackgroundWork) {
                 orders.source_id AS "sourceId",
                 orders.source_id_int AS "sourceIdInt",
                 orders.valid_between AS "validBetween",
-                COALESCE(quantity_remaining, 1) AS "quantityRemaining",
+                COALESCE(orders.quantity_remaining, 1) AS "quantityRemaining",
                 orders.maker,
                 orders.value,
                 orders.fillability_status AS "fillabilityStatus",
@@ -68,6 +70,11 @@ if (config.doBackgroundWork) {
               WHERE orders.id = $/id/
               LIMIT 1`,
             { id }
+          );
+
+          logger.info(
+            QUEUE_NAME,
+            `Found order for order info ${JSON.stringify(job.data)}: ${JSON.stringify(order)}`
           );
 
           side = order?.side;
