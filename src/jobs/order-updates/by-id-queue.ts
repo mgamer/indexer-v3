@@ -330,13 +330,12 @@ if (config.doBackgroundWork) {
               { tokenSetId }
             );
           }
-        }
 
-        if (order) {
-          if (order.side === "sell") {
-            // Insert a corresponding order event.
-            await idb.none(
-              `
+          if (order) {
+            if (order.side === "sell") {
+              // Insert a corresponding order event.
+              await idb.none(
+                `
                 INSERT INTO order_events (
                   kind,
                   status,
@@ -377,91 +376,92 @@ if (config.doBackgroundWork) {
                   $/txTimestamp/
                 ) 
               `,
-              {
-                fillabilityStatus: order.fillabilityStatus,
-                approvalStatus: order.approvalStatus,
-                contract: order.contract,
+                {
+                  fillabilityStatus: order.fillabilityStatus,
+                  approvalStatus: order.approvalStatus,
+                  contract: order.contract,
+                  tokenId: order.tokenId,
+                  id: order.id,
+                  sourceId: order.sourceId,
+                  sourceIdInt: order.sourceIdInt,
+                  validBetween: order.validBetween,
+                  quantityRemaining: order.quantityRemaining,
+                  maker: order.maker,
+                  value: order.value,
+                  kind: trigger.kind,
+                  txHash: trigger.txHash ? toBuffer(trigger.txHash) : null,
+                  txTimestamp: trigger.txTimestamp || null,
+                }
+              );
+
+              const updateFloorAskPriceInfo = {
+                contract: fromBuffer(order.contract),
                 tokenId: order.tokenId,
-                id: order.id,
-                sourceId: order.sourceId,
-                sourceIdInt: order.sourceIdInt,
-                validBetween: order.validBetween,
-                quantityRemaining: order.quantityRemaining,
-                maker: order.maker,
-                value: order.value,
-                kind: trigger.kind,
-                txHash: trigger.txHash ? toBuffer(trigger.txHash) : null,
-                txTimestamp: trigger.txTimestamp || null,
+                owner: fromBuffer(order.maker),
+              };
+
+              await updateNftBalanceFloorAskPriceQueue.addToQueue([updateFloorAskPriceInfo]);
+            }
+
+            let eventInfo;
+
+            if (trigger.kind == "cancel") {
+              const eventData = {
+                orderId: order.id,
+                contract: fromBuffer(order.contract),
+                tokenId: order.tokenId,
+                maker: fromBuffer(order.maker),
+                price: order.value,
+                amount: order.quantityRemaining,
+                transactionHash: trigger.txHash,
+                logIndex: trigger.logIndex,
+                batchIndex: trigger.batchIndex,
+                blockHash: trigger.blockHash,
+                timestamp: trigger.txTimestamp,
+              };
+
+              if (order.side === "sell") {
+                eventInfo = {
+                  kind: processActivityEvent.EventKind.sellOrderCancelled,
+                  data: eventData,
+                };
+              } else if (order.side === "buy") {
+                eventInfo = {
+                  kind: processActivityEvent.EventKind.buyOrderCancelled,
+                  data: eventData,
+                };
               }
-            );
-
-            const updateFloorAskPriceInfo = {
-              contract: fromBuffer(order.contract),
-              tokenId: order.tokenId,
-              owner: fromBuffer(order.maker),
-            };
-
-            await updateNftBalanceFloorAskPriceQueue.addToQueue([updateFloorAskPriceInfo]);
-          }
-
-          let eventInfo;
-
-          if (trigger.kind == "cancel") {
-            const eventData = {
-              orderId: order.id,
-              contract: fromBuffer(order.contract),
-              tokenId: order.tokenId,
-              maker: fromBuffer(order.maker),
-              price: order.value,
-              amount: order.quantityRemaining,
-              transactionHash: trigger.txHash,
-              logIndex: trigger.logIndex,
-              batchIndex: trigger.batchIndex,
-              blockHash: trigger.blockHash,
-              timestamp: trigger.txTimestamp,
-            };
-
-            if (order.side === "sell") {
-              eventInfo = {
-                kind: processActivityEvent.EventKind.sellOrderCancelled,
-                data: eventData,
+            } else if (
+              trigger.kind == "new-order" &&
+              order.fillabilityStatus == "fillable" &&
+              order.approvalStatus == "approved"
+            ) {
+              const eventData = {
+                orderId: order.id,
+                contract: fromBuffer(order.contract),
+                tokenId: order.tokenId,
+                maker: fromBuffer(order.maker),
+                price: order.value,
+                amount: order.quantityRemaining,
+                timestamp: Date.now() / 1000,
               };
-            } else if (order.side === "buy") {
-              eventInfo = {
-                kind: processActivityEvent.EventKind.buyOrderCancelled,
-                data: eventData,
-              };
+
+              if (order.side === "sell") {
+                eventInfo = {
+                  kind: processActivityEvent.EventKind.newSellOrder,
+                  data: eventData,
+                };
+              } else if (order.side === "buy") {
+                eventInfo = {
+                  kind: processActivityEvent.EventKind.newBuyOrder,
+                  data: eventData,
+                };
+              }
             }
-          } else if (
-            trigger.kind == "new-order" &&
-            order.fillabilityStatus == "fillable" &&
-            order.approvalStatus == "approved"
-          ) {
-            const eventData = {
-              orderId: order.id,
-              contract: fromBuffer(order.contract),
-              tokenId: order.tokenId,
-              maker: fromBuffer(order.maker),
-              price: order.value,
-              amount: order.quantityRemaining,
-              timestamp: Date.now() / 1000,
-            };
 
-            if (order.side === "sell") {
-              eventInfo = {
-                kind: processActivityEvent.EventKind.newSellOrder,
-                data: eventData,
-              };
-            } else if (order.side === "buy") {
-              eventInfo = {
-                kind: processActivityEvent.EventKind.newBuyOrder,
-                data: eventData,
-              };
+            if (eventInfo) {
+              await processActivityEvent.addToQueue([eventInfo as processActivityEvent.EventInfo]);
             }
-          }
-
-          if (eventInfo) {
-            await processActivityEvent.addToQueue([eventInfo as processActivityEvent.EventInfo]);
           }
         }
       } catch (error) {
