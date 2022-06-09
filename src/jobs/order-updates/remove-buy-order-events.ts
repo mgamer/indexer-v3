@@ -33,25 +33,30 @@ if (config.doBackgroundWork) {
       let continuationFilter = "";
 
       if (cursor) {
-        continuationFilter = `AND id > '${cursor.id}'`;
+        continuationFilter = `AND (created_at, id) < (to_timestamp($/createdAt/), $/id/)`;
       }
 
       const buyOrders = await idb.manyOrNone(
         `
-              SELECT id
+              SELECT extract(epoch from created_at) created_at, id
               FROM orders
               WHERE side = 'buy'
               ${continuationFilter}
-              ORDER BY id
-              LIMIT ${limit};
-          `
+              ORDER BY created_at DESC,id DESC
+              LIMIT $/limit/;
+          `,
+        {
+          createdAt: cursor?.createdAt,
+          id: cursor?.id,
+          limit,
+        }
       );
 
       if (buyOrders?.length > 0) {
         await idb.none(
           `
             DELETE from order_events
-            WHERE order_events.order_id IN ($/tokenSetIds/)
+            WHERE order_events.order_id IN ($/orderIds/)
           `,
           {
             orderIds: buyOrders.map((o) => o.id).join(","),
@@ -63,6 +68,7 @@ if (config.doBackgroundWork) {
 
           const nextCursor = {
             id: lastBuyOrder.id,
+            createdAt: lastBuyOrder.created_at,
           };
 
           logger.info(
@@ -93,6 +99,7 @@ if (config.doBackgroundWork) {
 
 export type CursorInfo = {
   id: string;
+  createdAt: string;
 };
 
 export const addToQueue = async (cursor?: CursorInfo) => {
