@@ -16,4 +16,4 @@ changelog:
         - hotfix
     - title: Misc
       labels:
-        - "*""
+        - "*"
