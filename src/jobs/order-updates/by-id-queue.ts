@@ -38,39 +38,43 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { id, side, tokenSetId, trigger } = job.data as OrderInfo;
+      const { id, trigger } = job.data as OrderInfo;
+      let { side, tokenSetId } = job.data as OrderInfo;
 
       try {
-        // Fetch the order's associated token set
-        const data: {
-          side: string | null;
-          token_set_id: string | null;
-          fillability_status: string | null;
-          approval_status: string | null;
-        } | null = id
-          ? await idb.oneOrNone(
-              `
-                SELECT
-                  "o"."side",
-                  "o"."token_set_id",
-                  "o"."fillability_status",
-                  "o"."approval_status"
-                FROM "orders" "o"
-                WHERE "o"."id" = $/id/
-              `,
-              { id }
-            )
-          : {
-              side: side!,
-              token_set_id: tokenSetId!,
-              fillability_status: null,
-              approval_status: null,
-            };
+        let order;
 
-        if (data && data.side && data.token_set_id) {
-          const side = data.side;
-          const tokenSetId = data.token_set_id;
+        if (id) {
+          // Fetch the order's associated data
+          order = await idb.oneOrNone(
+            `
+              SELECT
+                orders.id,
+                orders.side,
+                orders.token_set_id AS "tokenSetId",
+                orders.source_id AS "sourceId",
+                orders.source_id_int AS "sourceIdInt",
+                orders.valid_between AS "validBetween",
+                COALESCE(quantity_remaining, 1) AS "quantityRemaining",
+                orders.maker,
+                orders.value,
+                orders.fillability_status AS "fillabilityStatus",
+                orders.approval_status AS "approvalStatus",
+                token_sets_tokens.contract,
+                token_sets_tokens.token_id AS "tokenId"
+              FROM orders
+              JOIN token_sets_tokens
+                ON orders.token_set_id = token_sets_tokens.token_set_id
+              WHERE orders.id = $/id/
+              LIMIT 1`,
+            { id }
+          );
 
+          side = order?.side;
+          tokenSetId = order?.tokenSetId;
+        }
+
+        if (side && tokenSetId) {
           // Recompute `top_buy` for token sets that are not single token
           if (side === "buy" && !tokenSetId.startsWith("token")) {
             const buyOrderResult = await idb.manyOrNone(
@@ -118,7 +122,7 @@ if (config.doBackgroundWork) {
           // TODO: Research if splitting the single token updates in multiple
           // batches is needed (eg. to avoid blocking other running queries).
 
-          if (data.side === "sell") {
+          if (side === "sell") {
             // Atomically update the cache and trigger an api event if needed
             const sellOrderResult = await idb.oneOrNone(
               `
@@ -260,7 +264,7 @@ if (config.doBackgroundWork) {
                 : null;
               await collectionUpdatesFloorAsk.addToQueue([sellOrderResult]);
             }
-          } else if (data.side === "buy") {
+          } else if (side === "buy") {
             // TODO: Use keyset pagination (via multiple jobs) to handle token
             // cache updates in batches - only relevant for orders that are on
             // token sets with lots of tokens (eg. contract, range, list). The
@@ -319,10 +323,12 @@ if (config.doBackgroundWork) {
               { tokenSetId }
             );
           }
+        }
 
-          if (id) {
+        if (order) {
+          if (order.side === "sell") {
             // Insert a corresponding order event.
-            const orderEventResult = await idb.oneOrNone(
+            await idb.none(
               `
                 INSERT INTO order_events (
                   kind,
@@ -338,123 +344,117 @@ if (config.doBackgroundWork) {
                   price,
                   tx_hash,
                   tx_timestamp
-                ) (
-                  SELECT
-                    $/kind/,
-                    (
-                      CASE
-                        WHEN orders.fillability_status = 'filled' THEN 'filled'
-                        WHEN orders.fillability_status = 'cancelled' THEN 'cancelled'
-                        WHEN orders.fillability_status = 'expired' THEN 'expired'
-                        WHEN orders.fillability_status = 'no-balance' THEN 'inactive'
-                        WHEN orders.approval_status = 'no-approval' THEN 'inactive'
-                        ELSE 'active'
-                      END
-                    )::order_event_status_t,
-                    token_sets_tokens.contract,
-                    token_sets_tokens.token_id,
-                    orders.id,
-                    orders.source_id,
-                    orders.source_id_int,
-                    orders.valid_between,
-                    orders.quantity_remaining,
-                    orders.maker,
-                    orders.value,
-                    $/txHash/,
-                    $/txTimestamp/
-                  FROM orders
-                  JOIN token_sets_tokens
-                    ON orders.token_set_id = token_sets_tokens.token_set_id
-                  WHERE orders.id = $/id/
-                  LIMIT 1
                 )
-                RETURNING
-                  contract,
-                  token_id,
-                  maker,
-                  price,
-                  COALESCE(order_quantity_remaining, 1) AS amount,
-                  extract(epoch from order_events.created_at) AS timestamp
+                VALUES (
+                  $/kind/,
+                  (
+                    CASE
+                      WHEN $/fillabilityStatus/ = 'filled' THEN 'filled'
+                      WHEN $/fillabilityStatus/ = 'cancelled' THEN 'cancelled'
+                      WHEN $/fillabilityStatus/ = 'expired' THEN 'expired'
+                      WHEN $/fillabilityStatus/ = 'no-balance' THEN 'inactive'
+                      WHEN $/approvalStatus/ = 'no-approval' THEN 'inactive'
+                      ELSE 'active'
+                    END
+                  )::order_event_status_t,
+                  $/contract/,
+                  $/tokenId/,
+                  $/id/,
+                  $/sourceId/,
+                  $/sourceIdInt/,
+                  $/validBetween/,
+                  $/quantityRemaining/,
+                  $/maker/,
+                  $/value/,
+                  $/txHash/,
+                  $/txTimestamp/
+                ) 
               `,
               {
-                id,
+                fillabilityStatus: order.fillabilityStatus,
+                approvalStatus: order.approvalStatus,
+                contract: order.contract,
+                tokenId: order.tokenId,
+                id: order.id,
+                sourceId: order.sourceId,
+                sourceIdInt: order.sourceIdInt,
+                validBetween: order.validBetween,
+                quantityRemaining: order.quantityRemaining,
+                maker: order.maker,
+                value: order.value,
                 kind: trigger.kind,
                 txHash: trigger.txHash ? toBuffer(trigger.txHash) : null,
                 txTimestamp: trigger.txTimestamp || null,
               }
             );
 
-            if (data.side === "sell") {
-              const updateFloorAskPriceInfo = {
-                contract: fromBuffer(orderEventResult.contract),
-                tokenId: orderEventResult.token_id,
-                owner: fromBuffer(orderEventResult.maker),
+            const updateFloorAskPriceInfo = {
+              contract: fromBuffer(order.contract),
+              tokenId: order.tokenId,
+              owner: fromBuffer(order.maker),
+            };
+
+            await updateNftBalanceFloorAskPriceQueue.addToQueue([updateFloorAskPriceInfo]);
+          }
+
+          let eventInfo;
+
+          if (trigger.kind == "cancel") {
+            const eventData = {
+              orderId: order.id,
+              contract: fromBuffer(order.contract),
+              tokenId: order.tokenId,
+              maker: fromBuffer(order.maker),
+              price: order.value,
+              amount: order.quantityRemaining,
+              transactionHash: trigger.txHash,
+              logIndex: trigger.logIndex,
+              batchIndex: trigger.batchIndex,
+              blockHash: trigger.blockHash,
+              timestamp: trigger.txTimestamp,
+            };
+
+            if (order.side === "sell") {
+              eventInfo = {
+                kind: processActivityEvent.EventKind.sellOrderCancelled,
+                data: eventData,
               };
-
-              await updateNftBalanceFloorAskPriceQueue.addToQueue([updateFloorAskPriceInfo]);
-            }
-
-            let eventInfo;
-
-            if (trigger.kind == "cancel") {
-              const eventData = {
-                orderId: id,
-                contract: fromBuffer(orderEventResult.contract),
-                tokenId: orderEventResult.token_id,
-                maker: fromBuffer(orderEventResult.maker),
-                price: orderEventResult.price,
-                amount: orderEventResult.amount,
-                transactionHash: trigger.txHash,
-                logIndex: trigger.logIndex,
-                batchIndex: trigger.batchIndex,
-                blockHash: trigger.blockHash,
-                timestamp: trigger.txTimestamp,
+            } else if (order.side === "buy") {
+              eventInfo = {
+                kind: processActivityEvent.EventKind.buyOrderCancelled,
+                data: eventData,
               };
-
-              if (data.side === "sell") {
-                eventInfo = {
-                  kind: processActivityEvent.EventKind.sellOrderCancelled,
-                  data: eventData,
-                };
-              } else if (data.side === "buy") {
-                eventInfo = {
-                  kind: processActivityEvent.EventKind.buyOrderCancelled,
-                  data: eventData,
-                };
-              }
             }
+          } else if (
+            trigger.kind == "new-order" &&
+            order.fillabilityStatus == "fillable" &&
+            order.approvalStatus == "approved"
+          ) {
+            const eventData = {
+              orderId: order.id,
+              contract: fromBuffer(order.contract),
+              tokenId: order.tokenId,
+              maker: fromBuffer(order.maker),
+              price: order.value,
+              amount: order.quantityRemaining,
+              timestamp: Date.now() / 1000,
+            };
 
-            if (
-              trigger.kind == "new-order" &&
-              data.fillability_status == "fillable" &&
-              data.approval_status == "approved"
-            ) {
-              const eventData = {
-                orderId: id,
-                contract: fromBuffer(orderEventResult.contract),
-                tokenId: orderEventResult.token_id,
-                maker: fromBuffer(orderEventResult.maker),
-                price: orderEventResult.price,
-                amount: orderEventResult.amount,
-                timestamp: orderEventResult.timestamp,
+            if (order.side === "sell") {
+              eventInfo = {
+                kind: processActivityEvent.EventKind.newSellOrder,
+                data: eventData,
               };
-
-              if (data.side === "sell") {
-                eventInfo = {
-                  kind: processActivityEvent.EventKind.newSellOrder,
-                  data: eventData,
-                };
-              } else if (data.side === "buy") {
-                eventInfo = {
-                  kind: processActivityEvent.EventKind.newBuyOrder,
-                  data: eventData,
-                };
-              }
+            } else if (order.side === "buy") {
+              eventInfo = {
+                kind: processActivityEvent.EventKind.newBuyOrder,
+                data: eventData,
+              };
             }
+          }
 
-            if (eventInfo) {
-              await processActivityEvent.addToQueue([eventInfo as processActivityEvent.EventInfo]);
-            }
+          if (eventInfo) {
+            await processActivityEvent.addToQueue([eventInfo as processActivityEvent.EventInfo]);
           }
         }
       } catch (error) {
@@ -465,7 +465,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 20 }
+    { connection: redis.duplicate(), concurrency: 15 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);

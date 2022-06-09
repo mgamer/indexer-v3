@@ -21,6 +21,7 @@ import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 
 import "@/jobs/order-updates/by-id-queue";
 import "@/jobs/order-updates/by-maker-queue";
+import "@/jobs/order-updates/remove-buy-order-events";
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
