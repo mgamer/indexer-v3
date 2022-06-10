@@ -24,7 +24,8 @@ CREATE TABLE "fill_events_2" (
   "contract" BYTEA NOT NULL,
   "token_id" NUMERIC(78, 0) NOT NULL,
   "amount" NUMERIC(78, 0) NOT NULL,
-  "fill_source" fill_source_t
+  "fill_source" fill_source_t,
+  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 ALTER TABLE "fill_events_2"
