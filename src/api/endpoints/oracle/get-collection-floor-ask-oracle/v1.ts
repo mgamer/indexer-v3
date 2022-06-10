@@ -33,6 +33,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .required(),
+      chainId: Joi.number().default(config.chainId).required(),
       kind: Joi.string().valid("spot", "twap", "lower", "upper").default("spot"),
     }),
   },
@@ -206,8 +207,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
           {
             name: query.contractName,
             version: String(query.contractVersion),
-            // TODO: Potentially allow any chain id
-            chainId: config.chainId,
+            chainId: query.chainId,
             verifyingContract: query.verifyingContract,
           },
           {
