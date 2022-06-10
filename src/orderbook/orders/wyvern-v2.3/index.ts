@@ -17,7 +17,6 @@ import { Sources } from "@/models/sources";
 export type OrderInfo = {
   orderParams: Sdk.WyvernV23.Types.OrderParams;
   metadata: OrderMetadata;
-  logKey?: string;
 };
 
 type SaveResult = {

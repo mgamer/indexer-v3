@@ -115,7 +115,7 @@ export const syncEvents = async (
       const cancelEvents: es.cancels.Event[] = [];
       const cancelEventsFoundation: es.cancels.Event[] = [];
       const fillEvents: es.fills.Event[] = [];
-      const fillEventsZeroExV4: es.fills.Event[] = [];
+      const fillEventsPartial: es.fills.Event[] = [];
       const fillEventsFoundation: es.fills.Event[] = [];
       const foundationOrders: Foundation.OrderInfo[] = [];
 
@@ -1450,7 +1450,7 @@ export const syncEvents = async (
               }
 
               // Custom handling to support partial filling
-              fillEventsZeroExV4.push({
+              fillEventsPartial.push({
                 orderKind,
                 orderId,
                 orderSide: direction === 0 ? "sell" : "buy",
@@ -1506,6 +1506,97 @@ export const syncEvents = async (
 
               break;
             }
+
+            case "seaport-order-cancelled": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const orderId = parsedLog.args["orderHash"].toLowerCase();
+
+              cancelEvents.push({
+                orderKind: "seaport",
+                orderId,
+                baseEventParams,
+              });
+
+              orderInfos.push({
+                context: `cancelled-${orderId}`,
+                id: orderId,
+                trigger: {
+                  kind: "cancel",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                  logIndex: baseEventParams.logIndex,
+                  batchIndex: baseEventParams.batchIndex,
+                  blockHash: baseEventParams.blockHash,
+                },
+              });
+
+              break;
+            }
+
+            case "seaport-nonce-incremented": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const maker = parsedLog.args["oferrer"].toLowerCase();
+              const newNonce = parsedLog.args["newNonce"].toString();
+
+              bulkCancelEvents.push({
+                orderKind: "seaport",
+                maker,
+                minNonce: newNonce,
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "seaport-order-filled": {
+              const parsedLog = eventData.abi.parseLog(log);
+              // const orderId = parsedLog.args["orderHash"].toLowerCase();
+              const offer = parsedLog.args["offer"];
+              // const consideration = parsedLog.args["consideration"];
+
+              if (offer.length === 1) {
+                // const offerItem = offer[0];
+                // const considerationItem = consideration[0];
+                //   // Custom handling to support partial filling
+                //   fillEventsPartial.push({
+                //     orderKind: "seaport",
+                //     orderId,
+                //     orderSide: direction === 0 ? "sell" : "buy",
+                //     maker,
+                //     taker,
+                //     price: erc20FillAmount,
+                //     contract: erc1155Token,
+                //     tokenId: erc1155TokenId,
+                //     amount: erc1155FillAmount,
+                //     fillSource,
+                //     baseEventParams,
+                //   });
+                //   if (orderId) {
+                //     orderInfos.push({
+                //       context: `filled-${orderId}-${baseEventParams.txHash}`,
+                //       id: orderId,
+                //       trigger: {
+                //         kind: "sale",
+                //         txHash: baseEventParams.txHash,
+                //         txTimestamp: baseEventParams.timestamp,
+                //       },
+                //     });
+                //   }
+                //   fillInfos.push({
+                //     context: orderId || `${maker}-${nonce}`,
+                //     orderId: orderId,
+                //     orderSide: direction === 0 ? "sell" : "buy",
+                //     contract: erc1155Token,
+                //     tokenId: erc1155TokenId,
+                //     amount: erc1155FillAmount,
+                //     price: value,
+                //     timestamp: baseEventParams.timestamp,
+                //   });
+                // }
+              }
+
+              break;
+            }
           }
         } catch (error) {
           logger.info("sync-events", `Failed to handle events: ${error}`);
@@ -1516,7 +1607,7 @@ export const syncEvents = async (
       // WARNING! Ordering matters (fills should come in front of cancels).
       await Promise.all([
         es.fills.addEvents(fillEvents),
-        es.fills.addEventsZeroExV4(fillEventsZeroExV4),
+        es.fills.addEventsPartial(fillEventsPartial),
         es.fills.addEventsFoundation(fillEventsFoundation),
       ]);
 
@@ -1532,7 +1623,7 @@ export const syncEvents = async (
 
       // Add all the fill events to the activity queue
       const fillActivitiesInfo: processActivityEvent.EventInfo[] = _.map(
-        _.concat(fillEvents, fillEventsZeroExV4, fillEventsFoundation),
+        _.concat(fillEvents, fillEventsPartial, fillEventsFoundation),
         (event) => ({
           kind: processActivityEvent.EventKind.fillEvent,
           data: {

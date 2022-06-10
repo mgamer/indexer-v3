@@ -67,6 +67,16 @@ if (config.doBackgroundWork) {
             break;
           }
 
+          case "seaport": {
+            const result = await orders.seaport.save(
+              [info as orders.seaport.OrderInfo],
+              relayToArweave
+            );
+            logger.info(QUEUE_NAME, `[seaport] Order save result: ${JSON.stringify(result)}`);
+
+            break;
+          }
+
           case "wyvern-v2.3": {
             const result = await orders.wyvernV23.save(
               [info as orders.wyvernV23.OrderInfo],
@@ -147,6 +157,11 @@ export type GenericOrderInfo =
   | {
       kind: "x2y2";
       info: orders.x2y2.OrderInfo;
+      relayToArweave?: boolean;
+    }
+  | {
+      kind: "seaport";
+      info: orders.seaport.OrderInfo;
       relayToArweave?: boolean;
     };
 
