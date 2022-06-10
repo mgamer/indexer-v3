@@ -2,7 +2,7 @@
 
 import _ from "lodash";
 
-import { redb, idb } from "@/common/db";
+import { idb } from "@/common/db";
 import {
   AttributesEntity,
   AttributesEntityUpdateParams,
@@ -25,7 +25,7 @@ export class Attributes {
                    FROM attributes
                    WHERE id = $/attributeId/`;
 
-    const attribute = await redb.oneOrNone(query, {
+    const attribute = await idb.oneOrNone(query, {
       attributeId,
     });
 
@@ -41,7 +41,7 @@ export class Attributes {
                    FROM attributes
                    WHERE id IN ($/attributesId:raw/)`;
 
-    const attributes = await redb.manyOrNone(query, {
+    const attributes = await idb.manyOrNone(query, {
       attributesId: _.join(attributesId, ","),
     });
 
@@ -101,7 +101,7 @@ export class Attributes {
                    AND value = $/value/
                    LIMIT 1`;
 
-    const attribute = await redb.oneOrNone(query, replacementValues);
+    const attribute = await idb.oneOrNone(query, replacementValues);
 
     if (attribute) {
       return new AttributesEntity(attribute);
