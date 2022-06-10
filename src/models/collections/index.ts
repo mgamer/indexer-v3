@@ -57,7 +57,7 @@ export class Collections {
   }
 
   public static async getByTokenSetId(tokenSetId: string) {
-    const collection: CollectionsEntityParams | null = await idb.oneOrNone(
+    const collection: CollectionsEntityParams | null = await redb.oneOrNone(
       `SELECT *
               FROM collections
               WHERE token_set_id = $/tokenSetId/`,
@@ -122,7 +122,7 @@ export class Collections {
                    ORDER BY minted_timestamp ASC
                    LIMIT ${limit}`;
 
-    const collections = await idb.manyOrNone(query);
+    const collections = await redb.manyOrNone(query);
 
     if (!_.isEmpty(collections)) {
       return _.map(collections, (collection) => new CollectionsEntity(collection));
@@ -137,7 +137,7 @@ export class Collections {
                    ORDER BY day1_volume DESC
                    LIMIT ${limit}`;
 
-    const collections = await idb.manyOrNone(query);
+    const collections = await redb.manyOrNone(query);
 
     if (!_.isEmpty(collections)) {
       return _.map(collections, (collection) => new CollectionsEntity(collection));
@@ -147,7 +147,7 @@ export class Collections {
   }
 
   public static async recalculateContractFloorSell(contract: string) {
-    const result = await idb.manyOrNone(
+    const result = await redb.manyOrNone(
       `
         SELECT
           tokens.token_id
@@ -176,7 +176,7 @@ export class Collections {
   }
 
   public static async recalculateContractTopBuy(contract: string) {
-    const result = await idb.manyOrNone(
+    const result = await redb.manyOrNone(
       `
         SELECT
           tokens.token_id
