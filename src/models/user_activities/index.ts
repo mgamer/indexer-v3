@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { idb, pgp } from "@/common/db";
+import { redb, idb, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 
 import {
@@ -71,7 +71,7 @@ export class UserActivities {
       typesFilter = `AND type IN ('$/types:raw/')`;
     }
 
-    const activities: UserActivitiesEntityParams[] | null = await idb.manyOrNone(
+    const activities: UserActivitiesEntityParams[] | null = await redb.manyOrNone(
       `SELECT *
              FROM user_activities
              LEFT JOIN LATERAL (
