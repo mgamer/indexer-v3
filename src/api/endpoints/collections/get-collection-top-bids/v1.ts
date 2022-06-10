@@ -3,7 +3,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth } from "@/common/utils";
 
@@ -58,7 +58,7 @@ export const getCollectionTopBidsV1Options: RouteOptions = {
         ORDER BY "t"."top_buy_value" DESC NULLS LAST
       `;
 
-      const result = await edb.manyOrNone(baseQuery, params).then((result) =>
+      const result = await redb.manyOrNone(baseQuery, params).then((result) =>
         result.map((r) => ({
           value: formatEth(r.value),
           quantity: Number(r.quantity),
