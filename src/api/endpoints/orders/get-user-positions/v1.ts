@@ -3,7 +3,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, toBuffer } from "@/common/utils";
 
@@ -230,7 +230,7 @@ export const getUserPositionsV1Options: RouteOptions = {
       baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
-      const result = await edb.manyOrNone(baseQuery, { ...query, ...params }).then((result) =>
+      const result = await redb.manyOrNone(baseQuery, { ...query, ...params }).then((result) =>
         result.map((r) => ({
           set: {
             id: r.token_set_id,

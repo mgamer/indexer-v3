@@ -3,7 +3,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { Sources } from "@/models/sources";
@@ -163,7 +163,7 @@ export const getOrdersV2Options: RouteOptions = {
 
       const sources = await Sources.getInstance();
 
-      const result = await edb.manyOrNone(baseQuery, query).then((result) =>
+      const result = await redb.manyOrNone(baseQuery, query).then((result) =>
         result.map((r) => {
           const source = r.source_id ? sources.getByAddress(fromBuffer(r.source_id)).name : null;
 
