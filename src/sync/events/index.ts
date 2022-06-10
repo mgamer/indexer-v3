@@ -1550,49 +1550,72 @@ export const syncEvents = async (
 
             case "seaport-order-filled": {
               const parsedLog = eventData.abi.parseLog(log);
-              // const orderId = parsedLog.args["orderHash"].toLowerCase();
+              const orderId = parsedLog.args["orderHash"].toLowerCase();
+              const maker = parsedLog.args["oferrer"].toLowerCase();
+              let taker = parsedLog.args["recipient"].toLowerCase();
               const offer = parsedLog.args["offer"];
-              // const consideration = parsedLog.args["consideration"];
+              const consideration = parsedLog.args["consideration"];
 
-              if (offer.length === 1) {
-                // const offerItem = offer[0];
-                // const considerationItem = consideration[0];
-                //   // Custom handling to support partial filling
-                //   fillEventsPartial.push({
-                //     orderKind: "seaport",
-                //     orderId,
-                //     orderSide: direction === 0 ? "sell" : "buy",
-                //     maker,
-                //     taker,
-                //     price: erc20FillAmount,
-                //     contract: erc1155Token,
-                //     tokenId: erc1155TokenId,
-                //     amount: erc1155FillAmount,
-                //     fillSource,
-                //     baseEventParams,
-                //   });
-                //   if (orderId) {
-                //     orderInfos.push({
-                //       context: `filled-${orderId}-${baseEventParams.txHash}`,
-                //       id: orderId,
-                //       trigger: {
-                //         kind: "sale",
-                //         txHash: baseEventParams.txHash,
-                //         txTimestamp: baseEventParams.timestamp,
-                //       },
-                //     });
-                //   }
-                //   fillInfos.push({
-                //     context: orderId || `${maker}-${nonce}`,
-                //     orderId: orderId,
-                //     orderSide: direction === 0 ? "sell" : "buy",
-                //     contract: erc1155Token,
-                //     tokenId: erc1155TokenId,
-                //     amount: erc1155FillAmount,
-                //     price: value,
-                //     timestamp: baseEventParams.timestamp,
-                //   });
-                // }
+              const saleInfo = new Sdk.Seaport.Exchange(config.chainId).deriveBasicSale(
+                offer,
+                consideration
+              );
+              if (saleInfo) {
+                let side: "sell" | "buy";
+                if (saleInfo.paymentToken === Sdk.Common.Addresses.Eth[config.chainId]) {
+                  side = "sell";
+                } else if (saleInfo.paymentToken === Sdk.Common.Addresses.Weth[config.chainId]) {
+                  side = "buy";
+                } else {
+                  break;
+                }
+
+                // Handle filling through routers
+                let fillSource: string | undefined;
+                if (routerToFillSource[taker]) {
+                  fillSource = routerToFillSource[taker];
+                  taker = await syncEventsUtils
+                    .fetchTransaction(baseEventParams.txHash)
+                    .then((tx) => tx.from);
+                }
+
+                const price = bn(saleInfo.price).div(saleInfo.amount).toString();
+
+                // Custom handling to support partial filling
+                fillEventsPartial.push({
+                  orderKind: "seaport",
+                  orderId,
+                  orderSide: side,
+                  maker,
+                  taker,
+                  price,
+                  contract: saleInfo.contract,
+                  tokenId: saleInfo.tokenId,
+                  amount: saleInfo.amount,
+                  fillSource,
+                  baseEventParams,
+                });
+
+                orderInfos.push({
+                  context: `filled-${orderId}-${baseEventParams.txHash}`,
+                  id: orderId,
+                  trigger: {
+                    kind: "sale",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
+                });
+
+                fillInfos.push({
+                  context: `${orderId}-${baseEventParams.txHash}`,
+                  orderId: orderId,
+                  orderSide: side,
+                  contract: saleInfo.contract,
+                  tokenId: saleInfo.tokenId,
+                  amount: saleInfo.amount,
+                  price,
+                  timestamp: baseEventParams.timestamp,
+                });
               }
 
               break;
