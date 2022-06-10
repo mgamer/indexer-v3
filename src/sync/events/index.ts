@@ -1559,6 +1559,12 @@ export const syncEvents = async (
       const transferActivitiesInfo: processActivityEvent.EventInfo[] = _.map(
         nftTransferEvents,
         (event) => ({
+          context: [
+            processActivityEvent.EventKind.nftTransferEvent,
+            event.baseEventParams.txHash,
+            event.baseEventParams.logIndex,
+            event.baseEventParams.batchIndex,
+          ].join(":"),
           kind: processActivityEvent.EventKind.nftTransferEvent,
           data: {
             contract: event.baseEventParams.address,
