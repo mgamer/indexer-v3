@@ -33,7 +33,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .required(),
-      chainId: Joi.number().default(config.chainId).required(),
+      chainId: Joi.number().default(config.chainId),
       kind: Joi.string().valid("spot", "twap", "lower", "upper").default("spot"),
     }),
   },
