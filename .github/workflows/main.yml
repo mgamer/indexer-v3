@@ -35,7 +35,7 @@ jobs:
           branch: ${{ github.ref }}
           tags: true
 
-      - name: Merge to main (default branch)
+      - name: Merge to main
         uses: devmasx/merge-branch@master
         with:
           type: now
