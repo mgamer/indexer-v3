@@ -1073,6 +1073,10 @@ export const syncEvents = async (
                 break;
               }
 
+              if (backfill) {
+                logger.info(`debug`, `${taker} - ${JSON.stringify(routerToFillSource)}`);
+              }
+
               // Handle filling through routers
               let fillSource: string | undefined;
               if (routerToFillSource[taker]) {
