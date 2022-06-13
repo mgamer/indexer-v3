@@ -1550,13 +1550,12 @@ export const syncEvents = async (
 
             case "seaport-order-filled": {
               const parsedLog = eventData.abi.parseLog(log);
+              logger.info("debug", JSON.stringify(parsedLog));
               const orderId = parsedLog.args["orderHash"].toLowerCase();
               const maker = parsedLog.args["offerer"].toLowerCase();
               let taker = parsedLog.args["recipient"].toLowerCase();
               const offer = parsedLog.args["offer"];
               const consideration = parsedLog.args["consideration"];
-
-              logger.info("debug", JSON.stringify(parsedLog));
 
               const saleInfo = new Sdk.Seaport.Exchange(config.chainId).deriveBasicSale(
                 offer,
