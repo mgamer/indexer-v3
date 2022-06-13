@@ -173,7 +173,7 @@ export const save = async (
       }
 
       // Handle: fees
-      const feeAmount = order.getFeeAmount();
+      let feeAmount = order.getFeeAmount();
 
       // Handle: price and value
       let price = bn(info.price);
@@ -185,10 +185,11 @@ export const save = async (
         value = bn(price).sub(feeAmount);
       }
 
-      // The price and value are for a single item
+      // The price, value and fee are for a single item
       if (bn(info.amount).gt(1)) {
         price = price.div(info.amount);
         value = value.div(info.amount);
+        feeAmount = feeAmount.div(info.amount);
       }
 
       const feeBps = price.eq(0) ? bn(0) : feeAmount.mul(10000).div(price);
@@ -239,7 +240,7 @@ export const save = async (
         price: price.toString(),
         value: value.toString(),
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
-        nonce: order.params.nonce,
+        nonce: order.params.counter,
         source_id: source ? toBuffer(source) : null,
         source_id_int: sourceId,
         is_reservoir: isReservoir ? isReservoir : null,
