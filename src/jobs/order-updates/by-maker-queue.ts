@@ -573,6 +573,7 @@ if (config.doBackgroundWork) {
                   {
                     maker: toBuffer(maker),
                     contract: toBuffer(data.contract),
+                    operator: toBuffer(data.operator),
                     approvalStatus: data.approved ? "approved" : "no-approval",
                     expiration: trigger.txTimestamp,
                   }
