@@ -1551,7 +1551,7 @@ export const syncEvents = async (
             case "seaport-order-filled": {
               const parsedLog = eventData.abi.parseLog(log);
               const orderId = parsedLog.args["orderHash"].toLowerCase();
-              const maker = parsedLog.args["oferrer"].toLowerCase();
+              const maker = parsedLog.args["offerer"].toLowerCase();
               let taker = parsedLog.args["recipient"].toLowerCase();
               const offer = parsedLog.args["offer"];
               const consideration = parsedLog.args["consideration"];
