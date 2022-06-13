@@ -567,8 +567,8 @@ if (config.doBackgroundWork) {
                         AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
                         AND orders.approval_status != $/approvalStatus/
                     ) x
-                    WHERE orders.id = x.id
-                    RETURNING orders.id
+                    WHERE o.id = x.id
+                    RETURNING o.id
                   `,
                   {
                     maker: toBuffer(maker),
