@@ -46,7 +46,8 @@ if (config.doBackgroundWork) {
                 )
                 UPDATE orders SET
                   fillability_status = 'expired',
-                  expiration = x.expiration
+                  expiration = x.expiration,
+                  updated_at = now()
                 FROM x
                 WHERE orders.id = x.id
                 RETURNING orders.id

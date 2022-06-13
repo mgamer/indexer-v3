@@ -180,7 +180,8 @@ if (config.doBackgroundWork) {
                     )::INT,
                     "floor_sell_source_id" = "z"."source_id",
                     "floor_sell_source_id_int" = "z"."source_id_int",
-                    "floor_sell_is_reservoir" = "z"."is_reservoir"
+                    "floor_sell_is_reservoir" = "z"."is_reservoir",
+                    "updated_at" = now()
                   FROM "z"
                   WHERE "t"."contract" = "z"."contract"
                     AND "t"."token_id" = "z"."token_id"
@@ -310,7 +311,8 @@ if (config.doBackgroundWork) {
                 UPDATE "tokens" AS "t" SET
                   "top_buy_id" = "z"."order_id",
                   "top_buy_value" = "z"."value",
-                  "top_buy_maker" = "z"."maker"
+                  "top_buy_maker" = "z"."maker",
+                  "updated_at" = now()
                 FROM "z"
                 WHERE "t"."contract" = "z"."contract"
                   AND "t"."token_id" = "z"."token_id"

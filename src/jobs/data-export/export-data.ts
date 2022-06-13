@@ -3,14 +3,16 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-
-import { OrderEventsDataSource } from "@/jobs/data-export/data-sources/order-events";
-import { TokenFloorSellEventsDataSource } from "@/jobs/data-export/data-sources/token-floor-sell-events";
-import { CollectionFloorSellEventsDataSource } from "@/jobs/data-export/data-sources/collection-floor-sell-events";
 import { idb } from "@/common/db";
 import { randomUUID } from "crypto";
 import AWS from "aws-sdk";
-import { OrdersDataSource } from "@/jobs/data-export/data-sources/orders";
+
+import { AskEventsDataSource } from "@/jobs/data-export/data-sources/ask-events";
+import { TokenFloorSellEventsDataSource } from "@/jobs/data-export/data-sources/token-floor-sell-events";
+import { CollectionFloorSellEventsDataSource } from "@/jobs/data-export/data-sources/collection-floor-sell-events";
+import { AsksDataSource } from "@/jobs/data-export/data-sources/asks";
+import { TokensDataSource } from "@/jobs/data-export/data-sources/tokens";
+import { CollectionsDataSource } from "@/jobs/data-export/data-sources/collections";
 
 const QUEUE_NAME = "export-data-queue";
 const QUERY_LIMIT = 1000;
@@ -18,8 +20,6 @@ const QUERY_LIMIT = 1000;
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
-    // In order to be as lean as possible, leave retrying
-    // any failed processes to be done by subsequent jobs
     removeOnComplete: true,
     removeOnFail: true,
     timeout: 60000,
@@ -37,20 +37,26 @@ if (config.doBackgroundWork) {
       logger.info(QUEUE_NAME, `Export started. kind:${kind}, backfill:${backfill}`);
 
       try {
-        const { cursor, sequenceNumber } = await getCursorAndSequenceNumber(kind);
-        const { data, nextCursor } = await getDataSource(kind).getData(cursor, QUERY_LIMIT);
+        const { cursor, sequenceNumber } = await getSequenceInfo(kind);
+        const { data, nextCursor } = await getDataSource(kind).getSequenceData(cursor, QUERY_LIMIT);
 
         if (data.length) {
           const sequenceNumberPadded = ("000000000000000" + sequenceNumber).slice(-15);
 
-          await uploadDataToS3(
+          await uploadSequenceToS3(
             `${kind}/reservoir_${sequenceNumberPadded}.json`,
             JSON.stringify(data)
           );
-          await setCursorAndSequenceNumber(kind, nextCursor);
+          await setNextSequenceInfo(kind, nextCursor);
         }
 
+        // Trigger next sequence only if there are more results and in backfill mode
         job.data.addToQueue = backfill && data.length == QUERY_LIMIT;
+
+        logger.info(
+          QUEUE_NAME,
+          `Export finished. kind:${kind}, backfill:${backfill}, cursor:${cursor}, sequenceNumber:${sequenceNumber}`
+        );
       } catch (error) {
         logger.error(QUEUE_NAME, `Export ${kind} failed: ${error}`);
         throw error;
@@ -71,17 +77,19 @@ if (config.doBackgroundWork) {
 }
 
 export enum DataSourceKind {
-  orderEvents = "order-events",
+  askEvents = "ask-events",
   tokenFloorSellEvents = "token-floor-sell-events",
   collectionFloorSellEvents = "collection-floor-sell-events",
-  orders = "orders",
+  asks = "asks",
+  tokens = "tokens",
+  collections = "collections",
 }
 
 export const addToQueue = async (kind: DataSourceKind, backfill = false) => {
   await queue.add(randomUUID(), { kind, backfill }, { jobId: kind });
 };
 
-const getCursorAndSequenceNumber = async (kind: DataSourceKind) => {
+const getSequenceInfo = async (kind: DataSourceKind) => {
   const query = `SELECT cursor,
                         sequence_number AS "sequenceNumber"
                    FROM data_export_tasks
@@ -92,7 +100,7 @@ const getCursorAndSequenceNumber = async (kind: DataSourceKind) => {
   });
 };
 
-const setCursorAndSequenceNumber = async (kind: DataSourceKind, cursor: string | null) => {
+const setNextSequenceInfo = async (kind: DataSourceKind, cursor: string | null) => {
   const query = `
           UPDATE data_export_tasks
           SET cursor = $/cursor/,
@@ -109,31 +117,65 @@ const setCursorAndSequenceNumber = async (kind: DataSourceKind, cursor: string |
 
 const getDataSource = (kind: DataSourceKind) => {
   switch (kind) {
-    case DataSourceKind.orderEvents:
-      return new OrderEventsDataSource();
+    case DataSourceKind.askEvents:
+      return new AskEventsDataSource();
     case DataSourceKind.tokenFloorSellEvents:
       return new TokenFloorSellEventsDataSource();
     case DataSourceKind.collectionFloorSellEvents:
       return new CollectionFloorSellEventsDataSource();
-    case DataSourceKind.orders:
-      return new OrdersDataSource();
+    case DataSourceKind.asks:
+      return new AsksDataSource();
+    case DataSourceKind.tokens:
+      return new TokensDataSource();
+    case DataSourceKind.collections:
+      return new CollectionsDataSource();
   }
 
   throw new Error(`Unsupported data source ${kind}`);
 };
 
-const uploadDataToS3 = async (key: string, data: string) => {
-  const s3 = new AWS.S3({
-    accessKeyId: config.s3ExportAwsAccessKeyId,
-    secretAccessKey: config.s3ExportAwsSecretAccessKey,
-  });
+const uploadSequenceToS3 = async (key: string, data: string) => {
+  const s3UploadAWSCredentials = await getAwsCredentials();
 
-  await s3
+  await new AWS.S3(s3UploadAWSCredentials)
     .putObject({
-      Bucket: config.s3ExportBucketName,
+      Bucket: config.dataExportS3BucketName,
       Key: key,
       Body: data,
       ContentType: "application/json",
     })
     .promise();
+};
+
+const getAwsCredentials = async () => {
+  let sts = new AWS.STS({
+    accessKeyId: config.awsAccessKeyId,
+    secretAccessKey: config.awsSecretAccessKey,
+  });
+
+  const accessRole = await sts
+    .assumeRole({
+      RoleArn: config.dataExportAwsAccessRole,
+      RoleSessionName: "AssumeRoleSession",
+    })
+    .promise();
+
+  sts = new AWS.STS({
+    accessKeyId: accessRole?.Credentials?.AccessKeyId,
+    secretAccessKey: accessRole?.Credentials?.SecretAccessKey,
+    sessionToken: accessRole?.Credentials?.SessionToken,
+  });
+
+  const uploadRole = await sts
+    .assumeRole({
+      RoleArn: config.dataExportAwsS3UploadRole,
+      RoleSessionName: "UploadRoleSession",
+    })
+    .promise();
+
+  return {
+    accessKeyId: uploadRole?.Credentials?.AccessKeyId,
+    secretAccessKey: uploadRole?.Credentials?.SecretAccessKey,
+    sessionToken: uploadRole?.Credentials?.SessionToken,
+  };
 };

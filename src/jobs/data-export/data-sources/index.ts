@@ -1,8 +1,11 @@
 export abstract class BaseDataSource {
-  public abstract getData(cursor: string | null, limit: number): Promise<GetDataResult>;
+  public abstract getSequenceData(
+    cursor: string | null,
+    limit: number
+  ): Promise<getSequenceDataResult>;
 }
 
-export type GetDataResult = {
+export type getSequenceDataResult = {
   data: Record<string, unknown>[];
   nextCursor: string | null;
 };
