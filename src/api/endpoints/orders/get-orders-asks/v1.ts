@@ -22,10 +22,11 @@ export const getOrdersAsksV1Options: RouteOptions = {
   description: "Get a list of asks (listings), filtered by token, collection or maker",
   notes:
     "This API is designed for efficiently ingesting large volumes of orders, for external processing",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 41,
+      deprecated: true,
     },
   },
   validate: {

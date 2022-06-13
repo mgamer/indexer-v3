@@ -13,7 +13,7 @@ export const getCollectionsV1Options: RouteOptions = {
   description: "List of collections",
   notes:
     "Useful for getting multiple collections to show in a marketplace, or search for particular collections.",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 11,
