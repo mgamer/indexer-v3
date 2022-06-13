@@ -3,7 +3,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth } from "@/common/utils";
 
@@ -80,7 +80,7 @@ export const getDailyVolumesV1Options: RouteOptions = {
     baseQuery += ` LIMIT $/limit/`;
 
     try {
-      let result = await edb.manyOrNone(baseQuery, query);
+      let result = await redb.manyOrNone(baseQuery, query);
       result = result.map((r: any) => ({
         id: r.id,
         timestamp: r.timestamp,

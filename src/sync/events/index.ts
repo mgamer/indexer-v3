@@ -69,7 +69,7 @@ export const syncEvents = async (
   const routerToFillSource: { [address: string]: string } = {};
 
   // Reservoir
-  for (const address of Object.keys(Sdk.Router.Addresses.AllRouters[config.chainId])) {
+  for (const address of Sdk.Router.Addresses.AllRouters[config.chainId]) {
     routerToFillSource[address.toLowerCase()] = "reservoir";
   }
 

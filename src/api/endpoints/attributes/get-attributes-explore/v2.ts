@@ -4,7 +4,7 @@ import _ from "lodash";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
 
@@ -130,7 +130,7 @@ export const getAttributesExploreV2Options: RouteOptions = {
             OFFSET $/offset/
             LIMIT $/limit/`;
 
-      const attributesData = await edb.manyOrNone(attributesQuery, { ...query, ...params });
+      const attributesData = await redb.manyOrNone(attributesQuery, { ...query, ...params });
 
       // If no attributes found return here
       if (_.isEmpty(attributesData)) {

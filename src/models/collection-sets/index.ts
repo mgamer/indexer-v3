@@ -2,7 +2,7 @@
 
 import _ from "lodash";
 import crypto from "crypto";
-import { idb } from "@/common/db";
+import { redb, idb } from "@/common/db";
 
 export class CollectionSets {
   public static getCollectionsSetId(collectionIds: string[]) {
@@ -54,7 +54,7 @@ export class CollectionSets {
       WHERE collections_set_id = $/collectionsSetId/
     `;
 
-    const collections = await idb.manyOrNone(query, { collectionsSetId });
+    const collections = await redb.manyOrNone(query, { collectionsSetId });
     return _.map(collections, (collection) => collection.collection_id);
   }
 }
