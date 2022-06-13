@@ -51,7 +51,7 @@ export const offChainCheck = async (
 
   // Check: order has a valid nonce
   const minNonce = await commonHelpers.getMinNonce("seaport", order.params.offerer);
-  if (!minNonce.eq(order.params.nonce)) {
+  if (!minNonce.eq(order.params.counter)) {
     throw new Error("cancelled");
   }
 
