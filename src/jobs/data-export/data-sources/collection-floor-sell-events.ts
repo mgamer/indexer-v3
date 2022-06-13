@@ -4,7 +4,7 @@ import { formatEth, fromBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
 
 export class CollectionFloorSellEventsDataSource extends BaseDataSource {
-  public async getData(cursor: string | null, limit: number) {
+  public async getSequenceData(cursor: string | null, limit: number) {
     let continuationFilter = "";
 
     if (cursor) {
@@ -65,7 +65,7 @@ export class CollectionFloorSellEventsDataSource extends BaseDataSource {
 
       return {
         data,
-        nextCursor: data[data.length - 1].id,
+        nextCursor: result[result.length - 1].id,
       };
     }
 

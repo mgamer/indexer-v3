@@ -3,8 +3,8 @@ import { Sources } from "@/models/sources";
 import { formatEth, fromBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
 
-export class OrderEventsDataSource extends BaseDataSource {
-  public async getData(cursor: string | null, limit: number) {
+export class AskEventsDataSource extends BaseDataSource {
+  public async getSequenceData(cursor: string | null, limit: number) {
     let continuationFilter = "";
 
     if (cursor) {
@@ -67,7 +67,7 @@ export class OrderEventsDataSource extends BaseDataSource {
 
       return {
         data,
-        nextCursor: data[data.length - 1].id,
+        nextCursor: result[result.length - 1].id,
       };
     }
 

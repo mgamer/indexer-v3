@@ -3,8 +3,8 @@ import { Sources } from "@/models/sources";
 import { formatEth, fromBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
 
-export class OrdersDataSource extends BaseDataSource {
-  public async getData(cursor: string | null, limit: number) {
+export class AsksDataSource extends BaseDataSource {
+  public async getSequenceData(cursor: string | null, limit: number) {
     let continuationFilter = "";
 
     if (cursor) {
@@ -17,12 +17,13 @@ export class OrdersDataSource extends BaseDataSource {
           orders.kind,
           orders.side,
           orders.token_set_id,
-          orders.token_set_schema_hash,
           orders.contract,
           orders.maker,
           orders.taker,
           orders.price,
-          orders.value,
+          orders.dynamic,
+          orders.quantity_filled,
+          orders.quantity_remaining,
           DATE_PART('epoch', LOWER(orders.valid_between)) AS valid_from,
           COALESCE(
             NULLIF(DATE_PART('epoch', UPPER(orders.valid_between)), 'Infinity'),
@@ -35,7 +36,6 @@ export class OrdersDataSource extends BaseDataSource {
             NULLIF(DATE_PART('epoch', orders.expiration), 'Infinity'),
             0
           ) AS expiration,
-          extract(epoch from orders.created_at) AS created_at,
           (
             CASE
               WHEN orders.fillability_status = 'filled' THEN 'filled'
@@ -46,9 +46,11 @@ export class OrdersDataSource extends BaseDataSource {
               ELSE 'active'
             END
           ) AS status,
+          orders.raw_data,
+          orders.created_at,
           orders.updated_at
         FROM orders
-        WHERE side IS NOT NULL
+        WHERE orders.side = 'sell'
         ${continuationFilter}
         ORDER BY updated_at 
         LIMIT $/limit/;
@@ -62,36 +64,36 @@ export class OrdersDataSource extends BaseDataSource {
     if (result.length) {
       const sources = await Sources.getInstance();
 
-      const data = result.map((r) => ({
-        id: r.id,
-        kind: r.kind,
-        side: r.side,
-        status: r.status,
-        token_set_id: r.token_set_id,
-        // token_set_schema_hash: fromBuffer(r.token_set_schema_hash),
-        contract: fromBuffer(r.contract),
-        maker: fromBuffer(r.maker),
-        taker: fromBuffer(r.taker),
-        price: formatEth(r.price),
-        value:
-          r.side === "buy"
-            ? formatEth(r.value)
-            : formatEth(r.value) - (formatEth(r.value) * Number(r.fee_bps)) / 10000,
-        valid_from: Number(r.valid_from),
-        valid_until: Number(r.valid_until),
-        source: r.source_id ? sources.getByAddress(fromBuffer(r.source_id))?.name : null,
-        fee_bps: Number(r.fee_bps),
-        fee_breakdown: r.fee_breakdown,
-        expiration: Number(r.expiration),
-        created_at: new Date(r.created_at * 1000).toISOString(),
-        updated_at: new Date(r.updated_at).toISOString(),
-        // rawData: r.raw_data ?? undefined,
-        // metadata: r.metadata ?? undefined,
-      }));
+      const data = result.map((r) => {
+        const [, , tokenId] = r.token_set_id.split(":");
+
+        return {
+          id: r.id,
+          kind: r.kind,
+          status: r.status,
+          contract: fromBuffer(r.contract),
+          token_id: tokenId,
+          maker: fromBuffer(r.maker),
+          taker: fromBuffer(r.taker),
+          price: formatEth(r.price),
+          dynamic: r.dynamic,
+          quantity: Number(r.quantity_filled) + Number(r.quantity_remaining),
+          quantity_filled: Number(r.quantity_filled),
+          quantity_remaining: Number(r.quantity_remaining),
+          valid_from: Number(r.valid_from),
+          valid_until: Number(r.valid_until),
+          source: r.source_id ? sources.getByAddress(fromBuffer(r.source_id))?.name : null,
+          fee_bps: Number(r.fee_bps),
+          fee_breakdown: r.fee_breakdown,
+          expiration: Number(r.expiration),
+          created_at: new Date(r.created_at).toISOString(),
+          updated_at: new Date(r.updated_at).toISOString(),
+        };
+      });
 
       return {
         data,
-        nextCursor: data[data.length - 1].updated_at,
+        nextCursor: result[result.length - 1].updated_at,
       };
     }
 
