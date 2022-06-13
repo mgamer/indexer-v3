@@ -9,7 +9,8 @@ CREATE TYPE "order_kind_t" AS ENUM (
   'zeroex-v4-erc721',
   'zeroex-v4-erc1155',
   'foundation',
-  'x2y2'
+  'x2y2',
+  'seaport'
 );
 
 CREATE TYPE "order_side_t" AS ENUM (
