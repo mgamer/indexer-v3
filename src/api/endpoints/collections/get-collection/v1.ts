@@ -12,10 +12,11 @@ const version = "v1";
 export const getCollectionV1Options: RouteOptions = {
   description: "Get detailed information about a single collection",
   notes: "Get detailed information about a single collection, including real-time stats.",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 11,
+      deprecated: true,
     },
   },
   validate: {

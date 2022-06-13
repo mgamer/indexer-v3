@@ -13,7 +13,7 @@ export const getUserPositionsV1Options: RouteOptions = {
   description: "Get a summary of a users bids and asks",
   notes:
     "Get aggregate user liquidity, grouped by collection. Useful for showing a summary of liquidity being provided (orders made).",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Deprecated"],
   plugins: {
     "hapi-swagger": {
       deprecated: true,
