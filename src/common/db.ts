@@ -26,6 +26,17 @@ export const idb = pgp({
   allowExitOnIdle: true,
 });
 
+// Database connection for external public-facing APIs using a read replica DB
+export const redb = pgp({
+  connectionString: config.readReplicaDatabaseUrl,
+  keepAlive: true,
+  max: 30,
+  connectionTimeoutMillis: 30 * 1000,
+  query_timeout: 5 * 60 * 1000,
+  statement_timeout: 5 * 60 * 1000,
+  allowExitOnIdle: true,
+});
+
 // Common types
 
 export type PgPromiseQuery = {

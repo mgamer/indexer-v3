@@ -5,7 +5,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
 
@@ -88,7 +88,7 @@ export const getSearchCollectionsV1Options: RouteOptions = {
             OFFSET 0
             LIMIT $/limit/`;
 
-    const collections = await edb.manyOrNone(baseQuery, query);
+    const collections = await redb.manyOrNone(baseQuery, query);
 
     return {
       collections: _.map(collections, (collection) => ({

@@ -29,6 +29,9 @@ CREATE INDEX user_activities_contract_token_id_missing_collection_id_index
     ON user_activities (contract, token_id)
     WHERE ("collection_id" IS NULL);
 
+CREATE INDEX user_activities_block_hash_index
+    ON user_activities (block_hash);
+
 -- Down Migration
 
 DROP TABLE user_activities;

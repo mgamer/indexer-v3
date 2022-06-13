@@ -6,6 +6,7 @@ import * as weth from "@/events-sync/data/weth";
 import * as foundation from "@/events-sync/data/foundation";
 import * as looksRare from "@/events-sync/data/looks-rare";
 import * as openDao from "@/events-sync/data/opendao";
+import * as seaport from "@/events-sync/data/seaport";
 import * as wyvernV2 from "@/events-sync/data/wyvern-v2";
 import * as wyvernV23 from "@/events-sync/data/wyvern-v2.3";
 import * as x2y2 from "@/events-sync/data/x2y2";
@@ -21,6 +22,7 @@ export type EventDataKind =
   | "erc1155-transfer-single"
   | "erc1155-transfer-batch"
   | "erc721/1155-approval-for-all"
+  | "erc20-approval"
   | "erc20-transfer"
   | "weth-deposit"
   | "weth-withdrawal"
@@ -45,7 +47,10 @@ export type EventDataKind =
   | "foundation-buy-price-cancelled"
   | "foundation-buy-price-accepted"
   | "x2y2-order-cancelled"
-  | "x2y2-order-inventory";
+  | "x2y2-order-inventory"
+  | "seaport-order-cancelled"
+  | "seaport-order-filled"
+  | "seaport-counter-incremented";
 
 export type EventData = {
   kind: EventDataKind;
@@ -62,6 +67,7 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       erc721.approvalForAll,
       erc1155.transferSingle,
       erc1155.transferBatch,
+      weth.approval,
       weth.transfer,
       weth.deposit,
       weth.withdrawal,
@@ -73,6 +79,13 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       looksRare.cancelMultipleOrders,
       looksRare.takerAsk,
       looksRare.takerBid,
+      openDao.erc721OrderCancelled,
+      openDao.erc1155OrderCancelled,
+      openDao.erc721OrderFilled,
+      openDao.erc1155OrderFilled,
+      seaport.counterIncremented,
+      seaport.orderCancelled,
+      seaport.orderFulfilled,
       wyvernV2.ordersMatched,
       wyvernV23.orderCancelled,
       wyvernV23.ordersMatched,
@@ -81,10 +94,6 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       zeroExV4.erc1155OrderCancelled,
       zeroExV4.erc721OrderFilled,
       zeroExV4.erc1155OrderFilled,
-      openDao.erc721OrderCancelled,
-      openDao.erc1155OrderCancelled,
-      openDao.erc721OrderFilled,
-      openDao.erc1155OrderFilled,
       x2y2.orderCancelled,
       x2y2.orderInventory,
     ];
@@ -93,7 +102,7 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       eventDataKinds
         .map(internalGetEventData)
         .filter(Boolean)
-        // Force TS to remove `undefined`.
+        // Force TS to remove `undefined`
         .map((x) => x!)
     );
   }
@@ -109,6 +118,8 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return erc1155.transferBatch;
     case "erc1155-transfer-single":
       return erc1155.transferSingle;
+    case "erc20-approval":
+      return weth.approval;
     case "erc20-transfer":
       return weth.transfer;
     case "weth-deposit":
@@ -159,6 +170,12 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return x2y2.orderCancelled;
     case "x2y2-order-inventory":
       return x2y2.orderInventory;
+    case "seaport-counter-incremented":
+      return seaport.counterIncremented;
+    case "seaport-order-cancelled":
+      return seaport.orderCancelled;
+    case "seaport-order-filled":
+      return seaport.orderFulfilled;
     default:
       return undefined;
   }

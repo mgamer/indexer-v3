@@ -188,6 +188,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         source_id_int: sourceId,
         is_reservoir: null,
         contract: toBuffer(orderParams.contract),
+        conduit: null,
         fee_bps: feeBreakdown.map((fb) => fb.bps).reduce((a, b) => a + b, 0),
         fee_breakdown: feeBreakdown,
         dynamic: null,

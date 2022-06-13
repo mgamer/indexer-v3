@@ -1,5 +1,5 @@
 -- Up Migration
-CREATE EXTENSION hstore;
+CREATE EXTENSION IF NOT EXISTS hstore;
 CREATE TABLE "tokens" (
   "contract" BYTEA NOT NULL,
   "token_id" NUMERIC(78, 0) NOT NULL,

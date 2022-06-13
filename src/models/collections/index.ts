@@ -2,7 +2,7 @@
 
 import _ from "lodash";
 
-import { idb } from "@/common/db";
+import { idb, redb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import {
@@ -14,8 +14,9 @@ import { Tokens } from "@/models/tokens";
 import MetadataApi from "@/utils/metadata-api";
 
 export class Collections {
-  public static async getById(collectionId: string) {
-    const collection: CollectionsEntityParams | null = await idb.oneOrNone(
+  public static async getById(collectionId: string, readReplica = false) {
+    const dbInstance = readReplica ? redb : idb;
+    const collection: CollectionsEntityParams | null = await dbInstance.oneOrNone(
       `SELECT *
               FROM collections
               WHERE id = $/collectionId/`,
@@ -31,8 +32,13 @@ export class Collections {
     return null;
   }
 
-  public static async getByContractAndTokenId(contract: string, tokenId: number) {
-    const collection: CollectionsEntityParams | null = await idb.oneOrNone(
+  public static async getByContractAndTokenId(
+    contract: string,
+    tokenId: number,
+    readReplica = false
+  ) {
+    const dbInstance = readReplica ? redb : idb;
+    const collection: CollectionsEntityParams | null = await dbInstance.oneOrNone(
       `SELECT *
               FROM collections
               WHERE contract = $/contract/

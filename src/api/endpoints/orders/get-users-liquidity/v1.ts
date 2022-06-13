@@ -4,7 +4,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -110,7 +110,7 @@ export const getUsersLiquidityV1Options: RouteOptions = {
         baseQuery += ` WHERE "x"."user" = $/user/`;
       }
 
-      const result = await edb.manyOrNone(baseQuery, query).then((result) =>
+      const result = await redb.manyOrNone(baseQuery, query).then((result) =>
         result.map((r) => ({
           user: fromBuffer(r.user),
           rank: Number(r.rank),

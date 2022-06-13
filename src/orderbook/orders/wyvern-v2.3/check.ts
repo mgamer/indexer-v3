@@ -6,8 +6,7 @@ import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as utils from "@/orderbook/orders/wyvern-v2.3/utils";
-
-// TODO: Add support for on-chain check
+import * as onChainData from "@/utils/on-chain-data";
 
 export const offChainCheck = async (
   order: Sdk.WyvernV23.Order,
@@ -69,15 +68,16 @@ export const offChainCheck = async (
       hasBalance = false;
     }
 
-    // TODO: Integrate off-chain approval checking
     if (options?.onChainApprovalRecheck) {
-      const erc20 = new Sdk.Common.Helpers.Erc20(baseProvider, order.params.paymentToken);
       if (
         bn(
-          await erc20.getAllowance(
-            order.params.maker,
-            Sdk.WyvernV23.Addresses.TokenTransferProxy[config.chainId]
-          )
+          await onChainData
+            .fetchAndUpdateFtApproval(
+              order.params.paymentToken,
+              order.params.maker,
+              Sdk.WyvernV23.Addresses.TokenTransferProxy[config.chainId]
+            )
+            .then((a) => a.value)
         ).lt(order.params.basePrice)
       ) {
         hasApproval = false;

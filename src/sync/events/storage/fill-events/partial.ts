@@ -2,8 +2,9 @@ import { idb, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { DbEvent, Event } from "@/events-sync/storage/fill-events";
 
-// To be used only for erc1155 orders (which are partially fillable).
-export const addEventsZeroExV4 = async (events: Event[]) => {
+// TODO: Merge with `common` fill handling
+
+export const addEventsPartial = async (events: Event[]) => {
   const fillValues: DbEvent[] = [];
   for (const event of events) {
     fillValues.push({

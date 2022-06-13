@@ -5,11 +5,13 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { toBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import { TriggerKind } from "@/jobs/order-updates/types";
 import * as wyvernV23Utils from "@/orderbook/orders/wyvern-v2.3/utils";
+import { OrderKind } from "@/orderbook/orders";
+import { fetchAndUpdateFtApproval } from "@/utils/on-chain-data";
 
 const QUEUE_NAME = "order-updates-by-maker";
 
@@ -121,6 +123,134 @@ if (config.doBackgroundWork) {
             break;
           }
 
+          case "buy-approval": {
+            const { contract, orderKind, operator } = data;
+
+            if (operator) {
+              // Approval change is coming from an `Approval` event
+
+              // TODO: Split into multiple batches to support makers with lots of orders
+
+              // First, ensure the maker has any orders with the current `operator` as conduit
+              const result = await idb.manyOrNone(
+                `
+                  SELECT
+                    orders.id,
+                    orders.price
+                  FROM orders
+                  WHERE orders.maker = $/maker/
+                    AND orders.side = 'buy'
+                    AND orders.conduit = $/conduit/
+                    AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                  LIMIT 1
+                `,
+                {
+                  maker: toBuffer(maker),
+                  conduit: toBuffer(operator),
+                }
+              );
+              if (result.length) {
+                // Refresh approval
+                await fetchAndUpdateFtApproval(contract, maker, operator);
+
+                // Validate or invalidate orders based on the refreshed approval
+                const result = await idb.manyOrNone(
+                  `
+                    WITH
+                      x AS (
+                        SELECT
+                          orders.id,
+                          orders.price
+                        FROM orders
+                        WHERE orders.maker = $/maker/
+                          AND orders.side = 'buy'
+                          AND orders.conduit = $/conduit/
+                          AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                      ),
+                      y AS (
+                        SELECT
+                          ft_approvals.value
+                        FROM ft_approvals
+                        WHERE ft_approvals.token = $/token/
+                          AND ft_approvals.owner = $/maker/
+                          AND ft_approvals.spender = $/conduit/
+                      )
+                    UPDATE orders SET
+                      approval_status = (
+                        CASE
+                          WHEN orders.price > y.value THEN 'no-approval'
+                          ELSE 'approved'
+                        END
+                      )::order_approval_status_t
+                    FROM x LEFT JOIN y ON TRUE
+                    WHERE orders.id = x.id
+                      AND orders.approval_status != (
+                        CASE
+                          WHEN orders.price > y.value THEN 'no-approval'
+                          ELSE 'approved'
+                        END
+                      )::order_approval_status_t
+                    RETURNING orders.id
+                  `,
+                  {
+                    token: toBuffer(contract),
+                    maker: toBuffer(maker),
+                    conduit: toBuffer(operator),
+                  }
+                );
+
+                // Re-check all affected orders
+                await orderUpdatesById.addToQueue(
+                  result.map(({ id }) => ({
+                    context: `${context}-${id}`,
+                    id,
+                    trigger,
+                  }))
+                );
+              }
+            } else if (orderKind) {
+              // Approval change is coming from a `Transfer` event
+
+              // Fetch all different conduits for the given order kind
+              const result = await idb.manyOrNone(
+                `
+                  SELECT DISTINCT
+                    orders.conduit
+                  FROM orders
+                  WHERE orders.maker = $/maker/
+                    AND orders.side = 'buy'
+                    AND orders.kind = $/kind/
+                    AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                `,
+                {
+                  maker: toBuffer(maker),
+                  kind: orderKind,
+                }
+              );
+
+              // Trigger a new job to individually handle all maker's conduits
+              await addToQueue(
+                result
+                  .filter(({ conduit }) => Boolean(conduit))
+                  .map(({ conduit }) => {
+                    conduit = fromBuffer(conduit);
+                    return {
+                      context: `${context}-${conduit}`,
+                      maker,
+                      trigger,
+                      data: {
+                        kind: "buy-approval",
+                        contract,
+                        operator: conduit,
+                      },
+                    };
+                  })
+              );
+            }
+
+            break;
+          }
+
           case "sell-balance": {
             const fillabilityStatuses = await idb.manyOrNone(
               `
@@ -201,6 +331,9 @@ if (config.doBackgroundWork) {
           }
 
           case "sell-approval": {
+            // TODO: Get latest approval to operator and use that instead of
+            // `approved` field that gets explicitly passed to the job.
+
             // We must detect which exchange the approval is for (if any).
 
             // For "sell" orders we can be sure the associated token set
@@ -209,8 +342,11 @@ if (config.doBackgroundWork) {
 
             const result: { id: string }[] = [];
 
+            let detected = false;
+
             // OpenDao
             if (data.operator === Sdk.OpenDao.Addresses.Exchange[config.chainId]?.toLowerCase()) {
+              detected = true;
               for (const orderKind of ["opendao-erc721", "opendao-erc1155"]) {
                 result.push(
                   ...(await idb.manyOrNone(
@@ -248,6 +384,7 @@ if (config.doBackgroundWork) {
 
             // ZeroExV4
             if (data.operator === Sdk.ZeroExV4.Addresses.Exchange[config.chainId]?.toLowerCase()) {
+              detected = true;
               for (const orderKind of ["zeroex-v4-erc721", "zeroex-v4-erc1155"]) {
                 result.push(
                   ...(await idb.manyOrNone(
@@ -285,6 +422,7 @@ if (config.doBackgroundWork) {
 
             // X2Y2
             if (data.operator === Sdk.X2Y2.Addresses.Exchange[config.chainId]?.toLowerCase()) {
+              detected = true;
               result.push(
                 ...(await idb.manyOrNone(
                   `
@@ -325,6 +463,7 @@ if (config.doBackgroundWork) {
                 Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId]?.toLowerCase(),
               ].includes(data.operator)
             ) {
+              detected = true;
               const kind =
                 data.operator ===
                 Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]?.toLowerCase()
@@ -370,6 +509,7 @@ if (config.doBackgroundWork) {
             // Wyvern v2.3
             const proxy = await wyvernV23Utils.getUserProxy(maker);
             if (proxy && proxy === data.operator) {
+              detected = true;
               result.push(
                 ...(await idb.manyOrNone(
                   `
@@ -396,6 +536,46 @@ if (config.doBackgroundWork) {
                   {
                     maker: toBuffer(maker),
                     contract: toBuffer(data.contract),
+                    approvalStatus: data.approved ? "approved" : "no-approval",
+                    expiration: trigger.txTimestamp,
+                  }
+                ))
+              );
+            }
+
+            // TODO: Backfill orders conduit and use that directly instead of
+            // manually detecting and using the order kind from the operator.
+            // Just like we do with Seaport, but for all orders.
+
+            // Seaport
+            if (!detected) {
+              result.push(
+                ...(await idb.manyOrNone(
+                  `
+                    UPDATE orders AS o SET
+                      approval_status = $/approvalStatus/,
+                      expiration = to_timestamp($/expiration/),
+                      updated_at = now()
+                    FROM (
+                      SELECT
+                        orders.id
+                      FROM orders
+                      JOIN token_sets_tokens
+                        ON orders.token_set_id = token_sets_tokens.token_set_id
+                      WHERE token_sets_tokens.contract = $/contract/
+                        AND orders.maker = $/maker/
+                        AND orders.side = 'sell'
+                        AND orders.conduit = $/operator/
+                        AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                        AND orders.approval_status != $/approvalStatus/
+                    ) x
+                    WHERE o.id = x.id
+                    RETURNING o.id
+                  `,
+                  {
+                    maker: toBuffer(maker),
+                    contract: toBuffer(data.contract),
+                    operator: toBuffer(data.operator),
                     approvalStatus: data.approved ? "approved" : "no-approval",
                     expiration: trigger.txTimestamp,
                   }
@@ -455,6 +635,24 @@ export type MakerInfo = {
         contract: string;
       }
     | {
+        kind: "buy-approval";
+        contract: string;
+        // Keeping track of buy approvals is trickier than keeping track of sell approvals,
+        // due to the way the ERC20 standard is designed (eg. when a spender spends allowed
+        // tokens, the allowance is reduced but no associated `Approval` event gets emitted
+        // to be able to fully keep track of it off-chain). For this reason, we don't track
+        // ERC20 approvals off-chain, but fetch them directly from the blockchain when it's
+        // detected than an approval might have changed. There are three scenarios where an
+        // an approval could have changed:
+        // - we detect an ERC20 `Approval` event (in this case `operator` will be set and
+        //   so we recheck the approvals of all orders having that `operator` as conduit)
+        // - a `Transfer` event and a sale occur within the same transaction (in this case
+        //   `orderKind` is going to be set and we recheck the approvals of all the orders
+        //   which have that particular `orderKind`)
+        orderKind?: OrderKind;
+        operator?: string;
+      }
+    | {
         kind: "sell-balance";
         contract: string;
         tokenId: string;
@@ -463,6 +661,8 @@ export type MakerInfo = {
         kind: "sell-approval";
         contract: string;
         operator: string;
+        // TODO: Replace explicitly passing the `approved` field with
+        // fetching the latest approval directly from the database.
         approved: boolean;
       };
 };

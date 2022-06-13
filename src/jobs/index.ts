@@ -1,4 +1,4 @@
-// Initialize all background job queues and crons.
+// Initialize all background job queues and crons
 
 import "@/jobs/arweave-relay";
 import "@/jobs/arweave-sync";
@@ -18,11 +18,10 @@ import "@/jobs/collections-refresh";
 import "@/jobs/nft-balance-updates";
 import "@/jobs/data-export";
 
-// Export all job queues for monitoring through the UI.
+// Export all job queues for monitoring through the BullMQ UI
 
 import * as arweaveSyncBackfill from "@/jobs/arweave-sync/backfill-queue";
 import * as arweaveSyncRealtime from "@/jobs/arweave-sync/realtime-queue";
-import * as backfillQueue from "@/jobs/backfill/token-floor-ask-events";
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
@@ -58,12 +57,14 @@ import * as backfillNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-update
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
 import * as fixActivitiesMissingCollection from "@/jobs/activities/fix-activities-missing-collection";
+import * as updateNftBalanceTopBidQueue from "@/jobs/nft-balance-updates/update-top-bid-queue";
+import * as backfillNftBalanceTopBidQueue from "@/jobs/nft-balance-updates/backfill-top-bid-queue";
+import * as backfillFillEventsCreatedAt from "@/jobs/backfill/backfill-fill-events-created-at";
 import * as exportData from "@/jobs/data-export/export-data";
 
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
   arweaveSyncRealtime.queue,
-  backfillQueue.queue,
   collectionUpdatesFloorAsk.queue,
   collectionUpdatesMetadata.queue,
   eventsSyncBackfill.queue,
@@ -99,5 +100,8 @@ export const allJobQueues = [
   processActivityEvent.queue,
   removeUnsyncedEventsActivities.queue,
   fixActivitiesMissingCollection.queue,
+  updateNftBalanceTopBidQueue.queue,
+  backfillNftBalanceTopBidQueue.queue,
+  backfillFillEventsCreatedAt.queue,
   exportData.queue,
 ];

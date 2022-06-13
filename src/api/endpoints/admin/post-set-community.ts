@@ -25,7 +25,7 @@ export const postSetCollectionCommunity: RouteOptions = {
         .description(
           "Update community for a particular collection, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
-      community: Joi.string().required().allow(""),
+      community: Joi.string().lowercase().required().allow(""),
     }),
   },
   handler: async (request: Request) => {

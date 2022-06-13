@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { idb, pgp } from "@/common/db";
+import { idb, pgp, redb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import {
   ActivitiesEntity,
@@ -65,7 +65,7 @@ export class Activities {
       continuationFilter = `WHERE id > $/continuation/`;
     }
 
-    const activities: ActivitiesEntityParams[] | null = await idb.manyOrNone(
+    const activities: ActivitiesEntityParams[] | null = await redb.manyOrNone(
       `SELECT *
              FROM activities
              ${continuationFilter}
@@ -121,7 +121,7 @@ export class Activities {
       typesFilter = `AND type IN ('$/types:raw/')`;
     }
 
-    const activities: ActivitiesEntityParams[] | null = await idb.manyOrNone(
+    const activities: ActivitiesEntityParams[] | null = await redb.manyOrNone(
       `SELECT *
              FROM activities
              LEFT JOIN LATERAL (
@@ -173,7 +173,7 @@ export class Activities {
       typesFilter = `AND type IN ('$/types:raw/')`;
     }
 
-    const activities: ActivitiesEntityParams[] | null = await idb.manyOrNone(
+    const activities: ActivitiesEntityParams[] | null = await redb.manyOrNone(
       `SELECT *
              FROM activities
              LEFT JOIN LATERAL (

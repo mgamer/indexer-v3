@@ -3,7 +3,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
 
@@ -196,7 +196,7 @@ export const getCollectionDeprecatedV1Options: RouteOptions = {
         ) "z" ON TRUE
       `;
 
-      const result = await edb.oneOrNone(baseQuery, params).then((r) =>
+      const result = await redb.oneOrNone(baseQuery, params).then((r) =>
         !r
           ? null
           : {

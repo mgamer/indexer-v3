@@ -2,7 +2,7 @@
 
 import _ from "lodash";
 
-import { idb } from "@/common/db";
+import { idb, redb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import {
@@ -21,8 +21,13 @@ export type TokenAttributes = {
 };
 
 export class Tokens {
-  public static async getByContractAndTokenId(contract: string, tokenId: string) {
-    const token: TokensEntityParams | null = await idb.oneOrNone(
+  public static async getByContractAndTokenId(
+    contract: string,
+    tokenId: string,
+    readReplica = false
+  ) {
+    const dbInstance = readReplica ? redb : idb;
+    const token: TokensEntityParams | null = await dbInstance.oneOrNone(
       `SELECT *
               FROM tokens
               WHERE contract = $/contract/

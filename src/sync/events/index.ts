@@ -69,7 +69,7 @@ export const syncEvents = async (
   const routerToFillSource: { [address: string]: string } = {};
 
   // Reservoir
-  for (const address of Object.keys(Sdk.Router.Addresses.AllRouters[config.chainId])) {
+  for (const address of Sdk.Router.Addresses.AllRouters[config.chainId]) {
     routerToFillSource[address.toLowerCase()] = "reservoir";
   }
 
@@ -115,7 +115,7 @@ export const syncEvents = async (
       const cancelEvents: es.cancels.Event[] = [];
       const cancelEventsFoundation: es.cancels.Event[] = [];
       const fillEvents: es.fills.Event[] = [];
-      const fillEventsZeroExV4: es.fills.Event[] = [];
+      const fillEventsPartial: es.fills.Event[] = [];
       const fillEventsFoundation: es.fills.Event[] = [];
       const foundationOrders: Foundation.OrderInfo[] = [];
 
@@ -126,6 +126,20 @@ export const syncEvents = async (
         address: string;
         logIndex: number;
       }[] = [];
+
+      const currentTxHasWethTransfer = () => {
+        for (const event of currentTxEvents.slice(0, -1).reverse()) {
+          const erc20EventData = getEventData(["erc20-transfer"])[0];
+          if (
+            event.log.topics[0] === erc20EventData.topic &&
+            event.log.topics.length === erc20EventData.numTopics &&
+            erc20EventData.addresses?.[event.log.address.toLowerCase()]
+          ) {
+            return true;
+          }
+        }
+        return false;
+      };
 
       for (const log of logs) {
         try {
@@ -433,6 +447,32 @@ export const syncEvents = async (
               break;
             }
 
+            case "erc20-approval": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const owner = parsedLog.args["owner"].toLowerCase();
+              const spender = parsedLog.args["spender"].toLowerCase();
+
+              // Make sure to only handle the same data once per transaction
+              const contextPrefix = `${baseEventParams.txHash}-${baseEventParams.address}`;
+
+              makerInfos.push({
+                context: `${contextPrefix}-${owner}-${spender}-buy-approval`,
+                maker: owner,
+                trigger: {
+                  kind: "approval-change",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+                data: {
+                  kind: "buy-approval",
+                  contract: Sdk.Common.Addresses.Weth[config.chainId],
+                  operator: spender,
+                },
+              });
+
+              break;
+            }
+
             // Weth
 
             case "weth-deposit": {
@@ -605,6 +645,23 @@ export const syncEvents = async (
                   txTimestamp: baseEventParams.timestamp,
                 },
               });
+
+              if (currentTxHasWethTransfer()) {
+                makerInfos.push({
+                  context: `${baseEventParams.txHash}-buy-approval`,
+                  maker,
+                  trigger: {
+                    kind: "approval-change",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
+                  data: {
+                    kind: "buy-approval",
+                    contract: Sdk.Common.Addresses.Weth[config.chainId],
+                    orderKind: "x2y2",
+                  },
+                });
+              }
 
               break;
             }
@@ -820,6 +877,23 @@ export const syncEvents = async (
                 timestamp: baseEventParams.timestamp,
               });
 
+              if (currentTxHasWethTransfer()) {
+                makerInfos.push({
+                  context: `${baseEventParams.txHash}-buy-approval`,
+                  maker,
+                  trigger: {
+                    kind: "approval-change",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
+                  data: {
+                    kind: "buy-approval",
+                    contract: Sdk.Common.Addresses.Weth[config.chainId],
+                    orderKind: "looks-rare",
+                  },
+                });
+              }
+
               break;
             }
 
@@ -891,6 +965,23 @@ export const syncEvents = async (
                 price,
                 timestamp: baseEventParams.timestamp,
               });
+
+              if (currentTxHasWethTransfer()) {
+                makerInfos.push({
+                  context: `${baseEventParams.txHash}-buy-approval`,
+                  maker,
+                  trigger: {
+                    kind: "approval-change",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
+                  data: {
+                    kind: "buy-approval",
+                    contract: Sdk.Common.Addresses.Weth[config.chainId],
+                    orderKind: "looks-rare",
+                  },
+                });
+              }
 
               break;
             }
@@ -1034,6 +1125,23 @@ export const syncEvents = async (
                   price,
                   timestamp: baseEventParams.timestamp,
                 });
+
+                if (currentTxHasWethTransfer()) {
+                  makerInfos.push({
+                    context: `${baseEventParams.txHash}-buy-approval`,
+                    maker,
+                    trigger: {
+                      kind: "approval-change",
+                      txHash: baseEventParams.txHash,
+                      txTimestamp: baseEventParams.timestamp,
+                    },
+                    data: {
+                      kind: "buy-approval",
+                      contract: Sdk.Common.Addresses.Weth[config.chainId],
+                      orderKind,
+                    },
+                  });
+                }
               }
               if (sellOrderId !== HashZero) {
                 fillEvents.push({
@@ -1193,7 +1301,6 @@ export const syncEvents = async (
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
                         AND orders.contract = $/contract/
-                        AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
                       LIMIT 1
                     `,
                     {
@@ -1256,6 +1363,23 @@ export const syncEvents = async (
                 timestamp: baseEventParams.timestamp,
               });
 
+              if (currentTxHasWethTransfer()) {
+                makerInfos.push({
+                  context: `${baseEventParams.txHash}-buy-approval`,
+                  maker,
+                  trigger: {
+                    kind: "approval-change",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
+                  data: {
+                    kind: "buy-approval",
+                    contract: Sdk.Common.Addresses.Weth[config.chainId],
+                    orderKind: orderKind,
+                  },
+                });
+              }
+
               break;
             }
 
@@ -1308,7 +1432,7 @@ export const syncEvents = async (
                       WHERE orders.kind = '${orderKind}'
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
-                        AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                        AND orders.contract IS NOT NULL
                       LIMIT 1
                     `,
                     {
@@ -1326,7 +1450,7 @@ export const syncEvents = async (
               }
 
               // Custom handling to support partial filling
-              fillEventsZeroExV4.push({
+              fillEventsPartial.push({
                 orderKind,
                 orderId,
                 orderSide: direction === 0 ? "sell" : "buy",
@@ -1363,6 +1487,137 @@ export const syncEvents = async (
                 timestamp: baseEventParams.timestamp,
               });
 
+              if (currentTxHasWethTransfer()) {
+                makerInfos.push({
+                  context: `${baseEventParams.txHash}-buy-approval`,
+                  maker,
+                  trigger: {
+                    kind: "approval-change",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
+                  data: {
+                    kind: "buy-approval",
+                    contract: Sdk.Common.Addresses.Weth[config.chainId],
+                    orderKind: orderKind,
+                  },
+                });
+              }
+
+              break;
+            }
+
+            case "seaport-order-cancelled": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const orderId = parsedLog.args["orderHash"].toLowerCase();
+
+              cancelEvents.push({
+                orderKind: "seaport",
+                orderId,
+                baseEventParams,
+              });
+
+              orderInfos.push({
+                context: `cancelled-${orderId}`,
+                id: orderId,
+                trigger: {
+                  kind: "cancel",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                  logIndex: baseEventParams.logIndex,
+                  batchIndex: baseEventParams.batchIndex,
+                  blockHash: baseEventParams.blockHash,
+                },
+              });
+
+              break;
+            }
+
+            case "seaport-counter-incremented": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const maker = parsedLog.args["oferrer"].toLowerCase();
+              const newCounter = parsedLog.args["newCounter"].toString();
+
+              bulkCancelEvents.push({
+                orderKind: "seaport",
+                maker,
+                minNonce: newCounter,
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "seaport-order-filled": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const orderId = parsedLog.args["orderHash"].toLowerCase();
+              const maker = parsedLog.args["offerer"].toLowerCase();
+              let taker = parsedLog.args["recipient"].toLowerCase();
+              const offer = parsedLog.args["offer"];
+              const consideration = parsedLog.args["consideration"];
+
+              const saleInfo = new Sdk.Seaport.Exchange(config.chainId).deriveBasicSale(
+                offer,
+                consideration
+              );
+              if (saleInfo) {
+                let side: "sell" | "buy";
+                if (saleInfo.paymentToken === Sdk.Common.Addresses.Eth[config.chainId]) {
+                  side = "sell";
+                } else if (saleInfo.paymentToken === Sdk.Common.Addresses.Weth[config.chainId]) {
+                  side = "buy";
+                } else {
+                  break;
+                }
+
+                // Handle filling through routers
+                let fillSource: string | undefined;
+                if (routerToFillSource[taker]) {
+                  fillSource = routerToFillSource[taker];
+                  taker = await syncEventsUtils
+                    .fetchTransaction(baseEventParams.txHash)
+                    .then((tx) => tx.from);
+                }
+
+                const price = bn(saleInfo.price).div(saleInfo.amount).toString();
+
+                // Custom handling to support partial filling
+                fillEventsPartial.push({
+                  orderKind: "seaport",
+                  orderId,
+                  orderSide: side,
+                  maker,
+                  taker,
+                  price,
+                  contract: saleInfo.contract,
+                  tokenId: saleInfo.tokenId,
+                  amount: saleInfo.amount,
+                  fillSource,
+                  baseEventParams,
+                });
+
+                orderInfos.push({
+                  context: `filled-${orderId}-${baseEventParams.txHash}`,
+                  id: orderId,
+                  trigger: {
+                    kind: "sale",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
+                });
+
+                fillInfos.push({
+                  context: `${orderId}-${baseEventParams.txHash}`,
+                  orderId: orderId,
+                  orderSide: side,
+                  contract: saleInfo.contract,
+                  tokenId: saleInfo.tokenId,
+                  amount: saleInfo.amount,
+                  price,
+                  timestamp: baseEventParams.timestamp,
+                });
+              }
+
               break;
             }
           }
@@ -1375,7 +1630,7 @@ export const syncEvents = async (
       // WARNING! Ordering matters (fills should come in front of cancels).
       await Promise.all([
         es.fills.addEvents(fillEvents),
-        es.fills.addEventsZeroExV4(fillEventsZeroExV4),
+        es.fills.addEventsPartial(fillEventsPartial),
         es.fills.addEventsFoundation(fillEventsFoundation),
       ]);
 
@@ -1391,7 +1646,7 @@ export const syncEvents = async (
 
       // Add all the fill events to the activity queue
       const fillActivitiesInfo: processActivityEvent.EventInfo[] = _.map(
-        _.concat(fillEvents, fillEventsZeroExV4, fillEventsFoundation),
+        _.concat(fillEvents, fillEventsPartial, fillEventsFoundation),
         (event) => ({
           kind: processActivityEvent.EventKind.fillEvent,
           data: {
@@ -1418,6 +1673,12 @@ export const syncEvents = async (
       const transferActivitiesInfo: processActivityEvent.EventInfo[] = _.map(
         nftTransferEvents,
         (event) => ({
+          context: [
+            processActivityEvent.EventKind.nftTransferEvent,
+            event.baseEventParams.txHash,
+            event.baseEventParams.logIndex,
+            event.baseEventParams.batchIndex,
+          ].join(":"),
           kind: processActivityEvent.EventKind.nftTransferEvent,
           data: {
             contract: event.baseEventParams.address,

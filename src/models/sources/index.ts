@@ -4,7 +4,7 @@ import _ from "lodash";
 import { randomBytes } from "crypto";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-import { idb } from "@/common/db";
+import { idb, redb } from "@/common/db";
 import { SourcesEntity, SourcesEntityParams } from "@/models/sources/sources-entity";
 import { AddressZero } from "@ethersproject/constants";
 
@@ -32,7 +32,7 @@ export class Sources {
 
     if (_.isNull(sourcesCache) || forceDbLoad) {
       // If no cache load from DB
-      sources = await idb.manyOrNone(`SELECT * FROM sources_v2`);
+      sources = await redb.manyOrNone(`SELECT * FROM sources_v2`);
       await redis.set(Sources.getCacheKey(), JSON.stringify(sources), "EX", 60 * 60 * 24);
     } else {
       // Parse the cache data

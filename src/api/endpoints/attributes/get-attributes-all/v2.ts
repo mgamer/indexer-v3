@@ -4,7 +4,7 @@ import _ from "lodash";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 
 const version = "v2";
@@ -73,7 +73,7 @@ export const getAttributesAllV2Options: RouteOptions = {
         ORDER BY rank DESC
       `;
 
-      const result = await edb.manyOrNone(baseQuery, params).then((result) => {
+      const result = await redb.manyOrNone(baseQuery, params).then((result) => {
         return result.map((r) => {
           if (r.kind == "number") {
             return {

@@ -11,6 +11,10 @@ import * as Boom from "@hapi/boom";
 const version = "v1";
 
 export const getRedirectCollectionImageV1Options: RouteOptions = {
+  cache: {
+    privacy: "public",
+    expiresIn: 60000,
+  },
   description: "Redirect response to the given collection image",
   tags: ["api", "5. Redirects"],
   plugins: {
@@ -32,7 +36,7 @@ export const getRedirectCollectionImageV1Options: RouteOptions = {
   handler: async (request: Request, response) => {
     const params = request.params as any;
     try {
-      const collection = await Collections.getById(params.collection);
+      const collection = await Collections.getById(params.collection, true);
 
       if (_.isNull(collection)) {
         throw Boom.badData(`Collection ${params.collection} not found`);

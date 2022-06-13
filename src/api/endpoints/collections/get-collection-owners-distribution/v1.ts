@@ -3,7 +3,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
 
@@ -81,7 +81,7 @@ export const getCollectionOwnersDistributionV1Options: RouteOptions = {
         ORDER BY owners.token_count
       `;
 
-      const result = await edb.manyOrNone(baseQuery, params).then((result) =>
+      const result = await redb.manyOrNone(baseQuery, params).then((result) =>
         result.map((r) => ({
           tokenCount: Number(r.token_count),
           ownerCount: Number(r.owner_count),

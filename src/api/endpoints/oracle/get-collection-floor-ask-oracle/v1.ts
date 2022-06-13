@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { defaultAbiCoder } from "@ethersproject/abi";
-import { splitSignature } from "@ethersproject/bytes";
-import { keccak256 } from "@ethersproject/solidity";
+import { _TypedDataEncoder } from "@ethersproject/hash";
 import { Wallet } from "@ethersproject/wallet";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
@@ -16,12 +15,10 @@ import { config } from "@/config/index";
 const version = "v1";
 
 export const getCollectionFloorAskOracleV1Options: RouteOptions = {
-  description:
-    "Get a standardized 'TrustUs' signature of any collection's floor price (spot or twap)",
-  tags: ["api", "x-deprecated"],
+  description: "Get a signed message of any collection's floor price (spot or twap)",
+  tags: ["api", "oracle"],
   plugins: {
     "hapi-swagger": {
-      deprecated: true,
       order: 1,
     },
   },
@@ -36,23 +33,18 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .required(),
+      chainId: Joi.number().default(config.chainId),
       kind: Joi.string().valid("spot", "twap", "lower", "upper").default("spot"),
     }),
   },
   response: {
     schema: Joi.object({
       price: Joi.number().unsafe().required(),
-      packet: Joi.object({
-        request: Joi.string().required(),
-        deadline: Joi.number().required(),
+      message: Joi.object({
+        id: Joi.string().required(),
         payload: Joi.string().required(),
-        v: Joi.number(),
-        r: Joi.string()
-          .lowercase()
-          .pattern(/^0x[a-fA-F0-9]{64}$/),
-        s: Joi.string()
-          .lowercase()
-          .pattern(/^0x[a-fA-F0-9]{64}$/),
+        timestamp: Joi.number().required(),
+        signature: Joi.string().required(),
       }),
     }).label(`getCollectionFloorAskOracle${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
@@ -115,6 +107,14 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
           FROM w
       `;
 
+      enum PriceKind {
+        SPOT,
+        TWAP,
+        LOWER,
+        UPPER,
+      }
+
+      let kind: PriceKind;
       let price: string;
       if (query.kind === "spot") {
         const result = await edb.oneOrNone(spotQuery, params);
@@ -122,6 +122,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
           throw Boom.badRequest("No floor ask price available");
         }
 
+        kind = PriceKind.SPOT;
         price = result.price;
       } else if (query.kind === "twap") {
         const result = await edb.oneOrNone(twapQuery, params);
@@ -129,6 +130,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
           throw Boom.badRequest("No floor ask price available");
         }
 
+        kind = PriceKind.TWAP;
         price = result.price;
       } else {
         const spotResult = await edb.oneOrNone(spotQuery, params);
@@ -138,69 +140,92 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
         }
 
         if (query.kind === "lower") {
+          kind = PriceKind.LOWER;
           price = bn(spotResult.price).lt(twapResult.price) ? spotResult.price : twapResult.price;
         } else {
+          kind = PriceKind.UPPER;
           price = bn(spotResult.price).gt(twapResult.price) ? spotResult.price : twapResult.price;
         }
       }
 
-      let request: string;
+      // Use EIP-712 structured hashing (https://eips.ethereum.org/EIPS/eip-712)
+      const EIP712_TYPES = {
+        ContractWideCollectionPrice: {
+          ContractWideCollectionPrice: [
+            { name: "kind", type: "uint8" },
+            { name: "contract", type: "address" },
+          ],
+        },
+        TokenRangeCollectionPrice: {
+          TokenRangeCollectionPrice: [
+            { name: "kind", type: "uint8" },
+            { name: "startTokenId", type: "uint256" },
+            { name: "endTokenId", type: "uint256" },
+          ],
+        },
+      };
+
+      let id: string;
       if (params.collection.includes(":")) {
         const [contract, startTokenId, endTokenId] = params.collection.split(":");
-        request = keccak256(
-          ["string", "string", "address", "uint256", "uint256"],
-          [query.kind, "range", contract, startTokenId, endTokenId]
+        id = _TypedDataEncoder.hashStruct(
+          "TokenRangeCollectionPrice",
+          EIP712_TYPES.TokenRangeCollectionPrice,
+          {
+            kind,
+            contract,
+            startTokenId,
+            endTokenId,
+          }
         );
       } else {
-        request = keccak256(
-          ["string", "string", "address"],
-          [query.kind, "contract", params.collection]
+        id = _TypedDataEncoder.hashStruct(
+          "ContractWideCollectionPrice",
+          EIP712_TYPES.ContractWideCollectionPrice,
+          {
+            kind,
+            contract: params.collection,
+          }
         );
       }
 
-      // "TrustUs" packet
-      const packet: {
-        request: string;
-        deadline: number;
+      const message: {
+        id: string;
         payload: string;
-        v?: number;
-        r?: string;
-        s?: string;
+        timestamp: number;
+        signature?: string;
       } = {
-        request,
-        deadline: Math.floor(Date.now() / 1000) + 5 * 60,
+        id,
         payload: defaultAbiCoder.encode(["uint256"], [price]),
+        timestamp: Math.floor(Date.now() / 1000),
       };
 
       if (config.oraclePrivateKey) {
         const wallet = new Wallet(config.oraclePrivateKey);
 
-        const { v, r, s } = splitSignature(
-          await wallet._signTypedData(
-            {
-              name: query.contractName,
-              version: query.contractVersion,
-              chainId: config.chainId,
-              verifyingContract: query.verifyingContract,
-            },
-            {
-              VerifyPacket: [
-                { name: "request", type: "bytes32" },
-                { name: "deadline", type: "uint256" },
-                { name: "payload", type: "bytes" },
-              ],
-            },
-            packet
-          )
+        message.signature = await wallet._signTypedData(
+          {
+            name: query.contractName,
+            version: String(query.contractVersion),
+            chainId: query.chainId,
+            verifyingContract: query.verifyingContract,
+          },
+          {
+            Message: [
+              { name: "id", type: "bytes32" },
+              { name: "payload", type: "bytes" },
+              { name: "timestamp", type: "uint256" },
+            ],
+          },
+          message
         );
-        packet.v = v;
-        packet.r = r;
-        packet.s = s;
+      } else {
+        throw Boom.badRequest("Instance cannot act as oracle");
       }
 
       return {
         price: formatEth(price),
-        packet,
+        message,
       };
     } catch (error) {
       logger.error(

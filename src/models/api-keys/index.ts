@@ -5,7 +5,7 @@
 import { Request } from "@hapi/hapi";
 import { randomUUID } from "crypto";
 
-import { idb } from "@/common/db";
+import { idb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 
@@ -74,7 +74,7 @@ export class ApiKeyManager {
       }
     } else {
       // check if it exists in the database
-      const fromDb = await idb.oneOrNone(`SELECT * FROM api_keys WHERE key = $/key/`, { key });
+      const fromDb = await redb.oneOrNone(`SELECT * FROM api_keys WHERE key = $/key/`, { key });
       if (fromDb) {
         await redis.hset(redisKey, new Map(Object.entries(fromDb)));
         return fromDb;

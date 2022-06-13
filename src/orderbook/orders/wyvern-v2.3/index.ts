@@ -10,13 +10,13 @@ import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import { offChainCheck } from "@/orderbook/orders/wyvern-v2.3/check";
+import { getUserProxy } from "@/orderbook/orders/wyvern-v2.3/utils";
 import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
 
 export type OrderInfo = {
   orderParams: Sdk.WyvernV23.Types.OrderParams;
   metadata: OrderMetadata;
-  logKey?: string;
 };
 
 type SaveResult = {
@@ -370,6 +370,12 @@ export const save = async (
         isReservoir = false;
       }
 
+      // Handle: conduit
+      const conduit = await getUserProxy(order.params.maker);
+      if (!conduit) {
+        throw new Error("Missing user proxy");
+      }
+
       const validFrom = `date_trunc('seconds', to_timestamp(${order.params.listingTime}))`;
       const validTo = order.params.expirationTime
         ? `date_trunc('seconds', to_timestamp(${order.params.expirationTime}))`
@@ -392,6 +398,7 @@ export const save = async (
         source_id_int: sourceId,
         is_reservoir: isReservoir ? isReservoir : null,
         contract: toBuffer(info.contract),
+        conduit: toBuffer(conduit),
         fee_bps: feeBps,
         fee_breakdown: feeBreakdown || null,
         dynamic: order.isDutchAuction() ? true : null,
@@ -441,6 +448,7 @@ export const save = async (
         "source_id_int",
         "is_reservoir",
         "contract",
+        "conduit",
         "fee_bps",
         { name: "fee_breakdown", mod: ":json" },
         "dynamic",

@@ -29,10 +29,10 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { contract, tokenId } = job.data;
-      let retry = job.data.retry;
-
+      const { contract, tokenId, retry } = job.data;
       const token = await Tokens.getByContractAndTokenId(contract, tokenId);
+
+      job.data.addToQueue = false;
 
       if (token?.collectionId) {
         // Update the collection id of any missing activities
@@ -41,7 +41,7 @@ if (config.doBackgroundWork) {
           UserActivities.updateMissingCollectionId(contract, tokenId, token.collectionId),
         ]);
       } else if (retry < MAX_RETRIES) {
-        await addToQueue(contract, tokenId, ++retry);
+        job.data.addToQueue = true;
       } else {
         logger.warn(QUEUE_NAME, `Max retries reached for ${JSON.stringify(job.data)}`);
       }
@@ -49,13 +49,20 @@ if (config.doBackgroundWork) {
     { connection: redis.duplicate(), concurrency: 15 }
   );
 
+  worker.on("completed", async (job) => {
+    if (job.data.addToQueue) {
+      const retry = job.data.retry + 1;
+      await addToQueue(job.data.contract, job.data.tokenId, retry);
+    }
+  });
+
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
 }
 
 export const addToQueue = async (contract: string, tokenId: string, retry = 0) => {
-  const jobId = `${contract}:${tokenId}:${retry}`;
+  const jobId = `${contract}:${tokenId}`;
   const delay = retry ? retry ** 2 * 300 * 1000 : 0;
 
   await queue.add(

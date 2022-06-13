@@ -2,6 +2,8 @@ import { HashZero } from "@ethersproject/constants";
 import crypto from "crypto";
 import stringify from "json-stable-stringify";
 
+import { OrderKind } from "@/orderbook/orders";
+
 // Optional metadata associated to an order
 export type OrderMetadata = {
   // For now, only attribute orders will have an associated schema.
@@ -34,15 +36,7 @@ export const generateSchemaHash = (schema?: object) =>
 // Underlying database model for an order
 export type DbOrder = {
   id: string;
-  kind:
-    | "wyvern-v2.3"
-    | "looks-rare"
-    | "zeroex-v4-erc721"
-    | "zeroex-v4-erc1155"
-    | "opendao-erc721"
-    | "opendao-erc1155"
-    | "foundation"
-    | "x2y2";
+  kind: OrderKind;
   side: "buy" | "sell";
   fillability_status: string;
   approval_status: string;
@@ -59,6 +53,7 @@ export type DbOrder = {
   source_id_int?: number | null;
   is_reservoir?: boolean | null;
   contract: Buffer;
+  conduit: Buffer | null;
   fee_bps: number;
   fee_breakdown: object | null;
   dynamic: boolean | null;
