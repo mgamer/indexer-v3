@@ -4,7 +4,7 @@ import _ from "lodash";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
 
@@ -246,7 +246,7 @@ export const getCollectionV2Options: RouteOptions = {
          ) "attr_key" ON TRUE
       `;
 
-      const result = await edb.oneOrNone(baseQuery, query).then((r) =>
+      const result = await redb.oneOrNone(baseQuery, query).then((r) =>
         !r
           ? null
           : {

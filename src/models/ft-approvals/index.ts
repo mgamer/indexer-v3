@@ -1,4 +1,4 @@
-import { idb } from "@/common/db";
+import { redb, idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 
 export type FtApproval = {
@@ -42,7 +42,7 @@ export const getFtApproval = async (
   owner: string,
   spender: string
 ): Promise<FtApproval | undefined> =>
-  idb
+  redb
     .oneOrNone(
       `
         SELECT

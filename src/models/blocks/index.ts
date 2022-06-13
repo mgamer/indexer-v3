@@ -1,4 +1,4 @@
-import { idb } from "@/common/db";
+import { idb, redb } from "@/common/db";
 import { fromBuffer, toBuffer } from "@/common/utils";
 
 export type Block = {
@@ -41,7 +41,7 @@ export const deleteBlock = async (number: number, hash: string) =>
   );
 
 export const getBlocks = async (number: number): Promise<Block[]> =>
-  idb
+  redb
     .manyOrNone(
       `
         SELECT

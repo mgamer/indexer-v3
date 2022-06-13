@@ -155,7 +155,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle: price and value
       const price = bn(order.params.price);
-      const value = price.sub(price.mul(feeBps).div(10000));
+      const value = order.params.type === "sell" ? price : price.sub(price.mul(feeBps).div(10000));
 
       // Handle: source
       const sources = await Sources.getInstance();
