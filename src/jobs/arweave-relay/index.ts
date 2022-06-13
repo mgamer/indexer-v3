@@ -8,7 +8,7 @@ import { config } from "@/config/index";
 
 const PENDING_DATA_KEY = "pending-arweave-data";
 
-// TODO: Add support for relaying token sets, once integrated
+// TODO: Add support for relaying token sets
 
 export const addPendingOrdersWyvernV23 = async (
   data: { order: Sdk.WyvernV23.Order; schemaHash?: string; source?: string }[]
@@ -19,6 +19,25 @@ export const addPendingOrdersWyvernV23 = async (
       ...data.map(({ order, schemaHash }) =>
         JSON.stringify({
           kind: "wyvern-v2.3",
+          data: {
+            ...order.params,
+            schemaHash,
+          },
+        })
+      )
+    );
+  }
+};
+
+export const addPendingOrdersSeaport = async (
+  data: { order: Sdk.Seaport.Order; schemaHash?: string; source?: string }[]
+) => {
+  if (config.arweaveRelayerKey && data.length) {
+    await redis.rpush(
+      PENDING_DATA_KEY,
+      ...data.map(({ order, schemaHash }) =>
+        JSON.stringify({
+          kind: "seaport",
           data: {
             ...order.params,
             schemaHash,
@@ -88,7 +107,7 @@ export const addPendingOrdersOpenDao = async (
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork && config.arweaveRelayerKey) {
-  // Optimize as much as possible AR usage efficiency.
+  // Optimize as much as possible AR usage efficiency
   const relayInterval = config.chainId === 1 ? 3 : 24 * 60;
 
   cron.schedule(
