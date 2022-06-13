@@ -42,11 +42,11 @@ export const orderFulfilled: EventData = {
         uint256 amount,
         address recipient
       )[] consideration
-  )`,
+    )`,
   ]),
 };
 
-export const nonceIncremented: EventData = {
+export const counterIncremented: EventData = {
   kind: "seaport-counter-incremented",
   addresses: { [Seaport.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
   topic: "0x59950fb23669ee30425f6d79758e75fae698a6c88b2982f2980638d8bcd9397d",
