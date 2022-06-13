@@ -81,26 +81,32 @@ export type EventInfo =
   | {
       kind: EventKind.newSellOrder;
       data: NewSellOrderEventData;
+      context?: string;
     }
   | {
       kind: EventKind.newBuyOrder;
       data: NewBuyOrderEventData;
+      context?: string;
     }
   | {
       kind: EventKind.nftTransferEvent;
       data: NftTransferEventData;
+      context?: string;
     }
   | {
       kind: EventKind.fillEvent;
       data: FillEventData;
+      context?: string;
     }
   | {
       kind: EventKind.sellOrderCancelled;
       data: SellOrderCancelledEventData;
+      context?: string;
     }
   | {
       kind: EventKind.buyOrderCancelled;
       data: BuyOrderCancelledEventData;
+      context?: string;
     };
 
 export const addToQueue = async (events: EventInfo[]) => {
@@ -108,6 +114,9 @@ export const addToQueue = async (events: EventInfo[]) => {
     _.map(events, (event) => ({
       name: randomUUID(),
       data: event,
+      opts: {
+        jobId: event.context,
+      },
     }))
   );
 };

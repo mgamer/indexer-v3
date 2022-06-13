@@ -27,7 +27,7 @@ export const postOrderV2Options: RouteOptions = {
       order: Joi.object({
         kind: Joi.string()
           .lowercase()
-          .valid("opensea", "wyvern-v2.3", "looks-rare", "721ex", "zeroex-v4")
+          .valid("opensea", "wyvern-v2.3", "looks-rare", "721ex", "zeroex-v4", "seaport")
           .required(),
         data: Joi.object().required(),
       }),
@@ -132,6 +132,37 @@ export const postOrderV2Options: RouteOptions = {
             },
           };
           const [result] = await orders.zeroExV4.save([orderInfo]);
+          if (result.status === "success") {
+            return { message: "Success" };
+          } else {
+            throw Boom.badRequest(result.status);
+          }
+        }
+
+        case "seaport": {
+          if (orderbook !== "reservoir") {
+            throw new Error("Unsupported orderbook");
+          }
+
+          const orderInfo: orders.seaport.OrderInfo = {
+            orderParams: order.data,
+            metadata: {
+              schema: attribute && {
+                kind: "attribute",
+                data: {
+                  collection: attribute.collection,
+                  attributes: [
+                    {
+                      key: attribute.key,
+                      value: attribute.value,
+                    },
+                  ],
+                },
+              },
+              source,
+            },
+          };
+          const [result] = await orders.seaport.save([orderInfo]);
           if (result.status === "success") {
             return { message: "Success" };
           } else {

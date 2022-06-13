@@ -6,15 +6,15 @@ import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
-import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
-import { offChainCheck } from "@/orderbook/orders/x2y2/check";
+import { offChainCheck } from "@/orderbook/orders/seaport/check";
 import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
 
 export type OrderInfo = {
-  orderParams: Sdk.X2Y2.Types.Order;
+  orderParams: Sdk.Seaport.Types.OrderComponents;
   metadata: OrderMetadata;
 };
 
@@ -24,18 +24,32 @@ type SaveResult = {
   unfillable?: boolean;
 };
 
-export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
+export const save = async (
+  orderInfos: OrderInfo[],
+  relayToArweave?: boolean
+): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
 
-  // We don't relay X2Y2 orders to Arweave since there is no way to check
-  // the validity of those orders in a decentralized way (we fully depend
-  // on X2Y2's API for that).
+  const arweaveData: {
+    order: Sdk.Seaport.Order;
+    schemaHash?: string;
+    source?: string;
+  }[] = [];
 
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
-      const order = new Sdk.X2Y2.Order(config.chainId, orderParams);
-      const id = order.params.itemHash;
+      const order = new Sdk.Seaport.Order(config.chainId, orderParams);
+      const info = order.getInfo();
+      const id = order.hash();
+
+      // Check: order has a valid format
+      if (!info) {
+        return results.push({
+          id,
+          status: "invalid-format",
+        });
+      }
 
       // Check: order doesn't already exist
       const orderExists = await idb.oneOrNone(`SELECT 1 FROM orders WHERE orders.id = $/id/`, {
@@ -48,49 +62,60 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       }
 
-      // Handle: get order kind
-      const kind = await commonHelpers.getContractKind(order.params.nft.token);
-      if (!kind) {
+      const currentTime = Math.floor(Date.now() / 1000);
+
+      // Check: order has a valid start time
+      const startTime = order.params.startTime;
+      if (startTime - 5 * 60 >= currentTime) {
+        // TODO: Add support for not-yet-valid orders
         return results.push({
           id,
-          status: "unknown-order-kind",
+          status: "invalid-start-time",
         });
       }
 
-      const currentTime = Math.floor(Date.now() / 1000);
-
       // Check: order is not expired
-      const expirationTime = order.params.deadline;
-      if (currentTime >= expirationTime) {
+      const endTime = order.params.endTime;
+      if (endTime !== 0 && currentTime >= endTime) {
         return results.push({
           id,
           status: "expired",
         });
       }
 
-      if (order.params.type !== "sell") {
-        return results.push({
-          id,
-          status: "unsupported-side",
-        });
-      }
-
-      // Check: sell order has Eth as payment token
-      if (
-        order.params.type === "sell" &&
-        order.params.currency !== Sdk.Common.Addresses.Eth[config.chainId]
-      ) {
+      // Check: buy order has Weth as payment token
+      if (info.side === "buy" && info.paymentToken !== Sdk.Common.Addresses.Weth[config.chainId]) {
         return results.push({
           id,
           status: "unsupported-payment-token",
         });
       }
 
-      // Check: order is not private
-      if (order.params.taker !== AddressZero) {
+      // Check: sell order has Eth as payment token
+      if (info.side === "sell" && info.paymentToken !== Sdk.Common.Addresses.Eth[config.chainId]) {
         return results.push({
           id,
-          status: "unsupported-taker",
+          status: "unsupported-payment-token",
+        });
+      }
+
+      // Check: order is valid
+      try {
+        order.checkValidity();
+      } catch {
+        return results.push({
+          id,
+          status: "invalid",
+        });
+      }
+
+      // Check: order has a valid signature
+      try {
+        order.checkSignature();
+      } catch {
+        return results.push({
+          id,
+          status: "invalid-signature",
         });
       }
 
@@ -123,14 +148,18 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       switch (order.params.kind) {
         case "single-token": {
-          [{ id: tokenSetId }] = await tokenSet.singleToken.save([
-            {
-              id: `token:${order.params.nft.token}:${order.params.nft.tokenId}`,
-              schemaHash,
-              contract: order.params.nft.token,
-              tokenId: order.params.nft.tokenId,
-            },
-          ]);
+          const typedInfo = info as typeof info & { tokenId: string };
+          const tokenId = typedInfo.tokenId;
+          if (tokenId) {
+            [{ id: tokenSetId }] = await tokenSet.singleToken.save([
+              {
+                id: `token:${info.contract}:${tokenId}`,
+                schemaHash,
+                contract: info.contract,
+                tokenId,
+              },
+            ]);
+          }
 
           break;
         }
@@ -144,61 +173,82 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       }
 
       // Handle: fees
-      const feeBps = 50;
-      const feeBreakdown = [
-        {
-          kind: "royalty",
-          recipient: Sdk.X2Y2.Addresses.FeeManager[config.chainId],
-          bps: feeBps,
-        },
-      ];
+      let feeAmount = order.getFeeAmount();
 
       // Handle: price and value
-      const price = bn(order.params.price);
-      const value = order.params.type === "sell" ? price : price.sub(price.mul(feeBps).div(10000));
-
-      // Handle: source
-      const sources = await Sources.getInstance();
-      const sourceEntity = await sources.getOrInsert("X2Y2");
-      const source = sourceEntity.address;
-      const sourceId = sourceEntity.id;
-
-      // Handle: native Reservoir orders
-      const isReservoir = false;
-
-      // Handle: conduit
-      let conduit = Sdk.X2Y2.Addresses.Exchange[config.chainId];
-      if (order.params.type === "sell") {
-        const contractKind = await commonHelpers.getContractKind(order.params.nft.token);
-        conduit =
-          contractKind === "erc721"
-            ? Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]
-            : Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId];
+      let price = bn(info.price);
+      let value = price;
+      if (info.side === "buy") {
+        // For buy orders, we set the value as `price - fee` since it
+        // is best for UX to show the user exactly what they're going
+        // to receive on offer acceptance.
+        value = bn(price).sub(feeAmount);
       }
 
-      const validFrom = `date_trunc('seconds', to_timestamp(0))`;
-      const validTo = `date_trunc('seconds', to_timestamp(${order.params.deadline}))`;
+      // The price, value and fee are for a single item
+      if (bn(info.amount).gt(1)) {
+        price = price.div(info.amount);
+        value = value.div(info.amount);
+        feeAmount = feeAmount.div(info.amount);
+      }
+
+      const feeBps = price.eq(0) ? bn(0) : feeAmount.mul(10000).div(price);
+      if (feeBps.gt(10000)) {
+        return results.push({
+          id,
+          status: "fees-too-high",
+        });
+      }
+
+      // Handle: source and fees breakdown
+      let source: string | undefined;
+      let sourceId: number | null = null;
+
+      // Handle: native Reservoir orders
+      const isReservoir = true;
+
+      // If source was passed
+      if (metadata.source) {
+        const sources = await Sources.getInstance();
+        const sourceEntity = await sources.getOrInsert(metadata.source);
+        source = sourceEntity.address;
+        sourceId = sourceEntity.id;
+      }
+
+      const feeBreakdown = info.fees.map(({ recipient, amount }) => ({
+        kind: ["0x5b3256965e7c3cf26e11fcaf296dfc8807c01073"].includes(recipient.toLowerCase())
+          ? "marketplace"
+          : "royalty",
+        recipient,
+        bps: price.eq(0) ? bn(0) : bn(amount).mul(10000).div(price).toNumber(),
+      }));
+
+      const validFrom = `date_trunc('seconds', to_timestamp(${startTime}))`;
+      const validTo = endTime
+        ? `date_trunc('seconds', to_timestamp(${order.params.endTime}))`
+        : "'infinity'";
       orderValues.push({
         id,
-        kind: "x2y2",
-        side: "sell",
+        kind: "seaport",
+        side: info.side,
         fillability_status: fillabilityStatus,
         approval_status: approvalStatus,
         token_set_id: tokenSetId,
         token_set_schema_hash: toBuffer(schemaHash),
-        maker: toBuffer(order.params.maker),
+        maker: toBuffer(order.params.offerer),
         taker: toBuffer(AddressZero),
         price: price.toString(),
         value: value.toString(),
-        quantity_remaining: "1",
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
-        nonce: null,
+        nonce: order.params.counter,
         source_id: source ? toBuffer(source) : null,
         source_id_int: sourceId,
         is_reservoir: isReservoir ? isReservoir : null,
-        contract: toBuffer(order.params.nft.token),
-        conduit: toBuffer(conduit),
-        fee_bps: feeBps,
+        contract: toBuffer(info.contract),
+        conduit: toBuffer(
+          new Sdk.Seaport.Exchange(config.chainId).deriveConduit(order.params.conduitKey)
+        ),
+        fee_bps: feeBps.toNumber(),
         fee_breakdown: feeBreakdown || null,
         dynamic: null,
         raw_data: order.params,
@@ -211,9 +261,13 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         unfillable:
           fillabilityStatus !== "fillable" || approvalStatus !== "approved" ? true : undefined,
       });
+
+      if (relayToArweave) {
+        arweaveData.push({ order, schemaHash, source });
+      }
     } catch (error) {
       logger.error(
-        "orders-x2y2-save",
+        "orders-seaport-save",
         `Failed to handle order with params ${JSON.stringify(orderParams)}: ${error}`
       );
     }
@@ -237,7 +291,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         "taker",
         "price",
         "value",
-        "quantity_remaining",
         { name: "valid_between", mod: ":raw" },
         "nonce",
         "source_id",
@@ -271,6 +324,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             } as ordersUpdateById.OrderInfo)
         )
     );
+
+    if (relayToArweave) {
+      await arweaveRelay.addPendingOrdersSeaport(arweaveData);
+    }
   }
 
   return results;

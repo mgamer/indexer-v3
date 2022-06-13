@@ -69,7 +69,7 @@ export const syncEvents = async (
   const routerToFillSource: { [address: string]: string } = {};
 
   // Reservoir
-  for (const address of Object.keys(Sdk.Router.Addresses.AllRouters[config.chainId])) {
+  for (const address of Sdk.Router.Addresses.AllRouters[config.chainId]) {
     routerToFillSource[address.toLowerCase()] = "reservoir";
   }
 
@@ -115,7 +115,7 @@ export const syncEvents = async (
       const cancelEvents: es.cancels.Event[] = [];
       const cancelEventsFoundation: es.cancels.Event[] = [];
       const fillEvents: es.fills.Event[] = [];
-      const fillEventsZeroExV4: es.fills.Event[] = [];
+      const fillEventsPartial: es.fills.Event[] = [];
       const fillEventsFoundation: es.fills.Event[] = [];
       const foundationOrders: Foundation.OrderInfo[] = [];
 
@@ -1450,7 +1450,7 @@ export const syncEvents = async (
               }
 
               // Custom handling to support partial filling
-              fillEventsZeroExV4.push({
+              fillEventsPartial.push({
                 orderKind,
                 orderId,
                 orderSide: direction === 0 ? "sell" : "buy",
@@ -1506,6 +1506,120 @@ export const syncEvents = async (
 
               break;
             }
+
+            case "seaport-order-cancelled": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const orderId = parsedLog.args["orderHash"].toLowerCase();
+
+              cancelEvents.push({
+                orderKind: "seaport",
+                orderId,
+                baseEventParams,
+              });
+
+              orderInfos.push({
+                context: `cancelled-${orderId}`,
+                id: orderId,
+                trigger: {
+                  kind: "cancel",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                  logIndex: baseEventParams.logIndex,
+                  batchIndex: baseEventParams.batchIndex,
+                  blockHash: baseEventParams.blockHash,
+                },
+              });
+
+              break;
+            }
+
+            case "seaport-counter-incremented": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const maker = parsedLog.args["oferrer"].toLowerCase();
+              const newCounter = parsedLog.args["newCounter"].toString();
+
+              bulkCancelEvents.push({
+                orderKind: "seaport",
+                maker,
+                minNonce: newCounter,
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "seaport-order-filled": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const orderId = parsedLog.args["orderHash"].toLowerCase();
+              const maker = parsedLog.args["offerer"].toLowerCase();
+              let taker = parsedLog.args["recipient"].toLowerCase();
+              const offer = parsedLog.args["offer"];
+              const consideration = parsedLog.args["consideration"];
+
+              const saleInfo = new Sdk.Seaport.Exchange(config.chainId).deriveBasicSale(
+                offer,
+                consideration
+              );
+              if (saleInfo) {
+                let side: "sell" | "buy";
+                if (saleInfo.paymentToken === Sdk.Common.Addresses.Eth[config.chainId]) {
+                  side = "sell";
+                } else if (saleInfo.paymentToken === Sdk.Common.Addresses.Weth[config.chainId]) {
+                  side = "buy";
+                } else {
+                  break;
+                }
+
+                // Handle filling through routers
+                let fillSource: string | undefined;
+                if (routerToFillSource[taker]) {
+                  fillSource = routerToFillSource[taker];
+                  taker = await syncEventsUtils
+                    .fetchTransaction(baseEventParams.txHash)
+                    .then((tx) => tx.from);
+                }
+
+                const price = bn(saleInfo.price).div(saleInfo.amount).toString();
+
+                // Custom handling to support partial filling
+                fillEventsPartial.push({
+                  orderKind: "seaport",
+                  orderId,
+                  orderSide: side,
+                  maker,
+                  taker,
+                  price,
+                  contract: saleInfo.contract,
+                  tokenId: saleInfo.tokenId,
+                  amount: saleInfo.amount,
+                  fillSource,
+                  baseEventParams,
+                });
+
+                orderInfos.push({
+                  context: `filled-${orderId}-${baseEventParams.txHash}`,
+                  id: orderId,
+                  trigger: {
+                    kind: "sale",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
+                });
+
+                fillInfos.push({
+                  context: `${orderId}-${baseEventParams.txHash}`,
+                  orderId: orderId,
+                  orderSide: side,
+                  contract: saleInfo.contract,
+                  tokenId: saleInfo.tokenId,
+                  amount: saleInfo.amount,
+                  price,
+                  timestamp: baseEventParams.timestamp,
+                });
+              }
+
+              break;
+            }
           }
         } catch (error) {
           logger.info("sync-events", `Failed to handle events: ${error}`);
@@ -1516,7 +1630,7 @@ export const syncEvents = async (
       // WARNING! Ordering matters (fills should come in front of cancels).
       await Promise.all([
         es.fills.addEvents(fillEvents),
-        es.fills.addEventsZeroExV4(fillEventsZeroExV4),
+        es.fills.addEventsPartial(fillEventsPartial),
         es.fills.addEventsFoundation(fillEventsFoundation),
       ]);
 
@@ -1532,7 +1646,7 @@ export const syncEvents = async (
 
       // Add all the fill events to the activity queue
       const fillActivitiesInfo: processActivityEvent.EventInfo[] = _.map(
-        _.concat(fillEvents, fillEventsZeroExV4, fillEventsFoundation),
+        _.concat(fillEvents, fillEventsPartial, fillEventsFoundation),
         (event) => ({
           kind: processActivityEvent.EventKind.fillEvent,
           data: {
@@ -1559,6 +1673,12 @@ export const syncEvents = async (
       const transferActivitiesInfo: processActivityEvent.EventInfo[] = _.map(
         nftTransferEvents,
         (event) => ({
+          context: [
+            processActivityEvent.EventKind.nftTransferEvent,
+            event.baseEventParams.txHash,
+            event.baseEventParams.logIndex,
+            event.baseEventParams.batchIndex,
+          ].join(":"),
           kind: processActivityEvent.EventKind.nftTransferEvent,
           data: {
             contract: event.baseEventParams.address,

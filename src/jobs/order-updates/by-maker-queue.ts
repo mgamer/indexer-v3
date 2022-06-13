@@ -127,6 +127,8 @@ if (config.doBackgroundWork) {
             const { contract, orderKind, operator } = data;
 
             if (operator) {
+              // Approval change is coming from an `Approval` event
+
               // TODO: Split into multiple batches to support makers with lots of orders
 
               // First, ensure the maker has any orders with the current `operator` as conduit
@@ -207,6 +209,8 @@ if (config.doBackgroundWork) {
                 );
               }
             } else if (orderKind) {
+              // Approval change is coming from a `Transfer` event
+
               // Fetch all different conduits for the given order kind
               const result = await idb.manyOrNone(
                 `
@@ -226,19 +230,21 @@ if (config.doBackgroundWork) {
 
               // Trigger a new job to individually handle all maker's conduits
               await addToQueue(
-                result.map(({ conduit }) => {
-                  conduit = fromBuffer(conduit);
-                  return {
-                    context: `${context}-${conduit}`,
-                    maker,
-                    trigger,
-                    data: {
-                      kind: "buy-approval",
-                      contract,
-                      operator: conduit,
-                    },
-                  };
-                })
+                result
+                  .filter(({ conduit }) => Boolean(conduit))
+                  .map(({ conduit }) => {
+                    conduit = fromBuffer(conduit);
+                    return {
+                      context: `${context}-${conduit}`,
+                      maker,
+                      trigger,
+                      data: {
+                        kind: "buy-approval",
+                        contract,
+                        operator: conduit,
+                      },
+                    };
+                  })
               );
             }
 
@@ -325,9 +331,6 @@ if (config.doBackgroundWork) {
           }
 
           case "sell-approval": {
-            // TODO: Backfill orders conduit and use that directly instead of
-            // manually detecting and using the order kind from the operator.
-
             // TODO: Get latest approval to operator and use that instead of
             // `approved` field that gets explicitly passed to the job.
 
@@ -339,8 +342,11 @@ if (config.doBackgroundWork) {
 
             const result: { id: string }[] = [];
 
+            let detected = false;
+
             // OpenDao
             if (data.operator === Sdk.OpenDao.Addresses.Exchange[config.chainId]?.toLowerCase()) {
+              detected = true;
               for (const orderKind of ["opendao-erc721", "opendao-erc1155"]) {
                 result.push(
                   ...(await idb.manyOrNone(
@@ -378,6 +384,7 @@ if (config.doBackgroundWork) {
 
             // ZeroExV4
             if (data.operator === Sdk.ZeroExV4.Addresses.Exchange[config.chainId]?.toLowerCase()) {
+              detected = true;
               for (const orderKind of ["zeroex-v4-erc721", "zeroex-v4-erc1155"]) {
                 result.push(
                   ...(await idb.manyOrNone(
@@ -415,6 +422,7 @@ if (config.doBackgroundWork) {
 
             // X2Y2
             if (data.operator === Sdk.X2Y2.Addresses.Exchange[config.chainId]?.toLowerCase()) {
+              detected = true;
               result.push(
                 ...(await idb.manyOrNone(
                   `
@@ -455,6 +463,7 @@ if (config.doBackgroundWork) {
                 Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId]?.toLowerCase(),
               ].includes(data.operator)
             ) {
+              detected = true;
               const kind =
                 data.operator ===
                 Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]?.toLowerCase()
@@ -500,6 +509,7 @@ if (config.doBackgroundWork) {
             // Wyvern v2.3
             const proxy = await wyvernV23Utils.getUserProxy(maker);
             if (proxy && proxy === data.operator) {
+              detected = true;
               result.push(
                 ...(await idb.manyOrNone(
                   `
@@ -526,6 +536,46 @@ if (config.doBackgroundWork) {
                   {
                     maker: toBuffer(maker),
                     contract: toBuffer(data.contract),
+                    approvalStatus: data.approved ? "approved" : "no-approval",
+                    expiration: trigger.txTimestamp,
+                  }
+                ))
+              );
+            }
+
+            // TODO: Backfill orders conduit and use that directly instead of
+            // manually detecting and using the order kind from the operator.
+            // Just like we do with Seaport, but for all orders.
+
+            // Seaport
+            if (!detected) {
+              result.push(
+                ...(await idb.manyOrNone(
+                  `
+                    UPDATE orders AS o SET
+                      approval_status = $/approvalStatus/,
+                      expiration = to_timestamp($/expiration/),
+                      updated_at = now()
+                    FROM (
+                      SELECT
+                        orders.id
+                      FROM orders
+                      JOIN token_sets_tokens
+                        ON orders.token_set_id = token_sets_tokens.token_set_id
+                      WHERE token_sets_tokens.contract = $/contract/
+                        AND orders.maker = $/maker/
+                        AND orders.side = 'sell'
+                        AND orders.conduit = $/operator/
+                        AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                        AND orders.approval_status != $/approvalStatus/
+                    ) x
+                    WHERE o.id = x.id
+                    RETURNING o.id
+                  `,
+                  {
+                    maker: toBuffer(maker),
+                    contract: toBuffer(data.contract),
+                    operator: toBuffer(data.operator),
                     approvalStatus: data.approved ? "approved" : "no-approval",
                     expiration: trigger.txTimestamp,
                   }

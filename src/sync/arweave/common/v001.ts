@@ -9,6 +9,7 @@ import * as tokenList from "@/orderbook/token-sets/token-list";
 // - `looks-rare` orders
 // - `opendao` orders
 // - `zeroex-v4` orders
+// - `seaport` orders
 // - `list` token sets
 
 export const processTransactionData = async (
@@ -21,9 +22,11 @@ export const processTransactionData = async (
   for (const { kind, data } of transactionData) {
     try {
       switch (kind) {
-        case "wyvern-v2.3":
         case "looks-rare":
-        case "opendao": {
+        case "opendao":
+        case "seaport":
+        case "wyvern-v2.3":
+        case "zeroex-v4": {
           orderInfos.push({
             kind,
             info: {

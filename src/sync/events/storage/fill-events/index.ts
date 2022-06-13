@@ -2,7 +2,7 @@ import { BaseEventParams } from "@/events-sync/parser";
 import { OrderKind } from "@/orderbook/orders";
 
 export * from "@/events-sync/storage/fill-events/common";
-export * from "@/events-sync/storage/fill-events/zeroex-v4";
+export * from "@/events-sync/storage/fill-events/partial";
 export * from "@/events-sync/storage/fill-events/foundation";
 
 export type Event = {
