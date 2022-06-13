@@ -47,13 +47,13 @@ export const orderFulfilled: EventData = {
 };
 
 export const nonceIncremented: EventData = {
-  kind: "seaport-nonce-incremented",
+  kind: "seaport-counter-incremented",
   addresses: { [Seaport.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
-  topic: "0x7ab0fc7de8910a6100b24df423c3d0835534506dca9473d30c3e7df51241b2cf",
+  topic: "0x59950fb23669ee30425f6d79758e75fae698a6c88b2982f2980638d8bcd9397d",
   numTopics: 2,
   abi: new Interface([
-    `event NonceIncremented(
-      uint256 newNonce,
+    `event CounterIncremented(
+      uint256 newCounter,
       address indexed offerer
     )`,
   ]),

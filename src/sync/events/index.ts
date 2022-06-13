@@ -1533,15 +1533,15 @@ export const syncEvents = async (
               break;
             }
 
-            case "seaport-nonce-incremented": {
+            case "seaport-counter-incremented": {
               const parsedLog = eventData.abi.parseLog(log);
               const maker = parsedLog.args["oferrer"].toLowerCase();
-              const newNonce = parsedLog.args["newNonce"].toString();
+              const newCounter = parsedLog.args["newCounter"].toString();
 
               bulkCancelEvents.push({
                 orderKind: "seaport",
                 maker,
-                minNonce: newNonce,
+                minNonce: newCounter,
                 baseEventParams,
               });
 

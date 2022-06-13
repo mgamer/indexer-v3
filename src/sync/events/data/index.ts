@@ -49,7 +49,7 @@ export type EventDataKind =
   | "x2y2-order-inventory"
   | "seaport-order-cancelled"
   | "seaport-order-filled"
-  | "seaport-nonce-incremented";
+  | "seaport-counter-incremented";
 
 export type EventData = {
   kind: EventDataKind;
