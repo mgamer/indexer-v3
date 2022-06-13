@@ -46,7 +46,10 @@ export type EventDataKind =
   | "foundation-buy-price-cancelled"
   | "foundation-buy-price-accepted"
   | "x2y2-order-cancelled"
-  | "x2y2-order-inventory";
+  | "x2y2-order-inventory"
+  | "seaport-order-cancelled"
+  | "seaport-order-filled"
+  | "seaport-counter-incremented";
 
 export type EventData = {
   kind: EventDataKind;
