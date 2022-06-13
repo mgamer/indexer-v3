@@ -143,6 +143,7 @@ const uploadSequenceToS3 = async (key: string, data: string) => {
       Key: key,
       Body: data,
       ContentType: "application/json",
+      ACL: "bucket-owner-full-control",
     })
     .promise();
 };
