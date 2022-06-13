@@ -230,19 +230,21 @@ if (config.doBackgroundWork) {
 
               // Trigger a new job to individually handle all maker's conduits
               await addToQueue(
-                result.map(({ conduit }) => {
-                  conduit = fromBuffer(conduit);
-                  return {
-                    context: `${context}-${conduit}`,
-                    maker,
-                    trigger,
-                    data: {
-                      kind: "buy-approval",
-                      contract,
-                      operator: conduit,
-                    },
-                  };
-                })
+                result
+                  .filter(({ conduit }) => Boolean(conduit))
+                  .map(({ conduit }) => {
+                    conduit = fromBuffer(conduit);
+                    return {
+                      context: `${context}-${conduit}`,
+                      maker,
+                      trigger,
+                      data: {
+                        kind: "buy-approval",
+                        contract,
+                        operator: conduit,
+                      },
+                    };
+                  })
               );
             }
 
