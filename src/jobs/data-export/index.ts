@@ -16,6 +16,8 @@ if (config.doBackgroundWork) {
   getTasks()
     .then(async (tasks) => {
       for (const task of tasks) {
+        continue;
+
         cron.schedule(
           "*/10 * * * *",
           async () =>

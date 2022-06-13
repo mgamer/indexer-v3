@@ -59,7 +59,6 @@ if (config.doBackgroundWork) {
         );
       } catch (error) {
         logger.error(QUEUE_NAME, `Export ${kind} failed: ${error}`);
-        throw error;
       }
     },
     { connection: redis.duplicate(), concurrency: 15 }
