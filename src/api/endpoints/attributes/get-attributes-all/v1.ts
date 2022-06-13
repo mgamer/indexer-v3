@@ -13,7 +13,6 @@ export const getAttributesAllV1Options: RouteOptions = {
   tags: ["api", "Deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 13,
       deprecated: true,
     },
   },
