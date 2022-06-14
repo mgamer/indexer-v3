@@ -29,6 +29,7 @@ export class AsksDataSource extends BaseDataSource {
             NULLIF(DATE_PART('epoch', UPPER(orders.valid_between)), 'Infinity'),
             0
           ) AS valid_until,
+          orders.nonce,
           orders.source_id,
           orders.fee_bps,
           orders.fee_breakdown,
@@ -93,6 +94,7 @@ export class AsksDataSource extends BaseDataSource {
           quantity_remaining: Number(r.quantity_remaining),
           valid_from: Number(r.valid_from),
           valid_until: Number(r.valid_until),
+          nonce: Number(r.nonce),
           source: r.source_id ? sources.getByAddress(fromBuffer(r.source_id))?.name : null,
           fee_bps: Number(r.fee_bps),
           fee_breakdown: r.fee_breakdown,
