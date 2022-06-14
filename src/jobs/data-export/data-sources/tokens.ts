@@ -1,6 +1,6 @@
 import { idb } from "@/common/db";
 import { Sources } from "@/models/sources";
-import { formatEth, fromBuffer } from "@/common/utils";
+import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
 
 export class TokensDataSource extends BaseDataSource {
@@ -8,7 +8,7 @@ export class TokensDataSource extends BaseDataSource {
     let continuationFilter = "";
 
     if (cursor) {
-      continuationFilter = `WHERE ("t"."updated_at", "t"."id") > ($/updatedAt/, $/id/)`;
+      continuationFilter = `WHERE ("t"."updated_at", "t"."contract", "t"."token_id") > ($/updatedAt/, $/contract/, $/tokenId/)`;
     }
 
     const query = `
@@ -37,12 +37,13 @@ export class TokensDataSource extends BaseDataSource {
           "t"."updated_at"
         FROM "tokens" "t"
         ${continuationFilter}
-        ORDER BY "t"."updated_at", "t"."id"
+        ORDER BY "t"."updated_at", "t"."contract", "t"."token_id"
         LIMIT $/limit/;  
       `;
 
     const result = await idb.manyOrNone(query, {
-      id: cursor?.id,
+      contract: cursor?.contract ? toBuffer(cursor.contract) : null,
+      tokenId: cursor?.tokenId,
       updatedAt: cursor?.updatedAt,
       limit,
     });
@@ -55,7 +56,6 @@ export class TokensDataSource extends BaseDataSource {
         token_id: r.token_id,
         name: r.name,
         description: r.description,
-        kind: r.kind,
         collection_id: r.collection_id,
         owner: r.owner ? fromBuffer(r.owner) : null,
         floor_ask_id: r.floor_sell_id,
@@ -75,7 +75,8 @@ export class TokensDataSource extends BaseDataSource {
       return {
         data,
         nextCursor: {
-          id: result[result.length - 1].id,
+          contract: fromBuffer(result[result.length - 1].id),
+          TokenId: result[result.length - 1].token_id,
           updatedAt: result[result.length - 1].updated_at,
         },
       };
@@ -86,6 +87,7 @@ export class TokensDataSource extends BaseDataSource {
 }
 
 type CursorInfo = {
-  id: number;
+  contract: string;
+  tokenId: number;
   updatedAt: string;
 };

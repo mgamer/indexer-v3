@@ -55,7 +55,9 @@ if (config.doBackgroundWork) {
 
         logger.info(
           QUEUE_NAME,
-          `Export finished. kind:${kind}, backfill:${backfill}, cursor:${cursor}, sequenceNumber:${sequenceNumber}`
+          `Export finished. kind:${kind}, backfill:${backfill}, cursor:${JSON.stringify(
+            cursor
+          )}, sequenceNumber:${sequenceNumber}`
         );
       } catch (error) {
         logger.error(QUEUE_NAME, `Export ${kind} failed: ${error}`);
