@@ -8,8 +8,8 @@ import { randomUUID } from "crypto";
 import AWS from "aws-sdk";
 
 import { AskEventsDataSource } from "@/jobs/data-export/data-sources/ask-events";
-import { TokenFloorAskEventsDataSource } from "@/jobs/data-export/data-sources/token-floor-sell-events";
-import { CollectionFloorAskEventsDataSource } from "@/jobs/data-export/data-sources/collection-floor-sell-events";
+import { TokenFloorAskEventsDataSource } from "@/jobs/data-export/data-sources/token-floor-ask-events";
+import { CollectionFloorAskEventsDataSource } from "@/jobs/data-export/data-sources/collection-floor-ask-events";
 import { AsksDataSource } from "@/jobs/data-export/data-sources/asks";
 import { TokensDataSource } from "@/jobs/data-export/data-sources/tokens";
 import { CollectionsDataSource } from "@/jobs/data-export/data-sources/collections";
