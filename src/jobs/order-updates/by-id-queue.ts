@@ -41,8 +41,6 @@ if (config.doBackgroundWork) {
       const { id, trigger } = job.data as OrderInfo;
       let { side, tokenSetId } = job.data as OrderInfo;
 
-      logger.info(QUEUE_NAME, `Start to handle order info ${JSON.stringify(job.data)}`);
-
       try {
         let order;
 
@@ -70,11 +68,6 @@ if (config.doBackgroundWork) {
               WHERE orders.id = $/id/
               LIMIT 1`,
             { id }
-          );
-
-          logger.info(
-            QUEUE_NAME,
-            `Found order for order info ${JSON.stringify(job.data)}: ${JSON.stringify(order)}`
           );
 
           side = order?.side;
