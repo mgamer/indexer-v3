@@ -17,7 +17,7 @@ import { Sources } from "@/models/sources";
 const version = "v2";
 
 export const getExecuteBuyV2Options: RouteOptions = {
-  description: "Buy any token at the best available price",
+  description: "Buy a token at the best price",
   tags: ["api", "Router"],
   plugins: {
     "hapi-swagger": {

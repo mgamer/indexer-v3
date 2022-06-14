@@ -18,7 +18,7 @@ import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
 const version = "v1";
 
 export const postCollectionsRefreshV1Options: RouteOptions = {
-  description: "Public API for anyone to refresh a collection's orders and metadata",
+  description: "Refresh a collection's orders and metadata",
   tags: ["api", "Admin"],
   plugins: {
     "hapi-swagger": {

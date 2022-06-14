@@ -12,7 +12,7 @@ import { ActivityType } from "@/models/activities/activities-entity";
 const version = "v1";
 
 export const getTokenActivityV1Options: RouteOptions = {
-  description: "Get activity events for the given token",
+  description: "Token activity",
   notes: "This API can be used to build a feed for a token",
   tags: ["api", "Activity"],
   plugins: {

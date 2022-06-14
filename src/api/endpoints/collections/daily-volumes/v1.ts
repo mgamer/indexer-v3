@@ -10,7 +10,7 @@ import { formatEth } from "@/common/utils";
 const version = "v1";
 
 export const getDailyVolumesV1Options: RouteOptions = {
-  description: "Get historical volume data for a collection",
+  description: "Historical collection volume",
   notes: "Get date, volume, rank and sales count for each collection",
   tags: ["api", "Stats"],
   plugins: {

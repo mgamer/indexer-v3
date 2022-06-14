@@ -16,7 +16,7 @@ export const getSearchCollectionsV1Options: RouteOptions = {
     privacy: "public",
     expiresIn: 10000,
   },
-  description: "Search for collections by given name",
+  description: "Search collections",
   tags: ["api", "Collections"],
   plugins: {
     "hapi-swagger": {
