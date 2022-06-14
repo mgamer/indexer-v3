@@ -18,10 +18,10 @@ export const getUserTokensV2Options: RouteOptions = {
   description: "Get tokens held by a user, along with ownership information",
   notes:
     "Get tokens held by a user, along with ownership information such as associated orders and date acquired.",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "Tokens"],
   plugins: {
     "hapi-swagger": {
-      order: 32,
+      order: 9,
     },
   },
   validate: {

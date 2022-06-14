@@ -21,10 +21,10 @@ export const getOrdersAllV1Options: RouteOptions = {
   description: "Bulk access to raw orders",
   notes:
     "This API is designed for efficiently ingesting large volumes of orders, for external processing",
-  tags: ["api", "1. Order Book"],
+  tags: ["api", "Orders"],
   plugins: {
     "hapi-swagger": {
-      order: 1,
+      order: 5,
     },
   },
   validate: {

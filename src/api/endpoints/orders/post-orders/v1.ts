@@ -12,10 +12,10 @@ const version = "v1";
 
 export const postOrdersV1Options: RouteOptions = {
   description: "Publish multiple orders in bulk",
-  tags: ["api", "1. Order Book"],
+  tags: ["api", "Deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 5,
+      deprecated: true,
     },
   },
   validate: {

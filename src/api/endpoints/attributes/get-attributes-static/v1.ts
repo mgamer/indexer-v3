@@ -10,10 +10,10 @@ const version = "v1";
 
 export const getAttributesStaticV1Options: RouteOptions = {
   description: "Get all attributes in a collection, including tokens ids",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "Attributes"],
   plugins: {
     "hapi-swagger": {
-      order: 14,
+      order: 2,
     },
   },
   validate: {

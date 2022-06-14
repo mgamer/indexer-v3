@@ -11,10 +11,10 @@ const version = "v1";
 
 export const getStatsV1Options: RouteOptions = {
   description: "Get aggregate stats for a particular set (collection, attribute or single token)",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "Stats"],
   plugins: {
     "hapi-swagger": {
-      order: 53,
+      order: 7,
     },
   },
   validate: {
