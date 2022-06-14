@@ -3,7 +3,7 @@ import { Sources } from "@/models/sources";
 import { formatEth, fromBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
 
-export class TokenFloorSellEventsDataSource extends BaseDataSource {
+export class TokenFloorAskEventsDataSource extends BaseDataSource {
   public async getSequenceData(cursor: CursorInfo | null, limit: number) {
     let continuationFilter = "";
 
