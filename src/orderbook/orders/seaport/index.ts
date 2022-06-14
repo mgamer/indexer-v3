@@ -105,6 +105,8 @@ export const save = async (
           AddressZero,
           "0xf397619df7bfd4d1657ea9bdd9df7ff888731a11",
           "0x9b814233894cd227f561b78cc65891aa55c62ad2",
+          // Pausable zone
+          "0x44dc42076eca1b8e35b222a54b04daa333ce1f63",
         ].includes(order.params.zone)
       ) {
         return results.push({
