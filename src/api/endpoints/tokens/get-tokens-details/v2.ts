@@ -26,6 +26,7 @@ export const getTokensDetailsV2Options: RouteOptions = {
   plugins: {
     "hapi-swagger": {
       order: 22,
+      deprecated: true,
     },
   },
   validate: {

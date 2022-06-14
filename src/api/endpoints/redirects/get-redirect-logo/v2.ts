@@ -14,7 +14,7 @@ export const getRedirectLogoV2Options: RouteOptions = {
     expiresIn: 60000,
   },
   description: "Redirect response to the given source logo",
-  tags: ["api", "5. Redirects"],
+  tags: ["api", "Redirects"],
   plugins: {
     "hapi-swagger": {
       order: 53,

@@ -26,6 +26,7 @@ export const getOrdersBidsV1Options: RouteOptions = {
   plugins: {
     "hapi-swagger": {
       order: 42,
+      deprecated: true,
     },
   },
   validate: {

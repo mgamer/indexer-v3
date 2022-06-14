@@ -19,6 +19,7 @@ export const postOrderV1Options: RouteOptions = {
   plugins: {
     "hapi-swagger": {
       order: 4,
+      deprecated: true,
     },
   },
   validate: {

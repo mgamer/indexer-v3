@@ -27,10 +27,10 @@ export const getTokensDetailsV3Options: RouteOptions = {
   description: "Get one or more tokens with full details",
   notes:
     "Get a list of tokens with full metadata. This is useful for showing a single token page, or scenarios that require more metadata. If you don't need this metadata, you should use the <a href='#/tokens/getTokensV1'>tokens</a> API, which is much faster.",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 22,
+      deprecated: true,
     },
   },
   validate: {

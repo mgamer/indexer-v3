@@ -22,10 +22,10 @@ export const getSalesV3Options: RouteOptions = {
   description: "Get recent sales for a contract or token",
   notes:
     "Note: this API is returns rich metadata, and has advanced filters, so is only designed for small amounts of recent sales. If you want access to sales in bulk, use the `Aggregator > Bulk Sales` API.",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "Sales"],
   plugins: {
     "hapi-swagger": {
-      order: 52,
+      order: 8,
     },
   },
   validate: {
