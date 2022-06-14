@@ -99,7 +99,10 @@ const getSequenceInfo = async (kind: DataSourceKind) => {
   });
 };
 
-const setNextSequenceInfo = async (kind: DataSourceKind, cursor: string | null) => {
+const setNextSequenceInfo = async (
+  kind: DataSourceKind,
+  cursor: Record<string, unknown> | null
+) => {
   const query = `
           UPDATE data_export_tasks
           SET cursor = $/cursor/,

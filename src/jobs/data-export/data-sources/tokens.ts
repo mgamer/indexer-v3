@@ -4,11 +4,11 @@ import { formatEth, fromBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
 
 export class TokensDataSource extends BaseDataSource {
-  public async getSequenceData(cursor: string | null, limit: number) {
+  public async getSequenceData(cursor: CursorInfo | null, limit: number) {
     let continuationFilter = "";
 
     if (cursor) {
-      continuationFilter = `WHERE "t"."updated_at"  > $/cursor/`;
+      continuationFilter = `WHERE ("t"."updated_at", "t"."id") > ($/updatedAt/, $/id/)`;
     }
 
     const query = `
@@ -45,7 +45,8 @@ export class TokensDataSource extends BaseDataSource {
       `;
 
     const result = await idb.manyOrNone(query, {
-      cursor,
+      id: cursor?.id,
+      updatedAt: cursor?.updatedAt,
       limit,
     });
 
@@ -76,10 +77,18 @@ export class TokensDataSource extends BaseDataSource {
 
       return {
         data,
-        nextCursor: result[result.length - 1].updated_at,
+        nextCursor: {
+          id: result[result.length - 1].id,
+          updatedAt: result[result.length - 1].updated_at,
+        },
       };
     }
 
     return { data: [], nextCursor: null };
   }
 }
+
+type CursorInfo = {
+  id: number;
+  updatedAt: string;
+};
