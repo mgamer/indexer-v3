@@ -1,15 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { defaultAbiCoder } from "@ethersproject/abi";
+import { arrayify } from "@ethersproject/bytes";
+import { AddressZero } from "@ethersproject/constants";
 import { _TypedDataEncoder } from "@ethersproject/hash";
 import { Wallet } from "@ethersproject/wallet";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
+import * as Sdk from "@reservoir0x/sdk";
+import axios from "axios";
 import Joi from "joi";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { bn, formatEth } from "@/common/utils";
+import { bn, formatPrice } from "@/common/utils";
 import { config } from "@/config/index";
 
 const version = "v1";
@@ -27,14 +31,9 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
       collection: Joi.string().lowercase().required(),
     }),
     query: Joi.object({
-      contractName: Joi.string().required(),
-      contractVersion: Joi.number().integer().positive().required(),
-      verifyingContract: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .required(),
-      chainId: Joi.number().default(config.chainId),
       kind: Joi.string().valid("spot", "twap", "lower", "upper").default("spot"),
+      currency: Joi.string().lowercase().default(AddressZero),
+      eip3668Calldata: Joi.string(),
     }),
   },
   response: {
@@ -46,6 +45,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
         timestamp: Joi.number().required(),
         signature: Joi.string().required(),
       }),
+      data: Joi.string(),
     }).label(`getCollectionFloorAskOracle${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
@@ -58,6 +58,12 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
   handler: async (request: Request) => {
     const query = request.query as any;
     const params = request.params as any;
+
+    if (query.eip3668Calldata) {
+      const [currency, kind] = defaultAbiCoder.decode(["address", "string"], query.eip3668Calldata);
+      (query as any).currency = currency.toLowerCase();
+      (query as any).kind = kind;
+    }
 
     try {
       const spotQuery = `
@@ -116,6 +122,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
 
       let kind: PriceKind;
       let price: string;
+      let decimals = 18;
       if (query.kind === "spot") {
         const result = await edb.oneOrNone(spotQuery, params);
         if (!result?.price) {
@@ -150,6 +157,13 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
 
       // Use EIP-712 structured hashing (https://eips.ethereum.org/EIPS/eip-712)
       const EIP712_TYPES = {
+        Message: {
+          Message: [
+            { name: "id", type: "bytes32" },
+            { name: "payload", type: "bytes" },
+            { name: "timestamp", type: "uint256" },
+          ],
+        },
         ContractWideCollectionPrice: {
           ContractWideCollectionPrice: [
             { name: "kind", type: "uint8" },
@@ -189,6 +203,26 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
         );
       }
 
+      if (Object.values(Sdk.Common.Addresses.Eth).includes(query.currency)) {
+        // ETH: do nothing
+      } else if (Object.values(Sdk.Common.Addresses.Weth).includes(query.currency)) {
+        // WETH: do nothing
+      } else if (Object.values(Sdk.Common.Addresses.Usdc).includes(query.currency)) {
+        // USDC: convert price to USDC
+        const usdPrice = await axios
+          .get("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd")
+          .then((response) => (response.data as any).ethereum.usd);
+
+        // USDC has 6 decimals
+        price = bn(usdPrice * 1000000)
+          .mul(price)
+          .div(bn("1000000000000000000"))
+          .toString();
+        decimals = 6;
+      } else {
+        throw Boom.badRequest("Unsupported currency");
+      }
+
       const message: {
         id: string;
         payload: string;
@@ -196,36 +230,26 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
         signature?: string;
       } = {
         id,
-        payload: defaultAbiCoder.encode(["uint256"], [price]),
+        payload: defaultAbiCoder.encode(["address", "uint256"], [query.currency, price]),
         timestamp: Math.floor(Date.now() / 1000),
       };
 
       if (config.oraclePrivateKey) {
-        const wallet = new Wallet(config.oraclePrivateKey);
-
-        message.signature = await wallet._signTypedData(
-          {
-            name: query.contractName,
-            version: String(query.contractVersion),
-            chainId: query.chainId,
-            verifyingContract: query.verifyingContract,
-          },
-          {
-            Message: [
-              { name: "id", type: "bytes32" },
-              { name: "payload", type: "bytes" },
-              { name: "timestamp", type: "uint256" },
-            ],
-          },
-          message
+        message.signature = await new Wallet(config.oraclePrivateKey).signMessage(
+          arrayify(_TypedDataEncoder.hashStruct("Message", EIP712_TYPES.Message, message))
         );
       } else {
         throw Boom.badRequest("Instance cannot act as oracle");
       }
 
       return {
-        price: formatEth(price),
+        price: formatPrice(price, decimals),
         message,
+        // For EIP-3668 compatibility
+        data: defaultAbiCoder.encode(
+          ["(bytes32 id, bytes payload, uint256 timestamp, bytes signature)"],
+          [message]
+        ),
       };
     } catch (error) {
       logger.error(

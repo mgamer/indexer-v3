@@ -4,11 +4,11 @@ import { formatEth, fromBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
 
 export class CollectionFloorSellEventsDataSource extends BaseDataSource {
-  public async getSequenceData(cursor: string | null, limit: number) {
+  public async getSequenceData(cursor: CursorInfo | null, limit: number) {
     let continuationFilter = "";
 
     if (cursor) {
-      continuationFilter = `WHERE id > $/cursor/`;
+      continuationFilter = `WHERE id > $/id/`;
     }
 
     const query = `
@@ -37,7 +37,7 @@ export class CollectionFloorSellEventsDataSource extends BaseDataSource {
       `;
 
     const result = await idb.manyOrNone(query, {
-      cursor,
+      id: cursor?.id,
       limit,
     });
 
@@ -65,10 +65,14 @@ export class CollectionFloorSellEventsDataSource extends BaseDataSource {
 
       return {
         data,
-        nextCursor: result[result.length - 1].id,
+        nextCursor: { id: result[result.length - 1].id },
       };
     }
 
     return { data: [], nextCursor: null };
   }
 }
+
+type CursorInfo = {
+  id: number;
+};
