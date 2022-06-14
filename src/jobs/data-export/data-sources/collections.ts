@@ -37,7 +37,7 @@ export class CollectionsDataSource extends BaseDataSource {
           collections.updated_at
         FROM collections
         ${continuationFilter}
-        ORDER BY updated_at
+        ORDER BY updated_at, id
         LIMIT $/limit/;  
       `;
 

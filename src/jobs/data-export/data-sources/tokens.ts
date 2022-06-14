@@ -18,7 +18,6 @@ export class TokensDataSource extends BaseDataSource {
           "t"."name",
           "t"."description",
           "t"."collection_id",
-          "contracts"."kind",
           "t"."last_sell_value",
           "t"."last_sell_timestamp",
           (
@@ -37,10 +36,8 @@ export class TokensDataSource extends BaseDataSource {
           "t"."created_at",
           "t"."updated_at"
         FROM "tokens" "t"
-        JOIN "contracts" "contracts"
-          ON "t"."contract" = "con"."address"
         ${continuationFilter}
-        ORDER BY "t"."updated_at" 
+        ORDER BY "t"."updated_at", "t"."id"
         LIMIT $/limit/;  
       `;
 
