@@ -12,7 +12,7 @@ import { config } from "@/config/index";
 const version = "v1";
 
 export const getUsersLiquidityV1Options: RouteOptions = {
-  description: "User liquidity rankings",
+  description: "User bid liquidity rankings",
   notes:
     "This API calculates the total liquidity created by users, based on the number of tokens they are top bidder for.",
   tags: ["api", "Stats"],

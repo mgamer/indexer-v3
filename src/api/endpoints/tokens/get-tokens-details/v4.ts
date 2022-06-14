@@ -19,7 +19,7 @@ import { Sources } from "@/models/sources";
 const version = "v4";
 
 export const getTokensDetailsV4Options: RouteOptions = {
-  description: "Get one or more tokens with full details",
+  description: "Tokens with additional details",
   notes:
     "Get a list of tokens with full metadata. This is useful for showing a single token page, or scenarios that require more metadata. If you don't need this metadata, you should use the <a href='#/tokens/getTokensV1'>tokens</a> API, which is much faster.",
   tags: ["api", "Tokens"],

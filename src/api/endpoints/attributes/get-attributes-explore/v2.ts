@@ -11,7 +11,8 @@ import { formatEth, fromBuffer } from "@/common/utils";
 const version = "v2";
 
 export const getAttributesExploreV2Options: RouteOptions = {
-  description: "Get detailed aggregate about attributes in a collection, e.g. trait floors",
+  description: "Explore attribute floors",
+  notes: "Get detailed aggregate about attributes in a collection, e.g. trait floors",
   tags: ["api", "Attributes"],
   plugins: {
     "hapi-swagger": {
