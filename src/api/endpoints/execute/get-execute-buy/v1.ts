@@ -185,6 +185,14 @@ export const getExecuteBuyV1Options: RouteOptions = {
               order: new Sdk.ZeroExV4.Order(config.chainId, rawData),
             });
           }
+
+          case "seaport": {
+            return listingDetails.push({
+              kind: "seaport",
+              ...common,
+              order: new Sdk.Seaport.Order(config.chainId, rawData),
+            });
+          }
         }
       };
 
