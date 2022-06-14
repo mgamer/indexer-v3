@@ -13,10 +13,10 @@ const version = "v1";
 
 export const postTokenSetsV1Options: RouteOptions = {
   description: "Public API for anyone to trigger the creation of a new token set",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "Admin"],
   plugins: {
     "hapi-swagger": {
-      order: 62,
+      order: 13,
     },
   },
   validate: {

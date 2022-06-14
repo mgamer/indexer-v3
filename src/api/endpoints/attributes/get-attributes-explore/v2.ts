@@ -12,7 +12,7 @@ const version = "v2";
 
 export const getAttributesExploreV2Options: RouteOptions = {
   description: "Get detailed aggregate about attributes in a collection, e.g. trait floors",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "Attributes"],
   plugins: {
     "hapi-swagger": {
       order: 15,

@@ -16,10 +16,10 @@ const version = "v1";
 
 export const getCollectionFloorAskOracleV1Options: RouteOptions = {
   description: "Get a signed message of any collection's floor price (spot or twap)",
-  tags: ["api", "oracle"],
+  tags: ["api", "Oracle"],
   plugins: {
     "hapi-swagger": {
-      order: 1,
+      order: 12,
     },
   },
   validate: {

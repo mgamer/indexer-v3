@@ -14,10 +14,10 @@ const version = "v1";
 export const getTokenActivityV1Options: RouteOptions = {
   description: "Get activity events for the given token",
   notes: "This API can be used to build a feed for a token",
-  tags: ["api", "7. Activities"],
+  tags: ["api", "Activity"],
   plugins: {
     "hapi-swagger": {
-      order: 17,
+      order: 1,
     },
   },
   validate: {
