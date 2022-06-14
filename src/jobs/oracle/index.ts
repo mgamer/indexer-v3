@@ -94,10 +94,14 @@ if (config.doBackgroundWork && config.master && config.chainId === 4) {
                 // Wait for 1 minute to make sure on-chain validation passes
                 await new Promise((resolve) => setTimeout(resolve, 60 * 1000));
 
+                logger.info("debug", new Wallet(config.oraclePrivateKey).address);
+                logger.info("debug", contract.address);
+
                 // Publish the price
                 const tx = await contract
                   .connect(new Wallet(config.oraclePrivateKey).connect(provider))
                   .recordPrice(message);
+                logger.info("debug", "22");
                 const txReceipt = await tx.wait();
 
                 logger.info(
