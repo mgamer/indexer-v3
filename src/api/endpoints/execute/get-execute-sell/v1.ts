@@ -17,7 +17,7 @@ const version = "v1";
 
 export const getExecuteSellV1Options: RouteOptions = {
   description: "Sell any token at the best available price (accept bid)",
-  tags: ["api", "Deprecated"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       deprecated: true,

@@ -28,7 +28,7 @@ const version = "v1";
 
 export const getExecuteListV1Options: RouteOptions = {
   description: "List a token for sale",
-  tags: ["api", "Deprecated"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 1,

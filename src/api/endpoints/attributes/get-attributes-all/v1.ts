@@ -10,7 +10,7 @@ const version = "v1";
 
 export const getAttributesAllV1Options: RouteOptions = {
   description: "Get all attributes in a collection",
-  tags: ["api", "Deprecated"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       deprecated: true,

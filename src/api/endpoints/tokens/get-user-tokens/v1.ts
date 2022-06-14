@@ -13,7 +13,7 @@ export const getUserTokensV1Options: RouteOptions = {
   description: "User tokens",
   notes:
     "Get tokens held by a user, along with ownership information such as associated orders and date acquired.",
-  tags: ["api", "Deprecated"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       deprecated: true,

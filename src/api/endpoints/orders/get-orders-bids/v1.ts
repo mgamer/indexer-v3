@@ -22,7 +22,7 @@ export const getOrdersBidsV1Options: RouteOptions = {
   description: "Get a list of bids (offers), filtered by token, collection or maker",
   notes:
     "This API is designed for efficiently ingesting large volumes of orders, for external processing",
-  tags: ["api", "Deprecated"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 42,

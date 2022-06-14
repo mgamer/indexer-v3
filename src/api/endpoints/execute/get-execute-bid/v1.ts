@@ -27,7 +27,7 @@ const version = "v1";
 
 export const getExecuteBidV1Options: RouteOptions = {
   description: "Create a bid on any token, collection or trait",
-  tags: ["api", "Deprecated"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 2,
