@@ -13,7 +13,7 @@ import Joi from "joi";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { bn, formatEth } from "@/common/utils";
+import { bn, formatPrice } from "@/common/utils";
 import { config } from "@/config/index";
 
 const version = "v1";
@@ -243,7 +243,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
       }
 
       return {
-        price: formatEth(price, decimals),
+        price: formatPrice(price, decimals),
         message,
         // For EIP-3668 compatibility
         data: defaultAbiCoder.encode(
