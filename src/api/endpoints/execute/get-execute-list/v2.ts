@@ -33,10 +33,10 @@ const version = "v2";
 
 export const getExecuteListV2Options: RouteOptions = {
   description: "List a token for sale.",
-  tags: ["api", "3. Router"],
+  tags: ["api", "Orderbook"],
   plugins: {
     "hapi-swagger": {
-      order: 1,
+      order: 11,
     },
   },
   validate: {

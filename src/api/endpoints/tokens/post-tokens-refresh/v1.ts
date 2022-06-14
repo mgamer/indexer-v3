@@ -19,10 +19,10 @@ const version = "v1";
 
 export const postTokensRefreshV1Options: RouteOptions = {
   description: "Public API for anyone to refresh a token's orders and metadata",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "Admin"],
   plugins: {
     "hapi-swagger": {
-      order: 62,
+      order: 13,
     },
   },
   validate: {

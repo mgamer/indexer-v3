@@ -21,6 +21,7 @@ export const getCollectionsV3Options: RouteOptions = {
   plugins: {
     "hapi-swagger": {
       order: 12,
+      deprecated: true,
     },
   },
   validate: {

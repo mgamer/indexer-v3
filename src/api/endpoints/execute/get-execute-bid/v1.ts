@@ -31,6 +31,7 @@ export const getExecuteBidV1Options: RouteOptions = {
   plugins: {
     "hapi-swagger": {
       order: 2,
+      deprecated: true,
     },
   },
   validate: {

@@ -32,6 +32,7 @@ export const getExecuteListV1Options: RouteOptions = {
   plugins: {
     "hapi-swagger": {
       order: 1,
+      deprecated: true,
     },
   },
   validate: {
