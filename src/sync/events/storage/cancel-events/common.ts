@@ -61,10 +61,11 @@ export const addEvents = async (events: Event[]) => {
       ) (
         SELECT
           "x"."order_id",
-          "x"."order_kind",
+          MIN("x"."order_kind"),
           'cancelled'::order_fillability_status_t,
-          to_timestamp("x"."timestamp") AS "expiration"
+          MIN(to_timestamp("x"."timestamp")) AS "expiration"
         FROM "x"
+        GROUP BY "x"."order_id"
       )
       ON CONFLICT ("id") DO
       UPDATE SET
