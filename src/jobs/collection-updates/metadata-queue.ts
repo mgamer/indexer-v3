@@ -25,13 +25,13 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { contract } = job.data;
+      const { contract, tokenId } = job.data;
 
       if (await acquireLock(QUEUE_NAME, 1)) {
         logger.info(QUEUE_NAME, `Refresh collection metadata=${contract}`);
-        await Collections.updateCollectionCache(contract, "1");
+        await Collections.updateCollectionCache(contract, tokenId);
       } else {
-        await addToQueue(contract, 1000);
+        await addToQueue(contract, tokenId, 1000);
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }
@@ -42,6 +42,6 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (contract: string, delay = 0) => {
-  await queue.add(randomUUID(), { contract }, { delay });
+export const addToQueue = async (contract: string, tokenId = "1", delay = 0) => {
+  await queue.add(randomUUID(), { contract, tokenId }, { delay });
 };

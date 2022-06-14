@@ -68,7 +68,7 @@ export class CollectionsEntity {
   royalties: string;
   community: string;
   contract: string;
-  tokenIdRange: string;
+  tokenIdRange: number[];
   tokenSetId: string;
   tokenCount: number;
   createdAt: string;
@@ -93,7 +93,7 @@ export class CollectionsEntity {
     this.royalties = params.royalties ? fromBuffer(params.royalties) : params.royalties;
     this.community = params.community;
     this.contract = fromBuffer(params.contract);
-    this.tokenIdRange = params.token_id_range;
+    this.tokenIdRange = params.token_id_range != "(,)" ? JSON.parse(params.token_id_range) : [];
     this.tokenSetId = params.token_set_id;
     this.tokenCount = params.token_count;
     this.createdAt = params.created_at;
