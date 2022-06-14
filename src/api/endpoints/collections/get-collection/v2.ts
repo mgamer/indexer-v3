@@ -13,10 +13,10 @@ const version = "v2";
 export const getCollectionV2Options: RouteOptions = {
   description: "Get detailed information about a single collection",
   notes: "Get detailed information about a single collection, including real-time stats.",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "Collections"],
   plugins: {
     "hapi-swagger": {
-      order: 11,
+      order: 3,
     },
   },
   validate: {

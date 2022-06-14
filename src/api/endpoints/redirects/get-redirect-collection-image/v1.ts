@@ -16,7 +16,7 @@ export const getRedirectCollectionImageV1Options: RouteOptions = {
     expiresIn: 60000,
   },
   description: "Redirect response to the given collection image",
-  tags: ["api", "5. Redirects"],
+  tags: ["api", "Redirects"],
   plugins: {
     "hapi-swagger": {
       order: 53,

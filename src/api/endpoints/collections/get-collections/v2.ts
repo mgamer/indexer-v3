@@ -16,7 +16,6 @@ export const getCollectionsV2Options: RouteOptions = {
   tags: ["api", "Deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 12,
       deprecated: true,
     },
   },
