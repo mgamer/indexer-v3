@@ -75,8 +75,8 @@ export class TokensDataSource extends BaseDataSource {
       return {
         data,
         nextCursor: {
-          contract: fromBuffer(result[result.length - 1].id),
-          TokenId: result[result.length - 1].token_id,
+          contract: fromBuffer(result[result.length - 1].contract),
+          tokenId: result[result.length - 1].token_id,
           updatedAt: result[result.length - 1].updated_at,
         },
       };

@@ -64,6 +64,9 @@ CREATE INDEX "tokens_contract_token_id_index"
   ON "tokens" ("contract", "token_id")
   INCLUDE ("floor_sell_value", "top_buy_value");
 
+CREATE INDEX "tokens_updated_at_contract_token_id_index"
+  ON "tokens" ("updated_at", "contract", "token_id");
+
 -- https://www.lob.com/blog/supercharge-your-postgresql-performance
 -- https://klotzandrew.com/blog/posgres-per-table-autovacuum-management
 ALTER TABLE "tokens" SET (autovacuum_vacuum_scale_factor = 0.0);
