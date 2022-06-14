@@ -15,6 +15,8 @@ const getTasks = async () => {
 if (config.doBackgroundWork) {
   getTasks()
     .then(async (tasks) => {
+      return;
+
       for (const task of tasks) {
         cron.schedule(
           "*/10 * * * *",
