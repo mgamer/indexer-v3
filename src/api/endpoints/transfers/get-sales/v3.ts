@@ -19,9 +19,9 @@ import crypto from "crypto";
 const version = "v3";
 
 export const getSalesV3Options: RouteOptions = {
-  description: "Get recent sales for a contract or token",
+  description: "Historical sales",
   notes:
-    "Note: this API is returns rich metadata, and has advanced filters, so is only designed for small amounts of recent sales. If you want access to sales in bulk, use the `Aggregator > Bulk Sales` API.",
+    "Get recent sales for a contract or token. Note: this API is returns rich metadata, and has advanced filters, so is only designed for small amounts of recent sales. If you want access to sales in bulk, use the `Aggregator > Bulk Sales` API.",
   tags: ["api", "Sales"],
   plugins: {
     "hapi-swagger": {

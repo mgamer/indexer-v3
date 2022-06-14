@@ -14,7 +14,7 @@ export const getTokensFloorV1Options: RouteOptions = {
     privacy: "public",
     expiresIn: 5000,
   },
-  description: "Get the current best price of every on sale token in a collection",
+  description: "All token prices in a collection",
   notes:
     "This API will return the best price of every token in a collection that is currently on sale",
   tags: ["api", "Tokens"],

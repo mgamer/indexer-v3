@@ -11,7 +11,7 @@ import { Activities } from "@/models/activities";
 const version = "v1";
 
 export const getActivityV1Options: RouteOptions = {
-  description: "Get all activity events",
+  description: "All activity",
   notes: "This API can be used to scrape all of the activities",
   tags: ["api", "Activity"],
   plugins: {
