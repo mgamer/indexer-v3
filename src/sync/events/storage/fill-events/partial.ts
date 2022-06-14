@@ -98,8 +98,8 @@ export const addEventsPartial = async (events: Event[]) => {
           'filled'::order_fillability_status_t,
           MIN(to_timestamp(x.timestamp))
         FROM x
-        GROUP BY x.order_id
         WHERE x.order_id IS NOT NULL
+        GROUP BY x.order_id
       )
       ON CONFLICT (id) DO
       UPDATE SET
