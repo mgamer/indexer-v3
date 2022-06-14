@@ -8,8 +8,8 @@ import { randomUUID } from "crypto";
 import AWS from "aws-sdk";
 
 import { AskEventsDataSource } from "@/jobs/data-export/data-sources/ask-events";
-import { TokenFloorSellEventsDataSource } from "@/jobs/data-export/data-sources/token-floor-sell-events";
-import { CollectionFloorSellEventsDataSource } from "@/jobs/data-export/data-sources/collection-floor-sell-events";
+import { TokenFloorAskEventsDataSource } from "@/jobs/data-export/data-sources/token-floor-sell-events";
+import { CollectionFloorAskEventsDataSource } from "@/jobs/data-export/data-sources/collection-floor-sell-events";
 import { AsksDataSource } from "@/jobs/data-export/data-sources/asks";
 import { TokensDataSource } from "@/jobs/data-export/data-sources/tokens";
 import { CollectionsDataSource } from "@/jobs/data-export/data-sources/collections";
@@ -77,8 +77,8 @@ if (config.doBackgroundWork) {
 
 export enum DataSourceKind {
   askEvents = "ask-events",
-  tokenFloorSellEvents = "token-floor-sell-events",
-  collectionFloorSellEvents = "collection-floor-sell-events",
+  tokenFloorAskEvents = "token-floor-ask-events",
+  collectionFloorAskEvents = "collection-floor-ask-events",
   asks = "asks",
   tokens = "tokens",
   collections = "collections",
@@ -121,10 +121,10 @@ const getDataSource = (kind: DataSourceKind) => {
   switch (kind) {
     case DataSourceKind.askEvents:
       return new AskEventsDataSource();
-    case DataSourceKind.tokenFloorSellEvents:
-      return new TokenFloorSellEventsDataSource();
-    case DataSourceKind.collectionFloorSellEvents:
-      return new CollectionFloorSellEventsDataSource();
+    case DataSourceKind.tokenFloorAskEvents:
+      return new TokenFloorAskEventsDataSource();
+    case DataSourceKind.collectionFloorAskEvents:
+      return new CollectionFloorAskEventsDataSource();
     case DataSourceKind.asks:
       return new AsksDataSource();
     case DataSourceKind.tokens:
