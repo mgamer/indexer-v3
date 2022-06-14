@@ -8,6 +8,7 @@ import "@/jobs/collection-updates";
 import "@/jobs/events-sync";
 import "@/jobs/fill-updates";
 import "@/jobs/metadata-index";
+import "@/jobs/oracle";
 import "@/jobs/order-fixes";
 import "@/jobs/order-updates";
 import "@/jobs/orderbook";
