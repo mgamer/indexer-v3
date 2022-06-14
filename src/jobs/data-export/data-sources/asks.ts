@@ -8,7 +8,7 @@ export class AsksDataSource extends BaseDataSource {
     let continuationFilter = "";
 
     if (cursor) {
-      continuationFilter = `WHERE (updated_at, id) > ($/updatedAt/, $/id/)`;
+      continuationFilter = `AND (updated_at, id) > ($/updatedAt/, $/id/)`;
     }
 
     const query = `
@@ -21,7 +21,7 @@ export class AsksDataSource extends BaseDataSource {
           orders.maker,
           orders.taker,
           orders.price,
-          orders.dynamic,
+          COALESCE(orders.dynamic, FALSE) AS dynamic,
           orders.quantity_filled,
           orders.quantity_remaining,
           DATE_PART('epoch', LOWER(orders.valid_between)) AS valid_from,
@@ -97,7 +97,7 @@ export class AsksDataSource extends BaseDataSource {
           nonce: Number(r.nonce),
           source: r.source_id ? sources.getByAddress(fromBuffer(r.source_id))?.name : null,
           fee_bps: Number(r.fee_bps),
-          fee_breakdown: r.fee_breakdown,
+          // fee_breakdown: r.fee_breakdown,
           expiration: Number(r.expiration),
           created_at: new Date(r.created_at).toISOString(),
           updated_at: new Date(r.updated_at).toISOString(),
