@@ -1,9 +1,10 @@
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
-import { formatEther } from "@ethersproject/units";
+import { formatUnits } from "@ethersproject/units";
 
 export const bn = (value: BigNumberish) => BigNumber.from(value);
 
-export const formatEth = (wei: BigNumberish) => Number(Number(formatEther(wei)).toFixed(5));
+export const formatEth = (wei: BigNumberish, decimals = 18) =>
+  Number(Number(formatUnits(wei, decimals)).toFixed(5));
 
 export const fromBuffer = (buffer: Buffer) => "0x" + buffer.toString("hex");
 
