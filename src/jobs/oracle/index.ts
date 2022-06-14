@@ -17,9 +17,10 @@ if (config.doBackgroundWork && config.master && config.chainId === 4) {
     "0 0 */1 * * *",
     async () =>
       await redlock
-        .acquire(["oracle-price-publish"], (3600 - 5) * 1000)
+        .acquire(["oracle-price-publish"], (3600 - 60) * 1000)
         .then(async () => {
           logger.info("oracle-price-publish", "Publishing new prices");
+          logger.info("oracle-price-publish", config.oraclePrivateKey!);
 
           try {
             // Ideally every indexer should only publish prices to the chain it's
