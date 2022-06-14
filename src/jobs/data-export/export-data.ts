@@ -14,7 +14,7 @@ import { AsksDataSource } from "@/jobs/data-export/data-sources/asks";
 import { TokensDataSource } from "@/jobs/data-export/data-sources/tokens";
 import { CollectionsDataSource } from "@/jobs/data-export/data-sources/collections";
 
-const QUEUE_NAME = "export-data-queue";
+const QUEUE_NAME = "export-data-queue-v2";
 const QUERY_LIMIT = 1000;
 
 export const queue = new Queue(QUEUE_NAME, {
