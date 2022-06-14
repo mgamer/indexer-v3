@@ -1,6 +1,6 @@
 import { idb } from "@/common/db";
 import { Sources } from "@/models/sources";
-import { formatEth, fromBuffer } from "@/common/utils";
+import { bn, formatEth, fromBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
 
 export class AsksDataSource extends BaseDataSource {
@@ -52,7 +52,7 @@ export class AsksDataSource extends BaseDataSource {
         FROM orders
         WHERE orders.side = 'sell'
         ${continuationFilter}
-        ORDER BY updated_at 
+        ORDER BY updated_at, id
         LIMIT $/limit/;
       `;
 
@@ -68,6 +68,14 @@ export class AsksDataSource extends BaseDataSource {
       const data = result.map((r) => {
         const [, , tokenId] = r.token_set_id.split(":");
 
+        let startPrice = r.price;
+        let endPrice = r.price;
+
+        if (r.dynamic) {
+          startPrice = r.raw_data.basePrice;
+          endPrice = bn(r.raw_data.basePrice).sub(r.raw_data.extra);
+        }
+
         return {
           id: r.id,
           kind: r.kind,
@@ -77,6 +85,8 @@ export class AsksDataSource extends BaseDataSource {
           maker: fromBuffer(r.maker),
           taker: fromBuffer(r.taker),
           price: formatEth(r.price),
+          start_price: formatEth(startPrice),
+          end_price: formatEth(endPrice),
           dynamic: r.dynamic,
           quantity: Number(r.quantity_filled) + Number(r.quantity_remaining),
           quantity_filled: Number(r.quantity_filled),
