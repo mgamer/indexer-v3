@@ -16,7 +16,7 @@ import { config } from "@/config/index";
 const version = "v2";
 
 export const getExecuteSellV2Options: RouteOptions = {
-  description: "Sell any token at the best available price (accept bid)",
+  description: "Sell a token at the best price (accept bid)",
   tags: ["api", "Router"],
   plugins: {
     "hapi-swagger": {

@@ -16,7 +16,7 @@ export const getCollectionsV4Options: RouteOptions = {
     privacy: "public",
     expiresIn: 10 * 1000,
   },
-  description: "Get a filtered list of collections",
+  description: "Collections",
   notes:
     "Useful for getting multiple collections to show in a marketplace, or search for particular collections.",
   tags: ["api", "Collections"],

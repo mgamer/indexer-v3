@@ -12,7 +12,7 @@ import * as tokenSet from "@/orderbook/token-sets";
 const version = "v1";
 
 export const postTokenSetsV1Options: RouteOptions = {
-  description: "Public API for anyone to trigger the creation of a new token set",
+  description: "Create a token set",
   tags: ["api", "Admin"],
   plugins: {
     "hapi-swagger": {

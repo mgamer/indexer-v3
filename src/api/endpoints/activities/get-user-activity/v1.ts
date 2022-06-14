@@ -12,7 +12,7 @@ import { UserActivities } from "@/models/user_activities";
 const version = "v1";
 
 export const getUserActivityV1Options: RouteOptions = {
-  description: "Get activity events for the given user",
+  description: "User activity",
   notes: "This API can be used to build a feed for a user",
   tags: ["api", "Activity"],
   plugins: {

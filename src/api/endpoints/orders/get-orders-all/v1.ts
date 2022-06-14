@@ -18,7 +18,7 @@ import { Sources } from "@/models/sources";
 const version = "v1";
 
 export const getOrdersAllV1Options: RouteOptions = {
-  description: "Bulk access to raw orders",
+  description: "Bulk historical orders",
   notes:
     "This API is designed for efficiently ingesting large volumes of orders, for external processing",
   tags: ["api", "Orders"],

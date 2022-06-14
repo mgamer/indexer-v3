@@ -9,7 +9,7 @@ import { logger } from "@/common/logger";
 const version = "v1";
 
 export const getAttributesStaticV1Options: RouteOptions = {
-  description: "Get all attributes in a collection, including tokens ids",
+  description: "All token ids per attribute",
   tags: ["api", "Attributes"],
   plugins: {
     "hapi-swagger": {

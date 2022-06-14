@@ -18,7 +18,7 @@ import * as tokenRefreshCacheQueue from "@/jobs/token-updates/token-refresh-cach
 const version = "v1";
 
 export const postTokensRefreshV1Options: RouteOptions = {
-  description: "Public API for anyone to refresh a token's orders and metadata",
+  description: "Refresh a token's orders and metadata",
   tags: ["api", "Admin"],
   plugins: {
     "hapi-swagger": {
