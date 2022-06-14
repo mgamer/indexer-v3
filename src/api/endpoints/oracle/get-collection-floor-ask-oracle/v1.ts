@@ -13,7 +13,7 @@ import Joi from "joi";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { bn, formatEth } from "@/common/utils";
+import { bn, formatPrice } from "@/common/utils";
 import { config } from "@/config/index";
 
 const version = "v1";
@@ -122,6 +122,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
 
       let kind: PriceKind;
       let price: string;
+      let decimals = 18;
       if (query.kind === "spot") {
         const result = await edb.oneOrNone(spotQuery, params);
         if (!result?.price) {
@@ -212,14 +213,12 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
           .get("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd")
           .then((response) => (response.data as any).ethereum.usd);
 
-        const UNIT = bn("1000000000000000000");
-        // CoinGecko returns prices with 2 decimals
-        price = bn(usdPrice * 100)
-          .mul(UNIT)
-          .div(100)
+        // USDC has 6 decimals
+        price = bn(usdPrice * 1000000)
           .mul(price)
-          .div(UNIT)
+          .div(bn("1000000000000000000"))
           .toString();
+        decimals = 6;
       } else {
         throw Boom.badRequest("Unsupported currency");
       }
@@ -244,7 +243,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
       }
 
       return {
-        price: formatEth(price),
+        price: formatPrice(price, decimals),
         message,
         // For EIP-3668 compatibility
         data: defaultAbiCoder.encode(
