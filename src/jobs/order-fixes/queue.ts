@@ -220,7 +220,8 @@ if (config.doBackgroundWork) {
                 `
                   UPDATE "orders" AS "o" SET
                     "fillability_status" = $/fillabilityStatus/,
-                    "approval_status" = $/approvalStatus/
+                    "approval_status" = $/approvalStatus/,
+                    "updated_at" = now()
                   WHERE "o"."id" = $/id/
                     AND ("o"."fillability_status" != $/fillabilityStatus/ OR "o"."approval_status" != $/approvalStatus/)
                   RETURNING "o"."id"

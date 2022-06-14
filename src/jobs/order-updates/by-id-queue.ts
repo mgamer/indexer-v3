@@ -41,6 +41,8 @@ if (config.doBackgroundWork) {
       const { id, trigger } = job.data as OrderInfo;
       let { side, tokenSetId } = job.data as OrderInfo;
 
+      logger.info(QUEUE_NAME, `Start to handle order info ${JSON.stringify(job.data)}`);
+
       try {
         let order;
 
@@ -68,6 +70,11 @@ if (config.doBackgroundWork) {
               WHERE orders.id = $/id/
               LIMIT 1`,
             { id }
+          );
+
+          logger.info(
+            QUEUE_NAME,
+            `Found order for order info ${JSON.stringify(job.data)}: ${JSON.stringify(order)}`
           );
 
           side = order?.side;
@@ -184,7 +191,8 @@ if (config.doBackgroundWork) {
                     )::INT,
                     "floor_sell_source_id" = "z"."source_id",
                     "floor_sell_source_id_int" = "z"."source_id_int",
-                    "floor_sell_is_reservoir" = "z"."is_reservoir"
+                    "floor_sell_is_reservoir" = "z"."is_reservoir",
+                    "updated_at" = now()
                   FROM "z"
                   WHERE "t"."contract" = "z"."contract"
                     AND "t"."token_id" = "z"."token_id"
@@ -314,7 +322,8 @@ if (config.doBackgroundWork) {
                 UPDATE "tokens" AS "t" SET
                   "top_buy_id" = "z"."order_id",
                   "top_buy_value" = "z"."value",
-                  "top_buy_maker" = "z"."maker"
+                  "top_buy_maker" = "z"."maker",
+                  "updated_at" = now()
                 FROM "z"
                 WHERE "t"."contract" = "z"."contract"
                   AND "t"."token_id" = "z"."token_id"
