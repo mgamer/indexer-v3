@@ -3,7 +3,7 @@
 CREATE TABLE "data_export_tasks" (
   id SERIAL PRIMARY KEY,
   source TEXT NOT NULL,
-  cursor TEXT,
+  cursor JSONB,
   sequence_number INT NOT NULL DEFAULT 1,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
