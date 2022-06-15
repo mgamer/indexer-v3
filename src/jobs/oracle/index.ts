@@ -3,9 +3,9 @@ import { Contract } from "@ethersproject/contracts";
 import { AlchemyProvider } from "@ethersproject/providers";
 import { Wallet } from "@ethersproject/wallet";
 import * as Sdk from "@reservoir0x/sdk";
+import axios from "axios";
 import cron from "node-cron";
 
-import { inject } from "@/api/index";
 import { logger } from "@/common/logger";
 import { redlock } from "@/common/redis";
 import { config } from "@/config/index";
@@ -19,9 +19,6 @@ if (config.doBackgroundWork && config.master && config.chainId === 4) {
       await redlock
         .acquire(["oracle-price-publish"], (3600 - 60) * 1000)
         .then(async () => {
-          logger.info("oracle-price-publish", "Publishing new prices");
-          logger.info("oracle-price-publish", config.oraclePrivateKey!);
-
           try {
             // Ideally every indexer should only publish prices to the chain it's
             // running on. However, for testing purposes we make an exception and
@@ -81,28 +78,22 @@ if (config.doBackgroundWork && config.master && config.chainId === 4) {
 
               if (config.oraclePrivateKey) {
                 // Fetch the oracle message
-                const response = await inject({
-                  method: "GET",
-                  url: `/oracle/collections/${collection}/floor-ask/v1?kind=twap&currency=${
-                    Sdk.Common.Addresses.Usdc[provider.network.chainId]
-                  }`,
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                });
-                const message = JSON.parse(response.payload).message;
+                const message = await axios
+                  .get(
+                    `https://api.reservoir.tools/oracle/collections/${collection}/floor-ask/v1?kind=twap&currency=${
+                      Sdk.Common.Addresses.Usdc[provider.network.chainId]
+                    }`
+                  )
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  .then((response) => (response.data as any).message);
 
                 // Wait for 1 minute to make sure on-chain validation passes
                 await new Promise((resolve) => setTimeout(resolve, 60 * 1000));
-
-                logger.info("debug", new Wallet(config.oraclePrivateKey).address);
-                logger.info("debug", contract.address);
 
                 // Publish the price
                 const tx = await contract
                   .connect(new Wallet(config.oraclePrivateKey).connect(provider))
                   .recordPrice(message);
-                logger.info("debug", "22");
                 const txReceipt = await tx.wait();
 
                 logger.info(
