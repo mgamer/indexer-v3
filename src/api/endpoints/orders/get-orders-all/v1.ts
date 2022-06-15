@@ -76,7 +76,7 @@ export const getOrdersAllV1Options: RouteOptions = {
                   .lowercase()
                   .pattern(/^0x[a-fA-F0-9]{40}$/)
                   .allow(null),
-                bps: Joi.number(),
+                bps: Joi.number().allow(null),
               })
             )
             .allow(null),
