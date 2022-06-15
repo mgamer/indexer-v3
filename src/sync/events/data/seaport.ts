@@ -49,7 +49,7 @@ export const orderFulfilled: EventData = {
 export const counterIncremented: EventData = {
   kind: "seaport-counter-incremented",
   addresses: { [Seaport.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
-  topic: "0x59950fb23669ee30425f6d79758e75fae698a6c88b2982f2980638d8bcd9397d",
+  topic: "0x721c20121297512b72821b97f5326877ea8ecf4bb9948fea5bfcb6453074d37f",
   numTopics: 2,
   abi: new Interface([
     `event CounterIncremented(

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { AddressZero } from "@ethersproject/constants";
+import { joinSignature } from "@ethersproject/bytes";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
@@ -19,6 +20,10 @@ import * as looksRareCheck from "@/orderbook/orders/looks-rare/check";
 // OpenDao
 import * as openDaoSellToken from "@/orderbook/orders/opendao/build/sell/token";
 import * as openDaoCheck from "@/orderbook/orders/opendao/check";
+
+// Seaport
+import * as seaportSellToken from "@/orderbook/orders/seaport/build/sell/token";
+import * as seaportCheck from "@/orderbook/orders/seaport/check";
 
 // ZeroExV4
 import * as zeroExV4SellToken from "@/orderbook/orders/zeroex-v4/build/sell/token";
@@ -54,7 +59,7 @@ export const getExecuteListV2Options: RouteOptions = {
         .pattern(/^[0-9]+$/)
         .required(),
       orderKind: Joi.string()
-        .valid("721ex", "looks-rare", "wyvern-v2.3", "zeroex-v4")
+        .valid("721ex", "looks-rare", "wyvern-v2.3", "zeroex-v4", "seaport")
         .default("wyvern-v2.3"),
       orderbook: Joi.string().valid("opensea", "looks-rare", "reservoir").default("reservoir"),
       source: Joi.string(),
@@ -475,6 +480,110 @@ export const getExecuteListV2Options: RouteOptions = {
               ...query,
               expirationTime: order.params.expiry,
               nonce: order.params.nonce,
+            },
+          };
+        }
+
+        case "seaport": {
+          // Exchange-specific checks
+          if (!["reservoir"].includes(query.orderbook)) {
+            throw Boom.badRequest("Unsupported orderbook");
+          }
+
+          // Make sure the fee information is correctly typed
+          if (query.fee && !Array.isArray(query.fee)) {
+            query.fee = [query.fee];
+          }
+          if (query.feeRecipient && !Array.isArray(query.feeRecipient)) {
+            query.feeRecipient = [query.feeRecipient];
+          }
+          if (query.fee?.length !== query.feeRecipient?.length) {
+            throw Boom.badRequest("Invalid fee information");
+          }
+
+          const order = await seaportSellToken.build({
+            ...query,
+            contract,
+            tokenId,
+          });
+          if (!order) {
+            throw Boom.internal("Failed to generate order");
+          }
+
+          // Will be set if an approval is needed before listing
+          let approvalTx: TxData | undefined;
+
+          // Check the order's fillability
+          try {
+            await seaportCheck.offChainCheck(order, { onChainApprovalRecheck: true });
+          } catch (error: any) {
+            switch (error.message) {
+              case "no-balance-no-approval":
+              case "no-balance": {
+                // We cannot do anything if the user doesn't own the listed token
+                throw Boom.badData("Maker does not own the listed token");
+              }
+
+              case "no-approval": {
+                // Generate an approval transaction
+
+                const exchange = new Sdk.Seaport.Exchange(config.chainId);
+                const info = order.getInfo()!;
+
+                const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
+                approvalTx = (
+                  kind === "erc721"
+                    ? new Sdk.Common.Helpers.Erc721(baseProvider, info.contract)
+                    : new Sdk.Common.Helpers.Erc1155(baseProvider, info.contract)
+                ).approveTransaction(query.maker, exchange.deriveConduit(order.params.conduitKey));
+
+                break;
+              }
+            }
+          }
+
+          const hasSignature = query.v && query.r && query.s;
+          return {
+            steps: [
+              {
+                ...steps[1],
+                status: approvalTx ? "incomplete" : "complete",
+                data: approvalTx,
+              },
+              {
+                ...steps[2],
+                status: hasSignature ? "complete" : "incomplete",
+                data: hasSignature ? undefined : order.getSignatureData(),
+              },
+              {
+                ...steps[3],
+                status: "incomplete",
+                data: !hasSignature
+                  ? undefined
+                  : {
+                      endpoint: "/order/v2",
+                      method: "POST",
+                      body: {
+                        order: {
+                          kind: "seaport",
+                          data: {
+                            ...order.params,
+                            // Seaport takes the joined signature
+                            signature: joinSignature({ v: query.v, r: query.r, s: query.s }),
+                          },
+                        },
+                        orderbook: query.orderbook,
+                        source: query.source,
+                      },
+                    },
+              },
+            ],
+            query: {
+              ...query,
+              listingTime: order.params.startTime,
+              expirationTime: order.params.endTime,
+              salt: order.params.salt,
+              nonce: order.params.counter,
             },
           };
         }
