@@ -102,11 +102,13 @@ export const save = async (
       // Check: order has a known zone
       if (
         ![
+          // No zone
           AddressZero,
+          // Are these really used?
           "0xf397619df7bfd4d1657ea9bdd9df7ff888731a11",
           "0x9b814233894cd227f561b78cc65891aa55c62ad2",
           // Pausable zone
-          "0x004c00500000ad104d7dbd00e3ae0a5c00560c00",
+          Sdk.Seaport.Addresses.PausableZone[config.chainId],
         ].includes(order.params.zone)
       ) {
         return results.push({
