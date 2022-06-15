@@ -65,7 +65,9 @@ export const getBuildInfo = async (
     fees: [],
     // Use OpenSea's pausable zone when posting to OpenSea
     zone:
-      options.orderbook === "opensea" ? "0x004c00500000ad104d7dbd00e3ae0a5c00560c00" : AddressZero,
+      options.orderbook === "opensea"
+        ? Sdk.Seaport.Addresses.PausableZone[config.chainId]
+        : AddressZero,
     // OpenSea's conduit for sharing approvals
     conduitKey: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
     startTime: options.listingTime,
