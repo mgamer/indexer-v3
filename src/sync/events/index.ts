@@ -625,6 +625,7 @@ export const syncEvents = async (
                 orderKind: "x2y2",
                 orderId,
                 orderSide: [1, 5].includes(op) ? "sell" : "buy",
+                orderSourceIntId: null,
                 maker,
                 taker,
                 // Subtract any fees from the price.
@@ -716,6 +717,7 @@ export const syncEvents = async (
                 orderKind: "foundation",
                 orderId,
                 orderSide: "sell",
+                orderSourceIntId: null,
                 maker,
                 taker,
                 // Deduce the price from the protocol fee (which is 5%).
@@ -838,6 +840,7 @@ export const syncEvents = async (
                 orderKind: "looks-rare",
                 orderId,
                 orderSide: "buy",
+                orderSourceIntId: null,
                 maker,
                 taker,
                 price,
@@ -927,6 +930,7 @@ export const syncEvents = async (
                 orderKind: "looks-rare",
                 orderId,
                 orderSide: "sell",
+                orderSourceIntId: null,
                 maker,
                 taker,
                 price,
@@ -1092,6 +1096,7 @@ export const syncEvents = async (
                   orderKind,
                   orderId: buyOrderId,
                   orderSide: "buy",
+                  orderSourceIntId: null,
                   maker,
                   taker,
                   price,
@@ -1148,6 +1153,7 @@ export const syncEvents = async (
                   orderKind,
                   orderId: sellOrderId,
                   orderSide: "sell",
+                  orderSourceIntId: null,
                   maker,
                   taker,
                   price,
@@ -1322,6 +1328,7 @@ export const syncEvents = async (
                 orderKind,
                 orderId,
                 orderSide,
+                orderSourceIntId: null,
                 maker,
                 taker,
                 price: erc20TokenAmount,
@@ -1454,6 +1461,7 @@ export const syncEvents = async (
                 orderKind,
                 orderId,
                 orderSide: direction === 0 ? "sell" : "buy",
+                orderSourceIntId: null,
                 maker,
                 taker,
                 price: erc20FillAmount,
@@ -1586,6 +1594,7 @@ export const syncEvents = async (
                   orderKind: "seaport",
                   orderId,
                   orderSide: side,
+                  orderSourceIntId: null,
                   maker,
                   taker,
                   price,
@@ -1626,6 +1635,13 @@ export const syncEvents = async (
           throw error;
         }
       }
+
+      // Add order source value for each fill.
+      await Promise.all([
+        assignOrderSourceToFillEvents(fillEvents),
+        assignOrderSourceToFillEvents(fillEventsPartial),
+        assignOrderSourceToFillEvents(fillEventsFoundation),
+      ]);
 
       // WARNING! Ordering matters (fills should come in front of cancels).
       await Promise.all([
@@ -1755,4 +1771,53 @@ export const unsyncEvents = async (block: number, blockHash: string) => {
     es.nftTransfers.removeEvents(block, blockHash),
     removeUnsyncedEventsActivities.addToQueue(blockHash),
   ]);
+};
+
+const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
+  try {
+    const orderIds = [];
+
+    for (const event of fillEvents) {
+      if (event.orderId !== undefined) {
+        orderIds.push(event.orderId);
+      }
+    }
+
+    logger.info("sync-events", `Order Ids to assign: ${orderIds.length}`);
+
+    if (orderIds.length) {
+      const orders = await idb.manyOrNone(
+        `
+            SELECT id, source_id_int from orders
+            WHERE id IN ($/orderIds/)
+            AND source_id_int IS NOT NULL
+          `,
+        {
+          orderIds: orderIds.join(","),
+        }
+      );
+
+      logger.info("sync-events", `Orders with source: ${orders.length}`);
+
+      if (orders.length) {
+        const orderSourceIntIdByOrderId = new Map<string, number>();
+
+        for (const order of orders) {
+          orderSourceIntIdByOrderId.set(order.id, order.source_id_int);
+        }
+
+        fillEvents.forEach(function (event, index) {
+          fillEvents[index].orderSourceIntId =
+            orderSourceIntIdByOrderId.get(event.orderId!) || null;
+
+          logger.info(
+            "sync-events",
+            `Orders source assigned to fill event: ${JSON.stringify(event)}`
+          );
+        });
+      }
+    }
+  } catch (e) {
+    logger.error("sync-events", `Failed to assign order source id to fill events: ${e}`);
+  }
 };
