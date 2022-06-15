@@ -11,10 +11,10 @@ import { Sources } from "@/models/sources";
 const version = "v2";
 
 export const getOrdersV2Options: RouteOptions = {
-  description: "List of valid orders.",
+  description: "Submit order batch",
   notes:
     "Access orders with various filters applied. If you need orders created by a single user, use the positions API instead.",
-  tags: ["api", "1. Order Book"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       deprecated: true,

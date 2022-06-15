@@ -15,6 +15,7 @@ export const getAttributesExploreV1Options: RouteOptions = {
   plugins: {
     "hapi-swagger": {
       order: 15,
+      deprecated: true,
     },
   },
   validate: {

@@ -19,13 +19,13 @@ import crypto from "crypto";
 const version = "v3";
 
 export const getSalesV3Options: RouteOptions = {
-  description: "Get recent sales for a contract or token",
+  description: "Historical sales",
   notes:
-    "Note: this API is returns rich metadata, and has advanced filters, so is only designed for small amounts of recent sales. If you want access to sales in bulk, use the `Aggregator > Bulk Sales` API.",
-  tags: ["api", "4. NFT API"],
+    "Get recent sales for a contract or token. Note: this API is returns rich metadata, and has advanced filters, so is only designed for small amounts of recent sales. If you want access to sales in bulk, use the `Aggregator > Bulk Sales` API.",
+  tags: ["api", "Sales"],
   plugins: {
     "hapi-swagger": {
-      order: 52,
+      order: 8,
     },
   },
   validate: {
@@ -206,6 +206,7 @@ export const getSalesV3Options: RouteOptions = {
               (CASE
                 WHEN orders.kind = 'wyvern-v2' THEN '\\x5b3256965e7c3cf26e11fcaf296dfc8807c01073'::BYTEA
                 WHEN orders.kind = 'wyvern-v2.3' THEN '\\x5b3256965e7c3cf26e11fcaf296dfc8807c01073'::BYTEA
+                WHEN orders.kind = 'seaport' THEN '\\x5b3256965e7c3cf26e11fcaf296dfc8807c01073'::BYTEA
                 WHEN orders.kind = 'looks-rare' THEN '\\x5924a28caaf1cc016617874a2f0c3710d881f3c1'::BYTEA
               END)
             ) AS source_id,

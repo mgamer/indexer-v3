@@ -20,10 +20,10 @@ const version = "v1";
 
 export const getCollectionFloorAskOracleV1Options: RouteOptions = {
   description: "Get a signed message of any collection's floor price (spot or twap)",
-  tags: ["api", "oracle"],
+  tags: ["api", "Oracle"],
   plugins: {
     "hapi-swagger": {
-      order: 1,
+      order: 12,
     },
   },
   validate: {
@@ -90,8 +90,8 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
               *
             FROM collection_floor_sell_events
             WHERE collection_floor_sell_events.collection_id = $/collection/
-              AND collection_floor_sell_events.created_at < (SELECT MIN(x.created_at) FROM x)
-            ORDER BY collection_floor_sell_events.created_at
+              AND collection_floor_sell_events.created_at < (SELECT COALESCE(MIN(x.created_at), 'Infinity') FROM x)
+            ORDER BY collection_floor_sell_events.created_at DESC
             LIMIT 1
           ),
           z AS (

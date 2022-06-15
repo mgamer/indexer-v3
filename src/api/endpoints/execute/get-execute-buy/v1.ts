@@ -18,10 +18,10 @@ const version = "v1";
 
 export const getExecuteBuyV1Options: RouteOptions = {
   description: "Buy any token at the best available price",
-  tags: ["api", "3. Router"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 3,
+      deprecated: true,
     },
   },
   validate: {
@@ -183,6 +183,14 @@ export const getExecuteBuyV1Options: RouteOptions = {
               kind: "zeroex-v4",
               ...common,
               order: new Sdk.ZeroExV4.Order(config.chainId, rawData),
+            });
+          }
+
+          case "seaport": {
+            return listingDetails.push({
+              kind: "seaport",
+              ...common,
+              order: new Sdk.Seaport.Order(config.chainId, rawData),
             });
           }
         }

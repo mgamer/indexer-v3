@@ -18,11 +18,11 @@ import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
 const version = "v1";
 
 export const postCollectionsRefreshV1Options: RouteOptions = {
-  description: "Public API for anyone to refresh a collection's orders and metadata",
-  tags: ["api", "4. NFT API"],
+  description: "Refresh a collection's orders and metadata",
+  tags: ["api", "Admin"],
   plugins: {
     "hapi-swagger": {
-      order: 61,
+      order: 13,
     },
   },
   validate: {
@@ -101,7 +101,8 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       );
 
       // Refresh the collection metadata
-      await collectionUpdatesMetadata.addToQueue(collection.contract);
+      const tokenId = _.isEmpty(collection.tokenIdRange) ? "1" : `${collection.tokenIdRange[0]}`;
+      await collectionUpdatesMetadata.addToQueue(collection.contract, tokenId);
 
       // Refresh the contract floor sell and top bid
       await collectionsRefreshCache.addToQueue(collection.contract);

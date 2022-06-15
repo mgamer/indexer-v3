@@ -10,11 +10,11 @@ import { logger } from "@/common/logger";
 const version = "v1";
 
 export const getOrderExecutedV1Options: RouteOptions = {
-  description: "Check if an order is filled/canceled",
-  tags: ["api", "3. Router"],
+  description: "Check order status",
+  tags: ["api", "Orders"],
   plugins: {
     "hapi-swagger": {
-      order: 6,
+      order: 5,
     },
   },
   validate: {

@@ -22,11 +22,12 @@ export const getOrderEventsV1Options: RouteOptions = {
     privacy: "public",
     expiresIn: 5000,
   },
-  description: "Get updates any time an order status changes",
-  tags: ["api", "2. Aggregator"],
+  description: "Historical order status",
+  notes: "Get updates any time an order status changes",
+  tags: ["api", "Events"],
   plugins: {
     "hapi-swagger": {
-      order: 1,
+      order: 4,
     },
   },
   validate: {

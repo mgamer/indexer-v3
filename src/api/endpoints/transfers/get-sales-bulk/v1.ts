@@ -23,13 +23,13 @@ export const getSalesBulkV1Options: RouteOptions = {
     privacy: "public",
     expiresIn: 5000,
   },
-  description: "Get bulk access to historical sales",
+  description: "Bulk historical sales",
   notes:
     "Note: this API is optimized for bulk access, and offers minimal filters/metadata. If you need more flexibility, try the `NFT API > Sales` endpoint",
-  tags: ["api", "2. Aggregator"],
+  tags: ["api", "Sales"],
   plugins: {
     "hapi-swagger": {
-      order: 52,
+      order: 8,
     },
   },
   validate: {

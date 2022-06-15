@@ -10,11 +10,11 @@ import { logger } from "@/common/logger";
 const version = "v2";
 
 export const getAttributesAllV2Options: RouteOptions = {
-  description: "Get all attributes in a collection",
-  tags: ["api", "4. NFT API"],
+  description: "All attributes in a collection",
+  tags: ["api", "Attributes"],
   plugins: {
     "hapi-swagger": {
-      order: 13,
+      order: 2,
     },
   },
   validate: {

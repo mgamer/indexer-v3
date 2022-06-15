@@ -16,11 +16,11 @@ export const getSearchCollectionsV1Options: RouteOptions = {
     privacy: "public",
     expiresIn: 10000,
   },
-  description: "Search for collections by given name",
-  tags: ["api", "6. Search"],
+  description: "Search collections",
+  tags: ["api", "Collections"],
   plugins: {
     "hapi-swagger": {
-      order: 53,
+      order: 3,
     },
   },
   validate: {

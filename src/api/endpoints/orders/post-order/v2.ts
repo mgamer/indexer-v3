@@ -15,11 +15,11 @@ import { parseOpenSeaOrder } from "@/orderbook/orders/wyvern-v2.3/opensea";
 const version = "v2";
 
 export const postOrderV2Options: RouteOptions = {
-  description: "Publish a single order.",
-  tags: ["api", "1. Order Book"],
+  description: "Submit single order",
+  tags: ["api", "Orders"],
   plugins: {
     "hapi-swagger": {
-      order: 4,
+      order: 5,
     },
   },
   validate: {

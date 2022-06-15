@@ -18,13 +18,13 @@ import { Sources } from "@/models/sources";
 const version = "v1";
 
 export const getOrdersAllV1Options: RouteOptions = {
-  description: "Bulk access to raw orders",
+  description: "Bulk historical orders",
   notes:
     "This API is designed for efficiently ingesting large volumes of orders, for external processing",
-  tags: ["api", "1. Order Book"],
+  tags: ["api", "Orders"],
   plugins: {
     "hapi-swagger": {
-      order: 1,
+      order: 5,
     },
   },
   validate: {
@@ -76,7 +76,9 @@ export const getOrdersAllV1Options: RouteOptions = {
                   .lowercase()
                   .pattern(/^0x[a-fA-F0-9]{40}$/)
                   .allow(null),
-                bps: Joi.number(),
+                // Should be `Joi.number().allow(null)` but we set to `Joi.any()` to cover
+                // objects eith wrong schema that were inserted by mistake into the db
+                bps: Joi.any(),
               })
             )
             .allow(null),

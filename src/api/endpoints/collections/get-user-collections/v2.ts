@@ -11,13 +11,13 @@ import { CollectionSets } from "@/models/collection-sets";
 const version = "v2";
 
 export const getUserCollectionsV2Options: RouteOptions = {
-  description: "Get aggregate stats for a user, grouped by collection",
+  description: "User owned collections",
   notes:
     "Get aggregate stats for a user, grouped by collection. Useful for showing total portfolio information.",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "Collections"],
   plugins: {
     "hapi-swagger": {
-      order: 32,
+      order: 3,
     },
   },
   validate: {

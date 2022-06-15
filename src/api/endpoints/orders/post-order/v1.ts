@@ -15,7 +15,7 @@ const version = "v1";
 
 export const postOrderV1Options: RouteOptions = {
   description: "Publish a single order",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Orders"],
   plugins: {
     "hapi-swagger": {
       order: 4,

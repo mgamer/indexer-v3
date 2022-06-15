@@ -11,11 +11,11 @@ import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 const version = "v1";
 
 export const postOrdersV1Options: RouteOptions = {
-  description: "Publish multiple orders in bulk",
-  tags: ["api", "1. Order Book"],
+  description: "Submit order batch",
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 5,
+      deprecated: true,
     },
   },
   validate: {

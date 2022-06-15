@@ -88,6 +88,7 @@ export const start = async (): Promise<void> => {
             type: "apiKey",
             name: "x-api-key",
             in: "header",
+            "x-default": "demo-api-key",
           },
         },
         schemes: ["https", "http"],
@@ -102,33 +103,6 @@ export const start = async (): Promise<void> => {
           version: require("../../package.json").version,
           description: apiDescription,
         },
-        tags: [
-          {
-            name: "1. Order Book",
-            description: "Read & write from Reservoir's open, aggregated order book",
-          },
-          {
-            name: "2. Aggregator",
-            description: "Access normalized pricing and sales data, to feed into your own system",
-          },
-          {
-            name: "3. Router",
-            description:
-              "Simple APIs to create and fill liquidity from any supported exchange protocol",
-          },
-          {
-            name: "4. NFT API",
-            description: "Build a complete application with rich NFT endpoints",
-          },
-          {
-            name: "5. Redirects",
-            description: "Redirect APIs for different assets",
-          },
-          {
-            name: "6. Search",
-            description: "Lightweight search APIs optimized for searching collections/tokens",
-          },
-        ],
       },
     },
   ]);

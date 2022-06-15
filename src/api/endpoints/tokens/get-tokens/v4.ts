@@ -19,13 +19,13 @@ import {
 const version = "v4";
 
 export const getTokensV4Options: RouteOptions = {
-  description: "List of tokens, with basic details, optimized for speed",
+  description: "Tokens",
   notes:
     "This API is optimized for quickly fetching a list of tokens in a collection, sorted by price, with only the most important information returned. If you need more metadata, use the `tokens/details` API",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "Tokens"],
   plugins: {
     "hapi-swagger": {
-      order: 21,
+      order: 9,
     },
   },
   validate: {

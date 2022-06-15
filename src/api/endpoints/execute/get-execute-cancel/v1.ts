@@ -14,10 +14,10 @@ const version = "v1";
 
 export const getExecuteCancelV1Options: RouteOptions = {
   description: "Cancel an existing order",
-  tags: ["api", "3. Router"],
+  tags: ["api", "Orderbook"],
   plugins: {
     "hapi-swagger": {
-      order: 5,
+      order: 11,
     },
   },
   validate: {
@@ -123,6 +123,41 @@ export const getExecuteCancelV1Options: RouteOptions = {
                 status: "incomplete",
                 data: {
                   endpoint: `/orders/executed/v1?id=${order.prefixHash()}`,
+                  method: "GET",
+                },
+              },
+            ],
+          };
+        }
+
+        case "seaport": {
+          const order = new Sdk.Seaport.Order(config.chainId, orderResult.raw_data);
+
+          // Generate exchange-specific cancellation transaction.
+          const exchange = new Sdk.Seaport.Exchange(config.chainId);
+          const cancelTx = exchange.cancelOrderTx(query.maker, order);
+
+          const steps = generateSteps(order.getInfo()!.side);
+          return {
+            steps: [
+              {
+                ...steps[0],
+                status: "incomplete",
+                data: {
+                  ...cancelTx,
+                  maxFeePerGas: query.maxFeePerGas
+                    ? bn(query.maxFeePerGas).toHexString()
+                    : undefined,
+                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                    ? bn(query.maxPriorityFeePerGas).toHexString()
+                    : undefined,
+                },
+              },
+              {
+                ...steps[1],
+                status: "incomplete",
+                data: {
+                  endpoint: `/orders/executed/v1?id=${order.hash()}`,
                   method: "GET",
                 },
               },

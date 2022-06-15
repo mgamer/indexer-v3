@@ -1543,7 +1543,7 @@ export const syncEvents = async (
 
             case "seaport-counter-incremented": {
               const parsedLog = eventData.abi.parseLog(log);
-              const maker = parsedLog.args["oferrer"].toLowerCase();
+              const maker = parsedLog.args["offerer"].toLowerCase();
               const newCounter = parsedLog.args["newCounter"].toString();
 
               bulkCancelEvents.push({

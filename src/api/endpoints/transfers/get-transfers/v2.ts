@@ -19,10 +19,10 @@ const version = "v2";
 export const getTransfersV2Options: RouteOptions = {
   description: "Historical token transfers",
   notes: "Get recent transfers for a contract or token.",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "Transfers"],
   plugins: {
     "hapi-swagger": {
-      order: 54,
+      order: 10,
     },
   },
   validate: {

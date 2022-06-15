@@ -99,6 +99,24 @@ export const save = async (
         });
       }
 
+      // Check: order has a known zone
+      if (
+        ![
+          // No zone
+          AddressZero,
+          // Are these really used?
+          "0xf397619df7bfd4d1657ea9bdd9df7ff888731a11",
+          "0x9b814233894cd227f561b78cc65891aa55c62ad2",
+          // Pausable zone
+          Sdk.Seaport.Addresses.PausableZone[config.chainId],
+        ].includes(order.params.zone)
+      ) {
+        return results.push({
+          id,
+          status: "unsupported-zone",
+        });
+      }
+
       // Check: order is valid
       try {
         order.checkValidity();
@@ -176,7 +194,7 @@ export const save = async (
       let feeAmount = order.getFeeAmount();
 
       // Handle: price and value
-      let price = bn(info.price);
+      let price = bn(info.price).add(feeAmount);
       let value = price;
       if (info.side === "buy") {
         // For buy orders, we set the value as `price - fee` since it
@@ -200,19 +218,29 @@ export const save = async (
         });
       }
 
+      // Handle: native Reservoir orders
+      let isReservoir = false;
+
       // Handle: source and fees breakdown
       let source: string | undefined;
       let sourceId: number | null = null;
 
-      // Handle: native Reservoir orders
-      const isReservoir = true;
-
-      // If source was passed
+      const sources = await Sources.getInstance();
       if (metadata.source) {
-        const sources = await Sources.getInstance();
         const sourceEntity = await sources.getOrInsert(metadata.source);
         source = sourceEntity.address;
         sourceId = sourceEntity.id;
+
+        // Assume native listing
+        isReservoir = true;
+      } else if (
+        // OpenSea wallet is a fee recipient
+        info.fees.filter(
+          ({ recipient }) => recipient === "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073"
+        ).length
+      ) {
+        source = "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073";
+        sourceId = sources.getByName("OpenSea").id;
       }
 
       const feeBreakdown = info.fees.map(({ recipient, amount }) => ({
@@ -220,7 +248,7 @@ export const save = async (
           ? "marketplace"
           : "royalty",
         recipient,
-        bps: price.eq(0) ? bn(0) : bn(amount).mul(10000).div(price).toNumber(),
+        bps: price.eq(0) ? 0 : bn(amount).mul(10000).div(price).toNumber(),
       }));
 
       const validFrom = `date_trunc('seconds', to_timestamp(${startTime}))`;

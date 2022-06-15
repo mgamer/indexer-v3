@@ -18,6 +18,7 @@ export const getRedirectLogoV1Options: RouteOptions = {
   plugins: {
     "hapi-swagger": {
       order: 53,
+      deprecated: true,
     },
   },
   validate: {

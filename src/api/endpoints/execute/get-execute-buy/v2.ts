@@ -17,11 +17,11 @@ import { Sources } from "@/models/sources";
 const version = "v2";
 
 export const getExecuteBuyV2Options: RouteOptions = {
-  description: "Buy any token at the best available price",
-  tags: ["api", "3. Router"],
+  description: "Buy a token at the best price",
+  tags: ["api", "Router"],
   plugins: {
     "hapi-swagger": {
-      order: 3,
+      order: 11,
     },
   },
   validate: {
@@ -183,6 +183,14 @@ export const getExecuteBuyV2Options: RouteOptions = {
               kind: "zeroex-v4",
               ...common,
               order: new Sdk.ZeroExV4.Order(config.chainId, rawData),
+            });
+          }
+
+          case "seaport": {
+            return listingDetails.push({
+              kind: "seaport",
+              ...common,
+              order: new Sdk.Seaport.Order(config.chainId, rawData),
             });
           }
         }

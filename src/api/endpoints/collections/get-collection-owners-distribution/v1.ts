@@ -10,12 +10,12 @@ import { toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getCollectionOwnersDistributionV1Options: RouteOptions = {
-  description: "Owners distribution for all tokens in a collection",
+  description: "Owner distribution in a collection",
   notes: "This API can be used to show what the distribution of owners in a collection looks like.",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "Owners"],
   plugins: {
     "hapi-swagger": {
-      order: 17,
+      order: 6,
     },
   },
   validate: {

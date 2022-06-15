@@ -20,13 +20,13 @@ import _ from "lodash";
 const version = "v2";
 
 export const getOrdersBidsV2Options: RouteOptions = {
-  description: "Get a list of bids (offers), filtered by token, collection or maker",
+  description: "Bid orders (offers)",
   notes:
-    "This API is designed for efficiently ingesting large volumes of orders, for external processing",
-  tags: ["api", "4. NFT API"],
+    "Get a list of bids (offers), filtered by token, collection or maker. This API is designed for efficiently ingesting large volumes of orders, for external processing",
+  tags: ["api", "Orders"],
   plugins: {
     "hapi-swagger": {
-      order: 42,
+      order: 5,
     },
   },
   validate: {

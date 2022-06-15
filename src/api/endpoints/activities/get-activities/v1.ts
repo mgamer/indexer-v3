@@ -11,17 +11,17 @@ import { Activities } from "@/models/activities";
 const version = "v1";
 
 export const getActivityV1Options: RouteOptions = {
-  description: "Get all activity events",
+  description: "All activity",
   notes: "This API can be used to scrape all of the activities",
-  tags: ["api", "7. Activities"],
+  tags: ["api", "Activity"],
   plugins: {
     "hapi-swagger": {
-      order: 17,
+      order: 1,
     },
   },
   validate: {
     query: Joi.object({
-      limit: Joi.number().integer().min(1).max(20).default(1000),
+      limit: Joi.number().integer().min(1).max(1000).default(20),
       continuation: Joi.number(),
     }),
   },

@@ -12,12 +12,12 @@ import { ActivityType } from "@/models/activities/activities-entity";
 const version = "v1";
 
 export const getCollectionActivityV1Options: RouteOptions = {
-  description: "Get activity events for the given collection",
+  description: "Collection activity",
   notes: "This API can be used to build a feed for a collection",
-  tags: ["api", "7. Activities"],
+  tags: ["api", "Activity"],
   plugins: {
     "hapi-swagger": {
-      order: 17,
+      order: 1,
     },
   },
   validate: {

@@ -18,13 +18,13 @@ import { Sources } from "@/models/sources";
 const version = "v1";
 
 export const getTokensBootstrapV1Options: RouteOptions = {
-  description: "Get the current best price of every on sale token in a collection",
+  description: "All listed tokens in a collection",
   notes:
     "This API will return the best price of every token in a collection that is currently on sale",
-  tags: ["api", "2. Aggregator"],
+  tags: ["api", "Tokens"],
   plugins: {
     "hapi-swagger": {
-      order: 2,
+      order: 9,
     },
   },
   validate: {

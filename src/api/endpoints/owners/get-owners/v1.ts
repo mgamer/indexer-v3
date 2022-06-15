@@ -14,13 +14,13 @@ export const getOwnersV1Options: RouteOptions = {
     privacy: "public",
     expiresIn: 60 * 60 * 1000,
   },
-  description: "Get aggregated ownership counts of collections or traits",
+  description: "Owners of a token or collection",
   notes:
     "Get owners with various filters applied, and a summary of their ownership. Useful for exploring top owners in a collection or attribute.",
-  tags: ["api", "4. NFT API"],
+  tags: ["api", "Owners"],
   plugins: {
     "hapi-swagger": {
-      order: 51,
+      order: 6,
     },
   },
   validate: {
