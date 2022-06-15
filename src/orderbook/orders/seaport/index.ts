@@ -246,7 +246,7 @@ export const save = async (
           ? "marketplace"
           : "royalty",
         recipient,
-        bps: price.eq(0) ? bn(0) : bn(amount).mul(10000).div(price).toNumber(),
+        bps: price.eq(0) ? 0 : bn(amount).mul(10000).div(price).toNumber(),
       }));
 
       const validFrom = `date_trunc('seconds', to_timestamp(${startTime}))`;
