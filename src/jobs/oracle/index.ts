@@ -80,12 +80,12 @@ if (config.doBackgroundWork && config.master && config.chainId === 4) {
                 // Fetch the oracle message
                 const message = await axios
                   .get(
-                    `https://api.reservoir.tools/oracle/collections/${collection}/floor-ask/v1?kind=twap&currency=${
-                      Sdk.Common.Addresses.Usdc[provider.network.chainId]
-                    }`
+                    `https://api.reservoir.tools/oracle/collections/${collection}/floor-ask/v1?kind=twap&currency=${Sdk.Common.Addresses.Usdc[42]}`
                   )
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   .then((response) => (response.data as any).message);
+
+                logger.info("oracle-price-publish", JSON.stringify(message));
 
                 // Wait for 1 minute to make sure on-chain validation passes
                 await new Promise((resolve) => setTimeout(resolve, 60 * 1000));
