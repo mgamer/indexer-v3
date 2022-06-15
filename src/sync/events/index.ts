@@ -1775,27 +1775,29 @@ export const unsyncEvents = async (block: number, blockHash: string) => {
 
 const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
   try {
-    const orderIds = [];
-
-    for (const event of fillEvents) {
-      if (event.orderId !== undefined) {
-        orderIds.push(event.orderId);
-      }
-    }
+    const orderIds = fillEvents.filter((e) => e !== undefined).map((e) => e.orderId);
 
     logger.info("sync-events", `Order Ids to assign: ${orderIds.length}`);
 
     if (orderIds.length) {
-      const orders = await idb.manyOrNone(
-        `
+      const orders = [];
+
+      const orderIdsChunks = _.chunk(orderIds, 100);
+
+      for (const orderIdsChunk of orderIdsChunks) {
+        const ordersChunk = await idb.manyOrNone(
+          `
             SELECT id, source_id_int from orders
             WHERE id IN ($/orderIds/)
             AND source_id_int IS NOT NULL
           `,
-        {
-          orderIds: orderIds.join(","),
-        }
-      );
+          {
+            orderIds: orderIdsChunk.join(","),
+          }
+        );
+
+        orders.push(...ordersChunk);
+      }
 
       logger.info("sync-events", `Orders with source: ${orders.length}`);
 
@@ -1806,7 +1808,9 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
           orderSourceIntIdByOrderId.set(order.id, order.source_id_int);
         }
 
-        fillEvents.forEach(function (event, index) {
+        fillEvents.forEach((event, index) => {
+          if (event.orderId == undefined) return;
+
           fillEvents[index].orderSourceIntId =
             orderSourceIntIdByOrderId.get(event.orderId!) || null;
 

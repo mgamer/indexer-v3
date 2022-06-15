@@ -1,10 +1,13 @@
 import { idb, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { DbEvent, Event } from "@/events-sync/storage/fill-events";
+import { logger } from "@/common/logger";
 
 export const addEvents = async (events: Event[]) => {
   const fillValues: DbEvent[] = [];
   for (const event of events) {
+    logger.info("sync-events", `debug common add event: ${JSON.stringify(event)}`);
+
     fillValues.push({
       address: toBuffer(event.baseEventParams.address),
       block: event.baseEventParams.block,
