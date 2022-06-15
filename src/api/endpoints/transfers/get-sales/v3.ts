@@ -206,6 +206,7 @@ export const getSalesV3Options: RouteOptions = {
               (CASE
                 WHEN orders.kind = 'wyvern-v2' THEN '\\x5b3256965e7c3cf26e11fcaf296dfc8807c01073'::BYTEA
                 WHEN orders.kind = 'wyvern-v2.3' THEN '\\x5b3256965e7c3cf26e11fcaf296dfc8807c01073'::BYTEA
+                WHEN orders.kind = 'seaport' THEN '\\x5b3256965e7c3cf26e11fcaf296dfc8807c01073'::BYTEA
                 WHEN orders.kind = 'looks-rare' THEN '\\x5924a28caaf1cc016617874a2f0c3710d881f3c1'::BYTEA
               END)
             ) AS source_id,
