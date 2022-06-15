@@ -33,9 +33,9 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { kind, backfill } = job.data;
+      const { kind } = job.data;
 
-      logger.info(QUEUE_NAME, `Export started. kind:${kind}, backfill:${backfill}`);
+      logger.info(QUEUE_NAME, `Export started. kind:${kind}`);
 
       try {
         const { cursor, sequenceNumber } = await getSequenceInfo(kind);
@@ -51,12 +51,12 @@ if (config.doBackgroundWork) {
           await setNextSequenceInfo(kind, nextCursor);
         }
 
-        // Trigger next sequence only if there are more results and in backfill mode
-        job.data.addToQueue = backfill && data.length == QUERY_LIMIT;
+        // Trigger next sequence only if there are more results
+        job.data.addToQueue = data.length == QUERY_LIMIT;
 
         logger.info(
           QUEUE_NAME,
-          `Export finished. kind:${kind}, backfill:${backfill}, cursor:${JSON.stringify(
+          `Export finished. kind:${kind}, cursor:${JSON.stringify(
             cursor
           )}, sequenceNumber:${sequenceNumber}`
         );
@@ -69,7 +69,7 @@ if (config.doBackgroundWork) {
 
   worker.on("completed", async (job) => {
     if (job.data.addToQueue) {
-      await addToQueue(job.data.kind, job.data.backfill);
+      await addToQueue(job.data.kind);
     }
   });
 
@@ -88,8 +88,8 @@ export enum DataSourceKind {
   sales = "sales",
 }
 
-export const addToQueue = async (kind: DataSourceKind, backfill = false) => {
-  await queue.add(randomUUID(), { kind, backfill }, { jobId: kind });
+export const addToQueue = async (kind: DataSourceKind) => {
+  await queue.add(randomUUID(), { kind }, { jobId: kind });
 };
 
 const getSequenceInfo = async (kind: DataSourceKind) => {
