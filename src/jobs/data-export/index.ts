@@ -22,14 +22,7 @@ if (config.doBackgroundWork) {
             await redlock
               .acquire([`data-export-${task.source}-cron-lock`], (10 * 60 - 5) * 1000)
               .then(async () => {
-                await redlock
-                  .acquire([`data-export-${task.source}-backfill-lock`], 60 * 60 * 24 * 30 * 1000)
-                  .then(async () => {
-                    await exportData.addToQueue(task.source, true);
-                  })
-                  .catch(async () => {
-                    await exportData.addToQueue(task.source);
-                  });
+                await exportData.addToQueue(task.source);
               })
               .catch(() => {
                 // Skip on any errors

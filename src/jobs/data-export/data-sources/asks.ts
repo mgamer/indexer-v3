@@ -97,7 +97,7 @@ export class AsksDataSource extends BaseDataSource {
           source: r.source_id ? sources.getByAddress(fromBuffer(r.source_id))?.name : null,
           fee_bps: Number(r.fee_bps),
           expiration: Number(r.expiration),
-          raw_data: r.raw_data,
+          raw_data: r.raw_data ?? null,
           created_at: new Date(r.created_at).toISOString(),
           updated_at: new Date(r.updated_at).toISOString(),
         };
