@@ -76,7 +76,9 @@ export const getOrdersAllV1Options: RouteOptions = {
                   .lowercase()
                   .pattern(/^0x[a-fA-F0-9]{40}$/)
                   .allow(null),
-                bps: Joi.number().allow(null),
+                // Should be `Joi.number().allow(null)` but we set to `Joi.any()` to cover
+                // objects eith wrong schema that were inserted by mistake into the db
+                bps: Joi.any(),
               })
             )
             .allow(null),
