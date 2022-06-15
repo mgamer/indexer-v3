@@ -130,6 +130,41 @@ export const getExecuteCancelV1Options: RouteOptions = {
           };
         }
 
+        case "seaport": {
+          const order = new Sdk.Seaport.Order(config.chainId, orderResult.raw_data);
+
+          // Generate exchange-specific cancellation transaction.
+          const exchange = new Sdk.Seaport.Exchange(config.chainId);
+          const cancelTx = exchange.cancelOrderTx(query.maker, order);
+
+          const steps = generateSteps(order.getInfo()!.side);
+          return {
+            steps: [
+              {
+                ...steps[0],
+                status: "incomplete",
+                data: {
+                  ...cancelTx,
+                  maxFeePerGas: query.maxFeePerGas
+                    ? bn(query.maxFeePerGas).toHexString()
+                    : undefined,
+                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                    ? bn(query.maxPriorityFeePerGas).toHexString()
+                    : undefined,
+                },
+              },
+              {
+                ...steps[1],
+                status: "incomplete",
+                data: {
+                  endpoint: `/orders/executed/v1?id=${order.hash()}`,
+                  method: "GET",
+                },
+              },
+            ],
+          };
+        }
+
         case "looks-rare": {
           const order = new Sdk.LooksRare.Order(config.chainId, orderResult.raw_data);
 
