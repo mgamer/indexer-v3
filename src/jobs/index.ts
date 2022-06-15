@@ -61,8 +61,8 @@ import * as fixActivitiesMissingCollection from "@/jobs/activities/fix-activitie
 import * as updateNftBalanceTopBidQueue from "@/jobs/nft-balance-updates/update-top-bid-queue";
 import * as backfillNftBalanceTopBidQueue from "@/jobs/nft-balance-updates/backfill-top-bid-queue";
 import * as backfillFillEventsCreatedAt from "@/jobs/backfill/backfill-fill-events-created-at";
-import * as exportData from "@/jobs/data-export/export-data";
 import * as removeBuyOrderEvents from "@/jobs/order-updates/remove-buy-order-events";
+import * as exportData from "@/jobs/data-export/export-data";
 
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
@@ -105,6 +105,6 @@ export const allJobQueues = [
   updateNftBalanceTopBidQueue.queue,
   backfillNftBalanceTopBidQueue.queue,
   backfillFillEventsCreatedAt.queue,
-  exportData.queue,
   removeBuyOrderEvents.queue,
+  exportData.queue,
 ];

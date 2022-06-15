@@ -85,11 +85,13 @@ export class CollectionsDataSource extends BaseDataSource {
         updated_at: new Date(r.updated_at).toISOString(),
       }));
 
+      const lastResult = result[result.length - 1];
+
       return {
         data,
         nextCursor: {
-          id: result[result.length - 1].id,
-          updatedAt: result[result.length - 1].updated_at,
+          id: lastResult.id,
+          updatedAt: lastResult.updated_at,
         },
       };
     }

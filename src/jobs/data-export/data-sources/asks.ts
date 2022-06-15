@@ -32,7 +32,6 @@ export class AsksDataSource extends BaseDataSource {
           orders.nonce,
           orders.source_id,
           orders.fee_bps,
-          orders.fee_breakdown,
           COALESCE(
             NULLIF(DATE_PART('epoch', orders.expiration), 'Infinity'),
             0
@@ -73,8 +72,8 @@ export class AsksDataSource extends BaseDataSource {
         let endPrice = r.price;
 
         if (r.dynamic) {
-          startPrice = r.raw_data.basePrice;
-          endPrice = bn(r.raw_data.basePrice).sub(r.raw_data.extra);
+          startPrice = bn(r.raw_data.basePrice);
+          endPrice = bn(r.raw_data.basePrice).sub(bn(r.raw_data.extra));
         }
 
         return {
@@ -97,18 +96,20 @@ export class AsksDataSource extends BaseDataSource {
           nonce: Number(r.nonce),
           source: r.source_id ? sources.getByAddress(fromBuffer(r.source_id))?.name : null,
           fee_bps: Number(r.fee_bps),
-          // fee_breakdown: r.fee_breakdown,
           expiration: Number(r.expiration),
+          raw_data: r.raw_data,
           created_at: new Date(r.created_at).toISOString(),
           updated_at: new Date(r.updated_at).toISOString(),
         };
       });
 
+      const lastResult = result[result.length - 1];
+
       return {
         data,
         nextCursor: {
-          id: result[result.length - 1].id,
-          updatedAt: result[result.length - 1].updated_at,
+          id: lastResult.id,
+          updatedAt: lastResult.updated_at,
         },
       };
     }
