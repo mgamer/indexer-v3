@@ -65,11 +65,13 @@ export class TokenFloorAskEventsDataSource extends BaseDataSource {
         created_at: new Date(r.created_at * 1000).toISOString(),
       }));
 
+      const lastResult = result[result.length - 1];
+
       return {
         data,
         nextCursor: {
-          id: result[result.length - 1].id,
-          updatedAt: result[result.length - 1].updated_at,
+          id: lastResult.id,
+          updatedAt: lastResult.updated_at,
         },
       };
     }

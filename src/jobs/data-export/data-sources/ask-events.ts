@@ -65,9 +65,11 @@ export class AskEventsDataSource extends BaseDataSource {
         created_at: new Date(r.created_at * 1000).toISOString(),
       }));
 
+      const lastResult = result[result.length - 1];
+
       return {
         data,
-        nextCursor: { id: result[result.length - 1].id },
+        nextCursor: { id: lastResult.id },
       };
     }
 

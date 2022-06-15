@@ -13,6 +13,7 @@ import { CollectionFloorAskEventsDataSource } from "@/jobs/data-export/data-sour
 import { AsksDataSource } from "@/jobs/data-export/data-sources/asks";
 import { TokensDataSource } from "@/jobs/data-export/data-sources/tokens";
 import { CollectionsDataSource } from "@/jobs/data-export/data-sources/collections";
+import { SalesDataSource } from "@/jobs/data-export/data-sources/sales";
 
 const QUEUE_NAME = "export-data-queue";
 const QUERY_LIMIT = 1000;
@@ -84,6 +85,7 @@ export enum DataSourceKind {
   asks = "asks",
   tokens = "tokens",
   collections = "collections",
+  sales = "sales",
 }
 
 export const addToQueue = async (kind: DataSourceKind, backfill = false) => {
@@ -133,6 +135,8 @@ const getDataSource = (kind: DataSourceKind) => {
       return new TokensDataSource();
     case DataSourceKind.collections:
       return new CollectionsDataSource();
+    case DataSourceKind.sales:
+      return new SalesDataSource();
   }
 
   throw new Error(`Unsupported data source ${kind}`);
@@ -175,6 +179,7 @@ const getAwsCredentials = async () => {
     .assumeRole({
       RoleArn: config.dataExportAwsS3UploadRole,
       RoleSessionName: "UploadRoleSession",
+      ExternalId: config.dataExportAwsS3UploadExternalId,
     })
     .promise();
 

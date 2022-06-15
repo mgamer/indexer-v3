@@ -72,12 +72,14 @@ export class TokensDataSource extends BaseDataSource {
         updated_at: new Date(r.updated_at).toISOString(),
       }));
 
+      const lastResult = result[result.length - 1];
+
       return {
         data,
         nextCursor: {
-          contract: fromBuffer(result[result.length - 1].contract),
-          tokenId: result[result.length - 1].token_id,
-          updatedAt: result[result.length - 1].updated_at,
+          contract: fromBuffer(lastResult.contract),
+          tokenId: lastResult.token_id,
+          updatedAt: lastResult.updated_at,
         },
       };
     }
