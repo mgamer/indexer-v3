@@ -1829,12 +1829,19 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
         fillEvents.forEach((event, index) => {
           if (event.orderId == undefined) return;
 
-          fillEvents[index].orderSourceIdInt = orderSourceIdByOrderId.get(event.orderId!) || null;
+          const orderSourceId = orderSourceIdByOrderId.get(event.orderId!);
 
-          logger.info(
-            "sync-events",
-            `Orders source assigned to fill event: ${JSON.stringify(event)}`
-          );
+          // If the order source id exists on the order, use it in the fill event.
+          if (orderSourceId) {
+            logger.info(
+              "sync-events",
+              `Orders source assigned to fill event: ${JSON.stringify(
+                event
+              )}, orderSourceId: ${orderSourceId}`
+            );
+
+            fillEvents[index].orderSourceIdInt = orderSourceId;
+          }
         });
       }
     }
