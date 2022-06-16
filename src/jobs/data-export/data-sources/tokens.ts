@@ -1,4 +1,4 @@
-import { idb } from "@/common/db";
+import { redb } from "@/common/db";
 import { Sources } from "@/models/sources";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
@@ -41,7 +41,7 @@ export class TokensDataSource extends BaseDataSource {
         LIMIT $/limit/;  
       `;
 
-    const result = await idb.manyOrNone(query, {
+    const result = await redb.manyOrNone(query, {
       contract: cursor?.contract ? toBuffer(cursor.contract) : null,
       tokenId: cursor?.tokenId,
       updatedAt: cursor?.updatedAt,
