@@ -108,7 +108,7 @@ if (config.doBackgroundWork) {
 
       logger.info(
         QUEUE_NAME,
-        `Processed ${results.length} sell orders.  limit=${limit}, cursor=${JSON.stringify(cursor)}`
+        `Processed ${results.length} fill events.  limit=${limit}, cursor=${JSON.stringify(cursor)}`
       );
     },
     { connection: redis.duplicate(), concurrency: 1 }
@@ -121,7 +121,7 @@ if (config.doBackgroundWork) {
   redlock
     .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
-      // await addToQueue();
+      await addToQueue();
     })
     .catch(() => {
       // Skip on any errors

@@ -1656,12 +1656,14 @@ export const syncEvents = async (
         }
       }
 
-      // Add order source value for each fill.
-      await Promise.all([
-        assignOrderSourceToFillEvents(fillEvents),
-        assignOrderSourceToFillEvents(fillEventsPartial),
-        assignOrderSourceToFillEvents(fillEventsFoundation),
-      ]);
+      if (!backfill) {
+        // Assign source based on order for each fill.
+        await Promise.all([
+          assignOrderSourceToFillEvents(fillEvents),
+          assignOrderSourceToFillEvents(fillEventsPartial),
+          assignOrderSourceToFillEvents(fillEventsFoundation),
+        ]);
+      }
 
       // WARNING! Ordering matters (fills should come in front of cancels).
       await Promise.all([
@@ -1794,6 +1796,8 @@ export const unsyncEvents = async (block: number, blockHash: string) => {
 };
 
 const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
+  const start = new Date().getTime();
+
   try {
     const orderIds = fillEvents.filter((e) => e.orderId !== undefined).map((e) => e.orderId);
 
@@ -1816,8 +1820,6 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
 
         orders.push(...ordersChunk);
       }
-
-      logger.info("sync-events", `Orders with source: ${orders.length}`);
 
       if (orders.length) {
         const orderSourceIdByOrderId = new Map<string, number>();
@@ -1848,23 +1850,33 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
   } catch (e) {
     logger.error("sync-events", `Failed to assign order source id to fill events: ${e}`);
   }
+
+  logger.info(
+    "sync-events",
+    `assignOrderSourceToFillEvents execution time: ${new Date().getTime() - start}`
+  );
 };
 
 const getOrderSourceByOrderKind = async (orderKind: string) => {
-  const sources = await Sources.getInstance();
+  try {
+    const sources = await Sources.getInstance();
 
-  switch (orderKind) {
-    case "x2y2":
-      return sources.getByName("X2Y2").id;
-    case "foundation":
-      return sources.getByName("Foundation").id;
-    case "looks-rare":
-      return sources.getByName("LooksRare").id;
-    case "seaport":
-    case "wyvern-v2":
-    case "wyvern-v2.3":
-      return sources.getByName("OpenSea").id;
-    default:
-      return null; // For all others, we can't assume where the order originated from.
+    switch (orderKind) {
+      case "x2y2":
+        return sources.getByName("X2Y2").id;
+      case "foundation":
+        return sources.getByName("Foundation").id;
+      case "looks-rare":
+        return sources.getByName("LooksRare").id;
+      case "seaport":
+      case "wyvern-v2":
+      case "wyvern-v2.3":
+        return sources.getByName("OpenSea").id;
+      default:
+        return null; // For all others, we can't assume where the order originated from.
+    }
+  } catch (e) {
+    logger.error("sync-events", `Failed to get order source by order kind: ${e}`);
+    return null;
   }
 };
