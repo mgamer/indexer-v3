@@ -9,7 +9,7 @@ export type Event = {
   orderKind: OrderKind;
   orderId?: string;
   orderSide: "buy" | "sell";
-  orderSourceIntId: number | null;
+  orderSourceIdInt: number | null;
   maker: string;
   taker: string;
   price: string;
@@ -32,7 +32,7 @@ export type DbEvent = {
   order_kind: OrderKind;
   order_id: string | null;
   order_side: "buy" | "sell";
-  order_source_int_id: number | null;
+  order_source_id_int: number | null;
   maker: Buffer;
   taker: Buffer;
   price: string;

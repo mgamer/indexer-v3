@@ -1,13 +1,10 @@
 import { idb, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { DbEvent, Event } from "@/events-sync/storage/fill-events";
-import { logger } from "@/common/logger";
 
 export const addEvents = async (events: Event[]) => {
   const fillValues: DbEvent[] = [];
   for (const event of events) {
-    logger.info("sync-events", `debug common add event: ${JSON.stringify(event)}`);
-
     fillValues.push({
       address: toBuffer(event.baseEventParams.address),
       block: event.baseEventParams.block,
@@ -20,7 +17,7 @@ export const addEvents = async (events: Event[]) => {
       order_kind: event.orderKind,
       order_id: event.orderId || null,
       order_side: event.orderSide,
-      order_source_int_id: event.orderSourceIntId || null,
+      order_source_id_int: event.orderSourceIdInt || null,
       maker: toBuffer(event.maker),
       taker: toBuffer(event.taker),
       price: event.price,
@@ -47,7 +44,7 @@ export const addEvents = async (events: Event[]) => {
         "order_kind",
         "order_id",
         "order_side",
-        "order_source_int_id",
+        "order_source_id_int",
         "maker",
         "taker",
         "price",
@@ -74,7 +71,7 @@ export const addEvents = async (events: Event[]) => {
           "order_kind",
           "order_id",
           "order_side",
-          "order_source_int_id",
+          "order_source_id_int",
           "maker",
           "taker",
           "price",
