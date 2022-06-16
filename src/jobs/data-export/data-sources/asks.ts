@@ -1,7 +1,9 @@
 import { idb } from "@/common/db";
 import { Sources } from "@/models/sources";
-import { bn, formatEth, fromBuffer } from "@/common/utils";
+import { formatEth, fromBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
+import * as Sdk from "@reservoir0x/sdk";
+import { config } from "@/config/index";
 
 export class AsksDataSource extends BaseDataSource {
   public async getSequenceData(cursor: CursorInfo | null, limit: number) {
@@ -71,9 +73,19 @@ export class AsksDataSource extends BaseDataSource {
         let startPrice = r.price;
         let endPrice = r.price;
 
-        if (r.dynamic) {
-          startPrice = bn(r.raw_data.basePrice);
-          endPrice = bn(r.raw_data.basePrice).sub(bn(r.raw_data.extra));
+        switch (r.kind) {
+          case "wyvern-v2.3": {
+            const wyvernOrder = new Sdk.WyvernV23.Order(config.chainId, r.raw_data);
+            startPrice = wyvernOrder.getMatchingPrice(r.valid_from);
+            endPrice = wyvernOrder.getMatchingPrice(r.valid_until);
+            break;
+          }
+          case "seaport": {
+            const seaportOrder = new Sdk.Seaport.Order(config.chainId, r.raw_data);
+            startPrice = seaportOrder.getMatchingPrice(r.valid_from);
+            endPrice = seaportOrder.getMatchingPrice(r.valid_until);
+            break;
+          }
         }
 
         return {
