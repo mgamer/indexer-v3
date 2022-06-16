@@ -75,7 +75,7 @@ export class Tokens {
                    WHERE contract = $/contract/
                    AND token_id = $/tokenId/`;
 
-    return (await idb.manyOrNone(query, {
+    return (await redb.manyOrNone(query, {
       contract: toBuffer(contract),
       tokenId,
     })) as TokenAttributes[];
@@ -88,7 +88,7 @@ export class Tokens {
                    and key = $/key/
                    GROUP BY key`;
 
-    return await idb.oneOrNone(query, {
+    return await redb.oneOrNone(query, {
       collection,
       key,
     });
@@ -102,7 +102,7 @@ export class Tokens {
                    AND value = $/value/
                    GROUP BY key, value, attribute_id`;
 
-    return await idb.oneOrNone(query, {
+    return await redb.oneOrNone(query, {
       collection,
       key,
       value,
@@ -140,7 +140,7 @@ export class Tokens {
                    AND value = $/attributeValue/
                    AND floor_sell_value IS NOT NULL`;
 
-    const result = await idb.oneOrNone(query, {
+    const result = await redb.oneOrNone(query, {
       collection,
       attributeKey,
       attributeValue,
