@@ -6,7 +6,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import _ from "lodash";
 
 import { logger } from "@/common/logger";
-import { idb } from "@/common/db";
+import { idb, redb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -1796,8 +1796,6 @@ export const unsyncEvents = async (block: number, blockHash: string) => {
 };
 
 const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
-  const start = new Date().getTime();
-
   try {
     const orderIds = fillEvents.filter((e) => e.orderId !== undefined).map((e) => e.orderId);
 
@@ -1807,7 +1805,7 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
       const orderIdsChunks = _.chunk(orderIds, 100);
 
       for (const orderIdsChunk of orderIdsChunks) {
-        const ordersChunk = await idb.manyOrNone(
+        const ordersChunk = await redb.manyOrNone(
           `
             SELECT id, source_id_int from orders
             WHERE id IN ($/orderIds/)
@@ -1850,11 +1848,6 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
   } catch (e) {
     logger.error("sync-events", `Failed to assign order source id to fill events: ${e}`);
   }
-
-  logger.info(
-    "sync-events",
-    `assignOrderSourceToFillEvents execution time: ${new Date().getTime() - start}`
-  );
 };
 
 const getOrderSourceByOrderKind = async (orderKind: string) => {
