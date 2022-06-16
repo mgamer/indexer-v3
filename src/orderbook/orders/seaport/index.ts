@@ -194,7 +194,7 @@ export const save = async (
       let feeAmount = order.getFeeAmount();
 
       // Handle: price and value
-      let price = bn(info.price).add(feeAmount);
+      let price = bn(order.getMatchingPrice());
       let value = price;
       if (info.side === "buy") {
         // For buy orders, we set the value as `price - fee` since it
@@ -222,10 +222,12 @@ export const save = async (
       let isReservoir = false;
 
       // Handle: source and fees breakdown
-      let source: string | undefined;
-      let sourceId: number | null = null;
-
       const sources = await Sources.getInstance();
+
+      // Default source: OpenSea
+      let source = "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073";
+      let sourceId = sources.getByName("OpenSea").id;
+
       if (metadata.source) {
         const sourceEntity = await sources.getOrInsert(metadata.source);
         source = sourceEntity.address;
@@ -233,20 +235,14 @@ export const save = async (
 
         // Assume native listing
         isReservoir = true;
-      } else if (
-        // OpenSea wallet is a fee recipient
-        info.fees.filter(
-          ({ recipient }) => recipient === "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073"
-        ).length
-      ) {
-        source = "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073";
-        sourceId = sources.getByName("OpenSea").id;
       }
 
+      const openSeaFeeRecipients = [
+        "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073",
+        "0x8de9c5a032463c561423387a9648c5c7bcc5bc90",
+      ];
       const feeBreakdown = info.fees.map(({ recipient, amount }) => ({
-        kind: ["0x5b3256965e7c3cf26e11fcaf296dfc8807c01073"].includes(recipient.toLowerCase())
-          ? "marketplace"
-          : "royalty",
+        kind: openSeaFeeRecipients.includes(recipient.toLowerCase()) ? "marketplace" : "royalty",
         recipient,
         bps: price.eq(0) ? 0 : bn(amount).mul(10000).div(price).toNumber(),
       }));
@@ -278,7 +274,7 @@ export const save = async (
         ),
         fee_bps: feeBps.toNumber(),
         fee_breakdown: feeBreakdown || null,
-        dynamic: null,
+        dynamic: info.isDynamic ?? null,
         raw_data: order.params,
         expiration: validTo,
       });
