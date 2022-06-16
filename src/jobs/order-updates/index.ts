@@ -88,32 +88,45 @@ if (config.doBackgroundWork) {
             let done = false;
             while (!done) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const dynamicOrders: { id: string; raw_data: any }[] = await idb.manyOrNone(
-                `
-                  SELECT
-                    orders.id,
-                    orders.raw_data
-                  FROM orders
-                  WHERE orders.dynamic
-                    AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
-                    ${continuation ? "AND orders.id > $/continuation/" : ""}
-                  ORDER BY orders.id
-                  LIMIT ${limit}
-                `,
-                { continuation }
-              );
+              const dynamicOrders: { kind: string; id: string; raw_data: any }[] =
+                await idb.manyOrNone(
+                  `
+                    SELECT
+                      orders.kind,
+                      orders.id,
+                      orders.raw_data
+                    FROM orders
+                    WHERE orders.dynamic
+                      AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                      ${continuation ? "AND orders.id > $/continuation/" : ""}
+                    ORDER BY orders.id
+                    LIMIT ${limit}
+                  `,
+                  { continuation }
+                );
 
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const values: any[] = [];
-              for (const { id, raw_data } of dynamicOrders) {
-                const order = new Sdk.WyvernV23.Order(config.chainId, raw_data);
-                const newPrice = order.getMatchingPrice().toString();
-                values.push({
-                  id,
-                  price: newPrice,
-                  // TODO: We should have a generic method for deriving the `value` from `price`.
-                  value: newPrice,
-                });
+              for (const { kind, id, raw_data } of dynamicOrders) {
+                if (kind === "wyvern-v2.3") {
+                  const order = new Sdk.WyvernV23.Order(config.chainId, raw_data);
+                  const newPrice = order.getMatchingPrice().toString();
+                  values.push({
+                    id,
+                    price: newPrice,
+                    // TODO: We should have a generic method for deriving the `value` from `price`.
+                    value: newPrice,
+                  });
+                } else if (kind === "seaport") {
+                  const order = new Sdk.Seaport.Order(config.chainId, raw_data);
+                  const newPrice = order.getMatchingPrice().toString();
+                  values.push({
+                    id,
+                    price: newPrice,
+                    // TODO: We should have a generic method for deriving the `value` from `price`.
+                    value: newPrice,
+                  });
+                }
               }
 
               const columns = new pgp.helpers.ColumnSet(
