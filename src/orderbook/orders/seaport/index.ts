@@ -274,7 +274,7 @@ export const save = async (
         ),
         fee_bps: feeBps.toNumber(),
         fee_breakdown: feeBreakdown || null,
-        dynamic: null,
+        dynamic: info.isDynamic ?? null,
         raw_data: order.params,
         expiration: validTo,
       });
