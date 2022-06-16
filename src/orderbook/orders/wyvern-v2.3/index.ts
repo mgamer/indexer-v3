@@ -285,37 +285,29 @@ export const save = async (
       const feeBps = Math.max(order.params.makerRelayerFee, order.params.takerRelayerFee);
 
       // Handle: source and fees breakdown
-      let source: string | undefined;
-      let sourceId: number | null = null;
-      let feeBreakdown: object[] | undefined;
-
       const sources = await Sources.getInstance();
 
+      // Default source: OpenSea
+      let source = "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073";
+      let sourceId = sources.getByName("OpenSea").id;
+      let feeBreakdown: object[] = [];
+      feeBreakdown = [
+        {
+          kind: "marketplace",
+          recipient: order.params.feeRecipient,
+          bps: 250,
+        },
+      ];
+      if (feeBps > 250) {
+        feeBreakdown.push({
+          kind: "royalty",
+          // TODO: We should extract royalties out of the associated collection
+          recipient: null,
+          bps: feeBps - 250,
+        });
+      }
+
       switch (order.params.feeRecipient) {
-        // opensea.io
-        case "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073": {
-          source = order.params.feeRecipient;
-          sourceId = sources.getByName("OpenSea").id;
-          feeBreakdown = [
-            {
-              kind: "marketplace",
-              recipient: order.params.feeRecipient,
-              bps: 250,
-            },
-          ];
-
-          if (feeBps > 250) {
-            feeBreakdown.push({
-              kind: "royalty",
-              // TODO: We should extract royalties out of the associated collection
-              recipient: null,
-              bps: feeBps - 250,
-            });
-          }
-
-          break;
-        }
-
         // forgotten.market
         case "0xfdfda3d504b1431ea0fd70084b1bfa39fa99dcc4":
         case "0xcfd61fb650da1dd7b8f7bc7ad0d105b40bbd3882":
@@ -343,22 +335,20 @@ export const save = async (
         }
 
         default: {
-          source = metadata.source;
-
           // If source was passed
-          if (source) {
+          if (metadata.source) {
             const sourceEntity = await sources.getOrInsert(source);
             source = sourceEntity.address;
             sourceId = sourceEntity.id;
-          }
 
-          feeBreakdown = [
-            {
-              kind: "royalty",
-              recipient: order.params.feeRecipient,
-              bps: feeBps,
-            },
-          ];
+            feeBreakdown = [
+              {
+                kind: "royalty",
+                recipient: order.params.feeRecipient,
+                bps: feeBps,
+              },
+            ];
+          }
 
           break;
         }

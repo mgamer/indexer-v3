@@ -421,7 +421,10 @@ if (config.doBackgroundWork) {
             }
 
             // X2Y2
-            if (data.operator === Sdk.X2Y2.Addresses.Exchange[config.chainId]?.toLowerCase()) {
+            // TODO: Add support for erc1155 once X2Y2 integrates it
+            if (
+              data.operator === Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId]?.toLowerCase()
+            ) {
               detected = true;
               result.push(
                 ...(await idb.manyOrNone(
