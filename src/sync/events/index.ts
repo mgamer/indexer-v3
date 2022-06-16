@@ -1851,20 +1851,25 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
 };
 
 const getOrderSourceByOrderKind = async (orderKind: string) => {
-  const sources = await Sources.getInstance();
+  try {
+    const sources = await Sources.getInstance();
 
-  switch (orderKind) {
-    case "x2y2":
-      return sources.getByName("X2Y2").id;
-    case "foundation":
-      return sources.getByName("Foundation").id;
-    case "looks-rare":
-      return sources.getByName("LooksRare").id;
-    case "seaport":
-    case "wyvern-v2":
-    case "wyvern-v2.3":
-      return sources.getByName("OpenSea").id;
-    default:
-      return null; // For all others, we can't assume where the order originated from.
+    switch (orderKind) {
+      case "x2y2":
+        return sources.getByName("X2Y2").id;
+      case "foundation":
+        return sources.getByName("Foundation").id;
+      case "looks-rare":
+        return sources.getByName("LooksRare").id;
+      case "seaport":
+      case "wyvern-v2":
+      case "wyvern-v2.3":
+        return sources.getByName("OpenSea").id;
+      default:
+        return null; // For all others, we can't assume where the order originated from.
+    }
+  } catch (e) {
+    logger.error("sync-events", `Failed to get order source by order kind: ${e}`);
+    return null;
   }
 };
