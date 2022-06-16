@@ -1777,8 +1777,6 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
   try {
     const orderIds = fillEvents.filter((e) => e !== undefined).map((e) => e.orderId);
 
-    logger.info("sync-events", `Order Ids to assign: ${orderIds.length}`);
-
     if (orderIds.length) {
       const orders = [];
 
@@ -1802,17 +1800,16 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
       logger.info("sync-events", `Orders with source: ${orders.length}`);
 
       if (orders.length) {
-        const orderSourceIntIdByOrderId = new Map<string, number>();
+        const orderSourceIdByOrderId = new Map<string, number>();
 
         for (const order of orders) {
-          orderSourceIntIdByOrderId.set(order.id, order.source_id_int);
+          orderSourceIdByOrderId.set(order.id, order.source_id_int);
         }
 
         fillEvents.forEach((event, index) => {
           if (event.orderId == undefined) return;
 
-          fillEvents[index].orderSourceIntId =
-            orderSourceIntIdByOrderId.get(event.orderId!) || null;
+          fillEvents[index].orderSourceIdInt = orderSourceIdByOrderId.get(event.orderId!) || null;
 
           logger.info(
             "sync-events",
