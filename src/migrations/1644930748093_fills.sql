@@ -16,6 +16,7 @@ CREATE TABLE "fill_events_2" (
   "timestamp" INT NOT NULL,
   "batch_index" INT NOT NULL,
   "order_kind" order_kind_t NOT NULL,
+  "order_source_id_int" INT,
   "order_id" TEXT,
   "order_side" order_side_t NOT NULL,
   "order_source_id_int" INT,
