@@ -108,7 +108,7 @@ if (config.doBackgroundWork) {
 
       logger.info(
         QUEUE_NAME,
-        `Processed ${results.length} sell orders.  limit=${limit}, cursor=${JSON.stringify(cursor)}`
+        `Processed ${results.length} fill events.  limit=${limit}, cursor=${JSON.stringify(cursor)}`
       );
     },
     { connection: redis.duplicate(), concurrency: 1 }
