@@ -26,7 +26,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async () => {
-      const limit = 100;
+      const limit = 200;
 
       const { rowCount } = await idb.result(
         `
