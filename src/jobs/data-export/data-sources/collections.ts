@@ -1,4 +1,4 @@
-import { idb } from "@/common/db";
+import { redb } from "@/common/db";
 import { formatEth, fromBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
 
@@ -41,7 +41,7 @@ export class CollectionsDataSource extends BaseDataSource {
         LIMIT $/limit/;  
       `;
 
-    const result = await idb.manyOrNone(query, {
+    const result = await redb.manyOrNone(query, {
       id: cursor?.id,
       updatedAt: cursor?.updatedAt,
       limit,
