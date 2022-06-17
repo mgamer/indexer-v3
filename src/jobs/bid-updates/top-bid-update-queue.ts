@@ -89,7 +89,7 @@ if (config.doBackgroundWork) {
         tokenId,
       });
 
-      if (result) {
+      if (!tokenSetId.startsWith("token:") && result) {
         await addToQueue(tokenSetId, fromBuffer(result.contract), result.token_id);
       }
     },
