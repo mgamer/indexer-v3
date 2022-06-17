@@ -79,6 +79,10 @@ ALTER TABLE "token_attributes"
 CREATE INDEX "token_attributes_contract_token_id_key_value_index"
   ON "token_attributes" ("contract", "token_id", "key", "value");
 
+CREATE INDEX "token_attributes_collection_id_key_value_index"
+  ON "token_attributes" ("collection_id", "key", "value")
+  INCLUDE(contract, token_id);
+
 -- TODO: Look into replacing the current primary key with the below index
 
 CREATE UNIQUE INDEX "token_attributes_attribute_id_contract_token_id_unique_index"
