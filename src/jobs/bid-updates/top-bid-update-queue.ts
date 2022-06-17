@@ -75,7 +75,7 @@ if (config.doBackgroundWork) {
           WHERE "t"."contract" = "z"."contract"
           AND "t"."token_id" = "z"."token_id"
           AND "t"."top_buy_id" IS DISTINCT FROM "z"."order_id"
-          AND "z"."value" > "t"."top_buy_value"
+          AND ("t"."top_buy_value" IS NULL OR "z"."value" > "t"."top_buy_value")
         )
         
         SELECT contract, token_id
