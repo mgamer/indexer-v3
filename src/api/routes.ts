@@ -17,9 +17,6 @@ import * as redirectsEndpoints from "@/api/endpoints/redirects";
 import * as searchEndpoints from "@/api/endpoints/search";
 import * as activitiesEndpoints from "@/api/endpoints/activities";
 
-import * as topBidQueue from "@/jobs/bid-updates/top-bid-update-queue";
-topBidQueue.addToQueue("contract:0xb74bf94049d2c01f8805b8b15db0909168cabf46");
-
 export const setupRoutes = (server: Server) => {
   // Admin
 
