@@ -32,6 +32,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   // the validity of those orders in a decentralized way (we fully depend
   // on X2Y2's API for that).
 
+  const successOrders: Sdk.X2Y2.Types.Order[] = [];
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
       const order = new Sdk.X2Y2.Order(config.chainId, orderParams);
@@ -211,6 +212,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         unfillable:
           fillabilityStatus !== "fillable" || approvalStatus !== "approved" ? true : undefined,
       });
+
+      if (!results[results.length - 1].unfillable) {
+        successOrders.push(orderParams);
+      }
     } catch (error) {
       logger.error(
         "orders-x2y2-save",
@@ -271,6 +276,53 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             } as ordersUpdateById.OrderInfo)
         )
     );
+
+    // When lowering the price of a listing, X2Y2 will off-chain cancel
+    // all previous orders (they can do that by having their backend to
+    // refuse signing on any previous orders).
+    // https://discordapp.com/channels/977147775366082560/977189354738962463/987253907430449213
+    for (const orderParams of successOrders) {
+      if (orderParams.type === "sell") {
+        const result = await idb.manyOrNone(
+          `
+            WITH x AS (
+              SELECT
+                orders.id
+              FROM orders
+              WHERE orders.kind = 'x2y2'
+                AND orders.side = 'sell'
+                AND orders.maker = $/maker/
+                AND orders.token_set_id = $/tokenSetId/
+                AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                AND orders.price > $/price/
+            )
+            UPDATE orders AS o SET
+              fillability_status = 'cancelled'
+            FROM x
+            WHERE orders.id = x.id
+            RETURNING o.id
+          `,
+          {
+            maker: toBuffer(orderParams.maker),
+            tokenSetId: `token:${orderParams.nft.token}:${orderParams.nft.tokenId}`.toLowerCase(),
+            price: orderParams.price,
+          }
+        );
+
+        await ordersUpdateById.addToQueue(
+          result.map(
+            ({ id }) =>
+              ({
+                context: `cancelled-${id}`,
+                id,
+                trigger: {
+                  kind: "new-order",
+                },
+              } as ordersUpdateById.OrderInfo)
+          )
+        );
+      }
+    }
   }
 
   return results;
