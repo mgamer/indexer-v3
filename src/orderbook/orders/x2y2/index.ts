@@ -299,7 +299,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             UPDATE orders AS o SET
               fillability_status = 'cancelled'
             FROM x
-            WHERE orders.id = x.id
+            WHERE o.id = x.id
             RETURNING o.id
           `,
           {
