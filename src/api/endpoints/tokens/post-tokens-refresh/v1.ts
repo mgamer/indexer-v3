@@ -19,7 +19,7 @@ const version = "v1";
 
 export const postTokensRefreshV1Options: RouteOptions = {
   description: "Refresh a token's orders and metadata",
-  tags: ["api", "Admin"],
+  tags: ["api", "Management"],
   plugins: {
     "hapi-swagger": {
       order: 13,
