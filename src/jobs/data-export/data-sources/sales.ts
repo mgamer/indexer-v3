@@ -1,6 +1,7 @@
 import { redb } from "@/common/db";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
+import { Sources } from "@/models/sources";
 
 export class SalesDataSource extends BaseDataSource {
   public async getSequenceData(cursor: CursorInfo | null, limit: number) {
@@ -14,7 +15,10 @@ export class SalesDataSource extends BaseDataSource {
         SELECT
           contract,
           token_id,
+          order_id,
+          order_kind,
           order_side,
+          order_source_id_int,
           maker,
           taker,
           amount,
@@ -24,7 +28,7 @@ export class SalesDataSource extends BaseDataSource {
           price,
           block,
           log_index,
-          batch_index
+          batch_index,
           created_at
         FROM fill_events_2
         ${continuationFilter}
@@ -41,21 +45,25 @@ export class SalesDataSource extends BaseDataSource {
     });
 
     if (result.length) {
+      const sources = await Sources.getInstance();
+
       const data = result.map((r) => ({
         contract: fromBuffer(r.contract),
         token_id: r.token_id,
+        order_id: r.order_id,
+        order_kind: r.order_kind,
         order_side: r.order_side === "sell" ? "ask" : "bid",
+        order_source: r.order_source_id_int ? sources.get(r.order_source_id_int)?.name : null,
         from: r.order_side === "sell" ? fromBuffer(r.maker) : fromBuffer(r.taker),
         to: r.order_side === "sell" ? fromBuffer(r.taker) : fromBuffer(r.maker),
         price: r.price ? formatEth(r.price) : null,
-        amount: String(r.amount),
+        amount: Number(r.amount),
         fill_source: r.fill_source ? String(r.fill_source) : null,
         tx_hash: r.tx_hash ? fromBuffer(r.tx_hash) : null,
         log_index: r.log_index,
         batch_index: r.batch_index,
         timestamp: r.timestamp,
         created_at: new Date(r.created_at).toISOString(),
-        updated_at: new Date(r.updated_at).toISOString(),
       }));
 
       const lastResult = result[result.length - 1];
