@@ -19,7 +19,7 @@ const version = "v1";
 
 export const postCollectionsRefreshV1Options: RouteOptions = {
   description: "Refresh a collection's orders and metadata",
-  tags: ["api", "Admin"],
+  tags: ["api", "Management"],
   plugins: {
     "hapi-swagger": {
       order: 13,

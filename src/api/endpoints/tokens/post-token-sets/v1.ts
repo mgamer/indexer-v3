@@ -13,7 +13,7 @@ const version = "v1";
 
 export const postTokenSetsV1Options: RouteOptions = {
   description: "Create a token set",
-  tags: ["api", "Admin"],
+  tags: ["api", "Management"],
   plugins: {
     "hapi-swagger": {
       order: 13,
