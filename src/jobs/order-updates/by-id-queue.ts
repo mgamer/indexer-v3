@@ -15,6 +15,7 @@ import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-ord
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
 import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
+import * as topBidUpdateQueue from "@/jobs/bid-updates/top-bid-update-queue";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -266,64 +267,7 @@ if (config.doBackgroundWork) {
               await collectionUpdatesFloorAsk.addToQueue([sellOrderResult]);
             }
           } else if (side === "buy") {
-            // TODO: Use keyset pagination (via multiple jobs) to handle token
-            // cache updates in batches - only relevant for orders that are on
-            // token sets with lots of tokens (eg. contract, range, list). The
-            // reason for it is that updating tens of thousands of token cache
-            // entries all at once can be quite expensive (eg. queries running
-            // for 1-2 minutes) and this doesn't scale.
-
-            await idb.none(
-              `
-                WITH "z" AS (
-                  SELECT
-                    "x"."contract",
-                    "x"."token_id",
-                    "y"."order_id",
-                    "y"."value",
-                    "y"."maker"
-                  FROM (
-                    SELECT
-                      "tst"."contract",
-                      "tst"."token_id"
-                    FROM "token_sets_tokens" "tst"
-                    WHERE "token_set_id" = $/tokenSetId/
-                  ) "x" LEFT JOIN LATERAL (
-                    SELECT
-                      "o"."id" as "order_id",
-                      "o"."value",
-                      "o"."maker"
-                    FROM "orders" "o"
-                    JOIN "token_sets_tokens" "tst"
-                      ON "o"."token_set_id" = "tst"."token_set_id"
-                    WHERE "tst"."contract" = "x"."contract"
-                      AND "tst"."token_id" = "x"."token_id"
-                      AND "o"."side" = 'buy'
-                      AND "o"."fillability_status" = 'fillable'
-                      AND "o"."approval_status" = 'approved'
-                      AND EXISTS(
-                        SELECT FROM "nft_balances" "nb"
-                          WHERE "nb"."contract" = "x"."contract"
-                          AND "nb"."token_id" = "x"."token_id"
-                          AND "nb"."amount" > 0
-                          AND "nb"."owner" != "o"."maker"
-                      )
-                    ORDER BY "o"."value" DESC
-                    LIMIT 1
-                  ) "y" ON TRUE
-                )
-                UPDATE "tokens" AS "t" SET
-                  "top_buy_id" = "z"."order_id",
-                  "top_buy_value" = "z"."value",
-                  "top_buy_maker" = "z"."maker",
-                  "updated_at" = now()
-                FROM "z"
-                WHERE "t"."contract" = "z"."contract"
-                  AND "t"."token_id" = "z"."token_id"
-                  AND "t"."top_buy_id" IS DISTINCT FROM "z"."order_id"
-              `,
-              { tokenSetId }
-            );
+            await topBidUpdateQueue.addToQueue(tokenSetId);
           }
 
           if (order) {

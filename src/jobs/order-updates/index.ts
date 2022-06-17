@@ -84,7 +84,7 @@ if (config.doBackgroundWork) {
 
           try {
             let continuation: string | undefined;
-            const limit = 1000;
+            const limit = 500;
 
             let done = false;
             while (!done) {
