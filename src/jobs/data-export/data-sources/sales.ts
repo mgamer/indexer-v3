@@ -60,9 +60,9 @@ export class SalesDataSource extends BaseDataSource {
         amount: Number(r.amount),
         fill_source: r.fill_source ? String(r.fill_source) : null,
         tx_hash: r.tx_hash ? fromBuffer(r.tx_hash) : null,
-        log_index: r.log_index,
-        batch_index: r.batch_index,
-        timestamp: r.timestamp,
+        tx_log_index: r.log_index,
+        tx_batch_index: r.batch_index,
+        tx_timestamp: r.timestamp,
         created_at: new Date(r.created_at).toISOString(),
       }));
 
