@@ -62,7 +62,6 @@ import * as updateNftBalanceTopBidQueue from "@/jobs/nft-balance-updates/update-
 import * as backfillNftBalanceTopBidQueue from "@/jobs/nft-balance-updates/backfill-top-bid-queue";
 import * as backfillFillEventsCreatedAt from "@/jobs/backfill/backfill-fill-events-created-at";
 import * as removeBuyOrderEvents from "@/jobs/order-updates/remove-buy-order-events";
-import * as breakTokenSetBidQueue from "@/jobs/bid-updates/break-token-set-bid-queue";
 import * as topBidUpdateQueue from "@/jobs/bid-updates/top-bid-update-queue";
 
 export const allJobQueues = [
@@ -107,6 +106,5 @@ export const allJobQueues = [
   backfillNftBalanceTopBidQueue.queue,
   backfillFillEventsCreatedAt.queue,
   removeBuyOrderEvents.queue,
-  breakTokenSetBidQueue.queue,
   topBidUpdateQueue.queue,
 ];

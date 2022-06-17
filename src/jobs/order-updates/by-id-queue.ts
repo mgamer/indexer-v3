@@ -15,7 +15,7 @@ import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-ord
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
 import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
-import * as breakTokenSetBidQueue from "@/jobs/bid-updates/break-token-set-bid-queue";
+import * as topBidUpdateQueue from "@/jobs/bid-updates/top-bid-update-queue";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -266,7 +266,7 @@ if (config.doBackgroundWork) {
               await collectionUpdatesFloorAsk.addToQueue([sellOrderResult]);
             }
           } else if (side === "buy") {
-            await breakTokenSetBidQueue.addToQueue(tokenSetId);
+            await topBidUpdateQueue.addToQueue(tokenSetId);
           }
 
           if (order) {
