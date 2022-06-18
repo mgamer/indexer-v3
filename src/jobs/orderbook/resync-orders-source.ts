@@ -96,7 +96,7 @@ if (config.doBackgroundWork) {
 
         try {
           const updateQuery = `UPDATE orders
-                             SET source_id_int = x.sourceIdColumn
+                             SET source_id_int = x.sourceIdColumn, updated_at = now()
                              FROM (VALUES ${updateValuesString}) AS x(idColumn, sourceIdColumn)
                              WHERE x.idColumn = orders.id`;
 
