@@ -45,7 +45,7 @@ export const build = async (options: BuildOrderOptions) => {
       return undefined;
     }
 
-    if (Number(attributeResult.token_count) > 50000) {
+    if (Number(attributeResult.token_count) > config.maxItemsPerBid) {
       // We don't support attribute orders on large token sets
       return undefined;
     }
