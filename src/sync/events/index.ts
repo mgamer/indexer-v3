@@ -6,7 +6,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import _ from "lodash";
 
 import { logger } from "@/common/logger";
-import { idb } from "@/common/db";
+import { idb, redb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -25,6 +25,7 @@ import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsync
 import * as blocksModel from "@/models/blocks";
 import { OrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
+import { Sources } from "@/models/sources";
 
 // TODO: Split into multiple files (by exchange).
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
@@ -620,13 +621,16 @@ export const syncEvents = async (
                 break;
               }
 
+              const orderKind = "x2y2";
               const orderSide = [1, 5].includes(op) ? "sell" : "buy";
               const price = item.price.toString();
+              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
 
               fillEvents.push({
-                orderKind: "x2y2",
+                orderKind,
                 orderId,
                 orderSide,
+                orderSourceIdInt,
                 maker,
                 taker,
                 price,
@@ -724,14 +728,17 @@ export const syncEvents = async (
                   .then((tx) => tx.from);
               }
 
+              const orderKind = "foundation";
               // Deduce the price from the protocol fee (which is 5%)
               const price = bn(protocolFee).mul(10000).div(50).toString();
+              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
 
               // Custom handling to support on-chain orderbook quirks.
               fillEventsFoundation.push({
-                orderKind: "foundation",
+                orderKind,
                 orderId,
                 orderSide: "sell",
+                orderSourceIdInt,
                 maker,
                 taker,
                 price,
@@ -861,10 +868,14 @@ export const syncEvents = async (
                   .then((tx) => tx.from);
               }
 
+              const orderKind = "looks-rare";
+              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+
               fillEvents.push({
-                orderKind: "looks-rare",
+                orderKind,
                 orderId,
                 orderSide: "buy",
+                orderSourceIdInt,
                 maker,
                 taker,
                 price,
@@ -950,10 +961,14 @@ export const syncEvents = async (
                   .then((tx) => tx.from);
               }
 
+              const orderKind = "looks-rare";
+              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+
               fillEvents.push({
-                orderKind: "looks-rare",
+                orderKind,
                 orderId,
                 orderSide: "sell",
+                orderSourceIdInt,
                 maker,
                 taker,
                 price,
@@ -1113,12 +1128,15 @@ export const syncEvents = async (
                 ? "wyvern-v2.3"
                 : "wyvern-v2";
 
+              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+
               let batchIndex = 1;
               if (buyOrderId !== HashZero) {
                 fillEvents.push({
                   orderKind,
                   orderId: buyOrderId,
                   orderSide: "buy",
+                  orderSourceIdInt,
                   maker,
                   taker,
                   price,
@@ -1175,6 +1193,7 @@ export const syncEvents = async (
                   orderKind,
                   orderId: sellOrderId,
                   orderSide: "sell",
+                  orderSourceIdInt,
                   maker,
                   taker,
                   price,
@@ -1308,6 +1327,7 @@ export const syncEvents = async (
 
               const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
               const orderSide = direction === 0 ? "sell" : "buy";
+              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
 
               let orderId: string | undefined;
               if (!backfill) {
@@ -1349,6 +1369,7 @@ export const syncEvents = async (
                 orderKind,
                 orderId,
                 orderSide,
+                orderSourceIdInt,
                 maker,
                 taker,
                 price: erc20TokenAmount,
@@ -1444,6 +1465,7 @@ export const syncEvents = async (
               }
 
               const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
+              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
               const value = bn(erc20FillAmount).div(erc1155FillAmount).toString();
 
               let orderId: string | undefined;
@@ -1481,6 +1503,7 @@ export const syncEvents = async (
                 orderKind,
                 orderId,
                 orderSide: direction === 0 ? "sell" : "buy",
+                orderSourceIdInt,
                 maker,
                 taker,
                 price: erc20FillAmount,
@@ -1608,11 +1631,15 @@ export const syncEvents = async (
 
                 const price = bn(saleInfo.price).div(saleInfo.amount).toString();
 
+                const orderKind = "seaport";
+                const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+
                 // Custom handling to support partial filling
                 fillEventsPartial.push({
-                  orderKind: "seaport",
+                  orderKind,
                   orderId,
                   orderSide: side,
+                  orderSourceIdInt,
                   maker,
                   taker,
                   price,
@@ -1652,6 +1679,15 @@ export const syncEvents = async (
           logger.info("sync-events", `Failed to handle events: ${error}`);
           throw error;
         }
+      }
+
+      if (!backfill) {
+        // Assign source based on order for each fill.
+        await Promise.all([
+          assignOrderSourceToFillEvents(fillEvents),
+          assignOrderSourceToFillEvents(fillEventsPartial),
+          assignOrderSourceToFillEvents(fillEventsFoundation),
+        ]);
       }
 
       // WARNING! Ordering matters (fills should come in front of cancels).
@@ -1782,4 +1818,83 @@ export const unsyncEvents = async (block: number, blockHash: string) => {
     es.nftTransfers.removeEvents(block, blockHash),
     removeUnsyncedEventsActivities.addToQueue(blockHash),
   ]);
+};
+
+const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
+  try {
+    const orderIds = fillEvents.filter((e) => e.orderId !== undefined).map((e) => e.orderId);
+
+    if (orderIds.length) {
+      const orders = [];
+
+      const orderIdsChunks = _.chunk(orderIds, 100);
+
+      for (const orderIdsChunk of orderIdsChunks) {
+        const ordersChunk = await redb.manyOrNone(
+          `
+            SELECT id, source_id_int from orders
+            WHERE id IN ($/orderIds/)
+            AND source_id_int IS NOT NULL
+          `,
+          {
+            orderIds: orderIdsChunk.join(","),
+          }
+        );
+
+        orders.push(...ordersChunk);
+      }
+
+      if (orders.length) {
+        const orderSourceIdByOrderId = new Map<string, number>();
+
+        for (const order of orders) {
+          orderSourceIdByOrderId.set(order.id, order.source_id_int);
+        }
+
+        fillEvents.forEach((event, index) => {
+          if (event.orderId == undefined) return;
+
+          const orderSourceId = orderSourceIdByOrderId.get(event.orderId!);
+
+          // If the order source id exists on the order, use it in the fill event.
+          if (orderSourceId) {
+            logger.info(
+              "sync-events",
+              `Orders source assigned to fill event: ${JSON.stringify(
+                event
+              )}, orderSourceId: ${orderSourceId}`
+            );
+
+            fillEvents[index].orderSourceIdInt = orderSourceId;
+          }
+        });
+      }
+    }
+  } catch (e) {
+    logger.error("sync-events", `Failed to assign order source id to fill events: ${e}`);
+  }
+};
+
+const getOrderSourceByOrderKind = async (orderKind: string) => {
+  try {
+    const sources = await Sources.getInstance();
+
+    switch (orderKind) {
+      case "x2y2":
+        return sources.getByName("X2Y2").id;
+      case "foundation":
+        return sources.getByName("Foundation").id;
+      case "looks-rare":
+        return sources.getByName("LooksRare").id;
+      case "seaport":
+      case "wyvern-v2":
+      case "wyvern-v2.3":
+        return sources.getByName("OpenSea").id;
+      default:
+        return null; // For all others, we can't assume where the order originated from.
+    }
+  } catch (e) {
+    logger.error("sync-events", `Failed to get order source by order kind: ${e}`);
+    return null;
+  }
 };

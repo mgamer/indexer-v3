@@ -37,6 +37,12 @@ export const getAttributesExploreV2Options: RouteOptions = {
         .max(20)
         .default(1)
         .description("Max floor prices to return"),
+      maxLastSells: Joi.number()
+        .integer()
+        .min(0)
+        .max(20)
+        .default(0)
+        .description("Max last sells to return"),
       sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice"),
       offset: Joi.number().integer().min(0).max(10000).default(0),
       limit: Joi.number().integer().min(1).max(5000).default(20),
@@ -52,6 +58,13 @@ export const getAttributesExploreV2Options: RouteOptions = {
           onSaleCount: Joi.number().required(),
           sampleImages: Joi.array().items(Joi.string().allow(null, "")),
           floorAskPrices: Joi.array().items(Joi.number().unsafe()),
+          lastSells: Joi.array().items(
+            Joi.object({
+              tokenId: Joi.string().required(),
+              value: Joi.number().unsafe().required(),
+              timestamp: Joi.number().required(),
+            })
+          ),
           topBid: Joi.object({
             id: Joi.string().allow(null),
             value: Joi.number().unsafe().allow(null),
@@ -90,15 +103,33 @@ export const getAttributesExploreV2Options: RouteOptions = {
     }
 
     // If the client asks for multiple floor prices
-    let recentFloorValuesQuery = `SELECT NULL AS "floor_sell_values"`;
+    let tokensInfoQuery = `SELECT NULL AS "floor_sell_values"`;
+    const tokenInfoSelectColumns = [];
     if (query.maxFloorAskPrices > 1) {
-      recentFloorValuesQuery = `
-         SELECT
+      tokenInfoSelectColumns.push(`
             (
                 (array_agg(tokens.floor_sell_value ORDER BY tokens.floor_sell_value)
                  FILTER (WHERE tokens.floor_sell_value IS NOT NULL)
                 )::text[]
             )[1:${query.maxFloorAskPrices}] AS "floor_sell_values"
+      `);
+    }
+
+    if (query.maxLastSells) {
+      tokenInfoSelectColumns.push(`
+            ((array_agg(
+              json_build_object(
+                'tokenId', tokens.token_id,
+                'value', tokens.last_sell_value::text,
+                'timestamp', tokens.last_sell_timestamp
+              ) ORDER BY tokens.last_sell_timestamp DESC
+            ) FILTER (WHERE tokens.last_sell_value IS NOT NULL AND tokens.last_sell_value > 0) )::json[])[1:${query.maxLastSells}] AS "last_sells"
+      `);
+    }
+
+    if (!_.isEmpty(tokenInfoSelectColumns)) {
+      tokensInfoQuery = `
+        SELECT ${_.join(tokenInfoSelectColumns, ",")}
         FROM token_attributes
         JOIN tokens ON token_attributes.contract = tokens.contract AND token_attributes.token_id = tokens.token_id
         WHERE token_attributes.attribute_id = attributes.id
@@ -123,7 +154,7 @@ export const getAttributesExploreV2Options: RouteOptions = {
                 LIMIT 1
             ) "top_buy_info" ON TRUE
             JOIN LATERAL (
-                ${recentFloorValuesQuery}
+                ${tokensInfoQuery}
             ) "recent_floor_values_info" ON TRUE
             WHERE attributes.collection_id = $/collection/
             ${attributeKeyFilter}
@@ -148,6 +179,13 @@ export const getAttributesExploreV2Options: RouteOptions = {
           query.maxFloorAskPrices > 1
             ? (r.floor_sell_values || []).map(formatEth)
             : [formatEth(r.floor_sell_value || 0)],
+        lastSells: query.maxLastSells
+          ? (r.last_sells || []).map(({ tokenId, value, timestamp }: any) => ({
+              tokenId: `${tokenId}`,
+              value: formatEth(value),
+              timestamp: Number(timestamp),
+            }))
+          : [],
         topBid: {
           id: r.top_buy_id,
           value: r.top_buy_value ? formatEth(r.top_buy_value) : null,

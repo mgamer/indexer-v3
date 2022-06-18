@@ -4,7 +4,7 @@
 
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { PgPromiseQuery, idb, pgp } from "@/common/db";
+import { PgPromiseQuery, idb, pgp, redb } from "@/common/db";
 
 export class DailyVolume {
   private static lockKey = "daily-volumes-running";
@@ -17,7 +17,7 @@ export class DailyVolume {
    */
   public static async isDaySynced(startTime: number): Promise<boolean> {
     try {
-      const initialRow = await idb.oneOrNone(
+      const initialRow = await redb.oneOrNone(
         `
             SELECT volume
             FROM "daily_volumes"
@@ -84,7 +84,7 @@ export class DailyVolume {
 
     let results = [];
     try {
-      results = await idb.manyOrNone(
+      results = await redb.manyOrNone(
         `
           SELECT
               "collection_id",
@@ -203,7 +203,7 @@ export class DailyVolume {
 
     // Get the previous day data
     try {
-      day1Results = await idb.manyOrNone(
+      day1Results = await redb.manyOrNone(
         `
           SELECT 
                  collection_id,
@@ -247,7 +247,7 @@ export class DailyVolume {
       `;
 
     try {
-      day7Results = await idb.manyOrNone(query, [
+      day7Results = await redb.manyOrNone(query, [
         "day7_rank",
         "day7_volume",
         "day7_floor_sell_value",
@@ -266,7 +266,7 @@ export class DailyVolume {
     }
 
     try {
-      day30Results = await idb.manyOrNone(query, [
+      day30Results = await redb.manyOrNone(query, [
         "day30_rank",
         "day30_volume",
         "day30_floor_sell_value",
@@ -285,7 +285,7 @@ export class DailyVolume {
     }
 
     try {
-      allTimeResults = await idb.manyOrNone(query, [
+      allTimeResults = await redb.manyOrNone(query, [
         "all_time_rank",
         "all_time_volume",
         "all_time_floor_sell_value",
@@ -418,7 +418,7 @@ export class DailyVolume {
 
     let results: any = [];
     try {
-      results = await idb.manyOrNone(query, [
+      results = await redb.manyOrNone(query, [
         `prev_day${days}_volume`,
         previousPeriod,
         currentPeriod,
@@ -512,7 +512,7 @@ export class DailyVolume {
 
     let results: any = [];
     try {
-      results = await idb.manyOrNone(query, [dayToFetch]);
+      results = await redb.manyOrNone(query, [dayToFetch]);
     } catch (e: any) {
       logger.error(
         "daily-volumes",

@@ -9,7 +9,7 @@ const version = "v1";
 
 export const postCreateCollectionsSetV1Options: RouteOptions = {
   description: "Create a collection set",
-  tags: ["api", "Admin"],
+  tags: ["api", "Management"],
   plugins: {
     "hapi-swagger": {
       order: 13,

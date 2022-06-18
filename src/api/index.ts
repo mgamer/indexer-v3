@@ -88,6 +88,7 @@ export const start = async (): Promise<void> => {
             type: "apiKey",
             name: "x-api-key",
             in: "header",
+            "x-default": "demo-api-key",
           },
         },
         schemes: ["https", "http"],

@@ -33,7 +33,12 @@ export const getCollectionActivityV1Options: RouteOptions = {
     query: Joi.object({
       limit: Joi.number().integer().min(1).max(20).default(20),
       continuation: Joi.number(),
-      types: Joi.array().items(
+      types: Joi.alternatives().try(
+        Joi.array().items(
+          Joi.string()
+            .lowercase()
+            .valid(..._.values(ActivityType))
+        ),
         Joi.string()
           .lowercase()
           .valid(..._.values(ActivityType))
@@ -72,6 +77,10 @@ export const getCollectionActivityV1Options: RouteOptions = {
   handler: async (request: Request) => {
     const params = request.params as any;
     const query = request.query as any;
+
+    if (!_.isArray(query.types)) {
+      query.types = [query.types];
+    }
 
     try {
       const activities = await Activities.getCollectionActivities(

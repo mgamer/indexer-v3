@@ -8,6 +8,7 @@ import "@/jobs/collection-updates";
 import "@/jobs/events-sync";
 import "@/jobs/fill-updates";
 import "@/jobs/metadata-index";
+import "@/jobs/oracle";
 import "@/jobs/order-fixes";
 import "@/jobs/order-updates";
 import "@/jobs/orderbook";
@@ -16,6 +17,7 @@ import "@/jobs/daily-volumes";
 import "@/jobs/update-attribute";
 import "@/jobs/collections-refresh";
 import "@/jobs/nft-balance-updates";
+import "@/jobs/bid-updates";
 
 // Export all job queues for monitoring through the BullMQ UI
 
@@ -60,6 +62,8 @@ import * as updateNftBalanceTopBidQueue from "@/jobs/nft-balance-updates/update-
 import * as backfillNftBalanceTopBidQueue from "@/jobs/nft-balance-updates/backfill-top-bid-queue";
 import * as backfillFillEventsCreatedAt from "@/jobs/backfill/backfill-fill-events-created-at";
 import * as removeBuyOrderEvents from "@/jobs/order-updates/remove-buy-order-events";
+import * as backfillFillEventsOrderSource from "@/jobs/backfill/backfill-fill-events-order-source";
+import * as topBidUpdateQueue from "@/jobs/bid-updates/top-bid-update-queue";
 
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
@@ -103,4 +107,6 @@ export const allJobQueues = [
   backfillNftBalanceTopBidQueue.queue,
   backfillFillEventsCreatedAt.queue,
   removeBuyOrderEvents.queue,
+  backfillFillEventsOrderSource.queue,
+  topBidUpdateQueue.queue,
 ];
