@@ -55,6 +55,7 @@ if (config.doBackgroundWork) {
                     last_buy_timestamp = $/timestamp/,
                     last_buy_value = $/price/
                   WHERE id = $/tokenSetId/
+                    AND last_buy_timestamp < $/timestamp/
                 `,
                 {
                   tokenSetId: result.token_set_id,
@@ -73,6 +74,7 @@ if (config.doBackgroundWork) {
               last_${orderSide}_value = $/price/
             WHERE contract = $/contract/
               AND token_id = $/tokenId/
+              AND last_${orderSide}_timestamp < $/timestamp/
           `,
           {
             contract: toBuffer(contract),
