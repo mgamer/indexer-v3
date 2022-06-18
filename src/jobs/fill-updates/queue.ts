@@ -32,6 +32,8 @@ if (config.doBackgroundWork) {
         job.data as FillInfo;
 
       try {
+        logger.info(QUEUE_NAME, `Updating last sale info: ${JSON.stringify(job.data)}`);
+
         if (orderId) {
           const result = await idb.oneOrNone(
             `
