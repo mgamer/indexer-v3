@@ -83,6 +83,8 @@ if (config.doBackgroundWork) {
         LIMIT 1
       `;
 
+      logger.info("debug", JSON.stringify(query));
+
       const result = await idb.oneOrNone(query, {
         tokenSetId,
         contract: contract ? toBuffer(contract) : "",
