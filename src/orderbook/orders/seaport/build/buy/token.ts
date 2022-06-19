@@ -7,6 +7,7 @@ import { config } from "@/config/index";
 import * as utils from "@/orderbook/orders/seaport/build/utils";
 
 interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
+  contract: string;
   tokenId: string;
 }
 
@@ -28,7 +29,7 @@ export const build = async (options: BuildOrderOptions) => {
     throw new Error("Could not retrieve token's collection");
   }
 
-  const buildInfo = await utils.getBuildInfo(options, collectionResult.collection_id, "sell");
+  const buildInfo = await utils.getBuildInfo(options, collectionResult.collection_id, "buy");
   if (!buildInfo) {
     throw new Error("Could not generate build info");
   }

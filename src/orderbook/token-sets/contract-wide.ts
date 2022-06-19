@@ -1,6 +1,7 @@
 import { PgPromiseQuery, idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
+import { config } from "@/config/index";
 import { generateSchemaHash } from "@/orderbook/orders/utils";
 
 export type TokenSet = {
@@ -49,7 +50,7 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
           id: contract,
         }
       );
-      if (!collectionResult || Number(collectionResult.token_count) > 50000) {
+      if (!collectionResult || Number(collectionResult.token_count) > config.maxItemsPerBid) {
         // We don't support collection orders on large collections.
         continue;
       }
