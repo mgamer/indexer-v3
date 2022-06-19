@@ -89,6 +89,8 @@ if (config.doBackgroundWork) {
         tokenId,
       });
 
+      logger.info("debug", JSON.stringify(result));
+
       if (!tokenSetId.startsWith("token:") && result) {
         await addToQueue(tokenSetId, fromBuffer(result.contract), result.token_id);
       }
