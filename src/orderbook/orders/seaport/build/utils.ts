@@ -110,6 +110,8 @@ export const getBuildInfo = async (
   // amount received from the maker).
   if (side === "sell") {
     buildParams.price = bn(buildParams.price).sub(totalFees);
+  } else {
+    buildParams.price = bn(buildParams.price);
   }
 
   return {
