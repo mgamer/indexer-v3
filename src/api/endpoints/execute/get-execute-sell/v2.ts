@@ -118,24 +118,55 @@ export const getExecuteSellV2Options: RouteOptions = {
 
           const order = new Sdk.WyvernV23.Order(config.chainId, bestOrderResult.raw_data);
           if (order.params.kind?.includes("token-list")) {
-            const tokens = await edb.manyOrNone(
-              `
-                SELECT
-                  "tst"."token_id"
-                FROM "token_sets_tokens" "tst"
-                WHERE "tst"."token_set_id" = $/tokenSetId/
-              `,
-              { tokenSetId: bestOrderResult.tokenSetId }
-            );
-
             // When filling an attribute order, we also need to pass
             // in the full list of tokens the order is made on (that
             // is, the underlying token set tokens).
+            const tokens = await edb.manyOrNone(
+              `
+                SELECT
+                  token_sets_tokens.token_id
+                FROM token_sets_tokens
+                WHERE token_sets_tokens.token_set_id = $/tokenSetId/
+              `,
+              { tokenSetId: bestOrderResult.tokenSetId }
+            );
             extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
           }
 
           bidDetails = {
             kind: "wyvern-v2.3",
+            contractKind: bestOrderResult.token_kind,
+            contract,
+            tokenId,
+            extraArgs,
+            order,
+          };
+
+          break;
+        }
+
+        case "seaport": {
+          const extraArgs: any = {};
+
+          const order = new Sdk.Seaport.Order(config.chainId, bestOrderResult.raw_data);
+          if (order.params.kind?.includes("token-list")) {
+            // When filling an attribute order, we also need to pass
+            // in the full list of tokens the order is made on (that
+            // is, the underlying token set tokens).
+            const tokens = await edb.manyOrNone(
+              `
+                SELECT
+                  token_sets_tokens.token_id
+                FROM token_sets_tokens
+                WHERE token_sets_tokens.token_set_id = $/tokenSetId/
+              `,
+              { tokenSetId: bestOrderResult.tokenSetId }
+            );
+            extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
+          }
+
+          bidDetails = {
+            kind: "seaport",
             contractKind: bestOrderResult.token_kind,
             contract,
             tokenId,
