@@ -83,15 +83,11 @@ if (config.doBackgroundWork) {
         LIMIT 1
       `;
 
-      logger.info("debug", JSON.stringify(query));
-
       const result = await idb.oneOrNone(query, {
         tokenSetId,
         contract: contract ? toBuffer(contract) : "",
         tokenId,
       });
-
-      logger.info("debug", JSON.stringify(result));
 
       if (!tokenSetId.startsWith("token:") && result) {
         await addToQueue(tokenSetId, fromBuffer(result.contract), result.token_id);
