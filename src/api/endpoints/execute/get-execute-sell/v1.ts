@@ -79,7 +79,8 @@ export const getExecuteSellV1Options: RouteOptions = {
             orders.price,
             orders.raw_data,
             orders.source_id,
-            orders.maker
+            orders.maker,
+            orders.token_set_id
           FROM orders
           JOIN contracts
             ON orders.contract = contracts.address
@@ -160,7 +161,7 @@ export const getExecuteSellV1Options: RouteOptions = {
                 FROM token_sets_tokens
                 WHERE token_sets_tokens.token_set_id = $/tokenSetId/
               `,
-              { tokenSetId: bestOrderResult.tokenSetId }
+              { tokenSetId: bestOrderResult.token_set_id }
             );
             extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
           }
