@@ -27,4 +27,6 @@ export const config = {
   catchup: Boolean(Number(process.env.CATCHUP)),
   doBackgroundWork: Boolean(Number(process.env.DO_BACKGROUND_WORK)),
   disableOrders: Boolean(Number(process.env.DISABLE_ORDERS)),
+
+  maxItemsPerBid: 50000,
 };

@@ -1650,16 +1650,6 @@ export const syncEvents = async (
                   baseEventParams,
                 });
 
-                orderInfos.push({
-                  context: `filled-${orderId}-${baseEventParams.txHash}`,
-                  id: orderId,
-                  trigger: {
-                    kind: "sale",
-                    txHash: baseEventParams.txHash,
-                    txTimestamp: baseEventParams.timestamp,
-                  },
-                });
-
                 fillInfos.push({
                   context: `${orderId}-${baseEventParams.txHash}`,
                   orderId: orderId,
@@ -1671,6 +1661,16 @@ export const syncEvents = async (
                   timestamp: baseEventParams.timestamp,
                 });
               }
+
+              orderInfos.push({
+                context: `filled-${orderId}-${baseEventParams.txHash}`,
+                id: orderId,
+                trigger: {
+                  kind: "sale",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+              });
 
               break;
             }

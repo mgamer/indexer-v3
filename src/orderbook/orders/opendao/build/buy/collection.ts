@@ -29,7 +29,7 @@ export const build = async (options: BuildOrderOptions) => {
       return undefined;
     }
 
-    if (Number(collectionResult.token_count) > 50000) {
+    if (Number(collectionResult.token_count) > config.maxItemsPerBid) {
       // We don't support collection orders on large collections.
       return undefined;
     }
