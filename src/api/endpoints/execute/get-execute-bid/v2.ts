@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { joinSignature } from "@ethersproject/bytes";
 import { AddressZero } from "@ethersproject/constants";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
@@ -378,9 +379,8 @@ export const getExecuteBidV2Options: RouteOptions = {
                           kind: "seaport",
                           data: {
                             ...order.params,
-                            v: query.v,
-                            r: query.r,
-                            s: query.s,
+                            // Seaport requires the joined signature
+                            signature: joinSignature({ v: query.v, r: query.r, s: query.s }),
                           },
                         },
                         attribute:
