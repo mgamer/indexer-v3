@@ -181,6 +181,34 @@ export const save = async (
 
           break;
         }
+
+        case "contract-wide": {
+          [{ id: tokenSetId }] = await tokenSet.contractWide.save([
+            {
+              id: `contract:${info.contract}`,
+              schemaHash,
+              contract: info.contract,
+            },
+          ]);
+
+          break;
+        }
+
+        case "token-list": {
+          const typedInfo = info as typeof info & { merkleRoot: string };
+          const merkleRoot = typedInfo.merkleRoot;
+          if (merkleRoot) {
+            [{ id: tokenSetId }] = await tokenSet.tokenList.save([
+              {
+                id: `list:${info.contract}:${merkleRoot}`,
+                schemaHash,
+                schema: metadata.schema,
+              },
+            ]);
+          }
+
+          break;
+        }
       }
 
       if (!tokenSetId) {

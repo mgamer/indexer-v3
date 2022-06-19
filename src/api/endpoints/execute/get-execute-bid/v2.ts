@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { joinSignature } from "@ethersproject/bytes";
 import { AddressZero } from "@ethersproject/constants";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
@@ -16,6 +17,11 @@ import { config } from "@/config/index";
 import * as openDaoBuyAttribute from "@/orderbook/orders/opendao/build/buy/attribute";
 import * as openDaoBuyToken from "@/orderbook/orders/opendao/build/buy/token";
 import * as openDaoBuyCollection from "@/orderbook/orders/opendao/build/buy/collection";
+
+// Seaport
+import * as seaportBuyAttribute from "@/orderbook/orders/seaport/build/buy/attribute";
+import * as seaportBuyToken from "@/orderbook/orders/seaport/build/buy/token";
+import * as seaportBuyCollection from "@/orderbook/orders/seaport/build/buy/collection";
 
 // ZeroExV4
 import * as zeroExV4BuyAttribute from "@/orderbook/orders/zeroex-v4/build/buy/attribute";
@@ -60,7 +66,9 @@ export const getExecuteBidV2Options: RouteOptions = {
       weiPrice: Joi.string()
         .pattern(/^[0-9]+$/)
         .required(),
-      orderKind: Joi.string().valid("wyvern-v2.3", "721ex", "zeroex-v4").default("wyvern-v2.3"),
+      orderKind: Joi.string()
+        .valid("wyvern-v2.3", "721ex", "zeroex-v4", "seaport")
+        .default("wyvern-v2.3"),
       orderbook: Joi.string().valid("reservoir", "opensea").default("reservoir"),
       source: Joi.string(),
       automatedRoyalties: Joi.boolean().default(true),
@@ -281,6 +289,118 @@ export const getExecuteBidV2Options: RouteOptions = {
               ...query,
               listingTime: order.params.listingTime,
               expirationTime: order.params.expirationTime,
+              salt: order.params.salt,
+            },
+          };
+        }
+
+        case "seaport": {
+          if (!["reservoir"].includes(query.orderbook)) {
+            throw Boom.badRequest("Unsupported orderbook");
+          }
+
+          // We want the fee params as arrays
+          if (query.fee && !Array.isArray(query.fee)) {
+            query.fee = [query.fee];
+          }
+          if (query.feeRecipient && !Array.isArray(query.feeRecipient)) {
+            query.feeRecipient = [query.feeRecipient];
+          }
+          if (query.fee?.length !== query.feeRecipient?.length) {
+            throw Boom.badRequest("Invalid fee info");
+          }
+
+          let order: Sdk.Seaport.Order;
+          if (token) {
+            const [contract, tokenId] = token.split(":");
+            order = await seaportBuyToken.build({
+              ...query,
+              contract,
+              tokenId,
+            });
+          } else if (collection && attributeKey && attributeValue) {
+            order = await seaportBuyAttribute.build({
+              ...query,
+              collection,
+              attributes: [
+                {
+                  key: attributeKey,
+                  value: attributeValue,
+                },
+              ],
+            });
+          } else if (collection) {
+            order = await seaportBuyCollection.build({
+              ...query,
+              collection,
+            });
+          } else {
+            throw Boom.internal("Wrong metadata");
+          }
+
+          const exchange = new Sdk.Seaport.Exchange(config.chainId);
+          const conduit = exchange.deriveConduit(order.params.conduitKey);
+
+          // Check the maker's WETH approval
+          let approvalTx: TxData | undefined;
+          const wethApproval = await weth.getAllowance(query.maker, conduit);
+          if (bn(wethApproval).lt(order.getMatchingPrice())) {
+            approvalTx = weth.approveTransaction(query.maker, conduit);
+          }
+
+          const hasSignature = query.v && query.r && query.s;
+          return {
+            steps: [
+              {
+                ...steps[0],
+                status: !wrapEthTx ? "complete" : "incomplete",
+                data: wrapEthTx,
+              },
+              {
+                ...steps[1],
+                status: !approvalTx ? "complete" : "incomplete",
+                data: approvalTx,
+              },
+              {
+                ...steps[2],
+                status: hasSignature ? "complete" : "incomplete",
+                data: hasSignature ? undefined : order.getSignatureData(),
+              },
+              {
+                ...steps[3],
+                status: "incomplete",
+                data: !hasSignature
+                  ? undefined
+                  : {
+                      endpoint: "/order/v2",
+                      method: "POST",
+                      body: {
+                        order: {
+                          kind: "seaport",
+                          data: {
+                            ...order.params,
+                            // Seaport requires the joined signature
+                            signature: joinSignature({ v: query.v, r: query.r, s: query.s }),
+                          },
+                        },
+                        attribute:
+                          collection && attributeKey && attributeValue
+                            ? {
+                                collection,
+                                key: attributeKey,
+                                value: attributeValue,
+                              }
+                            : undefined,
+                        orderbook: query.orderbook,
+                        source: query.source,
+                      },
+                    },
+              },
+            ],
+            query: {
+              ...query,
+              listingTime: order.params.startTime,
+              expirationTime: order.params.endTime,
               salt: order.params.salt,
             },
           };
