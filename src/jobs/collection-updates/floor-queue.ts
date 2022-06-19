@@ -58,7 +58,8 @@ if (config.doBackgroundWork) {
                 floor_sell_maker = x.floor_sell_maker,
                 floor_sell_source_id = x.source_id,
                 floor_sell_source_id_int = x.source_id_int,
-                floor_sell_valid_between = x.valid_between
+                floor_sell_valid_between = x.valid_between,
+                updated_at = now()
               FROM (
                 SELECT
                   tokens.floor_sell_id,

@@ -25,7 +25,8 @@ export class AttributeKeys {
     updateString = _.trimEnd(updateString, ",");
 
     const query = `UPDATE attribute_keys
-                   SET ${updateString}
+                   SET updated_at = now(),
+                       ${updateString}
                    WHERE collection_id = $/collectionId/
                    AND key = $/key/`;
 
