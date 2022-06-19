@@ -214,7 +214,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
           .then((response) => (response.data as any).ethereum.usd);
 
         // USDC has 6 decimals
-        price = bn(usdPrice * 1000000)
+        price = bn(Math.floor(usdPrice * 1000000))
           .mul(price)
           .div(bn("1000000000000000000"))
           .toString();
