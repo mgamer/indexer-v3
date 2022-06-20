@@ -285,9 +285,7 @@ export const getExecuteBidV2Options: RouteOptions = {
                           query.excludeFlaggedTokens &&
                           !attributeKey &&
                           !attributeValue
-                            ? {
-                                collection,
-                              }
+                            ? collection
                             : undefined,
                         isNonFlagged: query.excludeFlaggedTokens,
                         orderbook: query.orderbook,
@@ -407,9 +405,7 @@ export const getExecuteBidV2Options: RouteOptions = {
                           query.excludeFlaggedTokens &&
                           !attributeKey &&
                           !attributeValue
-                            ? {
-                                collection,
-                              }
+                            ? collection
                             : undefined,
                         isNonFlagged: query.excludeFlaggedTokens,
                         orderbook: query.orderbook,
@@ -535,9 +531,7 @@ export const getExecuteBidV2Options: RouteOptions = {
                           query.excludeFlaggedTokens &&
                           !attributeKey &&
                           !attributeValue
-                            ? {
-                                collection,
-                              }
+                            ? collection
                             : undefined,
                         isNonFlagged: query.excludeFlaggedTokens,
                         orderbook: query.orderbook,
@@ -662,9 +656,7 @@ export const getExecuteBidV2Options: RouteOptions = {
                           query.excludeFlaggedTokens &&
                           !attributeKey &&
                           !attributeValue
-                            ? {
-                                collection,
-                              }
+                            ? collection
                             : undefined,
                         isNonFlagged: query.excludeFlaggedTokens,
                         orderbook: query.orderbook,
