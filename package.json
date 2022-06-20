@@ -22,6 +22,9 @@
     "postinstall": "husky install",
     "release": "standard-version"
   },
+  "standard-version": {
+    "t": ""
+  },
   "dependencies": {
     "@bull-board/hapi": "^3.11.0",
     "@hapi/boom": "^9.1.4",
