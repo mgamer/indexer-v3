@@ -1,6 +1,6 @@
 {
   "name": "reservoir-indexer",
-  "version": "5.81.112",
+  "version": "5.81.113",
   "description": "Reservoir Protocol Indexer",
   "main": "./dist/index.js",
   "repository": "https://github.com/reservoirprotocol/indexer-v3",
@@ -21,6 +21,9 @@
     "format": "prettier --write \"src/**/*.+(js|ts|json)\"",
     "postinstall": "husky install",
     "release": "standard-version"
+  },
+  "standard-version": {
+    "t": ""
   },
   "dependencies": {
     "@bull-board/hapi": "^3.11.0",
