@@ -72,7 +72,7 @@ export const getExecuteBidV2Options: RouteOptions = {
       orderbook: Joi.string().valid("reservoir", "opensea").default("reservoir"),
       source: Joi.string(),
       automatedRoyalties: Joi.boolean().default(true),
-      excludeFlaggedTokens: Joi.boolean().default(true),
+      excludeFlaggedTokens: Joi.boolean().default(false),
       fee: Joi.alternatives(Joi.string(), Joi.number()),
       feeRecipient: Joi.string()
         .lowercase()
