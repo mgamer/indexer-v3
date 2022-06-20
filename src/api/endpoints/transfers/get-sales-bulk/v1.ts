@@ -69,6 +69,7 @@ export const getSalesBulkV1Options: RouteOptions = {
           }),
           orderSource: Joi.string().allow(null, ""),
           orderSide: Joi.string().valid("ask", "bid"),
+          orderKind: Joi.string(),
           from: Joi.string()
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{40}$/),
@@ -151,17 +152,11 @@ export const getSalesBulkV1Options: RouteOptions = {
           fill_events_2_data.*
         FROM (
           SELECT
-            coalesce(
-              orders.source_id,
-              (CASE
-                WHEN orders.kind = 'wyvern-v2' THEN '\\x5b3256965e7c3cf26e11fcaf296dfc8807c01073'::BYTEA
-                WHEN orders.kind = 'wyvern-v2.3' THEN '\\x5b3256965e7c3cf26e11fcaf296dfc8807c01073'::BYTEA
-                WHEN orders.kind = 'looks-rare' THEN '\\x5924a28caaf1cc016617874a2f0c3710d881f3c1'::BYTEA
-              END)
-            ) AS source_id,
             fill_events_2.contract,
             fill_events_2.token_id,
             fill_events_2.order_side,
+            fill_events_2.order_kind,
+            fill_events_2.order_source_id_int,
             fill_events_2.maker,
             fill_events_2.taker,
             fill_events_2.amount,
@@ -173,9 +168,7 @@ export const getSalesBulkV1Options: RouteOptions = {
             fill_events_2.log_index,
             fill_events_2.batch_index
           FROM fill_events_2
-          LEFT JOIN orders
-            ON fill_events_2.order_id = orders.id
-            ${conditionsRendered}            
+          ${conditionsRendered}            
           ORDER BY
             fill_events_2.timestamp DESC,
             fill_events_2.log_index DESC,
@@ -207,8 +200,9 @@ export const getSalesBulkV1Options: RouteOptions = {
           contract: fromBuffer(r.contract),
           tokenId: r.token_id,
         },
-        orderSource: r.source_id ? sources.getByAddress(fromBuffer(r.source_id))?.name : null,
+        orderSource: r.order_source_id_int ? sources.get(r.order_source_id_int)?.name : null,
         orderSide: r.order_side === "sell" ? "ask" : "bid",
+        orderKind: r.order_kind,
         from: r.order_side === "sell" ? fromBuffer(r.maker) : fromBuffer(r.taker),
         to: r.order_side === "sell" ? fromBuffer(r.taker) : fromBuffer(r.maker),
         amount: String(r.amount),
