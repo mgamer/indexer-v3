@@ -3,7 +3,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { toBuffer } from "@/common/utils";
+import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
 const QUEUE_NAME = "fill-updates";
@@ -32,11 +32,15 @@ if (config.doBackgroundWork) {
         job.data as FillInfo;
 
       try {
+        logger.info(QUEUE_NAME, `Updating last sale info: ${JSON.stringify(job.data)}`);
+
         if (orderId) {
           const result = await idb.oneOrNone(
             `
-              SELECT "o"."token_set_id" FROM "orders" "o"
-              WHERE "o"."id" = $/orderId/
+              SELECT
+                orders.token_set_id
+              FROM orders
+              WHERE orders.id = $/orderId/
             `,
             { orderId }
           );
@@ -49,10 +53,11 @@ if (config.doBackgroundWork) {
             if (components[0] !== "token") {
               await idb.none(
                 `
-                  UPDATE "token_sets" SET
-                    "last_buy_timestamp" = $/timestamp/,
-                    "last_buy_value" = $/price/
-                  WHERE "id" = $/tokenSetId/
+                  UPDATE token_sets SET
+                    last_buy_timestamp = $/timestamp/,
+                    last_buy_value = $/price/
+                  WHERE id = $/tokenSetId/
+                    AND last_buy_timestamp < $/timestamp/
                 `,
                 {
                   tokenSetId: result.token_set_id,
@@ -64,24 +69,22 @@ if (config.doBackgroundWork) {
           }
         }
 
-        if (amount === "1") {
-          // TODO: We should also handle amounts greater than 1
-          await idb.none(
-            `
-              UPDATE "tokens" SET
-                "last_${orderSide}_timestamp" = $/timestamp/,
-                "last_${orderSide}_value" = $/price/
-              WHERE "contract" = $/contract/
-                AND "token_id" = $/tokenId/
-            `,
-            {
-              contract: toBuffer(contract),
-              tokenId,
-              price,
-              timestamp,
-            }
-          );
-        }
+        await idb.none(
+          `
+            UPDATE tokens SET
+              last_${orderSide}_timestamp = $/timestamp/,
+              last_${orderSide}_value = $/price/
+            WHERE contract = $/contract/
+              AND token_id = $/tokenId/
+              AND last_${orderSide}_timestamp < $/timestamp/
+          `,
+          {
+            contract: toBuffer(contract),
+            tokenId,
+            price: bn(price).div(amount).toString(),
+            timestamp,
+          }
+        );
       } catch (error) {
         logger.error(
           QUEUE_NAME,

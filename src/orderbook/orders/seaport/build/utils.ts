@@ -105,8 +105,14 @@ export const getBuildInfo = async (
     }
   }
 
-  // Subtract the fees from the gross price
-  buildParams.price = bn(buildParams.price).sub(totalFees);
+  // If the order is a listing, subtract the fees from the price.
+  // Otherwise, keep them (since the taker will pay them from the
+  // amount received from the maker).
+  if (side === "sell") {
+    buildParams.price = bn(buildParams.price).sub(totalFees);
+  } else {
+    buildParams.price = bn(buildParams.price);
+  }
 
   return {
     params: buildParams,

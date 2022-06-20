@@ -622,25 +622,26 @@ export const syncEvents = async (
               }
 
               const orderKind = "x2y2";
+              const orderSide = [1, 5].includes(op) ? "sell" : "buy";
+              const price = item.price.toString();
               const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
 
-              // Custom handling to support on-chain orderbook quirks.
               fillEvents.push({
                 orderKind,
                 orderId,
-                orderSide: [1, 5].includes(op) ? "sell" : "buy",
+                orderSide,
                 orderSourceIdInt,
                 maker,
                 taker,
-                // Subtract any fees from the price.
-                price: item.price.toString(),
+                price,
                 contract,
                 tokenId,
-                // X2Y2 only supports erc721 for now
+                // X2Y2 only supports ERC721 for now
                 amount: "1",
                 fillSource,
                 baseEventParams,
               });
+
               orderInfos.push({
                 context: `filled-${orderId}-${baseEventParams.txHash}`,
                 id: orderId,
@@ -649,6 +650,17 @@ export const syncEvents = async (
                   txHash: baseEventParams.txHash,
                   txTimestamp: baseEventParams.timestamp,
                 },
+              });
+
+              fillInfos.push({
+                context: `${orderId}-${baseEventParams.txHash}`,
+                orderId: orderId,
+                orderSide,
+                contract,
+                tokenId,
+                amount: "1",
+                price,
+                timestamp: baseEventParams.timestamp,
               });
 
               if (currentTxHasWethTransfer()) {
@@ -717,6 +729,8 @@ export const syncEvents = async (
               }
 
               const orderKind = "foundation";
+              // Deduce the price from the protocol fee (which is 5%)
+              const price = bn(protocolFee).mul(10000).div(50).toString();
               const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
 
               // Custom handling to support on-chain orderbook quirks.
@@ -727,8 +741,7 @@ export const syncEvents = async (
                 orderSourceIdInt,
                 maker,
                 taker,
-                // Deduce the price from the protocol fee (which is 5%).
-                price: bn(protocolFee).mul(10000).div(50).toString(),
+                price,
                 contract,
                 tokenId,
                 // Foundation only supports erc721 for now
@@ -736,6 +749,7 @@ export const syncEvents = async (
                 fillSource,
                 baseEventParams,
               });
+
               orderInfos.push({
                 context: `filled-${orderId}-${baseEventParams.txHash}`,
                 id: orderId,
@@ -744,6 +758,17 @@ export const syncEvents = async (
                   txHash: baseEventParams.txHash,
                   txTimestamp: baseEventParams.timestamp,
                 },
+              });
+
+              fillInfos.push({
+                context: `${orderId}-${baseEventParams.txHash}`,
+                orderId: orderId,
+                orderSide: "sell",
+                contract,
+                tokenId,
+                amount: "1",
+                price,
+                timestamp: baseEventParams.timestamp,
               });
 
               break;
@@ -1625,16 +1650,6 @@ export const syncEvents = async (
                   baseEventParams,
                 });
 
-                orderInfos.push({
-                  context: `filled-${orderId}-${baseEventParams.txHash}`,
-                  id: orderId,
-                  trigger: {
-                    kind: "sale",
-                    txHash: baseEventParams.txHash,
-                    txTimestamp: baseEventParams.timestamp,
-                  },
-                });
-
                 fillInfos.push({
                   context: `${orderId}-${baseEventParams.txHash}`,
                   orderId: orderId,
@@ -1646,6 +1661,16 @@ export const syncEvents = async (
                   timestamp: baseEventParams.timestamp,
                 });
               }
+
+              orderInfos.push({
+                context: `filled-${orderId}-${baseEventParams.txHash}`,
+                id: orderId,
+                trigger: {
+                  kind: "sale",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+              });
 
               break;
             }
