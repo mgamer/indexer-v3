@@ -8,9 +8,10 @@ export class SalesDataSource extends BaseDataSource {
     let continuationFilter = "";
 
     if (cursor) {
-      continuationFilter = `WHERE (created_at, tx_hash, log_index, batch_index) > ($/createdAt/, $/txHash/, $/logIndex/, $/batchIndex/)`;
+      continuationFilter = `AND (created_at, tx_hash, log_index, batch_index) > ($/createdAt/, $/txHash/, $/logIndex/, $/batchIndex/)`;
     }
 
+    //Only get records that are older than 5 min to take removed blocks into consideration.
     const query = `
         SELECT
           contract,
@@ -31,6 +32,7 @@ export class SalesDataSource extends BaseDataSource {
           batch_index,
           created_at
         FROM fill_events_2
+        WHERE created_at > NOW() - INTERVAL '5 minutes'
         ${continuationFilter}
         ORDER BY created_at, tx_hash, log_index, batch_index
         LIMIT $/limit/;  
