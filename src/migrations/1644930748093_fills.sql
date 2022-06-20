@@ -19,7 +19,6 @@ CREATE TABLE "fill_events_2" (
   "order_source_id_int" INT,
   "order_id" TEXT,
   "order_side" order_side_t NOT NULL,
-  "order_source_id_int" INT,
   "maker" BYTEA NOT NULL,
   "taker" BYTEA NOT NULL,
   "price" NUMERIC(78, 0) NOT NULL,
