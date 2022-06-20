@@ -28,6 +28,8 @@ export const config = {
   doBackgroundWork: Boolean(Number(process.env.DO_BACKGROUND_WORK)),
   disableOrders: Boolean(Number(process.env.DISABLE_ORDERS)),
 
+  maxItemsPerBid: 50000,
+
   awsAccessKeyId: String(process.env.AWS_ACCESS_KEY_ID),
   awsSecretAccessKey: String(process.env.AWS_SECRET_ACCESS_KEY),
 

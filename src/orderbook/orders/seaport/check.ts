@@ -81,7 +81,7 @@ export const offChainCheck = async (
     // Check: maker has enough balance
     const nftBalance = await commonHelpers.getNftBalance(
       info.contract,
-      info.tokenId,
+      info.tokenId!,
       order.params.offerer
     );
     if (nftBalance.lt(info.amount)) {

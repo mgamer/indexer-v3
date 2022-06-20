@@ -26,7 +26,7 @@ jobs:
           git config user.email "<41898282+github-actions[bot]@users.noreply.github.com>"
 
       - name: Standard Version
-        uses: qzb/standard-version-action@v1.0.5
+        uses: qzb/standard-version-action@v1.0.6
 
       - name: Push changes
         uses: ad-m/github-push-action@v0.6.0
@@ -42,5 +42,4 @@ jobs:
           from_branch: ${{ github.ref }}
           target_branch: main
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          tags: true
           message: ${{ github.event.pull_request.title }}
