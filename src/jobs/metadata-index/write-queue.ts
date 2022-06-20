@@ -84,6 +84,7 @@ if (config.doBackgroundWork) {
                     RETURNING contract, token_id, attribute_id, collection_id, key, value, created_at
                    )
                    INSERT INTO removed_token_attributes SELECT * FROM x
+                   ON CONFLICT (contract,token_id,attribute_id) DO UPDATE SET deleted_at = now()
                    RETURNING key, value, attribute_id;`,
           {
             contract: toBuffer(contract),
