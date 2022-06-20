@@ -2,6 +2,7 @@ import { redb } from "@/common/db";
 import { Sources } from "@/models/sources";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
+import crypto from "crypto";
 
 export class TokensDataSource extends BaseDataSource {
   public async getSequenceData(cursor: CursorInfo | null, limit: number) {
@@ -52,6 +53,10 @@ export class TokensDataSource extends BaseDataSource {
       const sources = await Sources.getInstance();
 
       const data = result.map((r) => ({
+        id: crypto
+          .createHash("sha256")
+          .update(`${fromBuffer(r.contract)}${r.token_id}`)
+          .digest("hex"),
         contract: fromBuffer(r.contract),
         token_id: r.token_id,
         name: r.name,
