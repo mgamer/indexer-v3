@@ -79,8 +79,13 @@ export class Attributes {
       attributeId,
     };
 
-    const query = `DELETE FROM attributes
-                   WHERE id = $/attributeId/`;
+    const query = `WITH x AS (
+                    DELETE FROM attributes
+                    WHERE id = $/attributeId/
+                    RETURNING id, attribute_key_id, value, token_count, on_sale_count,
+                              floor_sell_value, top_buy_value, sell_updated_at, buy_updated_at,
+                              sample_images, collection_id, kind, key, created_at
+                   ) INSERT INTO removed_attributes SELECT * FROM x;`;
 
     return await idb.none(query, replacementValues);
   }

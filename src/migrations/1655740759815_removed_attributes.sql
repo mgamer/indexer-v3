@@ -6,9 +6,10 @@ CREATE TABLE "removed_attribute_keys" (
   "key" TEXT NOT NULL,
   "kind" "attribute_key_kind_t" NOT NULL,
   "rank" INT,
-  "attribute_count" INT NOT NULL DEFAULT 0,
+  "attribute_count" INT NOT NULL,
   "info" JSONB,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+  "created_at" TIMESTAMPTZ NOT NULL,
+  "deleted_at" TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 ALTER TABLE "removed_attribute_keys"
@@ -19,8 +20,8 @@ CREATE TABLE "removed_attributes" (
   "id" BIGINT NOT NULL,
   "attribute_key_id" INT NOT NULL,
   "value" TEXT NOT NULL,
-  "token_count" INT NOT NULL DEFAULT 0,
-  "on_sale_count" INT NOT NULL DEFAULT 0,
+  "token_count" INT NOT NULL,
+  "on_sale_count" INT NOT NULL,
   "floor_sell_value" NUMERIC(78, 0),
   "top_buy_value" NUMERIC(78, 0),
   "sell_updated_at" TIMESTAMPTZ,
@@ -29,7 +30,8 @@ CREATE TABLE "removed_attributes" (
   "collection_id" TEXT,
   "kind" "attribute_key_kind_t",
   "key" TEXT,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+  "created_at" TIMESTAMPTZ NOT NULL,
+  "deleted_at" TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 ALTER TABLE "removed_attributes"
@@ -43,7 +45,8 @@ CREATE TABLE "removed_token_attributes" (
   "collection_id" TEXT NOT NULL,
   "key" TEXT NOT NULL,
   "value" TEXT NOT NULL,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+  "created_at" TIMESTAMPTZ NOT NULL,
+  "deleted_at" TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 ALTER TABLE "removed_token_attributes"
