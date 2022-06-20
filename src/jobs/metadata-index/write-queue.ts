@@ -83,7 +83,7 @@ if (config.doBackgroundWork) {
                     AND token_id = $/tokenId/
                     RETURNING contract, token_id, attribute_id, collection_id, key, value, created_at
                    )
-                   INSERT INTO token_attributes SELECT * FROM x
+                   INSERT INTO removed_token_attributes SELECT * FROM x
                    RETURNING key, value, attribute_id;`,
           {
             contract: toBuffer(contract),
