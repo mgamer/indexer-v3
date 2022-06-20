@@ -13,6 +13,7 @@ export type TokenSet = {
         kind: "attribute";
         data: {
           collection: string;
+          isNonFlagged?: boolean;
           attributes: [
             {
               key: string;
@@ -69,6 +70,7 @@ const isValid = async (tokenSet: TokenSet) => {
           return false;
         }
 
+        // TODO: Include `NOT is_flagged` filter in the query
         tokens = await idb.manyOrNone(
           `
             SELECT
