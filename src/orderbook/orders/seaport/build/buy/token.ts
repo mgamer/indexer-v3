@@ -12,6 +12,7 @@ interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
 }
 
 export const build = async (options: BuildOrderOptions) => {
+  // TODO: Include `NOT is_flagged` filter in the query
   const collectionResult = await edb.oneOrNone(
     `
       SELECT

@@ -41,6 +41,8 @@ export const postOrderV2Options: RouteOptions = {
         key: Joi.string().required(),
         value: Joi.string().required(),
       }),
+      collection: Joi.string(),
+      isNonFlagged: Joi.boolean(),
     }),
   },
   handler: async (request: Request) => {
@@ -54,11 +56,39 @@ export const postOrderV2Options: RouteOptions = {
       const order = payload.order;
       const orderbook = payload.orderbook;
       const source = payload.source;
-      // Only relevant/present for attribute bids.
+      // Only relevant/present for attribute bids
       const attribute = payload.attribute;
+      // Only relevant for collection bids
+      const collection = payload.collection;
+      // Only relevant for non-flagged tokens bids
+      const isNonFlagged = payload.isNonFlagged;
+
+      let schema: any;
+      if (attribute) {
+        schema = {
+          kind: "attribute",
+          data: {
+            collection: attribute.collection,
+            isNonFlagged: isNonFlagged || undefined,
+            attributes: [
+              {
+                key: attribute.key,
+                value: attribute.value,
+              },
+            ],
+          },
+        };
+      } else if (collection && isNonFlagged) {
+        schema = {
+          kind: "collection-non-flagged",
+          data: {
+            collection,
+          },
+        };
+      }
 
       switch (order.kind) {
-        // Publish a native OpenSea order.
+        // Publish a native OpenSea Wyvern v2.3 order
         case "opensea": {
           const parsedOrder = await parseOpenSeaOrder(order.data);
           if (!parsedOrder) {
@@ -85,18 +115,7 @@ export const postOrderV2Options: RouteOptions = {
           const orderInfo: orders.openDao.OrderInfo = {
             orderParams: order.data,
             metadata: {
-              schema: attribute && {
-                kind: "attribute",
-                data: {
-                  collection: attribute.collection,
-                  attributes: [
-                    {
-                      key: attribute.key,
-                      value: attribute.value,
-                    },
-                  ],
-                },
-              },
+              schema,
               source,
             },
           };
@@ -116,18 +135,7 @@ export const postOrderV2Options: RouteOptions = {
           const orderInfo: orders.zeroExV4.OrderInfo = {
             orderParams: order.data,
             metadata: {
-              schema: attribute && {
-                kind: "attribute",
-                data: {
-                  collection: attribute.collection,
-                  attributes: [
-                    {
-                      key: attribute.key,
-                      value: attribute.value,
-                    },
-                  ],
-                },
-              },
+              schema,
               source,
             },
           };
@@ -147,18 +155,7 @@ export const postOrderV2Options: RouteOptions = {
           const orderInfo: orders.seaport.OrderInfo = {
             orderParams: order.data,
             metadata: {
-              schema: attribute && {
-                kind: "attribute",
-                data: {
-                  collection: attribute.collection,
-                  attributes: [
-                    {
-                      key: attribute.key,
-                      value: attribute.value,
-                    },
-                  ],
-                },
-              },
+              schema,
               source,
             },
           };
@@ -177,18 +174,7 @@ export const postOrderV2Options: RouteOptions = {
               const orderInfo: orders.wyvernV23.OrderInfo = {
                 orderParams: order.data,
                 metadata: {
-                  schema: attribute && {
-                    kind: "attribute",
-                    data: {
-                      collection: attribute.collection,
-                      attributes: [
-                        {
-                          key: attribute.key,
-                          value: attribute.value,
-                        },
-                      ],
-                    },
-                  },
+                  schema,
                   source,
                 },
               };
