@@ -49,24 +49,28 @@ export class SalesDataSource extends BaseDataSource {
     if (result.length) {
       const sources = await Sources.getInstance();
 
-      const data = result.map((r) => ({
-        contract: fromBuffer(r.contract),
-        token_id: r.token_id,
-        order_id: r.order_id,
-        order_kind: r.order_kind,
-        order_side: r.order_side === "sell" ? "ask" : "bid",
-        order_source: r.order_source_id_int ? sources.get(r.order_source_id_int)?.name : null,
-        from: r.order_side === "sell" ? fromBuffer(r.maker) : fromBuffer(r.taker),
-        to: r.order_side === "sell" ? fromBuffer(r.taker) : fromBuffer(r.maker),
-        price: r.price ? formatEth(r.price) : null,
-        amount: Number(r.amount),
-        fill_source: r.fill_source ? String(r.fill_source) : null,
-        tx_hash: r.tx_hash ? fromBuffer(r.tx_hash) : null,
-        tx_log_index: r.log_index,
-        tx_batch_index: r.batch_index,
-        tx_timestamp: r.timestamp,
-        created_at: new Date(r.created_at).toISOString(),
-      }));
+      const data = result.map((r) => {
+        const orderSource = r.order_source_id_int ? sources.get(r.order_source_id_int)?.name : null;
+
+        return {
+          contract: fromBuffer(r.contract),
+          token_id: r.token_id,
+          order_id: r.order_id,
+          order_kind: r.order_kind,
+          order_side: r.order_side === "sell" ? "ask" : "bid",
+          order_source: orderSource,
+          from: r.order_side === "sell" ? fromBuffer(r.maker) : fromBuffer(r.taker),
+          to: r.order_side === "sell" ? fromBuffer(r.taker) : fromBuffer(r.maker),
+          price: r.price ? formatEth(r.price) : null,
+          amount: Number(r.amount),
+          fill_source: r.fill_source ? String(r.fill_source) : orderSource,
+          tx_hash: r.tx_hash ? fromBuffer(r.tx_hash) : null,
+          tx_log_index: r.log_index,
+          tx_batch_index: r.batch_index,
+          tx_timestamp: r.timestamp,
+          created_at: new Date(r.created_at).toISOString(),
+        };
+      });
 
       const lastResult = result[result.length - 1];
 
