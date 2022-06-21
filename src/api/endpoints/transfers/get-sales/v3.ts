@@ -258,34 +258,38 @@ export const getSalesV3Options: RouteOptions = {
       }
 
       const sources = await Sources.getInstance();
-      const result = rawResult.map((r) => ({
-        id: crypto
-          .createHash("sha256")
-          .update(`${fromBuffer(r.tx_hash)}${r.log_index}${r.batch_index}`)
-          .digest("hex"),
-        token: {
-          contract: fromBuffer(r.contract),
-          tokenId: r.token_id,
-          name: r.name,
-          image: r.image,
-          collection: {
-            id: r.collection_id,
-            name: r.collection_name,
+      const result = rawResult.map((r) => {
+        const orderSource = r.order_source_id_int ? sources.get(r.order_source_id_int)?.name : null;
+
+        return {
+          id: crypto
+            .createHash("sha256")
+            .update(`${fromBuffer(r.tx_hash)}${r.log_index}${r.batch_index}`)
+            .digest("hex"),
+          token: {
+            contract: fromBuffer(r.contract),
+            tokenId: r.token_id,
+            name: r.name,
+            image: r.image,
+            collection: {
+              id: r.collection_id,
+              name: r.collection_name,
+            },
           },
-        },
-        orderSource: r.order_source_id_int ? sources.get(r.order_source_id_int)?.name : null,
-        orderSide: r.order_side === "sell" ? "ask" : "bid",
-        orderKind: r.order_kind,
-        from: r.order_side === "sell" ? fromBuffer(r.maker) : fromBuffer(r.taker),
-        to: r.order_side === "sell" ? fromBuffer(r.taker) : fromBuffer(r.maker),
-        amount: String(r.amount),
-        fillSource: r.fill_source ? String(r.fill_source) : null,
-        txHash: fromBuffer(r.tx_hash),
-        logIndex: r.log_index,
-        batchIndex: r.batch_index,
-        timestamp: r.timestamp,
-        price: r.price ? formatEth(r.price) : null,
-      }));
+          orderSource,
+          orderSide: r.order_side === "sell" ? "ask" : "bid",
+          orderKind: r.order_kind,
+          from: r.order_side === "sell" ? fromBuffer(r.maker) : fromBuffer(r.taker),
+          to: r.order_side === "sell" ? fromBuffer(r.taker) : fromBuffer(r.maker),
+          amount: String(r.amount),
+          fillSource: r.fill_source ? String(r.fill_source) : orderSource,
+          txHash: fromBuffer(r.tx_hash),
+          logIndex: r.log_index,
+          batchIndex: r.batch_index,
+          timestamp: r.timestamp,
+          price: r.price ? formatEth(r.price) : null,
+        };
+      });
 
       return {
         sales: result,
