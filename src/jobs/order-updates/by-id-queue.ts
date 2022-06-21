@@ -185,7 +185,8 @@ if (config.doBackgroundWork) {
                     )::INT,
                     "floor_sell_source_id" = "z"."source_id",
                     "floor_sell_source_id_int" = "z"."source_id_int",
-                    "floor_sell_is_reservoir" = "z"."is_reservoir"
+                    "floor_sell_is_reservoir" = "z"."is_reservoir",
+                    "updated_at" = now()
                   FROM "z"
                   WHERE "t"."contract" = "z"."contract"
                     AND "t"."token_id" = "z"."token_id"

@@ -308,7 +308,7 @@ if (config.doBackgroundWork) {
         // Mark the token as having metadata indexed.
         await idb.none(
           `
-            UPDATE tokens SET metadata_indexed = TRUE
+            UPDATE tokens SET metadata_indexed = TRUE, updated_at = now()
             WHERE tokens.contract = $/contract/
               AND tokens.token_id = $/tokenId/
               AND tokens.metadata_indexed IS DISTINCT FROM TRUE

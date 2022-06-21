@@ -29,4 +29,12 @@ export const config = {
   disableOrders: Boolean(Number(process.env.DISABLE_ORDERS)),
 
   maxItemsPerBid: 50000,
+
+  awsAccessKeyId: String(process.env.AWS_ACCESS_KEY_ID),
+  awsSecretAccessKey: String(process.env.AWS_SECRET_ACCESS_KEY),
+
+  dataExportS3BucketName: String(process.env.DATA_EXPORT_S3_BUCKET_NAME),
+  dataExportAwsAccessRole: String(process.env.DATA_EXPORT_AWS_ACCESS_ROLE),
+  dataExportAwsS3UploadRole: String(process.env.DATA_EXPORT_AWS_S3_UPLOAD_ROLE),
+  dataExportAwsS3UploadExternalId: String(process.env.DATA_EXPORT_AWS_S3_UPLOAD_EXTERNAL_ID),
 };
