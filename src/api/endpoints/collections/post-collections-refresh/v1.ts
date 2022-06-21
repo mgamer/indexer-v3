@@ -90,7 +90,8 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
             WHERE collections.id = $/collection/
           )
           UPDATE tokens SET
-            collection_id = $/collection/
+            collection_id = $/collection/,
+            updated_at = now()
           FROM x
           WHERE tokens.contract = x.contract
             AND tokens.token_id <@ x.token_id_range
