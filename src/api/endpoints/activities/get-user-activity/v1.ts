@@ -78,7 +78,7 @@ export const getUserActivityV1Options: RouteOptions = {
     const params = request.params as any;
     const query = request.query as any;
 
-    if (!_.isArray(query.types)) {
+    if (query.types && !_.isArray(query.types)) {
       query.types = [query.types];
     }
 
