@@ -77,10 +77,15 @@ if (config.doBackgroundWork) {
 
         // Clear the current token attributes
         const attributesToRefresh = await idb.manyOrNone(
-          `DELETE FROM token_attributes
-                 WHERE contract = $/contract/
-                 AND token_id = $/tokenId/
-                 RETURNING key, value, attribute_id`,
+          `WITH x AS (
+                    DELETE FROM token_attributes
+                    WHERE contract = $/contract/
+                    AND token_id = $/tokenId/
+                    RETURNING contract, token_id, attribute_id, collection_id, key, value, created_at
+                   )
+                   INSERT INTO removed_token_attributes SELECT * FROM x
+                   ON CONFLICT (contract,token_id,attribute_id) DO UPDATE SET deleted_at = now()
+                   RETURNING key, value, attribute_id;`,
           {
             contract: toBuffer(contract),
             tokenId,
