@@ -30,7 +30,7 @@ export class SalesDataSource extends BaseDataSource {
           block,
           log_index,
           batch_index,
-          extract(epoch from created_at) created_at
+          extract(epoch from created_at) created_ts
         FROM fill_events_2
         WHERE created_at < NOW() - INTERVAL '5 minutes'
         ${continuationFilter}
@@ -68,7 +68,7 @@ export class SalesDataSource extends BaseDataSource {
           tx_log_index: r.log_index,
           tx_batch_index: r.batch_index,
           tx_timestamp: r.timestamp,
-          created_at: new Date(r.created_at).toISOString(),
+          created_at: new Date(r.created_ts).toISOString(),
         };
       });
 
@@ -77,7 +77,7 @@ export class SalesDataSource extends BaseDataSource {
       return {
         data,
         nextCursor: {
-          createdAt: lastResult.created_at,
+          createdAt: lastResult.created_ts,
           txHash: fromBuffer(lastResult.tx_hash),
           logIndex: lastResult.log_index,
           batchIndex: lastResult.batch_index,

@@ -34,7 +34,7 @@ export class CollectionsDataSource extends BaseDataSource {
           collections.day7_floor_sell_value,
           collections.day30_floor_sell_value,
           collections.created_at,
-          extract(epoch from collections.updated_at) updated_at
+          extract(epoch from collections.updated_at) updated_ts
         FROM collections
         ${continuationFilter}
         ORDER BY updated_at, id
@@ -82,7 +82,7 @@ export class CollectionsDataSource extends BaseDataSource {
           ? Number(r.floor_sell_value) / Number(r.day30_floor_sell_value)
           : null,
         created_at: new Date(r.created_at).toISOString(),
-        updated_at: new Date(r.updated_at).toISOString(),
+        updated_at: new Date(r.updated_ts).toISOString(),
       }));
 
       const lastResult = result[result.length - 1];
@@ -91,7 +91,7 @@ export class CollectionsDataSource extends BaseDataSource {
         data,
         nextCursor: {
           id: lastResult.id,
-          updatedAt: lastResult.updated_at,
+          updatedAt: lastResult.updated_ts,
         },
       };
     }
