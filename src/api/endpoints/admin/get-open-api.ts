@@ -15,7 +15,7 @@ export const getOpenApiOptions: RouteOptions = {
         url: "/swagger.json",
       });
 
-      return { message: JSON.parse(response.payload) };
+      return JSON.parse(response.payload);
     } catch (error) {
       logger.error("get-open-api-handler", `Handler failure: ${error}`);
       throw error;
