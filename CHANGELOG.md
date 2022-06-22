@@ -1,3 +1,12 @@
+## [5.82.10](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.9...v5.82.10) (2022-06-22)
+
+
+### Bug Fixes
+
+* create release from github action ([701bdce](https://github.com/reservoirprotocol/indexer-v3/commit/701bdce17dc73b12faf7bd2ef8d08cb1d036bf50))
+
+
+
 ## [5.82.9](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.8...v5.82.9) (2022-06-22)
 
 
