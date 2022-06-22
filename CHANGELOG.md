@@ -1,3 +1,21 @@
+## [5.82.7](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.6...v5.82.7) (2022-06-22)
+
+
+### Bug Fixes
+
+* revert release creation that was crashing ([#990](https://github.com/reservoirprotocol/indexer-v3/issues/990)) ([5cd8347](https://github.com/reservoirprotocol/indexer-v3/commit/5cd8347e21dd590916148f0d6a135dca142bc62a))
+
+
+
+## [5.82.6](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.5...v5.82.6) (2022-06-22)
+
+
+### Bug Fixes
+
+* still return sale results if collection is unknown ([b844c17](https://github.com/reservoirprotocol/indexer-v3/commit/b844c172c41a6ca63aa522f131646c4a89c702f7))
+
+
+
 ## [5.82.5](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.4...v5.82.5) (2022-06-22)
 
 
