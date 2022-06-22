@@ -10,7 +10,7 @@ export class AsksDataSource extends BaseDataSource {
     let continuationFilter = "";
 
     if (cursor) {
-      continuationFilter = `AND (updated_at, id) > ($/updatedAt/, $/id/)`;
+      continuationFilter = `AND (updated_at, id) > (to_timestamp($/updatedAt/), $/id/)`;
     }
 
     const query = `
@@ -50,7 +50,7 @@ export class AsksDataSource extends BaseDataSource {
           ) AS status,
           orders.raw_data,
           orders.created_at,
-          orders.updated_at
+          extract(epoch from orders.updated_at) updated_ts
         FROM orders
         WHERE orders.side = 'sell'
         ${continuationFilter}
@@ -111,7 +111,7 @@ export class AsksDataSource extends BaseDataSource {
           expiration: Number(r.expiration),
           raw_data: r.raw_data ?? null,
           created_at: new Date(r.created_at).toISOString(),
-          updated_at: new Date(r.updated_at).toISOString(),
+          updated_at: new Date(r.updated_ts).toISOString(),
         };
       });
 
@@ -121,7 +121,7 @@ export class AsksDataSource extends BaseDataSource {
         data,
         nextCursor: {
           id: lastResult.id,
-          updatedAt: lastResult.updated_at,
+          updatedAt: lastResult.updated_ts,
         },
       };
     }
