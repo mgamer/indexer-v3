@@ -1,3 +1,15 @@
+## [5.82.4](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.3...v5.82.4) (2022-06-22)
+
+
+### Bug Fixes
+
+* preserve all changes on changelog ([98b87d9](https://github.com/reservoirprotocol/indexer-v3/commit/98b87d93ac855beb56f2cbe5fca8015d1b553985))
+* regenerate the CHANGELOG.md ([f1be7ef](https://github.com/reservoirprotocol/indexer-v3/commit/f1be7ef54e99674f1024fb42215bbf7960e7aac6))
+* regenerate the CHANGELOG.md ([cd47de7](https://github.com/reservoirprotocol/indexer-v3/commit/cd47de76598c70ee2ed87c13fe9f96b79690e21a))
+* testing the changelog ([ca0caca](https://github.com/reservoirprotocol/indexer-v3/commit/ca0cacaba2f06a999a8f76e130d7c4fbdc56d2c7))
+
+
+
 ## [5.82.3](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.2...v5.82.3) (2022-06-22)
 
 
