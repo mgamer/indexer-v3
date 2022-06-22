@@ -30,6 +30,9 @@ CREATE INDEX "attribute_keys_collection_id_rank_key_index"
   ON "attribute_keys" ("collection_id", "rank" DESC)
   WHERE ("rank" IS NOT NULL);
 
+CREATE INDEX "attribute_keys_updated_at_id_index"
+  ON "attribute_keys" ("updated_at", "id");
+
 CREATE TABLE "attributes" (
   "id" BIGSERIAL NOT NULL,
   "attribute_key_id" INT NOT NULL,
@@ -63,6 +66,9 @@ CREATE INDEX attributes_key_collection_id_floor_sell_value_index
 CREATE INDEX attributes_kind_collection_id_index
   ON attributes (kind, collection_id ASC NULLS LAST);
 
+CREATE INDEX "attributes_updated_at_id_index"
+  ON "attributes" ("updated_at", "id");
+
 ALTER TABLE "attributes"
   ADD CONSTRAINT "attributes_pk"
   PRIMARY KEY ("id");
@@ -88,6 +94,9 @@ CREATE INDEX "token_attributes_contract_token_id_key_value_index"
 CREATE INDEX "token_attributes_collection_id_key_value_index"
   ON "token_attributes" ("collection_id", "key", "value")
   INCLUDE(contract, token_id);
+
+CREATE INDEX "token_attributes_updated_at_contract_token_id_attribute_id_index"
+  ON "token_attributes" ("updated_at", "contract", "token_id", "attribute_id");
 
 -- TODO: Look into replacing the current primary key with the below index
 

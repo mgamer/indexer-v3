@@ -14,6 +14,9 @@ import { AsksDataSource } from "@/jobs/data-export/data-sources/asks";
 import { TokensDataSource } from "@/jobs/data-export/data-sources/tokens";
 import { CollectionsDataSource } from "@/jobs/data-export/data-sources/collections";
 import { SalesDataSource } from "@/jobs/data-export/data-sources/sales";
+import { AttributeKeysDataSource } from "@/jobs/data-export/data-sources/attribute_keys";
+import { AttributesDataSource } from "@/jobs/data-export/data-sources/attributes";
+import { TokenAttributesDataSource } from "@/jobs/data-export/data-sources/token_attributes";
 
 const QUEUE_NAME = "export-data-queue";
 const QUERY_LIMIT = 1000;
@@ -52,7 +55,7 @@ if (config.doBackgroundWork) {
         }
 
         // Trigger next sequence only if there are more results
-        job.data.addToQueue = data.length == QUERY_LIMIT;
+        job.data.addToQueue = data.length >= QUERY_LIMIT;
 
         logger.info(
           QUEUE_NAME,
@@ -86,6 +89,9 @@ export enum DataSourceKind {
   tokens = "tokens",
   collections = "collections",
   sales = "sales",
+  attribute_keys = "attribute_keys",
+  attributes = "attributes",
+  token_attributes = "token_attributes",
 }
 
 export const addToQueue = async (kind: DataSourceKind) => {
@@ -137,6 +143,12 @@ const getDataSource = (kind: DataSourceKind) => {
       return new CollectionsDataSource();
     case DataSourceKind.sales:
       return new SalesDataSource();
+    case DataSourceKind.attribute_keys:
+      return new AttributeKeysDataSource();
+    case DataSourceKind.attributes:
+      return new AttributesDataSource();
+    case DataSourceKind.token_attributes:
+      return new TokenAttributesDataSource();
   }
 
   throw new Error(`Unsupported data source ${kind}`);
