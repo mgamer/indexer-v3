@@ -7,7 +7,7 @@ export class CollectionsDataSource extends BaseDataSource {
     let continuationFilter = "";
 
     if (cursor) {
-      continuationFilter = `WHERE (updated_at, id) > ($/updatedAt/, $/id/)`;
+      continuationFilter = `WHERE (updated_at, id) > (to_timestamp($/updatedAt/), $/id/)`;
     }
 
     const query = `
@@ -34,7 +34,7 @@ export class CollectionsDataSource extends BaseDataSource {
           collections.day7_floor_sell_value,
           collections.day30_floor_sell_value,
           collections.created_at,
-          collections.updated_at
+          extract(epoch from collections.updated_at) updated_at
         FROM collections
         ${continuationFilter}
         ORDER BY updated_at, id
