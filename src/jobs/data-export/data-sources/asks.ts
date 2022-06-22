@@ -50,7 +50,6 @@ export class AsksDataSource extends BaseDataSource {
           ) AS status,
           orders.raw_data,
           orders.created_at,
-          orders.updated_at,
           extract(epoch from orders.updated_at) updated_ts
         FROM orders
         WHERE orders.side = 'sell'
