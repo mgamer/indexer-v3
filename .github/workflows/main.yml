@@ -24,6 +24,7 @@ jobs:
         id: changelog
         uses: TriPSs/conventional-changelog-action@v3.7.1
         with:
+          release-count: '0'
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Merge to main
