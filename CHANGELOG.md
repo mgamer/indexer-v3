@@ -1,3 +1,13 @@
+# [5.84.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.83.0...v5.84.0) (2022-06-22)
+
+
+### Features
+
+* new api to get swagger json ([14c8790](https://github.com/reservoirprotocol/indexer-v3/commit/14c87901da767a457a93015e9b383865c2221b1e))
+* new api to get swagger json ([d50392e](https://github.com/reservoirprotocol/indexer-v3/commit/d50392e97446978530fcce7d430bf96cdef5860d))
+
+
+
 # [5.83.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.11...v5.83.0) (2022-06-22)
 
 
