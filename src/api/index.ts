@@ -112,6 +112,25 @@ export const start = async (): Promise<void> => {
     return h.continue;
   });
 
+  server.ext("onPreResponse", (request, reply) => {
+    const response = request.response;
+
+    // Set custom response in case of timeout
+    if ("isBoom" in response && "output" in response) {
+      if (response["output"]["statusCode"] == 503) {
+        const timeoutResponse = {
+          statusCode: 504,
+          error: "Gateway Timeout",
+          message: "Query cancelled because it took longer than 10s to execute",
+        };
+
+        return reply.response(timeoutResponse).type("application/json").code(504);
+      }
+    }
+
+    return reply.continue;
+  });
+
   setupRoutes(server);
 
   await server.start();
