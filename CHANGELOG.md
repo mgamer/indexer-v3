@@ -1,3 +1,23 @@
+## [5.82.2](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.1...v5.82.2) (2022-06-22)
+
+
+### Bug Fixes
+
+* regenerate the CHANGELOG.md ([cadc8a8](https://github.com/reservoirprotocol/indexer-v3/commit/cadc8a8b619e35dd4fe5301ac49f166082da63ae))
+
+
+
+## [5.82.1](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.0...v5.82.1) (2022-06-22)
+
+
+### Bug Fixes
+
+* don't update package-lock ([9238a86](https://github.com/reservoirprotocol/indexer-v3/commit/9238a863e4f621eb8ff292424d2e7e91dd388f5f))
+* remove the package-lock ([23dc19f](https://github.com/reservoirprotocol/indexer-v3/commit/23dc19f967ba276bc1cca0a57b7645a5317ea9ff))
+* update main.yaml file ([b775e1a](https://github.com/reservoirprotocol/indexer-v3/commit/b775e1a229cf1e7765b71cf8ab62b33d840e4454))
+
+
+
 # [5.82.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.81.119...v5.82.0) (2022-06-22)
 
 
