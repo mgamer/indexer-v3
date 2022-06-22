@@ -1,3 +1,12 @@
+## [5.82.7](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.6...v5.82.7) (2022-06-22)
+
+
+### Bug Fixes
+
+* revert release creation that was crashing ([#990](https://github.com/reservoirprotocol/indexer-v3/issues/990)) ([5cd8347](https://github.com/reservoirprotocol/indexer-v3/commit/5cd8347e21dd590916148f0d6a135dca142bc62a))
+
+
+
 ## [5.82.6](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.5...v5.82.6) (2022-06-22)
 
 
