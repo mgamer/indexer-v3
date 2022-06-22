@@ -1,3 +1,14 @@
+## [5.82.1](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.0...v5.82.1) (2022-06-22)
+
+
+### Bug Fixes
+
+* don't update package-lock ([9238a86](https://github.com/reservoirprotocol/indexer-v3/commit/9238a863e4f621eb8ff292424d2e7e91dd388f5f))
+* remove the package-lock ([23dc19f](https://github.com/reservoirprotocol/indexer-v3/commit/23dc19f967ba276bc1cca0a57b7645a5317ea9ff))
+* update main.yaml file ([b775e1a](https://github.com/reservoirprotocol/indexer-v3/commit/b775e1a229cf1e7765b71cf8ab62b33d840e4454))
+
+
+
 # [5.82.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.81.119...v5.82.0) (2022-06-22)
 
 
@@ -4704,6 +4715,3 @@
 * use denormalized attributes for filtering ([ad68c2b](https://github.com/reservoirprotocol/indexer-v3/commit/ad68c2b33a33756ec39edd52cdcde2bf640b7f9d))
 * v2 sales API ([ad41ff1](https://github.com/reservoirprotocol/indexer-v3/commit/ad41ff1f9a3ea1ae611a1a285e3bd3ee09d7a3ad))
 * wip ([bdfd689](https://github.com/reservoirprotocol/indexer-v3/commit/bdfd68975bf39cff74004f02625abd04ea2da426))
-
-
-
