@@ -1,3 +1,12 @@
+## [5.82.3](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.2...v5.82.3) (2022-06-22)
+
+
+### Bug Fixes
+
+* regenerate the CHANGELOG.md ([651e17d](https://github.com/reservoirprotocol/indexer-v3/commit/651e17d5860db6060633130cc78ac1bbec181822))
+
+
+
 ## [5.82.2](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.1...v5.82.2) (2022-06-22)
 
 
