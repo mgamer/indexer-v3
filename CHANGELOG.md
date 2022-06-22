@@ -1,3 +1,12 @@
+## [5.82.11](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.10...v5.82.11) (2022-06-22)
+
+
+### Bug Fixes
+
+* fix activities api ([4b3af0e](https://github.com/reservoirprotocol/indexer-v3/commit/4b3af0e295dfc2a1a9bd0a351859e65e46b01f09))
+
+
+
 ## [5.82.10](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.9...v5.82.10) (2022-06-22)
 
 
