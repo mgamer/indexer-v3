@@ -28,8 +28,8 @@ jobs:
           release-count: '0'
 
       - name: Create Release
+        id: create_release
         uses: actions/create-release@v1
-        if: ${{ steps.changelog.outputs.skipped == 'false' }}
         env:
           github-token: ${{ secrets.GITHUB_TOKEN }}
         with:
