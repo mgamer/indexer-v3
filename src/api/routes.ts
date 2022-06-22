@@ -21,6 +21,12 @@ export const setupRoutes = (server: Server) => {
   // Admin
 
   server.route({
+    method: "GET",
+    path: "/admin/open-api",
+    options: adminEndpoints.getOpenApiOptions,
+  });
+
+  server.route({
     method: "POST",
     path: "/admin/index-metadata",
     options: adminEndpoints.postMetadataIndexOptions,
