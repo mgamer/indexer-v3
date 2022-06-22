@@ -24,8 +24,8 @@ jobs:
         id: changelog
         uses: TriPSs/conventional-changelog-action@v3.7.1
         with:
-          release-count: '0'
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          release-count: '0'
 
       - name: Merge to main
         uses: devmasx/merge-branch@master
