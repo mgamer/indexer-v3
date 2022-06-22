@@ -1,3 +1,17 @@
+# [5.83.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.11...v5.83.0) (2022-06-22)
+
+
+### Bug Fixes
+
+* seaport end time validation ([fe7fdcd](https://github.com/reservoirprotocol/indexer-v3/commit/fe7fdcd2bd4f1e27de233dfe0a3f871ae6264f1b))
+
+
+### Features
+
+* use v2 for buy simulation ([d4b2c99](https://github.com/reservoirprotocol/indexer-v3/commit/d4b2c9994c99baebe538d0d0bcda781f8457aff4))
+
+
+
 ## [5.82.11](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.10...v5.82.11) (2022-06-22)
 
 
