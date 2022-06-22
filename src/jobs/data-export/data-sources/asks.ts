@@ -10,7 +10,7 @@ export class AsksDataSource extends BaseDataSource {
     let continuationFilter = "";
 
     if (cursor) {
-      continuationFilter = `AND (updated_at, id) > ($/updatedAt/, $/id/)`;
+      continuationFilter = `AND (updated_at, id) > (to_timestamp($/updatedAt/), $/id/)`;
     }
 
     const query = `
@@ -50,7 +50,7 @@ export class AsksDataSource extends BaseDataSource {
           ) AS status,
           orders.raw_data,
           orders.created_at,
-          orders.updated_at
+          extract(epoch from orders.updated_at) updated_at
         FROM orders
         WHERE orders.side = 'sell'
         ${continuationFilter}

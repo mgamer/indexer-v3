@@ -9,7 +9,7 @@ export class TokensDataSource extends BaseDataSource {
     let continuationFilter = "";
 
     if (cursor) {
-      continuationFilter = `WHERE ("t"."updated_at", "t"."contract", "t"."token_id") > ($/updatedAt/, $/contract/, $/tokenId/)`;
+      continuationFilter = `WHERE ("t"."updated_at", "t"."contract", "t"."token_id") > (to_timestamp($/updatedAt/), $/contract/, $/tokenId/)`;
     }
 
     const query = `
@@ -35,7 +35,7 @@ export class TokensDataSource extends BaseDataSource {
           "t"."floor_sell_valid_to",
           "t"."floor_sell_source_id",
           "t"."created_at",
-          "t"."updated_at"
+          extract(epoch from "t"."updated_at") "updated_at"
         FROM "tokens" "t"
         ${continuationFilter}
         ORDER BY "t"."updated_at", "t"."contract", "t"."token_id"
