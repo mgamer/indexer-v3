@@ -1,3 +1,20 @@
+# [5.85.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.84.0...v5.85.0) (2022-06-23)
+
+
+### Bug Fixes
+
+* default to including flagged tokens for now ([7633d31](https://github.com/reservoirprotocol/indexer-v3/commit/7633d31dda56d38b8eb05231cf03a6c039516df5))
+* minor tweaks ([226dbc7](https://github.com/reservoirprotocol/indexer-v3/commit/226dbc7919331b2aacd647528398298e44307405))
+* order posting payload build ([919e6ad](https://github.com/reservoirprotocol/indexer-v3/commit/919e6adb924f8447d061f0ce92347416d1de5c07))
+* return correct collection top bid ([431fe4b](https://github.com/reservoirprotocol/indexer-v3/commit/431fe4baa3aefb4eb0cae562cef84a1d95c24eef))
+
+
+### Features
+
+* add support for token-list collection bids (for non-flagged tokens bids) ([f2fe738](https://github.com/reservoirprotocol/indexer-v3/commit/f2fe738ba251d574f0d235b4b3db2d6fdafc78ec))
+
+
+
 # [5.84.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.83.0...v5.84.0) (2022-06-22)
 
 
