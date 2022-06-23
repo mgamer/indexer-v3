@@ -166,6 +166,7 @@ export const getCollectionV2Options: RouteOptions = {
           ARRAY(
             SELECT "t"."image" FROM "tokens" "t"
             WHERE "t"."collection_id" = "c"."id"
+            AND "t"."image" IS NOT NULL
             LIMIT 4
           ) AS "sample_images"          
         FROM "collections" "c"

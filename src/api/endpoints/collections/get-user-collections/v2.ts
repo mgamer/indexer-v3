@@ -129,6 +129,7 @@ export const getUserCollectionsV2Options: RouteOptions = {
                   SELECT array(
                     SELECT tokens.image FROM tokens
                     WHERE tokens.collection_id = collections.id
+                    AND tokens.image IS NOT NULL
                     LIMIT 4
                   )
                 ) AS sample_images,

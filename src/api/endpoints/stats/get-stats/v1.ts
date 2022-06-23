@@ -293,6 +293,7 @@ export const getStatsV1Options: RouteOptions = {
             array(
               SELECT "t"."image" FROM "tokens" "t"
               WHERE "t"."collection_id" = $/collection/
+              AND "t"."image" IS NOT NULL
               LIMIT 4
             ) AS "sample_images",
             "x".*,
