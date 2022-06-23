@@ -83,7 +83,7 @@ export const getExecuteListV2Options: RouteOptions = {
         )
       ),
       listingTime: Joi.alternatives(Joi.string(), Joi.number()),
-      expirationTime: Joi.alternatives(Joi.string(), Joi.number()),
+      expirationTime: Joi.alternatives(Joi.string(), Joi.number()).required(),
       salt: Joi.string(),
       nonce: Joi.string(),
       v: Joi.number(),
