@@ -1,3 +1,12 @@
+## [5.85.2](https://github.com/reservoirprotocol/indexer-v3/compare/v5.85.1...v5.85.2) (2022-06-23)
+
+
+### Bug Fixes
+
+* filter empty keys from details api ([15b7031](https://github.com/reservoirprotocol/indexer-v3/commit/15b7031d95370a196fc4b7ebfa31fd7d23e46932))
+
+
+
 ## [5.85.1](https://github.com/reservoirprotocol/indexer-v3/compare/v5.85.0...v5.85.1) (2022-06-23)
 
 
