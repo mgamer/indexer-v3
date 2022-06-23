@@ -227,7 +227,7 @@ export const getCollectionV2Options: RouteOptions = {
           FROM "token_sets" "ts"
           LEFT JOIN "orders" "o"
             ON "ts"."top_buy_id" = "o"."id"
-          WHERE "ts"."id" = "x"."token_set_id"
+          WHERE "ts"."collection_id" = "x"."id"
           ORDER BY "ts"."top_buy_value" DESC NULLS LAST
           LIMIT 1
         ) "z" ON TRUE

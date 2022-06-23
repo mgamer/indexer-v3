@@ -72,6 +72,7 @@ export const getExecuteBidV2Options: RouteOptions = {
       orderbook: Joi.string().valid("reservoir", "opensea").default("reservoir"),
       source: Joi.string(),
       automatedRoyalties: Joi.boolean().default(true),
+      excludeFlaggedTokens: Joi.boolean().default(false),
       fee: Joi.alternatives(Joi.string(), Joi.number()),
       feeRecipient: Joi.string()
         .lowercase()
@@ -279,6 +280,14 @@ export const getExecuteBidV2Options: RouteOptions = {
                                 value: attributeValue,
                               }
                             : undefined,
+                        collection:
+                          collection &&
+                          query.excludeFlaggedTokens &&
+                          !attributeKey &&
+                          !attributeValue
+                            ? collection
+                            : undefined,
+                        isNonFlagged: query.excludeFlaggedTokens,
                         orderbook: query.orderbook,
                         source: query.source,
                       },
@@ -391,6 +400,14 @@ export const getExecuteBidV2Options: RouteOptions = {
                                 value: attributeValue,
                               }
                             : undefined,
+                        collection:
+                          collection &&
+                          query.excludeFlaggedTokens &&
+                          !attributeKey &&
+                          !attributeValue
+                            ? collection
+                            : undefined,
+                        isNonFlagged: query.excludeFlaggedTokens,
                         orderbook: query.orderbook,
                         source: query.source,
                       },
@@ -509,6 +526,14 @@ export const getExecuteBidV2Options: RouteOptions = {
                                 value: attributeValue,
                               }
                             : undefined,
+                        collection:
+                          collection &&
+                          query.excludeFlaggedTokens &&
+                          !attributeKey &&
+                          !attributeValue
+                            ? collection
+                            : undefined,
+                        isNonFlagged: query.excludeFlaggedTokens,
                         orderbook: query.orderbook,
                         source: query.source,
                       },
@@ -626,6 +651,14 @@ export const getExecuteBidV2Options: RouteOptions = {
                                 value: attributeValue,
                               }
                             : undefined,
+                        collection:
+                          collection &&
+                          query.excludeFlaggedTokens &&
+                          !attributeKey &&
+                          !attributeValue
+                            ? collection
+                            : undefined,
+                        isNonFlagged: query.excludeFlaggedTokens,
                         orderbook: query.orderbook,
                         source: query.source,
                       },
