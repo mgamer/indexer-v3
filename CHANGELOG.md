@@ -1,3 +1,12 @@
+## [5.85.1](https://github.com/reservoirprotocol/indexer-v3/compare/v5.85.0...v5.85.1) (2022-06-23)
+
+
+### Bug Fixes
+
+* make expirationTime in execute/list/v2 required ([ca5c2b4](https://github.com/reservoirprotocol/indexer-v3/commit/ca5c2b4bee9f489753d40a3ebf72d7885c3fd52c))
+
+
+
 # [5.85.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.84.0...v5.85.0) (2022-06-23)
 
 
