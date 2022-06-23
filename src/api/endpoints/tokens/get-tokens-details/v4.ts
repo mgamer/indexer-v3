@@ -190,6 +190,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
             JOIN attributes ON "ta".attribute_id = attributes.id
             WHERE "ta"."contract" = "t"."contract"
             AND "ta"."token_id" = "t"."token_id"
+            AND "ta"."key" != ''
           ) AS "attributes",
           "t"."floor_sell_id",
           "t"."floor_sell_value",
