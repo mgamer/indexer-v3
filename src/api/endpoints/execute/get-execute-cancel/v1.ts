@@ -22,13 +22,22 @@ export const getExecuteCancelV1Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      id: Joi.string().required(),
+      id: Joi.string()
+        .required()
+        .description("Collection ID. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63``"),
       maker: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .required(),
-      maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
-      maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),
+        .required()
+        .description(
+          "Address of wallet cancelling the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
+        ),
+      maxFeePerGas: Joi.string()
+        .pattern(/^[0-9]+$/)
+        .description("Optional. Set custom gas price"),
+      maxPriorityFeePerGas: Joi.string()
+        .pattern(/^[0-9]+$/)
+        .description("Optional. Set custom gas price"),
     }),
   },
   response: {
