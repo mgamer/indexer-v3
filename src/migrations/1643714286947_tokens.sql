@@ -27,7 +27,8 @@ CREATE TABLE "tokens" (
   "last_buy_value" NUMERIC(78, 0),
   "last_metadata_sync" TIMESTAMPTZ,
   "created_at" TIMESTAMPTZ DEFAULT now(),
-  "updated_at" TIMESTAMPTZ DEFAULT now()
+  "updated_at" TIMESTAMPTZ DEFAULT now(),
+  "rarity_score" NUMERIC(78, 0),
 );
 
 ALTER TABLE "tokens"
