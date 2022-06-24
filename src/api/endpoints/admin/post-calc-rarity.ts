@@ -34,7 +34,7 @@ export const postCalcRarityOptions: RouteOptions = {
 
     try {
       const collectionId = payload.collection;
-      await rarityQueue.addToQueue(collectionId);
+      await rarityQueue.addToQueue(collectionId, 0);
 
       return { message: "Request accepted" };
     } catch (error) {

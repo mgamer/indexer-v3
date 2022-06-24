@@ -32,14 +32,17 @@ if (config.doBackgroundWork) {
 
       // If no collection found
       if (_.isNull(collection)) {
-        throw new Error(`Collection ${collectionId} not fund`);
+        logger.error(QUEUE_NAME, `Collection ${collectionId} not fund`);
+        return;
       }
 
       // If the collection is too big
       if (collection.tokenCount > 30000) {
-        throw new Error(
+        logger.error(
+          QUEUE_NAME,
           `Collection ${collectionId} has too many tokens (${collection.tokenCount})`
         );
+        return;
       }
 
       const tokensRarity = await Rarity.getCollectionTokensRarity(collectionId);
@@ -77,6 +80,6 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (collectionId: string, delay = 0) => {
-  await queue.add(randomUUID(), { collectionId }, { delay });
+export const addToQueue = async (collectionId: string, delay = 60 * 60 * 1000) => {
+  await queue.add(randomUUID(), { collectionId }, { delay, jobId: collectionId });
 };
