@@ -33,13 +33,13 @@ export const getTokensDetailsV4Options: RouteOptions = {
       collection: Joi.string()
         .lowercase()
         .description(
-          "Filter to a particular collection, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+          "Filter to a particular collection with collection-id. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
       contract: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .description(
-          "Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+          "Filter to a particular contract. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
       tokens: Joi.alternatives().try(
         Joi.array()
@@ -50,27 +50,39 @@ export const getTokensDetailsV4Options: RouteOptions = {
               .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
           )
           .description(
-            "Filter to one or more tokens, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+            "Array of tokens. Example: `tokens[0]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:704 tokens[1]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:979`"
           ),
         Joi.string()
           .lowercase()
           .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
           .description(
-            "Filter to one or more tokens, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+            "Array of tokens. Example: `tokens[0]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:704 tokens[1]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:979`"
           )
       ),
       tokenSetId: Joi.string()
         .lowercase()
         .description(
-          "Filter to a particular set, e.g. `contract:0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+          "Filter to a particular token set. `Example: token:0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270:129000685`"
         ),
       attributes: Joi.object()
         .unknown()
-        .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
-      source: Joi.string(),
-      sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice"),
-      limit: Joi.number().integer().min(1).max(50).default(20),
-      continuation: Joi.string().pattern(base64Regex),
+        .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
+      source: Joi.string()
+      .description(
+        "Name of the order source. Example `OpenSea`"
+      ),
+      sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice")
+      .description(
+        "Order the items are returned in the response."
+      ),
+      limit: Joi.number().integer().min(1).max(50).default(20)
+      .description(
+        "Amount of items returned in response."
+      ),
+      continuation: Joi.string().pattern(base64Regex)
+      .description(
+        "Use continuation token to request next offset of items."
+      ),
     })
       .or("collection", "contract", "tokens", "tokenSetId")
       .oxor("collection", "contract", "tokens", "tokenSetId")

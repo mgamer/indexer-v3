@@ -19,7 +19,8 @@ export const getOrderExecutedV1Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      id: Joi.string().required(),
+      id: Joi.string().required()
+      ,
       checkRecentEvents: Joi.boolean().default(false),
     }),
   },
