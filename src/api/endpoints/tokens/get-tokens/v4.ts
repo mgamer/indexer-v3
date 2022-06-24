@@ -70,7 +70,7 @@ export const getTokensV4Options: RouteOptions = {
       source: Joi.string().description("Name of the order source. Example `OpenSea`"),
       native: Joi.boolean().description("If true, results will filter only Reservoir orders."),
       sortBy: Joi.string()
-        .valid("floorAskPrice", "topBidValue", "tokenId")
+        .valid("floorAskPrice", "topBidValue", "tokenId", "rarity")
         .default("floorAskPrice")
         .description("Order the items are returned in the response."),
       limit: Joi.number()
@@ -111,6 +111,7 @@ export const getTokensV4Options: RouteOptions = {
           source: Joi.string().allow(null, ""),
           topBidValue: Joi.number().unsafe().allow(null),
           floorAskPrice: Joi.number().unsafe().allow(null),
+          rarity: Joi.number().unsafe().allow(null),
           owner: Joi.string().allow(null, ""),
         })
       ),

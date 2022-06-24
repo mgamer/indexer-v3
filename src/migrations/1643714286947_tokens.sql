@@ -54,6 +54,9 @@ CREATE INDEX "tokens_contract_top_buy_value_index"
 CREATE INDEX "tokens_collection_id_floor_sell_value_token_id_index"
   ON "tokens" ("collection_id", "floor_sell_value", "token_id");
 
+CREATE INDEX "tokens_collection_id_rarity_score_token_id_index"
+  ON "tokens" ("collection_id", "rarity_score", "token_id");
+
 CREATE INDEX "tokens_collection_id_top_buy_value_token_id_index"
   ON "tokens" ("collection_id", "top_buy_value" DESC NULLS LAST, "token_id" DESC);
 
