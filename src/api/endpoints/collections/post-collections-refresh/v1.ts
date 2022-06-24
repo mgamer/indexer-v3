@@ -30,7 +30,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       collection: Joi.string()
         .lowercase()
         .description(
-          "Refresh the given collection, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:1:2222`"
+          "Refresh the given collection. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         )
         .required(),
     }),

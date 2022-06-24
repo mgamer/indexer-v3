@@ -37,7 +37,7 @@ import * as wyvernV23Check from "@/orderbook/orders/wyvern-v2.3/check";
 const version = "v2";
 
 export const getExecuteListV2Options: RouteOptions = {
-  description: "List a token for sale.",
+  description: "List a token for sale",
   tags: ["api", "Orderbook"],
   plugins: {
     "hapi-swagger": {
@@ -49,50 +49,79 @@ export const getExecuteListV2Options: RouteOptions = {
       token: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
-        .required(),
-      quantity: Joi.number(),
+        .required()
+        .description(
+          "Filter to a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+        ),
+      quantity: Joi.number().description(
+        "Quanity of tokens user is listing. Only compatible with ERC1155 tokens. Example: `5`"
+      ),
       maker: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .required(),
+        .required()
+        .description(
+          "Address of wallet making the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
+        ),
       weiPrice: Joi.string()
         .pattern(/^[0-9]+$/)
-        .required(),
+        .required()
+        .description("Amount seller is willing to sell for in wei. Example: `1000000000000000000`"),
       orderKind: Joi.string()
         .valid("721ex", "looks-rare", "wyvern-v2.3", "zeroex-v4", "seaport")
-        .default("wyvern-v2.3"),
-      orderbook: Joi.string().valid("opensea", "looks-rare", "reservoir").default("reservoir"),
-      source: Joi.string(),
-      automatedRoyalties: Joi.boolean().default(true),
+        .default("wyvern-v2.3")
+        .description("Exchange protocol used to create order. Example: `seaport`"),
+      orderbook: Joi.string()
+        .valid("opensea", "looks-rare", "reservoir")
+        .default("reservoir")
+        .description("Orderbook where order is placed. Example: `Reservoir`"),
+      source: Joi.string().description(
+        "Name of the platform that created the order. Example: `Chimpers Market`"
+      ),
+      automatedRoyalties: Joi.boolean()
+        .default(true)
+        .description("If true, royalties will be automatically included."),
       fee: Joi.alternatives(
         Joi.string(),
         Joi.number(),
         Joi.array().items(Joi.string()),
-        Joi.array().items(Joi.number())
+        Joi.array().items(Joi.number()).description("Fee amount in BPS. Example: `100`")
       ),
       feeRecipient: Joi.alternatives(
         Joi.string()
           .lowercase()
           .pattern(/^0x[a-fA-F0-9]{40}$/)
           .disallow(AddressZero),
-        Joi.array().items(
-          Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/)
-            .disallow(AddressZero)
-        )
+        Joi.array()
+          .items(
+            Joi.string()
+              .lowercase()
+              .pattern(/^0x[a-fA-F0-9]{40}$/)
+              .disallow(AddressZero)
+          )
+          .description(
+            "Wallet address of fee recipient. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
+          )
       ),
-      listingTime: Joi.alternatives(Joi.string(), Joi.number()),
-      expirationTime: Joi.alternatives(Joi.string(), Joi.number()).required(),
-      salt: Joi.string(),
-      nonce: Joi.string(),
-      v: Joi.number(),
+      listingTime: Joi.alternatives(Joi.string(), Joi.number()).description(
+        "Unix timestamp indicating when listing will be listed. Example: `1656080318`"
+      ),
+      expirationTime: Joi.alternatives(Joi.string(), Joi.number()).description(
+        "Unix timestamp indicating when listing will expire. Example: `1656080318`"
+      ),
+      salt: Joi.string().description("Optional. Random string to make the order unique"),
+      nonce: Joi.string().description("Optional. Set a custom nonce"),
+      v: Joi.number().description(
+        "Signature v component (only required after order has been signed)"
+      ),
       r: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{64}$/),
+        .pattern(/^0x[a-fA-F0-9]{64}$/)
+        .description("Signature r component (only required after order has been signed)"),
       s: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{64}$/),
+        .pattern(/^0x[a-fA-F0-9]{64}$/)
+        .description("Signature s component (only required after order has been signed)"),
     })
       .with("feeRecipient", "fee")
       .with("fee", "feeRecipient"),

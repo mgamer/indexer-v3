@@ -28,27 +28,58 @@ export const getExecuteBuyV2Options: RouteOptions = {
     query: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/),
-      quantity: Joi.number().integer().positive(),
+        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+        .description(
+          "Filter to a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+        ),
+      quantity: Joi.number()
+        .integer()
+        .positive()
+        .description(
+          "Quanity of tokens user is buying. Only compatible with ERC1155 tokens. Example: `5`"
+        ),
       tokens: Joi.array().items(
         Joi.string()
           .lowercase()
           .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+          .description(
+            "Array of tokens user is buying. Example: `tokens[0]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:704 tokens[1]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:979`"
+          )
       ),
       taker: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .required(),
-      onlyQuote: Joi.boolean().default(false),
+        .required()
+        .description(
+          "Address of wallet filling the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
+        ),
+      onlyQuote: Joi.boolean().default(false).description("If true, only quote will be returned."),
       referrer: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .default(AddressZero),
-      referrerFeeBps: Joi.number().integer().positive().min(0).max(10000).default(0),
-      partial: Joi.boolean().default(false),
-      maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
-      maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),
-      skipBalanceCheck: Joi.boolean().default(false),
+        .default(AddressZero)
+        .description(
+          "Wallet address of referrer. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
+        ),
+      referrerFeeBps: Joi.number()
+        .integer()
+        .positive()
+        .min(0)
+        .max(10000)
+        .default(0)
+        .description("Fee amount in BPS. Example: `100`."),
+      partial: Joi.boolean()
+        .default(false)
+        .description("If true, partial orders will be accepted."),
+      maxFeePerGas: Joi.string()
+        .pattern(/^[0-9]+$/)
+        .description("Optional. Set custom gas price."),
+      maxPriorityFeePerGas: Joi.string()
+        .pattern(/^[0-9]+$/)
+        .description("Optional. Set custom gas price."),
+      skipBalanceCheck: Joi.boolean()
+        .default(false)
+        .description("If true, balance check will be skipped."),
     })
       .or("token", "tokens")
       .oxor("token", "tokens")
