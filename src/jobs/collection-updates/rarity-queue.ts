@@ -53,7 +53,7 @@ if (config.doBackgroundWork) {
         };
 
         _.forEach(tokens, (token) => {
-          updateTokensString += `('${token.id}', ${token.rarityTraitSum}),`;
+          updateTokensString += `(${token.id}, ${token.rarityTraitSum}),`;
         });
 
         updateTokensString = _.trimEnd(updateTokensString, ",");
