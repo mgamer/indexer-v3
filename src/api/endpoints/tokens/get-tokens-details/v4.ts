@@ -67,22 +67,20 @@ export const getTokensDetailsV4Options: RouteOptions = {
       attributes: Joi.object()
         .unknown()
         .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
-      source: Joi.string()
-      .description(
-        "Name of the order source. Example `OpenSea`"
-      ),
-      sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice")
-      .description(
-        "Order the items are returned in the response."
-      ),
-      limit: Joi.number().integer().min(1).max(50).default(20)
-      .description(
-        "Amount of items returned in response."
-      ),
-      continuation: Joi.string().pattern(base64Regex)
-      .description(
-        "Use continuation token to request next offset of items."
-      ),
+      source: Joi.string().description("Name of the order source. Example `OpenSea`"),
+      sortBy: Joi.string()
+        .valid("floorAskPrice", "topBidValue")
+        .default("floorAskPrice")
+        .description("Order the items are returned in the response."),
+      limit: Joi.number()
+        .integer()
+        .min(1)
+        .max(50)
+        .default(20)
+        .description("Amount of items returned in response."),
+      continuation: Joi.string()
+        .pattern(base64Regex)
+        .description("Use continuation token to request next offset of items."),
     })
       .or("collection", "contract", "tokens", "tokenSetId")
       .oxor("collection", "contract", "tokens", "tokenSetId")
@@ -202,6 +200,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
             JOIN attributes ON "ta".attribute_id = attributes.id
             WHERE "ta"."contract" = "t"."contract"
             AND "ta"."token_id" = "t"."token_id"
+            AND "ta"."key" != ''
           ) AS "attributes",
           "t"."floor_sell_id",
           "t"."floor_sell_value",

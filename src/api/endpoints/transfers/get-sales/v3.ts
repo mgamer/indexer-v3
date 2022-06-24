@@ -56,10 +56,15 @@ export const getSalesV3Options: RouteOptions = {
       endTimestamp: Joi.number().description(
         "Get events before a particular unix timestamp (inclusive)"
       ),
-      limit: Joi.number().integer().min(1).max(100).default(20)
-      .description("Amount of items returned in response."),
-      continuation: Joi.string().pattern(base64Regex)
-      .description("Use continuation token to request next offset of items."),
+      limit: Joi.number()
+        .integer()
+        .min(1)
+        .max(100)
+        .default(20)
+        .description("Amount of items returned in response."),
+      continuation: Joi.string()
+        .pattern(base64Regex)
+        .description("Use continuation token to request next offset of items."),
     })
       .oxor("contract", "token", "collection")
       .with("attributes", "collection"),

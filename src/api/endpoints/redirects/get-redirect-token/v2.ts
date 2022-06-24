@@ -22,10 +22,7 @@ export const getRedirectTokenV2Options: RouteOptions = {
   },
   validate: {
     params: Joi.object({
-      source: Joi.string().required()
-      .description(
-        "Name of the order source. Example `OpenSea`"
-      ),
+      source: Joi.string().required().description("Name of the order source. Example `OpenSea`"),
       token: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)

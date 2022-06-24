@@ -76,7 +76,7 @@ export const save = async (
 
       // Check: order is not expired
       const endTime = order.params.endTime;
-      if (endTime !== 0 && currentTime >= endTime) {
+      if (currentTime >= endTime) {
         return results.push({
           id,
           status: "expired",

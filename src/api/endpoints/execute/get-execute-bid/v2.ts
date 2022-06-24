@@ -56,79 +56,70 @@ export const getExecuteBidV2Options: RouteOptions = {
         .description(
           "Bid on a particular collection with collection-id. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
-      attributeKey: Joi.string()
-      .description(
+      attributeKey: Joi.string().description(
         "Bid on a particular attribute key. Example: `Composition`"
-        ),
-      attributeValue: Joi.string()
-      .description(
+      ),
+      attributeValue: Joi.string().description(
         "Bid on a particular attribute value. Example: `Teddy (#33)`"
-        ),
-      quantity: Joi.number()
-      .description(
+      ),
+      quantity: Joi.number().description(
         "Quanity of tokens user is buying. Only compatible with ERC1155 tokens. Example: `5`"
-        ),
+      ),
       maker: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .description(
-          "Address of wallet making the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`")
+          "Address of wallet making the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
+        )
         .required(),
       weiPrice: Joi.string()
         .pattern(/^[0-9]+$/)
-        .description(
-          "Amount bidder is willing to offer in wei. Example: `1000000000000000000`")
+        .description("Amount bidder is willing to offer in wei. Example: `1000000000000000000`")
         .required(),
       orderKind: Joi.string()
         .valid("wyvern-v2.3", "721ex", "zeroex-v4", "seaport")
         .default("wyvern-v2.3")
-        .description(
-          "Exchange protocol used to create order. Example: `seaport`"),
+        .description("Exchange protocol used to create order. Example: `seaport`"),
       orderbook: Joi.string()
         .valid("reservoir", "opensea")
         .default("reservoir")
-        .description(
-          "Orderbook where order is placed. Example: `Reservoir`"),
-      source: Joi.string()
-      .description(
-        "Name of the platform that created the order. Example: `Chimpers Market`"),
-      automatedRoyalties: Joi.boolean().default(true)
-      .description(
-        "If true, royalties will be automatically included."),
-      fee: Joi.alternatives(Joi.string(), Joi.number())
-      .description(
-        "Fee amount in BPS. Example: `100`"),
+        .description("Orderbook where order is placed. Example: `Reservoir`"),
+      source: Joi.string().description(
+        "Name of the platform that created the order. Example: `Chimpers Market`"
+      ),
+      automatedRoyalties: Joi.boolean()
+        .default(true)
+        .description("If true, royalties will be automatically included."),
+      fee: Joi.alternatives(Joi.string(), Joi.number()).description(
+        "Fee amount in BPS. Example: `100`"
+      ),
+      excludeFlaggedTokens: Joi.boolean().default(false),
       feeRecipient: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .description(
-          "Wallet address of fee recipient. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`")
+          "Wallet address of fee recipient. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
+        )
         .disallow(AddressZero),
-      listingTime: Joi.alternatives(Joi.string(), Joi.number())
-      .description(
-        "Unix timestamp indicating when listing will be listed. Example: `1656080318`"),
-      expirationTime: Joi.alternatives(Joi.string(), Joi.number())
-      .description(
-        "Unix timestamp indicating when listing will expire. Example: `1656080318`"),
-      salt: Joi.string()
-      .description(
-        "Optional. Random string to make the order unique"),
-      nonce: Joi.string()
-      .description(
-        "Optional. Set a custom nonce"),
-      v: Joi.number()
-      .description(
-        "Signature v component (only required after order has been signed)"),
+      listingTime: Joi.alternatives(Joi.string(), Joi.number()).description(
+        "Unix timestamp indicating when listing will be listed. Example: `1656080318`"
+      ),
+      expirationTime: Joi.alternatives(Joi.string(), Joi.number()).description(
+        "Unix timestamp indicating when listing will expire. Example: `1656080318`"
+      ),
+      salt: Joi.string().description("Optional. Random string to make the order unique"),
+      nonce: Joi.string().description("Optional. Set a custom nonce"),
+      v: Joi.number().description(
+        "Signature v component (only required after order has been signed)"
+      ),
       r: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{64}$/)
-        .description(
-          "Signature r component (only required after order has been signed)"),
+        .description("Signature r component (only required after order has been signed)"),
       s: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{64}$/)
-        .description(
-          "Signature s component (only required after order has been signed)"),
+        .description("Signature s component (only required after order has been signed)"),
     })
       .or("token", "collection")
       .oxor("token", "collection")
@@ -320,6 +311,14 @@ export const getExecuteBidV2Options: RouteOptions = {
                                 value: attributeValue,
                               }
                             : undefined,
+                        collection:
+                          collection &&
+                          query.excludeFlaggedTokens &&
+                          !attributeKey &&
+                          !attributeValue
+                            ? collection
+                            : undefined,
+                        isNonFlagged: query.excludeFlaggedTokens,
                         orderbook: query.orderbook,
                         source: query.source,
                       },
@@ -432,6 +431,14 @@ export const getExecuteBidV2Options: RouteOptions = {
                                 value: attributeValue,
                               }
                             : undefined,
+                        collection:
+                          collection &&
+                          query.excludeFlaggedTokens &&
+                          !attributeKey &&
+                          !attributeValue
+                            ? collection
+                            : undefined,
+                        isNonFlagged: query.excludeFlaggedTokens,
                         orderbook: query.orderbook,
                         source: query.source,
                       },
@@ -550,6 +557,14 @@ export const getExecuteBidV2Options: RouteOptions = {
                                 value: attributeValue,
                               }
                             : undefined,
+                        collection:
+                          collection &&
+                          query.excludeFlaggedTokens &&
+                          !attributeKey &&
+                          !attributeValue
+                            ? collection
+                            : undefined,
+                        isNonFlagged: query.excludeFlaggedTokens,
                         orderbook: query.orderbook,
                         source: query.source,
                       },
@@ -667,6 +682,14 @@ export const getExecuteBidV2Options: RouteOptions = {
                                 value: attributeValue,
                               }
                             : undefined,
+                        collection:
+                          collection &&
+                          query.excludeFlaggedTokens &&
+                          !attributeKey &&
+                          !attributeValue
+                            ? collection
+                            : undefined,
+                        isNonFlagged: query.excludeFlaggedTokens,
                         orderbook: query.orderbook,
                         source: query.source,
                       },

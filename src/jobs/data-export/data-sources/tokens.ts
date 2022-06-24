@@ -9,7 +9,7 @@ export class TokensDataSource extends BaseDataSource {
     let continuationFilter = "";
 
     if (cursor) {
-      continuationFilter = `WHERE ("t"."updated_at", "t"."contract", "t"."token_id") > ($/updatedAt/, $/contract/, $/tokenId/)`;
+      continuationFilter = `WHERE ("t"."updated_at", "t"."contract", "t"."token_id") > (to_timestamp($/updatedAt/), $/contract/, $/tokenId/)`;
     }
 
     const query = `
@@ -35,7 +35,7 @@ export class TokensDataSource extends BaseDataSource {
           "t"."floor_sell_valid_to",
           "t"."floor_sell_source_id",
           "t"."created_at",
-          "t"."updated_at"
+          extract(epoch from "t"."updated_at") "updated_ts"
         FROM "tokens" "t"
         ${continuationFilter}
         ORDER BY "t"."updated_at", "t"."contract", "t"."token_id"
@@ -74,7 +74,7 @@ export class TokensDataSource extends BaseDataSource {
         last_sale_value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
         last_sale_timestamp: r.last_sell_timestamp,
         created_at: new Date(r.created_at).toISOString(),
-        updated_at: new Date(r.updated_at).toISOString(),
+        updated_at: new Date(r.updated_ts).toISOString(),
       }));
 
       const lastResult = result[result.length - 1];
@@ -84,7 +84,7 @@ export class TokensDataSource extends BaseDataSource {
         nextCursor: {
           contract: fromBuffer(lastResult.contract),
           tokenId: lastResult.token_id,
-          updatedAt: lastResult.updated_at,
+          updatedAt: lastResult.updated_ts,
         },
       };
     }

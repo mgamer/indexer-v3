@@ -1,3 +1,71 @@
+## [5.85.2](https://github.com/reservoirprotocol/indexer-v3/compare/v5.85.1...v5.85.2) (2022-06-23)
+
+
+### Bug Fixes
+
+* filter empty keys from details api ([15b7031](https://github.com/reservoirprotocol/indexer-v3/commit/15b7031d95370a196fc4b7ebfa31fd7d23e46932))
+
+
+
+## [5.85.1](https://github.com/reservoirprotocol/indexer-v3/compare/v5.85.0...v5.85.1) (2022-06-23)
+
+
+### Bug Fixes
+
+* make expirationTime in execute/list/v2 required ([ca5c2b4](https://github.com/reservoirprotocol/indexer-v3/commit/ca5c2b4bee9f489753d40a3ebf72d7885c3fd52c))
+
+
+
+# [5.85.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.84.0...v5.85.0) (2022-06-23)
+
+
+### Bug Fixes
+
+* default to including flagged tokens for now ([7633d31](https://github.com/reservoirprotocol/indexer-v3/commit/7633d31dda56d38b8eb05231cf03a6c039516df5))
+* minor tweaks ([226dbc7](https://github.com/reservoirprotocol/indexer-v3/commit/226dbc7919331b2aacd647528398298e44307405))
+* order posting payload build ([919e6ad](https://github.com/reservoirprotocol/indexer-v3/commit/919e6adb924f8447d061f0ce92347416d1de5c07))
+* return correct collection top bid ([431fe4b](https://github.com/reservoirprotocol/indexer-v3/commit/431fe4baa3aefb4eb0cae562cef84a1d95c24eef))
+
+
+### Features
+
+* add support for token-list collection bids (for non-flagged tokens bids) ([f2fe738](https://github.com/reservoirprotocol/indexer-v3/commit/f2fe738ba251d574f0d235b4b3db2d6fdafc78ec))
+
+
+
+# [5.84.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.83.0...v5.84.0) (2022-06-22)
+
+
+### Features
+
+* new api to get swagger json ([14c8790](https://github.com/reservoirprotocol/indexer-v3/commit/14c87901da767a457a93015e9b383865c2221b1e))
+* new api to get swagger json ([d50392e](https://github.com/reservoirprotocol/indexer-v3/commit/d50392e97446978530fcce7d430bf96cdef5860d))
+
+
+
+# [5.83.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.11...v5.83.0) (2022-06-22)
+
+
+### Bug Fixes
+
+* seaport end time validation ([fe7fdcd](https://github.com/reservoirprotocol/indexer-v3/commit/fe7fdcd2bd4f1e27de233dfe0a3f871ae6264f1b))
+
+
+### Features
+
+* use v2 for buy simulation ([d4b2c99](https://github.com/reservoirprotocol/indexer-v3/commit/d4b2c9994c99baebe538d0d0bcda781f8457aff4))
+
+
+
+## [5.82.11](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.10...v5.82.11) (2022-06-22)
+
+
+### Bug Fixes
+
+* fix activities api ([4b3af0e](https://github.com/reservoirprotocol/indexer-v3/commit/4b3af0e295dfc2a1a9bd0a351859e65e46b01f09))
+
+
+
 ## [5.82.10](https://github.com/reservoirprotocol/indexer-v3/compare/v5.82.9...v5.82.10) (2022-06-22)
 
 

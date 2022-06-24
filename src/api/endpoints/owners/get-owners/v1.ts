@@ -46,14 +46,17 @@ export const getOwnersV1Options: RouteOptions = {
       attributes: Joi.object()
         .unknown()
         .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
-      offset: Joi.number().integer().min(0).default(0)
-      .description(
-        "Use offset to request the next batch of items."
-        ),
-      limit: Joi.number().integer().min(1).max(500).default(20)
-      .description(
-        "Amount of items returned in response."
-        ),
+      offset: Joi.number()
+        .integer()
+        .min(0)
+        .default(0)
+        .description("Use offset to request the next batch of items."),
+      limit: Joi.number()
+        .integer()
+        .min(1)
+        .max(500)
+        .default(20)
+        .description("Amount of items returned in response."),
     })
       .oxor("collection", "contract", "token")
       .or("collection", "contract", "token")

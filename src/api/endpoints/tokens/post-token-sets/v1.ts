@@ -25,9 +25,10 @@ export const postTokenSetsV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .description(
-          "Array of tokens to gather in a set. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`")
+          "Array of tokens to gather in a set. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+        )
         .required(),
-        
+
       tokenIds: Joi.array().items(Joi.string().lowercase().pattern(/^\d+$/)).required(),
     }),
   },
