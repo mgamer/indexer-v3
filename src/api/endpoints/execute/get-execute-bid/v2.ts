@@ -93,7 +93,9 @@ export const getExecuteBidV2Options: RouteOptions = {
       fee: Joi.alternatives(Joi.string(), Joi.number()).description(
         "Fee amount in BPS. Example: `100`"
       ),
-      excludeFlaggedTokens: Joi.boolean().default(false),
+      excludeFlaggedTokens: Joi.boolean()
+        .default(false)
+        .description("If true flagged tokens will be excluded"),
       feeRecipient: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
