@@ -1,3 +1,18 @@
+# [5.86.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.85.2...v5.86.0) (2022-06-24)
+
+
+### Bug Fixes
+
+* add description ([187ba8b](https://github.com/reservoirprotocol/indexer-v3/commit/187ba8b808e7ea0d20bf30f0c18cf6485e4a48d8))
+* update concurrency for mint queue ([9f8a7c1](https://github.com/reservoirprotocol/indexer-v3/commit/9f8a7c16fc2ad4c0a8faefee0558b186540c8975))
+
+
+### Features
+
+* **collections:** dont return null sample images ([5c0d7a5](https://github.com/reservoirprotocol/indexer-v3/commit/5c0d7a575555303f08b6e2d0b2923c9895ae7b46))
+
+
+
 ## [5.85.2](https://github.com/reservoirprotocol/indexer-v3/compare/v5.85.1...v5.85.2) (2022-06-23)
 
 
