@@ -16,7 +16,7 @@ const version = "v2";
 
 export const postOrderV2Options: RouteOptions = {
   description: "Submit single order",
-  tags: ["api", "Orders"],
+  tags: ["api", "Orderbook"],
   plugins: {
     "hapi-swagger": {
       order: 5,
