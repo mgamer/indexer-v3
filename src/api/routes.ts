@@ -414,6 +414,12 @@ export const setupRoutes = (server: Server) => {
     options: ownersEndpoints.getOwnersV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/owners/cross-collections/v1",
+    options: ownersEndpoints.getCrossOwnersCollectionsV1Options,
+  });
+
   // Stats
 
   server.route({
