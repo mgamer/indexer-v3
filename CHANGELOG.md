@@ -1,3 +1,12 @@
+## [5.87.2](https://github.com/reservoirprotocol/indexer-v3/compare/v5.87.1...v5.87.2) (2022-06-25)
+
+
+### Bug Fixes
+
+* wrong source detection ([2b1ec8d](https://github.com/reservoirprotocol/indexer-v3/commit/2b1ec8d66d8063a1e391926c2d94869cbd3a2b71))
+
+
+
 ## [5.87.1](https://github.com/reservoirprotocol/indexer-v3/compare/v5.87.0...v5.87.1) (2022-06-25)
 
 
