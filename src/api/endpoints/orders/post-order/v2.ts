@@ -148,23 +148,74 @@ export const postOrderV2Options: RouteOptions = {
         }
 
         case "seaport": {
-          if (orderbook !== "reservoir") {
-            throw new Error("Unsupported orderbook");
+          switch (orderbook) {
+            case "opensea": {
+              const sdkOrder = new Sdk.Seaport.Order(config.chainId, order.data);
+
+              // Post order via OpenSea's APIs.
+              await axios
+                .post(
+                  `https://${
+                    config.chainId === 4 ? "testnets-api." : "api."
+                  }opensea.io/v2/orders/ethereum/seaport/${
+                    sdkOrder.getInfo()?.side === "sell" ? "listings" : "offers"
+                  }`,
+                  JSON.stringify({
+                    parameters: {
+                      ...sdkOrder.params,
+                      totalOriginalConsiderationItems: sdkOrder.params.consideration.length,
+                    },
+                    signature: sdkOrder.params.signature!,
+                  }),
+                  {
+                    headers:
+                      config.chainId === 1
+                        ? {
+                            "Content-Type": "application/json",
+                            "X-Api-Key": String(process.env.OPENSEA_API_KEY),
+                          }
+                        : {
+                            "Content-Type": "application/json",
+                            // The request will fail if passing the API key on Rinkeby.
+                          },
+                  }
+                )
+                .catch((error) => {
+                  if (error.response) {
+                    logger.error(
+                      `post-order-${version}-handler`,
+                      `Failed to post order to OpenSea: ${JSON.stringify(error.response.data)}`
+                    );
+                  }
+
+                  throw Boom.badRequest(JSON.stringify(error.response.data));
+                });
+
+              break;
+            }
+
+            case "reservoir": {
+              const orderInfo: orders.seaport.OrderInfo = {
+                orderParams: order.data,
+                metadata: {
+                  schema,
+                  source,
+                },
+              };
+              const [result] = await orders.seaport.save([orderInfo]);
+              if (result.status === "success") {
+                return { message: "Success" };
+              } else {
+                throw Boom.badRequest(result.status);
+              }
+            }
+
+            default: {
+              throw Boom.badData("Unknown orderbook");
+            }
           }
 
-          const orderInfo: orders.seaport.OrderInfo = {
-            orderParams: order.data,
-            metadata: {
-              schema,
-              source,
-            },
-          };
-          const [result] = await orders.seaport.save([orderInfo]);
-          if (result.status === "success") {
-            return { message: "Success" };
-          } else {
-            throw Boom.badRequest(result.status);
-          }
+          break;
         }
 
         case "wyvern-v2.3": {

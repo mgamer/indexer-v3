@@ -1,3 +1,57 @@
+# [5.90.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.89.0...v5.90.0) (2022-06-25)
+
+
+### Features
+
+* support passing multiple contract to collections/v4 ([ac59d65](https://github.com/reservoirprotocol/indexer-v3/commit/ac59d65e57a0965ffbd6ff58b0ad26ef2cdfe75d))
+
+
+
+# [5.89.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.88.0...v5.89.0) (2022-06-25)
+
+
+### Features
+
+* new api to get common collections for owners ([4222b17](https://github.com/reservoirprotocol/indexer-v3/commit/4222b174bf7e817b85f327f9679ff50fe5d4ea19))
+
+
+
+# [5.88.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.87.2...v5.88.0) (2022-06-25)
+
+
+### Features
+
+* new api to get cross collections owners ([0f614d0](https://github.com/reservoirprotocol/indexer-v3/commit/0f614d0f0a5e4cf3e7f01f7180f09157b445e0c1))
+
+
+
+## [5.87.2](https://github.com/reservoirprotocol/indexer-v3/compare/v5.87.1...v5.87.2) (2022-06-25)
+
+
+### Bug Fixes
+
+* wrong source detection ([2b1ec8d](https://github.com/reservoirprotocol/indexer-v3/commit/2b1ec8d66d8063a1e391926c2d94869cbd3a2b71))
+
+
+
+## [5.87.1](https://github.com/reservoirprotocol/indexer-v3/compare/v5.87.0...v5.87.1) (2022-06-25)
+
+
+### Bug Fixes
+
+* forgotten warriors order source detection ([20750f1](https://github.com/reservoirprotocol/indexer-v3/commit/20750f1e7164da97dfe6979398fc6eb70825b54c))
+
+
+
+# [5.87.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.86.0...v5.87.0) (2022-06-25)
+
+
+### Features
+
+* add support for posting seaport orders to opensea ([63514f5](https://github.com/reservoirprotocol/indexer-v3/commit/63514f58c3f96ee8414b06d469f57bda1becc007))
+
+
+
 # [5.86.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.85.2...v5.86.0) (2022-06-24)
 
 
