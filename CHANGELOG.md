@@ -1,3 +1,12 @@
+# [5.88.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.87.2...v5.88.0) (2022-06-25)
+
+
+### Features
+
+* new api to get cross collections owners ([0f614d0](https://github.com/reservoirprotocol/indexer-v3/commit/0f614d0f0a5e4cf3e7f01f7180f09157b445e0c1))
+
+
+
 ## [5.87.2](https://github.com/reservoirprotocol/indexer-v3/compare/v5.87.1...v5.87.2) (2022-06-25)
 
 
