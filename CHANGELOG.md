@@ -1,3 +1,12 @@
+# [5.87.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.86.0...v5.87.0) (2022-06-25)
+
+
+### Features
+
+* add support for posting seaport orders to opensea ([63514f5](https://github.com/reservoirprotocol/indexer-v3/commit/63514f58c3f96ee8414b06d469f57bda1becc007))
+
+
+
 # [5.86.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.85.2...v5.86.0) (2022-06-24)
 
 
