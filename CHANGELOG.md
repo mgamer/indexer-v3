@@ -1,3 +1,12 @@
+## [5.87.1](https://github.com/reservoirprotocol/indexer-v3/compare/v5.87.0...v5.87.1) (2022-06-25)
+
+
+### Bug Fixes
+
+* forgotten warriors order source detection ([20750f1](https://github.com/reservoirprotocol/indexer-v3/commit/20750f1e7164da97dfe6979398fc6eb70825b54c))
+
+
+
 # [5.87.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.86.0...v5.87.0) (2022-06-25)
 
 
