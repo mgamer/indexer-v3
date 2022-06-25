@@ -24,7 +24,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
   tags: ["api", "Tokens"],
   plugins: {
     "hapi-swagger": {
-      order: 9,
+      order: 10,
     },
   },
   validate: {

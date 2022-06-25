@@ -10,7 +10,7 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 const version = "v1";
 
 export const getStatsV1Options: RouteOptions = {
-  description: "Aggregate stats for a group of tokens",
+  description: "Stats",
   notes: "Get aggregate stats for a particular set (collection, attribute or single token)",
   tags: ["api", "Stats"],
   plugins: {
