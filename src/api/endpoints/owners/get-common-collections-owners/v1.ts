@@ -10,14 +10,13 @@ import _ from "lodash";
 
 const version = "v1";
 
-export const getCrossCollectionsOwnersV1Options: RouteOptions = {
+export const getCommonCollectionsOwnersV1Options: RouteOptions = {
   cache: {
     privacy: "public",
     expiresIn: 60 * 60 * 1000,
   },
-  description: "Top owners of cross collections",
-  notes:
-    "This API can be used to find owners who have the most diverse portfolio across multiple collections.",
+  description: "Top common collections",
+  notes: "This API can be used to find top common collections among the given owners",
   tags: ["api", "Owners"],
   plugins: {
     "hapi-swagger": {
@@ -26,7 +25,7 @@ export const getCrossCollectionsOwnersV1Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      collections: Joi.alternatives()
+      owners: Joi.alternatives()
         .try(
           Joi.array()
             .items(
@@ -41,54 +40,54 @@ export const getCrossCollectionsOwnersV1Options: RouteOptions = {
             .pattern(/^0x[a-fA-F0-9]{40}$/)
         )
         .required()
-        .description("Array of contracts. Example: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63"),
+        .description("Array of owners. Example: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63"),
       limit: Joi.number()
         .integer()
         .min(1)
         .max(50)
         .default(20)
-        .description("Amount of owners returned in response."),
+        .description("Amount of collections returned in response."),
     }),
   },
   response: {
     schema: Joi.object({
-      owners: Joi.array().items(
+      collections: Joi.array().items(
         Joi.object({
           address: Joi.string(),
           count: Joi.number(),
-          collections: Joi.array(),
+          owners: Joi.array(),
         })
       ),
-    }).label(`getCrossCollectionsOwners${version.toUpperCase()}Response`),
+    }).label(`getCommonCollectionsOwners${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
-        `get-cross-collections-owners-${version}-handler`,
+        `get-common-collections-owners-${version}-handler`,
         `Wrong response schema: ${error}`
       );
       throw error;
     },
   },
   handler: async (request: Request) => {
-    let collectionsFilter = "";
+    let ownersFilter = "";
     const query = request.query as any;
 
-    if (query.collections) {
-      if (!_.isArray(query.collections)) {
-        query.collections = [query.collections];
+    if (query.owners) {
+      if (!_.isArray(query.owners)) {
+        query.owners = [query.owners];
       }
 
-      for (const collection of query.collections) {
-        const rawCollection = `'${_.replace(collection, "0x", "\\x")}'`;
+      for (const owner of query.owners) {
+        const rawOwner = `'${_.replace(owner, "0x", "\\x")}'`;
 
-        if (_.isUndefined((query as any).collectionsFilter)) {
-          (query as any).collectionsFilter = [];
+        if (_.isUndefined((query as any).ownersFilter)) {
+          (query as any).ownersFilter = [];
         }
 
-        (query as any).collectionsFilter.push(rawCollection);
+        (query as any).ownersFilter.push(rawOwner);
       }
 
-      (query as any).collectionsFilter = _.join((query as any).collectionsFilter, ",");
-      collectionsFilter = `contract IN ($/collectionsFilter:raw/)`;
+      (query as any).ownersFilter = _.join((query as any).ownersFilter, ",");
+      ownersFilter = `owner IN ($/ownersFilter:raw/)`;
     }
 
     try {
@@ -96,28 +95,28 @@ export const getCrossCollectionsOwnersV1Options: RouteOptions = {
         WITH x AS (
           SELECT DISTINCT ON (owner, contract) owner, contract
           FROM nft_balances
-          WHERE ${collectionsFilter}
+          WHERE ${ownersFilter}
           AND amount > 0
         )
         
-        SELECT owner, array_agg(contract) AS "contracts", array_length(array_agg(contract), 1) AS "contract_count"
+        SELECT contract, array_agg(owner) AS "owners", array_length(array_agg(owner), 1) AS "owner_count"
         FROM x
-        GROUP BY x.owner
-        ORDER BY contract_count DESC, owner ASC
+        GROUP BY x.contract
+        ORDER BY owner_count DESC, contract ASC
         LIMIT ${query.limit}
       `;
 
       const result = await redb.manyOrNone(baseQuery, query).then((result) =>
         result.map((r) => ({
-          address: fromBuffer(r.owner),
-          count: Number(r.contract_count),
-          collections: _.map(r.contracts, (contract) => fromBuffer(contract)),
+          address: fromBuffer(r.contract),
+          count: Number(r.owner_count),
+          owners: _.map(r.owners, (owner) => fromBuffer(owner)),
         }))
       );
 
-      return { owners: result };
+      return { collections: result };
     } catch (error) {
-      logger.error(`get-cross-collections-owners-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(`get-common-collections-owners-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },
