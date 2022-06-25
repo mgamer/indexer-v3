@@ -1,3 +1,12 @@
+# [5.90.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.89.0...v5.90.0) (2022-06-25)
+
+
+### Features
+
+* support passing multiple contract to collections/v4 ([ac59d65](https://github.com/reservoirprotocol/indexer-v3/commit/ac59d65e57a0965ffbd6ff58b0ad26ef2cdfe75d))
+
+
+
 # [5.89.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.88.0...v5.89.0) (2022-06-25)
 
 
