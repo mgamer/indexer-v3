@@ -1,3 +1,12 @@
+# [5.89.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.88.0...v5.89.0) (2022-06-25)
+
+
+### Features
+
+* new api to get common collections for owners ([4222b17](https://github.com/reservoirprotocol/indexer-v3/commit/4222b174bf7e817b85f327f9679ff50fe5d4ea19))
+
+
+
 # [5.88.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.87.2...v5.88.0) (2022-06-25)
 
 
