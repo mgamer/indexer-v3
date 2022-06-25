@@ -338,7 +338,7 @@ export const save = async (
         default: {
           // If source was passed
           if (metadata.source) {
-            const sourceEntity = await sources.getOrInsert(source);
+            const sourceEntity = await sources.getOrInsert(metadata.source);
             source = sourceEntity.address;
             sourceId = sourceEntity.id;
 
