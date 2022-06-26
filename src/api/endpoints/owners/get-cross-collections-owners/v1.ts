@@ -15,9 +15,8 @@ export const getCrossCollectionsOwnersV1Options: RouteOptions = {
     privacy: "public",
     expiresIn: 60 * 60 * 1000,
   },
-  description: "Top owners of cross collections",
-  notes:
-    "This API can be used to find owners who have the most diverse portfolio across multiple collections.",
+  description: "Owners intersection",
+  notes: "Find which addresses own the most of a group of collections.",
   tags: ["api", "Owners"],
   plugins: {
     "hapi-swagger": {
@@ -35,13 +34,18 @@ export const getCrossCollectionsOwnersV1Options: RouteOptions = {
                 .pattern(/^0x[a-fA-F0-9]{40}$/)
             )
             .min(1)
-            .max(5),
+            .max(5)
+            .description(
+              "Array of contracts. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+            ),
           Joi.string()
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{40}$/)
+            .description(
+              "Array of contracts. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+            )
         )
-        .required()
-        .description("Array of contracts. Example: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63"),
+        .required(),
       limit: Joi.number()
         .integer()
         .min(1)

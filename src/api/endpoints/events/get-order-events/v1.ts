@@ -22,7 +22,7 @@ export const getOrderEventsV1Options: RouteOptions = {
     privacy: "public",
     expiresIn: 5000,
   },
-  description: "Historical order status",
+  description: "Order status changes",
   notes: "Get updates any time an order status changes",
   tags: ["api", "Events"],
   plugins: {
