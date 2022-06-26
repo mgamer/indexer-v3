@@ -15,7 +15,7 @@ export const getCommonCollectionsOwnersV1Options: RouteOptions = {
     privacy: "public",
     expiresIn: 60 * 60 * 1000,
   },
-  description: "Top common collections",
+  description: "Common collections",
   notes: "This API can be used to find top common collections among the given owners",
   tags: ["api", "Owners"],
   plugins: {
@@ -34,13 +34,18 @@ export const getCommonCollectionsOwnersV1Options: RouteOptions = {
                 .pattern(/^0x[a-fA-F0-9]{40}$/)
             )
             .min(1)
-            .max(5),
+            .max(5)
+            .description(
+              "Array of owner addresses. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+            ),
           Joi.string()
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{40}$/)
+            .description(
+              "Array of owner addresses. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+            )
         )
-        .required()
-        .description("Array of owners. Example: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63"),
+        .required(),
       limit: Joi.number()
         .integer()
         .min(1)

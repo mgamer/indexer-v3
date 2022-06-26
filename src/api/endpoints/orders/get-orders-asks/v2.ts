@@ -20,7 +20,7 @@ import _ from "lodash";
 const version = "v2";
 
 export const getOrdersAsksV2Options: RouteOptions = {
-  description: "Ask orders (listings)",
+  description: "Asks (listings)",
   notes:
     "Get a list of asks (listings), filtered by token, collection or maker. This API is designed for efficiently ingesting large volumes of orders, for external processing",
   tags: ["api", "Orders"],
