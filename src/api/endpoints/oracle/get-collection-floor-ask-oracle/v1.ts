@@ -19,7 +19,8 @@ import { config } from "@/config/index";
 const version = "v1";
 
 export const getCollectionFloorAskOracleV1Options: RouteOptions = {
-  description: "Get a signed message of any collection's floor price (spot or twap)",
+  description: "Collection floor",
+  notes: "Get a signed message of any collection's floor price (spot or twap)",
   tags: ["api", "Oracle"],
   plugins: {
     "hapi-swagger": {

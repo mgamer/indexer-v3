@@ -14,7 +14,9 @@ CREATE TABLE "attribute_keys" (
   "kind" "attribute_key_kind_t" NOT NULL,
   "rank" INT,
   "attribute_count" INT NOT NULL DEFAULT 0,
-  "info" JSONB
+  "info" JSONB,
+  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 ALTER TABLE "attribute_keys"
@@ -27,6 +29,9 @@ CREATE UNIQUE INDEX "attribute_keys_collection_id_key_unique_index"
 CREATE INDEX "attribute_keys_collection_id_rank_key_index"
   ON "attribute_keys" ("collection_id", "rank" DESC)
   WHERE ("rank" IS NOT NULL);
+
+CREATE INDEX "attribute_keys_updated_at_id_index"
+  ON "attribute_keys" ("updated_at", "id");
 
 CREATE TABLE "attributes" (
   "id" BIGSERIAL NOT NULL,
@@ -41,7 +46,9 @@ CREATE TABLE "attributes" (
   "sample_images" TEXT[],
   "collection_id" TEXT,
   "kind" "attribute_key_kind_t",
-  "key" TEXT
+  "key" TEXT,
+  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE UNIQUE INDEX "attributes_attribute_key_id_value_unique_index"
@@ -59,6 +66,9 @@ CREATE INDEX attributes_key_collection_id_floor_sell_value_index
 CREATE INDEX attributes_kind_collection_id_index
   ON attributes (kind, collection_id ASC NULLS LAST);
 
+CREATE INDEX "attributes_updated_at_id_index"
+  ON "attributes" ("updated_at", "id");
+
 ALTER TABLE "attributes"
   ADD CONSTRAINT "attributes_pk"
   PRIMARY KEY ("id");
@@ -69,7 +79,9 @@ CREATE TABLE "token_attributes" (
   "attribute_id" BIGINT NOT NULL,
   "collection_id" TEXT NOT NULL,
   "key" TEXT NOT NULL,
-  "value" TEXT NOT NULL
+  "value" TEXT NOT NULL,
+  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 ALTER TABLE "token_attributes"
@@ -82,6 +94,9 @@ CREATE INDEX "token_attributes_contract_token_id_key_value_index"
 CREATE INDEX "token_attributes_collection_id_key_value_index"
   ON "token_attributes" ("collection_id", "key", "value")
   INCLUDE(contract, token_id);
+
+CREATE INDEX "token_attributes_updated_at_contract_token_id_attribute_id_index"
+  ON "token_attributes" ("updated_at", "contract", "token_id", "attribute_id");
 
 -- TODO: Look into replacing the current primary key with the below index
 

@@ -34,30 +34,37 @@ export const getSalesV3Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .description(
-          "Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+          "Filter to a particular contract. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
       token: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
         .description(
-          "Filter to a particular token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+          "Filter to a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
       collection: Joi.string()
         .lowercase()
         .description(
-          "Filter to a particular collection, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+          "Filter to a particular collection with collection-id. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
       attributes: Joi.object()
         .unknown()
-        .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
+        .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
       startTimestamp: Joi.number().description(
         "Get events after a particular unix timestamp (inclusive)"
       ),
       endTimestamp: Joi.number().description(
         "Get events before a particular unix timestamp (inclusive)"
       ),
-      limit: Joi.number().integer().min(1).max(100).default(20),
-      continuation: Joi.string().pattern(base64Regex),
+      limit: Joi.number()
+        .integer()
+        .min(1)
+        .max(100)
+        .default(20)
+        .description("Amount of items returned in response."),
+      continuation: Joi.string()
+        .pattern(base64Regex)
+        .description("Use continuation token to request next offset of items."),
     })
       .oxor("contract", "token", "collection")
       .with("attributes", "collection"),
@@ -81,6 +88,7 @@ export const getSalesV3Options: RouteOptions = {
           }),
           orderSource: Joi.string().allow(null, ""),
           orderSide: Joi.string().valid("ask", "bid"),
+          orderKind: Joi.string(),
           from: Joi.string()
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{40}$/),
@@ -201,18 +209,11 @@ export const getSalesV3Options: RouteOptions = {
           tokens_data.collection_name
         FROM (
           SELECT
-            coalesce(
-              orders.source_id,
-              (CASE
-                WHEN orders.kind = 'wyvern-v2' THEN '\\x5b3256965e7c3cf26e11fcaf296dfc8807c01073'::BYTEA
-                WHEN orders.kind = 'wyvern-v2.3' THEN '\\x5b3256965e7c3cf26e11fcaf296dfc8807c01073'::BYTEA
-                WHEN orders.kind = 'seaport' THEN '\\x5b3256965e7c3cf26e11fcaf296dfc8807c01073'::BYTEA
-                WHEN orders.kind = 'looks-rare' THEN '\\x5924a28caaf1cc016617874a2f0c3710d881f3c1'::BYTEA
-              END)
-            ) AS source_id,
             fill_events_2.contract,
             fill_events_2.token_id,
             fill_events_2.order_side,
+            fill_events_2.order_kind,
+            fill_events_2.order_source_id_int,
             fill_events_2.maker,
             fill_events_2.taker,
             fill_events_2.amount,
@@ -224,9 +225,7 @@ export const getSalesV3Options: RouteOptions = {
             fill_events_2.log_index,
             fill_events_2.batch_index
           FROM fill_events_2
-          LEFT JOIN orders
-            ON fill_events_2.order_id = orders.id
-            ${tokenJoins}
+          ${tokenJoins}
           WHERE
             ${collectionFilter}
             ${tokenFilter}
@@ -245,7 +244,7 @@ export const getSalesV3Options: RouteOptions = {
             tokens.collection_id,
             collections.name AS collection_name
           FROM tokens
-          JOIN collections
+          LEFT JOIN collections 
             ON tokens.collection_id = collections.id
           WHERE fill_events_2_data.token_id = tokens.token_id
             AND fill_events_2_data.contract = tokens.contract
@@ -266,33 +265,38 @@ export const getSalesV3Options: RouteOptions = {
       }
 
       const sources = await Sources.getInstance();
-      const result = rawResult.map((r) => ({
-        id: crypto
-          .createHash("sha256")
-          .update(`${fromBuffer(r.tx_hash)}${r.log_index}${r.batch_index}`)
-          .digest("hex"),
-        token: {
-          contract: fromBuffer(r.contract),
-          tokenId: r.token_id,
-          name: r.name,
-          image: r.image,
-          collection: {
-            id: r.collection_id,
-            name: r.collection_name,
+      const result = rawResult.map((r) => {
+        const orderSource = r.order_source_id_int ? sources.get(r.order_source_id_int)?.name : null;
+
+        return {
+          id: crypto
+            .createHash("sha256")
+            .update(`${fromBuffer(r.tx_hash)}${r.log_index}${r.batch_index}`)
+            .digest("hex"),
+          token: {
+            contract: fromBuffer(r.contract),
+            tokenId: r.token_id,
+            name: r.name,
+            image: r.image,
+            collection: {
+              id: r.collection_id,
+              name: r.collection_name,
+            },
           },
-        },
-        orderSource: r.source_id ? sources.getByAddress(fromBuffer(r.source_id))?.name : null,
-        orderSide: r.order_side === "sell" ? "ask" : "bid",
-        from: r.order_side === "sell" ? fromBuffer(r.maker) : fromBuffer(r.taker),
-        to: r.order_side === "sell" ? fromBuffer(r.taker) : fromBuffer(r.maker),
-        amount: String(r.amount),
-        fillSource: r.fill_source ? String(r.fill_source) : null,
-        txHash: fromBuffer(r.tx_hash),
-        logIndex: r.log_index,
-        batchIndex: r.batch_index,
-        timestamp: r.timestamp,
-        price: r.price ? formatEth(r.price) : null,
-      }));
+          orderSource,
+          orderSide: r.order_side === "sell" ? "ask" : "bid",
+          orderKind: r.order_kind,
+          from: r.order_side === "sell" ? fromBuffer(r.maker) : fromBuffer(r.taker),
+          to: r.order_side === "sell" ? fromBuffer(r.taker) : fromBuffer(r.maker),
+          amount: String(r.amount),
+          fillSource: r.fill_source ? String(r.fill_source) : orderSource,
+          txHash: fromBuffer(r.tx_hash),
+          logIndex: r.log_index,
+          batchIndex: r.batch_index,
+          timestamp: r.timestamp,
+          price: r.price ? formatEth(r.price) : null,
+        };
+      });
 
       return {
         sales: result,

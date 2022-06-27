@@ -71,7 +71,8 @@ if (config.doBackgroundWork) {
                 RETURNING 1
               )
               UPDATE "collections" SET
-                "token_count" = "token_count" + (SELECT COUNT(*) FROM "x")
+                "token_count" = "token_count" + (SELECT COUNT(*) FROM "x"),
+                "updated_at" = now()
               WHERE "id" = $/collection/
             `,
             values: {
@@ -162,13 +163,16 @@ if (config.doBackgroundWork) {
           queries.push({
             query: `
               WITH "x" AS (
-                UPDATE "tokens" SET "collection_id" = $/collection/
+                UPDATE "tokens" SET 
+                  "collection_id" = $/collection/,
+                  "updated_at" = now()
                 WHERE "contract" = $/contract/
                   AND "token_id" <@ $/tokenIdRange:raw/
                 RETURNING 1
               )
               UPDATE "collections" SET
-                "token_count" = (SELECT COUNT(*) FROM "x")
+                "token_count" = (SELECT COUNT(*) FROM "x"),
+                "updated_at" = now()
               WHERE "id" = $/collection/
             `,
             values: {
@@ -210,7 +214,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 1 }
+    { connection: redis.duplicate(), concurrency: 30 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);

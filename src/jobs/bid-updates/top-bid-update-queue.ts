@@ -70,7 +70,8 @@ if (config.doBackgroundWork) {
           UPDATE "tokens" AS "t"
           SET "top_buy_id" = "z"."order_id",
               "top_buy_value" = "z"."value",
-              "top_buy_maker" = "z"."maker"
+              "top_buy_maker" = "z"."maker",
+              "updated_at" = now()
           FROM "z"
           WHERE "t"."contract" = "z"."contract"
           AND "t"."token_id" = "z"."token_id"
@@ -93,7 +94,7 @@ if (config.doBackgroundWork) {
         await addToQueue(tokenSetId, fromBuffer(result.contract), result.token_id);
       }
     },
-    { connection: redis.duplicate(), concurrency: 10 }
+    { connection: redis.duplicate(), concurrency: 15 }
   );
 
   worker.on("error", (error) => {
