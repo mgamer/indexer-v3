@@ -65,6 +65,7 @@ import * as backfillFillEventsCreatedAt from "@/jobs/backfill/backfill-fill-even
 import * as removeBuyOrderEvents from "@/jobs/order-updates/remove-buy-order-events";
 import * as backfillFillEventsOrderSource from "@/jobs/backfill/backfill-fill-events-order-source";
 import * as topBidUpdateQueue from "@/jobs/bid-updates/top-bid-update-queue";
+import * as fixX2Y2OrdersQueue from "@/jobs/backfill/fix-x2y2-orders";
 import * as exportData from "@/jobs/data-export/export-data";
 
 export const allJobQueues = [
@@ -111,5 +112,6 @@ export const allJobQueues = [
   removeBuyOrderEvents.queue,
   backfillFillEventsOrderSource.queue,
   topBidUpdateQueue.queue,
+  fixX2Y2OrdersQueue.queue,
   exportData.queue,
 ];
