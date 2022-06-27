@@ -16,7 +16,7 @@ const version = "v2";
 
 export const postOrderV2Options: RouteOptions = {
   description: "Submit single order",
-  tags: ["api", "Orders"],
+  tags: ["api", "Orderbook"],
   plugins: {
     "hapi-swagger": {
       order: 5,
@@ -155,11 +155,9 @@ export const postOrderV2Options: RouteOptions = {
               // Post order via OpenSea's APIs.
               await axios
                 .post(
-                  `https://${
-                    config.chainId === 4 ? "testnets-api." : "api."
-                  }opensea.io/v2/orders/ethereum/seaport/${
-                    sdkOrder.getInfo()?.side === "sell" ? "listings" : "offers"
-                  }`,
+                  `https://${config.chainId === 4 ? "testnets-api." : "api."}opensea.io/v2/orders/${
+                    config.chainId === 4 ? "rinkeby" : "ethereum"
+                  }/seaport/${sdkOrder.getInfo()?.side === "sell" ? "listings" : "offers"}`,
                   JSON.stringify({
                     parameters: {
                       ...sdkOrder.params,

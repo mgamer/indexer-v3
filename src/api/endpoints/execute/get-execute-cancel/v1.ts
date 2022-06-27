@@ -13,7 +13,8 @@ import { config } from "@/config/index";
 const version = "v1";
 
 export const getExecuteCancelV1Options: RouteOptions = {
-  description: "Cancel an existing order",
+  description: "Cancel order",
+  notes: "Cancel an existing order on any marketplace",
   tags: ["api", "Orderbook"],
   plugins: {
     "hapi-swagger": {

@@ -15,7 +15,7 @@ export const getUserTokensV2Options: RouteOptions = {
     privacy: "public",
     expiresIn: 60000,
   },
-  description: "Get tokens held by a user, along with ownership information",
+  description: "User tokens",
   notes:
     "Get tokens held by a user, along with ownership information such as associated orders and date acquired.",
   tags: ["api", "Tokens"],

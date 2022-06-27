@@ -36,7 +36,8 @@ import * as wyvernV23BuyToken from "@/orderbook/orders/wyvern-v2.3/build/buy/tok
 const version = "v2";
 
 export const getExecuteBidV2Options: RouteOptions = {
-  description: "Bid on a token, collection or attribute",
+  description: "Create bid (offer)",
+  notes: "Generate a bid and submit it to multiple marketplaces",
   tags: ["api", "Orderbook"],
   plugins: {
     "hapi-swagger": {
