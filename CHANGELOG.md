@@ -1,3 +1,12 @@
+## [5.90.1](https://github.com/reservoirprotocol/indexer-v3/compare/v5.90.0...v5.90.1) (2022-06-27)
+
+
+### Bug Fixes
+
+* support opensea seaport orders in the execute apis ([d394f99](https://github.com/reservoirprotocol/indexer-v3/commit/d394f9913a79bc520e158625cddb712a2c365014))
+
+
+
 # [5.90.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.89.0...v5.90.0) (2022-06-25)
 
 
