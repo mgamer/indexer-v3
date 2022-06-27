@@ -21,6 +21,12 @@ export const setupRoutes = (server: Server) => {
   // Admin
 
   server.route({
+    method: "GET",
+    path: "/admin/open-api",
+    options: adminEndpoints.getOpenApiOptions,
+  });
+
+  server.route({
     method: "POST",
     path: "/admin/index-metadata",
     options: adminEndpoints.postMetadataIndexOptions,
@@ -406,6 +412,18 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/owners/v1",
     options: ownersEndpoints.getOwnersV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/owners/cross-collections/v1",
+    options: ownersEndpoints.getCrossCollectionsOwnersV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/owners/common-collections/v1",
+    options: ownersEndpoints.getCommonCollectionsOwnersV1Options,
   });
 
   // Stats
