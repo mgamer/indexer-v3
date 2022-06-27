@@ -1,3 +1,12 @@
+## [5.91.1](https://github.com/reservoirprotocol/indexer-v3/compare/v5.91.0...v5.91.1) (2022-06-27)
+
+
+### Bug Fixes
+
+* opensea seaport rinkeby order posting ([2121162](https://github.com/reservoirprotocol/indexer-v3/commit/2121162b7e2f9eaa78e0b642b76422bb80553a36))
+
+
+
 # [5.91.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.90.1...v5.91.0) (2022-06-27)
 
 
