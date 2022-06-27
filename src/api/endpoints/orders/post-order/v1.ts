@@ -147,6 +147,10 @@ export const postOrderV1Options: RouteOptions = {
             }
 
             case "opensea": {
+              if (![1, 4].includes(config.chainId)) {
+                throw new Error("Unsupported network");
+              }
+
               const sdkOrder = new Sdk.WyvernV23.Order(config.chainId, order.data);
               const orderInfo = sdkOrder.getInfo();
               if (!orderInfo) {

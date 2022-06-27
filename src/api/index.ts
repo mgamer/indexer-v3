@@ -9,10 +9,11 @@ import qs from "qs";
 
 import { setupRoutes } from "@/api/routes";
 import { logger } from "@/common/logger";
+import { getNetworkName } from "@/common/utils";
 import { config } from "@/config/index";
-import { ApiKeyManager } from "../models/api-keys";
-import { allJobQueues } from "@/jobs/index";
+import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
+import { allJobQueues } from "@/jobs/index";
 
 let server: Hapi.Server;
 
@@ -92,7 +93,7 @@ export const start = async (): Promise<void> => {
           },
         },
         schemes: ["https", "http"],
-        host: `${config.chainId === 1 ? "api" : "api-rinkeby"}.reservoir.tools`,
+        host: `${config.chainId === 1 ? "api" : `api-${getNetworkName()}`}.reservoir.tools`,
         cors: true,
         tryItOutEnabled: true,
         documentationPath: "/",
