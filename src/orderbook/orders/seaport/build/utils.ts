@@ -95,6 +95,17 @@ export const getBuildInfo = async (
     }
   }
 
+  if (options.orderbook === "opensea") {
+    if (!options.fee || !options.feeRecipient) {
+      options.fee = [];
+      options.feeRecipient = [];
+    }
+
+    options.fee.push(250);
+    // OpenSea's Seaport fee recipient
+    options.feeRecipient.push("0x8de9c5a032463c561423387a9648c5c7bcc5bc90");
+  }
+
   if (options.fee && options.feeRecipient) {
     for (let i = 0; i < options.fee.length; i++) {
       const fee = bn(options.fee[i]).mul(options.weiPrice).div(10000).toString();
