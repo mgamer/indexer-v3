@@ -515,7 +515,7 @@ export const getExecuteListV2Options: RouteOptions = {
 
         case "seaport": {
           // Exchange-specific checks
-          if (!["reservoir"].includes(query.orderbook)) {
+          if (!["reservoir", "opensea"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
 

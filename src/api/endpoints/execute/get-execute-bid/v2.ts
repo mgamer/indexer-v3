@@ -337,7 +337,7 @@ export const getExecuteBidV2Options: RouteOptions = {
         }
 
         case "seaport": {
-          if (!["reservoir"].includes(query.orderbook)) {
+          if (!["reservoir", "opensea"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
 
