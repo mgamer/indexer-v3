@@ -1620,6 +1620,10 @@ export const syncEvents = async (
                   break;
                 }
 
+                if (saleInfo.recipientOverride) {
+                  taker = saleInfo.recipientOverride;
+                }
+
                 // Handle filling through routers
                 let fillSource: string | undefined;
                 if (routerToFillSource[taker]) {

@@ -1,3 +1,12 @@
+# [5.91.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.90.1...v5.91.0) (2022-06-27)
+
+
+### Features
+
+* understand more complex seaport fills ([73e40a3](https://github.com/reservoirprotocol/indexer-v3/commit/73e40a3c9205dd36ce8118816cd939bda67fe068))
+
+
+
 ## [5.90.1](https://github.com/reservoirprotocol/indexer-v3/compare/v5.90.0...v5.90.1) (2022-06-27)
 
 
