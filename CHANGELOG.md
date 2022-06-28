@@ -1,3 +1,12 @@
+## [5.92.1](https://github.com/reservoirprotocol/indexer-v3/compare/v5.92.0...v5.92.1) (2022-06-28)
+
+
+### Bug Fixes
+
+* last sale update ([2253528](https://github.com/reservoirprotocol/indexer-v3/commit/2253528f3b08e1ca05cbcbea380e1e5461c9104e))
+
+
+
 # [5.92.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.91.1...v5.92.0) (2022-06-28)
 
 
