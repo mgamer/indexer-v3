@@ -69,9 +69,13 @@ export const syncEvents = async (
   // custom way so as to properly associate the maker and taker.
   const routerToFillSource: { [address: string]: string } = {};
 
+  // TODO: Move router detection logic to the core SDK
+
   // Reservoir
-  for (const address of Sdk.Router.Addresses.AllRouters[config.chainId]) {
-    routerToFillSource[address.toLowerCase()] = "reservoir";
+  if (Sdk.Router.Addresses.AllRouters[config.chainId]) {
+    for (const address of Sdk.Router.Addresses.AllRouters[config.chainId]) {
+      routerToFillSource[address.toLowerCase()] = "reservoir";
+    }
   }
 
   // Gem and Genie (source: https://dune.com/sohwak/NFT-Aggregator-(OpenSea-via-GemGenie)-Overview)
