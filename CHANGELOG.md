@@ -1,3 +1,17 @@
+# [5.92.0](https://github.com/reservoirprotocol/indexer-v3/compare/v5.91.1...v5.92.0) (2022-06-28)
+
+
+### Bug Fixes
+
+* invalidate cancelled x2y2 listings ([0a5e4f8](https://github.com/reservoirprotocol/indexer-v3/commit/0a5e4f8cde6afa98b32c8ee677f750684d8e8267))
+
+
+### Features
+
+* enable x2y2 order fixing script ([7e4d775](https://github.com/reservoirprotocol/indexer-v3/commit/7e4d77541e5eda5ebccff598f91b684a81cc195f))
+
+
+
 ## [5.91.1](https://github.com/reservoirprotocol/indexer-v3/compare/v5.91.0...v5.91.1) (2022-06-27)
 
 
