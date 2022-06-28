@@ -28,7 +28,7 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { collectionId } = job.data;
-      const collection = await Collections.getById(collectionId);
+      const collection = await Collections.getById(collectionId, true);
 
       // If no collection found
       if (_.isNull(collection)) {
