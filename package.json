@@ -3,7 +3,7 @@
   "version": "5.92.0",
   "description": "Reservoir Protocol Indexer",
   "main": "./dist/index.js",
-  "repository": "https://github.com/reservoirprotocol/indexer-v3",
+  "repository": "https://github.com/reservoirprotocol/indexer",
   "author": "Uneven Labs",
   "license": "MIT",
   "private": true,
