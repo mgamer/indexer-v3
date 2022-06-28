@@ -10,7 +10,7 @@ import { logger } from "@/common/logger";
 const version = "v2";
 
 export const getAttributesAllV2Options: RouteOptions = {
-  description: "All attributes in a collection",
+  description: "All attributes",
   tags: ["api", "Attributes"],
   plugins: {
     "hapi-swagger": {

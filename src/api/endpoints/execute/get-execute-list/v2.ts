@@ -37,7 +37,8 @@ import * as wyvernV23Check from "@/orderbook/orders/wyvern-v2.3/check";
 const version = "v2";
 
 export const getExecuteListV2Options: RouteOptions = {
-  description: "List a token for sale",
+  description: "Create ask (listing)",
+  notes: "Generate a listing and submit it to multiple marketplaces",
   tags: ["api", "Orderbook"],
   plugins: {
     "hapi-swagger": {
@@ -515,7 +516,7 @@ export const getExecuteListV2Options: RouteOptions = {
 
         case "seaport": {
           // Exchange-specific checks
-          if (!["reservoir"].includes(query.orderbook)) {
+          if (!["reservoir", "opensea"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
 

@@ -6,7 +6,7 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { formatEth, fromBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
 
 const version = "v4";
@@ -33,12 +33,20 @@ export const getCollectionsV4Options: RouteOptions = {
       community: Joi.string()
         .lowercase()
         .description("Filter to a particular community. Example: `artblocks`"),
-      contract: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .description(
-          "Filter to a particular contract. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
-        ),
+      contract: Joi.alternatives()
+        .try(
+          Joi.array()
+            .items(
+              Joi.string()
+                .lowercase()
+                .pattern(/^0x[a-fA-F0-9]{40}$/)
+            )
+            .max(20),
+          Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}$/)
+        )
+        .description("Array of contract. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"),
       name: Joi.string()
         .lowercase()
         .description("Search for collections that match a string. Example: `bored`"),
@@ -186,8 +194,22 @@ export const getCollectionsV4Options: RouteOptions = {
       }
 
       if (query.contract) {
-        query.contract = toBuffer(query.contract);
-        conditions.push(`collections.contract = $/contract/`);
+        if (!_.isArray(query.contract)) {
+          query.contract = [query.contract];
+        }
+
+        for (const contract of query.contract) {
+          const contractsFilter = `'${_.replace(contract, "0x", "\\x")}'`;
+
+          if (_.isUndefined((query as any).contractsFilter)) {
+            (query as any).contractsFilter = [];
+          }
+
+          (query as any).contractsFilter.push(contractsFilter);
+        }
+
+        (query as any).contractsFilter = _.join((query as any).contractsFilter, ",");
+        conditions.push(`collections.contract IN ($/contractsFilter:raw/)`);
       }
 
       if (query.name) {

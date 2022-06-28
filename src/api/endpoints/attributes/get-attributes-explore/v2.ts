@@ -11,7 +11,7 @@ import { formatEth, fromBuffer } from "@/common/utils";
 const version = "v2";
 
 export const getAttributesExploreV2Options: RouteOptions = {
-  description: "Explore attribute floors",
+  description: "Explore attributes",
   notes: "Get detailed aggregate about attributes in a collection, attribute floors",
   tags: ["api", "Attributes"],
   plugins: {

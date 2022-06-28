@@ -20,7 +20,7 @@ import _ from "lodash";
 const version = "v2";
 
 export const getOrdersBidsV2Options: RouteOptions = {
-  description: "Bid orders (offers)",
+  description: "Bids (offers)",
   notes:
     "Get a list of bids (offers), filtered by token, collection or maker. This API is designed for efficiently ingesting large volumes of orders, for external processing",
   tags: ["api", "Orders"],
