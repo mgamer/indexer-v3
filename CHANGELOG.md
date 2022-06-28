@@ -1,3 +1,12 @@
+## [5.93.1](https://github.com/reservoirprotocol/indexer/compare/v5.93.0...v5.93.1) (2022-06-28)
+
+
+### Bug Fixes
+
+* properly associating collections to token sets ([27c0d48](https://github.com/reservoirprotocol/indexer/commit/27c0d48e32da20de995af83b8ff439098edc26e6))
+
+
+
 # [5.93.0](https://github.com/reservoirprotocol/indexer/compare/v5.92.2...v5.93.0) (2022-06-28)
 
 
