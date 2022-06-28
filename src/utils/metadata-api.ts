@@ -22,9 +22,9 @@ export class MetadataApi {
         tokenSetId: `contract:${contract}`,
       };
     } else {
-      const url = `${
-        config.metadataApiBaseUrl
-      }/v3/${getNetworkName()}/collection?contract=${contract}&tokenId=${tokenId}`;
+      const url = `${config.metadataApiBaseUrl}/v4/${getNetworkName()}/metadata/collection?method=${
+        config.metadataIndexingMethod
+      }&token=${contract}:${tokenId}`;
 
       const { data } = await axios.get(url);
 
