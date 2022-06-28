@@ -129,14 +129,11 @@ async function getTokensForCollection(
   });
 }
 
-// We support the following metadata indexing methods.
-type IndexingMethod = "opensea" | "rarible";
-
 export type MetadataIndexInfo =
   | {
       kind: "full-collection";
       data: {
-        method: IndexingMethod;
+        method: string;
         collection: string;
         continuation?: string;
       };
@@ -144,7 +141,7 @@ export type MetadataIndexInfo =
   | {
       kind: "single-token";
       data: {
-        method: IndexingMethod;
+        method: string;
         collection: string;
         contract: string;
         tokenId: string;

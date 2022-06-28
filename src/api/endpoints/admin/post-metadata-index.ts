@@ -20,7 +20,7 @@ export const postMetadataIndexOptions: RouteOptions = {
       "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     payload: Joi.object({
-      method: Joi.string().valid("opensea", "rarible").default("rarible"),
+      method: Joi.string().required(),
       collections: Joi.array().items(Joi.string().required()),
     }),
   },
