@@ -1,3 +1,12 @@
+## [5.92.2](https://github.com/reservoirprotocol/indexer-v3/compare/v5.92.1...v5.92.2) (2022-06-28)
+
+
+### Bug Fixes
+
+* collection owner distribution response validation errors ([d54b3ff](https://github.com/reservoirprotocol/indexer-v3/commit/d54b3ff7916ee070c7430a40bba7ad7420257248))
+
+
+
 ## [5.92.1](https://github.com/reservoirprotocol/indexer-v3/compare/v5.92.0...v5.92.1) (2022-06-28)
 
 
