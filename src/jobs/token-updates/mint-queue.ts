@@ -193,7 +193,7 @@ if (config.doBackgroundWork) {
               {
                 kind: "single-token",
                 data: {
-                  method: "opensea",
+                  method: config.metadataIndexingMethod,
                   contract,
                   tokenId,
                   collection: collection.id,

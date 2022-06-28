@@ -2,6 +2,7 @@
 
 import axios from "axios";
 
+import { getNetworkName } from "@/common/utils";
 import { config } from "@/config/index";
 
 export class MetadataApi {
@@ -21,9 +22,9 @@ export class MetadataApi {
         tokenSetId: `contract:${contract}`,
       };
     } else {
-      const url = `${config.metadataApiBaseUrl}/v3/${
-        config.chainId === 1 ? "mainnet" : "rinkeby"
-      }/collection?contract=${contract}&tokenId=${tokenId}`;
+      const url = `${
+        config.metadataApiBaseUrl
+      }/v3/${getNetworkName()}/collection?contract=${contract}&tokenId=${tokenId}`;
 
       const { data } = await axios.get(url);
 
