@@ -73,7 +73,8 @@ if (config.doBackgroundWork) {
           `
             UPDATE tokens SET
               last_${orderSide}_timestamp = $/timestamp/,
-              last_${orderSide}_value = $/price/
+              last_${orderSide}_value = $/price/,
+              updated_at = now()
             WHERE contract = $/contract/
               AND token_id = $/tokenId/
               AND last_${orderSide}_timestamp < $/timestamp/

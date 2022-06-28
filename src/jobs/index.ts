@@ -18,6 +18,7 @@ import "@/jobs/update-attribute";
 import "@/jobs/collections-refresh";
 import "@/jobs/nft-balance-updates";
 import "@/jobs/bid-updates";
+import "@/jobs/data-export";
 
 // Export all job queues for monitoring through the BullMQ UI
 
@@ -65,6 +66,7 @@ import * as removeBuyOrderEvents from "@/jobs/order-updates/remove-buy-order-eve
 import * as backfillFillEventsOrderSource from "@/jobs/backfill/backfill-fill-events-order-source";
 import * as topBidUpdateQueue from "@/jobs/bid-updates/top-bid-update-queue";
 import * as fixX2Y2OrdersQueue from "@/jobs/backfill/fix-x2y2-orders";
+import * as exportData from "@/jobs/data-export/export-data";
 
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
@@ -111,4 +113,5 @@ export const allJobQueues = [
   backfillFillEventsOrderSource.queue,
   topBidUpdateQueue.queue,
   fixX2Y2OrdersQueue.queue,
+  exportData.queue,
 ];
