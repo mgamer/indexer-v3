@@ -6,7 +6,7 @@ import { logger } from "@/common/logger";
 import { redis, redlock } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-// import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
+import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 
 const QUEUE_NAME = "fix-x2y2-orders-backfill";
 
@@ -55,58 +55,58 @@ if (config.doBackgroundWork) {
 
         for (const { maker, token_set_id, count } of results) {
           if (Number(count) > 1) {
-            logger.info(
-              "debug",
-              `Detected wrong X2Y2 listing: ${fromBuffer(maker)}, ${token_set_id}`
+            const result = await idb.manyOrNone(
+              `
+                WITH x AS (
+                  SELECT orders.id FROM orders
+                  WHERE orders.kind = 'x2y2'
+                    AND orders.side = 'sell'
+                    AND orders.maker = $/maker/
+                    AND orders.token_set_id = $/tokenSetId/
+                  ORDER BY orders.created_at DESC NULLS LAST
+                  OFFSET 1
+                )
+                UPDATE orders SET
+                  fillability_status = 'cancelled'
+                FROM x
+                WHERE orders.id = x.id
+                  AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                RETURNING orders.id
+              `,
+              {
+                maker,
+                tokenSetId: token_set_id,
+              }
             );
 
-            // const result = await idb.manyOrNone(
-            //   `
-            //     WITH x AS (
-            //       SELECT orders.id FROM orders
-            //       WHERE orders.kind = 'x2y2'
-            //         AND orders.side = 'sell'
-            //         AND orders.maker = $/maker/
-            //         AND orders.token_set_id = $/tokenSetId/
-            //       ORDER BY orders.created_at DESC NULLS LAST
-            //       OFFSET 1
-            //     )
-            //     UPDATE orders SET
-            //       fillability_status = 'cancelled'
-            //     FROM x
-            //     WHERE orders.id = x.id
-            //     RETURNING orders.id
-            //   `,
-            //   {
-            //     maker,
-            //     tokenSetId: token_set_id,
-            //   }
-            // );
-            // await orderUpdatesById.addToQueue(
-            //   result.map(({ id }) => ({
-            //     context: `x2y2-order-fix-${id}`,
-            //     id,
-            //     trigger: { kind: "reprice" },
-            //   }))
-            // );
+            await orderUpdatesById.addToQueue(
+              result.map(({ id }) => ({
+                context: `x2y2-order-fix-${id}`,
+                id,
+                trigger: { kind: "reprice" },
+              }))
+            );
           }
         }
 
         if (results.length) {
           const lastResult = results[results.length - 1];
           await addToQueue([
-            { maker: fromBuffer(lastResult.maker), tokenSetId: lastResult.token_set_id },
+            {
+              maker: fromBuffer(lastResult.maker),
+              tokenSetId: lastResult.token_set_id,
+            },
           ]);
         }
       } catch (error) {
         logger.error(
           QUEUE_NAME,
-          `Failed to handle fill info ${JSON.stringify(job.data)}: ${error}`
+          `Failed to handle fix X2Y2 info ${JSON.stringify(job.data)}: ${error}`
         );
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 5 }
+    { connection: redis.duplicate() }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
