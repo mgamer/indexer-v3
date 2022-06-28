@@ -24,10 +24,7 @@
       "@/models/*": ["models/*"],
       "@/events-sync/*": ["sync/events/*"]
     },
-    "typeRoots": [
-      "node_modules/@types",
-      "./custom_typings"
-    ]
+    "typeRoots": ["node_modules/@types", "./custom-typings"]
   },
   "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.json"]
 }
