@@ -1,3 +1,17 @@
+# [5.95.0](https://github.com/reservoirprotocol/indexer/compare/v5.94.1...v5.95.0) (2022-06-29)
+
+
+### Bug Fixes
+
+* pass collections with no attributes ([da9ffcb](https://github.com/reservoirprotocol/indexer/commit/da9ffcb82832b22d7cbb16e8b518805eb41c1134))
+
+
+### Features
+
+* store rarity rank ([449b5f7](https://github.com/reservoirprotocol/indexer/commit/449b5f750757d563d766bf211ef1000a18409227))
+
+
+
 ## [5.94.1](https://github.com/reservoirprotocol/indexer/compare/v5.94.0...v5.94.1) (2022-06-29)
 
 

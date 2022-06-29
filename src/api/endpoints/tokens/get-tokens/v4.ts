@@ -112,6 +112,7 @@ export const getTokensV4Options: RouteOptions = {
           topBidValue: Joi.number().unsafe().allow(null),
           floorAskPrice: Joi.number().unsafe().allow(null),
           rarity: Joi.number().unsafe().allow(null),
+          rarityRank: Joi.number().unsafe().allow(null),
           owner: Joi.string().allow(null, ""),
         })
       ),
@@ -140,6 +141,7 @@ export const getTokensV4Options: RouteOptions = {
           "t"."floor_sell_value",
           "t"."top_buy_value",
           "t"."rarity_score",
+          "t"."rarity_rank",
           (
             SELECT owner
             FROM "nft_balances" "nb"
@@ -408,6 +410,7 @@ export const getTokensV4Options: RouteOptions = {
           floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
           topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
           rarity: r.rarity_score,
+          rarityRank: r.rarity_rank,
           owner: r.owner ? fromBuffer(r.owner) : null,
         };
       });

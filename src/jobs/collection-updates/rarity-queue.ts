@@ -56,15 +56,15 @@ if (config.doBackgroundWork) {
         };
 
         _.forEach(tokens, (token) => {
-          updateTokensString += `(${token.id}, ${token.rarityTraitSum}),`;
+          updateTokensString += `(${token.id}, ${token.rarityTraitSum}, ${token.rarityTraitSumRank}),`;
         });
 
         updateTokensString = _.trimEnd(updateTokensString, ",");
 
         if (updateTokensString !== "") {
           const updateQuery = `UPDATE tokens
-                               SET rarity_score = x.rarityTraitSum
-                               FROM (VALUES ${updateTokensString}) AS x(tokenId, rarityTraitSum)
+                               SET rarity_score = x.rarityTraitSum, rarity_rank = x.rarityTraitSumRank
+                               FROM (VALUES ${updateTokensString}) AS x(tokenId, rarityTraitSum, rarityTraitSumRank)
                                WHERE contract = $/contract/
                                AND token_id = x.tokenId`;
 
@@ -72,7 +72,7 @@ if (config.doBackgroundWork) {
         }
       }
     },
-    { connection: redis.duplicate(), concurrency: 3 }
+    { connection: redis.duplicate(), concurrency: 1 }
   );
 
   worker.on("error", (error) => {
