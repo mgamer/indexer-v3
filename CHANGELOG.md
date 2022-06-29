@@ -1,3 +1,12 @@
+## [5.93.2](https://github.com/reservoirprotocol/indexer/compare/v5.93.1...v5.93.2) (2022-06-29)
+
+
+### Bug Fixes
+
+* handle another piece of custom x2y2 cancellation logic ([5d52dba](https://github.com/reservoirprotocol/indexer/commit/5d52dba297602b7b30c837038258c15d70f89d00))
+
+
+
 ## [5.93.1](https://github.com/reservoirprotocol/indexer/compare/v5.93.0...v5.93.1) (2022-06-28)
 
 
