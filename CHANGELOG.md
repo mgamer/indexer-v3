@@ -1,3 +1,12 @@
+## [5.93.3](https://github.com/reservoirprotocol/indexer/compare/v5.93.2...v5.93.3) (2022-06-29)
+
+
+### Bug Fixes
+
+* better x2y2 transfer issue logic ([e29cfbe](https://github.com/reservoirprotocol/indexer/commit/e29cfbedab6b72e33a59418371cfe3bf17cedaac))
+
+
+
 ## [5.93.2](https://github.com/reservoirprotocol/indexer/compare/v5.93.1...v5.93.2) (2022-06-29)
 
 
