@@ -1,3 +1,12 @@
+## [5.93.6](https://github.com/reservoirprotocol/indexer/compare/v5.93.5...v5.93.6) (2022-06-29)
+
+
+### Bug Fixes
+
+* do not exit on unhandled rejections ([e403ab7](https://github.com/reservoirprotocol/indexer/commit/e403ab76949036501d35c38f2aef7ffa4d018d26))
+
+
+
 ## [5.93.5](https://github.com/reservoirprotocol/indexer/compare/v5.93.4...v5.93.5) (2022-06-29)
 
 
