@@ -1,3 +1,12 @@
+## [5.93.5](https://github.com/reservoirprotocol/indexer/compare/v5.93.4...v5.93.5) (2022-06-29)
+
+
+### Bug Fixes
+
+* remove crashes ([e53a377](https://github.com/reservoirprotocol/indexer/commit/e53a37763279fef43b11ac5d3ca17e8070ab310b))
+
+
+
 ## [5.93.4](https://github.com/reservoirprotocol/indexer/compare/v5.93.3...v5.93.4) (2022-06-29)
 
 
