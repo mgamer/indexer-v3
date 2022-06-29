@@ -28,7 +28,8 @@ CREATE TABLE "tokens" (
   "last_metadata_sync" TIMESTAMPTZ,
   "created_at" TIMESTAMPTZ DEFAULT now(),
   "updated_at" TIMESTAMPTZ DEFAULT now(),
-  "rarity_score" DOUBLE PRECISION
+  "rarity_score" DOUBLE PRECISION,
+  "rarity_rank" INT
 );
 
 ALTER TABLE "tokens"
