@@ -520,40 +520,42 @@ if (config.doBackgroundWork) {
             }
 
             // Wyvern v2.3
-            const proxy = await wyvernV23Utils.getUserProxy(maker);
-            if (proxy && proxy === data.operator) {
-              detected = true;
-              result.push(
-                ...(await idb.manyOrNone(
-                  `
-                    UPDATE "orders" AS "o" SET
-                      "approval_status" = $/approvalStatus/,
-                      "expiration" = to_timestamp($/expiration/),
-                      "updated_at" = now()
-                    FROM (
-                      SELECT
-                        "o"."id"
-                      FROM "orders" "o"
-                      JOIN "token_sets_tokens" "tst"
-                        ON "o"."token_set_id" = "tst"."token_set_id"
-                      WHERE "tst"."contract" = $/contract/
-                        AND "o"."kind" = 'wyvern-v2.3'
-                        AND "o"."maker" = $/maker/
-                        AND "o"."side" = 'sell'
-                        AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-                        AND "o"."approval_status" != $/approvalStatus/
-                    ) "x"
-                    WHERE "o"."id" = "x"."id"
-                    RETURNING "o"."id"
-                  `,
-                  {
-                    maker: toBuffer(maker),
-                    contract: toBuffer(data.contract),
-                    approvalStatus: data.approved ? "approved" : "no-approval",
-                    expiration: trigger.txTimestamp,
-                  }
-                ))
-              );
+            if (Sdk.WyvernV23.Addresses.ProxyRegistry[config.chainId]) {
+              const proxy = await wyvernV23Utils.getUserProxy(maker);
+              if (proxy && proxy === data.operator) {
+                detected = true;
+                result.push(
+                  ...(await idb.manyOrNone(
+                    `
+                      UPDATE "orders" AS "o" SET
+                        "approval_status" = $/approvalStatus/,
+                        "expiration" = to_timestamp($/expiration/),
+                        "updated_at" = now()
+                      FROM (
+                        SELECT
+                          "o"."id"
+                        FROM "orders" "o"
+                        JOIN "token_sets_tokens" "tst"
+                          ON "o"."token_set_id" = "tst"."token_set_id"
+                        WHERE "tst"."contract" = $/contract/
+                          AND "o"."kind" = 'wyvern-v2.3'
+                          AND "o"."maker" = $/maker/
+                          AND "o"."side" = 'sell'
+                          AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
+                          AND "o"."approval_status" != $/approvalStatus/
+                      ) "x"
+                      WHERE "o"."id" = "x"."id"
+                      RETURNING "o"."id"
+                    `,
+                    {
+                      maker: toBuffer(maker),
+                      contract: toBuffer(data.contract),
+                      approvalStatus: data.approved ? "approved" : "no-approval",
+                      expiration: trigger.txTimestamp,
+                    }
+                  ))
+                );
+              }
             }
 
             // TODO: Backfill orders conduit and use that directly instead of
