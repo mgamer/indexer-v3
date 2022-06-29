@@ -1,3 +1,20 @@
+# [5.94.0](https://github.com/reservoirprotocol/indexer/compare/v5.93.6...v5.94.0) (2022-06-29)
+
+
+### Features
+
+* added rarity column ([327628e](https://github.com/reservoirprotocol/indexer/commit/327628efefe4cb55b9dbbdb6bcb40c0cf0be40b1))
+* added rarity column ([76054ef](https://github.com/reservoirprotocol/indexer/commit/76054ef260023466807f93ddc74103ddf54d23ad))
+* added script to backfill collections rarity ([5f20ded](https://github.com/reservoirprotocol/indexer/commit/5f20ded17b20353467feab125055d77be923a0e8))
+* remove on completed rarity ([6a39cc8](https://github.com/reservoirprotocol/indexer/commit/6a39cc8b1b8941b9b68900133b03f5623d64cc23))
+* support fetching tokens by rarity ([6022f2c](https://github.com/reservoirprotocol/indexer/commit/6022f2c5e94bdb63c0cbdbe2fc36893568b7a72d))
+* update migration file ([b1a4ab5](https://github.com/reservoirprotocol/indexer/commit/b1a4ab5a18441d581481d4ae7af9a49de814b3ba))
+* update rarity upon minting/refresh ([36df808](https://github.com/reservoirprotocol/indexer/commit/36df808096e82d975f3523eefeb46d2c488b0c1f))
+* update tokens migration ([87f3481](https://github.com/reservoirprotocol/indexer/commit/87f34814219269d78c171fbb8b223ba56fac726d))
+* use read replica ([367e528](https://github.com/reservoirprotocol/indexer/commit/367e5280fb57e8d7f34f1615b026df3f578286ce))
+
+
+
 ## [5.93.6](https://github.com/reservoirprotocol/indexer/compare/v5.93.5...v5.93.6) (2022-06-29)
 
 
