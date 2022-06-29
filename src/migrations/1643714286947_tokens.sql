@@ -27,7 +27,8 @@ CREATE TABLE "tokens" (
   "last_buy_value" NUMERIC(78, 0),
   "last_metadata_sync" TIMESTAMPTZ,
   "created_at" TIMESTAMPTZ DEFAULT now(),
-  "updated_at" TIMESTAMPTZ DEFAULT now()
+  "updated_at" TIMESTAMPTZ DEFAULT now(),
+  "rarity_score" DOUBLE PRECISION
 );
 
 ALTER TABLE "tokens"
@@ -43,15 +44,14 @@ CREATE INDEX "tokens_collection_id_contract_token_id_index"
 CREATE INDEX "tokens_collection_id_source_id_floor_sell_value_index"
   ON "tokens" ("collection_id", "floor_sell_source_id", "floor_sell_value");
 
-CREATE INDEX "tokens_collection_id_floor_sell_value_index"
-  ON "tokens" ("collection_id", "floor_sell_value")
-  WHERE ("floor_sell_is_reservoir");
-
 CREATE INDEX "tokens_contract_top_buy_value_index"
   ON "tokens" ("contract", "top_buy_value" DESC NULLS LAST);
 
 CREATE INDEX "tokens_collection_id_floor_sell_value_token_id_index"
   ON "tokens" ("collection_id", "floor_sell_value", "token_id");
+
+CREATE INDEX "tokens_collection_id_rarity_score_token_id_index"
+  ON "tokens" ("collection_id", "rarity_score" DESC NULLS LAST, "token_id");
 
 CREATE INDEX "tokens_collection_id_top_buy_value_token_id_index"
   ON "tokens" ("collection_id", "top_buy_value" DESC NULLS LAST, "token_id" DESC);
