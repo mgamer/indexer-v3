@@ -293,8 +293,10 @@ if (config.doBackgroundWork) {
               // orders from the initial owner, so that if they ever get the token
               // back in their wallet no order will get reactivated (they are able
               // to do that by having their backend refuse to sign on such orders).
-              .filter(({ kind, new_status }) =>
-                kind === "x2y2" ? new_status !== "fillable" : true
+              .map((data) =>
+                data.kind === "x2y2" && data.new_status === "no-balance"
+                  ? { ...data, new_status: "cancelled" }
+                  : data
               )
               .map(({ id, new_status, expiration }) => ({
                 id,
