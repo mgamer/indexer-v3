@@ -32,7 +32,7 @@ export const getBuildInfo = async (
   options: BaseOrderBuildOptions,
   collection: string,
   side: "sell" | "buy"
-): Promise<OrderBuildInfo | undefined> => {
+): Promise<OrderBuildInfo> => {
   const collectionResult = await edb.oneOrNone(
     `
       SELECT
@@ -47,8 +47,7 @@ export const getBuildInfo = async (
     { collection }
   );
   if (!collectionResult) {
-    // Skip if we cannot retrieve the collection.
-    return undefined;
+    throw new Error("Could not fetch collection");
   }
 
   const exchange = new Sdk.Seaport.Exchange(config.chainId);
