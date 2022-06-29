@@ -16,7 +16,7 @@ export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 10,
-    removeOnComplete: 100,
+    removeOnComplete: true,
     removeOnFail: 1000,
   },
 });
@@ -72,7 +72,7 @@ if (config.doBackgroundWork) {
         }
       }
     },
-    { connection: redis.duplicate(), concurrency: 5 }
+    { connection: redis.duplicate(), concurrency: 3 }
   );
 
   worker.on("error", (error) => {
