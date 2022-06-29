@@ -72,7 +72,12 @@ export const getOrdersBidsV2Options: RouteOptions = {
           "active = currently valid, inactive = temporarily invalid, expired = permanently invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
         ),
       sortBy: Joi.string()
-        .valid("price", "createdAt")
+        .when("token", {
+          is: Joi.exist(),
+          then: Joi.valid("price", "createdAt"),
+          otherwise: Joi.valid("createdAt"),
+        })
+        .default("createdAt")
         .description("Order the items are returned in the response."),
       continuation: Joi.string()
         .pattern(base64Regex)
@@ -86,8 +91,7 @@ export const getOrdersBidsV2Options: RouteOptions = {
     })
       .or("token", "tokenSetId", "maker", "contracts")
       .oxor("token", "tokenSetId")
-      .with("status", "maker")
-      .with("sortBy", "token"),
+      .with("status", "maker"),
   },
   response: {
     schema: Joi.object({

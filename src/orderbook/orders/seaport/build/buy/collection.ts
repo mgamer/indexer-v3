@@ -38,9 +38,6 @@ export const build = async (options: BuildOrderOptions) => {
     options.collection,
     "buy"
   );
-  if (!buildInfo) {
-    throw new Error("Could not generate build info");
-  }
 
   if (!options.excludeFlaggedTokens) {
     // Use contract-wide/token-range order
