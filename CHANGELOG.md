@@ -1,3 +1,12 @@
+## [5.94.1](https://github.com/reservoirprotocol/indexer/compare/v5.94.0...v5.94.1) (2022-06-29)
+
+
+### Bug Fixes
+
+* flightcontrol build ([86b5016](https://github.com/reservoirprotocol/indexer/commit/86b5016836a5ebaeea0248acd4409a2d3a718e72))
+
+
+
 # [5.94.0](https://github.com/reservoirprotocol/indexer/compare/v5.93.6...v5.94.0) (2022-06-29)
 
 
