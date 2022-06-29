@@ -10,6 +10,7 @@ import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attribute-key-counts";
 import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
+import * as rarityQueue from "@/jobs/collection-updates/rarity-queue";
 
 const QUEUE_NAME = "metadata-index-write-queue";
 
@@ -91,6 +92,9 @@ if (config.doBackgroundWork) {
             tokenId,
           }
         );
+
+        // Recalculate the collection rarity
+        await rarityQueue.addToQueue(collection);
 
         // Schedule attribute refresh
         _.forEach(attributesToRefresh, (attribute) => {
