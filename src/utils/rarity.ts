@@ -18,6 +18,10 @@ export class Rarity {
       collectionId,
     });
 
+    if (_.isEmpty(result)) {
+      return [];
+    }
+
     // Build an array for the rarity calculation, some of the fields are not relevant for the calculation but needs to be passed
     const nfts: NftInit[] = _.map(result, (result) => {
       const traits: TraitBase[] = _.map(result.attributes, (attribute) => ({
