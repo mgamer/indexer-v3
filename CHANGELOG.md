@@ -1,3 +1,66 @@
+## [5.96.4](https://github.com/reservoirprotocol/indexer/compare/v5.96.3...v5.96.4) (2022-06-30)
+
+
+### Bug Fixes
+
+* zeroex-v4/opendao token range orders ([72d3ae6](https://github.com/reservoirprotocol/indexer/commit/72d3ae6af41a459407615986216a70d6772db9bc))
+
+
+
+## [5.96.3](https://github.com/reservoirprotocol/indexer/compare/v5.96.2...v5.96.3) (2022-06-30)
+
+
+### Bug Fixes
+
+* lowercase contract address when indexing metadata ([a321960](https://github.com/reservoirprotocol/indexer/commit/a3219604aa115dd0711143ff913c7a09249f3ba3))
+
+
+
+## [5.96.2](https://github.com/reservoirprotocol/indexer/compare/v5.96.1...v5.96.2) (2022-06-30)
+
+
+### Bug Fixes
+
+* debug ([013b9ce](https://github.com/reservoirprotocol/indexer/commit/013b9ce6551c8a5fcfc313b4112ab51063db984f))
+
+
+
+## [5.96.1](https://github.com/reservoirprotocol/indexer/compare/v5.96.0...v5.96.1) (2022-06-30)
+
+
+### Bug Fixes
+
+* debug ([d7a911f](https://github.com/reservoirprotocol/indexer/commit/d7a911f710dd5e6ea1224c4845c98ef5f19d3fc7))
+
+
+
+# [5.96.0](https://github.com/reservoirprotocol/indexer/compare/v5.95.2...v5.96.0) (2022-06-30)
+
+
+### Features
+
+* get token metadata on backfilling as well ([0085de9](https://github.com/reservoirprotocol/indexer/commit/0085de9d4c8c78160304cf8e65184a8de5feacb1))
+
+
+
+## [5.95.2](https://github.com/reservoirprotocol/indexer/compare/v5.95.1...v5.95.2) (2022-06-30)
+
+
+### Bug Fixes
+
+* stricter validation rules for execute apis query parameters ([fcd856f](https://github.com/reservoirprotocol/indexer/commit/fcd856f3afd1de3ae740f32e9459e2f8c80e143a))
+
+
+
+## [5.95.1](https://github.com/reservoirprotocol/indexer/compare/v5.95.0...v5.95.1) (2022-06-30)
+
+
+### Bug Fixes
+
+* use default values for startTime and endTime of seaport orders ([3706706](https://github.com/reservoirprotocol/indexer/commit/3706706ef5720bfb9e56881d6892a987ad1895f4))
+
+
+
 # [5.95.0](https://github.com/reservoirprotocol/indexer/compare/v5.94.1...v5.95.0) (2022-06-29)
 
 

@@ -86,7 +86,7 @@ if (config.doBackgroundWork) {
       await metadataIndexWrite.addToQueue(
         metadata.map((m) => ({
           ...m,
-          collection: (tokenToCollections as any)[`${m.contract}:${m.tokenId}`],
+          collection: (tokenToCollections as any)[`${m.contract.toLowerCase()}:${m.tokenId}`],
         }))
       );
 

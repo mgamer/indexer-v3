@@ -1,6 +1,6 @@
 {
   "name": "reservoir-indexer",
-  "version": "5.95.0",
+  "version": "5.96.4",
   "description": "Reservoir Protocol Indexer",
   "main": "./dist/index.js",
   "repository": "https://github.com/reservoirprotocol/indexer",
@@ -30,7 +30,7 @@
     "@hapi/inert": "^6.0.4",
     "@hapi/vision": "^6.1.0",
     "@poprank/rankings": "^1.1.20",
-    "@reservoir0x/sdk": "0.0.110",
+    "@reservoir0x/sdk": "0.0.111",
     "@types/date-fns": "^2.6.0",
     "@types/hapi__hapi": "^20.0.9",
     "@types/hapi__inert": "^5.2.3",
