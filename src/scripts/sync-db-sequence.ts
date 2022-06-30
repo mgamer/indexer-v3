@@ -4,7 +4,7 @@
 import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 
-import { idb, wedb } from "@/common/db";
+import { idb } from "@/common/db";
 
 const main = async () => {
   let id;
@@ -45,7 +45,7 @@ async function getNextId(table: string) {
 
 async function updateSequence(sequence: string, newValue: number) {
   const query = `ALTER SEQUENCE ${sequence} restart with ${newValue};`;
-  await wedb.none(query);
+  await idb.none(query); // This pointed originally to the replica
 }
 
 main()
