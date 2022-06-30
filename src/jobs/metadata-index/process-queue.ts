@@ -82,8 +82,20 @@ if (config.doBackgroundWork) {
 
       const metadataResult = await axios.get(url, { timeout: 60 * 1000 }).then(({ data }) => data);
 
+      logger.info(QUEUE_NAME, `Result: ${JSON.stringify(metadataResult)}`);
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const metadata: TokenMetadata[] = (metadataResult as any).metadata;
+
+      logger.info(
+        QUEUE_NAME,
+        `To queue: ${JSON.stringify(
+          metadata.map((m) => ({
+            ...m,
+            collection: (tokenToCollections as any)[`${m.contract}:${m.tokenId}`],
+          }))
+        )}`
+      );
 
       await metadataIndexWrite.addToQueue(
         metadata.map((m) => ({
