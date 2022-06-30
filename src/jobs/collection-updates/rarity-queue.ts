@@ -16,7 +16,7 @@ export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 10,
-    removeOnComplete: 100,
+    removeOnComplete: true,
     removeOnFail: 1000,
   },
 });
@@ -28,7 +28,7 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { collectionId } = job.data;
-      const collection = await Collections.getById(collectionId);
+      const collection = await Collections.getById(collectionId, true);
 
       // If no collection found
       if (_.isNull(collection)) {
@@ -56,15 +56,15 @@ if (config.doBackgroundWork) {
         };
 
         _.forEach(tokens, (token) => {
-          updateTokensString += `(${token.id}, ${token.rarityTraitSum}),`;
+          updateTokensString += `(${token.id}, ${token.rarityTraitSum}, ${token.rarityTraitSumRank}),`;
         });
 
         updateTokensString = _.trimEnd(updateTokensString, ",");
 
         if (updateTokensString !== "") {
           const updateQuery = `UPDATE tokens
-                               SET rarity_score = x.rarityTraitSum
-                               FROM (VALUES ${updateTokensString}) AS x(tokenId, rarityTraitSum)
+                               SET rarity_score = x.rarityTraitSum, rarity_rank = x.rarityTraitSumRank
+                               FROM (VALUES ${updateTokensString}) AS x(tokenId, rarityTraitSum, rarityTraitSumRank)
                                WHERE contract = $/contract/
                                AND token_id = x.tokenId`;
 
@@ -72,7 +72,7 @@ if (config.doBackgroundWork) {
         }
       }
     },
-    { connection: redis.duplicate(), concurrency: 5 }
+    { connection: redis.duplicate(), concurrency: 1 }
   );
 
   worker.on("error", (error) => {

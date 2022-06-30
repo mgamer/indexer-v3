@@ -1,3 +1,142 @@
+## [5.96.3](https://github.com/reservoirprotocol/indexer/compare/v5.96.2...v5.96.3) (2022-06-30)
+
+
+### Bug Fixes
+
+* lowercase contract address when indexing metadata ([a321960](https://github.com/reservoirprotocol/indexer/commit/a3219604aa115dd0711143ff913c7a09249f3ba3))
+
+
+
+## [5.96.2](https://github.com/reservoirprotocol/indexer/compare/v5.96.1...v5.96.2) (2022-06-30)
+
+
+### Bug Fixes
+
+* debug ([013b9ce](https://github.com/reservoirprotocol/indexer/commit/013b9ce6551c8a5fcfc313b4112ab51063db984f))
+
+
+
+## [5.96.1](https://github.com/reservoirprotocol/indexer/compare/v5.96.0...v5.96.1) (2022-06-30)
+
+
+### Bug Fixes
+
+* debug ([d7a911f](https://github.com/reservoirprotocol/indexer/commit/d7a911f710dd5e6ea1224c4845c98ef5f19d3fc7))
+
+
+
+# [5.96.0](https://github.com/reservoirprotocol/indexer/compare/v5.95.2...v5.96.0) (2022-06-30)
+
+
+### Features
+
+* get token metadata on backfilling as well ([0085de9](https://github.com/reservoirprotocol/indexer/commit/0085de9d4c8c78160304cf8e65184a8de5feacb1))
+
+
+
+## [5.95.2](https://github.com/reservoirprotocol/indexer/compare/v5.95.1...v5.95.2) (2022-06-30)
+
+
+### Bug Fixes
+
+* stricter validation rules for execute apis query parameters ([fcd856f](https://github.com/reservoirprotocol/indexer/commit/fcd856f3afd1de3ae740f32e9459e2f8c80e143a))
+
+
+
+## [5.95.1](https://github.com/reservoirprotocol/indexer/compare/v5.95.0...v5.95.1) (2022-06-30)
+
+
+### Bug Fixes
+
+* use default values for startTime and endTime of seaport orders ([3706706](https://github.com/reservoirprotocol/indexer/commit/3706706ef5720bfb9e56881d6892a987ad1895f4))
+
+
+
+# [5.95.0](https://github.com/reservoirprotocol/indexer/compare/v5.94.1...v5.95.0) (2022-06-29)
+
+
+### Bug Fixes
+
+* pass collections with no attributes ([da9ffcb](https://github.com/reservoirprotocol/indexer/commit/da9ffcb82832b22d7cbb16e8b518805eb41c1134))
+
+
+### Features
+
+* store rarity rank ([449b5f7](https://github.com/reservoirprotocol/indexer/commit/449b5f750757d563d766bf211ef1000a18409227))
+
+
+
+## [5.94.1](https://github.com/reservoirprotocol/indexer/compare/v5.94.0...v5.94.1) (2022-06-29)
+
+
+### Bug Fixes
+
+* flightcontrol build ([86b5016](https://github.com/reservoirprotocol/indexer/commit/86b5016836a5ebaeea0248acd4409a2d3a718e72))
+
+
+
+# [5.94.0](https://github.com/reservoirprotocol/indexer/compare/v5.93.6...v5.94.0) (2022-06-29)
+
+
+### Features
+
+* added rarity column ([327628e](https://github.com/reservoirprotocol/indexer/commit/327628efefe4cb55b9dbbdb6bcb40c0cf0be40b1))
+* added rarity column ([76054ef](https://github.com/reservoirprotocol/indexer/commit/76054ef260023466807f93ddc74103ddf54d23ad))
+* added script to backfill collections rarity ([5f20ded](https://github.com/reservoirprotocol/indexer/commit/5f20ded17b20353467feab125055d77be923a0e8))
+* remove on completed rarity ([6a39cc8](https://github.com/reservoirprotocol/indexer/commit/6a39cc8b1b8941b9b68900133b03f5623d64cc23))
+* support fetching tokens by rarity ([6022f2c](https://github.com/reservoirprotocol/indexer/commit/6022f2c5e94bdb63c0cbdbe2fc36893568b7a72d))
+* update migration file ([b1a4ab5](https://github.com/reservoirprotocol/indexer/commit/b1a4ab5a18441d581481d4ae7af9a49de814b3ba))
+* update rarity upon minting/refresh ([36df808](https://github.com/reservoirprotocol/indexer/commit/36df808096e82d975f3523eefeb46d2c488b0c1f))
+* update tokens migration ([87f3481](https://github.com/reservoirprotocol/indexer/commit/87f34814219269d78c171fbb8b223ba56fac726d))
+* use read replica ([367e528](https://github.com/reservoirprotocol/indexer/commit/367e5280fb57e8d7f34f1615b026df3f578286ce))
+
+
+
+## [5.93.6](https://github.com/reservoirprotocol/indexer/compare/v5.93.5...v5.93.6) (2022-06-29)
+
+
+### Bug Fixes
+
+* do not exit on unhandled rejections ([e403ab7](https://github.com/reservoirprotocol/indexer/commit/e403ab76949036501d35c38f2aef7ffa4d018d26))
+
+
+
+## [5.93.5](https://github.com/reservoirprotocol/indexer/compare/v5.93.4...v5.93.5) (2022-06-29)
+
+
+### Bug Fixes
+
+* remove crashes ([e53a377](https://github.com/reservoirprotocol/indexer/commit/e53a37763279fef43b11ac5d3ca17e8070ab310b))
+
+
+
+## [5.93.4](https://github.com/reservoirprotocol/indexer/compare/v5.93.3...v5.93.4) (2022-06-29)
+
+
+### Bug Fixes
+
+* redeploy ([eb5a818](https://github.com/reservoirprotocol/indexer/commit/eb5a818b2bc7bb24f9449630b9ce6c872ac2fb05))
+
+
+
+## [5.93.3](https://github.com/reservoirprotocol/indexer/compare/v5.93.2...v5.93.3) (2022-06-29)
+
+
+### Bug Fixes
+
+* better x2y2 transfer issue logic ([e29cfbe](https://github.com/reservoirprotocol/indexer/commit/e29cfbedab6b72e33a59418371cfe3bf17cedaac))
+
+
+
+## [5.93.2](https://github.com/reservoirprotocol/indexer/compare/v5.93.1...v5.93.2) (2022-06-29)
+
+
+### Bug Fixes
+
+* handle another piece of custom x2y2 cancellation logic ([5d52dba](https://github.com/reservoirprotocol/indexer/commit/5d52dba297602b7b30c837038258c15d70f89d00))
+
+
+
 ## [5.93.1](https://github.com/reservoirprotocol/indexer/compare/v5.93.0...v5.93.1) (2022-06-28)
 
 
