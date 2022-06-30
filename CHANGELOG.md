@@ -1,3 +1,12 @@
+## [5.96.3](https://github.com/reservoirprotocol/indexer/compare/v5.96.2...v5.96.3) (2022-06-30)
+
+
+### Bug Fixes
+
+* lowercase contract address when indexing metadata ([a321960](https://github.com/reservoirprotocol/indexer/commit/a3219604aa115dd0711143ff913c7a09249f3ba3))
+
+
+
 ## [5.96.2](https://github.com/reservoirprotocol/indexer/compare/v5.96.1...v5.96.2) (2022-06-30)
 
 
