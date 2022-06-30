@@ -1,7 +1,7 @@
 import { AddressZero } from "@ethersproject/constants";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
-import { idb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis, redlock } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
@@ -33,7 +33,7 @@ if (config.doBackgroundWork) {
       const { maker, tokenSetId } = job.data as Info;
 
       try {
-        const results = await idb.manyOrNone(
+        const results = await redb.manyOrNone(
           `
             SELECT
               orders.maker,
@@ -55,7 +55,7 @@ if (config.doBackgroundWork) {
 
         for (const { maker, token_set_id, count } of results) {
           if (Number(count) > 1) {
-            const result = await idb.manyOrNone(
+            const result = await redb.manyOrNone(
               `
                 WITH x AS (
                   SELECT orders.id FROM orders
