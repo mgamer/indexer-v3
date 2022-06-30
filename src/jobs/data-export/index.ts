@@ -1,5 +1,5 @@
 import { config } from "@/config/index";
-import { idb } from "@/common/db";
+import { redb } from "@/common/db";
 
 import * as exportData from "@/jobs/data-export/export-data";
 
@@ -8,7 +8,7 @@ import cron from "node-cron";
 import { redlock } from "@/common/redis";
 
 const getTasks = async () => {
-  return await idb.manyOrNone(`SELECT source FROM data_export_tasks`);
+  return await redb.manyOrNone(`SELECT source FROM data_export_tasks`);
 };
 
 // BACKGROUND WORKER ONLY

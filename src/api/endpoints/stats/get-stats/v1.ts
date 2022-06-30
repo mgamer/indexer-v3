@@ -3,7 +3,7 @@
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 
@@ -321,7 +321,7 @@ export const getStatsV1Options: RouteOptions = {
         `;
       }
 
-      const result = await edb.oneOrNone(baseQuery!, query).then((r) =>
+      const result = await redb.oneOrNone(baseQuery!, query).then((r) =>
         r
           ? {
               tokenCount: Number(r.token_count),

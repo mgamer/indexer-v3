@@ -7,7 +7,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import { ListingDetails } from "@reservoir0x/sdk/dist/router/types";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, formatEth, fromBuffer, toBuffer } from "@/common/utils";
@@ -232,7 +232,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
 
         if (query.quantity === 1) {
           // Filling a quantity of 1 implies getting the best listing for that token
-          const bestOrderResult = await edb.oneOrNone(
+          const bestOrderResult = await redb.oneOrNone(
             `
               SELECT
                 orders.id,
@@ -276,7 +276,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
           confirmationQuery = `?id=${id}&checkRecentEvents=true`;
         } else {
           // Only ERC1155 tokens support a quantity greater than 1
-          const kindResult = await edb.one(
+          const kindResult = await redb.one(
             `
               SELECT contracts.kind FROM contracts
               WHERE contracts.address = $/contract/
@@ -288,7 +288,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
           }
 
           // Fetch matching orders until the quantity to fill is met
-          const bestOrdersResult = await edb.manyOrNone(
+          const bestOrdersResult = await redb.manyOrNone(
             `
               SELECT
                 x.id,
