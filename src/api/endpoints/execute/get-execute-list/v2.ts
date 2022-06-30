@@ -65,7 +65,7 @@ export const getExecuteListV2Options: RouteOptions = {
           "Address of wallet making the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
       weiPrice: Joi.string()
-        .pattern(/^[0-9]+$/)
+        .pattern(/^\d+$/)
         .required()
         .description("Amount seller is willing to sell for in wei. Example: `1000000000000000000`"),
       orderKind: Joi.string()
@@ -83,9 +83,9 @@ export const getExecuteListV2Options: RouteOptions = {
         .default(true)
         .description("If true, royalties will be automatically included."),
       fee: Joi.alternatives(
-        Joi.string(),
+        Joi.string().pattern(/^\d+$/),
         Joi.number(),
-        Joi.array().items(Joi.string()),
+        Joi.array().items(Joi.string().pattern(/^\d+$/)),
         Joi.array().items(Joi.number()).description("Fee amount in BPS. Example: `100`")
       ),
       feeRecipient: Joi.alternatives(
@@ -104,14 +104,16 @@ export const getExecuteListV2Options: RouteOptions = {
             "Wallet address of fee recipient. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
           )
       ),
-      listingTime: Joi.alternatives(Joi.string(), Joi.number()).description(
+      listingTime: Joi.alternatives(Joi.string().pattern(/^\d+$/), Joi.number()).description(
         "Unix timestamp indicating when listing will be listed. Example: `1656080318`"
       ),
-      expirationTime: Joi.alternatives(Joi.string(), Joi.number()).description(
+      expirationTime: Joi.alternatives(Joi.string().pattern(/^\d+$/), Joi.number()).description(
         "Unix timestamp indicating when listing will expire. Example: `1656080318`"
       ),
-      salt: Joi.string().description("Optional. Random string to make the order unique"),
-      nonce: Joi.string().description("Optional. Set a custom nonce"),
+      salt: Joi.string()
+        .pattern(/^\d+$/)
+        .description("Optional. Random string to make the order unique"),
+      nonce: Joi.string().pattern(/^\d+$/).description("Optional. Set a custom nonce"),
       v: Joi.number().description(
         "Signature v component (only required after order has been signed)"
       ),
