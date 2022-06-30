@@ -2,7 +2,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
-import { idb } from "@/common/db";
+import { idb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
@@ -44,7 +44,7 @@ if (config.doBackgroundWork) {
         switch (by) {
           case "id": {
             // If the order is valid, recheck is status.
-            const result = await idb.oneOrNone(
+            const result = await redb.oneOrNone(
               `
                 SELECT
                   orders.kind,

@@ -20,7 +20,7 @@ export class CollectionSets {
       RETURNING id
     `;
 
-    const collectionsSetsResult = await idb.oneOrNone(query, {
+    const collectionsSetsResult = await redb.oneOrNone(query, {
       collectionsHash,
     });
 
