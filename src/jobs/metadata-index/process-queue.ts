@@ -78,6 +78,8 @@ if (config.doBackgroundWork) {
         config.metadataApiBaseUrl
       }/v4/${getNetworkName()}/metadata/token?${queryParams.toString()}`;
 
+      logger.info(QUEUE_NAME, `URL: ${url}`);
+
       const metadataResult = await axios.get(url, { timeout: 60 * 1000 }).then(({ data }) => data);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
