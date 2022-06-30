@@ -1,3 +1,12 @@
+# [5.96.0](https://github.com/reservoirprotocol/indexer/compare/v5.95.2...v5.96.0) (2022-06-30)
+
+
+### Features
+
+* get token metadata on backfilling as well ([0085de9](https://github.com/reservoirprotocol/indexer/commit/0085de9d4c8c78160304cf8e65184a8de5feacb1))
+
+
+
 ## [5.95.2](https://github.com/reservoirprotocol/indexer/compare/v5.95.1...v5.95.2) (2022-06-30)
 
 
