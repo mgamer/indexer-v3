@@ -252,7 +252,7 @@ if (config.doBackgroundWork) {
 
           case "token": {
             // Trigger a fix for all valid orders on the token.
-            const result = await idb.manyOrNone(
+            const result = await redb.manyOrNone(
               `
                 SELECT "o"."id" FROM "orders" "o"
                 WHERE "o"."token_set_id" = $/tokenSetId/
@@ -271,7 +271,7 @@ if (config.doBackgroundWork) {
           case "maker": {
             // Trigger a fix for all of valid orders from the maker.
             // TODO: Use keyset pagination to be able to handle large amounts of orders.
-            const result = await idb.manyOrNone(
+            const result = await redb.manyOrNone(
               `
                 SELECT "o"."id" FROM "orders" "o"
                 WHERE "o"."maker" = $/maker/
@@ -292,7 +292,7 @@ if (config.doBackgroundWork) {
             // Trigger a fix for all valid orders on the contract.
             for (const side of ["sell", "buy"]) {
               // TODO: Use keyset pagination to be able to handle large amounts of orders.
-              const result = await idb.manyOrNone(
+              const result = await redb.manyOrNone(
                 `
                   SELECT "o"."id" FROM "orders" "o"
                   WHERE "o"."side" = $/side/ AND "o"."contract" = $/contract/
