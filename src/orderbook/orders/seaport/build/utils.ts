@@ -70,8 +70,8 @@ export const getBuildInfo = async (
         : AddressZero,
     // OpenSea's conduit for sharing approvals
     conduitKey: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
-    startTime: options.listingTime,
-    endTime: options.expirationTime,
+    startTime: options.listingTime || Math.floor(Date.now() / 1000),
+    endTime: options.expirationTime || Math.floor(Date.now() / 1000) + 6 * 30 * 24 * 3600,
     salt: options.salt,
     counter: (await exchange.getCounter(baseProvider, options.maker)).toString(),
   };

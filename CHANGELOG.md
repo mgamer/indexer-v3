@@ -1,3 +1,12 @@
+## [5.95.1](https://github.com/reservoirprotocol/indexer/compare/v5.95.0...v5.95.1) (2022-06-30)
+
+
+### Bug Fixes
+
+* use default values for startTime and endTime of seaport orders ([3706706](https://github.com/reservoirprotocol/indexer/commit/3706706ef5720bfb9e56881d6892a987ad1895f4))
+
+
+
 # [5.95.0](https://github.com/reservoirprotocol/indexer/compare/v5.94.1...v5.95.0) (2022-06-29)
 
 
