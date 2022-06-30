@@ -1,3 +1,12 @@
+## [5.96.2](https://github.com/reservoirprotocol/indexer/compare/v5.96.1...v5.96.2) (2022-06-30)
+
+
+### Bug Fixes
+
+* debug ([013b9ce](https://github.com/reservoirprotocol/indexer/commit/013b9ce6551c8a5fcfc313b4112ab51063db984f))
+
+
+
 ## [5.96.1](https://github.com/reservoirprotocol/indexer/compare/v5.96.0...v5.96.1) (2022-06-30)
 
 
