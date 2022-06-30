@@ -1,3 +1,12 @@
+## [5.95.2](https://github.com/reservoirprotocol/indexer/compare/v5.95.1...v5.95.2) (2022-06-30)
+
+
+### Bug Fixes
+
+* stricter validation rules for execute apis query parameters ([fcd856f](https://github.com/reservoirprotocol/indexer/commit/fcd856f3afd1de3ae740f32e9459e2f8c80e143a))
+
+
+
 ## [5.95.1](https://github.com/reservoirprotocol/indexer/compare/v5.95.0...v5.95.1) (2022-06-30)
 
 
