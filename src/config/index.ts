@@ -22,6 +22,9 @@ export const config = {
 
   databaseUrl: String(process.env.DATABASE_URL),
   readReplicaDatabaseUrl: String(process.env.READ_REPLICA_DATABASE_URL || process.env.DATABASE_URL),
+  writeReplicaDatabaseUrl: String(
+    process.env.WRITE_REPLICA_DATABASE_URL || process.env.DATABASE_URL
+  ),
   redisUrl: String(process.env.REDIS_URL),
 
   master: Boolean(Number(process.env.MASTER)),

@@ -3,7 +3,7 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import _ from "lodash";
-import { idb } from "@/common/db";
+import { idb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
@@ -172,7 +172,7 @@ if (config.doBackgroundWork) {
           }
 
           // Fetch the attribute from the database (will succeed in the common case)
-          let attributeResult = await idb.oneOrNone(
+          let attributeResult = await redb.oneOrNone(
             `
               SELECT id
               FROM attributes

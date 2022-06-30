@@ -4,7 +4,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { idb } from "@/common/db";
+import { idb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
@@ -41,7 +41,7 @@ export const postMetadataIndexOptions: RouteOptions = {
 
       for (const collection of collections) {
         // Make sure the collection exists.
-        const result = await idb.oneOrNone(
+        const result = await redb.oneOrNone(
           `
             SELECT
               collections.id

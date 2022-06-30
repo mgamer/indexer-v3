@@ -3,7 +3,7 @@ import _ from "lodash";
 import { HashZero } from "@ethersproject/constants";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
-import { idb } from "@/common/db";
+import { idb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
@@ -49,7 +49,7 @@ if (config.doBackgroundWork) {
 
         if (id) {
           // Fetch the order's associated data
-          order = await idb.oneOrNone(
+          order = await redb.oneOrNone(
             `
               SELECT
                 orders.id,
