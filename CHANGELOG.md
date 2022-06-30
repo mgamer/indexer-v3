@@ -1,3 +1,12 @@
+## [5.96.4](https://github.com/reservoirprotocol/indexer/compare/v5.96.3...v5.96.4) (2022-06-30)
+
+
+### Bug Fixes
+
+* zeroex-v4/opendao token range orders ([72d3ae6](https://github.com/reservoirprotocol/indexer/commit/72d3ae6af41a459407615986216a70d6772db9bc))
+
+
+
 ## [5.96.3](https://github.com/reservoirprotocol/indexer/compare/v5.96.2...v5.96.3) (2022-06-30)
 
 
