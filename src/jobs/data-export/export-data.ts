@@ -14,9 +14,9 @@ import { AsksDataSource } from "@/jobs/data-export/data-sources/asks";
 import { TokensDataSource } from "@/jobs/data-export/data-sources/tokens";
 import { CollectionsDataSource } from "@/jobs/data-export/data-sources/collections";
 import { SalesDataSource } from "@/jobs/data-export/data-sources/sales";
-import { AttributeKeysDataSource } from "@/jobs/data-export/data-sources/attribute_keys";
+import { AttributeKeysDataSource } from "@/jobs/data-export/data-sources/attribute-keys";
 import { AttributesDataSource } from "@/jobs/data-export/data-sources/attributes";
-import { TokenAttributesDataSource } from "@/jobs/data-export/data-sources/token_attributes";
+import { TokenAttributesDataSource } from "@/jobs/data-export/data-sources/token-attributes";
 
 const QUEUE_NAME = "export-data-queue";
 const QUERY_LIMIT = 1000;
@@ -46,9 +46,10 @@ if (config.doBackgroundWork) {
 
         if (data.length) {
           const sequenceNumberPadded = ("000000000000000" + sequenceNumber).slice(-15);
+          const targetName = kind.replace(/-/g, "_");
 
           await uploadSequenceToS3(
-            `${kind}/reservoir_${sequenceNumberPadded}.json`,
+            `${targetName}/reservoir_${sequenceNumberPadded}.json`,
             JSON.stringify(data)
           );
           await setNextSequenceInfo(kind, nextCursor);
@@ -89,9 +90,9 @@ export enum DataSourceKind {
   tokens = "tokens",
   collections = "collections",
   sales = "sales",
-  attribute_keys = "attribute_keys",
+  attributeKeys = "attribute-keys",
   attributes = "attributes",
-  token_attributes = "token_attributes",
+  tokenAttributes = "token-attributes",
 }
 
 export const addToQueue = async (kind: DataSourceKind) => {
@@ -143,11 +144,11 @@ const getDataSource = (kind: DataSourceKind) => {
       return new CollectionsDataSource();
     case DataSourceKind.sales:
       return new SalesDataSource();
-    case DataSourceKind.attribute_keys:
+    case DataSourceKind.attributeKeys:
       return new AttributeKeysDataSource();
     case DataSourceKind.attributes:
       return new AttributesDataSource();
-    case DataSourceKind.token_attributes:
+    case DataSourceKind.tokenAttributes:
       return new TokenAttributesDataSource();
   }
 

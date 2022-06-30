@@ -98,7 +98,7 @@ export class AttributeKeysDataSource extends BaseDataSource {
       let nextRemovalsCursor = _.clone(removalsCursor);
 
       if (removedResult.length) {
-        const lastRemovedResult = removedResult[updatedResult.length - 1];
+        const lastRemovedResult = removedResult[removedResult.length - 1];
 
         nextRemovalsCursor = {
           id: lastRemovedResult.id,

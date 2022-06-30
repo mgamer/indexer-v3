@@ -29,7 +29,7 @@ export class AttributesDataSource extends BaseDataSource {
           kind,
           key,
           created_at,
-          extract(epoch from updated_at) updated_at
+          extract(epoch from updated_at) updated_ts
         FROM attributes
         ${updatesContinuationFilter}
         ORDER BY updated_at, id
@@ -63,7 +63,7 @@ export class AttributesDataSource extends BaseDataSource {
           kind,
           key,
           created_at,
-          extract(epoch from deleted_at) deleted_at
+          extract(epoch from deleted_at) deleted_ts
         FROM removed_attributes
         ${removalsContinuationFilter}
         ORDER BY deleted_at, id
@@ -100,7 +100,7 @@ export class AttributesDataSource extends BaseDataSource {
 
         nextUpdatesCursor = {
           id: lastUpdatedResult.id,
-          updatedAt: lastUpdatedResult.updated_at,
+          updatedAt: lastUpdatedResult.updated_ts,
         };
       }
 
@@ -123,11 +123,11 @@ export class AttributesDataSource extends BaseDataSource {
       let nextRemovalsCursor = _.clone(removalsCursor);
 
       if (removedResult.length) {
-        const lastRemovedResult = removedResult[updatedResult.length - 1];
+        const lastRemovedResult = removedResult[removedResult.length - 1];
 
         nextRemovalsCursor = {
           id: lastRemovedResult.id,
-          deletedAt: lastRemovedResult.deleted_at,
+          deletedAt: lastRemovedResult.deleted_ts,
         };
       }
 
