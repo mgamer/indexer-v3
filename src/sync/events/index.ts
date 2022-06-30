@@ -1780,7 +1780,6 @@ export const syncEvents = async (
           fillUpdates.addToQueue(fillInfos),
           orderUpdatesById.addToQueue(orderInfos),
           orderUpdatesByMaker.addToQueue(makerInfos),
-          tokenUpdatesMint.addToQueue(mintInfos),
           orderbookOrders.addToQueue(
             foundationOrders.map((info) => ({ kind: "foundation", info }))
           ),
@@ -1813,6 +1812,9 @@ export const syncEvents = async (
           )
         );
       }
+
+      // We want to get metadata when backfilling as well
+      await tokenUpdatesMint.addToQueue(mintInfos);
     });
 };
 
