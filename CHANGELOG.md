@@ -1,3 +1,14 @@
+# [5.99.0](https://github.com/reservoirprotocol/indexer/compare/v5.98.0...v5.99.0) (2022-07-01)
+
+
+### Features
+
+* enable datadog profiling ([f58b217](https://github.com/reservoirprotocol/indexer/commit/f58b217e237367d5b72ea92841bc2747c33d6a87))
+* enable profiling ([44fbcbd](https://github.com/reservoirprotocol/indexer/commit/44fbcbd8132d363b89e0c4dc109e223758e76ae6))
+* update datadog ([7f1d058](https://github.com/reservoirprotocol/indexer/commit/7f1d058ede16da02a5077f6acdcedfcc4f54bbcd))
+
+
+
 # [5.98.0](https://github.com/reservoirprotocol/indexer/compare/v5.97.1...v5.98.0) (2022-07-01)
 
 

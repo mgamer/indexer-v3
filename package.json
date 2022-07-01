@@ -1,6 +1,6 @@
 {
   "name": "reservoir-indexer",
-  "version": "5.98.0",
+  "version": "5.99.0",
   "description": "Reservoir Protocol Indexer",
   "main": "./dist/index.js",
   "repository": "https://github.com/reservoirprotocol/indexer",
@@ -46,7 +46,7 @@
     "arweave": "^1.10.23",
     "aws-sdk": "^2.1148.0",
     "bullmq": "^1.75.1",
-    "dd-trace": "^1.5.1",
+    "dd-trace": "^2.10.0",
     "dotenv": "^10.0.0",
     "eslint": "^8.10.0",
     "eslint-config-prettier": "^8.5.0",
