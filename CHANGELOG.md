@@ -1,3 +1,12 @@
+## [5.99.1](https://github.com/reservoirprotocol/indexer/compare/v5.99.0...v5.99.1) (2022-07-01)
+
+
+### Bug Fixes
+
+* properly associate x2y2 sales to transfers ([79947d2](https://github.com/reservoirprotocol/indexer/commit/79947d281694ef0225939dd7f65ba82e9873a7c2))
+
+
+
 # [5.99.0](https://github.com/reservoirprotocol/indexer/compare/v5.98.0...v5.99.0) (2022-07-01)
 
 
