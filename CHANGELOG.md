@@ -1,3 +1,15 @@
+# [5.98.0](https://github.com/reservoirprotocol/indexer/compare/v5.97.1...v5.98.0) (2022-07-01)
+
+
+### Features
+
+* fetch tokens in batches for the rarity calculation ([97771e9](https://github.com/reservoirprotocol/indexer/commit/97771e9dad3338b713ac155198067be35c72b123))
+* fix collection sets post ([d1635ba](https://github.com/reservoirprotocol/indexer/commit/d1635ba4beffa0e5fbf41c27138ac7d915922ae1))
+* support addBulk in rarity queue ([39640db](https://github.com/reservoirprotocol/indexer/commit/39640db2638f6d7f358eed34af6275af19bb8719))
+* update health check ([25cb183](https://github.com/reservoirprotocol/indexer/commit/25cb183036080ff1bc63156e006e0a7f3c244d80))
+
+
+
 ## [5.97.1](https://github.com/reservoirprotocol/indexer/compare/v5.97.0...v5.97.1) (2022-07-01)
 
 
