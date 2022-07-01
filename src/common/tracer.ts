@@ -7,9 +7,12 @@ if (process.env.DATADOG_AGENT_URL) {
   const service = `indexer-${config.version}-${getNetworkName()}`;
 
   tracer.init({
+    profiling: true,
+    env: config.chainId === 1 ? "prod" : "dev",
     logInjection: true,
     service,
     url: process.env.DATADOG_AGENT_URL,
+    version: "1.0.3",
   });
 }
 
