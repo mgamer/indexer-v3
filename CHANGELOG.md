@@ -1,3 +1,25 @@
+## [5.97.1](https://github.com/reservoirprotocol/indexer/compare/v5.97.0...v5.97.1) (2022-07-01)
+
+
+### Bug Fixes
+
+* properly associate seaport sales to transfers ([178af17](https://github.com/reservoirprotocol/indexer/commit/178af17fbc573830143582c0b30c12f7fff1e2ba))
+
+
+
+# [5.97.0](https://github.com/reservoirprotocol/indexer/compare/v5.96.4...v5.97.0) (2022-06-30)
+
+
+### Features
+
+* added script to sync sequences ([e7c7e66](https://github.com/reservoirprotocol/indexer/commit/e7c7e66ae20bd02ac7c49407efa7e1c0bf8b2f9f))
+* move calls to READER ([9c67ff1](https://github.com/reservoirprotocol/indexer/commit/9c67ff1d0f993b946b469e291108f8ad1ce43456))
+* move calls to READER ([22ba806](https://github.com/reservoirprotocol/indexer/commit/22ba8061005d9d5a0a8e23dabf49cedca2e38130))
+* move calls to READER ([75c7f4b](https://github.com/reservoirprotocol/indexer/commit/75c7f4bf935d219b745febc628472b3047488082))
+* update migration to run only once ([7311611](https://github.com/reservoirprotocol/indexer/commit/73116115a45678ebc01b22e048a55c3d90466248))
+
+
+
 ## [5.96.4](https://github.com/reservoirprotocol/indexer/compare/v5.96.3...v5.96.4) (2022-06-30)
 
 

@@ -29,9 +29,8 @@ const main = async () => {
     `;
 
     const collections = await redb.manyOrNone(query);
-    for (const collection of collections) {
-      await rarityQueue.addToQueue(collection.id);
-    }
+    const ids = _.map(collections, (collection) => collection.id);
+    await rarityQueue.addToQueue(ids);
 
     if (_.size(collections) < limit) {
       keepIterate = false;
