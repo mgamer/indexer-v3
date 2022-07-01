@@ -12,7 +12,6 @@ if (process.env.DATADOG_AGENT_URL) {
     logInjection: true,
     service,
     url: process.env.DATADOG_AGENT_URL,
-    version: "1.0.3",
   });
 }
 
