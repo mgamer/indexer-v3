@@ -80,6 +80,16 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (collectionId: string, delay = 60 * 60 * 1000) => {
-  await queue.add(randomUUID(), { collectionId }, { delay, jobId: collectionId });
+export const addToQueue = async (collectionId: string | string[], delay = 60 * 60 * 1000) => {
+  if (_.isArray(collectionId)) {
+    await queue.addBulk(
+      _.map(collectionId, (id) => ({
+        name: randomUUID(),
+        data: { collectionId: id },
+        opts: { delay, jobId: id },
+      }))
+    );
+  } else {
+    await queue.add(randomUUID(), { collectionId }, { delay, jobId: collectionId });
+  }
 };
