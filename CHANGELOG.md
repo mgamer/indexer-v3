@@ -1,3 +1,12 @@
+## [5.97.1](https://github.com/reservoirprotocol/indexer/compare/v5.97.0...v5.97.1) (2022-07-01)
+
+
+### Bug Fixes
+
+* properly associate seaport sales to transfers ([178af17](https://github.com/reservoirprotocol/indexer/commit/178af17fbc573830143582c0b30c12f7fff1e2ba))
+
+
+
 # [5.97.0](https://github.com/reservoirprotocol/indexer/compare/v5.96.4...v5.97.0) (2022-06-30)
 
 
