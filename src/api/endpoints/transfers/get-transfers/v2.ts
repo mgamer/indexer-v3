@@ -99,9 +99,8 @@ export const getTransfersV2Options: RouteOptions = {
     try {
       // Associating sales to transfers is done by searching for transfer
       // and sale events that occurred close to each other. In most cases
-      // we will first have the transfer followed by the sale but seaport
-      // is an exception to this where we first have the sale followed by
-      // the approval clearing and then the transfer (hence the -2 below).
+      // we will first have the transfer followed by the sale but we have
+      // some exceptions.
       let baseQuery = `
         SELECT
           nft_transfer_events.address,
@@ -124,6 +123,7 @@ export const getTransfersV2Options: RouteOptions = {
             WHERE fill_events_2.tx_hash = nft_transfer_events.tx_hash
               AND fill_events_2.log_index = nft_transfer_events.log_index + (
                 CASE
+                  WHEN fill_events_2.order_kind = 'x2y2' THEN 2
                   WHEN fill_events_2.order_kind = 'seaport' THEN -2
                   ELSE 1
                 END
