@@ -7,6 +7,7 @@ if (process.env.DATADOG_AGENT_URL) {
   const service = `indexer-${config.version}-${getNetworkName()}`;
 
   tracer.init({
+    profiling: true,
     logInjection: true,
     service,
     url: process.env.DATADOG_AGENT_URL,
