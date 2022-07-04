@@ -9,7 +9,7 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { baseProvider } from "@/common/provider";
+import { slowProvider } from "@/common/provider";
 import { bn, formatEth, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
@@ -231,7 +231,7 @@ export const getExecuteSellV1Options: RouteOptions = {
         throw Boom.internal("Could not generate transaction(s)");
       }
 
-      const router = new Sdk.Router.Router(config.chainId, baseProvider);
+      const router = new Sdk.Router.Router(config.chainId, slowProvider);
       const tx = await router.fillBidTx(bidDetails, query.taker, { referrer: query.referrer });
 
       // Set up generic filling steps
