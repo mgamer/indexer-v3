@@ -1,3 +1,12 @@
+# [5.100.0](https://github.com/reservoirprotocol/indexer/compare/v5.99.1...v5.100.0) (2022-07-04)
+
+
+### Features
+
+* use slow provider for api rpc calls ([661be7f](https://github.com/reservoirprotocol/indexer/commit/661be7f25f1d8fa530e397133f3136141bbee8c1))
+
+
+
 ## [5.99.1](https://github.com/reservoirprotocol/indexer/compare/v5.99.0...v5.99.1) (2022-07-01)
 
 
