@@ -1,3 +1,12 @@
+## [5.100.1](https://github.com/reservoirprotocol/indexer/compare/v5.100.0...v5.100.1) (2022-07-04)
+
+
+### Bug Fixes
+
+* skip seaport orders with a zero price ([2e5052d](https://github.com/reservoirprotocol/indexer/commit/2e5052d640dc77180faa3e97bf6b841c633eb146))
+
+
+
 # [5.100.0](https://github.com/reservoirprotocol/indexer/compare/v5.99.1...v5.100.0) (2022-07-04)
 
 
