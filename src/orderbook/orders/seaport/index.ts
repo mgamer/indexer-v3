@@ -62,6 +62,14 @@ export const save = async (
         });
       }
 
+      // Check: order has a non-zero price
+      if (bn(info.price).lte(0)) {
+        return results.push({
+          id,
+          status: "zero-price",
+        });
+      }
+
       const currentTime = Math.floor(Date.now() / 1000);
 
       // Check: order has a valid start time
