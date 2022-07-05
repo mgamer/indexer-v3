@@ -181,7 +181,8 @@ if (config.doBackgroundWork) {
                           ELSE 'approved'
                         END
                       )::order_approval_status_t
-                    FROM x LEFT JOIN y ON TRUE
+                    FROM x
+                    LEFT JOIN y ON TRUE
                     WHERE orders.id = x.id
                       AND orders.approval_status != (
                         CASE
@@ -324,8 +325,8 @@ if (config.doBackgroundWork) {
                     values,
                     columns
                   )}) AS x(id, fillability_status, expiration)
-                  WHERE o.id = x.id::TEXT
-                    AND o.kind != 'foundation'::order_kind_t
+                  WHERE orders.id = x.id::TEXT
+                    AND orders.kind != 'foundation'::order_kind_t
                 `
               );
             }
@@ -346,7 +347,7 @@ if (config.doBackgroundWork) {
           case "sell-approval": {
             const result: { id: string }[] = await idb.manyOrNone(
               `
-                UPDATE orders AS o SET
+                UPDATE orders SET
                   approval_status = $/approvalStatus/,
                   expiration = to_timestamp($/expiration/),
                   updated_at = now()
@@ -364,8 +365,8 @@ if (config.doBackgroundWork) {
                     AND orders.approval_status != $/approvalStatus/
                   LIMIT 1
                 ) x
-                WHERE o.id = x.id
-                RETURNING o.id
+                WHERE orders.id = x.id
+                RETURNING orders.id
               `,
               {
                 maker: toBuffer(maker),
