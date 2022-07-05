@@ -9,7 +9,7 @@ import { TxData } from "@reservoir0x/sdk/dist/utils";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import { baseProvider } from "@/common/provider";
+import { slowProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 
@@ -227,7 +227,7 @@ export const getExecuteListV2Options: RouteOptions = {
                 // Generate a proxy registration transaction.
 
                 const proxyRegistry = new Sdk.WyvernV23.Helpers.ProxyRegistry(
-                  baseProvider,
+                  slowProvider,
                   config.chainId
                 );
                 const proxyRegistrationTx = proxyRegistry.registerProxyTransaction(query.maker);
@@ -261,8 +261,8 @@ export const getExecuteListV2Options: RouteOptions = {
                 const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
                 approvalTx = (
                   kind === "erc721"
-                    ? new Sdk.Common.Helpers.Erc721(baseProvider, orderInfo.contract)
-                    : new Sdk.Common.Helpers.Erc1155(baseProvider, orderInfo.contract)
+                    ? new Sdk.Common.Helpers.Erc721(slowProvider, orderInfo.contract)
+                    : new Sdk.Common.Helpers.Erc1155(slowProvider, orderInfo.contract)
                 ).approveTransaction(query.maker, userProxy!);
               }
             }
@@ -363,8 +363,8 @@ export const getExecuteListV2Options: RouteOptions = {
                 const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
                 approvalTx = (
                   kind === "erc721"
-                    ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.nft)
-                    : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.nft)
+                    ? new Sdk.Common.Helpers.Erc721(slowProvider, order.params.nft)
+                    : new Sdk.Common.Helpers.Erc1155(slowProvider, order.params.nft)
                 ).approveTransaction(query.maker, Sdk.OpenDao.Addresses.Exchange[config.chainId]);
 
                 break;
@@ -462,8 +462,8 @@ export const getExecuteListV2Options: RouteOptions = {
                 const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
                 approvalTx = (
                   kind === "erc721"
-                    ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.nft)
-                    : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.nft)
+                    ? new Sdk.Common.Helpers.Erc721(slowProvider, order.params.nft)
+                    : new Sdk.Common.Helpers.Erc1155(slowProvider, order.params.nft)
                 ).approveTransaction(query.maker, Sdk.ZeroExV4.Addresses.Exchange[config.chainId]);
 
                 break;
@@ -565,8 +565,8 @@ export const getExecuteListV2Options: RouteOptions = {
                 const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
                 approvalTx = (
                   kind === "erc721"
-                    ? new Sdk.Common.Helpers.Erc721(baseProvider, info.contract)
-                    : new Sdk.Common.Helpers.Erc1155(baseProvider, info.contract)
+                    ? new Sdk.Common.Helpers.Erc721(slowProvider, info.contract)
+                    : new Sdk.Common.Helpers.Erc1155(slowProvider, info.contract)
                 ).approveTransaction(query.maker, exchange.deriveConduit(order.params.conduitKey));
 
                 break;
@@ -661,8 +661,8 @@ export const getExecuteListV2Options: RouteOptions = {
                 // Generate an approval transaction.
                 approvalTx = (
                   contractKind === "erc721"
-                    ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.collection)
-                    : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.collection)
+                    ? new Sdk.Common.Helpers.Erc721(slowProvider, order.params.collection)
+                    : new Sdk.Common.Helpers.Erc1155(slowProvider, order.params.collection)
                 ).approveTransaction(
                   query.maker,
                   contractKind === "erc721"

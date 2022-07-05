@@ -13,6 +13,9 @@ export const config = {
 
   baseNetworkHttpUrl: String(process.env.BASE_NETWORK_HTTP_URL),
   baseNetworkWsUrl: String(process.env.BASE_NETWORK_WS_URL),
+  slowNetworkHttpUrl: String(
+    process.env.SLOW_NETWORK_HTTP_URL ?? process.env.BASE_NETWORK_HTTP_URL
+  ),
   openseaIndexerApiBaseUrl: String(process.env.OPENSEA_INDEXER_API_BASE_URL),
 
   // When running in liquidity-only mode, all metadata processes are disabled
