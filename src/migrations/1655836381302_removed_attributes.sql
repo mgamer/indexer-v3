@@ -16,6 +16,9 @@ ALTER TABLE "removed_attribute_keys"
   ADD CONSTRAINT "removed_attribute_keys_pk"
   PRIMARY KEY ("id");
 
+CREATE INDEX "removed_attribute_keys_deleted_at_id_index"
+  ON "removed_attribute_keys" ("deleted_at", "id");
+
 CREATE TABLE "removed_attributes" (
   "id" BIGINT NOT NULL,
   "attribute_key_id" INT NOT NULL,
@@ -38,6 +41,9 @@ ALTER TABLE "removed_attributes"
   ADD CONSTRAINT "removed_attributes_pk"
   PRIMARY KEY ("id");
 
+CREATE INDEX "removed_attributes_deleted_at_id_index"
+  ON "removed_attributes" ("deleted_at", "id");
+
 CREATE TABLE "removed_token_attributes" (
   "contract" BYTEA NOT NULL,
   "token_id" NUMERIC(78, 0) NOT NULL,
@@ -52,6 +58,9 @@ CREATE TABLE "removed_token_attributes" (
 ALTER TABLE "removed_token_attributes"
   ADD CONSTRAINT "removed_token_attributes_pk"
   PRIMARY KEY ("contract", "token_id", "attribute_id");
+
+CREATE INDEX "removed_token_attributes_deleted_at_contract_token_id_attribute_id_index"
+  ON "removed_token_attributes" ("deleted_at", "contract", "token_id", "attribute_id");
 
 -- Down Migration
 
