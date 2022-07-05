@@ -2,7 +2,7 @@
 
 import _ from "lodash";
 
-import { idb } from "@/common/db";
+import { idb, redb } from "@/common/db";
 import { AttributeKeysEntityParamsUpdateParams } from "@/models/attribute-keys/attribute-keys-entity";
 
 export class AttributeKeys {
@@ -47,5 +47,15 @@ export class AttributeKeys {
                    ) INSERT INTO removed_attribute_keys SELECT * FROM x;`;
 
     return await idb.none(query, replacementValues);
+  }
+
+  public static async getKeysCount(collectionId: string) {
+    const query = `
+        SELECT count(*) AS "count"
+        FROM attribute_keys
+        WHERE collection_id = $/collectionId/
+    `;
+
+    return (await redb.one(query, { collectionId })).count;
   }
 }
