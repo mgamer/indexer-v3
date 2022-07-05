@@ -273,7 +273,7 @@ if (config.doBackgroundWork) {
                 JOIN token_sets_tokens
                   ON orders.token_set_id = token_sets_tokens.token_set_id
                   AND nft_balances.contract = token_sets_tokens.contract
-                  AND nft_balances.token_id = token_sets_tokens.token_ids
+                  AND nft_balances.token_id = token_sets_tokens.token_id
                 WHERE orders.maker = $/maker/
                   AND orders.side = 'sell'
                   AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
