@@ -1,3 +1,13 @@
+## [5.102.2](https://github.com/reservoirprotocol/indexer/compare/v5.102.1...v5.102.2) (2022-07-05)
+
+
+### Bug Fixes
+
+* filter collections with keys that has too many values from rarity ([5d3f00a](https://github.com/reservoirprotocol/indexer/commit/5d3f00a0f62e40bf8137ee562c4db6aa41ba92ac))
+* stop creating releases ([690e237](https://github.com/reservoirprotocol/indexer/commit/690e237d0fbee04a5cc15f45858282befbff5d74))
+
+
+
 ## [5.102.1](https://github.com/reservoirprotocol/indexer/compare/v5.102.0...v5.102.1) (2022-07-05)
 
 
