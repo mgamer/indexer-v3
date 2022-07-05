@@ -1,3 +1,14 @@
+# [5.101.0](https://github.com/reservoirprotocol/indexer/compare/v5.100.1...v5.101.0) (2022-07-05)
+
+
+### Bug Fixes
+
+* check if collection has too many keys ([c6398bb](https://github.com/reservoirprotocol/indexer/commit/c6398bbe9fb45db9549259e29afa2f3e7543f3a0))
+* revert datadog version ([8ad5934](https://github.com/reservoirprotocol/indexer/commit/8ad5934ab2458925853dfac2f2f0fcc2fcbd1c26))
+* revert datadog version ([6a31273](https://github.com/reservoirprotocol/indexer/commit/6a31273135f06bf20899d9e3be60ebbea61b9686))
+
+
+
 ## [5.100.1](https://github.com/reservoirprotocol/indexer/compare/v5.100.0...v5.100.1) (2022-07-04)
 
 
