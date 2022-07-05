@@ -39,6 +39,11 @@ if (config.doBackgroundWork) {
         job.data as TokenMetadataInfo;
 
       try {
+        logger.info(
+          QUEUE_NAME,
+          `Start. contract:${contract}, tokenId:${tokenId}, attributeCount:${_.size(attributes)}`
+        );
+
         // Update the token's metadata.
         const result = await idb.oneOrNone(
           `
@@ -66,32 +71,8 @@ if (config.doBackgroundWork) {
           return;
         }
 
-        // Clear the current token attributes
-        const attributesToRefresh = await idb.manyOrNone(
-          `WITH x AS (
-                    DELETE FROM token_attributes
-                    WHERE contract = $/contract/
-                    AND token_id = $/tokenId/
-                    RETURNING contract, token_id, attribute_id, collection_id, key, value, created_at
-                   )
-                   INSERT INTO removed_token_attributes SELECT * FROM x
-                   ON CONFLICT (contract,token_id,attribute_id) DO UPDATE SET deleted_at = now()
-                   RETURNING key, value, attribute_id;`,
-          {
-            contract: toBuffer(contract),
-            tokenId,
-          }
-        );
-
-        // Recalculate the collection rarity
-        await rarityQueue.addToQueue(collection);
-
-        // Schedule attribute refresh
-        _.forEach(attributesToRefresh, (attribute) => {
-          resyncAttributeKeyCounts.addToQueue(collection, attribute.key);
-          resyncAttributeValueCounts.addToQueue(collection, attribute.key, attribute.value);
-          (tokenAttributeCounter as any)[attribute.attribute_id] = -1;
-        });
+        const addedTokenAttributes = [];
+        const attributeIds = [];
 
         // Token attributes
         for (const { key, value, kind, rank } of attributes) {
@@ -231,6 +212,8 @@ if (config.doBackgroundWork) {
             throw new Error(`Could not fetch/save attribute "${value}"`);
           }
 
+          attributeIds.push(attributeResult.id);
+
           let sampleImageUpdate = "";
           if (imageUrl) {
             sampleImageUpdate = `
@@ -245,8 +228,9 @@ if (config.doBackgroundWork) {
           }
 
           // Associate the attribute with the token
-          await idb.none(
+          const tokenAttributeResult = await idb.oneOrNone(
             `
+              ${sampleImageUpdate}
               INSERT INTO "token_attributes" (
                 "contract",
                 "token_id",
@@ -262,9 +246,8 @@ if (config.doBackgroundWork) {
                 $/key/,
                 $/value/
               )
-              ON CONFLICT DO NOTHING;
-              
-              ${sampleImageUpdate}
+              ON CONFLICT DO NOTHING
+              RETURNING key, value, attribute_id;
             `,
             {
               contract: toBuffer(contract),
@@ -277,12 +260,68 @@ if (config.doBackgroundWork) {
             }
           );
 
-          if (_.has(tokenAttributeCounter, attributeResult.id)) {
-            ++(tokenAttributeCounter as any)[attributeResult.id];
-          } else {
+          if (tokenAttributeResult) {
+            logger.info(
+              QUEUE_NAME,
+              `Added token attribute. contract:${contract}, tokenId:${tokenId}, attributeId:${attributeResult.id}, key:${key}, key:${value}`
+            );
+            addedTokenAttributes.push(tokenAttributeResult);
             (tokenAttributeCounter as any)[attributeResult.id] = 1;
+          } else {
+            logger.info(
+              QUEUE_NAME,
+              `Existing token attribute. contract:${contract}, tokenId:${tokenId}, attributeId:${attributeResult.id}, key:${key}, key:${value}`
+            );
           }
         }
+
+        // Clear deleted token attributes
+        const removedTokenAttributes = await idb.manyOrNone(
+          `WITH x AS (
+                    DELETE FROM token_attributes
+                    WHERE contract = $/contract/
+                    AND token_id = $/tokenId/
+                    AND attribute_id NOT IN ($/attributeIds:raw/)
+                    RETURNING contract, token_id, attribute_id, collection_id, key, value, created_at
+                   )
+                   INSERT INTO removed_token_attributes SELECT * FROM x
+                   ON CONFLICT (contract,token_id,attribute_id) DO UPDATE SET deleted_at = now()
+                   RETURNING key, value, attribute_id;`,
+          {
+            contract: toBuffer(contract),
+            tokenId,
+            attributeIds: _.join(attributeIds, ","),
+          }
+        );
+
+        // Schedule attribute refresh
+        _.forEach(removedTokenAttributes, (attribute) => {
+          (tokenAttributeCounter as any)[attribute.attribute_id] = -1;
+          logger.info(
+            QUEUE_NAME,
+            `Removed token attribute. contract:${contract}, tokenId:${tokenId}, attribute:${JSON.stringify(
+              attribute
+            )}`
+          );
+        });
+
+        logger.info(
+          QUEUE_NAME,
+          `Refresh. contract:${contract}, tokenId:${tokenId}, addedTokenAttributes:${_.size(
+            addedTokenAttributes
+          )}, removedTokenAttributes:${_.size(removedTokenAttributes)}`
+        );
+
+        const attributesToRefresh = addedTokenAttributes.concat(removedTokenAttributes);
+
+        // Schedule attribute refresh
+        _.forEach(attributesToRefresh, (attribute) => {
+          resyncAttributeKeyCounts.addToQueue(collection, attribute.key);
+          resyncAttributeValueCounts.addToQueue(collection, attribute.key, attribute.value);
+        });
+
+        // Recalculate the collection rarity
+        await rarityQueue.addToQueue(collection);
 
         // Update the attributes token count
         const replacementParams = {};
