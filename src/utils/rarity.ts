@@ -19,14 +19,25 @@ export class Rarity {
       }[];
     }[] = [];
 
+    // Filter any keys with more than 5000 distinct values
+    const valuesCount = await Rarity.getValuesCount(collectionId);
+    const excludedKeys: string[] = [];
+    _.map(valuesCount, (value) => (value.count > 5000 ? excludedKeys.push(value.key) : null));
+
     let lastTokenId;
 
     // Get all tokens and their attributes for the given collection
     while (fetchMoreTokens) {
       let continuation = "";
+      let keysFilter = "";
+
       if (lastTokenId) {
         continuation = `AND token_id > $/tokenId/`;
         values = _.merge(values, { tokenId: lastTokenId });
+      }
+
+      if (_.size(excludedKeys)) {
+        keysFilter = `AND key NOT IN ('${_.join(excludedKeys, "','")}')`;
       }
 
       const query = `
@@ -34,6 +45,7 @@ export class Rarity {
                array_agg(json_build_object('key', key, 'value', value)) AS "attributes"
         FROM token_attributes
         WHERE collection_id = $/collectionId/
+        ${keysFilter}
         ${continuation}
         GROUP BY contract, token_id
         ORDER BY token_id ASC
@@ -54,24 +66,14 @@ export class Rarity {
       return [];
     }
 
-    // Filter any keys with more than 5000 distince values
-    const valuesCount = await Rarity.getValuesCount(collectionId);
-    const excludedKeys: string[] = [];
-    _.map(valuesCount, (value) => (value.count > 5000 ? excludedKeys.push(value.key) : null));
-
     // Build an array for the rarity calculation, some of the fields are not relevant for the calculation but needs to be passed
     const nfts: NftInit[] = _.map(tokens, (result) => {
-      const traits: TraitBase[] = [];
-      _.map(result.attributes, (attribute) =>
-        _.indexOf(excludedKeys, attribute.key) === -1
-          ? traits.push({
-              typeValue: attribute.key,
-              value: attribute.value,
-              category: "Traits",
-              displayType: null,
-            })
-          : null
-      );
+      const traits: TraitBase[] = _.map(result.attributes, (attribute) => ({
+        typeValue: attribute.key,
+        value: attribute.value,
+        category: "Traits",
+        displayType: null,
+      }));
 
       traits.push({
         typeValue: "Trait Count",
