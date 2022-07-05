@@ -30,14 +30,14 @@ export class Rarity {
       }
 
       const query = `
-      SELECT token_id AS "tokenId",
-             array_agg(json_build_object('key', key, 'value', value)) AS "attributes"
-      FROM token_attributes
-      WHERE collection_id = $/collectionId/
-      ${continuation}
-      GROUP BY contract, token_id
-      ORDER BY contract, token_id ASC
-      LIMIT ${limit}
+        SELECT token_id AS "tokenId",
+               array_agg(json_build_object('key', key, 'value', value)) AS "attributes"
+        FROM token_attributes
+        WHERE collection_id = $/collectionId/
+        ${continuation}
+        GROUP BY contract, token_id
+        ORDER BY contract, token_id ASC
+        LIMIT ${limit}
     `;
 
       const result = await redb.manyOrNone(query, values);
@@ -54,14 +54,24 @@ export class Rarity {
       return [];
     }
 
+    // Filter any keys with more than 5000 distince values
+    const valuesCount = await Rarity.getValuesCount(collectionId);
+    const excludedKeys: string[] = [];
+    _.map(valuesCount, (value) => (value.count > 5000 ? excludedKeys.push(value.key) : null));
+
     // Build an array for the rarity calculation, some of the fields are not relevant for the calculation but needs to be passed
     const nfts: NftInit[] = _.map(tokens, (result) => {
-      const traits: TraitBase[] = _.map(result.attributes, (attribute) => ({
-        typeValue: attribute.key,
-        value: attribute.value,
-        category: "Traits",
-        displayType: null,
-      }));
+      const traits: TraitBase[] = [];
+      _.map(result.attributes, (attribute) =>
+        _.indexOf(excludedKeys, attribute.key) === -1
+          ? traits.push({
+              typeValue: attribute.key,
+              value: attribute.value,
+              category: "Traits",
+              displayType: null,
+            })
+          : null
+      );
 
       traits.push({
         typeValue: "Trait Count",
@@ -88,5 +98,18 @@ export class Rarity {
     // Get the score for the tokens and return
     const { nftsWithRarityAndRank } = getAllNftsRarity(nfts);
     return nftsWithRarityAndRank;
+  }
+
+  public static async getValuesCount(
+    collectionId: string
+  ): Promise<{ key: string; count: number }[]> {
+    const query = `
+      SELECT key, count(DISTINCT value) AS "count"
+      FROM token_attributes
+      WHERE collection_id = $/collectionId/
+      GROUP BY key
+    `;
+
+    return await redb.manyOrNone(query, { collectionId });
   }
 }
