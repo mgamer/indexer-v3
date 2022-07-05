@@ -98,12 +98,6 @@ export const setupRoutes = (server: Server) => {
     options: adminEndpoints.postSetCollectionCommunity,
   });
 
-  server.route({
-    method: "POST",
-    path: "/admin/simulate-floor",
-    options: adminEndpoints.postSimulateFloor,
-  });
-
   // Api keys
 
   server.route({
@@ -518,6 +512,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/tokens/refresh/v1",
     options: tokensEndpoints.postTokensRefreshV1Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/tokens/simulate-floor/v1",
+    options: tokensEndpoints.postSimulateFloorV1Options,
   });
 
   // Token sets
