@@ -36,7 +36,7 @@ export class Rarity {
         WHERE collection_id = $/collectionId/
         ${continuation}
         GROUP BY contract, token_id
-        ORDER BY contract, token_id ASC
+        ORDER BY token_id ASC
         LIMIT ${limit}
     `;
 
