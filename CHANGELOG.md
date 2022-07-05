@@ -1,3 +1,57 @@
+## [5.102.1](https://github.com/reservoirprotocol/indexer/compare/v5.102.0...v5.102.1) (2022-07-05)
+
+
+### Bug Fixes
+
+* log any invalid orders ([3b80481](https://github.com/reservoirprotocol/indexer/commit/3b80481dcb58f271c5a18f57a633a9f60c6a2e69))
+
+
+
+# [5.102.0](https://github.com/reservoirprotocol/indexer/compare/v5.101.0...v5.102.0) (2022-07-05)
+
+
+### Bug Fixes
+
+* remove explicit transactions ([4de2c99](https://github.com/reservoirprotocol/indexer/commit/4de2c996bcff19a0b9d7b97061a5efab42f62be9))
+* tweaks ([4df7103](https://github.com/reservoirprotocol/indexer/commit/4df7103aac3e2a4d4237df4b0246e84edd687d3d))
+* wrong query ([cb073b2](https://github.com/reservoirprotocol/indexer/commit/cb073b2da39585c5989c9768aac3307b915d98aa))
+
+
+### Features
+
+* public api for floor order simulation ([0fa55cb](https://github.com/reservoirprotocol/indexer/commit/0fa55cb6c14ae384bb4ad93e9791fab1fa62e5d0))
+
+
+
+# [5.101.0](https://github.com/reservoirprotocol/indexer/compare/v5.100.1...v5.101.0) (2022-07-05)
+
+
+### Bug Fixes
+
+* check if collection has too many keys ([c6398bb](https://github.com/reservoirprotocol/indexer/commit/c6398bbe9fb45db9549259e29afa2f3e7543f3a0))
+* revert datadog version ([8ad5934](https://github.com/reservoirprotocol/indexer/commit/8ad5934ab2458925853dfac2f2f0fcc2fcbd1c26))
+* revert datadog version ([6a31273](https://github.com/reservoirprotocol/indexer/commit/6a31273135f06bf20899d9e3be60ebbea61b9686))
+
+
+
+## [5.100.1](https://github.com/reservoirprotocol/indexer/compare/v5.100.0...v5.100.1) (2022-07-04)
+
+
+### Bug Fixes
+
+* skip seaport orders with a zero price ([2e5052d](https://github.com/reservoirprotocol/indexer/commit/2e5052d640dc77180faa3e97bf6b841c633eb146))
+
+
+
+# [5.100.0](https://github.com/reservoirprotocol/indexer/compare/v5.99.1...v5.100.0) (2022-07-04)
+
+
+### Features
+
+* use slow provider for api rpc calls ([661be7f](https://github.com/reservoirprotocol/indexer/commit/661be7f25f1d8fa530e397133f3136141bbee8c1))
+
+
+
 ## [5.99.1](https://github.com/reservoirprotocol/indexer/compare/v5.99.0...v5.99.1) (2022-07-01)
 
 

@@ -1,5 +1,4 @@
 import { BigNumberish, BigNumber } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
 import pLimit from "p-limit";
@@ -142,14 +141,6 @@ export const save = async (
         return results.push({
           id,
           status: "unsupported-payment-token",
-        });
-      }
-
-      // Check: order is not private
-      if (order.params.taker !== AddressZero) {
-        return results.push({
-          id,
-          status: "unsupported-taker",
         });
       }
 
@@ -349,7 +340,7 @@ export const save = async (
         token_set_id: tokenSetId,
         token_set_schema_hash: toBuffer(schemaHash),
         maker: toBuffer(order.params.maker),
-        taker: toBuffer(AddressZero),
+        taker: toBuffer(order.params.taker),
         price: price.toString(),
         value: value.toString(),
         quantity_remaining: order.params.nftAmount,
