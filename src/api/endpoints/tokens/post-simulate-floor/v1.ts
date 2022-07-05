@@ -73,6 +73,13 @@ export const postSimulateFloorV1Options: RouteOptions = {
       if (simulationResult.success) {
         return { message: "Floor order is fillable" };
       } else {
+        const orderId = (groups as any).orderId;
+
+        logger.warn(
+          `post-simulate-floor-${version}-handler`,
+          `Detected unfillable order ${orderId}`
+        );
+
         // Invalidate the order if the simulation failed
         await inject({
           method: "POST",
@@ -82,7 +89,7 @@ export const postSimulateFloorV1Options: RouteOptions = {
             "X-Admin-Api-Key": config.adminApiKey,
           },
           payload: {
-            id: (groups as any).orderId,
+            id: orderId,
           },
         });
 
