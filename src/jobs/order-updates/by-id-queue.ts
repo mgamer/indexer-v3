@@ -43,7 +43,8 @@ if (config.doBackgroundWork) {
       let { side, tokenSetId } = job.data as OrderInfo;
 
       try {
-        let order;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let order: any;
 
         if (id) {
           // Fetch the order's associated data
@@ -67,7 +68,8 @@ if (config.doBackgroundWork) {
               JOIN token_sets_tokens
                 ON orders.token_set_id = token_sets_tokens.token_set_id
               WHERE orders.id = $/id/
-              LIMIT 1`,
+              LIMIT 1
+            `,
             { id }
           );
 
@@ -119,9 +121,6 @@ if (config.doBackgroundWork) {
               }
             }
           }
-
-          // TODO: Research if splitting the single token updates in multiple
-          // batches is needed (eg. to avoid blocking other running queries).
 
           if (side === "sell") {
             // Atomically update the cache and trigger an api event if needed
@@ -267,54 +266,54 @@ if (config.doBackgroundWork) {
               await collectionUpdatesFloorAsk.addToQueue([sellOrderResult]);
             }
           } else if (side === "buy") {
-            await topBidUpdateQueue.addToQueue(tokenSetId);
+            await topBidUpdateQueue.addToQueue(tokenSetId!);
           }
 
           if (order) {
             if (order.side === "sell") {
-              // Insert a corresponding order event.
+              // Insert a corresponding order event
               await idb.none(
                 `
-                INSERT INTO order_events (
-                  kind,
-                  status,
-                  contract,
-                  token_id,
-                  order_id,
-                  order_source_id,
-                  order_source_id_int,
-                  order_valid_between,
-                  order_quantity_remaining,
-                  maker,
-                  price,
-                  tx_hash,
-                  tx_timestamp
-                )
-                VALUES (
-                  $/kind/,
-                  (
-                    CASE
-                      WHEN $/fillabilityStatus/ = 'filled' THEN 'filled'
-                      WHEN $/fillabilityStatus/ = 'cancelled' THEN 'cancelled'
-                      WHEN $/fillabilityStatus/ = 'expired' THEN 'expired'
-                      WHEN $/fillabilityStatus/ = 'no-balance' THEN 'inactive'
-                      WHEN $/approvalStatus/ = 'no-approval' THEN 'inactive'
-                      ELSE 'active'
-                    END
-                  )::order_event_status_t,
-                  $/contract/,
-                  $/tokenId/,
-                  $/id/,
-                  $/sourceId/,
-                  $/sourceIdInt/,
-                  $/validBetween/,
-                  $/quantityRemaining/,
-                  $/maker/,
-                  $/value/,
-                  $/txHash/,
-                  $/txTimestamp/
-                ) 
-              `,
+                  INSERT INTO order_events (
+                    kind,
+                    status,
+                    contract,
+                    token_id,
+                    order_id,
+                    order_source_id,
+                    order_source_id_int,
+                    order_valid_between,
+                    order_quantity_remaining,
+                    maker,
+                    price,
+                    tx_hash,
+                    tx_timestamp
+                  )
+                  VALUES (
+                    $/kind/,
+                    (
+                      CASE
+                        WHEN $/fillabilityStatus/ = 'filled' THEN 'filled'
+                        WHEN $/fillabilityStatus/ = 'cancelled' THEN 'cancelled'
+                        WHEN $/fillabilityStatus/ = 'expired' THEN 'expired'
+                        WHEN $/fillabilityStatus/ = 'no-balance' THEN 'inactive'
+                        WHEN $/approvalStatus/ = 'no-approval' THEN 'inactive'
+                        ELSE 'active'
+                      END
+                    )::order_event_status_t,
+                    $/contract/,
+                    $/tokenId/,
+                    $/id/,
+                    $/sourceId/,
+                    $/sourceIdInt/,
+                    $/validBetween/,
+                    $/quantityRemaining/,
+                    $/maker/,
+                    $/value/,
+                    $/txHash/,
+                    $/txTimestamp/
+                  )
+                `,
                 {
                   fillabilityStatus: order.fillabilityStatus,
                   approvalStatus: order.approvalStatus,
