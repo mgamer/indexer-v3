@@ -91,6 +91,7 @@ export const getExecuteSellV1Options: RouteOptions = {
             AND orders.side = 'buy'
             AND orders.fillability_status = 'fillable'
             AND orders.approval_status = 'approved'
+            AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
           ORDER BY orders.value DESC
           LIMIT 1
         `,
