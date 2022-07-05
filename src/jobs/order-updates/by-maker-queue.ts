@@ -90,36 +90,38 @@ if (config.doBackgroundWork) {
                 expiration: expiration || "infinity",
               }));
 
-            // Update any orders that did change status
-            if (values.length) {
-              const columns = new pgp.helpers.ColumnSet(
-                ["id", "fillability_status", "expiration"],
-                { table: "orders" }
-              );
+            await idb.tx(async (t) => {
+              // Update any orders that did change status
+              if (values.length) {
+                const columns = new pgp.helpers.ColumnSet(
+                  ["id", "fillability_status", "expiration"],
+                  { table: "orders" }
+                );
 
-              await idb.none(
-                `
-                  UPDATE orders SET
-                    fillability_status = x.fillability_status::order_fillability_status_t,
-                    expiration = x.expiration::TIMESTAMPTZ,
-                    updated_at = now()
-                  FROM (VALUES ${pgp.helpers.values(
-                    values,
-                    columns
-                  )}) AS x(id, fillability_status, expiration)
-                  WHERE orders.id = x.id::TEXT
-                `
-              );
-            }
+                await t.none(
+                  `
+                    UPDATE orders SET
+                      fillability_status = x.fillability_status::order_fillability_status_t,
+                      expiration = x.expiration::TIMESTAMPTZ,
+                      updated_at = now()
+                    FROM (VALUES ${pgp.helpers.values(
+                      values,
+                      columns
+                    )}) AS x(id, fillability_status, expiration)
+                    WHERE orders.id = x.id::TEXT
+                  `
+                );
+              }
 
-            // Recheck all updated orders
-            await orderUpdatesById.addToQueue(
-              fillabilityStatuses.map(({ id }) => ({
-                context: `${context}-${id}`,
-                id,
-                trigger,
-              }))
-            );
+              // Recheck all updated orders
+              await orderUpdatesById.addToQueue(
+                fillabilityStatuses.map(({ id }) => ({
+                  context: `${context}-${id}`,
+                  id,
+                  trigger,
+                }))
+              );
+            });
 
             break;
           }
@@ -152,60 +154,62 @@ if (config.doBackgroundWork) {
                 // Refresh approval from on-chain data
                 await fetchAndUpdateFtApproval(data.contract, maker, data.operator);
 
-                // Validate or invalidate orders based on the just-updated approval
-                const result = await idb.manyOrNone(
-                  `
-                    WITH
-                      x AS (
-                        SELECT
-                          orders.id,
-                          orders.price
-                        FROM orders
-                        WHERE orders.maker = $/maker/
-                          AND orders.side = 'buy'
-                          AND orders.conduit = $/conduit/
-                          AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
-                      ),
-                      y AS (
-                        SELECT
-                          ft_approvals.value
-                        FROM ft_approvals
-                        WHERE ft_approvals.token = $/token/
-                          AND ft_approvals.owner = $/maker/
-                          AND ft_approvals.spender = $/conduit/
-                      )
-                    UPDATE orders SET
-                      approval_status = (
-                        CASE
-                          WHEN orders.price > y.value THEN 'no-approval'
-                          ELSE 'approved'
-                        END
-                      )::order_approval_status_t
-                    FROM x LEFT JOIN y ON TRUE
-                    WHERE orders.id = x.id
-                      AND orders.approval_status != (
-                        CASE
-                          WHEN orders.price > y.value THEN 'no-approval'
-                          ELSE 'approved'
-                        END
-                      )::order_approval_status_t
-                    RETURNING orders.id
-                  `,
-                  {
-                    token: toBuffer(data.contract),
-                    maker: toBuffer(maker),
-                    conduit: toBuffer(data.operator),
-                  }
-                );
+                await idb.tx(async (t) => {
+                  // Validate or invalidate orders based on the just-updated approval
+                  const result = await t.manyOrNone(
+                    `
+                      WITH
+                        x AS (
+                          SELECT
+                            orders.id,
+                            orders.price
+                          FROM orders
+                          WHERE orders.maker = $/maker/
+                            AND orders.side = 'buy'
+                            AND orders.conduit = $/conduit/
+                            AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                        ),
+                        y AS (
+                          SELECT
+                            ft_approvals.value
+                          FROM ft_approvals
+                          WHERE ft_approvals.token = $/token/
+                            AND ft_approvals.owner = $/maker/
+                            AND ft_approvals.spender = $/conduit/
+                        )
+                      UPDATE orders SET
+                        approval_status = (
+                          CASE
+                            WHEN orders.price > y.value THEN 'no-approval'
+                            ELSE 'approved'
+                          END
+                        )::order_approval_status_t
+                      FROM x LEFT JOIN y ON TRUE
+                      WHERE orders.id = x.id
+                        AND orders.approval_status != (
+                          CASE
+                            WHEN orders.price > y.value THEN 'no-approval'
+                            ELSE 'approved'
+                          END
+                        )::order_approval_status_t
+                      RETURNING orders.id
+                    `,
+                    {
+                      token: toBuffer(data.contract),
+                      maker: toBuffer(maker),
+                      conduit: toBuffer(data.operator!),
+                    }
+                  );
 
-                // Recheck all affected orders
-                await orderUpdatesById.addToQueue(
-                  result.map(({ id }) => ({
-                    context: `${context}-${id}`,
-                    id,
-                    trigger,
-                  }))
-                );
+                  // Recheck all affected orders
+                  await orderUpdatesById.addToQueue(
+                    result.map(({ id }) => ({
+                      context: `${context}-${id}`,
+                      id,
+                      trigger,
+                    }))
+                  );
+                });
               }
             } else if (data.orderKind) {
               // Otherwise, the approval change is coming from a `Transfer` event
@@ -306,83 +310,88 @@ if (config.doBackgroundWork) {
                 expiration: expiration || "infinity",
               }));
 
-            // Update any orders that did change status
-            if (values.length) {
-              const columns = new pgp.helpers.ColumnSet(
-                ["id", "fillability_status", "expiration"],
-                { table: "orders" }
-              );
+            await idb.tx(async (t) => {
+              // Update any orders that did change status
+              if (values.length) {
+                const columns = new pgp.helpers.ColumnSet(
+                  ["id", "fillability_status", "expiration"],
+                  { table: "orders" }
+                );
 
-              // Exclude 'foundation' orders (which need special rules because of the escrowed orderbook)
-              await idb.none(
-                `
-                  UPDATE orders SET
-                    fillability_status = x.fillability_status::order_fillability_status_t,
-                    expiration = x.expiration::TIMESTAMPTZ,
-                    updated_at = now()
-                  FROM (VALUES ${pgp.helpers.values(
-                    values,
-                    columns
-                  )}) AS x(id, fillability_status, expiration)
-                  WHERE o.id = x.id::TEXT
-                    AND o.kind != 'foundation'::order_kind_t
-                `
-              );
-            }
+                // Exclude 'foundation' orders (which need special rules because of the escrowed orderbook)
+                await t.none(
+                  `
+                    UPDATE orders SET
+                      fillability_status = x.fillability_status::order_fillability_status_t,
+                      expiration = x.expiration::TIMESTAMPTZ,
+                      updated_at = now()
+                    FROM (VALUES ${pgp.helpers.values(
+                      values,
+                      columns
+                    )}) AS x(id, fillability_status, expiration)
+                    WHERE o.id = x.id::TEXT
+                      AND o.kind != 'foundation'::order_kind_t
+                  `
+                );
+              }
 
-            // Recheck all affected orders
-            await orderUpdatesById.addToQueue(
-              fillabilityStatuses.map(({ id }) => ({
-                context: `${context}-${id}`,
-                id,
-                trigger,
-              }))
-            );
+              // Recheck all affected orders
+              await orderUpdatesById.addToQueue(
+                fillabilityStatuses.map(({ id }) => ({
+                  context: `${context}-${id}`,
+                  id,
+                  trigger,
+                }))
+              );
+            });
 
             break;
           }
 
+          // Handle changes in ERC721/ERC1155 approvals (relevant for 'sell' orders)
           case "sell-approval": {
-            const result: { id: string }[] = await idb.manyOrNone(
-              `
-                UPDATE orders AS o SET
-                  approval_status = $/approvalStatus/,
-                  expiration = to_timestamp($/expiration/),
-                  updated_at = now()
-                FROM (
-                  SELECT
-                    orders.id
-                  FROM orders
-                  JOIN token_sets_tokens
-                    ON orders.token_set_id = token_sets_tokens.token_set_id
-                  WHERE token_sets_tokens.contract = $/contract/
-                    AND orders.maker = $/maker/
-                    AND orders.side = 'sell'
-                    AND orders.conduit = $/operator/
-                    AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
-                    AND orders.approval_status != $/approvalStatus/
-                  LIMIT 1
-                ) x
-                WHERE o.id = x.id
-                RETURNING o.id
-              `,
-              {
-                maker: toBuffer(maker),
-                contract: toBuffer(data.contract),
-                operator: toBuffer(data.operator),
-                approvalStatus: data.approved ? "approved" : "no-approval",
-                expiration: trigger.txTimestamp,
-              }
-            );
+            await idb.tx(async (t) => {
+              const result: { id: string }[] = await t.manyOrNone(
+                `
+                  UPDATE orders AS o SET
+                    approval_status = $/approvalStatus/,
+                    expiration = to_timestamp($/expiration/),
+                    updated_at = now()
+                  FROM (
+                    SELECT
+                      orders.id
+                    FROM orders
+                    JOIN token_sets_tokens
+                      ON orders.token_set_id = token_sets_tokens.token_set_id
+                    WHERE token_sets_tokens.contract = $/contract/
+                      AND orders.maker = $/maker/
+                      AND orders.side = 'sell'
+                      AND orders.conduit = $/operator/
+                      AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                      AND orders.approval_status != $/approvalStatus/
+                    LIMIT 1
+                  ) x
+                  WHERE o.id = x.id
+                  RETURNING o.id
+                `,
+                {
+                  maker: toBuffer(maker),
+                  contract: toBuffer(data.contract),
+                  operator: toBuffer(data.operator),
+                  approvalStatus: data.approved ? "approved" : "no-approval",
+                  expiration: trigger.txTimestamp,
+                }
+              );
 
-            // Recheck all affected orders
-            await orderUpdatesById.addToQueue(
-              result.map(({ id }) => ({
-                context: `${context}-${id}`,
-                id,
-                trigger,
-              }))
-            );
+              // Recheck all affected orders
+              await orderUpdatesById.addToQueue(
+                result.map(({ id }) => ({
+                  context: `${context}-${id}`,
+                  id,
+                  trigger,
+                }))
+              );
+            });
 
             break;
           }

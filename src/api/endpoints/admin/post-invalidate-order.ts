@@ -28,27 +28,29 @@ export const postInvalidateOrderOptions: RouteOptions = {
     const payload = request.payload as any;
 
     try {
-      await idb.none(
-        `
-          UPDATE orders SET
-            fillability_status = 'cancelled',
-            approval_status = 'disabled',
-            updated_at = now()
-          WHERE orders.id = $/id/
-        `,
-        { id: payload.id }
-      );
+      await idb.tx(async (t) => {
+        await t.none(
+          `
+            UPDATE orders SET
+              fillability_status = 'cancelled',
+              approval_status = 'disabled',
+              updated_at = now()
+            WHERE orders.id = $/id/
+          `,
+          { id: payload.id }
+        );
 
-      // Update any wrong caches.
-      await orderUpdatesById.addToQueue([
-        {
-          context: `revalidation-${Date.now()}-${payload.id}`,
-          id: payload.id,
-          trigger: {
-            kind: "revalidation",
-          },
-        } as orderUpdatesById.OrderInfo,
-      ]);
+        // Recheck the order
+        await orderUpdatesById.addToQueue([
+          {
+            context: `revalidation-${Date.now()}-${payload.id}`,
+            id: payload.id,
+            trigger: {
+              kind: "revalidation",
+            },
+          } as orderUpdatesById.OrderInfo,
+        ]);
+      });
 
       return { message: "Success" };
     } catch (error) {

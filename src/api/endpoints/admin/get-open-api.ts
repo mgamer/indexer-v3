@@ -1,10 +1,11 @@
 import { RouteOptions } from "@hapi/hapi";
-import { logger } from "@/common/logger";
-import { inject } from "@/api/index";
 import swagger2openapi from "swagger2openapi";
 
-//eslint-disable-next-line
-function parseMethod(object: { [key: string]: any }) {
+import { inject } from "@/api/index";
+import { logger } from "@/common/logger";
+
+// eslint-disable-next-line
+const parseMethod = (object: { [key: string]: any }) => {
   if (object["get"]) {
     return object["get"];
   } else if (object["post"]) {
@@ -14,8 +15,7 @@ function parseMethod(object: { [key: string]: any }) {
   } else if (object["delete"]) {
     return object["delete"];
   }
-  return null;
-}
+};
 
 export const getOpenApiOptions: RouteOptions = {
   description: "Get swagger json in OpenApi V3",
@@ -42,15 +42,19 @@ export const getOpenApiOptions: RouteOptions = {
           url: "https://api.reservoir.tools",
         },
         {
-          url: "http://api-rinkeby.reservoir.tools",
+          url: "https://api-rinkeby.reservoir.tools",
+        },
+        {
+          url: "https://api-optimism.reservoir.tools",
         },
       ];
 
       data.openapi["paths"] = Object.fromEntries(
-        //eslint-disable-next-line
+        // eslint-disable-next-line
         Object.entries(data.openapi["paths"]).sort((a: any, b: any) => {
           const aMethod = parseMethod(a[1]);
           const bMethod = parseMethod(b[1]);
+
           if (aMethod["tags"][0] < bMethod["tags"][0]) {
             return -1;
           }
@@ -58,6 +62,7 @@ export const getOpenApiOptions: RouteOptions = {
           if (aMethod["tags"][0] > bMethod["tags"][0]) {
             return 1;
           }
+
           return 0;
         })
       );
