@@ -217,6 +217,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
                 AND orders.side = 'sell'
                 AND orders.fillability_status = 'fillable'
                 AND orders.approval_status = 'approved'
+                AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
               ORDER BY orders.value
               LIMIT 1
             `,
@@ -274,6 +275,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
                 WHERE orders.token_set_id = $/tokenSetId/
                   AND orders.fillability_status = 'fillable'
                   AND orders.approval_status = 'approved'
+                  AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
               ) x WHERE x.quantity < $/quantity/
             `,
             {
