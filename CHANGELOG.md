@@ -1,3 +1,12 @@
+## [5.102.1](https://github.com/reservoirprotocol/indexer/compare/v5.102.0...v5.102.1) (2022-07-05)
+
+
+### Bug Fixes
+
+* log any invalid orders ([3b80481](https://github.com/reservoirprotocol/indexer/commit/3b80481dcb58f271c5a18f57a633a9f60c6a2e69))
+
+
+
 # [5.102.0](https://github.com/reservoirprotocol/indexer/compare/v5.101.0...v5.102.0) (2022-07-05)
 
 
