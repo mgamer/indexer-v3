@@ -1,3 +1,19 @@
+# [5.102.0](https://github.com/reservoirprotocol/indexer/compare/v5.101.0...v5.102.0) (2022-07-05)
+
+
+### Bug Fixes
+
+* remove explicit transactions ([4de2c99](https://github.com/reservoirprotocol/indexer/commit/4de2c996bcff19a0b9d7b97061a5efab42f62be9))
+* tweaks ([4df7103](https://github.com/reservoirprotocol/indexer/commit/4df7103aac3e2a4d4237df4b0246e84edd687d3d))
+* wrong query ([cb073b2](https://github.com/reservoirprotocol/indexer/commit/cb073b2da39585c5989c9768aac3307b915d98aa))
+
+
+### Features
+
+* public api for floor order simulation ([0fa55cb](https://github.com/reservoirprotocol/indexer/commit/0fa55cb6c14ae384bb4ad93e9791fab1fa62e5d0))
+
+
+
 # [5.101.0](https://github.com/reservoirprotocol/indexer/compare/v5.100.1...v5.101.0) (2022-07-05)
 
 
