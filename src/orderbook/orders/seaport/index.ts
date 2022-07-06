@@ -9,7 +9,8 @@ import { config } from "@/config/index";
 import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
-import { offChainCheck } from "@/orderbook/orders/seaport/check";
+import { offChainCheck, offChainCheckBundle } from "@/orderbook/orders/seaport/check";
+import * as bundles from "@/orderbook/bundles";
 import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
 
@@ -32,7 +33,7 @@ export const save = async (
   const orderValues: DbOrder[] = [];
 
   const arweaveData: {
-    order: Sdk.Seaport.Order;
+    order: Sdk.Seaport.Order | Sdk.Seaport.BundleOrder;
     schemaHash?: string;
     source?: string;
   }[] = [];
@@ -328,14 +329,270 @@ export const save = async (
     } catch (error) {
       logger.error(
         "orders-seaport-save",
-        `Failed to handle order with params ${JSON.stringify(orderParams)}: ${error}`
+        `Failed to handle order with params ${JSON.stringify(orderParams)}: ${error} (will retry)`
+      );
+
+      // Throw so that we retry with he bundle-handling code
+      throw error;
+    }
+  };
+
+  const handleBundleOrder = async ({ orderParams, metadata }: OrderInfo) => {
+    try {
+      const order = new Sdk.Seaport.BundleOrder(config.chainId, orderParams);
+      const info = order.getInfo();
+      const id = order.hash();
+
+      // Check: order has a valid format
+      if (!info) {
+        return results.push({
+          id,
+          status: "invalid-format",
+        });
+      }
+
+      // Check: order doesn't already exist
+      const orderExists = await idb.oneOrNone(`SELECT 1 FROM orders WHERE orders.id = $/id/`, {
+        id,
+      });
+      if (orderExists) {
+        return results.push({
+          id,
+          status: "already-exists",
+        });
+      }
+
+      const currentTime = Math.floor(Date.now() / 1000);
+
+      // Check: order has a valid start time
+      const startTime = order.params.startTime;
+      if (startTime - 5 * 60 >= currentTime) {
+        // TODO: Add support for not-yet-valid orders
+        return results.push({
+          id,
+          status: "invalid-start-time",
+        });
+      }
+
+      // Check: order is not expired
+      const endTime = order.params.endTime;
+      if (currentTime >= endTime) {
+        return results.push({
+          id,
+          status: "expired",
+        });
+      }
+
+      // Check: order has a known zone
+      if (
+        ![
+          // No zone
+          AddressZero,
+          // Are these really used?
+          "0xf397619df7bfd4d1657ea9bdd9df7ff888731a11",
+          "0x9b814233894cd227f561b78cc65891aa55c62ad2",
+          // Pausable zone
+          Sdk.Seaport.Addresses.PausableZone[config.chainId],
+        ].includes(order.params.zone)
+      ) {
+        return results.push({
+          id,
+          status: "unsupported-zone",
+        });
+      }
+
+      // Check: order is valid
+      try {
+        order.checkValidity();
+      } catch {
+        return results.push({
+          id,
+          status: "invalid",
+        });
+      }
+
+      // Check: order has a valid signature
+      try {
+        order.checkSignature();
+      } catch (error) {
+        return results.push({
+          id,
+          status: "invalid-signature",
+        });
+      }
+
+      // Check: order fillability
+      let fillabilityStatus = "fillable";
+      let approvalStatus = "approved";
+      try {
+        await offChainCheckBundle(order, { onChainApprovalRecheck: true });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        // Keep any orders that can potentially get valid in the future
+        if (error.message === "no-balance-no-approval") {
+          fillabilityStatus = "no-balance";
+          approvalStatus = "no-approval";
+        } else if (error.message === "no-approval") {
+          approvalStatus = "no-approval";
+        } else if (error.message === "no-balance") {
+          fillabilityStatus = "no-balance";
+        } else {
+          return results.push({
+            id,
+            status: "not-fillable",
+          });
+        }
+      }
+
+      // TODO: Add support for non-token token sets
+      const tokenSets = await tokenSet.singleToken.save(
+        info.offerItems.map((item) => ({
+          id: `token:${item.contract}:${item.tokenId!}`,
+          schemaHash: generateSchemaHash(),
+          contract: item.contract,
+          tokenId: item.tokenId!,
+        }))
+      );
+
+      // TODO: Add support for consideration bundles
+      const offerBundle = await bundles.create(tokenSets.map(({ id }) => ({ kind: "nft", id })));
+
+      if (order.params.kind === "bundle-ask") {
+        // Check: order has a non-zero price
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (bn((info as any).price).lte(0)) {
+          return results.push({
+            id,
+            status: "zero-price",
+          });
+        }
+
+        // Check: sell order has Eth as payment token
+        if (
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (info as any).paymentToken !== Sdk.Common.Addresses.Eth[config.chainId]
+        ) {
+          return results.push({
+            id,
+            status: "unsupported-payment-token",
+          });
+        }
+      }
+
+      // Handle: price and value
+      const price = bn(order.getMatchingPrice());
+      const value = price;
+
+      // Handle: fees
+      const feeAmount = order.getFeeAmount();
+
+      const feeBps = price.eq(0) ? bn(0) : feeAmount.mul(10000).div(price);
+      if (feeBps.gt(10000)) {
+        return results.push({
+          id,
+          status: "fees-too-high",
+        });
+      }
+
+      const openSeaFeeRecipients = [
+        "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073",
+        "0x8de9c5a032463c561423387a9648c5c7bcc5bc90",
+      ];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const feeBreakdown = ((info as any) || []).fees.map(
+        ({ recipient, amount }: { recipient: string; amount: string }) => ({
+          kind: openSeaFeeRecipients.includes(recipient.toLowerCase()) ? "marketplace" : "royalty",
+          recipient,
+          bps: price.eq(0) ? 0 : bn(amount).mul(10000).div(price).toNumber(),
+        })
+      );
+
+      // Handle: native Reservoir orders
+      let isReservoir = false;
+
+      // Handle: source and fees breakdown
+      const sources = await Sources.getInstance();
+
+      // Default source: OpenSea
+      let source = "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073";
+      let sourceId = sources.getByName("OpenSea").id;
+
+      if (metadata.source) {
+        const sourceEntity = await sources.getOrInsert(metadata.source);
+        source = sourceEntity.address;
+        sourceId = sourceEntity.id;
+
+        // Assume native listing
+        isReservoir = true;
+      }
+
+      const validFrom = `date_trunc('seconds', to_timestamp(${startTime}))`;
+      const validTo = endTime
+        ? `date_trunc('seconds', to_timestamp(${order.params.endTime}))`
+        : "'infinity'";
+      orderValues.push({
+        id,
+        kind: "seaport",
+        side: "bundle",
+        fillability_status: fillabilityStatus,
+        approval_status: approvalStatus,
+        token_set_id: null,
+        token_set_schema_hash: null,
+        offer_bundle_id: offerBundle,
+        consideration_bundle_id: undefined,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        bundle_kind: order.params.kind as any,
+        contract: null,
+        maker: toBuffer(order.params.offerer),
+        taker: toBuffer(info.taker),
+        price: price.toString(),
+        value: value.toString(),
+        valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
+        nonce: order.params.counter,
+        source_id: source ? toBuffer(source) : null,
+        source_id_int: sourceId,
+        is_reservoir: isReservoir ? isReservoir : null,
+        conduit: toBuffer(
+          new Sdk.Seaport.Exchange(config.chainId).deriveConduit(order.params.conduitKey)
+        ),
+        fee_breakdown: feeBreakdown,
+        fee_bps: feeBps.toNumber(),
+        raw_data: order.params,
+        dynamic: null,
+        expiration: validTo,
+      });
+
+      results.push({
+        id,
+        status: "success",
+        unfillable:
+          fillabilityStatus !== "fillable" || approvalStatus !== "approved" ? true : undefined,
+      });
+
+      if (relayToArweave) {
+        arweaveData.push({ order, source });
+      }
+    } catch (error) {
+      logger.error(
+        "orders-seaport-save-bundle",
+        `Failed to handle bundle order with params ${JSON.stringify(orderParams)}: ${error}`
       );
     }
   };
 
   // Process all orders concurrently
   const limit = pLimit(20);
-  await Promise.all(orderInfos.map((orderInfo) => limit(() => handleOrder(orderInfo))));
+  await Promise.all(
+    orderInfos.map((orderInfo) =>
+      limit(async () => {
+        try {
+          await handleOrder(orderInfo);
+        } catch (error) {
+          await handleBundleOrder(orderInfo);
+        }
+      })
+    )
+  );
 
   if (orderValues.length) {
     const columns = new pgp.helpers.ColumnSet(
@@ -347,6 +604,9 @@ export const save = async (
         "approval_status",
         "token_set_id",
         "token_set_schema_hash",
+        "offer_bundle_id",
+        "consideration_bundle_id",
+        "bundle_kind",
         "maker",
         "taker",
         "price",
