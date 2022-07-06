@@ -296,7 +296,7 @@ export const save = async (
         token_set_id: tokenSetId,
         token_set_schema_hash: toBuffer(schemaHash),
         maker: toBuffer(order.params.offerer),
-        taker: toBuffer(AddressZero),
+        taker: toBuffer(info.taker),
         price: price.toString(),
         value: value.toString(),
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
