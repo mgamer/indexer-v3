@@ -190,16 +190,16 @@ export const getTransfersV2Options: RouteOptions = {
       }
 
       if (query.continuation) {
-        const [block, logIndex, batchIndex] = splitContinuation(
+        const [timestamp, logIndex, batchIndex] = splitContinuation(
           query.continuation,
           /^(\d+)_(\d+)_(\d+)$/
         );
-        (query as any).block = block;
+        (query as any).timestamp = timestamp;
         (query as any).logIndex = logIndex;
         (query as any).batchIndex = batchIndex;
 
         conditions.push(
-          `(nft_transfer_events.block, nft_transfer_events.log_index, nft_transfer_events.batch_index) < ($/block/, $/logIndex/, $/batchIndex/)`
+          `(nft_transfer_events.timestamp, nft_transfer_events.log_index, nft_transfer_events.batch_index) < ($/timestamp/, $/logIndex/, $/batchIndex/)`
         );
       }
 
@@ -208,7 +208,7 @@ export const getTransfersV2Options: RouteOptions = {
       }
 
       // Sorting
-      baseQuery += ` ORDER BY nft_transfer_events.block DESC`;
+      baseQuery += ` ORDER BY nft_transfer_events.timestamp DESC`;
 
       // Pagination
       baseQuery += ` LIMIT $/limit/`;
@@ -218,7 +218,7 @@ export const getTransfersV2Options: RouteOptions = {
       let continuation = null;
       if (rawResult.length === query.limit) {
         continuation = buildContinuation(
-          rawResult[rawResult.length - 1].block +
+          rawResult[rawResult.length - 1].timestamp +
             "_" +
             rawResult[rawResult.length - 1].log_index +
             "_" +
