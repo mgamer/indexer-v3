@@ -1,3 +1,20 @@
+# [5.103.0](https://github.com/reservoirprotocol/indexer/compare/v5.102.2...v5.103.0) (2022-07-06)
+
+
+### Bug Fixes
+
+* properly handle tenderly simulation reverts ([7d4749c](https://github.com/reservoirprotocol/indexer/commit/7d4749c2d0068529223a64341b3c2fa7a2fe2619))
+* update order updates by maker queue concurrency ([ce35ec4](https://github.com/reservoirprotocol/indexer/commit/ce35ec4cb0571317eeafcfbad19614d2bdfbfaa0))
+
+
+### Features
+
+* add support for seaport private listings ([7280443](https://github.com/reservoirprotocol/indexer/commit/72804430c0313cd27adb52551e76adf9223aca8a))
+* add transfers bulk api ([e739e70](https://github.com/reservoirprotocol/indexer/commit/e739e70d4369077f3d27e7dc4c5c8cd583e4a203))
+* support private listings (non-seaport for now) ([5f79f75](https://github.com/reservoirprotocol/indexer/commit/5f79f75a7b6cd61f26629acf27631badec2c7ae3))
+
+
+
 ## [5.102.2](https://github.com/reservoirprotocol/indexer/compare/v5.102.1...v5.102.2) (2022-07-05)
 
 
