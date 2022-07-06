@@ -39,11 +39,6 @@ if (config.doBackgroundWork) {
         job.data as TokenMetadataInfo;
 
       try {
-        logger.info(
-          QUEUE_NAME,
-          `Start. contract:${contract}, tokenId:${tokenId}, attributeCount:${_.size(attributes)}`
-        );
-
         // Update the token's metadata.
         const result = await idb.oneOrNone(
           `
@@ -263,16 +258,22 @@ if (config.doBackgroundWork) {
           if (tokenAttributeResult) {
             logger.info(
               QUEUE_NAME,
-              `Added token attribute. contract:${contract}, tokenId:${tokenId}, attributeId:${attributeResult.id}, key:${key}, key:${value}`
+              `Added token attribute. contract:${contract}, tokenId:${tokenId}, attributeId:${attributeResult.id}, key:${key}, value:${value}`
             );
             addedTokenAttributes.push(tokenAttributeResult);
             (tokenAttributeCounter as any)[attributeResult.id] = 1;
           } else {
             logger.info(
               QUEUE_NAME,
-              `Existing token attribute. contract:${contract}, tokenId:${tokenId}, attributeId:${attributeResult.id}, key:${key}, key:${value}`
+              `Existing token attribute. contract:${contract}, tokenId:${tokenId}, attributeId:${attributeResult.id}, key:${key}, value:${value}`
             );
           }
+        }
+
+        let attributeIdsFilter = "";
+
+        if (attributeIds.length) {
+          attributeIdsFilter = `AND attribute_id NOT IN ($/attributeIds:raw/)`;
         }
 
         // Clear deleted token attributes
@@ -281,7 +282,7 @@ if (config.doBackgroundWork) {
                     DELETE FROM token_attributes
                     WHERE contract = $/contract/
                     AND token_id = $/tokenId/
-                    AND attribute_id NOT IN ($/attributeIds:raw/)
+                    ${attributeIdsFilter}
                     RETURNING contract, token_id, attribute_id, collection_id, key, value, created_at
                    )
                    INSERT INTO removed_token_attributes SELECT * FROM x
@@ -299,17 +300,17 @@ if (config.doBackgroundWork) {
           (tokenAttributeCounter as any)[attribute.attribute_id] = -1;
           logger.info(
             QUEUE_NAME,
-            `Removed token attribute. contract:${contract}, tokenId:${tokenId}, attribute:${JSON.stringify(
-              attribute
-            )}`
+            `Removed token attribute. contract:${contract}, tokenId:${tokenId}, attributeId:${attribute.attribute_id}, key:${attribute.key}, value:${attribute.value}`
           );
         });
 
         logger.info(
           QUEUE_NAME,
-          `Refresh. contract:${contract}, tokenId:${tokenId}, addedTokenAttributes:${_.size(
-            addedTokenAttributes
-          )}, removedTokenAttributes:${_.size(removedTokenAttributes)}`
+          `Refresh. contract:${contract}, tokenId:${tokenId}, attributeCount:${_.size(
+            attributes
+          )}, addedTokenAttributes:${_.size(addedTokenAttributes)}, removedTokenAttributes:${_.size(
+            removedTokenAttributes
+          )}`
         );
 
         const attributesToRefresh = addedTokenAttributes.concat(removedTokenAttributes);
