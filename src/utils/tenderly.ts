@@ -36,6 +36,12 @@ export const simulateBuyTx = async (tokenKind: "erc721" | "erc1155", tx: TxData)
     }
   );
 
+  if (
+    (simulation.data as any).transaction.transaction_info.call_trace.error === "execution reverted"
+  ) {
+    return { success: false };
+  }
+
   let hasTransfer = false;
   for (const { name, inputs } of (simulation.data as any).transaction.transaction_info.logs) {
     if (tokenKind === "erc721" && name === "Transfer" && inputs[1].value === genericTaker) {
