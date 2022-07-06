@@ -1,14 +1,14 @@
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuilder } from "@reservoir0x/sdk/dist/looks-rare/builders/base";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import * as utils from "@/orderbook/orders/looks-rare/build/utils";
 
 export const build = async (options: utils.BaseOrderBuildOptions) => {
   try {
-    const collectionResult = await edb.oneOrNone(
+    const collectionResult = await redb.oneOrNone(
       `
         SELECT
           collections.id

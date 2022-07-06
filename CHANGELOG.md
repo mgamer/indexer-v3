@@ -1,3 +1,14 @@
+## [5.103.1](https://github.com/reservoirprotocol/indexer/compare/v5.103.0...v5.103.1) (2022-07-06)
+
+
+### Bug Fixes
+
+* exclude large keys from query ([f9b1429](https://github.com/reservoirprotocol/indexer/commit/f9b1429a3532f31404fdb8b5166358ab5a516a79))
+* move reads to replica ([8b219d1](https://github.com/reservoirprotocol/indexer/commit/8b219d1a07f7ca424398cbf2236d70f410e906dc))
+* sort by token id ([610e8e1](https://github.com/reservoirprotocol/indexer/commit/610e8e165fac1f8b9de028ea561119a7304024e0))
+
+
+
 # [5.103.0](https://github.com/reservoirprotocol/indexer/compare/v5.102.2...v5.103.0) (2022-07-06)
 
 
