@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Request, RouteOptions } from "@hapi/hapi";
+import crypto from "crypto";
 import Joi from "joi";
 
 import { redb } from "@/common/db";
@@ -14,7 +15,6 @@ import {
   toBuffer,
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
-import crypto from "crypto";
 
 const version = "v1";
 

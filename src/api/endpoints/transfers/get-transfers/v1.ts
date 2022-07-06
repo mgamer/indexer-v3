@@ -135,7 +135,7 @@ export const getTransfersV1Options: RouteOptions = {
       }
 
       // Sorting
-      baseQuery += ` ORDER BY "nte"."block" DESC`;
+      baseQuery += ` ORDER BY "nte"."timestamp" DESC`;
 
       // Pagination
       baseQuery += ` OFFSET $/offset/`;

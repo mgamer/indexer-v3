@@ -22,11 +22,14 @@ ALTER TABLE "nft_transfer_events"
 CREATE INDEX "nft_transfer_events_block_block_hash_index"
   ON "nft_transfer_events" ("block", "block_hash");
 
-CREATE INDEX "nft_transfer_events_address_block_index"
-  ON "nft_transfer_events" ("address", "block" DESC);
+CREATE INDEX "nft_transfer_events_timestamp_index"
+  ON "nft_transfer_events" ("timestamp" DESC);
 
-CREATE INDEX "nft_transfer_events_address_token_id_block_index"
-  ON "nft_transfer_events" ("address", "token_id", "block" DESC);
+CREATE INDEX "nft_transfer_events_address_timestamp_index"
+  ON "nft_transfer_events" ("address", "timestamp" DESC);
+
+CREATE INDEX "nft_transfer_events_address_token_id_timestamp_index"
+  ON "nft_transfer_events" ("address", "token_id", "timestamp" DESC);
 
 CREATE TABLE "ft_transfer_events" (
   "address" BYTEA NOT NULL,

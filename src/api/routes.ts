@@ -566,6 +566,12 @@ export const setupRoutes = (server: Server) => {
     options: transfersEndpoints.getTransfersV2Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/transfers/bulk/v1",
+    options: transfersEndpoints.getTransfersBulkV1Options,
+  });
+
   // Redirects
   server.route({
     method: "GET",
