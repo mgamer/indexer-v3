@@ -33,6 +33,8 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
+      logger.info(QUEUE_NAME, `Start. liquidityOnly:${config.liquidityOnly}`);
+
       // Do nothing if the indexer is running in liquidity-only mode
       if (config.liquidityOnly) {
         return;
@@ -84,6 +86,8 @@ if (config.doBackgroundWork) {
         });
       }
 
+      logger.info(QUEUE_NAME, `Start. refreshTokens:${JSON.stringify(refreshTokens)}`);
+
       // Add the tokens to the list
       const pendingRefreshTokens = new PendingRefreshTokens(data.method);
       const pendingCount = await pendingRefreshTokens.add(refreshTokens, prioritized);
@@ -96,6 +100,8 @@ if (config.doBackgroundWork) {
         // Trigger a job to process the queue
         await metadataIndexProcess.addToQueue(data.method);
       }
+
+      logger.info(QUEUE_NAME, `End`);
     },
     { connection: redis.duplicate(), concurrency: 3 }
   );
