@@ -109,7 +109,7 @@ export const getUserTokensV1Options: RouteOptions = {
             WHERE "nte"."address" = "t"."contract"
               AND "nte"."token_id" = "t"."token_id"
               AND "nte"."to" = $/user/
-            ORDER BY "nte"."block" DESC
+            ORDER BY "nte"."timestamp" DESC
             LIMIT 1
           ) AS "acquired_at"
         FROM "nft_balances" "nb"
