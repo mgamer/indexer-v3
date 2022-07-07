@@ -9,7 +9,7 @@ import { fromBuffer, toBuffer } from "@/common/utils";
 
 const QUEUE_NAME = "top-bid-update-queue";
 
-export const bidUpdateBatchSize = 500;
+export const bidUpdateBatchSize = 200;
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
