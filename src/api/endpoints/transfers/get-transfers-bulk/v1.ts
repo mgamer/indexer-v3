@@ -159,7 +159,12 @@ export const getTransfersBulkV1Options: RouteOptions = {
       }
 
       // Sorting
-      baseQuery += ` ORDER BY nft_transfer_events.timestamp DESC`;
+      baseQuery += `
+        ORDER BY
+          nft_transfer_events.timestamp DESC,
+          nft_transfer_events.log_index DESC,
+          nft_transfer_events.batch_index DESC
+      `;
 
       // Pagination
       baseQuery += ` LIMIT $/limit/`;
