@@ -38,6 +38,11 @@ if (config.doBackgroundWork) {
       const { collection, contract, tokenId, name, description, imageUrl, mediaUrl, attributes } =
         job.data as TokenMetadataInfo;
 
+      logger.info(
+        QUEUE_NAME,
+        `Start. contract:${contract}, tokenId:${tokenId}, attributeCount:${_.size(attributes)}`
+      );
+
       try {
         // Update the token's metadata.
         const result = await idb.oneOrNone(

@@ -71,6 +71,13 @@ if (config.doBackgroundWork) {
         queryParams.append("token", `${refreshToken.contract}:${refreshToken.tokenId}`);
         (tokenToCollections as any)[`${refreshToken.contract}:${refreshToken.tokenId}`] =
           refreshToken.collection;
+
+        logger.info(
+          QUEUE_NAME,
+          `Start. contract:${refreshToken.contract}, tokenId:${
+            refreshToken.tokenId
+          }, collection:${_.size(refreshToken.collection)}`
+        );
       }
 
       // Get the metadata for the tokens
