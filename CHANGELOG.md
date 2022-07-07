@@ -1,3 +1,12 @@
+## [5.103.2](https://github.com/reservoirprotocol/indexer/compare/v5.103.1...v5.103.2) (2022-07-07)
+
+
+### Bug Fixes
+
+* transfers bulk api sorting ([4440264](https://github.com/reservoirprotocol/indexer/commit/4440264ed84a9d1a6aa5da4a99efd7a9d988259d))
+
+
+
 ## [5.103.1](https://github.com/reservoirprotocol/indexer/compare/v5.103.0...v5.103.1) (2022-07-06)
 
 
