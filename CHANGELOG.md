@@ -1,3 +1,12 @@
+## [5.103.3](https://github.com/reservoirprotocol/indexer/compare/v5.103.2...v5.103.3) (2022-07-08)
+
+
+### Bug Fixes
+
+* read from writer in the order updates by id queue ([58e2d04](https://github.com/reservoirprotocol/indexer/commit/58e2d0494c77366214f33d612f930b4cb70389ba))
+
+
+
 ## [5.103.2](https://github.com/reservoirprotocol/indexer/compare/v5.103.1...v5.103.2) (2022-07-07)
 
 
