@@ -66,6 +66,7 @@ import * as removeBuyOrderEvents from "@/jobs/order-updates/remove-buy-order-eve
 import * as backfillFillEventsOrderSource from "@/jobs/backfill/backfill-fill-events-order-source";
 import * as topBidUpdateQueue from "@/jobs/bid-updates/top-bid-update-queue";
 import * as exportData from "@/jobs/data-export/export-data";
+import * as rarityQueue from "@/jobs/collection-updates/rarity-queue";
 
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
@@ -112,4 +113,5 @@ export const allJobQueues = [
   backfillFillEventsOrderSource.queue,
   topBidUpdateQueue.queue,
   exportData.queue,
+  rarityQueue.queue,
 ];

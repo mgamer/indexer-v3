@@ -1,5 +1,4 @@
-import { BigNumberish } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
+import { BigNumberish, BigNumber } from "@ethersproject/bignumber";
 import * as Sdk from "@reservoir0x/sdk";
 import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
 import pLimit from "p-limit";
@@ -145,14 +144,6 @@ export const save = async (
         });
       }
 
-      // Check: order is not private
-      if (order.params.taker !== AddressZero) {
-        return results.push({
-          id,
-          status: "unsupported-taker",
-        });
-      }
-
       // Check: order is valid
       try {
         order.checkValidity();
@@ -237,11 +228,11 @@ export const save = async (
 
         case "token-range": {
           const typedInfo = info as typeof info & {
-            startTokenId: string;
-            endTokenId: string;
+            startTokenId: BigNumber;
+            endTokenId: BigNumber;
           };
-          const startTokenId = typedInfo.startTokenId;
-          const endTokenId = typedInfo.endTokenId;
+          const startTokenId = typedInfo.startTokenId.toString();
+          const endTokenId = typedInfo.endTokenId.toString();
 
           if (startTokenId && endTokenId) {
             [{ id: tokenSetId }] = await tokenSet.tokenRange.save([
@@ -349,7 +340,7 @@ export const save = async (
         token_set_id: tokenSetId,
         token_set_schema_hash: toBuffer(schemaHash),
         maker: toBuffer(order.params.maker),
-        taker: toBuffer(AddressZero),
+        taker: toBuffer(order.params.taker),
         price: price.toString(),
         value: value.toString(),
         quantity_remaining: order.params.nftAmount,

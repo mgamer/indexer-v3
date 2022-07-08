@@ -69,9 +69,13 @@ export const syncEvents = async (
   // custom way so as to properly associate the maker and taker.
   const routerToFillSource: { [address: string]: string } = {};
 
+  // TODO: Move router detection logic to the core SDK
+
   // Reservoir
-  for (const address of Sdk.Router.Addresses.AllRouters[config.chainId]) {
-    routerToFillSource[address.toLowerCase()] = "reservoir";
+  if (Sdk.Router.Addresses.AllRouters[config.chainId]) {
+    for (const address of Sdk.Router.Addresses.AllRouters[config.chainId]) {
+      routerToFillSource[address.toLowerCase()] = "reservoir";
+    }
   }
 
   // Gem and Genie (source: https://dune.com/sohwak/NFT-Aggregator-(OpenSea-via-GemGenie)-Overview)
@@ -1620,6 +1624,10 @@ export const syncEvents = async (
                   break;
                 }
 
+                if (saleInfo.recipientOverride) {
+                  taker = saleInfo.recipientOverride;
+                }
+
                 // Handle filling through routers
                 let fillSource: string | undefined;
                 if (routerToFillSource[taker]) {
@@ -1707,6 +1715,52 @@ export const syncEvents = async (
         es.nftTransfers.addEvents(nftTransferEvents, backfill),
       ]);
 
+      if (!backfill) {
+        // WARNING! It's very important to guarantee that the previous
+        // events are persisted to the database before any of the jobs
+        // below are executed. Otherwise, the jobs can potentially use
+        // stale data which will cause inconsistencies (eg. orders can
+        // have wrong statuses).
+        await Promise.all([
+          fillUpdates.addToQueue(fillInfos),
+          orderUpdatesById.addToQueue(orderInfos),
+          orderUpdatesByMaker.addToQueue(makerInfos),
+          orderbookOrders.addToQueue(
+            foundationOrders.map((info) => ({ kind: "foundation", info }))
+          ),
+        ]);
+      }
+
+      // --- Handle: orphan blocks ---
+      if (!backfill) {
+        for (const [hash, number] of Object.entries(blockHashToNumber)) {
+          // Persist the block
+          await blocksModel.saveBlock({ hash, number });
+
+          // Act right away if the current block is a duplicate
+          if ((await blocksModel.getBlocks(number)).length > 1) {
+            blockCheck.addToQueue(number, 10 * 1000);
+            blockCheck.addToQueue(number, 30 * 1000);
+          }
+        }
+
+        // Put all fetched blocks on a queue for handling block reorgs
+        // (recheck each block in 1m, 5m, 10m and 60m).
+        // TODO: The check frequency should be a per-chain setting
+        await Promise.all(
+          Object.entries(blockHashToNumber).map(async ([, block]) =>
+            Promise.all([
+              blockCheck.addToQueue(block, 60 * 1000),
+              blockCheck.addToQueue(block, 5 * 60 * 1000),
+              blockCheck.addToQueue(block, 10 * 60 * 1000),
+              blockCheck.addToQueue(block, 60 * 60 * 1000),
+            ])
+          )
+        );
+      }
+
+      // --- Handle: activities ---
+
       // Add all the fill events to the activity queue
       const fillActivitiesInfo: processActivityEvent.EventInfo[] = _.map(
         _.concat(fillEvents, fillEventsPartial, fillEventsFoundation),
@@ -1762,48 +1816,10 @@ export const syncEvents = async (
         await processActivityEvent.addToQueue(transferActivitiesInfo);
       }
 
-      if (!backfill) {
-        // WARNING! It's very important to guarantee that the previous
-        // events are persisted to the database before any of the jobs
-        // below are executed. Otherwise, the jobs can potentially use
-        // stale data which will cause inconsistencies (eg. orders can
-        // have wrong statuses).
-        await Promise.all([
-          fillUpdates.addToQueue(fillInfos),
-          orderUpdatesById.addToQueue(orderInfos),
-          orderUpdatesByMaker.addToQueue(makerInfos),
-          tokenUpdatesMint.addToQueue(mintInfos),
-          orderbookOrders.addToQueue(
-            foundationOrders.map((info) => ({ kind: "foundation", info }))
-          ),
-        ]);
+      // --- Handle: mints ---
 
-        // --- Handle: orphan blocks ---
-
-        for (const [hash, number] of Object.entries(blockHashToNumber)) {
-          // Persist the block
-          await blocksModel.saveBlock({ hash, number });
-
-          // Act right away if the current block is a duplicate
-          if ((await blocksModel.getBlocks(number)).length > 1) {
-            blockCheck.addToQueue(number, 10 * 1000);
-            blockCheck.addToQueue(number, 30 * 1000);
-          }
-        }
-
-        // Put all fetched blocks on a queue for handling block reorgs
-        // (recheck each block in 1m, 5m, 10m and 60m).
-        await Promise.all(
-          Object.entries(blockHashToNumber).map(async ([, block]) =>
-            Promise.all([
-              blockCheck.addToQueue(block, 60 * 1000),
-              blockCheck.addToQueue(block, 5 * 60 * 1000),
-              blockCheck.addToQueue(block, 10 * 60 * 1000),
-              blockCheck.addToQueue(block, 60 * 60 * 1000),
-            ])
-          )
-        );
-      }
+      // We want to get metadata when backfilling as well
+      await tokenUpdatesMint.addToQueue(mintInfos);
     });
 };
 

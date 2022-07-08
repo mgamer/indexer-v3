@@ -1,7 +1,7 @@
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuilder } from "@reservoir0x/sdk/dist/seaport/builders/base";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as utils from "@/orderbook/orders/seaport/build/utils";
@@ -11,7 +11,7 @@ interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
 }
 
 export const build = async (options: BuildOrderOptions) => {
-  const collectionResult = await edb.oneOrNone(
+  const collectionResult = await redb.oneOrNone(
     `
       SELECT
         collections.token_set_id,
@@ -38,14 +38,38 @@ export const build = async (options: BuildOrderOptions) => {
     options.collection,
     "buy"
   );
-  if (!buildInfo) {
-    throw new Error("Could not generate build info");
-  }
 
-  if (!collectionResult.token_set_id.startsWith("contract:")) {
-    throw new Error("Token range collections are not supported");
-  }
+  if (!options.excludeFlaggedTokens) {
+    // Use contract-wide/token-range order
 
-  const builder: BaseBuilder = new Sdk.Seaport.Builders.ContractWide(config.chainId);
-  return builder?.build(buildInfo.params);
+    if (!collectionResult.token_set_id.startsWith("contract:")) {
+      throw new Error("Token range collections are not supported");
+    }
+
+    const builder: BaseBuilder = new Sdk.Seaport.Builders.ContractWide(config.chainId);
+    return builder?.build(buildInfo.params);
+  } else {
+    // Use token-list order
+
+    // Fetch all non-flagged tokens from the collection
+    // TODO: Include `NOT is_flagged` filter in the query
+    const tokens = await redb.manyOrNone(
+      `
+        SELECT
+          tokens.token_id
+        FROM tokens
+        WHERE tokens.collection_id = $/collection/
+      `,
+      {
+        collection: options.collection,
+      }
+    );
+
+    const builder: BaseBuilder = new Sdk.Seaport.Builders.TokenList(config.chainId);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (buildInfo.params as any).tokenIds = tokens.map(({ token_id }) => token_id);
+
+    return builder?.build(buildInfo.params);
+  }
 };

@@ -2,7 +2,7 @@ import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
 
-import { idb, pgp } from "@/common/db";
+import { idb, pgp, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -171,7 +171,7 @@ export const save = async (
       let feeBps = 200;
 
       // Handle: royalties
-      const royaltiesResult = await idb.oneOrNone(
+      const royaltiesResult = await redb.oneOrNone(
         `
           SELECT collections.royalties FROM collections
           WHERE collections.contract = $/contract/

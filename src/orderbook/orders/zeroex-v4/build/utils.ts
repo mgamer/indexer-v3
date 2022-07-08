@@ -1,6 +1,6 @@
 import { BaseBuildParams } from "@reservoir0x/sdk/dist/zeroex-v4/builders/base";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { bn } from "@/common/utils";
 
 export interface BaseOrderBuildOptions {
@@ -14,6 +14,7 @@ export interface BaseOrderBuildOptions {
   feeRecipient?: string[];
   expirationTime?: number;
   automatedRoyalties?: boolean;
+  excludeFlaggedTokens?: boolean;
 }
 
 type OrderBuildInfo = {
@@ -26,7 +27,7 @@ export const getBuildInfo = async (
   collection: string,
   side: "sell" | "buy"
 ): Promise<OrderBuildInfo | undefined> => {
-  const collectionResult = await edb.oneOrNone(
+  const collectionResult = await redb.oneOrNone(
     `
       SELECT
         contracts.kind,

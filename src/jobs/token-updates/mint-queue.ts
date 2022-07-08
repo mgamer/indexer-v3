@@ -193,7 +193,7 @@ if (config.doBackgroundWork) {
               {
                 kind: "single-token",
                 data: {
-                  method: "opensea",
+                  method: config.metadataIndexingMethod,
                   contract,
                   tokenId,
                   collection: collection.id,
@@ -214,7 +214,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 1 }
+    { connection: redis.duplicate(), concurrency: 5 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);

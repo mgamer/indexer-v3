@@ -62,6 +62,14 @@ export const save = async (
         });
       }
 
+      // Check: order has a non-zero price
+      if (bn(info.price).lte(0)) {
+        return results.push({
+          id,
+          status: "zero-price",
+        });
+      }
+
       const currentTime = Math.floor(Date.now() / 1000);
 
       // Check: order has a valid start time
@@ -76,7 +84,7 @@ export const save = async (
 
       // Check: order is not expired
       const endTime = order.params.endTime;
-      if (endTime !== 0 && currentTime >= endTime) {
+      if (currentTime >= endTime) {
         return results.push({
           id,
           status: "expired",
@@ -288,7 +296,7 @@ export const save = async (
         token_set_id: tokenSetId,
         token_set_schema_hash: toBuffer(schemaHash),
         maker: toBuffer(order.params.offerer),
-        taker: toBuffer(AddressZero),
+        taker: toBuffer(info.taker),
         price: price.toString(),
         value: value.toString(),
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,

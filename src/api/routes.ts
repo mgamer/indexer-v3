@@ -22,6 +22,18 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/calc-rarity",
+    options: adminEndpoints.postCalcRarityOptions,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/admin/open-api",
+    options: adminEndpoints.getOpenApiOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/index-metadata",
     options: adminEndpoints.postMetadataIndexOptions,
   });
@@ -86,12 +98,6 @@ export const setupRoutes = (server: Server) => {
     options: adminEndpoints.postSetCollectionCommunity,
   });
 
-  server.route({
-    method: "POST",
-    path: "/admin/simulate-floor",
-    options: adminEndpoints.postSimulateFloor,
-  });
-
   // Api keys
 
   server.route({
@@ -144,6 +150,12 @@ export const setupRoutes = (server: Server) => {
     options: attributesEndpoints.getAttributesExploreV2Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/collections/{collection}/attributes/explore/v3",
+    options: attributesEndpoints.getAttributesExploreV3Options,
+  });
+
   // Collections
 
   server.route({
@@ -186,6 +198,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/collection/v2",
     options: collectionsEndpoints.getCollectionV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/collection/v3",
+    options: collectionsEndpoints.getCollectionV3Options,
   });
 
   server.route({
@@ -408,6 +426,18 @@ export const setupRoutes = (server: Server) => {
     options: ownersEndpoints.getOwnersV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/owners/cross-collections/v1",
+    options: ownersEndpoints.getCrossCollectionsOwnersV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/owners/common-collections/v1",
+    options: ownersEndpoints.getCommonCollectionsOwnersV1Options,
+  });
+
   // Stats
 
   server.route({
@@ -496,6 +526,12 @@ export const setupRoutes = (server: Server) => {
     options: tokensEndpoints.postTokensRefreshV1Options,
   });
 
+  server.route({
+    method: "POST",
+    path: "/tokens/simulate-floor/v1",
+    options: tokensEndpoints.postSimulateFloorV1Options,
+  });
+
   // Token sets
 
   server.route({
@@ -540,6 +576,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/transfers/v2",
     options: transfersEndpoints.getTransfersV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/transfers/bulk/v1",
+    options: transfersEndpoints.getTransfersBulkV1Options,
   });
 
   // Redirects

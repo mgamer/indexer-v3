@@ -3,7 +3,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-import { idb } from "@/common/db";
+import { idb, redb } from "@/common/db";
 import { randomUUID } from "crypto";
 import AWS from "aws-sdk";
 
@@ -105,7 +105,7 @@ const getSequenceInfo = async (kind: DataSourceKind) => {
                    FROM data_export_tasks
                    WHERE source = $/kind/`;
 
-  return await idb.one(query, {
+  return await redb.one(query, {
     kind,
   });
 };
