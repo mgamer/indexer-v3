@@ -2,6 +2,7 @@ import { redb } from "@/common/db";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
 import { Sources } from "@/models/sources";
+import crypto from "crypto";
 
 export class SalesDataSource extends BaseDataSource {
   public async getSequenceData(cursor: CursorInfo | null, limit: number) {
@@ -53,6 +54,10 @@ export class SalesDataSource extends BaseDataSource {
         const orderSource = r.order_source_id_int ? sources.get(r.order_source_id_int)?.name : null;
 
         return {
+          id: crypto
+            .createHash("sha256")
+            .update(`${fromBuffer(r.tx_hash)}${r.log_index}${r.batch_index}`)
+            .digest("hex"),
           contract: fromBuffer(r.contract),
           token_id: r.token_id,
           order_id: r.order_id,
@@ -64,7 +69,7 @@ export class SalesDataSource extends BaseDataSource {
           price: r.price ? formatEth(r.price) : null,
           amount: Number(r.amount),
           fill_source: r.fill_source ? String(r.fill_source) : orderSource,
-          tx_hash: r.tx_hash ? fromBuffer(r.tx_hash) : null,
+          tx_hash: fromBuffer(r.tx_hash),
           tx_log_index: r.log_index,
           tx_batch_index: r.batch_index,
           tx_timestamp: r.timestamp,
