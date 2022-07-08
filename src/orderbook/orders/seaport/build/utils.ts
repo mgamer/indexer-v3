@@ -2,7 +2,7 @@ import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuildParams } from "@reservoir0x/sdk/dist/seaport/builders/base";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
@@ -33,7 +33,7 @@ export const getBuildInfo = async (
   collection: string,
   side: "sell" | "buy"
 ): Promise<OrderBuildInfo> => {
-  const collectionResult = await edb.oneOrNone(
+  const collectionResult = await redb.oneOrNone(
     `
       SELECT
         contracts.kind,
