@@ -1,6 +1,6 @@
 import { Common } from "@reservoir0x/sdk";
 
-import { PgPromiseQuery, idb, pgp } from "@/common/db";
+import { PgPromiseQuery, idb, pgp, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { generateSchemaHash } from "@/orderbook/orders/utils";
@@ -71,7 +71,7 @@ const isValid = async (tokenSet: TokenSet) => {
         }
 
         // TODO: Include `NOT is_flagged` filter in the query
-        tokens = await idb.manyOrNone(
+        tokens = await redb.manyOrNone(
           `
             SELECT
               token_attributes.contract,
@@ -93,7 +93,7 @@ const isValid = async (tokenSet: TokenSet) => {
         );
       } else if (tokenSet.schema.kind === "collection-non-flagged") {
         // TODO: Include `NOT is_flagged` filter in the query
-        tokens = await idb.manyOrNone(
+        tokens = await redb.manyOrNone(
           `
             SELECT
               tokens.contract,
@@ -161,7 +161,7 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
       let attributeId: string | null = null;
       let collectionId: string | null = null;
       if (schema && schema.kind === "attribute") {
-        const attributeResult = await idb.oneOrNone(
+        const attributeResult = await redb.oneOrNone(
           `
             SELECT
               attributes.id
@@ -214,7 +214,7 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
       });
 
       // For efficiency, skip if data already exists
-      const tokenSetTokensExist = await idb.oneOrNone(
+      const tokenSetTokensExist = await redb.oneOrNone(
         `
           SELECT 1 FROM "token_sets_tokens" "tst"
           WHERE "tst"."token_set_id" = $/tokenSetId/

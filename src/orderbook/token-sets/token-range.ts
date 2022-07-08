@@ -1,4 +1,4 @@
-import { PgPromiseQuery, idb, pgp } from "@/common/db";
+import { PgPromiseQuery, idb, pgp, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
 import { generateSchemaHash } from "@/orderbook/orders/utils";
@@ -81,7 +81,7 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
       });
 
       // For efficiency, skip if data already exists
-      const tokenSetTokensExist = await idb.oneOrNone(
+      const tokenSetTokensExist = await redb.oneOrNone(
         `
           SELECT 1 FROM "token_sets_tokens" "tst"
           WHERE "tst"."token_set_id" = $/tokenSetId/
