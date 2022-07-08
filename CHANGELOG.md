@@ -1,3 +1,16 @@
+# [5.104.0](https://github.com/reservoirprotocol/indexer/compare/v5.103.3...v5.104.0) (2022-07-08)
+
+
+### Features
+
+* bigger top bid batch update ([aae96ca](https://github.com/reservoirprotocol/indexer/commit/aae96caa19f14f7628a74e1a0f13cc2a87890f35))
+* move calls to replica ([5e5de93](https://github.com/reservoirprotocol/indexer/commit/5e5de93c158e78e198cb70b2a72b0927d3a414c3))
+* update explore and get collection to make top bid optional ([b3a927e](https://github.com/reservoirprotocol/indexer/commit/b3a927e98b9e6fe3ff3de1afcacbf67b24853471))
+* update top bid batch size ([bcfef53](https://github.com/reservoirprotocol/indexer/commit/bcfef533d83c0cd7c92ee4296de9eb1ea1ca2ea3))
+* update top bid batch size ([c418f29](https://github.com/reservoirprotocol/indexer/commit/c418f29366d1b492c3670ec677d7cc899870fd8b))
+
+
+
 ## [5.103.3](https://github.com/reservoirprotocol/indexer/compare/v5.103.2...v5.103.3) (2022-07-08)
 
 
