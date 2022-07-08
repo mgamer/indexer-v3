@@ -150,6 +150,12 @@ export const setupRoutes = (server: Server) => {
     options: attributesEndpoints.getAttributesExploreV2Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/collections/{collection}/attributes/explore/v3",
+    options: attributesEndpoints.getAttributesExploreV3Options,
+  });
+
   // Collections
 
   server.route({
@@ -192,6 +198,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/collection/v2",
     options: collectionsEndpoints.getCollectionV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/collection/v3",
+    options: collectionsEndpoints.getCollectionV3Options,
   });
 
   server.route({
