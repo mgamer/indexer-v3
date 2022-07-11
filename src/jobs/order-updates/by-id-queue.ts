@@ -3,7 +3,7 @@ import _ from "lodash";
 import { HashZero } from "@ethersproject/constants";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
-import { idb, redb } from "@/common/db";
+import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
@@ -42,13 +42,15 @@ if (config.doBackgroundWork) {
       const { id, trigger } = job.data as OrderInfo;
       let { side, tokenSetId } = job.data as OrderInfo;
 
+      logger.info(QUEUE_NAME, `Start to handle order info ${JSON.stringify(job.data)}`);
+
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let order: any;
 
         if (id) {
           // Fetch the order's associated data
-          order = await redb.oneOrNone(
+          order = await idb.oneOrNone(
             `
               SELECT
                 orders.id,
@@ -71,6 +73,11 @@ if (config.doBackgroundWork) {
               LIMIT 1
             `,
             { id }
+          );
+
+          logger.info(
+            QUEUE_NAME,
+            `Found order for order info ${JSON.stringify(job.data)}: ${JSON.stringify(order)}`
           );
 
           side = order?.side;
