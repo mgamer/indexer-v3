@@ -38,6 +38,7 @@ import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
 import * as orderFixes from "@/jobs/order-fixes/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
+import * as bundleOrderUpdatesByMaker from "@/jobs/order-updates/by-maker-bundle-queue";
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
 import * as tokenUpdatesMintQueue from "@/jobs/token-updates/mint-queue";
@@ -85,6 +86,7 @@ export const allJobQueues = [
   orderFixes.queue,
   orderUpdatesById.queue,
   orderUpdatesByMaker.queue,
+  bundleOrderUpdatesByMaker.queue,
   orderbookOrders.queue,
   orderbookTokenSets.queue,
   tokenUpdatesMintQueue.queue,
