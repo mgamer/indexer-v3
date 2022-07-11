@@ -61,7 +61,8 @@ if (config.doBackgroundWork) {
                     orders.maker,
                     orders.fillability_status,
                     orders.offer_bundle_id,
-                    orders.valid_between
+                    orders.valid_between,
+                    orders.expiration
                   FROM orders
                   JOIN bundle_items
                     ON orders.offer_bundle_id = bundle_items.bundle_id
