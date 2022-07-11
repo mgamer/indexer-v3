@@ -42,9 +42,9 @@ export type DbOrder = {
   approval_status: string;
   token_set_id?: string | null;
   token_set_schema_hash?: Buffer | null;
-  offer_bundle_id?: string;
-  consideration_bundle_id?: string;
-  bundle_kind?: "bundle-ask";
+  offer_bundle_id?: string | null;
+  consideration_bundle_id?: string | null;
+  bundle_kind?: "bundle-ask" | null;
   maker: Buffer;
   taker: Buffer;
   price: string;
