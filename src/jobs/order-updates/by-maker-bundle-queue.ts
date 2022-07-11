@@ -130,7 +130,7 @@ if (config.doBackgroundWork) {
 
                 return {
                   id,
-                  fillabilityStatuses: unfillableIndex === -1 ? "fillable" : "no-balance",
+                  fillabilityStatus: unfillableIndex === -1 ? "fillable" : "no-balance",
                   expiration:
                     (unfillableIndex === -1 ? expirations[0] : expirations[unfillableIndex]) ||
                     "infinity",
