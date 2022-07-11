@@ -56,9 +56,10 @@ if (config.doBackgroundWork) {
             const fillabilityStatuses = await idb.manyOrNone(
               `
                 WITH x AS (
-                  SELECT DISTINCT ON (orders.id)
+                  SELECT
                     orders.id,
                     orders.maker,
+                    orders.fillability_status,
                     orders.offer_bundle_id,
                     orders.valid_between
                   FROM orders
@@ -74,7 +75,7 @@ if (config.doBackgroundWork) {
                 )
                 SELECT
                   x.id,
-                  array_agg(orders.fillability_status) AS old_statuses,
+                  array_agg(x.fillability_status) AS old_statuses,
                   array_agg((CASE
                     WHEN bundle_items.kind = 'nft' AND nft_balances.amount >= bundle_items.amount THEN 'fillable'
                     WHEN bundle_items.kind = 'ft' AND ft_balances.amount >= bundle_items.amount THEN 'fillable'
@@ -209,7 +210,7 @@ if (config.doBackgroundWork) {
       } catch (error) {
         logger.error(
           QUEUE_NAME,
-          `Failed to handle maker info ${JSON.stringify(job.data)}: ${error}`
+          `Failed to handle bundle maker info ${JSON.stringify(job.data)}: ${error}`
         );
         throw error;
       }
