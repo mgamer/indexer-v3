@@ -137,6 +137,8 @@ if (config.doBackgroundWork) {
                 };
               });
 
+            logger.info("debug", JSON.stringify(values));
+
             // Update any orders that did change status
             if (values.length) {
               const columns = new pgp.helpers.ColumnSet(
