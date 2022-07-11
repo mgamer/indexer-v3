@@ -130,14 +130,12 @@ if (config.doBackgroundWork) {
 
                 return {
                   id,
-                  fillabilityStatus: unfillableIndex === -1 ? "fillable" : "no-balance",
+                  fillability_status: unfillableIndex === -1 ? "fillable" : "no-balance",
                   expiration:
                     (unfillableIndex === -1 ? expirations[0] : expirations[unfillableIndex]) ||
                     "infinity",
                 };
               });
-
-            logger.info("debug", JSON.stringify(values));
 
             // Update any orders that did change status
             if (values.length) {
