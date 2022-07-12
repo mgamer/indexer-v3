@@ -140,6 +140,8 @@ if (config.doBackgroundWork) {
                 };
               });
 
+            throw new Error("Testing");
+
             // Update any orders that did change status
             if (values.length) {
               const columns = new pgp.helpers.ColumnSet(
