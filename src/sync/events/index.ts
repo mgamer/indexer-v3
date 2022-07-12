@@ -1764,22 +1764,32 @@ export const syncEvents = async (
       // Add all the fill events to the activity queue
       const fillActivitiesInfo: processActivityEvent.EventInfo[] = _.map(
         _.concat(fillEvents, fillEventsPartial, fillEventsFoundation),
-        (event) => ({
-          kind: processActivityEvent.EventKind.fillEvent,
-          data: {
-            contract: event.contract,
-            tokenId: event.tokenId,
-            fromAddress: event.maker,
-            toAddress: event.taker,
-            price: Number(event.price),
-            amount: Number(event.amount),
-            transactionHash: event.baseEventParams.txHash,
-            logIndex: event.baseEventParams.logIndex,
-            batchIndex: event.baseEventParams.batchIndex,
-            blockHash: event.baseEventParams.blockHash,
-            timestamp: event.baseEventParams.timestamp,
-          },
-        })
+        (event) => {
+          let fromAddress = event.maker;
+          let toAddress = event.taker;
+
+          if (event.orderSide === "buy") {
+            fromAddress = event.taker;
+            toAddress = event.maker;
+          }
+
+          return {
+            kind: processActivityEvent.EventKind.fillEvent,
+            data: {
+              contract: event.contract,
+              tokenId: event.tokenId,
+              fromAddress,
+              toAddress,
+              price: Number(event.price),
+              amount: Number(event.amount),
+              transactionHash: event.baseEventParams.txHash,
+              logIndex: event.baseEventParams.logIndex,
+              batchIndex: event.baseEventParams.batchIndex,
+              blockHash: event.baseEventParams.blockHash,
+              timestamp: event.baseEventParams.timestamp,
+            },
+          };
+        }
       );
 
       if (!_.isEmpty(fillActivitiesInfo)) {
