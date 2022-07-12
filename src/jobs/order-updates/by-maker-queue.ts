@@ -390,6 +390,9 @@ if (config.doBackgroundWork) {
               }))
             );
 
+            // Revalidate any bundles
+            await bundleOrderUpdatesByMaker.addToQueue([job.data]);
+
             break;
           }
         }
