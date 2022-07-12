@@ -109,17 +109,20 @@ if (config.doBackgroundWork) {
               }
             );
 
+            logger.info("debug", JSON.stringify(fillabilityStatuses));
+
             // Filter any orders that didn't change status
             const values = fillabilityStatuses
               .filter(({ old_statuses, new_statuses }) => {
                 for (let i = 0; i < Math.min(old_statuses.length, new_statuses.length); i++) {
-                  if (old_statuses !== new_statuses) {
+                  if (old_statuses[i] !== new_statuses[i]) {
                     return true;
                   }
                 }
                 return false;
               })
               .map(({ id, new_statuses, expirations }) => {
+                logger.info("debug", JSON.stringify({ id, new_statuses, expirations }));
                 let unfillableIndex = -1;
                 for (let i = 0; i < new_statuses.length; i++) {
                   if (new_statuses[i] === "no-balance") {
@@ -136,6 +139,8 @@ if (config.doBackgroundWork) {
                     "infinity",
                 };
               });
+
+            throw new Error("Testing");
 
             // Update any orders that did change status
             if (values.length) {
