@@ -57,7 +57,7 @@ export const getOrderExecutedV1Options: RouteOptions = {
         filledBy: taker ? fromBuffer(taker) : null,
       }));
 
-      if (!result.some(({ filledBy }) => Boolean(filledBy))) {
+      if (!result.some(({ status, filledBy }) => status === "executed" || Boolean(filledBy))) {
         throw Boom.badData("Orders not recently executed");
       }
 
