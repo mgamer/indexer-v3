@@ -31,7 +31,11 @@ export const addPendingOrdersWyvernV23 = async (
 };
 
 export const addPendingOrdersSeaport = async (
-  data: { order: Sdk.Seaport.Order; schemaHash?: string; source?: string }[]
+  data: {
+    order: Sdk.Seaport.Order | Sdk.Seaport.BundleOrder;
+    schemaHash?: string;
+    source?: string;
+  }[]
 ) => {
   if (config.arweaveRelayerKey && data.length) {
     await redis.rpush(
