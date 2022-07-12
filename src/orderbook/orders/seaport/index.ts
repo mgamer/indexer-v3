@@ -330,7 +330,7 @@ export const save = async (
         arweaveData.push({ order, schemaHash, source });
       }
     } catch (error) {
-      logger.error(
+      logger.warn(
         "orders-seaport-save",
         `Failed to handle order with params ${JSON.stringify(orderParams)}: ${error} (will retry)`
       );

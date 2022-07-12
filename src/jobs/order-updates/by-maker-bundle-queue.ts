@@ -76,17 +76,17 @@ if (config.doBackgroundWork) {
                 )
                 SELECT
                   x.id,
-                  array_agg(x.fillability_status) AS old_statuses,
+                  array_agg(x.fillability_status)::TEXT[] AS old_statuses,
                   array_agg((CASE
                     WHEN bundle_items.kind = 'nft' AND nft_balances.amount >= bundle_items.amount THEN 'fillable'
                     WHEN bundle_items.kind = 'ft' AND ft_balances.amount >= bundle_items.amount THEN 'fillable'
                     ELSE 'no-balance'
-                  END)::order_fillability_status_t) AS new_statuses,
+                  END)::order_fillability_status_t)::TEXT[] AS new_statuses,
                   array_agg((CASE
                     WHEN bundle_items.kind = 'nft' AND nft_balances.amount >= bundle_items.amount THEN upper(x.valid_between)
                     WHEN bundle_items.kind = 'ft' AND ft_balances.amount >= bundle_items.amount THEN upper(x.valid_between)
                     ELSE least(x.expiration, to_timestamp($/timestamp/))
-                  END)::timestamptz) AS expirations
+                  END)::timestamptz)::TEXT[] AS expirations
                 FROM x
                 JOIN bundle_items
                   ON x.offer_bundle_id = bundle_items.bundle_id
