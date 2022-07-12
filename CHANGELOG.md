@@ -1,3 +1,12 @@
+# [5.105.0](https://github.com/reservoirprotocol/indexer/compare/v5.104.0...v5.105.0) (2022-07-12)
+
+
+### Features
+
+* improve order execution confirmation ([cf5cd9b](https://github.com/reservoirprotocol/indexer/commit/cf5cd9b068f1d8a68bd64d2ddf68b1f022f99e5b))
+
+
+
 # [5.104.0](https://github.com/reservoirprotocol/indexer/compare/v5.103.3...v5.104.0) (2022-07-08)
 
 

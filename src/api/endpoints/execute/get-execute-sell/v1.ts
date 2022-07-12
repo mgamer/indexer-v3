@@ -266,7 +266,7 @@ export const getExecuteSellV1Options: RouteOptions = {
             ...steps[1],
             status: "incomplete",
             data: {
-              endpoint: `/orders/executed/v1?id=${bestOrderResult.id}`,
+              endpoint: `/orders/executed/v1?ids=${bestOrderResult.id}`,
               method: "GET",
             },
           },
