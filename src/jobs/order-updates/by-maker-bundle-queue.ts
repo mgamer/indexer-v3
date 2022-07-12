@@ -189,10 +189,10 @@ if (config.doBackgroundWork) {
                   x.id,
                   array_agg(x.approval_status)::TEXT[] AS old_statuses,
                   array_agg((CASE
-                    WHEN bundle_items.kind = 'nft' AND $/approvalStatus/ THEN 'fillable'
-                    WHEN bundle_items.kind = 'ft' AND ft_approvals.value >= bundle_items.amount THEN 'fillable'
-                    ELSE 'no-balance'
-                  END)::order_fillability_status_t)::TEXT[] AS new_statuses,
+                    WHEN bundle_items.kind = 'nft' AND $/approvalStatus/ THEN 'approved'
+                    WHEN bundle_items.kind = 'ft' AND ft_approvals.value >= bundle_items.amount THEN 'approved'
+                    ELSE 'no-approval'
+                  END)::order_approval_status_t)::TEXT[] AS new_statuses,
                   array_agg((CASE
                     WHEN bundle_items.kind = 'nft' AND $/approvalStatus/ THEN upper(x.valid_between)
                     WHEN bundle_items.kind = 'ft' AND ft_approvals.value >= bundle_items.amount THEN upper(x.valid_between)
