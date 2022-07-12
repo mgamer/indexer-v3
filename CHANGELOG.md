@@ -1,3 +1,18 @@
+# [5.106.0](https://github.com/reservoirprotocol/indexer/compare/v5.105.1...v5.106.0) (2022-07-12)
+
+
+### Bug Fixes
+
+* check the order side for the fill event ([2e1490f](https://github.com/reservoirprotocol/indexer/commit/2e1490f5273121459be8359f49139d3ad15c4f4d))
+* check the order side for the fill event and store order id ([87a773b](https://github.com/reservoirprotocol/indexer/commit/87a773b33b86de4a37648b016c7fa032f5923404))
+
+
+### Features
+
+* filter empty attributes ([7968be5](https://github.com/reservoirprotocol/indexer/commit/7968be57bcd6a534a488a26272bf3586cc66cbb4))
+
+
+
 ## [5.105.1](https://github.com/reservoirprotocol/indexer/compare/v5.105.0...v5.105.1) (2022-07-12)
 
 
