@@ -1787,6 +1787,7 @@ export const syncEvents = async (
               batchIndex: event.baseEventParams.batchIndex,
               blockHash: event.baseEventParams.blockHash,
               timestamp: event.baseEventParams.timestamp,
+              orderId: event.orderId || "",
             },
           };
         }
