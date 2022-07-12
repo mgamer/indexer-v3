@@ -1,3 +1,13 @@
+## [5.105.1](https://github.com/reservoirprotocol/indexer/compare/v5.105.0...v5.105.1) (2022-07-12)
+
+
+### Bug Fixes
+
+* cancelled orders confirmation ([b2f7eef](https://github.com/reservoirprotocol/indexer/commit/b2f7eef1f3d938f2ef90920b38cc1597d94f5ced))
+* properly handle cancellations ([35c8c7a](https://github.com/reservoirprotocol/indexer/commit/35c8c7ab2161b45cd8b0e2fdb98e95ee18b129ef))
+
+
+
 # [5.105.0](https://github.com/reservoirprotocol/indexer/compare/v5.104.0...v5.105.0) (2022-07-12)
 
 
