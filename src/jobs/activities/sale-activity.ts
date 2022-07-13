@@ -28,10 +28,6 @@ export class SaleActivity {
       data.batchIndex.toString()
     );
 
-    if (!data.orderId) {
-      logger.info("sale-activity", `No orderId found ${JSON.stringify(data)}`);
-    }
-
     const activity = {
       type: ActivityType.sale,
       hash: activityHash,
