@@ -7,7 +7,9 @@ export const getNetworkSettings = () => {
     // Ethereum
     case 1:
     // Rinkeby
-    case 4: {
+    case 4:
+    // Goerli
+    case 5: {
       return {
         realtimeSyncFrequencySeconds: 15,
         backfillBlockBatchSize: 16,
