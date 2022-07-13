@@ -1,3 +1,12 @@
+## [5.108.1](https://github.com/reservoirprotocol/indexer/compare/v5.108.0...v5.108.1) (2022-07-13)
+
+
+### Bug Fixes
+
+* additional goerli settings ([2bfc89c](https://github.com/reservoirprotocol/indexer/commit/2bfc89c993facf84a9195eed0d9c4e8503036b6d))
+
+
+
 # [5.108.0](https://github.com/reservoirprotocol/indexer/compare/v5.107.1...v5.108.0) (2022-07-13)
 
 
