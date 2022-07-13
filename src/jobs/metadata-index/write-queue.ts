@@ -256,17 +256,8 @@ if (config.doBackgroundWork) {
           );
 
           if (tokenAttributeResult) {
-            logger.info(
-              QUEUE_NAME,
-              `Added token attribute. contract:${contract}, tokenId:${tokenId}, attributeId:${attributeResult.id}, key:${key}, value:${value}`
-            );
             addedTokenAttributes.push(tokenAttributeResult);
             (tokenAttributeCounter as any)[attributeResult.id] = 1;
-          } else {
-            logger.info(
-              QUEUE_NAME,
-              `Existing token attribute. contract:${contract}, tokenId:${tokenId}, attributeId:${attributeResult.id}, key:${key}, value:${value}`
-            );
           }
         }
 
@@ -298,10 +289,6 @@ if (config.doBackgroundWork) {
         // Schedule attribute refresh
         _.forEach(removedTokenAttributes, (attribute) => {
           (tokenAttributeCounter as any)[attribute.attribute_id] = -1;
-          logger.info(
-            QUEUE_NAME,
-            `Removed token attribute. contract:${contract}, tokenId:${tokenId}, attributeId:${attribute.attribute_id}, key:${attribute.key}, value:${attribute.value}`
-          );
         });
 
         logger.info(
