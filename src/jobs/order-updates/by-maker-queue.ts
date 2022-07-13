@@ -7,6 +7,7 @@ import { redis } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
+import * as bundleOrderUpdatesByMaker from "@/jobs/order-updates/by-maker-bundle-queue";
 import { TriggerKind } from "@/jobs/order-updates/types";
 import { OrderKind } from "@/orderbook/orders";
 import { fetchAndUpdateFtApproval } from "@/utils/on-chain-data";
@@ -48,6 +49,10 @@ if (config.doBackgroundWork) {
         // maker's buy orders on ALL TOKENS / TOKEN SETS - so buy side check
         // can potentially be more prone to not being able to handle all the
         // affected orders in a single batch).
+
+        // TODO: For validation efficiency, we should maybe store the status
+        // of every bundle item individually (eg. fillability and approval),
+        // so that there is no need to revalidate everything on each change.
 
         switch (data.kind) {
           // Handle changes in ERC20 balances (relevant for 'buy' orders)
@@ -340,6 +345,9 @@ if (config.doBackgroundWork) {
               }))
             );
 
+            // Revalidate any bundles
+            await bundleOrderUpdatesByMaker.addToQueue([job.data]);
+
             break;
           }
 
@@ -385,6 +393,9 @@ if (config.doBackgroundWork) {
                 trigger,
               }))
             );
+
+            // Revalidate any bundles
+            await bundleOrderUpdatesByMaker.addToQueue([job.data]);
 
             break;
           }
