@@ -8,12 +8,12 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
 
-const version = "v2";
+const version = "v3";
 
-export const getCollectionV2Options: RouteOptions = {
+export const getCollectionV3Options: RouteOptions = {
   description: "Single Collection",
   notes: "Get detailed information about a single collection, including real-time stats.",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Collections"],
   plugins: {
     "hapi-swagger": {
       order: 3,
@@ -29,6 +29,9 @@ export const getCollectionV2Options: RouteOptions = {
       slug: Joi.string()
         .lowercase()
         .description("Filter to a particular collection slug. Example: `boredapeyachtclub`"),
+      includeTopBid: Joi.boolean()
+        .default(false)
+        .description("If true, top bid will be returned in the response."),
     })
       .or("id", "slug")
       .oxor("id", "slug"),
@@ -85,7 +88,7 @@ export const getCollectionV2Options: RouteOptions = {
             .allow(null),
           validFrom: Joi.number().unsafe().allow(null),
           validUntil: Joi.number().unsafe().allow(null),
-        }),
+        }).optional(),
         rank: Joi.object({
           "1day": Joi.number().unsafe().allow(null),
           "7day": Joi.number().unsafe().allow(null),
@@ -131,6 +134,7 @@ export const getCollectionV2Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const query = request.query as any;
+    let selectQuery = `SELECT "x".*, "y".*, "ow".*, attr_key.*`;
 
     try {
       let baseQuery = `
@@ -183,14 +187,33 @@ export const getCollectionV2Options: RouteOptions = {
 
       baseQuery += ` LIMIT 1`;
 
+      let topBidQuery = "";
+      if (query.includeTopBid) {
+        selectQuery += `, "z".*`;
+        topBidQuery = `LEFT JOIN LATERAL (
+          SELECT
+            "ts"."top_buy_id",
+            "ts"."top_buy_value",
+            "ts"."top_buy_maker",
+            DATE_PART('epoch', LOWER("o"."valid_between")) AS "top_buy_valid_from",
+            COALESCE(
+              NULLIF(DATE_PART('epoch', UPPER("o"."valid_between")), 'Infinity'),
+              0
+            ) AS "top_buy_valid_until",
+            "ts"."last_buy_value",
+            "ts"."last_buy_timestamp"
+          FROM "token_sets" "ts"
+          LEFT JOIN "orders" "o"
+            ON "ts"."top_buy_id" = "o"."id"
+          WHERE "ts"."collection_id" = "x"."id"
+          ORDER BY "ts"."top_buy_value" DESC NULLS LAST
+          LIMIT 1
+        ) "z" ON TRUE`;
+      }
+
       baseQuery = `
         WITH "x" AS (${baseQuery})
-        SELECT
-          "x".*,
-          "y".*,
-          "z".*,
-          "ow".*,
-          attr_key.*
+        ${selectQuery}
         FROM "x"
         LEFT JOIN LATERAL (
           SELECT
@@ -213,25 +236,7 @@ export const getCollectionV2Options: RouteOptions = {
           ORDER BY "t"."floor_sell_value"
           LIMIT 1
         ) "y" ON TRUE
-        LEFT JOIN LATERAL (
-          SELECT
-            "ts"."top_buy_id",
-            "ts"."top_buy_value",
-            "ts"."top_buy_maker",
-            DATE_PART('epoch', LOWER("o"."valid_between")) AS "top_buy_valid_from",
-            COALESCE(
-              NULLIF(DATE_PART('epoch', UPPER("o"."valid_between")), 'Infinity'),
-              0
-            ) AS "top_buy_valid_until",
-            "ts"."last_buy_value",
-            "ts"."last_buy_timestamp"
-          FROM "token_sets" "ts"
-          LEFT JOIN "orders" "o"
-            ON "ts"."top_buy_id" = "o"."id"
-          WHERE "ts"."collection_id" = "x"."id"
-          ORDER BY "ts"."top_buy_value" DESC NULLS LAST
-          LIMIT 1
-        ) "z" ON TRUE
+        ${topBidQuery}
         LEFT JOIN LATERAL (
           SELECT COUNT(DISTINCT owner) AS "ownerCount"
           FROM nft_balances
@@ -284,13 +289,15 @@ export const getCollectionV2Options: RouteOptions = {
                   image: r.floor_sell_token_image,
                 },
               },
-              topBid: {
-                id: r.top_buy_id,
-                value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-                maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
-                validFrom: r.top_buy_valid_from,
-                validUntil: r.top_buy_value ? r.top_buy_valid_until : null,
-              },
+              topBid: query.includeTopBid
+                ? {
+                    id: r.top_buy_id,
+                    value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+                    maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
+                    validFrom: r.top_buy_valid_from,
+                    validUntil: r.top_buy_value ? r.top_buy_valid_until : null,
+                  }
+                : undefined,
               rank: {
                 "1day": r.day1_rank,
                 "7day": r.day7_rank,

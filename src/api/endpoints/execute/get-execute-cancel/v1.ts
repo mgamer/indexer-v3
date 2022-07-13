@@ -132,7 +132,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
                 ...steps[1],
                 status: "incomplete",
                 data: {
-                  endpoint: `/orders/executed/v1?id=${order.prefixHash()}`,
+                  endpoint: `/orders/executed/v1?ids=${order.prefixHash()}`,
                   method: "GET",
                 },
               },
@@ -167,7 +167,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
                 ...steps[1],
                 status: "incomplete",
                 data: {
-                  endpoint: `/orders/executed/v1?id=${order.hash()}`,
+                  endpoint: `/orders/executed/v1?ids=${order.hash()}`,
                   method: "GET",
                 },
               },
@@ -202,7 +202,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
                 ...steps[1],
                 status: "incomplete",
                 data: {
-                  endpoint: `/orders/executed/v1?id=${order.hash()}`,
+                  endpoint: `/orders/executed/v1?ids=${order.hash()}`,
                   method: "GET",
                 },
               },
@@ -240,7 +240,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
                 ...steps[1],
                 status: "incomplete",
                 data: {
-                  endpoint: `/orders/executed/v1?id=${order.hash()}`,
+                  endpoint: `/orders/executed/v1?ids=${order.hash()}`,
                   method: "GET",
                 },
               },
@@ -278,7 +278,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
                 ...steps[1],
                 status: "incomplete",
                 data: {
-                  endpoint: `/orders/executed/v1?id=${order.hash()}`,
+                  endpoint: `/orders/executed/v1?ids=${order.hash()}`,
                   method: "GET",
                 },
               },

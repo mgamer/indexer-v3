@@ -1,13 +1,13 @@
 import { BigNumber } from "@ethersproject/bignumber";
 
-import { idb } from "@/common/db";
+import { redb } from "@/common/db";
 import { toBuffer, bn } from "@/common/utils";
 import { config } from "@/config/index";
 
 export const getContractKind = async (
   contract: string
 ): Promise<"erc721" | "erc1155" | undefined> => {
-  const contractResult = await idb.oneOrNone(
+  const contractResult = await redb.oneOrNone(
     `
       SELECT contracts.kind FROM contracts
       WHERE contracts.address = $/address/
@@ -19,7 +19,7 @@ export const getContractKind = async (
 };
 
 export const getFtBalance = async (contract: string, owner: string): Promise<BigNumber> => {
-  const balanceResult = await idb.oneOrNone(
+  const balanceResult = await redb.oneOrNone(
     `
       SELECT ft_balances.amount FROM ft_balances
       WHERE ft_balances.contract = $/contract/
@@ -39,7 +39,7 @@ export const getNftBalance = async (
   tokenId: string,
   owner: string
 ): Promise<BigNumber> => {
-  const balanceResult = await idb.oneOrNone(
+  const balanceResult = await redb.oneOrNone(
     `
       SELECT nft_balances.amount FROM nft_balances
       WHERE nft_balances.contract = $/contract/
@@ -61,7 +61,7 @@ export const getNftApproval = async (
   owner: string,
   operator: string
 ): Promise<boolean> => {
-  const approvalResult = await idb.oneOrNone(
+  const approvalResult = await redb.oneOrNone(
     `
       SELECT nft_approval_events.approved FROM nft_approval_events
       WHERE nft_approval_events.address = $/address/
@@ -88,7 +88,7 @@ export const getMinNonce = async (orderKind: string, maker: string): Promise<Big
   // Mainnet: ++nonces[msg.sender]
   // Rinkeby: nonces[msg.sender]++
   if (config.chainId === 4 && orderKind === "wyvern-v2.3") {
-    bulkCancelResult = await idb.oneOrNone(
+    bulkCancelResult = await redb.oneOrNone(
       `
         SELECT coalesce(
           (
@@ -107,7 +107,7 @@ export const getMinNonce = async (orderKind: string, maker: string): Promise<Big
       }
     );
   } else {
-    bulkCancelResult = await idb.oneOrNone(
+    bulkCancelResult = await redb.oneOrNone(
       `
         SELECT coalesce(
           (
@@ -135,7 +135,7 @@ export const isNonceCancelled = async (
   maker: string,
   nonce: string
 ): Promise<boolean> => {
-  const nonceCancelResult = await idb.oneOrNone(
+  const nonceCancelResult = await redb.oneOrNone(
     `
       SELECT nonce FROM nonce_cancel_events
       WHERE order_kind = $/orderKind/
@@ -153,7 +153,7 @@ export const isNonceCancelled = async (
 };
 
 export const isOrderCancelled = async (orderId: string): Promise<boolean> => {
-  const cancelResult = await idb.oneOrNone(
+  const cancelResult = await redb.oneOrNone(
     `
       SELECT order_id FROM cancel_events
       WHERE order_id = $/orderId/
@@ -165,7 +165,7 @@ export const isOrderCancelled = async (orderId: string): Promise<boolean> => {
 };
 
 export const getQuantityFilled = async (orderId: string): Promise<BigNumber> => {
-  const fillResult = await idb.oneOrNone(
+  const fillResult = await redb.oneOrNone(
     `
       SELECT SUM(amount) AS quantity_filled FROM fill_events_2
       WHERE order_id = $/orderId/

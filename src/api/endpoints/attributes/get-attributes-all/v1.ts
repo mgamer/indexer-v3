@@ -60,6 +60,7 @@ export const getAttributesAllV1Options: RouteOptions = {
           ON "ak"."id" = "a"."attribute_key_id"
         WHERE "ak"."collection_id" = $/collection/
           AND "ak"."rank" IS NOT NULL
+          AND "a"."token_count" > 0
         GROUP BY "ak"."id"
         ORDER BY "ak"."rank" DESC
       `;

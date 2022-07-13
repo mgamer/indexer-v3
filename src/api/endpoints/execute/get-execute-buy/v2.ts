@@ -133,10 +133,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
         quote: number;
       }[] = [];
 
-      // HACK: The confirmation query for the whole multi buy batch can
-      // be the confirmation query of any token within the batch (under
-      // the asumption that all sub-fills will succeed).
-      let confirmationQuery: string;
+      let confirmationQuery = "";
 
       // Consistently handle a single token vs multiple tokens
       let tokens: string[] = [];
@@ -274,7 +271,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
           }
 
           addListingDetail(kind, token_kind, contract, tokenId, 1, raw_data);
-          confirmationQuery = `?id=${id}&checkRecentEvents=true`;
+          confirmationQuery += `${confirmationQuery.length ? "&" : "?"}ids=${id}`;
         } else {
           // Only ERC1155 tokens support a quantity greater than 1
           const kindResult = await redb.one(
@@ -344,7 +341,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
             }
 
             addListingDetail(kind, "erc1155", contract, tokenId, quantityFilled, raw_data);
-            confirmationQuery = `?id=${id}&checkRecentEvents=true`;
+            confirmationQuery = `?ids=${id}`;
           }
 
           // No available orders to fill the requested quantity

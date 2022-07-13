@@ -1,3 +1,79 @@
+# [5.106.0](https://github.com/reservoirprotocol/indexer/compare/v5.105.1...v5.106.0) (2022-07-12)
+
+
+### Bug Fixes
+
+* check the order side for the fill event ([2e1490f](https://github.com/reservoirprotocol/indexer/commit/2e1490f5273121459be8359f49139d3ad15c4f4d))
+* check the order side for the fill event and store order id ([87a773b](https://github.com/reservoirprotocol/indexer/commit/87a773b33b86de4a37648b016c7fa032f5923404))
+
+
+### Features
+
+* filter empty attributes ([7968be5](https://github.com/reservoirprotocol/indexer/commit/7968be57bcd6a534a488a26272bf3586cc66cbb4))
+
+
+
+## [5.105.1](https://github.com/reservoirprotocol/indexer/compare/v5.105.0...v5.105.1) (2022-07-12)
+
+
+### Bug Fixes
+
+* cancelled orders confirmation ([b2f7eef](https://github.com/reservoirprotocol/indexer/commit/b2f7eef1f3d938f2ef90920b38cc1597d94f5ced))
+* properly handle cancellations ([35c8c7a](https://github.com/reservoirprotocol/indexer/commit/35c8c7ab2161b45cd8b0e2fdb98e95ee18b129ef))
+
+
+
+# [5.105.0](https://github.com/reservoirprotocol/indexer/compare/v5.104.0...v5.105.0) (2022-07-12)
+
+
+### Features
+
+* improve order execution confirmation ([cf5cd9b](https://github.com/reservoirprotocol/indexer/commit/cf5cd9b068f1d8a68bd64d2ddf68b1f022f99e5b))
+
+
+
+# [5.104.0](https://github.com/reservoirprotocol/indexer/compare/v5.103.3...v5.104.0) (2022-07-08)
+
+
+### Features
+
+* bigger top bid batch update ([aae96ca](https://github.com/reservoirprotocol/indexer/commit/aae96caa19f14f7628a74e1a0f13cc2a87890f35))
+* move calls to replica ([5e5de93](https://github.com/reservoirprotocol/indexer/commit/5e5de93c158e78e198cb70b2a72b0927d3a414c3))
+* update explore and get collection to make top bid optional ([b3a927e](https://github.com/reservoirprotocol/indexer/commit/b3a927e98b9e6fe3ff3de1afcacbf67b24853471))
+* update top bid batch size ([bcfef53](https://github.com/reservoirprotocol/indexer/commit/bcfef533d83c0cd7c92ee4296de9eb1ea1ca2ea3))
+* update top bid batch size ([c418f29](https://github.com/reservoirprotocol/indexer/commit/c418f29366d1b492c3670ec677d7cc899870fd8b))
+
+
+
+## [5.103.3](https://github.com/reservoirprotocol/indexer/compare/v5.103.2...v5.103.3) (2022-07-08)
+
+
+### Bug Fixes
+
+* read from writer in the order updates by id queue ([58e2d04](https://github.com/reservoirprotocol/indexer/commit/58e2d0494c77366214f33d612f930b4cb70389ba))
+
+
+
+## [5.103.2](https://github.com/reservoirprotocol/indexer/compare/v5.103.1...v5.103.2) (2022-07-07)
+
+
+### Bug Fixes
+
+* transfers bulk api sorting ([4440264](https://github.com/reservoirprotocol/indexer/commit/4440264ed84a9d1a6aa5da4a99efd7a9d988259d))
+
+
+
+## [5.103.1](https://github.com/reservoirprotocol/indexer/compare/v5.103.0...v5.103.1) (2022-07-06)
+
+
+### Bug Fixes
+
+* exclude large keys from query ([f9b1429](https://github.com/reservoirprotocol/indexer/commit/f9b1429a3532f31404fdb8b5166358ab5a516a79))
+* move reads to replica ([8b219d1](https://github.com/reservoirprotocol/indexer/commit/8b219d1a07f7ca424398cbf2236d70f410e906dc))
+* sort by token id ([610e8e1](https://github.com/reservoirprotocol/indexer/commit/610e8e165fac1f8b9de028ea561119a7304024e0))
+
+
+
 # [5.103.0](https://github.com/reservoirprotocol/indexer/compare/v5.102.2...v5.103.0) (2022-07-06)
 
 
