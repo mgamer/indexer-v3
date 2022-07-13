@@ -19,7 +19,7 @@ export class SaleActivity {
 
     // If no collection found
     if (!token.collectionId) {
-      logger.warn("bid-activity", `No collection found for ${JSON.stringify(data)}`);
+      logger.warn("sale-activity", `No collection found for ${JSON.stringify(data)}`);
     }
 
     const activityHash = getActivityHash(
@@ -27,6 +27,10 @@ export class SaleActivity {
       data.logIndex.toString(),
       data.batchIndex.toString()
     );
+
+    if (!data.orderId) {
+      logger.info("sale-activity", `No orderId found ${JSON.stringify(data)}`);
+    }
 
     const activity = {
       type: ActivityType.sale,
