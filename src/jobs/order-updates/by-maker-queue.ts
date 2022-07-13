@@ -50,6 +50,10 @@ if (config.doBackgroundWork) {
         // can potentially be more prone to not being able to handle all the
         // affected orders in a single batch).
 
+        // TODO: For validation efficiency, we should maybe store the status
+        // of every bundle item individually (eg. fillability and approval),
+        // so that there is no need to revalidate everything on each change.
+
         switch (data.kind) {
           // Handle changes in ERC20 balances (relevant for 'buy' orders)
           case "buy-balance": {
