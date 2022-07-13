@@ -1,3 +1,12 @@
+## [5.107.1](https://github.com/reservoirprotocol/indexer/compare/v5.107.0...v5.107.1) (2022-07-13)
+
+
+### Bug Fixes
+
+* properly detect goerli network ([4553c14](https://github.com/reservoirprotocol/indexer/commit/4553c14512a9edc6248a3b06efecce1a28c53ed6))
+
+
+
 # [5.107.0](https://github.com/reservoirprotocol/indexer/compare/v5.106.0...v5.107.0) (2022-07-13)
 
 
