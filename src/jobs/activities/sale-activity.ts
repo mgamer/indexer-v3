@@ -19,7 +19,7 @@ export class SaleActivity {
 
     // If no collection found
     if (!token.collectionId) {
-      logger.warn("bid-activity", `No collection found for ${JSON.stringify(data)}`);
+      logger.warn("sale-activity", `No collection found for ${JSON.stringify(data)}`);
     }
 
     const activityHash = getActivityHash(
@@ -27,6 +27,10 @@ export class SaleActivity {
       data.logIndex.toString(),
       data.batchIndex.toString()
     );
+
+    if (!data.orderId) {
+      logger.info("sale-activity", `No orderId found ${JSON.stringify(data)}`);
+    }
 
     const activity = {
       type: ActivityType.sale,
@@ -44,6 +48,7 @@ export class SaleActivity {
         transactionHash: data.transactionHash,
         logIndex: data.logIndex,
         batchIndex: data.batchIndex,
+        orderId: data.orderId,
       },
     } as ActivitiesEntityInsertParams;
 
@@ -73,4 +78,5 @@ export type FillEventData = {
   batchIndex: number;
   blockHash: string;
   timestamp: number;
+  orderId: string;
 };
