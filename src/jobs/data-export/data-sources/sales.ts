@@ -1,5 +1,5 @@
 import { redb } from "@/common/db";
-import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
 import { Sources } from "@/models/sources";
 import crypto from "crypto";
@@ -66,7 +66,7 @@ export class SalesDataSource extends BaseDataSource {
           order_source: orderSource,
           from: r.order_side === "sell" ? fromBuffer(r.maker) : fromBuffer(r.taker),
           to: r.order_side === "sell" ? fromBuffer(r.taker) : fromBuffer(r.maker),
-          price: r.price ? formatEth(r.price) : null,
+          price: r.price ? r.price.toString() : null,
           amount: Number(r.amount),
           fill_source: r.fill_source ? String(r.fill_source) : orderSource,
           tx_hash: fromBuffer(r.tx_hash),
