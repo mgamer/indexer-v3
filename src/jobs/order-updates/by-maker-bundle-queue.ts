@@ -189,12 +189,12 @@ if (config.doBackgroundWork) {
                   x.id,
                   array_agg(x.approval_status)::TEXT[] AS old_statuses,
                   array_agg((CASE
-                    WHEN bundle_items.kind = 'nft' AND $/approvalStatus/ = 'approved' THEN 'approved'
+                    WHEN bundle_items.kind = 'nft' AND y.approved THEN 'approved'
                     WHEN bundle_items.kind = 'ft' AND ft_approvals.value >= bundle_items.amount THEN 'approved'
                     ELSE 'no-approval'
                   END)::order_approval_status_t)::TEXT[] AS new_statuses,
                   array_agg((CASE
-                    WHEN bundle_items.kind = 'nft' AND $/approvalStatus/ = 'approved' THEN upper(x.valid_between)
+                    WHEN bundle_items.kind = 'nft' AND y.approved THEN upper(x.valid_between)
                     WHEN bundle_items.kind = 'ft' AND ft_approvals.value >= bundle_items.amount THEN upper(x.valid_between)
                     ELSE least(x.expiration, to_timestamp($/timestamp/))
                   END)::timestamptz)::TEXT[] AS expirations
@@ -207,13 +207,22 @@ if (config.doBackgroundWork) {
                   ON x.maker = ft_approvals.owner
                   AND x.conduit = ft_approvals.spender
                   AND token_sets_tokens.contract = ft_approvals.token
+                LEFT JOIN LATERAL (
+                  SELECT
+                    nft_approval_events.approved
+                  FROM nft_approval_events
+                  WHERE nft_approval_events.address = token_sets_tokens.contract
+                    AND nft_approval_events.owner = x.maker
+                    AND nft_approval_events.operator = x.conduit
+                  ORDER BY nft_approval_events.block DESC
+                  LIMIT 1
+                ) y ON TRUE
                 GROUP BY x.id
               `,
               {
                 maker: toBuffer(maker),
                 contract: toBuffer(data.contract),
                 operator: toBuffer(data.operator),
-                approvalStatus: data.approved ? "approved" : "no-approval",
                 timestamp: trigger.txTimestamp,
               }
             );
@@ -314,9 +323,6 @@ export type MakerInfo = {
         kind: "sell-approval";
         contract: string;
         operator: string;
-        // TODO: Replace explicitly passing the `approved` field with
-        // fetching the latest approval directly from the database
-        approved: boolean;
       };
 };
 
