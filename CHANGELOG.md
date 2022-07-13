@@ -1,3 +1,34 @@
+# [5.107.0](https://github.com/reservoirprotocol/indexer/compare/v5.106.0...v5.107.0) (2022-07-13)
+
+
+### Bug Fixes
+
+* bundle order updates by maker query ([f259961](https://github.com/reservoirprotocol/indexer/commit/f25996152164190535a6f9ffcf27bc98265cf212))
+* debug ([6ac1384](https://github.com/reservoirprotocol/indexer/commit/6ac1384ceb77bfa29a69b69969696cbd3e7eb017))
+* minor tweaks ([33a42d0](https://github.com/reservoirprotocol/indexer/commit/33a42d0c1783e8faf6c849db9d55cc221361fe08))
+* minor tweaks ([087dc18](https://github.com/reservoirprotocol/indexer/commit/087dc18c5fcb4e9ea9b5335db52ec5f559c7d1cd))
+* minor tweaks ([e041db3](https://github.com/reservoirprotocol/indexer/commit/e041db3dd5291da6e53962bb9903d0703604a205))
+* minor tweaks ([01e00da](https://github.com/reservoirprotocol/indexer/commit/01e00dab202147c3821f98a6d217a6154f8e692a))
+* minor tweaks ([4a6b2d6](https://github.com/reservoirprotocol/indexer/commit/4a6b2d65a6fb26096011640b452439e57e040461))
+* minor tweaks ([b44d477](https://github.com/reservoirprotocol/indexer/commit/b44d47773bb9433e0e92d37a054a7f14e550fc90))
+* minor tweaks ([4670d42](https://github.com/reservoirprotocol/indexer/commit/4670d42fba87ee28080f30a486cea545555290e7))
+* minor tweaks ([a4ee0db](https://github.com/reservoirprotocol/indexer/commit/a4ee0db0bc872450d82c199ef8b15b7ad034db23))
+* minor tweaks ([4aadca7](https://github.com/reservoirprotocol/indexer/commit/4aadca7fb18b58f1e592d08e75b703b386bb0476))
+* minor tweaks ([b620be2](https://github.com/reservoirprotocol/indexer/commit/b620be24faa1b1e71623e362b23dd518a0d91671))
+* minor tweaks ([65b6dfc](https://github.com/reservoirprotocol/indexer/commit/65b6dfcfd3e7bcb3ba8454af83cbb19903019c9a))
+* minor tweaks ([075d59c](https://github.com/reservoirprotocol/indexer/commit/075d59ce2a967c48457c8aac83fd42dba88d978f))
+* minor tweaks ([71d5199](https://github.com/reservoirprotocol/indexer/commit/71d519951921df5ff63446ef0808fa004272f1bc))
+* uncomment index creation ([b904f19](https://github.com/reservoirprotocol/indexer/commit/b904f19689f240d366d67bb52ca874cdf07640e6))
+
+
+### Features
+
+* basic support for bundles ([cd0c4d3](https://github.com/reservoirprotocol/indexer/commit/cd0c4d3b309d739950ad0319abd1c66502f866c1))
+* handle bundle orders approvals ([d2cd4c9](https://github.com/reservoirprotocol/indexer/commit/d2cd4c97d2436d0d13871c38b38701af2c6d58d7))
+* validate bundle balances ([342a848](https://github.com/reservoirprotocol/indexer/commit/342a848c867cbf4d987f0ab59895b4ddc94d7731))
+
+
+
 # [5.106.0](https://github.com/reservoirprotocol/indexer/compare/v5.105.1...v5.106.0) (2022-07-12)
 
 
