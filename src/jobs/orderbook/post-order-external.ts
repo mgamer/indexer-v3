@@ -181,8 +181,17 @@ const postOpenSea = async (orderData: Record<string, unknown>, apiKey: string | 
       if (error.response) {
         logger.error(
           QUEUE_NAME,
-          `Failed to post order to OpenSea: ${JSON.stringify(error.response)}`
+          `Failed to post order to OpenSea: ${JSON.stringify(error.response.data)}`
         );
+
+        if (error.response.data.detail?.startsWith("Request was throttled. Expected available in")) {
+          const delay = error.response.data.detail.split(" ")[-2];
+
+          logger.info(
+              QUEUE_NAME,
+              `Request was throttled: ${delay}`
+          );
+        }
       }
 
       throw new Error(`Failed to post order.`);
@@ -219,7 +228,7 @@ const postLooksRare = async (orderData: Record<string, unknown>, apiKey: string 
       if (error.response) {
         logger.error(
           QUEUE_NAME,
-          `Failed to post order to LooksRare: ${JSON.stringify(error.response)}`
+          `Failed to post order to LooksRare: ${JSON.stringify(error.response.data)}`
         );
       }
 
