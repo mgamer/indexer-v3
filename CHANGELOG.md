@@ -1,3 +1,12 @@
+# [5.110.0](https://github.com/reservoirprotocol/indexer/compare/v5.109.0...v5.110.0) (2022-07-14)
+
+
+### Features
+
+* properly attribute fill source across all exchanges ([19c3cc3](https://github.com/reservoirprotocol/indexer/commit/19c3cc3965328660362737105edee08d446c07f4))
+
+
+
 # [5.109.0](https://github.com/reservoirprotocol/indexer/compare/v5.108.1...v5.109.0) (2022-07-14)
 
 

@@ -6,7 +6,12 @@ export type Transaction = {
   from: string;
   to: string;
   value: string;
-  data?: string;
+  data: string;
+  blockNumber: number;
+  blockTimestamp: number;
+  gasUsed: string;
+  gasPrice: string;
+  gasFee: string;
 };
 
 export const saveTransaction = async (transaction: Transaction) => {
@@ -17,13 +22,23 @@ export const saveTransaction = async (transaction: Transaction) => {
         "from",
         "to",
         value,
-        data
+        data,
+        block_number,
+        block_timestamp,
+        gas_used,
+        gas_price,
+        gas_fee
       ) VALUES (
         $/hash/,
         $/from/,
         $/to/,
         $/value/,
-        $/data/
+        $/data/,
+        $/blockNumber/,
+        $/blockTimestamp/,
+        $/gasUsed/,
+        $/gasPrice/,
+        $/gasFee/
       )
       ON CONFLICT DO NOTHING
     `,
@@ -32,14 +47,21 @@ export const saveTransaction = async (transaction: Transaction) => {
       from: toBuffer(transaction.from),
       to: toBuffer(transaction.to),
       value: transaction.value,
-      data: transaction.data ? toBuffer(transaction.data) : null,
+      data: toBuffer(transaction.data),
+      blockNumber: transaction.blockNumber,
+      blockTimestamp: transaction.blockTimestamp,
+      gasUsed: transaction.gasUsed,
+      gasPrice: transaction.gasPrice,
+      gasFee: transaction.gasFee,
     }
   );
 
   return transaction;
 };
 
-export const getTransaction = async (hash: string): Promise<Transaction> => {
+export const getTransaction = async (
+  hash: string
+): Promise<Pick<Transaction, "hash" | "from" | "to" | "value">> => {
   const result = await redb.oneOrNone(
     `
       SELECT
