@@ -1,6 +1,7 @@
 import { baseProvider } from "@/common/provider";
 import { getBlocks, saveBlock } from "@/models/blocks";
 import { getTransaction, saveTransaction } from "@/models/transactions";
+import { logger } from "@/common/logger";
 
 export const fetchBlock = async (blockNumber: number) =>
   getBlocks(blockNumber)
@@ -8,7 +9,7 @@ export const fetchBlock = async (blockNumber: number) =>
     .then((b) => b[0])
     .catch(async () => {
       const block = await baseProvider.getBlock(blockNumber);
-
+      logger.info("fetch-block", JSON.stringify(block));
       return saveBlock({
         number: block.number,
         hash: block.hash,
