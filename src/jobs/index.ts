@@ -70,6 +70,7 @@ import * as backfillFillEventsOrderSource from "@/jobs/backfill/backfill-fill-ev
 import * as topBidUpdateQueue from "@/jobs/bid-updates/top-bid-update-queue";
 import * as exportData from "@/jobs/data-export/export-data";
 import * as rarityQueue from "@/jobs/collection-updates/rarity-queue";
+import * as orderbookPostOrderExternal from "@/jobs/orderbook/post-order-external";
 
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
@@ -120,4 +121,5 @@ export const allJobQueues = [
   topBidUpdateQueue.queue,
   exportData.queue,
   rarityQueue.queue,
+  orderbookPostOrderExternal.queue,
 ];
