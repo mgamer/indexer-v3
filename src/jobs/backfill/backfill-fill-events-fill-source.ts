@@ -78,19 +78,21 @@ if (config.doBackgroundWork) {
         }
       }
 
-      await idb.none(
-        `
-          UPDATE fill_events_2 SET
-            fill_source = x.fill_source,
-            taker = x.taker
-          FROM (
-            VALUES ${pgp.helpers.values(values, columns)}
-          ) AS x(tx_hash, log_index, batch_index, taker, fill_source)
-          WHERE fill_events_2.tx_hash = x.tx_hash::BYTEA
-            AND fill_events_2.log_index = x.log_index::INT
-            AND fill_events_2.batch_index = x.batch_index::INT
-        `
-      );
+      if (values.length) {
+        await idb.none(
+          `
+            UPDATE fill_events_2 SET
+              fill_source = x.fill_source,
+              taker = x.taker
+            FROM (
+              VALUES ${pgp.helpers.values(values, columns)}
+            ) AS x(tx_hash, log_index, batch_index, taker, fill_source)
+            WHERE fill_events_2.tx_hash = x.tx_hash::BYTEA
+              AND fill_events_2.log_index = x.log_index::INT
+              AND fill_events_2.batch_index = x.batch_index::INT
+          `
+        );
+      }
 
       if (result.length >= limit) {
         const lastResult = result[result.length - 1];
