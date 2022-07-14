@@ -1,3 +1,12 @@
+## [5.112.3](https://github.com/reservoirprotocol/indexer/compare/v5.112.2...v5.112.3) (2022-07-14)
+
+
+### Bug Fixes
+
+* revert to more efficient block ingestion ([3d822f2](https://github.com/reservoirprotocol/indexer/commit/3d822f2dc572b225b5e1c2d2756403d7a50d07bc))
+
+
+
 ## [5.112.2](https://github.com/reservoirprotocol/indexer/compare/v5.112.1...v5.112.2) (2022-07-14)
 
 
