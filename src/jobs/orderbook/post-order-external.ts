@@ -181,14 +181,12 @@ const postOpenSea = async (orderData: Record<string, unknown>, apiKey: string | 
       if (error.response) {
         logger.error(
           QUEUE_NAME,
-          `Failed to post order to OpenSea: ${JSON.stringify(error.response.data)}`
+          `Failed to post order to OpenSea: ${JSON.stringify(error.response)}`
         );
       }
 
-      return false;
+      throw new Error(`Failed to post order.`);
     });
-
-  return true;
 };
 
 const postLooksRare = async (orderData: Record<string, unknown>, apiKey: string | null) => {
@@ -221,14 +219,12 @@ const postLooksRare = async (orderData: Record<string, unknown>, apiKey: string 
       if (error.response) {
         logger.error(
           QUEUE_NAME,
-          `Failed to post order to LooksRare: ${JSON.stringify(error.response.data)}`
+          `Failed to post order to LooksRare: ${JSON.stringify(error.response)}`
         );
       }
 
-      return false;
+      throw new Error(`Failed to post order.`);
     });
-
-  return true;
 };
 
 const decryptApiKey = (apiKeyHash: string) => {
