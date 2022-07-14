@@ -1,7 +1,7 @@
 import { createLogger, format, transports } from "winston";
 
 import { config } from "@/config/index";
-import { getNetworkName } from "@/common/utils";
+import { getNetworkName } from "@/config/network";
 
 import { networkInterfaces } from "os";
 

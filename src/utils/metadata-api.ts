@@ -2,8 +2,8 @@
 
 import axios from "axios";
 
-import { getNetworkName } from "@/common/utils";
 import { config } from "@/config/index";
+import { getNetworkName } from "@/config/network";
 
 export class MetadataApi {
   static async getCollectionMetadata(contract: string, tokenId: string) {
