@@ -1,3 +1,30 @@
+# [5.112.0](https://github.com/reservoirprotocol/indexer/compare/v5.111.0...v5.112.0) (2022-07-14)
+
+
+### Bug Fixes
+
+* backfill missing fill sources ([5adbdf2](https://github.com/reservoirprotocol/indexer/commit/5adbdf2598f3885624673e77ba92cce0be5c9dfe))
+* debug ([f801ad6](https://github.com/reservoirprotocol/indexer/commit/f801ad641f97b2121c38ef62c192ee6d6cc0ef96))
+* minor tweaks ([a69c351](https://github.com/reservoirprotocol/indexer/commit/a69c3512dda3b733d0c17d7d926057092ed24a9b))
+* minor tweaks ([3a61c92](https://github.com/reservoirprotocol/indexer/commit/3a61c9201c471b4a485bf0fb985fce7230a79f61))
+* minor tweaks ([18e8703](https://github.com/reservoirprotocol/indexer/commit/18e870312f97f2fad423842ec0557a09f403535e))
+* minor tweaks ([4ac7736](https://github.com/reservoirprotocol/indexer/commit/4ac7736ea9aca41e4cc5f2d7f6a46f3b934022f4))
+* remove debug logs ([7b32f0e](https://github.com/reservoirprotocol/indexer/commit/7b32f0e9ead3dba3c12cf492c300e2345889abe7))
+* tweaks ([f4f8473](https://github.com/reservoirprotocol/indexer/commit/f4f8473f003cdd669ff88b6fd0e2f584b2098d6b))
+* tweaks ([f064c97](https://github.com/reservoirprotocol/indexer/commit/f064c978997149a92842070c72c2a90e3e6af160))
+* tweaks ([b9a52f4](https://github.com/reservoirprotocol/indexer/commit/b9a52f4ac4b7848ff96c3fe2137bfb8d35f91599))
+* tweaks ([0fa9774](https://github.com/reservoirprotocol/indexer/commit/0fa977437d08999369688421924ada6633fd4306))
+* tweaks ([d0ba026](https://github.com/reservoirprotocol/indexer/commit/d0ba026f197744ad5edb0645e275a2f91f32d64b))
+* use write instance ([011d5de](https://github.com/reservoirprotocol/indexer/commit/011d5dee4b931b346d5ad7c2ba84000bb46e0c14))
+
+
+### Features
+
+* add queue for backfilling block timestamps ([f3271e1](https://github.com/reservoirprotocol/indexer/commit/f3271e173f430c3be5ad4320e49b3f2456475604))
+* synchronous handling of blocks ([2c4bacf](https://github.com/reservoirprotocol/indexer/commit/2c4bacf05d665ec30c9ceb33f7a688894cc2ca8c))
+
+
+
 # [5.111.0](https://github.com/reservoirprotocol/indexer/compare/v5.110.1...v5.111.0) (2022-07-14)
 
 
