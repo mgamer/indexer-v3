@@ -1,3 +1,12 @@
+## [5.110.1](https://github.com/reservoirprotocol/indexer/compare/v5.110.0...v5.110.1) (2022-07-14)
+
+
+### Bug Fixes
+
+* disallow fallback collection data in most cases ([56c2968](https://github.com/reservoirprotocol/indexer/commit/56c2968df4fad40283c34ac7f2a97dc6f3680f55))
+
+
+
 # [5.110.0](https://github.com/reservoirprotocol/indexer/compare/v5.109.0...v5.110.0) (2022-07-14)
 
 
