@@ -1,3 +1,13 @@
+# [5.111.0](https://github.com/reservoirprotocol/indexer/compare/v5.110.1...v5.111.0) (2022-07-14)
+
+
+### Features
+
+* reduce concurrency ([073d42a](https://github.com/reservoirprotocol/indexer/commit/073d42aa130a351dca2a2abd8698b99a1706473f))
+* remove logs ([474a903](https://github.com/reservoirprotocol/indexer/commit/474a90341214dbd75734671850d2658a545ebc32))
+
+
+
 ## [5.110.1](https://github.com/reservoirprotocol/indexer/compare/v5.110.0...v5.110.1) (2022-07-14)
 
 
