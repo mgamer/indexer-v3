@@ -1,6 +1,6 @@
 import { redb } from "@/common/db";
 import { Sources } from "@/models/sources";
-import { formatEth, fromBuffer } from "@/common/utils";
+import { fromBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
 
 export class AskEventsDataSource extends BaseDataSource {
@@ -53,7 +53,7 @@ export class AskEventsDataSource extends BaseDataSource {
         token_id: r.token_id,
         order_id: r.order_id,
         maker: r.maker ? fromBuffer(r.maker) : null,
-        price: r.price ? formatEth(r.price) : null,
+        price: r.price ? r.price.toString() : null,
         quantity_remaining: Number(r.order_quantity_remaining),
         valid_from: r.valid_from ? Number(r.valid_from) : null,
         valid_until: r.valid_until ? Number(r.valid_until) : null,

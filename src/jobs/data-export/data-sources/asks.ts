@@ -1,6 +1,6 @@
 import { redb } from "@/common/db";
 import { Sources } from "@/models/sources";
-import { formatEth, fromBuffer } from "@/common/utils";
+import { fromBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
@@ -96,9 +96,9 @@ export class AsksDataSource extends BaseDataSource {
           token_id: tokenId,
           maker: fromBuffer(r.maker),
           taker: fromBuffer(r.taker),
-          price: formatEth(r.price),
-          start_price: formatEth(startPrice),
-          end_price: formatEth(endPrice),
+          price: r.price.toString(),
+          start_price: startPrice.toString(),
+          end_price: endPrice.toString(),
           dynamic: r.dynamic,
           quantity: Number(r.quantity_filled) + Number(r.quantity_remaining),
           quantity_filled: Number(r.quantity_filled),
