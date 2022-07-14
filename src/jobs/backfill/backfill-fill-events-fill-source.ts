@@ -39,9 +39,7 @@ if (config.doBackgroundWork) {
             fill_events_2.batch_index,
             fill_events_2.fill_source
           FROM fill_events_2
-          WHERE fill_events_2.tx_hash < $/txHash/
-            AND fill_events_2.log_index < $/logIndex/
-            AND fill_events_2.batch_index < $/batchIndex/
+          WHERE (fill_events_2.tx_hash, fill_events_2.log_index, fill_events_2.batch_index) < ($/txHash/, $/logIndex/, $/batchIndex/)
           ORDER BY
             fill_events_2.tx_hash DESC,
             fill_events_2.log_index DESC,
@@ -111,7 +109,7 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
+    .acquire([`${QUEUE_NAME}-lock-2`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       await addToQueue("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 0, 0);
     })
