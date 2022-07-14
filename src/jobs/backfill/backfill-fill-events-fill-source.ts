@@ -85,16 +85,10 @@ if (config.doBackgroundWork) {
             taker = x.taker
           FROM (
             VALUES ${pgp.helpers.values(values, columns)}
-          ) AS x (
-            tx_hash,
-            log_index,
-            batch_index,
-            taker,
-            fill_source
-          )
-          WHERE fill_events_2.tx_hash = x.tx_hash
-            AND fill_events_2.log_index = x.log_index
-            AND fill_events_2.batch_index = x.batch_index
+          ) AS x(tx_hash, log_index, batch_index, taker, fill_source)
+          WHERE fill_events_2.tx_hash = x.tx_hash::BYTEA
+            AND fill_events_2.log_index = x.log_index::INT
+            AND fill_events_2.batch_index = x.batch_index::INT
         `
       );
 
