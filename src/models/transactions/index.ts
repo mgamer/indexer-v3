@@ -1,4 +1,4 @@
-import { redb, idb } from "@/common/db";
+import { idb } from "@/common/db";
 import { fromBuffer, toBuffer } from "@/common/utils";
 
 export type Transaction = {
@@ -62,7 +62,7 @@ export const saveTransaction = async (transaction: Transaction) => {
 export const getTransaction = async (
   hash: string
 ): Promise<Pick<Transaction, "hash" | "from" | "to" | "value">> => {
-  const result = await redb.oneOrNone(
+  const result = await idb.oneOrNone(
     `
       SELECT
         transactions.from,

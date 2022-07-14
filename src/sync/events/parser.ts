@@ -28,8 +28,8 @@ export const parseEvent = async (
 
   let cache = blocksCache.get(block);
   if (!cache) {
-    blocksCache.set(block, await fetchBlock(block));
-    cache = blocksCache.get(block)!;
+    cache = await fetchBlock(block);
+    blocksCache.set(block, cache);
   }
 
   return {
