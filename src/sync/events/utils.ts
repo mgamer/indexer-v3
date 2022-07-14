@@ -1,11 +1,15 @@
 import { baseProvider } from "@/common/provider";
 import { getTransaction, saveTransaction } from "@/models/transactions";
+import { logger } from "@/common/logger";
 
 export const fetchTransaction = async (txHash: string) =>
   getTransaction(txHash).catch(async () => {
     // Unfortunately, we need to make two calls
     const tx = await baseProvider.getTransaction(txHash);
     const txReceipt = await baseProvider.getTransactionReceipt(txHash);
+
+    logger.info("debug", JSON.stringify(tx));
+    logger.info("debug", JSON.stringify(txReceipt));
 
     return saveTransaction({
       hash: tx.hash.toLowerCase(),
