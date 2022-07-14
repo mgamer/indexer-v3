@@ -48,6 +48,7 @@ if (config.doBackgroundWork) {
         `,
         { limit, txHash: toBuffer(txHash), logIndex, batchIndex }
       );
+      logger.info("debug", `Result length: ${result.length}`);
 
       let routerToFillSource: { [address: string]: string } = {};
       if (Sdk.Common.Addresses.Routers[config.chainId]) {
@@ -109,7 +110,7 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire([`${QUEUE_NAME}-lock-2`], 60 * 60 * 24 * 30 * 1000)
+    .acquire([`${QUEUE_NAME}-lock-3`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       await addToQueue("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 0, 0);
     })
