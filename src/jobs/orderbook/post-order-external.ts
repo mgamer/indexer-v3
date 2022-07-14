@@ -4,10 +4,8 @@ import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 import axios from "axios";
-import * as Boom from "@hapi/boom";
 import * as Sdk from "@reservoir0x/sdk";
 import { joinSignature } from "@ethersproject/bytes";
-import { RateLimiter } from "limiter";
 
 const QUEUE_NAME = "orderbook-post-order-external-queue";
 const OPENSEA_RATE_LIMIT_REQUEST_COUNT = 2;
@@ -83,7 +81,7 @@ if (config.doBackgroundWork) {
 }
 
 export type PostOrderExternalParams = {
-  orderData: any;
+  orderData: Record<string, unknown>;
   orderbook: string;
   orderbookApiKeyHash: string;
 };
@@ -128,7 +126,11 @@ const reachedApiKeyRateLimit = async (orderbook: string, apiKeyHash: string | nu
   return current > rateLimitRequestCount;
 };
 
-const postOrder = async (orderbook: string, orderData: any, apiKeyHash: string | null) => {
+const postOrder = async (
+  orderbook: string,
+  orderData: Record<string, unknown>,
+  apiKeyHash: string | null
+) => {
   const apiKey = apiKeyHash ? decryptApiKey(apiKeyHash) : null;
 
   logger.info(
@@ -146,7 +148,7 @@ const postOrder = async (orderbook: string, orderData: any, apiKeyHash: string |
   throw new Error(`Unsupported orderbook ${orderbook}`);
 };
 
-const postOpenSea = async (orderData: any, apiKey: string | null) => {
+const postOpenSea = async (orderData: Record<string, unknown>, apiKey: string | null) => {
   const sdkOrder = new Sdk.Seaport.Order(config.chainId, orderData);
 
   await axios
@@ -188,7 +190,7 @@ const postOpenSea = async (orderData: any, apiKey: string | null) => {
   return true;
 };
 
-const postLooksRare = async (orderData: any, apiKey: string | null) => {
+const postLooksRare = async (orderData: Record<string, unknown>, apiKey: string | null) => {
   const sdkOrder = new Sdk.LooksRare.Order(config.chainId, orderData);
   const lrOrder = {
     ...sdkOrder.params,
@@ -250,7 +252,7 @@ export const encryptApiKey = (apiKey: string) => {
 };
 
 export const addToQueue = async (
-  orderData: any,
+  orderData: Record<string, unknown>,
   orderbook: string,
   orderbookApiKey: string | null,
   delay = 0
