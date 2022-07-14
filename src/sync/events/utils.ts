@@ -1,3 +1,4 @@
+import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { getBlocks, saveBlock } from "@/models/blocks";
 import { getTransaction, saveTransaction } from "@/models/transactions";
@@ -22,12 +23,15 @@ export const fetchTransaction = async (txHash: string) =>
     const txReceipt = await baseProvider.getTransactionReceipt(txHash);
     const blockTimestamp = (await fetchBlock(txReceipt.blockNumber)).timestamp;
 
+    logger.info("debug", JSON.stringify(tx));
+    logger.info("debug", JSON.stringify(txReceipt));
+
     // Sometimes `effectiveGasPrice` can be null
     const gasPrice = txReceipt.effectiveGasPrice || tx.gasPrice || 0;
 
     return saveTransaction({
       hash: tx.hash.toLowerCase(),
-      from: txReceipt.from.toLowerCase(),
+      from: tx.from.toLowerCase(),
       to: txReceipt.to.toLowerCase(),
       value: tx.value.toString(),
       data: tx.data.toLowerCase(),
