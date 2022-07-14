@@ -23,22 +23,24 @@ export const fetchTransaction = async (txHash: string) =>
     const txReceipt = await baseProvider.getTransactionReceipt(txHash);
     const blockTimestamp = (await fetchBlock(txReceipt.blockNumber)).timestamp;
 
-    logger.info("debug", JSON.stringify(tx));
-    logger.info("debug", JSON.stringify(txReceipt));
-
     // Sometimes `effectiveGasPrice` can be null
     const gasPrice = txReceipt.effectiveGasPrice || tx.gasPrice || 0;
 
-    return saveTransaction({
-      hash: tx.hash.toLowerCase(),
-      from: tx.from.toLowerCase(),
-      to: txReceipt.to.toLowerCase(),
-      value: tx.value.toString(),
-      data: tx.data.toLowerCase(),
-      blockNumber: txReceipt.blockNumber,
-      blockTimestamp,
-      gasUsed: txReceipt.gasUsed.toString(),
-      gasPrice: gasPrice.toString(),
-      gasFee: txReceipt.gasUsed.mul(gasPrice).toString(),
-    });
+    try {
+      return saveTransaction({
+        hash: tx.hash.toLowerCase(),
+        from: tx.from.toLowerCase(),
+        to: txReceipt.to.toLowerCase(),
+        value: tx.value.toString(),
+        data: tx.data.toLowerCase(),
+        blockNumber: txReceipt.blockNumber,
+        blockTimestamp,
+        gasUsed: txReceipt.gasUsed.toString(),
+        gasPrice: gasPrice.toString(),
+        gasFee: txReceipt.gasUsed.mul(gasPrice).toString(),
+      });
+    } catch (error) {
+      logger.info("debug", JSON.stringify({ tx, txReceipt }));
+      throw error;
+    }
   });
