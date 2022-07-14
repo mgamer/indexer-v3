@@ -1,8 +1,6 @@
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { formatEther, formatUnits } from "@ethersproject/units";
 
-import { config } from "../config/index";
-
 // --- BigNumbers and prices ---
 
 export const bn = (value: BigNumberish) => BigNumber.from(value);
@@ -39,20 +37,3 @@ export const splitContinuation = (c: string, regEx: RegExp) => {
 export const buildContinuation = (c: string) => Buffer.from(c).toString("base64");
 
 export const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
-
-// --- Networks ---
-
-export const getNetworkName = () => {
-  switch (config.chainId) {
-    case 1:
-      return "mainnet";
-    case 4:
-      return "rinkeby";
-    case 5:
-      return "goerli";
-    case 10:
-      return "optimism";
-    default:
-      return "unknown";
-  }
-};

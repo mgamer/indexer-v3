@@ -7,8 +7,8 @@ import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
 import { redis, extendLock, releaseLock } from "@/common/redis";
-import { getNetworkName } from "@/common/utils";
 import { config } from "@/config/index";
+import { getNetworkName } from "@/config/network";
 import { PendingRefreshTokens } from "@/models/pending-refresh-tokens";
 import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
 
