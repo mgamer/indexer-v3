@@ -81,8 +81,8 @@ if (config.doBackgroundWork) {
         await idb.none(
           `
             UPDATE fill_events_2 SET
-              fill_source = x.fill_source,
-              taker = x.taker
+              fill_source = x.fill_source::fill_source_t,
+              taker = x.taker::BYTEA
             FROM (
               VALUES ${pgp.helpers.values(values, columns)}
             ) AS x(tx_hash, log_index, batch_index, taker, fill_source)
