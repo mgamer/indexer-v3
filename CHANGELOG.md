@@ -1,3 +1,17 @@
+# [5.109.0](https://github.com/reservoirprotocol/indexer/compare/v5.108.1...v5.109.0) (2022-07-14)
+
+
+### Bug Fixes
+
+* simulate floor api ([e908d3a](https://github.com/reservoirprotocol/indexer/commit/e908d3a39aec9600d8f9b9f48efdd7e560e1749a))
+
+
+### Features
+
+* use on-chain data for collection information ([9ed4094](https://github.com/reservoirprotocol/indexer/commit/9ed409417e721f7d3c933019da79b28a3c895cae))
+
+
+
 ## [5.108.1](https://github.com/reservoirprotocol/indexer/compare/v5.108.0...v5.108.1) (2022-07-13)
 
 

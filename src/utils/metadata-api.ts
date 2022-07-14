@@ -1,23 +1,37 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { Interface } from "@ethersproject/abi";
+import { Contract } from "@ethersproject/contracts";
 import axios from "axios";
+import slugify from "slugify";
 
-import { getNetworkName } from "@/common/utils";
+import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
+import { getNetworkName } from "@/config/network";
 
 export class MetadataApi {
   static async getCollectionMetadata(contract: string, tokenId: string) {
     if (config.liquidityOnly) {
-      // When running in liquidity-only mode, the collection id matches the contract
+      // When running in liquidity-only mode:
+      // - assume the collection id matches the contract address
+      // - the collection name is retrieved from an on-chain `name()` call
+
+      const name = await new Contract(
+        contract,
+        new Interface(["function name() view returns (string)"]),
+        baseProvider
+      )
+        .name()
+        .catch(() => "");
+
       return {
         id: contract,
-        slug: "",
-        name: "",
+        slug: slugify(name, { lower: true }),
+        name,
         community: null,
         metadata: null,
         royalties: null,
         contract,
-        // All tokens within the contract
         tokenIdRange: null,
         tokenSetId: `contract:${contract}`,
       };

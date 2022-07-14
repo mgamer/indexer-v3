@@ -1,6 +1,6 @@
 {
   "name": "reservoir-indexer",
-  "version": "5.108.1",
+  "version": "5.109.0",
   "description": "Reservoir Protocol Indexer",
   "main": "./dist/index.js",
   "repository": "https://github.com/reservoirprotocol/indexer",
@@ -68,6 +68,7 @@
     "prettier": "^2.5.1",
     "qs": "^6.10.1",
     "redlock": "^5.0.0-beta.1",
+    "slugify": "^1.6.5",
     "standard-version": "^9.3.2",
     "swagger2openapi": "^7.0.8",
     "ts-node": "^10.4.0",

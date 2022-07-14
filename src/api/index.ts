@@ -9,8 +9,8 @@ import qs from "qs";
 
 import { setupRoutes } from "@/api/routes";
 import { logger } from "@/common/logger";
-import { getNetworkName } from "@/common/utils";
 import { config } from "@/config/index";
+import { getNetworkName } from "@/config/network";
 import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
 import { allJobQueues } from "@/jobs/index";
