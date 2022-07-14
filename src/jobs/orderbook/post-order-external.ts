@@ -59,7 +59,7 @@ if (config.doBackgroundWork) {
           `Rate Limited. orderbook: ${orderbook}, orderbookApiKeyHash: ${orderbookApiKeyHash}, rateLimitKey: ${rateLimitKey}, delay: ${delay}`
         );
 
-        await addToQueue(orderbook, orderData, orderbookApiKeyHash, delay);
+        await addToQueue(orderData, orderbook, orderbookApiKeyHash, delay);
       } else {
         logger.info(
           QUEUE_NAME,
@@ -149,7 +149,8 @@ const postOrder = async (
 };
 
 const postOpenSea = async (orderData: Record<string, unknown>, apiKey: string | null) => {
-  const sdkOrder = new Sdk.Seaport.Order(config.chainId, orderData);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sdkOrder = new Sdk.Seaport.Order(config.chainId, orderData as any);
 
   await axios
     .post(
@@ -191,7 +192,8 @@ const postOpenSea = async (orderData: Record<string, unknown>, apiKey: string | 
 };
 
 const postLooksRare = async (orderData: Record<string, unknown>, apiKey: string | null) => {
-  const sdkOrder = new Sdk.LooksRare.Order(config.chainId, orderData);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sdkOrder = new Sdk.LooksRare.Order(config.chainId, orderData as any);
   const lrOrder = {
     ...sdkOrder.params,
     signature: joinSignature({
