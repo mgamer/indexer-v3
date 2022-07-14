@@ -132,6 +132,9 @@ export const syncEvents = async (
       for (const log of logs) {
         try {
           const baseEventParams = parseEvent(log, blockRange);
+
+          // It's quite important from a performance perspective to have
+          // the block data available before proceeding with the events
           if (!blocksCache.has(baseEventParams.block)) {
             blocksCache.set(
               baseEventParams.block,
