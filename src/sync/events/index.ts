@@ -42,6 +42,27 @@ export const syncEvents = async (
     eventDataKinds?: EventDataKind[];
   }
 ) => {
+  // --- Handle: synchronous timestamps of events ---
+
+  // Fetch the timestamps of the blocks at each side of the range in
+  // order to be able to estimate the timestamp of each block within
+  // the range (to avoid any further `eth_getBlockByNumber` calls)
+  const [fromBlockTimestamp, toBlockTimestamp] = await Promise.all([
+    baseProvider.getBlock(fromBlock),
+    baseProvider.getBlock(toBlock),
+  ]).then((blocks) => [blocks[0].timestamp, blocks[1].timestamp]);
+
+  const blockRange = {
+    from: {
+      block: fromBlock,
+      timestamp: fromBlockTimestamp,
+    },
+    to: {
+      block: toBlock,
+      timestamp: toBlockTimestamp,
+    },
+  };
+
   // --- Handle: known router contract fills ---
 
   // Fills going through router contracts are to be handled in a
@@ -110,7 +131,20 @@ export const syncEvents = async (
 
       for (const log of logs) {
         try {
-          const baseEventParams = await parseEvent(log, blocksCache);
+          const baseEventParams = parseEvent(log, blockRange);
+
+          // It's quite important from a performance perspective to have
+          // the block data available before proceeding with the events
+          if (!blocksCache.has(baseEventParams.block)) {
+            blocksCache.set(
+              baseEventParams.block,
+              await blocksModel.saveBlock({
+                number: baseEventParams.block,
+                hash: baseEventParams.blockHash,
+                timestamp: baseEventParams.timestamp,
+              })
+            );
+          }
 
           // Save the event in the currently processing transaction data
           if (currentTx !== baseEventParams.txHash) {
