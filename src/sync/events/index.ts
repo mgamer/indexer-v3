@@ -23,11 +23,11 @@ import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
 import * as blocksModel from "@/models/blocks";
+import { Sources } from "@/models/sources";
 import { OrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
-import { Sources } from "@/models/sources";
 
-// TODO: Split into multiple files (by exchange).
+// TODO: Split into multiple files (by exchange)
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
 // processing (this will make things so much more flexible). However
 // for backfill procesing, we should still use bulk operations so as
@@ -46,7 +46,7 @@ export const syncEvents = async (
 
   // Fetch the timestamps of the blocks at each side of the range in
   // order to be able to estimate the timestamp of each block within
-  // the range (to avoid any further `eth_getBlockByNumber` calls).
+  // the range (to avoid any further `eth_getBlockByNumber` calls)
   const [fromBlockTimestamp, toBlockTimestamp] = await Promise.all([
     baseProvider.getBlock(fromBlock),
     baseProvider.getBlock(toBlock),
@@ -66,28 +66,13 @@ export const syncEvents = async (
   // --- Handle: known router contract fills ---
 
   // Fills going through router contracts are to be handled in a
-  // custom way so as to properly associate the maker and taker.
-  const routerToFillSource: { [address: string]: string } = {};
-
-  // TODO: Move router detection logic to the core SDK
-
-  // Reservoir
-  if (Sdk.Router.Addresses.AllRouters[config.chainId]) {
-    for (const address of Sdk.Router.Addresses.AllRouters[config.chainId]) {
-      routerToFillSource[address.toLowerCase()] = "reservoir";
-    }
+  // custom way so as to properly associate the maker and taker
+  let routerToFillSource: { [address: string]: string } = {};
+  if (Sdk.Common.Addresses.Routers[config.chainId]) {
+    routerToFillSource = Sdk.Common.Addresses.Routers[config.chainId];
   }
 
-  // Gem and Genie (source: https://dune.com/sohwak/NFT-Aggregator-(OpenSea-via-GemGenie)-Overview)
-  if (config.chainId === 1) {
-    routerToFillSource["0x0000000031f7382a812c64b604da4fc520afef4b"] = "gem";
-    routerToFillSource["0xf24629fbb477e10f2cf331c2b7452d8596b5c7a5"] = "gem";
-    routerToFillSource["0x83c8f28c26bf6aaca652df1dbbe0e1b56f8baba2"] = "gem";
-    routerToFillSource["0x0000000035634b55f3d99b071b5a354f48e10bef"] = "gem";
-    routerToFillSource["0x00000000a50bb64b4bbeceb18715748dface08af"] = "gem";
-    routerToFillSource["0x0a267cf51ef038fc00e71801f5a524aec06e4f07"] = "genie";
-    routerToFillSource["0x2af4b707e1dce8fc345f38cfeeaa2421e54976d5"] = "genie";
-  }
+  // --- Handle: fetch and process events ---
 
   // Keep track of all handled blocks
   const blockHashToNumber: { [hash: string]: number } = {};
@@ -98,15 +83,13 @@ export const syncEvents = async (
   const makerInfos: orderUpdatesByMaker.MakerInfo[] = [];
   const mintInfos: tokenUpdatesMint.MintInfo[] = [];
 
-  // --- Handle: fetch and process events ---
-
   // When backfilling, certain processes are disabled
   const backfill = Boolean(options?.backfill);
   const eventDatas = getEventData(options?.eventDataKinds);
   await baseProvider
     .getLogs({
       // Only keep unique topics (eg. an example of duplicated topics are
-      // erc721 and erc20 transfers which have the exact same signature).
+      // erc721 and erc20 transfers which have the exact same signature)
       topics: [[...new Set(eventDatas.map(({ topic }) => topic))]],
       fromBlock,
       toBlock,
@@ -598,13 +581,12 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle filling through routers
+              // Handle fill source
               let fillSource: string | undefined;
-              if (routerToFillSource[taker]) {
-                fillSource = routerToFillSource[taker];
-                taker = await syncEventsUtils
-                  .fetchTransaction(baseEventParams.txHash)
-                  .then((tx) => tx.from);
+              const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
+              if (routerToFillSource[tx.to]) {
+                fillSource = routerToFillSource[tx.to];
+                taker = tx.from;
               }
 
               // Decode the sold token (ignoring bundles).
@@ -723,13 +705,12 @@ export const syncEvents = async (
 
               const orderId = keccak256(["address", "uint256"], [contract, tokenId]);
 
-              // Handle filling through routers
+              // Handle fill source
               let fillSource: string | undefined;
-              if (routerToFillSource[taker]) {
-                fillSource = routerToFillSource[taker];
-                taker = await syncEventsUtils
-                  .fetchTransaction(baseEventParams.txHash)
-                  .then((tx) => tx.from);
+              const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
+              if (routerToFillSource[tx.to]) {
+                fillSource = routerToFillSource[tx.to];
+                taker = tx.from;
               }
 
               const orderKind = "foundation";
@@ -863,13 +844,12 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle filling through routers
+              // Handle fill source
               let fillSource: string | undefined;
-              if (routerToFillSource[taker]) {
-                fillSource = routerToFillSource[taker];
-                taker = await syncEventsUtils
-                  .fetchTransaction(baseEventParams.txHash)
-                  .then((tx) => tx.from);
+              const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
+              if (routerToFillSource[tx.to]) {
+                fillSource = routerToFillSource[tx.to];
+                taker = tx.from;
               }
 
               const orderKind = "looks-rare";
@@ -956,13 +936,12 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle filling through routers
+              // Handle fill source
               let fillSource: string | undefined;
-              if (routerToFillSource[taker]) {
-                fillSource = routerToFillSource[taker];
-                taker = await syncEventsUtils
-                  .fetchTransaction(baseEventParams.txHash)
-                  .then((tx) => tx.from);
+              const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
+              if (routerToFillSource[tx.to]) {
+                fillSource = routerToFillSource[tx.to];
+                taker = tx.from;
               }
 
               const orderKind = "looks-rare";
@@ -1119,13 +1098,12 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle filling through routers
+              // Handle fill source
               let fillSource: string | undefined;
-              if (routerToFillSource[taker]) {
-                fillSource = routerToFillSource[taker];
-                taker = await syncEventsUtils
-                  .fetchTransaction(baseEventParams.txHash)
-                  .then((tx) => tx.from);
+              const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
+              if (routerToFillSource[tx.to]) {
+                fillSource = routerToFillSource[tx.to];
+                taker = tx.from;
               }
 
               const orderKind = eventData.kind.startsWith("wyvern-v2.3")
@@ -1320,13 +1298,12 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle filling through routers
+              // Handle fill source
               let fillSource: string | undefined;
-              if (routerToFillSource[taker]) {
-                fillSource = routerToFillSource[taker];
-                taker = await syncEventsUtils
-                  .fetchTransaction(baseEventParams.txHash)
-                  .then((tx) => tx.from);
+              const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
+              if (routerToFillSource[tx.to]) {
+                fillSource = routerToFillSource[tx.to];
+                taker = tx.from;
               }
 
               const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
@@ -1459,13 +1436,12 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle filling through routers
+              // Handle fill source
               let fillSource: string | undefined;
-              if (routerToFillSource[taker]) {
-                fillSource = routerToFillSource[taker];
-                taker = await syncEventsUtils
-                  .fetchTransaction(baseEventParams.txHash)
-                  .then((tx) => tx.from);
+              const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
+              if (routerToFillSource[tx.to]) {
+                fillSource = routerToFillSource[tx.to];
+                taker = tx.from;
               }
 
               const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
@@ -1628,13 +1604,12 @@ export const syncEvents = async (
                   taker = saleInfo.recipientOverride;
                 }
 
-                // Handle filling through routers
+                // Handle fill source
                 let fillSource: string | undefined;
-                if (routerToFillSource[taker]) {
-                  fillSource = routerToFillSource[taker];
-                  taker = await syncEventsUtils
-                    .fetchTransaction(baseEventParams.txHash)
-                    .then((tx) => tx.from);
+                const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
+                if (routerToFillSource[tx.to]) {
+                  fillSource = routerToFillSource[tx.to];
+                  taker = tx.from;
                 }
 
                 const price = bn(saleInfo.price).div(saleInfo.amount).toString();
