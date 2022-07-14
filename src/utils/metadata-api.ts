@@ -6,7 +6,11 @@ import { getNetworkName } from "@/common/utils";
 import { config } from "@/config/index";
 
 export class MetadataApi {
-  static async getCollectionMetadata(contract: string, tokenId: string) {
+  static async getCollectionMetadata(
+    contract: string,
+    tokenId: string,
+    options?: { allowFallback?: boolean }
+  ) {
     if (config.liquidityOnly) {
       // When running in liquidity-only mode, the collection id matches the contract
       return {
@@ -38,7 +42,12 @@ export class MetadataApi {
         contract: string;
         tokenIdRange: [string, string] | null;
         tokenSetId: string;
+        isFallback?: boolean;
       } = (data as any).collection;
+
+      if (collection.isFallback && !options?.allowFallback) {
+        throw new Error("Fallback collection data not acceptable");
+      }
 
       return collection;
     }
