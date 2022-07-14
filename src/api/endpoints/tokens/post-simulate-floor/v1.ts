@@ -54,7 +54,7 @@ export const postSimulateFloorV1Options: RouteOptions = {
       });
 
       // HACK: Extract the corresponding order id via regex
-      const { groups } = /\?id=(?<orderId>0x[0-9a-f]{64})/.exec(response.payload)!;
+      const { groups } = /\?ids=(?<orderId>0x[0-9a-f]{64})/.exec(response.payload)!;
 
       const contractResult = await redb.one(
         `
