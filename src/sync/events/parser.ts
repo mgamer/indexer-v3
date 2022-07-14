@@ -2,6 +2,7 @@ import { Log } from "@ethersproject/abstract-provider";
 
 import { Block } from "@/models/blocks";
 import { fetchBlock } from "./utils";
+import { logger } from "@/common/logger";
 
 export type BaseEventParams = {
   address: string;
@@ -29,6 +30,7 @@ export const parseEvent = async (
   let cache = blocksCache.get(block);
   if (!cache) {
     cache = await fetchBlock(block);
+    logger.info("debug", JSON.stringify(cache));
     blocksCache.set(block, cache);
   }
 
