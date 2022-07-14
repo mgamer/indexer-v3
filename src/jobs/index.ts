@@ -62,6 +62,8 @@ import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsync
 import * as fixActivitiesMissingCollection from "@/jobs/activities/fix-activities-missing-collection";
 import * as updateNftBalanceTopBidQueue from "@/jobs/nft-balance-updates/update-top-bid-queue";
 import * as backfillNftBalanceTopBidQueue from "@/jobs/nft-balance-updates/backfill-top-bid-queue";
+import * as backfillBlockTimestamps from "@/jobs/backfill/backfill-block-timestamps";
+import * as backfillFillEventsFillSourceQueue from "@/jobs/backfill/backfill-fill-events-fill-source";
 import * as backfillFillEventsCreatedAt from "@/jobs/backfill/backfill-fill-events-created-at";
 import * as removeBuyOrderEvents from "@/jobs/order-updates/remove-buy-order-events";
 import * as backfillFillEventsOrderSource from "@/jobs/backfill/backfill-fill-events-order-source";
@@ -72,6 +74,8 @@ import * as rarityQueue from "@/jobs/collection-updates/rarity-queue";
 export const allJobQueues = [
   arweaveSyncBackfill.queue,
   arweaveSyncRealtime.queue,
+  backfillFillEventsFillSourceQueue.queue,
+  backfillBlockTimestamps.queue,
   collectionUpdatesFloorAsk.queue,
   collectionUpdatesMetadata.queue,
   eventsSyncBackfill.queue,

@@ -1,9 +1,10 @@
-import { idb, redb } from "@/common/db";
+import { idb } from "@/common/db";
 import { fromBuffer, toBuffer } from "@/common/utils";
 
 export type Block = {
   hash: string;
   number: number;
+  timestamp: number;
 };
 
 export const saveBlock = async (block: Block): Promise<Block> => {
@@ -11,16 +12,19 @@ export const saveBlock = async (block: Block): Promise<Block> => {
     `
       INSERT INTO blocks (
         hash,
-        number
+        number,
+        "timestamp"
       ) VALUES (
         $/hash/,
-        $/number/
+        $/number/,
+        $/timestamp/
       )
       ON CONFLICT DO NOTHING
     `,
     {
       hash: toBuffer(block.hash),
       number: block.number,
+      timestamp: block.timestamp,
     }
   );
 
@@ -41,19 +45,21 @@ export const deleteBlock = async (number: number, hash: string) =>
   );
 
 export const getBlocks = async (number: number): Promise<Block[]> =>
-  redb
-    .manyOrNone(
+  idb
+    .many(
       `
         SELECT
-          blocks.hash
+          blocks.hash,
+          blocks.timestamp
         FROM blocks
         WHERE blocks.number = $/number/
       `,
       { number }
     )
     .then((result) =>
-      result.map(({ hash }) => ({
+      result.map(({ hash, timestamp }) => ({
         hash: fromBuffer(hash),
         number,
+        timestamp,
       }))
     );

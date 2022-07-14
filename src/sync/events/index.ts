@@ -42,27 +42,6 @@ export const syncEvents = async (
     eventDataKinds?: EventDataKind[];
   }
 ) => {
-  // --- Handle: synchronous timestamps of events ---
-
-  // Fetch the timestamps of the blocks at each side of the range in
-  // order to be able to estimate the timestamp of each block within
-  // the range (to avoid any further `eth_getBlockByNumber` calls)
-  const [fromBlockTimestamp, toBlockTimestamp] = await Promise.all([
-    baseProvider.getBlock(fromBlock),
-    baseProvider.getBlock(toBlock),
-  ]).then((blocks) => [blocks[0].timestamp, blocks[1].timestamp]);
-
-  const blockRange = {
-    from: {
-      block: fromBlock,
-      timestamp: fromBlockTimestamp,
-    },
-    to: {
-      block: toBlock,
-      timestamp: toBlockTimestamp,
-    },
-  };
-
   // --- Handle: known router contract fills ---
 
   // Fills going through router contracts are to be handled in a
@@ -75,7 +54,7 @@ export const syncEvents = async (
   // --- Handle: fetch and process events ---
 
   // Keep track of all handled blocks
-  const blockHashToNumber: { [hash: string]: number } = {};
+  const blocksCache = new Map<number, blocksModel.Block>();
 
   // Keep track of data needed by other processes that will get triggered
   const fillInfos: fillUpdates.FillInfo[] = [];
@@ -131,7 +110,7 @@ export const syncEvents = async (
 
       for (const log of logs) {
         try {
-          const baseEventParams = parseEvent(log, blockRange);
+          const baseEventParams = await parseEvent(log, blocksCache);
 
           // Save the event in the currently processing transaction data
           if (currentTx !== baseEventParams.txHash) {
@@ -143,11 +122,6 @@ export const syncEvents = async (
             address: baseEventParams.address,
             logIndex: baseEventParams.logIndex,
           });
-
-          // Save the block
-          if (!options?.backfill) {
-            blockHashToNumber[baseEventParams.blockHash] = baseEventParams.block;
-          }
 
           // Find first matching event:
           // - matching topic
@@ -1708,14 +1682,11 @@ export const syncEvents = async (
 
       // --- Handle: orphan blocks ---
       if (!backfill) {
-        for (const [hash, number] of Object.entries(blockHashToNumber)) {
-          // Persist the block
-          await blocksModel.saveBlock({ hash, number });
-
+        for (const block of blocksCache.values()) {
           // Act right away if the current block is a duplicate
-          if ((await blocksModel.getBlocks(number)).length > 1) {
-            blockCheck.addToQueue(number, 10 * 1000);
-            blockCheck.addToQueue(number, 30 * 1000);
+          if ((await blocksModel.getBlocks(block.number)).length > 1) {
+            blockCheck.addToQueue(block.number, 10 * 1000);
+            blockCheck.addToQueue(block.number, 30 * 1000);
           }
         }
 
@@ -1723,12 +1694,12 @@ export const syncEvents = async (
         // (recheck each block in 1m, 5m, 10m and 60m).
         // TODO: The check frequency should be a per-chain setting
         await Promise.all(
-          Object.entries(blockHashToNumber).map(async ([, block]) =>
+          [...blocksCache.keys()].map(async (blockNumber) =>
             Promise.all([
-              blockCheck.addToQueue(block, 60 * 1000),
-              blockCheck.addToQueue(block, 5 * 60 * 1000),
-              blockCheck.addToQueue(block, 10 * 60 * 1000),
-              blockCheck.addToQueue(block, 60 * 60 * 1000),
+              blockCheck.addToQueue(blockNumber, 60 * 1000),
+              blockCheck.addToQueue(blockNumber, 5 * 60 * 1000),
+              blockCheck.addToQueue(blockNumber, 10 * 60 * 1000),
+              blockCheck.addToQueue(blockNumber, 60 * 60 * 1000),
             ])
           )
         );
