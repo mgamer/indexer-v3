@@ -184,13 +184,12 @@ const postOpenSea = async (orderData: Record<string, unknown>, apiKey: string | 
           `Failed to post order to OpenSea: ${JSON.stringify(error.response.data)}`
         );
 
-        if (error.response.data.detail?.startsWith("Request was throttled. Expected available in")) {
+        if (
+          error.response.data.detail?.startsWith("Request was throttled. Expected available in")
+        ) {
           const delay = error.response.data.detail.split(" ")[-2];
 
-          logger.info(
-              QUEUE_NAME,
-              `Request was throttled: ${delay}`
-          );
+          logger.info(QUEUE_NAME, `Request was throttled: ${delay}`);
         }
       }
 
