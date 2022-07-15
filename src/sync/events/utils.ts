@@ -1,6 +1,6 @@
 import { AddressZero } from "@ethersproject/constants";
 
-import { baseProvider } from "@/common/provider";
+import { baseProvider, slowProvider } from "@/common/provider";
 import { getBlocks, saveBlock } from "@/models/blocks";
 import { getTransaction, saveTransaction } from "@/models/transactions";
 
@@ -26,7 +26,11 @@ export const fetchTransaction = async (txHash: string) =>
     // - `eth_getTransactionByHash`
     // - `eth_getTransactionReceipt`
 
-    const tx = await baseProvider.getTransaction(txHash);
+    let tx = await baseProvider.getTransaction(txHash);
+    if (!tx) {
+      tx = await slowProvider.getTransaction(txHash);
+    }
+
     const blockTimestamp = (await fetchBlock(tx.blockNumber!)).timestamp;
 
     // TODO: Fetch gas fields via `eth_getTransactionReceipt`
