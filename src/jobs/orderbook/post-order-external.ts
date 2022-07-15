@@ -1,4 +1,4 @@
-import * as Crypto from "crypto";
+import * as crypto from "crypto";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
@@ -16,9 +16,9 @@ const LOOKSRARE_RATE_LIMIT_INTERVAL = 1;
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
-    attempts: 10,
+    attempts: 5,
     backoff: {
-      type: "exponential",
+      type: "fixed",
       delay: 5000,
     },
     removeOnComplete: 1000,
@@ -33,12 +33,8 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { orderData, orderbook, orderbookApiKeyHash } = job.data as PostOrderExternalParams;
-
-      logger.info(
-        QUEUE_NAME,
-        `Start. orderbook: ${orderbook}, orderbookApiKeyHash: ${orderbookApiKeyHash}`
-      );
+      const { orderData, orderbook, orderbookApiKeyEncrypted } =
+        job.data as PostOrderExternalParams;
 
       if (![1, 4].includes(config.chainId)) {
         throw new Error("Unsupported network");
@@ -48,37 +44,40 @@ if (config.doBackgroundWork) {
         throw new Error("Unsupported orderbook");
       }
 
+      let orderbookApiKey = null;
+      let orderbookApiKeyHash = null;
+
+      if (orderbookApiKeyEncrypted) {
+        orderbookApiKey = decryptApiKey(orderbookApiKeyEncrypted);
+        orderbookApiKeyHash = crypto.createHash("md5").update(orderbookApiKey).digest("hex");
+      }
+
       const apiKeyRateLimitReached = await reachedApiKeyRateLimit(orderbook, orderbookApiKeyHash);
 
       if (apiKeyRateLimitReached) {
         const rateLimitKey = getApiKeyRateLimitRedisKey(orderbook, orderbookApiKeyHash);
-        const delay = (await redis.ttl(rateLimitKey)) * 1000;
+        const rateLimitKeyTTL = await redis.ttl(rateLimitKey);
+        const delayMS = rateLimitKeyTTL * 1000;
 
         logger.info(
           QUEUE_NAME,
-          `Rate Limited. orderbook: ${orderbook}, orderbookApiKeyHash: ${orderbookApiKeyHash}, rateLimitKey: ${rateLimitKey}, delay: ${delay}`
+          `Post Order Rate Limited. orderbook: ${orderbook}, orderbookApiKeyHash: ${orderbookApiKeyHash}, rateLimitKey: ${rateLimitKey}, rateLimitKeyTTL: ${rateLimitKeyTTL}, delayMS: ${delayMS}`
         );
 
-        await addToQueue(orderData, orderbook, orderbookApiKeyHash, delay);
+        await addToQueue(orderData, orderbook, orderbookApiKeyEncrypted, delayMS);
       } else {
-        logger.info(
-          QUEUE_NAME,
-          `Post Order. orderbook: ${orderbook}, orderbookApiKeyHash: ${orderbookApiKeyHash}, apiKeyRateLimitReached: ${apiKeyRateLimitReached}`
-        );
-
         try {
-          await postOrder(orderbook, orderData, orderbookApiKeyHash);
+          await postOrder(orderbook, orderData, orderbookApiKey);
         } catch (error) {
           if (error instanceof RequestWasThrottledError) {
+            const delayMS = error.delay * 1000;
+
             logger.info(
               QUEUE_NAME,
-              `Post Order Throttled. orderbook: ${orderbook}, orderbookApiKeyHash: ${orderbookApiKeyHash}, delay: ${error.delay}`
+              `Post Order Throttled. orderbook: ${orderbook}, orderbookApiKeyHash: ${orderbookApiKeyHash}, delayMS: ${delayMS}`
             );
 
-            const rateLimitKey = getApiKeyRateLimitRedisKey(orderbook, orderbookApiKeyHash);
-
-            await redis.expire(rateLimitKey, error.delay);
-            await addToQueue(orderData, orderbook, orderbookApiKeyHash, error.delay * 1000);
+            await addToQueue(orderData, orderbook, orderbookApiKeyEncrypted, delayMS);
           } else {
             throw error;
           }
@@ -99,7 +98,7 @@ if (config.doBackgroundWork) {
 export type PostOrderExternalParams = {
   orderData: Record<string, unknown>;
   orderbook: string;
-  orderbookApiKeyHash: string;
+  orderbookApiKeyEncrypted: string;
 };
 
 const getApiKeyRateLimitRedisKey = (orderbook: string, apiKeyHash: string | null) => {
@@ -130,11 +129,6 @@ const reachedApiKeyRateLimit = async (orderbook: string, apiKeyHash: string | nu
   const rateLimitKey = getApiKeyRateLimitRedisKey(orderbook, apiKeyHash);
   const current = await redis.incr(rateLimitKey);
 
-  logger.info(
-    QUEUE_NAME,
-    `Rate Limit Check. orderbook: ${orderbook}, rateLimitKey: ${rateLimitKey}, current: ${current}`
-  );
-
   if (current == 1) {
     await redis.expire(rateLimitKey, rateLimitInterval);
   }
@@ -145,20 +139,13 @@ const reachedApiKeyRateLimit = async (orderbook: string, apiKeyHash: string | nu
 const postOrder = async (
   orderbook: string,
   orderData: Record<string, unknown>,
-  apiKeyHash: string | null
+  orderbookApiKey: string | null
 ) => {
-  const apiKey = apiKeyHash ? decryptApiKey(apiKeyHash) : null;
-
-  logger.info(
-    QUEUE_NAME,
-    `Api Key. orderbook: ${orderbook}, apiKeyHash: ${apiKeyHash}, apiKey: ${apiKey}`
-  );
-
   switch (orderbook) {
     case "opensea":
-      return postOpenSea(orderData, apiKey);
+      return postOpenSea(orderData, orderbookApiKey);
     case "looks-rare":
-      return postLooksRare(orderData, apiKey);
+      return postLooksRare(orderData, orderbookApiKey);
   }
 
   throw new Error(`Unsupported orderbook ${orderbook}`);
@@ -254,9 +241,9 @@ const postLooksRare = async (orderData: Record<string, unknown>, apiKey: string 
 
 const decryptApiKey = (apiKeyHash: string) => {
   const [iv, encrypted] = apiKeyHash.split(":");
-  const key = Crypto.scryptSync(config.orderbookPostOrderExternalEncryptionKey, "salt", 32);
+  const key = crypto.scryptSync(config.orderbookPostOrderExternalEncryptionKey, "salt", 32);
 
-  const decipher = Crypto.createDecipheriv("aes-256-ctr", key, Buffer.from(iv, "hex"));
+  const decipher = crypto.createDecipheriv("aes-256-ctr", key, Buffer.from(iv, "hex"));
   const decrpyted = Buffer.concat([
     decipher.update(Buffer.from(encrypted, "hex")),
     decipher.final(),
@@ -266,9 +253,9 @@ const decryptApiKey = (apiKeyHash: string) => {
 };
 
 export const encryptApiKey = (apiKey: string) => {
-  const iv = Crypto.randomBytes(16);
-  const key = Crypto.scryptSync(config.orderbookPostOrderExternalEncryptionKey, "salt", 32);
-  const cipher = Crypto.createCipheriv("aes-256-ctr", key, iv);
+  const iv = crypto.randomBytes(16);
+  const key = crypto.scryptSync(config.orderbookPostOrderExternalEncryptionKey, "salt", 32);
+  const cipher = crypto.createCipheriv("aes-256-ctr", key, iv);
   const encrypted = Buffer.concat([cipher.update(apiKey), cipher.final()]);
 
   return iv.toString("hex") + ":" + encrypted.toString("hex");
@@ -280,14 +267,14 @@ export const addToQueue = async (
   orderbookApiKey: string | null,
   delay = 0
 ) => {
-  const orderbookApiKeyHash = orderbookApiKey ? encryptApiKey(orderbookApiKey) : null;
+  const orderbookApiKeyEncrypted = orderbookApiKey ? encryptApiKey(orderbookApiKey) : null;
 
   await queue.add(
-    Crypto.randomUUID(),
+    crypto.randomUUID(),
     {
       orderData,
       orderbook,
-      orderbookApiKeyHash,
+      orderbookApiKeyEncrypted,
     },
     {
       delay,
