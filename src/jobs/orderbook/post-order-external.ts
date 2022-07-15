@@ -64,7 +64,7 @@ if (config.doBackgroundWork) {
           `Post Order Rate Limited. orderbook: ${orderbook}, orderbookApiKeyHash: ${orderbookApiKeyHash}, rateLimitKey: ${rateLimitKey}, rateLimitKeyTTL: ${rateLimitKeyTTL}, delayMS: ${delayMS}`
         );
 
-        await addToQueue(orderData, orderbook, orderbookApiKeyEncrypted, delayMS);
+        await addToQueue(orderData, orderbook, orderbookApiKey, delayMS);
       } else {
         try {
           await postOrder(orderbook, orderData, orderbookApiKey);
@@ -77,7 +77,7 @@ if (config.doBackgroundWork) {
               `Post Order Throttled. orderbook: ${orderbook}, orderbookApiKeyHash: ${orderbookApiKeyHash}, delayMS: ${delayMS}`
             );
 
-            await addToQueue(orderData, orderbook, orderbookApiKeyEncrypted, delayMS);
+            await addToQueue(orderData, orderbook, orderbookApiKey, delayMS);
           } else {
             throw error;
           }
