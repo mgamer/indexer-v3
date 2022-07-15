@@ -71,7 +71,7 @@ if (config.doBackgroundWork) {
             FROM (
               VALUES ${pgp.helpers.values(values, columns)}
             ) AS x(hash, block_number, block_timestamp)
-            WHERE transactions.hash = x.hash
+            WHERE transactions.hash = x.hash::BYTEA
           `
         );
       }
