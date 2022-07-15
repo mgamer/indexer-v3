@@ -46,7 +46,7 @@ export const deleteBlock = async (number: number, hash: string) =>
 
 export const getBlocks = async (number: number): Promise<Block[]> =>
   idb
-    .many(
+    .manyOrNone(
       `
         SELECT
           blocks.hash,
