@@ -53,6 +53,7 @@ if (config.doBackgroundWork) {
       for (const { hash, block_timestamp } of results) {
         if (!block_timestamp) {
           const tx = await baseProvider.getTransaction(fromBuffer(hash));
+          logger.info("debug", JSON.stringify({ tx }));
           values.push({
             hash,
             block_number: tx.blockNumber!,
