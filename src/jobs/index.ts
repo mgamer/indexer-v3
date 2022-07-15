@@ -88,6 +88,8 @@ import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order
 import * as resyncAttributeCache from "@/jobs/update-attribute/resync-attribute-cache";
 import * as resyncAttributeCollection from "@/jobs/update-attribute/resync-attribute-collection";
 import * as resyncAttributeFloorSell from "@/jobs/update-attribute/resync-attribute-floor-sell";
+import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attribute-key-counts";
+import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
 
 export const allJobQueues = [
   fixActivitiesMissingCollection.queue,
@@ -141,7 +143,7 @@ export const allJobQueues = [
   removeBuyOrderEvents.queue,
 
   orderbookOrders.queue,
-  orderbookPostExternal.queue,
+  orderbookPostOrderExternal.queue,
   orderbookTokenSets.queue,
   resyncOrdersSource.queue,
 
