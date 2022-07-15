@@ -66,7 +66,23 @@ if (config.doBackgroundWork) {
           `Post Order. orderbook: ${orderbook}, orderbookApiKeyHash: ${orderbookApiKeyHash}, apiKeyRateLimitReached: ${apiKeyRateLimitReached}`
         );
 
-        await postOrder(orderbook, orderData, orderbookApiKeyHash);
+        try {
+          await postOrder(orderbook, orderData, orderbookApiKeyHash);
+        } catch (error) {
+          if (error instanceof RequestWasThrottledError) {
+            logger.info(
+              QUEUE_NAME,
+              `Post Order Throttled. orderbook: ${orderbook}, orderbookApiKeyHash: ${orderbookApiKeyHash}, delay: ${error.delay}`
+            );
+
+            const rateLimitKey = getApiKeyRateLimitRedisKey(orderbook, orderbookApiKeyHash);
+
+            await redis.expire(rateLimitKey, error.delay);
+            await addToQueue(orderData, orderbook, orderbookApiKeyHash, error.delay * 1000);
+          } else {
+            throw error;
+          }
+        }
       }
     },
     {
@@ -187,9 +203,10 @@ const postOpenSea = async (orderData: Record<string, unknown>, apiKey: string | 
         if (
           error.response.data.detail?.startsWith("Request was throttled. Expected available in")
         ) {
-          const delay = error.response.data.detail.split(" ")[-2];
+          const detailParts = error.response.data.detail.split(" ");
+          const delay = detailParts[detailParts.length - 2];
 
-          logger.info(QUEUE_NAME, `Request was throttled: ${delay}`);
+          throw new RequestWasThrottledError("Request was throttled by OpenSea", delay);
         }
       }
 
@@ -277,3 +294,14 @@ export const addToQueue = async (
     }
   );
 };
+
+export class RequestWasThrottledError extends Error {
+  delay = 0;
+
+  constructor(message: string, delay: number) {
+    super(message);
+    this.delay = delay;
+
+    Object.setPrototypeOf(this, RequestWasThrottledError.prototype);
+  }
+}
