@@ -1,3 +1,12 @@
+## [5.113.4](https://github.com/reservoirprotocol/indexer/compare/v5.113.3...v5.113.4) (2022-07-15)
+
+
+### Bug Fixes
+
+* joi sortBy validation when filtering by contract ([f9778b7](https://github.com/reservoirprotocol/indexer/commit/f9778b743cfe2a71ed4966e5cbd8b3501512f802))
+
+
+
 ## [5.113.3](https://github.com/reservoirprotocol/indexer/compare/v5.113.2...v5.113.3) (2022-07-15)
 
 
