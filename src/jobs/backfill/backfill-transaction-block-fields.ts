@@ -9,7 +9,6 @@ import { baseProvider } from "@/common/provider";
 import { redis, redlock } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import { fetchBlock } from "@/events-sync/utils";
 
 const QUEUE_NAME = "backfill-transaction-block-fields-queue";
 
@@ -57,7 +56,7 @@ if (config.doBackgroundWork) {
           values.push({
             hash,
             block_number: tx.blockNumber!,
-            block_timestamp: (await fetchBlock(tx.blockNumber!)).timestamp,
+            block_timestamp: (await baseProvider.getBlock(tx.blockNumber!)).timestamp,
           });
         }
       }
@@ -91,7 +90,7 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire([`${QUEUE_NAME}-lock-3`], 60 * 60 * 24 * 30 * 1000)
+    .acquire([`${QUEUE_NAME}-lock-4`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       await addToQueue("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
     })
