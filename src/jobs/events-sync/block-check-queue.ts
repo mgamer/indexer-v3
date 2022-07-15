@@ -111,6 +111,8 @@ if (config.doBackgroundWork) {
 
           // Delete the orphaned block from the `blocks` table
           await blocksModel.deleteBlock(block, blockHash);
+
+          // TODO: Also delete transactions associated to the orphaned block
         }
       } catch (error) {
         logger.error(QUEUE_NAME, `Block check failed: ${error}`);

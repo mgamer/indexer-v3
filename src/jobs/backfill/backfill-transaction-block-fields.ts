@@ -77,8 +77,6 @@ if (config.doBackgroundWork) {
         );
       }
 
-      logger.info("debug", JSON.stringify(results));
-
       if (results.length >= limit) {
         const lastResult = results[results.length - 1];
         await addToQueue(fromBuffer(lastResult.hash));

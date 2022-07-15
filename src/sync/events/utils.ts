@@ -1,6 +1,5 @@
 import { AddressZero } from "@ethersproject/constants";
 
-import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { getBlocks, saveBlock } from "@/models/blocks";
 import { getTransaction, saveTransaction } from "@/models/transactions";
@@ -32,21 +31,16 @@ export const fetchTransaction = async (txHash: string) =>
     // const txReceipt = await baseProvider.getTransactionReceipt(txHash);
     // const gasPrice = txReceipt.effectiveGasPrice || tx.gasPrice || 0;
 
-    try {
-      return saveTransaction({
-        hash: tx.hash.toLowerCase(),
-        from: tx.from.toLowerCase(),
-        to: (tx.to || AddressZero).toLowerCase(),
-        value: tx.value.toString(),
-        data: tx.data.toLowerCase(),
-        blockNumber: tx.blockNumber!,
-        blockTimestamp,
-        // gasUsed: txReceipt.gasUsed.toString(),
-        // gasPrice: gasPrice.toString(),
-        // gasFee: txReceipt.gasUsed.mul(gasPrice).toString(),
-      });
-    } catch (error) {
-      logger.info("debug", JSON.stringify({ tx }));
-      throw error;
-    }
+    return saveTransaction({
+      hash: tx.hash.toLowerCase(),
+      from: tx.from.toLowerCase(),
+      to: (tx.to || AddressZero).toLowerCase(),
+      value: tx.value.toString(),
+      data: tx.data.toLowerCase(),
+      blockNumber: tx.blockNumber!,
+      blockTimestamp,
+      // gasUsed: txReceipt.gasUsed.toString(),
+      // gasPrice: gasPrice.toString(),
+      // gasFee: txReceipt.gasUsed.mul(gasPrice).toString(),
+    });
   });
