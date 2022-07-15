@@ -76,10 +76,10 @@ if (config.doBackgroundWork) {
         );
       }
 
-      if (results.length >= limit) {
-        const lastResult = results[results.length - 1];
-        await addToQueue(fromBuffer(lastResult.hash));
-      }
+      // if (results.length >= limit) {
+      //   const lastResult = results[results.length - 1];
+      //   await addToQueue(fromBuffer(lastResult.hash));
+      // }
     },
     { connection: redis.duplicate(), concurrency: 1 }
   );
