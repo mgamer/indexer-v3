@@ -1,3 +1,12 @@
+## [5.112.4](https://github.com/reservoirprotocol/indexer/compare/v5.112.3...v5.112.4) (2022-07-15)
+
+
+### Bug Fixes
+
+* backfill missing transaction fields ([daf3506](https://github.com/reservoirprotocol/indexer/commit/daf35065481085262df4e886061405c26c896e9d))
+
+
+
 ## [5.112.3](https://github.com/reservoirprotocol/indexer/compare/v5.112.2...v5.112.3) (2022-07-14)
 
 
