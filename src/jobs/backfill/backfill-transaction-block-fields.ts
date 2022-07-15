@@ -7,9 +7,8 @@ import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { redis, redlock } from "@/common/redis";
-import { fromBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import { fetchBlock } from "@/events-sync/utils";
 
 const QUEUE_NAME = "backfill-transaction-block-fields-queue";
 
@@ -43,7 +42,7 @@ if (config.doBackgroundWork) {
         `,
         {
           limit,
-          hash,
+          hash: toBuffer(hash),
         }
       );
 
@@ -57,7 +56,7 @@ if (config.doBackgroundWork) {
           values.push({
             hash,
             block_number: tx.blockNumber!,
-            block_timestamp: (await fetchBlock(tx.blockNumber!)).timestamp,
+            block_timestamp: (await baseProvider.getBlock(tx.blockNumber!)).timestamp,
           });
         }
       }
@@ -71,10 +70,12 @@ if (config.doBackgroundWork) {
             FROM (
               VALUES ${pgp.helpers.values(values, columns)}
             ) AS x(hash, block_number, block_timestamp)
-            WHERE transactions.hash = x.hash
+            WHERE transactions.hash = x.hash::BYTEA
           `
         );
       }
+
+      logger.info("debug", JSON.stringify(results));
 
       if (results.length >= limit) {
         const lastResult = results[results.length - 1];
@@ -89,7 +90,7 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
+    .acquire([`${QUEUE_NAME}-lock-4`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       await addToQueue("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
     })
