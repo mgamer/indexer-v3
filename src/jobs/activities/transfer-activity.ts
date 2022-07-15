@@ -11,7 +11,7 @@ import * as fixActivitiesMissingCollection from "@/jobs/activities/fix-activitie
 
 export class TransferActivity {
   public static async handleEvent(data: NftTransferEventData) {
-    const token = await Tokens.getByContractAndTokenId(data.contract, data.tokenId);
+    const token = await Tokens.getByContractAndTokenId(data.contract, data.tokenId, true);
 
     // If no token found
     if (_.isNull(token)) {
