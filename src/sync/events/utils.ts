@@ -28,7 +28,7 @@ export const fetchTransaction = async (txHash: string) =>
     // - `eth_getTransactionReceipt`
 
     const tx = await baseProvider.getTransaction(txHash);
-    logger.info("debug", JSON.stringify({ tx }));
+    logger.info("debug", JSON.stringify({ txHash, tx }));
     const blockTimestamp = (await fetchBlock(tx.blockNumber!)).timestamp;
 
     // TODO: Fetch gas fields via `eth_getTransactionReceipt`

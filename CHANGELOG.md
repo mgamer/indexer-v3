@@ -1,3 +1,12 @@
+## [5.113.2](https://github.com/reservoirprotocol/indexer/compare/v5.113.1...v5.113.2) (2022-07-15)
+
+
+### Bug Fixes
+
+* debug ([585e446](https://github.com/reservoirprotocol/indexer/commit/585e446a5a13aaedb8d099dcad3be113f1eb158c))
+
+
+
 ## [5.113.1](https://github.com/reservoirprotocol/indexer/compare/v5.113.0...v5.113.1) (2022-07-15)
 
 
