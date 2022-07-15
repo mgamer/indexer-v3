@@ -1,3 +1,5 @@
+import { AddressZero } from "@ethersproject/constants";
+
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { getBlocks, saveBlock } from "@/models/blocks";
@@ -5,7 +7,7 @@ import { getTransaction, saveTransaction } from "@/models/transactions";
 
 export const fetchBlock = async (blockNumber: number) =>
   getBlocks(blockNumber)
-    // Only fetch a single block
+    // Only fetch a single block (multiple ones might be available due to reorgs)
     .then((b) => b[0])
     .catch(async () => {
       const block = await baseProvider.getBlock(blockNumber);
@@ -18,29 +20,33 @@ export const fetchBlock = async (blockNumber: number) =>
 
 export const fetchTransaction = async (txHash: string) =>
   getTransaction(txHash).catch(async () => {
-    // Unfortunately we need to make two calls
-    const tx = await baseProvider.getTransaction(txHash);
-    const txReceipt = await baseProvider.getTransactionReceipt(txHash);
-    const blockTimestamp = (await fetchBlock(txReceipt.blockNumber)).timestamp;
+    // In order to get all transaction fields we need to make two calls:
+    // - `eth_getTransactionByHash`
+    // - `eth_getTransactionReceipt`
 
+    const tx = await baseProvider.getTransaction(txHash);
+    const blockTimestamp = (await fetchBlock(tx.blockNumber!)).timestamp;
+
+    // TODO: Fetch gas fields via `eth_getTransactionReceipt`
     // Sometimes `effectiveGasPrice` can be null
-    const gasPrice = txReceipt.effectiveGasPrice || tx.gasPrice || 0;
+    // const txReceipt = await baseProvider.getTransactionReceipt(txHash);
+    // const gasPrice = txReceipt.effectiveGasPrice || tx.gasPrice || 0;
 
     try {
       return saveTransaction({
         hash: tx.hash.toLowerCase(),
         from: tx.from.toLowerCase(),
-        to: txReceipt.to.toLowerCase(),
+        to: (tx.to || AddressZero).toLowerCase(),
         value: tx.value.toString(),
         data: tx.data.toLowerCase(),
-        blockNumber: txReceipt.blockNumber,
+        blockNumber: tx.blockNumber!,
         blockTimestamp,
-        gasUsed: txReceipt.gasUsed.toString(),
-        gasPrice: gasPrice.toString(),
-        gasFee: txReceipt.gasUsed.mul(gasPrice).toString(),
+        // gasUsed: txReceipt.gasUsed.toString(),
+        // gasPrice: gasPrice.toString(),
+        // gasFee: txReceipt.gasUsed.mul(gasPrice).toString(),
       });
     } catch (error) {
-      logger.info("debug", JSON.stringify({ tx, txReceipt }));
+      logger.info("debug", JSON.stringify({ tx }));
       throw error;
     }
   });
