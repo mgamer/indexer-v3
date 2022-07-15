@@ -7,7 +7,7 @@ import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { redis, redlock } from "@/common/redis";
-import { fromBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { fetchBlock } from "@/events-sync/utils";
 
@@ -43,7 +43,7 @@ if (config.doBackgroundWork) {
         `,
         {
           limit,
-          hash,
+          hash: toBuffer(hash),
         }
       );
 
