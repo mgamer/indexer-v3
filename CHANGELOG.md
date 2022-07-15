@@ -1,3 +1,12 @@
+# [5.113.0](https://github.com/reservoirprotocol/indexer/compare/v5.112.14...v5.113.0) (2022-07-15)
+
+
+### Features
+
+* allow any twap interval ([0cdbd1f](https://github.com/reservoirprotocol/indexer/commit/0cdbd1f14dab5049578ef73da54504cd8b9f8e8e))
+
+
+
 ## [5.112.14](https://github.com/reservoirprotocol/indexer/compare/v5.112.13...v5.112.14) (2022-07-15)
 
 
