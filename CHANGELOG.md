@@ -1,3 +1,12 @@
+## [5.113.3](https://github.com/reservoirprotocol/indexer/compare/v5.113.2...v5.113.3) (2022-07-15)
+
+
+### Bug Fixes
+
+* missing transaction data ([913f5a8](https://github.com/reservoirprotocol/indexer/commit/913f5a81a5e8942d8b7aad942afe5b997006e874))
+
+
+
 ## [5.113.2](https://github.com/reservoirprotocol/indexer/compare/v5.113.1...v5.113.2) (2022-07-15)
 
 
