@@ -1,3 +1,12 @@
+## [5.112.8](https://github.com/reservoirprotocol/indexer/compare/v5.112.7...v5.112.8) (2022-07-15)
+
+
+### Bug Fixes
+
+* reenable backfill job ([f4b9b49](https://github.com/reservoirprotocol/indexer/commit/f4b9b49e086ef80708306f5161d8bf1461268f06))
+
+
+
 ## [5.112.7](https://github.com/reservoirprotocol/indexer/compare/v5.112.6...v5.112.7) (2022-07-15)
 
 
