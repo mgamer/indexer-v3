@@ -50,7 +50,7 @@ export const saveTransaction = async (transaction: Transaction) => {
 export const getTransaction = async (
   hash: string
 ): Promise<Pick<Transaction, "hash" | "from" | "to" | "value">> => {
-  const result = await idb.one(
+  const result = await idb.oneOrNone(
     `
       SELECT
         transactions.from,

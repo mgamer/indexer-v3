@@ -7,14 +7,17 @@ import { getTransaction, saveTransaction } from "@/models/transactions";
 export const fetchBlock = async (blockNumber: number) =>
   getBlocks(blockNumber)
     // Only fetch a single block (multiple ones might be available due to reorgs)
-    .then((b) => b[0])
-    .catch(async () => {
-      const block = await baseProvider.getBlock(blockNumber);
-      return saveBlock({
-        number: block.number,
-        hash: block.hash,
-        timestamp: block.timestamp,
-      });
+    .then(async (blocks) => {
+      if (blocks.length) {
+        return blocks[0];
+      } else {
+        const block = await baseProvider.getBlock(blockNumber);
+        return saveBlock({
+          number: block.number,
+          hash: block.hash,
+          timestamp: block.timestamp,
+        });
+      }
     });
 
 export const fetchTransaction = async (txHash: string) =>
