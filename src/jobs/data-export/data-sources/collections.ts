@@ -1,5 +1,5 @@
 import { redb } from "@/common/db";
-import { formatEth, fromBuffer } from "@/common/utils";
+import { fromBuffer } from "@/common/utils";
 import { BaseDataSource } from "@/jobs/data-export/data-sources/index";
 
 export class CollectionsDataSource extends BaseDataSource {
@@ -59,18 +59,18 @@ export class CollectionsDataSource extends BaseDataSource {
         day7_rank: r.day7_rank,
         day30_rank: r.day30_rank,
         all_time_rank: r.all_time_rank,
-        day1_volume: r.day1_volume ? formatEth(r.day1_volume) : null,
-        day7_volume: r.day7_volume ? formatEth(r.day7_volume) : null,
-        day30_volume: r.day30_volume ? formatEth(r.day30_volume) : null,
-        all_time_volume: r.all_time_volume ? formatEth(r.all_time_volume) : null,
+        day1_volume: r.day1_volume ? r.day1_volume.toString() : null,
+        day7_volume: r.day7_volume ? r.day7_volume.toString() : null,
+        day30_volume: r.day30_volume ? r.day30_volume.toString() : null,
+        all_time_volume: r.all_time_volume ? r.all_time_volume.toString() : null,
         day1_volume_change: r.day1_volume_change,
         day7_volume_change: r.day7_volume_change,
         day30_volume_change: r.day30_volume_change,
-        floor_ask_value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-        day1_floor_ask_value: r.day1_floor_sell_value ? formatEth(r.day1_floor_sell_value) : null,
-        day7_floor_ask_value: r.day7_floor_sell_value ? formatEth(r.day7_floor_sell_value) : null,
+        floor_ask_value: r.floor_sell_value ? r.floor_sell_value.toString() : null,
+        day1_floor_ask_value: r.day1_floor_sell_value ? r.day1_floor_sell_value.toString() : null,
+        day7_floor_ask_value: r.day7_floor_sell_value ? r.day7_floor_sell_value.toString() : null,
         day30_floor_ask_value: r.day30_floor_sell_value
-          ? formatEth(r.day30_floor_sell_value)
+          ? r.day30_floor_sell_value.toString()
           : null,
         day1_floor_ask_change: r.day1_floor_sell_value
           ? Number(r.floor_sell_value) / Number(r.day1_floor_sell_value)
