@@ -53,11 +53,13 @@ if (config.doBackgroundWork) {
       for (const { hash, block_timestamp } of results) {
         if (!block_timestamp) {
           const tx = await baseProvider.getTransaction(fromBuffer(hash));
-          values.push({
-            hash,
-            block_number: tx.blockNumber!,
-            block_timestamp: (await baseProvider.getBlock(tx.blockNumber!)).timestamp,
-          });
+          if (tx) {
+            values.push({
+              hash,
+              block_number: tx.blockNumber!,
+              block_timestamp: (await baseProvider.getBlock(tx.blockNumber!)).timestamp,
+            });
+          }
         }
       }
 
@@ -74,8 +76,6 @@ if (config.doBackgroundWork) {
           `
         );
       }
-
-      logger.info("debug", JSON.stringify(results));
 
       if (results.length >= limit) {
         const lastResult = results[results.length - 1];
