@@ -1,3 +1,12 @@
+## [5.112.5](https://github.com/reservoirprotocol/indexer/compare/v5.112.4...v5.112.5) (2022-07-15)
+
+
+### Bug Fixes
+
+* transaction block fields update query ([f974732](https://github.com/reservoirprotocol/indexer/commit/f974732b6f5dd5cbc54ee7fca6378f06dc05b616))
+
+
+
 ## [5.112.4](https://github.com/reservoirprotocol/indexer/compare/v5.112.3...v5.112.4) (2022-07-15)
 
 
