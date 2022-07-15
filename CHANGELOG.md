@@ -1,3 +1,12 @@
+# [5.115.0](https://github.com/reservoirprotocol/indexer/compare/v5.114.0...v5.115.0) (2022-07-15)
+
+
+### Features
+
+* read token from replica ([1b1e98f](https://github.com/reservoirprotocol/indexer/commit/1b1e98fecf8c24d34c50d94a0a4706414702f46c))
+
+
+
 # [5.114.0](https://github.com/reservoirprotocol/indexer/compare/v5.113.4...v5.114.0) (2022-07-15)
 
 
