@@ -1,3 +1,12 @@
+## [5.115.2](https://github.com/reservoirprotocol/indexer/compare/v5.115.1...v5.115.2) (2022-07-16)
+
+
+### Bug Fixes
+
+* backfill fill source in descending order ([a840bc6](https://github.com/reservoirprotocol/indexer/commit/a840bc65f57db41524ebff8541f61cfd8e2e4573))
+
+
+
 ## [5.115.1](https://github.com/reservoirprotocol/indexer/compare/v5.115.0...v5.115.1) (2022-07-16)
 
 
