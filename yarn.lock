@@ -23,30 +23,30 @@
     chalk "^2.0.0"
     js-tokens "^4.0.0"
 
-"@bull-board/api@3.11.0":
-  version "3.11.0"
-  resolved "https://registry.yarnpkg.com/@bull-board/api/-/api-3.11.0.tgz#680a9a488dc503e5aec74df6c17486f009d3bb07"
-  integrity sha512-0fB3aD3NTU3e5WApJbEJWFwDI0RKqw9P9hHVjs7yx6/8C7IXmAH0HjS5vwXUDDyEvs0sKJZuCbWcfwJIk1nGOA==
+"@bull-board/api@4.0.1":
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/@bull-board/api/-/api-4.0.1.tgz#5dceda4a038b31ba1d2c8ebedecadd0bca8d85f8"
+  integrity sha512-C46wQyDLTHc3QMq+7JaMCGgqPgmUqs6B7gUplfWxgjvFMDMkIZmMvb88EbKs0eNuwuBWADxvuLX9mc/tV9mOAg==
   dependencies:
     redis-info "^3.0.8"
 
-"@bull-board/hapi@^3.11.0":
-  version "3.11.0"
-  resolved "https://registry.yarnpkg.com/@bull-board/hapi/-/hapi-3.11.0.tgz#4df334c0ae93e20b530e57de49563f48169e6694"
-  integrity sha512-SIdSTVLYBhPrGuBNc/59zopK05VTZAmZavQ45iqs3VNEZLVvNjQUHosdiCqD5+4BZ0dBOfvDVw2bVPwkMGxn3g==
+"@bull-board/hapi@4.0.1":
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/@bull-board/hapi/-/hapi-4.0.1.tgz#da309d5c37f854e11c05c84b02b9fd244dbe7bcc"
+  integrity sha512-o/rz7Nl2/SHtgKGPSG1vl+hDmkPSaNOUP4EWJhPNcDUlp3bTWCnXokSADIOZ3hwSaCOuNcpe/TjXtHsu9lEHDw==
   dependencies:
-    "@bull-board/api" "3.11.0"
-    "@bull-board/ui" "3.11.0"
+    "@bull-board/api" "4.0.1"
+    "@bull-board/ui" "4.0.1"
     "@hapi/inert" "^6.0.5"
     "@hapi/vision" "^6.1.0"
     ejs "^3.1.7"
 
-"@bull-board/ui@3.11.0":
-  version "3.11.0"
-  resolved "https://registry.yarnpkg.com/@bull-board/ui/-/ui-3.11.0.tgz#4cd7825adc76c87596326504f6f74a153c272464"
-  integrity sha512-dUOwnH4mJO154FDKiA4j7nkyYCfCq0Bghos5de5orFxjGRBwSAhRQXoSTtl2ZHAOGCZNinXHGTEXFry3G8OWgw==
+"@bull-board/ui@4.0.1":
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/@bull-board/ui/-/ui-4.0.1.tgz#e0cbabdd7acf1675910cc375cad957d17261c3d5"
+  integrity sha512-bYPfHotet/3J/R5uMZJDshEaXtNFUlp9irO1ImtCh6L/zBgTf8mgTjBRfqFEyKo1i9xgElYnQ+MRCHYcUdVa2Q==
   dependencies:
-    "@bull-board/api" "3.11.0"
+    "@bull-board/api" "4.0.1"
 
 "@colors/colors@1.5.0":
   version "1.5.0"
