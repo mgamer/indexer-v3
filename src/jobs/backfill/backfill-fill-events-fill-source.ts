@@ -92,14 +92,14 @@ if (config.doBackgroundWork) {
         );
       }
 
-      if (result.length >= limit) {
-        const lastResult = result[result.length - 1];
-        await addToQueue(
-          fromBuffer(lastResult.tx_hash),
-          lastResult.log_index,
-          lastResult.batch_index
-        );
-      }
+      // if (result.length >= limit) {
+      //   const lastResult = result[result.length - 1];
+      //   await addToQueue(
+      //     fromBuffer(lastResult.tx_hash),
+      //     lastResult.log_index,
+      //     lastResult.batch_index
+      //   );
+      // }
     },
     { connection: redis.duplicate(), concurrency: 1 }
   );
