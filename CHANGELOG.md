@@ -1,3 +1,12 @@
+## [5.115.3](https://github.com/reservoirprotocol/indexer/compare/v5.115.2...v5.115.3) (2022-07-16)
+
+
+### Bug Fixes
+
+* retry backfill ([7ac0c9c](https://github.com/reservoirprotocol/indexer/commit/7ac0c9c80049732f517e11bbddffa7c1b1b2787a))
+
+
+
 ## [5.115.2](https://github.com/reservoirprotocol/indexer/compare/v5.115.1...v5.115.2) (2022-07-16)
 
 
