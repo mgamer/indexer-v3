@@ -9,6 +9,7 @@ import { baseProvider } from "@/common/provider";
 import { redis, redlock } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import * as syncEventsUtils from "@/events-sync/utils";
 
 const QUEUE_NAME = "backfill-transaction-block-fields-queue";
 
@@ -57,7 +58,7 @@ if (config.doBackgroundWork) {
             values.push({
               hash,
               block_number: tx.blockNumber!,
-              block_timestamp: (await baseProvider.getBlock(tx.blockNumber!)).timestamp,
+              block_timestamp: (await syncEventsUtils.fetchBlock(tx.blockNumber!)).timestamp,
             });
           }
         }
