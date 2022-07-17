@@ -4,6 +4,7 @@ export const config = {
   chainId: Number(process.env.CHAIN_ID),
 
   adminApiKey: String(process.env.ADMIN_API_KEY),
+  bullmqAdminPassword: String(process.env.BULLMQ_ADMIN_PASSWORD),
   arweaveRelayerKey: process.env.ARWEAVE_RELAYER_KEY
     ? String(process.env.ARWEAVE_RELAYER_KEY)
     : undefined,

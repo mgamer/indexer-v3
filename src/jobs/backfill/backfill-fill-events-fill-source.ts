@@ -17,6 +17,7 @@ export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 10,
+    backoff: 5000,
     removeOnComplete: 10000,
     removeOnFail: 10000,
   },
@@ -28,7 +29,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job) => {
-      const { txHash, logIndex, batchIndex } = job.data;
+      const { timestamp, logIndex, batchIndex } = job.data;
 
       const limit = 200;
       const result = await idb.manyOrNone(
@@ -37,16 +38,17 @@ if (config.doBackgroundWork) {
             fill_events_2.tx_hash,
             fill_events_2.log_index,
             fill_events_2.batch_index,
-            fill_events_2.fill_source
+            fill_events_2.fill_source,
+            fill_events_2.timestamp
           FROM fill_events_2
-          WHERE (fill_events_2.tx_hash, fill_events_2.log_index, fill_events_2.batch_index) < ($/txHash/, $/logIndex/, $/batchIndex/)
+          WHERE (fill_events_2.timestamp, fill_events_2.log_index, fill_events_2.batch_index) < ($/timestamp/, $/logIndex/, $/batchIndex/)
           ORDER BY
-            fill_events_2.tx_hash DESC,
+            fill_events_2.timestamp DESC,
             fill_events_2.log_index DESC,
             fill_events_2.batch_index DESC
           LIMIT $/limit/
         `,
-        { limit, txHash: toBuffer(txHash), logIndex, batchIndex }
+        { limit, timestamp, logIndex, batchIndex }
       );
 
       let routerToFillSource: { [address: string]: string } = {};
@@ -94,11 +96,7 @@ if (config.doBackgroundWork) {
 
       if (result.length >= limit) {
         const lastResult = result[result.length - 1];
-        await addToQueue(
-          fromBuffer(lastResult.tx_hash),
-          lastResult.log_index,
-          lastResult.batch_index
-        );
+        await addToQueue(lastResult.timestamp, lastResult.log_index, lastResult.batch_index);
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }
@@ -109,15 +107,15 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire([`${QUEUE_NAME}-lock-3`], 60 * 60 * 24 * 30 * 1000)
+    .acquire([`${QUEUE_NAME}-lock-5`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
-      await addToQueue("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 0, 0);
+      await addToQueue(Math.floor(Date.now() / 1000), 0, 0);
     })
     .catch(() => {
       // Skip on any errors
     });
 }
 
-export const addToQueue = async (txHash: string, logIndex: number, batchIndex: number) => {
-  await queue.add(randomUUID(), { txHash, logIndex, batchIndex });
+export const addToQueue = async (timestamp: number, logIndex: number, batchIndex: number) => {
+  await queue.add(randomUUID(), { timestamp, logIndex, batchIndex });
 };
