@@ -1,6 +1,7 @@
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { HapiAdapter } from "@bull-board/hapi";
+import Basic from "@hapi/basic";
 import Hapi from "@hapi/hapi";
 import Inert from "@hapi/inert";
 import Vision from "@hapi/vision";
@@ -53,16 +54,35 @@ export const start = async (): Promise<void> => {
     },
   });
 
-  // Integrated BullMQ monitoring UI
+  // Register an authentication strategy for the BullMQ monitoring UI
+  await server.register(Basic);
+  server.auth.strategy("simple", "basic", {
+    validate: (_request: Hapi.Request, username: string, password: string) => {
+      return {
+        isValid: username === "admin" && password === config.bullmqAdminPassword,
+        credentials: { username },
+      };
+    },
+  });
+
+  // Setup the BullMQ monitoring UI
   const serverAdapter = new HapiAdapter();
   createBullBoard({
     queues: allJobQueues.map((q) => new BullMQAdapter(q)),
     serverAdapter,
   });
   serverAdapter.setBasePath("/admin/bullmq");
-  await server.register(serverAdapter.registerPlugin(), {
-    routes: { prefix: "/admin/bullmq" },
-  });
+  await server.register(
+    {
+      plugin: serverAdapter.registerPlugin(),
+      options: {
+        auth: "simple",
+      },
+    },
+    {
+      routes: { prefix: "/admin/bullmq" },
+    }
+  );
 
   // Create all supported sources
   await Sources.syncSources();
