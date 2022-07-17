@@ -1,3 +1,12 @@
+# [5.116.0](https://github.com/reservoirprotocol/indexer/compare/v5.115.3...v5.116.0) (2022-07-17)
+
+
+### Features
+
+* require authentication for the bullmq admin dashboard ([2f7b32c](https://github.com/reservoirprotocol/indexer/commit/2f7b32c2e9d320cd413f234a130965e599987396))
+
+
+
 ## [5.115.3](https://github.com/reservoirprotocol/indexer/compare/v5.115.2...v5.115.3) (2022-07-16)
 
 
