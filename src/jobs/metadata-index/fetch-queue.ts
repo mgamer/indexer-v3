@@ -33,12 +33,13 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
+      const { kind, data, force } = job.data as MetadataIndexInfo;
+
       // Do nothing if the indexer is running in liquidity-only mode
-      if (config.liquidityOnly) {
+      if (!force && config.liquidityOnly) {
         return;
       }
 
-      const { kind, data } = job.data as MetadataIndexInfo;
       const prioritized = !_.isUndefined(job.opts.priority);
       const limit = 1000;
       let refreshTokens: RefreshTokens[] = [];
@@ -70,6 +71,7 @@ if (config.doBackgroundWork) {
                   ...data,
                   continuation,
                 },
+                force,
               },
             ],
             prioritized
@@ -137,6 +139,7 @@ export type MetadataIndexInfo =
         collection: string;
         continuation?: string;
       };
+      force?: boolean;
     }
   | {
       kind: "single-token";
@@ -146,6 +149,7 @@ export type MetadataIndexInfo =
         contract: string;
         tokenId: string;
       };
+      force?: boolean;
     };
 
 export const addToQueue = async (metadataIndexInfos: MetadataIndexInfo[], prioritized = false) => {
