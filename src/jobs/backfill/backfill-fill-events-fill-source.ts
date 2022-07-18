@@ -17,7 +17,10 @@ export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 10,
-    backoff: 5000,
+    backoff: {
+      type: "exponential",
+      delay: 20000,
+    },
     removeOnComplete: 10000,
     removeOnFail: 10000,
   },
