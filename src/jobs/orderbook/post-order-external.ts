@@ -33,7 +33,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { orderData, orderbook, orderbookApiKeyEncrypted } =
+      const { orderData, orderbook, orderbookApiKeyEncrypted, retry } =
         job.data as PostOrderExternalParams;
 
       if (![1, 4].includes(config.chainId)) {
@@ -45,41 +45,46 @@ if (config.doBackgroundWork) {
       }
 
       let orderbookApiKey = null;
-      let orderbookApiKeyHash = null;
 
       if (orderbookApiKeyEncrypted) {
         orderbookApiKey = decryptApiKey(orderbookApiKeyEncrypted);
-        orderbookApiKeyHash = crypto.createHash("md5").update(orderbookApiKey).digest("hex");
       }
 
-      const apiKeyRateLimitReached = await reachedApiKeyRateLimit(orderbook, orderbookApiKeyHash);
+      const apiKeyRateLimitReached = await reachedApiKeyRateLimit(orderbook, orderbookApiKey);
 
       if (apiKeyRateLimitReached) {
-        const rateLimitKey = getApiKeyRateLimitRedisKey(orderbook, orderbookApiKeyHash);
-        const rateLimitKeyTTL = await redis.ttl(rateLimitKey);
-        const delayMS = rateLimitKeyTTL * 1000;
+        const rateLimitKey = getApiKeyRateLimitRedisKey(orderbook, orderbookApiKey);
+        const delay = await redis.pttl(rateLimitKey);
 
         logger.info(
           QUEUE_NAME,
-          `Post Order Rate Limited. orderbook: ${orderbook}, orderbookApiKeyHash: ${orderbookApiKeyHash}, rateLimitKey: ${rateLimitKey}, rateLimitKeyTTL: ${rateLimitKeyTTL}, delayMS: ${delayMS}`
+          `Post Order Rate Limited. orderbook: ${orderbook}, orderbookApiKey: ${orderbookApiKey}, rateLimitKey: ${rateLimitKey}, delay: ${delay}, retry: ${retry}`
         );
 
-        await addToQueue(orderData, orderbook, orderbookApiKey, delayMS);
+        job.data.retryJob = true;
+        job.data.retryJobDelay = delay;
       } else {
         try {
           await postOrder(orderbook, orderData, orderbookApiKey);
         } catch (error) {
           if (error instanceof RequestWasThrottledError) {
-            const delayMS = error.delay * 1000;
+            const delay = error.delay * 1000;
+
+            job.data.retryJob = true;
+            job.data.retryJobDelay = delay;
 
             logger.info(
               QUEUE_NAME,
-              `Post Order Throttled. orderbook: ${orderbook}, orderbookApiKeyHash: ${orderbookApiKeyHash}, delayMS: ${delayMS}`
+              `Post Order Throttled. orderbook: ${orderbook}, orderbookApiKey: ${orderbookApiKey}, delay: ${delay}, retry: ${retry}`
             );
-
-            await addToQueue(orderData, orderbook, orderbookApiKey, delayMS);
           } else {
-            throw error;
+            job.data.retryJob = true;
+            job.data.retryJobDelay = 5000;
+
+            logger.error(
+              QUEUE_NAME,
+              `Post Order Error. orderbook: ${orderbook}, orderbookApiKey: ${orderbookApiKey}, retry: ${retry}, error: ${error}`
+            );
           }
         }
       }
@@ -90,6 +95,29 @@ if (config.doBackgroundWork) {
     }
   );
 
+  worker.on("completed", async (job) => {
+    if (job.data.retryJob) {
+      const retry = job.data.retry + 1;
+      const delay = job.data.retryJobDelay;
+
+      if (retry <= 5) {
+        await addToQueue(
+          job.data.orderData,
+          job.data.orderbook,
+          job.data.orderbookApiKey,
+          retry,
+          delay,
+          true
+        );
+      } else {
+        logger.error(
+          QUEUE_NAME,
+          `Max Retries Reached. orderbook: ${job.data.orderbook}, orderbookApiKey: ${job.data.orderbookApiKey}, retry: ${retry}`
+        );
+      }
+    }
+  });
+
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
@@ -99,13 +127,14 @@ export type PostOrderExternalParams = {
   orderData: Record<string, unknown>;
   orderbook: string;
   orderbookApiKeyEncrypted: string;
+  retry: number;
 };
 
-const getApiKeyRateLimitRedisKey = (orderbook: string, apiKeyHash: string | null) => {
+const getApiKeyRateLimitRedisKey = (orderbook: string, apiKey: string | null) => {
   let rateLimitKey = "orderbook-post-order-external" + ":" + orderbook;
 
-  if (apiKeyHash) {
-    rateLimitKey = rateLimitKey + ":" + apiKeyHash;
+  if (apiKey) {
+    rateLimitKey = rateLimitKey + ":" + apiKey;
   }
 
   return rateLimitKey;
@@ -265,7 +294,9 @@ export const addToQueue = async (
   orderData: Record<string, unknown>,
   orderbook: string,
   orderbookApiKey: string | null,
-  delay = 0
+  retry = 0,
+  delay = 0,
+  prioritized = false
 ) => {
   const orderbookApiKeyEncrypted = orderbookApiKey ? encryptApiKey(orderbookApiKey) : null;
 
@@ -275,9 +306,11 @@ export const addToQueue = async (
       orderData,
       orderbook,
       orderbookApiKeyEncrypted,
+      retry,
     },
     {
       delay,
+      priority: prioritized ? 1 : undefined,
     }
   );
 };
