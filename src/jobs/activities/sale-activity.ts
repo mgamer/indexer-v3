@@ -9,7 +9,7 @@ import { UserActivities } from "@/models/user_activities";
 
 export class SaleActivity {
   public static async handleEvent(data: FillEventData) {
-    const token = await Tokens.getByContractAndTokenId(data.contract, data.tokenId);
+    const token = await Tokens.getByContractAndTokenId(data.contract, data.tokenId, true);
 
     // If no token found
     if (_.isNull(token)) {
@@ -27,10 +27,6 @@ export class SaleActivity {
       data.logIndex.toString(),
       data.batchIndex.toString()
     );
-
-    if (!data.orderId) {
-      logger.info("sale-activity", `No orderId found ${JSON.stringify(data)}`);
-    }
 
     const activity = {
       type: ActivityType.sale,

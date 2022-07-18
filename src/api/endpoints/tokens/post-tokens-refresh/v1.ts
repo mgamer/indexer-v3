@@ -53,7 +53,7 @@ export const postTokensRefreshV1Options: RouteOptions = {
     try {
       const [contract, tokenId] = payload.token.split(":");
 
-      const token = await Tokens.getByContractAndTokenId(contract, tokenId);
+      const token = await Tokens.getByContractAndTokenId(contract, tokenId, true);
 
       // If no token found
       if (_.isNull(token)) {
