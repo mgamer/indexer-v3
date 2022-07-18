@@ -108,6 +108,7 @@ export const getTokensV4Options: RouteOptions = {
             .required(),
           name: Joi.string().allow(null, ""),
           image: Joi.string().allow(null, ""),
+          media: Joi.string().allow(null, ""),
           collection: Joi.object({
             id: Joi.string().allow(null),
             name: Joi.string().allow(null, ""),
@@ -139,6 +140,7 @@ export const getTokensV4Options: RouteOptions = {
           "t"."token_id",
           "t"."name",
           "t"."image",
+          "t"."media",
           "t"."collection_id",
           "c"."name" as "collection_name",
           "t"."floor_sell_source_id",
@@ -406,6 +408,7 @@ export const getTokensV4Options: RouteOptions = {
           tokenId: r.token_id,
           name: r.name,
           image: r.image,
+          media: r.media,
           collection: {
             id: r.collection_id,
             name: r.collection_name,
