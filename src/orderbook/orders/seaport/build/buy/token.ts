@@ -1,7 +1,7 @@
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuilder } from "@reservoir0x/sdk/dist/seaport/builders/base";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as utils from "@/orderbook/orders/seaport/build/utils";
@@ -13,7 +13,7 @@ interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
 
 export const build = async (options: BuildOrderOptions) => {
   // TODO: Include `NOT is_flagged` filter in the query
-  const collectionResult = await edb.oneOrNone(
+  const collectionResult = await redb.oneOrNone(
     `
       SELECT
         tokens.collection_id
@@ -31,9 +31,6 @@ export const build = async (options: BuildOrderOptions) => {
   }
 
   const buildInfo = await utils.getBuildInfo(options, collectionResult.collection_id, "buy");
-  if (!buildInfo) {
-    throw new Error("Could not generate build info");
-  }
 
   const builder: BaseBuilder = new Sdk.Seaport.Builders.SingleToken(config.chainId);
 

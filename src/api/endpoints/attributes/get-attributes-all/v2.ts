@@ -69,12 +69,17 @@ export const getAttributesAllV2Options: RouteOptions = {
         JOIN attributes ON attribute_keys.id = attributes.attribute_key_id
         WHERE attribute_keys.collection_id = $/collection/
         AND attribute_keys.kind = 'string'
+        AND attributes.token_count > 0
         GROUP BY attribute_keys.id
         ORDER BY rank DESC
       `;
 
       const result = await redb.manyOrNone(baseQuery, params).then((result) => {
         return result.map((r) => {
+          if (r.values.count == 0) {
+            return undefined;
+          }
+
           if (r.kind == "number") {
             return {
               key: r.key,

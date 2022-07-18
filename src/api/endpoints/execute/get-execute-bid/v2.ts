@@ -9,7 +9,7 @@ import { TxData } from "@reservoir0x/sdk/dist/utils";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import { baseProvider } from "@/common/provider";
+import { slowProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 
@@ -74,7 +74,7 @@ export const getExecuteBidV2Options: RouteOptions = {
         )
         .required(),
       weiPrice: Joi.string()
-        .pattern(/^[0-9]+$/)
+        .pattern(/^\d+$/)
         .description("Amount bidder is willing to offer in wei. Example: `1000000000000000000`")
         .required(),
       orderKind: Joi.string()
@@ -91,7 +91,7 @@ export const getExecuteBidV2Options: RouteOptions = {
       automatedRoyalties: Joi.boolean()
         .default(true)
         .description("If true, royalties will be automatically included."),
-      fee: Joi.alternatives(Joi.string(), Joi.number()).description(
+      fee: Joi.alternatives(Joi.string().pattern(/^\d+$/), Joi.number()).description(
         "Fee amount in BPS. Example: `100`"
       ),
       excludeFlaggedTokens: Joi.boolean()
@@ -104,14 +104,16 @@ export const getExecuteBidV2Options: RouteOptions = {
           "Wallet address of fee recipient. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         )
         .disallow(AddressZero),
-      listingTime: Joi.alternatives(Joi.string(), Joi.number()).description(
+      listingTime: Joi.alternatives(Joi.string().pattern(/^\d+$/), Joi.number()).description(
         "Unix timestamp indicating when listing will be listed. Example: `1656080318`"
       ),
-      expirationTime: Joi.alternatives(Joi.string(), Joi.number()).description(
+      expirationTime: Joi.alternatives(Joi.string().pattern(/^\d+$/), Joi.number()).description(
         "Unix timestamp indicating when listing will expire. Example: `1656080318`"
       ),
-      salt: Joi.string().description("Optional. Random string to make the order unique"),
-      nonce: Joi.string().description("Optional. Set a custom nonce"),
+      salt: Joi.string()
+        .pattern(/^\d+$/)
+        .description("Optional. Random string to make the order unique"),
+      nonce: Joi.string().pattern(/^\d+$/).description("Optional. Set a custom nonce"),
       v: Joi.number().description(
         "Signature v component (only required after order has been signed)"
       ),
@@ -190,10 +192,10 @@ export const getExecuteBidV2Options: RouteOptions = {
 
       // Check the maker's Weth/Eth balance.
       let wrapEthTx: TxData | undefined;
-      const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
+      const weth = new Sdk.Common.Helpers.Weth(slowProvider, config.chainId);
       const wethBalance = await weth.getBalance(query.maker);
       if (bn(wethBalance).lt(query.weiPrice)) {
-        const ethBalance = await baseProvider.getBalance(query.maker);
+        const ethBalance = await slowProvider.getBalance(query.maker);
         if (bn(wethBalance).add(ethBalance).lt(query.weiPrice)) {
           // We cannot do anything if the maker doesn't have sufficient balance.
           throw Boom.badData("Maker does not have sufficient balance");
@@ -338,7 +340,7 @@ export const getExecuteBidV2Options: RouteOptions = {
         }
 
         case "seaport": {
-          if (!["reservoir"].includes(query.orderbook)) {
+          if (!["reservoir", "opensea"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
 

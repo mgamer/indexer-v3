@@ -5,7 +5,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -66,7 +66,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
 
     try {
       // Fetch the order to get cancelled.
-      const orderResult = await edb.oneOrNone(
+      const orderResult = await redb.oneOrNone(
         `
           SELECT "kind", "raw_data" FROM "orders"
           WHERE "id" = $/id/
@@ -132,7 +132,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
                 ...steps[1],
                 status: "incomplete",
                 data: {
-                  endpoint: `/orders/executed/v1?id=${order.prefixHash()}`,
+                  endpoint: `/orders/executed/v1?ids=${order.prefixHash()}`,
                   method: "GET",
                 },
               },
@@ -167,7 +167,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
                 ...steps[1],
                 status: "incomplete",
                 data: {
-                  endpoint: `/orders/executed/v1?id=${order.hash()}`,
+                  endpoint: `/orders/executed/v1?ids=${order.hash()}`,
                   method: "GET",
                 },
               },
@@ -202,7 +202,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
                 ...steps[1],
                 status: "incomplete",
                 data: {
-                  endpoint: `/orders/executed/v1?id=${order.hash()}`,
+                  endpoint: `/orders/executed/v1?ids=${order.hash()}`,
                   method: "GET",
                 },
               },
@@ -240,7 +240,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
                 ...steps[1],
                 status: "incomplete",
                 data: {
-                  endpoint: `/orders/executed/v1?id=${order.hash()}`,
+                  endpoint: `/orders/executed/v1?ids=${order.hash()}`,
                   method: "GET",
                 },
               },
@@ -278,7 +278,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
                 ...steps[1],
                 status: "incomplete",
                 data: {
-                  endpoint: `/orders/executed/v1?id=${order.hash()}`,
+                  endpoint: `/orders/executed/v1?ids=${order.hash()}`,
                   method: "GET",
                 },
               },

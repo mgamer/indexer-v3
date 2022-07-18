@@ -5,6 +5,7 @@ import { logger } from "@/common/logger";
 import { arweaveGateway } from "@/common/provider";
 import { redlock, redis } from "@/common/redis";
 import { config } from "@/config/index";
+import { getNetworkName } from "@/config/network";
 
 const PENDING_DATA_KEY = "pending-arweave-data";
 
@@ -30,7 +31,11 @@ export const addPendingOrdersWyvernV23 = async (
 };
 
 export const addPendingOrdersSeaport = async (
-  data: { order: Sdk.Seaport.Order; schemaHash?: string; source?: string }[]
+  data: {
+    order: Sdk.Seaport.Order | Sdk.Seaport.BundleOrder;
+    schemaHash?: string;
+    source?: string;
+  }[]
 ) => {
   if (config.arweaveRelayerKey && data.length) {
     await redis.rpush(
@@ -141,7 +146,7 @@ if (config.doBackgroundWork && config.arweaveRelayerKey) {
               transaction.addTag("Content-Type", "application/json");
               transaction.addTag("App-Name", `Reservoir Protocol`);
               transaction.addTag("App-Version", "0.0.1");
-              transaction.addTag("Network", config.chainId === 1 ? "mainnet" : "rinkeby");
+              transaction.addTag("Network", getNetworkName());
 
               await arweaveGateway.transactions.sign(transaction, wallet).then(async () => {
                 const uploader = await arweaveGateway.transactions.getUploader(transaction);

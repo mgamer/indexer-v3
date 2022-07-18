@@ -1,5 +1,4 @@
 import { AddressZero } from "@ethersproject/constants";
-import * as Sdk from "@reservoir0x/sdk";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { idb, pgp } from "@/common/db";
@@ -8,8 +7,8 @@ import { redis } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
+import * as bundleOrderUpdatesByMaker from "@/jobs/order-updates/by-maker-bundle-queue";
 import { TriggerKind } from "@/jobs/order-updates/types";
-import * as wyvernV23Utils from "@/orderbook/orders/wyvern-v2.3/utils";
 import { OrderKind } from "@/orderbook/orders";
 import { fetchAndUpdateFtApproval } from "@/utils/on-chain-data";
 
@@ -51,28 +50,34 @@ if (config.doBackgroundWork) {
         // can potentially be more prone to not being able to handle all the
         // affected orders in a single batch).
 
+        // TODO: For validation efficiency, we should maybe store the status
+        // of every bundle item individually (eg. fillability and approval),
+        // so that there is no need to revalidate everything on each change.
+
         switch (data.kind) {
+          // Handle changes in ERC20 balances (relevant for 'buy' orders)
           case "buy-balance": {
+            // Get the old and new fillability statuses of the current maker's 'buy' orders
             const fillabilityStatuses = await idb.manyOrNone(
               `
                 SELECT
-                  "o"."id",
-                  "o"."fillability_status" AS "old_status",
+                  orders.id,
+                  orders.fillability_status AS old_status,
                   (CASE
-                    WHEN "fb"."amount" >= ("o"."price" * "o"."quantity_remaining") THEN 'fillable'
+                    WHEN ft_balances.amount >= (orders.price * orders.quantity_remaining) THEN 'fillable'
                     ELSE 'no-balance'
-                  END)::order_fillability_status_t AS "new_status",
+                  END)::order_fillability_status_t AS new_status,
                   (CASE
-                    WHEN "fb"."amount" >= ("o"."price" * "o"."quantity_remaining") THEN upper("o"."valid_between")
+                    WHEN ft_balances.amount >= (orders.price * orders.quantity_remaining) THEN upper(orders.valid_between)
                     ELSE to_timestamp($/timestamp/)
-                  END)::timestamptz AS "expiration"
-                FROM "orders" "o"
-                JOIN "ft_balances" "fb"
-                  ON "o"."maker" = "fb"."owner"
-                WHERE "o"."maker" = $/maker/
-                  AND "o"."side" = 'buy'
-                  AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-                  AND "fb"."contract" = $/contract/
+                  END)::timestamptz AS expiration
+                FROM orders
+                JOIN ft_balances
+                  ON orders.maker = ft_balances.owner
+                WHERE orders.maker = $/maker/
+                  AND orders.side = 'buy'
+                  AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                  AND ft_balances.contract = $/contract/
               `,
               {
                 maker: toBuffer(maker),
@@ -81,6 +86,7 @@ if (config.doBackgroundWork) {
               }
             );
 
+            // Filter any orders that didn't change status
             const values = fillabilityStatuses
               .filter(({ old_status, new_status }) => old_status !== new_status)
               .map(({ id, new_status, expiration }) => ({
@@ -88,30 +94,30 @@ if (config.doBackgroundWork) {
                 fillability_status: new_status,
                 expiration: expiration || "infinity",
               }));
+
+            // Update any orders that did change status
             if (values.length) {
               const columns = new pgp.helpers.ColumnSet(
                 ["id", "fillability_status", "expiration"],
-                {
-                  table: "orders",
-                }
+                { table: "orders" }
               );
 
               await idb.none(
                 `
-                  UPDATE "orders" AS "o" SET
-                    "fillability_status" = "x"."fillability_status"::order_fillability_status_t,
-                    "expiration" = "x"."expiration"::timestamptz,
-                    "updated_at" = now()
+                  UPDATE orders SET
+                    fillability_status = x.fillability_status::order_fillability_status_t,
+                    expiration = x.expiration::TIMESTAMPTZ,
+                    updated_at = now()
                   FROM (VALUES ${pgp.helpers.values(
                     values,
                     columns
-                  )}) AS "x"("id", "fillability_status", "expiration")
-                  WHERE "o"."id" = "x"."id"::text
+                  )}) AS x(id, fillability_status, expiration)
+                  WHERE orders.id = x.id::TEXT
                 `
               );
             }
 
-            // Re-check all affected orders
+            // Recheck all updated orders
             await orderUpdatesById.addToQueue(
               fillabilityStatuses.map(({ id }) => ({
                 context: `${context}-${id}`,
@@ -123,15 +129,12 @@ if (config.doBackgroundWork) {
             break;
           }
 
+          // Handle changes in ERC20 approvals (relevant for 'buy' orders)
           case "buy-approval": {
-            const { contract, orderKind, operator } = data;
+            if (data.operator) {
+              // If `operator` is specified, then the approval change is coming from an `Approval` event
 
-            if (operator) {
-              // Approval change is coming from an `Approval` event
-
-              // TODO: Split into multiple batches to support makers with lots of orders
-
-              // First, ensure the maker has any orders with the current `operator` as conduit
+              // Fetch all 'buy' orders with `operator` as conduit
               const result = await idb.manyOrNone(
                 `
                   SELECT
@@ -146,14 +149,15 @@ if (config.doBackgroundWork) {
                 `,
                 {
                   maker: toBuffer(maker),
-                  conduit: toBuffer(operator),
+                  conduit: toBuffer(data.operator),
                 }
               );
-              if (result.length) {
-                // Refresh approval
-                await fetchAndUpdateFtApproval(contract, maker, operator);
 
-                // Validate or invalidate orders based on the refreshed approval
+              if (result.length) {
+                // Refresh approval from on-chain data
+                await fetchAndUpdateFtApproval(data.contract, maker, data.operator);
+
+                // Validate or invalidate orders based on the just-updated approval
                 const result = await idb.manyOrNone(
                   `
                     WITH
@@ -182,7 +186,8 @@ if (config.doBackgroundWork) {
                           ELSE 'approved'
                         END
                       )::order_approval_status_t
-                    FROM x LEFT JOIN y ON TRUE
+                    FROM x
+                    LEFT JOIN y ON TRUE
                     WHERE orders.id = x.id
                       AND orders.approval_status != (
                         CASE
@@ -193,13 +198,13 @@ if (config.doBackgroundWork) {
                     RETURNING orders.id
                   `,
                   {
-                    token: toBuffer(contract),
+                    token: toBuffer(data.contract),
                     maker: toBuffer(maker),
-                    conduit: toBuffer(operator),
+                    conduit: toBuffer(data.operator!),
                   }
                 );
 
-                // Re-check all affected orders
+                // Recheck all affected orders
                 await orderUpdatesById.addToQueue(
                   result.map(({ id }) => ({
                     context: `${context}-${id}`,
@@ -208,8 +213,8 @@ if (config.doBackgroundWork) {
                   }))
                 );
               }
-            } else if (orderKind) {
-              // Approval change is coming from a `Transfer` event
+            } else if (data.orderKind) {
+              // Otherwise, the approval change is coming from a `Transfer` event
 
               // Fetch all different conduits for the given order kind
               const result = await idb.manyOrNone(
@@ -224,7 +229,7 @@ if (config.doBackgroundWork) {
                 `,
                 {
                   maker: toBuffer(maker),
-                  kind: orderKind,
+                  kind: data.orderKind,
                 }
               );
 
@@ -240,7 +245,7 @@ if (config.doBackgroundWork) {
                       trigger,
                       data: {
                         kind: "buy-approval",
-                        contract,
+                        contract: data.contract,
                         operator: conduit,
                       },
                     };
@@ -251,32 +256,35 @@ if (config.doBackgroundWork) {
             break;
           }
 
+          // Handle changes in ERC721/ERC1155 balances (relevant for 'sell' orders)
           case "sell-balance": {
+            // Get the old and new fillability statuses of the affected orders (filter by maker + token)
             const fillabilityStatuses = await idb.manyOrNone(
               `
                 SELECT
-                  "o"."id",
-                  "o"."fillability_status" AS "old_status",
+                  orders.kind,
+                  orders.id,
+                  orders.fillability_status AS old_status,
                   (CASE
-                    WHEN "nb"."amount" >= "o"."quantity_remaining" THEN 'fillable'
+                    WHEN nft_balances.amount >= orders.quantity_remaining THEN 'fillable'
                     ELSE 'no-balance'
-                  END)::order_fillability_status_t AS "new_status",
+                  END)::order_fillability_status_t AS new_status,
                   (CASE
-                    WHEN "nb"."amount" >= "o"."quantity_remaining" THEN upper("o"."valid_between")
+                    WHEN nft_balances.amount >= orders.quantity_remaining THEN upper(orders.valid_between)
                     ELSE to_timestamp($/timestamp/)
-                  END)::timestamptz AS "expiration"
-                FROM "orders" "o"
-                JOIN "nft_balances" "nb"
-                  on "o"."maker" = "nb"."owner"
-                JOIN "token_sets_tokens" "tst"
-                  ON "o"."token_set_id" = "tst"."token_set_id"
-                  AND "nb"."contract" = "tst"."contract"
-                  AND "nb"."token_id" = "tst"."token_id"
-                WHERE "o"."maker" = $/maker/
-                  AND "o"."side" = 'sell'
-                  AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-                  AND "nb"."contract" = $/contract/
-                  AND "nb"."token_id" = $/tokenId/
+                  END)::timestamptz AS expiration
+                FROM orders
+                JOIN nft_balances
+                  ON orders.maker = nft_balances.owner
+                JOIN token_sets_tokens
+                  ON orders.token_set_id = token_sets_tokens.token_set_id
+                  AND nft_balances.contract = token_sets_tokens.contract
+                  AND nft_balances.token_id = token_sets_tokens.token_id
+                WHERE orders.maker = $/maker/
+                  AND orders.side = 'sell'
+                  AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                  AND nft_balances.contract = $/contract/
+                  AND nft_balances.token_id = $/tokenId/
               `,
               {
                 maker: toBuffer(maker),
@@ -286,39 +294,49 @@ if (config.doBackgroundWork) {
               }
             );
 
+            // Filter any orders that didn't change status
             const values = fillabilityStatuses
               .filter(({ old_status, new_status }) => old_status !== new_status)
+              // When a token gets transferred, X2Y2 will off-chain cancel all the
+              // orders from the initial owner, so that if they ever get the token
+              // back in their wallet no order will get reactivated (they are able
+              // to do that by having their backend refuse to sign on such orders).
+              .map((data) =>
+                data.kind === "x2y2" && data.new_status === "no-balance"
+                  ? { ...data, new_status: "cancelled" }
+                  : data
+              )
               .map(({ id, new_status, expiration }) => ({
                 id,
                 fillability_status: new_status,
                 expiration: expiration || "infinity",
               }));
+
+            // Update any orders that did change status
             if (values.length) {
               const columns = new pgp.helpers.ColumnSet(
                 ["id", "fillability_status", "expiration"],
-                {
-                  table: "orders",
-                }
+                { table: "orders" }
               );
 
-              // Foundation needs special rules since it's an escrowed orderbook.
+              // Exclude 'foundation' orders (which need special rules because of the escrowed orderbook)
               await idb.none(
                 `
-                  UPDATE "orders" AS "o" SET
-                    "fillability_status" = "x"."fillability_status"::order_fillability_status_t,
-                    "expiration" = "x"."expiration"::timestamptz,
-                    "updated_at" = now()
+                  UPDATE orders SET
+                    fillability_status = x.fillability_status::order_fillability_status_t,
+                    expiration = x.expiration::TIMESTAMPTZ,
+                    updated_at = now()
                   FROM (VALUES ${pgp.helpers.values(
                     values,
                     columns
-                  )}) AS "x"("id", "fillability_status", "expiration")
-                  WHERE "o"."id" = "x"."id"::text
-                    AND "o"."kind" != 'foundation'::order_kind_t
+                  )}) AS x(id, fillability_status, expiration)
+                  WHERE orders.id = x.id::TEXT
+                    AND orders.kind != 'foundation'::order_kind_t
                 `
               );
             }
 
-            // Re-check all affected orders
+            // Recheck all affected orders
             await orderUpdatesById.addToQueue(
               fillabilityStatuses.map(({ id }) => ({
                 context: `${context}-${id}`,
@@ -327,266 +345,47 @@ if (config.doBackgroundWork) {
               }))
             );
 
+            // Revalidate any bundles
+            await bundleOrderUpdatesByMaker.addToQueue([job.data]);
+
             break;
           }
 
+          // Handle changes in ERC721/ERC1155 approvals (relevant for 'sell' orders)
           case "sell-approval": {
-            // TODO: Get latest approval to operator and use that instead of
-            // `approved` field that gets explicitly passed to the job.
-
-            // We must detect which exchange the approval is for (if any).
-
-            // For "sell" orders we can be sure the associated token set
-            // consists of a single token - otherwise we should probably
-            // use `DISTINCT ON ("o"."id")` - relevant to queries below.
-
-            const result: { id: string }[] = [];
-
-            let detected = false;
-
-            // OpenDao
-            if (data.operator === Sdk.OpenDao.Addresses.Exchange[config.chainId]?.toLowerCase()) {
-              detected = true;
-              for (const orderKind of ["opendao-erc721", "opendao-erc1155"]) {
-                result.push(
-                  ...(await idb.manyOrNone(
-                    `
-                      UPDATE "orders" AS "o" SET
-                        "approval_status" = $/approvalStatus/,
-                        "expiration" = to_timestamp($/expiration/),
-                        "updated_at" = now()
-                      FROM (
-                        SELECT
-                          "o"."id"
-                        FROM "orders" "o"
-                        JOIN "token_sets_tokens" "tst"
-                          ON "o"."token_set_id" = "tst"."token_set_id"
-                        WHERE "tst"."contract" = $/contract/
-                          AND "o"."kind" = '${orderKind}'
-                          AND "o"."maker" = $/maker/
-                          AND "o"."side" = 'sell'
-                          AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-                          AND "o"."approval_status" != $/approvalStatus/
-                      ) "x"
-                      WHERE "o"."id" = "x"."id"
-                      RETURNING "o"."id"
-                    `,
-                    {
-                      maker: toBuffer(maker),
-                      contract: toBuffer(data.contract),
-                      approvalStatus: data.approved ? "approved" : "no-approval",
-                      expiration: trigger.txTimestamp,
-                    }
-                  ))
-                );
+            const result: { id: string }[] = await idb.manyOrNone(
+              `
+                UPDATE orders SET
+                  approval_status = $/approvalStatus/,
+                  expiration = to_timestamp($/expiration/),
+                  updated_at = now()
+                FROM (
+                  SELECT
+                    orders.id
+                  FROM orders
+                  JOIN token_sets_tokens
+                    ON orders.token_set_id = token_sets_tokens.token_set_id
+                  WHERE token_sets_tokens.contract = $/contract/
+                    AND orders.maker = $/maker/
+                    AND orders.side = 'sell'
+                    AND orders.conduit = $/operator/
+                    AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                    AND orders.approval_status != $/approvalStatus/
+                  LIMIT 1
+                ) x
+                WHERE orders.id = x.id
+                RETURNING orders.id
+              `,
+              {
+                maker: toBuffer(maker),
+                contract: toBuffer(data.contract),
+                operator: toBuffer(data.operator),
+                approvalStatus: data.approved ? "approved" : "no-approval",
+                expiration: trigger.txTimestamp,
               }
-            }
+            );
 
-            // ZeroExV4
-            if (data.operator === Sdk.ZeroExV4.Addresses.Exchange[config.chainId]?.toLowerCase()) {
-              detected = true;
-              for (const orderKind of ["zeroex-v4-erc721", "zeroex-v4-erc1155"]) {
-                result.push(
-                  ...(await idb.manyOrNone(
-                    `
-                      UPDATE "orders" AS "o" SET
-                        "approval_status" = $/approvalStatus/,
-                        "expiration" = to_timestamp($/expiration/),
-                        "updated_at" = now()
-                      FROM (
-                        SELECT
-                          "o"."id"
-                        FROM "orders" "o"
-                        JOIN "token_sets_tokens" "tst"
-                          ON "o"."token_set_id" = "tst"."token_set_id"
-                        WHERE "tst"."contract" = $/contract/
-                          AND "o"."kind" = '${orderKind}'
-                          AND "o"."maker" = $/maker/
-                          AND "o"."side" = 'sell'
-                          AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-                          AND "o"."approval_status" != $/approvalStatus/
-                      ) "x"
-                      WHERE "o"."id" = "x"."id"
-                      RETURNING "o"."id"
-                    `,
-                    {
-                      maker: toBuffer(maker),
-                      contract: toBuffer(data.contract),
-                      approvalStatus: data.approved ? "approved" : "no-approval",
-                      expiration: trigger.txTimestamp,
-                    }
-                  ))
-                );
-              }
-            }
-
-            // X2Y2
-            // TODO: Add support for erc1155 once X2Y2 integrates it
-            if (
-              data.operator === Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId]?.toLowerCase()
-            ) {
-              detected = true;
-              result.push(
-                ...(await idb.manyOrNone(
-                  `
-                      UPDATE "orders" AS "o" SET
-                        "approval_status" = $/approvalStatus/,
-                        "expiration" = to_timestamp($/expiration/),
-                        "updated_at" = now()
-                      FROM (
-                        SELECT
-                          "o"."id"
-                        FROM "orders" "o"
-                        JOIN "token_sets_tokens" "tst"
-                          ON "o"."token_set_id" = "tst"."token_set_id"
-                        WHERE "tst"."contract" = $/contract/
-                          AND "o"."kind" = 'x2y2'
-                          AND "o"."maker" = $/maker/
-                          AND "o"."side" = 'sell'
-                          AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-                          AND "o"."approval_status" != $/approvalStatus/
-                      ) "x"
-                      WHERE "o"."id" = "x"."id"
-                      RETURNING "o"."id"
-                    `,
-                  {
-                    maker: toBuffer(maker),
-                    contract: toBuffer(data.contract),
-                    approvalStatus: data.approved ? "approved" : "no-approval",
-                    expiration: trigger.txTimestamp,
-                  }
-                ))
-              );
-            }
-
-            // LooksRare
-            if (
-              [
-                Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]?.toLowerCase(),
-                Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId]?.toLowerCase(),
-              ].includes(data.operator)
-            ) {
-              detected = true;
-              const kind =
-                data.operator ===
-                Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]?.toLowerCase()
-                  ? "erc721"
-                  : "erc1155";
-
-              result.push(
-                ...(await idb.manyOrNone(
-                  `
-                    UPDATE "orders" AS "o" SET
-                      "approval_status" = $/approvalStatus/,
-                      "expiration" = to_timestamp($/expiration/),
-                      "updated_at" = now()
-                    FROM (
-                      SELECT
-                        "o"."id"
-                      FROM "orders" "o"
-                      JOIN "token_sets_tokens" "tst"
-                        ON "o"."token_set_id" = "tst"."token_set_id"
-                      JOIN "contracts" "c"
-                        ON "tst"."contract" = "c"."address"
-                      WHERE "tst"."contract" = $/contract/
-                        AND "c"."kind" = '${kind}'
-                        AND "o"."kind" = 'looks-rare'
-                        AND "o"."maker" = $/maker/
-                        AND "o"."side" = 'sell'
-                        AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-                        AND "o"."approval_status" != $/approvalStatus/
-                    ) "x"
-                    WHERE "o"."id" = "x"."id"
-                    RETURNING "o"."id"
-                  `,
-                  {
-                    maker: toBuffer(maker),
-                    contract: toBuffer(data.contract),
-                    approvalStatus: data.approved ? "approved" : "no-approval",
-                    expiration: trigger.txTimestamp,
-                  }
-                ))
-              );
-            }
-
-            // Wyvern v2.3
-            const proxy = await wyvernV23Utils.getUserProxy(maker);
-            if (proxy && proxy === data.operator) {
-              detected = true;
-              result.push(
-                ...(await idb.manyOrNone(
-                  `
-                    UPDATE "orders" AS "o" SET
-                      "approval_status" = $/approvalStatus/,
-                      "expiration" = to_timestamp($/expiration/),
-                      "updated_at" = now()
-                    FROM (
-                      SELECT
-                        "o"."id"
-                      FROM "orders" "o"
-                      JOIN "token_sets_tokens" "tst"
-                        ON "o"."token_set_id" = "tst"."token_set_id"
-                      WHERE "tst"."contract" = $/contract/
-                        AND "o"."kind" = 'wyvern-v2.3'
-                        AND "o"."maker" = $/maker/
-                        AND "o"."side" = 'sell'
-                        AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-                        AND "o"."approval_status" != $/approvalStatus/
-                    ) "x"
-                    WHERE "o"."id" = "x"."id"
-                    RETURNING "o"."id"
-                  `,
-                  {
-                    maker: toBuffer(maker),
-                    contract: toBuffer(data.contract),
-                    approvalStatus: data.approved ? "approved" : "no-approval",
-                    expiration: trigger.txTimestamp,
-                  }
-                ))
-              );
-            }
-
-            // TODO: Backfill orders conduit and use that directly instead of
-            // manually detecting and using the order kind from the operator.
-            // Just like we do with Seaport, but for all orders.
-
-            // Seaport
-            if (!detected) {
-              result.push(
-                ...(await idb.manyOrNone(
-                  `
-                    UPDATE orders AS o SET
-                      approval_status = $/approvalStatus/,
-                      expiration = to_timestamp($/expiration/),
-                      updated_at = now()
-                    FROM (
-                      SELECT
-                        orders.id
-                      FROM orders
-                      JOIN token_sets_tokens
-                        ON orders.token_set_id = token_sets_tokens.token_set_id
-                      WHERE token_sets_tokens.contract = $/contract/
-                        AND orders.maker = $/maker/
-                        AND orders.side = 'sell'
-                        AND orders.conduit = $/operator/
-                        AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
-                        AND orders.approval_status != $/approvalStatus/
-                    ) x
-                    WHERE o.id = x.id
-                    RETURNING o.id
-                  `,
-                  {
-                    maker: toBuffer(maker),
-                    contract: toBuffer(data.contract),
-                    operator: toBuffer(data.operator),
-                    approvalStatus: data.approved ? "approved" : "no-approval",
-                    expiration: trigger.txTimestamp,
-                  }
-                ))
-              );
-            }
-
-            // Re-check all affected orders
+            // Recheck all affected orders
             await orderUpdatesById.addToQueue(
               result.map(({ id }) => ({
                 context: `${context}-${id}`,
@@ -594,6 +393,9 @@ if (config.doBackgroundWork) {
                 trigger,
               }))
             );
+
+            // Revalidate any bundles
+            await bundleOrderUpdatesByMaker.addToQueue([job.data]);
 
             break;
           }
@@ -606,7 +408,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 5 }
+    { connection: redis.duplicate(), concurrency: 10 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
@@ -665,7 +467,7 @@ export type MakerInfo = {
         contract: string;
         operator: string;
         // TODO: Replace explicitly passing the `approved` field with
-        // fetching the latest approval directly from the database.
+        // fetching the latest approval directly from the database
         approved: boolean;
       };
 };

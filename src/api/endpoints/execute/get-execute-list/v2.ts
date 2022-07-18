@@ -9,7 +9,7 @@ import { TxData } from "@reservoir0x/sdk/dist/utils";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import { baseProvider } from "@/common/provider";
+import { slowProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 
@@ -65,7 +65,7 @@ export const getExecuteListV2Options: RouteOptions = {
           "Address of wallet making the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
       weiPrice: Joi.string()
-        .pattern(/^[0-9]+$/)
+        .pattern(/^\d+$/)
         .required()
         .description("Amount seller is willing to sell for in wei. Example: `1000000000000000000`"),
       orderKind: Joi.string()
@@ -83,9 +83,9 @@ export const getExecuteListV2Options: RouteOptions = {
         .default(true)
         .description("If true, royalties will be automatically included."),
       fee: Joi.alternatives(
-        Joi.string(),
+        Joi.string().pattern(/^\d+$/),
         Joi.number(),
-        Joi.array().items(Joi.string()),
+        Joi.array().items(Joi.string().pattern(/^\d+$/)),
         Joi.array().items(Joi.number()).description("Fee amount in BPS. Example: `100`")
       ),
       feeRecipient: Joi.alternatives(
@@ -104,14 +104,16 @@ export const getExecuteListV2Options: RouteOptions = {
             "Wallet address of fee recipient. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
           )
       ),
-      listingTime: Joi.alternatives(Joi.string(), Joi.number()).description(
+      listingTime: Joi.alternatives(Joi.string().pattern(/^\d+$/), Joi.number()).description(
         "Unix timestamp indicating when listing will be listed. Example: `1656080318`"
       ),
-      expirationTime: Joi.alternatives(Joi.string(), Joi.number()).description(
+      expirationTime: Joi.alternatives(Joi.string().pattern(/^\d+$/), Joi.number()).description(
         "Unix timestamp indicating when listing will expire. Example: `1656080318`"
       ),
-      salt: Joi.string().description("Optional. Random string to make the order unique"),
-      nonce: Joi.string().description("Optional. Set a custom nonce"),
+      salt: Joi.string()
+        .pattern(/^\d+$/)
+        .description("Optional. Random string to make the order unique"),
+      nonce: Joi.string().pattern(/^\d+$/).description("Optional. Set a custom nonce"),
       v: Joi.number().description(
         "Signature v component (only required after order has been signed)"
       ),
@@ -225,7 +227,7 @@ export const getExecuteListV2Options: RouteOptions = {
                 // Generate a proxy registration transaction.
 
                 const proxyRegistry = new Sdk.WyvernV23.Helpers.ProxyRegistry(
-                  baseProvider,
+                  slowProvider,
                   config.chainId
                 );
                 const proxyRegistrationTx = proxyRegistry.registerProxyTransaction(query.maker);
@@ -259,8 +261,8 @@ export const getExecuteListV2Options: RouteOptions = {
                 const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
                 approvalTx = (
                   kind === "erc721"
-                    ? new Sdk.Common.Helpers.Erc721(baseProvider, orderInfo.contract)
-                    : new Sdk.Common.Helpers.Erc1155(baseProvider, orderInfo.contract)
+                    ? new Sdk.Common.Helpers.Erc721(slowProvider, orderInfo.contract)
+                    : new Sdk.Common.Helpers.Erc1155(slowProvider, orderInfo.contract)
                 ).approveTransaction(query.maker, userProxy!);
               }
             }
@@ -361,8 +363,8 @@ export const getExecuteListV2Options: RouteOptions = {
                 const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
                 approvalTx = (
                   kind === "erc721"
-                    ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.nft)
-                    : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.nft)
+                    ? new Sdk.Common.Helpers.Erc721(slowProvider, order.params.nft)
+                    : new Sdk.Common.Helpers.Erc1155(slowProvider, order.params.nft)
                 ).approveTransaction(query.maker, Sdk.OpenDao.Addresses.Exchange[config.chainId]);
 
                 break;
@@ -460,8 +462,8 @@ export const getExecuteListV2Options: RouteOptions = {
                 const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
                 approvalTx = (
                   kind === "erc721"
-                    ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.nft)
-                    : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.nft)
+                    ? new Sdk.Common.Helpers.Erc721(slowProvider, order.params.nft)
+                    : new Sdk.Common.Helpers.Erc1155(slowProvider, order.params.nft)
                 ).approveTransaction(query.maker, Sdk.ZeroExV4.Addresses.Exchange[config.chainId]);
 
                 break;
@@ -516,7 +518,7 @@ export const getExecuteListV2Options: RouteOptions = {
 
         case "seaport": {
           // Exchange-specific checks
-          if (!["reservoir"].includes(query.orderbook)) {
+          if (!["reservoir", "opensea"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
 
@@ -563,8 +565,8 @@ export const getExecuteListV2Options: RouteOptions = {
                 const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
                 approvalTx = (
                   kind === "erc721"
-                    ? new Sdk.Common.Helpers.Erc721(baseProvider, info.contract)
-                    : new Sdk.Common.Helpers.Erc1155(baseProvider, info.contract)
+                    ? new Sdk.Common.Helpers.Erc721(slowProvider, info.contract)
+                    : new Sdk.Common.Helpers.Erc1155(slowProvider, info.contract)
                 ).approveTransaction(query.maker, exchange.deriveConduit(order.params.conduitKey));
 
                 break;
@@ -659,8 +661,8 @@ export const getExecuteListV2Options: RouteOptions = {
                 // Generate an approval transaction.
                 approvalTx = (
                   contractKind === "erc721"
-                    ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.collection)
-                    : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.collection)
+                    ? new Sdk.Common.Helpers.Erc721(slowProvider, order.params.collection)
+                    : new Sdk.Common.Helpers.Erc1155(slowProvider, order.params.collection)
                 ).approveTransaction(
                   query.maker,
                   contractKind === "erc721"

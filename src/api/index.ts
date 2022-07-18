@@ -1,6 +1,7 @@
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { HapiAdapter } from "@bull-board/hapi";
+import Basic from "@hapi/basic";
 import Hapi from "@hapi/hapi";
 import Inert from "@hapi/inert";
 import Vision from "@hapi/vision";
@@ -10,9 +11,10 @@ import qs from "qs";
 import { setupRoutes } from "@/api/routes";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import { ApiKeyManager } from "../models/api-keys";
-import { allJobQueues } from "@/jobs/index";
+import { getNetworkName } from "@/config/network";
+import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
+import { allJobQueues } from "@/jobs/index";
 
 let server: Hapi.Server;
 
@@ -52,16 +54,35 @@ export const start = async (): Promise<void> => {
     },
   });
 
-  // Integrated BullMQ monitoring UI
+  // Register an authentication strategy for the BullMQ monitoring UI
+  await server.register(Basic);
+  server.auth.strategy("simple", "basic", {
+    validate: (_request: Hapi.Request, username: string, password: string) => {
+      return {
+        isValid: username === "admin" && password === config.bullmqAdminPassword,
+        credentials: { username },
+      };
+    },
+  });
+
+  // Setup the BullMQ monitoring UI
   const serverAdapter = new HapiAdapter();
   createBullBoard({
     queues: allJobQueues.map((q) => new BullMQAdapter(q)),
     serverAdapter,
   });
   serverAdapter.setBasePath("/admin/bullmq");
-  await server.register(serverAdapter.registerPlugin(), {
-    routes: { prefix: "/admin/bullmq" },
-  });
+  await server.register(
+    {
+      plugin: serverAdapter.registerPlugin(),
+      options: {
+        auth: "simple",
+      },
+    },
+    {
+      routes: { prefix: "/admin/bullmq" },
+    }
+  );
 
   // Create all supported sources
   await Sources.syncSources();
@@ -92,7 +113,7 @@ export const start = async (): Promise<void> => {
           },
         },
         schemes: ["https", "http"],
-        host: `${config.chainId === 1 ? "api" : "api-rinkeby"}.reservoir.tools`,
+        host: `${config.chainId === 1 ? "api" : `api-${getNetworkName()}`}.reservoir.tools`,
         cors: true,
         tryItOutEnabled: true,
         documentationPath: "/",

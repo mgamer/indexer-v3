@@ -4,6 +4,7 @@ export const config = {
   chainId: Number(process.env.CHAIN_ID),
 
   adminApiKey: String(process.env.ADMIN_API_KEY),
+  bullmqAdminPassword: String(process.env.BULLMQ_ADMIN_PASSWORD),
   arweaveRelayerKey: process.env.ARWEAVE_RELAYER_KEY
     ? String(process.env.ARWEAVE_RELAYER_KEY)
     : undefined,
@@ -13,14 +14,21 @@ export const config = {
 
   baseNetworkHttpUrl: String(process.env.BASE_NETWORK_HTTP_URL),
   baseNetworkWsUrl: String(process.env.BASE_NETWORK_WS_URL),
+  slowNetworkHttpUrl: String(
+    process.env.SLOW_NETWORK_HTTP_URL ?? process.env.BASE_NETWORK_HTTP_URL
+  ),
   openseaIndexerApiBaseUrl: String(process.env.OPENSEA_INDEXER_API_BASE_URL),
 
   // When running in liquidity-only mode, all metadata processes are disabled
   liquidityOnly: !process.env.METADATA_API_BASE_URL,
+  metadataIndexingMethod: String(process.env.METADATA_INDEXING_METHOD || "opensea"),
   metadataApiBaseUrl: String(process.env.METADATA_API_BASE_URL),
 
   databaseUrl: String(process.env.DATABASE_URL),
   readReplicaDatabaseUrl: String(process.env.READ_REPLICA_DATABASE_URL || process.env.DATABASE_URL),
+  writeReplicaDatabaseUrl: String(
+    process.env.WRITE_REPLICA_DATABASE_URL || process.env.DATABASE_URL
+  ),
   redisUrl: String(process.env.REDIS_URL),
 
   master: Boolean(Number(process.env.MASTER)),

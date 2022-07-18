@@ -2,7 +2,7 @@ import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuildParams } from "@reservoir0x/sdk/dist/seaport/builders/base";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
@@ -32,8 +32,8 @@ export const getBuildInfo = async (
   options: BaseOrderBuildOptions,
   collection: string,
   side: "sell" | "buy"
-): Promise<OrderBuildInfo | undefined> => {
-  const collectionResult = await edb.oneOrNone(
+): Promise<OrderBuildInfo> => {
+  const collectionResult = await redb.oneOrNone(
     `
       SELECT
         contracts.kind,
@@ -47,8 +47,7 @@ export const getBuildInfo = async (
     { collection }
   );
   if (!collectionResult) {
-    // Skip if we cannot retrieve the collection.
-    return undefined;
+    throw new Error("Could not fetch collection");
   }
 
   const exchange = new Sdk.Seaport.Exchange(config.chainId);
@@ -71,8 +70,8 @@ export const getBuildInfo = async (
         : AddressZero,
     // OpenSea's conduit for sharing approvals
     conduitKey: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
-    startTime: options.listingTime,
-    endTime: options.expirationTime,
+    startTime: options.listingTime || Math.floor(Date.now() / 1000),
+    endTime: options.expirationTime || Math.floor(Date.now() / 1000) + 6 * 30 * 24 * 3600,
     salt: options.salt,
     counter: (await exchange.getCounter(baseProvider, options.maker)).toString(),
   };
@@ -93,6 +92,17 @@ export const getBuildInfo = async (
         totalFees = totalFees.add(fee);
       }
     }
+  }
+
+  if (options.orderbook === "opensea") {
+    if (!options.fee || !options.feeRecipient) {
+      options.fee = [];
+      options.feeRecipient = [];
+    }
+
+    options.fee.push(250);
+    // OpenSea's Seaport fee recipient
+    options.feeRecipient.push("0x8de9c5a032463c561423387a9648c5c7bcc5bc90");
   }
 
   if (options.fee && options.feeRecipient) {

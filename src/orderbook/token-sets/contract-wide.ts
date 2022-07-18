@@ -1,4 +1,4 @@
-import { PgPromiseQuery, idb, pgp } from "@/common/db";
+import { PgPromiseQuery, idb, pgp, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -43,8 +43,11 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
       // Make sure an associated collection exists
       const collectionResult = await idb.oneOrNone(
         `
-          SELECT "token_count" FROM "collections"
-          WHERE "id" = $/id/
+          SELECT
+            collections.id,
+            collections.token_count
+          FROM collections
+          WHERE collections.id = $/id/
         `,
         {
           id: contract,
@@ -79,7 +82,7 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
       });
 
       // For efficiency, skip if data already exists
-      const tokenSetTokensExist = await idb.oneOrNone(
+      const tokenSetTokensExist = await redb.oneOrNone(
         `
           SELECT 1 FROM "token_sets_tokens" "tst"
           WHERE "tst"."token_set_id" = $/tokenSetId/

@@ -11,7 +11,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import axios from "axios";
 import Joi from "joi";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, formatPrice } from "@/common/utils";
 import { config } from "@/config/index";
@@ -34,6 +34,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
     query: Joi.object({
       kind: Joi.string().valid("spot", "twap", "lower", "upper").default("spot"),
       currency: Joi.string().lowercase().default(AddressZero),
+      twapHours: Joi.number().default(24),
       eip3668Calldata: Joi.string(),
     }),
   },
@@ -83,7 +84,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
               *
             FROM collection_floor_sell_events
             WHERE collection_floor_sell_events.collection_id = $/collection/
-              AND collection_floor_sell_events.created_at >= now() - interval '24 hours'
+              AND collection_floor_sell_events.created_at >= now() - interval '${query.twapHours} hours'
             ORDER BY collection_floor_sell_events.created_at
           ),
           y AS (
@@ -103,7 +104,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
           w AS (
             SELECT
               price,
-              floor(extract('epoch' FROM greatest(z.created_at, now() - interval '24 hours'))) AS start_time,
+              floor(extract('epoch' FROM greatest(z.created_at, now() - interval '${query.twapHours} hours'))) AS start_time,
               floor(extract('epoch' FROM coalesce(lead(z.created_at, 1) OVER (ORDER BY created_at), now()))) AS end_time
             FROM z
           )
@@ -125,7 +126,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
       let price: string;
       let decimals = 18;
       if (query.kind === "spot") {
-        const result = await edb.oneOrNone(spotQuery, params);
+        const result = await redb.oneOrNone(spotQuery, params);
         if (!result?.price) {
           throw Boom.badRequest("No floor ask price available");
         }
@@ -133,7 +134,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
         kind = PriceKind.SPOT;
         price = result.price;
       } else if (query.kind === "twap") {
-        const result = await edb.oneOrNone(twapQuery, params);
+        const result = await redb.oneOrNone(twapQuery, params);
         if (!result?.price) {
           throw Boom.badRequest("No floor ask price available");
         }
@@ -141,8 +142,8 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
         kind = PriceKind.TWAP;
         price = result.price;
       } else {
-        const spotResult = await edb.oneOrNone(spotQuery, params);
-        const twapResult = await edb.oneOrNone(twapQuery, params);
+        const spotResult = await redb.oneOrNone(spotQuery, params);
+        const twapResult = await redb.oneOrNone(twapQuery, params);
         if (!spotResult?.price || !twapResult?.price) {
           throw Boom.badRequest("No floor ask price available");
         }

@@ -43,7 +43,8 @@ if (config.doBackgroundWork) {
       let { side, tokenSetId } = job.data as OrderInfo;
 
       try {
-        let order;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let order: any;
 
         if (id) {
           // Fetch the order's associated data
@@ -67,7 +68,8 @@ if (config.doBackgroundWork) {
               JOIN token_sets_tokens
                 ON orders.token_set_id = token_sets_tokens.token_set_id
               WHERE orders.id = $/id/
-              LIMIT 1`,
+              LIMIT 1
+            `,
             { id }
           );
 
@@ -76,39 +78,43 @@ if (config.doBackgroundWork) {
         }
 
         if (side && tokenSetId) {
-          // Recompute `top_buy` for token sets that are not single token
+          // If the order is a complex 'buy' order, then recompute the top bid cache on the token set
           if (side === "buy" && !tokenSetId.startsWith("token")) {
             const buyOrderResult = await idb.manyOrNone(
               `
-                WITH "x" AS (
+                WITH x AS (
                   SELECT
-                    "ts"."id" as "token_set_id",
-                    "y".*
-                  FROM "token_sets" "ts"
+                    token_sets.id AS token_set_id,
+                    y.*
+                  FROM token_sets
                   LEFT JOIN LATERAL (
                     SELECT
-                      "o"."id" as "order_id",
-                      "o"."value",
-                      "o"."maker"
-                    FROM "orders" "o"
-                    WHERE "o"."token_set_id" = "ts"."id"
-                      AND "o"."side" = 'buy'
-                      AND "o"."fillability_status" = 'fillable'
-                      AND "o"."approval_status" = 'approved'
-                    ORDER BY "o"."value" DESC
+                      orders.id AS order_id,
+                      orders.value,
+                      orders.maker
+                    FROM orders
+                    WHERE orders.token_set_id = token_sets.id
+                      AND orders.side = 'buy'
+                      AND orders.fillability_status = 'fillable'
+                      AND orders.approval_status = 'approved'
+                      AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                    ORDER BY orders.value DESC
                     LIMIT 1
-                  ) "y" ON TRUE
-                  WHERE "ts"."id" = $/tokenSetId/
+                  ) y ON TRUE
+                  WHERE token_sets.id = $/tokenSetId/
                 )
-                UPDATE "token_sets" AS "ts" SET
-                  "top_buy_id" = "x"."order_id",
-                  "top_buy_value" = "x"."value",
-                  "top_buy_maker" = "x"."maker",
-                  "attribute_id" = "ts"."attribute_id"
-                FROM "x"
-                WHERE "ts"."id" = "x"."token_set_id"
-                AND "ts"."top_buy_id" IS DISTINCT FROM "x"."order_id"
-                RETURNING attribute_id AS "attributeId", top_buy_value AS "topBuyValue"
+                UPDATE token_sets SET
+                  top_buy_id = x.order_id,
+                  top_buy_value = x.value,
+                  top_buy_maker = x.maker,
+                  attribute_id = token_sets.attribute_id,
+                  collection_id = token_sets.collection_id
+                FROM x
+                WHERE token_sets.id = x.token_set_id
+                  AND token_sets.top_buy_id IS DISTINCT FROM x.order_id
+                RETURNING
+                  attribute_id AS "attributeId",
+                  top_buy_value AS "topBuyValue"
               `,
               { tokenSetId }
             );
@@ -120,132 +126,130 @@ if (config.doBackgroundWork) {
             }
           }
 
-          // TODO: Research if splitting the single token updates in multiple
-          // batches is needed (eg. to avoid blocking other running queries).
-
           if (side === "sell") {
             // Atomically update the cache and trigger an api event if needed
             const sellOrderResult = await idb.oneOrNone(
               `
-                WITH "z" AS (
+                WITH z AS (
                   SELECT
-                    "x"."contract",
-                    "x"."token_id",
-                    "y"."order_id",
-                    "y"."value",
-                    "y"."maker",
-                    "y"."valid_between",
-                    "y"."nonce",
-                    "y"."source_id",
-                    "y"."source_id_int",
-                    "y"."is_reservoir"
+                    x.contract,
+                    x.token_id,
+                    y.order_id,
+                    y.value,
+                    y.maker,
+                    y.valid_between,
+                    y.nonce,
+                    y.source_id,
+                    y.source_id_int,
+                    y.is_reservoir
                   FROM (
                     SELECT
-                      "tst"."contract",
-                      "tst"."token_id"
-                    FROM "token_sets_tokens" "tst"
-                    WHERE "token_set_id" = $/tokenSetId/
-                  ) "x" LEFT JOIN LATERAL (
+                      token_sets_tokens.contract,
+                      token_sets_tokens.token_id
+                    FROM token_sets_tokens
+                    WHERE token_sets_tokens.token_set_id = $/tokenSetId/
+                  ) x LEFT JOIN LATERAL (
                     SELECT
-                      "o"."id" as "order_id",
-                      "o"."value",
-                      "o"."maker",
-                      "o"."valid_between",
-                      "o"."source_id",
-                      "o"."source_id_int",
-                      "o"."nonce",
-                      "o"."is_reservoir"
-                    FROM "orders" "o"
-                    JOIN "token_sets_tokens" "tst"
-                      ON "o"."token_set_id" = "tst"."token_set_id"
-                    WHERE "tst"."contract" = "x"."contract"
-                      AND "tst"."token_id" = "x"."token_id"
-                      AND "o"."side" = 'sell'
-                      AND "o"."fillability_status" = 'fillable'
-                      AND "o"."approval_status" = 'approved'
-                    ORDER BY "o"."value", "o"."fee_bps"
+                      orders.id AS order_id,
+                      orders.value,
+                      orders.maker,
+                      orders.valid_between,
+                      orders.source_id,
+                      orders.source_id_int,
+                      orders.nonce,
+                      orders.is_reservoir
+                    FROM orders
+                    JOIN token_sets_tokens
+                      ON orders.token_set_id = token_sets_tokens.token_set_id
+                    WHERE token_sets_tokens.contract = x.contract
+                      AND token_sets_tokens.token_id = x.token_id
+                      AND orders.side = 'sell'
+                      AND orders.fillability_status = 'fillable'
+                      AND orders.approval_status = 'approved'
+                      AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                    ORDER BY orders.value, orders.fee_bps
                     LIMIT 1
-                  ) "y" ON TRUE
+                  ) y ON TRUE
                 ),
-                "w" AS (
-                  UPDATE "tokens" AS "t" SET
-                    "floor_sell_id" = "z"."order_id",
-                    "floor_sell_value" = "z"."value",
-                    "floor_sell_maker" = "z"."maker",
-                    "floor_sell_valid_from" = least(
+                w AS (
+                  UPDATE tokens SET
+                    floor_sell_id = z.order_id,
+                    floor_sell_value = z.value,
+                    floor_sell_maker = z.maker,
+                    floor_sell_valid_from = least(
                       2147483647::NUMERIC,
-                      date_part('epoch', lower("z"."valid_between"))
+                      date_part('epoch', lower(z.valid_between))
                     )::INT,
-                    "floor_sell_valid_to" = least(
+                    floor_sell_valid_to = least(
                       2147483647::NUMERIC,
                       coalesce(
-                        nullif(date_part('epoch', upper("z"."valid_between")), 'Infinity'),
+                        nullif(date_part('epoch', upper(z.valid_between)), 'Infinity'),
                         0
                       )
                     )::INT,
-                    "floor_sell_source_id" = "z"."source_id",
-                    "floor_sell_source_id_int" = "z"."source_id_int",
-                    "floor_sell_is_reservoir" = "z"."is_reservoir",
-                    "updated_at" = now()
-                  FROM "z"
-                  WHERE "t"."contract" = "z"."contract"
-                    AND "t"."token_id" = "z"."token_id"
+                    floor_sell_source_id = z.source_id,
+                    floor_sell_source_id_int = z.source_id_int,
+                    floor_sell_is_reservoir = z.is_reservoir,
+                    updated_at = now()
+                  FROM z
+                  WHERE tokens.contract = z.contract
+                    AND tokens.token_id = z.token_id
                     AND (
-                      "t"."floor_sell_id" IS DISTINCT FROM "z"."order_id"
-                      OR "t"."floor_sell_maker" IS DISTINCT FROM "z"."maker"
-                      OR "t"."floor_sell_value" IS DISTINCT FROM "z"."value"
+                      tokens.floor_sell_id IS DISTINCT FROM z.order_id
+                      OR tokens.floor_sell_maker IS DISTINCT FROM z.maker
+                      OR tokens.floor_sell_value IS DISTINCT FROM z.value
                     )
                   RETURNING
-                    "z"."contract",
-                    "z"."token_id",
-                    "z"."order_id" AS "new_floor_sell_id",
-                    "z"."maker" AS "new_floor_sell_maker",
-                    "z"."value" AS "new_floor_sell_value",
-                    "z"."valid_between" AS "new_floor_sell_valid_between",
-                    "z"."nonce" AS "new_floor_sell_nonce",
-                    "z"."source_id_int" AS "new_floor_sell_source_id_int",
+                    z.contract,
+                    z.token_id,
+                    z.order_id AS new_floor_sell_id,
+                    z.maker AS new_floor_sell_maker,
+                    z.value AS new_floor_sell_value,
+                    z.valid_between AS new_floor_sell_valid_between,
+                    z.nonce AS new_floor_sell_nonce,
+                    z.source_id_int AS new_floor_sell_source_id_int,
                     (
-                      SELECT "t"."floor_sell_value" FROM "tokens" "t"
-                      WHERE "t"."contract" = "z"."contract"
-                        AND "t"."token_id" = "z"."token_id"
-                    ) AS "old_floor_sell_value"
+                      SELECT tokens.floor_sell_value FROM tokens
+                      WHERE tokens.contract = z.contract
+                        AND tokens.token_id = z.token_id
+                    ) AS old_floor_sell_value
                 )
-                INSERT INTO "token_floor_sell_events"(
-                  "kind",
-                  "contract",
-                  "token_id",
-                  "order_id",
-                  "maker",
-                  "price",
-                  "source_id_int",
-                  "valid_between",
-                  "nonce",
-                  "previous_price",
-                  "tx_hash",
-                  "tx_timestamp"
+                INSERT INTO token_floor_sell_events(
+                  kind,
+                  contract,
+                  token_id,
+                  order_id,
+                  maker,
+                  price,
+                  source_id_int,
+                  valid_between,
+                  nonce,
+                  previous_price,
+                  tx_hash,
+                  tx_timestamp
                 )
                 SELECT
-                  $/kind/ AS "kind",
-                  "w"."contract",
-                  "w"."token_id",
-                  "w"."new_floor_sell_id" AS "order_id",
-                  "w"."new_floor_sell_maker" AS "maker",
-                  "w"."new_floor_sell_value" AS "price",
-                  "w"."new_floor_sell_source_id_int" AS "source_id_int",
-                  "w"."new_floor_sell_valid_between" AS "valid_between",
-                  "w"."new_floor_sell_nonce" AS "nonce",
-                  "w"."old_floor_sell_value" AS "previous_price",
-                  $/txHash/ AS "tx_hash",
-                  $/txTimestamp/ AS "tx_timestamp"
-                FROM "w"
+                  $/kind/ AS kind,
+                  w.contract,
+                  w.token_id,
+                  w.new_floor_sell_id AS order_id,
+                  w.new_floor_sell_maker AS maker,
+                  w.new_floor_sell_value AS price,
+                  w.new_floor_sell_source_id_int AS source_id_int,
+                  w.new_floor_sell_valid_between AS valid_between,
+                  w.new_floor_sell_nonce AS nonce,
+                  w.old_floor_sell_value AS previous_price,
+                  $/txHash/ AS tx_hash,
+                  $/txTimestamp/ AS tx_timestamp
+                FROM w
                 RETURNING
-                  "kind",
-                  "contract",
-                  "token_id" AS "tokenId",
-                  "price",
-                  "previous_price" AS "previousPrice",
-                  "tx_hash" AS "txHash",
-                  "tx_timestamp" AS "txTimestamp"
+                  kind,
+                  contract,
+                  token_id AS "tokenId",
+                  price,
+                  previous_price AS "previousPrice",
+                  tx_hash AS "txHash",
+                  tx_timestamp AS "txTimestamp"
               `,
               {
                 tokenSetId,
@@ -267,54 +271,54 @@ if (config.doBackgroundWork) {
               await collectionUpdatesFloorAsk.addToQueue([sellOrderResult]);
             }
           } else if (side === "buy") {
-            await topBidUpdateQueue.addToQueue(tokenSetId);
+            await topBidUpdateQueue.addToQueue(tokenSetId!);
           }
 
           if (order) {
             if (order.side === "sell") {
-              // Insert a corresponding order event.
+              // Insert a corresponding order event
               await idb.none(
                 `
-                INSERT INTO order_events (
-                  kind,
-                  status,
-                  contract,
-                  token_id,
-                  order_id,
-                  order_source_id,
-                  order_source_id_int,
-                  order_valid_between,
-                  order_quantity_remaining,
-                  maker,
-                  price,
-                  tx_hash,
-                  tx_timestamp
-                )
-                VALUES (
-                  $/kind/,
-                  (
-                    CASE
-                      WHEN $/fillabilityStatus/ = 'filled' THEN 'filled'
-                      WHEN $/fillabilityStatus/ = 'cancelled' THEN 'cancelled'
-                      WHEN $/fillabilityStatus/ = 'expired' THEN 'expired'
-                      WHEN $/fillabilityStatus/ = 'no-balance' THEN 'inactive'
-                      WHEN $/approvalStatus/ = 'no-approval' THEN 'inactive'
-                      ELSE 'active'
-                    END
-                  )::order_event_status_t,
-                  $/contract/,
-                  $/tokenId/,
-                  $/id/,
-                  $/sourceId/,
-                  $/sourceIdInt/,
-                  $/validBetween/,
-                  $/quantityRemaining/,
-                  $/maker/,
-                  $/value/,
-                  $/txHash/,
-                  $/txTimestamp/
-                ) 
-              `,
+                  INSERT INTO order_events (
+                    kind,
+                    status,
+                    contract,
+                    token_id,
+                    order_id,
+                    order_source_id,
+                    order_source_id_int,
+                    order_valid_between,
+                    order_quantity_remaining,
+                    maker,
+                    price,
+                    tx_hash,
+                    tx_timestamp
+                  )
+                  VALUES (
+                    $/kind/,
+                    (
+                      CASE
+                        WHEN $/fillabilityStatus/ = 'filled' THEN 'filled'
+                        WHEN $/fillabilityStatus/ = 'cancelled' THEN 'cancelled'
+                        WHEN $/fillabilityStatus/ = 'expired' THEN 'expired'
+                        WHEN $/fillabilityStatus/ = 'no-balance' THEN 'inactive'
+                        WHEN $/approvalStatus/ = 'no-approval' THEN 'inactive'
+                        ELSE 'active'
+                      END
+                    )::order_event_status_t,
+                    $/contract/,
+                    $/tokenId/,
+                    $/id/,
+                    $/sourceId/,
+                    $/sourceIdInt/,
+                    $/validBetween/,
+                    $/quantityRemaining/,
+                    $/maker/,
+                    $/value/,
+                    $/txHash/,
+                    $/txTimestamp/
+                  )
+                `,
                 {
                   fillabilityStatus: order.fillabilityStatus,
                   approvalStatus: order.approvalStatus,

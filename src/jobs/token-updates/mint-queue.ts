@@ -113,7 +113,9 @@ if (config.doBackgroundWork) {
           }
         } else {
           // Otherwise, we fetch the collection metadata from upstream.
-          const collection = await MetadataApi.getCollectionMetadata(contract, tokenId);
+          const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, {
+            allowFallback: true,
+          });
 
           const tokenIdRange = collection.tokenIdRange
             ? `numrange(${collection.tokenIdRange[0]}, ${collection.tokenIdRange[1]}, '[]')`
@@ -193,7 +195,7 @@ if (config.doBackgroundWork) {
               {
                 kind: "single-token",
                 data: {
-                  method: "opensea",
+                  method: config.metadataIndexingMethod,
                   contract,
                   tokenId,
                   collection: collection.id,

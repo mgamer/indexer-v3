@@ -1,7 +1,7 @@
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuilder } from "@reservoir0x/sdk/dist/seaport/builders/base";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as utils from "@/orderbook/orders/seaport/build/utils";
@@ -11,7 +11,7 @@ interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
 }
 
 export const build = async (options: BuildOrderOptions) => {
-  const collectionResult = await edb.oneOrNone(
+  const collectionResult = await redb.oneOrNone(
     `
       SELECT
         collections.token_set_id,
@@ -38,9 +38,6 @@ export const build = async (options: BuildOrderOptions) => {
     options.collection,
     "buy"
   );
-  if (!buildInfo) {
-    throw new Error("Could not generate build info");
-  }
 
   if (!options.excludeFlaggedTokens) {
     // Use contract-wide/token-range order
@@ -56,7 +53,7 @@ export const build = async (options: BuildOrderOptions) => {
 
     // Fetch all non-flagged tokens from the collection
     // TODO: Include `NOT is_flagged` filter in the query
-    const tokens = await edb.manyOrNone(
+    const tokens = await redb.manyOrNone(
       `
         SELECT
           tokens.token_id

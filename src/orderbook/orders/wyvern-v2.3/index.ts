@@ -114,14 +114,6 @@ export const save = async (
         });
       }
 
-      // Check: order is not private
-      if (order.params.taker !== AddressZero) {
-        return results.push({
-          id,
-          status: "unsupported-taker",
-        });
-      }
-
       // Check: order is valid
       try {
         order.checkValidity();

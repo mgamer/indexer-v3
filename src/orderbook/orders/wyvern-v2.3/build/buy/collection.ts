@@ -1,7 +1,7 @@
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuilder } from "@reservoir0x/sdk/dist/wyvern-v2.3/builders/base";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import * as utils from "@/orderbook/orders/wyvern-v2.3/build/utils";
@@ -12,7 +12,7 @@ interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
 
 export const build = async (options: BuildOrderOptions) => {
   try {
-    const collectionResult = await edb.oneOrNone(
+    const collectionResult = await redb.oneOrNone(
       `
         SELECT "token_set_id", "token_count" FROM "collections"
         WHERE "id" = $/collection/
@@ -72,7 +72,7 @@ export const build = async (options: BuildOrderOptions) => {
 
       // Fetch all non-flagged tokens from the collection
       // TODO: Include `NOT is_flagged` filter in the query
-      const tokens = await edb.manyOrNone(
+      const tokens = await redb.manyOrNone(
         `
           SELECT
             tokens.token_id

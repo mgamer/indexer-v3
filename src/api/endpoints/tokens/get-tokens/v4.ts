@@ -5,7 +5,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 import _ from "lodash";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
   base64Regex,
@@ -70,9 +70,15 @@ export const getTokensV4Options: RouteOptions = {
       source: Joi.string().description("Name of the order source. Example `OpenSea`"),
       native: Joi.boolean().description("If true, results will filter only Reservoir orders."),
       sortBy: Joi.string()
-        .valid("floorAskPrice", "topBidValue", "tokenId")
-        .default("floorAskPrice")
-        .description("Order the items are returned in the response."),
+        .allow("floorAskPrice", "topBidValue", "tokenId", "rarity")
+        .when("contract", {
+          is: Joi.exist(),
+          then: Joi.invalid("floorAskPrice", "topBidValue", "rarity"),
+        })
+        .default((parent) => (parent && parent.contract ? "tokenId" : "floorAskPrice"))
+        .description(
+          "Order the items are returned in the response, by default sorted by `floorAskPrice`. Not supported when filtering by `contract`. When filtering by `contract` the results are sorted by `tokenId` by default."
+        ),
       limit: Joi.number()
         .integer()
         .min(1)
@@ -111,6 +117,8 @@ export const getTokensV4Options: RouteOptions = {
           source: Joi.string().allow(null, ""),
           topBidValue: Joi.number().unsafe().allow(null),
           floorAskPrice: Joi.number().unsafe().allow(null),
+          rarity: Joi.number().unsafe().allow(null),
+          rarityRank: Joi.number().unsafe().allow(null),
           owner: Joi.string().allow(null, ""),
         })
       ),
@@ -138,6 +146,8 @@ export const getTokensV4Options: RouteOptions = {
           "c"."slug",
           "t"."floor_sell_value",
           "t"."top_buy_value",
+          "t"."rarity_score",
+          "t"."rarity_rank",
           (
             SELECT owner
             FROM "nft_balances" "nb"
@@ -230,7 +240,7 @@ export const getTokensV4Options: RouteOptions = {
       if (query.continuation && !query.tokens) {
         const contArr = splitContinuation(
           query.continuation,
-          /^((\d+|null|0x[a-fA-F0-9]+)_\d+|\d+)$/
+          /^((([0-9]+\.?[0-9]*|\.[0-9]+)|null|0x[a-fA-F0-9]+)_\d+|\d+)$/
         );
 
         if (query.collection || query.attributes) {
@@ -245,7 +255,17 @@ export const getTokensV4Options: RouteOptions = {
 
             throw new Error("Invalid continuation string used");
           }
+
           switch (query.sortBy) {
+            case "rarity": {
+              conditions.push(
+                `("t"."rarity_score", "t"."token_id") < ($/contRarity/, $/contTokenId/)`
+              );
+              (query as any).contRarity = contArr[0];
+              (query as any).contTokenId = contArr[1];
+              break;
+            }
+
             case "tokenId": {
               conditions.push(
                 `("t"."contract", "t"."token_id") > ($/contContract/, $/contTokenId/)`
@@ -298,9 +318,14 @@ export const getTokensV4Options: RouteOptions = {
       }
 
       // Sorting
-      // Only allow sorting on floorSell and topBid when we filter by collection or attributes
+      // Only allow sorting on floorSell / topBid / tokenId / rarity when we filter by collection or attributes
       if (query.collection || query.attributes) {
         switch (query.sortBy) {
+          case "rarity": {
+            baseQuery += ` ORDER BY "t"."rarity_score" DESC NULLS LAST, "t"."token_id" DESC`;
+            break;
+          }
+
           case "tokenId": {
             baseQuery += ` ORDER BY "t"."contract", "t"."token_id"`;
             break;
@@ -323,10 +348,11 @@ export const getTokensV4Options: RouteOptions = {
 
       baseQuery += ` LIMIT $/limit/`;
 
-      const rawResult = await edb.manyOrNone(baseQuery, query);
+      const rawResult = await redb.manyOrNone(baseQuery, query);
 
       /** Depending on how we sorted, we use that sorting key to determine the next page of results
           Possible formats:
+            rarity_tokenid
             topBidValue_tokenid
             floorAskPrice_tokenid
             tokenid
@@ -340,15 +366,22 @@ export const getTokensV4Options: RouteOptions = {
         // when we have collection/attributes
         if (query.collection || query.attributes) {
           switch (query.sortBy) {
+            case "rarity":
+              continuation = rawResult[rawResult.length - 1].rarity_score || "null";
+              break;
+
             case "tokenId":
               continuation = fromBuffer(rawResult[rawResult.length - 1].contract);
               break;
+
             case "topBidValue":
               continuation = rawResult[rawResult.length - 1].top_buy_value || "null";
               break;
+
             case "floorAskPrice":
               continuation = rawResult[rawResult.length - 1].floor_sell_value || "null";
               break;
+
             default:
               break;
           }
@@ -382,6 +415,8 @@ export const getTokensV4Options: RouteOptions = {
           source: source?.name,
           floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
           topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+          rarity: r.rarity_score,
+          rarityRank: r.rarity_rank,
           owner: r.owner ? fromBuffer(r.owner) : null,
         };
       });

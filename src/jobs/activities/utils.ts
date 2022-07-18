@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { idb } from "@/common/db";
+import { redb } from "@/common/db";
 import { Tokens } from "@/models/tokens";
 import { Attributes } from "@/models/attributes";
 import { Collections } from "@/models/collections";
@@ -15,7 +15,7 @@ export async function getBidInfoByOrderId(orderId: string) {
   let tokenId;
   let collectionId;
 
-  const tokenSetByOrderIdResult = await idb.oneOrNone(
+  const tokenSetByOrderIdResult = await redb.oneOrNone(
     `
                 SELECT
                   ts.id,
@@ -36,7 +36,7 @@ export async function getBidInfoByOrderId(orderId: string) {
 
     [, contract, tokenId] = tokenSetByOrderIdResult.id.split(":");
 
-    const token = await Tokens.getByContractAndTokenId(contract, tokenId);
+    const token = await Tokens.getByContractAndTokenId(contract, tokenId, true);
     collectionId = token?.collectionId;
   } else if (tokenSetByOrderIdResult.id.startsWith("list:")) {
     const attribute = await Attributes.getById(tokenSetByOrderIdResult.attribute_id);

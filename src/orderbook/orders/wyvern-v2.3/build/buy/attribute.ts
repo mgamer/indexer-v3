@@ -1,7 +1,7 @@
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuilder } from "@reservoir0x/sdk/dist/wyvern-v2.3/builders/base";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -19,7 +19,7 @@ export const build = async (options: BuildOrderOptions) => {
       return undefined;
     }
 
-    const attributeResult = await edb.oneOrNone(
+    const attributeResult = await redb.oneOrNone(
       `
         SELECT
           "c"."contract",
@@ -65,7 +65,7 @@ export const build = async (options: BuildOrderOptions) => {
 
     // Fetch all tokens matching the attributes
     // TODO: Include `NOT is_flagged` filter in the query
-    const tokens = await edb.manyOrNone(
+    const tokens = await redb.manyOrNone(
       `
         SELECT
           "ta"."token_id"
