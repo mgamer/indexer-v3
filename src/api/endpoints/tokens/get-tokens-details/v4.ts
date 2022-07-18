@@ -102,6 +102,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
             name: Joi.string().allow(null, ""),
             description: Joi.string().allow(null, ""),
             image: Joi.string().allow(null, ""),
+            media: Joi.string().allow(null, ""),
             kind: Joi.string().allow(null, ""),
             collection: Joi.object({
               id: Joi.string().allow(null),
@@ -172,6 +173,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
           "t"."name",
           "t"."description",
           "t"."image",
+          "t"."media",
           "t"."collection_id",
           "c"."name" as "collection_name",
           "con"."kind",
@@ -427,6 +429,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
             name: r.name,
             description: r.description,
             image: r.image,
+            media: r.media,
             kind: r.kind,
             collection: {
               id: r.collection_id,
