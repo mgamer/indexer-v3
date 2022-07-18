@@ -13,7 +13,7 @@ const version = "v2";
 export const getAttributesExploreV2Options: RouteOptions = {
   description: "Explore attributes",
   notes: "Get detailed aggregate about attributes in a collection, attribute floors",
-  tags: ["api", "Attributes"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 15,

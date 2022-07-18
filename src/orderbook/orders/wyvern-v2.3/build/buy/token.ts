@@ -1,7 +1,7 @@
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuilder } from "@reservoir0x/sdk/dist/wyvern-v2.3/builders/base";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -15,7 +15,7 @@ interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
 export const build = async (options: BuildOrderOptions) => {
   try {
     // TODO: Include `NOT is_flagged` filter in the query
-    const collectionResult = await edb.oneOrNone(
+    const collectionResult = await redb.oneOrNone(
       `
         SELECT "t"."collection_id" FROM "tokens" "t"
         WHERE "t"."contract" = $/contract/

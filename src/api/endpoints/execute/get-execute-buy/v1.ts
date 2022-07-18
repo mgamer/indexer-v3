@@ -9,7 +9,7 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { baseProvider } from "@/common/provider";
+import { slowProvider } from "@/common/provider";
 import { bn, formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
@@ -217,6 +217,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
                 AND orders.side = 'sell'
                 AND orders.fillability_status = 'fillable'
                 AND orders.approval_status = 'approved'
+                AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
               ORDER BY orders.value
               LIMIT 1
             `,
@@ -242,7 +243,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
           }
 
           addListingDetail(kind, token_kind, contract, tokenId, 1, raw_data);
-          confirmationQuery = `?id=${id}&checkRecentEvents=true`;
+          confirmationQuery = `?ids=${id}`;
         } else {
           // Only ERC1155 tokens support a quantity greater than 1
           const kindResult = await redb.one(
@@ -274,6 +275,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
                 WHERE orders.token_set_id = $/tokenSetId/
                   AND orders.fillability_status = 'fillable'
                   AND orders.approval_status = 'approved'
+                  AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
               ) x WHERE x.quantity < $/quantity/
             `,
             {
@@ -311,7 +313,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
             }
 
             addListingDetail(kind, "erc1155", contract, tokenId, quantityFilled, raw_data);
-            confirmationQuery = `?id=${id}&checkRecentEvents=true`;
+            confirmationQuery = `?ids=${id}`;
           }
 
           // No available orders to fill the requested quantity
@@ -327,7 +329,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
         return { quote, path };
       }
 
-      const router = new Sdk.Router.Router(config.chainId, baseProvider);
+      const router = new Sdk.Router.Router(config.chainId, slowProvider);
       const tx = await router.fillListingsTx(listingDetails, query.taker, {
         referrer: query.referrer,
         referrerFeeBps: query.referrerFeeBps,
@@ -335,7 +337,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
       });
 
       // Check that the taker has enough funds to fill all requested tokens
-      const balance = await baseProvider.getBalance(query.taker);
+      const balance = await slowProvider.getBalance(query.taker);
       if (!query.skipBalanceCheck && bn(balance).lt(tx.value!)) {
         throw Boom.badData("ETH balance too low to proceed with transaction");
       }

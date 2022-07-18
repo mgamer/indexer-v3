@@ -37,11 +37,14 @@ export const generateSchemaHash = (schema?: object) =>
 export type DbOrder = {
   id: string;
   kind: OrderKind;
-  side: "buy" | "sell";
+  side: "buy" | "sell" | "bundle";
   fillability_status: string;
   approval_status: string;
-  token_set_id: string;
-  token_set_schema_hash: Buffer;
+  token_set_id?: string | null;
+  token_set_schema_hash?: Buffer | null;
+  offer_bundle_id?: string | null;
+  consideration_bundle_id?: string | null;
+  bundle_kind?: "bundle-ask" | null;
   maker: Buffer;
   taker: Buffer;
   price: string;
@@ -52,11 +55,11 @@ export type DbOrder = {
   source_id: Buffer | null;
   source_id_int?: number | null;
   is_reservoir?: boolean | null;
-  contract: Buffer;
+  contract?: Buffer | null;
   conduit: Buffer | null;
   fee_bps: number;
-  fee_breakdown: object | null;
-  dynamic: boolean | null;
+  fee_breakdown?: object | null;
+  dynamic?: boolean | null;
   raw_data: object;
   expiration: string;
 };

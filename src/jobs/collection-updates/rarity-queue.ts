@@ -9,6 +9,7 @@ import _ from "lodash";
 import { idb } from "@/common/db";
 import { Collections } from "@/models/collections";
 import { toBuffer } from "@/common/utils";
+import { AttributeKeys } from "@/models/attribute-keys";
 
 const QUEUE_NAME = "rarity-queue";
 
@@ -42,6 +43,12 @@ if (config.doBackgroundWork) {
           QUEUE_NAME,
           `Collection ${collectionId} has too many tokens (${collection.tokenCount})`
         );
+        return;
+      }
+
+      const keysCount = await AttributeKeys.getKeysCount(collectionId);
+      if (keysCount > 100) {
+        logger.error(QUEUE_NAME, `Collection ${collectionId} has too many keys (${keysCount})`);
         return;
       }
 

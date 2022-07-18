@@ -19,25 +19,37 @@ export class Rarity {
       }[];
     }[] = [];
 
+    // Filter any keys with more than 5000 distinct values
+    const valuesCount = await Rarity.getValuesCount(collectionId);
+    const excludedKeys: string[] = [];
+    _.map(valuesCount, (value) => (value.count > 5000 ? excludedKeys.push(value.key) : null));
+
     let lastTokenId;
 
     // Get all tokens and their attributes for the given collection
     while (fetchMoreTokens) {
       let continuation = "";
+      let keysFilter = "";
+
       if (lastTokenId) {
         continuation = `AND token_id > $/tokenId/`;
         values = _.merge(values, { tokenId: lastTokenId });
       }
 
+      if (_.size(excludedKeys)) {
+        keysFilter = `AND key NOT IN ('${_.join(excludedKeys, "','")}')`;
+      }
+
       const query = `
-      SELECT token_id AS "tokenId",
-             array_agg(json_build_object('key', key, 'value', value)) AS "attributes"
-      FROM token_attributes
-      WHERE collection_id = $/collectionId/
-      ${continuation}
-      GROUP BY contract, token_id
-      ORDER BY contract, token_id ASC
-      LIMIT ${limit}
+        SELECT token_id AS "tokenId",
+               array_agg(json_build_object('key', key, 'value', value)) AS "attributes"
+        FROM token_attributes
+        WHERE collection_id = $/collectionId/
+        ${keysFilter}
+        ${continuation}
+        GROUP BY contract, token_id
+        ORDER BY token_id ASC
+        LIMIT ${limit}
     `;
 
       const result = await redb.manyOrNone(query, values);
@@ -88,5 +100,18 @@ export class Rarity {
     // Get the score for the tokens and return
     const { nftsWithRarityAndRank } = getAllNftsRarity(nfts);
     return nftsWithRarityAndRank;
+  }
+
+  public static async getValuesCount(
+    collectionId: string
+  ): Promise<{ key: string; count: number }[]> {
+    const query = `
+      SELECT key, count(DISTINCT value) AS "count"
+      FROM token_attributes
+      WHERE collection_id = $/collectionId/
+      GROUP BY key
+    `;
+
+    return await redb.manyOrNone(query, { collectionId });
   }
 }

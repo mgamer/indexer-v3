@@ -70,9 +70,15 @@ export const getTokensV4Options: RouteOptions = {
       source: Joi.string().description("Name of the order source. Example `OpenSea`"),
       native: Joi.boolean().description("If true, results will filter only Reservoir orders."),
       sortBy: Joi.string()
-        .valid("floorAskPrice", "topBidValue", "tokenId", "rarity")
-        .default("floorAskPrice")
-        .description("Order the items are returned in the response."),
+        .allow("floorAskPrice", "topBidValue", "tokenId", "rarity")
+        .when("contract", {
+          is: Joi.exist(),
+          then: Joi.invalid("floorAskPrice", "topBidValue", "rarity"),
+        })
+        .default((parent) => (parent && parent.contract ? "tokenId" : "floorAskPrice"))
+        .description(
+          "Order the items are returned in the response, by default sorted by `floorAskPrice`. Not supported when filtering by `contract`. When filtering by `contract` the results are sorted by `tokenId` by default."
+        ),
       limit: Joi.number()
         .integer()
         .min(1)

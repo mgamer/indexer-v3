@@ -1,10 +1,9 @@
 import { BigNumberish } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
 import pLimit from "p-limit";
 
-import { idb, pgp } from "@/common/db";
+import { idb, pgp, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -68,7 +67,7 @@ export const save = async (
       // Check: order has unique nonce
       if (kind === "erc1155") {
         // For erc1155, enforce uniqueness of maker/nonce.
-        const nonceExists = await idb.oneOrNone(
+        const nonceExists = await redb.oneOrNone(
           `
             SELECT 1 FROM orders
             WHERE orders.kind = 'opendao-erc1155'
@@ -89,7 +88,7 @@ export const save = async (
         }
       } else {
         // For erc721, enforce uniqueness of maker/nonce/contract.
-        const nonceExists = await idb.oneOrNone(
+        const nonceExists = await redb.oneOrNone(
           `
             SELECT 1 FROM orders
             WHERE orders.kind = 'opendao-erc721'
@@ -142,14 +141,6 @@ export const save = async (
         return results.push({
           id,
           status: "unsupported-payment-token",
-        });
-      }
-
-      // Check: order is not private
-      if (order.params.taker !== AddressZero) {
-        return results.push({
-          id,
-          status: "unsupported-taker",
         });
       }
 
@@ -348,7 +339,7 @@ export const save = async (
         token_set_id: tokenSetId,
         token_set_schema_hash: toBuffer(schemaHash),
         maker: toBuffer(order.params.maker),
-        taker: toBuffer(AddressZero),
+        taker: toBuffer(order.params.taker),
         price: price.toString(),
         value: value.toString(),
         quantity_remaining: order.params.nftAmount,

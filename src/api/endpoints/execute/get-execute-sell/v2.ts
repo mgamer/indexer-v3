@@ -9,7 +9,7 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { baseProvider } from "@/common/provider";
+import { slowProvider } from "@/common/provider";
 import { bn, formatEth, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
@@ -104,6 +104,7 @@ export const getExecuteSellV2Options: RouteOptions = {
             AND orders.side = 'buy'
             AND orders.fillability_status = 'fillable'
             AND orders.approval_status = 'approved'
+            AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
           ORDER BY orders.value DESC
           LIMIT 1
         `,
@@ -244,7 +245,7 @@ export const getExecuteSellV2Options: RouteOptions = {
         throw Boom.internal("Could not generate transaction(s)");
       }
 
-      const router = new Sdk.Router.Router(config.chainId, baseProvider);
+      const router = new Sdk.Router.Router(config.chainId, slowProvider);
       const tx = await router.fillBidTx(bidDetails, query.taker, { referrer: query.referrer });
 
       // Set up generic filling steps
@@ -278,7 +279,7 @@ export const getExecuteSellV2Options: RouteOptions = {
             ...steps[1],
             status: "incomplete",
             data: {
-              endpoint: `/orders/executed/v1?id=${bestOrderResult.id}`,
+              endpoint: `/orders/executed/v1?ids=${bestOrderResult.id}`,
               method: "GET",
             },
           },

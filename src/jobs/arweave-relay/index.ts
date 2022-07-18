@@ -4,8 +4,8 @@ import cron from "node-cron";
 import { logger } from "@/common/logger";
 import { arweaveGateway } from "@/common/provider";
 import { redlock, redis } from "@/common/redis";
-import { getNetworkName } from "@/common/utils";
 import { config } from "@/config/index";
+import { getNetworkName } from "@/config/network";
 
 const PENDING_DATA_KEY = "pending-arweave-data";
 
@@ -31,7 +31,11 @@ export const addPendingOrdersWyvernV23 = async (
 };
 
 export const addPendingOrdersSeaport = async (
-  data: { order: Sdk.Seaport.Order; schemaHash?: string; source?: string }[]
+  data: {
+    order: Sdk.Seaport.Order | Sdk.Seaport.BundleOrder;
+    schemaHash?: string;
+    source?: string;
+  }[]
 ) => {
   if (config.arweaveRelayerKey && data.length) {
     await redis.rpush(

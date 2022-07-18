@@ -39,7 +39,7 @@ export const postInvalidateOrderOptions: RouteOptions = {
         { id: payload.id }
       );
 
-      // Update any wrong caches.
+      // Recheck the order
       await orderUpdatesById.addToQueue([
         {
           context: `revalidation-${Date.now()}-${payload.id}`,

@@ -99,9 +99,8 @@ export const getTransfersV2Options: RouteOptions = {
     try {
       // Associating sales to transfers is done by searching for transfer
       // and sale events that occurred close to each other. In most cases
-      // we will first have the transfer followed by the sale but seaport
-      // is an exception to this where we first have the sale followed by
-      // the approval clearing and then the transfer (hence the -2 below).
+      // we will first have the transfer followed by the sale but we have
+      // some exceptions.
       let baseQuery = `
         SELECT
           nft_transfer_events.address,
@@ -124,6 +123,7 @@ export const getTransfersV2Options: RouteOptions = {
             WHERE fill_events_2.tx_hash = nft_transfer_events.tx_hash
               AND fill_events_2.log_index = nft_transfer_events.log_index + (
                 CASE
+                  WHEN fill_events_2.order_kind = 'x2y2' THEN 2
                   WHEN fill_events_2.order_kind = 'seaport' THEN -2
                   ELSE 1
                 END
@@ -190,16 +190,16 @@ export const getTransfersV2Options: RouteOptions = {
       }
 
       if (query.continuation) {
-        const [block, logIndex, batchIndex] = splitContinuation(
+        const [timestamp, logIndex, batchIndex] = splitContinuation(
           query.continuation,
           /^(\d+)_(\d+)_(\d+)$/
         );
-        (query as any).block = block;
+        (query as any).timestamp = timestamp;
         (query as any).logIndex = logIndex;
         (query as any).batchIndex = batchIndex;
 
         conditions.push(
-          `(nft_transfer_events.block, nft_transfer_events.log_index, nft_transfer_events.batch_index) < ($/block/, $/logIndex/, $/batchIndex/)`
+          `(nft_transfer_events.timestamp, nft_transfer_events.log_index, nft_transfer_events.batch_index) < ($/timestamp/, $/logIndex/, $/batchIndex/)`
         );
       }
 
@@ -208,7 +208,7 @@ export const getTransfersV2Options: RouteOptions = {
       }
 
       // Sorting
-      baseQuery += ` ORDER BY nft_transfer_events.block DESC`;
+      baseQuery += ` ORDER BY nft_transfer_events.timestamp DESC`;
 
       // Pagination
       baseQuery += ` LIMIT $/limit/`;
@@ -218,7 +218,7 @@ export const getTransfersV2Options: RouteOptions = {
       let continuation = null;
       if (rawResult.length === query.limit) {
         continuation = buildContinuation(
-          rawResult[rawResult.length - 1].block +
+          rawResult[rawResult.length - 1].timestamp +
             "_" +
             rawResult[rawResult.length - 1].log_index +
             "_" +

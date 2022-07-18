@@ -1,7 +1,7 @@
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuildParams } from "@reservoir0x/sdk/dist/wyvern-v2.3/builders/base";
 
-import { edb } from "@/common/db";
+import { redb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 
@@ -47,7 +47,7 @@ export const getBuildInfo = async (
   };
 
   if (options.automatedRoyalties) {
-    const royaltiesResult = await edb.oneOrNone(
+    const royaltiesResult = await redb.oneOrNone(
       `
         SELECT "c"."royalties" FROM "collections" "c"
         WHERE "c"."id" = $/collection/
@@ -74,7 +74,7 @@ export const getBuildInfo = async (
     }
   }
 
-  const kindResult = await edb.oneOrNone(
+  const kindResult = await redb.oneOrNone(
     `
       SELECT "c"."kind" FROM "tokens" "t"
       JOIN "contracts" "c"

@@ -9,7 +9,7 @@ import { TxData } from "@reservoir0x/sdk/dist/utils";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import { baseProvider } from "@/common/provider";
+import { slowProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 
@@ -192,10 +192,10 @@ export const getExecuteBidV2Options: RouteOptions = {
 
       // Check the maker's Weth/Eth balance.
       let wrapEthTx: TxData | undefined;
-      const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
+      const weth = new Sdk.Common.Helpers.Weth(slowProvider, config.chainId);
       const wethBalance = await weth.getBalance(query.maker);
       if (bn(wethBalance).lt(query.weiPrice)) {
-        const ethBalance = await baseProvider.getBalance(query.maker);
+        const ethBalance = await slowProvider.getBalance(query.maker);
         if (bn(wethBalance).add(ethBalance).lt(query.weiPrice)) {
           // We cannot do anything if the maker doesn't have sufficient balance.
           throw Boom.badData("Maker does not have sufficient balance");

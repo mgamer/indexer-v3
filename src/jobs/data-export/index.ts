@@ -13,24 +13,24 @@ const getTasks = async () => {
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
-  getTasks()
-    .then(async (tasks) => {
-      for (const task of tasks) {
-        cron.schedule(
-          "*/10 * * * *",
-          async () =>
-            await redlock
-              .acquire([`data-export-${task.source}-cron-lock`], (10 * 60 - 5) * 1000)
-              .then(async () => {
+  cron.schedule(
+    "*/10 * * * *",
+    async () =>
+      await redlock
+        .acquire([`data-export-cron-lock`], (10 * 60 - 5) * 1000)
+        .then(async () => {
+          getTasks()
+            .then(async (tasks) => {
+              for (const task of tasks) {
                 await exportData.addToQueue(task.source);
-              })
-              .catch(() => {
-                // Skip on any errors
-              })
-        );
-      }
-    })
-    .catch(() => {
-      // Skip on any errors
-    });
+              }
+            })
+            .catch(() => {
+              // Skip on any errors
+            });
+        })
+        .catch(() => {
+          // Skip on any errors
+        })
+  );
 }
