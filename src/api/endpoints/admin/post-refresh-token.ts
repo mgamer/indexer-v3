@@ -70,7 +70,6 @@ export const postRefreshTokenOptions: RouteOptions = {
                 tokenId,
                 collection: collection.id,
               },
-              force: true,
             },
           ],
           true
