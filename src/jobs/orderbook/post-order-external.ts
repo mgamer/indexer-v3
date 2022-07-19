@@ -9,6 +9,8 @@ import { joinSignature } from "@ethersproject/bytes";
 
 const QUEUE_NAME = "orderbook-post-order-external-queue";
 
+const MAX_RETRIES = 5;
+
 // Open Sea default rate limit - 2 requests per second for post apis
 const OPENSEA_RATE_LIMIT_REQUEST_COUNT = 2;
 const OPENSEA_RATE_LIMIT_INTERVAL = 1000;
@@ -20,11 +22,6 @@ const LOOKSRARE_RATE_LIMIT_INTERVAL = 1000 * 60;
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
-    attempts: 5,
-    backoff: {
-      type: "fixed",
-      delay: 5000,
-    },
     removeOnComplete: 1000,
     removeOnFail: 1000,
     timeout: 60000,
@@ -109,7 +106,7 @@ if (config.doBackgroundWork) {
       const retry = job.data.retry + 1;
       const delay = job.data.retryJobDelay;
 
-      if (retry <= 5) {
+      if (retry <= MAX_RETRIES) {
         let orderbookApiKey = null;
 
         if (job.data.orderbookApiKeyEncrypted) {
@@ -125,10 +122,7 @@ if (config.doBackgroundWork) {
           true
         );
       } else {
-        logger.error(
-          QUEUE_NAME,
-          `Max Retries Reached. orderbook: ${job.data.orderbook}, orderbookApiKey: ${job.data.orderbookApiKey}`
-        );
+        logger.error(QUEUE_NAME, `Max Retries Reached. orderbook: ${job.data.orderbook}`);
       }
     }
   });
