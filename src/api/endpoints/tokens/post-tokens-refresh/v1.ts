@@ -89,6 +89,7 @@ export const postTokensRefreshV1Options: RouteOptions = {
                 tokenId,
                 collection: collection.id,
               },
+              force: config.chainId !== 1,
             },
           ],
           true
