@@ -125,7 +125,6 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
                 method: config.metadataIndexingMethod,
                 collection: collection.id,
               },
-              force: config.chainId !== 1,
             },
           ],
           true

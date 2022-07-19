@@ -93,7 +93,6 @@ export const postRefreshCollectionOptions: RouteOptions = {
               method: config.metadataIndexingMethod,
               collection: collection.id,
             },
-            force: true,
           },
         ],
         true
