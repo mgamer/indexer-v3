@@ -1,6 +1,7 @@
 import { AddressZero } from "@ethersproject/constants";
 import pLimit from "p-limit";
 
+import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
 import { getBlocks, saveBlock } from "@/models/blocks";
@@ -20,6 +21,8 @@ export const fetchBlock = async (blockNumber: number) =>
         await Promise.all(
           block.transactions.map((tx) =>
             limit(async () => {
+              logger.info("debug", JSON.stringify(tx));
+
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const rawTx = tx.raw as any;
 
