@@ -23,10 +23,10 @@ import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
 import * as blocksModel from "@/models/blocks";
-import * as transactionsModel from "@/models/transactions";
 import { Sources } from "@/models/sources";
 import { OrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
+import * as syncEventsUtils from "@/events-sync/utils";
 
 // TODO: Split into multiple files (by exchange)
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
@@ -579,7 +579,7 @@ export const syncEvents = async (
 
               // Handle fill source
               let fillSource: string | undefined;
-              const tx = await transactionsModel.getTransaction(baseEventParams.txHash);
+              const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
               if (routerToFillSource[tx.to]) {
                 fillSource = routerToFillSource[tx.to];
                 taker = tx.from;
@@ -703,7 +703,7 @@ export const syncEvents = async (
 
               // Handle fill source
               let fillSource: string | undefined;
-              const tx = await transactionsModel.getTransaction(baseEventParams.txHash);
+              const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
               if (routerToFillSource[tx.to]) {
                 fillSource = routerToFillSource[tx.to];
                 taker = tx.from;
@@ -842,7 +842,7 @@ export const syncEvents = async (
 
               // Handle fill source
               let fillSource: string | undefined;
-              const tx = await transactionsModel.getTransaction(baseEventParams.txHash);
+              const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
               if (routerToFillSource[tx.to]) {
                 fillSource = routerToFillSource[tx.to];
                 taker = tx.from;
@@ -934,7 +934,7 @@ export const syncEvents = async (
 
               // Handle fill source
               let fillSource: string | undefined;
-              const tx = await transactionsModel.getTransaction(baseEventParams.txHash);
+              const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
               if (routerToFillSource[tx.to]) {
                 fillSource = routerToFillSource[tx.to];
                 taker = tx.from;
@@ -1096,7 +1096,7 @@ export const syncEvents = async (
 
               // Handle fill source
               let fillSource: string | undefined;
-              const tx = await transactionsModel.getTransaction(baseEventParams.txHash);
+              const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
               if (routerToFillSource[tx.to]) {
                 fillSource = routerToFillSource[tx.to];
                 taker = tx.from;
@@ -1296,7 +1296,7 @@ export const syncEvents = async (
 
               // Handle fill source
               let fillSource: string | undefined;
-              const tx = await transactionsModel.getTransaction(baseEventParams.txHash);
+              const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
               if (routerToFillSource[tx.to]) {
                 fillSource = routerToFillSource[tx.to];
                 taker = tx.from;
@@ -1434,7 +1434,7 @@ export const syncEvents = async (
 
               // Handle fill source
               let fillSource: string | undefined;
-              const tx = await transactionsModel.getTransaction(baseEventParams.txHash);
+              const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
               if (routerToFillSource[tx.to]) {
                 fillSource = routerToFillSource[tx.to];
                 taker = tx.from;
@@ -1602,7 +1602,7 @@ export const syncEvents = async (
 
                 // Handle fill source
                 let fillSource: string | undefined;
-                const tx = await transactionsModel.getTransaction(baseEventParams.txHash);
+                const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
                 if (routerToFillSource[tx.to]) {
                   fillSource = routerToFillSource[tx.to];
                   taker = tx.from;
