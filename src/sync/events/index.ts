@@ -1661,8 +1661,6 @@ export const syncEvents = async (
       }
 
       if (!backfill) {
-        logger.info("sync-events", `Assigning orders source to fill events`);
-
         // Assign source based on order for each fill.
         await Promise.all([
           assignOrderSourceToFillEvents(fillEvents),
@@ -1842,6 +1840,11 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
 
         orders.push(...ordersChunk);
       }
+
+      logger.info(
+        "sync-events",
+        `orderIds.length: ${orderIds.length}, orders.length: ${orders.length}`
+      );
 
       if (orders.length) {
         const orderSourceIdByOrderId = new Map<string, number>();
