@@ -39,6 +39,9 @@ export const getExecuteSellV2Options: RouteOptions = {
         .description(
           "Address of wallet filling the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
+      source: Joi.string()
+        .lowercase()
+        .description("Filling source used for attribution. Example: `reservoir.market`"),
       referrer: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
@@ -246,7 +249,7 @@ export const getExecuteSellV2Options: RouteOptions = {
       }
 
       const router = new Sdk.Router.Router(config.chainId, slowProvider);
-      const tx = await router.fillBidTx(bidDetails, query.taker, { referrer: query.referrer });
+      const tx = await router.fillBidTx(bidDetails, query.taker, { referrer: query.source });
 
       // Set up generic filling steps
       const steps = [

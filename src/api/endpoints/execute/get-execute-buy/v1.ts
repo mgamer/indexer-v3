@@ -40,6 +40,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .required(),
       onlyQuote: Joi.boolean().default(false),
+      source: Joi.string().lowercase(),
       referrer: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
@@ -331,8 +332,11 @@ export const getExecuteBuyV1Options: RouteOptions = {
 
       const router = new Sdk.Router.Router(config.chainId, slowProvider);
       const tx = await router.fillListingsTx(listingDetails, query.taker, {
-        referrer: query.referrer,
-        referrerFeeBps: query.referrerFeeBps,
+        referrer: query.source,
+        fee: {
+          recipient: query.referrer,
+          bps: query.referrerFeeBps,
+        },
         partial: query.partial,
       });
 

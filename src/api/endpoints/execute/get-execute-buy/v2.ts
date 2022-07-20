@@ -54,6 +54,9 @@ export const getExecuteBuyV2Options: RouteOptions = {
           "Address of wallet filling the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
       onlyQuote: Joi.boolean().default(false).description("If true, only quote will be returned."),
+      source: Joi.string()
+        .lowercase()
+        .description("Filling source used for attribution. Example: `reservoir.market`"),
       referrer: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
@@ -359,8 +362,11 @@ export const getExecuteBuyV2Options: RouteOptions = {
 
       const router = new Sdk.Router.Router(config.chainId, slowProvider);
       const tx = await router.fillListingsTx(listingDetails, query.taker, {
-        referrer: query.referrer,
-        referrerFeeBps: query.referrerFeeBps,
+        referrer: query.source,
+        fee: {
+          recipient: query.referrer,
+          bps: query.referrerFeeBps,
+        },
         partial: query.partial,
       });
 
