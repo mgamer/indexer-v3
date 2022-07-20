@@ -1,3 +1,12 @@
+## [5.118.3](https://github.com/reservoirprotocol/indexer/compare/v5.118.2...v5.118.3) (2022-07-20)
+
+
+### Bug Fixes
+
+* debug logs ([d678d31](https://github.com/reservoirprotocol/indexer/commit/d678d3156cf9ae2139db994b1be545039206ecb7))
+
+
+
 ## [5.118.2](https://github.com/reservoirprotocol/indexer/compare/v5.118.1...v5.118.2) (2022-07-20)
 
 
