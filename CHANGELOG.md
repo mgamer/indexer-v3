@@ -1,3 +1,12 @@
+## [5.118.2](https://github.com/reservoirprotocol/indexer/compare/v5.118.1...v5.118.2) (2022-07-20)
+
+
+### Bug Fixes
+
+* fallback to on-chain data retrieval when no transaction is available ([e26f45d](https://github.com/reservoirprotocol/indexer/commit/e26f45d1380d2568a0a33f68202181d1ac2f9e6d))
+
+
+
 ## [5.118.1](https://github.com/reservoirprotocol/indexer/compare/v5.118.0...v5.118.1) (2022-07-20)
 
 
