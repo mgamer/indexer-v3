@@ -1,3 +1,59 @@
+## [5.118.3](https://github.com/reservoirprotocol/indexer/compare/v5.118.2...v5.118.3) (2022-07-20)
+
+
+### Bug Fixes
+
+* debug logs ([d678d31](https://github.com/reservoirprotocol/indexer/commit/d678d3156cf9ae2139db994b1be545039206ecb7))
+
+
+
+## [5.118.2](https://github.com/reservoirprotocol/indexer/compare/v5.118.1...v5.118.2) (2022-07-20)
+
+
+### Bug Fixes
+
+* fallback to on-chain data retrieval when no transaction is available ([e26f45d](https://github.com/reservoirprotocol/indexer/commit/e26f45d1380d2568a0a33f68202181d1ac2f9e6d))
+
+
+
+## [5.118.1](https://github.com/reservoirprotocol/indexer/compare/v5.118.0...v5.118.1) (2022-07-20)
+
+
+### Bug Fixes
+
+* various tweaks ([c289299](https://github.com/reservoirprotocol/indexer/commit/c289299abe4f88210b7bad0edd6afcdce3fde664))
+
+
+
+# [5.118.0](https://github.com/reservoirprotocol/indexer/compare/v5.117.0...v5.118.0) (2022-07-20)
+
+
+### Bug Fixes
+
+* use :csv instead of :raw ([e09bee0](https://github.com/reservoirprotocol/indexer/commit/e09bee078634947ce581db9fb8e5457fdc70d3dc))
+
+
+### Features
+
+* add filtering for multiple values per key on tokens/details as well ([eb8aae1](https://github.com/reservoirprotocol/indexer/commit/eb8aae1efb26018e3e4ecfa36cfc3b0c0a07ca85))
+* support multiple values selected per attribute ([06c865e](https://github.com/reservoirprotocol/indexer/commit/06c865e0a2f4f862cd6a86cba6cc7189b53833eb))
+
+
+
+# [5.117.0](https://github.com/reservoirprotocol/indexer/compare/v5.116.1...v5.117.0) (2022-07-19)
+
+
+### Bug Fixes
+
+* log received transactions ([292b672](https://github.com/reservoirprotocol/indexer/commit/292b672b4f520c0cfcb0b4b6292cea72edce89c7))
+
+
+### Features
+
+* more efficient handling of transactions ([4d51036](https://github.com/reservoirprotocol/indexer/commit/4d5103684790b44986fad245661cbf8a8ab61b44))
+
+
+
 ## [5.116.1](https://github.com/reservoirprotocol/indexer/compare/v5.116.0...v5.116.1) (2022-07-18)
 
 
