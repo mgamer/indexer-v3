@@ -53,7 +53,14 @@ export const fetchBlock = async (blockNumber: number) =>
 
 export const fetchTransaction = async (txHash: string) =>
   getTransaction(txHash).catch(async () => {
-    // This should happen very rarely since all transactions should be readily available
+    // TODO: This should happen very rarely since all transactions
+    // should be readily available. The only case when data misses
+    // is when a block reorg happens and the replacing block takes
+    // in transactions that were missing in the previous block. In
+    // this case we don't refetch the new block's transactions but
+    // assume it cannot include new transactions. But that's not a
+    // a good assumption so we should force re-fetch the new block
+    // together with its transactions when a reorg happens.
 
     // In order to get all transaction fields we need to make two calls:
     // - `eth_getTransactionByHash`
