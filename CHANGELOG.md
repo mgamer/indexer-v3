@@ -1,3 +1,18 @@
+# [5.118.0](https://github.com/reservoirprotocol/indexer/compare/v5.117.0...v5.118.0) (2022-07-20)
+
+
+### Bug Fixes
+
+* use :csv instead of :raw ([e09bee0](https://github.com/reservoirprotocol/indexer/commit/e09bee078634947ce581db9fb8e5457fdc70d3dc))
+
+
+### Features
+
+* add filtering for multiple values per key on tokens/details as well ([eb8aae1](https://github.com/reservoirprotocol/indexer/commit/eb8aae1efb26018e3e4ecfa36cfc3b0c0a07ca85))
+* support multiple values selected per attribute ([06c865e](https://github.com/reservoirprotocol/indexer/commit/06c865e0a2f4f862cd6a86cba6cc7189b53833eb))
+
+
+
 # [5.117.0](https://github.com/reservoirprotocol/indexer/compare/v5.116.1...v5.117.0) (2022-07-19)
 
 
