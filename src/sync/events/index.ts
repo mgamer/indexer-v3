@@ -1667,6 +1667,8 @@ export const syncEvents = async (
           assignOrderSourceToFillEvents(fillEventsPartial),
           assignOrderSourceToFillEvents(fillEventsFoundation),
         ]);
+      } else {
+        logger.warn("sync-events", `Skipping assigning orders source assigned to fill events`);
       }
 
       // WARNING! Ordering matters (fills should come in front of cancels).
@@ -1839,6 +1841,11 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
         orders.push(...ordersChunk);
       }
 
+      logger.info(
+        "sync-events",
+        `orderIds.length: ${orderIds.length}, orders.length: ${orders.length}`
+      );
+
       if (orders.length) {
         const orderSourceIdByOrderId = new Map<string, number>();
 
@@ -1847,7 +1854,14 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
         }
 
         fillEvents.forEach((event, index) => {
-          if (event.orderId == undefined) return;
+          if (event.orderId == undefined) {
+            logger.warn(
+              "sync-events",
+              `Order Id is missing on fill event: ${JSON.stringify(event)}`
+            );
+
+            return;
+          }
 
           const orderSourceId = orderSourceIdByOrderId.get(event.orderId!);
 
@@ -1861,6 +1875,11 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
             );
 
             fillEvents[index].orderSourceIdInt = orderSourceId;
+          } else {
+            logger.warn(
+              "sync-events",
+              `Orders source NOT assigned to fill event: ${JSON.stringify(event)}`
+            );
           }
         });
       }
