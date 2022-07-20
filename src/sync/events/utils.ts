@@ -5,6 +5,7 @@ import { baseProvider, slowProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
 import { getBlocks, saveBlock } from "@/models/blocks";
 import { getTransaction, saveTransaction } from "@/models/transactions";
+import { logger } from "@/common/logger";
 
 export const fetchBlock = async (blockNumber: number) =>
   getBlocks(blockNumber)
@@ -66,10 +67,14 @@ export const fetchTransaction = async (txHash: string) =>
     // - `eth_getTransactionByHash`
     // - `eth_getTransactionReceipt`
 
+    logger.info("debug", `Fetching tx ${txHash}`);
+
     let tx = await baseProvider.getTransaction(txHash);
     if (!tx) {
       tx = await slowProvider.getTransaction(txHash);
     }
+
+    logger.info("debug", `Got tx: ${JSON.stringify(tx)}`);
 
     const blockTimestamp = (await fetchBlock(tx.blockNumber!)).timestamp;
 
