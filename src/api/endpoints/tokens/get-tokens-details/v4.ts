@@ -236,22 +236,21 @@ export const getTokensDetailsV4Options: RouteOptions = {
       }
 
       if (query.attributes) {
-        const attributes: { key: string; value: string }[] = [];
-        Object.entries(query.attributes).forEach(([key, values]) => {
-          (Array.isArray(values) ? values : [values]).forEach((value) =>
-            attributes.push({ key, value })
-          );
-        });
+        const attributes: { key: string; value: any }[] = [];
+        Object.entries(query.attributes).forEach(([key, value]) => attributes.push({ key, value }));
 
         for (let i = 0; i < attributes.length; i++) {
+          const multipleSelection = Array.isArray(attributes[i].value);
+
           (query as any)[`key${i}`] = attributes[i].key;
           (query as any)[`value${i}`] = attributes[i].value;
+
           baseQuery += `
             JOIN "token_attributes" "ta${i}"
               ON "t"."contract" = "ta${i}"."contract"
               AND "t"."token_id" = "ta${i}"."token_id"
               AND "ta${i}"."key" = $/key${i}/
-              AND "ta${i}"."value" = $/value${i}/
+              AND "ta${i}"."value" ${multipleSelection ? `IN ($/value${i}:csv/)` : `= $/value${i}/`}
           `;
         }
       }
