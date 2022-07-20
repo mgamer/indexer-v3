@@ -33,6 +33,7 @@ export const getExecuteSellV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .required(),
+      source: Joi.string(),
       referrer: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
@@ -233,7 +234,7 @@ export const getExecuteSellV1Options: RouteOptions = {
       }
 
       const router = new Sdk.Router.Router(config.chainId, slowProvider);
-      const tx = await router.fillBidTx(bidDetails, query.taker, { referrer: query.referrer });
+      const tx = await router.fillBidTx(bidDetails, query.taker, { referrer: query.source });
 
       // Set up generic filling steps
       const steps = [
