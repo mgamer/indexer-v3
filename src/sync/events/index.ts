@@ -1830,22 +1830,27 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
         const ordersChunk = await redb.manyOrNone(
           `
             SELECT id, source_id_int from orders
-            WHERE id IN ($/orderIds/)
+            WHERE id IN ($/orderIds:list/)
             AND source_id_int IS NOT NULL
           `,
           {
-            orderIds: orderIdsChunk.join(","),
+            orderIds: orderIdsChunk,
           }
         );
 
         orders.push(...ordersChunk);
       }
 
+      logger.info(
+        "sync-events",
+        `orderIds.length: ${orderIds.length}, orders.length: ${orders.length}`
+      );
+
       if (orders.length != orderIds.length) {
         logger.info(
           "sync-events",
           `orderIds.length: ${orderIds.length}, orders.length: ${
-            orderIds.length
+            orders.length
           }, firstTenOrderIds=${orderIds.slice(0, 10).join(",")}`
         );
       }
