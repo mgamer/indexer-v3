@@ -1843,17 +1843,10 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
 
       logger.info(
         "sync-events",
-        `orderIds.length: ${orderIds.length}, orders.length: ${orders.length}`
+        `orderIds.length: ${orderIds.length}, orders.length: ${
+          orders.length
+        }, firstFiveOrderIds=${orderIds.slice(0, 5).join(",")}`
       );
-
-      if (orders.length != orderIds.length) {
-        logger.info(
-          "sync-events",
-          `orderIds.length: ${orderIds.length}, orders.length: ${
-            orders.length
-          }, firstTenOrderIds=${orderIds.slice(0, 10).join(",")}`
-        );
-      }
 
       if (orders.length) {
         const orderSourceIdByOrderId = new Map<string, number>();
