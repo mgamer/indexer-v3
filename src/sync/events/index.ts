@@ -1841,13 +1841,6 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
         orders.push(...ordersChunk);
       }
 
-      logger.info(
-        "sync-events",
-        `orderIds.length: ${orderIds.length}, orders.length: ${
-          orders.length
-        }, firstFiveOrderIds=${orderIds.slice(0, 5).join(",")}`
-      );
-
       if (orders.length) {
         const orderSourceIdByOrderId = new Map<string, number>();
 
@@ -1856,32 +1849,13 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
         }
 
         fillEvents.forEach((event, index) => {
-          if (event.orderId == undefined) {
-            logger.warn(
-              "sync-events",
-              `Order Id is missing on fill event: ${JSON.stringify(event)}`
-            );
-
-            return;
-          }
+          if (event.orderId == undefined) return;
 
           const orderSourceId = orderSourceIdByOrderId.get(event.orderId!);
 
           // If the order source id exists on the order, use it in the fill event.
           if (orderSourceId) {
-            logger.info(
-              "sync-events",
-              `Orders source assigned to fill event: ${JSON.stringify(
-                event
-              )}, orderSourceId: ${orderSourceId}`
-            );
-
             fillEvents[index].orderSourceIdInt = orderSourceId;
-          } else {
-            logger.warn(
-              "sync-events",
-              `Orders source NOT assigned to fill event: ${JSON.stringify(event)}`
-            );
           }
         });
       }
