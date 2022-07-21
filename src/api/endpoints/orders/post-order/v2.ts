@@ -23,6 +23,11 @@ export const postOrderV2Options: RouteOptions = {
     },
   },
   validate: {
+    query: Joi.object({
+      signature: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-fA-F0-9]+$/),
+    }),
     payload: Joi.object({
       order: Joi.object({
         kind: Joi.string()
@@ -50,6 +55,7 @@ export const postOrderV2Options: RouteOptions = {
       throw Boom.badRequest("Order posting is disabled");
     }
 
+    const query = request.query as any;
     const payload = request.payload as any;
 
     try {
@@ -62,6 +68,12 @@ export const postOrderV2Options: RouteOptions = {
       const collection = payload.collection;
       // Only relevant for non-flagged tokens bids
       const isNonFlagged = payload.isNonFlagged;
+
+      // If the signature is provided via query parameters, use it
+      order.data = {
+        ...order.data,
+        signature: query.signature ?? order.data.signature,
+      };
 
       let schema: any;
       if (attribute) {
