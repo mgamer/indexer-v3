@@ -102,7 +102,7 @@ export const postOrderV2Options: RouteOptions = {
           };
           const [result] = await orders.wyvernV23.save([orderInfo]);
           if (result.status === "success") {
-            return { message: "Success" };
+            return { message: "Success", orderId: result.id };
           } else {
             throw Boom.badRequest(result.status);
           }
@@ -122,7 +122,7 @@ export const postOrderV2Options: RouteOptions = {
           };
           const [result] = await orders.openDao.save([orderInfo]);
           if (result.status === "success") {
-            return { message: "Success" };
+            return { message: "Success", orderId: result.id };
           } else {
             throw Boom.badRequest(result.status);
           }
@@ -142,46 +142,36 @@ export const postOrderV2Options: RouteOptions = {
           };
           const [result] = await orders.zeroExV4.save([orderInfo]);
           if (result.status === "success") {
-            return { message: "Success" };
+            return { message: "Success", orderId: result.id };
           } else {
             throw Boom.badRequest(result.status);
           }
         }
 
         case "seaport": {
-          switch (orderbook) {
-            case "opensea": {
-              if (![1, 4].includes(config.chainId)) {
-                throw new Error("Unsupported network");
-              }
-
-              await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
-
-              break;
-            }
-
-            case "reservoir": {
-              const orderInfo: orders.seaport.OrderInfo = {
-                orderParams: order.data,
-                metadata: {
-                  schema,
-                  source,
-                },
-              };
-              const [result] = await orders.seaport.save([orderInfo]);
-              if (result.status === "success") {
-                return { message: "Success" };
-              } else {
-                throw Boom.badRequest(result.status);
-              }
-            }
-
-            default: {
-              throw Boom.badData("Unknown orderbook");
-            }
+          if (!["opensea", "reservoir"].includes(orderbook)) {
+            throw new Error("Unknown orderbook");
           }
 
-          break;
+          const orderInfo: orders.seaport.OrderInfo = {
+            orderParams: order.data,
+            metadata: {
+              schema,
+              source,
+            },
+          };
+
+          const [result] = await orders.seaport.save([orderInfo]);
+
+          if (result.status !== "success") {
+            throw Boom.badRequest(result.status);
+          }
+
+          if (orderbook === "opensea") {
+            await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
+          }
+
+          return { message: "Success", orderId: result.id };
         }
 
         case "wyvern-v2.3": {
@@ -212,38 +202,30 @@ export const postOrderV2Options: RouteOptions = {
         }
 
         case "looks-rare": {
-          // Both Reservoir and LooksRare are supported as orderbooks.
-          switch (orderbook) {
-            case "reservoir": {
-              const orderInfo: orders.looksRare.OrderInfo = {
-                orderParams: order.data,
-                metadata: {
-                  source,
-                },
-              };
-              const [result] = await orders.looksRare.save([orderInfo]);
-              if (result.status === "success") {
-                return { message: "Success" };
-              } else {
-                throw Boom.badRequest(result.status);
-              }
-            }
-
-            // Publish to LooksRare's native orderbook
-            case "looks-rare": {
-              if (![1, 4].includes(config.chainId)) {
-                throw new Error("Unsupported network");
-              }
-
-              await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
-
-              break;
-            }
-
-            default: {
-              throw Boom.badData("Unknown orderbook");
-            }
+          // Only Reservoir and LooksRare are supported as orderbooks.
+          if (!["looks-rare", "reservoir"].includes(orderbook)) {
+            throw new Error("Unknown orderbook");
           }
+
+          const orderInfo: orders.looksRare.OrderInfo = {
+            orderParams: order.data,
+            metadata: {
+              schema,
+              source,
+            },
+          };
+
+          const [result] = await orders.looksRare.save([orderInfo]);
+
+          if (result.status !== "success") {
+            throw Boom.badRequest(result.status);
+          }
+
+          if (orderbook === "opensea") {
+            await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
+          }
+
+          return { message: "Success", orderId: result.id };
         }
       }
 
