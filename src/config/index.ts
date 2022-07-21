@@ -49,8 +49,4 @@ export const config = {
 
   looksRareApiKey: String(process.env.LOOKSRARE_API_KEY),
   openSeaApiKey: String(process.env.OPENSEA_API_KEY),
-
-  orderbookPostOrderExternalEncryptionKey: String(
-    process.env.ORDERBOOK_POST_ORDER_EXTERNAL_ENCRYPTION_KEY
-  ),
 };
