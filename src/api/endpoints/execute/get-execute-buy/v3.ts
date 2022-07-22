@@ -10,7 +10,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { slowProvider } from "@/common/provider";
-import { bn, formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { bn, formatEth, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 
@@ -53,7 +53,9 @@ export const getExecuteBuyV3Options: RouteOptions = {
         .description(
           "Address of wallet filling the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
-      onlyQuote: Joi.boolean().default(false).description("If true, only quote will be returned."),
+      onlyPath: Joi.boolean()
+        .default(false)
+        .description("If true, only the path will be returned."),
       source: Joi.string()
         .lowercase()
         .description("Filling source used for attribution. Example: `reservoir.market`"),
@@ -114,13 +116,13 @@ export const getExecuteBuyV3Options: RouteOptions = {
           tokenId: Joi.string().lowercase().pattern(/^\d+$/),
           quantity: Joi.number().unsafe(),
           source: Joi.string().allow("", null),
+          currency: Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}$/),
           quote: Joi.number().unsafe(),
           rawQuote: Joi.string().pattern(/^\d+$/),
         })
       ),
-      // TODO: Do we really need these if we have the path?
-      quote: Joi.number().unsafe(),
-      rawQuote: Joi.string().pattern(/^\d+$/),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-execute-buy-${version}-handler`, `Wrong response schema: ${error}`);
@@ -141,6 +143,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
         tokenId: string;
         quantity: number;
         source: string | null;
+        currency: string;
         quote: number;
         rawQuote: string;
       }[] = [];
@@ -249,7 +252,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
                 contracts.kind AS token_kind,
                 orders.price,
                 orders.raw_data,
-                orders.source_id
+                orders.source_id_int
               FROM orders
               JOIN contracts
                 ON orders.contract = contracts.address
@@ -268,7 +271,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
             throw Boom.badRequest("No available orders");
           }
 
-          const { id, kind, token_kind, price, source_id, raw_data } = bestOrderResult;
+          const { id, kind, token_kind, price, source_id_int, raw_data } = bestOrderResult;
 
           const rawQuote = bn(price).add(bn(price).mul(query.referrerFeeBps).div(10000));
           path.push({
@@ -276,11 +279,13 @@ export const getExecuteBuyV3Options: RouteOptions = {
             contract,
             tokenId,
             quantity: 1,
-            source: source_id ? sources.getByAddress(fromBuffer(source_id))?.name : null,
+            source: source_id_int ? sources.get(source_id_int)?.name : null,
+            // TODO: Add support for multiple currencies
+            currency: Sdk.Common.Addresses.Eth[config.chainId],
             quote: formatEth(rawQuote),
             rawQuote: rawQuote.toString(),
           });
-          if (query.onlyQuote) {
+          if (query.onlyPath) {
             // Skip generating any transactions if only the quote was requested
             continue;
           }
@@ -308,7 +313,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
                 x.kind,
                 x.price,
                 x.quantity_remaining,
-                x.source_id,
+                x.source_id_int,
                 x.raw_data
               FROM (
                 SELECT
@@ -336,7 +341,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
             kind,
             quantity_remaining,
             price,
-            source_id,
+            source_id_int,
             raw_data,
           } of bestOrdersResult) {
             const quantityFilled = Math.min(Number(quantity_remaining), totalQuantityToFill);
@@ -349,11 +354,13 @@ export const getExecuteBuyV3Options: RouteOptions = {
               contract,
               tokenId,
               quantity: quantityFilled,
-              source: source_id ? sources.getByAddress(fromBuffer(source_id))?.name : null,
+              source: source_id_int ? sources.get(source_id_int)?.name : null,
+              // TODO: Add support for multiple currencies
+              currency: Sdk.Common.Addresses.Eth[config.chainId],
               quote: formatEth(rawQuote),
               rawQuote: rawQuote.toString(),
             });
-            if (query.onlyQuote) {
+            if (query.onlyPath) {
               // Skip generating any transactions if only the quote was requested
               continue;
             }
@@ -369,10 +376,9 @@ export const getExecuteBuyV3Options: RouteOptions = {
         }
       }
 
-      const rawTotalQuote = path.map((p) => bn(p.rawQuote)).reduce((a, b) => bn(a).add(b), bn(0));
-      if (query.onlyQuote) {
-        // Only return the quote if that's what was requested
-        return { quote: formatEth(rawTotalQuote), rawQuote: rawTotalQuote.toString(), path };
+      if (query.onlyPath) {
+        // Only return the path if that's what was requested
+        return { path };
       }
 
       const router = new Sdk.Router.Router(config.chainId, slowProvider);
@@ -428,8 +434,6 @@ export const getExecuteBuyV3Options: RouteOptions = {
 
       return {
         steps,
-        quote: formatEth(rawTotalQuote),
-        rawQuote: rawTotalQuote.toString(),
         path,
       };
     } catch (error) {

@@ -12,6 +12,7 @@ import { logger } from "@/common/logger";
 import { slowProvider } from "@/common/provider";
 import { bn, formatEth, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { Sources } from "@/models/sources";
 
 const version = "v3";
 
@@ -49,7 +50,9 @@ export const getExecuteSellV3Options: RouteOptions = {
         .description(
           "Wallet address of referrer. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
-      onlyQuote: Joi.boolean().default(false).description("If true, only quote will be returned."),
+      onlyPath: Joi.boolean()
+        .default(false)
+        .description("If true, only the path will be returned."),
       maxFeePerGas: Joi.string()
         .pattern(/^[0-9]+$/)
         .description("Optional. Set custom gas price."),
@@ -75,8 +78,22 @@ export const getExecuteSellV3Options: RouteOptions = {
             .required(),
         })
       ),
-      quote: Joi.number().unsafe(),
-      rawQuote: Joi.string().pattern(/^\d+$/),
+      path: Joi.array().items(
+        Joi.object({
+          orderId: Joi.string(),
+          contract: Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}$/),
+          tokenId: Joi.string().lowercase().pattern(/^\d+$/),
+          quantity: Joi.number().unsafe(),
+          source: Joi.string().allow("", null),
+          currency: Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}$/),
+          quote: Joi.number().unsafe(),
+          rawQuote: Joi.string().pattern(/^\d+$/),
+        })
+      ),
     }).label(`getExecuteSell${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-execute-sell-${version}-handler`, `Wrong response schema: ${error}`);
@@ -98,7 +115,7 @@ export const getExecuteSellV3Options: RouteOptions = {
             contracts.kind AS token_kind,
             orders.price,
             orders.raw_data,
-            orders.source_id,
+            orders.source_id_int,
             orders.maker,
             orders.token_set_id
           FROM orders
@@ -126,12 +143,26 @@ export const getExecuteSellV3Options: RouteOptions = {
         throw Boom.badRequest("No available orders");
       }
 
-      // The quote is the best offer's price
-      const rawQuote = bn(bestOrderResult.price).toString();
-      const quote = formatEth(rawQuote);
-      if (query.onlyQuote) {
-        // Skip generating any transactions if only the quote was requested
-        return { rawQuote, quote };
+      const sources = await Sources.getInstance();
+      const sourceId = bestOrderResult.source_id_int;
+
+      const path = [
+        {
+          orderId: bestOrderResult.id,
+          contract,
+          tokenId,
+          quantity: 1,
+          source: sourceId ? sources.get(sourceId) : null,
+          // TODO: Add support for multiple currencies
+          currency: Sdk.Common.Addresses.Weth[config.chainId],
+          quote: formatEth(bestOrderResult.price),
+          rawQuote: bestOrderResult.price,
+        },
+      ];
+
+      if (query.onlyPath) {
+        // Skip generating any transactions if only the path was requested
+        return { path };
       }
 
       let bidDetails: BidDetails;
@@ -293,8 +324,7 @@ export const getExecuteSellV3Options: RouteOptions = {
 
       return {
         steps,
-        quote,
-        rawQuote,
+        path,
       };
     } catch (error) {
       logger.error(`get-execute-sell-${version}-handler`, `Handler failure: ${error}`);
