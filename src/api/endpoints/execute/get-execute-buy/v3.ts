@@ -14,15 +14,14 @@ import { bn, formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 
-const version = "v2";
+const version = "v3";
 
-export const getExecuteBuyV2Options: RouteOptions = {
+export const getExecuteBuyV3Options: RouteOptions = {
   description: "Buy a token at the best price",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Router"],
   plugins: {
     "hapi-swagger": {
       order: 11,
-      deprecated: true,
     },
   },
   validate: {
@@ -95,16 +94,20 @@ export const getExecuteBuyV2Options: RouteOptions = {
         Joi.object({
           action: Joi.string().required(),
           description: Joi.string().required(),
-          status: Joi.string().valid("complete", "incomplete").required(),
-          kind: Joi.string()
-            .valid("request", "signature", "transaction", "confirmation")
+          kind: Joi.string().valid("transaction").required(),
+          items: Joi.array()
+            .items(
+              Joi.object({
+                status: Joi.string().valid("complete", "incomplete").required(),
+                data: Joi.object(),
+              })
+            )
             .required(),
-          data: Joi.object(),
         })
       ),
-      quote: Joi.number().unsafe(),
       path: Joi.array().items(
         Joi.object({
+          orderId: Joi.string(),
           contract: Joi.string()
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{40}$/),
@@ -112,9 +115,12 @@ export const getExecuteBuyV2Options: RouteOptions = {
           quantity: Joi.number().unsafe(),
           source: Joi.string().allow("", null),
           quote: Joi.number().unsafe(),
+          rawQuote: Joi.string().pattern(/^\d+$/),
         })
       ),
-      query: Joi.object(),
+      // TODO: Do we really need these if we have the path?
+      quote: Joi.number().unsafe(),
+      rawQuote: Joi.string().pattern(/^\d+$/),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-execute-buy-${version}-handler`, `Wrong response schema: ${error}`);
@@ -130,11 +136,13 @@ export const getExecuteBuyV2Options: RouteOptions = {
 
       // Keep track of the filled path
       const path: {
+        orderId: string;
         contract: string;
         tokenId: string;
         quantity: number;
         source: string | null;
         quote: number;
+        rawQuote: string;
       }[] = [];
 
       let confirmationQuery = "";
@@ -262,12 +270,15 @@ export const getExecuteBuyV2Options: RouteOptions = {
 
           const { id, kind, token_kind, price, source_id, raw_data } = bestOrderResult;
 
+          const rawQuote = bn(price).add(bn(price).mul(query.referrerFeeBps).div(10000));
           path.push({
+            orderId: bestOrderResult.id,
             contract,
             tokenId,
             quantity: 1,
             source: source_id ? sources.getByAddress(fromBuffer(source_id))?.name : null,
-            quote: formatEth(bn(price).add(bn(price).mul(query.referrerFeeBps).div(10000))),
+            quote: formatEth(rawQuote),
+            rawQuote: rawQuote.toString(),
           });
           if (query.onlyQuote) {
             // Skip generating any transactions if only the quote was requested
@@ -332,12 +343,15 @@ export const getExecuteBuyV2Options: RouteOptions = {
             totalQuantityToFill -= quantityFilled;
 
             const totalPrice = bn(price).mul(quantityFilled);
+            const rawQuote = totalPrice.add(totalPrice.mul(query.referrerFeeBps).div(10000));
             path.push({
+              orderId: id,
               contract,
               tokenId,
               quantity: quantityFilled,
               source: source_id ? sources.getByAddress(fromBuffer(source_id))?.name : null,
-              quote: formatEth(totalPrice.add(totalPrice.mul(query.referrerFeeBps).div(10000))),
+              quote: formatEth(rawQuote),
+              rawQuote: rawQuote.toString(),
             });
             if (query.onlyQuote) {
               // Skip generating any transactions if only the quote was requested
@@ -355,10 +369,10 @@ export const getExecuteBuyV2Options: RouteOptions = {
         }
       }
 
-      const quote = path.map((p) => p.quote).reduce((a, b) => a + b, 0);
+      const rawTotalQuote = path.map((p) => bn(p.rawQuote)).reduce((a, b) => bn(a).add(b), bn(0));
       if (query.onlyQuote) {
         // Only return the quote if that's what was requested
-        return { quote, path };
+        return { quote: formatEth(rawTotalQuote), rawQuote: rawTotalQuote.toString(), path };
       }
 
       const router = new Sdk.Router.Router(config.chainId, slowProvider);
@@ -378,42 +392,44 @@ export const getExecuteBuyV2Options: RouteOptions = {
       }
 
       // Set up generic filling steps
-      const steps = [
+      const steps: {
+        action: string;
+        description: string;
+        kind: string;
+        items: {
+          status: string;
+          data?: any;
+        }[];
+      }[] = [
         {
           action: "Confirm purchase",
           description: "To purchase this item you must confirm the transaction and pay the gas fee",
           kind: "transaction",
-        },
-        {
-          action: "Confirmation",
-          description: "Verify that the item was successfully purchased",
-          kind: "confirmation",
+          items: [],
         },
       ];
 
+      steps[0].items.push({
+        status: "incomplete",
+        data: {
+          tx: {
+            ...tx,
+            maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
+            maxPriorityFeePerGas: query.maxPriorityFeePerGas
+              ? bn(query.maxPriorityFeePerGas).toHexString()
+              : undefined,
+          },
+          confirmation: {
+            endpoint: `/orders/executed/v1${confirmationQuery!}`,
+            method: "GET",
+          },
+        },
+      });
+
       return {
-        steps: [
-          {
-            ...steps[0],
-            status: "incomplete",
-            data: {
-              ...tx,
-              maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
-              maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                ? bn(query.maxPriorityFeePerGas).toHexString()
-                : undefined,
-            },
-          },
-          {
-            ...steps[1],
-            status: "incomplete",
-            data: {
-              endpoint: `/orders/executed/v1${confirmationQuery!}`,
-              method: "GET",
-            },
-          },
-        ],
-        quote,
+        steps,
+        quote: formatEth(rawTotalQuote),
+        rawQuote: rawTotalQuote.toString(),
         path,
       };
     } catch (error) {

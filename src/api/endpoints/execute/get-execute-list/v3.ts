@@ -6,6 +6,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import { TxData } from "@reservoir0x/sdk/dist/utils";
 import Joi from "joi";
+import _ from "lodash";
 
 import { logger } from "@/common/logger";
 import { slowProvider } from "@/common/provider";
@@ -135,7 +136,7 @@ export const getExecuteListV3Options: RouteOptions = {
               Joi.object({
                 status: Joi.string().valid("complete", "incomplete").required(),
                 data: Joi.object(),
-                orderIndex: Joi.number().required(),
+                orderIndex: Joi.number(),
               })
             )
             .required(),
@@ -162,7 +163,7 @@ export const getExecuteListV3Options: RouteOptions = {
         items: {
           status: string;
           data?: any;
-          orderIndex: number;
+          orderIndex?: number;
         }[];
       }[] = [
         {
@@ -289,8 +290,8 @@ export const getExecuteListV3Options: RouteOptions = {
             steps[2].items.push({
               status: "incomplete",
               data: {
-                signatureData: order.getSignatureData(),
-                orderPosting: {
+                sign: order.getSignatureData(),
+                post: {
                   endpoint: "/order/v2",
                   method: "POST",
                   body: {
@@ -375,8 +376,8 @@ export const getExecuteListV3Options: RouteOptions = {
             steps[2].items.push({
               status: "incomplete",
               data: {
-                signatureData: order.getSignatureData(),
-                orderPosting: {
+                sign: order.getSignatureData(),
+                post: {
                   endpoint: "/order/v2",
                   method: "POST",
                   body: {
@@ -461,8 +462,8 @@ export const getExecuteListV3Options: RouteOptions = {
             steps[2].items.push({
               status: "incomplete",
               data: {
-                signatureData: order.getSignatureData(),
-                orderPosting: {
+                sign: order.getSignatureData(),
+                post: {
                   endpoint: "/order/v2",
                   method: "POST",
                   body: {
@@ -551,8 +552,8 @@ export const getExecuteListV3Options: RouteOptions = {
             steps[2].items.push({
               status: "incomplete",
               data: {
-                signatureData: order.getSignatureData(),
-                orderPosting: {
+                sign: order.getSignatureData(),
+                post: {
                   endpoint: "/order/v2",
                   method: "POST",
                   body: {
@@ -638,8 +639,8 @@ export const getExecuteListV3Options: RouteOptions = {
             steps[2].items.push({
               status: "incomplete",
               data: {
-                signatureData: order.getSignatureData(),
-                orderPosting: {
+                sign: order.getSignatureData(),
+                post: {
                   endpoint: "/order/v2",
                   method: "POST",
                   body: {
@@ -660,6 +661,15 @@ export const getExecuteListV3Options: RouteOptions = {
             // Go on with the next listing
             continue;
           }
+        }
+      }
+
+      // De-duplicate step items
+      for (const step of steps) {
+        // Assume `JSON.stringify` is deterministic
+        const uniqueItems = _.uniqBy(step.items, ({ data }) => JSON.stringify(data));
+        if (step.items.length > uniqueItems.length) {
+          step.items = uniqueItems.map((item) => ({ status: item.status, data: item.data }));
         }
       }
 
