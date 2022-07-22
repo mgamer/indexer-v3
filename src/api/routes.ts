@@ -320,8 +320,20 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/execute/buy/v3",
+    options: executeEndpoints.getExecuteBuyV3Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/execute/cancel/v1",
     options: executeEndpoints.getExecuteCancelV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/execute/cancel/v2",
+    options: executeEndpoints.getExecuteCancelV2Options,
   });
 
   server.route({
@@ -352,6 +364,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/execute/sell/v2",
     options: executeEndpoints.getExecuteSellV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/execute/sell/v3",
+    options: executeEndpoints.getExecuteSellV3Options,
   });
 
   // Oracle
