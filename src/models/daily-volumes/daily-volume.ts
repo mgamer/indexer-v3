@@ -99,6 +99,7 @@ export class DailyVolume {
               "fe"."timestamp" >= $/startTime/
               AND "fe"."timestamp" < $/endTime/
               AND fe.price > 0
+              AND coalesce(fe.wash_trading_score, 0) = 0
           GROUP BY "collection_id"
         `,
         {
