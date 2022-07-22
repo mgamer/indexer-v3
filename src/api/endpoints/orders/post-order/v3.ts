@@ -12,11 +12,11 @@ import { config } from "@/config/index";
 import * as orders from "@/orderbook/orders";
 import { parseOpenSeaOrder } from "@/orderbook/orders/wyvern-v2.3/opensea";
 
-const version = "v2";
+const version = "v3";
 
-export const postOrderV2Options: RouteOptions = {
+export const postOrderV3Options: RouteOptions = {
   description: "Submit single order",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Orderbook"],
   plugins: {
     "hapi-swagger": {
       order: 5,
@@ -35,7 +35,9 @@ export const postOrderV2Options: RouteOptions = {
         .lowercase()
         .valid("reservoir", "opensea", "looks-rare")
         .default("reservoir"),
-      source: Joi.string().description("The name of the source"),
+      source: Joi.string()
+        .pattern(/^[a-zA-Z0-9][a-zA-Z0-9.-]+[a-zA-Z0-9]$/)
+        .description("The source domain"),
       attribute: Joi.object({
         collection: Joi.string().required(),
         key: Joi.string().required(),

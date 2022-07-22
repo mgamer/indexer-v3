@@ -17,12 +17,14 @@ export class Sources {
   public sources: object;
   public sourcesByNames: object;
   public sourcesByAddress: object;
+  public sourcesByDomains: object;
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {
     this.sources = {};
     this.sourcesByNames = {};
     this.sourcesByAddress = {};
+    this.sourcesByDomains = {};
   }
 
   private async loadData(forceDbLoad = false) {
@@ -43,6 +45,7 @@ export class Sources {
       (this.sources as any)[source.id] = new SourcesEntity(source);
       (this.sourcesByNames as any)[_.toLower(source.name)] = new SourcesEntity(source);
       (this.sourcesByAddress as any)[_.toLower(source.address)] = new SourcesEntity(source);
+      (this.sourcesByDomains as any)[_.toLower(source.domain)] = new SourcesEntity(source);
     }
   }
 
@@ -62,6 +65,7 @@ export class Sources {
   public static getDefaultSource(): SourcesEntity {
     return new SourcesEntity({
       id: 0,
+      domain: "reservoir.market",
       address: AddressZero,
       name: "Reservoir",
       metadata: {
@@ -74,18 +78,25 @@ export class Sources {
 
   public static async syncSources() {
     _.forEach(sourcesFromJson, (item, id) => {
-      Sources.addFromJson(Number(id), item.name, item.address, item.data);
+      Sources.addFromJson(Number(id), item.domain, item.name, item.address, item.data);
     });
   }
 
-  public static async addFromJson(id: number, name: string, address: string, metadata: object) {
-    const query = `INSERT INTO sources_v2 (id, name, address, metadata)
-                   VALUES ($/id/, $/name/, $/address/, $/metadata:json/)
+  public static async addFromJson(
+    id: number,
+    domain: string,
+    name: string,
+    address: string,
+    metadata: object
+  ) {
+    const query = `INSERT INTO sources_v2 (id, domain, name, address, metadata)
+                   VALUES ($/id/, $/domain/, $/name/, $/address/, $/metadata:json/)
                    ON CONFLICT (id) DO UPDATE
-                   SET metadata = $/metadata:json/, name = $/name/`;
+                   SET metadata = $/metadata:json/, name = $/name/, domain = $/domain/`;
 
     const values = {
       id,
+      domain,
       name,
       address,
       metadata,
@@ -94,14 +105,14 @@ export class Sources {
     await idb.none(query, values);
   }
 
-  public async create(name: string, address: string, metadata: object = {}) {
-    const query = `INSERT INTO sources_v2 (name, address, metadata)
-                   VALUES ($/name/, $/address/, $/metadata:json/)
+  public async create(domain: string, address: string, metadata: object = {}) {
+    const query = `INSERT INTO sources_v2 (domain, name, address, metadata)
+                   VALUES ($/domain/, $/domain/, $/address/, $/metadata:json/)
                    ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
                    RETURNING *`;
 
     const values = {
-      name,
+      domain,
       address,
       metadata,
     };
@@ -110,7 +121,7 @@ export class Sources {
     const sourcesEntity = new SourcesEntity(source);
 
     await Sources.instance.loadData(true); // reload the cache
-    logger.info("sources", `New source ${name} - ${address} was added`);
+    logger.info("sources", `New source ${domain} - ${address} was added`);
 
     return sourcesEntity;
   }
@@ -121,6 +132,18 @@ export class Sources {
     if (id in this.sources) {
       sourceEntity = (this.sources as any)[id];
     } else {
+      sourceEntity = Sources.getDefaultSource();
+    }
+
+    return sourceEntity;
+  }
+
+  public getByDomain(domain: string, returnDefault = true) {
+    let sourceEntity;
+
+    if (_.toLower(domain) in this.sourcesByNames) {
+      sourceEntity = (this.sourcesByNames as any)[_.toLower(domain)];
+    } else if (returnDefault) {
       sourceEntity = Sources.getDefaultSource();
     }
 
@@ -158,6 +181,7 @@ export class Sources {
   public async getOrInsert(source: string) {
     let sourceEntity;
 
+    // If the passed source is an address
     if (source.match(/^0x[a-fA-F0-9]{40}$/)) {
       sourceEntity = this.getByAddress(source, undefined, undefined, false); // This is an address
 
@@ -165,8 +189,15 @@ export class Sources {
         sourceEntity = await this.create(source, source);
       }
     } else {
-      sourceEntity = this.getByName(source, false); // This is a name
+      // Try to get the source by name
+      sourceEntity = this.getByName(source, false);
 
+      // If the source was not found try to get it by domain
+      if (!sourceEntity) {
+        sourceEntity = this.getByDomain(source, false);
+      }
+
+      // If source was not found by name nor domain create one
       if (!sourceEntity) {
         const address = "0x" + randomBytes(20).toString("hex");
         sourceEntity = await this.create(source, address);

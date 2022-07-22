@@ -414,6 +414,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/order/v3",
+    options: ordersEndpoints.postOrderV3Options,
+  });
+
+  server.route({
+    method: "POST",
     path: "/orders/v1",
     options: ordersEndpoints.postOrdersV1Options,
   });
