@@ -25,6 +25,7 @@ export const addEvents = async (events: Event[]) => {
       token_id: event.tokenId,
       amount: event.amount,
       fill_source: event.fillSource || null,
+      wash_trading_score: event.washTradingScore || 0,
     });
   }
 
@@ -52,6 +53,7 @@ export const addEvents = async (events: Event[]) => {
         "token_id",
         "amount",
         "fill_source",
+        "wash_trading_score",
       ],
       { table: "fill_events_2" }
     );
@@ -78,7 +80,8 @@ export const addEvents = async (events: Event[]) => {
           "contract",
           "token_id",
           "amount",
-          "fill_source"
+          "fill_source",
+          "wash_trading_score"
         ) VALUES ${pgp.helpers.values(fillValues, columns)}
         ON CONFLICT DO NOTHING
         RETURNING "order_kind", "order_id", "timestamp"
