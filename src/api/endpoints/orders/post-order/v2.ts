@@ -114,7 +114,7 @@ export const postOrderV2Options: RouteOptions = {
           };
           const [result] = await orders.wyvernV23.save([orderInfo]);
           if (result.status === "success") {
-            return { message: "Success" };
+            return { message: "Success", orderId: result.id };
           } else {
             throw Boom.badRequest(result.status);
           }
@@ -134,7 +134,7 @@ export const postOrderV2Options: RouteOptions = {
           };
           const [result] = await orders.openDao.save([orderInfo]);
           if (result.status === "success") {
-            return { message: "Success" };
+            return { message: "Success", orderId: result.id };
           } else {
             throw Boom.badRequest(result.status);
           }
@@ -154,7 +154,7 @@ export const postOrderV2Options: RouteOptions = {
           };
           const [result] = await orders.zeroExV4.save([orderInfo]);
           if (result.status === "success") {
-            return { message: "Success" };
+            return { message: "Success", orderId: result.id };
           } else {
             throw Boom.badRequest(result.status);
           }
@@ -183,7 +183,7 @@ export const postOrderV2Options: RouteOptions = {
             await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
           }
 
-          return { message: "Success" };
+          return { message: "Success", orderId: result.id };
         }
 
         case "wyvern-v2.3": {
@@ -199,7 +199,7 @@ export const postOrderV2Options: RouteOptions = {
               };
               const [result] = await orders.wyvernV23.save([orderInfo]);
               if (result.status === "success") {
-                return { message: "Success" };
+                return { message: "Success", orderId: result.id };
               } else {
                 throw Boom.badRequest(result.status);
               }
@@ -237,7 +237,7 @@ export const postOrderV2Options: RouteOptions = {
             await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
           }
 
-          return { message: "Success" };
+          return { message: "Success", orderId: result.id };
         }
       }
 
