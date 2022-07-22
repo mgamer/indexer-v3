@@ -23,7 +23,7 @@ export class OrderbookApiRateLimiter {
   }
 
   public async getExpiration() {
-    return await redis.pttl(this.key);
+    return Math.max(await redis.pttl(this.key), 0);
   }
 
   public async setExpiration(ttl: number) {
