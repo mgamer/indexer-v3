@@ -63,7 +63,7 @@ export const getUserActivityV1Options: RouteOptions = {
           fromAddress: Joi.string(),
           toAddress: Joi.string().allow(null),
           price: Joi.number(),
-          amount: Joi.number(),
+          amount: Joi.number().unsafe(),
           timestamp: Joi.number(),
           token: Joi.object({
             tokenId: Joi.string().allow(null),
