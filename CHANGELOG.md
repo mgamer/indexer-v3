@@ -1,3 +1,12 @@
+# [5.120.0](https://github.com/reservoirprotocol/indexer/compare/v5.119.0...v5.120.0) (2022-07-23)
+
+
+### Bug Fixes
+
+* allow unsafe number for amount ([7d67c7f](https://github.com/reservoirprotocol/indexer/commit/7d67c7f508fc1db4d70c5aa253d759e4ff66474d))
+
+
+
 # [5.119.0](https://github.com/reservoirprotocol/indexer/compare/v5.118.3...v5.119.0) (2022-07-22)
 
 
