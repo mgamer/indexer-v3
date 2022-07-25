@@ -293,7 +293,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
 
       if (query.source) {
         const sources = await Sources.getInstance();
-        let source = sources.getByName(query.source);
+        let source = sources.getByName(query.source, false);
         if (!source) {
           source = await sources.getByDomain(query.source);
         }
