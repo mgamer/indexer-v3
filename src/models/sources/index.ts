@@ -141,8 +141,8 @@ export class Sources {
   public getByDomain(domain: string, returnDefault = true) {
     let sourceEntity;
 
-    if (_.toLower(domain) in this.sourcesByNames) {
-      sourceEntity = (this.sourcesByNames as any)[_.toLower(domain)];
+    if (_.toLower(domain) in this.sourcesByDomains) {
+      sourceEntity = (this.sourcesByDomains as any)[_.toLower(domain)];
     } else if (returnDefault) {
       sourceEntity = Sources.getDefaultSource();
     }
