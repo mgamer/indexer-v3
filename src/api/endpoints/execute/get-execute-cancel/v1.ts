@@ -15,10 +15,11 @@ const version = "v1";
 export const getExecuteCancelV1Options: RouteOptions = {
   description: "Cancel order",
   notes: "Cancel an existing order on any marketplace",
-  tags: ["api", "Orderbook"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 11,
+      deprecated: true,
     },
   },
   validate: {
@@ -182,7 +183,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
 
           // Generate exchange-specific cancellation transaction.
           const exchange = new Sdk.LooksRare.Exchange(config.chainId);
-          const cancelTx = exchange.cancelTransaction(query.maker, order);
+          const cancelTx = exchange.cancelOrderTx(query.maker, order);
 
           const steps = generateSteps(order.params.isOrderAsk ? "sell" : "buy");
           return {
@@ -218,7 +219,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
 
           // Generate exchange-specific cancellation transaction.
           const exchange = new Sdk.OpenDao.Exchange(config.chainId);
-          const cancelTx = exchange.cancelTransaction(query.maker, order);
+          const cancelTx = exchange.cancelOrderTx(query.maker, order);
 
           const steps = generateSteps(
             order.params.direction === Sdk.OpenDao.Types.TradeDirection.SELL ? "sell" : "buy"
@@ -256,7 +257,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
 
           // Generate exchange-specific cancellation transaction.
           const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
-          const cancelTx = exchange.cancelTransaction(query.maker, order);
+          const cancelTx = exchange.cancelOrderTx(query.maker, order);
 
           const steps = generateSteps(
             order.params.direction === Sdk.ZeroExV4.Types.TradeDirection.SELL ? "sell" : "buy"

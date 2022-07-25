@@ -12,16 +12,16 @@ import { logger } from "@/common/logger";
 import { slowProvider } from "@/common/provider";
 import { bn, formatEth, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { Sources } from "@/models/sources";
 
-const version = "v2";
+const version = "v3";
 
-export const getExecuteSellV2Options: RouteOptions = {
+export const getExecuteSellV3Options: RouteOptions = {
   description: "Sell a token at the best price (accept bid)",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Router"],
   plugins: {
     "hapi-swagger": {
-      order: 1,
-      deprecated: true,
+      order: 10,
     },
   },
   validate: {
@@ -50,7 +50,9 @@ export const getExecuteSellV2Options: RouteOptions = {
         .description(
           "Wallet address of referrer. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
-      onlyQuote: Joi.boolean().default(false).description("If true, only quote will be returned."),
+      onlyPath: Joi.boolean()
+        .default(false)
+        .description("If true, only the path will be returned."),
       maxFeePerGas: Joi.string()
         .pattern(/^[0-9]+$/)
         .description("Optional. Set custom gas price."),
@@ -65,15 +67,33 @@ export const getExecuteSellV2Options: RouteOptions = {
         Joi.object({
           action: Joi.string().required(),
           description: Joi.string().required(),
-          status: Joi.string().valid("complete", "incomplete").required(),
-          kind: Joi.string()
-            .valid("request", "signature", "transaction", "confirmation")
+          kind: Joi.string().valid("transaction").required(),
+          items: Joi.array()
+            .items(
+              Joi.object({
+                status: Joi.string().valid("complete", "incomplete").required(),
+                data: Joi.object(),
+              })
+            )
             .required(),
-          data: Joi.object(),
         })
       ),
-      quote: Joi.number().unsafe(),
-      query: Joi.object(),
+      path: Joi.array().items(
+        Joi.object({
+          orderId: Joi.string(),
+          contract: Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}$/),
+          tokenId: Joi.string().lowercase().pattern(/^\d+$/),
+          quantity: Joi.number().unsafe(),
+          source: Joi.string().allow("", null),
+          currency: Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}$/),
+          quote: Joi.number().unsafe(),
+          rawQuote: Joi.string().pattern(/^\d+$/),
+        })
+      ),
     }).label(`getExecuteSell${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-execute-sell-${version}-handler`, `Wrong response schema: ${error}`);
@@ -86,7 +106,7 @@ export const getExecuteSellV2Options: RouteOptions = {
     try {
       const [contract, tokenId] = query.token.split(":");
 
-      // Fetch the best offer on the current token.
+      // Fetch the best offer on the current token
       const bestOrderResult = await redb.oneOrNone(
         `
           SELECT
@@ -95,7 +115,7 @@ export const getExecuteSellV2Options: RouteOptions = {
             contracts.kind AS token_kind,
             orders.price,
             orders.raw_data,
-            orders.source_id,
+            orders.source_id_int,
             orders.maker,
             orders.token_set_id
           FROM orders
@@ -118,16 +138,31 @@ export const getExecuteSellV2Options: RouteOptions = {
         }
       );
 
-      // Return early in case no offer is available.
+      // Return early in case no offer is available
       if (!bestOrderResult) {
         throw Boom.badRequest("No available orders");
       }
 
-      // The quote is the best offer's price
-      const quote = formatEth(bestOrderResult.price);
-      if (query.onlyQuote) {
-        // Skip generating any transactions if only the quote was requested
-        return { quote };
+      const sources = await Sources.getInstance();
+      const sourceId = bestOrderResult.source_id_int;
+
+      const path = [
+        {
+          orderId: bestOrderResult.id,
+          contract,
+          tokenId,
+          quantity: 1,
+          source: sourceId ? sources.get(sourceId) : null,
+          // TODO: Add support for multiple currencies
+          currency: Sdk.Common.Addresses.Weth[config.chainId],
+          quote: formatEth(bestOrderResult.price),
+          rawQuote: bestOrderResult.price,
+        },
+      ];
+
+      if (query.onlyPath) {
+        // Skip generating any transactions if only the path was requested
+        return { path };
       }
 
       let bidDetails: BidDetails;
@@ -139,7 +174,7 @@ export const getExecuteSellV2Options: RouteOptions = {
           if (order.params.kind?.includes("token-list")) {
             // When filling an attribute order, we also need to pass
             // in the full list of tokens the order is made on (that
-            // is, the underlying token set tokens).
+            // is, the underlying token set tokens)
             const tokens = await redb.manyOrNone(
               `
                 SELECT
@@ -171,7 +206,7 @@ export const getExecuteSellV2Options: RouteOptions = {
           if (order.params.kind?.includes("token-list")) {
             // When filling an attribute order, we also need to pass
             // in the full list of tokens the order is made on (that
-            // is, the underlying token set tokens).
+            // is, the underlying token set tokens)
             const tokens = await redb.manyOrNone(
               `
                 SELECT
@@ -253,42 +288,43 @@ export const getExecuteSellV2Options: RouteOptions = {
       const tx = await router.fillBidTx(bidDetails, query.taker, { referrer: query.source });
 
       // Set up generic filling steps
-      const steps = [
+      const steps: {
+        action: string;
+        description: string;
+        kind: string;
+        items: {
+          status: string;
+          data?: any;
+        }[];
+      }[] = [
         {
           action: "Accept offer",
           description: "To sell this item you must confirm the transaction and pay the gas fee",
           kind: "transaction",
-        },
-        {
-          action: "Confirmation",
-          description: "Verify that the offer was successfully accepted",
-          kind: "confirmation",
+          items: [],
         },
       ];
 
+      steps[0].items.push({
+        status: "incomplete",
+        data: {
+          tx: {
+            ...tx,
+            maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
+            maxPriorityFeePerGas: query.maxPriorityFeePerGas
+              ? bn(query.maxPriorityFeePerGas).toHexString()
+              : undefined,
+          },
+          confirmation: {
+            endpoint: `/orders/executed/v1?ids=${bestOrderResult.id}`,
+            method: "GET",
+          },
+        },
+      });
+
       return {
-        steps: [
-          {
-            ...steps[0],
-            status: "incomplete",
-            data: {
-              ...tx,
-              maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
-              maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                ? bn(query.maxPriorityFeePerGas).toHexString()
-                : undefined,
-            },
-          },
-          {
-            ...steps[1],
-            status: "incomplete",
-            data: {
-              endpoint: `/orders/executed/v1?ids=${bestOrderResult.id}`,
-              method: "GET",
-            },
-          },
-        ],
-        quote,
+        steps,
+        path,
       };
     } catch (error) {
       logger.error(`get-execute-sell-${version}-handler`, `Handler failure: ${error}`);

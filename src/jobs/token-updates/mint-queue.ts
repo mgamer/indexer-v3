@@ -189,7 +189,7 @@ if (config.doBackgroundWork) {
           await idb.none(pgp.helpers.concat(queries));
         }
 
-        if (collection?.id) {
+        if (collection?.id && !config.disableRealtimeMetadataRefresh) {
           await metadataIndexFetch.addToQueue(
             [
               {
@@ -216,7 +216,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 5 }
+    { connection: redis.duplicate(), concurrency: 30 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
