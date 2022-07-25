@@ -23,30 +23,30 @@
     chalk "^2.0.0"
     js-tokens "^4.0.0"
 
-"@bull-board/api@3.11.0":
-  version "3.11.0"
-  resolved "https://registry.yarnpkg.com/@bull-board/api/-/api-3.11.0.tgz#680a9a488dc503e5aec74df6c17486f009d3bb07"
-  integrity sha512-0fB3aD3NTU3e5WApJbEJWFwDI0RKqw9P9hHVjs7yx6/8C7IXmAH0HjS5vwXUDDyEvs0sKJZuCbWcfwJIk1nGOA==
+"@bull-board/api@4.0.1":
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/@bull-board/api/-/api-4.0.1.tgz#5dceda4a038b31ba1d2c8ebedecadd0bca8d85f8"
+  integrity sha512-C46wQyDLTHc3QMq+7JaMCGgqPgmUqs6B7gUplfWxgjvFMDMkIZmMvb88EbKs0eNuwuBWADxvuLX9mc/tV9mOAg==
   dependencies:
     redis-info "^3.0.8"
 
-"@bull-board/hapi@^3.11.0":
-  version "3.11.0"
-  resolved "https://registry.yarnpkg.com/@bull-board/hapi/-/hapi-3.11.0.tgz#4df334c0ae93e20b530e57de49563f48169e6694"
-  integrity sha512-SIdSTVLYBhPrGuBNc/59zopK05VTZAmZavQ45iqs3VNEZLVvNjQUHosdiCqD5+4BZ0dBOfvDVw2bVPwkMGxn3g==
+"@bull-board/hapi@4.0.1":
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/@bull-board/hapi/-/hapi-4.0.1.tgz#da309d5c37f854e11c05c84b02b9fd244dbe7bcc"
+  integrity sha512-o/rz7Nl2/SHtgKGPSG1vl+hDmkPSaNOUP4EWJhPNcDUlp3bTWCnXokSADIOZ3hwSaCOuNcpe/TjXtHsu9lEHDw==
   dependencies:
-    "@bull-board/api" "3.11.0"
-    "@bull-board/ui" "3.11.0"
+    "@bull-board/api" "4.0.1"
+    "@bull-board/ui" "4.0.1"
     "@hapi/inert" "^6.0.5"
     "@hapi/vision" "^6.1.0"
     ejs "^3.1.7"
 
-"@bull-board/ui@3.11.0":
-  version "3.11.0"
-  resolved "https://registry.yarnpkg.com/@bull-board/ui/-/ui-3.11.0.tgz#4cd7825adc76c87596326504f6f74a153c272464"
-  integrity sha512-dUOwnH4mJO154FDKiA4j7nkyYCfCq0Bghos5de5orFxjGRBwSAhRQXoSTtl2ZHAOGCZNinXHGTEXFry3G8OWgw==
+"@bull-board/ui@4.0.1":
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/@bull-board/ui/-/ui-4.0.1.tgz#e0cbabdd7acf1675910cc375cad957d17261c3d5"
+  integrity sha512-bYPfHotet/3J/R5uMZJDshEaXtNFUlp9irO1ImtCh6L/zBgTf8mgTjBRfqFEyKo1i9xgElYnQ+MRCHYcUdVa2Q==
   dependencies:
-    "@bull-board/api" "3.11.0"
+    "@bull-board/api" "4.0.1"
 
 "@colors/colors@1.5.0":
   version "1.5.0"
@@ -641,6 +641,14 @@
   dependencies:
     "@hapi/hoek" "9.x.x"
 
+"@hapi/basic@^6.0.0":
+  version "6.0.0"
+  resolved "https://registry.yarnpkg.com/@hapi/basic/-/basic-6.0.0.tgz#d8372a8eea9583f7077c60b8d55eb5f3a447d4ef"
+  integrity sha512-nWWSXNCq3WptnP3To2c8kfQiRFDUnd9FQOcMS0B85y1x/m12c0hhp+VdmK60BMe44k6WIog1n6g8f9gZOagqBg==
+  dependencies:
+    "@hapi/boom" "9.x.x"
+    "@hapi/hoek" "9.x.x"
+
 "@hapi/boom@9.x.x", "@hapi/boom@^9.0.0", "@hapi/boom@^9.1.0", "@hapi/boom@^9.1.4":
   version "9.1.4"
   resolved "https://registry.yarnpkg.com/@hapi/boom/-/boom-9.1.4.tgz#1f9dad367c6a7da9f8def24b4a986fc5a7bd9db6"
@@ -992,10 +1000,10 @@
   resolved "https://registry.yarnpkg.com/@protobufjs/utf8/-/utf8-1.1.0.tgz#a777360b5b39a1a2e5106f8e858f2fd2d060c570"
   integrity sha1-p3c2C1s5oaLlEG+OhY8v0tBgxXA=
 
-"@reservoir0x/sdk@0.0.115":
-  version "0.0.115"
-  resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.0.115.tgz#673acb94ca4c98dfd869524bded2a647c5cb5e5c"
-  integrity sha512-cE4IRo0OvQH43gBZ7bO0gGK/I56YqN9DYSON5HYYByhiUhLkVKvH0OIYxBcLGQTkV7ZHxpTl4cxgIBru1X1d/g==
+"@reservoir0x/sdk@0.0.123-hotfix":
+  version "0.0.123-hotfix"
+  resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.0.123-hotfix.tgz#9fa1d399c07612a7d1381ef2d146b471538b015a"
+  integrity sha512-GNABX15l0fcLm91BrPj4Ekmhp6KG7IVOBtGDgtOeOerJpcc+6pb8WJgRjApyNZeSUnfC1cnPxY5DITfrwUiBlA==
   dependencies:
     ethers "^5.6.8"
     merkletreejs "0.2.31"
@@ -1062,6 +1070,14 @@
   integrity sha1-sGLKRlYgApCb4MY6ZGftFzE2rME=
   dependencies:
     date-fns "*"
+
+"@types/hapi__basic@^5.1.2":
+  version "5.1.2"
+  resolved "https://registry.yarnpkg.com/@types/hapi__basic/-/hapi__basic-5.1.2.tgz#5809c0bfa04facf2b5f18eae770c59d23cf20dcc"
+  integrity sha512-sqoQ34nwmRlNgQ5fdHHnghyVzs23aC2d30l9G1sKvdrh4PDV22bnQ+8fBCjoItT+0gGSuXIoG4qdoVZGBjH5EQ==
+  dependencies:
+    "@types/hapi__hapi" "*"
+    joi "^17.3.0"
 
 "@types/hapi__catbox@*":
   version "10.2.4"
@@ -5129,6 +5145,11 @@ slash@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/slash/-/slash-3.0.0.tgz#6539be870c165adbd5240220dbe361f1bc4d4634"
   integrity sha512-g9Q1haeby36OSStwb4ntCGGGaKsaVSjQ68fBxoQcutl5fS1vuY18H3wSt3jFyFtrkx+Kz0V1G85A4MyAdDMi2Q==
+
+slugify@^1.6.5:
+  version "1.6.5"
+  resolved "https://registry.yarnpkg.com/slugify/-/slugify-1.6.5.tgz#c8f5c072bf2135b80703589b39a3d41451fbe8c8"
+  integrity sha512-8mo9bslnBO3tr5PEVFzMPIWwWnipGS0xVbYf65zxDqfNwmzYn1LpiKNrR6DlClusuvo+hDHd1zKpmfAe83NQSQ==
 
 source-map-resolve@^0.6.0:
   version "0.6.0"

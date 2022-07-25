@@ -9,7 +9,7 @@ import { UserActivities } from "@/models/user_activities";
 
 export class SaleActivity {
   public static async handleEvent(data: FillEventData) {
-    const token = await Tokens.getByContractAndTokenId(data.contract, data.tokenId);
+    const token = await Tokens.getByContractAndTokenId(data.contract, data.tokenId, true);
 
     // If no token found
     if (_.isNull(token)) {
@@ -19,7 +19,7 @@ export class SaleActivity {
 
     // If no collection found
     if (!token.collectionId) {
-      logger.warn("bid-activity", `No collection found for ${JSON.stringify(data)}`);
+      logger.warn("sale-activity", `No collection found for ${JSON.stringify(data)}`);
     }
 
     const activityHash = getActivityHash(
@@ -44,6 +44,7 @@ export class SaleActivity {
         transactionHash: data.transactionHash,
         logIndex: data.logIndex,
         batchIndex: data.batchIndex,
+        orderId: data.orderId,
       },
     } as ActivitiesEntityInsertParams;
 
@@ -73,4 +74,5 @@ export type FillEventData = {
   batchIndex: number;
   blockHash: string;
   timestamp: number;
+  orderId: string;
 };

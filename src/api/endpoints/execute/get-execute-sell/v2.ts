@@ -39,6 +39,9 @@ export const getExecuteSellV2Options: RouteOptions = {
         .description(
           "Address of wallet filling the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
+      source: Joi.string()
+        .lowercase()
+        .description("Filling source used for attribution. Example: `reservoir.market`"),
       referrer: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
@@ -279,7 +282,7 @@ export const getExecuteSellV2Options: RouteOptions = {
             ...steps[1],
             status: "incomplete",
             data: {
-              endpoint: `/orders/executed/v1?id=${bestOrderResult.id}`,
+              endpoint: `/orders/executed/v1?ids=${bestOrderResult.id}`,
               method: "GET",
             },
           },

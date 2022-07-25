@@ -243,7 +243,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
           }
 
           addListingDetail(kind, token_kind, contract, tokenId, 1, raw_data);
-          confirmationQuery = `?id=${id}&checkRecentEvents=true`;
+          confirmationQuery = `?ids=${id}`;
         } else {
           // Only ERC1155 tokens support a quantity greater than 1
           const kindResult = await redb.one(
@@ -313,7 +313,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
             }
 
             addListingDetail(kind, "erc1155", contract, tokenId, quantityFilled, raw_data);
-            confirmationQuery = `?id=${id}&checkRecentEvents=true`;
+            confirmationQuery = `?ids=${id}`;
           }
 
           // No available orders to fill the requested quantity

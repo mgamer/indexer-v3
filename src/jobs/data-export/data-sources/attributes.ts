@@ -110,7 +110,7 @@ export class AttributesDataSource extends BaseDataSource {
         value: r.attribute_key_id,
         token_count: Number(r.token_count),
         on_sale_count: Number(r.on_sale_count),
-        floor_sell_value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+        floor_sell_value: r.floor_sell_value ? r.floor_sell_value.toString() : null,
         sell_updated_at: r.sell_updated_at ? new Date(r.sell_updated_at).toISOString() : null,
         collection_id: r.collection_id,
         kind: r.kind,
