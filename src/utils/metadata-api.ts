@@ -10,7 +10,11 @@ import { config } from "@/config/index";
 import { getNetworkName } from "@/config/network";
 
 export class MetadataApi {
-  static async getCollectionMetadata(contract: string, tokenId: string) {
+  static async getCollectionMetadata(
+    contract: string,
+    tokenId: string,
+    options?: { allowFallback?: boolean }
+  ) {
     if (config.liquidityOnly) {
       // When running in liquidity-only mode:
       // - assume the collection id matches the contract address
@@ -52,7 +56,12 @@ export class MetadataApi {
         contract: string;
         tokenIdRange: [string, string] | null;
         tokenSetId: string;
+        isFallback?: boolean;
       } = (data as any).collection;
+
+      if (collection.isFallback && !options?.allowFallback) {
+        throw new Error("Fallback collection data not acceptable");
+      }
 
       return collection;
     }

@@ -76,6 +76,7 @@ import * as bundleOrderUpdatesByMaker from "@/jobs/order-updates/by-maker-bundle
 import * as removeBuyOrderEvents from "@/jobs/order-updates/remove-buy-order-events";
 
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
+import * as orderbookPostOrderExternal from "@/jobs/orderbook/post-order-external";
 import * as resyncOrdersSource from "@/jobs/orderbook/resync-orders-source";
 import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
 
@@ -142,6 +143,7 @@ export const allJobQueues = [
   removeBuyOrderEvents.queue,
 
   orderbookOrders.queue,
+  orderbookPostOrderExternal.queue,
   orderbookTokenSets.queue,
   resyncOrdersSource.queue,
 

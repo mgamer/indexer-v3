@@ -7,9 +7,9 @@ import _ from "lodash";
 import pLimit from "p-limit";
 
 import { logger } from "@/common/logger";
-import { idb, redb } from "@/common/db";
+import { idb, pgp, redb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
-import { bn, toBuffer } from "@/common/utils";
+import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { EventDataKind, getEventData } from "@/events-sync/data";
 import * as es from "@/events-sync/storage";
@@ -1667,6 +1667,14 @@ export const syncEvents = async (
           assignOrderSourceToFillEvents(fillEventsPartial),
           assignOrderSourceToFillEvents(fillEventsFoundation),
         ]);
+
+        await Promise.all([
+          assignWashTradingScoreToFillEvents(fillEvents),
+          assignWashTradingScoreToFillEvents(fillEventsPartial),
+          assignWashTradingScoreToFillEvents(fillEventsFoundation),
+        ]);
+      } else {
+        logger.warn("sync-events", `Skipping assigning orders source assigned to fill events`);
       }
 
       // WARNING! Ordering matters (fills should come in front of cancels).
@@ -1707,8 +1715,8 @@ export const syncEvents = async (
         for (const block of blocksCache.values()) {
           // Act right away if the current block is a duplicate
           if ((await blocksModel.getBlocks(block.number)).length > 1) {
-            blockCheck.addToQueue(block.number, 10 * 1000);
-            blockCheck.addToQueue(block.number, 30 * 1000);
+            blockCheck.addToQueue(block.number, block.hash, 10);
+            blockCheck.addToQueue(block.number, block.hash, 30);
           }
         }
 
@@ -1716,12 +1724,12 @@ export const syncEvents = async (
         // (recheck each block in 1m, 5m, 10m and 60m).
         // TODO: The check frequency should be a per-chain setting
         await Promise.all(
-          [...blocksCache.keys()].map(async (blockNumber) =>
+          [...blocksCache.values()].map(async (block) =>
             Promise.all([
-              blockCheck.addToQueue(blockNumber, 60 * 1000),
-              blockCheck.addToQueue(blockNumber, 5 * 60 * 1000),
-              blockCheck.addToQueue(blockNumber, 10 * 60 * 1000),
-              blockCheck.addToQueue(blockNumber, 60 * 60 * 1000),
+              blockCheck.addToQueue(block.number, block.hash, 60),
+              blockCheck.addToQueue(block.number, block.hash, 5 * 60),
+              blockCheck.addToQueue(block.number, block.hash, 10 * 60),
+              blockCheck.addToQueue(block.number, block.hash, 60 * 60),
             ])
           )
         );
@@ -1828,11 +1836,11 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
         const ordersChunk = await redb.manyOrNone(
           `
             SELECT id, source_id_int from orders
-            WHERE id IN ($/orderIds/)
+            WHERE id IN ($/orderIds:list/)
             AND source_id_int IS NOT NULL
           `,
           {
-            orderIds: orderIdsChunk.join(","),
+            orderIds: orderIdsChunk,
           }
         );
 
@@ -1853,13 +1861,6 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
 
           // If the order source id exists on the order, use it in the fill event.
           if (orderSourceId) {
-            logger.info(
-              "sync-events",
-              `Orders source assigned to fill event: ${JSON.stringify(
-                event
-              )}, orderSourceId: ${orderSourceId}`
-            );
-
             fillEvents[index].orderSourceIdInt = orderSourceId;
           }
         });
@@ -1891,5 +1892,52 @@ const getOrderSourceByOrderKind = async (orderKind: string) => {
   } catch (e) {
     logger.error("sync-events", `Failed to get order source by order kind: ${e}`);
     return null;
+  }
+};
+
+const assignWashTradingScoreToFillEvents = async (fillEvents: es.fills.Event[]) => {
+  try {
+    const inverseFillEvents: { contract: Buffer; maker: Buffer; taker: Buffer }[] = [];
+
+    const fillEventsChunks = _.chunk(fillEvents, 100);
+
+    for (const fillEventsChunk of fillEventsChunks) {
+      const inverseFillEventsFilter = fillEventsChunk.map(
+        (fillEvent) =>
+          `('${_.replace(fillEvent.taker, "0x", "\\x")}', '${_.replace(
+            fillEvent.maker,
+            "0x",
+            "\\x"
+          )}', '${_.replace(fillEvent.contract, "0x", "\\x")}')`
+      );
+
+      const inverseFillEventsChunkQuery = pgp.as.format(
+        `
+            SELECT DISTINCT contract, maker, taker from fill_events_2
+            WHERE (maker, taker, contract) IN ($/inverseFillEventsFilter:raw/)
+          `,
+        {
+          inverseFillEventsFilter: inverseFillEventsFilter.join(","),
+        }
+      );
+
+      const inverseFillEventsChunk = await redb.manyOrNone(inverseFillEventsChunkQuery);
+
+      inverseFillEvents.push(...inverseFillEventsChunk);
+    }
+
+    fillEvents.forEach((event, index) => {
+      const washTradingDetected = inverseFillEvents.some((inverseFillEvent) => {
+        return (
+          event.maker == fromBuffer(inverseFillEvent.taker) &&
+          event.taker == fromBuffer(inverseFillEvent.maker) &&
+          event.contract == fromBuffer(inverseFillEvent.contract)
+        );
+      });
+
+      fillEvents[index].washTradingScore = Number(washTradingDetected);
+    });
+  } catch (e) {
+    logger.error("sync-events", `Failed to assign wash trading score to fill events: ${e}`);
   }
 };

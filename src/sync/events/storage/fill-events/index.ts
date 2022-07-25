@@ -17,6 +17,7 @@ export type Event = {
   tokenId: string;
   amount: string;
   fillSource?: string;
+  washTradingScore?: number;
   baseEventParams: BaseEventParams;
 };
 
@@ -40,4 +41,5 @@ export type DbEvent = {
   token_id: string;
   amount: string;
   fill_source: string | null;
+  wash_trading_score: number;
 };
