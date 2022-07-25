@@ -31,7 +31,7 @@ export const getRedirectLogoV1Options: RouteOptions = {
     const sources = await Sources.getInstance();
 
     try {
-      let source = await sources.getByName(query.source);
+      let source = await sources.getByName(query.source, false);
       if (!source) {
         source = await sources.getByDomain(query.source);
       }
