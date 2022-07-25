@@ -1,23 +1,50 @@
 import { Server } from "@hapi/hapi";
 
+import * as activitiesEndpoints from "@/api/endpoints/activities";
 import * as adminEndpoints from "@/api/endpoints/admin";
 import * as apiKeysEndpoints from "@/api/endpoints/api-keys";
 import * as attributesEndpoints from "@/api/endpoints/attributes";
+import * as collectionsEndpoints from "@/api/endpoints/collections";
 import * as eventsEndpoints from "@/api/endpoints/events";
 import * as executeEndpoints from "@/api/endpoints/execute";
-import * as collectionsEndpoints from "@/api/endpoints/collections";
 import * as healthEndpoints from "@/api/endpoints/health";
 import * as oracleEndpoints from "@/api/endpoints/oracle";
 import * as ordersEndpoints from "@/api/endpoints/orders";
 import * as ownersEndpoints from "@/api/endpoints/owners";
-import * as statsEndpoints from "@/api/endpoints/stats";
-import * as tokensEndpoints from "@/api/endpoints/tokens";
-import * as transfersEndpoints from "@/api/endpoints/transfers";
 import * as redirectsEndpoints from "@/api/endpoints/redirects";
 import * as searchEndpoints from "@/api/endpoints/search";
-import * as activitiesEndpoints from "@/api/endpoints/activities";
+import * as statsEndpoints from "@/api/endpoints/stats";
+import * as tokensEndpoints from "@/api/endpoints/tokens";
+import * as transactionsEndpoints from "@/api/endpoints/transactions";
+import * as transfersEndpoints from "@/api/endpoints/transfers";
 
 export const setupRoutes = (server: Server) => {
+  // Activity
+
+  server.route({
+    method: "GET",
+    path: "/collections/{collection}/activity/v1",
+    options: activitiesEndpoints.getCollectionActivityV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/tokens/{token}/activity/v1",
+    options: activitiesEndpoints.getTokenActivityV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/users/{user}/activity/v1",
+    options: activitiesEndpoints.getUserActivityV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/activity/v1",
+    options: activitiesEndpoints.getActivityV1Options,
+  });
+
   // Admin
 
   server.route({
@@ -110,7 +137,7 @@ export const setupRoutes = (server: Server) => {
     options: adminEndpoints.postSetCollectionCommunity,
   });
 
-  // Api keys
+  // API keys
 
   server.route({
     method: "POST",
@@ -372,6 +399,25 @@ export const setupRoutes = (server: Server) => {
     options: executeEndpoints.getExecuteSellV3Options,
   });
 
+  // Health
+
+  // Both `/readyz` and `/livez` point to the same handler,
+  // but maybe at some point we want to separate the logic:
+  // `/readyz`: Check whether the container can be added to the load balancer and have it receive traffic
+  // `/livez`: During the lifetime of the container do checks to see if the container is still responsive
+
+  server.route({
+    method: "GET",
+    path: "/livez",
+    options: healthEndpoints.getLiveOptions,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/readyz",
+    options: healthEndpoints.getLiveOptions,
+  });
+
   // Oracle
 
   server.route({
@@ -480,6 +526,52 @@ export const setupRoutes = (server: Server) => {
     options: ownersEndpoints.getCommonCollectionsOwnersV1Options,
   });
 
+  // Redirects
+
+  server.route({
+    method: "GET",
+    path: "/redirect/logo/v1",
+    options: redirectsEndpoints.getRedirectLogoV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/redirect/sources/{source}/logo/v2",
+    options: redirectsEndpoints.getRedirectLogoV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/redirect/token/v1",
+    options: redirectsEndpoints.getRedirectTokenV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/redirect/sources/{source}/tokens/{token}/link/v2",
+    options: redirectsEndpoints.getRedirectTokenV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/redirect/tokens/{token}/image/v1",
+    options: redirectsEndpoints.getRedirectTokenImageV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/redirect/collections/{collection}/image/v1",
+    options: redirectsEndpoints.getRedirectCollectionImageV1Options,
+  });
+
+  // Search
+
+  server.route({
+    method: "GET",
+    path: "/search/collections/v1",
+    options: searchEndpoints.getSearchCollectionsV1Options,
+  });
+
   // Stats
 
   server.route({
@@ -582,6 +674,14 @@ export const setupRoutes = (server: Server) => {
     options: tokensEndpoints.postTokenSetsV1Options,
   });
 
+  // Transactions
+
+  server.route({
+    method: "GET",
+    path: "/transactions/{txHash}/synced/v1",
+    options: transactionsEndpoints.getTransactionSyncedV1Options,
+  });
+
   // Transfers
 
   server.route({
@@ -624,94 +724,5 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/transfers/bulk/v1",
     options: transfersEndpoints.getTransfersBulkV1Options,
-  });
-
-  // Redirects
-  server.route({
-    method: "GET",
-    path: "/redirect/logo/v1",
-    options: redirectsEndpoints.getRedirectLogoV1Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/redirect/sources/{source}/logo/v2",
-    options: redirectsEndpoints.getRedirectLogoV2Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/redirect/token/v1",
-    options: redirectsEndpoints.getRedirectTokenV1Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/redirect/sources/{source}/tokens/{token}/link/v2",
-    options: redirectsEndpoints.getRedirectTokenV2Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/redirect/tokens/{token}/image/v1",
-    options: redirectsEndpoints.getRedirectTokenImageV1Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/redirect/collections/{collection}/image/v1",
-    options: redirectsEndpoints.getRedirectCollectionImageV1Options,
-  });
-
-  // Activity
-
-  server.route({
-    method: "GET",
-    path: "/collections/{collection}/activity/v1",
-    options: activitiesEndpoints.getCollectionActivityV1Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/tokens/{token}/activity/v1",
-    options: activitiesEndpoints.getTokenActivityV1Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/users/{user}/activity/v1",
-    options: activitiesEndpoints.getUserActivityV1Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/activity/v1",
-    options: activitiesEndpoints.getActivityV1Options,
-  });
-
-  // Search
-
-  server.route({
-    method: "GET",
-    path: "/search/collections/v1",
-    options: searchEndpoints.getSearchCollectionsV1Options,
-  });
-
-  // Health
-
-  // Both readyz and livez endpoints point to the same handler, maybe at some point we want to separate the logic
-  // readyz: when can container be added to the load balancer and receive traffic
-  // livez: during the lifetime of the container do checks to see if the container is still responsive
-
-  server.route({
-    method: "GET",
-    path: "/livez",
-    options: healthEndpoints.getLiveOptions,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/readyz",
-    options: healthEndpoints.getLiveOptions,
   });
 };

@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Request, RouteOptions } from "@hapi/hapi";
+import crypto from "crypto";
 import Joi from "joi";
+import _ from "lodash";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
@@ -14,8 +16,6 @@ import {
   toBuffer,
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
-import crypto from "crypto";
-import _ from "lodash";
 
 const version = "v3";
 
@@ -59,6 +59,12 @@ export const getSalesV3Options: RouteOptions = {
       attributes: Joi.object()
         .unknown()
         .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
+      txHash: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-fA-F0-9]{64}$/)
+        .description(
+          "Filter to a particular transaction. Example: `0x04654cc4c81882ed4d20b958e0eeb107915d75730110cce65333221439de6afc`"
+        ),
       startTimestamp: Joi.number().description(
         "Get events after a particular unix timestamp (inclusive)"
       ),
@@ -75,7 +81,7 @@ export const getSalesV3Options: RouteOptions = {
         .pattern(base64Regex)
         .description("Use continuation token to request next offset of items."),
     })
-      .oxor("contract", "token", "collection")
+      .oxor("contract", "token", "collection", "txHash")
       .with("attributes", "collection"),
   },
   response: {
@@ -191,6 +197,9 @@ export const getSalesV3Options: RouteOptions = {
         (query as any).contract = toBuffer(query.collection);
         collectionFilter = `fill_events_2.contract = $/contract/`;
       }
+    } else if (query.txHash) {
+      (query as any).txHash = toBuffer(query.txHash);
+      collectionFilter = `fill_events_2.tx_hash = $/txHash/`;
     } else {
       collectionFilter = "TRUE";
     }
