@@ -1,3 +1,12 @@
+## [5.120.3](https://github.com/reservoirprotocol/indexer/compare/v5.120.2...v5.120.3) (2022-07-25)
+
+
+### Bug Fixes
+
+* add one more block orphan check job ([4a36717](https://github.com/reservoirprotocol/indexer/commit/4a3671775321c4e0f7a674f247589b4cb4e0bd55))
+
+
+
 ## [5.120.2](https://github.com/reservoirprotocol/indexer/compare/v5.120.1...v5.120.2) (2022-07-25)
 
 
