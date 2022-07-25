@@ -242,7 +242,7 @@ export const save = async (
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
         nonce: order.params.nonce,
         source_id: source ? toBuffer(source) : null,
-        source_id_int: source ? sources.getByName("LooksRare").id : null,
+        source_id_int: source ? sources.getByDomain("looksrare.io").id : null,
         is_reservoir: isReservoir ? isReservoir : null,
         contract: toBuffer(order.params.collection),
         conduit: toBuffer(conduit),

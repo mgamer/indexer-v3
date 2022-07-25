@@ -1887,15 +1887,15 @@ const getOrderSourceByOrderKind = async (orderKind: string) => {
 
     switch (orderKind) {
       case "x2y2":
-        return sources.getByName("X2Y2").id;
+        return sources.getByDomain("x2y2.io").id;
       case "foundation":
-        return sources.getByName("Foundation").id;
+        return sources.getByDomain("foundation.app").id;
       case "looks-rare":
-        return sources.getByName("LooksRare").id;
+        return sources.getByDomain("looksrare.org").id;
       case "seaport":
       case "wyvern-v2":
       case "wyvern-v2.3":
-        return sources.getByName("OpenSea").id;
+        return sources.getByDomain("opensea.io").id;
       default:
         return null; // For all others, we can't assume where the order originated from.
     }

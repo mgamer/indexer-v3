@@ -15,7 +15,7 @@ const version = "v2";
 
 export const postOrderV2Options: RouteOptions = {
   description: "Submit single order",
-  tags: ["api", "Orderbook"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 5,
@@ -40,7 +40,7 @@ export const postOrderV2Options: RouteOptions = {
         .valid("reservoir", "opensea", "looks-rare")
         .default("reservoir"),
       orderbookApiKey: Joi.string(),
-      source: Joi.string(),
+      source: Joi.string().description("The name of the source"),
       attribute: Joi.object({
         collection: Joi.string().required(),
         key: Joi.string().required(),
