@@ -148,8 +148,6 @@ export const getExecuteBuyV3Options: RouteOptions = {
         rawQuote: string;
       }[] = [];
 
-      let confirmationQuery = "";
-
       // Consistently handle a single token vs multiple tokens
       let tokens: string[] = [];
       if (query.token) {
@@ -275,7 +273,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
 
           const rawQuote = bn(price).add(bn(price).mul(query.referrerFeeBps).div(10000));
           path.push({
-            orderId: bestOrderResult.id,
+            orderId: id,
             contract,
             tokenId,
             quantity: 1,
@@ -291,7 +289,6 @@ export const getExecuteBuyV3Options: RouteOptions = {
           }
 
           addListingDetail(kind, token_kind, contract, tokenId, 1, raw_data);
-          confirmationQuery += `${confirmationQuery.length ? "&" : "?"}ids=${id}`;
         } else {
           // Only ERC1155 tokens support a quantity greater than 1
           const kindResult = await redb.one(
@@ -366,7 +363,6 @@ export const getExecuteBuyV3Options: RouteOptions = {
             }
 
             addListingDetail(kind, "erc1155", contract, tokenId, quantityFilled, raw_data);
-            confirmationQuery = `?ids=${id}`;
           }
 
           // No available orders to fill the requested quantity
@@ -418,17 +414,11 @@ export const getExecuteBuyV3Options: RouteOptions = {
       steps[0].items.push({
         status: "incomplete",
         data: {
-          tx: {
-            ...tx,
-            maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
-            maxPriorityFeePerGas: query.maxPriorityFeePerGas
-              ? bn(query.maxPriorityFeePerGas).toHexString()
-              : undefined,
-          },
-          confirmation: {
-            endpoint: `/orders/executed/v1${confirmationQuery!}`,
-            method: "GET",
-          },
+          ...tx,
+          maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
+          maxPriorityFeePerGas: query.maxPriorityFeePerGas
+            ? bn(query.maxPriorityFeePerGas).toHexString()
+            : undefined,
         },
       });
 

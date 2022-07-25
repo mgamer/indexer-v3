@@ -122,19 +122,13 @@ export const getExecuteCancelV2Options: RouteOptions = {
                   {
                     status: "incomplete",
                     data: {
-                      tx: {
-                        ...cancelTx,
-                        maxFeePerGas: query.maxFeePerGas
-                          ? bn(query.maxFeePerGas).toHexString()
-                          : undefined,
-                        maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                          ? bn(query.maxPriorityFeePerGas).toHexString()
-                          : undefined,
-                      },
-                      confirmation: {
-                        endpoint: `/orders/executed/v1?ids=${order.prefixHash()}`,
-                        method: "GET",
-                      },
+                      ...cancelTx,
+                      maxFeePerGas: query.maxFeePerGas
+                        ? bn(query.maxFeePerGas).toHexString()
+                        : undefined,
+                      maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                        ? bn(query.maxPriorityFeePerGas).toHexString()
+                        : undefined,
                     },
                     orderIndex: 0,
                   },
@@ -160,19 +154,13 @@ export const getExecuteCancelV2Options: RouteOptions = {
                   {
                     status: "incomplete",
                     data: {
-                      tx: {
-                        ...cancelTx,
-                        maxFeePerGas: query.maxFeePerGas
-                          ? bn(query.maxFeePerGas).toHexString()
-                          : undefined,
-                        maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                          ? bn(query.maxPriorityFeePerGas).toHexString()
-                          : undefined,
-                      },
-                      confirmation: {
-                        endpoint: `/orders/executed/v1?ids=${order.hash()}`,
-                        method: "GET",
-                      },
+                      ...cancelTx,
+                      maxFeePerGas: query.maxFeePerGas
+                        ? bn(query.maxFeePerGas).toHexString()
+                        : undefined,
+                      maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                        ? bn(query.maxPriorityFeePerGas).toHexString()
+                        : undefined,
                     },
                     orderIndex: 0,
                   },
@@ -198,19 +186,13 @@ export const getExecuteCancelV2Options: RouteOptions = {
                   {
                     status: "incomplete",
                     data: {
-                      tx: {
-                        ...cancelTx,
-                        maxFeePerGas: query.maxFeePerGas
-                          ? bn(query.maxFeePerGas).toHexString()
-                          : undefined,
-                        maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                          ? bn(query.maxPriorityFeePerGas).toHexString()
-                          : undefined,
-                      },
-                      confirmation: {
-                        endpoint: `/orders/executed/v1?ids=${order.hash()}`,
-                        method: "GET",
-                      },
+                      ...cancelTx,
+                      maxFeePerGas: query.maxFeePerGas
+                        ? bn(query.maxFeePerGas).toHexString()
+                        : undefined,
+                      maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                        ? bn(query.maxPriorityFeePerGas).toHexString()
+                        : undefined,
                     },
                     orderIndex: 0,
                   },
@@ -239,19 +221,13 @@ export const getExecuteCancelV2Options: RouteOptions = {
                   {
                     status: "incomplete",
                     data: {
-                      tx: {
-                        ...cancelTx,
-                        maxFeePerGas: query.maxFeePerGas
-                          ? bn(query.maxFeePerGas).toHexString()
-                          : undefined,
-                        maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                          ? bn(query.maxPriorityFeePerGas).toHexString()
-                          : undefined,
-                      },
-                      confirmation: {
-                        endpoint: `/orders/executed/v1?ids=${order.hash()}`,
-                        method: "GET",
-                      },
+                      ...cancelTx,
+                      maxFeePerGas: query.maxFeePerGas
+                        ? bn(query.maxFeePerGas).toHexString()
+                        : undefined,
+                      maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                        ? bn(query.maxPriorityFeePerGas).toHexString()
+                        : undefined,
                     },
                     orderIndex: 0,
                   },
@@ -280,19 +256,13 @@ export const getExecuteCancelV2Options: RouteOptions = {
                   {
                     status: "incomplete",
                     data: {
-                      tx: {
-                        ...cancelTx,
-                        maxFeePerGas: query.maxFeePerGas
-                          ? bn(query.maxFeePerGas).toHexString()
-                          : undefined,
-                        maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                          ? bn(query.maxPriorityFeePerGas).toHexString()
-                          : undefined,
-                      },
-                      confirmation: {
-                        endpoint: `/orders/executed/v1?ids=${order.hash()}`,
-                        method: "GET",
-                      },
+                      ...cancelTx,
+                      maxFeePerGas: query.maxFeePerGas
+                        ? bn(query.maxFeePerGas).toHexString()
+                        : undefined,
+                      maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                        ? bn(query.maxPriorityFeePerGas).toHexString()
+                        : undefined,
                     },
                     orderIndex: 0,
                   },

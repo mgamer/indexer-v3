@@ -308,17 +308,11 @@ export const getExecuteSellV3Options: RouteOptions = {
       steps[0].items.push({
         status: "incomplete",
         data: {
-          tx: {
-            ...tx,
-            maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
-            maxPriorityFeePerGas: query.maxPriorityFeePerGas
-              ? bn(query.maxPriorityFeePerGas).toHexString()
-              : undefined,
-          },
-          confirmation: {
-            endpoint: `/orders/executed/v1?ids=${bestOrderResult.id}`,
-            method: "GET",
-          },
+          ...tx,
+          maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
+          maxPriorityFeePerGas: query.maxPriorityFeePerGas
+            ? bn(query.maxPriorityFeePerGas).toHexString()
+            : undefined,
         },
       });
 
