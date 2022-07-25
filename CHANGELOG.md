@@ -1,3 +1,13 @@
+## [5.120.2](https://github.com/reservoirprotocol/indexer/compare/v5.120.1...v5.120.2) (2022-07-25)
+
+
+### Bug Fixes
+
+* block orphan checking ([ae9cca1](https://github.com/reservoirprotocol/indexer/commit/ae9cca1466b14c4471bc571200b5ec4109e4e040))
+* use default chain id configs ([2ee84e8](https://github.com/reservoirprotocol/indexer/commit/2ee84e8e60b3b915a8b5e446741a3eedd244c307))
+
+
+
 ## [5.120.1](https://github.com/reservoirprotocol/indexer/compare/v5.120.0...v5.120.1) (2022-07-25)
 
 
