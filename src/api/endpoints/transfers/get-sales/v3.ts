@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Request, RouteOptions } from "@hapi/hapi";
+import crypto from "crypto";
 import Joi from "joi";
+import _ from "lodash";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
@@ -14,7 +16,6 @@ import {
   toBuffer,
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
-import crypto from "crypto";
 
 const version = "v3";
 
@@ -30,12 +31,20 @@ export const getSalesV3Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      contract: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .description(
-          "Filter to a particular contract. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
-        ),
+      contract: Joi.alternatives()
+        .try(
+          Joi.array()
+            .items(
+              Joi.string()
+                .lowercase()
+                .pattern(/^0x[a-fA-F0-9]{40}$/)
+            )
+            .max(20),
+          Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}$/)
+        )
+        .description("Array of contract. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"),
       token: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
@@ -50,6 +59,12 @@ export const getSalesV3Options: RouteOptions = {
       attributes: Joi.object()
         .unknown()
         .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
+      txHash: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-fA-F0-9]{64}$/)
+        .description(
+          "Filter to a particular transaction. Example: `0x04654cc4c81882ed4d20b958e0eeb107915d75730110cce65333221439de6afc`"
+        ),
       startTimestamp: Joi.number().description(
         "Get events after a particular unix timestamp (inclusive)"
       ),
@@ -66,7 +81,7 @@ export const getSalesV3Options: RouteOptions = {
         .pattern(base64Regex)
         .description("Use continuation token to request next offset of items."),
     })
-      .oxor("contract", "token", "collection")
+      .oxor("contract", "token", "collection", "txHash")
       .with("attributes", "collection"),
   },
   response: {
@@ -123,8 +138,22 @@ export const getSalesV3Options: RouteOptions = {
 
     // Filters
     if (query.contract) {
-      (query as any).contract = toBuffer(query.contract);
-      tokenFilter = `fill_events_2.contract = $/contract/`;
+      if (!_.isArray(query.contract)) {
+        query.contract = [query.contract];
+      }
+
+      for (const contract of query.contract) {
+        const contractsFilter = `'${_.replace(contract, "0x", "\\x")}'`;
+
+        if (_.isUndefined((query as any).contractsFilter)) {
+          (query as any).contractsFilter = [];
+        }
+
+        (query as any).contractsFilter.push(contractsFilter);
+      }
+
+      (query as any).contractsFilter = _.join((query as any).contractsFilter, ",");
+      tokenFilter = `fill_events_2.contract IN ($/contractsFilter:raw/)`;
     } else if (query.token) {
       const [contract, tokenId] = query.token.split(":");
 
@@ -168,6 +197,9 @@ export const getSalesV3Options: RouteOptions = {
         (query as any).contract = toBuffer(query.collection);
         collectionFilter = `fill_events_2.contract = $/contract/`;
       }
+    } else if (query.txHash) {
+      (query as any).txHash = toBuffer(query.txHash);
+      collectionFilter = `fill_events_2.tx_hash = $/txHash/`;
     } else {
       collectionFilter = "TRUE";
     }
