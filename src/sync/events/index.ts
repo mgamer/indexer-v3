@@ -1732,6 +1732,7 @@ export const syncEvents = async (
               blockCheck.addToQueue(block, blockHash, 60),
               blockCheck.addToQueue(block, blockHash, 5 * 60),
               blockCheck.addToQueue(block, blockHash, 10 * 60),
+              blockCheck.addToQueue(block, blockHash, 30 * 60),
               blockCheck.addToQueue(block, blockHash, 60 * 60),
             ]);
           })
