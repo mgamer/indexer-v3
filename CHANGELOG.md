@@ -1,3 +1,49 @@
+## [5.120.3](https://github.com/reservoirprotocol/indexer/compare/v5.120.2...v5.120.3) (2022-07-25)
+
+
+### Bug Fixes
+
+* add one more block orphan check job ([4a36717](https://github.com/reservoirprotocol/indexer/commit/4a3671775321c4e0f7a674f247589b4cb4e0bd55))
+
+
+
+## [5.120.2](https://github.com/reservoirprotocol/indexer/compare/v5.120.1...v5.120.2) (2022-07-25)
+
+
+### Bug Fixes
+
+* block orphan checking ([ae9cca1](https://github.com/reservoirprotocol/indexer/commit/ae9cca1466b14c4471bc571200b5ec4109e4e040))
+* use default chain id configs ([2ee84e8](https://github.com/reservoirprotocol/indexer/commit/2ee84e8e60b3b915a8b5e446741a3eedd244c307))
+
+
+
+## [5.120.1](https://github.com/reservoirprotocol/indexer/compare/v5.120.0...v5.120.1) (2022-07-25)
+
+
+### Bug Fixes
+
+* more resilient orphan block check ([4eea30f](https://github.com/reservoirprotocol/indexer/commit/4eea30f9f3411aaa4103303e663d381982e673b9))
+
+
+
+# [5.120.0](https://github.com/reservoirprotocol/indexer/compare/v5.119.0...v5.120.0) (2022-07-23)
+
+
+### Bug Fixes
+
+* allow unsafe number for amount ([7d67c7f](https://github.com/reservoirprotocol/indexer/commit/7d67c7f508fc1db4d70c5aa253d759e4ff66474d))
+
+
+
+# [5.119.0](https://github.com/reservoirprotocol/indexer/compare/v5.118.3...v5.119.0) (2022-07-22)
+
+
+### Features
+
+* allow passing source in the execute apis ([1bb1a98](https://github.com/reservoirprotocol/indexer/commit/1bb1a9853995786662c1394bd90f4ded63b61d1d))
+
+
+
 ## [5.118.3](https://github.com/reservoirprotocol/indexer/compare/v5.118.2...v5.118.3) (2022-07-20)
 
 

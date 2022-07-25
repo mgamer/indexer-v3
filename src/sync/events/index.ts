@@ -54,8 +54,10 @@ export const syncEvents = async (
 
   // --- Handle: fetch and process events ---
 
-  // Keep track of all handled blocks
+  // Cache blocks for efficiency
   const blocksCache = new Map<number, blocksModel.Block>();
+  // Keep track of all handled `${block}-${blockHash}` pairs
+  const blocksSet = new Set<string>();
 
   // Keep track of data needed by other processes that will get triggered
   const fillInfos: fillUpdates.FillInfo[] = [];
@@ -120,6 +122,7 @@ export const syncEvents = async (
       for (const log of logs) {
         try {
           const baseEventParams = await parseEvent(log, blocksCache);
+          blocksSet.add(`${log.blockNumber}-${log.blockHash}`);
 
           // It's quite important from a performance perspective to have
           // the block data available before proceeding with the events
@@ -1706,11 +1709,14 @@ export const syncEvents = async (
 
       // --- Handle: orphan blocks ---
       if (!backfill) {
-        for (const block of blocksCache.values()) {
+        for (const blockData of blocksSet.values()) {
+          const block = Number(blockData.split("-")[0]);
+          const blockHash = blockData.split("-")[1];
+
           // Act right away if the current block is a duplicate
-          if ((await blocksModel.getBlocks(block.number)).length > 1) {
-            blockCheck.addToQueue(block.number, 10 * 1000);
-            blockCheck.addToQueue(block.number, 30 * 1000);
+          if ((await blocksModel.getBlocks(block)).length > 1) {
+            blockCheck.addToQueue(block, blockHash, 10);
+            blockCheck.addToQueue(block, blockHash, 30);
           }
         }
 
@@ -1718,14 +1724,18 @@ export const syncEvents = async (
         // (recheck each block in 1m, 5m, 10m and 60m).
         // TODO: The check frequency should be a per-chain setting
         await Promise.all(
-          [...blocksCache.keys()].map(async (blockNumber) =>
-            Promise.all([
-              blockCheck.addToQueue(blockNumber, 60 * 1000),
-              blockCheck.addToQueue(blockNumber, 5 * 60 * 1000),
-              blockCheck.addToQueue(blockNumber, 10 * 60 * 1000),
-              blockCheck.addToQueue(blockNumber, 60 * 60 * 1000),
-            ])
-          )
+          [...blocksSet.values()].map(async (blockData) => {
+            const block = Number(blockData.split("-")[0]);
+            const blockHash = blockData.split("-")[1];
+
+            return Promise.all([
+              blockCheck.addToQueue(block, blockHash, 60),
+              blockCheck.addToQueue(block, blockHash, 5 * 60),
+              blockCheck.addToQueue(block, blockHash, 10 * 60),
+              blockCheck.addToQueue(block, blockHash, 30 * 60),
+              blockCheck.addToQueue(block, blockHash, 60 * 60),
+            ]);
+          })
         );
       }
 
