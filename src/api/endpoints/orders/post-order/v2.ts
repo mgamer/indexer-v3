@@ -221,7 +221,7 @@ export const postOrderV2Options: RouteOptions = {
             throw Boom.badRequest(result.status);
           }
 
-          if (orderbook === "opensea") {
+          if (orderbook === "looks-rare") {
             await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
           }
 
