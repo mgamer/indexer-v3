@@ -75,6 +75,9 @@ export const getExecuteBuyV2Options: RouteOptions = {
       partial: Joi.boolean()
         .default(false)
         .description("If true, partial orders will be accepted."),
+      noDirectFilling: Joi.boolean().description(
+        "If true, all fills will be executed through the router."
+      ),
       maxFeePerGas: Joi.string()
         .pattern(/^[0-9]+$/)
         .description("Optional. Set custom gas price."),
@@ -369,6 +372,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
           bps: query.referrerFeeBps,
         },
         partial: query.partial,
+        noDirectFilling: query.noDirectFilling,
       });
 
       // Check that the taker has enough funds to fill all requested tokens
