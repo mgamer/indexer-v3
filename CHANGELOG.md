@@ -1,3 +1,12 @@
+## [5.120.1](https://github.com/reservoirprotocol/indexer/compare/v5.120.0...v5.120.1) (2022-07-25)
+
+
+### Bug Fixes
+
+* more resilient orphan block check ([4eea30f](https://github.com/reservoirprotocol/indexer/commit/4eea30f9f3411aaa4103303e663d381982e673b9))
+
+
+
 # [5.120.0](https://github.com/reservoirprotocol/indexer/compare/v5.119.0...v5.120.0) (2022-07-23)
 
 
