@@ -51,6 +51,9 @@ export const getExecuteSellV2Options: RouteOptions = {
           "Wallet address of referrer. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
       onlyQuote: Joi.boolean().default(false).description("If true, only quote will be returned."),
+      noDirectFilling: Joi.boolean().description(
+        "If true, all fills will be executed through the router"
+      ),
       maxFeePerGas: Joi.string()
         .pattern(/^[0-9]+$/)
         .description("Optional. Set custom gas price."),
@@ -250,7 +253,10 @@ export const getExecuteSellV2Options: RouteOptions = {
       }
 
       const router = new Sdk.Router.Router(config.chainId, slowProvider);
-      const tx = await router.fillBidTx(bidDetails, query.taker, { referrer: query.source });
+      const tx = await router.fillBidTx(bidDetails, query.taker, {
+        referrer: query.source,
+        noDirectFilling: query.noDirectFilling,
+      });
 
       // Set up generic filling steps
       const steps = [

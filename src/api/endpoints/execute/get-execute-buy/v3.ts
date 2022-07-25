@@ -56,6 +56,9 @@ export const getExecuteBuyV3Options: RouteOptions = {
       onlyPath: Joi.boolean()
         .default(false)
         .description("If true, only the path will be returned."),
+      noDirectFilling: Joi.boolean().description(
+        "If true, all fills will be executed through the router."
+      ),
       source: Joi.string()
         .lowercase()
         .description("Filling source used for attribution. Example: `reservoir.market`"),
@@ -385,6 +388,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
           bps: query.referrerFeeBps,
         },
         partial: query.partial,
+        noDirectFilling: query.noDirectFilling,
       });
 
       // Check that the taker has enough funds to fill all requested tokens
