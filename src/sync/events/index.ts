@@ -1715,8 +1715,8 @@ export const syncEvents = async (
         for (const block of blocksCache.values()) {
           // Act right away if the current block is a duplicate
           if ((await blocksModel.getBlocks(block.number)).length > 1) {
-            blockCheck.addToQueue(block.number, 10 * 1000);
-            blockCheck.addToQueue(block.number, 30 * 1000);
+            blockCheck.addToQueue(block.number, block.hash, 10);
+            blockCheck.addToQueue(block.number, block.hash, 30);
           }
         }
 
@@ -1724,12 +1724,12 @@ export const syncEvents = async (
         // (recheck each block in 1m, 5m, 10m and 60m).
         // TODO: The check frequency should be a per-chain setting
         await Promise.all(
-          [...blocksCache.keys()].map(async (blockNumber) =>
+          [...blocksCache.values()].map(async (block) =>
             Promise.all([
-              blockCheck.addToQueue(blockNumber, 60 * 1000),
-              blockCheck.addToQueue(blockNumber, 5 * 60 * 1000),
-              blockCheck.addToQueue(blockNumber, 10 * 60 * 1000),
-              blockCheck.addToQueue(blockNumber, 60 * 60 * 1000),
+              blockCheck.addToQueue(block.number, block.hash, 60),
+              blockCheck.addToQueue(block.number, block.hash, 5 * 60),
+              blockCheck.addToQueue(block.number, block.hash, 10 * 60),
+              blockCheck.addToQueue(block.number, block.hash, 60 * 60),
             ])
           )
         );
