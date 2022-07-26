@@ -40,7 +40,7 @@ export const buildContinuation = (c: string) => Buffer.from(c).toString("base64"
 
 export const regex = {
   base64: /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/,
-  domain: /^((?!-)[a-zA-Z0-9-]{1,63}(?<!-)\\.)+[a-zA-Z]{2,63}$/,
+  domain: /^[a-zA-Z0-9][a-zA-Z0-9.-]+[a-zA-Z0-9]$/,
   address: /^0x[a-fA-F0-9]{40}$/,
   bytes32: /^0x[a-fA-F0-9]{64}$/,
   token: /^0x[a-fA-F0-9]{40}:[0-9]+$/,
