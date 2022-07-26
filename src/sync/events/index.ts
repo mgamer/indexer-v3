@@ -1901,7 +1901,7 @@ export const unsyncEvents = async (block: number, blockHash: string) => {
 
 const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
   try {
-    const orderIds = fillEvents.map((e) => e.orderId).filter(Boolean);
+    const orderIds = fillEvents.filter((e) => e.orderId !== undefined).map((e) => e.orderId);
     if (orderIds.length) {
       const orders = [];
       const orderIdChunks = _.chunk(orderIds, 100);
@@ -1928,7 +1928,7 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
         }
 
         fillEvents.forEach((event) => {
-          if (!event.orderId) {
+          if (event.orderId == undefined) {
             return;
           }
 
