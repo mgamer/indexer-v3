@@ -23,6 +23,7 @@ export const config = {
   liquidityOnly: !process.env.METADATA_API_BASE_URL,
   metadataIndexingMethod: String(process.env.METADATA_INDEXING_METHOD || "opensea"),
   metadataApiBaseUrl: String(process.env.METADATA_API_BASE_URL),
+  disableRealtimeMetadataRefresh: Boolean(Number(process.env.DISABLE_REALTIME_METADATA_REFRESH)),
 
   databaseUrl: String(process.env.DATABASE_URL),
   readReplicaDatabaseUrl: String(process.env.READ_REPLICA_DATABASE_URL || process.env.DATABASE_URL),
@@ -45,4 +46,7 @@ export const config = {
   dataExportAwsAccessRole: String(process.env.DATA_EXPORT_AWS_ACCESS_ROLE),
   dataExportAwsS3UploadRole: String(process.env.DATA_EXPORT_AWS_S3_UPLOAD_ROLE),
   dataExportAwsS3UploadExternalId: String(process.env.DATA_EXPORT_AWS_S3_UPLOAD_EXTERNAL_ID),
+
+  looksRareApiKey: String(process.env.LOOKSRARE_API_KEY),
+  openSeaApiKey: String(process.env.OPENSEA_API_KEY),
 };
