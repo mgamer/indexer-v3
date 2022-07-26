@@ -92,8 +92,6 @@ import * as resyncAttributeFloorSell from "@/jobs/update-attribute/resync-attrib
 import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attribute-key-counts";
 import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
 
-import * as orderbookPostOrderExternal from "@/jobs/orderbook/post-order-external";
-
 export const allJobQueues = [
   fixActivitiesMissingCollection.queue,
   processActivityEvent.queue,
