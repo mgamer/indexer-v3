@@ -8,9 +8,9 @@ import _ from "lodash";
 import pLimit from "p-limit";
 
 import { logger } from "@/common/logger";
-import { idb } from "@/common/db";
+import { idb, pgp, redb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
-import { bn, toBuffer } from "@/common/utils";
+import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { EventDataKind, getEventData } from "@/events-sync/data";
 import * as es from "@/events-sync/storage";
@@ -55,8 +55,10 @@ export const syncEvents = async (
 
   // --- Handle: fetch and process events ---
 
-  // Keep track of all handled blocks
+  // Cache blocks for efficiency
   const blocksCache = new Map<number, blocksModel.Block>();
+  // Keep track of all handled `${block}-${blockHash}` pairs
+  const blocksSet = new Set<string>();
 
   // Keep track of data needed by other processes that will get triggered
   const fillInfos: fillUpdates.FillInfo[] = [];
@@ -124,6 +126,7 @@ export const syncEvents = async (
       for (const log of logs) {
         try {
           const baseEventParams = await parseEvent(log, blocksCache);
+          blocksSet.add(`${log.blockNumber}-${log.blockHash}`);
 
           // It's quite important from a performance perspective to have
           // the block data available before proceeding with the events
@@ -1751,6 +1754,14 @@ export const syncEvents = async (
           assignOrderSourceToFillEvents(fillEventsPartial),
           assignOrderSourceToFillEvents(fillEventsFoundation),
         ]);
+
+        await Promise.all([
+          assignWashTradingScoreToFillEvents(fillEvents),
+          assignWashTradingScoreToFillEvents(fillEventsPartial),
+          assignWashTradingScoreToFillEvents(fillEventsFoundation),
+        ]);
+      } else {
+        logger.warn("sync-events", `Skipping assigning orders source assigned to fill events`);
       }
 
       // WARNING! Ordering matters (fills should come in front of cancels).
@@ -1788,11 +1799,14 @@ export const syncEvents = async (
 
       // --- Handle: orphan blocks ---
       if (!backfill) {
-        for (const block of blocksCache.values()) {
+        for (const blockData of blocksSet.values()) {
+          const block = Number(blockData.split("-")[0]);
+          const blockHash = blockData.split("-")[1];
+
           // Act right away if the current block is a duplicate
-          if ((await blocksModel.getBlocks(block.number)).length > 1) {
-            blockCheck.addToQueue(block.number, 10 * 1000);
-            blockCheck.addToQueue(block.number, 30 * 1000);
+          if ((await blocksModel.getBlocks(block)).length > 1) {
+            blockCheck.addToQueue(block, blockHash, 10);
+            blockCheck.addToQueue(block, blockHash, 30);
           }
         }
 
@@ -1800,14 +1814,18 @@ export const syncEvents = async (
         // (recheck each block in 1m, 5m, 10m and 60m).
         // TODO: The check frequency should be a per-chain setting
         await Promise.all(
-          [...blocksCache.keys()].map(async (blockNumber) =>
-            Promise.all([
-              blockCheck.addToQueue(blockNumber, 60 * 1000),
-              blockCheck.addToQueue(blockNumber, 5 * 60 * 1000),
-              blockCheck.addToQueue(blockNumber, 10 * 60 * 1000),
-              blockCheck.addToQueue(blockNumber, 60 * 60 * 1000),
-            ])
-          )
+          [...blocksSet.values()].map(async (blockData) => {
+            const block = Number(blockData.split("-")[0]);
+            const blockHash = blockData.split("-")[1];
+
+            return Promise.all([
+              blockCheck.addToQueue(block, blockHash, 60),
+              blockCheck.addToQueue(block, blockHash, 5 * 60),
+              blockCheck.addToQueue(block, blockHash, 10 * 60),
+              blockCheck.addToQueue(block, blockHash, 30 * 60),
+              blockCheck.addToQueue(block, blockHash, 60 * 60),
+            ]);
+          })
         );
       }
 
@@ -1951,5 +1969,52 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
     }
   } catch (error) {
     logger.error("sync-events", `Failed to assign default sources to fill events: ${error}`);
+  }
+};
+
+const assignWashTradingScoreToFillEvents = async (fillEvents: es.fills.Event[]) => {
+  try {
+    const inverseFillEvents: { contract: Buffer; maker: Buffer; taker: Buffer }[] = [];
+
+    const fillEventsChunks = _.chunk(fillEvents, 100);
+
+    for (const fillEventsChunk of fillEventsChunks) {
+      const inverseFillEventsFilter = fillEventsChunk.map(
+        (fillEvent) =>
+          `('${_.replace(fillEvent.taker, "0x", "\\x")}', '${_.replace(
+            fillEvent.maker,
+            "0x",
+            "\\x"
+          )}', '${_.replace(fillEvent.contract, "0x", "\\x")}')`
+      );
+
+      const inverseFillEventsChunkQuery = pgp.as.format(
+        `
+            SELECT DISTINCT contract, maker, taker from fill_events_2
+            WHERE (maker, taker, contract) IN ($/inverseFillEventsFilter:raw/)
+          `,
+        {
+          inverseFillEventsFilter: inverseFillEventsFilter.join(","),
+        }
+      );
+
+      const inverseFillEventsChunk = await redb.manyOrNone(inverseFillEventsChunkQuery);
+
+      inverseFillEvents.push(...inverseFillEventsChunk);
+    }
+
+    fillEvents.forEach((event, index) => {
+      const washTradingDetected = inverseFillEvents.some((inverseFillEvent) => {
+        return (
+          event.maker == fromBuffer(inverseFillEvent.taker) &&
+          event.taker == fromBuffer(inverseFillEvent.maker) &&
+          event.contract == fromBuffer(inverseFillEvent.contract)
+        );
+      });
+
+      fillEvents[index].washTradingScore = Number(washTradingDetected);
+    });
+  } catch (e) {
+    logger.error("sync-events", `Failed to assign wash trading score to fill events: ${e}`);
   }
 };

@@ -49,6 +49,18 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/refresh-token",
+    options: adminEndpoints.postRefreshTokenOptions,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/admin/refresh-collection",
+    options: adminEndpoints.postRefreshCollectionOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/calc-rarity",
     options: adminEndpoints.postCalcRarityOptions,
   });
@@ -486,6 +498,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/order/v2",
     options: ordersEndpoints.postOrderV2Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/order/v3",
+    options: ordersEndpoints.postOrderV3Options,
   });
 
   server.route({

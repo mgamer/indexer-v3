@@ -37,6 +37,7 @@ import * as backfillFillEventsCreatedAt from "@/jobs/backfill/backfill-fill-even
 import * as backfillFillEventsFillSource from "@/jobs/backfill/backfill-fill-events-fill-source";
 import * as backfillFillEventsOrderSource from "@/jobs/backfill/backfill-fill-events-order-source";
 import * as backfillTransactionBlockFields from "@/jobs/backfill/backfill-transaction-block-fields";
+import * as backfillFillEventsWashTradingScore from "@/jobs/backfill/backfill-fill-events-wash-trading-score";
 
 import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
 
@@ -76,6 +77,7 @@ import * as bundleOrderUpdatesByMaker from "@/jobs/order-updates/by-maker-bundle
 import * as removeBuyOrderEvents from "@/jobs/order-updates/remove-buy-order-events";
 
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
+import * as orderbookPostOrderExternal from "@/jobs/orderbook/post-order-external";
 import * as resyncOrdersSource from "@/jobs/orderbook/resync-orders-source";
 import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
 
@@ -103,6 +105,7 @@ export const allJobQueues = [
   backfillFillEventsFillSource.queue,
   backfillFillEventsOrderSource.queue,
   backfillTransactionBlockFields.queue,
+  backfillFillEventsWashTradingScore.queue,
 
   topBidUpdate.queue,
 
@@ -142,6 +145,7 @@ export const allJobQueues = [
   removeBuyOrderEvents.queue,
 
   orderbookOrders.queue,
+  orderbookPostOrderExternal.queue,
   orderbookTokenSets.queue,
   resyncOrdersSource.queue,
 

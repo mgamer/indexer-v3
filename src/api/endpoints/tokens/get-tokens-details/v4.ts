@@ -102,6 +102,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
             name: Joi.string().allow(null, ""),
             description: Joi.string().allow(null, ""),
             image: Joi.string().allow(null, ""),
+            media: Joi.string().allow(null, ""),
             kind: Joi.string().allow(null, ""),
             collection: Joi.object({
               id: Joi.string().allow(null),
@@ -172,6 +173,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
           "t"."name",
           "t"."description",
           "t"."image",
+          "t"."media",
           "t"."collection_id",
           "c"."name" as "collection_name",
           "con"."kind",
@@ -234,22 +236,21 @@ export const getTokensDetailsV4Options: RouteOptions = {
       }
 
       if (query.attributes) {
-        const attributes: { key: string; value: string }[] = [];
-        Object.entries(query.attributes).forEach(([key, values]) => {
-          (Array.isArray(values) ? values : [values]).forEach((value) =>
-            attributes.push({ key, value })
-          );
-        });
+        const attributes: { key: string; value: any }[] = [];
+        Object.entries(query.attributes).forEach(([key, value]) => attributes.push({ key, value }));
 
         for (let i = 0; i < attributes.length; i++) {
+          const multipleSelection = Array.isArray(attributes[i].value);
+
           (query as any)[`key${i}`] = attributes[i].key;
           (query as any)[`value${i}`] = attributes[i].value;
+
           baseQuery += `
             JOIN "token_attributes" "ta${i}"
               ON "t"."contract" = "ta${i}"."contract"
               AND "t"."token_id" = "ta${i}"."token_id"
               AND "ta${i}"."key" = $/key${i}/
-              AND "ta${i}"."value" = $/value${i}/
+              AND "ta${i}"."value" ${multipleSelection ? `IN ($/value${i}:csv/)` : `= $/value${i}/`}
           `;
         }
       }
@@ -292,7 +293,11 @@ export const getTokensDetailsV4Options: RouteOptions = {
 
       if (query.source) {
         const sources = await Sources.getInstance();
-        const source = sources.getByName(query.source);
+        let source = sources.getByName(query.source, false);
+        if (!source) {
+          source = await sources.getByDomain(query.source);
+        }
+
         (query as any).sourceAddress = toBuffer(source.address);
         conditions.push(`"t"."floor_sell_source_id" = $/sourceAddress/`);
       }
@@ -427,6 +432,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
             name: r.name,
             description: r.description,
             image: r.image,
+            media: r.media,
             kind: r.kind,
             collection: {
               id: r.collection_id,
