@@ -3,11 +3,12 @@ import { Log } from "@ethersproject/abstract-provider";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
+import { getReferrer } from "@reservoir0x/sdk/dist/utils";
 import _ from "lodash";
 import pLimit from "p-limit";
 
 import { logger } from "@/common/logger";
-import { idb, redb } from "@/common/db";
+import { idb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -47,9 +48,9 @@ export const syncEvents = async (
 
   // Fills going through router contracts are to be handled in a
   // custom way so as to properly associate the maker and taker
-  let routerToFillSource: { [address: string]: string } = {};
+  let routers: { [address: string]: string } = {};
   if (Sdk.Common.Addresses.Routers[config.chainId]) {
-    routerToFillSource = Sdk.Common.Addresses.Routers[config.chainId];
+    routers = Sdk.Common.Addresses.Routers[config.chainId];
   }
 
   // --- Handle: fetch and process events ---
@@ -70,6 +71,9 @@ export const syncEvents = async (
       limit(() => baseProvider.getBlockWithTransactions(block))
     )
   );
+
+  // Initialize a sources instance
+  const sources = await Sources.getInstance();
 
   // When backfilling, certain processes are disabled
   const backfill = Boolean(options?.backfill);
@@ -573,19 +577,28 @@ export const syncEvents = async (
               // 2 - COMPLETE_BUY_OFFER
               // 5 - COMPLETE_AUCTION
               if (![1, 2, 5].includes(op)) {
-                // Skip any irrelevant events.
+                // Skip any irrelevant events
                 break;
               }
 
-              // Handle fill source
-              let fillSource: string | undefined;
+              // Handle aggregator source
+              let aggregatorSource: { id: number; domain: string } | undefined;
               const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
-              if (routerToFillSource[tx.to]) {
-                fillSource = routerToFillSource[tx.to];
+              if (routers[tx.to]) {
                 taker = tx.from;
+                aggregatorSource = await sources.getOrInsert(routers[tx.to]);
               }
 
-              // Decode the sold token (ignoring bundles).
+              // Handle fill source
+              let fillSource: { id: number } | undefined;
+              const referrer = getReferrer(tx.data);
+              if (referrer) {
+                fillSource = await sources.getOrInsert(referrer);
+              } else if (aggregatorSource?.domain !== "reservoir.market") {
+                fillSource = aggregatorSource;
+              }
+
+              // Decode the sold token (ignoring bundles)
               let contract: string;
               let tokenId: string;
               try {
@@ -606,7 +619,7 @@ export const syncEvents = async (
               const orderKind = "x2y2";
               const orderSide = [1, 5].includes(op) ? "sell" : "buy";
               const price = item.price.toString();
-              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+              const orderSourceIdInt = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
               fillEvents.push({
                 orderKind,
@@ -620,7 +633,8 @@ export const syncEvents = async (
                 tokenId,
                 // X2Y2 only supports ERC721 for now
                 amount: "1",
-                fillSource,
+                aggregatorSourceId: aggregatorSource?.id,
+                fillSourceId: fillSource?.id,
                 baseEventParams,
               });
 
@@ -701,18 +715,26 @@ export const syncEvents = async (
 
               const orderId = keccak256(["address", "uint256"], [contract, tokenId]);
 
-              // Handle fill source
-              let fillSource: string | undefined;
+              // Handle aggregator source
+              let aggregatorSource: { id: number; domain: string } | undefined;
               const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
-              if (routerToFillSource[tx.to]) {
-                fillSource = routerToFillSource[tx.to];
+              if (routers[tx.to]) {
                 taker = tx.from;
+                aggregatorSource = await sources.getOrInsert(routers[tx.to]);
               }
 
+              // Handle fill source
+              let fillSource: { id: number } | undefined;
+              const referrer = getReferrer(tx.data);
+              if (referrer) {
+                fillSource = await sources.getOrInsert(referrer);
+              } else if (aggregatorSource?.domain !== "reservoir.market") {
+                fillSource = aggregatorSource;
+              }
               const orderKind = "foundation";
               // Deduce the price from the protocol fee (which is 5%)
               const price = bn(protocolFee).mul(10000).div(50).toString();
-              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+              const orderSourceIdInt = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
               // Custom handling to support on-chain orderbook quirks.
               fillEventsFoundation.push({
@@ -727,7 +749,8 @@ export const syncEvents = async (
                 tokenId,
                 // Foundation only supports erc721 for now
                 amount: "1",
-                fillSource,
+                aggregatorSourceId: aggregatorSource?.id,
+                fillSourceId: fillSource?.id,
                 baseEventParams,
               });
 
@@ -840,16 +863,25 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle fill source
-              let fillSource: string | undefined;
+              // Handle aggregator source
+              let aggregatorSource: { id: number; domain: string } | undefined;
               const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
-              if (routerToFillSource[tx.to]) {
-                fillSource = routerToFillSource[tx.to];
+              if (routers[tx.to]) {
                 taker = tx.from;
+                aggregatorSource = await sources.getOrInsert(routers[tx.to]);
+              }
+
+              // Handle fill source
+              let fillSource: { id: number } | undefined;
+              const referrer = getReferrer(tx.data);
+              if (referrer) {
+                fillSource = await sources.getOrInsert(referrer);
+              } else if (aggregatorSource?.domain !== "reservoir.market") {
+                fillSource = aggregatorSource;
               }
 
               const orderKind = "looks-rare";
-              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+              const orderSourceIdInt = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
               fillEvents.push({
                 orderKind,
@@ -862,7 +894,8 @@ export const syncEvents = async (
                 contract,
                 tokenId,
                 amount,
-                fillSource,
+                aggregatorSourceId: aggregatorSource?.id,
+                fillSourceId: fillSource?.id,
                 baseEventParams,
               });
 
@@ -932,16 +965,25 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle fill source
-              let fillSource: string | undefined;
+              // Handle aggregator source
+              let aggregatorSource: { id: number; domain: string } | undefined;
               const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
-              if (routerToFillSource[tx.to]) {
-                fillSource = routerToFillSource[tx.to];
+              if (routers[tx.to]) {
                 taker = tx.from;
+                aggregatorSource = await sources.getOrInsert(routers[tx.to]);
+              }
+
+              // Handle fill source
+              let fillSource: { id: number } | undefined;
+              const referrer = getReferrer(tx.data);
+              if (referrer) {
+                fillSource = await sources.getOrInsert(referrer);
+              } else if (aggregatorSource?.domain !== "reservoir.market") {
+                fillSource = aggregatorSource;
               }
 
               const orderKind = "looks-rare";
-              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+              const orderSourceIdInt = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
               fillEvents.push({
                 orderKind,
@@ -954,7 +996,8 @@ export const syncEvents = async (
                 contract,
                 tokenId,
                 amount,
-                fillSource,
+                aggregatorSourceId: aggregatorSource?.id,
+                fillSourceId: fillSource?.id,
                 baseEventParams,
               });
 
@@ -1094,19 +1137,28 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle fill source
-              let fillSource: string | undefined;
+              // Handle aggregator source
+              let aggregatorSource: { id: number; domain: string } | undefined;
               const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
-              if (routerToFillSource[tx.to]) {
-                fillSource = routerToFillSource[tx.to];
+              if (routers[tx.to]) {
                 taker = tx.from;
+                aggregatorSource = await sources.getOrInsert(routers[tx.to]);
+              }
+
+              // Handle fill source
+              let fillSource: { id: number } | undefined;
+              const referrer = getReferrer(tx.data);
+              if (referrer) {
+                fillSource = await sources.getOrInsert(referrer);
+              } else if (aggregatorSource?.domain !== "reservoir.market") {
+                fillSource = aggregatorSource;
               }
 
               const orderKind = eventData.kind.startsWith("wyvern-v2.3")
                 ? "wyvern-v2.3"
                 : "wyvern-v2";
 
-              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+              const orderSourceIdInt = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
               let batchIndex = 1;
               if (buyOrderId !== HashZero) {
@@ -1121,7 +1173,8 @@ export const syncEvents = async (
                   contract: associatedNftTransferEvent.baseEventParams.address,
                   tokenId: associatedNftTransferEvent.tokenId,
                   amount: associatedNftTransferEvent.amount,
-                  fillSource,
+                  aggregatorSourceId: aggregatorSource?.id,
+                  fillSourceId: fillSource?.id,
                   baseEventParams: {
                     ...baseEventParams,
                     batchIndex: batchIndex++,
@@ -1178,7 +1231,8 @@ export const syncEvents = async (
                   contract: associatedNftTransferEvent.baseEventParams.address,
                   tokenId: associatedNftTransferEvent.tokenId,
                   amount: associatedNftTransferEvent.amount,
-                  fillSource,
+                  aggregatorSourceId: aggregatorSource?.id,
+                  fillSourceId: fillSource?.id,
                   baseEventParams: {
                     ...baseEventParams,
                     batchIndex: batchIndex++,
@@ -1294,17 +1348,26 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle fill source
-              let fillSource: string | undefined;
+              // Handle aggregator source
+              let aggregatorSource: { id: number; domain: string } | undefined;
               const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
-              if (routerToFillSource[tx.to]) {
-                fillSource = routerToFillSource[tx.to];
+              if (routers[tx.to]) {
                 taker = tx.from;
+                aggregatorSource = await sources.getOrInsert(routers[tx.to]);
+              }
+
+              // Handle fill source
+              let fillSource: { id: number } | undefined;
+              const referrer = getReferrer(tx.data);
+              if (referrer) {
+                fillSource = await sources.getOrInsert(referrer);
+              } else if (aggregatorSource?.domain !== "reservoir.market") {
+                fillSource = aggregatorSource;
               }
 
               const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
               const orderSide = direction === 0 ? "sell" : "buy";
-              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+              const orderSourceIdInt = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
               let orderId: string | undefined;
               if (!backfill) {
@@ -1353,7 +1416,8 @@ export const syncEvents = async (
                 contract: erc721Token,
                 tokenId: erc721TokenId,
                 amount: "1",
-                fillSource,
+                aggregatorSourceId: aggregatorSource?.id,
+                fillSourceId: fillSource?.id,
                 baseEventParams,
               });
 
@@ -1432,16 +1496,25 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle fill source
-              let fillSource: string | undefined;
+              // Handle aggregator source
+              let aggregatorSource: { id: number; domain: string } | undefined;
               const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
-              if (routerToFillSource[tx.to]) {
-                fillSource = routerToFillSource[tx.to];
+              if (routers[tx.to]) {
                 taker = tx.from;
+                aggregatorSource = await sources.getOrInsert(routers[tx.to]);
+              }
+
+              // Handle fill source
+              let fillSource: { id: number } | undefined;
+              const referrer = getReferrer(tx.data);
+              if (referrer) {
+                fillSource = await sources.getOrInsert(referrer);
+              } else if (aggregatorSource?.domain !== "reservoir.market") {
+                fillSource = aggregatorSource;
               }
 
               const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
-              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+              const orderSourceIdInt = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
               const value = bn(erc20FillAmount).div(erc1155FillAmount).toString();
 
               let orderId: string | undefined;
@@ -1486,7 +1559,8 @@ export const syncEvents = async (
                 contract: erc1155Token,
                 tokenId: erc1155TokenId,
                 amount: erc1155FillAmount,
-                fillSource,
+                aggregatorSourceId: aggregatorSource?.id,
+                fillSourceId: fillSource?.id,
                 baseEventParams,
               });
 
@@ -1600,18 +1674,27 @@ export const syncEvents = async (
                   taker = saleInfo.recipientOverride;
                 }
 
-                // Handle fill source
-                let fillSource: string | undefined;
+                // Handle aggregator source
+                let aggregatorSource: { id: number; domain: string } | undefined;
                 const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
-                if (routerToFillSource[tx.to]) {
-                  fillSource = routerToFillSource[tx.to];
+                if (routers[tx.to]) {
                   taker = tx.from;
+                  aggregatorSource = await sources.getOrInsert(routers[tx.to]);
+                }
+
+                // Handle fill source
+                let fillSource: { id: number } | undefined;
+                const referrer = getReferrer(tx.data);
+                if (referrer) {
+                  fillSource = await sources.getOrInsert(referrer);
+                } else if (aggregatorSource?.domain !== "reservoir.market") {
+                  fillSource = aggregatorSource;
                 }
 
                 const price = bn(saleInfo.price).div(saleInfo.amount).toString();
 
                 const orderKind = "seaport";
-                const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+                const orderSourceIdInt = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
                 // Custom handling to support partial filling
                 fillEventsPartial.push({
@@ -1625,7 +1708,8 @@ export const syncEvents = async (
                   contract: saleInfo.contract,
                   tokenId: saleInfo.tokenId,
                   amount: saleInfo.amount,
-                  fillSource,
+                  aggregatorSourceId: aggregatorSource?.id,
+                  fillSourceId: fillSource?.id,
                   baseEventParams,
                 });
 
@@ -1817,79 +1901,55 @@ export const unsyncEvents = async (block: number, blockHash: string) => {
 
 const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
   try {
-    const orderIds = fillEvents.filter((e) => e.orderId !== undefined).map((e) => e.orderId);
-
+    const orderIds = fillEvents.map((e) => e.orderId).filter(Boolean);
     if (orderIds.length) {
       const orders = [];
+      const orderIdChunks = _.chunk(orderIds, 100);
 
-      const orderIdsChunks = _.chunk(orderIds, 100);
-
-      for (const orderIdsChunk of orderIdsChunks) {
-        const ordersChunk = await redb.manyOrNone(
+      for (const chunk of orderIdChunks) {
+        const ordersChunk = await idb.manyOrNone(
           `
-            SELECT id, source_id_int from orders
+            SELECT
+              orders.id,
+              orders.source_id_int
+            FROM orders
             WHERE id IN ($/orderIds/)
-            AND source_id_int IS NOT NULL
+              AND source_id_int IS NOT NULL
           `,
-          {
-            orderIds: orderIdsChunk.join(","),
-          }
+          { orderIds: chunk.join(",") }
         );
-
         orders.push(...ordersChunk);
       }
 
       if (orders.length) {
         const orderSourceIdByOrderId = new Map<string, number>();
-
         for (const order of orders) {
           orderSourceIdByOrderId.set(order.id, order.source_id_int);
         }
 
-        fillEvents.forEach((event, index) => {
-          if (event.orderId == undefined) return;
+        fillEvents.forEach((event) => {
+          if (!event.orderId) {
+            return;
+          }
 
           const orderSourceId = orderSourceIdByOrderId.get(event.orderId!);
 
-          // If the order source id exists on the order, use it in the fill event.
+          // If the source id exists on the order, use it as the default in the fill event
           if (orderSourceId) {
             logger.info(
               "sync-events",
-              `Orders source assigned to fill event: ${JSON.stringify(
-                event
-              )}, orderSourceId: ${orderSourceId}`
+              `Default source '${orderSourceId}' assigned to fill event: ${JSON.stringify(event)}`
             );
 
-            fillEvents[index].orderSourceIdInt = orderSourceId;
+            event.orderSourceIdInt = orderSourceId;
+            if (!event.aggregatorSourceId && !event.fillSourceId) {
+              event.fillSourceId = orderSourceId;
+            }
           }
         });
       }
     }
-  } catch (e) {
-    logger.error("sync-events", `Failed to assign order source id to fill events: ${e}`);
-  }
-};
-
-const getOrderSourceByOrderKind = async (orderKind: string) => {
-  try {
-    const sources = await Sources.getInstance();
-
-    switch (orderKind) {
-      case "x2y2":
-        return sources.getByName("X2Y2").id;
-      case "foundation":
-        return sources.getByName("Foundation").id;
-      case "looks-rare":
-        return sources.getByName("LooksRare").id;
-      case "seaport":
-      case "wyvern-v2":
-      case "wyvern-v2.3":
-        return sources.getByName("OpenSea").id;
-      default:
-        return null; // For all others, we can't assume where the order originated from.
-    }
-  } catch (e) {
-    logger.error("sync-events", `Failed to get order source by order kind: ${e}`);
-    return null;
+  } catch (error) {
+    logger.error("sync-events", `Failed to assign default sources to fill events: ${error}`);
   }
 };
