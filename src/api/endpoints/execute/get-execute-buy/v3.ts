@@ -10,7 +10,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { slowProvider } from "@/common/provider";
-import { bn, formatEth, toBuffer } from "@/common/utils";
+import { bn, formatEth, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 
@@ -28,7 +28,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
     query: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+        .pattern(regex.token)
         .description(
           "Filter to a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
@@ -41,14 +41,14 @@ export const getExecuteBuyV3Options: RouteOptions = {
       tokens: Joi.array().items(
         Joi.string()
           .lowercase()
-          .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+          .pattern(regex.token)
           .description(
             "Array of tokens user is buying. Example: `tokens[0]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:704 tokens[1]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:979`"
           )
       ),
       taker: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .required()
         .description(
           "Address of wallet filling the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
@@ -61,10 +61,12 @@ export const getExecuteBuyV3Options: RouteOptions = {
       ),
       source: Joi.string()
         .lowercase()
+        .pattern(regex.domain)
+        .required()
         .description("Filling source used for attribution. Example: `reservoir.market`"),
       referrer: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .default(AddressZero)
         .description(
           "Wallet address of referrer. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
@@ -80,10 +82,10 @@ export const getExecuteBuyV3Options: RouteOptions = {
         .default(false)
         .description("If true, partial orders will be accepted."),
       maxFeePerGas: Joi.string()
-        .pattern(/^[0-9]+$/)
+        .pattern(regex.number)
         .description("Optional. Set custom gas price."),
       maxPriorityFeePerGas: Joi.string()
-        .pattern(/^[0-9]+$/)
+        .pattern(regex.number)
         .description("Optional. Set custom gas price."),
       skipBalanceCheck: Joi.boolean()
         .default(false)
@@ -113,17 +115,13 @@ export const getExecuteBuyV3Options: RouteOptions = {
       path: Joi.array().items(
         Joi.object({
           orderId: Joi.string(),
-          contract: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/),
-          tokenId: Joi.string().lowercase().pattern(/^\d+$/),
+          contract: Joi.string().lowercase().pattern(regex.address),
+          tokenId: Joi.string().lowercase().pattern(regex.number),
           quantity: Joi.number().unsafe(),
           source: Joi.string().allow("", null),
-          currency: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/),
+          currency: Joi.string().lowercase().pattern(regex.address),
           quote: Joi.number().unsafe(),
-          rawQuote: Joi.string().pattern(/^\d+$/),
+          rawQuote: Joi.string().pattern(regex.number),
         })
       ),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),

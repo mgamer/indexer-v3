@@ -7,10 +7,10 @@ import _ from "lodash";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
-  base64Regex,
   buildContinuation,
   formatEth,
   fromBuffer,
+  regex,
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
@@ -37,24 +37,20 @@ export const getTokensV3Options: RouteOptions = {
         ),
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .description(
           "Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
       tokens: Joi.alternatives().try(
         Joi.array()
           .max(50)
-          .items(
-            Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
-          )
+          .items(Joi.string().lowercase().pattern(regex.token))
           .description(
             "Filter to one or more tokens, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
           ),
         Joi.string()
           .lowercase()
-          .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+          .pattern(regex.token)
           .description(
             "Filter to one or more tokens, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
           )
@@ -69,7 +65,7 @@ export const getTokensV3Options: RouteOptions = {
         .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
       sortBy: Joi.string().valid("floorAskPrice", "topBidValue").default("floorAskPrice"),
       limit: Joi.number().integer().min(1).max(50).default(20),
-      continuation: Joi.string().pattern(base64Regex),
+      continuation: Joi.string().pattern(regex.base64),
     })
       .or("collection", "contract", "tokens", "tokenSetId")
       .oxor("collection", "contract", "tokens", "tokenSetId")
@@ -79,13 +75,8 @@ export const getTokensV3Options: RouteOptions = {
     schema: Joi.object({
       tokens: Joi.array().items(
         Joi.object({
-          contract: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/)
-            .required(),
-          tokenId: Joi.string()
-            .pattern(/^[0-9]+$/)
-            .required(),
+          contract: Joi.string().lowercase().pattern(regex.address).required(),
+          tokenId: Joi.string().pattern(regex.number).required(),
           name: Joi.string().allow(null, ""),
           image: Joi.string().allow(null, ""),
           collection: Joi.object({
@@ -98,7 +89,7 @@ export const getTokensV3Options: RouteOptions = {
           floorAskPrice: Joi.number().unsafe().allow(null),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex).allow(null),
+      continuation: Joi.string().pattern(regex.base64).allow(null),
     }).label(`getTokens${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-tokens-${version}-handler`, `Wrong response schema: ${error}`);
