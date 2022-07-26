@@ -1,5 +1,4 @@
 import { idb } from "@/common/db";
-import { logger } from "@/common/logger";
 import { fromBuffer, toBuffer } from "@/common/utils";
 
 export type Transaction = {
@@ -62,28 +61,25 @@ export const saveTransaction = async (transaction: Transaction) => {
 
 export const getTransaction = async (
   hash: string
-): Promise<Pick<Transaction, "hash" | "from" | "to" | "value">> => {
+): Promise<Pick<Transaction, "hash" | "from" | "to" | "value" | "data">> => {
   const result = await idb.oneOrNone(
     `
       SELECT
         transactions.from,
         transactions.to,
-        transactions.value
+        transactions.value,
+        transactions.data
       FROM transactions
       WHERE transactions.hash = $/hash/
     `,
     { hash: toBuffer(hash) }
   );
 
-  try {
-    return {
-      hash,
-      from: fromBuffer(result.from),
-      to: fromBuffer(result.to),
-      value: result.value,
-    };
-  } catch (error) {
-    logger.info("debug", `Error fetching transaction ${hash}: ${JSON.stringify(result)}`);
-    throw error;
-  }
+  return {
+    hash,
+    from: fromBuffer(result.from),
+    to: fromBuffer(result.to),
+    value: result.value,
+    data: fromBuffer(result.data),
+  };
 };
