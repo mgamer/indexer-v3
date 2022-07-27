@@ -1,3 +1,12 @@
+# [5.122.0](https://github.com/reservoirprotocol/indexer/compare/v5.121.0...v5.122.0) (2022-07-27)
+
+
+### Features
+
+* add reorg-resistant sale id ([7a3a809](https://github.com/reservoirprotocol/indexer/commit/7a3a809c135d9a9d969fb21d5fa55b56b6273075))
+
+
+
 # [5.121.0](https://github.com/reservoirprotocol/indexer/compare/v5.120.6...v5.121.0) (2022-07-27)
 
 
