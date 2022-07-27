@@ -18,11 +18,10 @@ const version = "v2";
 
 export const getExecuteBuyV2Options: RouteOptions = {
   description: "Buy a token at the best price",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Router"],
   plugins: {
     "hapi-swagger": {
-      order: 11,
-      deprecated: true,
+      order: 10,
     },
   },
   validate: {
@@ -364,6 +363,24 @@ export const getExecuteBuyV2Options: RouteOptions = {
         return { quote, path };
       }
 
+      // Use either the source or the old referrer
+      if (!query.source && query.referrer !== AddressZero) {
+        const result = await redb.oneOrNone(
+          `
+            SELECT
+              sources_v2.domain
+            FROM sources_v2
+            WHERE sources_v2.address = $/address/
+          `,
+          {
+            address: query.referrer,
+          }
+        );
+        if (result && result.domain) {
+          query.source = result.domain;
+        }
+      }
+
       const router = new Sdk.Router.Router(config.chainId, slowProvider);
       const tx = await router.fillListingsTx(listingDetails, query.taker, {
         referrer: query.source,
@@ -372,7 +389,8 @@ export const getExecuteBuyV2Options: RouteOptions = {
           bps: query.referrerFeeBps,
         },
         partial: query.partial,
-        noDirectFilling: query.noDirectFilling,
+        // Force router filling so that we don't lose any attribution
+        noDirectFilling: true,
       });
 
       // Check that the taker has enough funds to fill all requested tokens

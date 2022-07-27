@@ -338,6 +338,8 @@ export const getExecuteBuyV1Options: RouteOptions = {
           bps: query.referrerFeeBps,
         },
         partial: query.partial,
+        // Force router filling so that we don't lose any attribution
+        noDirectFilling: true,
       });
 
       // Check that the taker has enough funds to fill all requested tokens

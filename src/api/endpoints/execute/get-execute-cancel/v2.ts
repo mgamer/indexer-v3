@@ -272,6 +272,8 @@ export const getExecuteCancelV2Options: RouteOptions = {
           };
         }
 
+        // TODO: Integrate X2Y2 order cancelling
+
         default: {
           throw Boom.notImplemented("Unsupported order kind");
         }

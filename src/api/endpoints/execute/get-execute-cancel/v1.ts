@@ -15,7 +15,7 @@ const version = "v1";
 export const getExecuteCancelV1Options: RouteOptions = {
   description: "Cancel order",
   notes: "Cancel an existing order on any marketplace",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Router"],
   plugins: {
     "hapi-swagger": {
       order: 11,
@@ -288,6 +288,8 @@ export const getExecuteCancelV1Options: RouteOptions = {
             ],
           };
         }
+
+        // TODO: Integrate X2Y2 order cancelling
 
         default: {
           throw Boom.notImplemented("Unsupported order kind");

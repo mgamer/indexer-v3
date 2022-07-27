@@ -252,10 +252,29 @@ export const getExecuteSellV2Options: RouteOptions = {
         throw Boom.internal("Could not generate transaction(s)");
       }
 
+      // Use either the source or the old referrer
+      if (!query.source && query.referrer !== AddressZero) {
+        const result = await redb.oneOrNone(
+          `
+            SELECT
+              sources_v2.domain
+            FROM sources_v2
+            WHERE sources_v2.address = $/address/
+          `,
+          {
+            address: query.referrer,
+          }
+        );
+        if (result && result.domain) {
+          query.source = result.domain;
+        }
+      }
+
       const router = new Sdk.Router.Router(config.chainId, slowProvider);
       const tx = await router.fillBidTx(bidDetails, query.taker, {
         referrer: query.source,
-        noDirectFilling: query.noDirectFilling,
+        // Force router filling so that we don't lose any attribution
+        noDirectFilling: true,
       });
 
       // Set up generic filling steps

@@ -1,3 +1,30 @@
+## [5.120.6](https://github.com/reservoirprotocol/indexer/compare/v5.120.5...v5.120.6) (2022-07-27)
+
+
+### Bug Fixes
+
+* query ([8a7379c](https://github.com/reservoirprotocol/indexer/commit/8a7379c4ef9e4819562a0398b9d1613e31d86290))
+
+
+
+## [5.120.5](https://github.com/reservoirprotocol/indexer/compare/v5.120.4...v5.120.5) (2022-07-27)
+
+
+### Bug Fixes
+
+* better zeroex-v4/opendao order nonce handling ([dbd03fe](https://github.com/reservoirprotocol/indexer/commit/dbd03feb51e69429d0e01fea8b18fa58dfbd605f))
+
+
+
+## [5.120.4](https://github.com/reservoirprotocol/indexer/compare/v5.120.3...v5.120.4) (2022-07-26)
+
+
+### Bug Fixes
+
+* looksrare order cross-posting ([56f1d4f](https://github.com/reservoirprotocol/indexer/commit/56f1d4fc4ba732f5beb6d70ac7a626f7bc3a30f9))
+
+
+
 ## [5.120.3](https://github.com/reservoirprotocol/indexer/compare/v5.120.2...v5.120.3) (2022-07-25)
 
 
