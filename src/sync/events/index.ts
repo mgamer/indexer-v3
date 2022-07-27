@@ -7,7 +7,7 @@ import _ from "lodash";
 import pLimit from "p-limit";
 
 import { logger } from "@/common/logger";
-import { idb, redb, pgp } from "@/common/db";
+import { idb, pgp, redb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -1928,7 +1928,7 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
       const orderIdChunks = _.chunk(orderIds, 100);
 
       for (const chunk of orderIdChunks) {
-        const ordersChunk = await idb.manyOrNone(
+        const ordersChunk = await redb.manyOrNone(
           `
             SELECT
               orders.id,
