@@ -18,11 +18,10 @@ const version = "v2";
 
 export const getExecuteBuyV2Options: RouteOptions = {
   description: "Buy a token at the best price",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Router"],
   plugins: {
     "hapi-swagger": {
-      order: 11,
-      deprecated: true,
+      order: 10,
     },
   },
   validate: {
