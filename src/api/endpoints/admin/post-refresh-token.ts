@@ -2,7 +2,6 @@
 
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
-import { isAfter, add, formatISO9075 } from "date-fns";
 import _ from "lodash";
 import Joi from "joi";
 
@@ -16,17 +15,13 @@ import { Collections } from "@/models/collections";
 import { Tokens } from "@/models/tokens";
 import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
 
-const version = "v1";
-
-export const postTokensRefreshV1Options: RouteOptions = {
+export const postRefreshTokenOptions: RouteOptions = {
   description: "Refresh a token's orders and metadata",
-  tags: ["api", "Management"],
-  plugins: {
-    "hapi-swagger": {
-      order: 13,
-    },
-  },
+  tags: ["api", "x-admin"],
   validate: {
+    headers: Joi.object({
+      "x-admin-api-key": Joi.string().required(),
+    }).options({ allowUnknown: true }),
     payload: Joi.object({
       token: Joi.string()
         .lowercase()
@@ -37,18 +32,12 @@ export const postTokensRefreshV1Options: RouteOptions = {
         .required(),
     }),
   },
-  response: {
-    schema: Joi.object({
-      message: Joi.string(),
-    }).label(`postTokensRefresh${version.toUpperCase()}Response`),
-    failAction: (_request, _h, error) => {
-      logger.error(`post-tokens-refresh-${version}-handler`, `Wrong response schema: ${error}`);
-      throw error;
-    },
-  },
   handler: async (request: Request) => {
+    if (request.headers["x-admin-api-key"] !== config.adminApiKey) {
+      throw Boom.unauthorized("Wrong or missing admin API key");
+    }
+
     const payload = request.payload as any;
-    const refreshCoolDownMin = 60; // How many minutes between each refresh
 
     try {
       const [contract, tokenId] = payload.token.split(":");
@@ -58,14 +47,6 @@ export const postTokensRefreshV1Options: RouteOptions = {
       // If no token found
       if (_.isNull(token)) {
         throw Boom.badRequest(`Token ${payload.token} not found`);
-      }
-
-      // Check when the last sync was performed
-      const nextAvailableSync = add(new Date(token.lastMetadataSync), {
-        minutes: refreshCoolDownMin,
-      });
-      if (!_.isNull(token.lastMetadataSync) && isAfter(nextAvailableSync, Date.now())) {
-        throw Boom.tooEarly(`Next available sync ${formatISO9075(nextAvailableSync)} UTC`);
       }
 
       // Update the last sync date
@@ -104,14 +85,9 @@ export const postTokensRefreshV1Options: RouteOptions = {
       // Refresh the token floor sell and top bid
       await tokenRefreshCacheQueue.addToQueue(contract, tokenId);
 
-      logger.info(
-        `post-tokens-refresh-${version}-handler`,
-        `Refresh token=${payload.token} at ${currentUtcTime}`
-      );
-
       return { message: "Request accepted" };
     } catch (error) {
-      logger.error(`post-tokens-refresh-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(`post-tokens-refresh-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

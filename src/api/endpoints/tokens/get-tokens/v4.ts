@@ -66,9 +66,15 @@ export const getTokensV4Options: RouteOptions = {
       source: Joi.string().description("Name of the order source. Example `OpenSea`"),
       native: Joi.boolean().description("If true, results will filter only Reservoir orders."),
       sortBy: Joi.string()
-        .valid("floorAskPrice", "topBidValue", "tokenId", "rarity")
-        .default("floorAskPrice")
-        .description("Order the items are returned in the response."),
+        .allow("floorAskPrice", "topBidValue", "tokenId", "rarity")
+        .when("contract", {
+          is: Joi.exist(),
+          then: Joi.invalid("floorAskPrice", "topBidValue", "rarity"),
+        })
+        .default((parent) => (parent && parent.contract ? "tokenId" : "floorAskPrice"))
+        .description(
+          "Order the items are returned in the response, by default sorted by `floorAskPrice`. Not supported when filtering by `contract`. When filtering by `contract` the results are sorted by `tokenId` by default."
+        ),
       limit: Joi.number()
         .integer()
         .min(1)
@@ -93,6 +99,7 @@ export const getTokensV4Options: RouteOptions = {
           tokenId: Joi.string().pattern(regex.number).required(),
           name: Joi.string().allow(null, ""),
           image: Joi.string().allow(null, ""),
+          media: Joi.string().allow(null, ""),
           collection: Joi.object({
             id: Joi.string().allow(null),
             name: Joi.string().allow(null, ""),
@@ -124,6 +131,7 @@ export const getTokensV4Options: RouteOptions = {
           "t"."token_id",
           "t"."name",
           "t"."image",
+          "t"."media",
           "t"."collection_id",
           "c"."name" as "collection_name",
           "t"."floor_sell_source_id",
@@ -155,22 +163,21 @@ export const getTokensV4Options: RouteOptions = {
       }
 
       if (query.attributes) {
-        const attributes: { key: string; value: string }[] = [];
-        Object.entries(query.attributes).forEach(([key, values]) => {
-          (Array.isArray(values) ? values : [values]).forEach((value) =>
-            attributes.push({ key, value })
-          );
-        });
+        const attributes: { key: string; value: any }[] = [];
+        Object.entries(query.attributes).forEach(([key, value]) => attributes.push({ key, value }));
 
         for (let i = 0; i < attributes.length; i++) {
+          const multipleSelection = Array.isArray(attributes[i].value);
+
           (query as any)[`key${i}`] = attributes[i].key;
           (query as any)[`value${i}`] = attributes[i].value;
+
           baseQuery += `
             JOIN "token_attributes" "ta${i}"
               ON "t"."contract" = "ta${i}"."contract"
               AND "t"."token_id" = "ta${i}"."token_id"
               AND "ta${i}"."key" = $/key${i}/
-              AND "ta${i}"."value" = $/value${i}/
+              AND "ta${i}"."value" ${multipleSelection ? `IN ($/value${i}:csv/)` : `= $/value${i}/`}
           `;
         }
       }
@@ -391,6 +398,7 @@ export const getTokensV4Options: RouteOptions = {
           tokenId: r.token_id,
           name: r.name,
           image: r.image,
+          media: r.media,
           collection: {
             id: r.collection_id,
             name: r.collection_name,

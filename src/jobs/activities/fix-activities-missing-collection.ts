@@ -30,7 +30,7 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { contract, tokenId, retry } = job.data;
-      const token = await Tokens.getByContractAndTokenId(contract, tokenId);
+      const token = await Tokens.getByContractAndTokenId(contract, tokenId, true);
 
       job.data.addToQueue = false;
 

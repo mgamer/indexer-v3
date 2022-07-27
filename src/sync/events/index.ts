@@ -55,8 +55,10 @@ export const syncEvents = async (
 
   // --- Handle: fetch and process events ---
 
-  // Keep track of all handled blocks
+  // Cache blocks for efficiency
   const blocksCache = new Map<number, blocksModel.Block>();
+  // Keep track of all handled `${block}-${blockHash}` pairs
+  const blocksSet = new Set<string>();
 
   // Keep track of data needed by other processes that will get triggered
   const fillInfos: fillUpdates.FillInfo[] = [];
@@ -124,6 +126,7 @@ export const syncEvents = async (
       for (const log of logs) {
         try {
           const baseEventParams = await parseEvent(log, blocksCache);
+          blocksSet.add(`${log.blockNumber}-${log.blockHash}`);
 
           // It's quite important from a performance perspective to have
           // the block data available before proceeding with the events
@@ -1375,8 +1378,7 @@ export const syncEvents = async (
                 // (it only includes the nonce, but we can potentially have multiple
                 // different orders sharing the same nonce off-chain), we attempt to
                 // detect the order id which got filled by checking the database for
-                // orders which have the exact nonce/value/token-set combination (it
-                // doesn't cover all cases, but it's good enough for now).
+                // orders which have the exact nonce/contract/price combination.
                 await idb
                   .oneOrNone(
                     `
@@ -1388,12 +1390,14 @@ export const syncEvents = async (
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
                         AND orders.contract = $/contract/
+                        AND (orders.raw_data ->> 'erc20TokenAmount')::NUMERIC = $/price/
                       LIMIT 1
                     `,
                     {
                       maker: toBuffer(maker),
                       nonce,
                       contract: toBuffer(erc721Token),
+                      price: erc20TokenAmount,
                     }
                   )
                   .then((result) => {
@@ -1519,7 +1523,10 @@ export const syncEvents = async (
 
               let orderId: string | undefined;
               if (!backfill) {
-                // For erc1155 orders we only allow unique maker/nonce orders.
+                // For erc1155 orders we only allow unique nonce/contract/price. Since erc1155
+                // orders are partially fillable, we have to detect the price of an individual
+                // item from the fill amount, which might result in imprecise results. However
+                // at the moment, we can live with it.
                 await idb
                   .oneOrNone(
                     `
@@ -1530,12 +1537,15 @@ export const syncEvents = async (
                       WHERE orders.kind = '${orderKind}'
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
-                        AND orders.contract IS NOT NULL
+                        AND orders.contract = $/contract/
+                        AND (orders.raw_data ->> 'erc20TokenAmount')::NUMERIC / (orders.raw_data ->> 'nftAmount')::NUMERIC = $/price/
                       LIMIT 1
                     `,
                     {
                       maker: toBuffer(maker),
                       nonce,
+                      contract: toBuffer(erc1155Token),
+                      price: bn(erc20FillAmount).div(erc1155FillAmount).toString(),
                     }
                   )
                   .then((result) => {
@@ -1751,6 +1761,8 @@ export const syncEvents = async (
           assignOrderSourceToFillEvents(fillEventsPartial),
           assignOrderSourceToFillEvents(fillEventsFoundation),
         ]);
+      } else {
+        logger.warn("sync-events", `Skipping assigning orders source assigned to fill events`);
       }
 
       // WARNING! Ordering matters (fills should come in front of cancels).
@@ -1788,11 +1800,14 @@ export const syncEvents = async (
 
       // --- Handle: orphan blocks ---
       if (!backfill) {
-        for (const block of blocksCache.values()) {
+        for (const blockData of blocksSet.values()) {
+          const block = Number(blockData.split("-")[0]);
+          const blockHash = blockData.split("-")[1];
+
           // Act right away if the current block is a duplicate
-          if ((await blocksModel.getBlocks(block.number)).length > 1) {
-            blockCheck.addToQueue(block.number, 10 * 1000);
-            blockCheck.addToQueue(block.number, 30 * 1000);
+          if ((await blocksModel.getBlocks(block)).length > 1) {
+            blockCheck.addToQueue(block, blockHash, 10);
+            blockCheck.addToQueue(block, blockHash, 30);
           }
         }
 
@@ -1800,14 +1815,18 @@ export const syncEvents = async (
         // (recheck each block in 1m, 5m, 10m and 60m).
         // TODO: The check frequency should be a per-chain setting
         await Promise.all(
-          [...blocksCache.keys()].map(async (blockNumber) =>
-            Promise.all([
-              blockCheck.addToQueue(blockNumber, 60 * 1000),
-              blockCheck.addToQueue(blockNumber, 5 * 60 * 1000),
-              blockCheck.addToQueue(blockNumber, 10 * 60 * 1000),
-              blockCheck.addToQueue(blockNumber, 60 * 60 * 1000),
-            ])
-          )
+          [...blocksSet.values()].map(async (blockData) => {
+            const block = Number(blockData.split("-")[0]);
+            const blockHash = blockData.split("-")[1];
+
+            return Promise.all([
+              blockCheck.addToQueue(block, blockHash, 60),
+              blockCheck.addToQueue(block, blockHash, 5 * 60),
+              blockCheck.addToQueue(block, blockHash, 10 * 60),
+              blockCheck.addToQueue(block, blockHash, 30 * 60),
+              blockCheck.addToQueue(block, blockHash, 60 * 60),
+            ]);
+          })
         );
       }
 
@@ -1913,10 +1932,10 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
               orders.id,
               orders.source_id_int
             FROM orders
-            WHERE id IN ($/orderIds/)
+            WHERE id IN ($/orderIds:list/)
               AND source_id_int IS NOT NULL
           `,
-          { orderIds: chunk.join(",") }
+          { orderIds: chunk }
         );
         orders.push(...ordersChunk);
       }

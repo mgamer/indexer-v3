@@ -25,7 +25,9 @@ export const getExecuteCancelV1Options: RouteOptions = {
     query: Joi.object({
       id: Joi.string()
         .required()
-        .description("Collection ID. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63``"),
+        .description(
+          "Order Id. Example: `0x1544e82e6f2174f26233abcc35f3d478fa9c92926a91465430657987aea7d748`"
+        ),
       maker: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)

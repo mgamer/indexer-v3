@@ -1,3 +1,462 @@
+## [5.120.6](https://github.com/reservoirprotocol/indexer/compare/v5.120.5...v5.120.6) (2022-07-27)
+
+
+### Bug Fixes
+
+* query ([8a7379c](https://github.com/reservoirprotocol/indexer/commit/8a7379c4ef9e4819562a0398b9d1613e31d86290))
+
+
+
+## [5.120.5](https://github.com/reservoirprotocol/indexer/compare/v5.120.4...v5.120.5) (2022-07-27)
+
+
+### Bug Fixes
+
+* better zeroex-v4/opendao order nonce handling ([dbd03fe](https://github.com/reservoirprotocol/indexer/commit/dbd03feb51e69429d0e01fea8b18fa58dfbd605f))
+
+
+
+## [5.120.4](https://github.com/reservoirprotocol/indexer/compare/v5.120.3...v5.120.4) (2022-07-26)
+
+
+### Bug Fixes
+
+* looksrare order cross-posting ([56f1d4f](https://github.com/reservoirprotocol/indexer/commit/56f1d4fc4ba732f5beb6d70ac7a626f7bc3a30f9))
+
+
+
+## [5.120.3](https://github.com/reservoirprotocol/indexer/compare/v5.120.2...v5.120.3) (2022-07-25)
+
+
+### Bug Fixes
+
+* add one more block orphan check job ([4a36717](https://github.com/reservoirprotocol/indexer/commit/4a3671775321c4e0f7a674f247589b4cb4e0bd55))
+
+
+
+## [5.120.2](https://github.com/reservoirprotocol/indexer/compare/v5.120.1...v5.120.2) (2022-07-25)
+
+
+### Bug Fixes
+
+* block orphan checking ([ae9cca1](https://github.com/reservoirprotocol/indexer/commit/ae9cca1466b14c4471bc571200b5ec4109e4e040))
+* use default chain id configs ([2ee84e8](https://github.com/reservoirprotocol/indexer/commit/2ee84e8e60b3b915a8b5e446741a3eedd244c307))
+
+
+
+## [5.120.1](https://github.com/reservoirprotocol/indexer/compare/v5.120.0...v5.120.1) (2022-07-25)
+
+
+### Bug Fixes
+
+* more resilient orphan block check ([4eea30f](https://github.com/reservoirprotocol/indexer/commit/4eea30f9f3411aaa4103303e663d381982e673b9))
+
+
+
+# [5.120.0](https://github.com/reservoirprotocol/indexer/compare/v5.119.0...v5.120.0) (2022-07-23)
+
+
+### Bug Fixes
+
+* allow unsafe number for amount ([7d67c7f](https://github.com/reservoirprotocol/indexer/commit/7d67c7f508fc1db4d70c5aa253d759e4ff66474d))
+
+
+
+# [5.119.0](https://github.com/reservoirprotocol/indexer/compare/v5.118.3...v5.119.0) (2022-07-22)
+
+
+### Features
+
+* allow passing source in the execute apis ([1bb1a98](https://github.com/reservoirprotocol/indexer/commit/1bb1a9853995786662c1394bd90f4ded63b61d1d))
+
+
+
+## [5.118.3](https://github.com/reservoirprotocol/indexer/compare/v5.118.2...v5.118.3) (2022-07-20)
+
+
+### Bug Fixes
+
+* debug logs ([d678d31](https://github.com/reservoirprotocol/indexer/commit/d678d3156cf9ae2139db994b1be545039206ecb7))
+
+
+
+## [5.118.2](https://github.com/reservoirprotocol/indexer/compare/v5.118.1...v5.118.2) (2022-07-20)
+
+
+### Bug Fixes
+
+* fallback to on-chain data retrieval when no transaction is available ([e26f45d](https://github.com/reservoirprotocol/indexer/commit/e26f45d1380d2568a0a33f68202181d1ac2f9e6d))
+
+
+
+## [5.118.1](https://github.com/reservoirprotocol/indexer/compare/v5.118.0...v5.118.1) (2022-07-20)
+
+
+### Bug Fixes
+
+* various tweaks ([c289299](https://github.com/reservoirprotocol/indexer/commit/c289299abe4f88210b7bad0edd6afcdce3fde664))
+
+
+
+# [5.118.0](https://github.com/reservoirprotocol/indexer/compare/v5.117.0...v5.118.0) (2022-07-20)
+
+
+### Bug Fixes
+
+* use :csv instead of :raw ([e09bee0](https://github.com/reservoirprotocol/indexer/commit/e09bee078634947ce581db9fb8e5457fdc70d3dc))
+
+
+### Features
+
+* add filtering for multiple values per key on tokens/details as well ([eb8aae1](https://github.com/reservoirprotocol/indexer/commit/eb8aae1efb26018e3e4ecfa36cfc3b0c0a07ca85))
+* support multiple values selected per attribute ([06c865e](https://github.com/reservoirprotocol/indexer/commit/06c865e0a2f4f862cd6a86cba6cc7189b53833eb))
+
+
+
+# [5.117.0](https://github.com/reservoirprotocol/indexer/compare/v5.116.1...v5.117.0) (2022-07-19)
+
+
+### Bug Fixes
+
+* log received transactions ([292b672](https://github.com/reservoirprotocol/indexer/commit/292b672b4f520c0cfcb0b4b6292cea72edce89c7))
+
+
+### Features
+
+* more efficient handling of transactions ([4d51036](https://github.com/reservoirprotocol/indexer/commit/4d5103684790b44986fad245661cbf8a8ab61b44))
+
+
+
+## [5.116.1](https://github.com/reservoirprotocol/indexer/compare/v5.116.0...v5.116.1) (2022-07-18)
+
+
+### Bug Fixes
+
+* use exponential backoff for the fill events fill source backfill ([e293c2e](https://github.com/reservoirprotocol/indexer/commit/e293c2e5533097118824d4d2208b84a3fff237de))
+
+
+
+# [5.116.0](https://github.com/reservoirprotocol/indexer/compare/v5.115.3...v5.116.0) (2022-07-17)
+
+
+### Features
+
+* require authentication for the bullmq admin dashboard ([2f7b32c](https://github.com/reservoirprotocol/indexer/commit/2f7b32c2e9d320cd413f234a130965e599987396))
+
+
+
+## [5.115.3](https://github.com/reservoirprotocol/indexer/compare/v5.115.2...v5.115.3) (2022-07-16)
+
+
+### Bug Fixes
+
+* retry backfill ([7ac0c9c](https://github.com/reservoirprotocol/indexer/commit/7ac0c9c80049732f517e11bbddffa7c1b1b2787a))
+
+
+
+## [5.115.2](https://github.com/reservoirprotocol/indexer/compare/v5.115.1...v5.115.2) (2022-07-16)
+
+
+### Bug Fixes
+
+* backfill fill source in descending order ([a840bc6](https://github.com/reservoirprotocol/indexer/commit/a840bc65f57db41524ebff8541f61cfd8e2e4573))
+
+
+
+## [5.115.1](https://github.com/reservoirprotocol/indexer/compare/v5.115.0...v5.115.1) (2022-07-16)
+
+
+### Bug Fixes
+
+* stop fill source backfill ([475349c](https://github.com/reservoirprotocol/indexer/commit/475349c5e451c87b961ab1e45cdb35098c10daed))
+
+
+
+# [5.115.0](https://github.com/reservoirprotocol/indexer/compare/v5.114.0...v5.115.0) (2022-07-15)
+
+
+### Features
+
+* read token from replica ([1b1e98f](https://github.com/reservoirprotocol/indexer/commit/1b1e98fecf8c24d34c50d94a0a4706414702f46c))
+
+
+
+# [5.114.0](https://github.com/reservoirprotocol/indexer/compare/v5.113.4...v5.114.0) (2022-07-15)
+
+
+### Features
+
+* read token from replica ([b59da82](https://github.com/reservoirprotocol/indexer/commit/b59da82e2802524c50788af283fdf06c629e1210))
+
+
+
+## [5.113.4](https://github.com/reservoirprotocol/indexer/compare/v5.113.3...v5.113.4) (2022-07-15)
+
+
+### Bug Fixes
+
+* joi sortBy validation when filtering by contract ([f9778b7](https://github.com/reservoirprotocol/indexer/commit/f9778b743cfe2a71ed4966e5cbd8b3501512f802))
+
+
+
+## [5.113.3](https://github.com/reservoirprotocol/indexer/compare/v5.113.2...v5.113.3) (2022-07-15)
+
+
+### Bug Fixes
+
+* missing transaction data ([913f5a8](https://github.com/reservoirprotocol/indexer/commit/913f5a81a5e8942d8b7aad942afe5b997006e874))
+
+
+
+## [5.113.2](https://github.com/reservoirprotocol/indexer/compare/v5.113.1...v5.113.2) (2022-07-15)
+
+
+### Bug Fixes
+
+* debug ([585e446](https://github.com/reservoirprotocol/indexer/commit/585e446a5a13aaedb8d099dcad3be113f1eb158c))
+
+
+
+## [5.113.1](https://github.com/reservoirprotocol/indexer/compare/v5.113.0...v5.113.1) (2022-07-15)
+
+
+### Bug Fixes
+
+* debug ([35c700b](https://github.com/reservoirprotocol/indexer/commit/35c700b80d8796dad04a18003469543ef3ecdf81))
+
+
+
+# [5.113.0](https://github.com/reservoirprotocol/indexer/compare/v5.112.14...v5.113.0) (2022-07-15)
+
+
+### Features
+
+* allow any twap interval ([0cdbd1f](https://github.com/reservoirprotocol/indexer/commit/0cdbd1f14dab5049578ef73da54504cd8b9f8e8e))
+
+
+
+## [5.112.14](https://github.com/reservoirprotocol/indexer/compare/v5.112.13...v5.112.14) (2022-07-15)
+
+
+### Bug Fixes
+
+* tweaks ([8985c2b](https://github.com/reservoirprotocol/indexer/commit/8985c2b0158f653012891d81401b9664d80843f8))
+
+
+
+## [5.112.13](https://github.com/reservoirprotocol/indexer/compare/v5.112.12...v5.112.13) (2022-07-15)
+
+
+### Bug Fixes
+
+* tweaks ([8bf9690](https://github.com/reservoirprotocol/indexer/commit/8bf9690e3d5d57d2e6c5cf8c304bf1c45dabed80))
+
+
+
+## [5.112.12](https://github.com/reservoirprotocol/indexer/compare/v5.112.11...v5.112.12) (2022-07-15)
+
+
+### Bug Fixes
+
+* tweaks ([d6548b2](https://github.com/reservoirprotocol/indexer/commit/d6548b25642c4b3dbd5fb5018538e5eab9da5b2c))
+
+
+
+## [5.112.11](https://github.com/reservoirprotocol/indexer/compare/v5.112.10...v5.112.11) (2022-07-15)
+
+
+### Bug Fixes
+
+* tweaks ([2569cfd](https://github.com/reservoirprotocol/indexer/commit/2569cfdff099685a46dea7b3005cf19c057510d2))
+
+
+
+## [5.112.10](https://github.com/reservoirprotocol/indexer/compare/v5.112.9...v5.112.10) (2022-07-15)
+
+
+### Bug Fixes
+
+* tweaks ([8675f12](https://github.com/reservoirprotocol/indexer/commit/8675f12c5df1eb65a126449968269f91e8fa2b64))
+
+
+
+## [5.112.9](https://github.com/reservoirprotocol/indexer/compare/v5.112.8...v5.112.9) (2022-07-15)
+
+
+### Bug Fixes
+
+* debug ([334a8fc](https://github.com/reservoirprotocol/indexer/commit/334a8fc6d68886a8c1913b4c0506c25b3ce1ece4))
+
+
+
+## [5.112.8](https://github.com/reservoirprotocol/indexer/compare/v5.112.7...v5.112.8) (2022-07-15)
+
+
+### Bug Fixes
+
+* reenable backfill job ([f4b9b49](https://github.com/reservoirprotocol/indexer/commit/f4b9b49e086ef80708306f5161d8bf1461268f06))
+
+
+
+## [5.112.7](https://github.com/reservoirprotocol/indexer/compare/v5.112.6...v5.112.7) (2022-07-15)
+
+
+### Bug Fixes
+
+* stop backfill ([f47f0ea](https://github.com/reservoirprotocol/indexer/commit/f47f0ea7362885cf9555cedc5595dabb160bcd03))
+
+
+
+## [5.112.6](https://github.com/reservoirprotocol/indexer/compare/v5.112.5...v5.112.6) (2022-07-15)
+
+
+### Bug Fixes
+
+* transaction block fields update query ([99eb487](https://github.com/reservoirprotocol/indexer/commit/99eb48731d0093b3df992a26421e0c22be081e46))
+
+
+
+## [5.112.5](https://github.com/reservoirprotocol/indexer/compare/v5.112.4...v5.112.5) (2022-07-15)
+
+
+### Bug Fixes
+
+* transaction block fields update query ([f974732](https://github.com/reservoirprotocol/indexer/commit/f974732b6f5dd5cbc54ee7fca6378f06dc05b616))
+
+
+
+## [5.112.4](https://github.com/reservoirprotocol/indexer/compare/v5.112.3...v5.112.4) (2022-07-15)
+
+
+### Bug Fixes
+
+* backfill missing transaction fields ([daf3506](https://github.com/reservoirprotocol/indexer/commit/daf35065481085262df4e886061405c26c896e9d))
+
+
+
+## [5.112.3](https://github.com/reservoirprotocol/indexer/compare/v5.112.2...v5.112.3) (2022-07-14)
+
+
+### Bug Fixes
+
+* revert to more efficient block ingestion ([3d822f2](https://github.com/reservoirprotocol/indexer/commit/3d822f2dc572b225b5e1c2d2756403d7a50d07bc))
+
+
+
+## [5.112.2](https://github.com/reservoirprotocol/indexer/compare/v5.112.1...v5.112.2) (2022-07-14)
+
+
+### Bug Fixes
+
+* debug ([8dafe22](https://github.com/reservoirprotocol/indexer/commit/8dafe22986169d5cb36c11173ea90f6f6d7a515f))
+
+
+
+## [5.112.1](https://github.com/reservoirprotocol/indexer/compare/v5.112.0...v5.112.1) (2022-07-14)
+
+
+### Bug Fixes
+
+* debug ([3856da9](https://github.com/reservoirprotocol/indexer/commit/3856da9030f9c6d03a49efd963d8cd3a936e4e38))
+
+
+
+# [5.112.0](https://github.com/reservoirprotocol/indexer/compare/v5.111.0...v5.112.0) (2022-07-14)
+
+
+### Bug Fixes
+
+* backfill missing fill sources ([5adbdf2](https://github.com/reservoirprotocol/indexer/commit/5adbdf2598f3885624673e77ba92cce0be5c9dfe))
+* debug ([f801ad6](https://github.com/reservoirprotocol/indexer/commit/f801ad641f97b2121c38ef62c192ee6d6cc0ef96))
+* minor tweaks ([a69c351](https://github.com/reservoirprotocol/indexer/commit/a69c3512dda3b733d0c17d7d926057092ed24a9b))
+* minor tweaks ([3a61c92](https://github.com/reservoirprotocol/indexer/commit/3a61c9201c471b4a485bf0fb985fce7230a79f61))
+* minor tweaks ([18e8703](https://github.com/reservoirprotocol/indexer/commit/18e870312f97f2fad423842ec0557a09f403535e))
+* minor tweaks ([4ac7736](https://github.com/reservoirprotocol/indexer/commit/4ac7736ea9aca41e4cc5f2d7f6a46f3b934022f4))
+* remove debug logs ([7b32f0e](https://github.com/reservoirprotocol/indexer/commit/7b32f0e9ead3dba3c12cf492c300e2345889abe7))
+* tweaks ([f4f8473](https://github.com/reservoirprotocol/indexer/commit/f4f8473f003cdd669ff88b6fd0e2f584b2098d6b))
+* tweaks ([f064c97](https://github.com/reservoirprotocol/indexer/commit/f064c978997149a92842070c72c2a90e3e6af160))
+* tweaks ([b9a52f4](https://github.com/reservoirprotocol/indexer/commit/b9a52f4ac4b7848ff96c3fe2137bfb8d35f91599))
+* tweaks ([0fa9774](https://github.com/reservoirprotocol/indexer/commit/0fa977437d08999369688421924ada6633fd4306))
+* tweaks ([d0ba026](https://github.com/reservoirprotocol/indexer/commit/d0ba026f197744ad5edb0645e275a2f91f32d64b))
+* use write instance ([011d5de](https://github.com/reservoirprotocol/indexer/commit/011d5dee4b931b346d5ad7c2ba84000bb46e0c14))
+
+
+### Features
+
+* add queue for backfilling block timestamps ([f3271e1](https://github.com/reservoirprotocol/indexer/commit/f3271e173f430c3be5ad4320e49b3f2456475604))
+* synchronous handling of blocks ([2c4bacf](https://github.com/reservoirprotocol/indexer/commit/2c4bacf05d665ec30c9ceb33f7a688894cc2ca8c))
+
+
+
+# [5.111.0](https://github.com/reservoirprotocol/indexer/compare/v5.110.1...v5.111.0) (2022-07-14)
+
+
+### Features
+
+* reduce concurrency ([073d42a](https://github.com/reservoirprotocol/indexer/commit/073d42aa130a351dca2a2abd8698b99a1706473f))
+* remove logs ([474a903](https://github.com/reservoirprotocol/indexer/commit/474a90341214dbd75734671850d2658a545ebc32))
+
+
+
+## [5.110.1](https://github.com/reservoirprotocol/indexer/compare/v5.110.0...v5.110.1) (2022-07-14)
+
+
+### Bug Fixes
+
+* disallow fallback collection data in most cases ([56c2968](https://github.com/reservoirprotocol/indexer/commit/56c2968df4fad40283c34ac7f2a97dc6f3680f55))
+
+
+
+# [5.110.0](https://github.com/reservoirprotocol/indexer/compare/v5.109.0...v5.110.0) (2022-07-14)
+
+
+### Features
+
+* properly attribute fill source across all exchanges ([19c3cc3](https://github.com/reservoirprotocol/indexer/commit/19c3cc3965328660362737105edee08d446c07f4))
+
+
+
+# [5.109.0](https://github.com/reservoirprotocol/indexer/compare/v5.108.1...v5.109.0) (2022-07-14)
+
+
+### Bug Fixes
+
+* simulate floor api ([e908d3a](https://github.com/reservoirprotocol/indexer/commit/e908d3a39aec9600d8f9b9f48efdd7e560e1749a))
+
+
+### Features
+
+* use on-chain data for collection information ([9ed4094](https://github.com/reservoirprotocol/indexer/commit/9ed409417e721f7d3c933019da79b28a3c895cae))
+
+
+
+## [5.108.1](https://github.com/reservoirprotocol/indexer/compare/v5.108.0...v5.108.1) (2022-07-13)
+
+
+### Bug Fixes
+
+* additional goerli settings ([2bfc89c](https://github.com/reservoirprotocol/indexer/commit/2bfc89c993facf84a9195eed0d9c4e8503036b6d))
+
+
+
+# [5.108.0](https://github.com/reservoirprotocol/indexer/compare/v5.107.1...v5.108.0) (2022-07-13)
+
+
+### Features
+
+* added logs ([3fdefd6](https://github.com/reservoirprotocol/indexer/commit/3fdefd6c0b8a6240b696a343ded0434bce5906c2))
+
+
+
+## [5.107.1](https://github.com/reservoirprotocol/indexer/compare/v5.107.0...v5.107.1) (2022-07-13)
+
+
+### Bug Fixes
+
+* properly detect goerli network ([4553c14](https://github.com/reservoirprotocol/indexer/commit/4553c14512a9edc6248a3b06efecce1a28c53ed6))
+
+
+
 # [5.107.0](https://github.com/reservoirprotocol/indexer/compare/v5.106.0...v5.107.0) (2022-07-13)
 
 
