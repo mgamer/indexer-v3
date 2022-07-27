@@ -3,7 +3,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
 import pLimit from "p-limit";
 
-import { idb, pgp, redb } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -66,18 +66,21 @@ export const save = async (
 
       // Check: order has unique nonce
       if (kind === "erc1155") {
-        // For erc1155, enforce uniqueness of maker/nonce.
-        const nonceExists = await redb.oneOrNone(
+        // For erc1155, enforce uniqueness of maker/nonce/contract/price
+        const nonceExists = await idb.oneOrNone(
           `
             SELECT 1 FROM orders
             WHERE orders.kind = 'opendao-erc1155'
               AND orders.maker = $/maker/
               AND orders.nonce = $/nonce/
-              AND orders.contract IS NOT NULL
+              AND orders.contract = $/contract/
+              AND (orders.raw_data ->> 'erc20TokenAmount')::NUMERIC / (orders.raw_data ->> 'nftAmount')::NUMERIC = $/price/
           `,
           {
             maker: toBuffer(order.params.maker),
             nonce: order.params.nonce,
+            contract: toBuffer(order.params.nft),
+            price: bn(order.params.erc20TokenAmount).div(order.params.nftAmount!).toString(),
           }
         );
         if (nonceExists) {
@@ -87,14 +90,15 @@ export const save = async (
           });
         }
       } else {
-        // For erc721, enforce uniqueness of maker/nonce/contract.
-        const nonceExists = await redb.oneOrNone(
+        // For erc721, enforce uniqueness of maker/nonce/contract/price
+        const nonceExists = await idb.oneOrNone(
           `
             SELECT 1 FROM orders
             WHERE orders.kind = 'opendao-erc721'
               AND orders.maker = $/maker/
               AND orders.nonce = $/nonce/
               AND orders.contract = $/contract/
+              AND (orders.raw_data ->> 'erc20TokenAmount')::NUMERIC = $/price/
           `,
           {
             maker: toBuffer(order.params.maker),
