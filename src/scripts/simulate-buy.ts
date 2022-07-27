@@ -17,12 +17,14 @@ const main = async () => {
     ["0x76be3b62873462d2142405439777e971754e8e77", "erc1155"],
     // Foundation
     ["0x3b3ee1931dc30c1957379fac9aba94d1c48a5405", "erc721"],
+    // Bored Ape Yacht Club
+    ["0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d", "erc721"],
   ];
 
   for (const [collection, kind] of collections) {
     // Get the floor token of the collection.
     const { tokens }: { tokens: any } = await axios
-      .get(`${BASE_URL}/tokens/v4?collection=${collection}&limit=1`)
+      .get(`${BASE_URL}/tokens/v4?collection=${collection}&limit=3`)
       .then(({ data }) => data);
 
     for (const { contract, tokenId } of tokens) {

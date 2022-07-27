@@ -50,9 +50,6 @@ export const getExecuteSellV2Options: RouteOptions = {
           "Wallet address of referrer. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
       onlyQuote: Joi.boolean().default(false).description("If true, only quote will be returned."),
-      noDirectFilling: Joi.boolean().description(
-        "If true, all fills will be executed through the router"
-      ),
       maxFeePerGas: Joi.string()
         .pattern(/^[0-9]+$/)
         .description("Optional. Set custom gas price."),
@@ -251,10 +248,29 @@ export const getExecuteSellV2Options: RouteOptions = {
         throw Boom.internal("Could not generate transaction(s)");
       }
 
+      // Use either the source or the old referrer
+      if (!query.source && query.referrer !== AddressZero) {
+        const result = await redb.oneOrNone(
+          `
+            SELECT
+              sources_v2.domain
+            FROM sources_v2
+            WHERE sources_v2.address = $/address/
+          `,
+          {
+            address: query.referrer,
+          }
+        );
+        if (result && result.domain) {
+          query.source = result.domain;
+        }
+      }
+
       const router = new Sdk.Router.Router(config.chainId, slowProvider);
       const tx = await router.fillBidTx(bidDetails, query.taker, {
         referrer: query.source,
-        noDirectFilling: query.noDirectFilling,
+        // Force router filling so that we don't lose any attribution
+        noDirectFilling: true,
       });
 
       // Set up generic filling steps
