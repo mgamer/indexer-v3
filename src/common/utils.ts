@@ -24,7 +24,7 @@ export const splitContinuation = (c: string, regEx: RegExp) => {
   }
 
   c = decodeURIComponent(c);
-  if (c.match(base64Regex)) {
+  if (c.match(regex.base64)) {
     const decoded = Buffer.from(c, "base64").toString("ascii");
     if (decoded.match(regEx)) {
       return decoded.split("_");
@@ -36,4 +36,13 @@ export const splitContinuation = (c: string, regEx: RegExp) => {
 
 export const buildContinuation = (c: string) => Buffer.from(c).toString("base64");
 
-export const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+// --- Regex ---
+
+export const regex = {
+  base64: /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/,
+  domain: /^[a-zA-Z0-9][a-zA-Z0-9.-]+[a-zA-Z0-9]$/,
+  address: /^0x[a-fA-F0-9]{40}$/,
+  bytes32: /^0x[a-fA-F0-9]{64}$/,
+  token: /^0x[a-fA-F0-9]{40}:[0-9]+$/,
+  number: /^[0-9]+$/,
+};

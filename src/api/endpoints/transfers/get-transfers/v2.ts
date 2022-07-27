@@ -6,10 +6,10 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
-  base64Regex,
   buildContinuation,
   formatEth,
   fromBuffer,
+  regex,
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
@@ -29,13 +29,13 @@ export const getTransfersV2Options: RouteOptions = {
     query: Joi.object({
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .description(
           "Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+        .pattern(regex.token)
         .description(
           "Filter to a particular token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
@@ -48,7 +48,7 @@ export const getTransfersV2Options: RouteOptions = {
         .unknown()
         .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
       limit: Joi.number().integer().min(1).max(100).default(20),
-      continuation: Joi.string().pattern(base64Regex),
+      continuation: Joi.string().pattern(regex.base64),
     })
       .oxor("contract", "token", "collection")
       .or("contract", "token", "collection")
@@ -59,10 +59,8 @@ export const getTransfersV2Options: RouteOptions = {
       transfers: Joi.array().items(
         Joi.object({
           token: Joi.object({
-            contract: Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{40}$/),
-            tokenId: Joi.string().pattern(/^[0-9]+$/),
+            contract: Joi.string().lowercase().pattern(regex.address),
+            tokenId: Joi.string().pattern(regex.number),
             name: Joi.string().allow(null, ""),
             image: Joi.string().allow(null, ""),
             collection: Joi.object({
@@ -70,23 +68,17 @@ export const getTransfersV2Options: RouteOptions = {
               name: Joi.string().allow(null, ""),
             }),
           }),
-          from: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/),
-          to: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/),
+          from: Joi.string().lowercase().pattern(regex.address),
+          to: Joi.string().lowercase().pattern(regex.address),
           amount: Joi.string(),
-          txHash: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{64}$/),
+          txHash: Joi.string().lowercase().pattern(regex.bytes32),
           logIndex: Joi.number(),
           batchIndex: Joi.number(),
           timestamp: Joi.number(),
           price: Joi.number().unsafe().allow(null),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex).allow(null),
+      continuation: Joi.string().pattern(regex.base64).allow(null),
     }).label(`getTransfers${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-transfers-${version}-handler`, `Wrong response schema: ${error}`);
