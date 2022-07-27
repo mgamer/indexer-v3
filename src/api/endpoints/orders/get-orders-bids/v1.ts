@@ -6,10 +6,10 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
-  base64Regex,
   buildContinuation,
   formatEth,
   fromBuffer,
+  regex,
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
@@ -33,7 +33,7 @@ export const getOrdersBidsV1Options: RouteOptions = {
     query: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:\d+$/)
+        .pattern(regex.token)
         .description("Filter to a token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"),
       tokenSetId: Joi.string()
         .lowercase()
@@ -42,7 +42,7 @@ export const getOrdersBidsV1Options: RouteOptions = {
         ),
       maker: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .description(
           "Filter to a particular user, e.g. `0x4d04eb67a2d1e01c71fad0366e0c200207a75487`"
         ),
@@ -52,7 +52,7 @@ export const getOrdersBidsV1Options: RouteOptions = {
           "`active` = currently valid, `inactive` = temporarily invalid, `expired` = permanently invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
         ),
       sortBy: Joi.string().valid("price", "createdAt"),
-      continuation: Joi.string().pattern(base64Regex),
+      continuation: Joi.string().pattern(regex.base64),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     })
       .or("token", "tokenSetId", "maker")
@@ -69,21 +69,10 @@ export const getOrdersBidsV1Options: RouteOptions = {
           side: Joi.string().valid("buy", "sell").required(),
           status: Joi.string(),
           tokenSetId: Joi.string().required(),
-          tokenSetSchemaHash: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{64}$/)
-            .required(),
-          contract: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/),
-          maker: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/)
-            .required(),
-          taker: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/)
-            .required(),
+          tokenSetSchemaHash: Joi.string().lowercase().pattern(regex.bytes32).required(),
+          contract: Joi.string().lowercase().pattern(regex.address),
+          maker: Joi.string().lowercase().pattern(regex.address).required(),
+          taker: Joi.string().lowercase().pattern(regex.address).required(),
           price: Joi.number().unsafe().required(),
           value: Joi.number().unsafe().required(),
           validFrom: Joi.number().required(),
@@ -121,10 +110,7 @@ export const getOrdersBidsV1Options: RouteOptions = {
             .items(
               Joi.object({
                 kind: Joi.string(),
-                recipient: Joi.string()
-                  .lowercase()
-                  .pattern(/^0x[a-fA-F0-9]{40}$/)
-                  .allow(null),
+                recipient: Joi.string().lowercase().pattern(regex.address).allow(null),
                 bps: Joi.number(),
               })
             )
@@ -135,7 +121,7 @@ export const getOrdersBidsV1Options: RouteOptions = {
           rawData: Joi.object(),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex).allow(null),
+      continuation: Joi.string().pattern(regex.base64).allow(null),
     }).label(`getOrdersBids${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-orders-bids-${version}-handler`, `Wrong response schema: ${error}`);

@@ -10,24 +10,23 @@ import { logger } from "@/common/logger";
 import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
-const version = "v1";
+const version = "v2";
 
-export const getExecuteCancelV1Options: RouteOptions = {
+export const getExecuteCancelV2Options: RouteOptions = {
   description: "Cancel order",
   notes: "Cancel an existing order on any marketplace",
-  tags: ["api", "Router"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 11,
+      order: 1,
+      deprecated: true,
     },
   },
   validate: {
     query: Joi.object({
       id: Joi.string()
         .required()
-        .description(
-          "Order Id. Example: `0x1544e82e6f2174f26233abcc35f3d478fa9c92926a91465430657987aea7d748`"
-        ),
+        .description("Collection ID. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63``"),
       maker: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
@@ -49,14 +48,18 @@ export const getExecuteCancelV1Options: RouteOptions = {
         Joi.object({
           action: Joi.string().required(),
           description: Joi.string().required(),
-          status: Joi.string().valid("complete", "incomplete").required(),
-          kind: Joi.string()
-            .valid("request", "signature", "transaction", "confirmation")
+          kind: Joi.string().valid("transaction").required(),
+          items: Joi.array()
+            .items(
+              Joi.object({
+                status: Joi.string().valid("complete", "incomplete").required(),
+                data: Joi.object(),
+                orderIndex: Joi.number(),
+              })
+            )
             .required(),
-          data: Joi.object(),
         })
       ),
-      query: Joi.object(),
     }).label(`getExecuteCancel${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-execute-cancel-${version}-handler`, `Wrong response schema: ${error}`);
@@ -67,13 +70,16 @@ export const getExecuteCancelV1Options: RouteOptions = {
     const query = request.query as any;
 
     try {
-      // Fetch the order to get cancelled.
+      // Fetch the order to get cancelled
       const orderResult = await redb.oneOrNone(
         `
-          SELECT "kind", "raw_data" FROM "orders"
-          WHERE "id" = $/id/
-            AND "maker" = $/maker/
-            AND ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance')
+          SELECT
+            orders.kind,
+            orders.raw_data
+          FROM orders
+          WHERE orders.id = $/id/
+            AND orders.maker = $/maker/
+            AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
         `,
         {
           id: query.id,
@@ -81,12 +87,13 @@ export const getExecuteCancelV1Options: RouteOptions = {
         }
       );
 
-      // Return early in case no order was found.
+      // Return early in case no order was found
       if (!orderResult) {
         throw Boom.badData("No matching order");
       }
 
-      // Set up generic cancellation steps.
+      // Set up generic cancellation steps
+      // TODO: We should remove the "listing"/"offer" distinction once we get to bundles
       const generateSteps = (side: "buy" | "sell") => [
         {
           action: side === "sell" ? "Submit cancellation" : "Cancel offer",
@@ -95,20 +102,13 @@ export const getExecuteCancelV1Options: RouteOptions = {
           } you must confirm the transaction and pay the gas fee`,
           kind: "transaction",
         },
-        {
-          action: "Confirmation",
-          description: `Verify that the ${
-            side === "sell" ? "listing" : "offer"
-          } was successfully cancelled`,
-          kind: "confirmation",
-        },
       ];
 
       switch (orderResult.kind) {
         case "wyvern-v2.3": {
           const order = new Sdk.WyvernV23.Order(config.chainId, orderResult.raw_data);
 
-          // Generate exchange-specific cancellation transaction.
+          // Generate exchange-specific cancellation transaction
           const exchange = new Sdk.WyvernV23.Exchange(config.chainId);
           const cancelTx = exchange.cancelTransaction(query.maker, order);
 
@@ -119,24 +119,21 @@ export const getExecuteCancelV1Options: RouteOptions = {
             steps: [
               {
                 ...steps[0],
-                status: "incomplete",
-                data: {
-                  ...cancelTx,
-                  maxFeePerGas: query.maxFeePerGas
-                    ? bn(query.maxFeePerGas).toHexString()
-                    : undefined,
-                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                    ? bn(query.maxPriorityFeePerGas).toHexString()
-                    : undefined,
-                },
-              },
-              {
-                ...steps[1],
-                status: "incomplete",
-                data: {
-                  endpoint: `/orders/executed/v1?ids=${order.prefixHash()}`,
-                  method: "GET",
-                },
+                items: [
+                  {
+                    status: "incomplete",
+                    data: {
+                      ...cancelTx,
+                      maxFeePerGas: query.maxFeePerGas
+                        ? bn(query.maxFeePerGas).toHexString()
+                        : undefined,
+                      maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                        ? bn(query.maxPriorityFeePerGas).toHexString()
+                        : undefined,
+                    },
+                    orderIndex: 0,
+                  },
+                ],
               },
             ],
           };
@@ -145,7 +142,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
         case "seaport": {
           const order = new Sdk.Seaport.Order(config.chainId, orderResult.raw_data);
 
-          // Generate exchange-specific cancellation transaction.
+          // Generate exchange-specific cancellation transaction
           const exchange = new Sdk.Seaport.Exchange(config.chainId);
           const cancelTx = exchange.cancelOrderTx(query.maker, order);
 
@@ -154,24 +151,21 @@ export const getExecuteCancelV1Options: RouteOptions = {
             steps: [
               {
                 ...steps[0],
-                status: "incomplete",
-                data: {
-                  ...cancelTx,
-                  maxFeePerGas: query.maxFeePerGas
-                    ? bn(query.maxFeePerGas).toHexString()
-                    : undefined,
-                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                    ? bn(query.maxPriorityFeePerGas).toHexString()
-                    : undefined,
-                },
-              },
-              {
-                ...steps[1],
-                status: "incomplete",
-                data: {
-                  endpoint: `/orders/executed/v1?ids=${order.hash()}`,
-                  method: "GET",
-                },
+                items: [
+                  {
+                    status: "incomplete",
+                    data: {
+                      ...cancelTx,
+                      maxFeePerGas: query.maxFeePerGas
+                        ? bn(query.maxFeePerGas).toHexString()
+                        : undefined,
+                      maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                        ? bn(query.maxPriorityFeePerGas).toHexString()
+                        : undefined,
+                    },
+                    orderIndex: 0,
+                  },
+                ],
               },
             ],
           };
@@ -180,7 +174,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
         case "looks-rare": {
           const order = new Sdk.LooksRare.Order(config.chainId, orderResult.raw_data);
 
-          // Generate exchange-specific cancellation transaction.
+          // Generate exchange-specific cancellation transaction
           const exchange = new Sdk.LooksRare.Exchange(config.chainId);
           const cancelTx = exchange.cancelOrderTx(query.maker, order);
 
@@ -189,24 +183,21 @@ export const getExecuteCancelV1Options: RouteOptions = {
             steps: [
               {
                 ...steps[0],
-                status: "incomplete",
-                data: {
-                  ...cancelTx,
-                  maxFeePerGas: query.maxFeePerGas
-                    ? bn(query.maxFeePerGas).toHexString()
-                    : undefined,
-                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                    ? bn(query.maxPriorityFeePerGas).toHexString()
-                    : undefined,
-                },
-              },
-              {
-                ...steps[1],
-                status: "incomplete",
-                data: {
-                  endpoint: `/orders/executed/v1?ids=${order.hash()}`,
-                  method: "GET",
-                },
+                items: [
+                  {
+                    status: "incomplete",
+                    data: {
+                      ...cancelTx,
+                      maxFeePerGas: query.maxFeePerGas
+                        ? bn(query.maxFeePerGas).toHexString()
+                        : undefined,
+                      maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                        ? bn(query.maxPriorityFeePerGas).toHexString()
+                        : undefined,
+                    },
+                    orderIndex: 0,
+                  },
+                ],
               },
             ],
           };
@@ -216,7 +207,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
         case "opendao-erc1155": {
           const order = new Sdk.OpenDao.Order(config.chainId, orderResult.raw_data);
 
-          // Generate exchange-specific cancellation transaction.
+          // Generate exchange-specific cancellation transaction
           const exchange = new Sdk.OpenDao.Exchange(config.chainId);
           const cancelTx = exchange.cancelOrderTx(query.maker, order);
 
@@ -227,24 +218,21 @@ export const getExecuteCancelV1Options: RouteOptions = {
             steps: [
               {
                 ...steps[0],
-                status: "incomplete",
-                data: {
-                  ...cancelTx,
-                  maxFeePerGas: query.maxFeePerGas
-                    ? bn(query.maxFeePerGas).toHexString()
-                    : undefined,
-                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                    ? bn(query.maxPriorityFeePerGas).toHexString()
-                    : undefined,
-                },
-              },
-              {
-                ...steps[1],
-                status: "incomplete",
-                data: {
-                  endpoint: `/orders/executed/v1?ids=${order.hash()}`,
-                  method: "GET",
-                },
+                items: [
+                  {
+                    status: "incomplete",
+                    data: {
+                      ...cancelTx,
+                      maxFeePerGas: query.maxFeePerGas
+                        ? bn(query.maxFeePerGas).toHexString()
+                        : undefined,
+                      maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                        ? bn(query.maxPriorityFeePerGas).toHexString()
+                        : undefined,
+                    },
+                    orderIndex: 0,
+                  },
+                ],
               },
             ],
           };
@@ -254,7 +242,7 @@ export const getExecuteCancelV1Options: RouteOptions = {
         case "zeroex-v4-erc1155": {
           const order = new Sdk.ZeroExV4.Order(config.chainId, orderResult.raw_data);
 
-          // Generate exchange-specific cancellation transaction.
+          // Generate exchange-specific cancellation transaction
           const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
           const cancelTx = exchange.cancelOrderTx(query.maker, order);
 
@@ -265,24 +253,21 @@ export const getExecuteCancelV1Options: RouteOptions = {
             steps: [
               {
                 ...steps[0],
-                status: "incomplete",
-                data: {
-                  ...cancelTx,
-                  maxFeePerGas: query.maxFeePerGas
-                    ? bn(query.maxFeePerGas).toHexString()
-                    : undefined,
-                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                    ? bn(query.maxPriorityFeePerGas).toHexString()
-                    : undefined,
-                },
-              },
-              {
-                ...steps[1],
-                status: "incomplete",
-                data: {
-                  endpoint: `/orders/executed/v1?ids=${order.hash()}`,
-                  method: "GET",
-                },
+                items: [
+                  {
+                    status: "incomplete",
+                    data: {
+                      ...cancelTx,
+                      maxFeePerGas: query.maxFeePerGas
+                        ? bn(query.maxFeePerGas).toHexString()
+                        : undefined,
+                      maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                        ? bn(query.maxPriorityFeePerGas).toHexString()
+                        : undefined,
+                    },
+                    orderIndex: 0,
+                  },
+                ],
               },
             ],
           };
