@@ -68,6 +68,7 @@ export const getSalesBulkV1Options: RouteOptions = {
       sales: Joi.array().items(
         Joi.object({
           id: Joi.string(),
+          saleId: Joi.string(),
           token: Joi.object({
             contract: Joi.string().lowercase().pattern(regex.address),
             tokenId: Joi.string().pattern(regex.number),
@@ -197,6 +198,12 @@ export const getSalesBulkV1Options: RouteOptions = {
           id: crypto
             .createHash("sha256")
             .update(`${fromBuffer(r.tx_hash)}${r.log_index}${r.batch_index}`)
+            .digest("hex"),
+          saleId: crypto
+            .createHash("sha256")
+            .update(
+              `${fromBuffer(r.tx_hash)}${r.maker}${r.taker}${r.contract}${r.token_id}${r.price}`
+            )
             .digest("hex"),
           token: {
             contract: fromBuffer(r.contract),
