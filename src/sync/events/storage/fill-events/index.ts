@@ -18,6 +18,7 @@ export type Event = {
   amount: string;
   aggregatorSourceId?: number;
   fillSourceId?: number;
+  washTradingScore?: number;
   baseEventParams: BaseEventParams;
 };
 
@@ -42,4 +43,5 @@ export type DbEvent = {
   amount: string;
   aggregator_source_id: number | null;
   fill_source_id: number | null;
+  wash_trading_score: number;
 };
