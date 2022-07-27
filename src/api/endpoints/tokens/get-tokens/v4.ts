@@ -219,7 +219,11 @@ export const getTokensV4Options: RouteOptions = {
 
       if (query.source) {
         const sources = await Sources.getInstance();
-        const source = sources.getByName(query.source);
+        let source = sources.getByName(query.source, false);
+        if (!source) {
+          source = await sources.getByDomain(query.source);
+        }
+
         (query as any).sourceAddress = toBuffer(source.address);
         conditions.push(`"t"."floor_sell_source_id" = $/sourceAddress/`);
       }

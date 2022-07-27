@@ -37,7 +37,11 @@ export const getRedirectTokenV2Options: RouteOptions = {
     const sources = await Sources.getInstance();
 
     try {
-      const source = await sources.getByName(params.source);
+      let source = await sources.getByName(params.source, false);
+      if (!source) {
+        source = await sources.getByDomain(params.source);
+      }
+
       const [contract, tokenId] = params.token.split(":");
       const tokenUrl = sources.getTokenUrl(source, contract, tokenId);
 
