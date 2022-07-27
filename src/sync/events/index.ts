@@ -3,7 +3,6 @@ import { Log } from "@ethersproject/abstract-provider";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
-import { getReferrer } from "@reservoir0x/sdk/dist/utils";
 import _ from "lodash";
 import pLimit from "p-limit";
 
@@ -24,7 +23,6 @@ import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
 import * as blocksModel from "@/models/blocks";
-import { Sources } from "@/models/sources";
 import { OrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
 import * as syncEventsUtils from "@/events-sync/utils";
@@ -73,9 +71,6 @@ export const syncEvents = async (
       limit(() => baseProvider.getBlockWithTransactions(block))
     )
   );
-
-  // Initialize a sources instance
-  const sources = await Sources.getInstance();
 
   // When backfilling, certain processes are disabled
   const backfill = Boolean(options?.backfill);
@@ -589,17 +584,17 @@ export const syncEvents = async (
               const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
               if (routers[tx.to]) {
                 taker = tx.from;
-                aggregatorSource = await sources.getOrInsert(routers[tx.to]);
+                // aggregatorSource = await sources.getOrInsert(routers[tx.to]);
               }
 
               // Handle fill source
               let fillSource: { id: number } | undefined;
-              const referrer = getReferrer(tx.data);
-              if (referrer) {
-                fillSource = await sources.getOrInsert(referrer);
-              } else if (aggregatorSource?.domain !== "reservoir.market") {
-                fillSource = aggregatorSource;
-              }
+              // const referrer = getReferrer(tx.data);
+              // if (referrer) {
+              //   fillSource = await sources.getOrInsert(referrer);
+              // } else if (aggregatorSource?.domain !== "reservoir.market") {
+              //   fillSource = aggregatorSource;
+              // }
 
               // Decode the sold token (ignoring bundles)
               let contract: string;
@@ -723,17 +718,18 @@ export const syncEvents = async (
               const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
               if (routers[tx.to]) {
                 taker = tx.from;
-                aggregatorSource = await sources.getOrInsert(routers[tx.to]);
+                // aggregatorSource = await sources.getOrInsert(routers[tx.to]);
               }
 
               // Handle fill source
               let fillSource: { id: number } | undefined;
-              const referrer = getReferrer(tx.data);
-              if (referrer) {
-                fillSource = await sources.getOrInsert(referrer);
-              } else if (aggregatorSource?.domain !== "reservoir.market") {
-                fillSource = aggregatorSource;
-              }
+              // const referrer = getReferrer(tx.data);
+              // if (referrer) {
+              //   fillSource = await sources.getOrInsert(referrer);
+              // } else if (aggregatorSource?.domain !== "reservoir.market") {
+              //   fillSource = aggregatorSource;
+              // }
+
               const orderKind = "foundation";
               // Deduce the price from the protocol fee (which is 5%)
               const price = bn(protocolFee).mul(10000).div(50).toString();
@@ -871,17 +867,17 @@ export const syncEvents = async (
               const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
               if (routers[tx.to]) {
                 taker = tx.from;
-                aggregatorSource = await sources.getOrInsert(routers[tx.to]);
+                // aggregatorSource = await sources.getOrInsert(routers[tx.to]);
               }
 
               // Handle fill source
               let fillSource: { id: number } | undefined;
-              const referrer = getReferrer(tx.data);
-              if (referrer) {
-                fillSource = await sources.getOrInsert(referrer);
-              } else if (aggregatorSource?.domain !== "reservoir.market") {
-                fillSource = aggregatorSource;
-              }
+              // const referrer = getReferrer(tx.data);
+              // if (referrer) {
+              //   fillSource = await sources.getOrInsert(referrer);
+              // } else if (aggregatorSource?.domain !== "reservoir.market") {
+              //   fillSource = aggregatorSource;
+              // }
 
               const orderKind = "looks-rare";
               const orderSourceIdInt = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
@@ -973,17 +969,17 @@ export const syncEvents = async (
               const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
               if (routers[tx.to]) {
                 taker = tx.from;
-                aggregatorSource = await sources.getOrInsert(routers[tx.to]);
+                // aggregatorSource = await sources.getOrInsert(routers[tx.to]);
               }
 
               // Handle fill source
               let fillSource: { id: number } | undefined;
-              const referrer = getReferrer(tx.data);
-              if (referrer) {
-                fillSource = await sources.getOrInsert(referrer);
-              } else if (aggregatorSource?.domain !== "reservoir.market") {
-                fillSource = aggregatorSource;
-              }
+              // const referrer = getReferrer(tx.data);
+              // if (referrer) {
+              //   fillSource = await sources.getOrInsert(referrer);
+              // } else if (aggregatorSource?.domain !== "reservoir.market") {
+              //   fillSource = aggregatorSource;
+              // }
 
               const orderKind = "looks-rare";
               const orderSourceIdInt = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
@@ -1145,17 +1141,17 @@ export const syncEvents = async (
               const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
               if (routers[tx.to]) {
                 taker = tx.from;
-                aggregatorSource = await sources.getOrInsert(routers[tx.to]);
+                // aggregatorSource = await sources.getOrInsert(routers[tx.to]);
               }
 
               // Handle fill source
               let fillSource: { id: number } | undefined;
-              const referrer = getReferrer(tx.data);
-              if (referrer) {
-                fillSource = await sources.getOrInsert(referrer);
-              } else if (aggregatorSource?.domain !== "reservoir.market") {
-                fillSource = aggregatorSource;
-              }
+              // const referrer = getReferrer(tx.data);
+              // if (referrer) {
+              //   fillSource = await sources.getOrInsert(referrer);
+              // } else if (aggregatorSource?.domain !== "reservoir.market") {
+              //   fillSource = aggregatorSource;
+              // }
 
               const orderKind = eventData.kind.startsWith("wyvern-v2.3")
                 ? "wyvern-v2.3"
@@ -1356,17 +1352,17 @@ export const syncEvents = async (
               const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
               if (routers[tx.to]) {
                 taker = tx.from;
-                aggregatorSource = await sources.getOrInsert(routers[tx.to]);
+                // aggregatorSource = await sources.getOrInsert(routers[tx.to]);
               }
 
               // Handle fill source
               let fillSource: { id: number } | undefined;
-              const referrer = getReferrer(tx.data);
-              if (referrer) {
-                fillSource = await sources.getOrInsert(referrer);
-              } else if (aggregatorSource?.domain !== "reservoir.market") {
-                fillSource = aggregatorSource;
-              }
+              // const referrer = getReferrer(tx.data);
+              // if (referrer) {
+              //   fillSource = await sources.getOrInsert(referrer);
+              // } else if (aggregatorSource?.domain !== "reservoir.market") {
+              //   fillSource = aggregatorSource;
+              // }
 
               const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
               const orderSide = direction === 0 ? "sell" : "buy";
@@ -1505,17 +1501,17 @@ export const syncEvents = async (
               const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
               if (routers[tx.to]) {
                 taker = tx.from;
-                aggregatorSource = await sources.getOrInsert(routers[tx.to]);
+                // aggregatorSource = await sources.getOrInsert(routers[tx.to]);
               }
 
               // Handle fill source
               let fillSource: { id: number } | undefined;
-              const referrer = getReferrer(tx.data);
-              if (referrer) {
-                fillSource = await sources.getOrInsert(referrer);
-              } else if (aggregatorSource?.domain !== "reservoir.market") {
-                fillSource = aggregatorSource;
-              }
+              // const referrer = getReferrer(tx.data);
+              // if (referrer) {
+              //   fillSource = await sources.getOrInsert(referrer);
+              // } else if (aggregatorSource?.domain !== "reservoir.market") {
+              //   fillSource = aggregatorSource;
+              // }
 
               const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
               const orderSourceIdInt = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
@@ -1689,17 +1685,17 @@ export const syncEvents = async (
                 const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
                 if (routers[tx.to]) {
                   taker = tx.from;
-                  aggregatorSource = await sources.getOrInsert(routers[tx.to]);
+                  // aggregatorSource = await sources.getOrInsert(routers[tx.to]);
                 }
 
                 // Handle fill source
                 let fillSource: { id: number } | undefined;
-                const referrer = getReferrer(tx.data);
-                if (referrer) {
-                  fillSource = await sources.getOrInsert(referrer);
-                } else if (aggregatorSource?.domain !== "reservoir.market") {
-                  fillSource = aggregatorSource;
-                }
+                // const referrer = getReferrer(tx.data);
+                // if (referrer) {
+                //   fillSource = await sources.getOrInsert(referrer);
+                // } else if (aggregatorSource?.domain !== "reservoir.market") {
+                //   fillSource = aggregatorSource;
+                // }
 
                 const price = bn(saleInfo.price).div(saleInfo.amount).toString();
 
