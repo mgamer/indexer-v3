@@ -3,12 +3,11 @@ import { Log } from "@ethersproject/abstract-provider";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
-import { getReferrer } from "@reservoir0x/sdk/dist/utils";
 import _ from "lodash";
 import pLimit from "p-limit";
 
 import { logger } from "@/common/logger";
-import { idb } from "@/common/db";
+import { idb, redb, pgp } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -72,9 +71,6 @@ export const syncEvents = async (
       limit(() => baseProvider.getBlockWithTransactions(block))
     )
   );
-
-  // Initialize a sources instance
-  const sources = await Sources.getInstance();
 
   // When backfilling, certain processes are disabled
   const backfill = Boolean(options?.backfill);
