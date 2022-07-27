@@ -86,20 +86,47 @@ export class DailyVolume {
     try {
       results = await redb.manyOrNone(
         `
-          SELECT
+          SELECT t1.collection_id,
+            t1.volume,
+            COALESCE(t2.volume, 0) AS volume_clean,
+            t1.rank,
+            COALESCE(t2.rank, -1) AS rank_clean,
+            t1.floor_sell_value,
+		    COALESCE(t2.floor_sell_value, 0) AS floor_sell_value_clean,
+			t1.sales_count,
+		    COALESCE(t2.sales_count, 0) AS sales_count_clean
+          FROM 
+            (SELECT
               "collection_id",
               sum("fe"."price") AS "volume",              
               RANK() OVER (ORDER BY SUM(price) DESC, "collection_id") "rank",
               min(fe.price) AS "floor_sell_value",
               count(fe.price) AS "sales_count"
-          FROM "fill_events_2" "fe"
+            FROM "fill_events_2" "fe"
               JOIN "tokens" "t" ON "fe"."token_id" = "t"."token_id" AND "fe"."contract" = "t"."contract"
               JOIN "collections" "c" ON "t"."collection_id" = "c"."id"
-          WHERE
+            WHERE
               "fe"."timestamp" >= $/startTime/
               AND "fe"."timestamp" < $/endTime/
               AND fe.price > 0
-          GROUP BY "collection_id"
+            GROUP BY "collection_id") t1
+          LEFT JOIN
+            (SELECT
+              "collection_id",
+              sum("fe"."price") AS "volume",              
+              RANK() OVER (ORDER BY SUM(price) DESC, "collection_id") "rank",
+              min(fe.price) AS "floor_sell_value",
+              count(fe.price) AS "sales_count"
+            FROM "fill_events_2" "fe"
+              JOIN "tokens" "t" ON "fe"."token_id" = "t"."token_id" AND "fe"."contract" = "t"."contract"
+              JOIN "collections" "c" ON "t"."collection_id" = "c"."id"
+            WHERE
+              "fe"."timestamp" >= $/startTime/
+              AND "fe"."timestamp" < $/endTime/
+              AND fe.price > 0
+              AND coalesce(fe.wash_trading_score, 0) = 0
+            GROUP BY "collection_id") t2
+          ON (t1.collection_id = t2.collection_id)
         `,
         {
           startTime,
@@ -125,9 +152,13 @@ export class DailyVolume {
       results.push({
         collection_id: -1,
         volume: 0,
+        volume_clean: 0,
         rank: -1,
+        rank_clean: -1,
         floor_sell_value: 0,
+        floor_sell_value_clean: 0,
         sales_count: 0,
+        sales_count_clean: 0,
       });
 
       const queries: PgPromiseQuery[] = [];
@@ -139,26 +170,38 @@ export class DailyVolume {
                 (
                  collection_id, 
                  timestamp, 
-                 rank, 
+                 rank,
+                 rank_clean,
                  volume,
+                 volume_clean,
                  floor_sell_value,
-                 sales_count
+                 floor_sell_value_clean,
+                 sales_count,
+                 sales_count_clean
                 )
             VALUES (
                 $/collection_id/, 
                 ${startTime}, 
                 $/rank/, 
+                $/rank_clean/, 
                 $/volume/,
+                $/volume_clean/,
                 $/floor_sell_value/,
-                $/sales_count/
+                $/floor_sell_value_clean/,
+                $/sales_count/,
+                $/sales_count_clean/
             )
             ON CONFLICT ON CONSTRAINT daily_volumes_pk
             DO 
                 UPDATE SET 
                     volume = $/volume/, 
+                    volume_clean = $/volume_clean/, 
                     rank = $/rank/, 
+                    rank_clean = $/rank_clean/, 
                     floor_sell_value = $/floor_sell_value/, 
-                    sales_count = $/sales_count/
+                    floor_sell_value_clean = $/floor_sell_value_clean/, 
+                    sales_count = $/sales_count/,
+                    sales_count_clean = $/sales_count_clean/
             `,
           values: values,
         });
