@@ -551,7 +551,7 @@ export class DailyVolume {
     logger.info(
       "daily-volumes",
       JSON.stringify({
-        msg: `Running cacheFloorSalePrice for period ${period}. valuesPostfix: ${valuesPostfix}`,
+        msg: `Running cacheFloorSalePrice for period ${period}. useCleanValues: ${useCleanValues}`,
       })
     );
 
