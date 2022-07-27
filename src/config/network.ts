@@ -21,33 +21,48 @@ export const getNetworkName = () => {
 };
 
 export const getNetworkSettings = () => {
+  const washTradingExcludedContracts: string[] = [];
+
+  const defaultNetworkSettings = {
+    realtimeSyncFrequencySeconds: 15,
+    backfillBlockBatchSize: 16,
+    washTradingExcludedContracts,
+  };
+
+  let networkSettings = {};
+
   switch (config.chainId) {
     // Goerli
     case 5: {
-      return {
-        realtimeSyncFrequencySeconds: 15,
+      networkSettings = {
         backfillBlockBatchSize: 128,
       };
+      break;
     }
-
     // Optimism
     case 10: {
-      return {
+      networkSettings = {
         realtimeSyncFrequencySeconds: 5,
         backfillBlockBatchSize: 512,
       };
+      break;
     }
-
     // Ethereum
     case 1:
+      networkSettings = {
+        washTradingExcludedContracts: [
+          // ArtBlocks Contracts
+          "0x059edd72cd353df5106d2b9cc5ab83a52287ac3a",
+          "0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270",
+        ],
+      };
+      break;
     // Rinkeby
     case 4:
     // Default
-    default: {
-      return {
-        realtimeSyncFrequencySeconds: 15,
-        backfillBlockBatchSize: 16,
-      };
-    }
+    default:
+      break;
   }
+
+  return Object.assign(defaultNetworkSettings, networkSettings);
 };

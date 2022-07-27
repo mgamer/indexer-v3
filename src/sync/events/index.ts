@@ -28,6 +28,7 @@ import { Sources } from "@/models/sources";
 import { OrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
 import * as syncEventsUtils from "@/events-sync/utils";
+import { getNetworkSettings } from "@/config/network";
 
 // TODO: Split into multiple files (by exchange)
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
@@ -1983,8 +1984,11 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
 const assignWashTradingScoreToFillEvents = async (fillEvents: es.fills.Event[]) => {
   try {
     const inverseFillEvents: { contract: Buffer; maker: Buffer; taker: Buffer }[] = [];
-
-    const fillEventsChunks = _.chunk(fillEvents, 100);
+    const excludedContracts = getNetworkSettings().washTradingExcludedContracts;
+    const fillEventsFiltered = excludedContracts.length
+      ? fillEvents.filter((e) => !excludedContracts.includes(e.contract))
+      : fillEvents;
+    const fillEventsChunks = _.chunk(fillEventsFiltered, 100);
 
     for (const fillEventsChunk of fillEventsChunks) {
       const inverseFillEventsFilter = fillEventsChunk.map(
