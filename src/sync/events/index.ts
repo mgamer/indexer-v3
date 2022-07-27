@@ -1538,7 +1538,7 @@ export const syncEvents = async (
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
                         AND orders.contract = $/contract/
-                        AND (orders.raw_data ->> 'erc20TokenAmount')::NUMERIC / (order.raw_data ->> 'nftAmount')::NUMERIC = $/price/
+                        AND (orders.raw_data ->> 'erc20TokenAmount')::NUMERIC / (orders.raw_data ->> 'nftAmount')::NUMERIC = $/price/
                       LIMIT 1
                     `,
                     {
