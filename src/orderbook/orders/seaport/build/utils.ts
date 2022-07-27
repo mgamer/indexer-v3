@@ -1,4 +1,4 @@
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, HashZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuildParams } from "@reservoir0x/sdk/dist/seaport/builders/base";
 
@@ -68,8 +68,10 @@ export const getBuildInfo = async (
       options.orderbook === "opensea"
         ? Sdk.Seaport.Addresses.PausableZone[config.chainId]
         : AddressZero,
-    // OpenSea's conduit for sharing approvals
-    conduitKey: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
+    // OpenSea's conduit for sharing approvals (where available)
+    conduitKey: [1, 4].includes(config.chainId)
+      ? "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000"
+      : HashZero,
     startTime: options.listingTime || Math.floor(Date.now() / 1000),
     endTime: options.expirationTime || Math.floor(Date.now() / 1000) + 6 * 30 * 24 * 3600,
     salt: options.salt,

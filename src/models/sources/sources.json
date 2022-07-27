@@ -29,16 +29,6 @@
       "tokenUrlRinkeby": "https://rinkeby.looksrare.org/collections/${contract}/${tokenId}"
     }
   },
-  "4": {
-    "domain": "pleasebepatientwith.me.io",
-    "name": "PleaseBePatientWithMe",
-    "address": "0x7aee8b2d275266c95494d420eef4e73d77036882",
-    "data": {
-      "icon": "https://raw.githubusercontent.com/reservoirprotocol/indexer/v5/src/models/sources/pleasebepatientwithme-logo.png",
-      "tokenUrlMainnet": "https://www.pleasebepatientwith.me/${contract}/${tokenId}",
-      "tokenUrlRinkeby": "https://www.pleasebepatientwith.me/${contract}/${tokenId}"
-    }
-  },
   "5": {
     "domain": "pleasebepatientwith.me",
     "name": "PleaseBePatientWith.Me",

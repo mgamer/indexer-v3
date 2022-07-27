@@ -6,11 +6,11 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
-  base64Regex,
   buildContinuation,
   formatEth,
   fromBuffer,
   splitContinuation,
+  regex,
   toBuffer,
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
@@ -34,7 +34,7 @@ export const getOrderEventsV1Options: RouteOptions = {
     query: Joi.object({
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}/)
+        .pattern(regex.address)
         .description(
           "Filter to a particular contract. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
@@ -49,7 +49,7 @@ export const getOrderEventsV1Options: RouteOptions = {
         .default("desc")
         .description("Order the items are returned in the response."),
       continuation: Joi.string()
-        .pattern(base64Regex)
+        .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
       limit: Joi.number()
         .integer()
@@ -66,14 +66,9 @@ export const getOrderEventsV1Options: RouteOptions = {
           order: Joi.object({
             id: Joi.string(),
             status: Joi.string(),
-            contract: Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{40}/),
-            tokenId: Joi.string().pattern(/^\d+$/),
-            maker: Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{40}/)
-              .allow(null),
+            contract: Joi.string().lowercase().pattern(regex.address),
+            tokenId: Joi.string().pattern(regex.number),
+            maker: Joi.string().lowercase().pattern(regex.address).allow(null),
             price: Joi.number().unsafe().allow(null),
             quantityRemaining: Joi.number().unsafe(),
             validFrom: Joi.number().unsafe().allow(null),
@@ -93,16 +88,13 @@ export const getOrderEventsV1Options: RouteOptions = {
               "revalidation",
               "reprice"
             ),
-            txHash: Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{64}/)
-              .allow(null),
+            txHash: Joi.string().lowercase().pattern(regex.bytes32).allow(null),
             txTimestamp: Joi.number().allow(null),
             createdAt: Joi.string(),
           }),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex).allow(null),
+      continuation: Joi.string().pattern(regex.base64).allow(null),
     }).label(`getOrderEvents${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-order-events-${version}-handler`, `Wrong response schema: ${error}`);

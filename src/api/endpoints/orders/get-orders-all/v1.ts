@@ -6,10 +6,10 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
-  base64Regex,
   buildContinuation,
   formatEth,
   fromBuffer,
+  regex,
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
@@ -29,7 +29,9 @@ export const getOrdersAllV1Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      id: Joi.alternatives(Joi.string(), Joi.array().items(Joi.string())).description("Orders id."),
+      id: Joi.alternatives(Joi.string(), Joi.array().items(Joi.string())).description(
+        "Order id(s)."
+      ),
       source: Joi.string().description("Filter to a source. Example: `OpenSea`"),
       native: Joi.boolean().description("If true, results will filter only Reservoir orders."),
       side: Joi.string().valid("sell", "buy").default("sell").description("Sell or buy side."),
@@ -40,7 +42,7 @@ export const getOrdersAllV1Options: RouteOptions = {
         .default(false)
         .description("If true, raw data will be included in the response."),
       continuation: Joi.string()
-        .pattern(base64Regex)
+        .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
       limit: Joi.number()
         .integer()
@@ -58,21 +60,10 @@ export const getOrdersAllV1Options: RouteOptions = {
           kind: Joi.string().required(),
           side: Joi.string().valid("buy", "sell").required(),
           tokenSetId: Joi.string().required(),
-          tokenSetSchemaHash: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{64}$/)
-            .required(),
-          contract: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/),
-          maker: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/)
-            .required(),
-          taker: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/)
-            .required(),
+          tokenSetSchemaHash: Joi.string().lowercase().pattern(regex.bytes32).required(),
+          contract: Joi.string().lowercase().pattern(regex.address),
+          maker: Joi.string().lowercase().pattern(regex.address).required(),
+          taker: Joi.string().lowercase().pattern(regex.address).required(),
           price: Joi.number().unsafe().required(),
           value: Joi.number().unsafe().required(),
           validFrom: Joi.number().required(),
@@ -83,10 +74,7 @@ export const getOrdersAllV1Options: RouteOptions = {
             .items(
               Joi.object({
                 kind: Joi.string(),
-                recipient: Joi.string()
-                  .lowercase()
-                  .pattern(/^0x[a-fA-F0-9]{40}$/)
-                  .allow(null),
+                recipient: Joi.string().lowercase().pattern(regex.address).allow(null),
                 // Should be `Joi.number().allow(null)` but we set to `Joi.any()` to cover
                 // objects eith wrong schema that were inserted by mistake into the db
                 bps: Joi.any(),
@@ -101,7 +89,7 @@ export const getOrdersAllV1Options: RouteOptions = {
           rawData: Joi.object().allow(null),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex).allow(null),
+      continuation: Joi.string().pattern(regex.base64).allow(null),
     }).label(`getOrdersAll${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-orders-all-${version}-handler`, `Wrong response schema: ${error}`);
