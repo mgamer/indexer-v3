@@ -7,8 +7,6 @@ ALTER TABLE "daily_volumes" ADD COLUMN "rank_clean" INT;
 ALTER TABLE "daily_volumes" ADD COLUMN "floor_sell_value_clean" NUMERIC(78, 0);
 ALTER TABLE "daily_volumes" ADD COLUMN "sales_count_clean" INT;
 
-ADD "day30_volume" NUMERIC(78, 0) DEFAULT 0;
-
 -- Down Migration
 
 ALTER TABLE "fill_events_2" DROP COLUMN "wash_trading_score";
