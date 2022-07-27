@@ -10,7 +10,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { slowProvider } from "@/common/provider";
-import { bn, formatEth, toBuffer } from "@/common/utils";
+import { bn, formatEth, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
 const version = "v1";
@@ -25,22 +25,13 @@ export const getExecuteSellV1Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      token: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
-        .required(),
-      taker: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .required(),
+      token: Joi.string().lowercase().pattern(regex.token).required(),
+      taker: Joi.string().lowercase().pattern(regex.address).required(),
       source: Joi.string(),
-      referrer: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .default(AddressZero),
+      referrer: Joi.string().lowercase().pattern(regex.address).default(AddressZero),
       onlyQuote: Joi.boolean().default(false),
-      maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
-      maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),
+      maxFeePerGas: Joi.string().pattern(regex.number),
+      maxPriorityFeePerGas: Joi.string().pattern(regex.number),
     }),
   },
   response: {
