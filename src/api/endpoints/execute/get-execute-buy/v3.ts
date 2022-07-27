@@ -10,17 +10,18 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { slowProvider } from "@/common/provider";
-import { bn, formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { bn, formatEth, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 
-const version = "v1";
+const version = "v3";
 
-export const getExecuteBuyV1Options: RouteOptions = {
-  description: "Buy any token at the best available price",
+export const getExecuteBuyV3Options: RouteOptions = {
+  description: "Buy a token at the best price",
   tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
+      order: 1,
       deprecated: true,
     },
   },
@@ -28,28 +29,68 @@ export const getExecuteBuyV1Options: RouteOptions = {
     query: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/),
-      quantity: Joi.number().integer().positive(),
+        .pattern(regex.token)
+        .description(
+          "Filter to a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+        ),
+      quantity: Joi.number()
+        .integer()
+        .positive()
+        .description(
+          "Quanity of tokens user is buying. Only compatible with ERC1155 tokens. Example: `5`"
+        ),
       tokens: Joi.array().items(
         Joi.string()
           .lowercase()
-          .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+          .pattern(regex.token)
+          .description(
+            "Array of tokens user is buying. Example: `tokens[0]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:704 tokens[1]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:979`"
+          )
       ),
       taker: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .required(),
-      onlyQuote: Joi.boolean().default(false),
-      source: Joi.string().lowercase(),
+        .pattern(regex.address)
+        .required()
+        .description(
+          "Address of wallet filling the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
+        ),
+      onlyPath: Joi.boolean()
+        .default(false)
+        .description("If true, only the path will be returned."),
+      noDirectFilling: Joi.boolean().description(
+        "If true, all fills will be executed through the router."
+      ),
+      source: Joi.string()
+        .lowercase()
+        .pattern(regex.domain)
+        .required()
+        .description("Filling source used for attribution. Example: `reservoir.market`"),
       referrer: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .default(AddressZero),
-      referrerFeeBps: Joi.number().integer().positive().min(0).max(10000).default(0),
-      partial: Joi.boolean().default(false),
-      maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
-      maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),
-      skipBalanceCheck: Joi.boolean().default(false),
+        .pattern(regex.address)
+        .default(AddressZero)
+        .description(
+          "Wallet address of referrer. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
+        ),
+      referrerFeeBps: Joi.number()
+        .integer()
+        .positive()
+        .min(0)
+        .max(10000)
+        .default(0)
+        .description("Fee amount in BPS. Example: `100`."),
+      partial: Joi.boolean()
+        .default(false)
+        .description("If true, partial orders will be accepted."),
+      maxFeePerGas: Joi.string()
+        .pattern(regex.number)
+        .description("Optional. Set custom gas price."),
+      maxPriorityFeePerGas: Joi.string()
+        .pattern(regex.number)
+        .description("Optional. Set custom gas price."),
+      skipBalanceCheck: Joi.boolean()
+        .default(false)
+        .description("If true, balance check will be skipped."),
     })
       .or("token", "tokens")
       .oxor("token", "tokens")
@@ -61,26 +102,29 @@ export const getExecuteBuyV1Options: RouteOptions = {
         Joi.object({
           action: Joi.string().required(),
           description: Joi.string().required(),
-          status: Joi.string().valid("complete", "incomplete").required(),
-          kind: Joi.string()
-            .valid("request", "signature", "transaction", "confirmation")
+          kind: Joi.string().valid("transaction").required(),
+          items: Joi.array()
+            .items(
+              Joi.object({
+                status: Joi.string().valid("complete", "incomplete").required(),
+                data: Joi.object(),
+              })
+            )
             .required(),
-          data: Joi.object(),
         })
       ),
-      quote: Joi.number().unsafe(),
       path: Joi.array().items(
         Joi.object({
-          contract: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/),
-          tokenId: Joi.string().lowercase().pattern(/^\d+$/),
+          orderId: Joi.string(),
+          contract: Joi.string().lowercase().pattern(regex.address),
+          tokenId: Joi.string().lowercase().pattern(regex.number),
           quantity: Joi.number().unsafe(),
           source: Joi.string().allow("", null),
+          currency: Joi.string().lowercase().pattern(regex.address),
           quote: Joi.number().unsafe(),
+          rawQuote: Joi.string().pattern(regex.number),
         })
       ),
-      query: Joi.object(),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-execute-buy-${version}-handler`, `Wrong response schema: ${error}`);
@@ -96,17 +140,15 @@ export const getExecuteBuyV1Options: RouteOptions = {
 
       // Keep track of the filled path
       const path: {
+        orderId: string;
         contract: string;
         tokenId: string;
         quantity: number;
         source: string | null;
+        currency: string;
         quote: number;
+        rawQuote: string;
       }[] = [];
-
-      // HACK: The confirmation query for the whole multi buy batch can
-      // be the confirmation query of any token within the batch (under
-      // the asumption that all sub-fills will succeed).
-      let confirmationQuery: string;
 
       // Consistently handle a single token vs multiple tokens
       let tokens: string[] = [];
@@ -210,7 +252,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
                 contracts.kind AS token_kind,
                 orders.price,
                 orders.raw_data,
-                orders.source_id
+                orders.source_id_int
               FROM orders
               JOIN contracts
                 ON orders.contract = contracts.address
@@ -229,22 +271,26 @@ export const getExecuteBuyV1Options: RouteOptions = {
             throw Boom.badRequest("No available orders");
           }
 
-          const { id, kind, token_kind, price, source_id, raw_data } = bestOrderResult;
+          const { id, kind, token_kind, price, source_id_int, raw_data } = bestOrderResult;
 
+          const rawQuote = bn(price).add(bn(price).mul(query.referrerFeeBps).div(10000));
           path.push({
+            orderId: id,
             contract,
             tokenId,
             quantity: 1,
-            source: source_id ? sources.getByAddress(fromBuffer(source_id))?.name : null,
-            quote: formatEth(bn(price).add(bn(price).mul(query.referrerFeeBps).div(10000))),
+            source: source_id_int ? sources.get(source_id_int)?.name : null,
+            // TODO: Add support for multiple currencies
+            currency: Sdk.Common.Addresses.Eth[config.chainId],
+            quote: formatEth(rawQuote),
+            rawQuote: rawQuote.toString(),
           });
-          if (query.onlyQuote) {
+          if (query.onlyPath) {
             // Skip generating any transactions if only the quote was requested
             continue;
           }
 
           addListingDetail(kind, token_kind, contract, tokenId, 1, raw_data);
-          confirmationQuery = `?ids=${id}`;
         } else {
           // Only ERC1155 tokens support a quantity greater than 1
           const kindResult = await redb.one(
@@ -266,7 +312,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
                 x.kind,
                 x.price,
                 x.quantity_remaining,
-                x.source_id,
+                x.source_id_int,
                 x.raw_data
               FROM (
                 SELECT
@@ -294,27 +340,31 @@ export const getExecuteBuyV1Options: RouteOptions = {
             kind,
             quantity_remaining,
             price,
-            source_id,
+            source_id_int,
             raw_data,
           } of bestOrdersResult) {
             const quantityFilled = Math.min(Number(quantity_remaining), totalQuantityToFill);
             totalQuantityToFill -= quantityFilled;
 
             const totalPrice = bn(price).mul(quantityFilled);
+            const rawQuote = totalPrice.add(totalPrice.mul(query.referrerFeeBps).div(10000));
             path.push({
+              orderId: id,
               contract,
               tokenId,
               quantity: quantityFilled,
-              source: source_id ? sources.getByAddress(fromBuffer(source_id))?.name : null,
-              quote: formatEth(totalPrice.add(totalPrice.mul(query.referrerFeeBps).div(10000))),
+              source: source_id_int ? sources.get(source_id_int)?.name : null,
+              // TODO: Add support for multiple currencies
+              currency: Sdk.Common.Addresses.Eth[config.chainId],
+              quote: formatEth(rawQuote),
+              rawQuote: rawQuote.toString(),
             });
-            if (query.onlyQuote) {
+            if (query.onlyPath) {
               // Skip generating any transactions if only the quote was requested
               continue;
             }
 
             addListingDetail(kind, "erc1155", contract, tokenId, quantityFilled, raw_data);
-            confirmationQuery = `?ids=${id}`;
           }
 
           // No available orders to fill the requested quantity
@@ -324,10 +374,9 @@ export const getExecuteBuyV1Options: RouteOptions = {
         }
       }
 
-      const quote = path.map((p) => p.quote).reduce((a, b) => a + b, 0);
-      if (query.onlyQuote) {
-        // Only return the quote if that's what was requested
-        return { quote, path };
+      if (query.onlyPath) {
+        // Only return the path if that's what was requested
+        return { path };
       }
 
       const router = new Sdk.Router.Router(config.chainId, slowProvider);
@@ -338,8 +387,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
           bps: query.referrerFeeBps,
         },
         partial: query.partial,
-        // Force router filling so that we don't lose any attribution
-        noDirectFilling: true,
+        noDirectFilling: query.noDirectFilling,
       });
 
       // Check that the taker has enough funds to fill all requested tokens
@@ -349,42 +397,36 @@ export const getExecuteBuyV1Options: RouteOptions = {
       }
 
       // Set up generic filling steps
-      const steps = [
+      const steps: {
+        action: string;
+        description: string;
+        kind: string;
+        items: {
+          status: string;
+          data?: any;
+        }[];
+      }[] = [
         {
           action: "Confirm purchase",
           description: "To purchase this item you must confirm the transaction and pay the gas fee",
           kind: "transaction",
-        },
-        {
-          action: "Confirmation",
-          description: "Verify that the item was successfully purchased",
-          kind: "confirmation",
+          items: [],
         },
       ];
 
+      steps[0].items.push({
+        status: "incomplete",
+        data: {
+          ...tx,
+          maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
+          maxPriorityFeePerGas: query.maxPriorityFeePerGas
+            ? bn(query.maxPriorityFeePerGas).toHexString()
+            : undefined,
+        },
+      });
+
       return {
-        steps: [
-          {
-            ...steps[0],
-            status: "incomplete",
-            data: {
-              ...tx,
-              maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
-              maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                ? bn(query.maxPriorityFeePerGas).toHexString()
-                : undefined,
-            },
-          },
-          {
-            ...steps[1],
-            status: "incomplete",
-            data: {
-              endpoint: `/orders/executed/v1${confirmationQuery!}`,
-              method: "GET",
-            },
-          },
-        ],
-        quote,
+        steps,
         path,
       };
     } catch (error) {

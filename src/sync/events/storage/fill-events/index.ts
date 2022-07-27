@@ -16,7 +16,8 @@ export type Event = {
   contract: string;
   tokenId: string;
   amount: string;
-  fillSource?: string;
+  aggregatorSourceId?: number;
+  fillSourceId?: number;
   washTradingScore?: number;
   baseEventParams: BaseEventParams;
 };
@@ -40,6 +41,7 @@ export type DbEvent = {
   contract: Buffer;
   token_id: string;
   amount: string;
-  fill_source: string | null;
+  aggregator_source_id: number | null;
+  fill_source_id: number | null;
   wash_trading_score: number;
 };

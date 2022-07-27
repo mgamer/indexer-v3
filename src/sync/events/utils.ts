@@ -4,8 +4,8 @@ import pLimit from "p-limit";
 import { baseProvider, slowProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
 import { getBlocks, saveBlock } from "@/models/blocks";
+import { Sources } from "@/models/sources";
 import { getTransaction, saveTransaction } from "@/models/transactions";
-import { logger } from "@/common/logger";
 
 export const fetchBlock = async (blockNumber: number) =>
   getBlocks(blockNumber)
@@ -67,14 +67,10 @@ export const fetchTransaction = async (txHash: string) =>
     // - `eth_getTransactionByHash`
     // - `eth_getTransactionReceipt`
 
-    logger.info("debug", `Fetching tx ${txHash}`);
-
     let tx = await baseProvider.getTransaction(txHash);
     if (!tx) {
       tx = await slowProvider.getTransaction(txHash);
     }
-
-    logger.info("debug", `Got tx: ${JSON.stringify(tx)}`);
 
     const blockTimestamp = (await fetchBlock(tx.blockNumber!)).timestamp;
 
@@ -96,3 +92,27 @@ export const fetchTransaction = async (txHash: string) =>
       // gasFee: txReceipt.gasUsed.mul(gasPrice).toString(),
     });
   });
+
+export const getOrderSourceByOrderKind = async (orderKind: string): Promise<number | null> => {
+  try {
+    const sources = await Sources.getInstance();
+
+    switch (orderKind) {
+      case "x2y2":
+        return sources.getByName("X2Y2").id;
+      case "foundation":
+        return sources.getByName("Foundation").id;
+      case "looks-rare":
+        return sources.getByName("LooksRare").id;
+      case "seaport":
+      case "wyvern-v2":
+      case "wyvern-v2.3":
+        return sources.getByName("OpenSea").id;
+      default:
+        // For all other order kinds we cannot default the source
+        return null;
+    }
+  } catch (error) {
+    return null;
+  }
+};

@@ -6,10 +6,10 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
-  base64Regex,
   buildContinuation,
   formatEth,
   fromBuffer,
+  regex,
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
@@ -33,12 +33,10 @@ export const getTokensFloorAskV2Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      contract: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}/),
+      contract: Joi.string().lowercase().pattern(regex.address),
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+        .pattern(regex.token)
         .description(
           "Filter to a particular token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
@@ -49,7 +47,7 @@ export const getTokensFloorAskV2Options: RouteOptions = {
         "Get events before a particular unix timestamp (inclusive)"
       ),
       sortDirection: Joi.string().valid("asc", "desc").default("desc"),
-      continuation: Joi.string().pattern(base64Regex),
+      continuation: Joi.string().pattern(regex.base64),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     }).oxor("contract", "token"),
   },
@@ -58,18 +56,13 @@ export const getTokensFloorAskV2Options: RouteOptions = {
       events: Joi.array().items(
         Joi.object({
           token: Joi.object({
-            contract: Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{40}/),
-            tokenId: Joi.string().pattern(/^[0-9]+$/),
+            contract: Joi.string().lowercase().pattern(regex.address),
+            tokenId: Joi.string().pattern(regex.number),
           }),
           floorAsk: Joi.object({
             orderId: Joi.string().allow(null),
-            maker: Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{40}/)
-              .allow(null),
-            nonce: Joi.string().pattern(/^\d+$/).allow(null),
+            maker: Joi.string().lowercase().pattern(regex.address).allow(null),
+            nonce: Joi.string().pattern(regex.number).allow(null),
             price: Joi.number().unsafe().allow(null),
             validFrom: Joi.number().unsafe().allow(null),
             validUntil: Joi.number().unsafe().allow(null),
@@ -89,16 +82,13 @@ export const getTokensFloorAskV2Options: RouteOptions = {
               "reprice"
             ),
             previousPrice: Joi.number().unsafe().allow(null),
-            txHash: Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{64}/)
-              .allow(null),
+            txHash: Joi.string().lowercase().pattern(regex.bytes32).allow(null),
             txTimestamp: Joi.number().allow(null),
             createdAt: Joi.string(),
           }),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex).allow(null),
+      continuation: Joi.string().pattern(regex.base64).allow(null),
     }).label(`getTokensFloorAsk${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-tokens-floor-ask-${version}-handler`, `Wrong response schema: ${error}`);

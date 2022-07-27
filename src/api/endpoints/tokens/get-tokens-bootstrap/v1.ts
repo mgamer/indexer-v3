@@ -6,10 +6,10 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
-  base64Regex,
   buildContinuation,
   formatEth,
   fromBuffer,
+  regex,
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
@@ -36,12 +36,12 @@ export const getTokensBootstrapV1Options: RouteOptions = {
         ),
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .description(
           "Filter to a particular contract. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
       continuation: Joi.string()
-        .pattern(base64Regex)
+        .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
       limit: Joi.number()
         .integer()
@@ -57,22 +57,18 @@ export const getTokensBootstrapV1Options: RouteOptions = {
     schema: Joi.object({
       tokens: Joi.array().items(
         Joi.object({
-          contract: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/),
-          tokenId: Joi.string().pattern(/^[0-9]+$/),
+          contract: Joi.string().lowercase().pattern(regex.address),
+          tokenId: Joi.string().pattern(regex.number),
           image: Joi.string().allow(null, ""),
           orderId: Joi.string(),
-          maker: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/),
+          maker: Joi.string().lowercase().pattern(regex.address),
           validFrom: Joi.number().unsafe(),
           validUntil: Joi.number().unsafe(),
           price: Joi.number().unsafe(),
           source: Joi.string().allow(null, ""),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex),
+      continuation: Joi.string().pattern(regex.base64),
     }).label(`getTokensBootstrap${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-tokens-bootstrap-${version}-handler`, `Wrong response schema: ${error}`);
