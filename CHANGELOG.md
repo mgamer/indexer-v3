@@ -1,3 +1,19 @@
+# [5.127.0](https://github.com/reservoirprotocol/indexer/compare/v5.126.0...v5.127.0) (2022-07-27)
+
+
+### Bug Fixes
+
+* return source domain ([1dccb29](https://github.com/reservoirprotocol/indexer/commit/1dccb2919af5f1e908759db54c18d347d8b5cd90))
+* return source domain ([34b61ed](https://github.com/reservoirprotocol/indexer/commit/34b61ed8b09eae24559e4ed70a1e532d849e4f1c))
+
+
+### Features
+
+* on conflict domain ([e5b35c7](https://github.com/reservoirprotocol/indexer/commit/e5b35c76d3e562e0cbcf4f564ded9009814f52b6))
+* update no token found to warning ([5783004](https://github.com/reservoirprotocol/indexer/commit/578300481e9855a4d2bb43264ea51833994bc259))
+
+
+
 # [5.126.0](https://github.com/reservoirprotocol/indexer/compare/v5.125.0...v5.126.0) (2022-07-27)
 
 
