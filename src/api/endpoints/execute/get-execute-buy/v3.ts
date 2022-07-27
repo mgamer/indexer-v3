@@ -279,7 +279,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
             contract,
             tokenId,
             quantity: 1,
-            source: source_id_int ? sources.get(source_id_int)?.name : null,
+            source: source_id_int ? sources.get(source_id_int)?.domain : null,
             // TODO: Add support for multiple currencies
             currency: Sdk.Common.Addresses.Eth[config.chainId],
             quote: formatEth(rawQuote),
