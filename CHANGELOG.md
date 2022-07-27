@@ -1,3 +1,12 @@
+## [5.120.6](https://github.com/reservoirprotocol/indexer/compare/v5.120.5...v5.120.6) (2022-07-27)
+
+
+### Bug Fixes
+
+* query ([8a7379c](https://github.com/reservoirprotocol/indexer/commit/8a7379c4ef9e4819562a0398b9d1613e31d86290))
+
+
+
 ## [5.120.5](https://github.com/reservoirprotocol/indexer/compare/v5.120.4...v5.120.5) (2022-07-27)
 
 
