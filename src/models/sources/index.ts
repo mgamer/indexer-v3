@@ -5,6 +5,7 @@ import { randomBytes } from "crypto";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { idb, redb } from "@/common/db";
+import { regex } from "@/common/utils";
 import { SourcesEntity, SourcesEntityParams } from "@/models/sources/sources-entity";
 import { AddressZero } from "@ethersproject/constants";
 
@@ -182,7 +183,7 @@ export class Sources {
     let sourceEntity;
 
     // If the passed source is an address
-    if (source.match(/^0x[a-fA-F0-9]{40}$/)) {
+    if (source.match(regex.address)) {
       sourceEntity = this.getByAddress(source, undefined, undefined, false); // This is an address
 
       if (!sourceEntity) {

@@ -7,7 +7,7 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { bn, toBuffer } from "@/common/utils";
+import { bn, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
 const version = "v2";
@@ -28,16 +28,16 @@ export const getExecuteCancelV2Options: RouteOptions = {
         .description("Collection ID. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63``"),
       maker: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .required()
         .description(
           "Address of wallet cancelling the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
       maxFeePerGas: Joi.string()
-        .pattern(/^[0-9]+$/)
+        .pattern(regex.number)
         .description("Optional. Set custom gas price"),
       maxPriorityFeePerGas: Joi.string()
-        .pattern(/^[0-9]+$/)
+        .pattern(regex.number)
         .description("Optional. Set custom gas price"),
     }),
   },

@@ -1,3 +1,32 @@
+# [5.124.0](https://github.com/reservoirprotocol/indexer/compare/v5.123.0...v5.124.0) (2022-07-27)
+
+
+### Bug Fixes
+
+* don't return defaults ([b8ca0da](https://github.com/reservoirprotocol/indexer/commit/b8ca0da6fd803d8a2cc7ce9e52a9371468031c41))
+* don't return defaults ([3ca4ecc](https://github.com/reservoirprotocol/indexer/commit/3ca4eccb61975905bf820bbfb42ab3c06b1c0409))
+* search for domains ([10308ea](https://github.com/reservoirprotocol/indexer/commit/10308ea59f6405960802cf9f861e9522ffd88224))
+
+
+### Features
+
+* add collectionsSetId as get-owners query param ([f21f8cc](https://github.com/reservoirprotocol/indexer/commit/f21f8cc3aeb69ea560db74dc2cd103738ba862a5))
+* added support for sources by domain ([b20eb2d](https://github.com/reservoirprotocol/indexer/commit/b20eb2df2d6837e72c3c25f88e9b19b0a730c250))
+* update events utils ([f341afe](https://github.com/reservoirprotocol/indexer/commit/f341afeaf6ecd05c0a6af1204c738b289f590606))
+* update order v3 ([0d9c80d](https://github.com/reservoirprotocol/indexer/commit/0d9c80d43edb6ca386f1240d297fb43b844c95ff))
+* update sources.json ([cd1ad64](https://github.com/reservoirprotocol/indexer/commit/cd1ad64248d68bd25b86de3d22f194fe3c40a6f8))
+
+
+
+# [5.123.0](https://github.com/reservoirprotocol/indexer/compare/v5.122.0...v5.123.0) (2022-07-27)
+
+
+### Features
+
+* add support for cancelling x2y2 orders ([6ea4e11](https://github.com/reservoirprotocol/indexer/commit/6ea4e11fb424dd54d381418c1e4a1174b7799534))
+
+
+
 # [5.122.0](https://github.com/reservoirprotocol/indexer/compare/v5.121.0...v5.122.0) (2022-07-27)
 
 
