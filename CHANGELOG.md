@@ -1,3 +1,12 @@
+# [5.123.0](https://github.com/reservoirprotocol/indexer/compare/v5.122.0...v5.123.0) (2022-07-27)
+
+
+### Features
+
+* add support for cancelling x2y2 orders ([6ea4e11](https://github.com/reservoirprotocol/indexer/commit/6ea4e11fb424dd54d381418c1e4a1174b7799534))
+
+
+
 # [5.122.0](https://github.com/reservoirprotocol/indexer/compare/v5.121.0...v5.122.0) (2022-07-27)
 
 
