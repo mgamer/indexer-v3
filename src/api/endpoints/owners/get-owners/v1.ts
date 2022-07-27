@@ -147,8 +147,8 @@ export const getOwnersV1Options: RouteOptions = {
       const addCollectionToFilter = (id: string) => {
         ++i;
         (query as any)[`contract${i}`] = toBuffer(id);
-        nftBalancesFilter = `${nftBalancesFilter}nft_balances.contract = $/contract${i}/ OR `;
-        tokensFilter = `${tokensFilter}tokens.contract = $/contract${i}/ OR `;
+        nftBalancesFilter = `${nftBalancesFilter}$/contract${i}/, `;
+        tokensFilter = `${tokensFilter}$/contract${i}/, `;
       };
 
       await CollectionSets.getCollectionsIds(query.collectionsSetId).then((result) =>
@@ -157,11 +157,14 @@ export const getOwnersV1Options: RouteOptions = {
       if (!nftBalancesFilter && !tokensFilter) {
         return { owners: [] };
       }
-      nftBalancesFilter = `(${nftBalancesFilter.substring(
+      nftBalancesFilter = `nft_balances.contract IN (${nftBalancesFilter.substring(
         0,
-        nftBalancesFilter.lastIndexOf(" OR ")
+        nftBalancesFilter.lastIndexOf(", ")
       )})`;
-      tokensFilter = `(${tokensFilter.substring(0, tokensFilter.lastIndexOf(" OR "))})`;
+      tokensFilter = `tokens.contract IN (${tokensFilter.substring(
+        0,
+        tokensFilter.lastIndexOf(", ")
+      )})`;
     }
 
     try {
