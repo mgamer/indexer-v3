@@ -3,13 +3,14 @@ import { Log } from "@ethersproject/abstract-provider";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
+import { getReferrer } from "@reservoir0x/sdk/dist/utils";
 import _ from "lodash";
 import pLimit from "p-limit";
 
 import { logger } from "@/common/logger";
 import { idb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
-import { bn, toBuffer } from "@/common/utils";
+import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { EventDataKind, getEventData } from "@/events-sync/data";
 import * as es from "@/events-sync/storage";
@@ -71,6 +72,9 @@ export const syncEvents = async (
       limit(() => baseProvider.getBlockWithTransactions(block))
     )
   );
+
+  // Initialize a sources instance
+  const sources = await Sources.getInstance();
 
   // When backfilling, certain processes are disabled
   const backfill = Boolean(options?.backfill);
@@ -1757,6 +1761,12 @@ export const syncEvents = async (
           assignOrderSourceToFillEvents(fillEventsPartial),
           assignOrderSourceToFillEvents(fillEventsFoundation),
         ]);
+
+        await Promise.all([
+          assignWashTradingScoreToFillEvents(fillEvents),
+          assignWashTradingScoreToFillEvents(fillEventsPartial),
+          assignWashTradingScoreToFillEvents(fillEventsFoundation),
+        ]);
       } else {
         logger.warn("sync-events", `Skipping assigning orders source assigned to fill events`);
       }
@@ -1966,5 +1976,52 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
     }
   } catch (error) {
     logger.error("sync-events", `Failed to assign default sources to fill events: ${error}`);
+  }
+};
+
+const assignWashTradingScoreToFillEvents = async (fillEvents: es.fills.Event[]) => {
+  try {
+    const inverseFillEvents: { contract: Buffer; maker: Buffer; taker: Buffer }[] = [];
+
+    const fillEventsChunks = _.chunk(fillEvents, 100);
+
+    for (const fillEventsChunk of fillEventsChunks) {
+      const inverseFillEventsFilter = fillEventsChunk.map(
+        (fillEvent) =>
+          `('${_.replace(fillEvent.taker, "0x", "\\x")}', '${_.replace(
+            fillEvent.maker,
+            "0x",
+            "\\x"
+          )}', '${_.replace(fillEvent.contract, "0x", "\\x")}')`
+      );
+
+      const inverseFillEventsChunkQuery = pgp.as.format(
+        `
+            SELECT DISTINCT contract, maker, taker from fill_events_2
+            WHERE (maker, taker, contract) IN ($/inverseFillEventsFilter:raw/)
+          `,
+        {
+          inverseFillEventsFilter: inverseFillEventsFilter.join(","),
+        }
+      );
+
+      const inverseFillEventsChunk = await redb.manyOrNone(inverseFillEventsChunkQuery);
+
+      inverseFillEvents.push(...inverseFillEventsChunk);
+    }
+
+    fillEvents.forEach((event, index) => {
+      const washTradingDetected = inverseFillEvents.some((inverseFillEvent) => {
+        return (
+          event.maker == fromBuffer(inverseFillEvent.taker) &&
+          event.taker == fromBuffer(inverseFillEvent.maker) &&
+          event.contract == fromBuffer(inverseFillEvent.contract)
+        );
+      });
+
+      fillEvents[index].washTradingScore = Number(washTradingDetected);
+    });
+  } catch (e) {
+    logger.error("sync-events", `Failed to assign wash trading score to fill events: ${e}`);
   }
 };

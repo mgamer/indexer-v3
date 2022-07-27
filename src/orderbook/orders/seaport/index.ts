@@ -263,7 +263,7 @@ export const save = async (
 
       // Default source: OpenSea
       let source = "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073";
-      let sourceId = sources.getByName("OpenSea").id;
+      let sourceId = sources.getByDomain("opensea.io").id;
 
       if (metadata.source) {
         const sourceEntity = await sources.getOrInsert(metadata.source);
@@ -518,7 +518,7 @@ export const save = async (
 
       // Default source: OpenSea
       let source = "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073";
-      let sourceId = sources.getByName("OpenSea").id;
+      let sourceId = sources.getByDomain("opensea.io").id;
 
       if (metadata.source) {
         const sourceEntity = await sources.getOrInsert(metadata.source);

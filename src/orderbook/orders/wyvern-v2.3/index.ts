@@ -281,7 +281,7 @@ export const save = async (
 
       // Default source: OpenSea
       let source = "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073";
-      let sourceId = sources.getByName("OpenSea").id;
+      let sourceId = sources.getByDomain("opensea.io").id;
       let feeBreakdown: object[] = [];
       feeBreakdown = [
         {
@@ -306,7 +306,7 @@ export const save = async (
         case "0x94f0e012b7bb033f32029fbcc4f1d29ff1cfc30a":
         case "0x6be88409f2a4751aea05a3a0977cb239904fe0d6": {
           source = "0xfdfda3d504b1431ea0fd70084b1bfa39fa99dcc4";
-          sourceId = sources.getByName("Forgotten Market").id;
+          sourceId = sources.getByDomain("forgotten.market").id;
           feeBreakdown = [
             {
               kind: "marketplace",
