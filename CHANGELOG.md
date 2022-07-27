@@ -1,3 +1,25 @@
+# [5.121.0](https://github.com/reservoirprotocol/indexer/compare/v5.120.6...v5.121.0) (2022-07-27)
+
+
+### Bug Fixes
+
+* disable aggregator and fill source detection until sources v3 is live ([8b4430f](https://github.com/reservoirprotocol/indexer/commit/8b4430fbe30aad89910a88c645ec9819031fb69a))
+* order source defaulting ([4d3efe9](https://github.com/reservoirprotocol/indexer/commit/4d3efe99dbc3651bd545ea8ccce489e24470da82))
+* seaport conduit on non-opensea chains ([6fe8b04](https://github.com/reservoirprotocol/indexer/commit/6fe8b04072be6daeda6433f436d01a2e36734100))
+
+
+### Features
+
+* add support for checking transaction status and retrieving sales by transaction ([648b62a](https://github.com/reservoirprotocol/indexer/commit/648b62a38de3767b410299d79c953eee48412f1d))
+* allow forcing all fills to go through the router ([1d11fc3](https://github.com/reservoirprotocol/indexer/commit/1d11fc3bf8e95f07449e175ef287bb8709676526))
+* improved execute list and bid apis ([6341301](https://github.com/reservoirprotocol/indexer/commit/6341301fdfddcdf1dbe47c37b1610b02dd78008f))
+* integrate aggregator and fill sources ([f2c89c2](https://github.com/reservoirprotocol/indexer/commit/f2c89c2c7320b5467584f487b9ba1835f8c75e3f))
+* minor improvements to the execute apis ([ac64140](https://github.com/reservoirprotocol/indexer/commit/ac64140da2a876c3970eca4d6eecef56731315f4))
+* refactor execute apis ([348173b](https://github.com/reservoirprotocol/indexer/commit/348173be77d10274145adb31766d75cd4fe2dd78))
+* update domain regex ([64a4f34](https://github.com/reservoirprotocol/indexer/commit/64a4f342c5b5ae66cf4280fc23740c13740f5bc6))
+
+
+
 ## [5.120.6](https://github.com/reservoirprotocol/indexer/compare/v5.120.5...v5.120.6) (2022-07-27)
 
 
