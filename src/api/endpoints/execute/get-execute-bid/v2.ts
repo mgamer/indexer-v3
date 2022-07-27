@@ -10,7 +10,7 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { slowProvider } from "@/common/provider";
-import { bn } from "@/common/utils";
+import { bn, regex } from "@/common/utils";
 import { config } from "@/config/index";
 
 // OpenDao
@@ -48,7 +48,7 @@ export const getExecuteBidV2Options: RouteOptions = {
     query: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+        .pattern(regex.token)
         .description(
           "Bid on a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
@@ -68,13 +68,13 @@ export const getExecuteBidV2Options: RouteOptions = {
       ),
       maker: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .description(
           "Address of wallet making the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         )
         .required(),
       weiPrice: Joi.string()
-        .pattern(/^\d+$/)
+        .pattern(regex.number)
         .description("Amount bidder is willing to offer in wei. Example: `1000000000000000000`")
         .required(),
       orderKind: Joi.string()
@@ -91,7 +91,7 @@ export const getExecuteBidV2Options: RouteOptions = {
       automatedRoyalties: Joi.boolean()
         .default(true)
         .description("If true, royalties will be automatically included."),
-      fee: Joi.alternatives(Joi.string().pattern(/^\d+$/), Joi.number()).description(
+      fee: Joi.alternatives(Joi.string().pattern(regex.number), Joi.number()).description(
         "Fee amount in BPS. Example: `100`"
       ),
       excludeFlaggedTokens: Joi.boolean()
@@ -99,31 +99,32 @@ export const getExecuteBidV2Options: RouteOptions = {
         .description("If true flagged tokens will be excluded"),
       feeRecipient: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .description(
           "Wallet address of fee recipient. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         )
         .disallow(AddressZero),
-      listingTime: Joi.alternatives(Joi.string().pattern(/^\d+$/), Joi.number()).description(
+      listingTime: Joi.alternatives(Joi.string().pattern(regex.number), Joi.number()).description(
         "Unix timestamp indicating when listing will be listed. Example: `1656080318`"
       ),
-      expirationTime: Joi.alternatives(Joi.string().pattern(/^\d+$/), Joi.number()).description(
-        "Unix timestamp indicating when listing will expire. Example: `1656080318`"
-      ),
+      expirationTime: Joi.alternatives(
+        Joi.string().pattern(regex.number),
+        Joi.number()
+      ).description("Unix timestamp indicating when listing will expire. Example: `1656080318`"),
       salt: Joi.string()
         .pattern(/^\d+$/)
         .description("Optional. Random string to make the order unique"),
-      nonce: Joi.string().pattern(/^\d+$/).description("Optional. Set a custom nonce"),
+      nonce: Joi.string().pattern(regex.number).description("Optional. Set a custom nonce"),
       v: Joi.number().description(
         "Signature v component (only required after order has been signed)"
       ),
       r: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{64}$/)
+        .pattern(regex.bytes32)
         .description("Signature r component (only required after order has been signed)"),
       s: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{64}$/)
+        .pattern(regex.bytes32)
         .description("Signature s component (only required after order has been signed)"),
     })
       .or("token", "collection")

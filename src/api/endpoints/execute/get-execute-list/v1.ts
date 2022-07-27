@@ -9,6 +9,7 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { slowProvider } from "@/common/provider";
+import { regex } from "@/common/utils";
 import { config } from "@/config/index";
 
 // OpenDao
@@ -37,41 +38,24 @@ export const getExecuteListV1Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      token: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
-        .required(),
-      maker: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .required(),
-      weiPrice: Joi.string()
-        .pattern(/^[0-9]+$/)
-        .required(),
+      token: Joi.string().lowercase().pattern(regex.token).required(),
+      maker: Joi.string().lowercase().pattern(regex.address).required(),
+      weiPrice: Joi.string().pattern(regex.number).required(),
       orderKind: Joi.string()
         .valid("721ex", "looks-rare", "wyvern-v2.3", "zeroex-v4")
         .default("wyvern-v2.3"),
       orderbook: Joi.string().valid("opensea", "reservoir").default("reservoir"),
-      source: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/),
+      source: Joi.string().lowercase().pattern(regex.address),
       automatedRoyalties: Joi.boolean().default(true),
       fee: Joi.alternatives(Joi.string(), Joi.number()),
-      feeRecipient: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .disallow(AddressZero),
+      feeRecipient: Joi.string().lowercase().pattern(regex.address).disallow(AddressZero),
       listingTime: Joi.alternatives(Joi.string(), Joi.number()),
       expirationTime: Joi.alternatives(Joi.string(), Joi.number()),
       salt: Joi.string(),
       nonce: Joi.string(),
       v: Joi.number(),
-      r: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{64}$/),
-      s: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{64}$/),
+      r: Joi.string().lowercase().pattern(regex.bytes32),
+      s: Joi.string().lowercase().pattern(regex.bytes32),
     }).with("feeRecipient", "fee"),
   },
   response: {

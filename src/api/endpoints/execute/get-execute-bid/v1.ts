@@ -9,7 +9,7 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { slowProvider } from "@/common/provider";
-import { bn } from "@/common/utils";
+import { bn, regex } from "@/common/utils";
 import { config } from "@/config/index";
 
 // OpenDao
@@ -38,7 +38,7 @@ export const getExecuteBidV1Options: RouteOptions = {
     query: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+        .pattern(regex.token)
         .description(
           "Filter to a particular token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
@@ -49,35 +49,21 @@ export const getExecuteBidV1Options: RouteOptions = {
         ),
       attributeKey: Joi.string(),
       attributeValue: Joi.string(),
-      maker: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .required(),
-      weiPrice: Joi.string()
-        .pattern(/^[0-9]+$/)
-        .required(),
+      maker: Joi.string().lowercase().pattern(regex.address).required(),
+      weiPrice: Joi.string().pattern(regex.number).required(),
       orderKind: Joi.string().valid("wyvern-v2.3", "721ex", "zeroex-v4").default("wyvern-v2.3"),
       orderbook: Joi.string().valid("reservoir", "opensea").default("reservoir"),
-      source: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-f0-9]{40}$/),
+      source: Joi.string().lowercase().pattern(regex.address),
       automatedRoyalties: Joi.boolean().default(true),
       fee: Joi.alternatives(Joi.string(), Joi.number()),
-      feeRecipient: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .disallow(AddressZero),
+      feeRecipient: Joi.string().lowercase().pattern(regex.address).disallow(AddressZero),
       listingTime: Joi.alternatives(Joi.string(), Joi.number()),
       expirationTime: Joi.alternatives(Joi.string(), Joi.number()),
       salt: Joi.string(),
       nonce: Joi.string(),
       v: Joi.number(),
-      r: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{64}$/),
-      s: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{64}$/),
+      r: Joi.string().lowercase().pattern(regex.bytes32),
+      s: Joi.string().lowercase().pattern(regex.bytes32),
     })
       .or("token", "collection")
       .oxor("token", "collection")
