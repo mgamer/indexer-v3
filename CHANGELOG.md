@@ -1,3 +1,12 @@
+# [5.125.0](https://github.com/reservoirprotocol/indexer/compare/v5.124.0...v5.125.0) (2022-07-27)
+
+
+### Features
+
+* integrated sources v3 ([3818c77](https://github.com/reservoirprotocol/indexer/commit/3818c777afa76d2aa67b83107952e05f65336aba))
+
+
+
 # [5.124.0](https://github.com/reservoirprotocol/indexer/compare/v5.123.0...v5.124.0) (2022-07-27)
 
 
