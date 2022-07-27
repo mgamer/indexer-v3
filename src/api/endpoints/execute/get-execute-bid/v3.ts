@@ -81,7 +81,6 @@ export const getExecuteBidV3Options: RouteOptions = {
           quantity: Joi.number().description(
             "Quanity of tokens user is buying. Only compatible with ERC1155 tokens. Example: `5`"
           ),
-
           weiPrice: Joi.string()
             .pattern(regex.number)
             .description("Amount bidder is willing to offer in wei. Example: `1000000000000000000`")
