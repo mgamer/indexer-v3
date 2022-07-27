@@ -1315,8 +1315,7 @@ export const syncEvents = async (
                 // (it only includes the nonce, but we can potentially have multiple
                 // different orders sharing the same nonce off-chain), we attempt to
                 // detect the order id which got filled by checking the database for
-                // orders which have the exact nonce/value/token-set combination (it
-                // doesn't cover all cases, but it's good enough for now).
+                // orders which have the exact nonce/contract/price combination.
                 await idb
                   .oneOrNone(
                     `
@@ -1328,12 +1327,14 @@ export const syncEvents = async (
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
                         AND orders.contract = $/contract/
+                        AND (orders.raw_data ->> 'erc20TokenAmount')::NUMERIC = $/price/
                       LIMIT 1
                     `,
                     {
                       maker: toBuffer(maker),
                       nonce,
                       contract: toBuffer(erc721Token),
+                      price: erc20TokenAmount,
                     }
                   )
                   .then((result) => {
@@ -1449,7 +1450,10 @@ export const syncEvents = async (
 
               let orderId: string | undefined;
               if (!backfill) {
-                // For erc1155 orders we only allow unique maker/nonce orders.
+                // For erc1155 orders we only allow unique nonce/contract/price. Since erc1155
+                // orders are partially fillable, we have to detect the price of an individual
+                // item from the fill amount, which might result in imprecise results. However
+                // at the moment, we can live with it.
                 await idb
                   .oneOrNone(
                     `
@@ -1460,12 +1464,15 @@ export const syncEvents = async (
                       WHERE orders.kind = '${orderKind}'
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
-                        AND orders.contract IS NOT NULL
+                        AND orders.contract = $/contract/
+                        AND (orders.raw_data ->> 'erc20TokenAmount')::NUMERIC / (order.raw_data ->> 'nftAmount')::NUMERIC = $/price/
                       LIMIT 1
                     `,
                     {
                       maker: toBuffer(maker),
                       nonce,
+                      contract: toBuffer(erc1155Token),
+                      price: bn(erc20FillAmount).div(erc1155FillAmount).toString(),
                     }
                   )
                   .then((result) => {
