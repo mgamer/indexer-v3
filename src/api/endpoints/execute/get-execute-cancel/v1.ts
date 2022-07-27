@@ -288,7 +288,40 @@ export const getExecuteCancelV1Options: RouteOptions = {
           };
         }
 
-        // TODO: Integrate X2Y2 order cancelling
+        case "x2y2": {
+          const order = new Sdk.X2Y2.Order(config.chainId, orderResult.raw_data);
+
+          // Generate exchange-specific cancellation transaction
+          const exchange = new Sdk.X2Y2.Exchange(config.chainId, process.env.X2Y2_API_KEY!);
+          const cancelTx = exchange.cancelOrderTx(query.maker, order);
+
+          const steps = generateSteps(order.params.type as "sell" | "buy");
+          return {
+            steps: [
+              {
+                ...steps[0],
+                status: "incomplete",
+                data: {
+                  ...cancelTx,
+                  maxFeePerGas: query.maxFeePerGas
+                    ? bn(query.maxFeePerGas).toHexString()
+                    : undefined,
+                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                    ? bn(query.maxPriorityFeePerGas).toHexString()
+                    : undefined,
+                },
+              },
+              {
+                ...steps[1],
+                status: "incomplete",
+                data: {
+                  endpoint: `/orders/executed/v1?ids=${order.params.itemHash}`,
+                  method: "GET",
+                },
+              },
+            ],
+          };
+        }
 
         default: {
           throw Boom.notImplemented("Unsupported order kind");
