@@ -13,7 +13,7 @@ export class SaleActivity {
 
     // If no token found
     if (_.isNull(token)) {
-      logger.error("sale-activity", `No token found for ${JSON.stringify(data)}`);
+      logger.warn("sale-activity", `No token found for ${JSON.stringify(data)}`);
       return;
     }
 

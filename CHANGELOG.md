@@ -1,3 +1,22 @@
+# [5.126.0](https://github.com/reservoirprotocol/indexer/compare/v5.125.0...v5.126.0) (2022-07-27)
+
+
+### Features
+
+* backfill transactions from missing block range ([4956060](https://github.com/reservoirprotocol/indexer/commit/4956060718688ccb7a6b0188cd764d5e8a5fc5b4))
+* collections sets endpoint with owners dist ([53e812f](https://github.com/reservoirprotocol/indexer/commit/53e812fc312f6fbaf32d59b29e0deba1f445cae9))
+
+
+
+# [5.125.0](https://github.com/reservoirprotocol/indexer/compare/v5.124.0...v5.125.0) (2022-07-27)
+
+
+### Features
+
+* integrated sources v3 ([3818c77](https://github.com/reservoirprotocol/indexer/commit/3818c777afa76d2aa67b83107952e05f65336aba))
+
+
+
 # [5.124.0](https://github.com/reservoirprotocol/indexer/compare/v5.123.0...v5.124.0) (2022-07-27)
 
 

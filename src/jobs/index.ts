@@ -23,7 +23,6 @@ import "@/jobs/token-updates";
 import "@/jobs/update-attribute";
 
 // Export all job queues for monitoring through the BullMQ UI
-// TODO: Restrict the BullMQ UI via password
 
 import * as fixActivitiesMissingCollection from "@/jobs/activities/fix-activities-missing-collection";
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
@@ -36,8 +35,9 @@ import * as backfillBlockTimestamps from "@/jobs/backfill/backfill-block-timesta
 import * as backfillFillEventsCreatedAt from "@/jobs/backfill/backfill-fill-events-created-at";
 import * as backfillFillEventsFillSource from "@/jobs/backfill/backfill-fill-events-fill-source";
 import * as backfillFillEventsOrderSource from "@/jobs/backfill/backfill-fill-events-order-source";
-import * as backfillTransactionBlockFields from "@/jobs/backfill/backfill-transaction-block-fields";
 import * as backfillFillEventsWashTradingScore from "@/jobs/backfill/backfill-fill-events-wash-trading-score";
+import * as backfillTransactionBlockFields from "@/jobs/backfill/backfill-transaction-block-fields";
+import * as backfillTransactions from "@/jobs/backfill/backfill-transactions";
 
 import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
 
@@ -104,8 +104,9 @@ export const allJobQueues = [
   backfillFillEventsCreatedAt.queue,
   backfillFillEventsFillSource.queue,
   backfillFillEventsOrderSource.queue,
-  backfillTransactionBlockFields.queue,
   backfillFillEventsWashTradingScore.queue,
+  backfillTransactionBlockFields.queue,
+  backfillTransactions.queue,
 
   topBidUpdate.queue,
 
