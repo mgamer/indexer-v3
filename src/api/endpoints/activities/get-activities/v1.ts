@@ -5,7 +5,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import { formatEth } from "@/common/utils";
+import { formatEth, regex } from "@/common/utils";
 import { Activities } from "@/models/activities";
 
 const version = "v1";
@@ -39,13 +39,10 @@ export const getActivityV1Options: RouteOptions = {
           tokenId: Joi.string().allow(null),
           fromAddress: Joi.string(),
           toAddress: Joi.string().allow(null),
-          price: Joi.number(),
+          price: Joi.number().unsafe(),
           amount: Joi.number().unsafe(),
           timestamp: Joi.number(),
-          txHash: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-f0-9]{64}$/)
-            .allow(null),
+          txHash: Joi.string().lowercase().pattern(regex.bytes32).allow(null),
           logIndex: Joi.number().allow(null),
           batchIndex: Joi.number().allow(null),
         }).description("Amount of items returned in response.")
