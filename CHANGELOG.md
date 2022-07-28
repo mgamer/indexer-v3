@@ -1,3 +1,12 @@
+## [5.128.1](https://github.com/reservoirprotocol/indexer/compare/v5.128.0...v5.128.1) (2022-07-28)
+
+
+### Bug Fixes
+
+* activity apis validation errors ([39ca5de](https://github.com/reservoirprotocol/indexer/commit/39ca5de6d573d1be19d2c85ef35d6f74b82d7cbf))
+
+
+
 # [5.128.0](https://github.com/reservoirprotocol/indexer/compare/v5.127.0...v5.128.0) (2022-07-28)
 
 
