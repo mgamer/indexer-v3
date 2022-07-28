@@ -6,11 +6,17 @@ import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { idb, redb } from "@/common/db";
 import { regex } from "@/common/utils";
-import { SourcesEntity, SourcesEntityParams } from "@/models/sources/sources-entity";
+import {
+  SourcesEntity,
+  SourcesEntityParams,
+  SourcesMetadata,
+} from "@/models/sources/sources-entity";
 import { AddressZero } from "@ethersproject/constants";
 
 import { default as sourcesFromJson } from "./sources.json";
 import { logger } from "@/common/logger";
+import * as fetchSourceInfo from "@/jobs/sources/fetch-source-info";
+import { channels } from "@/pubsub/channels";
 
 export class Sources {
   private static instance: Sources;
@@ -61,6 +67,12 @@ export class Sources {
     }
 
     return this.instance;
+  }
+
+  public static async forceDataReload() {
+    if (this.instance) {
+      await this.instance.loadData(true);
+    }
   }
 
   public static getDefaultSource(): SourcesEntity {
@@ -122,9 +134,36 @@ export class Sources {
     const sourcesEntity = new SourcesEntity(source);
 
     await Sources.instance.loadData(true); // reload the cache
+    await fetchSourceInfo.addToQueue(domain); // Fetch domain info
+    await redis.publish(channels.sourcesUpdated, `New source ${domain}`);
+
     logger.info("sources", `New source ${domain} - ${address} was added`);
 
     return sourcesEntity;
+  }
+
+  public async update(domain: string, metadata: SourcesMetadata = {}) {
+    const query = `UPDATE sources_v2
+                   SET metadata = metadata || jsonb_build_object (
+                          'adminIcon', $/metadataAdminIcon/,
+                          'adminTitle', $/metadataAdminTitle/,
+                          'icon', $/metadataIcon/,
+                          'title', $/metadataTitle/
+                       )
+                   WHERE domain = $/domain/`;
+
+    const values = {
+      domain,
+      metadataAdminIcon: metadata.adminIcon || "",
+      metadataAdminTitle: metadata.adminTitle || "",
+      metadataIcon: metadata.icon || "",
+      metadataTitle: metadata.title || "",
+    };
+
+    await idb.none(query, values);
+
+    await Sources.instance.loadData(true); // reload the cache
+    await redis.publish(channels.sourcesUpdated, `Updated source ${domain}`);
   }
 
   public get(id: number) {

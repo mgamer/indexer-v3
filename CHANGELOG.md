@@ -1,3 +1,19 @@
+# [5.129.0](https://github.com/reservoirprotocol/indexer/compare/v5.128.4...v5.129.0) (2022-07-28)
+
+
+### Features
+
+* added admin api to resync source ([cdfd508](https://github.com/reservoirprotocol/indexer/commit/cdfd508d7bced123699d0bf179196fe45c4cb650))
+* fetch sources icon and title and reload them ([ef08ab4](https://github.com/reservoirprotocol/indexer/commit/ef08ab45b66090c513e3a1565e01a91a25ab20a1))
+* fix pubsub ([aa803fc](https://github.com/reservoirprotocol/indexer/commit/aa803fcda386d10f3d5607682bbc147de878c07e))
+* fix pubsub ([cf8d53e](https://github.com/reservoirprotocol/indexer/commit/cf8d53ecd286a5e832944e5c123c15e837739c2d))
+* new connection for redis subscriber ([14a0a01](https://github.com/reservoirprotocol/indexer/commit/14a0a0166c8028386bc1bbdecfb49a8f87d4ed0f))
+* update events name ([bf95f4b](https://github.com/reservoirprotocol/indexer/commit/bf95f4bc05c2baade970a58dc889180e76464e72))
+* update source ([a039339](https://github.com/reservoirprotocol/indexer/commit/a039339ad5c88b51b91435082542aa3223075976))
+* wip ([5451aed](https://github.com/reservoirprotocol/indexer/commit/5451aed88350e7a757cc9c6aa677b4fd6974d440))
+
+
+
 ## [5.128.4](https://github.com/reservoirprotocol/indexer/compare/v5.128.3...v5.128.4) (2022-07-28)
 
 

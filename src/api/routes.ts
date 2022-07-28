@@ -50,6 +50,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/resync-source",
+    options: adminEndpoints.postResyncSourceOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/refresh-token",
     options: adminEndpoints.postRefreshTokenOptions,
   });
