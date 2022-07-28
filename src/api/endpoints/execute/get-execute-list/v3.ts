@@ -671,7 +671,11 @@ export const getExecuteListV3Options: RouteOptions = {
         // Assume `JSON.stringify` is deterministic
         const uniqueItems = _.uniqBy(step.items, ({ data }) => JSON.stringify(data));
         if (step.items.length > uniqueItems.length) {
-          step.items = uniqueItems.map((item) => ({ status: item.status, data: item.data }));
+          step.items = uniqueItems.map((item) => ({
+            status: item.status,
+            data: item.data,
+            orderIndex: item.orderIndex,
+          }));
         }
       }
 
