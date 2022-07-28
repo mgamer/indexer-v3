@@ -1,3 +1,3 @@
-export enum events {
+export enum channels {
   sourcesUpdated = "sources-updated",
 }
