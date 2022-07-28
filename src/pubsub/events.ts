@@ -1,3 +1,3 @@
 export enum events {
-  sourcesUpdated = "sourcesUpdated",
+  sourcesUpdated = "sources-updated",
 }
