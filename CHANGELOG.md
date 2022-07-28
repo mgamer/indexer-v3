@@ -1,3 +1,12 @@
+# [5.131.0](https://github.com/reservoirprotocol/indexer/compare/v5.130.0...v5.131.0) (2022-07-28)
+
+
+### Features
+
+* allow to edit the source icon/title ([25b1cda](https://github.com/reservoirprotocol/indexer/commit/25b1cda682c9d2b914e072b360ccbb248ed39b14))
+
+
+
 # [5.130.0](https://github.com/reservoirprotocol/indexer/compare/v5.129.2...v5.130.0) (2022-07-28)
 
 
