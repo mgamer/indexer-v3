@@ -5,7 +5,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import { formatEth } from "@/common/utils";
+import { formatEth, regex } from "@/common/utils";
 import { ActivityType } from "@/models/activities/activities-entity";
 import { UserActivities } from "@/models/user_activities";
 
@@ -24,7 +24,7 @@ export const getUserActivityV1Options: RouteOptions = {
     params: Joi.object({
       user: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .required()
         .description(
           "Filter to a particular user. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
@@ -62,7 +62,7 @@ export const getUserActivityV1Options: RouteOptions = {
           type: Joi.string(),
           fromAddress: Joi.string(),
           toAddress: Joi.string().allow(null),
-          price: Joi.number(),
+          price: Joi.number().unsafe(),
           amount: Joi.number().unsafe(),
           timestamp: Joi.number(),
           token: Joi.object({
@@ -75,10 +75,7 @@ export const getUserActivityV1Options: RouteOptions = {
             collectionName: Joi.string().allow(null),
             collectionImage: Joi.string().allow(null),
           }),
-          txHash: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-f0-9]{64}$/)
-            .allow(null),
+          txHash: Joi.string().lowercase().pattern(regex.bytes32).allow(null),
           logIndex: Joi.number().allow(null),
           batchIndex: Joi.number().allow(null),
         })
