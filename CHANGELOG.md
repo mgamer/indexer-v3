@@ -1,3 +1,12 @@
+## [5.128.4](https://github.com/reservoirprotocol/indexer/compare/v5.128.3...v5.128.4) (2022-07-28)
+
+
+### Bug Fixes
+
+* use default source for fill events on backfill ([09ddcda](https://github.com/reservoirprotocol/indexer/commit/09ddcda1a0b15c842764db8eca578dac3ece09dd))
+
+
+
 ## [5.128.3](https://github.com/reservoirprotocol/indexer/compare/v5.128.2...v5.128.3) (2022-07-28)
 
 
