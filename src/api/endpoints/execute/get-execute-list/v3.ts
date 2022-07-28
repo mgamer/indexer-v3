@@ -81,7 +81,7 @@ export const getExecuteListV3Options: RouteOptions = {
             ),
           orderKind: Joi.string()
             .valid("721ex", "looks-rare", "wyvern-v2.3", "zeroex-v4", "seaport")
-            .default("wyvern-v2.3")
+            .default("seaport")
             .description("Exchange protocol used to create order. Example: `seaport`"),
           orderbook: Joi.string()
             .valid("opensea", "looks-rare", "reservoir")

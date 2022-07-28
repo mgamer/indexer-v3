@@ -56,9 +56,6 @@ export const getExecuteSellV3Options: RouteOptions = {
       onlyPath: Joi.boolean()
         .default(false)
         .description("If true, only the path will be returned."),
-      noDirectFilling: Joi.boolean().description(
-        "If true, all fills will be executed through the router."
-      ),
       maxFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional. Set custom gas price."),
@@ -289,7 +286,6 @@ export const getExecuteSellV3Options: RouteOptions = {
       const router = new Sdk.Router.Router(config.chainId, slowProvider);
       const tx = await router.fillBidTx(bidDetails, query.taker, {
         referrer: query.source,
-        noDirectFilling: query.noDirectFilling,
       });
 
       // Set up generic filling steps
