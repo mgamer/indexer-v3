@@ -1,3 +1,12 @@
+## [5.128.2](https://github.com/reservoirprotocol/indexer/compare/v5.128.1...v5.128.2) (2022-07-28)
+
+
+### Bug Fixes
+
+* debug failing backfill ([d3cd0f3](https://github.com/reservoirprotocol/indexer/commit/d3cd0f3f592c943ca0bc34bd714d2c25a8abc4e0))
+
+
+
 ## [5.128.1](https://github.com/reservoirprotocol/indexer/compare/v5.128.0...v5.128.1) (2022-07-28)
 
 
