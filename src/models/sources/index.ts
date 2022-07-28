@@ -16,7 +16,7 @@ import { AddressZero } from "@ethersproject/constants";
 import { default as sourcesFromJson } from "./sources.json";
 import { logger } from "@/common/logger";
 import * as fetchSourceInfo from "@/jobs/sources/fetch-source-info";
-import { events } from "@/pubsub/events";
+import { channels } from "@/pubsub/channels";
 
 export class Sources {
   private static instance: Sources;
@@ -136,7 +136,7 @@ export class Sources {
 
     await Sources.instance.loadData(true); // reload the cache
     await fetchSourceInfo.addToQueue(domain); // Fetch domain info
-    await redis.publish(events.sourcesUpdated, "");
+    await redis.publish(channels.sourcesUpdated, "");
 
     logger.info("sources", `New source ${domain} - ${address} was added`);
 
@@ -164,7 +164,7 @@ export class Sources {
     await idb.none(query, values);
 
     await Sources.instance.loadData(true); // reload the cache
-    await redis.publish(events.sourcesUpdated, "");
+    await redis.publish(channels.sourcesUpdated, "");
   }
 
   public get(id: number) {
