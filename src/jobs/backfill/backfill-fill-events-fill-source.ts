@@ -94,16 +94,11 @@ if (config.doBackgroundWork) {
 
           // Handle fill source
           let fillSource: { id: number } | undefined;
-          try {
-            const referrer = getReferrer(tx.data);
-            if (referrer) {
-              fillSource = await sources.getOrInsert(referrer);
-            } else if (aggregatorSource?.domain !== "reservoir.market") {
-              fillSource = aggregatorSource;
-            }
-          } catch (error) {
-            logger.info("debug", JSON.stringify({ txHash, data: tx.data }));
-            throw error;
+          const referrer = getReferrer(tx.data);
+          if (referrer) {
+            fillSource = await sources.getOrInsert(referrer);
+          } else if (aggregatorSource?.domain !== "reservoir.market") {
+            fillSource = aggregatorSource;
           }
 
           values.push({
