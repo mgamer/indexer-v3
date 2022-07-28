@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { splitSignature } from "@ethersproject/bytes";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
@@ -22,6 +23,11 @@ export const postOrderV3Options: RouteOptions = {
     },
   },
   validate: {
+    query: Joi.object({
+      signature: Joi.string()
+        .lowercase()
+        .pattern(/^0x[a-fA-F0-9]+$/),
+    }),
     payload: Joi.object({
       order: Joi.object({
         kind: Joi.string()
@@ -53,6 +59,7 @@ export const postOrderV3Options: RouteOptions = {
     }
 
     const payload = request.payload as any;
+    const query = request.query as any;
 
     try {
       const order = payload.order;
@@ -65,6 +72,21 @@ export const postOrderV3Options: RouteOptions = {
       const collection = payload.collection;
       // Only relevant for non-flagged tokens bids
       const isNonFlagged = payload.isNonFlagged;
+
+      const signature = query.signature ?? order.data.signature;
+      const { v, r, s } = splitSignature(signature);
+
+      // If the signature is provided via query parameters, use it
+      order.data = {
+        ...order.data,
+        // To cover everything:
+        // - orders requiring a single signature field
+        // - orders requiring split signature fields
+        signature,
+        v,
+        r,
+        s,
+      };
 
       let schema: any;
       if (attribute) {
