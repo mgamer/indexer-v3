@@ -48,9 +48,9 @@ export const getOrdersAsksV1Options: RouteOptions = {
           "Filter to a particular user, e.g. `0x4d04eb67a2d1e01c71fad0366e0c200207a75487`"
         ),
       status: Joi.string()
-        .valid("active", "inactive", "expired")
+        .valid("active", "inactive")
         .description(
-          "`active` = currently valid, `inactive` = temporarily invalid, `expired` = permanently invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
+          "`active` = currently valid, `inactive` = temporarily invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
         ),
       sortBy: Joi.string().valid("price", "createdAt"),
       continuation: Joi.string().pattern(regex.base64),
@@ -267,14 +267,6 @@ export const getOrdersAsksV1Options: RouteOptions = {
             // Potentially-valid orders
             conditions.push(
               `orders.fillability_status = 'no-balance' OR (orders.fillability_status = 'fillable' AND orders.approval_status != 'approved')`
-            );
-            break;
-          }
-
-          case "expired": {
-            // Invalid orders
-            conditions.push(
-              `orders.fillability_status != 'fillable' AND orders.fillability_status != 'no-balance'`
             );
             break;
           }
