@@ -70,7 +70,7 @@ if (config.doBackgroundWork) {
 
       // Update the source data
       const sources = await Sources.getInstance();
-      await sources.update(url, { title: titleText, icon: iconUrl });
+      await sources.update(sourceDomain, { title: titleText, icon: iconUrl });
     },
     {
       connection: redis.duplicate(),
@@ -85,5 +85,5 @@ if (config.doBackgroundWork) {
 
 export const addToQueue = async (sourceDomain: string, delay = 0) => {
   const jobId = `${sourceDomain}`;
-  await queue.add(jobId, { sourceDomain }, { jobId, delay });
+  await queue.add(jobId, { sourceDomain }, { delay });
 };
