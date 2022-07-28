@@ -227,8 +227,6 @@ export const getExecuteSellV1Options: RouteOptions = {
       const router = new Sdk.Router.Router(config.chainId, slowProvider);
       const tx = await router.fillBidTx(bidDetails, query.taker, {
         referrer: query.source,
-        // Force router filling so that we don't lose any attribution
-        noDirectFilling: true,
       });
 
       // Set up generic filling steps
