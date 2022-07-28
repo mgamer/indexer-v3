@@ -22,6 +22,7 @@
       "@/orderbook/*": ["orderbook/*"],
       "@/utils/*": ["utils/*"],
       "@/models/*": ["models/*"],
+      "@/pubsub/*": ["pubsub/*"],
       "@/events-sync/*": ["sync/events/*"]
     },
     "typeRoots": ["node_modules/@types", "./custom-typings"]
