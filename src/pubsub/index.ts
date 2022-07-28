@@ -14,7 +14,7 @@ redisSubscriber.subscribe(channels.sourcesUpdated, (err, count) => {
     logger.error("pubsub", `Failed to subscribe ${err.message}`);
   }
 
-  logger.info("pubsub", `${config.railwayStaticUrl} subscribed to ${count}`);
+  logger.info("pubsub", `${config.railwayStaticUrl} subscribed to ${count} channels`);
 });
 
 redisSubscriber.on("message", async (channel, message) => {

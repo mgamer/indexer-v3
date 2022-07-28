@@ -136,7 +136,7 @@ export class Sources {
 
     await Sources.instance.loadData(true); // reload the cache
     await fetchSourceInfo.addToQueue(domain); // Fetch domain info
-    await redis.publish(channels.sourcesUpdated, "");
+    await redis.publish(channels.sourcesUpdated, `New source ${domain}`);
 
     logger.info("sources", `New source ${domain} - ${address} was added`);
 
@@ -164,7 +164,7 @@ export class Sources {
     await idb.none(query, values);
 
     await Sources.instance.loadData(true); // reload the cache
-    await redis.publish(channels.sourcesUpdated, "");
+    await redis.publish(channels.sourcesUpdated, `Updated source ${domain}`);
   }
 
   public get(id: number) {
