@@ -14,3 +14,4 @@ export * from "@/api/endpoints/admin/get-open-api";
 export * from "@/api/endpoints/admin/post-refresh-token";
 export * from "@/api/endpoints/admin/post-refresh-collection";
 export * from "@/api/endpoints/admin/post-resync-source";
+export * from "@/api/endpoints/admin/post-update-source";

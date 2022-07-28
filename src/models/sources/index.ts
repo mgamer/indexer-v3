@@ -20,7 +20,6 @@ import { channels } from "@/pubsub/channels";
 
 export class Sources {
   private static instance: Sources;
-  private static forceRefresh: boolean;
 
   public sources: object;
   public sourcesByNames: object;
@@ -62,7 +61,7 @@ export class Sources {
   }
 
   public static async getInstance() {
-    if (!this.instance || this.forceRefresh) {
+    if (!this.instance) {
       this.instance = new Sources();
       await this.instance.loadData();
     }
@@ -144,22 +143,27 @@ export class Sources {
   }
 
   public async update(domain: string, metadata: SourcesMetadata = {}) {
-    const query = `UPDATE sources_v2
-                   SET metadata = metadata || jsonb_build_object (
-                          'adminIcon', $/metadataAdminIcon/,
-                          'adminTitle', $/metadataAdminTitle/,
-                          'icon', $/metadataIcon/,
-                          'title', $/metadataTitle/
-                       )
-                   WHERE domain = $/domain/`;
-
     const values = {
       domain,
-      metadataAdminIcon: metadata.adminIcon || "",
-      metadataAdminTitle: metadata.adminTitle || "",
-      metadataIcon: metadata.icon || "",
-      metadataTitle: metadata.title || "",
     };
+
+    let jsonBuildObject = "";
+    _.forEach(metadata, (value, key) => {
+      if (!_.isUndefined(value)) {
+        jsonBuildObject += `'${key}', $/${key}/,`;
+        (values as any)[key] = value;
+      }
+    });
+
+    if (jsonBuildObject == "") {
+      return;
+    }
+
+    jsonBuildObject = _.trimEnd(jsonBuildObject, ",");
+
+    const query = `UPDATE sources_v2
+                   SET metadata = metadata || jsonb_build_object (${jsonBuildObject})
+                   WHERE domain = $/domain/`;
 
     await idb.none(query, values);
 
