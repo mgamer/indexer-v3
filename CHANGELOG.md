@@ -1,3 +1,12 @@
+# [5.128.0](https://github.com/reservoirprotocol/indexer/compare/v5.127.0...v5.128.0) (2022-07-28)
+
+
+### Features
+
+* backfill new fill and aggregator source columns ([2788d00](https://github.com/reservoirprotocol/indexer/commit/2788d003a85fdf0c0141655e4fad113fd00df12d))
+
+
+
 # [5.127.0](https://github.com/reservoirprotocol/indexer/compare/v5.126.0...v5.127.0) (2022-07-27)
 
 
