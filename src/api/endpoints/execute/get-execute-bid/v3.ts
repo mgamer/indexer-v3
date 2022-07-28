@@ -87,7 +87,7 @@ export const getExecuteBidV3Options: RouteOptions = {
             .required(),
           orderKind: Joi.string()
             .valid("wyvern-v2.3", "721ex", "zeroex-v4", "seaport")
-            .default("wyvern-v2.3")
+            .default("seaport")
             .description("Exchange protocol used to create order. Example: `seaport`"),
           orderbook: Joi.string()
             .valid("reservoir", "opensea")
@@ -695,7 +695,11 @@ export const getExecuteBidV3Options: RouteOptions = {
         // Assume `JSON.stringify` is deterministic
         const uniqueItems = _.uniqBy(step.items, ({ data }) => JSON.stringify(data));
         if (step.items.length > uniqueItems.length) {
-          step.items = uniqueItems.map((item) => ({ status: item.status, data: item.data }));
+          step.items = uniqueItems.map((item) => ({
+            status: item.status,
+            data: item.data,
+            orderIndex: item.orderIndex,
+          }));
         }
       }
 
