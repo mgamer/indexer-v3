@@ -11,6 +11,7 @@ import * as wyvernV2 from "@/events-sync/data/wyvern-v2";
 import * as wyvernV23 from "@/events-sync/data/wyvern-v2.3";
 import * as x2y2 from "@/events-sync/data/x2y2";
 import * as zeroExV4 from "@/events-sync/data/zeroex-v4";
+import * as element from "@/events-sync/data/element";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -50,7 +51,9 @@ export type EventDataKind =
   | "x2y2-order-inventory"
   | "seaport-order-cancelled"
   | "seaport-order-filled"
-  | "seaport-counter-incremented";
+  | "seaport-counter-incremented"
+  | "element-erc721-sell-order-filled"
+  | "element-erc721-buy-order-filled";
 
 export type EventData = {
   kind: EventDataKind;
@@ -96,6 +99,8 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       zeroExV4.erc1155OrderFilled,
       x2y2.orderCancelled,
       x2y2.orderInventory,
+      element.erc721BuyOrderFilled,
+      element.erc721SellOrderFilled,
     ];
   } else {
     return (
@@ -176,6 +181,10 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return seaport.orderCancelled;
     case "seaport-order-filled":
       return seaport.orderFulfilled;
+    case "element-erc721-sell-order-filled":
+      return element.erc721SellOrderFilled;
+    case "element-erc721-buy-order-filled":
+      return element.erc721BuyOrderFilled;
     default:
       return undefined;
   }

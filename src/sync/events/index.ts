@@ -1748,6 +1748,74 @@ export const syncEvents = async (
 
               break;
             }
+
+            case "element-erc721-sell-order-filled": {
+              const { args } = eventData.abi.parseLog(log);
+              const maker = args["maker"].toLowerCase();
+              const taker = args["taker"].toLowerCase();
+              const erc20Token = args["erc20Token"].toLowerCase();
+              const erc20TokenAmount = args["erc20TokenAmount"].toString();
+              const erc721Token = args["erc721Token"].toLowerCase();
+              const erc721TokenId = args["erc721TokenId"].toString();
+              const orderHash = args["orderHash"];
+
+              const ETH = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+
+              if (![Sdk.Common.Addresses.Weth[config.chainId], ETH].includes(erc20Token)) {
+                // Skip if the payment token is not supported.
+                break;
+              }
+
+              fillEventsPartial.push({
+                orderKind: "element",
+                orderId: orderHash,
+                orderSide: "sell",
+                orderSourceIdInt: null,
+                maker,
+                taker,
+                price: erc20TokenAmount,
+                contract: erc721Token,
+                tokenId: erc721TokenId,
+                amount: "1",
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "element-erc721-buy-order-filled": {
+              const { args } = eventData.abi.parseLog(log);
+              const maker = args["maker"].toLowerCase();
+              const taker = args["taker"].toLowerCase();
+              const erc20Token = args["erc20Token"].toLowerCase();
+              const erc20TokenAmount = args["erc20TokenAmount"].toString();
+              const erc721Token = args["erc721Token"].toLowerCase();
+              const erc721TokenId = args["erc721TokenId"].toString();
+              const orderHash = args["orderHash"];
+
+              const ETH = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+
+              if (![Sdk.Common.Addresses.Weth[config.chainId], ETH].includes(erc20Token)) {
+                // Skip if the payment token is not supported.
+                break;
+              }
+
+              fillEventsPartial.push({
+                orderKind: "element",
+                orderId: orderHash,
+                orderSide: "buy",
+                orderSourceIdInt: null,
+                maker,
+                taker,
+                price: erc20TokenAmount,
+                contract: erc721Token,
+                tokenId: erc721TokenId,
+                amount: "1",
+                baseEventParams,
+              });
+
+              break;
+            }
           }
         } catch (error) {
           logger.info("sync-events", `Failed to handle events: ${error}`);
