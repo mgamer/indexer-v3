@@ -87,7 +87,7 @@ export const getExecuteBidV3Options: RouteOptions = {
             .required(),
           orderKind: Joi.string()
             .valid("wyvern-v2.3", "721ex", "zeroex-v4", "seaport")
-            .default("wyvern-v2.3")
+            .default("seaport")
             .description("Exchange protocol used to create order. Example: `seaport`"),
           orderbook: Joi.string()
             .valid("reservoir", "opensea")
