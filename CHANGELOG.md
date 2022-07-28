@@ -1,3 +1,12 @@
+## [5.128.3](https://github.com/reservoirprotocol/indexer/compare/v5.128.2...v5.128.3) (2022-07-28)
+
+
+### Bug Fixes
+
+* by default exclude private orders from the asks api ([4849cab](https://github.com/reservoirprotocol/indexer/commit/4849caba4230b07acd3531cb0996fc10f908ae39))
+
+
+
 ## [5.128.2](https://github.com/reservoirprotocol/indexer/compare/v5.128.1...v5.128.2) (2022-07-28)
 
 
