@@ -40,6 +40,7 @@ if (config.doBackgroundWork) {
       const result = await idb.manyOrNone(
         `
           SELECT
+            fill_events_2.order_kind,
             fill_events_2.tx_hash,
             fill_events_2.log_index,
             fill_events_2.batch_index,
@@ -76,6 +77,7 @@ if (config.doBackgroundWork) {
         tx_hash,
         log_index,
         batch_index,
+        order_kind,
         taker,
         fill_source_id,
         aggregator_source_id,
@@ -99,6 +101,13 @@ if (config.doBackgroundWork) {
             fillSource = await sources.getOrInsert(referrer);
           } else if (aggregatorSource?.domain !== "reservoir.market") {
             fillSource = aggregatorSource;
+          }
+
+          if (!fillSource && !aggregatorSource) {
+            const defaultSource = await syncEventsUtils.getOrderSourceByOrderKind(order_kind);
+            if (defaultSource) {
+              fillSource = { id: defaultSource };
+            }
           }
 
           values.push({
@@ -142,7 +151,7 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire([`${QUEUE_NAME}-lock-6`], 60 * 60 * 24 * 30 * 1000)
+    .acquire([`${QUEUE_NAME}-lock-7`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       await addToQueue(Math.floor(Date.now() / 1000), 0, 0);
     })
