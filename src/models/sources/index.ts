@@ -20,7 +20,6 @@ import { channels } from "@/pubsub/channels";
 
 export class Sources {
   private static instance: Sources;
-  private static forceRefresh: boolean;
 
   public sources: object;
   public sourcesByNames: object;
@@ -62,7 +61,7 @@ export class Sources {
   }
 
   public static async getInstance() {
-    if (!this.instance || this.forceRefresh) {
+    if (!this.instance) {
       this.instance = new Sources();
       await this.instance.loadData();
     }
