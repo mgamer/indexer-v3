@@ -1,3 +1,12 @@
+# [5.130.0](https://github.com/reservoirprotocol/indexer/compare/v5.129.2...v5.130.0) (2022-07-28)
+
+
+### Features
+
+* added api to get multiple users activity ([0f8e6eb](https://github.com/reservoirprotocol/indexer/commit/0f8e6eb651dc19b1d7efb29f5d23a58432022cf6))
+
+
+
 ## [5.129.2](https://github.com/reservoirprotocol/indexer/compare/v5.129.1...v5.129.2) (2022-07-28)
 
 
