@@ -9,28 +9,36 @@ import { formatEth, regex } from "@/common/utils";
 import { ActivityType } from "@/models/activities/activities-entity";
 import { UserActivities } from "@/models/user_activities";
 
-const version = "v1";
+const version = "v2";
 
-export const getUserActivityV1Options: RouteOptions = {
-  description: "User activity",
+export const getUserActivityV2Options: RouteOptions = {
+  description: "Users activity",
   notes: "This API can be used to build a feed for a user",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Activity"],
   plugins: {
     "hapi-swagger": {
       order: 1,
     },
   },
   validate: {
-    params: Joi.object({
-      user: Joi.string()
-        .lowercase()
-        .pattern(regex.address)
-        .required()
-        .description(
-          "Filter to a particular user. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
-        ),
-    }),
     query: Joi.object({
+      users: Joi.alternatives()
+        .try(
+          Joi.array()
+            .items(Joi.string().lowercase().pattern(regex.address))
+            .min(1)
+            .max(50)
+            .description(
+              "Array of users addresses. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+            ),
+          Joi.string()
+            .lowercase()
+            .pattern(regex.address)
+            .description(
+              "Array of users addresses. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+            )
+        )
+        .required(),
       limit: Joi.number()
         .integer()
         .min(1)
@@ -87,16 +95,19 @@ export const getUserActivityV1Options: RouteOptions = {
     },
   },
   handler: async (request: Request) => {
-    const params = request.params as any;
     const query = request.query as any;
 
     if (query.types && !_.isArray(query.types)) {
       query.types = [query.types];
     }
 
+    if (!_.isArray(query.users)) {
+      query.users = [query.users];
+    }
+
     try {
       const activities = await UserActivities.getActivities(
-        [params.user],
+        query.users,
         query.continuation,
         query.types,
         query.limit
