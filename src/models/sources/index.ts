@@ -183,7 +183,7 @@ export class Sources {
     return sourceEntity;
   }
 
-  public getByDomain(domain: string, returnDefault = true) {
+  public getByDomain(domain: string, returnDefault = true): SourcesEntity {
     let sourceEntity;
 
     if (_.toLower(domain) in this.sourcesByDomains) {
@@ -195,7 +195,7 @@ export class Sources {
     return sourceEntity;
   }
 
-  public getByName(name: string, returnDefault = true) {
+  public getByName(name: string, returnDefault = true): SourcesEntity {
     let sourceEntity;
 
     if (_.toLower(name) in this.sourcesByNames) {
@@ -207,7 +207,12 @@ export class Sources {
     return sourceEntity;
   }
 
-  public getByAddress(address: string, contract?: string, tokenId?: string, returnDefault = true) {
+  public getByAddress(
+    address: string,
+    contract?: string,
+    tokenId?: string,
+    returnDefault = true
+  ): SourcesEntity {
     let sourceEntity;
 
     if (_.toLower(address) in this.sourcesByAddress) {
@@ -223,7 +228,7 @@ export class Sources {
     return sourceEntity;
   }
 
-  public async getOrInsert(source: string) {
+  public async getOrInsert(source: string): Promise<SourcesEntity> {
     let sourceEntity;
 
     // If the passed source is an address
