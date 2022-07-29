@@ -13,6 +13,9 @@ ALTER TABLE "transactions"
   ADD CONSTRAINT "transactions_pk"
   PRIMARY KEY ("hash");
 
+CREATE INDEX "transactions_to_index"
+  ON "transactions" ("to");
+
 -- Down Migration
 
 DROP TABLE "transactions";
