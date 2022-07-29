@@ -16,4 +16,5 @@ export type OrderKind =
   | "opendao-erc1155"
   | "foundation"
   | "x2y2"
-  | "seaport";
+  | "seaport"
+  | "rarible";
