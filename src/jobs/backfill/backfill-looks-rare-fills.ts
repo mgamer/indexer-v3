@@ -38,6 +38,7 @@ if (config.doBackgroundWork) {
       const result = await idb.manyOrNone(
         `
           SELECT
+            fill_events_2.block,
             fill_events_2.tx_hash,
             fill_events_2.log_index,
             fill_events_2.batch_index,
@@ -102,7 +103,7 @@ if (config.doBackgroundWork) {
 
   if (config.chainId === 1) {
     redlock
-      .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
+      .acquire([`${QUEUE_NAME}-lock-2`], 60 * 60 * 24 * 30 * 1000)
       .then(async () => {
         await addToQueue(14860000, HashZero);
       })
