@@ -1,3 +1,12 @@
+## [5.131.3](https://github.com/reservoirprotocol/indexer/compare/v5.131.2...v5.131.3) (2022-07-29)
+
+
+### Bug Fixes
+
+* proper attribution handling ([a01779d](https://github.com/reservoirprotocol/indexer/commit/a01779d4e501c156ade4571fa2044474a8419830))
+
+
+
 ## [5.131.2](https://github.com/reservoirprotocol/indexer/compare/v5.131.1...v5.131.2) (2022-07-29)
 
 
