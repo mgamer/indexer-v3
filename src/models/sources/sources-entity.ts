@@ -7,10 +7,10 @@ export type SourcesEntityParams = {
 };
 
 export type SourcesMetadata = {
-  icon?: string | null;
-  url?: string | null;
-  tokenUrlMainnet?: string | null;
-  tokenUrlRinkeby?: string | null;
+  icon?: string;
+  url?: string;
+  tokenUrlMainnet?: string;
+  tokenUrlRinkeby?: string;
 };
 
 export class SourcesEntity {
