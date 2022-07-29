@@ -1,3 +1,12 @@
+# [5.132.0](https://github.com/reservoirprotocol/indexer/compare/v5.131.6...v5.132.0) (2022-07-29)
+
+
+### Features
+
+* return last buys from explore api ([35693d1](https://github.com/reservoirprotocol/indexer/commit/35693d115a17656b4c9635a689201182dd18d966))
+
+
+
 ## [5.131.6](https://github.com/reservoirprotocol/indexer/compare/v5.131.5...v5.131.6) (2022-07-29)
 
 
