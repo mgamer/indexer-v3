@@ -10,6 +10,7 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { slowProvider } from "@/common/provider";
+import { regex } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 
@@ -49,7 +50,7 @@ export const getExecuteListV2Options: RouteOptions = {
     query: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+        .pattern(regex.token)
         .required()
         .description(
           "Filter to a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
@@ -59,13 +60,13 @@ export const getExecuteListV2Options: RouteOptions = {
       ),
       maker: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .required()
         .description(
           "Address of wallet making the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
       weiPrice: Joi.string()
-        .pattern(/^\d+$/)
+        .pattern(regex.number)
         .required()
         .description("Amount seller is willing to sell for in wei. Example: `1000000000000000000`"),
       orderKind: Joi.string()
@@ -83,47 +84,40 @@ export const getExecuteListV2Options: RouteOptions = {
         .default(true)
         .description("If true, royalties will be automatically included."),
       fee: Joi.alternatives(
-        Joi.string().pattern(/^\d+$/),
+        Joi.string().pattern(regex.number),
         Joi.number(),
-        Joi.array().items(Joi.string().pattern(/^\d+$/)),
+        Joi.array().items(Joi.string().pattern(regex.number)),
         Joi.array().items(Joi.number()).description("Fee amount in BPS. Example: `100`")
       ),
       feeRecipient: Joi.alternatives(
-        Joi.string()
-          .lowercase()
-          .pattern(/^0x[a-fA-F0-9]{40}$/)
-          .disallow(AddressZero),
+        Joi.string().lowercase().pattern(regex.address).disallow(AddressZero),
         Joi.array()
-          .items(
-            Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{40}$/)
-              .disallow(AddressZero)
-          )
+          .items(Joi.string().lowercase().pattern(regex.address).disallow(AddressZero))
           .description(
             "Wallet address of fee recipient. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
           )
       ),
-      listingTime: Joi.alternatives(Joi.string().pattern(/^\d+$/), Joi.number()).description(
+      listingTime: Joi.alternatives(Joi.string().pattern(regex.number), Joi.number()).description(
         "Unix timestamp indicating when listing will be listed. Example: `1656080318`"
       ),
-      expirationTime: Joi.alternatives(Joi.string().pattern(/^\d+$/), Joi.number()).description(
-        "Unix timestamp indicating when listing will expire. Example: `1656080318`"
-      ),
+      expirationTime: Joi.alternatives(
+        Joi.string().pattern(regex.number),
+        Joi.number()
+      ).description("Unix timestamp indicating when listing will expire. Example: `1656080318`"),
       salt: Joi.string()
         .pattern(/^\d+$/)
         .description("Optional. Random string to make the order unique"),
-      nonce: Joi.string().pattern(/^\d+$/).description("Optional. Set a custom nonce"),
+      nonce: Joi.string().pattern(regex.number).description("Optional. Set a custom nonce"),
       v: Joi.number().description(
         "Signature v component (only required after order has been signed)"
       ),
       r: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{64}$/)
+        .pattern(regex.bytes32)
         .description("Signature r component (only required after order has been signed)"),
       s: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{64}$/)
+        .pattern(regex.bytes32)
         .description("Signature s component (only required after order has been signed)"),
     })
       .with("feeRecipient", "fee")

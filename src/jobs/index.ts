@@ -21,9 +21,9 @@ import "@/jobs/order-updates";
 import "@/jobs/orderbook";
 import "@/jobs/token-updates";
 import "@/jobs/update-attribute";
+import "@/jobs/sources";
 
 // Export all job queues for monitoring through the BullMQ UI
-// TODO: Restrict the BullMQ UI via password
 
 import * as fixActivitiesMissingCollection from "@/jobs/activities/fix-activities-missing-collection";
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
@@ -36,8 +36,10 @@ import * as backfillBlockTimestamps from "@/jobs/backfill/backfill-block-timesta
 import * as backfillFillEventsCreatedAt from "@/jobs/backfill/backfill-fill-events-created-at";
 import * as backfillFillEventsFillSource from "@/jobs/backfill/backfill-fill-events-fill-source";
 import * as backfillFillEventsOrderSource from "@/jobs/backfill/backfill-fill-events-order-source";
-import * as backfillTransactionBlockFields from "@/jobs/backfill/backfill-transaction-block-fields";
 import * as backfillFillEventsWashTradingScore from "@/jobs/backfill/backfill-fill-events-wash-trading-score";
+import * as backfillLooksRareFills from "@/jobs/backfill/backfill-looks-rare-fills";
+import * as backfillTransactionBlockFields from "@/jobs/backfill/backfill-transaction-block-fields";
+import * as backfillTransactions from "@/jobs/backfill/backfill-transactions";
 
 import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
 
@@ -93,6 +95,8 @@ import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attr
 
 import * as orderbookPostOrderExternal from "@/jobs/orderbook/post-order-external";
 
+import * as fetchSourceInfo from "@/jobs/sources/fetch-source-info";
+
 export const allJobQueues = [
   fixActivitiesMissingCollection.queue,
   processActivityEvent.queue,
@@ -105,8 +109,10 @@ export const allJobQueues = [
   backfillFillEventsCreatedAt.queue,
   backfillFillEventsFillSource.queue,
   backfillFillEventsOrderSource.queue,
-  backfillTransactionBlockFields.queue,
   backfillFillEventsWashTradingScore.queue,
+  backfillLooksRareFills.queue,
+  backfillTransactionBlockFields.queue,
+  backfillTransactions.queue,
 
   topBidUpdate.queue,
 
@@ -161,4 +167,6 @@ export const allJobQueues = [
   resyncAttributeValueCounts.queue,
 
   orderbookPostOrderExternal.queue,
+
+  fetchSourceInfo.queue,
 ];

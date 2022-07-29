@@ -30,7 +30,15 @@ export const getRedirectLogoV2Options: RouteOptions = {
     const sources = await Sources.getInstance();
 
     try {
-      const source = await sources.getByName(params.source);
+      let source = sources.getByName(params.source, false);
+      if (!source) {
+        source = sources.getByDomain(params.source);
+      }
+
+      if (source.metadata.adminIcon) {
+        return response.redirect(source.metadata.adminIcon);
+      }
+
       return response.redirect(source.metadata.icon);
     } catch (error) {
       logger.error(`get-redirect-logo-${version}-handler`, `Handler failure: ${error}`);

@@ -12,11 +12,11 @@ import { parseOpenSeaOrder } from "@/orderbook/orders/wyvern-v2.3/opensea";
 
 import * as postOrderExternal from "@/jobs/orderbook/post-order-external";
 
-const version = "v2";
+const version = "v3";
 
-export const postOrderV2Options: RouteOptions = {
+export const postOrderV3Options: RouteOptions = {
   description: "Submit single order",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Orderbook"],
   plugins: {
     "hapi-swagger": {
       order: 5,
@@ -41,7 +41,9 @@ export const postOrderV2Options: RouteOptions = {
         .valid("reservoir", "opensea", "looks-rare")
         .default("reservoir"),
       orderbookApiKey: Joi.string(),
-      source: Joi.string().description("The name of the source"),
+      source: Joi.string()
+        .pattern(/^[a-zA-Z0-9][a-zA-Z0-9.-]+[a-zA-Z0-9]$/)
+        .description("The source domain"),
       attribute: Joi.object({
         collection: Joi.string().required(),
         key: Joi.string().required(),
@@ -56,8 +58,8 @@ export const postOrderV2Options: RouteOptions = {
       throw Boom.badRequest("Order posting is disabled");
     }
 
-    const query = request.query as any;
     const payload = request.payload as any;
+    const query = request.query as any;
 
     try {
       const order = payload.order;
