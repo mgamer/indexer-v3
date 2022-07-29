@@ -36,6 +36,7 @@ import * as backfillFillEventsCreatedAt from "@/jobs/backfill/backfill-fill-even
 import * as backfillFillEventsFillSource from "@/jobs/backfill/backfill-fill-events-fill-source";
 import * as backfillFillEventsOrderSource from "@/jobs/backfill/backfill-fill-events-order-source";
 import * as backfillFillEventsWashTradingScore from "@/jobs/backfill/backfill-fill-events-wash-trading-score";
+import * as backfillLooksRareFills from "@/jobs/backfill/backfill-looks-rare-fills";
 import * as backfillTransactionBlockFields from "@/jobs/backfill/backfill-transaction-block-fields";
 import * as backfillTransactions from "@/jobs/backfill/backfill-transactions";
 
@@ -106,6 +107,7 @@ export const allJobQueues = [
   backfillFillEventsFillSource.queue,
   backfillFillEventsOrderSource.queue,
   backfillFillEventsWashTradingScore.queue,
+  backfillLooksRareFills.queue,
   backfillTransactionBlockFields.queue,
   backfillTransactions.queue,
 
