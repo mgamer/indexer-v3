@@ -1,3 +1,12 @@
+## [5.131.4](https://github.com/reservoirprotocol/indexer/compare/v5.131.3...v5.131.4) (2022-07-29)
+
+
+### Bug Fixes
+
+* change lock name ([208966d](https://github.com/reservoirprotocol/indexer/commit/208966df505371c7263f50d80b4a7e7b4aefce05))
+
+
+
 ## [5.131.3](https://github.com/reservoirprotocol/indexer/compare/v5.131.2...v5.131.3) (2022-07-29)
 
 
