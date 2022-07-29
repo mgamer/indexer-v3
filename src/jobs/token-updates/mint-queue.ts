@@ -202,7 +202,10 @@ if (config.doBackgroundWork) {
                 },
               },
             ],
-            true
+            true,
+            // One minute of delay to increase the chances of metadata being
+            // available on the upstream provider by the time we fetch it
+            60
           );
         }
 
