@@ -1,17 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import * as Sdk from "@reservoir0x/sdk";
-import { getReferrer } from "@reservoir0x/sdk/dist/utils";
 import { Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis, redlock } from "@/common/redis";
-import { fromBuffer, toBuffer } from "@/common/utils";
+import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as syncEventsUtils from "@/events-sync/utils";
-import { Sources } from "@/models/sources";
+import { extractAttributionData } from "@/events-sync/utils";
 
 const QUEUE_NAME = "backfill-fill-events-fill-source-queue";
 
@@ -59,13 +56,6 @@ if (config.doBackgroundWork) {
         { limit, timestamp, logIndex, batchIndex }
       );
 
-      const sources = await Sources.getInstance();
-
-      let routers: { [address: string]: string } = {};
-      if (Sdk.Common.Addresses.Routers[config.chainId]) {
-        routers = Sdk.Common.Addresses.Routers[config.chainId];
-      }
-
       const values: any[] = [];
       const columns = new pgp.helpers.ColumnSet(
         ["tx_hash", "log_index", "batch_index", "taker", "fill_source_id", "aggregator_source_id"],
@@ -84,30 +74,12 @@ if (config.doBackgroundWork) {
       } of result) {
         if (!fill_source_id || !aggregator_source_id) {
           const txHash = fromBuffer(tx_hash);
-          const tx = await syncEventsUtils.fetchTransaction(txHash);
 
-          // Handle aggregator source
-          let aggregatorSource: { id: number; domain: string } | undefined;
+          const data = await extractAttributionData(txHash, order_kind);
+
           let realTaker = taker;
-          if (routers[tx.to]) {
-            realTaker = toBuffer(tx.from);
-            aggregatorSource = await sources.getOrInsert(routers[tx.to]);
-          }
-
-          // Handle fill source
-          let fillSource: { id: number } | undefined;
-          const referrer = getReferrer(tx.data);
-          if (referrer) {
-            fillSource = await sources.getOrInsert(referrer);
-          } else if (aggregatorSource?.domain !== "reservoir.market") {
-            fillSource = aggregatorSource;
-          }
-
-          if (!fillSource && !aggregatorSource) {
-            const defaultSource = await syncEventsUtils.getOrderSourceByOrderKind(order_kind);
-            if (defaultSource) {
-              fillSource = { id: defaultSource };
-            }
+          if (data.taker) {
+            realTaker = taker;
           }
 
           values.push({
@@ -115,8 +87,8 @@ if (config.doBackgroundWork) {
             log_index,
             batch_index,
             taker: realTaker,
-            fill_source_id: fillSource?.id,
-            aggregator_source_id: aggregatorSource?.id,
+            fill_source_id: data.fillSource?.id,
+            aggregator_source_id: data.aggregatorSource?.id,
           });
         }
       }
