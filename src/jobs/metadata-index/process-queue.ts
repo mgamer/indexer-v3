@@ -96,6 +96,13 @@ if (config.doBackgroundWork) {
 
           // Trigger another job
           if (await extendLock(getLockName(method), delay + 60 * 5)) {
+            logger.info(
+              QUEUE_NAME,
+              `Adding Another Job. error: ${JSON.stringify(
+                (error as any).response.data
+              )}, delay=${delay}`
+            );
+
             await addToQueue(method, delay * 1000);
           }
 
