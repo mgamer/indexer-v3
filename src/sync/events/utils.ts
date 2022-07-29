@@ -138,13 +138,13 @@ export const extractAttributionData = async (txHash: string, orderKind: string) 
 
   // Reference: https://github.com/reservoirprotocol/core/issues/22#issuecomment-1191040945
   if (referrer) {
-    aggregatorSource = await sources.getByDomain("reservoir.market");
-    fillSource = await sources.getByDomain(referrer);
-  } else if (router === "reservoir.market") {
-    aggregatorSource = await sources.getByDomain("reservoir.market");
+    aggregatorSource = await sources.getOrInsert("reservoir.tools");
+    fillSource = await sources.getOrInsert(referrer);
+  } else if (router === "reservoir.tools") {
+    aggregatorSource = await sources.getOrInsert("reservoir.tools");
   } else if (router) {
-    aggregatorSource = await sources.getByDomain(router);
-    fillSource = await sources.getByDomain(router);
+    aggregatorSource = await sources.getOrInsert(router);
+    fillSource = await sources.getOrInsert(router);
   } else {
     const defaultSourceId = await getOrderSourceByOrderKind(orderKind);
     if (defaultSourceId) {
