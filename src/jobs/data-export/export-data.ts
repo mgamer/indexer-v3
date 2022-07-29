@@ -5,8 +5,8 @@ import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { idb, redb } from "@/common/db";
 import { randomUUID } from "crypto";
+import { EOL } from "os";
 import AWS from "aws-sdk";
-import * as os from "os";
 
 import { AskEventsDataSource } from "@/jobs/data-export/data-sources/ask-events";
 import { TokenFloorAskEventsDataSource } from "@/jobs/data-export/data-sources/token-floor-ask-events";
@@ -52,7 +52,7 @@ if (config.doBackgroundWork) {
           let sequence = "";
 
           for (const dataRecord of data) {
-            sequence += JSON.stringify(dataRecord) + os.EOL;
+            sequence += JSON.stringify(dataRecord) + EOL;
           }
 
           await uploadSequenceToS3(
