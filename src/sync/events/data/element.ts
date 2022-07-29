@@ -22,8 +22,7 @@ export const erc721SellOrderFilled: EventData = {
 export const erc721BuyOrderFilled: EventData = {
   kind: "element-erc721-buy-order-filled",
   addresses: { ["0x20F780A973856B93f63670377900C1d2a50a77c4".toLowerCase()]: true },
-  // CAN'T FIND EXAMPLE ORDER
-  topic: "",
+  topic: "0xa24193d56ccdf64ce1df60c80ca683da965a1da3363efa67c14abf62b2d7d493",
   numTopics: 1,
   abi: new Interface([
     `event ERC721BuyOrderFilled(
