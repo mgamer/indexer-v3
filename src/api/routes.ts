@@ -5,6 +5,7 @@ import * as adminEndpoints from "@/api/endpoints/admin";
 import * as apiKeysEndpoints from "@/api/endpoints/api-keys";
 import * as attributesEndpoints from "@/api/endpoints/attributes";
 import * as collectionsEndpoints from "@/api/endpoints/collections";
+import * as collectionsSetsEndpoints from "@/api/endpoints/collections-sets";
 import * as eventsEndpoints from "@/api/endpoints/events";
 import * as executeEndpoints from "@/api/endpoints/execute";
 import * as healthEndpoints from "@/api/endpoints/health";
@@ -41,11 +42,29 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/users/activity/v2",
+    options: activitiesEndpoints.getUserActivityV2Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/activity/v1",
     options: activitiesEndpoints.getActivityV1Options,
   });
 
   // Admin
+
+  server.route({
+    method: "POST",
+    path: "/admin/update-source",
+    options: adminEndpoints.postUpdateSourceOptions,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/admin/resync-source",
+    options: adminEndpoints.postResyncSourceOptions,
+  });
 
   server.route({
     method: "POST",
@@ -285,6 +304,14 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/collections-sets/v1",
     options: collectionsEndpoints.postCreateCollectionsSetV1Options,
+  });
+
+  // Collections Sets
+
+  server.route({
+    method: "GET",
+    path: "/collections-sets/{collectionsSetId}/owners-distribution/v1",
+    options: collectionsSetsEndpoints.getCollectionsSetOwnersDistributionV1Options,
   });
 
   // Events

@@ -3,6 +3,7 @@ dotEnvConfig();
 
 import "@/common/tracer";
 import "@/jobs/index";
+import "@/pubsub/index";
 
 import { start } from "@/api/index";
 import { logger } from "@/common/logger";
