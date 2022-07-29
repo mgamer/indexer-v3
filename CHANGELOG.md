@@ -1,3 +1,13 @@
+## [5.131.1](https://github.com/reservoirprotocol/indexer/compare/v5.131.0...v5.131.1) (2022-07-29)
+
+
+### Bug Fixes
+
+* add new index on transactions table ([9119ee8](https://github.com/reservoirprotocol/indexer/commit/9119ee8af735b44ee0b6f1c70ce20efa4a8edab2))
+* delay newly minted tokens metadata by 1 minute ([a66a412](https://github.com/reservoirprotocol/indexer/commit/a66a412bd55e45ea04062d7019f9009ec0261259))
+
+
+
 # [5.131.0](https://github.com/reservoirprotocol/indexer/compare/v5.130.0...v5.131.0) (2022-07-28)
 
 
