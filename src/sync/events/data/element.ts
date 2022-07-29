@@ -1,9 +1,11 @@
 import { Interface } from "@ethersproject/abi";
 import { EventData } from "@/events-sync/data";
+import { Element } from "@reservoir0x/sdk";
+import { config } from "@/config/index";
 
 export const erc721SellOrderFilled: EventData = {
   kind: "element-erc721-sell-order-filled",
-  addresses: { ["0x20F780A973856B93f63670377900C1d2a50a77c4".toLowerCase()]: true },
+  addresses: { [Element.Addresses.Exchange[config.chainId].toLowerCase()]: true },
   topic: "0x8a0f8e04e7a35efabdc150b7d106308198a4f965a5d11badf768c5b8b273ac94",
   numTopics: 1,
   abi: new Interface([
@@ -21,7 +23,7 @@ export const erc721SellOrderFilled: EventData = {
 
 export const erc721BuyOrderFilled: EventData = {
   kind: "element-erc721-buy-order-filled",
-  addresses: { ["0x20F780A973856B93f63670377900C1d2a50a77c4".toLowerCase()]: true },
+  addresses: { [Element.Addresses.Exchange[config.chainId].toLowerCase()]: true },
   topic: "0xa24193d56ccdf64ce1df60c80ca683da965a1da3363efa67c14abf62b2d7d493",
   numTopics: 1,
   abi: new Interface([
