@@ -1,3 +1,12 @@
+## [5.131.2](https://github.com/reservoirprotocol/indexer/compare/v5.131.1...v5.131.2) (2022-07-29)
+
+
+### Bug Fixes
+
+* backfill wrong looksrare order side ([9e5cd5a](https://github.com/reservoirprotocol/indexer/commit/9e5cd5abb8cacaa5fd47fb02215b3b1eb0453b7c))
+
+
+
 ## [5.131.1](https://github.com/reservoirprotocol/indexer/compare/v5.131.0...v5.131.1) (2022-07-29)
 
 
