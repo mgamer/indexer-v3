@@ -42,11 +42,23 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/users/activity/v2",
+    options: activitiesEndpoints.getUserActivityV2Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/activity/v1",
     options: activitiesEndpoints.getActivityV1Options,
   });
 
   // Admin
+
+  server.route({
+    method: "POST",
+    path: "/admin/update-source",
+    options: adminEndpoints.postUpdateSourceOptions,
+  });
 
   server.route({
     method: "POST",
