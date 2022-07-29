@@ -171,7 +171,7 @@ export class Sources {
     await redis.publish(channels.sourcesUpdated, `Updated source ${domain}`);
   }
 
-  public get(id: number) {
+  public get(id: number): SourcesEntity {
     let sourceEntity;
 
     if (id in this.sources) {

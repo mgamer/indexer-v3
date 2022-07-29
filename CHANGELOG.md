@@ -1,3 +1,67 @@
+## [5.131.6](https://github.com/reservoirprotocol/indexer/compare/v5.131.5...v5.131.6) (2022-07-29)
+
+
+### Bug Fixes
+
+* change lock name ([83c8049](https://github.com/reservoirprotocol/indexer/commit/83c8049b664cac79e4ca6b432173acd33d5b33db))
+
+
+
+## [5.131.5](https://github.com/reservoirprotocol/indexer/compare/v5.131.4...v5.131.5) (2022-07-29)
+
+
+### Bug Fixes
+
+* change lock name ([b7fff12](https://github.com/reservoirprotocol/indexer/commit/b7fff1276c8d4d4fce168cd0f7c25c9b47930ae2))
+
+
+
+## [5.131.4](https://github.com/reservoirprotocol/indexer/compare/v5.131.3...v5.131.4) (2022-07-29)
+
+
+### Bug Fixes
+
+* change lock name ([208966d](https://github.com/reservoirprotocol/indexer/commit/208966df505371c7263f50d80b4a7e7b4aefce05))
+
+
+
+## [5.131.3](https://github.com/reservoirprotocol/indexer/compare/v5.131.2...v5.131.3) (2022-07-29)
+
+
+### Bug Fixes
+
+* proper attribution handling ([a01779d](https://github.com/reservoirprotocol/indexer/commit/a01779d4e501c156ade4571fa2044474a8419830))
+
+
+
+## [5.131.2](https://github.com/reservoirprotocol/indexer/compare/v5.131.1...v5.131.2) (2022-07-29)
+
+
+### Bug Fixes
+
+* backfill wrong looksrare order side ([9e5cd5a](https://github.com/reservoirprotocol/indexer/commit/9e5cd5abb8cacaa5fd47fb02215b3b1eb0453b7c))
+
+
+
+## [5.131.1](https://github.com/reservoirprotocol/indexer/compare/v5.131.0...v5.131.1) (2022-07-29)
+
+
+### Bug Fixes
+
+* add new index on transactions table ([9119ee8](https://github.com/reservoirprotocol/indexer/commit/9119ee8af735b44ee0b6f1c70ce20efa4a8edab2))
+* delay newly minted tokens metadata by 1 minute ([a66a412](https://github.com/reservoirprotocol/indexer/commit/a66a412bd55e45ea04062d7019f9009ec0261259))
+
+
+
+# [5.131.0](https://github.com/reservoirprotocol/indexer/compare/v5.130.0...v5.131.0) (2022-07-28)
+
+
+### Features
+
+* allow to edit the source icon/title ([25b1cda](https://github.com/reservoirprotocol/indexer/commit/25b1cda682c9d2b914e072b360ccbb248ed39b14))
+
+
+
 # [5.130.0](https://github.com/reservoirprotocol/indexer/compare/v5.129.2...v5.130.0) (2022-07-28)
 
 
