@@ -1733,7 +1733,6 @@ export const syncEvents = async (
                 orderKind: "rarible",
                 orderId: leftHash,
                 orderSide: side,
-                orderSourceIdInt: null,
                 maker: leftMaker,
                 taker: rightMaker,
                 price,
