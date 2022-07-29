@@ -21,6 +21,7 @@ import "@/jobs/order-updates";
 import "@/jobs/orderbook";
 import "@/jobs/token-updates";
 import "@/jobs/update-attribute";
+import "@/jobs/sources";
 
 // Export all job queues for monitoring through the BullMQ UI
 
@@ -78,6 +79,7 @@ import * as bundleOrderUpdatesByMaker from "@/jobs/order-updates/by-maker-bundle
 import * as removeBuyOrderEvents from "@/jobs/order-updates/remove-buy-order-events";
 
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
+import * as orderbookPostOrderExternal from "@/jobs/orderbook/post-order-external";
 import * as resyncOrdersSource from "@/jobs/orderbook/resync-orders-source";
 import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
 
@@ -92,7 +94,7 @@ import * as resyncAttributeFloorSell from "@/jobs/update-attribute/resync-attrib
 import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attribute-key-counts";
 import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
 
-import * as orderbookPostOrderExternal from "@/jobs/orderbook/post-order-external";
+import * as fetchSourceInfo from "@/jobs/sources/fetch-source-info";
 
 export const allJobQueues = [
   fixActivitiesMissingCollection.queue,
@@ -149,6 +151,7 @@ export const allJobQueues = [
   removeBuyOrderEvents.queue,
 
   orderbookOrders.queue,
+  orderbookPostOrderExternal.queue,
   orderbookTokenSets.queue,
   resyncOrdersSource.queue,
 
@@ -164,4 +167,6 @@ export const allJobQueues = [
   resyncAttributeValueCounts.queue,
 
   orderbookPostOrderExternal.queue,
+
+  fetchSourceInfo.queue,
 ];

@@ -7,6 +7,9 @@ export type SourcesEntityParams = {
 };
 
 export type SourcesMetadata = {
+  adminTitle?: string;
+  adminIcon?: string;
+  title?: string;
   icon?: string;
   url?: string;
   tokenUrlMainnet?: string;
