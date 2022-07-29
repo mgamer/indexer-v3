@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import _ from "lodash";
 import { redb, idb, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
@@ -55,7 +57,7 @@ export class UserActivities {
   }
 
   public static async getActivities(
-    user: string,
+    users: string[],
     createdBefore: null | string = null,
     types: string[] = [],
     limit = 20
@@ -71,6 +73,24 @@ export class UserActivities {
       typesFilter = `AND type IN ('$/types:raw/')`;
     }
 
+    const values = {
+      limit,
+      createdBefore,
+      types: _.join(types, "','"),
+    };
+
+    let usersFilter = "";
+    let i = 0;
+    const addUsersToFilter = (user: string) => {
+      ++i;
+      (values as any)[`user${i}`] = toBuffer(user);
+      usersFilter = `${usersFilter}$/user${i}/, `;
+    };
+
+    users.forEach(addUsersToFilter);
+
+    usersFilter = `address IN (${usersFilter.substring(0, usersFilter.lastIndexOf(", "))})`;
+
     const activities: UserActivitiesEntityParams[] | null = await redb.manyOrNone(
       `SELECT *
              FROM user_activities
@@ -85,17 +105,12 @@ export class UserActivities {
                 FROM collections
                 WHERE user_activities.collection_id = collections.id
              ) c ON TRUE
-             WHERE address = $/user/
+             WHERE ${usersFilter}
              ${continuation}
              ${typesFilter}
              ORDER BY event_timestamp DESC NULLS LAST
              LIMIT $/limit/`,
-      {
-        user: toBuffer(user),
-        limit,
-        createdBefore,
-        types: _.join(types, "','"),
-      }
+      values
     );
 
     if (activities) {

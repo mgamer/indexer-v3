@@ -72,19 +72,21 @@ export const postOrderV2Options: RouteOptions = {
       const isNonFlagged = payload.isNonFlagged;
 
       const signature = query.signature ?? order.data.signature;
-      const { v, r, s } = splitSignature(signature);
+      if (signature) {
+        const { v, r, s } = splitSignature(signature);
 
-      // If the signature is provided via query parameters, use it
-      order.data = {
-        ...order.data,
-        // To cover everything:
-        // - orders requiring a single signature field
-        // - orders requiring split signature fields
-        signature,
-        v,
-        r,
-        s,
-      };
+        // If the signature is provided via query parameters, use it
+        order.data = {
+          ...order.data,
+          // To cover everything:
+          // - orders requiring a single signature field
+          // - orders requiring split signature fields
+          signature,
+          v,
+          r,
+          s,
+        };
+      }
 
       let schema: any;
       if (attribute) {

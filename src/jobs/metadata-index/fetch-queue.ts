@@ -148,13 +148,18 @@ export type MetadataIndexInfo =
       };
     };
 
-export const addToQueue = async (metadataIndexInfos: MetadataIndexInfo[], prioritized = false) => {
+export const addToQueue = async (
+  metadataIndexInfos: MetadataIndexInfo[],
+  prioritized = false,
+  delayInSeconds = 0
+) => {
   await queue.addBulk(
     metadataIndexInfos.map((metadataIndexInfo) => ({
       name: randomUUID(),
       data: metadataIndexInfo,
       opts: {
         priority: prioritized ? 1 : undefined,
+        delay: delayInSeconds * 1000,
       },
     }))
   );

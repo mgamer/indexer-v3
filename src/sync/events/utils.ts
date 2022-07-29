@@ -1,10 +1,14 @@
 import { AddressZero } from "@ethersproject/constants";
+import * as Sdk from "@reservoir0x/sdk";
+import { getReferrer } from "@reservoir0x/sdk/dist/utils";
 import pLimit from "p-limit";
 
 import { baseProvider, slowProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
+import { config } from "@/config/index";
 import { getBlocks, saveBlock } from "@/models/blocks";
 import { Sources } from "@/models/sources";
+import { SourcesEntity } from "@/models/sources/sources-entity";
 import { getTransaction, saveTransaction } from "@/models/transactions";
 
 export const fetchBlock = async (blockNumber: number, force = false) =>
@@ -90,21 +94,23 @@ export const fetchTransaction = async (txHash: string) =>
     });
   });
 
-export const getOrderSourceByOrderKind = async (orderKind: string): Promise<number | null> => {
+export const getOrderSourceByOrderKind = async (
+  orderKind: string
+): Promise<SourcesEntity | null> => {
   try {
     const sources = await Sources.getInstance();
 
     switch (orderKind) {
       case "x2y2":
-        return sources.getByDomain("x2y2.io").id;
+        return sources.getByDomain("x2y2.io");
       case "foundation":
-        return sources.getByDomain("foundation.app").id;
+        return sources.getByDomain("foundation.app");
       case "looks-rare":
-        return sources.getByDomain("looksrare.org").id;
+        return sources.getByDomain("looksrare.org");
       case "seaport":
       case "wyvern-v2":
       case "wyvern-v2.3":
-        return sources.getByDomain("opensea.io").id;
+        return sources.getByDomain("opensea.io");
       default:
         // For all other order kinds we cannot default the source
         return null;
@@ -112,4 +118,43 @@ export const getOrderSourceByOrderKind = async (orderKind: string): Promise<numb
   } catch (error) {
     return null;
   }
+};
+
+export const extractAttributionData = async (txHash: string, orderKind: string) => {
+  const sources = await Sources.getInstance();
+
+  let aggregatorSource: SourcesEntity | undefined;
+  let fillSource: SourcesEntity | undefined;
+  let taker: string | undefined;
+
+  // Properly set the taker when filling through router contracts
+  const tx = await fetchTransaction(txHash);
+  const router = Sdk.Common.Addresses.Routers[config.chainId][tx.to];
+  if (router) {
+    taker = tx.from;
+  }
+
+  const referrer = getReferrer(tx.data);
+
+  // Reference: https://github.com/reservoirprotocol/core/issues/22#issuecomment-1191040945
+  if (referrer) {
+    aggregatorSource = await sources.getOrInsert("reservoir.tools");
+    fillSource = await sources.getOrInsert(referrer);
+  } else if (router === "reservoir.tools") {
+    aggregatorSource = await sources.getOrInsert("reservoir.tools");
+  } else if (router) {
+    aggregatorSource = await sources.getOrInsert(router);
+    fillSource = await sources.getOrInsert(router);
+  } else {
+    const defaultSourceId = await getOrderSourceByOrderKind(orderKind);
+    if (defaultSourceId) {
+      fillSource = defaultSourceId;
+    }
+  }
+
+  return {
+    fillSource,
+    aggregatorSource,
+    taker,
+  };
 };

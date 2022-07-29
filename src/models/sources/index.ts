@@ -143,22 +143,27 @@ export class Sources {
   }
 
   public async update(domain: string, metadata: SourcesMetadata = {}) {
-    const query = `UPDATE sources_v2
-                   SET metadata = metadata || jsonb_build_object (
-                          'adminIcon', $/metadataAdminIcon/,
-                          'adminTitle', $/metadataAdminTitle/,
-                          'icon', $/metadataIcon/,
-                          'title', $/metadataTitle/
-                       )
-                   WHERE domain = $/domain/`;
-
     const values = {
       domain,
-      metadataAdminIcon: metadata.adminIcon || "",
-      metadataAdminTitle: metadata.adminTitle || "",
-      metadataIcon: metadata.icon || "",
-      metadataTitle: metadata.title || "",
     };
+
+    let jsonBuildObject = "";
+    _.forEach(metadata, (value, key) => {
+      if (!_.isUndefined(value)) {
+        jsonBuildObject += `'${key}', $/${key}/,`;
+        (values as any)[key] = value;
+      }
+    });
+
+    if (jsonBuildObject == "") {
+      return;
+    }
+
+    jsonBuildObject = _.trimEnd(jsonBuildObject, ",");
+
+    const query = `UPDATE sources_v2
+                   SET metadata = metadata || jsonb_build_object (${jsonBuildObject})
+                   WHERE domain = $/domain/`;
 
     await idb.none(query, values);
 
@@ -166,7 +171,7 @@ export class Sources {
     await redis.publish(channels.sourcesUpdated, `Updated source ${domain}`);
   }
 
-  public get(id: number) {
+  public get(id: number): SourcesEntity {
     let sourceEntity;
 
     if (id in this.sources) {
@@ -178,7 +183,7 @@ export class Sources {
     return sourceEntity;
   }
 
-  public getByDomain(domain: string, returnDefault = true) {
+  public getByDomain(domain: string, returnDefault = true): SourcesEntity {
     let sourceEntity;
 
     if (_.toLower(domain) in this.sourcesByDomains) {
@@ -190,7 +195,7 @@ export class Sources {
     return sourceEntity;
   }
 
-  public getByName(name: string, returnDefault = true) {
+  public getByName(name: string, returnDefault = true): SourcesEntity {
     let sourceEntity;
 
     if (_.toLower(name) in this.sourcesByNames) {
@@ -202,7 +207,12 @@ export class Sources {
     return sourceEntity;
   }
 
-  public getByAddress(address: string, contract?: string, tokenId?: string, returnDefault = true) {
+  public getByAddress(
+    address: string,
+    contract?: string,
+    tokenId?: string,
+    returnDefault = true
+  ): SourcesEntity {
     let sourceEntity;
 
     if (_.toLower(address) in this.sourcesByAddress) {
@@ -218,7 +228,7 @@ export class Sources {
     return sourceEntity;
   }
 
-  public async getOrInsert(source: string) {
+  public async getOrInsert(source: string): Promise<SourcesEntity> {
     let sourceEntity;
 
     // If the passed source is an address

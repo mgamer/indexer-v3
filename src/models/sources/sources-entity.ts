@@ -7,13 +7,13 @@ export type SourcesEntityParams = {
 };
 
 export type SourcesMetadata = {
-  adminTitle?: string | null;
-  adminIcon?: string | null;
-  title?: string | null;
-  icon?: string | null;
-  url?: string | null;
-  tokenUrlMainnet?: string | null;
-  tokenUrlRinkeby?: string | null;
+  adminTitle?: string;
+  adminIcon?: string;
+  title?: string;
+  icon?: string;
+  url?: string;
+  tokenUrlMainnet?: string;
+  tokenUrlRinkeby?: string;
 };
 
 export class SourcesEntity {
