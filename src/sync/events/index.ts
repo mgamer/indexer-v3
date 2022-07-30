@@ -26,6 +26,7 @@ import * as blocksModel from "@/models/blocks";
 import { OrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
 import * as syncEventsUtils from "@/events-sync/utils";
+import { getNetworkSettings } from "@/config/network";
 
 // TODO: Split into multiple files (by exchange)
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
@@ -1735,7 +1736,9 @@ export const syncEvents = async (
       }
 
       // --- Handle: orphan blocks ---
-      if (!backfill) {
+
+      const networkSettings = getNetworkSettings();
+      if (!backfill && networkSettings.enableReorgCheck) {
         for (const blockData of blocksSet.values()) {
           const block = Number(blockData.split("-")[0]);
           const blockHash = blockData.split("-")[1];
