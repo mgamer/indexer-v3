@@ -1,3 +1,12 @@
+## [5.132.3](https://github.com/reservoirprotocol/indexer/compare/v5.132.2...v5.132.3) (2022-07-30)
+
+
+### Performance Improvements
+
+* optimize optimism rpc calls ([8ce7630](https://github.com/reservoirprotocol/indexer/commit/8ce763031de6fae5a6616866db320202e61d50e9))
+
+
+
 ## [5.132.2](https://github.com/reservoirprotocol/indexer/compare/v5.132.1...v5.132.2) (2022-07-30)
 
 
