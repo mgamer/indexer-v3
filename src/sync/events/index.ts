@@ -1803,7 +1803,9 @@ export const syncEvents = async (
       }
 
       // --- Handle: orphan blocks ---
-      if (!backfill) {
+
+      const networkSettings = getNetworkSettings();
+      if (!backfill && networkSettings.enableReorgCheck) {
         for (const blockData of blocksSet.values()) {
           const block = Number(blockData.split("-")[0]);
           const blockHash = blockData.split("-")[1];
