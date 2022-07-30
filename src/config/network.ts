@@ -1,7 +1,7 @@
 /* eslint-disable no-fallthrough */
 
 // Any new network that is supported should have a corresponding
-// entry in the configuration methods below.
+// entry in the configuration methods below
 
 import { config } from "@/config/index";
 
@@ -20,49 +20,58 @@ export const getNetworkName = () => {
   }
 };
 
-export const getNetworkSettings = () => {
-  const washTradingExcludedContracts: string[] = [];
+type NetworkSettings = {
+  enableWebSocket: boolean;
+  realtimeSyncFrequencySeconds: number;
+  backfillBlockBatchSize: number;
+  washTradingExcludedContracts: string[];
+};
 
-  const defaultNetworkSettings = {
+export const getNetworkSettings = (): NetworkSettings => {
+  const defaultNetworkSettings: NetworkSettings = {
+    enableWebSocket: true,
     realtimeSyncFrequencySeconds: 15,
     backfillBlockBatchSize: 16,
-    washTradingExcludedContracts,
+    washTradingExcludedContracts: [],
   };
 
-  let networkSettings = {};
-
   switch (config.chainId) {
-    // Goerli
-    case 5: {
-      networkSettings = {
-        backfillBlockBatchSize: 128,
-      };
-      break;
-    }
-    // Optimism
-    case 10: {
-      networkSettings = {
-        realtimeSyncFrequencySeconds: 5,
-        backfillBlockBatchSize: 512,
-      };
-      break;
-    }
     // Ethereum
     case 1:
-      networkSettings = {
+      return {
+        ...defaultNetworkSettings,
         washTradingExcludedContracts: [
           // ArtBlocks Contracts
           "0x059edd72cd353df5106d2b9cc5ab83a52287ac3a",
           "0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270",
         ],
       };
-      break;
     // Rinkeby
     case 4:
+      return {
+        ...defaultNetworkSettings,
+      };
+    // Goerli
+    case 5: {
+      return {
+        ...defaultNetworkSettings,
+        backfillBlockBatchSize: 128,
+      };
+    }
+    // Optimism
+    case 10: {
+      return {
+        ...defaultNetworkSettings,
+        enableWebSocket: false,
+        realtimeSyncFrequencySeconds: 10,
+        backfillBlockBatchSize: 512,
+      };
+    }
     // Default
     default:
-      break;
+      return {
+        ...defaultNetworkSettings,
+      };
   }
-
-  return Object.assign(defaultNetworkSettings, networkSettings);
 };
+
