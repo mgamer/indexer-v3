@@ -22,7 +22,9 @@ export const getNetworkName = () => {
 
 type NetworkSettings = {
   enableWebSocket: boolean;
+  enableReorgCheck: boolean;
   realtimeSyncFrequencySeconds: number;
+  realtimeSyncMaxBlockLag: number;
   backfillBlockBatchSize: number;
   washTradingExcludedContracts: string[];
 };
@@ -30,7 +32,9 @@ type NetworkSettings = {
 export const getNetworkSettings = (): NetworkSettings => {
   const defaultNetworkSettings: NetworkSettings = {
     enableWebSocket: true,
+    enableReorgCheck: true,
     realtimeSyncFrequencySeconds: 15,
+    realtimeSyncMaxBlockLag: 16,
     backfillBlockBatchSize: 16,
     washTradingExcludedContracts: [],
   };
@@ -64,7 +68,9 @@ export const getNetworkSettings = (): NetworkSettings => {
       return {
         ...defaultNetworkSettings,
         enableWebSocket: false,
+        enableReorgCheck: false,
         realtimeSyncFrequencySeconds: 10,
+        realtimeSyncMaxBlockLag: 128,
         backfillBlockBatchSize: 512,
       };
     }
