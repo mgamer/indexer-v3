@@ -50,6 +50,7 @@ export const getNetworkSettings = (): NetworkSettings => {
     case 4:
       return {
         ...defaultNetworkSettings,
+        backfillBlockBatchSize: 128,
       };
     // Goerli
     case 5: {
