@@ -5,6 +5,7 @@ import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { idb, redb } from "@/common/db";
 import { randomUUID } from "crypto";
+import { EOL } from "os";
 import AWS from "aws-sdk";
 
 import { AskEventsDataSource } from "@/jobs/data-export/data-sources/ask-events";
@@ -48,9 +49,15 @@ if (config.doBackgroundWork) {
           const sequenceNumberPadded = ("000000000000000" + sequenceNumber).slice(-15);
           const targetName = kind.replace(/-/g, "_");
 
+          let sequence = "";
+
+          for (const dataRecord of data) {
+            sequence += JSON.stringify(dataRecord) + EOL;
+          }
+
           await uploadSequenceToS3(
             `${targetName}/reservoir_${sequenceNumberPadded}.json`,
-            JSON.stringify(data)
+            sequence
           );
           await setNextSequenceInfo(kind, nextCursor);
         }
