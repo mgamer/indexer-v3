@@ -1,7 +1,7 @@
 /* eslint-disable no-fallthrough */
 
 // Any new network that is supported should have a corresponding
-// entry in the configuration methods below.
+// entry in the configuration methods below
 
 import { config } from "@/config/index";
 
@@ -20,34 +20,57 @@ export const getNetworkName = () => {
   }
 };
 
-export const getNetworkSettings = () => {
+type NetworkSettings = {
+  enableWebSocket: boolean;
+  realtimeSyncFrequencySeconds: number;
+  backfillBlockBatchSize: number;
+  washTradingExcludedContracts: string[];
+};
+
+export const getNetworkSettings = (): NetworkSettings => {
+  const defaultNetworkSettings: NetworkSettings = {
+    enableWebSocket: true,
+    realtimeSyncFrequencySeconds: 15,
+    backfillBlockBatchSize: 16,
+    washTradingExcludedContracts: [],
+  };
+
   switch (config.chainId) {
+    // Ethereum
+    case 1:
+      return {
+        ...defaultNetworkSettings,
+        washTradingExcludedContracts: [
+          // ArtBlocks Contracts
+          "0x059edd72cd353df5106d2b9cc5ab83a52287ac3a",
+          "0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270",
+        ],
+      };
+    // Rinkeby
+    case 4:
+      return {
+        ...defaultNetworkSettings,
+      };
     // Goerli
     case 5: {
       return {
-        realtimeSyncFrequencySeconds: 15,
+        ...defaultNetworkSettings,
         backfillBlockBatchSize: 128,
       };
     }
-
     // Optimism
     case 10: {
       return {
-        realtimeSyncFrequencySeconds: 5,
+        ...defaultNetworkSettings,
+        enableWebSocket: false,
+        realtimeSyncFrequencySeconds: 10,
         backfillBlockBatchSize: 512,
       };
     }
-
-    // Ethereum
-    case 1:
-    // Rinkeby
-    case 4:
     // Default
-    default: {
+    default:
       return {
-        realtimeSyncFrequencySeconds: 15,
-        backfillBlockBatchSize: 16,
+        ...defaultNetworkSettings,
       };
-    }
   }
 };
