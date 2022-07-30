@@ -1,3 +1,12 @@
+## [5.132.2](https://github.com/reservoirprotocol/indexer/compare/v5.132.1...v5.132.2) (2022-07-30)
+
+
+### Performance Improvements
+
+* increase block batch size on rinkeby ([7267d7d](https://github.com/reservoirprotocol/indexer/commit/7267d7dd48705fd6c1e5d8ab8700474bf030785c))
+
+
+
 ## [5.132.1](https://github.com/reservoirprotocol/indexer/compare/v5.132.0...v5.132.1) (2022-07-30)
 
 
