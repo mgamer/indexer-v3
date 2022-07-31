@@ -1,3 +1,12 @@
+# [5.133.0](https://github.com/reservoirprotocol/indexer/compare/v5.132.3...v5.133.0) (2022-07-31)
+
+
+### Features
+
+* completely get rid of tenderly for tx simulation ([b81203a](https://github.com/reservoirprotocol/indexer/commit/b81203ac599dbc648022e91c0c206c6821de0f54))
+
+
+
 ## [5.132.3](https://github.com/reservoirprotocol/indexer/compare/v5.132.2...v5.132.3) (2022-07-30)
 
 
