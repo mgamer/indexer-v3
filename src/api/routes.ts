@@ -156,6 +156,12 @@ export const setupRoutes = (server: Server) => {
     options: adminEndpoints.postSetCollectionCommunity,
   });
 
+  server.route({
+    method: "GET",
+    path: "/admin/get-marketplaces",
+    options: adminEndpoints.getMarketplaces,
+  });
+
   // API keys
 
   server.route({
