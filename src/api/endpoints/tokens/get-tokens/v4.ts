@@ -134,7 +134,7 @@ export const getTokensV4Options: RouteOptions = {
           "t"."media",
           "t"."collection_id",
           "c"."name" as "collection_name",
-          "t"."floor_sell_source_id",
+          "t"."floor_sell_source_id_int",
           ("c".metadata ->> 'imageUrl')::TEXT AS "collection_image",
           "c"."slug",
           "t"."floor_sell_value",
@@ -221,11 +221,11 @@ export const getTokensV4Options: RouteOptions = {
         const sources = await Sources.getInstance();
         let source = sources.getByName(query.source, false);
         if (!source) {
-          source = await sources.getByDomain(query.source);
+          source = sources.getByDomain(query.source);
         }
 
-        (query as any).sourceAddress = toBuffer(source.address);
-        conditions.push(`"t"."floor_sell_source_id" = $/sourceAddress/`);
+        (query as any).source = source?.id;
+        conditions.push(`"t"."floor_sell_source_id_int" = $/source/`);
       }
 
       if (query.native) {
@@ -391,12 +391,7 @@ export const getTokensV4Options: RouteOptions = {
       }
 
       const sources = await Sources.getInstance();
-
       const result = rawResult.map((r) => {
-        const source = r.floor_sell_source_id
-          ? sources.getByAddress(fromBuffer(r.floor_sell_source_id))
-          : null;
-
         return {
           contract: fromBuffer(r.contract),
           tokenId: r.token_id,
@@ -409,7 +404,7 @@ export const getTokensV4Options: RouteOptions = {
             image: r.collection_image,
             slug: r.slug,
           },
-          source: source?.name,
+          source: sources.get(r.floor_sell_source_id)?.name,
           floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
           topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
           rarity: r.rarity_score,
