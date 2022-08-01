@@ -183,7 +183,7 @@ export const getTokensDetailsV3Options: RouteOptions = {
             NULLIF(date_part('epoch', UPPER("os"."valid_between")), 'Infinity'),
             0
           ) AS "floor_sell_valid_until",
-          "os"."source_id" AS "floor_sell_source_id",
+          "os"."source_id_int" AS "floor_sell_source_id_int",
           "t"."top_buy_id",
           "t"."top_buy_value",
           "t"."top_buy_maker",
@@ -394,15 +394,8 @@ export const getTokensDetailsV3Options: RouteOptions = {
       }
 
       const sources = await Sources.getInstance();
-
       const result = rawResult.map((r) => {
-        const source = r.floor_sell_source_id
-          ? sources.getByAddress(
-              fromBuffer(r.floor_sell_source_id),
-              fromBuffer(r.contract),
-              r.token_id
-            )
-          : null;
+        const source = sources.get(r.floor_sell_source_id_int);
 
         return {
           token: {
