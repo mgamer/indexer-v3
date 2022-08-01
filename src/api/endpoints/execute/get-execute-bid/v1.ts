@@ -18,11 +18,6 @@ import * as openDaoBuyToken from "@/orderbook/orders/opendao/build/buy/token";
 // ZeroExV4
 import * as zeroExV4BuyToken from "@/orderbook/orders/zeroex-v4/build/buy/token";
 
-// Wyvern v2.3
-import * as wyvernV23BuyAttribute from "@/orderbook/orders/wyvern-v2.3/build/buy/attribute";
-import * as wyvernV23BuyCollection from "@/orderbook/orders/wyvern-v2.3/build/buy/collection";
-import * as wyvernV23BuyToken from "@/orderbook/orders/wyvern-v2.3/build/buy/token";
-
 const version = "v1";
 
 export const getExecuteBidV1Options: RouteOptions = {
@@ -51,8 +46,8 @@ export const getExecuteBidV1Options: RouteOptions = {
       attributeValue: Joi.string(),
       maker: Joi.string().lowercase().pattern(regex.address).required(),
       weiPrice: Joi.string().pattern(regex.number).required(),
-      orderKind: Joi.string().valid("wyvern-v2.3", "721ex", "zeroex-v4").default("wyvern-v2.3"),
-      orderbook: Joi.string().valid("reservoir", "opensea").default("reservoir"),
+      orderKind: Joi.string().valid("721ex", "zeroex-v4").default("zeroex-v4"),
+      orderbook: Joi.string().valid("reservoir").default("reservoir"),
       source: Joi.string().lowercase().pattern(regex.address),
       automatedRoyalties: Joi.boolean().default(true),
       fee: Joi.alternatives(Joi.string(), Joi.number()),
@@ -104,170 +99,6 @@ export const getExecuteBidV1Options: RouteOptions = {
       }
 
       switch (query.orderKind) {
-        case "wyvern-v2.3": {
-          if (!["reservoir", "opensea"].includes(query.orderbook)) {
-            throw Boom.badRequest("Unsupported orderbook");
-          }
-          if (query.automatedRoyalties && query.feeRecipient) {
-            throw Boom.badRequest("Exchange does not supported multiple fee recipients");
-          }
-
-          let order: Sdk.WyvernV23.Order | undefined;
-          if (token) {
-            const [contract, tokenId] = token.split(":");
-
-            order = await wyvernV23BuyToken.build({
-              ...query,
-              contract,
-              tokenId,
-            });
-          } else if (collection && attributeKey && attributeValue) {
-            if (query.orderbook !== "reservoir") {
-              throw Boom.notImplemented("Attribute bids are not supported outside of Reservoir");
-            }
-
-            order = await wyvernV23BuyAttribute.build({
-              ...query,
-              collection,
-              attributes: [
-                {
-                  key: attributeKey,
-                  value: attributeValue,
-                },
-              ],
-            });
-          } else if (collection) {
-            if (query.orderbook !== "reservoir") {
-              throw Boom.notImplemented("Collection bids are not supported outside of Reservoir");
-            }
-
-            order = await wyvernV23BuyCollection.build({
-              ...query,
-              collection,
-            });
-          }
-
-          // Make sure the order was successfully generated
-          const orderInfo = order?.getInfo();
-          if (!order || !orderInfo) {
-            throw Boom.internal("Failed to generate order");
-          }
-
-          // Check the maker's Weth/Eth balance
-          let wrapEthTx: TxData | undefined;
-          const weth = new Sdk.Common.Helpers.Weth(slowProvider, config.chainId);
-          const wethBalance = await weth.getBalance(query.maker);
-          if (bn(wethBalance).lt(order.params.basePrice)) {
-            const ethBalance = await slowProvider.getBalance(query.maker);
-            if (bn(wethBalance).add(ethBalance).lt(order.params.basePrice)) {
-              // We cannot do anything if the maker doesn't have sufficient balance
-              throw Boom.badData("Maker does not have sufficient balance");
-            } else {
-              wrapEthTx = weth.depositTransaction(
-                query.maker,
-                bn(order.params.basePrice).sub(wethBalance)
-              );
-            }
-          }
-
-          // Check the maker's approval
-          let approvalTx: TxData | undefined;
-          const wethApproval = await weth.getAllowance(
-            query.maker,
-            Sdk.WyvernV23.Addresses.TokenTransferProxy[config.chainId]
-          );
-          if (bn(wethApproval).lt(order.params.basePrice)) {
-            approvalTx = weth.approveTransaction(
-              query.maker,
-              Sdk.WyvernV23.Addresses.TokenTransferProxy[config.chainId]
-            );
-          }
-
-          const steps = [
-            {
-              action: "Wrapping ETH",
-              description: "Wrapping ETH required to make offer",
-              kind: "transaction",
-            },
-            {
-              action: "Approve WETH contract",
-              description: "A one-time setup transaction to enable trading with WETH",
-              kind: "transaction",
-            },
-            {
-              action: "Authorize offer",
-              description: "A free off-chain signature to create the offer",
-              kind: "signature",
-            },
-            {
-              action: "Submit offer",
-              description: "Post your offer to the order book for others to discover it",
-              kind: "request",
-            },
-          ];
-
-          const hasSignature = query.v && query.r && query.s;
-
-          return {
-            steps: [
-              {
-                ...steps[0],
-                status: !wrapEthTx ? "complete" : "incomplete",
-                data: wrapEthTx,
-              },
-              {
-                ...steps[1],
-                status: !approvalTx ? "complete" : "incomplete",
-                data: approvalTx,
-              },
-              {
-                ...steps[2],
-                status: hasSignature ? "complete" : "incomplete",
-                data: hasSignature ? undefined : order.getSignatureData(),
-              },
-              {
-                ...steps[3],
-                status: "incomplete",
-                data: !hasSignature
-                  ? undefined
-                  : {
-                      endpoint: "/order/v1",
-                      method: "POST",
-                      body: {
-                        order: {
-                          kind: "wyvern-v2.3",
-                          data: {
-                            ...order.params,
-                            v: query.v,
-                            r: query.r,
-                            s: query.s,
-                            contract: query.contract,
-                            tokenId: query.tokenId,
-                          },
-                        },
-                        attribute:
-                          collection && attributeKey && attributeValue
-                            ? {
-                                collection,
-                                key: attributeKey,
-                                value: attributeValue,
-                              }
-                            : undefined,
-                        orderbook: query.orderbook,
-                        source: query.source,
-                      },
-                    },
-              },
-            ],
-            query: {
-              ...query,
-              listingTime: order.params.listingTime,
-              expirationTime: order.params.expirationTime,
-              salt: order.params.salt,
-            },
-          };
-        }
-
         case "721ex": {
           if (!["reservoir"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
