@@ -1,3 +1,12 @@
+# [5.135.0](https://github.com/reservoirprotocol/indexer/compare/v5.134.1...v5.135.0) (2022-08-01)
+
+
+### Features
+
+* disabled exception ([#1355](https://github.com/reservoirprotocol/indexer/issues/1355)) ([9c003cb](https://github.com/reservoirprotocol/indexer/commit/9c003cb02777f4af539a34c7151ad7f38aa6095e))
+
+
+
 ## [5.134.1](https://github.com/reservoirprotocol/indexer/compare/v5.134.0...v5.134.1) (2022-08-01)
 
 
