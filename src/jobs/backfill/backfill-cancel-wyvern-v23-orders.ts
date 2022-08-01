@@ -39,6 +39,7 @@ if (config.doBackgroundWork) {
             WHERE orders.kind = 'wyvern-v2.3'
               AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
               AND orders.id > $/id/
+            ORDER BY orders.id
             LIMIT $/limit/
           )
           UPDATE orders SET
