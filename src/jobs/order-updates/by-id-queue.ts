@@ -56,7 +56,6 @@ if (config.doBackgroundWork) {
                 orders.id,
                 orders.side,
                 orders.token_set_id AS "tokenSetId",
-                orders.source_id AS "sourceId",
                 orders.source_id_int AS "sourceIdInt",
                 orders.valid_between AS "validBetween",
                 COALESCE(orders.quantity_remaining, 1) AS "quantityRemaining",
@@ -146,7 +145,6 @@ if (config.doBackgroundWork) {
                     y.maker,
                     y.valid_between,
                     y.nonce,
-                    y.source_id,
                     y.source_id_int,
                     y.is_reservoir
                   FROM (
@@ -161,7 +159,6 @@ if (config.doBackgroundWork) {
                       orders.value,
                       orders.maker,
                       orders.valid_between,
-                      orders.source_id,
                       orders.source_id_int,
                       orders.nonce,
                       orders.is_reservoir
@@ -194,7 +191,6 @@ if (config.doBackgroundWork) {
                         0
                       )
                     )::INT,
-                    floor_sell_source_id = z.source_id,
                     floor_sell_source_id_int = z.source_id_int,
                     floor_sell_is_reservoir = z.is_reservoir,
                     updated_at = now()
