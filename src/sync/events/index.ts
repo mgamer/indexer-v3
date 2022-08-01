@@ -1578,6 +1578,87 @@ export const syncEvents = async (
 
               break;
             }
+
+            case "rarible-match": {
+              const { args } = eventData.abi.parseLog(log);
+              const leftHash = args["leftHash"].toLowerCase();
+              const leftMaker = args["leftMaker"].toLowerCase();
+              const rightMaker = args["rightMaker"].toLowerCase();
+              const newLeftFill = args["newLeftFill"].toString();
+              const newRightFill = args["newRightFill"].toString();
+              const leftAsset = args["leftAsset"];
+              const rightAsset = args["rightAsset"];
+
+              // Keccak-256 hash
+              const ERC20 = "0x8ae85d84";
+              const ETH = "0xaaaebeba";
+              const ERC721 = "0x73ad2146";
+              const ERC1155 = "0x973bb640";
+
+              const assetTypes = [ERC721, ERC1155, ERC20, ETH];
+
+              if (
+                ([ERC20].includes(leftAsset[0]) &&
+                  ![Sdk.Common.Addresses.Weth[config.chainId]].includes(leftAsset[1])) ||
+                ([ERC20].includes(rightAsset[0]) &&
+                  ![Sdk.Common.Addresses.Weth[config.chainId]].includes(rightAsset[1]))
+              ) {
+                // Skip if the payment token is not supported.
+                break;
+              }
+
+              // Exclude orders with exotic asset types
+              if (!assetTypes.includes(leftAsset[0]) || !assetTypes.includes(rightAsset[0])) {
+                break;
+              }
+
+              // Assume the left order is the maker's order
+              const side = [ERC721, ERC1155].includes(leftAsset[0]) ? "sell" : "buy";
+
+              const price =
+                side === "buy"
+                  ? bn(newLeftFill).div(newRightFill).toString()
+                  : bn(newRightFill).div(newLeftFill).toString();
+
+              const decodedAsset = defaultAbiCoder.decode(
+                ["(address token, uint tokenId)"],
+                side === "sell" ? leftAsset.data : rightAsset.data
+              );
+
+              const contract = decodedAsset[0][0].toLowerCase();
+              const tokenId = decodedAsset[0][1].toString();
+
+              const amount = side === "sell" ? newLeftFill : newRightFill;
+
+              const orderKind = "rarible";
+
+              let taker = rightMaker;
+
+              // Handle attribution
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+
+              if (data.taker) {
+                taker = data.taker;
+              }
+
+              fillEventsPartial.push({
+                orderKind: "rarible",
+                orderId: leftHash,
+                orderSide: side,
+                maker: leftMaker,
+                taker,
+                price,
+                contract,
+                tokenId,
+                amount,
+                baseEventParams,
+              });
+
+              break;
+            }
           }
         } catch (error) {
           logger.info("sync-events", `Failed to handle events: ${error}`);
