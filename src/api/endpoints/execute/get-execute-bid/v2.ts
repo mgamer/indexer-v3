@@ -368,7 +368,7 @@ export const getExecuteBidV2Options: RouteOptions = {
             throw Boom.internal("Failed to generate order");
           }
 
-          // Check the maker's approval.
+          // Check the maker's approval
           let approvalTx: TxData | undefined;
           const wethApproval = await weth.getAllowance(
             query.maker,
@@ -452,7 +452,7 @@ export const getExecuteBidV2Options: RouteOptions = {
             throw Boom.badRequest("Unsupported orderbook");
           }
 
-          // Make sure the fee information is correctly types.
+          // Make sure the fee information is correctly types
           if (query.fee && !Array.isArray(query.fee)) {
             query.fee = [query.fee];
           }
@@ -493,7 +493,7 @@ export const getExecuteBidV2Options: RouteOptions = {
             throw Boom.internal("Failed to generate order");
           }
 
-          // Check the maker's approval.
+          // Check the maker's approval
           let approvalTx: TxData | undefined;
           const wethApproval = await weth.getAllowance(
             query.maker,
