@@ -1729,12 +1729,26 @@ export const syncEvents = async (
 
               const amount = side === "sell" ? newLeftFill : newRightFill;
 
+              const orderKind = "rarible";
+
+              let taker = rightMaker;
+
+              // Handle attribution
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+
+              if (data.taker) {
+                taker = data.taker;
+              }
+
               fillEventsPartial.push({
                 orderKind: "rarible",
                 orderId: leftHash,
                 orderSide: side,
                 maker: leftMaker,
-                taker: rightMaker,
+                taker,
                 price,
                 contract,
                 tokenId,
