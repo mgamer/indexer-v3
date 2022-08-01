@@ -15,6 +15,8 @@ export const getNetworkName = () => {
       return "goerli";
     case 10:
       return "optimism";
+    case 136:
+      return "polygon";
     default:
       return "unknown";
   }
@@ -65,6 +67,17 @@ export const getNetworkSettings = (): NetworkSettings => {
     }
     // Optimism
     case 10: {
+      return {
+        ...defaultNetworkSettings,
+        enableWebSocket: false,
+        enableReorgCheck: false,
+        realtimeSyncFrequencySeconds: 10,
+        realtimeSyncMaxBlockLag: 128,
+        backfillBlockBatchSize: 512,
+      };
+    }
+    // Polygon
+    case 136: {
       return {
         ...defaultNetworkSettings,
         enableWebSocket: false,
