@@ -69,7 +69,7 @@ if (config.doBackgroundWork) {
 
       if (results.length >= limit) {
         const lastResult = results[results.length - 1];
-        await addToQueue(lastResult.number);
+        await addToQueue(lastResult.id);
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }
@@ -80,7 +80,7 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
+    .acquire([`${QUEUE_NAME}-lock-2`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       await addToQueue(HashZero);
     })
