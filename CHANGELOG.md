@@ -1,3 +1,46 @@
+# [5.138.0](https://github.com/reservoirprotocol/indexer/compare/v5.137.0...v5.138.0) (2022-08-01)
+
+
+### Features
+
+* get marketplaces ([c9612ab](https://github.com/reservoirprotocol/indexer/commit/c9612ab78858477e6a937e7c506216f7271142a4))
+
+
+
+# [5.137.0](https://github.com/reservoirprotocol/indexer/compare/v5.136.1...v5.137.0) (2022-08-01)
+
+
+### Bug Fixes
+
+* add default source and attribution ([eede652](https://github.com/reservoirprotocol/indexer/commit/eede65218f9756ad6b3c8d59199cd49a82bc6de8))
+* fixed build errors ([8d66c8a](https://github.com/reservoirprotocol/indexer/commit/8d66c8a4a91db562747c399d09e044a40dffbb49))
+
+
+### Features
+
+* first commit ([88a6464](https://github.com/reservoirprotocol/indexer/commit/88a64646edd0a27decf831ae980f97e0d3310734))
+
+
+
+## [5.136.1](https://github.com/reservoirprotocol/indexer/compare/v5.136.0...v5.136.1) (2022-08-01)
+
+
+### Performance Improvements
+
+* only put fillable orders on the queue ([b340454](https://github.com/reservoirprotocol/indexer/commit/b3404546a0a833f9ef25dc223cdc3b9bcf81863a))
+
+
+
+# [5.136.0](https://github.com/reservoirprotocol/indexer/compare/v5.135.0...v5.136.0) (2022-08-01)
+
+
+### Features
+
+* sort tokens/v4 by floor ask price ([f84933a](https://github.com/reservoirprotocol/indexer/commit/f84933a17b74e9b3213e34e81da7bb1d786741dd))
+* sort tokens/v4 by floor ask price ([2e9cd8c](https://github.com/reservoirprotocol/indexer/commit/2e9cd8c72baff9b65059b4fc3385ea70742bcca1))
+
+
+
 # [5.135.0](https://github.com/reservoirprotocol/indexer/compare/v5.134.1...v5.135.0) (2022-08-01)
 
 

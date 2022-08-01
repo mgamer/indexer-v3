@@ -6,6 +6,11 @@ export const getMarketplaces: RouteOptions = {
   timeout: {
     server: 10 * 1000,
   },
+  plugins: {
+    "hapi-swagger": {
+      order: 7,
+    },
+  },
   handler: async () => {
     return {
       marketplaces: [
