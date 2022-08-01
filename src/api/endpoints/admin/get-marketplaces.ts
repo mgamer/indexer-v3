@@ -1,5 +1,14 @@
 import { RouteOptions } from "@hapi/hapi";
 
+type Marketplace = {
+  name: string;
+  imageUrl: string;
+  feeBps: number;
+  orderbook: string | null;
+  orderKind: string | null;
+  listingEnabled: boolean;
+};
+
 export const getMarketplaces: RouteOptions = {
   description: "Get supported marketplaces",
   tags: ["api", "x-admin"],
@@ -12,49 +21,48 @@ export const getMarketplaces: RouteOptions = {
     },
   },
   handler: async () => {
-    return {
-      marketplaces: [
-        {
-          name: "Reservoir",
-          imgUrl: "https://api.reservoir.tools/redirect/sources/reservoir/logo/v2",
-          feeBps: 0,
-          orderbook: "reservoir",
-          orderKind: "seaport",
-          listingEnabled: true,
-        },
-        {
-          name: "OpenSea",
-          imageUrl: "https://api.reservoir.tools/redirect/sources/opensea/logo/v2",
-          feeBps: 0.025,
-          orderbook: "opensea",
-          orderKind: "seaport",
-          listingEnabled: true,
-        },
-        {
-          name: "LooksRare",
-          imageUrl: "https://api.reservoir.tools/redirect/sources/looksrare/logo/v2",
-          feeBps: 0.02,
-          orderbook: "looks-rare",
-          orderKind: "looks-rare",
-          listingEnabled: true,
-        },
-        {
-          name: "x2y2",
-          imageUrl: "https://api.reservoir.tools/redirect/sources/x2y2/logo/v2",
-          feeBps: 0.05,
-          orderBook: null,
-          orderKind: null,
-          listingEnabled: false,
-        },
-        {
-          name: "Foundation",
-          imageUrl: "https://api.reservoir.tools/redirect/sources/foundation/logo/v2",
-          feeBps: 0.05,
-          orderBook: null,
-          orderKind: null,
-          listingEnabled: false,
-        },
-      ],
-    };
+    const marketplaces: Marketplace[] = [
+      {
+        name: "Reservoir",
+        imageUrl: "https://api.reservoir.tools/redirect/sources/reservoir/logo/v2",
+        feeBps: 0,
+        orderbook: "reservoir",
+        orderKind: "seaport",
+        listingEnabled: true,
+      },
+      {
+        name: "OpenSea",
+        imageUrl: "https://api.reservoir.tools/redirect/sources/opensea/logo/v2",
+        feeBps: 0.025,
+        orderbook: "opensea",
+        orderKind: "seaport",
+        listingEnabled: true,
+      },
+      {
+        name: "LooksRare",
+        imageUrl: "https://api.reservoir.tools/redirect/sources/looksrare/logo/v2",
+        feeBps: 0.02,
+        orderbook: "looks-rare",
+        orderKind: "looks-rare",
+        listingEnabled: true,
+      },
+      {
+        name: "x2y2",
+        imageUrl: "https://api.reservoir.tools/redirect/sources/x2y2/logo/v2",
+        feeBps: 0.05,
+        orderbook: null,
+        orderKind: null,
+        listingEnabled: false,
+      },
+      {
+        name: "Foundation",
+        imageUrl: "https://api.reservoir.tools/redirect/sources/foundation/logo/v2",
+        feeBps: 0.05,
+        orderbook: null,
+        orderKind: null,
+        listingEnabled: false,
+      },
+    ];
+    return marketplaces;
   },
 };
