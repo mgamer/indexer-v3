@@ -53,6 +53,10 @@ export const postSimulateFloorV1Options: RouteOptions = {
         },
       });
 
+      if (response.payload.includes("No available orders")) {
+        return { message: "No orders to simulate" };
+      }
+
       // HACK: Extract the corresponding order id via regex
       // TODO: Once we switch to the v3 APIs we should get the order ids from the path
       const { groups } = /\?ids=(?<orderId>0x[0-9a-f]{64})/.exec(response.payload)!;
