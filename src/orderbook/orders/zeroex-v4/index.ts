@@ -393,7 +393,6 @@ export const save = async (
         "quantity_remaining",
         { name: "valid_between", mod: ":raw" },
         "nonce",
-        "source_id",
         "source_id_int",
         "is_reservoir",
         "contract",
