@@ -404,7 +404,7 @@ export const getTokensV4Options: RouteOptions = {
             image: r.collection_image,
             slug: r.slug,
           },
-          source: sources.get(r.floor_sell_source_id)?.name,
+          source: sources.get(r.floor_sell_source_id_int)?.name,
           floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
           topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
           rarity: r.rarity_score,

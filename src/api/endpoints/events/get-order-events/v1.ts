@@ -191,7 +191,7 @@ export const getOrderEventsV1Options: RouteOptions = {
           quantityRemaining: Number(r.order_quantity_remaining),
           validFrom: r.valid_from ? Number(r.valid_from) : null,
           validUntil: r.valid_until ? Number(r.valid_until) : null,
-          source: sources.get(r.order_source_id)?.name,
+          source: sources.get(r.order_source_id_int)?.name,
         },
         event: {
           id: r.id,
