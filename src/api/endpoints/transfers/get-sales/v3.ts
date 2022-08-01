@@ -1,20 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Request, RouteOptions } from "@hapi/hapi";
+import crypto from "crypto";
 import Joi from "joi";
+import _ from "lodash";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
-  base64Regex,
   buildContinuation,
   formatEth,
   fromBuffer,
+  regex,
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
-import crypto from "crypto";
 
 const version = "v3";
 
@@ -30,15 +31,15 @@ export const getSalesV3Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      contract: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .description(
-          "Filter to a particular contract. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
-        ),
+      contract: Joi.alternatives()
+        .try(
+          Joi.array().items(Joi.string().lowercase().pattern(regex.address)).max(20),
+          Joi.string().lowercase().pattern(regex.address)
+        )
+        .description("Array of contract. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"),
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+        .pattern(regex.token)
         .description(
           "Filter to a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
@@ -50,6 +51,12 @@ export const getSalesV3Options: RouteOptions = {
       attributes: Joi.object()
         .unknown()
         .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
+      txHash: Joi.string()
+        .lowercase()
+        .pattern(regex.bytes32)
+        .description(
+          "Filter to a particular transaction. Example: `0x04654cc4c81882ed4d20b958e0eeb107915d75730110cce65333221439de6afc`"
+        ),
       startTimestamp: Joi.number().description(
         "Get events after a particular unix timestamp (inclusive)"
       ),
@@ -63,10 +70,10 @@ export const getSalesV3Options: RouteOptions = {
         .default(20)
         .description("Amount of items returned in response."),
       continuation: Joi.string()
-        .pattern(base64Regex)
+        .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
     })
-      .oxor("contract", "token", "collection")
+      .oxor("contract", "token", "collection", "txHash")
       .with("attributes", "collection"),
   },
   response: {
@@ -74,11 +81,10 @@ export const getSalesV3Options: RouteOptions = {
       sales: Joi.array().items(
         Joi.object({
           id: Joi.string(),
+          saleId: Joi.string(),
           token: Joi.object({
-            contract: Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{40}$/),
-            tokenId: Joi.string().pattern(/^[0-9]+$/),
+            contract: Joi.string().lowercase().pattern(regex.address),
+            tokenId: Joi.string().pattern(regex.number),
             name: Joi.string().allow(null, ""),
             image: Joi.string().allow(null, ""),
             collection: Joi.object({
@@ -89,24 +95,18 @@ export const getSalesV3Options: RouteOptions = {
           orderSource: Joi.string().allow(null, ""),
           orderSide: Joi.string().valid("ask", "bid"),
           orderKind: Joi.string(),
-          from: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/),
-          to: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/),
+          from: Joi.string().lowercase().pattern(regex.address),
+          to: Joi.string().lowercase().pattern(regex.address),
           amount: Joi.string(),
           fillSource: Joi.string().allow(null),
-          txHash: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{64}$/),
+          txHash: Joi.string().lowercase().pattern(regex.bytes32),
           logIndex: Joi.number(),
           batchIndex: Joi.number(),
           timestamp: Joi.number(),
           price: Joi.number().unsafe().allow(null),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex).allow(null),
+      continuation: Joi.string().pattern(regex.base64).allow(null),
     }).label(`getSales${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-sales-${version}-handler`, `Wrong response schema: ${error}`);
@@ -123,8 +123,22 @@ export const getSalesV3Options: RouteOptions = {
 
     // Filters
     if (query.contract) {
-      (query as any).contract = toBuffer(query.contract);
-      tokenFilter = `fill_events_2.contract = $/contract/`;
+      if (!_.isArray(query.contract)) {
+        query.contract = [query.contract];
+      }
+
+      for (const contract of query.contract) {
+        const contractsFilter = `'${_.replace(contract, "0x", "\\x")}'`;
+
+        if (_.isUndefined((query as any).contractsFilter)) {
+          (query as any).contractsFilter = [];
+        }
+
+        (query as any).contractsFilter.push(contractsFilter);
+      }
+
+      (query as any).contractsFilter = _.join((query as any).contractsFilter, ",");
+      tokenFilter = `fill_events_2.contract IN ($/contractsFilter:raw/)`;
     } else if (query.token) {
       const [contract, tokenId] = query.token.split(":");
 
@@ -168,6 +182,9 @@ export const getSalesV3Options: RouteOptions = {
         (query as any).contract = toBuffer(query.collection);
         collectionFilter = `fill_events_2.contract = $/contract/`;
       }
+    } else if (query.txHash) {
+      (query as any).txHash = toBuffer(query.txHash);
+      collectionFilter = `fill_events_2.tx_hash = $/txHash/`;
     } else {
       collectionFilter = "TRUE";
     }
@@ -272,6 +289,12 @@ export const getSalesV3Options: RouteOptions = {
           id: crypto
             .createHash("sha256")
             .update(`${fromBuffer(r.tx_hash)}${r.log_index}${r.batch_index}`)
+            .digest("hex"),
+          saleId: crypto
+            .createHash("sha256")
+            .update(
+              `${fromBuffer(r.tx_hash)}${r.maker}${r.taker}${r.contract}${r.token_id}${r.price}`
+            )
             .digest("hex"),
           token: {
             contract: fromBuffer(r.contract),

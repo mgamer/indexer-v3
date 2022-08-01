@@ -10,6 +10,7 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { slowProvider } from "@/common/provider";
+import { regex } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 
@@ -29,11 +30,6 @@ import * as seaportCheck from "@/orderbook/orders/seaport/check";
 import * as zeroExV4SellToken from "@/orderbook/orders/zeroex-v4/build/sell/token";
 import * as zeroExV4Check from "@/orderbook/orders/zeroex-v4/check";
 
-// Wyvern v2.3
-import * as wyvernV23SellToken from "@/orderbook/orders/wyvern-v2.3/build/sell/token";
-import * as wyvernV23Utils from "@/orderbook/orders/wyvern-v2.3/utils";
-import * as wyvernV23Check from "@/orderbook/orders/wyvern-v2.3/check";
-
 const version = "v2";
 
 export const getExecuteListV2Options: RouteOptions = {
@@ -49,7 +45,7 @@ export const getExecuteListV2Options: RouteOptions = {
     query: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+        .pattern(regex.token)
         .required()
         .description(
           "Filter to a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
@@ -59,18 +55,18 @@ export const getExecuteListV2Options: RouteOptions = {
       ),
       maker: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .required()
         .description(
           "Address of wallet making the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
       weiPrice: Joi.string()
-        .pattern(/^\d+$/)
+        .pattern(regex.number)
         .required()
         .description("Amount seller is willing to sell for in wei. Example: `1000000000000000000`"),
       orderKind: Joi.string()
-        .valid("721ex", "looks-rare", "wyvern-v2.3", "zeroex-v4", "seaport")
-        .default("wyvern-v2.3")
+        .valid("721ex", "looks-rare", "zeroex-v4", "seaport")
+        .default("seaport")
         .description("Exchange protocol used to create order. Example: `seaport`"),
       orderbook: Joi.string()
         .valid("opensea", "looks-rare", "reservoir")
@@ -83,47 +79,40 @@ export const getExecuteListV2Options: RouteOptions = {
         .default(true)
         .description("If true, royalties will be automatically included."),
       fee: Joi.alternatives(
-        Joi.string().pattern(/^\d+$/),
+        Joi.string().pattern(regex.number),
         Joi.number(),
-        Joi.array().items(Joi.string().pattern(/^\d+$/)),
+        Joi.array().items(Joi.string().pattern(regex.number)),
         Joi.array().items(Joi.number()).description("Fee amount in BPS. Example: `100`")
       ),
       feeRecipient: Joi.alternatives(
-        Joi.string()
-          .lowercase()
-          .pattern(/^0x[a-fA-F0-9]{40}$/)
-          .disallow(AddressZero),
+        Joi.string().lowercase().pattern(regex.address).disallow(AddressZero),
         Joi.array()
-          .items(
-            Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{40}$/)
-              .disallow(AddressZero)
-          )
+          .items(Joi.string().lowercase().pattern(regex.address).disallow(AddressZero))
           .description(
             "Wallet address of fee recipient. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
           )
       ),
-      listingTime: Joi.alternatives(Joi.string().pattern(/^\d+$/), Joi.number()).description(
+      listingTime: Joi.alternatives(Joi.string().pattern(regex.number), Joi.number()).description(
         "Unix timestamp indicating when listing will be listed. Example: `1656080318`"
       ),
-      expirationTime: Joi.alternatives(Joi.string().pattern(/^\d+$/), Joi.number()).description(
-        "Unix timestamp indicating when listing will expire. Example: `1656080318`"
-      ),
+      expirationTime: Joi.alternatives(
+        Joi.string().pattern(regex.number),
+        Joi.number()
+      ).description("Unix timestamp indicating when listing will expire. Example: `1656080318`"),
       salt: Joi.string()
         .pattern(/^\d+$/)
         .description("Optional. Random string to make the order unique"),
-      nonce: Joi.string().pattern(/^\d+$/).description("Optional. Set a custom nonce"),
+      nonce: Joi.string().pattern(regex.number).description("Optional. Set a custom nonce"),
       v: Joi.number().description(
         "Signature v component (only required after order has been signed)"
       ),
       r: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{64}$/)
+        .pattern(regex.bytes32)
         .description("Signature r component (only required after order has been signed)"),
       s: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{64}$/)
+        .pattern(regex.bytes32)
         .description("Signature s component (only required after order has been signed)"),
     })
       .with("feeRecipient", "fee")
@@ -153,12 +142,12 @@ export const getExecuteListV2Options: RouteOptions = {
     try {
       const [contract, tokenId] = query.token.split(":");
 
-      // On Rinkeby, proxy ZeroEx V4 to 721ex.
+      // On Rinkeby, proxy ZeroEx V4 to 721ex
       if (query.orderKind === "zeroex-v4" && config.chainId === 4) {
         query.orderKind = "721ex";
       }
 
-      // Set up generic listing steps.
+      // Set up generic listing steps
       const steps = [
         {
           action: "Initialize wallet",
@@ -185,146 +174,13 @@ export const getExecuteListV2Options: RouteOptions = {
       ];
 
       switch (query.orderKind) {
-        case "wyvern-v2.3": {
-          // Exchange-specific checks.
-          if (!["reservoir", "opensea"].includes(query.orderbook)) {
-            throw Boom.badRequest("Unsupported orderbook");
-          }
-          if (query.automatedRoyalties && query.feeRecipient) {
-            throw Boom.badRequest("Exchange does not supported multiple fee recipients");
-          }
-          if (Array.isArray(query.fee) || Array.isArray(query.feeRecipient)) {
-            throw Boom.badRequest("Exchange does not support multiple fee recipients");
-          }
-
-          const order = await wyvernV23SellToken.build({
-            ...query,
-            contract,
-            tokenId,
-          });
-
-          // Make sure the order was successfully generated.
-          const orderInfo = order?.getInfo();
-          if (!order || !orderInfo) {
-            throw Boom.internal("Failed to generate order");
-          }
-
-          // Will be set if an approval is needed before listing.
-          let approvalTx: TxData | undefined;
-
-          // Check the order's fillability.
-          try {
-            await wyvernV23Check.offChainCheck(order, { onChainApprovalRecheck: true });
-          } catch (error: any) {
-            switch (error.message) {
-              case "no-balance-no-approval":
-              case "no-balance": {
-                // We cannot do anything if the user doesn't own the listed token.
-                throw Boom.badData("Maker does not own the listed token");
-              }
-
-              case "no-user-proxy": {
-                // Generate a proxy registration transaction.
-
-                const proxyRegistry = new Sdk.WyvernV23.Helpers.ProxyRegistry(
-                  slowProvider,
-                  config.chainId
-                );
-                const proxyRegistrationTx = proxyRegistry.registerProxyTransaction(query.maker);
-
-                return {
-                  steps: [
-                    {
-                      ...steps[0],
-                      status: "incomplete",
-                      data: proxyRegistrationTx,
-                    },
-                    {
-                      ...steps[1],
-                      status: "incomplete",
-                    },
-                    {
-                      ...steps[2],
-                      status: "incomplete",
-                    },
-                    {
-                      ...steps[3],
-                      status: "incomplete",
-                    },
-                  ],
-                };
-              }
-
-              case "no-approval": {
-                // Generate an approval transaction.
-                const userProxy = await wyvernV23Utils.getUserProxy(query.maker);
-                const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
-                approvalTx = (
-                  kind === "erc721"
-                    ? new Sdk.Common.Helpers.Erc721(slowProvider, orderInfo.contract)
-                    : new Sdk.Common.Helpers.Erc1155(slowProvider, orderInfo.contract)
-                ).approveTransaction(query.maker, userProxy!);
-              }
-            }
-          }
-
-          const hasSignature = query.v && query.r && query.s;
-          return {
-            steps: [
-              {
-                ...steps[0],
-                status: "complete",
-              },
-              {
-                ...steps[1],
-                status: !approvalTx ? "complete" : "incomplete",
-                data: !approvalTx ? undefined : approvalTx,
-              },
-              {
-                ...steps[2],
-                status: hasSignature ? "complete" : "incomplete",
-                data: hasSignature ? undefined : order.getSignatureData(),
-              },
-              {
-                ...steps[3],
-                status: "incomplete",
-                data: !hasSignature
-                  ? undefined
-                  : {
-                      endpoint: "/order/v2",
-                      method: "POST",
-                      body: {
-                        order: {
-                          kind: "wyvern-v2.3",
-                          data: {
-                            ...order.params,
-                            v: query.v,
-                            r: query.r,
-                            s: query.s,
-                          },
-                        },
-                        orderbook: query.orderbook,
-                        source: query.source,
-                      },
-                    },
-              },
-            ],
-            query: {
-              ...query,
-              listingTime: order.params.listingTime,
-              expirationTime: order.params.expirationTime,
-              salt: order.params.salt,
-            },
-          };
-        }
-
         case "721ex": {
-          // Exchange-specific checks.
+          // Exchange-specific checks
           if (!["reservoir"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
 
-          // Make sure the fee information is correctly types.
+          // Make sure the fee information is correctly types
           if (query.fee && !Array.isArray(query.fee)) {
             query.fee = [query.fee];
           }
@@ -344,22 +200,22 @@ export const getExecuteListV2Options: RouteOptions = {
             throw Boom.internal("Failed to generate order");
           }
 
-          // Will be set if an approval is needed before listing.
+          // Will be set if an approval is needed before listing
           let approvalTx: TxData | undefined;
 
-          // Check the order's fillability.
+          // Check the order's fillability
           try {
             await openDaoCheck.offChainCheck(order, { onChainApprovalRecheck: true });
           } catch (error: any) {
             switch (error.message) {
               case "no-balance-no-approval":
               case "no-balance": {
-                // We cannot do anything if the user doesn't own the listed token.
+                // We cannot do anything if the user doesn't own the listed token
                 throw Boom.badData("Maker does not own the listed token");
               }
 
               case "no-approval": {
-                // Generate an approval transaction.
+                // Generate an approval transaction
                 const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
                 approvalTx = (
                   kind === "erc721"
@@ -418,12 +274,12 @@ export const getExecuteListV2Options: RouteOptions = {
         }
 
         case "zeroex-v4": {
-          // Exchange-specific checks.
+          // Exchange-specific checks
           if (!["reservoir"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
 
-          // Make sure the fee information is correctly types.
+          // Make sure the fee information is correctly types
           if (query.fee && !Array.isArray(query.fee)) {
             query.fee = [query.fee];
           }
@@ -443,22 +299,22 @@ export const getExecuteListV2Options: RouteOptions = {
             throw Boom.internal("Failed to generate order");
           }
 
-          // Will be set if an approval is needed before listing.
+          // Will be set if an approval is needed before listing
           let approvalTx: TxData | undefined;
 
-          // Check the order's fillability.
+          // Check the order's fillability
           try {
             await zeroExV4Check.offChainCheck(order, { onChainApprovalRecheck: true });
           } catch (error: any) {
             switch (error.message) {
               case "no-balance-no-approval":
               case "no-balance": {
-                // We cannot do anything if the user doesn't own the listed token.
+                // We cannot do anything if the user doesn't own the listed token
                 throw Boom.badData("Maker does not own the listed token");
               }
 
               case "no-approval": {
-                // Generate an approval transaction.
+                // Generate an approval transaction
                 const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
                 approvalTx = (
                   kind === "erc721"
@@ -621,7 +477,7 @@ export const getExecuteListV2Options: RouteOptions = {
         }
 
         case "looks-rare": {
-          // Exchange-specific checks.
+          // Exchange-specific checks
           if (!["reservoir", "looks-rare"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
@@ -638,17 +494,17 @@ export const getExecuteListV2Options: RouteOptions = {
             throw Boom.internal("Failed to generate order");
           }
 
-          // Will be set if an approval is needed before listing.
+          // Will be set if an approval is needed before listing
           let approvalTx: TxData | undefined;
 
-          // Check the order's fillability.
+          // Check the order's fillability
           try {
             await looksRareCheck.offChainCheck(order, { onChainApprovalRecheck: true });
           } catch (error: any) {
             switch (error.message) {
               case "no-balance-no-approval":
               case "no-balance": {
-                // We cannot do anything if the user doesn't own the listed token.
+                // We cannot do anything if the user doesn't own the listed token
                 throw Boom.badData("Maker does not own the listed token");
               }
 
@@ -658,7 +514,7 @@ export const getExecuteListV2Options: RouteOptions = {
                   throw Boom.internal("Missing contract kind");
                 }
 
-                // Generate an approval transaction.
+                // Generate an approval transaction
                 approvalTx = (
                   contractKind === "erc721"
                     ? new Sdk.Common.Helpers.Erc721(slowProvider, order.params.collection)

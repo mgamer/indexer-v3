@@ -5,13 +5,7 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import {
-  base64Regex,
-  buildContinuation,
-  formatEth,
-  fromBuffer,
-  splitContinuation,
-} from "@/common/utils";
+import { buildContinuation, formatEth, fromBuffer, regex, splitContinuation } from "@/common/utils";
 import { Sources } from "@/models/sources";
 
 const version = "v1";
@@ -46,7 +40,7 @@ export const getCollectionsFloorAskV1Options: RouteOptions = {
         .default("desc")
         .description("Order the items are returned in the response."),
       continuation: Joi.string()
-        .pattern(base64Regex)
+        .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
       limit: Joi.number()
         .integer()
@@ -65,15 +59,9 @@ export const getCollectionsFloorAskV1Options: RouteOptions = {
           }),
           floorAsk: Joi.object({
             orderId: Joi.string().allow(null),
-            contract: Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{40}/)
-              .allow(null),
-            tokenId: Joi.string().pattern(/^\d+$/).allow(null),
-            maker: Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{40}/)
-              .allow(null),
+            contract: Joi.string().lowercase().pattern(regex.address).allow(null),
+            tokenId: Joi.string().pattern(regex.number).allow(null),
+            maker: Joi.string().lowercase().pattern(regex.address).allow(null),
             price: Joi.number().unsafe().allow(null),
             validUntil: Joi.number().unsafe().allow(null),
             source: Joi.string().allow(null, ""),
@@ -92,16 +80,13 @@ export const getCollectionsFloorAskV1Options: RouteOptions = {
               "reprice"
             ),
             previousPrice: Joi.number().unsafe().allow(null),
-            txHash: Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{64}/)
-              .allow(null),
+            txHash: Joi.string().lowercase().pattern(regex.bytes32).allow(null),
             txTimestamp: Joi.number().allow(null),
             createdAt: Joi.string(),
           }),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex).allow(null),
+      continuation: Joi.string().pattern(regex.base64).allow(null),
     }).label(`getCollectionsFloorAsk${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
@@ -127,7 +112,7 @@ export const getCollectionsFloorAskV1Options: RouteOptions = {
           collection_floor_sell_events.contract,
           collection_floor_sell_events.token_id,
           collection_floor_sell_events.order_id,
-          collection_floor_sell_events.order_source_id,
+          collection_floor_sell_events.order_source_id_int,
           collection_floor_sell_events.maker,
           collection_floor_sell_events.price,
           collection_floor_sell_events.previous_price,
@@ -199,9 +184,7 @@ export const getCollectionsFloorAskV1Options: RouteOptions = {
           maker: r.maker ? fromBuffer(r.maker) : null,
           price: r.price ? formatEth(r.price) : null,
           validUntil: r.price ? Number(r.valid_until) : null,
-          source: r.order_source_id
-            ? sources.getByAddress(fromBuffer(r.order_source_id))?.name
-            : null,
+          source: sources.get(r.order_source_id_int)?.name,
         },
         event: {
           id: r.id,

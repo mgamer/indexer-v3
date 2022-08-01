@@ -4,16 +4,16 @@ import { AddressZero, HashZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
 import _ from "lodash";
+import pLimit from "p-limit";
 
 import { logger } from "@/common/logger";
-import { idb, redb } from "@/common/db";
+import { idb, pgp, redb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
-import { bn, toBuffer } from "@/common/utils";
+import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { EventDataKind, getEventData } from "@/events-sync/data";
 import * as es from "@/events-sync/storage";
 import { parseEvent } from "@/events-sync/parser";
-import * as syncEventsUtils from "@/events-sync/utils";
 import * as blockCheck from "@/jobs/events-sync/block-check-queue";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
@@ -25,9 +25,10 @@ import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsync
 import * as blocksModel from "@/models/blocks";
 import { OrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
-import { Sources } from "@/models/sources";
+import * as syncEventsUtils from "@/events-sync/utils";
+import { getNetworkSettings } from "@/config/network";
 
-// TODO: Split into multiple files (by exchange).
+// TODO: Split into multiple files (by exchange)
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
 // processing (this will make things so much more flexible). However
 // for backfill procesing, we should still use bulk operations so as
@@ -42,55 +43,12 @@ export const syncEvents = async (
     eventDataKinds?: EventDataKind[];
   }
 ) => {
-  // --- Handle: synchronous timestamps of events ---
+  // --- Handle: fetch and process events ---
 
-  // Fetch the timestamps of the blocks at each side of the range in
-  // order to be able to estimate the timestamp of each block within
-  // the range (to avoid any further `eth_getBlockByNumber` calls).
-  const [fromBlockTimestamp, toBlockTimestamp] = await Promise.all([
-    baseProvider.getBlock(fromBlock),
-    baseProvider.getBlock(toBlock),
-  ]).then((blocks) => [blocks[0].timestamp, blocks[1].timestamp]);
-
-  const blockRange = {
-    from: {
-      block: fromBlock,
-      timestamp: fromBlockTimestamp,
-    },
-    to: {
-      block: toBlock,
-      timestamp: toBlockTimestamp,
-    },
-  };
-
-  // --- Handle: known router contract fills ---
-
-  // Fills going through router contracts are to be handled in a
-  // custom way so as to properly associate the maker and taker.
-  const routerToFillSource: { [address: string]: string } = {};
-
-  // TODO: Move router detection logic to the core SDK
-
-  // Reservoir
-  if (Sdk.Router.Addresses.AllRouters[config.chainId]) {
-    for (const address of Sdk.Router.Addresses.AllRouters[config.chainId]) {
-      routerToFillSource[address.toLowerCase()] = "reservoir";
-    }
-  }
-
-  // Gem and Genie (source: https://dune.com/sohwak/NFT-Aggregator-(OpenSea-via-GemGenie)-Overview)
-  if (config.chainId === 1) {
-    routerToFillSource["0x0000000031f7382a812c64b604da4fc520afef4b"] = "gem";
-    routerToFillSource["0xf24629fbb477e10f2cf331c2b7452d8596b5c7a5"] = "gem";
-    routerToFillSource["0x83c8f28c26bf6aaca652df1dbbe0e1b56f8baba2"] = "gem";
-    routerToFillSource["0x0000000035634b55f3d99b071b5a354f48e10bef"] = "gem";
-    routerToFillSource["0x00000000a50bb64b4bbeceb18715748dface08af"] = "gem";
-    routerToFillSource["0x0a267cf51ef038fc00e71801f5a524aec06e4f07"] = "genie";
-    routerToFillSource["0x2af4b707e1dce8fc345f38cfeeaa2421e54976d5"] = "genie";
-  }
-
-  // Keep track of all handled blocks
-  const blockHashToNumber: { [hash: string]: number } = {};
+  // Cache blocks for efficiency
+  const blocksCache = new Map<number, blocksModel.Block>();
+  // Keep track of all handled `${block}-${blockHash}` pairs
+  const blocksSet = new Set<string>();
 
   // Keep track of data needed by other processes that will get triggered
   const fillInfos: fillUpdates.FillInfo[] = [];
@@ -98,7 +56,13 @@ export const syncEvents = async (
   const makerInfos: orderUpdatesByMaker.MakerInfo[] = [];
   const mintInfos: tokenUpdatesMint.MintInfo[] = [];
 
-  // --- Handle: fetch and process events ---
+  // Before proceeding, fetch all individual blocks within the current range
+  const limit = pLimit(5);
+  await Promise.all(
+    _.range(fromBlock, toBlock + 1).map((block) =>
+      limit(() => baseProvider.getBlockWithTransactions(block))
+    )
+  );
 
   // When backfilling, certain processes are disabled
   const backfill = Boolean(options?.backfill);
@@ -106,7 +70,7 @@ export const syncEvents = async (
   await baseProvider
     .getLogs({
       // Only keep unique topics (eg. an example of duplicated topics are
-      // erc721 and erc20 transfers which have the exact same signature).
+      // erc721 and erc20 transfers which have the exact same signature)
       topics: [[...new Set(eventDatas.map(({ topic }) => topic))]],
       fromBlock,
       toBlock,
@@ -148,7 +112,21 @@ export const syncEvents = async (
 
       for (const log of logs) {
         try {
-          const baseEventParams = parseEvent(log, blockRange);
+          const baseEventParams = await parseEvent(log, blocksCache);
+          blocksSet.add(`${log.blockNumber}-${log.blockHash}`);
+
+          // It's quite important from a performance perspective to have
+          // the block data available before proceeding with the events
+          if (!blocksCache.has(baseEventParams.block)) {
+            blocksCache.set(
+              baseEventParams.block,
+              await blocksModel.saveBlock({
+                number: baseEventParams.block,
+                hash: baseEventParams.blockHash,
+                timestamp: baseEventParams.timestamp,
+              })
+            );
+          }
 
           // Save the event in the currently processing transaction data
           if (currentTx !== baseEventParams.txHash) {
@@ -160,11 +138,6 @@ export const syncEvents = async (
             address: baseEventParams.address,
             logIndex: baseEventParams.logIndex,
           });
-
-          // Save the block
-          if (!options?.backfill) {
-            blockHashToNumber[baseEventParams.blockHash] = baseEventParams.block;
-          }
 
           // Find first matching event:
           // - matching topic
@@ -594,20 +567,22 @@ export const syncEvents = async (
               // 2 - COMPLETE_BUY_OFFER
               // 5 - COMPLETE_AUCTION
               if (![1, 2, 5].includes(op)) {
-                // Skip any irrelevant events.
+                // Skip any irrelevant events
                 break;
               }
 
-              // Handle filling through routers
-              let fillSource: string | undefined;
-              if (routerToFillSource[taker]) {
-                fillSource = routerToFillSource[taker];
-                taker = await syncEventsUtils
-                  .fetchTransaction(baseEventParams.txHash)
-                  .then((tx) => tx.from);
+              const orderKind = "x2y2";
+
+              // Handle attribution
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
               }
 
-              // Decode the sold token (ignoring bundles).
+              // Decode the sold token (ignoring bundles)
               let contract: string;
               let tokenId: string;
               try {
@@ -625,16 +600,15 @@ export const syncEvents = async (
                 break;
               }
 
-              const orderKind = "x2y2";
               const orderSide = [1, 5].includes(op) ? "sell" : "buy";
               const price = item.price.toString();
-              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
               fillEvents.push({
                 orderKind,
                 orderId,
                 orderSide,
-                orderSourceIdInt,
+                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price,
@@ -642,7 +616,8 @@ export const syncEvents = async (
                 tokenId,
                 // X2Y2 only supports ERC721 for now
                 amount: "1",
-                fillSource,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -723,26 +698,27 @@ export const syncEvents = async (
 
               const orderId = keccak256(["address", "uint256"], [contract, tokenId]);
 
-              // Handle filling through routers
-              let fillSource: string | undefined;
-              if (routerToFillSource[taker]) {
-                fillSource = routerToFillSource[taker];
-                taker = await syncEventsUtils
-                  .fetchTransaction(baseEventParams.txHash)
-                  .then((tx) => tx.from);
+              const orderKind = "foundation";
+
+              // Handle attribution
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
               }
 
-              const orderKind = "foundation";
               // Deduce the price from the protocol fee (which is 5%)
               const price = bn(protocolFee).mul(10000).div(50).toString();
-              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
               // Custom handling to support on-chain orderbook quirks.
               fillEventsFoundation.push({
                 orderKind,
                 orderId,
                 orderSide: "sell",
-                orderSourceIdInt,
+                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price,
@@ -750,7 +726,8 @@ export const syncEvents = async (
                 tokenId,
                 // Foundation only supports erc721 for now
                 amount: "1",
-                fillSource,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -863,30 +840,32 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle filling through routers
-              let fillSource: string | undefined;
-              if (routerToFillSource[taker]) {
-                fillSource = routerToFillSource[taker];
-                taker = await syncEventsUtils
-                  .fetchTransaction(baseEventParams.txHash)
-                  .then((tx) => tx.from);
+              const orderKind = "looks-rare";
+
+              // Handle attribution
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
               }
 
-              const orderKind = "looks-rare";
-              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
               fillEvents.push({
                 orderKind,
                 orderId,
                 orderSide: "buy",
-                orderSourceIdInt,
+                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price,
                 contract,
                 tokenId,
                 amount,
-                fillSource,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -956,30 +935,32 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle filling through routers
-              let fillSource: string | undefined;
-              if (routerToFillSource[taker]) {
-                fillSource = routerToFillSource[taker];
-                taker = await syncEventsUtils
-                  .fetchTransaction(baseEventParams.txHash)
-                  .then((tx) => tx.from);
+              const orderKind = "looks-rare";
+
+              // Handle attribution
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
               }
 
-              const orderKind = "looks-rare";
-              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
               fillEvents.push({
                 orderKind,
                 orderId,
                 orderSide: "sell",
-                orderSourceIdInt,
+                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price,
                 contract,
                 tokenId,
                 amount,
-                fillSource,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -1034,9 +1015,9 @@ export const syncEvents = async (
 
             // WyvernV2/WyvernV2.3
 
-            // Wyvern V2 is now decomissioned, but we still keep handling
-            // its fill event in order to get access to historical sales.
-            // This is only relevant when backfilling though.
+            // Wyvern V2 and V2.3 are both decomissioned, but we still keep handling
+            // fill event from them in order to get access to historical sales. This
+            // is only relevant when backfilling though.
 
             case "wyvern-v2-orders-matched":
             case "wyvern-v2.3-orders-matched": {
@@ -1119,20 +1100,20 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle filling through routers
-              let fillSource: string | undefined;
-              if (routerToFillSource[taker]) {
-                fillSource = routerToFillSource[taker];
-                taker = await syncEventsUtils
-                  .fetchTransaction(baseEventParams.txHash)
-                  .then((tx) => tx.from);
-              }
-
               const orderKind = eventData.kind.startsWith("wyvern-v2.3")
                 ? "wyvern-v2.3"
                 : "wyvern-v2";
 
-              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+              // Handle attribution
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
+              }
+
+              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
               let batchIndex = 1;
               if (buyOrderId !== HashZero) {
@@ -1140,139 +1121,41 @@ export const syncEvents = async (
                   orderKind,
                   orderId: buyOrderId,
                   orderSide: "buy",
-                  orderSourceIdInt,
+                  orderSourceIdInt: orderSource?.id,
                   maker,
                   taker,
                   price,
                   contract: associatedNftTransferEvent.baseEventParams.address,
                   tokenId: associatedNftTransferEvent.tokenId,
                   amount: associatedNftTransferEvent.amount,
-                  fillSource,
+                  aggregatorSourceId: data.aggregatorSource?.id,
+                  fillSourceId: data.fillSource?.id,
                   baseEventParams: {
                     ...baseEventParams,
                     batchIndex: batchIndex++,
                   },
                 });
-
-                orderInfos.push({
-                  context: `filled-${buyOrderId}`,
-                  id: buyOrderId,
-                  trigger: {
-                    kind: "sale",
-                    txHash: baseEventParams.txHash,
-                    txTimestamp: baseEventParams.timestamp,
-                  },
-                });
-
-                fillInfos.push({
-                  context: buyOrderId,
-                  orderId: buyOrderId,
-                  orderSide: "buy",
-                  contract: associatedNftTransferEvent.baseEventParams.address,
-                  tokenId: associatedNftTransferEvent.tokenId,
-                  amount: associatedNftTransferEvent.amount,
-                  price,
-                  timestamp: baseEventParams.timestamp,
-                });
-
-                if (currentTxHasWethTransfer()) {
-                  makerInfos.push({
-                    context: `${baseEventParams.txHash}-buy-approval`,
-                    maker,
-                    trigger: {
-                      kind: "approval-change",
-                      txHash: baseEventParams.txHash,
-                      txTimestamp: baseEventParams.timestamp,
-                    },
-                    data: {
-                      kind: "buy-approval",
-                      contract: Sdk.Common.Addresses.Weth[config.chainId],
-                      orderKind,
-                    },
-                  });
-                }
               }
               if (sellOrderId !== HashZero) {
                 fillEvents.push({
                   orderKind,
                   orderId: sellOrderId,
                   orderSide: "sell",
-                  orderSourceIdInt,
+                  orderSourceIdInt: orderSource?.id,
                   maker,
                   taker,
                   price,
                   contract: associatedNftTransferEvent.baseEventParams.address,
                   tokenId: associatedNftTransferEvent.tokenId,
                   amount: associatedNftTransferEvent.amount,
-                  fillSource,
+                  aggregatorSourceId: data.aggregatorSource?.id,
+                  fillSourceId: data.fillSource?.id,
                   baseEventParams: {
                     ...baseEventParams,
                     batchIndex: batchIndex++,
                   },
                 });
-
-                orderInfos.push({
-                  context: `filled-${sellOrderId}`,
-                  id: sellOrderId,
-                  trigger: {
-                    kind: "sale",
-                    txHash: baseEventParams.txHash,
-                    txTimestamp: baseEventParams.timestamp,
-                  },
-                });
-
-                fillInfos.push({
-                  context: sellOrderId,
-                  orderId: sellOrderId,
-                  orderSide: "sell",
-                  contract: associatedNftTransferEvent.baseEventParams.address,
-                  tokenId: associatedNftTransferEvent.tokenId,
-                  amount: associatedNftTransferEvent.amount,
-                  price,
-                  timestamp: baseEventParams.timestamp,
-                });
               }
-
-              break;
-            }
-
-            case "wyvern-v2.3-order-cancelled": {
-              const parsedLog = eventData.abi.parseLog(log);
-              const orderId = parsedLog.args["hash"].toLowerCase();
-
-              cancelEvents.push({
-                orderKind: "wyvern-v2.3",
-                orderId,
-                baseEventParams,
-              });
-
-              orderInfos.push({
-                context: `cancelled-${orderId}`,
-                id: orderId,
-                trigger: {
-                  kind: "cancel",
-                  txHash: baseEventParams.txHash,
-                  txTimestamp: baseEventParams.timestamp,
-                  logIndex: baseEventParams.logIndex,
-                  batchIndex: baseEventParams.batchIndex,
-                  blockHash: baseEventParams.blockHash,
-                },
-              });
-
-              break;
-            }
-
-            case "wyvern-v2.3-nonce-incremented": {
-              const parsedLog = eventData.abi.parseLog(log);
-              const maker = parsedLog.args["maker"].toLowerCase();
-              const newNonce = parsedLog.args["newNonce"].toString();
-
-              bulkCancelEvents.push({
-                orderKind: "wyvern-v2.3",
-                maker,
-                minNonce: newNonce,
-                baseEventParams,
-              });
 
               break;
             }
@@ -1320,18 +1203,19 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle filling through routers
-              let fillSource: string | undefined;
-              if (routerToFillSource[taker]) {
-                fillSource = routerToFillSource[taker];
-                taker = await syncEventsUtils
-                  .fetchTransaction(baseEventParams.txHash)
-                  .then((tx) => tx.from);
+              const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
+
+              // Handle attribution
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
               }
 
-              const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
               const orderSide = direction === 0 ? "sell" : "buy";
-              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
               let orderId: string | undefined;
               if (!backfill) {
@@ -1339,8 +1223,7 @@ export const syncEvents = async (
                 // (it only includes the nonce, but we can potentially have multiple
                 // different orders sharing the same nonce off-chain), we attempt to
                 // detect the order id which got filled by checking the database for
-                // orders which have the exact nonce/value/token-set combination (it
-                // doesn't cover all cases, but it's good enough for now).
+                // orders which have the exact nonce/contract/price combination.
                 await idb
                   .oneOrNone(
                     `
@@ -1352,12 +1235,14 @@ export const syncEvents = async (
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
                         AND orders.contract = $/contract/
+                        AND (orders.raw_data ->> 'erc20TokenAmount')::NUMERIC = $/price/
                       LIMIT 1
                     `,
                     {
                       maker: toBuffer(maker),
                       nonce,
                       contract: toBuffer(erc721Token),
+                      price: erc20TokenAmount,
                     }
                   )
                   .then((result) => {
@@ -1373,14 +1258,15 @@ export const syncEvents = async (
                 orderKind,
                 orderId,
                 orderSide,
-                orderSourceIdInt,
+                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: erc20TokenAmount,
                 contract: erc721Token,
                 tokenId: erc721TokenId,
                 amount: "1",
-                fillSource,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -1459,22 +1345,26 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle filling through routers
-              let fillSource: string | undefined;
-              if (routerToFillSource[taker]) {
-                fillSource = routerToFillSource[taker];
-                taker = await syncEventsUtils
-                  .fetchTransaction(baseEventParams.txHash)
-                  .then((tx) => tx.from);
+              const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
+
+              // Handle attribution
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
               }
 
-              const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
-              const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
               const value = bn(erc20FillAmount).div(erc1155FillAmount).toString();
 
               let orderId: string | undefined;
               if (!backfill) {
-                // For erc1155 orders we only allow unique maker/nonce orders.
+                // For erc1155 orders we only allow unique nonce/contract/price. Since erc1155
+                // orders are partially fillable, we have to detect the price of an individual
+                // item from the fill amount, which might result in imprecise results. However
+                // at the moment, we can live with it.
                 await idb
                   .oneOrNone(
                     `
@@ -1485,12 +1375,15 @@ export const syncEvents = async (
                       WHERE orders.kind = '${orderKind}'
                         AND orders.maker = $/maker/
                         AND orders.nonce = $/nonce/
-                        AND orders.contract IS NOT NULL
+                        AND orders.contract = $/contract/
+                        AND (orders.raw_data ->> 'erc20TokenAmount')::NUMERIC / (orders.raw_data ->> 'nftAmount')::NUMERIC = $/price/
                       LIMIT 1
                     `,
                     {
                       maker: toBuffer(maker),
                       nonce,
+                      contract: toBuffer(erc1155Token),
+                      price: bn(erc20FillAmount).div(erc1155FillAmount).toString(),
                     }
                   )
                   .then((result) => {
@@ -1507,14 +1400,15 @@ export const syncEvents = async (
                 orderKind,
                 orderId,
                 orderSide: direction === 0 ? "sell" : "buy",
-                orderSourceIdInt,
+                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: erc20FillAmount,
                 contract: erc1155Token,
                 tokenId: erc1155TokenId,
                 amount: erc1155FillAmount,
-                fillSource,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -1628,33 +1522,35 @@ export const syncEvents = async (
                   taker = saleInfo.recipientOverride;
                 }
 
-                // Handle filling through routers
-                let fillSource: string | undefined;
-                if (routerToFillSource[taker]) {
-                  fillSource = routerToFillSource[taker];
-                  taker = await syncEventsUtils
-                    .fetchTransaction(baseEventParams.txHash)
-                    .then((tx) => tx.from);
+                const orderKind = "seaport";
+
+                // Handle attribution
+                const data = await syncEventsUtils.extractAttributionData(
+                  baseEventParams.txHash,
+                  orderKind
+                );
+                if (data.taker) {
+                  taker = data.taker;
                 }
 
                 const price = bn(saleInfo.price).div(saleInfo.amount).toString();
 
-                const orderKind = "seaport";
-                const orderSourceIdInt = await getOrderSourceByOrderKind(orderKind);
+                const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
                 // Custom handling to support partial filling
                 fillEventsPartial.push({
                   orderKind,
                   orderId,
                   orderSide: side,
-                  orderSourceIdInt,
+                  orderSourceIdInt: orderSource?.id,
                   maker,
                   taker,
                   price,
                   contract: saleInfo.contract,
                   tokenId: saleInfo.tokenId,
                   amount: saleInfo.amount,
-                  fillSource,
+                  aggregatorSourceId: data.aggregatorSource?.id,
+                  fillSourceId: data.fillSource?.id,
                   baseEventParams,
                 });
 
@@ -1696,6 +1592,14 @@ export const syncEvents = async (
           assignOrderSourceToFillEvents(fillEventsPartial),
           assignOrderSourceToFillEvents(fillEventsFoundation),
         ]);
+
+        await Promise.all([
+          assignWashTradingScoreToFillEvents(fillEvents),
+          assignWashTradingScoreToFillEvents(fillEventsPartial),
+          assignWashTradingScoreToFillEvents(fillEventsFoundation),
+        ]);
+      } else {
+        logger.warn("sync-events", `Skipping assigning orders source assigned to fill events`);
       }
 
       // WARNING! Ordering matters (fills should come in front of cancels).
@@ -1732,15 +1636,17 @@ export const syncEvents = async (
       }
 
       // --- Handle: orphan blocks ---
-      if (!backfill) {
-        for (const [hash, number] of Object.entries(blockHashToNumber)) {
-          // Persist the block
-          await blocksModel.saveBlock({ hash, number });
+
+      const networkSettings = getNetworkSettings();
+      if (!backfill && networkSettings.enableReorgCheck) {
+        for (const blockData of blocksSet.values()) {
+          const block = Number(blockData.split("-")[0]);
+          const blockHash = blockData.split("-")[1];
 
           // Act right away if the current block is a duplicate
-          if ((await blocksModel.getBlocks(number)).length > 1) {
-            blockCheck.addToQueue(number, 10 * 1000);
-            blockCheck.addToQueue(number, 30 * 1000);
+          if ((await blocksModel.getBlocks(block)).length > 1) {
+            blockCheck.addToQueue(block, blockHash, 10);
+            blockCheck.addToQueue(block, blockHash, 30);
           }
         }
 
@@ -1748,14 +1654,18 @@ export const syncEvents = async (
         // (recheck each block in 1m, 5m, 10m and 60m).
         // TODO: The check frequency should be a per-chain setting
         await Promise.all(
-          Object.entries(blockHashToNumber).map(async ([, block]) =>
-            Promise.all([
-              blockCheck.addToQueue(block, 60 * 1000),
-              blockCheck.addToQueue(block, 5 * 60 * 1000),
-              blockCheck.addToQueue(block, 10 * 60 * 1000),
-              blockCheck.addToQueue(block, 60 * 60 * 1000),
-            ])
-          )
+          [...blocksSet.values()].map(async (blockData) => {
+            const block = Number(blockData.split("-")[0]);
+            const blockHash = blockData.split("-")[1];
+
+            return Promise.all([
+              blockCheck.addToQueue(block, blockHash, 60),
+              blockCheck.addToQueue(block, blockHash, 5 * 60),
+              blockCheck.addToQueue(block, blockHash, 10 * 60),
+              blockCheck.addToQueue(block, blockHash, 30 * 60),
+              blockCheck.addToQueue(block, blockHash, 60 * 60),
+            ]);
+          })
         );
       }
 
@@ -1850,78 +1760,101 @@ export const unsyncEvents = async (block: number, blockHash: string) => {
 const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
   try {
     const orderIds = fillEvents.filter((e) => e.orderId !== undefined).map((e) => e.orderId);
-
     if (orderIds.length) {
       const orders = [];
+      const orderIdChunks = _.chunk(orderIds, 100);
 
-      const orderIdsChunks = _.chunk(orderIds, 100);
-
-      for (const orderIdsChunk of orderIdsChunks) {
+      for (const chunk of orderIdChunks) {
         const ordersChunk = await redb.manyOrNone(
           `
-            SELECT id, source_id_int from orders
-            WHERE id IN ($/orderIds/)
-            AND source_id_int IS NOT NULL
+            SELECT
+              orders.id,
+              orders.source_id_int
+            FROM orders
+            WHERE id IN ($/orderIds:list/)
+              AND source_id_int IS NOT NULL
           `,
-          {
-            orderIds: orderIdsChunk.join(","),
-          }
+          { orderIds: chunk }
         );
-
         orders.push(...ordersChunk);
       }
 
       if (orders.length) {
         const orderSourceIdByOrderId = new Map<string, number>();
-
         for (const order of orders) {
           orderSourceIdByOrderId.set(order.id, order.source_id_int);
         }
 
-        fillEvents.forEach((event, index) => {
-          if (event.orderId == undefined) return;
+        fillEvents.forEach((event) => {
+          if (event.orderId == undefined) {
+            return;
+          }
 
           const orderSourceId = orderSourceIdByOrderId.get(event.orderId!);
 
-          // If the order source id exists on the order, use it in the fill event.
+          // If the source id exists on the order, use it as the default in the fill event
           if (orderSourceId) {
             logger.info(
               "sync-events",
-              `Orders source assigned to fill event: ${JSON.stringify(
-                event
-              )}, orderSourceId: ${orderSourceId}`
+              `Default source '${orderSourceId}' assigned to fill event: ${JSON.stringify(event)}`
             );
 
-            fillEvents[index].orderSourceIdInt = orderSourceId;
+            event.orderSourceIdInt = orderSourceId;
+            if (!event.aggregatorSourceId && !event.fillSourceId) {
+              event.fillSourceId = orderSourceId;
+            }
           }
         });
       }
     }
-  } catch (e) {
-    logger.error("sync-events", `Failed to assign order source id to fill events: ${e}`);
+  } catch (error) {
+    logger.error("sync-events", `Failed to assign default sources to fill events: ${error}`);
   }
 };
 
-const getOrderSourceByOrderKind = async (orderKind: string) => {
+const assignWashTradingScoreToFillEvents = async (fillEvents: es.fills.Event[]) => {
   try {
-    const sources = await Sources.getInstance();
+    const inverseFillEvents: { contract: Buffer; maker: Buffer; taker: Buffer }[] = [];
 
-    switch (orderKind) {
-      case "x2y2":
-        return sources.getByName("X2Y2").id;
-      case "foundation":
-        return sources.getByName("Foundation").id;
-      case "looks-rare":
-        return sources.getByName("LooksRare").id;
-      case "seaport":
-      case "wyvern-v2":
-      case "wyvern-v2.3":
-        return sources.getByName("OpenSea").id;
-      default:
-        return null; // For all others, we can't assume where the order originated from.
+    const fillEventsChunks = _.chunk(fillEvents, 100);
+
+    for (const fillEventsChunk of fillEventsChunks) {
+      const inverseFillEventsFilter = fillEventsChunk.map(
+        (fillEvent) =>
+          `('${_.replace(fillEvent.taker, "0x", "\\x")}', '${_.replace(
+            fillEvent.maker,
+            "0x",
+            "\\x"
+          )}', '${_.replace(fillEvent.contract, "0x", "\\x")}')`
+      );
+
+      const inverseFillEventsChunkQuery = pgp.as.format(
+        `
+            SELECT DISTINCT contract, maker, taker from fill_events_2
+            WHERE (maker, taker, contract) IN ($/inverseFillEventsFilter:raw/)
+          `,
+        {
+          inverseFillEventsFilter: inverseFillEventsFilter.join(","),
+        }
+      );
+
+      const inverseFillEventsChunk = await redb.manyOrNone(inverseFillEventsChunkQuery);
+
+      inverseFillEvents.push(...inverseFillEventsChunk);
     }
+
+    fillEvents.forEach((event, index) => {
+      const washTradingDetected = inverseFillEvents.some((inverseFillEvent) => {
+        return (
+          event.maker == fromBuffer(inverseFillEvent.taker) &&
+          event.taker == fromBuffer(inverseFillEvent.maker) &&
+          event.contract == fromBuffer(inverseFillEvent.contract)
+        );
+      });
+
+      fillEvents[index].washTradingScore = Number(washTradingDetected);
+    });
   } catch (e) {
-    logger.error("sync-events", `Failed to get order source by order kind: ${e}`);
-    return null;
+    logger.error("sync-events", `Failed to assign wash trading score to fill events: ${e}`);
   }
 };

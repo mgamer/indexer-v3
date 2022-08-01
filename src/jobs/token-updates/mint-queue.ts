@@ -113,7 +113,9 @@ if (config.doBackgroundWork) {
           }
         } else {
           // Otherwise, we fetch the collection metadata from upstream.
-          const collection = await MetadataApi.getCollectionMetadata(contract, tokenId);
+          const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, {
+            allowFallback: true,
+          });
 
           const tokenIdRange = collection.tokenIdRange
             ? `numrange(${collection.tokenIdRange[0]}, ${collection.tokenIdRange[1]}, '[]')`
@@ -187,7 +189,7 @@ if (config.doBackgroundWork) {
           await idb.none(pgp.helpers.concat(queries));
         }
 
-        if (collection?.id) {
+        if (collection?.id && !config.disableRealtimeMetadataRefresh) {
           await metadataIndexFetch.addToQueue(
             [
               {
@@ -200,7 +202,10 @@ if (config.doBackgroundWork) {
                 },
               },
             ],
-            true
+            true,
+            // One minute of delay to increase the chances of metadata being
+            // available on the upstream provider by the time we fetch it
+            60
           );
         }
 

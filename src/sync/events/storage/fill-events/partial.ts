@@ -26,7 +26,9 @@ export const addEventsPartial = async (events: Event[]) => {
       contract: toBuffer(event.contract),
       token_id: event.tokenId,
       amount: event.amount,
-      fill_source: event.fillSource || null,
+      aggregator_source_id: event.aggregatorSourceId || null,
+      fill_source_id: event.fillSourceId || null,
+      wash_trading_score: event.washTradingScore || 0,
     });
   }
 
@@ -51,7 +53,9 @@ export const addEventsPartial = async (events: Event[]) => {
         "contract",
         "token_id",
         "amount",
-        "fill_source",
+        "aggregator_source_id",
+        "fill_source_id",
+        "wash_trading_score",
       ],
       { table: "fill_events_2" }
     );
@@ -78,7 +82,9 @@ export const addEventsPartial = async (events: Event[]) => {
           contract,
           token_id,
           amount,
-          fill_source
+          aggregator_source_id,
+          fill_source_id,
+          wash_trading_score
         ) VALUES ${pgp.helpers.values(fillValues, columns)}
         ON CONFLICT DO NOTHING
         RETURNING

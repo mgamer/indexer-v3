@@ -5,7 +5,7 @@ import * as v001 from "@/arweave-sync/common/v001";
 import { arweaveGateway } from "@/common/provider";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { getNetworkName } from "@/common/utils";
+import { getNetworkName } from "@/config/network";
 
 type Transaction = {
   version: string;

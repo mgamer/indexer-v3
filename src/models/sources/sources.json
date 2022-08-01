@@ -1,5 +1,6 @@
 {
   "1": {
+    "domain": "opensea.io",
     "name": "OpenSea",
     "address": "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073",
     "data": {
@@ -9,6 +10,7 @@
     }
   },
   "2": {
+    "domain": "forgotten.market",
     "name": "Forgotten Market",
     "address": "0xfdfda3d504b1431ea0fd70084b1bfa39fa99dcc4",
     "data": {
@@ -18,6 +20,7 @@
     }
   },
   "3": {
+    "domain": "looksrare.org",
     "name": "LooksRare",
     "address": "0x5924a28caaf1cc016617874a2f0c3710d881f3c1",
     "data": {
@@ -26,16 +29,8 @@
       "tokenUrlRinkeby": "https://rinkeby.looksrare.org/collections/${contract}/${tokenId}"
     }
   },
-  "4": {
-    "name": "PleaseBePatientWithMe",
-    "address": "0x7aee8b2d275266c95494d420eef4e73d77036882",
-    "data": {
-      "icon": "https://raw.githubusercontent.com/reservoirprotocol/indexer/v5/src/models/sources/pleasebepatientwithme-logo.png",
-      "tokenUrlMainnet": "https://www.pleasebepatientwith.me/${contract}/${tokenId}",
-      "tokenUrlRinkeby": "https://www.pleasebepatientwith.me/${contract}/${tokenId}"
-    }
-  },
   "5": {
+    "domain": "pleasebepatientwith.me",
     "name": "PleaseBePatientWith.Me",
     "address": "0x4713dbc943a3f892d3e8ae2778a0aa9b2c1fb0af",
     "data": {
@@ -45,6 +40,7 @@
     }
   },
   "6": {
+    "domain": "knny.vercel.app",
     "name": "KNNY",
     "address": "0x912e86686ff6d8d57a439666b5fe8401de13cf02",
     "data": {
@@ -54,6 +50,7 @@
     }
   },
   "12": {
+    "domain": "foundation.app",
     "name": "Foundation",
     "address": "0x6c51c470341fa0e9894ee5e4e227c786c51650b4",
     "data": {
@@ -63,6 +60,7 @@
     }
   },
   "14": {
+    "domain": "gmoney.market",
     "name": "gmoney market",
     "address": "0xec2184ba5c8d6bfbeda759119addc183ba1c3ac2",
     "data": {

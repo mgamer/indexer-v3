@@ -10,8 +10,9 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { slowProvider } from "@/common/provider";
-import { bn, formatEth, toBuffer } from "@/common/utils";
+import { bn, formatEth, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { Sources } from "@/models/sources";
 
 const version = "v2";
 
@@ -27,31 +28,35 @@ export const getExecuteSellV2Options: RouteOptions = {
     query: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+        .pattern(regex.token)
         .required()
         .description(
           "Filter to a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
       taker: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .required()
         .description(
           "Address of wallet filling the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
+      source: Joi.string()
+        .lowercase()
+        .pattern(regex.domain)
+        .description("Filling source used for attribution. Example: `reservoir.market`"),
       referrer: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .default(AddressZero)
         .description(
           "Wallet address of referrer. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
       onlyQuote: Joi.boolean().default(false).description("If true, only quote will be returned."),
       maxFeePerGas: Joi.string()
-        .pattern(/^[0-9]+$/)
+        .pattern(regex.number)
         .description("Optional. Set custom gas price."),
       maxPriorityFeePerGas: Joi.string()
-        .pattern(/^[0-9]+$/)
+        .pattern(regex.number)
         .description("Optional. Set custom gas price."),
     }),
   },
@@ -82,6 +87,8 @@ export const getExecuteSellV2Options: RouteOptions = {
     try {
       const [contract, tokenId] = query.token.split(":");
 
+      const sources = await Sources.getInstance();
+
       // Fetch the best offer on the current token.
       const bestOrderResult = await redb.oneOrNone(
         `
@@ -91,7 +98,6 @@ export const getExecuteSellV2Options: RouteOptions = {
             contracts.kind AS token_kind,
             orders.price,
             orders.raw_data,
-            orders.source_id,
             orders.maker,
             orders.token_set_id
           FROM orders
@@ -128,38 +134,6 @@ export const getExecuteSellV2Options: RouteOptions = {
 
       let bidDetails: BidDetails;
       switch (bestOrderResult.kind) {
-        case "wyvern-v2.3": {
-          const extraArgs: any = {};
-
-          const order = new Sdk.WyvernV23.Order(config.chainId, bestOrderResult.raw_data);
-          if (order.params.kind?.includes("token-list")) {
-            // When filling an attribute order, we also need to pass
-            // in the full list of tokens the order is made on (that
-            // is, the underlying token set tokens).
-            const tokens = await redb.manyOrNone(
-              `
-                SELECT
-                  token_sets_tokens.token_id
-                FROM token_sets_tokens
-                WHERE token_sets_tokens.token_set_id = $/tokenSetId/
-              `,
-              { tokenSetId: bestOrderResult.tokenSetId }
-            );
-            extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
-          }
-
-          bidDetails = {
-            kind: "wyvern-v2.3",
-            contractKind: bestOrderResult.token_kind,
-            contract,
-            tokenId,
-            extraArgs,
-            order,
-          };
-
-          break;
-        }
-
         case "seaport": {
           const extraArgs: any = {};
 
@@ -245,8 +219,18 @@ export const getExecuteSellV2Options: RouteOptions = {
         throw Boom.internal("Could not generate transaction(s)");
       }
 
+      // Use either the source or the old referrer
+      if (!query.source && query.referrer !== AddressZero) {
+        const source = await sources.getByAddress(query.referrer);
+        if (source) {
+          query.source = source.domain;
+        }
+      }
+
       const router = new Sdk.Router.Router(config.chainId, slowProvider);
-      const tx = await router.fillBidTx(bidDetails, query.taker, { referrer: query.referrer });
+      const tx = await router.fillBidTx(bidDetails, query.taker, {
+        referrer: query.source,
+      });
 
       // Set up generic filling steps
       const steps = [

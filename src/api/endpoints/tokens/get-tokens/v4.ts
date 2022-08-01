@@ -8,10 +8,10 @@ import _ from "lodash";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
-  base64Regex,
   buildContinuation,
   formatEth,
   fromBuffer,
+  regex,
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
@@ -37,24 +37,20 @@ export const getTokensV4Options: RouteOptions = {
         ),
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .description(
           "Filter to a particular contract. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
       tokens: Joi.alternatives().try(
         Joi.array()
           .max(50)
-          .items(
-            Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
-          )
+          .items(Joi.string().lowercase().pattern(regex.token))
           .description(
             "Array of tokens. Example: `tokens[0]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:704tokens[1]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:979`"
           ),
         Joi.string()
           .lowercase()
-          .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+          .pattern(regex.token)
           .description(
             "Array of tokens. Example: `tokens[0]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:704 tokens[1]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:979`"
           )
@@ -70,9 +66,15 @@ export const getTokensV4Options: RouteOptions = {
       source: Joi.string().description("Name of the order source. Example `OpenSea`"),
       native: Joi.boolean().description("If true, results will filter only Reservoir orders."),
       sortBy: Joi.string()
-        .valid("floorAskPrice", "topBidValue", "tokenId", "rarity")
-        .default("floorAskPrice")
-        .description("Order the items are returned in the response."),
+        .allow("floorAskPrice", "topBidValue", "tokenId", "rarity")
+        .when("contract", {
+          is: Joi.exist(),
+          then: Joi.invalid("floorAskPrice", "topBidValue", "rarity"),
+        })
+        .default((parent) => (parent && parent.contract ? "tokenId" : "floorAskPrice"))
+        .description(
+          "Order the items are returned in the response, by default sorted by `floorAskPrice`. Not supported when filtering by `contract`. When filtering by `contract` the results are sorted by `tokenId` by default."
+        ),
       limit: Joi.number()
         .integer()
         .min(1)
@@ -80,7 +82,7 @@ export const getTokensV4Options: RouteOptions = {
         .default(20)
         .description("Amount of items returned in response."),
       continuation: Joi.string()
-        .pattern(base64Regex)
+        .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
     })
       .or("collection", "contract", "tokens", "tokenSetId")
@@ -93,15 +95,11 @@ export const getTokensV4Options: RouteOptions = {
     schema: Joi.object({
       tokens: Joi.array().items(
         Joi.object({
-          contract: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/)
-            .required(),
-          tokenId: Joi.string()
-            .pattern(/^[0-9]+$/)
-            .required(),
+          contract: Joi.string().lowercase().pattern(regex.address).required(),
+          tokenId: Joi.string().pattern(regex.number).required(),
           name: Joi.string().allow(null, ""),
           image: Joi.string().allow(null, ""),
+          media: Joi.string().allow(null, ""),
           collection: Joi.object({
             id: Joi.string().allow(null),
             name: Joi.string().allow(null, ""),
@@ -116,7 +114,7 @@ export const getTokensV4Options: RouteOptions = {
           owner: Joi.string().allow(null, ""),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex).allow(null),
+      continuation: Joi.string().pattern(regex.base64).allow(null),
     }).label(`getTokens${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-tokens-${version}-handler`, `Wrong response schema: ${error}`);
@@ -133,9 +131,10 @@ export const getTokensV4Options: RouteOptions = {
           "t"."token_id",
           "t"."name",
           "t"."image",
+          "t"."media",
           "t"."collection_id",
           "c"."name" as "collection_name",
-          "t"."floor_sell_source_id",
+          "t"."floor_sell_source_id_int",
           ("c".metadata ->> 'imageUrl')::TEXT AS "collection_image",
           "c"."slug",
           "t"."floor_sell_value",
@@ -164,22 +163,21 @@ export const getTokensV4Options: RouteOptions = {
       }
 
       if (query.attributes) {
-        const attributes: { key: string; value: string }[] = [];
-        Object.entries(query.attributes).forEach(([key, values]) => {
-          (Array.isArray(values) ? values : [values]).forEach((value) =>
-            attributes.push({ key, value })
-          );
-        });
+        const attributes: { key: string; value: any }[] = [];
+        Object.entries(query.attributes).forEach(([key, value]) => attributes.push({ key, value }));
 
         for (let i = 0; i < attributes.length; i++) {
+          const multipleSelection = Array.isArray(attributes[i].value);
+
           (query as any)[`key${i}`] = attributes[i].key;
           (query as any)[`value${i}`] = attributes[i].value;
+
           baseQuery += `
             JOIN "token_attributes" "ta${i}"
               ON "t"."contract" = "ta${i}"."contract"
               AND "t"."token_id" = "ta${i}"."token_id"
               AND "ta${i}"."key" = $/key${i}/
-              AND "ta${i}"."value" = $/value${i}/
+              AND "ta${i}"."value" ${multipleSelection ? `IN ($/value${i}:csv/)` : `= $/value${i}/`}
           `;
         }
       }
@@ -221,9 +219,13 @@ export const getTokensV4Options: RouteOptions = {
 
       if (query.source) {
         const sources = await Sources.getInstance();
-        const source = sources.getByName(query.source);
-        (query as any).sourceAddress = toBuffer(source.address);
-        conditions.push(`"t"."floor_sell_source_id" = $/sourceAddress/`);
+        let source = sources.getByName(query.source, false);
+        if (!source) {
+          source = sources.getByDomain(query.source);
+        }
+
+        (query as any).source = source?.id;
+        conditions.push(`"t"."floor_sell_source_id_int" = $/source/`);
       }
 
       if (query.native) {
@@ -389,24 +391,20 @@ export const getTokensV4Options: RouteOptions = {
       }
 
       const sources = await Sources.getInstance();
-
       const result = rawResult.map((r) => {
-        const source = r.floor_sell_source_id
-          ? sources.getByAddress(fromBuffer(r.floor_sell_source_id))
-          : null;
-
         return {
           contract: fromBuffer(r.contract),
           tokenId: r.token_id,
           name: r.name,
           image: r.image,
+          media: r.media,
           collection: {
             id: r.collection_id,
             name: r.collection_name,
             image: r.collection_image,
             slug: r.slug,
           },
-          source: source?.name,
+          source: sources.get(r.floor_sell_source_id_int)?.name,
           floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
           topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
           rarity: r.rarity_score,

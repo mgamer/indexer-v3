@@ -9,11 +9,11 @@ import { UserActivities } from "@/models/user_activities";
 
 export class SaleActivity {
   public static async handleEvent(data: FillEventData) {
-    const token = await Tokens.getByContractAndTokenId(data.contract, data.tokenId);
+    const token = await Tokens.getByContractAndTokenId(data.contract, data.tokenId, true);
 
     // If no token found
     if (_.isNull(token)) {
-      logger.error("sale-activity", `No token found for ${JSON.stringify(data)}`);
+      logger.warn("sale-activity", `No token found for ${JSON.stringify(data)}`);
       return;
     }
 

@@ -7,10 +7,10 @@ import _ from "lodash";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
-  base64Regex,
   buildContinuation,
   formatEth,
   fromBuffer,
+  regex,
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
@@ -37,24 +37,20 @@ export const getTokensDetailsV4Options: RouteOptions = {
         ),
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .description(
           "Filter to a particular contract. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
       tokens: Joi.alternatives().try(
         Joi.array()
           .max(50)
-          .items(
-            Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
-          )
+          .items(Joi.string().lowercase().pattern(regex.token))
           .description(
             "Array of tokens. Example: `tokens[0]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:704 tokens[1]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:979`"
           ),
         Joi.string()
           .lowercase()
-          .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+          .pattern(regex.token)
           .description(
             "Array of tokens. Example: `tokens[0]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:704 tokens[1]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:979`"
           )
@@ -79,7 +75,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
         .default(20)
         .description("Amount of items returned in response."),
       continuation: Joi.string()
-        .pattern(base64Regex)
+        .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
     })
       .or("collection", "contract", "tokens", "tokenSetId")
@@ -92,16 +88,12 @@ export const getTokensDetailsV4Options: RouteOptions = {
       tokens: Joi.array().items(
         Joi.object({
           token: Joi.object({
-            contract: Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{40}$/)
-              .required(),
-            tokenId: Joi.string()
-              .pattern(/^[0-9]+$/)
-              .required(),
+            contract: Joi.string().lowercase().pattern(regex.address).required(),
+            tokenId: Joi.string().pattern(regex.number).required(),
             name: Joi.string().allow(null, ""),
             description: Joi.string().allow(null, ""),
             image: Joi.string().allow(null, ""),
+            media: Joi.string().allow(null, ""),
             kind: Joi.string().allow(null, ""),
             collection: Joi.object({
               id: Joi.string().allow(null),
@@ -133,10 +125,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
             floorAsk: {
               id: Joi.string().allow(null),
               price: Joi.number().unsafe().allow(null),
-              maker: Joi.string()
-                .lowercase()
-                .pattern(/^0x[a-fA-F0-9]{40}$/)
-                .allow(null),
+              maker: Joi.string().lowercase().pattern(regex.address).allow(null),
               validFrom: Joi.number().unsafe().allow(null),
               validUntil: Joi.number().unsafe().allow(null),
               source: Joi.object().allow(null),
@@ -144,17 +133,14 @@ export const getTokensDetailsV4Options: RouteOptions = {
             topBid: Joi.object({
               id: Joi.string().allow(null),
               value: Joi.number().unsafe().allow(null),
-              maker: Joi.string()
-                .lowercase()
-                .pattern(/^0x[a-fA-F0-9]{40}$/)
-                .allow(null),
+              maker: Joi.string().lowercase().pattern(regex.address).allow(null),
               validFrom: Joi.number().unsafe().allow(null),
               validUntil: Joi.number().unsafe().allow(null),
             }),
           }),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex).allow(null),
+      continuation: Joi.string().pattern(regex.base64).allow(null),
     }).label(`getTokensDetails${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-tokens-details-${version}-handler`, `Wrong response schema: ${error}`);
@@ -172,6 +158,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
           "t"."name",
           "t"."description",
           "t"."image",
+          "t"."media",
           "t"."collection_id",
           "c"."name" as "collection_name",
           "con"."kind",
@@ -207,7 +194,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
           "t"."floor_sell_maker",
           "t"."floor_sell_valid_from",
           "t"."floor_sell_valid_to",
-          "t"."floor_sell_source_id",
+          "t"."floor_sell_source_id_int",
           "t"."top_buy_id",
           "t"."top_buy_value",
           "t"."top_buy_maker",
@@ -234,22 +221,21 @@ export const getTokensDetailsV4Options: RouteOptions = {
       }
 
       if (query.attributes) {
-        const attributes: { key: string; value: string }[] = [];
-        Object.entries(query.attributes).forEach(([key, values]) => {
-          (Array.isArray(values) ? values : [values]).forEach((value) =>
-            attributes.push({ key, value })
-          );
-        });
+        const attributes: { key: string; value: any }[] = [];
+        Object.entries(query.attributes).forEach(([key, value]) => attributes.push({ key, value }));
 
         for (let i = 0; i < attributes.length; i++) {
+          const multipleSelection = Array.isArray(attributes[i].value);
+
           (query as any)[`key${i}`] = attributes[i].key;
           (query as any)[`value${i}`] = attributes[i].value;
+
           baseQuery += `
             JOIN "token_attributes" "ta${i}"
               ON "t"."contract" = "ta${i}"."contract"
               AND "t"."token_id" = "ta${i}"."token_id"
               AND "ta${i}"."key" = $/key${i}/
-              AND "ta${i}"."value" = $/value${i}/
+              AND "ta${i}"."value" ${multipleSelection ? `IN ($/value${i}:csv/)` : `= $/value${i}/`}
           `;
         }
       }
@@ -292,9 +278,13 @@ export const getTokensDetailsV4Options: RouteOptions = {
 
       if (query.source) {
         const sources = await Sources.getInstance();
-        const source = sources.getByName(query.source);
-        (query as any).sourceAddress = toBuffer(source.address);
-        conditions.push(`"t"."floor_sell_source_id" = $/sourceAddress/`);
+        let source = sources.getByName(query.source, false);
+        if (!source) {
+          source = sources.getByDomain(query.source);
+        }
+
+        (query as any).source = source?.id;
+        conditions.push(`"t"."floor_sell_source_id_int" = $/source/`);
       }
 
       // Continue with the next page, this depends on the sorting used
@@ -410,16 +400,8 @@ export const getTokensDetailsV4Options: RouteOptions = {
       }
 
       const sources = await Sources.getInstance();
-
       const result = rawResult.map((r) => {
-        const source = r.floor_sell_source_id
-          ? sources.getByAddress(
-              fromBuffer(r.floor_sell_source_id),
-              fromBuffer(r.contract),
-              r.token_id
-            )
-          : null;
-
+        const source = sources.get(r.floor_sell_source_id_int);
         return {
           token: {
             contract: fromBuffer(r.contract),
@@ -427,6 +409,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
             name: r.name,
             description: r.description,
             image: r.image,
+            media: r.media,
             kind: r.kind,
             collection: {
               id: r.collection_id,

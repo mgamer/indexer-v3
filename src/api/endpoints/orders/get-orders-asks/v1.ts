@@ -6,10 +6,10 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
-  base64Regex,
   buildContinuation,
   formatEth,
   fromBuffer,
+  regex,
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
@@ -33,27 +33,27 @@ export const getOrdersAsksV1Options: RouteOptions = {
     query: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:\d+$/)
+        .pattern(regex.token)
         .description("Filter to a token, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"),
       maker: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .description(
           "Filter to a particular user, e.g. `0x4d04eb67a2d1e01c71fad0366e0c200207a75487`"
         ),
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .description(
           "Filter to a particular user, e.g. `0x4d04eb67a2d1e01c71fad0366e0c200207a75487`"
         ),
       status: Joi.string()
-        .valid("active", "inactive", "expired")
+        .valid("active", "inactive")
         .description(
-          "`active` = currently valid, `inactive` = temporarily invalid, `expired` = permanently invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
+          "`active` = currently valid, `inactive` = temporarily invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
         ),
       sortBy: Joi.string().valid("price", "createdAt"),
-      continuation: Joi.string().pattern(base64Regex),
+      continuation: Joi.string().pattern(regex.base64),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     })
       .or("token", "contract", "maker")
@@ -69,21 +69,10 @@ export const getOrdersAsksV1Options: RouteOptions = {
           kind: Joi.string().required(),
           side: Joi.string().valid("buy", "sell").required(),
           tokenSetId: Joi.string().required(),
-          tokenSetSchemaHash: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{64}$/)
-            .required(),
-          contract: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/),
-          maker: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/)
-            .required(),
-          taker: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/)
-            .required(),
+          tokenSetSchemaHash: Joi.string().lowercase().pattern(regex.bytes32).required(),
+          contract: Joi.string().lowercase().pattern(regex.address),
+          maker: Joi.string().lowercase().pattern(regex.address).required(),
+          taker: Joi.string().lowercase().pattern(regex.address).required(),
           price: Joi.number().unsafe().required(),
           value: Joi.number().unsafe().required(),
           validFrom: Joi.number().required(),
@@ -122,10 +111,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
             .items(
               Joi.object({
                 kind: Joi.string(),
-                recipient: Joi.string()
-                  .lowercase()
-                  .pattern(/^0x[a-fA-F0-9]{40}$/)
-                  .allow(null),
+                recipient: Joi.string().lowercase().pattern(regex.address).allow(null),
                 bps: Joi.number(),
               })
             )
@@ -136,7 +122,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
           rawData: Joi.object(),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex).allow(null),
+      continuation: Joi.string().pattern(regex.base64).allow(null),
     }).label(`getOrdersAsks${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-orders-asks-${version}-handler`, `Wrong response schema: ${error}`);
@@ -231,7 +217,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
             NULLIF(DATE_PART('epoch', UPPER(orders.valid_between)), 'Infinity'),
             0
           ) AS valid_until,
-          orders.source_id,
+          orders.source_id_int,
           orders.fee_bps,
           orders.fee_breakdown,
           COALESCE(
@@ -281,14 +267,6 @@ export const getOrdersAsksV1Options: RouteOptions = {
             // Potentially-valid orders
             conditions.push(
               `orders.fillability_status = 'no-balance' OR (orders.fillability_status = 'fillable' AND orders.approval_status != 'approved')`
-            );
-            break;
-          }
-
-          case "expired": {
-            // Invalid orders
-            conditions.push(
-              `orders.fillability_status != 'fillable' AND orders.fillability_status != 'no-balance'`
             );
             break;
           }
@@ -355,16 +333,11 @@ export const getOrdersAsksV1Options: RouteOptions = {
         }
       }
 
+      const sources = await Sources.getInstance();
       const result = rawResult.map(async (r) => {
-        const sources = await Sources.getInstance();
         let source: SourcesEntity | undefined;
-        if (r.source_id) {
-          let contract: string | undefined;
-          let tokenId: string | undefined;
-          if (r.token_set_id?.startsWith("token:")) {
-            [contract, tokenId] = r.token_set_id.split(":").slice(1);
-          }
-          source = sources.getByAddress(fromBuffer(r.source_id), contract, tokenId);
+        if (r.source_id_int) {
+          source = sources.get(r.source_id_int);
         }
 
         return {

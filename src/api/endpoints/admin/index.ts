@@ -11,3 +11,7 @@ export * from "@/api/endpoints/admin/post-sync-daily-volumes";
 export * from "@/api/endpoints/admin/post-sync-events";
 export * from "@/api/endpoints/admin/post-calc-rarity";
 export * from "@/api/endpoints/admin/get-open-api";
+export * from "@/api/endpoints/admin/post-refresh-token";
+export * from "@/api/endpoints/admin/post-refresh-collection";
+export * from "@/api/endpoints/admin/post-resync-source";
+export * from "@/api/endpoints/admin/post-update-source";

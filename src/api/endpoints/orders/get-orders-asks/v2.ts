@@ -6,10 +6,10 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
-  base64Regex,
   buildContinuation,
   formatEth,
   fromBuffer,
+  regex,
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
@@ -33,37 +33,32 @@ export const getOrdersAsksV2Options: RouteOptions = {
     query: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:\d+$/)
+        .pattern(regex.token)
         .description(
           "Filter to a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
       maker: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .description(
           "Filter to a particular user. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
       contracts: Joi.alternatives()
         .try(
-          Joi.array()
-            .max(50)
-            .items(
-              Joi.string()
-                .lowercase()
-                .pattern(/^0x[a-fA-F0-9]{40}$/)
-            ),
-          Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/)
+          Joi.array().max(50).items(Joi.string().lowercase().pattern(regex.address)),
+          Joi.string().lowercase().pattern(regex.address)
         )
         .description(
           "Filter to an array of contracts. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
       status: Joi.string()
-        .valid("active", "inactive", "expired")
+        .valid("active", "inactive")
         .description(
-          "active = currently valid, inactive = temporarily invalid, expired = permanently invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
+          "active = currently valid, inactive = temporarily invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
         ),
+      includePrivate: Joi.boolean()
+        .default(false)
+        .description("When true, private orders are included in the response."),
       sortBy: Joi.string()
         .when("token", {
           is: Joi.exist(),
@@ -73,7 +68,7 @@ export const getOrdersAsksV2Options: RouteOptions = {
         .default("createdAt")
         .description("Order the items are returned in the response."),
       continuation: Joi.string()
-        .pattern(base64Regex)
+        .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
       limit: Joi.number()
         .integer()
@@ -93,21 +88,10 @@ export const getOrdersAsksV2Options: RouteOptions = {
           kind: Joi.string().required(),
           side: Joi.string().valid("buy", "sell").required(),
           tokenSetId: Joi.string().required(),
-          tokenSetSchemaHash: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{64}$/)
-            .required(),
-          contract: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/),
-          maker: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/)
-            .required(),
-          taker: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/)
-            .required(),
+          tokenSetSchemaHash: Joi.string().lowercase().pattern(regex.bytes32).required(),
+          contract: Joi.string().lowercase().pattern(regex.address),
+          maker: Joi.string().lowercase().pattern(regex.address).required(),
+          taker: Joi.string().lowercase().pattern(regex.address).required(),
           price: Joi.number().unsafe().required(),
           value: Joi.number().unsafe().required(),
           validFrom: Joi.number().required(),
@@ -146,10 +130,7 @@ export const getOrdersAsksV2Options: RouteOptions = {
             .items(
               Joi.object({
                 kind: Joi.string(),
-                recipient: Joi.string()
-                  .lowercase()
-                  .pattern(/^0x[a-fA-F0-9]{40}$/)
-                  .allow(null),
+                recipient: Joi.string().lowercase().pattern(regex.address).allow(null),
                 bps: Joi.number(),
               })
             )
@@ -160,7 +141,7 @@ export const getOrdersAsksV2Options: RouteOptions = {
           rawData: Joi.object(),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex).allow(null),
+      continuation: Joi.string().pattern(regex.base64).allow(null),
     }).label(`getOrdersAsks${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-orders-asks-${version}-handler`, `Wrong response schema: ${error}`);
@@ -255,7 +236,7 @@ export const getOrdersAsksV2Options: RouteOptions = {
             NULLIF(DATE_PART('epoch', UPPER(orders.valid_between)), 'Infinity'),
             0
           ) AS valid_until,
-          orders.source_id,
+          orders.source_id_int,
           orders.fee_bps,
           orders.fee_breakdown,
           COALESCE(
@@ -315,16 +296,16 @@ export const getOrdersAsksV2Options: RouteOptions = {
             orderStatusFilter = `orders.fillability_status = 'no-balance' OR (orders.fillability_status = 'fillable' AND orders.approval_status != 'approved')`;
             break;
           }
-
-          case "expired": {
-            // Invalid orders
-            orderStatusFilter = `orders.fillability_status != 'fillable' AND orders.fillability_status != 'no-balance'`;
-            break;
-          }
         }
 
         (query as any).maker = toBuffer(query.maker);
         conditions.push(`orders.maker = $/maker/`);
+      }
+
+      if (!query.includePrivate) {
+        conditions.push(
+          `orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL`
+        );
       }
 
       conditions.push(orderStatusFilter);
@@ -377,16 +358,11 @@ export const getOrdersAsksV2Options: RouteOptions = {
         }
       }
 
+      const sources = await Sources.getInstance();
       const result = rawResult.map(async (r) => {
-        const sources = await Sources.getInstance();
         let source: SourcesEntity | undefined;
-        if (r.source_id) {
-          let contract: string | undefined;
-          let tokenId: string | undefined;
-          if (r.token_set_id?.startsWith("token:")) {
-            [contract, tokenId] = r.token_set_id.split(":").slice(1);
-          }
-          source = sources.getByAddress(fromBuffer(r.source_id), contract, tokenId);
+        if (r.source_id_int) {
+          source = sources.get(r.source_id_int);
         }
 
         return {

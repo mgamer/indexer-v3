@@ -5,7 +5,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import { formatEth } from "@/common/utils";
+import { formatEth, regex } from "@/common/utils";
 import { Activities } from "@/models/activities";
 import { ActivityType } from "@/models/activities/activities-entity";
 
@@ -24,7 +24,7 @@ export const getTokenActivityV1Options: RouteOptions = {
     params: Joi.object({
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+        .pattern(regex.token)
         .description(
           "Filter to a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         )
@@ -62,8 +62,8 @@ export const getTokenActivityV1Options: RouteOptions = {
           type: Joi.string(),
           fromAddress: Joi.string(),
           toAddress: Joi.string().allow(null),
-          price: Joi.number(),
-          amount: Joi.number(),
+          price: Joi.number().unsafe(),
+          amount: Joi.number().unsafe(),
           timestamp: Joi.number(),
           token: Joi.object({
             tokenId: Joi.string().allow(null),
@@ -75,6 +75,9 @@ export const getTokenActivityV1Options: RouteOptions = {
             collectionName: Joi.string().allow(null),
             collectionImage: Joi.string().allow(null),
           }),
+          txHash: Joi.string().lowercase().pattern(regex.bytes32).allow(null),
+          logIndex: Joi.number().allow(null),
+          batchIndex: Joi.number().allow(null),
         })
       ),
     }).label(`getTokenActivity${version.toUpperCase()}Response`),
@@ -115,6 +118,9 @@ export const getTokenActivityV1Options: RouteOptions = {
         timestamp: activity.eventTimestamp,
         token: activity.token,
         collection: activity.collection,
+        txHash: activity.metadata.transactionHash,
+        logIndex: activity.metadata.logIndex,
+        batchIndex: activity.metadata.batchIndex,
       }));
 
       // Set the continuation node

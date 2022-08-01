@@ -7,10 +7,10 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
-  base64Regex,
   buildContinuation,
   formatEth,
   fromBuffer,
+  regex,
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
@@ -36,13 +36,13 @@ export const getSalesBulkV1Options: RouteOptions = {
     query: Joi.object({
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .description(
           "Filter to a particular contract. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
       token: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
+        .pattern(regex.token)
         .description(
           "Filter to a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
@@ -59,7 +59,7 @@ export const getSalesBulkV1Options: RouteOptions = {
         .default(100)
         .description("Amount of items returned in response."),
       continuation: Joi.string()
-        .pattern(base64Regex)
+        .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
     }),
   },
@@ -68,33 +68,26 @@ export const getSalesBulkV1Options: RouteOptions = {
       sales: Joi.array().items(
         Joi.object({
           id: Joi.string(),
+          saleId: Joi.string(),
           token: Joi.object({
-            contract: Joi.string()
-              .lowercase()
-              .pattern(/^0x[a-fA-F0-9]{40}$/),
-            tokenId: Joi.string().pattern(/^[0-9]+$/),
+            contract: Joi.string().lowercase().pattern(regex.address),
+            tokenId: Joi.string().pattern(regex.number),
           }),
           orderSource: Joi.string().allow(null, ""),
           orderSide: Joi.string().valid("ask", "bid"),
           orderKind: Joi.string(),
-          from: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/),
-          to: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/),
+          from: Joi.string().lowercase().pattern(regex.address),
+          to: Joi.string().lowercase().pattern(regex.address),
           amount: Joi.string(),
           fillSource: Joi.string().allow(null),
-          txHash: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{64}$/),
+          txHash: Joi.string().lowercase().pattern(regex.bytes32),
           logIndex: Joi.number(),
           batchIndex: Joi.number(),
           timestamp: Joi.number(),
           price: Joi.number().unsafe().allow(null),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex).allow(null),
+      continuation: Joi.string().pattern(regex.base64).allow(null),
     }).label(`getSalesBulk${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-sales-bulk-${version}-handler`, `Wrong response schema: ${error}`);
@@ -205,6 +198,12 @@ export const getSalesBulkV1Options: RouteOptions = {
           id: crypto
             .createHash("sha256")
             .update(`${fromBuffer(r.tx_hash)}${r.log_index}${r.batch_index}`)
+            .digest("hex"),
+          saleId: crypto
+            .createHash("sha256")
+            .update(
+              `${fromBuffer(r.tx_hash)}${r.maker}${r.taker}${r.contract}${r.token_id}${r.price}`
+            )
             .digest("hex"),
           token: {
             contract: fromBuffer(r.contract),

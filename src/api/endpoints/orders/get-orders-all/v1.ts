@@ -5,14 +5,7 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import {
-  base64Regex,
-  buildContinuation,
-  formatEth,
-  fromBuffer,
-  splitContinuation,
-  toBuffer,
-} from "@/common/utils";
+import { buildContinuation, formatEth, fromBuffer, regex, splitContinuation } from "@/common/utils";
 import { Sources } from "@/models/sources";
 
 const version = "v1";
@@ -29,7 +22,9 @@ export const getOrdersAllV1Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      id: Joi.string().description("Orders id."),
+      id: Joi.alternatives(Joi.string(), Joi.array().items(Joi.string())).description(
+        "Order id(s)."
+      ),
       source: Joi.string().description("Filter to a source. Example: `OpenSea`"),
       native: Joi.boolean().description("If true, results will filter only Reservoir orders."),
       side: Joi.string().valid("sell", "buy").default("sell").description("Sell or buy side."),
@@ -40,7 +35,7 @@ export const getOrdersAllV1Options: RouteOptions = {
         .default(false)
         .description("If true, raw data will be included in the response."),
       continuation: Joi.string()
-        .pattern(base64Regex)
+        .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
       limit: Joi.number()
         .integer()
@@ -58,21 +53,10 @@ export const getOrdersAllV1Options: RouteOptions = {
           kind: Joi.string().required(),
           side: Joi.string().valid("buy", "sell").required(),
           tokenSetId: Joi.string().required(),
-          tokenSetSchemaHash: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{64}$/)
-            .required(),
-          contract: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/),
-          maker: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/)
-            .required(),
-          taker: Joi.string()
-            .lowercase()
-            .pattern(/^0x[a-fA-F0-9]{40}$/)
-            .required(),
+          tokenSetSchemaHash: Joi.string().lowercase().pattern(regex.bytes32).required(),
+          contract: Joi.string().lowercase().pattern(regex.address),
+          maker: Joi.string().lowercase().pattern(regex.address).required(),
+          taker: Joi.string().lowercase().pattern(regex.address).required(),
           price: Joi.number().unsafe().required(),
           value: Joi.number().unsafe().required(),
           validFrom: Joi.number().required(),
@@ -83,10 +67,7 @@ export const getOrdersAllV1Options: RouteOptions = {
             .items(
               Joi.object({
                 kind: Joi.string(),
-                recipient: Joi.string()
-                  .lowercase()
-                  .pattern(/^0x[a-fA-F0-9]{40}$/)
-                  .allow(null),
+                recipient: Joi.string().lowercase().pattern(regex.address).allow(null),
                 // Should be `Joi.number().allow(null)` but we set to `Joi.any()` to cover
                 // objects eith wrong schema that were inserted by mistake into the db
                 bps: Joi.any(),
@@ -101,7 +82,7 @@ export const getOrdersAllV1Options: RouteOptions = {
           rawData: Joi.object().allow(null),
         })
       ),
-      continuation: Joi.string().pattern(base64Regex).allow(null),
+      continuation: Joi.string().pattern(regex.base64).allow(null),
     }).label(`getOrdersAll${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-orders-all-${version}-handler`, `Wrong response schema: ${error}`);
@@ -196,7 +177,7 @@ export const getOrdersAllV1Options: RouteOptions = {
             NULLIF(DATE_PART('epoch', UPPER(orders.valid_between)), 'Infinity'),
             0
           ) AS valid_until,
-          orders.source_id,
+          orders.source_id_int,
           orders.fee_bps,
           orders.fee_breakdown,
           COALESCE(
@@ -223,7 +204,11 @@ export const getOrdersAllV1Options: RouteOptions = {
       // Filters
       const conditions: string[] = [];
       if (query.id) {
-        conditions.push(`orders.id = $/id/`);
+        if (Array.isArray(query.id)) {
+          conditions.push(`orders.id IN ($/id:csv/)`);
+        } else {
+          conditions.push(`orders.id = $/id/`);
+        }
       } else {
         conditions.push(`orders.side = $/side/`);
         conditions.push(
@@ -232,9 +217,13 @@ export const getOrdersAllV1Options: RouteOptions = {
 
         if (query.source) {
           const sources = await Sources.getInstance();
-          const source = sources.getByName(query.source);
-          (query as any).sourceAddress = toBuffer(source.address);
-          conditions.push(`orders.source_id = $/sourceAddress/`);
+          const source = sources.getByDomain(query.source);
+          if (!source) {
+            return { orders: [] };
+          }
+
+          (query as any).source = source.id;
+          conditions.push(`orders.source_id_int = $/source/`);
         }
         if (query.native) {
           conditions.push(`orders.is_reservoir`);
@@ -288,7 +277,7 @@ export const getOrdersAllV1Options: RouteOptions = {
             : formatEth(r.value) - (formatEth(r.value) * Number(r.fee_bps)) / 10000,
         validFrom: Number(r.valid_from),
         validUntil: Number(r.valid_until),
-        source: r.source_id ? sources.getByAddress(fromBuffer(r.source_id))?.name : null,
+        source: sources.get(r.source_id_int)?.name,
         feeBps: Number(r.fee_bps),
         feeBreakdown: r.fee_breakdown,
         expiration: Number(r.expiration),

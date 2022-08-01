@@ -9,14 +9,16 @@ export type Event = {
   orderKind: OrderKind;
   orderId?: string;
   orderSide: "buy" | "sell";
-  orderSourceIdInt: number | null;
+  orderSourceIdInt?: number;
   maker: string;
   taker: string;
   price: string;
   contract: string;
   tokenId: string;
   amount: string;
-  fillSource?: string;
+  aggregatorSourceId?: number;
+  fillSourceId?: number;
+  washTradingScore?: number;
   baseEventParams: BaseEventParams;
 };
 
@@ -39,5 +41,7 @@ export type DbEvent = {
   contract: Buffer;
   token_id: string;
   amount: string;
-  fill_source: string | null;
+  aggregator_source_id: number | null;
+  fill_source_id: number | null;
+  wash_trading_score: number;
 };

@@ -34,6 +34,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
     query: Joi.object({
       kind: Joi.string().valid("spot", "twap", "lower", "upper").default("spot"),
       currency: Joi.string().lowercase().default(AddressZero),
+      twapHours: Joi.number().default(24),
       eip3668Calldata: Joi.string(),
     }),
   },
@@ -83,7 +84,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
               *
             FROM collection_floor_sell_events
             WHERE collection_floor_sell_events.collection_id = $/collection/
-              AND collection_floor_sell_events.created_at >= now() - interval '24 hours'
+              AND collection_floor_sell_events.created_at >= now() - interval '${query.twapHours} hours'
             ORDER BY collection_floor_sell_events.created_at
           ),
           y AS (
@@ -103,7 +104,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
           w AS (
             SELECT
               price,
-              floor(extract('epoch' FROM greatest(z.created_at, now() - interval '24 hours'))) AS start_time,
+              floor(extract('epoch' FROM greatest(z.created_at, now() - interval '${query.twapHours} hours'))) AS start_time,
               floor(extract('epoch' FROM coalesce(lead(z.created_at, 1) OVER (ORDER BY created_at), now()))) AS end_time
             FROM z
           )

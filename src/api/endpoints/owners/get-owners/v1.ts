@@ -6,6 +6,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { CollectionSets } from "@/models/collection-sets";
 
 const version = "v1";
 
@@ -25,6 +26,9 @@ export const getOwnersV1Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
+      collectionsSetId: Joi.string()
+        .lowercase()
+        .description("Filter to a particular collection set."),
       collection: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+:[0-9]+$|^0x[a-fA-F0-9]{40}$/)
@@ -58,9 +62,9 @@ export const getOwnersV1Options: RouteOptions = {
         .default(20)
         .description("Amount of items returned in response."),
     })
-      .oxor("collection", "contract", "token")
-      .or("collection", "contract", "token")
-      .with("attributes", "collection"),
+      .oxor("collectionsSetId", "collection", "contract", "token")
+      .or("collectionsSetId", "collection", "contract", "token")
+      .with("attributes", ["collectionsSetId", "collection"]),
   },
   response: {
     schema: Joi.object({
@@ -138,6 +142,29 @@ export const getOwnersV1Options: RouteOptions = {
       (query as any).tokenId = tokenId;
       nftBalancesFilter = `nft_balances.contract = $/contract/ AND nft_balances.token_id = $/tokenId/`;
       tokensFilter = `tokens.contract = $/contract/ AND tokens.token_id = $/tokenId/`;
+    } else if (query.collectionsSetId) {
+      let i = 0;
+      const addCollectionToFilter = (id: string) => {
+        ++i;
+        (query as any)[`contract${i}`] = toBuffer(id);
+        nftBalancesFilter = `${nftBalancesFilter}$/contract${i}/, `;
+        tokensFilter = `${tokensFilter}$/contract${i}/, `;
+      };
+
+      await CollectionSets.getCollectionsIds(query.collectionsSetId).then((result) =>
+        result.forEach(addCollectionToFilter)
+      );
+      if (!nftBalancesFilter && !tokensFilter) {
+        return { owners: [] };
+      }
+      nftBalancesFilter = `nft_balances.contract IN (${nftBalancesFilter.substring(
+        0,
+        nftBalancesFilter.lastIndexOf(", ")
+      )})`;
+      tokensFilter = `tokens.contract IN (${tokensFilter.substring(
+        0,
+        tokensFilter.lastIndexOf(", ")
+      )})`;
     }
 
     try {

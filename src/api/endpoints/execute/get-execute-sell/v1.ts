@@ -10,7 +10,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { slowProvider } from "@/common/provider";
-import { bn, formatEth, toBuffer } from "@/common/utils";
+import { bn, formatEth, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
 const version = "v1";
@@ -25,21 +25,13 @@ export const getExecuteSellV1Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      token: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
-        .required(),
-      taker: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .required(),
-      referrer: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .default(AddressZero),
+      token: Joi.string().lowercase().pattern(regex.token).required(),
+      taker: Joi.string().lowercase().pattern(regex.address).required(),
+      source: Joi.string(),
+      referrer: Joi.string().lowercase().pattern(regex.address).default(AddressZero),
       onlyQuote: Joi.boolean().default(false),
-      maxFeePerGas: Joi.string().pattern(/^[0-9]+$/),
-      maxPriorityFeePerGas: Joi.string().pattern(/^[0-9]+$/),
+      maxFeePerGas: Joi.string().pattern(regex.number),
+      maxPriorityFeePerGas: Joi.string().pattern(regex.number),
     }),
   },
   response: {
@@ -78,7 +70,6 @@ export const getExecuteSellV1Options: RouteOptions = {
             contracts.kind AS token_kind,
             orders.price,
             orders.raw_data,
-            orders.source_id,
             orders.maker,
             orders.token_set_id
           FROM orders
@@ -115,38 +106,6 @@ export const getExecuteSellV1Options: RouteOptions = {
 
       let bidDetails: BidDetails;
       switch (bestOrderResult.kind) {
-        case "wyvern-v2.3": {
-          const extraArgs: any = {};
-
-          const order = new Sdk.WyvernV23.Order(config.chainId, bestOrderResult.raw_data);
-          if (order.params.kind?.includes("token-list")) {
-            // When filling an attribute order, we also need to pass
-            // in the full list of tokens the order is made on (that
-            // is, the underlying token set tokens).
-            const tokens = await redb.manyOrNone(
-              `
-                SELECT
-                  token_sets_tokens.token_id
-                FROM token_sets_tokens
-                WHERE token_sets_tokens.token_set_id = $/tokenSetId/
-              `,
-              { tokenSetId: bestOrderResult.tokenSetId }
-            );
-            extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
-          }
-
-          bidDetails = {
-            kind: "wyvern-v2.3",
-            contractKind: bestOrderResult.token_kind,
-            contract,
-            tokenId,
-            extraArgs,
-            order,
-          };
-
-          break;
-        }
-
         case "seaport": {
           const extraArgs: any = {};
 
@@ -233,7 +192,9 @@ export const getExecuteSellV1Options: RouteOptions = {
       }
 
       const router = new Sdk.Router.Router(config.chainId, slowProvider);
-      const tx = await router.fillBidTx(bidDetails, query.taker, { referrer: query.referrer });
+      const tx = await router.fillBidTx(bidDetails, query.taker, {
+        referrer: query.source,
+      });
 
       // Set up generic filling steps
       const steps = [

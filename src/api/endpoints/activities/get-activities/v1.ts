@@ -5,7 +5,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import { formatEth } from "@/common/utils";
+import { formatEth, regex } from "@/common/utils";
 import { Activities } from "@/models/activities";
 
 const version = "v1";
@@ -39,9 +39,12 @@ export const getActivityV1Options: RouteOptions = {
           tokenId: Joi.string().allow(null),
           fromAddress: Joi.string(),
           toAddress: Joi.string().allow(null),
-          price: Joi.number(),
-          amount: Joi.number(),
+          price: Joi.number().unsafe(),
+          amount: Joi.number().unsafe(),
           timestamp: Joi.number(),
+          txHash: Joi.string().lowercase().pattern(regex.bytes32).allow(null),
+          logIndex: Joi.number().allow(null),
+          batchIndex: Joi.number().allow(null),
         }).description("Amount of items returned in response.")
       ),
     }).label(`getActivity${version.toUpperCase()}Response`),
@@ -72,6 +75,9 @@ export const getActivityV1Options: RouteOptions = {
         price: formatEth(activity.price),
         amount: activity.amount,
         timestamp: activity.eventTimestamp,
+        txHash: activity.metadata.transactionHash,
+        logIndex: activity.metadata.logIndex,
+        batchIndex: activity.metadata.batchIndex,
       }));
 
       // Set the continuation node
