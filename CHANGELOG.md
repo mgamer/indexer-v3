@@ -1,3 +1,24 @@
+# [5.134.0](https://github.com/reservoirprotocol/indexer/compare/v5.133.0...v5.134.0) (2022-08-01)
+
+
+### Bug Fixes
+
+* backfill script query ([8065732](https://github.com/reservoirprotocol/indexer/commit/80657321eeb7aae00814fff4ba62e586201a0853))
+* backfill script query ([db31a4d](https://github.com/reservoirprotocol/indexer/commit/db31a4d914e3cffc801da12f35fe959557657aca))
+* minor tweaks ([ef371b1](https://github.com/reservoirprotocol/indexer/commit/ef371b118af8da3733fec7ee1af8a7871e8e6361))
+* minor tweaks ([da6c5fa](https://github.com/reservoirprotocol/indexer/commit/da6c5fab5ff1c351763e7927200973efd8c560e8))
+* remove more source id relics ([963cc95](https://github.com/reservoirprotocol/indexer/commit/963cc95a2f7573d5ca290c04201f0780d3bbd706))
+* remove some more unused apis and port everything to the new source id ([7ffc7a7](https://github.com/reservoirprotocol/indexer/commit/7ffc7a75963308199970b276ee33d2f05517785c))
+* restructure source handling and remove some unused apis ([bbdcc79](https://github.com/reservoirprotocol/indexer/commit/bbdcc79d024c8b0a569c95d7bf6b0803769badb0))
+* update lock name ([b676a8c](https://github.com/reservoirprotocol/indexer/commit/b676a8c081a55bb9ad501c51d26b2a8f9738ae9f))
+
+
+### Features
+
+* create backfill job for manually cancel all wyvern v2.3 orders ([309c161](https://github.com/reservoirprotocol/indexer/commit/309c161c1c8ebfcb84a264bb29e154dca938069f))
+
+
+
 # [5.133.0](https://github.com/reservoirprotocol/indexer/compare/v5.132.3...v5.133.0) (2022-07-31)
 
 

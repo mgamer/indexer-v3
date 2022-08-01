@@ -10,7 +10,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { slowProvider } from "@/common/provider";
-import { bn, formatEth, fromBuffer, regex, toBuffer } from "@/common/utils";
+import { bn, formatEth, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 
@@ -231,7 +231,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
                 contracts.kind AS token_kind,
                 orders.price,
                 orders.raw_data,
-                orders.source_id
+                orders.source_id_int
               FROM orders
               JOIN contracts
                 ON orders.contract = contracts.address
@@ -250,13 +250,13 @@ export const getExecuteBuyV2Options: RouteOptions = {
             throw Boom.badRequest("No available orders");
           }
 
-          const { id, kind, token_kind, price, source_id, raw_data } = bestOrderResult;
+          const { id, kind, token_kind, price, source_id_int, raw_data } = bestOrderResult;
 
           path.push({
             contract,
             tokenId,
             quantity: 1,
-            source: source_id ? sources.getByAddress(fromBuffer(source_id))?.name : null,
+            source: sources.get(source_id_int)?.name,
             quote: formatEth(bn(price).add(bn(price).mul(query.referrerFeeBps).div(10000))),
           });
           if (query.onlyQuote) {
@@ -287,7 +287,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
                 x.kind,
                 x.price,
                 x.quantity_remaining,
-                x.source_id,
+                x.source_id_int,
                 x.raw_data
               FROM (
                 SELECT
@@ -315,7 +315,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
             kind,
             quantity_remaining,
             price,
-            source_id,
+            source_id_int,
             raw_data,
           } of bestOrdersResult) {
             const quantityFilled = Math.min(Number(quantity_remaining), totalQuantityToFill);
@@ -326,7 +326,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
               contract,
               tokenId,
               quantity: quantityFilled,
-              source: source_id ? sources.getByAddress(fromBuffer(source_id))?.name : null,
+              source: sources.get(source_id_int)?.name,
               quote: formatEth(totalPrice.add(totalPrice.mul(query.referrerFeeBps).div(10000))),
             });
             if (query.onlyQuote) {
