@@ -38,3 +38,41 @@ export const erc721BuyOrderFilled: EventData = {
     )`,
   ]),
 };
+
+export const erc1155SellOrderFilled: EventData = {
+  kind: "element-erc1155-sell-order-filled",
+  addresses: { [Element.Addresses.Exchange[config.chainId].toLowerCase()]: true },
+  topic: "0x3ae452568bed7ccafe4345f10048675bae78660c7ea37eb5112b572648d4f116",
+  numTopics: 1,
+  abi: new Interface([
+    `event ERC1155SellOrderFilled(
+      address maker,
+      address taker,
+      address erc20Token,
+      uint256 erc20FillAmount,
+      address erc1155Token,
+      uint256 erc1155TokenId,
+      uint128 erc1155FillAmount,
+      bytes32 orderHash
+    )`,
+  ]),
+};
+
+export const erc1155BuyOrderFilled: EventData = {
+  kind: "element-erc1155-buy-order-filled",
+  addresses: { [Element.Addresses.Exchange[config.chainId].toLowerCase()]: true },
+  topic: "0x020486beb4ea38db8dc504078b03c4f758de372097584b434a8b8f53583eecac",
+  numTopics: 1,
+  abi: new Interface([
+    `event ERC1155BuyOrderFilled(
+      address maker,
+      address taker,
+      address erc20Token,
+      uint256 erc20FillAmount,
+      address erc1155Token,
+      uint256 erc1155TokenId,
+      uint128 erc1155FillAmount,
+      bytes32 orderHash
+    )`,
+  ]),
+};

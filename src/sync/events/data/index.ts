@@ -53,7 +53,9 @@ export type EventDataKind =
   | "seaport-order-filled"
   | "seaport-counter-incremented"
   | "element-erc721-sell-order-filled"
-  | "element-erc721-buy-order-filled";
+  | "element-erc721-buy-order-filled"
+  | "element-erc1155-sell-order-filled"
+  | "element-erc1155-buy-order-filled";
 
 export type EventData = {
   kind: EventDataKind;
@@ -101,6 +103,8 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       x2y2.orderInventory,
       element.erc721BuyOrderFilled,
       element.erc721SellOrderFilled,
+      element.erc1155BuyOrderFilled,
+      element.erc1155SellOrderFilled,
     ];
   } else {
     return (
@@ -185,6 +189,10 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return element.erc721SellOrderFilled;
     case "element-erc721-buy-order-filled":
       return element.erc721BuyOrderFilled;
+    case "element-erc1155-sell-order-filled":
+      return element.erc1155SellOrderFilled;
+    case "element-erc1155-buy-order-filled":
+      return element.erc1155BuyOrderFilled;
     default:
       return undefined;
   }
