@@ -1,3 +1,12 @@
+# [5.138.0](https://github.com/reservoirprotocol/indexer/compare/v5.137.0...v5.138.0) (2022-08-01)
+
+
+### Features
+
+* get marketplaces ([c9612ab](https://github.com/reservoirprotocol/indexer/commit/c9612ab78858477e6a937e7c506216f7271142a4))
+
+
+
 # [5.137.0](https://github.com/reservoirprotocol/indexer/compare/v5.136.1...v5.137.0) (2022-08-01)
 
 
