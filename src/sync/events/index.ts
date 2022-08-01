@@ -1720,7 +1720,7 @@ export const syncEvents = async (
               const erc20TokenAmount = args["erc20TokenAmount"].toString();
               const erc721Token = args["erc721Token"].toLowerCase();
               const erc721TokenId = args["erc721TokenId"].toString();
-              const orderHash = args["orderHash"];
+              const orderHash = args["orderHash"].toLowerCase();
 
               const ETH = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 
