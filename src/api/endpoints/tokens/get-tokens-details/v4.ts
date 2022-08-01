@@ -291,7 +291,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
       if (query.continuation && !query.token) {
         const contArr = splitContinuation(query.continuation, /^((\d+|null)_\d+|\d+)$/);
 
-        if (query.collection || query.attributes) {
+        if (query.collection || query.attributes || query.tokenSetId) {
           if (contArr.length !== 2) {
             logger.error(
               "get-tokens",
@@ -344,8 +344,8 @@ export const getTokensDetailsV4Options: RouteOptions = {
       }
 
       // Sorting
-      // Only allow sorting on floorSell and topBid when we filter by collection or attributes
-      if (query.collection || query.attributes) {
+      // Only allow sorting on floorSell and topBid when we filter by collection / attributes / tokenSetId
+      if (query.collection || query.attributes || query.tokenSetId) {
         switch (query.sortBy) {
           case "topBidValue": {
             baseQuery += ` ORDER BY "t"."top_buy_value" DESC NULLS LAST, "t"."token_id" DESC`;
@@ -379,7 +379,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
         // Only build a "value_tokenid" continuation string when we filter on collection or attributes
         // Otherwise continuation string will just be based on the last tokenId. This is because only use sorting
         // when we have collection/attributes
-        if (query.collection || query.attributes) {
+        if (query.collection || query.attributes || query.tokenSetId) {
           switch (query.sortBy) {
             case "topBidValue":
               continuation = rawResult[rawResult.length - 1].top_buy_value || "null";
