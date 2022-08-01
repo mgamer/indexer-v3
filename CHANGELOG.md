@@ -1,3 +1,12 @@
+## [5.134.1](https://github.com/reservoirprotocol/indexer/compare/v5.134.0...v5.134.1) (2022-08-01)
+
+
+### Bug Fixes
+
+* handle no orders available for simulation case ([5b2fe7d](https://github.com/reservoirprotocol/indexer/commit/5b2fe7dd4a511bf1cb714023788da0b2062a8cf9))
+
+
+
 # [5.134.0](https://github.com/reservoirprotocol/indexer/compare/v5.133.0...v5.134.0) (2022-08-01)
 
 
