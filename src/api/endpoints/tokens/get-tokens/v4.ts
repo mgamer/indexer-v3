@@ -239,7 +239,7 @@ export const getTokensV4Options: RouteOptions = {
           /^((([0-9]+\.?[0-9]*|\.[0-9]+)|null|0x[a-fA-F0-9]+)_\d+|\d+)$/
         );
 
-        if (query.collection || query.attributes) {
+        if (query.collection || query.attributes || query.tokenSetId) {
           if (contArr.length !== 2) {
             logger.error(
               "get-tokens",
@@ -315,7 +315,7 @@ export const getTokensV4Options: RouteOptions = {
 
       // Sorting
       // Only allow sorting on floorSell / topBid / tokenId / rarity when we filter by collection or attributes
-      if (query.collection || query.attributes) {
+      if (query.collection || query.attributes || query.tokenSetId) {
         switch (query.sortBy) {
           case "rarity": {
             baseQuery += ` ORDER BY "t"."rarity_score" DESC NULLS LAST, "t"."token_id" DESC`;
@@ -360,7 +360,7 @@ export const getTokensV4Options: RouteOptions = {
         // Only build a "value_tokenid" continuation string when we filter on collection or attributes
         // Otherwise continuation string will just be based on the last tokenId. This is because only use sorting
         // when we have collection/attributes
-        if (query.collection || query.attributes) {
+        if (query.collection || query.attributes || query.tokenSetId) {
           switch (query.sortBy) {
             case "rarity":
               continuation = rawResult[rawResult.length - 1].rarity_score || "null";
