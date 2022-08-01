@@ -194,7 +194,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
           "t"."floor_sell_maker",
           "t"."floor_sell_valid_from",
           "t"."floor_sell_valid_to",
-          "t"."floor_sell_source_id",
+          "t"."floor_sell_source_id_int",
           "t"."top_buy_id",
           "t"."top_buy_value",
           "t"."top_buy_maker",
@@ -280,11 +280,11 @@ export const getTokensDetailsV4Options: RouteOptions = {
         const sources = await Sources.getInstance();
         let source = sources.getByName(query.source, false);
         if (!source) {
-          source = await sources.getByDomain(query.source);
+          source = sources.getByDomain(query.source);
         }
 
-        (query as any).sourceAddress = toBuffer(source.address);
-        conditions.push(`"t"."floor_sell_source_id" = $/sourceAddress/`);
+        (query as any).source = source?.id;
+        conditions.push(`"t"."floor_sell_source_id_int" = $/source/`);
       }
 
       // Continue with the next page, this depends on the sorting used
@@ -400,16 +400,8 @@ export const getTokensDetailsV4Options: RouteOptions = {
       }
 
       const sources = await Sources.getInstance();
-
       const result = rawResult.map((r) => {
-        const source = r.floor_sell_source_id
-          ? sources.getByAddress(
-              fromBuffer(r.floor_sell_source_id),
-              fromBuffer(r.contract),
-              r.token_id
-            )
-          : null;
-
+        const source = sources.get(r.floor_sell_source_id_int);
         return {
           token: {
             contract: fromBuffer(r.contract),
