@@ -1,3 +1,78 @@
+## [5.134.1](https://github.com/reservoirprotocol/indexer/compare/v5.134.0...v5.134.1) (2022-08-01)
+
+
+### Bug Fixes
+
+* handle no orders available for simulation case ([5b2fe7d](https://github.com/reservoirprotocol/indexer/commit/5b2fe7dd4a511bf1cb714023788da0b2062a8cf9))
+
+
+
+# [5.134.0](https://github.com/reservoirprotocol/indexer/compare/v5.133.0...v5.134.0) (2022-08-01)
+
+
+### Bug Fixes
+
+* backfill script query ([8065732](https://github.com/reservoirprotocol/indexer/commit/80657321eeb7aae00814fff4ba62e586201a0853))
+* backfill script query ([db31a4d](https://github.com/reservoirprotocol/indexer/commit/db31a4d914e3cffc801da12f35fe959557657aca))
+* minor tweaks ([ef371b1](https://github.com/reservoirprotocol/indexer/commit/ef371b118af8da3733fec7ee1af8a7871e8e6361))
+* minor tweaks ([da6c5fa](https://github.com/reservoirprotocol/indexer/commit/da6c5fab5ff1c351763e7927200973efd8c560e8))
+* remove more source id relics ([963cc95](https://github.com/reservoirprotocol/indexer/commit/963cc95a2f7573d5ca290c04201f0780d3bbd706))
+* remove some more unused apis and port everything to the new source id ([7ffc7a7](https://github.com/reservoirprotocol/indexer/commit/7ffc7a75963308199970b276ee33d2f05517785c))
+* restructure source handling and remove some unused apis ([bbdcc79](https://github.com/reservoirprotocol/indexer/commit/bbdcc79d024c8b0a569c95d7bf6b0803769badb0))
+* update lock name ([b676a8c](https://github.com/reservoirprotocol/indexer/commit/b676a8c081a55bb9ad501c51d26b2a8f9738ae9f))
+
+
+### Features
+
+* create backfill job for manually cancel all wyvern v2.3 orders ([309c161](https://github.com/reservoirprotocol/indexer/commit/309c161c1c8ebfcb84a264bb29e154dca938069f))
+
+
+
+# [5.133.0](https://github.com/reservoirprotocol/indexer/compare/v5.132.3...v5.133.0) (2022-07-31)
+
+
+### Features
+
+* completely get rid of tenderly for tx simulation ([b81203a](https://github.com/reservoirprotocol/indexer/commit/b81203ac599dbc648022e91c0c206c6821de0f54))
+
+
+
+## [5.132.3](https://github.com/reservoirprotocol/indexer/compare/v5.132.2...v5.132.3) (2022-07-30)
+
+
+### Performance Improvements
+
+* optimize optimism rpc calls ([8ce7630](https://github.com/reservoirprotocol/indexer/commit/8ce763031de6fae5a6616866db320202e61d50e9))
+
+
+
+## [5.132.2](https://github.com/reservoirprotocol/indexer/compare/v5.132.1...v5.132.2) (2022-07-30)
+
+
+### Performance Improvements
+
+* increase block batch size on rinkeby ([7267d7d](https://github.com/reservoirprotocol/indexer/commit/7267d7dd48705fd6c1e5d8ab8700474bf030785c))
+
+
+
+## [5.132.1](https://github.com/reservoirprotocol/indexer/compare/v5.132.0...v5.132.1) (2022-07-30)
+
+
+### Bug Fixes
+
+* tweaks ([11f283a](https://github.com/reservoirprotocol/indexer/commit/11f283adbfa34929ec6a0c8a994b5eeb2c818b05))
+
+
+
+# [5.132.0](https://github.com/reservoirprotocol/indexer/compare/v5.131.6...v5.132.0) (2022-07-29)
+
+
+### Features
+
+* return last buys from explore api ([35693d1](https://github.com/reservoirprotocol/indexer/commit/35693d115a17656b4c9635a689201182dd18d966))
+
+
+
 ## [5.131.6](https://github.com/reservoirprotocol/indexer/compare/v5.131.5...v5.131.6) (2022-07-29)
 
 
