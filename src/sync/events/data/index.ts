@@ -29,8 +29,6 @@ export type EventDataKind =
   | "weth-withdrawal"
   | "wyvern-v2-orders-matched"
   | "wyvern-v2.3-orders-matched"
-  | "wyvern-v2.3-order-cancelled"
-  | "wyvern-v2.3-nonce-incremented"
   | "looks-rare-cancel-all-orders"
   | "looks-rare-cancel-multiple-orders"
   | "looks-rare-taker-ask"
@@ -89,9 +87,7 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       seaport.orderCancelled,
       seaport.orderFulfilled,
       wyvernV2.ordersMatched,
-      wyvernV23.orderCancelled,
       wyvernV23.ordersMatched,
-      wyvernV23.nonceIncremented,
       zeroExV4.erc721OrderCancelled,
       zeroExV4.erc1155OrderCancelled,
       zeroExV4.erc721OrderFilled,
@@ -139,12 +135,8 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return foundation.buyPriceSet;
     case "wyvern-v2-orders-matched":
       return wyvernV2.ordersMatched;
-    case "wyvern-v2.3-order-cancelled":
-      return wyvernV23.orderCancelled;
     case "wyvern-v2.3-orders-matched":
       return wyvernV23.ordersMatched;
-    case "wyvern-v2.3-nonce-incremented":
-      return wyvernV23.nonceIncremented;
     case "looks-rare-cancel-all-orders":
       return looksRare.cancelAllOrders;
     case "looks-rare-cancel-multiple-orders":

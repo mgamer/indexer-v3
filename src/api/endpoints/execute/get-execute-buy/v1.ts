@@ -148,14 +148,6 @@ export const getExecuteBuyV1Options: RouteOptions = {
             });
           }
 
-          case "wyvern-v2.3": {
-            return listingDetails.push({
-              kind: "wyvern-v2.3",
-              ...common,
-              order: new Sdk.WyvernV23.Order(config.chainId, rawData),
-            });
-          }
-
           case "x2y2": {
             return listingDetails.push({
               kind: "x2y2",
@@ -325,7 +317,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
         },
         partial: query.partial,
         // Force router filling so that we don't lose any attribution
-        noDirectFilling: true,
+        forceRouter: true,
       });
 
       // Check that the taker has enough funds to fill all requested tokens
