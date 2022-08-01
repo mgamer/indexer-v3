@@ -1,3 +1,12 @@
+## [5.136.1](https://github.com/reservoirprotocol/indexer/compare/v5.136.0...v5.136.1) (2022-08-01)
+
+
+### Performance Improvements
+
+* only put fillable orders on the queue ([b340454](https://github.com/reservoirprotocol/indexer/commit/b3404546a0a833f9ef25dc223cdc3b9bcf81863a))
+
+
+
 # [5.136.0](https://github.com/reservoirprotocol/indexer/compare/v5.135.0...v5.136.0) (2022-08-01)
 
 
