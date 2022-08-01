@@ -1015,9 +1015,9 @@ export const syncEvents = async (
 
             // WyvernV2/WyvernV2.3
 
-            // Wyvern V2 is now decomissioned, but we still keep handling
-            // its fill event in order to get access to historical sales.
-            // This is only relevant when backfilling though.
+            // Wyvern V2 and V2.3 are both decomissioned, but we still keep handling
+            // fill event from them in order to get access to historical sales. This
+            // is only relevant when backfilling though.
 
             case "wyvern-v2-orders-matched":
             case "wyvern-v2.3-orders-matched": {
@@ -1135,44 +1135,6 @@ export const syncEvents = async (
                     batchIndex: batchIndex++,
                   },
                 });
-
-                orderInfos.push({
-                  context: `filled-${buyOrderId}`,
-                  id: buyOrderId,
-                  trigger: {
-                    kind: "sale",
-                    txHash: baseEventParams.txHash,
-                    txTimestamp: baseEventParams.timestamp,
-                  },
-                });
-
-                fillInfos.push({
-                  context: buyOrderId,
-                  orderId: buyOrderId,
-                  orderSide: "buy",
-                  contract: associatedNftTransferEvent.baseEventParams.address,
-                  tokenId: associatedNftTransferEvent.tokenId,
-                  amount: associatedNftTransferEvent.amount,
-                  price,
-                  timestamp: baseEventParams.timestamp,
-                });
-
-                if (currentTxHasWethTransfer()) {
-                  makerInfos.push({
-                    context: `${baseEventParams.txHash}-buy-approval`,
-                    maker,
-                    trigger: {
-                      kind: "approval-change",
-                      txHash: baseEventParams.txHash,
-                      txTimestamp: baseEventParams.timestamp,
-                    },
-                    data: {
-                      kind: "buy-approval",
-                      contract: Sdk.Common.Addresses.Weth[config.chainId],
-                      orderKind,
-                    },
-                  });
-                }
               }
               if (sellOrderId !== HashZero) {
                 fillEvents.push({
@@ -1193,69 +1155,7 @@ export const syncEvents = async (
                     batchIndex: batchIndex++,
                   },
                 });
-
-                orderInfos.push({
-                  context: `filled-${sellOrderId}`,
-                  id: sellOrderId,
-                  trigger: {
-                    kind: "sale",
-                    txHash: baseEventParams.txHash,
-                    txTimestamp: baseEventParams.timestamp,
-                  },
-                });
-
-                fillInfos.push({
-                  context: sellOrderId,
-                  orderId: sellOrderId,
-                  orderSide: "sell",
-                  contract: associatedNftTransferEvent.baseEventParams.address,
-                  tokenId: associatedNftTransferEvent.tokenId,
-                  amount: associatedNftTransferEvent.amount,
-                  price,
-                  timestamp: baseEventParams.timestamp,
-                });
               }
-
-              break;
-            }
-
-            case "wyvern-v2.3-order-cancelled": {
-              const parsedLog = eventData.abi.parseLog(log);
-              const orderId = parsedLog.args["hash"].toLowerCase();
-
-              cancelEvents.push({
-                orderKind: "wyvern-v2.3",
-                orderId,
-                baseEventParams,
-              });
-
-              orderInfos.push({
-                context: `cancelled-${orderId}`,
-                id: orderId,
-                trigger: {
-                  kind: "cancel",
-                  txHash: baseEventParams.txHash,
-                  txTimestamp: baseEventParams.timestamp,
-                  logIndex: baseEventParams.logIndex,
-                  batchIndex: baseEventParams.batchIndex,
-                  blockHash: baseEventParams.blockHash,
-                },
-              });
-
-              break;
-            }
-
-            case "wyvern-v2.3-nonce-incremented": {
-              const parsedLog = eventData.abi.parseLog(log);
-              const maker = parsedLog.args["maker"].toLowerCase();
-              const newNonce = parsedLog.args["newNonce"].toString();
-
-              bulkCancelEvents.push({
-                orderKind: "wyvern-v2.3",
-                maker,
-                minNonce: newNonce,
-                baseEventParams,
-              });
 
               break;
             }
