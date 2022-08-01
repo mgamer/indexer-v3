@@ -98,7 +98,6 @@ export const getExecuteSellV2Options: RouteOptions = {
             contracts.kind AS token_kind,
             orders.price,
             orders.raw_data,
-            orders.source_id,
             orders.maker,
             orders.token_set_id
           FROM orders

@@ -327,13 +327,6 @@ export const setupRoutes = (server: Server) => {
     path: "/events/orders/v1",
     options: eventsEndpoints.getOrderEventsV1Options,
   });
-
-  server.route({
-    method: "GET",
-    path: "/events/tokens/floor-ask/v1",
-    options: eventsEndpoints.getTokensFloorAskV1Options,
-  });
-
   server.route({
     method: "GET",
     path: "/events/tokens/floor-ask/v2",
@@ -635,12 +628,6 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/tokens/details/v1",
-    options: tokensEndpoints.getTokensDetailsV1Options,
-  });
-
-  server.route({
-    method: "GET",
     path: "/tokens/details/v2",
     options: tokensEndpoints.getTokensDetailsV2Options,
   });
@@ -727,12 +714,6 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/sales/bulk/v1",
     options: transfersEndpoints.getSalesBulkV1Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/transfers/v1",
-    options: transfersEndpoints.getTransfersV1Options,
   });
 
   server.route({
