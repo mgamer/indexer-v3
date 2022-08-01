@@ -1,3 +1,13 @@
+# [5.136.0](https://github.com/reservoirprotocol/indexer/compare/v5.135.0...v5.136.0) (2022-08-01)
+
+
+### Features
+
+* sort tokens/v4 by floor ask price ([f84933a](https://github.com/reservoirprotocol/indexer/commit/f84933a17b74e9b3213e34e81da7bb1d786741dd))
+* sort tokens/v4 by floor ask price ([2e9cd8c](https://github.com/reservoirprotocol/indexer/commit/2e9cd8c72baff9b65059b4fc3385ea70742bcca1))
+
+
+
 # [5.135.0](https://github.com/reservoirprotocol/indexer/compare/v5.134.1...v5.135.0) (2022-08-01)
 
 
