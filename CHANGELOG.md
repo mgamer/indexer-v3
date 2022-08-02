@@ -1,3 +1,13 @@
+## [5.139.2](https://github.com/reservoirprotocol/indexer/compare/v5.139.1...v5.139.2) (2022-08-02)
+
+
+### Bug Fixes
+
+* changed amount and price ([42e5960](https://github.com/reservoirprotocol/indexer/commit/42e5960a4a15a11e6c9b54783376bfabde55c8dd))
+* fix price calculation for partial filling ([2eade65](https://github.com/reservoirprotocol/indexer/commit/2eade656804956f762eb29e94655975799a2474d))
+
+
+
 ## [5.139.1](https://github.com/reservoirprotocol/indexer/compare/v5.139.0...v5.139.1) (2022-08-02)
 
 
