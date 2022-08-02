@@ -3,6 +3,7 @@
 // Any new network that is supported should have a corresponding
 // entry in the configuration methods below
 
+import { idb } from "@/common/db";
 import { config } from "@/config/index";
 
 export const getNetworkName = () => {
@@ -29,6 +30,12 @@ type NetworkSettings = {
   metadataMintDelay: number;
   enableMetadataAutoRefresh: boolean;
   washTradingExcludedContracts: string[];
+  coingecko?: {
+    networkId: string;
+    nativeCurrencyContract: string;
+    usdcCurrencyContract: string;
+  };
+  onStartup?: () => Promise<void>;
 };
 
 export const getNetworkSettings = (): NetworkSettings => {
@@ -55,6 +62,50 @@ export const getNetworkSettings = (): NetworkSettings => {
           "0x059edd72cd353df5106d2b9cc5ab83a52287ac3a",
           "0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270",
         ],
+        coingecko: {
+          networkId: "ethereum",
+          nativeCurrencyContract: "0x0000000000000000000000000000000000000000",
+          usdcCurrencyContract: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        },
+        onStartup: async () => {
+          // Insert ETH and USDC as currencies
+          await Promise.all([
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\x0000000000000000000000000000000000000000',
+                  'Ether',
+                  'ETH',
+                  18,
+                  '{"coingeckoCurrencyId": "ethereum"}'
+                )
+              `
+            ),
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+                  'USD Coin',
+                  'USDC',
+                  6,
+                  '{"coingeckoCurrencyId": "usd-coin"}'
+                )
+              `
+            ),
+          ]);
+        },
       };
     // Rinkeby
     case 4:
@@ -78,6 +129,11 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 10,
         realtimeSyncMaxBlockLag: 128,
         backfillBlockBatchSize: 512,
+        coingecko: {
+          networkId: "optimistic-ethereum",
+          nativeCurrencyContract: "optimism",
+          usdcCurrencyContract: "",
+        },
       };
     }
     // Default

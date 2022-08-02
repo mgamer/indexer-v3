@@ -11,6 +11,7 @@ import { idb, pgp, redb } from "@/common/db";
 import { baseProvider, slowProvider } from "@/common/provider";
 import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { getNetworkSettings } from "@/config/network";
 import { EventDataKind, getEventData } from "@/events-sync/data";
 import * as es from "@/events-sync/storage";
 import { parseEvent } from "@/events-sync/parser";
@@ -26,7 +27,6 @@ import * as blocksModel from "@/models/blocks";
 import { OrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
 import * as syncEventsUtils from "@/events-sync/utils";
-import { getNetworkSettings } from "@/config/network";
 
 // TODO: Split into multiple files (by exchange)
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
