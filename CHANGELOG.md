@@ -1,3 +1,12 @@
+# [5.139.0](https://github.com/reservoirprotocol/indexer/compare/v5.138.1...v5.139.0) (2022-08-02)
+
+
+### Features
+
+* allow bidding directly on token sets ([adb38ab](https://github.com/reservoirprotocol/indexer/commit/adb38ab587de5aa6d0e1dc38839b2f5464d25fa7))
+
+
+
 ## [5.138.1](https://github.com/reservoirprotocol/indexer/compare/v5.138.0...v5.138.1) (2022-08-02)
 
 
