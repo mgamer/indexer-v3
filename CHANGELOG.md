@@ -1,3 +1,12 @@
+# [5.140.0](https://github.com/reservoirprotocol/indexer/compare/v5.139.2...v5.140.0) (2022-08-02)
+
+
+### Features
+
+* allow specifying blocks per batch when backfilling ([525588a](https://github.com/reservoirprotocol/indexer/commit/525588a632e8e3239778ceb6313a8133c5fd6cb6))
+
+
+
 ## [5.139.2](https://github.com/reservoirprotocol/indexer/compare/v5.139.1...v5.139.2) (2022-08-02)
 
 
