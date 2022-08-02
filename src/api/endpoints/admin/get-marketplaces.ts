@@ -1,4 +1,5 @@
 import { RouteOptions } from "@hapi/hapi";
+import Joi from "joi";
 
 type Marketplace = {
   name: string;
@@ -19,6 +20,20 @@ export const getMarketplaces: RouteOptions = {
     "hapi-swagger": {
       order: 7,
     },
+  },
+  response: {
+    schema: Joi.object({
+      marketplaces: Joi.array().items(
+        Joi.object({
+          name: Joi.string(),
+          imageUrl: Joi.string(),
+          feeBps: Joi.number(),
+          orderbook: Joi.string().allow(null),
+          orderKind: Joi.string().allow(null),
+          listingEnabled: Joi.boolean(),
+        })
+      ),
+    }).label(`getMarketplacesv1Resp`),
   },
   handler: async () => {
     const marketplaces: Marketplace[] = [
@@ -63,6 +78,8 @@ export const getMarketplaces: RouteOptions = {
         listingEnabled: false,
       },
     ];
-    return marketplaces;
+    return {
+      marketplaces: marketplaces,
+    };
   },
 };
