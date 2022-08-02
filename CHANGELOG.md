@@ -1,3 +1,15 @@
+# [5.141.0](https://github.com/reservoirprotocol/indexer/compare/v5.140.1...v5.141.0) (2022-08-02)
+
+
+### Bug Fixes
+
+* add hapi swagger plugin to marketplaces api ([af5e7bb](https://github.com/reservoirprotocol/indexer/commit/af5e7bb7e63f0993fe9ceff2b3f02adedb0cd581))
+* get martketplace response types ([df9f05c](https://github.com/reservoirprotocol/indexer/commit/df9f05c89a716d626350e76f0b4a397ac07b2c4c))
+* reservoir token url redirect ([d43aeca](https://github.com/reservoirprotocol/indexer/commit/d43aecaa5b258efcc5fa79cdfcf4c6913df21da6))
+* type definitions for get marketplaces api ([a3a8241](https://github.com/reservoirprotocol/indexer/commit/a3a82414acd3c6d09065de6935e9c0cde19a2af2))
+
+
+
 ## [5.140.1](https://github.com/reservoirprotocol/indexer/compare/v5.140.0...v5.140.1) (2022-08-02)
 
 
