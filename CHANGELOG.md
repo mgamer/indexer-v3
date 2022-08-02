@@ -1,3 +1,17 @@
+## [5.140.1](https://github.com/reservoirprotocol/indexer/compare/v5.140.0...v5.140.1) (2022-08-02)
+
+
+### Bug Fixes
+
+* added support for 1155 tokens ([fa1d0af](https://github.com/reservoirprotocol/indexer/commit/fa1d0afd3c51d12246708c52ec934420dda3ee22))
+* added topic ([18f8f49](https://github.com/reservoirprotocol/indexer/commit/18f8f499f89da69c53cc39103307e7c82ff100c2))
+* first commit ([9fab529](https://github.com/reservoirprotocol/indexer/commit/9fab5292d1ac537265aed3a2c10e2dcd79c4e12a))
+* fix price calculation ([d821895](https://github.com/reservoirprotocol/indexer/commit/d821895c61e8190b7cd1a391a42e4912a457dbc1))
+* lowered case hash, fix migration ([40dfdac](https://github.com/reservoirprotocol/indexer/commit/40dfdacdfe45ed0593485dcdcdeba95a4a4ffb3d))
+* updated SDK ([a12e360](https://github.com/reservoirprotocol/indexer/commit/a12e3602b40888a39521c2d9236d775fb1bc69ba))
+
+
+
 # [5.140.0](https://github.com/reservoirprotocol/indexer/compare/v5.139.2...v5.140.0) (2022-08-02)
 
 
