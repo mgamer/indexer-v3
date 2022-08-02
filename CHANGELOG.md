@@ -1,3 +1,63 @@
+## [5.140.1](https://github.com/reservoirprotocol/indexer/compare/v5.140.0...v5.140.1) (2022-08-02)
+
+
+### Bug Fixes
+
+* added support for 1155 tokens ([fa1d0af](https://github.com/reservoirprotocol/indexer/commit/fa1d0afd3c51d12246708c52ec934420dda3ee22))
+* added topic ([18f8f49](https://github.com/reservoirprotocol/indexer/commit/18f8f499f89da69c53cc39103307e7c82ff100c2))
+* first commit ([9fab529](https://github.com/reservoirprotocol/indexer/commit/9fab5292d1ac537265aed3a2c10e2dcd79c4e12a))
+* fix price calculation ([d821895](https://github.com/reservoirprotocol/indexer/commit/d821895c61e8190b7cd1a391a42e4912a457dbc1))
+* lowered case hash, fix migration ([40dfdac](https://github.com/reservoirprotocol/indexer/commit/40dfdacdfe45ed0593485dcdcdeba95a4a4ffb3d))
+* updated SDK ([a12e360](https://github.com/reservoirprotocol/indexer/commit/a12e3602b40888a39521c2d9236d775fb1bc69ba))
+
+
+
+# [5.140.0](https://github.com/reservoirprotocol/indexer/compare/v5.139.2...v5.140.0) (2022-08-02)
+
+
+### Features
+
+* allow specifying blocks per batch when backfilling ([525588a](https://github.com/reservoirprotocol/indexer/commit/525588a632e8e3239778ceb6313a8133c5fd6cb6))
+
+
+
+## [5.139.2](https://github.com/reservoirprotocol/indexer/compare/v5.139.1...v5.139.2) (2022-08-02)
+
+
+### Bug Fixes
+
+* changed amount and price ([42e5960](https://github.com/reservoirprotocol/indexer/commit/42e5960a4a15a11e6c9b54783376bfabde55c8dd))
+* fix price calculation for partial filling ([2eade65](https://github.com/reservoirprotocol/indexer/commit/2eade656804956f762eb29e94655975799a2474d))
+
+
+
+## [5.139.1](https://github.com/reservoirprotocol/indexer/compare/v5.139.0...v5.139.1) (2022-08-02)
+
+
+### Bug Fixes
+
+* minor tweaks ([48bd2e6](https://github.com/reservoirprotocol/indexer/commit/48bd2e6ddf582a01eb2043d8d67f6e4f5e032a77))
+
+
+
+# [5.139.0](https://github.com/reservoirprotocol/indexer/compare/v5.138.1...v5.139.0) (2022-08-02)
+
+
+### Features
+
+* allow bidding directly on token sets ([adb38ab](https://github.com/reservoirprotocol/indexer/commit/adb38ab587de5aa6d0e1dc38839b2f5464d25fa7))
+
+
+
+## [5.138.1](https://github.com/reservoirprotocol/indexer/compare/v5.138.0...v5.138.1) (2022-08-02)
+
+
+### Bug Fixes
+
+* consistent handling of zeroex-v4 fill events ([f149ae7](https://github.com/reservoirprotocol/indexer/commit/f149ae7b1fa23608d544f01f95d9b7cfb563ce3c))
+
+
+
 # [5.138.0](https://github.com/reservoirprotocol/indexer/compare/v5.137.0...v5.138.0) (2022-08-01)
 
 
