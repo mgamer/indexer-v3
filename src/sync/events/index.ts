@@ -1722,8 +1722,10 @@ export const syncEvents = async (
               const contract = decodedAsset[0][0].toLowerCase();
               const tokenId = decodedAsset[0][1].toString();
 
-              const price = side === "sell" ? newLeftFill : newRightFill;
+              let price = side === "sell" ? newLeftFill : newRightFill;
               const amount = side === "sell" ? newRightFill : newLeftFill;
+
+              price = bn(price).div(amount).toString();
 
               const orderKind = "rarible";
 
