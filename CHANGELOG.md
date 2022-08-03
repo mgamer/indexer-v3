@@ -1,3 +1,12 @@
+# [5.142.0](https://github.com/reservoirprotocol/indexer/compare/v5.141.0...v5.142.0) (2022-08-03)
+
+
+### Features
+
+* allow using the slow provider in the admin sync events api ([2fd35e0](https://github.com/reservoirprotocol/indexer/commit/2fd35e0a7b33dc8e97b0117e312f9a3114f78773))
+
+
+
 # [5.141.0](https://github.com/reservoirprotocol/indexer/compare/v5.140.1...v5.141.0) (2022-08-02)
 
 
