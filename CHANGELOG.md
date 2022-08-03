@@ -1,3 +1,12 @@
+# [5.143.0](https://github.com/reservoirprotocol/indexer/compare/v5.142.1...v5.143.0) (2022-08-03)
+
+
+### Features
+
+* update top bids on the fly ([fba69bd](https://github.com/reservoirprotocol/indexer/commit/fba69bd2ac801300e0057a02c0e548ac75a242ed))
+
+
+
 ## [5.142.1](https://github.com/reservoirprotocol/indexer/compare/v5.142.0...v5.142.1) (2022-08-03)
 
 
