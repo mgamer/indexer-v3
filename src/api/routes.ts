@@ -503,6 +503,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   server.route({
+    method: "GET",
+    path: "/liquidity/users/v2",
+    options: ordersEndpoints.getUsersLiquidityV2Options,
+  });
+
+  server.route({
     method: "POST",
     path: "/order/v1",
     options: ordersEndpoints.postOrderV1Options,
@@ -666,6 +672,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/users/{user}/tokens/v2",
     options: tokensEndpoints.getUserTokensV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/users/{user}/tokens/v3",
+    options: tokensEndpoints.getUserTokensV3Options,
   });
 
   server.route({
