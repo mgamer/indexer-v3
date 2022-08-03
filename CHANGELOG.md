@@ -1,3 +1,12 @@
+## [5.142.1](https://github.com/reservoirprotocol/indexer/compare/v5.142.0...v5.142.1) (2022-08-03)
+
+
+### Bug Fixes
+
+* crashes ([a51f06c](https://github.com/reservoirprotocol/indexer/commit/a51f06c915b865e3374898aca2927ef2d63535b8))
+
+
+
 # [5.142.0](https://github.com/reservoirprotocol/indexer/compare/v5.141.0...v5.142.0) (2022-08-03)
 
 
