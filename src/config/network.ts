@@ -32,8 +32,6 @@ type NetworkSettings = {
   washTradingExcludedContracts: string[];
   coingecko?: {
     networkId: string;
-    nativeCurrencyContract: string;
-    usdcCurrencyContract: string;
   };
   onStartup?: () => Promise<void>;
 };
@@ -64,11 +62,9 @@ export const getNetworkSettings = (): NetworkSettings => {
         ],
         coingecko: {
           networkId: "ethereum",
-          nativeCurrencyContract: "0x0000000000000000000000000000000000000000",
-          usdcCurrencyContract: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
         },
         onStartup: async () => {
-          // Insert ETH and USDC as currencies
+          // Insert the native currency
           await Promise.all([
             idb.none(
               `
@@ -84,24 +80,7 @@ export const getNetworkSettings = (): NetworkSettings => {
                   'ETH',
                   18,
                   '{"coingeckoCurrencyId": "ethereum"}'
-                )
-              `
-            ),
-            idb.none(
-              `
-                INSERT INTO currencies (
-                  contract,
-                  name,
-                  symbol,
-                  decimals,
-                  metadata
-                ) VALUES (
-                  '\\xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
-                  'USD Coin',
-                  'USDC',
-                  6,
-                  '{"coingeckoCurrencyId": "usd-coin"}'
-                )
+                ) ON CONFLICT DO NOTHING
               `
             ),
           ]);
@@ -131,8 +110,28 @@ export const getNetworkSettings = (): NetworkSettings => {
         backfillBlockBatchSize: 512,
         coingecko: {
           networkId: "optimistic-ethereum",
-          nativeCurrencyContract: "optimism",
-          usdcCurrencyContract: "",
+        },
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\x0000000000000000000000000000000000000000',
+                  'Optimism',
+                  'OP',
+                  18,
+                  '{"coingeckoCurrencyId": "optimism"}'
+                ) ON CONFLICT DO NOTHING
+              `
+            ),
+          ]);
         },
       };
     }
