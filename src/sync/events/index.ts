@@ -8,7 +8,7 @@ import pLimit from "p-limit";
 
 import { logger } from "@/common/logger";
 import { idb, pgp, redb } from "@/common/db";
-import { baseProvider } from "@/common/provider";
+import { baseProvider, slowProvider } from "@/common/provider";
 import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { EventDataKind, getEventData } from "@/events-sync/data";
@@ -41,6 +41,7 @@ export const syncEvents = async (
   options?: {
     backfill?: boolean;
     eventDataKinds?: EventDataKind[];
+    useSlowProvider?: boolean;
   }
 ) => {
   // --- Handle: fetch and process events ---
@@ -56,18 +57,20 @@ export const syncEvents = async (
   const makerInfos: orderUpdatesByMaker.MakerInfo[] = [];
   const mintInfos: tokenUpdatesMint.MintInfo[] = [];
 
+  const provider = options?.useSlowProvider ? slowProvider : baseProvider;
+
   // Before proceeding, fetch all individual blocks within the current range
   const limit = pLimit(5);
   await Promise.all(
     _.range(fromBlock, toBlock + 1).map((block) =>
-      limit(() => baseProvider.getBlockWithTransactions(block))
+      limit(() => provider.getBlockWithTransactions(block))
     )
   );
 
   // When backfilling, certain processes are disabled
   const backfill = Boolean(options?.backfill);
   const eventDatas = getEventData(options?.eventDataKinds);
-  await baseProvider
+  await provider
     .getLogs({
       // Only keep unique topics (eg. an example of duplicated topics are
       // erc721 and erc20 transfers which have the exact same signature)
@@ -1621,11 +1624,6 @@ export const syncEvents = async (
               // Assume the left order is the maker's order
               const side = [ERC721, ERC1155].includes(leftAsset[0]) ? "sell" : "buy";
 
-              const price =
-                side === "buy"
-                  ? bn(newLeftFill).div(newRightFill).toString()
-                  : bn(newRightFill).div(newLeftFill).toString();
-
               const decodedAsset = defaultAbiCoder.decode(
                 ["(address token, uint tokenId)"],
                 side === "sell" ? leftAsset.data : rightAsset.data
@@ -1634,7 +1632,10 @@ export const syncEvents = async (
               const contract = decodedAsset[0][0].toLowerCase();
               const tokenId = decodedAsset[0][1].toString();
 
-              const amount = side === "sell" ? newLeftFill : newRightFill;
+              let price = side === "sell" ? newLeftFill : newRightFill;
+              const amount = side === "sell" ? newRightFill : newLeftFill;
+
+              price = bn(price).div(amount).toString();
 
               const orderKind = "rarible";
 
@@ -1660,6 +1661,156 @@ export const syncEvents = async (
                 contract,
                 tokenId,
                 amount,
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "element-erc721-sell-order-filled": {
+              const { args } = eventData.abi.parseLog(log);
+              const maker = args["maker"].toLowerCase();
+              const taker = args["taker"].toLowerCase();
+              const erc20Token = args["erc20Token"].toLowerCase();
+              const erc20TokenAmount = args["erc20TokenAmount"].toString();
+              const erc721Token = args["erc721Token"].toLowerCase();
+              const erc721TokenId = args["erc721TokenId"].toString();
+              const orderHash = args["orderHash"].toLowerCase();
+
+              if (
+                ![
+                  Sdk.Common.Addresses.Weth[config.chainId],
+                  Sdk.ZeroExV4.Addresses.Eth[config.chainId],
+                ].includes(erc20Token)
+              ) {
+                // Skip if the payment token is not supported.
+                break;
+              }
+
+              fillEventsPartial.push({
+                orderKind: "element-erc721",
+                orderId: orderHash,
+                orderSide: "sell",
+                maker,
+                taker,
+                price: erc20TokenAmount,
+                contract: erc721Token,
+                tokenId: erc721TokenId,
+                amount: "1",
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "element-erc721-buy-order-filled": {
+              const { args } = eventData.abi.parseLog(log);
+              const maker = args["maker"].toLowerCase();
+              const taker = args["taker"].toLowerCase();
+              const erc20Token = args["erc20Token"].toLowerCase();
+              const erc20TokenAmount = args["erc20TokenAmount"].toString();
+              const erc721Token = args["erc721Token"].toLowerCase();
+              const erc721TokenId = args["erc721TokenId"].toString();
+              const orderHash = args["orderHash"].toLowerCase();
+
+              if (
+                ![
+                  Sdk.Common.Addresses.Weth[config.chainId],
+                  Sdk.ZeroExV4.Addresses.Eth[config.chainId],
+                ].includes(erc20Token)
+              ) {
+                // Skip if the payment token is not supported.
+                break;
+              }
+
+              fillEventsPartial.push({
+                orderKind: "element-erc721",
+                orderId: orderHash,
+                orderSide: "buy",
+                maker,
+                taker,
+                price: erc20TokenAmount,
+                contract: erc721Token,
+                tokenId: erc721TokenId,
+                amount: "1",
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "element-erc1155-sell-order-filled": {
+              const { args } = eventData.abi.parseLog(log);
+              const maker = args["maker"].toLowerCase();
+              const taker = args["taker"].toLowerCase();
+              const erc20Token = args["erc20Token"].toLowerCase();
+              const erc20FillAmount = args["erc20FillAmount"].toString();
+              const erc1155Token = args["erc1155Token"].toLowerCase();
+              const erc1155TokenId = args["erc1155TokenId"].toString();
+              const erc1155FillAmount = args["erc1155FillAmount"].toString();
+              const orderHash = args["orderHash"].toLowerCase();
+
+              if (
+                ![
+                  Sdk.Common.Addresses.Weth[config.chainId],
+                  Sdk.ZeroExV4.Addresses.Eth[config.chainId],
+                ].includes(erc20Token)
+              ) {
+                // Skip if the payment token is not supported.
+                break;
+              }
+
+              const price = bn(erc20FillAmount).div(erc1155FillAmount).toString();
+
+              fillEventsPartial.push({
+                orderKind: "element-erc1155",
+                orderId: orderHash,
+                orderSide: "sell",
+                maker,
+                taker,
+                price,
+                contract: erc1155Token,
+                tokenId: erc1155TokenId,
+                amount: erc1155FillAmount,
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "element-erc1155-buy-order-filled": {
+              const { args } = eventData.abi.parseLog(log);
+              const maker = args["maker"].toLowerCase();
+              const taker = args["taker"].toLowerCase();
+              const erc20Token = args["erc20Token"].toLowerCase();
+              const erc20FillAmount = args["erc20FillAmount"].toString();
+              const erc1155Token = args["erc1155Token"].toLowerCase();
+              const erc1155TokenId = args["erc1155TokenId"].toString();
+              const erc1155FillAmount = args["erc1155FillAmount"].toString();
+              const orderHash = args["orderHash"].toLowerCase();
+
+              if (
+                ![
+                  Sdk.Common.Addresses.Weth[config.chainId],
+                  Sdk.ZeroExV4.Addresses.Eth[config.chainId],
+                ].includes(erc20Token)
+              ) {
+                // Skip if the payment token is not supported.
+                break;
+              }
+
+              const price = bn(erc20FillAmount).div(erc1155FillAmount).toString();
+
+              fillEventsPartial.push({
+                orderKind: "element-erc1155",
+                orderId: orderHash,
+                orderSide: "buy",
+                maker,
+                taker,
+                price,
+                contract: erc1155Token,
+                tokenId: erc1155TokenId,
+                amount: erc1155FillAmount,
                 baseEventParams,
               });
 

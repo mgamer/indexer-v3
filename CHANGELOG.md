@@ -1,3 +1,57 @@
+# [5.142.0](https://github.com/reservoirprotocol/indexer/compare/v5.141.0...v5.142.0) (2022-08-03)
+
+
+### Features
+
+* allow using the slow provider in the admin sync events api ([2fd35e0](https://github.com/reservoirprotocol/indexer/commit/2fd35e0a7b33dc8e97b0117e312f9a3114f78773))
+
+
+
+# [5.141.0](https://github.com/reservoirprotocol/indexer/compare/v5.140.1...v5.141.0) (2022-08-02)
+
+
+### Bug Fixes
+
+* add hapi swagger plugin to marketplaces api ([af5e7bb](https://github.com/reservoirprotocol/indexer/commit/af5e7bb7e63f0993fe9ceff2b3f02adedb0cd581))
+* get martketplace response types ([df9f05c](https://github.com/reservoirprotocol/indexer/commit/df9f05c89a716d626350e76f0b4a397ac07b2c4c))
+* reservoir token url redirect ([d43aeca](https://github.com/reservoirprotocol/indexer/commit/d43aecaa5b258efcc5fa79cdfcf4c6913df21da6))
+* type definitions for get marketplaces api ([a3a8241](https://github.com/reservoirprotocol/indexer/commit/a3a82414acd3c6d09065de6935e9c0cde19a2af2))
+
+
+
+## [5.140.1](https://github.com/reservoirprotocol/indexer/compare/v5.140.0...v5.140.1) (2022-08-02)
+
+
+### Bug Fixes
+
+* added support for 1155 tokens ([fa1d0af](https://github.com/reservoirprotocol/indexer/commit/fa1d0afd3c51d12246708c52ec934420dda3ee22))
+* added topic ([18f8f49](https://github.com/reservoirprotocol/indexer/commit/18f8f499f89da69c53cc39103307e7c82ff100c2))
+* first commit ([9fab529](https://github.com/reservoirprotocol/indexer/commit/9fab5292d1ac537265aed3a2c10e2dcd79c4e12a))
+* fix price calculation ([d821895](https://github.com/reservoirprotocol/indexer/commit/d821895c61e8190b7cd1a391a42e4912a457dbc1))
+* lowered case hash, fix migration ([40dfdac](https://github.com/reservoirprotocol/indexer/commit/40dfdacdfe45ed0593485dcdcdeba95a4a4ffb3d))
+* updated SDK ([a12e360](https://github.com/reservoirprotocol/indexer/commit/a12e3602b40888a39521c2d9236d775fb1bc69ba))
+
+
+
+# [5.140.0](https://github.com/reservoirprotocol/indexer/compare/v5.139.2...v5.140.0) (2022-08-02)
+
+
+### Features
+
+* allow specifying blocks per batch when backfilling ([525588a](https://github.com/reservoirprotocol/indexer/commit/525588a632e8e3239778ceb6313a8133c5fd6cb6))
+
+
+
+## [5.139.2](https://github.com/reservoirprotocol/indexer/compare/v5.139.1...v5.139.2) (2022-08-02)
+
+
+### Bug Fixes
+
+* changed amount and price ([42e5960](https://github.com/reservoirprotocol/indexer/commit/42e5960a4a15a11e6c9b54783376bfabde55c8dd))
+* fix price calculation for partial filling ([2eade65](https://github.com/reservoirprotocol/indexer/commit/2eade656804956f762eb29e94655975799a2474d))
+
+
+
 ## [5.139.1](https://github.com/reservoirprotocol/indexer/compare/v5.139.0...v5.139.1) (2022-08-02)
 
 

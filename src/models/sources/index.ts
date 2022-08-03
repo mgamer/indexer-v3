@@ -83,8 +83,8 @@ export class Sources {
       name: "Reservoir",
       metadata: {
         icon: "https://www.reservoir.market/reservoir.svg",
-        tokenUrlMainnet: "https://www.reservoir.market/collections/${contract}/${tokenId}",
-        tokenUrlRinkeby: "https://www.reservoir.fun/collections/${contract}/${tokenId}",
+        tokenUrlMainnet: "https://www.reservoir.market/${contract}/${tokenId}",
+        tokenUrlRinkeby: "https://dev.reservoir.market/${contract}/${tokenId}",
       },
     });
   }
