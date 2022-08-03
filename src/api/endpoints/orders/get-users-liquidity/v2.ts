@@ -9,13 +9,13 @@ import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
-const version = "v1";
+const version = "v2";
 
-export const getUsersLiquidityV1Options: RouteOptions = {
+export const getUsersLiquidityV2Options: RouteOptions = {
   description: "User bid liquidity rankings",
   notes:
     "This API calculates the total liquidity created by users, based on the number of tokens they are top bidder for.",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Stats"],
   plugins: {
     "hapi-swagger": {
       order: 7,
@@ -27,13 +27,8 @@ export const getUsersLiquidityV1Options: RouteOptions = {
         .lowercase()
         .description(
           "Filter to a particular collection with collection-id. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
-        ),
-      user: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .description(
-          "Filter to a particular user. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
-        ),
+        )
+        .required(),
       offset: Joi.number()
         .integer()
         .min(0)
@@ -46,9 +41,7 @@ export const getUsersLiquidityV1Options: RouteOptions = {
         .max(20)
         .default(20)
         .description("Amount of items returned in response."),
-    })
-      .or("collection", "user")
-      .oxor("collection", "user"),
+    }),
   },
   response: {
     schema: Joi.object({
@@ -75,32 +68,44 @@ export const getUsersLiquidityV1Options: RouteOptions = {
 
     try {
       let baseQuery = `
-        SELECT
-          "t"."top_buy_maker" AS "user",
-          SUM("t"."top_buy_value") as "liquidity",
-          MAX("t"."top_buy_value") as "max_top_buy_value",
-          RANK() OVER (ORDER BY SUM("t"."top_buy_value") DESC NULLS LAST) AS "rank",
-          COUNT(*) AS "token_count"
-        FROM "tokens" "t"
+        SELECT maker AS "user",
+               SUM(value) as "liquidity",
+               MAX(value) as "max_top_buy_value",
+               RANK() OVER (ORDER BY SUM(value) DESC NULLS LAST) AS "rank",
+               COUNT(*) AS "token_count"
+        FROM (
+          SELECT contract, token_id
+          FROM tokens
+          WHERE collection_id = $/collection/
+          ORDER BY contract, token_id ASC
+        ) "x" LEFT JOIN LATERAL (
+          SELECT
+            "o"."id" as "order_id",
+            "o"."value",
+            "o"."maker"
+          FROM "orders" "o"
+          JOIN "token_sets_tokens" "tst" ON "o"."token_set_id" = "tst"."token_set_id"
+          WHERE "tst"."contract" = "x"."contract"
+          AND "tst"."token_id" = "x"."token_id"
+          AND "o"."side" = 'buy'
+          AND "o"."fillability_status" = 'fillable'
+          AND "o"."approval_status" = 'approved'
+          AND EXISTS(
+            SELECT FROM "nft_balances" "nb"
+            WHERE "nb"."contract" = "x"."contract"
+            AND "nb"."token_id" = "x"."token_id"
+            AND "nb"."amount" > 0
+            AND "nb"."owner" != "o"."maker"
+          )
+          ORDER BY "o"."value" DESC
+          LIMIT 1
+        ) "y" ON TRUE
+        WHERE value IS NOT NULL
+        GROUP BY maker
+        ORDER BY rank, maker
+        OFFSET $/offset/
+        LIMIT $/limit/
       `;
-
-      const conditions: string[] = [`"t"."top_buy_maker" IS NOT NULL`];
-      if (query.collection) {
-        conditions.push(`"t"."collection_id" = $/collection/`);
-      }
-      if (conditions.length) {
-        baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
-      }
-
-      // Grouping
-      baseQuery += ` GROUP BY "t"."top_buy_maker"`;
-
-      // Sorting
-      baseQuery += ` ORDER BY "rank", "t"."top_buy_maker"`;
-
-      // Pagination
-      baseQuery += ` OFFSET $/offset/`;
-      baseQuery += ` LIMIT $/limit/`;
 
       baseQuery = `
         WITH "x" AS (${baseQuery})
@@ -116,12 +121,8 @@ export const getUsersLiquidityV1Options: RouteOptions = {
           ) AS "weth_balance"
         FROM "x"
       `;
-      (query as any).weth = toBuffer(Sdk.Common.Addresses.Weth[config.chainId]);
 
-      if (query.user) {
-        (query as any).user = toBuffer(query.user);
-        baseQuery += ` WHERE "x"."user" = $/user/`;
-      }
+      (query as any).weth = toBuffer(Sdk.Common.Addresses.Weth[config.chainId]);
 
       const result = await redb.manyOrNone(baseQuery, query).then((result) =>
         result.map((r) => ({

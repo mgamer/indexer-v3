@@ -66,10 +66,10 @@ export const getTokensV4Options: RouteOptions = {
       source: Joi.string().description("Name of the order source. Example `OpenSea`"),
       native: Joi.boolean().description("If true, results will filter only Reservoir orders."),
       sortBy: Joi.string()
-        .allow("floorAskPrice", "topBidValue", "tokenId", "rarity")
+        .allow("floorAskPrice", "tokenId", "rarity")
         .when("contract", {
           is: Joi.exist(),
-          then: Joi.invalid("floorAskPrice", "topBidValue", "rarity"),
+          then: Joi.invalid("floorAskPrice", "rarity"),
         })
         .default((parent) => (parent && parent.contract ? "tokenId" : "floorAskPrice"))
         .description(
@@ -81,6 +81,9 @@ export const getTokensV4Options: RouteOptions = {
         .max(50)
         .default(20)
         .description("Amount of items returned in response."),
+      includeTopBid: Joi.boolean()
+        .default(false)
+        .description("If true, top bid will be returned in the response."),
       continuation: Joi.string()
         .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
@@ -107,7 +110,7 @@ export const getTokensV4Options: RouteOptions = {
             slug: Joi.string().allow(null, ""),
           }),
           source: Joi.string().allow(null, ""),
-          topBidValue: Joi.number().unsafe().allow(null),
+          topBidValue: Joi.number().unsafe().allow(null).optional(),
           floorAskPrice: Joi.number().unsafe().allow(null),
           rarity: Joi.number().unsafe().allow(null),
           rarityRank: Joi.number().unsafe().allow(null),
@@ -124,6 +127,33 @@ export const getTokensV4Options: RouteOptions = {
   handler: async (request: Request) => {
     const query = request.query as any;
 
+    let selectTopBid = "";
+    let topBidQuery = "";
+    if (query.includeTopBid) {
+      selectTopBid = "y.top_buy_value,";
+      topBidQuery = `
+        LEFT JOIN LATERAL (
+          SELECT o.value AS "top_buy_value"
+          FROM "orders" "o"
+          JOIN "token_sets_tokens" "tst" ON "o"."token_set_id" = "tst"."token_set_id"
+          WHERE "tst"."contract" = "t"."contract"
+          AND "tst"."token_id" = "t"."token_id"
+          AND "o"."side" = 'buy'
+          AND "o"."fillability_status" = 'fillable'
+          AND "o"."approval_status" = 'approved'
+          AND EXISTS(
+            SELECT FROM "nft_balances" "nb"
+              WHERE "nb"."contract" = "t"."contract"
+              AND "nb"."token_id" = "t"."token_id"
+              AND "nb"."amount" > 0
+              AND "nb"."owner" != "o"."maker"
+          )
+          ORDER BY "o"."value" DESC
+          LIMIT 1
+        ) "y" ON TRUE
+      `;
+    }
+
     try {
       let baseQuery = `
         SELECT
@@ -138,7 +168,7 @@ export const getTokensV4Options: RouteOptions = {
           ("c".metadata ->> 'imageUrl')::TEXT AS "collection_image",
           "c"."slug",
           "t"."floor_sell_value",
-          "t"."top_buy_value",
+          ${selectTopBid}
           "t"."rarity_score",
           "t"."rarity_rank",
           (
@@ -150,8 +180,8 @@ export const getTokensV4Options: RouteOptions = {
             LIMIT 1
           ) AS "owner"
         FROM "tokens" "t"
-        JOIN "collections" "c"
-          ON "t"."collection_id" = "c"."id"
+        ${topBidQuery}
+        JOIN "collections" "c" ON "t"."collection_id" = "c"."id"
       `;
 
       if (query.tokenSetId) {
@@ -271,21 +301,6 @@ export const getTokensV4Options: RouteOptions = {
               break;
             }
 
-            case "topBidValue": {
-              if (contArr[0] !== "null") {
-                conditions.push(`
-                  ("t"."top_buy_value", "t"."token_id") < ($/topBuyValue:raw/, $/tokenId:raw/)
-                  OR (t.top_buy_value is null)
-                 `);
-                (query as any).topBuyValue = contArr[0];
-                (query as any).tokenId = contArr[1];
-              } else {
-                conditions.push(`(t.top_buy_value is null AND t.token_id < $/tokenId/)`);
-                (query as any).tokenId = contArr[1];
-              }
-              break;
-            }
-
             case "floorAskPrice":
             default: {
               if (contArr[0] !== "null") {
@@ -314,7 +329,7 @@ export const getTokensV4Options: RouteOptions = {
       }
 
       // Sorting
-      // Only allow sorting on floorSell / topBid / tokenId / rarity when we filter by collection or attributes
+      // Only allow sorting on floorSell / tokenId / rarity when we filter by collection or attributes
       if (query.collection || query.attributes || query.tokenSetId) {
         switch (query.sortBy) {
           case "rarity": {
@@ -324,11 +339,6 @@ export const getTokensV4Options: RouteOptions = {
 
           case "tokenId": {
             baseQuery += ` ORDER BY "t"."contract", "t"."token_id"`;
-            break;
-          }
-
-          case "topBidValue": {
-            baseQuery += ` ORDER BY "t"."top_buy_value" DESC NULLS LAST, "t"."token_id" DESC`;
             break;
           }
 
@@ -349,7 +359,6 @@ export const getTokensV4Options: RouteOptions = {
       /** Depending on how we sorted, we use that sorting key to determine the next page of results
           Possible formats:
             rarity_tokenid
-            topBidValue_tokenid
             floorAskPrice_tokenid
             tokenid
        **/
@@ -368,10 +377,6 @@ export const getTokensV4Options: RouteOptions = {
 
             case "tokenId":
               continuation = fromBuffer(rawResult[rawResult.length - 1].contract);
-              break;
-
-            case "topBidValue":
-              continuation = rawResult[rawResult.length - 1].top_buy_value || "null";
               break;
 
             case "floorAskPrice":
@@ -406,7 +411,11 @@ export const getTokensV4Options: RouteOptions = {
           },
           source: sources.get(r.floor_sell_source_id_int)?.name,
           floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-          topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+          topBidValue: query.includeTopBid
+            ? r.top_buy_value
+              ? formatEth(r.top_buy_value)
+              : null
+            : undefined,
           rarity: r.rarity_score,
           rarityRank: r.rarity_rank,
           owner: r.owner ? fromBuffer(r.owner) : null,

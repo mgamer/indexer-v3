@@ -2,15 +2,16 @@
 
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
+import _ from "lodash";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
 
-const version = "v2";
+const version = "v3";
 
-export const getUserTokensV2Options: RouteOptions = {
+export const getUserTokensV3Options: RouteOptions = {
   cache: {
     privacy: "public",
     expiresIn: 60000,
@@ -18,7 +19,7 @@ export const getUserTokensV2Options: RouteOptions = {
   description: "User tokens",
   notes:
     "Get tokens held by a user, along with ownership information such as associated orders and date acquired.",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Tokens"],
   plugins: {
     "hapi-swagger": {
       order: 9,
@@ -72,6 +73,9 @@ export const getUserTokensV2Options: RouteOptions = {
         .max(20)
         .default(20)
         .description("Amount of items returned in response."),
+      includeTopBid: Joi.boolean()
+        .default(false)
+        .description("If true, top bid will be returned in the response."),
     }),
   },
   response: {
@@ -92,7 +96,7 @@ export const getUserTokensV2Options: RouteOptions = {
             topBid: Joi.object({
               id: Joi.string().allow(null),
               value: Joi.number().unsafe().allow(null),
-            }),
+            }).optional(),
           }),
           ownership: Joi.object({
             tokenCount: Joi.string(),
@@ -178,12 +182,51 @@ export const getUserTokensV2Options: RouteOptions = {
       }
     }
 
+    let tokensJoin = `
+      JOIN LATERAL (
+        SELECT t.token_id, t.name, t.image, t.collection_id, null AS top_buy_id, null AS top_buy_value
+        FROM tokens t
+        WHERE b.token_id = t.token_id
+        AND b.contract = t.contract
+      ) t ON TRUE
+    `;
+
+    if (query.includeTopBid) {
+      tokensJoin = `
+        JOIN LATERAL (
+          SELECT t.token_id, t.name, t.image, t.collection_id
+          FROM tokens t
+          WHERE b.token_id = t.token_id
+          AND b.contract = t.contract
+        ) t ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT "o"."id" AS "top_buy_id", o.value AS "top_buy_value"
+          FROM "orders" "o"
+          JOIN "token_sets_tokens" "tst" ON "o"."token_set_id" = "tst"."token_set_id"
+          WHERE "tst"."contract" = "b"."contract"
+          AND "tst"."token_id" = "b"."token_id"
+          AND "o"."side" = 'buy'
+          AND "o"."fillability_status" = 'fillable'
+          AND "o"."approval_status" = 'approved'
+          AND EXISTS(
+            SELECT FROM "nft_balances" "nb"
+              WHERE "nb"."contract" = "b"."contract"
+              AND "nb"."token_id" = "b"."token_id"
+              AND "nb"."amount" > 0
+              AND "nb"."owner" != "o"."maker"
+          )
+          ORDER BY "o"."value" DESC
+          LIMIT 1
+        ) "y" ON TRUE
+      `;
+    }
+
     try {
       const baseQuery = `
         SELECT b.contract, b.token_id, b.token_count, b.acquired_at, t.name,
-               t.image, t.collection_id, b.floor_sell_id, b.floor_sell_value, t.top_buy_id,
-               t.top_buy_value, t.total_buy_value, c.name as collection_name,
-               c.metadata, c.floor_sell_value AS "collection_floor_sell_value",
+               t.image, t.collection_id, b.floor_sell_id, b.floor_sell_value, top_buy_id,
+               top_buy_value, c.name as collection_name, c.metadata,
+               c.floor_sell_value AS "collection_floor_sell_value",
                (
                     CASE WHEN b.floor_sell_value IS NOT NULL
                     THEN 1
@@ -197,47 +240,43 @@ export const getUserTokensV2Options: RouteOptions = {
               AND ${collectionFilters.length ? "(" + collectionFilters.join(" OR ") + ")" : "TRUE"}
               AND amount > 0
           ) AS b
-          JOIN LATERAL (
-            SELECT t.token_id, t.name, t.image, t.collection_id,
-               t.top_buy_id, t.top_buy_value, b.token_count * t.top_buy_value AS total_buy_value
-            FROM tokens t
-            WHERE b.token_id = t.token_id
-            AND b.contract = t.contract
-          ) t ON TRUE
+          ${tokensJoin}
           JOIN collections c ON c.id = t.collection_id
         ${sortByFilter}
         OFFSET $/offset/
         LIMIT $/limit/
       `;
 
-      const result = await redb.manyOrNone(baseQuery, { ...query, ...params }).then((result) =>
-        result.map((r) => ({
-          token: {
-            contract: fromBuffer(r.contract),
-            tokenId: r.token_id,
-            name: r.name,
-            image: r.image,
-            collection: {
-              id: r.collection_id,
-              name: r.collection_name,
-              imageUrl: r.metadata?.imageUrl,
-              floorAskPrice: r.collection_floor_sell_value
-                ? formatEth(r.collection_floor_sell_value)
-                : null,
-            },
-            topBid: {
-              id: r.top_buy_id,
-              value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-            },
+      const userTokens = await redb.manyOrNone(baseQuery, { ...query, ...params });
+
+      const result = _.map(userTokens, (r) => ({
+        token: {
+          contract: fromBuffer(r.contract),
+          tokenId: r.token_id,
+          name: r.name,
+          image: r.image,
+          collection: {
+            id: r.collection_id,
+            name: r.collection_name,
+            imageUrl: r.metadata?.imageUrl,
+            floorAskPrice: r.collection_floor_sell_value
+              ? formatEth(r.collection_floor_sell_value)
+              : null,
           },
-          ownership: {
-            tokenCount: String(r.token_count),
-            onSaleCount: String(r.on_sale_count),
-            floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-            acquiredAt: r.acquired_at ? new Date(r.acquired_at).toISOString() : null,
-          },
-        }))
-      );
+          topBid: query.includeTopBid
+            ? {
+                id: r.top_buy_id,
+                value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+              }
+            : undefined,
+        },
+        ownership: {
+          tokenCount: String(r.token_count),
+          onSaleCount: String(r.on_sale_count),
+          floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+          acquiredAt: r.acquired_at ? new Date(r.acquired_at).toISOString() : null,
+        },
+      }));
 
       return { tokens: result };
     } catch (error) {
