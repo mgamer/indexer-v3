@@ -25,6 +25,8 @@ export const getNetworkName = () => {
 type NetworkSettings = {
   enableWebSocket: boolean;
   enableReorgCheck: boolean;
+  backfillFetchAllBlocks: boolean;
+  reorgCheckFrequency: number[];
   realtimeSyncFrequencySeconds: number;
   realtimeSyncMaxBlockLag: number;
   backfillBlockBatchSize: number;
@@ -35,10 +37,12 @@ export const getNetworkSettings = (): NetworkSettings => {
   const defaultNetworkSettings: NetworkSettings = {
     enableWebSocket: true,
     enableReorgCheck: true,
+    backfillFetchAllBlocks: true,
     realtimeSyncFrequencySeconds: 15,
     realtimeSyncMaxBlockLag: 16,
     backfillBlockBatchSize: 16,
     washTradingExcludedContracts: [],
+    reorgCheckFrequency: [1, 5, 10, 30, 60], // In Minutes
   };
 
   switch (config.chainId) {
@@ -81,10 +85,12 @@ export const getNetworkSettings = (): NetworkSettings => {
       return {
         ...defaultNetworkSettings,
         enableWebSocket: false,
-        enableReorgCheck: false,
+        enableReorgCheck: true,
+        backfillFetchAllBlocks: false,
         realtimeSyncFrequencySeconds: 10,
         realtimeSyncMaxBlockLag: 128,
         backfillBlockBatchSize: 512,
+        reorgCheckFrequency: [30],
       };
     }
     // Default
