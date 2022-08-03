@@ -47,6 +47,7 @@ export const postSyncEventsOptions: RouteOptions = {
         backfill,
         eventDataKinds,
         blocksPerBatch,
+        useSlowProvider: true,
       });
 
       return { message: "Request accepted" };
