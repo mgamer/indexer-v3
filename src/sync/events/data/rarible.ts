@@ -5,7 +5,7 @@ import { EventData } from "@/events-sync/data";
 
 export const match: EventData = {
   kind: "rarible-match",
-  addresses: { [Rarible.Addresses.Exchange[config.chainId]]: true },
+  addresses: { [Rarible.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
   topic: "0x268820db288a211986b26a8fda86b1e0046281b21206936bb0e61c67b5c79ef4",
   numTopics: 1,
   abi: new Interface([
