@@ -1690,8 +1690,6 @@ export const syncEvents = async (
                   break;
                 }
 
-                const orderKind = "seaport";
-
                 let aggregatorSourceId;
                 let fillSourceId;
 
