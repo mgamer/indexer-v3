@@ -408,7 +408,10 @@ export const getTokensDetailsV4Options: RouteOptions = {
         const contract = fromBuffer(r.contract);
         const tokenId = r.token_id;
 
-        const source = sources.get(r.floor_sell_source_id_int, contract, tokenId);
+        const source =
+          r.floor_sell_source_id_int !== null
+            ? sources.get(r.floor_sell_source_id_int, contract, tokenId)
+            : undefined;
         return {
           token: {
             contract,
