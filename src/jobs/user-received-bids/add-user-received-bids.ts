@@ -3,7 +3,7 @@ import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 import { idb } from "@/common/db";
-import { fromBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 
 const QUEUE_NAME = "add-user-received-bids-queue";
 
@@ -115,6 +115,8 @@ if (config.doBackgroundWork) {
         quantity: order.quantity_remaining,
         validBetween: order.valid_between,
         expiration: order.expiration,
+        contract: contract ? toBuffer(contract) : null,
+        tokenId,
       });
 
       if (!order.token_set_id.startsWith("token:") && result) {
