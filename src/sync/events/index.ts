@@ -1816,6 +1816,90 @@ export const syncEvents = async (
 
               break;
             }
+
+            case "quixotic-order-filled": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const orderId = parsedLog.args["orderHash"].toLowerCase();
+              const maker = parsedLog.args["offerer"].toLowerCase();
+              let taker = parsedLog.args["recipient"].toLowerCase();
+              const offer = parsedLog.args["offer"];
+              const consideration = parsedLog.args["consideration"];
+
+              // TODO: Switch to `Quixotic` class once integrated
+              const saleInfo = new Sdk.Seaport.Exchange(config.chainId).deriveBasicSale(
+                offer,
+                consideration
+              );
+              if (saleInfo) {
+                let side: "sell" | "buy";
+                if (saleInfo.paymentToken === Sdk.Common.Addresses.Eth[config.chainId]) {
+                  side = "sell";
+                } else if (saleInfo.paymentToken === Sdk.Common.Addresses.Weth[config.chainId]) {
+                  side = "buy";
+                } else {
+                  break;
+                }
+
+                if (saleInfo.recipientOverride) {
+                  taker = saleInfo.recipientOverride;
+                }
+
+                const orderKind = "quixotic";
+
+                // Handle attribution
+                const data = await syncEventsUtils.extractAttributionData(
+                  baseEventParams.txHash,
+                  orderKind
+                );
+                if (data.taker) {
+                  taker = data.taker;
+                }
+
+                const price = bn(saleInfo.price).div(saleInfo.amount).toString();
+
+                const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
+
+                // Custom handling to support partial filling
+                fillEventsPartial.push({
+                  orderKind,
+                  orderId,
+                  orderSide: side,
+                  orderSourceIdInt: orderSource?.id,
+                  maker,
+                  taker,
+                  price,
+                  contract: saleInfo.contract,
+                  tokenId: saleInfo.tokenId,
+                  amount: saleInfo.amount,
+                  aggregatorSourceId: data.aggregatorSource?.id,
+                  fillSourceId: data.fillSource?.id,
+                  baseEventParams,
+                });
+
+                fillInfos.push({
+                  context: `${orderId}-${baseEventParams.txHash}`,
+                  orderId: orderId,
+                  orderSide: side,
+                  contract: saleInfo.contract,
+                  tokenId: saleInfo.tokenId,
+                  amount: saleInfo.amount,
+                  price,
+                  timestamp: baseEventParams.timestamp,
+                });
+              }
+
+              orderInfos.push({
+                context: `filled-${orderId}-${baseEventParams.txHash}`,
+                id: orderId,
+                trigger: {
+                  kind: "sale",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+              });
+
+              break;
+            }
           }
         } catch (error) {
           logger.info("sync-events", `Failed to handle events: ${error}`);
