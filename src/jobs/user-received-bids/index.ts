@@ -1,1 +1,1 @@
-import "@/jobs/user-received-bids/handle-new-buy-order";
+import "@/jobs/user-received-bids/add-user-received-bids";

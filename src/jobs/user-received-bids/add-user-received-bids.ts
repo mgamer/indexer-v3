@@ -5,7 +5,7 @@ import { logger } from "@/common/logger";
 import { idb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
 
-const QUEUE_NAME = "user-received-bids-handle-new-buy-order-queue";
+const QUEUE_NAME = "add-user-received-bids-queue";
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
@@ -25,7 +25,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { orderId, contract, tokenId } = job.data as HandleBuyOrderParams;
+      const { orderId, contract, tokenId } = job.data as AddUserReceivedBidsParams;
 
       let continuationFilter = "";
 
@@ -138,17 +138,17 @@ if (config.doBackgroundWork) {
   });
 }
 
-export type HandleBuyOrderParams = {
+export type AddUserReceivedBidsParams = {
   orderId: string;
   contract?: string | null;
   tokenId?: string | null;
 };
 
-export const addToQueue = async (buyOrders: HandleBuyOrderParams[]) => {
+export const addToQueue = async (jobs: AddUserReceivedBidsParams[]) => {
   await queue.addBulk(
-    buyOrders.map((buyOrder) => ({
-      name: buyOrder.orderId,
-      data: buyOrder,
+    jobs.map((job) => ({
+      name: job.orderId,
+      data: job,
     }))
   );
 };

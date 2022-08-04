@@ -99,7 +99,7 @@ import * as orderbookPostOrderExternal from "@/jobs/orderbook/post-order-externa
 
 import * as fetchSourceInfo from "@/jobs/sources/fetch-source-info";
 
-import * as userReceivedBidsHandleNewBuyOrder from "@/jobs/user-received-bids/handle-new-buy-order";
+import * as addUserReceivedBids from "@/jobs/user-received-bids/add-user-received-bids";
 
 export const allJobQueues = [
   fixActivitiesMissingCollection.queue,
@@ -175,5 +175,5 @@ export const allJobQueues = [
 
   fetchSourceInfo.queue,
 
-  userReceivedBidsHandleNewBuyOrder.queue,
+  addUserReceivedBids.queue,
 ];

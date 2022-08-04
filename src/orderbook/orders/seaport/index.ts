@@ -13,7 +13,7 @@ import { offChainCheck, offChainCheckBundle } from "@/orderbook/orders/seaport/c
 import * as bundles from "@/orderbook/bundles";
 import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
-import * as userReceivedBidsHandleNewBuyOrder from "@/jobs/user-received-bids/handle-new-buy-order";
+import * as addUserReceivedBids from "@/jobs/user-received-bids/add-user-received-bids";
 
 export type OrderInfo = {
   orderParams: Sdk.Seaport.Types.OrderComponents;
@@ -639,12 +639,12 @@ export const save = async (
         )
     );
 
-    await userReceivedBidsHandleNewBuyOrder.addToQueue(
+    await addUserReceivedBids.addToQueue(
       fillableBuyOrdersIds.map(
         (id) =>
           ({
             orderId: id,
-          } as userReceivedBidsHandleNewBuyOrder.HandleBuyOrderParams)
+          } as addUserReceivedBids.AddUserReceivedBidsParams)
       )
     );
 
