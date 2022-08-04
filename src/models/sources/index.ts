@@ -121,7 +121,7 @@ export class Sources {
   public async create(domain: string, address: string, metadata: object = {}) {
     const query = `INSERT INTO sources_v2 (domain, name, address, metadata)
                    VALUES ($/domain/, $/domain/, $/address/, $/metadata:json/)
-                   ON CONFLICT (domain) DO UPDATE SET domain = EXCLUDED.domain
+                   ON CONFLICT DO NOTHING
                    RETURNING *`;
 
     const values = {
