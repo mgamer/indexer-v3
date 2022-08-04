@@ -1,3 +1,12 @@
+## [5.143.1](https://github.com/reservoirprotocol/indexer/compare/v5.143.0...v5.143.1) (2022-08-04)
+
+
+### Bug Fixes
+
+* x2y2 conduit address ([a957048](https://github.com/reservoirprotocol/indexer/commit/a957048a497ec2bfa0252ef2034a370536559840))
+
+
+
 # [5.143.0](https://github.com/reservoirprotocol/indexer/compare/v5.142.1...v5.143.0) (2022-08-03)
 
 
