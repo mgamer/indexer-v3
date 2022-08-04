@@ -1,3 +1,18 @@
+# [5.145.0](https://github.com/reservoirprotocol/indexer/compare/v5.144.0...v5.145.0) (2022-08-04)
+
+
+### Bug Fixes
+
+* wip ([53b2114](https://github.com/reservoirprotocol/indexer/commit/53b2114491c75c6719ec8ed9f06ddcaa000b374c))
+* wip ([eb91d94](https://github.com/reservoirprotocol/indexer/commit/eb91d94e0500a8ef399dff618f68b4fb0abfd5dd))
+
+
+### Features
+
+* integrate erc20 sales ([aaf9f71](https://github.com/reservoirprotocol/indexer/commit/aaf9f718538c20513f9e1f34a1a540a7d2296e76))
+
+
+
 # [5.144.0](https://github.com/reservoirprotocol/indexer/compare/v5.143.2...v5.144.0) (2022-08-04)
 
 
