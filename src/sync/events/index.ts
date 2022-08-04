@@ -2077,6 +2077,38 @@ export const syncEvents = async (
 
               break;
             }
+
+            case "zora-ask-filled": {
+              const { args } = eventData.abi.parseLog(log);
+              const tokenContract = args["tokenContract"].toLowerCase();
+              const tokenId = args["tokenId"].toString();
+              const buyer = args["buyer"].toLowerCase();
+              const ask = args["ask"];
+
+              const seller = ask["seller"].toLowerCase();
+              const askCurrency = ask["askCurrency"].toLowerCase();
+              const askPrice = ask["askPrice"].toString();
+
+              if (![Sdk.Common.Addresses.Weth[config.chainId], AddressZero].includes(askCurrency)) {
+                // Skip if the payment token is not supported.
+                break;
+              }
+
+              fillEventsPartial.push({
+                orderKind: "zora",
+                currency: askCurrency,
+                orderSide: "buy",
+                taker: seller,
+                maker: buyer,
+                price: askPrice,
+                contract: tokenContract,
+                tokenId,
+                amount: "1",
+                baseEventParams,
+              });
+
+              break;
+            }
           }
         } catch (error) {
           logger.info("sync-events", `Failed to handle events: ${error}`);
