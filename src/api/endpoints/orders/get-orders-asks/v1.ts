@@ -336,7 +336,7 @@ export const getOrdersAsksV1Options: RouteOptions = {
       const sources = await Sources.getInstance();
       const result = rawResult.map(async (r) => {
         let source: SourcesEntity | undefined;
-        if (r.source_id_int) {
+        if (r.source_id_int !== null) {
           if (r.token_set_id?.startsWith("token")) {
             const [, contract, tokenId] = r.token_set_id.split(":");
             source = sources.get(r.source_id_int, contract, tokenId);
