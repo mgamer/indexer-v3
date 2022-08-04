@@ -65,7 +65,7 @@ if (config.doBackgroundWork) {
             $/value/::NUMERIC(78, 0) AS value,
             $/quantity/::NUMERIC(78, 0) AS quantity,
             $/validBetween/::TSTZRANGE AS valid_between,
-            LEAST($/expiration/::TIMESTAMPTZ, now() - interval '24 hours') AS clean_at
+            LEAST($/expiration/::TIMESTAMPTZ, now() + interval '24 hours') AS clean_at
           FROM (
             SELECT "tst"."contract", "tst"."token_id"
             FROM "token_sets_tokens" "tst"
