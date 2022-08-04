@@ -30,6 +30,8 @@ type NetworkSettings = {
   realtimeSyncFrequencySeconds: number;
   realtimeSyncMaxBlockLag: number;
   backfillBlockBatchSize: number;
+  metadataMintDelay: number;
+  enableMetadataAutoRefresh: boolean;
   washTradingExcludedContracts: string[];
 };
 
@@ -41,6 +43,8 @@ export const getNetworkSettings = (): NetworkSettings => {
     realtimeSyncFrequencySeconds: 15,
     realtimeSyncMaxBlockLag: 16,
     backfillBlockBatchSize: 16,
+    metadataMintDelay: 120,
+    enableMetadataAutoRefresh: false,
     washTradingExcludedContracts: [],
     reorgCheckFrequency: [1, 5, 10, 30, 60], // In Minutes
   };
@@ -50,6 +54,8 @@ export const getNetworkSettings = (): NetworkSettings => {
     case 1:
       return {
         ...defaultNetworkSettings,
+        metadataMintDelay: 30,
+        enableMetadataAutoRefresh: true,
         washTradingExcludedContracts: [
           // ArtBlocks Contracts
           "0x059edd72cd353df5106d2b9cc5ab83a52287ac3a",
