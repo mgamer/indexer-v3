@@ -1254,7 +1254,6 @@ export const syncEvents = async (
               if (
                 ![
                   Sdk.ZeroExV4.Addresses.Eth[config.chainId],
-                  Sdk.OpenDao.Addresses.Eth[config.chainId],
                   Sdk.Common.Addresses.Weth[config.chainId],
                 ].includes(erc20Token)
               ) {
@@ -1314,7 +1313,12 @@ export const syncEvents = async (
               }
 
               // Handle: prices
-              const currency = erc20Token;
+              let currency = erc20Token;
+              if (currency === Sdk.ZeroExV4.Addresses.Eth[config.chainId]) {
+                // Map the weird 0x ETH address
+                currency = Sdk.Common.Addresses.Eth[config.chainId];
+              }
+
               const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
               if (!prices.nativePrice) {
                 // We must always have the native price
@@ -1410,7 +1414,6 @@ export const syncEvents = async (
               if (
                 ![
                   Sdk.ZeroExV4.Addresses.Eth[config.chainId],
-                  Sdk.OpenDao.Addresses.Eth[config.chainId],
                   Sdk.Common.Addresses.Weth[config.chainId],
                 ].includes(erc20Token)
               ) {
@@ -1469,7 +1472,12 @@ export const syncEvents = async (
               }
 
               // Handle: prices
-              const currency = erc20Token;
+              let currency = erc20Token;
+              if (currency === Sdk.ZeroExV4.Addresses.Eth[config.chainId]) {
+                // Map the weird 0x ETH address
+                currency = Sdk.Common.Addresses.Eth[config.chainId];
+              }
+
               const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
               if (!prices.nativePrice) {
                 // We must always have the native price
@@ -1783,7 +1791,11 @@ export const syncEvents = async (
               }
 
               // Handle: prices
-              const currency = erc20Token;
+              let currency = erc20Token;
+              if (currency === Sdk.ZeroExV4.Addresses.Eth[config.chainId]) {
+                // Map the weird 0x ETH address
+                currency = Sdk.Common.Addresses.Eth[config.chainId];
+              }
               const currencyPrice = erc20TokenAmount;
 
               const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
@@ -1832,7 +1844,11 @@ export const syncEvents = async (
               }
 
               // Handle: prices
-              const currency = erc20Token;
+              let currency = erc20Token;
+              if (currency === Sdk.ZeroExV4.Addresses.Eth[config.chainId]) {
+                // Map the weird 0x ETH address
+                currency = Sdk.Common.Addresses.Eth[config.chainId];
+              }
               const currencyPrice = erc20TokenAmount;
 
               const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
@@ -1882,7 +1898,11 @@ export const syncEvents = async (
               }
 
               // Handle: prices
-              const currency = erc20Token;
+              let currency = erc20Token;
+              if (currency === Sdk.ZeroExV4.Addresses.Eth[config.chainId]) {
+                // Map the weird 0x ETH address
+                currency = Sdk.Common.Addresses.Eth[config.chainId];
+              }
               const currencyPrice = bn(erc20FillAmount).div(erc1155FillAmount).toString();
 
               const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
@@ -1932,7 +1952,11 @@ export const syncEvents = async (
               }
 
               // Handle: prices
-              const currency = erc20Token;
+              let currency = erc20Token;
+              if (currency === Sdk.ZeroExV4.Addresses.Eth[config.chainId]) {
+                // Map the weird 0x ETH address
+                currency = Sdk.Common.Addresses.Eth[config.chainId];
+              }
               const currencyPrice = bn(erc20FillAmount).div(erc1155FillAmount).toString();
 
               const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
@@ -1998,7 +2022,14 @@ export const syncEvents = async (
                   taker = data.taker;
                 }
 
-                const price = bn(saleInfo.price).div(saleInfo.amount).toString();
+                // Handle: prices
+                const currency = saleInfo.paymentToken;
+                const currencyPrice = bn(saleInfo.price).div(saleInfo.amount).toString();
+                const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+                if (!prices.nativePrice) {
+                  // We must always have the native price
+                  break;
+                }
 
                 const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
@@ -2010,7 +2041,10 @@ export const syncEvents = async (
                   orderSourceIdInt: orderSource?.id,
                   maker,
                   taker,
-                  price,
+                  price: prices.nativePrice,
+                  currency,
+                  currencyPrice,
+                  usdPrice: prices.usdPrice,
                   contract: saleInfo.contract,
                   tokenId: saleInfo.tokenId,
                   amount: saleInfo.amount,
@@ -2026,7 +2060,7 @@ export const syncEvents = async (
                   contract: saleInfo.contract,
                   tokenId: saleInfo.tokenId,
                   amount: saleInfo.amount,
-                  price,
+                  price: prices.nativePrice,
                   timestamp: baseEventParams.timestamp,
                 });
               }

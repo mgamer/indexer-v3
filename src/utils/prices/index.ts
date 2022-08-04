@@ -8,7 +8,6 @@ import { bn, toBuffer } from "@/common/utils";
 import { getCurrency } from "@/utils/currencies";
 
 const USD_DECIMALS = 6;
-const USD_UNIT = bn("1000000");
 // TODO: This should be a per-network setting
 const NATIVE_UNIT = bn("1000000000000000000");
 
@@ -152,13 +151,14 @@ export const getUSDAndNativePrices = async (
 
   const currency = await getCurrency(currencyAddress);
   if (currency.decimals && currencyUSDPrice) {
-    usdPrice = bn(amount).mul(currencyUSDPrice.value).div(bn(10).pow(currency.decimals)).toString();
+    const currencyUnit = bn(10).pow(currency.decimals);
+    usdPrice = bn(amount).mul(currencyUSDPrice.value).div(currencyUnit).toString();
     if (nativeUSDPrice) {
       nativePrice = bn(amount)
         .mul(currencyUSDPrice.value)
         .mul(NATIVE_UNIT)
         .div(nativeUSDPrice.value)
-        .div(USD_UNIT)
+        .div(currencyUnit)
         .toString();
     }
   }
