@@ -1,3 +1,63 @@
+# [5.145.0](https://github.com/reservoirprotocol/indexer/compare/v5.144.0...v5.145.0) (2022-08-04)
+
+
+### Bug Fixes
+
+* wip ([53b2114](https://github.com/reservoirprotocol/indexer/commit/53b2114491c75c6719ec8ed9f06ddcaa000b374c))
+* wip ([eb91d94](https://github.com/reservoirprotocol/indexer/commit/eb91d94e0500a8ef399dff618f68b4fb0abfd5dd))
+
+
+### Features
+
+* integrate erc20 sales ([aaf9f71](https://github.com/reservoirprotocol/indexer/commit/aaf9f718538c20513f9e1f34a1a540a7d2296e76))
+
+
+
+# [5.144.0](https://github.com/reservoirprotocol/indexer/compare/v5.143.2...v5.144.0) (2022-08-04)
+
+
+### Features
+
+* add support for quixotic sales ([165d3b6](https://github.com/reservoirprotocol/indexer/commit/165d3b6f8ee098fb04c598b45a3526dc30d74dca))
+
+
+
+## [5.143.2](https://github.com/reservoirprotocol/indexer/compare/v5.143.1...v5.143.2) (2022-08-04)
+
+
+### Performance Improvements
+
+* improve metadata efficiency on certain chains ([44565e6](https://github.com/reservoirprotocol/indexer/commit/44565e689a49142e49c91d3039fef06b08f6e7c9))
+
+
+
+## [5.143.1](https://github.com/reservoirprotocol/indexer/compare/v5.143.0...v5.143.1) (2022-08-04)
+
+
+### Bug Fixes
+
+* x2y2 conduit address ([a957048](https://github.com/reservoirprotocol/indexer/commit/a957048a497ec2bfa0252ef2034a370536559840))
+
+
+
+# [5.143.0](https://github.com/reservoirprotocol/indexer/compare/v5.142.1...v5.143.0) (2022-08-03)
+
+
+### Features
+
+* update top bids on the fly ([fba69bd](https://github.com/reservoirprotocol/indexer/commit/fba69bd2ac801300e0057a02c0e548ac75a242ed))
+
+
+
+## [5.142.1](https://github.com/reservoirprotocol/indexer/compare/v5.142.0...v5.142.1) (2022-08-03)
+
+
+### Bug Fixes
+
+* crashes ([a51f06c](https://github.com/reservoirprotocol/indexer/commit/a51f06c915b865e3374898aca2927ef2d63535b8))
+
+
+
 # [5.142.0](https://github.com/reservoirprotocol/indexer/compare/v5.141.0...v5.142.0) (2022-08-03)
 
 
