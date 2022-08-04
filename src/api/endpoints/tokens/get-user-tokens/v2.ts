@@ -89,10 +89,6 @@ export const getUserTokensV2Options: RouteOptions = {
               imageUrl: Joi.string().allow(null),
               floorAskPrice: Joi.number().unsafe().allow(null),
             }),
-            topBid: Joi.object({
-              id: Joi.string().allow(null),
-              value: Joi.number().unsafe().allow(null),
-            }),
           }),
           ownership: Joi.object({
             tokenCount: Joi.string(),
@@ -224,10 +220,6 @@ export const getUserTokensV2Options: RouteOptions = {
               floorAskPrice: r.collection_floor_sell_value
                 ? formatEth(r.collection_floor_sell_value)
                 : null,
-            },
-            topBid: {
-              id: r.top_buy_id,
-              value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
             },
           },
           ownership: {
