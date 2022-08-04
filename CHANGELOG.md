@@ -1,3 +1,12 @@
+## [5.143.2](https://github.com/reservoirprotocol/indexer/compare/v5.143.1...v5.143.2) (2022-08-04)
+
+
+### Performance Improvements
+
+* improve metadata efficiency on certain chains ([44565e6](https://github.com/reservoirprotocol/indexer/commit/44565e689a49142e49c91d3039fef06b08f6e7c9))
+
+
+
 ## [5.143.1](https://github.com/reservoirprotocol/indexer/compare/v5.143.0...v5.143.1) (2022-08-04)
 
 
