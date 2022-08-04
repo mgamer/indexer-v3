@@ -80,14 +80,6 @@ export const syncEvents = async (
     handleAttribution = true;
   }
 
-  // Before proceeding, fetch all individual blocks within the current range
-  const limit = pLimit(5);
-  await Promise.all(
-    _.range(fromBlock, toBlock + 1).map((block) =>
-      limit(() => provider.getBlockWithTransactions(block))
-    )
-  );
-
   const eventDatas = getEventData(options?.eventDataKinds);
   await provider
     .getLogs({
