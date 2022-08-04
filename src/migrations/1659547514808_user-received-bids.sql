@@ -16,7 +16,7 @@ CREATE TABLE user_received_bids (
 );
 
 CREATE UNIQUE INDEX user_received_bids_contract_token_id_address_order_id_index
-    ON user_activities (contract, token_id, address, order_id), ;
+    ON user_received_bids (contract, token_id, address, order_id);
 
 CREATE INDEX user_received_bids_address_index
     ON user_received_bids (address);
