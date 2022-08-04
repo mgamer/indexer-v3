@@ -1,3 +1,12 @@
+# [5.144.0](https://github.com/reservoirprotocol/indexer/compare/v5.143.2...v5.144.0) (2022-08-04)
+
+
+### Features
+
+* add support for quixotic sales ([165d3b6](https://github.com/reservoirprotocol/indexer/commit/165d3b6f8ee098fb04c598b45a3526dc30d74dca))
+
+
+
 ## [5.143.2](https://github.com/reservoirprotocol/indexer/compare/v5.143.1...v5.143.2) (2022-08-04)
 
 
