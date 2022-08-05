@@ -25,7 +25,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const limit = 1000;
+      const limit = 5000;
       const deletedBidsCount = await UserReceivedBids.cleanBids(limit);
       logger.info(QUEUE_NAME, `Deleted ${deletedBidsCount} bids`);
 
@@ -40,7 +40,7 @@ if (config.doBackgroundWork) {
     if (job.data.moreToDelete) {
       await addToQueue();
     } else {
-      await releaseLock("clean-user-received-bids");
+      await releaseLock(`clean-user-received-bids-${config.railwayStaticUrl}`);
     }
   });
 

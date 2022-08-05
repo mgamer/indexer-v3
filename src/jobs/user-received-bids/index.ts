@@ -11,7 +11,7 @@ import { config } from "@/config/index";
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
   cron.schedule("* * * * *", async () => {
-    if (await acquireLock("clean-user-received-bids")) {
+    if (await acquireLock(`clean-user-received-bids-${config.railwayStaticUrl}`)) {
       logger.info(cleanUserReceivedBids.queue.name, "Clean user received bids");
 
       try {
