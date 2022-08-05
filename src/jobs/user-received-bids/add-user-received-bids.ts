@@ -81,7 +81,6 @@ if (config.doBackgroundWork) {
               AND "nb"."token_id" = "x"."token_id"
               AND "nb"."amount" > 0
           ) "y" ON TRUE
-          
         ), y AS (
           INSERT INTO "user_received_bids" (
             address,
