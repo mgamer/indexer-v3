@@ -25,7 +25,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const limit = 1000;
+      const limit = 5000;
       const deletedBidsCount = await UserReceivedBids.cleanBids(limit);
       logger.info(QUEUE_NAME, `Deleted ${deletedBidsCount} bids`);
 
