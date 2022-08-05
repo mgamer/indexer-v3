@@ -19,7 +19,7 @@ export const queue = new Queue(QUEUE_NAME, {
 
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
-export const BATCH_SIZE = 200;
+export const BATCH_SIZE = 500;
 
 if (config.doBackgroundWork) {
   const worker = new Worker(
@@ -57,15 +57,7 @@ if (config.doBackgroundWork) {
           SELECT
             "y"."owner" as "address",
             "x"."contract",
-            "x"."token_id",
-            $/orderId/ AS order_id,
-            $/orderCreatedAt/::TIMESTAMPTZ AS order_created_at,
-            $/maker/::BYTEA AS maker,
-            $/price/::NUMERIC(78, 0) AS price,
-            $/value/::NUMERIC(78, 0) AS value,
-            $/quantity/::NUMERIC(78, 0) AS quantity,
-            $/validBetween/::TSTZRANGE AS valid_between,
-            LEAST($/expiration/::TIMESTAMPTZ, now() + interval '24 hours') AS clean_at
+            "x"."token_id"
           FROM (
             SELECT "tst"."contract", "tst"."token_id"
             FROM "token_sets_tokens" "tst"
@@ -95,7 +87,21 @@ if (config.doBackgroundWork) {
             valid_between,
             clean_at
           )
-          SELECT * FROM z  
+          SELECT
+            address,
+            contract,
+            max(token_id),
+            $/orderId/,
+            $/orderCreatedAt/::TIMESTAMPTZ,
+            $/maker/::BYTEA AS maker,
+            $/price/::NUMERIC(78, 0),
+            $/value/::NUMERIC(78, 0),
+            $/quantity/::NUMERIC(78, 0),
+            $/validBetween/::TSTZRANGE,
+            LEAST($/expiration/::TIMESTAMPTZ, now() + interval '24 hours')
+          FROM z 
+          WHERE "z"."address" IS NOT NULL 
+          GROUP BY address, contract
           ON CONFLICT DO NOTHING
           RETURNING *
         )

@@ -1,3 +1,18 @@
+# [5.146.0](https://github.com/reservoirprotocol/indexer/compare/v5.145.0...v5.146.0) (2022-08-04)
+
+
+### Bug Fixes
+
+* wrong default sources ([e88e9c4](https://github.com/reservoirprotocol/indexer/commit/e88e9c49f6d9da521ab01660053cb2d88f6391a8))
+
+
+### Features
+
+* don't return error on large contracts bids and don't return top bid user-tokens/v2 ([58c1378](https://github.com/reservoirprotocol/indexer/commit/58c1378bcc800e44b36571c4dc6f4fd55de61f3e))
+* update rarity only if attributes changed ([86ce442](https://github.com/reservoirprotocol/indexer/commit/86ce442beaaa0f5ab67825deb455021a8d86e01b))
+
+
+
 # [5.145.0](https://github.com/reservoirprotocol/indexer/compare/v5.144.0...v5.145.0) (2022-08-04)
 
 
