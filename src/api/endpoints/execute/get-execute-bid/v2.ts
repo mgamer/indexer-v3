@@ -100,11 +100,12 @@ export const getExecuteBidV2Options: RouteOptions = {
           "Wallet address of fee recipient. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         )
         .disallow(AddressZero),
-      listingTime: Joi.alternatives(Joi.string().pattern(regex.number), Joi.number()).description(
-        "Unix timestamp indicating when listing will be listed. Example: `1656080318`"
-      ),
+      listingTime: Joi.alternatives(
+        Joi.string().pattern(regex.unix_timestamp),
+        Joi.number()
+      ).description("Unix timestamp indicating when listing will be listed. Example: `1656080318`"),
       expirationTime: Joi.alternatives(
-        Joi.string().pattern(regex.number),
+        Joi.string().pattern(regex.unix_timestamp),
         Joi.number()
       ).description("Unix timestamp indicating when listing will expire. Example: `1656080318`"),
       salt: Joi.string()

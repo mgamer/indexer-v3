@@ -106,13 +106,13 @@ export const getExecuteBidV3Options: RouteOptions = {
             )
             .disallow(AddressZero),
           listingTime: Joi.alternatives(
-            Joi.string().pattern(regex.number),
+            Joi.string().pattern(regex.unix_timestamp),
             Joi.number()
           ).description(
             "Unix timestamp indicating when listing will be listed. Example: `1656080318`"
           ),
           expirationTime: Joi.alternatives(
-            Joi.string().pattern(regex.number),
+            Joi.string().pattern(regex.unix_timestamp),
             Joi.number()
           ).description(
             "Unix timestamp indicating when listing will expire. Example: `1656080318`"
