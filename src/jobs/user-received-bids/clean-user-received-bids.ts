@@ -40,7 +40,7 @@ if (config.doBackgroundWork) {
     if (job.data.moreToDelete) {
       await addToQueue();
     } else {
-      await releaseLock("clean-user-received-bids");
+      await releaseLock(`clean-user-received-bids-${config.railwayStaticUrl}`);
     }
   });
 
