@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Job, Queue, QueueScheduler, Worker } from "bullmq";
+import { Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
@@ -25,8 +25,8 @@ new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
-    async (job: Job) => {
-      const limit = 7500;
+    async () => {
+      const limit = 10000;
       const offset = _.random(0, 6) * limit;
       const maxIterations = 10;
       let deletedBidsCount = 0;
@@ -36,19 +36,9 @@ if (config.doBackgroundWork) {
       }
 
       logger.info(QUEUE_NAME, `Deleted ${deletedBidsCount} bids`);
-
-      if (deletedBidsCount == limit) {
-        job.data.moreToDelete = true;
-      }
     },
     { connection: redis.duplicate(), concurrency: 1 }
   );
-
-  worker.on("completed", async (job: Job) => {
-    if (job.data.moreToDelete) {
-      await addToQueue();
-    }
-  });
 
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
