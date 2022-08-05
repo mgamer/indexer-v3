@@ -7,6 +7,7 @@ import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { UserReceivedBids } from "@/models/user-received-bids";
+import _ from "lodash";
 
 const QUEUE_NAME = "clean-user-received-bids-queue";
 
@@ -26,7 +27,14 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const limit = 7500;
-      const deletedBidsCount = await UserReceivedBids.cleanBids(limit);
+      const offset = _.random(0, 6) * limit;
+      const maxIterations = 10;
+      let deletedBidsCount = 0;
+
+      for (let i = 0; i < maxIterations; ++i) {
+        deletedBidsCount += await UserReceivedBids.cleanBids(limit, offset);
+      }
+
       logger.info(QUEUE_NAME, `Deleted ${deletedBidsCount} bids`);
 
       if (deletedBidsCount == limit) {

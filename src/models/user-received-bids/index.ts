@@ -4,9 +4,7 @@ import _ from "lodash";
 import { idb } from "@/common/db";
 
 export class UserReceivedBids {
-  public static async cleanBids(limit: number) {
-    const offset = _.random(0, 6) * limit;
-
+  public static async cleanBids(limit: number, offset = 0) {
     const query = `
       DELETE FROM user_received_bids
       WHERE id IN (
