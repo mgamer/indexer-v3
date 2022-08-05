@@ -4,13 +4,14 @@ import _ from "lodash";
 import { idb } from "@/common/db";
 
 export class UserReceivedBids {
-  public static async cleanBids(limit: number) {
+  public static async cleanBids(limit: number, offset = 0) {
     const query = `
       DELETE FROM user_received_bids
       WHERE id IN (
         SELECT id
         FROM user_received_bids
         WHERE clean_at < NOW()
+        OFFSET ${offset}
         LIMIT ${limit}
       )
       
