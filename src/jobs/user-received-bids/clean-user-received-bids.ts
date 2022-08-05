@@ -4,7 +4,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
-import { redis, releaseLock } from "@/common/redis";
+import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { UserReceivedBids } from "@/models/user-received-bids";
 
@@ -39,8 +39,6 @@ if (config.doBackgroundWork) {
   worker.on("completed", async (job: Job) => {
     if (job.data.moreToDelete) {
       await addToQueue();
-    } else {
-      await releaseLock(`clean-user-received-bids-${config.railwayStaticUrl}`);
     }
   });
 
