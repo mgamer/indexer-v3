@@ -136,7 +136,7 @@ export const extractAttributionData = async (txHash: string, orderKind: string) 
 
   // Properly set the taker when filling through router contracts
   const tx = await fetchTransaction(txHash);
-  const router = Sdk.Common.Addresses.Routers[config.chainId][tx.to];
+  const router = Sdk.Common.Addresses.Routers[config.chainId]?.[tx.to];
   if (router) {
     taker = tx.from;
   }
