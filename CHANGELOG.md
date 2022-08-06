@@ -1,3 +1,12 @@
+## [5.147.1](https://github.com/reservoirprotocol/indexer/compare/v5.147.0...v5.147.1) (2022-08-06)
+
+
+### Bug Fixes
+
+* undefined access ([9ae1018](https://github.com/reservoirprotocol/indexer/commit/9ae101832b1cf02ee22805b0f61b37105510f417))
+
+
+
 # [5.147.0](https://github.com/reservoirprotocol/indexer/compare/v5.146.0...v5.147.0) (2022-08-06)
 
 
