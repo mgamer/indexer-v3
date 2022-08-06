@@ -1,3 +1,12 @@
+## [5.147.2](https://github.com/reservoirprotocol/indexer/compare/v5.147.1...v5.147.2) (2022-08-06)
+
+
+### Bug Fixes
+
+* use get or insert for sources ([d203880](https://github.com/reservoirprotocol/indexer/commit/d203880f2a2951a802b8f132fd71e9db22f02387))
+
+
+
 ## [5.147.1](https://github.com/reservoirprotocol/indexer/compare/v5.147.0...v5.147.1) (2022-08-06)
 
 
