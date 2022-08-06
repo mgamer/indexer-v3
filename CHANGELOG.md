@@ -1,3 +1,12 @@
+## [5.147.3](https://github.com/reservoirprotocol/indexer/compare/v5.147.2...v5.147.3) (2022-08-06)
+
+
+### Bug Fixes
+
+* change optimism native token to eth ([799761f](https://github.com/reservoirprotocol/indexer/commit/799761f48ee4d76b83b9a6e6defcab3e8efdf620))
+
+
+
 ## [5.147.2](https://github.com/reservoirprotocol/indexer/compare/v5.147.1...v5.147.2) (2022-08-06)
 
 
