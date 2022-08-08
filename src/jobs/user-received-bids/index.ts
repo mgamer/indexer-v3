@@ -9,7 +9,7 @@ import { config } from "@/config/index";
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
-  cron.schedule("* * * * *", async () => {
+  cron.schedule("*/10 * * * * *", async () => {
     logger.info(cleanUserReceivedBids.queue.name, "Clean user received bids");
 
     try {

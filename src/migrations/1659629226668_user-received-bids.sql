@@ -17,8 +17,8 @@ CREATE TABLE user_received_bids (
     CONSTRAINT user_received_bids_pk PRIMARY KEY (id)
 );
 
-CREATE UNIQUE INDEX user_received_bids_contract_token_id_address_order_id_index
-    ON user_received_bids (contract, token_id, address, order_id);
+CREATE UNIQUE INDEX user_received_bids_address_order_id_index
+    ON user_received_bids (address, order_id);
 
 CREATE INDEX user_received_bids_address_id_index
     ON user_received_bids (address, id);
