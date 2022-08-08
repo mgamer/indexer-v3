@@ -73,13 +73,13 @@ export const build = async (options: BuildOrderOptions) => {
       return builder?.build(buildInfo.params);
     } else {
       // Fetch all non-flagged tokens from the collection
-      // TODO: Include `NOT is_flagged` filter in the query
       const tokens = await redb.manyOrNone(
         `
           SELECT
             tokens.token_id
           FROM tokens
           WHERE tokens.collection_id = $/collection/
+          AND tokens.is_flagged = 0
         `,
         {
           collection: options.collection,

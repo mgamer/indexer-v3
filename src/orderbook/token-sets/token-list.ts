@@ -98,7 +98,6 @@ const isValid = async (tokenSet: TokenSet) => {
           }
         );
       } else if (tokenSet.schema.kind === "collection-non-flagged") {
-        // TODO: Include `NOT is_flagged` filter in the query
         tokens = await redb.manyOrNone(
           `
             SELECT
@@ -106,6 +105,7 @@ const isValid = async (tokenSet: TokenSet) => {
               tokens.token_id
             FROM tokens
             WHERE tokens.collection_id = $/collection/
+            AND tokens.is_flagged = 0
           `,
           {
             collection: tokenSet.schema!.data.collection,
