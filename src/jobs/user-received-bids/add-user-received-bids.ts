@@ -3,6 +3,7 @@ import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 import { idb } from "@/common/db";
+import { fromBuffer, toBuffer } from "@/common/utils";
 
 const QUEUE_NAME = "add-user-received-bids-queue";
 
@@ -18,11 +19,19 @@ export const queue = new Queue(QUEUE_NAME, {
 
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
+export const BATCH_SIZE = 500;
+
 if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { orderId } = job.data as AddUserReceivedBidsParams;
+      const { orderId, contract, tokenId } = job.data as AddUserReceivedBidsParams;
+
+      let continuationFilter = "";
+
+      if (contract && tokenId) {
+        continuationFilter = `AND (contract, token_id) > ($/contract/, $/tokenId/)`;
+      }
 
       const order = await idb.oneOrNone(
         `
@@ -48,11 +57,15 @@ if (config.doBackgroundWork) {
         WITH "z" AS (
           SELECT
             "y"."address",
-            "x"."contract"
+            "x"."contract",
+            MAX("x"."token_id") as "token_id"
           FROM (
             SELECT "tst"."contract", "tst"."token_id"
             FROM "token_sets_tokens" "tst"
             WHERE "token_set_id" = $/tokenSetId/
+            ${continuationFilter}
+            ORDER BY contract, token_id ASC
+            LIMIT ${BATCH_SIZE}
           ) "x" LEFT JOIN LATERAL (
             SELECT
               "nb"."owner" as "address"
@@ -61,7 +74,8 @@ if (config.doBackgroundWork) {
               AND "nb"."token_id" = "x"."token_id"
               AND "nb"."amount" > 0
           ) "y" ON TRUE
-        )
+          GROUP BY "y"."address", "x"."contract"
+        ), y AS (
           INSERT INTO "user_received_bids" (
             address,
             contract,
@@ -156,9 +170,14 @@ if (config.doBackgroundWork) {
             FROM z 
             WHERE "z"."address" IS NOT NULL 
             ON CONFLICT DO NOTHING
+        )
+        SELECT contract, token_id
+        FROM z
+        ORDER BY contract, token_id DESC
+        LIMIT 1
       `;
 
-      await idb.none(query, {
+      const result = await idb.oneOrNone(query, {
         tokenSetId: order.token_set_id,
         orderId: order.id,
         orderSourceIdInt: order.source_id_int,
@@ -169,7 +188,19 @@ if (config.doBackgroundWork) {
         quantity: order.quantity_remaining,
         validBetween: order.valid_between,
         expiration: order.expiration,
+        contract: contract ? toBuffer(contract) : null,
+        tokenId,
       });
+
+      if (!order.token_set_id.startsWith("token:") && result) {
+        await addToQueue([
+          {
+            orderId,
+            contract: fromBuffer(result.contract),
+            tokenId: result.token_id,
+          },
+        ]);
+      }
     },
     {
       connection: redis.duplicate(),
@@ -184,6 +215,8 @@ if (config.doBackgroundWork) {
 
 export type AddUserReceivedBidsParams = {
   orderId: string;
+  contract?: string | null;
+  tokenId?: string | null;
 };
 
 export const addToQueue = async (jobs: AddUserReceivedBidsParams[]) => {
