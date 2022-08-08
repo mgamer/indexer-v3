@@ -60,7 +60,9 @@ export type EventDataKind =
   | "element-erc1155-sell-order-filled"
   | "element-erc1155-buy-order-filled"
   | "quixotic-order-filled"
-  | "zora-ask-filled";
+  | "zora-ask-filled"
+  | "zora-auction-ended-core-eth"
+  | "zora-auction-ended-core-erc20";
 
 export type EventData = {
   kind: EventDataKind;
@@ -111,6 +113,8 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       element.erc1155SellOrderFilled,
       quixotic.orderFulfilled,
       zora.askFilled,
+      zora.auctionEndedCoreErc20,
+      zora.auctionEndedCoreEth,
     ];
   } else {
     return (
@@ -201,6 +205,10 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return quixotic.orderFulfilled;
     case "zora-ask-filled":
       return zora.askFilled;
+    case "zora-auction-ended-core-erc20":
+      return zora.auctionEndedCoreErc20;
+    case "zora-auction-ended-core-eth":
+      return zora.auctionEndedCoreEth;
     default:
       return undefined;
   }
