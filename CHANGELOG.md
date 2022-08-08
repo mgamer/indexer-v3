@@ -1,3 +1,12 @@
+## [5.148.1](https://github.com/reservoirprotocol/indexer/compare/v5.148.0...v5.148.1) (2022-08-08)
+
+
+### Bug Fixes
+
+* added null support ([#1417](https://github.com/reservoirprotocol/indexer/issues/1417)) ([0cc3e01](https://github.com/reservoirprotocol/indexer/commit/0cc3e01287fdd576b18e915aca2e5ec91b5eaadc))
+
+
+
 # [5.148.0](https://github.com/reservoirprotocol/indexer/compare/v5.147.3...v5.148.0) (2022-08-08)
 
 
