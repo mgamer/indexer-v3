@@ -86,7 +86,7 @@ export const getReceivedBidsV1Options: RouteOptions = {
     let continuationFilter = "";
 
     if (!_.isNull(query.continuation)) {
-      continuationFilter = `WHERE user_received_bids.id > $/continuation/`;
+      continuationFilter = `WHERE user_received_bids.id < $/continuation/`;
     }
 
     try {
@@ -109,7 +109,7 @@ export const getReceivedBidsV1Options: RouteOptions = {
             extract(epoch from user_received_bids.order_created_at) AS created_at
         FROM user_received_bids
         ${continuationFilter}
-        ORDER BY id ASC
+        ORDER BY id DESC
         LIMIT $/limit/
       `;
 
