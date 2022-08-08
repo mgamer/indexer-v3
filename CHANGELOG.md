@@ -1,3 +1,13 @@
+# [5.148.0](https://github.com/reservoirprotocol/indexer/compare/v5.147.3...v5.148.0) (2022-08-08)
+
+
+### Features
+
+* validate timestamps ([520d305](https://github.com/reservoirprotocol/indexer/commit/520d305f6bae49085bd4ff5b5ecf598eec773cd9))
+* validate unix timestamps are no more than 10 numbers ([698c2a6](https://github.com/reservoirprotocol/indexer/commit/698c2a6b9eec90fbb6ebf7a4f9d85a8e46e8e6f0))
+
+
+
 ## [5.147.3](https://github.com/reservoirprotocol/indexer/compare/v5.147.2...v5.147.3) (2022-08-06)
 
 
