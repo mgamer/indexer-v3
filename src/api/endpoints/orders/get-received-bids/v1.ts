@@ -5,10 +5,7 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import {
-  formatEth,
-  fromBuffer,
-} from "@/common/utils";
+import { formatEth, fromBuffer } from "@/common/utils";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import _ from "lodash";
