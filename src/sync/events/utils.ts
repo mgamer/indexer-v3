@@ -118,6 +118,8 @@ export const getOrderSourceByOrderKind = async (
         return sources.getByDomain("element.market");
       case "quixotic":
         return sources.getByDomain("quixotic.io");
+      case "zora-v3":
+        return sources.getByDomain("zora.co");
       default:
         // For all other order kinds we cannot default the source
         return null;
