@@ -37,7 +37,7 @@ if (config.doBackgroundWork) {
         return;
       }
 
-      const tokenIds = await Tokens.getNonFlaggedTokenIdsInContract(contract);
+      const tokenIds = await Tokens.getNonFlaggedTokenIdsInCollection(contract);
       const merkleTree = generateMerkleTree(tokenIds);
 
       await tokenSet.tokenList.save([
@@ -59,6 +59,6 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (contract: string) => {
-  await queue.add(randomUUID(), { contract });
+export const addToQueue = async (contract: string, collectionId: string) => {
+  await queue.add(randomUUID(), { contract, collectionId });
 };

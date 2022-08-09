@@ -122,7 +122,7 @@ export class Tokens {
       .then((result) => (result ? result.count : 0));
   }
 
-  public static async getNonFlaggedTokenIdsInContract(contract: string) {
+  public static async getNonFlaggedTokenIdsInCollection(contract: string, collectionId: string) {
     const limit = 5000;
     let checkForMore = true;
     let continuation = "";
@@ -133,6 +133,7 @@ export class Tokens {
         SELECT token_id
         FROM tokens
         WHERE contract = $/contract/
+        AND collection_id = $/collectionId/
         AND is_flagged = 0
         ${continuation}
         ORDER BY token_id ASC
@@ -141,6 +142,7 @@ export class Tokens {
 
       const result = await redb.manyOrNone(query, {
         contract: toBuffer(contract),
+        collectionId,
       });
 
       if (!_.isEmpty(result)) {

@@ -55,9 +55,14 @@ export const postFlagTokenV1Options: RouteOptions = {
     }
 
     const payload = request.payload as any;
+    const [contract, tokenId] = payload.token.split(":");
+
+    const token = await Tokens.getByContractAndTokenId(contract, tokenId);
+    if (!token) {
+      throw Boom.badData(`Token ${payload.token} not found`);
+    }
 
     try {
-      const [contract, tokenId] = payload.token.split(":");
       const currentUtcTime = new Date().toISOString();
 
       await Tokens.update(contract, tokenId, {
@@ -65,7 +70,7 @@ export const postFlagTokenV1Options: RouteOptions = {
         lastFlagUpdate: currentUtcTime,
       });
 
-      await nonFlaggedTokenSet.addToQueue(contract);
+      await nonFlaggedTokenSet.addToQueue(contract, token.collectionId);
 
       logger.info(
         `post-flag-token-${version}-handler`,
