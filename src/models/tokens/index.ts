@@ -122,7 +122,12 @@ export class Tokens {
       .then((result) => (result ? result.count : 0));
   }
 
-  public static async getNonFlaggedTokenIdsInCollection(contract: string, collectionId: string) {
+  public static async getNonFlaggedTokenIdsInCollection(
+    contract: string,
+    collectionId: string,
+    readReplica = false
+  ) {
+    const dbInstance = readReplica ? redb : idb;
     const limit = 5000;
     let checkForMore = true;
     let continuation = "";
@@ -140,7 +145,7 @@ export class Tokens {
         LIMIT ${limit}
       `;
 
-      const result = await redb.manyOrNone(query, {
+      const result = await dbInstance.manyOrNone(query, {
         contract: toBuffer(contract),
         collectionId,
       });
