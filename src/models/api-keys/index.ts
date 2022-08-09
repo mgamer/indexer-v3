@@ -62,26 +62,31 @@ export class ApiKeyManager {
    * @param key
    */
   public static async getApiKey(key: string): Promise<ApiKeyEntity | null> {
-    const redisKey = `apikey:${key}`;
-    const apiKey = await redis.get(redisKey);
+    const redisKey = `api-key:${key}`;
 
-    if (apiKey) {
-      if (apiKey == "empty") {
-        return null;
-      } else {
-        return new ApiKeyEntity(JSON.parse(apiKey));
-      }
-    } else {
-      // check if it exists in the database
-      const fromDb = await redb.oneOrNone(`SELECT * FROM api_keys WHERE key = $/key/`, { key });
+    try {
+      const apiKey = await redis.get(redisKey);
 
-      if (fromDb) {
-        await redis.set(redisKey, JSON.stringify(fromDb));
-        return new ApiKeyEntity(fromDb);
+      if (apiKey) {
+        if (apiKey == "empty") {
+          return null;
+        } else {
+          return new ApiKeyEntity(JSON.parse(apiKey));
+        }
       } else {
-        await redis.set(redisKey, "empty");
-        await redis.expire(redisKey, 3600 * 24);
+        // check if it exists in the database
+        const fromDb = await redb.oneOrNone(`SELECT * FROM api_keys WHERE key = $/key/`, { key });
+
+        if (fromDb) {
+          await redis.set(redisKey, JSON.stringify(fromDb));
+          return new ApiKeyEntity(fromDb);
+        } else {
+          await redis.set(redisKey, "empty");
+          await redis.expire(redisKey, 3600 * 24);
+        }
       }
+    } catch (error) {
+      logger.error("get-api-key", `Failed to get ${key} error: ${error}`);
     }
 
     return null;

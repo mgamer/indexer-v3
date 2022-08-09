@@ -13,3 +13,4 @@ export * from "@/api/endpoints/tokens/get-user-tokens/v3";
 export * from "@/api/endpoints/tokens/post-simulate-floor/v1";
 export * from "@/api/endpoints/tokens/post-token-sets/v1";
 export * from "@/api/endpoints/tokens/post-tokens-refresh/v1";
+export * from "@/api/endpoints/tokens/post-flag-token/v1";
