@@ -1,3 +1,12 @@
+# [5.150.0](https://github.com/reservoirprotocol/indexer/compare/v5.149.0...v5.150.0) (2022-08-09)
+
+
+### Features
+
+* added source domain to collection/v3 response ([de03324](https://github.com/reservoirprotocol/indexer/commit/de0332496b7ccdec1c5db8019f94643bd7ff813b))
+
+
+
 # [5.149.0](https://github.com/reservoirprotocol/indexer/compare/v5.148.1...v5.149.0) (2022-08-09)
 
 
