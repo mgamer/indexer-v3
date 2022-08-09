@@ -333,10 +333,17 @@ export const setupRoutes = (server: Server) => {
     path: "/events/orders/v1",
     options: eventsEndpoints.getOrderEventsV1Options,
   });
+
   server.route({
     method: "GET",
     path: "/events/tokens/floor-ask/v2",
     options: eventsEndpoints.getTokensFloorAskV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/events/bids/v1",
+    options: eventsEndpoints.getBidEventsV1Options,
   });
 
   // Execute

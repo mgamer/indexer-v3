@@ -57,6 +57,7 @@ if (config.doBackgroundWork) {
                 orders.valid_between AS "validBetween",
                 COALESCE(orders.quantity_remaining, 1) AS "quantityRemaining",
                 orders.maker,
+                orders.price,
                 orders.value,
                 orders.fillability_status AS "fillabilityStatus",
                 orders.approval_status AS "approvalStatus",
