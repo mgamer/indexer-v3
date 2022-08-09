@@ -39,10 +39,12 @@ if (config.doBackgroundWork) {
 
       const tokenIds = await Tokens.getNonFlaggedTokenIdsInCollection(contract, collectionId);
       const merkleTree = generateMerkleTree(tokenIds);
+      const tokenSetId = `list:${contract}:${merkleTree.getHexRoot()}`;
 
+      // Create new token set for non flagged tokens
       await tokenSet.tokenList.save([
         {
-          id: `list:${contract}:${merkleTree.getHexRoot()}`,
+          id: tokenSetId,
           schemaHash: generateSchemaHash(undefined),
           items: {
             contract,
@@ -50,6 +52,9 @@ if (config.doBackgroundWork) {
           },
         },
       ]);
+
+      // Set the new non flagged tokens token set
+      await Collections.update(collectionId, { nonFlaggedTokenSetId: tokenSetId });
     },
     { connection: redis.duplicate(), concurrency: 1 }
   );

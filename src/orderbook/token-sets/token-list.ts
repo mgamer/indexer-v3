@@ -76,6 +76,10 @@ const isValid = async (tokenSet: TokenSet) => {
           return false;
         }
 
+        const excludeFlaggedTokens = tokenSet.schema.data.isNonFlagged
+          ? "AND tokens.is_flagged = 0"
+          : "";
+
         tokens = await redb.manyOrNone(
           `
             SELECT token_attributes.contract, token_attributes.token_id
@@ -86,7 +90,7 @@ const isValid = async (tokenSet: TokenSet) => {
             WHERE attribute_keys.collection_id = $/collection/
             AND attribute_keys.key = $/key/
             AND attributes.value = $/value/
-            AND tokens.is_flagged = 0
+            ${excludeFlaggedTokens}
           `,
           {
             collection: tokenSet.schema!.data.collection,

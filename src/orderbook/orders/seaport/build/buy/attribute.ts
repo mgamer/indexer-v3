@@ -61,6 +61,8 @@ export const build = async (options: BuildOrderOptions) => {
       "buy"
     );
 
+    const excludeFlaggedTokens = options.excludeFlaggedTokens ? "AND tokens.is_flagged = 0" : "";
+
     // Fetch all tokens matching the attributes
     const tokens = await redb.manyOrNone(
       `
@@ -72,7 +74,7 @@ export const build = async (options: BuildOrderOptions) => {
         WHERE attribute_keys.collection_id = $/collection/
         AND attribute_keys.key = $/key/
         AND attributes.value = $/value/
-        AND tokens.is_flagged = 0
+        ${excludeFlaggedTokens}
         ORDER BY token_attributes.token_id
       `,
       {

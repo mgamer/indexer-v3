@@ -13,6 +13,8 @@ interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
 
 export const build = async (options: BuildOrderOptions) => {
   try {
+    const excludeFlaggedTokens = options.excludeFlaggedTokens ? "AND tokens.is_flagged = 0" : "";
+
     const collectionResult = await redb.oneOrNone(
       `
         SELECT
@@ -20,7 +22,7 @@ export const build = async (options: BuildOrderOptions) => {
         FROM tokens
         WHERE tokens.contract = $/contract/
         AND tokens.token_id = $/tokenId/
-        AND tokens.is_flagged = 0
+        ${excludeFlaggedTokens}
       `,
       {
         contract: toBuffer(options.contract),
