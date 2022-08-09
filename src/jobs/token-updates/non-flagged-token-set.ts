@@ -37,7 +37,7 @@ if (config.doBackgroundWork) {
         return;
       }
 
-      const tokenIds = await Tokens.getNonFlaggedTokenIdsInCollection(contract);
+      const tokenIds = await Tokens.getNonFlaggedTokenIdsInCollection(contract, collectionId);
       const merkleTree = generateMerkleTree(tokenIds);
 
       await tokenSet.tokenList.save([
