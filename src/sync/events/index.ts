@@ -2089,15 +2089,20 @@ export const syncEvents = async (
               const askCurrency = ask["askCurrency"].toLowerCase();
               const askPrice = ask["askPrice"].toString();
 
-              if (![Sdk.Common.Addresses.Weth[config.chainId], AddressZero].includes(askCurrency)) {
+              if (
+                ![
+                  Sdk.Common.Addresses.Weth[config.chainId],
+                  Sdk.Common.Addresses.Eth[config.chainId],
+                ].includes(askCurrency)
+              ) {
                 // Skip if the payment token is not supported.
                 break;
               }
 
-              fillEventsPartial.push({
-                orderKind: "zora",
+              fillEvents.push({
+                orderKind: "zora-v3",
                 currency: askCurrency,
-                orderSide: "buy",
+                orderSide: "sell",
                 taker: seller,
                 maker: buyer,
                 price: askPrice,

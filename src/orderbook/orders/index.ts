@@ -20,4 +20,4 @@ export type OrderKind =
   | "element-erc721"
   | "element-erc1155"
   | "quixotic"
-  | "zora";
+  | "zora-v3";
