@@ -7,6 +7,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
+import { Sources } from "@/models/sources";
 
 const version = "v3";
 
@@ -60,6 +61,7 @@ export const getCollectionV3Options: RouteOptions = {
         },
         floorAsk: {
           id: Joi.string().allow(null),
+          sourceDomain: Joi.string().allow(null, ""),
           price: Joi.number().unsafe().allow(null),
           maker: Joi.string()
             .lowercase()
@@ -217,6 +219,7 @@ export const getCollectionV3Options: RouteOptions = {
         FROM "x"
         LEFT JOIN LATERAL (
           SELECT
+            "t"."floor_sell_source_id_int",
             "t"."contract" AS "floor_sell_token_contract",
             "t"."token_id" AS "floor_sell_token_id",
             "t"."name" AS "floor_sell_token_name",
@@ -252,6 +255,7 @@ export const getCollectionV3Options: RouteOptions = {
          ) "attr_key" ON TRUE
       `;
 
+      const sources = await Sources.getInstance();
       const result = await redb.oneOrNone(baseQuery, query).then((r) =>
         !r
           ? null
@@ -276,6 +280,7 @@ export const getCollectionV3Options: RouteOptions = {
               },
               floorAsk: {
                 id: r.floor_sell_id,
+                sourceDomain: sources.get(r.floor_sell_source_id_int)?.domain,
                 price: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
                 maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
                 validFrom: r.floor_sell_valid_from,
