@@ -2,6 +2,7 @@
 
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
+import _ from "lodash";
 
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
@@ -38,6 +39,10 @@ if (config.doBackgroundWork) {
       }
 
       const tokenIds = await Tokens.getNonFlaggedTokenIdsInCollection(contract, collectionId);
+      if (_.isEmpty(tokenIds)) {
+        logger.warn(QUEUE_NAME, `No tokens for contract=${contract}, collectionId=${collectionId}`);
+      }
+
       const merkleTree = generateMerkleTree(tokenIds);
       const tokenSetId = `list:${contract}:${merkleTree.getHexRoot()}`;
 
