@@ -1,13 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// TODO: Fix `any` types
-
 import { Request } from "@hapi/hapi";
 import { randomUUID } from "crypto";
 
 import { idb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
+import { ApiKeyEntity } from "@/models/api-keys/api-key-entity";
 
 export type ApiKeyRecord = {
   app_name: string;
@@ -62,26 +61,25 @@ export class ApiKeyManager {
    *
    * @param key
    */
-  public static async getApiKey(key: string): Promise<null | any> {
+  public static async getApiKey(key: string): Promise<ApiKeyEntity | null> {
     const redisKey = `apikey:${key}`;
-    const apiKey: any = await redis.hgetall(redisKey);
+    const apiKey = await redis.get(redisKey);
 
-    if (apiKey && Object.keys(apiKey).length) {
-      if (apiKey.empty) {
+    if (apiKey) {
+      if (apiKey == "empty") {
         return null;
       } else {
-        return apiKey;
+        return new ApiKeyEntity(JSON.parse(apiKey));
       }
     } else {
       // check if it exists in the database
       const fromDb = await redb.oneOrNone(`SELECT * FROM api_keys WHERE key = $/key/`, { key });
+
       if (fromDb) {
-        await redis.hset(redisKey, new Map(Object.entries(fromDb)));
-        return fromDb;
+        await redis.set(redisKey, JSON.stringify(fromDb));
+        return new ApiKeyEntity(fromDb);
       } else {
-        const map = new Map();
-        map.set("empty", true);
-        await redis.hset(redisKey, map);
+        await redis.set(redisKey, "empty");
         await redis.expire(redisKey, 3600 * 24);
       }
     }

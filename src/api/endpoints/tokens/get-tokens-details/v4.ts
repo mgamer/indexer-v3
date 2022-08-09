@@ -98,6 +98,8 @@ export const getTokensDetailsV4Options: RouteOptions = {
             image: Joi.string().allow(null, ""),
             media: Joi.string().allow(null, ""),
             kind: Joi.string().allow(null, ""),
+            isFlagged: Joi.boolean().default(false),
+            lastFlagUpdate: Joi.string().allow(null, ""),
             collection: Joi.object({
               id: Joi.string().allow(null),
               name: Joi.string().allow(null, ""),
@@ -192,12 +194,14 @@ export const getTokensDetailsV4Options: RouteOptions = {
           "t"."collection_id",
           "c"."name" as "collection_name",
           "con"."kind",
-          ("c".metadata ->> 'imageUrl')::TEXT AS "collection_image",
+          "t"."is_flagged",
+          "t"."last_flag_update",
           "c"."slug",
           "t"."last_buy_value",
           "t"."last_buy_timestamp",
           "t"."last_sell_value",
           "t"."last_sell_timestamp",
+          ("c".metadata ->> 'imageUrl')::TEXT AS "collection_image",
           (
             SELECT "nb"."owner" FROM "nft_balances" "nb"
             WHERE "nb"."contract" = "t"."contract"
@@ -421,6 +425,8 @@ export const getTokensDetailsV4Options: RouteOptions = {
             image: r.image,
             media: r.media,
             kind: r.kind,
+            isFlagged: Boolean(Number(r.is_flagged)),
+            lastFlagUpdate: r.last_flag_update,
             collection: {
               id: r.collection_id,
               name: r.collection_name,

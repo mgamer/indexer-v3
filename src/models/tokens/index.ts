@@ -122,6 +122,45 @@ export class Tokens {
       .then((result) => (result ? result.count : 0));
   }
 
+  public static async getNonFlaggedTokenIdsInCollection(contract: string, collectionId: string) {
+    const limit = 5000;
+    let checkForMore = true;
+    let continuation = "";
+    let tokenIds: string[] = [];
+
+    while (checkForMore) {
+      const query = `
+        SELECT token_id
+        FROM tokens
+        WHERE contract = $/contract/
+        AND collection_id = $/collectionId/
+        AND is_flagged = 0
+        ${continuation}
+        ORDER BY token_id ASC
+        LIMIT ${limit}
+      `;
+
+      const result = await redb.manyOrNone(query, {
+        contract: toBuffer(contract),
+        collectionId,
+      });
+
+      if (!_.isEmpty(result)) {
+        tokenIds = _.concat(
+          tokenIds,
+          _.map(result, (r) => r.token_id)
+        );
+        continuation = `AND token_id > ${_.last(result).token_id}`;
+      }
+
+      if (limit > _.size(result)) {
+        checkForMore = false;
+      }
+    }
+
+    return tokenIds;
+  }
+
   /**
    * Return the lowest sell price and number of tokens on sale for the given attribute
    * @param collection
