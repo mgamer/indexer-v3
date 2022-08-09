@@ -37,6 +37,7 @@ if (config.doBackgroundWork) {
         `
               SELECT
                 orders.id,
+                orders.source_id_int,
                 orders.token_set_id,
                 orders.maker,
                 orders.price,
@@ -55,9 +56,9 @@ if (config.doBackgroundWork) {
       const query = `
         WITH "z" AS (
           SELECT
-            "y"."owner" as "address",
+            "y"."address",
             "x"."contract",
-            "x"."token_id"
+            MAX("x"."token_id") as "token_id"
           FROM (
             SELECT "tst"."contract", "tst"."token_id"
             FROM "token_sets_tokens" "tst"
@@ -67,46 +68,111 @@ if (config.doBackgroundWork) {
             LIMIT ${BATCH_SIZE}
           ) "x" LEFT JOIN LATERAL (
             SELECT
-              "nb"."owner"
+              "nb"."owner" as "address"
             FROM "nft_balances" "nb"
             WHERE "nb"."contract" = "x"."contract"
               AND "nb"."token_id" = "x"."token_id"
               AND "nb"."amount" > 0
           ) "y" ON TRUE
+          GROUP BY "y"."address", "x"."contract"
         ), y AS (
           INSERT INTO "user_received_bids" (
             address,
             contract,
-            token_id,
+            token_set_id,
             order_id,
+            order_source_id_int,
             order_created_at,
             maker,
             price,
             value,
             quantity,
             valid_between,
-            clean_at
+            clean_at,
+            metadata
           )
           SELECT
             address,
             contract,
-            max(token_id),
+            $/tokenSetId/,
             $/orderId/,
+            $/orderSourceIdInt/,
             $/orderCreatedAt/::TIMESTAMPTZ,
-            $/maker/::BYTEA AS maker,
+            $/maker/::BYTEA,
             $/price/::NUMERIC(78, 0),
             $/value/::NUMERIC(78, 0),
             $/quantity/::NUMERIC(78, 0),
             $/validBetween/::TSTZRANGE,
-            LEAST($/expiration/::TIMESTAMPTZ, now() + interval '24 hours')
-          FROM z 
-          WHERE "z"."address" IS NOT NULL 
-          GROUP BY address, contract
-          ON CONFLICT DO NOTHING
-          RETURNING *
+            LEAST($/expiration/::TIMESTAMPTZ, now() + interval '24 hours'),
+            (
+              CASE
+                WHEN $/tokenSetId/ LIKE 'token:%' THEN
+                  (SELECT
+                    json_build_object(
+                      'kind', 'token',
+                      'data', json_build_object(
+                        'collectionName', collections.name,
+                        'tokenName', tokens.name,
+                        'image', tokens.image
+                      )
+                    )
+                  FROM tokens
+                  JOIN collections
+                    ON tokens.collection_id = collections.id
+                  WHERE tokens.contract = decode(substring(split_part($/tokenSetId/, ':', 2) from 3), 'hex')
+                    AND tokens.token_id = (split_part($/tokenSetId/, ':', 3)::NUMERIC(78, 0)))
+    
+                WHEN $/tokenSetId/ LIKE 'contract:%' THEN
+                  (SELECT
+                    json_build_object(
+                      'kind', 'collection',
+                      'data', json_build_object(
+                        'collectionName', collections.name,
+                        'image', (collections.metadata ->> 'imageUrl')::TEXT
+                      )
+                    )
+                  FROM collections
+                  WHERE collections.id = substring($/tokenSetId/ from 10))
+    
+                WHEN $/tokenSetId/ LIKE 'range:%' THEN
+                  (SELECT
+                    json_build_object(
+                      'kind', 'collection',
+                      'data', json_build_object(
+                        'collectionName', collections.name,
+                        'image', (collections.metadata ->> 'imageUrl')::TEXT
+                      )
+                    )
+                  FROM collections
+                  WHERE collections.id = substring($/tokenSetId/ from 7))
+    
+                WHEN $/tokenSetId/ LIKE 'list:%' THEN
+                  (SELECT
+                    json_build_object(
+                      'kind', 'attribute',
+                      'data', json_build_object(
+                        'collectionName', collections.name,
+                        'attributes', ARRAY[json_build_object('key', attribute_keys.key, 'value', attributes.value)],
+                        'image', (collections.metadata ->> 'imageUrl')::TEXT
+                      )
+                    )
+                  FROM token_sets
+                  JOIN attributes
+                    ON token_sets.attribute_id = attributes.id
+                  JOIN attribute_keys
+                    ON attributes.attribute_key_id = attribute_keys.id
+                  JOIN collections
+                    ON attribute_keys.collection_id = collections.id
+                  WHERE token_sets.id = $/tokenSetId/)
+                ELSE NULL
+              END
+            ) AS metadata
+            FROM z 
+            WHERE "z"."address" IS NOT NULL 
+            ON CONFLICT DO NOTHING
         )
         SELECT contract, token_id
-        FROM y
+        FROM z
         ORDER BY contract, token_id DESC
         LIMIT 1
       `;
@@ -114,6 +180,7 @@ if (config.doBackgroundWork) {
       const result = await idb.oneOrNone(query, {
         tokenSetId: order.token_set_id,
         orderId: order.id,
+        orderSourceIdInt: order.source_id_int,
         orderCreatedAt: order.created_at,
         maker: order.maker,
         price: order.price,
