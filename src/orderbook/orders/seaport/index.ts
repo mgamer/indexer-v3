@@ -2,7 +2,6 @@ import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
 
-import _ from "lodash";
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, toBuffer } from "@/common/utils";
@@ -278,13 +277,13 @@ export const save = async (
       if (metadata.source) {
         source = await sources.getOrInsert(metadata.source);
       } else {
-        _.each(feeBreakdown, async (fee) => {
-          // If one of the fees is marketplace the source of the order is opensea
+        // If one of the fees is marketplace the source of the order is opensea
+        for (const fee of feeBreakdown) {
           if (fee.kind == "marketplace") {
             source = await sources.getOrInsert("opensea.io");
-            return false;
+            break;
           }
-        });
+        }
       }
 
       const validFrom = `date_trunc('seconds', to_timestamp(${startTime}))`;
@@ -527,13 +526,13 @@ export const save = async (
       if (metadata.source) {
         source = await sources.getOrInsert(metadata.source);
       } else {
-        _.each(feeBreakdown, async (fee) => {
-          // If one of the fees is marketplace the source of the order is opensea
+        // If one of the fees is marketplace the source of the order is opensea
+        for (const fee of feeBreakdown) {
           if (fee.kind == "marketplace") {
             source = await sources.getOrInsert("opensea.io");
-            return false;
+            break;
           }
-        });
+        }
       }
 
       const validFrom = `date_trunc('seconds', to_timestamp(${startTime}))`;
