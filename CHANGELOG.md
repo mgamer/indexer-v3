@@ -1,3 +1,13 @@
+# [5.151.0](https://github.com/reservoirprotocol/indexer/compare/v5.150.1...v5.151.0) (2022-08-10)
+
+
+### Features
+
+* detect opensea as source from the fee ([d058586](https://github.com/reservoirprotocol/indexer/commit/d0585869339541cc6001af88b7f4e9e7fbad52c6))
+* update default source domain ([15dd168](https://github.com/reservoirprotocol/indexer/commit/15dd168c3f2c25d2e253d41c374ebcf2bc5f708e))
+
+
+
 ## [5.150.1](https://github.com/reservoirprotocol/indexer/compare/v5.150.0...v5.150.1) (2022-08-10)
 
 
