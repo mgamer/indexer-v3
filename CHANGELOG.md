@@ -1,3 +1,48 @@
+# [5.156.0](https://github.com/reservoirprotocol/indexer/compare/v5.155.0...v5.156.0) (2022-08-10)
+
+
+### Bug Fixes
+
+* generate UUID based on params passed ([b129b7a](https://github.com/reservoirprotocol/indexer/commit/b129b7a803080730aeb67c518aef79a08adf1c19))
+
+
+
+# [5.155.0](https://github.com/reservoirprotocol/indexer/compare/v5.154.0...v5.155.0) (2022-08-10)
+
+
+### Bug Fixes
+
+* currency price in sales/v3 ([ba6d52b](https://github.com/reservoirprotocol/indexer/commit/ba6d52bce6ada28c773fffbbefb39ae535b9df37))
+* currency price in sales/v3 ([edcbde5](https://github.com/reservoirprotocol/indexer/commit/edcbde5db35ead6a63811a0da79449a963c5221d))
+
+
+### Features
+
+* allow sort tokens by token id (desc/asc) ([fbe9689](https://github.com/reservoirprotocol/indexer/commit/fbe96896eb1b5652bf2f28cc636860cf376a3baf))
+
+
+
+# [5.154.0](https://github.com/reservoirprotocol/indexer/compare/v5.153.0...v5.154.0) (2022-08-10)
+
+
+### Features
+
+* fix sources ([7c9eac5](https://github.com/reservoirprotocol/indexer/commit/7c9eac543b8dbb91dd8bda7464a3bd73e03dcbf8))
+* get token url tags from custom tags ([8209ee9](https://github.com/reservoirprotocol/indexer/commit/8209ee909115a8625e70de5149b4c65ab8cada3c))
+* parse custom tags for token url ([238c65b](https://github.com/reservoirprotocol/indexer/commit/238c65b5a6e5a0f4a07c8eef8e907b5ca0ace177))
+
+
+
+# [5.153.0](https://github.com/reservoirprotocol/indexer/compare/v5.152.0...v5.153.0) (2022-08-10)
+
+
+### Features
+
+* added score to sales api, added whitelisting / blacklisting ([#1437](https://github.com/reservoirprotocol/indexer/issues/1437)) ([110272f](https://github.com/reservoirprotocol/indexer/commit/110272fda39b9942111b8448275dcb5a8652991e))
+* fix sources ([9ddbd07](https://github.com/reservoirprotocol/indexer/commit/9ddbd073a4a92012cb03f6d45ef50d109e9d9b43))
+
+
+
 # [5.152.0](https://github.com/reservoirprotocol/indexer/compare/v5.151.0...v5.152.0) (2022-08-10)
 
 
