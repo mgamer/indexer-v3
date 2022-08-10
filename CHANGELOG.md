@@ -1,3 +1,12 @@
+# [5.156.0](https://github.com/reservoirprotocol/indexer/compare/v5.155.0...v5.156.0) (2022-08-10)
+
+
+### Bug Fixes
+
+* generate UUID based on params passed ([b129b7a](https://github.com/reservoirprotocol/indexer/commit/b129b7a803080730aeb67c518aef79a08adf1c19))
+
+
+
 # [5.155.0](https://github.com/reservoirprotocol/indexer/compare/v5.154.0...v5.155.0) (2022-08-10)
 
 
