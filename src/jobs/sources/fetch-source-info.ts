@@ -28,6 +28,8 @@ if (config.doBackgroundWork) {
       let url = sourceDomain;
       let iconUrl;
       let titleText;
+      let tokenUrlMainnet;
+      let tokenUrlRinkeby;
 
       if (!_.startsWith(url, "http")) {
         url = `https://${url}`;
@@ -68,9 +70,42 @@ if (config.doBackgroundWork) {
         iconUrl = `${url}${iconUrl}`;
       }
 
+      // Get the custom reservoir token URL tag for mainnet
+      const reservoirTokenUrlMainnet = html.querySelector(
+        "meta[property='reservoir:token-url-mainnet']"
+      );
+
+      if (reservoirTokenUrlMainnet) {
+        tokenUrlMainnet = reservoirTokenUrlMainnet.getAttribute("content");
+
+        // If this a relative url
+        if (tokenUrlMainnet && _.startsWith(iconUrl, "/")) {
+          tokenUrlMainnet = `${url}${iconUrl}`;
+        }
+      }
+
+      // Get the custom reservoir token URL tag for rinkeby
+      const reservoirTokenUrlRinkeby = html.querySelector(
+        "meta[property='reservoir:token-url-rinkeby']"
+      );
+
+      if (reservoirTokenUrlRinkeby) {
+        tokenUrlRinkeby = reservoirTokenUrlRinkeby.getAttribute("content");
+
+        // If this a relative url
+        if (tokenUrlRinkeby && _.startsWith(iconUrl, "/")) {
+          tokenUrlRinkeby = `${url}${iconUrl}`;
+        }
+      }
+
       // Update the source data
       const sources = await Sources.getInstance();
-      await sources.update(sourceDomain, { title: titleText, icon: iconUrl });
+      await sources.update(sourceDomain, {
+        title: titleText,
+        icon: iconUrl,
+        tokenUrlMainnet,
+        tokenUrlRinkeby,
+      });
     },
     {
       connection: redis.duplicate(),
