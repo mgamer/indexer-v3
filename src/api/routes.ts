@@ -616,6 +616,12 @@ export const setupRoutes = (server: Server) => {
   // Tokens
 
   server.route({
+    method: "POST",
+    path: "/tokens/flag/v1",
+    options: tokensEndpoints.postFlagTokenV1Options,
+  });
+
+  server.route({
     method: "GET",
     path: "/tokens/v1",
     options: tokensEndpoints.getTokensV1Options,

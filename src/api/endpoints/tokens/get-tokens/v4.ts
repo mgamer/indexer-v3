@@ -116,6 +116,8 @@ export const getTokensV4Options: RouteOptions = {
           rarity: Joi.number().unsafe().allow(null),
           rarityRank: Joi.number().unsafe().allow(null),
           owner: Joi.string().allow(null, ""),
+          isFlagged: Joi.boolean().default(false),
+          lastFlagUpdate: Joi.string().allow(null, ""),
         })
       ),
       continuation: Joi.string().pattern(regex.base64).allow(null),
@@ -172,6 +174,8 @@ export const getTokensV4Options: RouteOptions = {
           ${selectTopBid}
           "t"."rarity_score",
           "t"."rarity_rank",
+          "t"."is_flagged",
+          "t"."last_flag_update",
           (
             SELECT owner
             FROM "nft_balances" "nb"
@@ -427,6 +431,8 @@ export const getTokensV4Options: RouteOptions = {
           rarity: r.rarity_score,
           rarityRank: r.rarity_rank,
           owner: r.owner ? fromBuffer(r.owner) : null,
+          isFlagged: Boolean(Number(r.is_flagged)),
+          lastFlagUpdate: r.last_flag_update,
         };
       });
 
