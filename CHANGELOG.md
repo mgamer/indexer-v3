@@ -1,3 +1,14 @@
+# [5.154.0](https://github.com/reservoirprotocol/indexer/compare/v5.153.0...v5.154.0) (2022-08-10)
+
+
+### Features
+
+* fix sources ([7c9eac5](https://github.com/reservoirprotocol/indexer/commit/7c9eac543b8dbb91dd8bda7464a3bd73e03dcbf8))
+* get token url tags from custom tags ([8209ee9](https://github.com/reservoirprotocol/indexer/commit/8209ee909115a8625e70de5149b4c65ab8cada3c))
+* parse custom tags for token url ([238c65b](https://github.com/reservoirprotocol/indexer/commit/238c65b5a6e5a0f4a07c8eef8e907b5ca0ace177))
+
+
+
 # [5.153.0](https://github.com/reservoirprotocol/indexer/compare/v5.152.0...v5.153.0) (2022-08-10)
 
 
