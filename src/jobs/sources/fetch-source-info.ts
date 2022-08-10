@@ -4,7 +4,7 @@ import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 import axios from "axios";
 import _ from "lodash";
-import { parse } from "node-html-parser";
+import { HTMLElement, parse } from "node-html-parser";
 import { Sources } from "@/models/sources";
 
 const QUEUE_NAME = "fetch-source-info-queue";
@@ -28,8 +28,6 @@ if (config.doBackgroundWork) {
       let url = sourceDomain;
       let iconUrl;
       let titleText;
-      let tokenUrlMainnet;
-      let tokenUrlRinkeby;
 
       if (!_.startsWith(url, "http")) {
         url = `https://${url}`;
@@ -70,33 +68,8 @@ if (config.doBackgroundWork) {
         iconUrl = `${url}${iconUrl}`;
       }
 
-      // Get the custom reservoir token URL tag for mainnet
-      const reservoirTokenUrlMainnet = html.querySelector(
-        "meta[property='reservoir:token-url-mainnet']"
-      );
-
-      if (reservoirTokenUrlMainnet) {
-        tokenUrlMainnet = reservoirTokenUrlMainnet.getAttribute("content");
-
-        // If this a relative url
-        if (tokenUrlMainnet && _.startsWith(iconUrl, "/")) {
-          tokenUrlMainnet = `${url}${iconUrl}`;
-        }
-      }
-
-      // Get the custom reservoir token URL tag for rinkeby
-      const reservoirTokenUrlRinkeby = html.querySelector(
-        "meta[property='reservoir:token-url-rinkeby']"
-      );
-
-      if (reservoirTokenUrlRinkeby) {
-        tokenUrlRinkeby = reservoirTokenUrlRinkeby.getAttribute("content");
-
-        // If this a relative url
-        if (tokenUrlRinkeby && _.startsWith(iconUrl, "/")) {
-          tokenUrlRinkeby = `${url}${iconUrl}`;
-        }
-      }
+      const tokenUrlMainnet = getTokenUrl(html, url, "mainnet");
+      const tokenUrlRinkeby = getTokenUrl(html, url, "rinkeby");
 
       // Update the source data
       const sources = await Sources.getInstance();
@@ -116,6 +89,24 @@ if (config.doBackgroundWork) {
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
+}
+
+function getTokenUrl(html: HTMLElement, domain: string, network: string) {
+  let tokenUrl;
+
+  // Get the custom reservoir token URL tag for mainnet
+  const reservoirTokenUrl = html.querySelector(`meta[property='reservoir:token-url-${network}']`);
+
+  if (reservoirTokenUrl) {
+    tokenUrl = reservoirTokenUrl.getAttribute("content");
+
+    // If this a relative url
+    if (tokenUrl && _.startsWith(tokenUrl, "/")) {
+      tokenUrl = `${domain}${tokenUrl}`;
+    }
+  }
+
+  return tokenUrl;
 }
 
 export const addToQueue = async (sourceDomain: string, delay = 0) => {
