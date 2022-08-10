@@ -30,6 +30,8 @@ type NetworkSettings = {
   metadataMintDelay: number;
   enableMetadataAutoRefresh: boolean;
   washTradingExcludedContracts: string[];
+  washTradingWhitelistedAddresses: string[];
+  washTradingBlacklistedAddresses: string[];
   coingecko?: {
     networkId: string;
   };
@@ -46,6 +48,8 @@ export const getNetworkSettings = (): NetworkSettings => {
     metadataMintDelay: 120,
     enableMetadataAutoRefresh: false,
     washTradingExcludedContracts: [],
+    washTradingWhitelistedAddresses: [],
+    washTradingBlacklistedAddresses: [],
   };
 
   switch (config.chainId) {
@@ -60,6 +64,7 @@ export const getNetworkSettings = (): NetworkSettings => {
           "0x059edd72cd353df5106d2b9cc5ab83a52287ac3a",
           "0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270",
         ],
+        washTradingBlacklistedAddresses: ["0xac335e6855df862410f96f345f93af4f96351a87"],
         coingecko: {
           networkId: "ethereum",
         },

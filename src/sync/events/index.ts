@@ -2314,13 +2314,24 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
 const assignWashTradingScoreToFillEvents = async (fillEvents: es.fills.Event[]) => {
   try {
     const inverseFillEvents: { contract: Buffer; maker: Buffer; taker: Buffer }[] = [];
-    const excludedContracts = getNetworkSettings().washTradingExcludedContracts;
-    const fillEventsFiltered = excludedContracts.length
-      ? fillEvents.filter((e) => !excludedContracts.includes(e.contract))
-      : fillEvents;
-    const fillEventsChunks = _.chunk(fillEventsFiltered, 100);
 
-    for (const fillEventsChunk of fillEventsChunks) {
+    const washTradingExcludedContracts = getNetworkSettings().washTradingExcludedContracts;
+    const washTradingWhitelistedAddresses = getNetworkSettings().washTradingWhitelistedAddresses;
+    const washTradingBlacklistedAddresses = getNetworkSettings().washTradingBlacklistedAddresses;
+
+    // Filter events that don't need to be checked for inverse sales
+    const fillEventsPendingInverseCheck = fillEvents.filter(
+      (e) =>
+        !washTradingExcludedContracts.includes(e.contract) &&
+        !washTradingWhitelistedAddresses.includes(e.maker) &&
+        !washTradingWhitelistedAddresses.includes(e.taker) &&
+        !washTradingBlacklistedAddresses.includes(e.maker) &&
+        !washTradingBlacklistedAddresses.includes(e.taker)
+    );
+
+    const fillEventsPendingInverseCheckChunks = _.chunk(fillEventsPendingInverseCheck, 100);
+
+    for (const fillEventsChunk of fillEventsPendingInverseCheckChunks) {
       const inverseFillEventsFilter = fillEventsChunk.map(
         (fillEvent) =>
           `('${_.replace(fillEvent.taker, "0x", "\\x")}', '${_.replace(
@@ -2346,13 +2357,25 @@ const assignWashTradingScoreToFillEvents = async (fillEvents: es.fills.Event[]) 
     }
 
     fillEvents.forEach((event, index) => {
-      const washTradingDetected = inverseFillEvents.some((inverseFillEvent) => {
-        return (
-          event.maker == fromBuffer(inverseFillEvent.taker) &&
-          event.taker == fromBuffer(inverseFillEvent.maker) &&
-          event.contract == fromBuffer(inverseFillEvent.contract)
-        );
-      });
+      // Mark event as wash trading for any blacklisted addresses
+      let washTradingDetected =
+        washTradingBlacklistedAddresses.includes(event.maker) ||
+        washTradingBlacklistedAddresses.includes(event.taker);
+
+      if (!washTradingDetected) {
+        // Mark event as wash trading if we find a corresponding transfer from taker
+        washTradingDetected = inverseFillEvents.some((inverseFillEvent) => {
+          return (
+            event.maker == fromBuffer(inverseFillEvent.taker) &&
+            event.taker == fromBuffer(inverseFillEvent.maker) &&
+            event.contract == fromBuffer(inverseFillEvent.contract)
+          );
+        });
+      }
+
+      if (washTradingDetected) {
+        logger.info("sync-events", `Wash trading detected. event: ${JSON.stringify(event)}`);
+      }
 
       fillEvents[index].washTradingScore = Number(washTradingDetected);
     });

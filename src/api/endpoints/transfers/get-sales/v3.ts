@@ -112,6 +112,7 @@ export const getSalesV3Options: RouteOptions = {
           currency: Joi.string().pattern(regex.address),
           currencyPrice: Joi.number().unsafe().allow(null),
           usdPrice: Joi.number().unsafe().allow(null),
+          washTradingScore: Joi.number(),
         })
       ),
       continuation: Joi.string().pattern(regex.base64).allow(null),
@@ -252,7 +253,8 @@ export const getSalesV3Options: RouteOptions = {
             fill_events_2.usd_price,
             fill_events_2.block,
             fill_events_2.log_index,
-            fill_events_2.batch_index
+            fill_events_2.batch_index,
+            fill_events_2.wash_trading_score
           FROM fill_events_2
           LEFT JOIN currencies
             ON fill_events_2.currency = currencies.contract
@@ -344,6 +346,7 @@ export const getSalesV3Options: RouteOptions = {
             ? formatEth(r.price)
             : null,
           usdPrice: r.usd_price ? formatUsd(r.usd_price) : null,
+          washTradingScore: r.wash_trading_score,
         };
       });
 
