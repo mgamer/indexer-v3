@@ -63,7 +63,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
       attributes: Joi.object()
         .unknown()
         .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
-      source: Joi.string().description("Name of the order source. Example `OpenSea`"),
+      source: Joi.string().description("Domain of the order source. Example `opensea.io`"),
       sortBy: Joi.string()
         .valid("floorAskPrice")
         .default("floorAskPrice")
@@ -466,6 +466,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
               validUntil: r.floor_sell_value ? r.floor_sell_valid_to : null,
               source: {
                 id: source?.address,
+                domain: source?.domain,
                 name: source?.name,
                 icon: source?.metadata.icon,
                 url: source?.metadata.url,

@@ -38,7 +38,7 @@ if (config.doBackgroundWork) {
         return;
       }
 
-      const tokenIds = await Tokens.getNonFlaggedTokenIdsInCollection(contract, collectionId);
+      const tokenIds = await Tokens.getNonFlaggedTokenIdsInCollection(contract, collectionId, true);
       if (_.isEmpty(tokenIds)) {
         logger.warn(QUEUE_NAME, `No tokens for contract=${contract}, collectionId=${collectionId}`);
       }

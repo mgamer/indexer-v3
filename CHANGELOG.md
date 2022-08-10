@@ -1,3 +1,56 @@
+# [5.152.0](https://github.com/reservoirprotocol/indexer/compare/v5.151.0...v5.152.0) (2022-08-10)
+
+
+### Features
+
+* ability to flag tokens ([f9fc3e8](https://github.com/reservoirprotocol/indexer/commit/f9fc3e83f1e57e5ec427e99f7485d91b44216df3))
+* build token set only for tokens within the relevant collection ([a235a3d](https://github.com/reservoirprotocol/indexer/commit/a235a3dcab61a23c688240ed918541039bbccbb8))
+* filter flagged tokens ([05cde99](https://github.com/reservoirprotocol/indexer/commit/05cde9967305e1706791401b83999025908c02f6))
+* fix error ([510335b](https://github.com/reservoirprotocol/indexer/commit/510335ba1889943b476221c9da300195139920d9))
+* fix migration ([ba8f856](https://github.com/reservoirprotocol/indexer/commit/ba8f856d40bee5b6dbabed2b77b1d41215ee4e93))
+* read from master ([36fdbc3](https://github.com/reservoirprotocol/indexer/commit/36fdbc3fd0928a45c0779f73bfcc2342d67c7dcb))
+* read from replica ([665e2c5](https://github.com/reservoirprotocol/indexer/commit/665e2c559a826b31a3566f54019f6d5f8a18ae7e))
+* set is_flagged behind a flag ([9ac84b2](https://github.com/reservoirprotocol/indexer/commit/9ac84b283a8d93ab130f5040c9527c52702f51b2))
+
+
+
+# [5.151.0](https://github.com/reservoirprotocol/indexer/compare/v5.150.1...v5.151.0) (2022-08-10)
+
+
+### Features
+
+* detect opensea as source from the fee ([d058586](https://github.com/reservoirprotocol/indexer/commit/d0585869339541cc6001af88b7f4e9e7fbad52c6))
+* update default source domain ([15dd168](https://github.com/reservoirprotocol/indexer/commit/15dd168c3f2c25d2e253d41c374ebcf2bc5f708e))
+
+
+
+## [5.150.1](https://github.com/reservoirprotocol/indexer/compare/v5.150.0...v5.150.1) (2022-08-10)
+
+
+### Bug Fixes
+
+* properly update all relevant order statuses on approval revokes ([5d7e180](https://github.com/reservoirprotocol/indexer/commit/5d7e180f03bf4beefac9125370212611ff3513f6))
+
+
+
+# [5.150.0](https://github.com/reservoirprotocol/indexer/compare/v5.149.0...v5.150.0) (2022-08-09)
+
+
+### Features
+
+* added source domain to collection/v3 response ([de03324](https://github.com/reservoirprotocol/indexer/commit/de0332496b7ccdec1c5db8019f94643bd7ff813b))
+
+
+
+# [5.149.0](https://github.com/reservoirprotocol/indexer/compare/v5.148.1...v5.149.0) (2022-08-09)
+
+
+### Features
+
+* return source domain ([f576a0d](https://github.com/reservoirprotocol/indexer/commit/f576a0dfe670f4c00c859f26604e91966f7896b1))
+
+
+
 ## [5.148.1](https://github.com/reservoirprotocol/indexer/compare/v5.148.0...v5.148.1) (2022-08-08)
 
 

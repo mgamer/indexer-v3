@@ -4,7 +4,7 @@ import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 import axios from "axios";
 import _ from "lodash";
-import { parse } from "node-html-parser";
+import { HTMLElement, parse } from "node-html-parser";
 import { Sources } from "@/models/sources";
 
 const QUEUE_NAME = "fetch-source-info-queue";
@@ -68,9 +68,17 @@ if (config.doBackgroundWork) {
         iconUrl = `${url}${iconUrl}`;
       }
 
+      const tokenUrlMainnet = getTokenUrl(html, url, "mainnet");
+      const tokenUrlRinkeby = getTokenUrl(html, url, "rinkeby");
+
       // Update the source data
       const sources = await Sources.getInstance();
-      await sources.update(sourceDomain, { title: titleText, icon: iconUrl });
+      await sources.update(sourceDomain, {
+        title: titleText,
+        icon: iconUrl,
+        tokenUrlMainnet,
+        tokenUrlRinkeby,
+      });
     },
     {
       connection: redis.duplicate(),
@@ -81,6 +89,24 @@ if (config.doBackgroundWork) {
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
+}
+
+function getTokenUrl(html: HTMLElement, domain: string, network: string) {
+  let tokenUrl;
+
+  // Get the custom reservoir token URL tag for mainnet
+  const reservoirTokenUrl = html.querySelector(`meta[property='reservoir:token-url-${network}']`);
+
+  if (reservoirTokenUrl) {
+    tokenUrl = reservoirTokenUrl.getAttribute("content");
+
+    // If this a relative url
+    if (tokenUrl && _.startsWith(tokenUrl, "/")) {
+      tokenUrl = `${domain}${tokenUrl}`;
+    }
+  }
+
+  return tokenUrl;
 }
 
 export const addToQueue = async (sourceDomain: string, delay = 0) => {

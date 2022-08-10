@@ -63,7 +63,7 @@ export const getTokensV4Options: RouteOptions = {
       attributes: Joi.object()
         .unknown()
         .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
-      source: Joi.string().description("Name of the order source. Example `OpenSea`"),
+      source: Joi.string().description("Domain of the order source. Example `opensea.io`"),
       native: Joi.boolean().description("If true, results will filter only Reservoir orders."),
       sortBy: Joi.string()
         .allow("floorAskPrice", "tokenId", "rarity")
@@ -110,6 +110,7 @@ export const getTokensV4Options: RouteOptions = {
             slug: Joi.string().allow(null, ""),
           }),
           source: Joi.string().allow(null, ""),
+          sourceDomain: Joi.string().allow(null, ""),
           topBidValue: Joi.number().unsafe().allow(null).optional(),
           floorAskPrice: Joi.number().unsafe().allow(null),
           rarity: Joi.number().unsafe().allow(null),
@@ -416,6 +417,10 @@ export const getTokensV4Options: RouteOptions = {
           source:
             r.floor_sell_source_id_int !== null
               ? sources.get(r.floor_sell_source_id_int)?.name
+              : undefined,
+          sourceDomain:
+            r.floor_sell_source_id_int !== null
+              ? sources.get(r.floor_sell_source_id_int)?.domain
               : undefined,
           floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
           topBidValue: query.includeTopBid

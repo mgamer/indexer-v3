@@ -97,7 +97,9 @@ export const getExecuteListV2Options: RouteOptions = {
       ),
       expirationTime: Joi.string()
         .pattern(regex.unix_timestamp)
-        .description("Unix timestamp indicating when listing will expire. Example: `1656080318`"),
+        .description(
+          "Unix timestamp (seconds) indicating when listing will expire. Example: `1656080318`"
+        ),
       salt: Joi.string()
         .pattern(/^\d+$/)
         .description("Optional. Random string to make the order unique"),
