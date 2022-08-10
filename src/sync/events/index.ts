@@ -2114,6 +2114,44 @@ export const syncEvents = async (
 
               break;
             }
+
+            case "zora-auction-ended": {
+              const { args } = eventData.abi.parseLog(log);
+              // const auctionId = args["auctionId"].toString();
+              const tokenId = args["tokenId"].toString();
+              const tokenContract = args["tokenContract"].toLowerCase();
+              const tokenOwner = args["tokenOwner"].toLowerCase();
+              // const curator = args["curator"].toLowerCase();
+              const winner = args["winner"].toLowerCase();
+              const amount = args["amount"].toString();
+              // const curatorFee = args["curatorFee"].toString();
+              const auctionCurrency = args["auctionCurrency"].toLowerCase();
+
+              if (
+                ![
+                  Sdk.Common.Addresses.Weth[config.chainId],
+                  Sdk.Common.Addresses.Eth[config.chainId],
+                ].includes(auctionCurrency)
+              ) {
+                // Skip if the payment token is not supported.
+                break;
+              }
+
+              fillEvents.push({
+                orderKind: "zora-v3",
+                currency: auctionCurrency,
+                orderSide: "sell",
+                taker: winner,
+                maker: tokenOwner,
+                price: amount,
+                contract: tokenContract,
+                tokenId,
+                amount: "1",
+                baseEventParams,
+              });
+
+              break;
+            }
           }
         } catch (error) {
           logger.info("sync-events", `Failed to handle events: ${error}`);

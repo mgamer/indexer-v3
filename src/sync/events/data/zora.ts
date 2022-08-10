@@ -23,49 +23,22 @@ export const askFilled: EventData = {
   ]),
 };
 
-export const auctionEndedCoreEth: EventData = {
-  kind: "zora-auction-ended-core-eth",
-  addresses: { [Zora.Addresses.AuctionHouseCoreEth[config.chainId]?.toLowerCase()]: true },
-  topic: "0xde4690ca69ca2f9bab030a05a3072d626b0692c7020c1ef534aa3cc140fb1ff5",
-  numTopics: 3,
+export const auctionEnded: EventData = {
+  kind: "zora-auction-ended",
+  addresses: { [Zora.Addresses.AuctionHouse[config.chainId]?.toLowerCase()]: true },
+  topic: "0x4f35fb3ea0081b3ccbe8df613cab0f9e1694d50a025e0aa09b88a86a3d07c2de",
+  numTopics: 4,
   abi: new Interface([
     `event AuctionEnded(
-      address indexed tokenContract, 
-      uint256 indexed tokenId, 
-      (
-        address seller,
-        uint96 reservePrice,
-        address sellerFundsRecipient,
-        uint96 highestBid,
-        address highestBidder,
-        uint32 duration,
-        uint32 startTime,
-        uint32 firstBidTime
-        ) auction
-      )`,
-  ]),
-};
-
-export const auctionEndedCoreErc20: EventData = {
-  kind: "zora-auction-ended-core-erc20",
-  addresses: { [Zora.Addresses.AuctionHouseCoreErc20[config.chainId]?.toLowerCase()]: true },
-  topic: "0x84042a9c30febd3a9f01ec941c4468830c511bca38f54ca7cb0d39e0c509f387",
-  numTopics: 3,
-  abi: new Interface([
-    `event AuctionEnded(
-      address indexed tokenContract, 
-      uint256 indexed tokenId, 
-      (
-        address seller,
-        uint96 reservePrice,
-        address sellerFundsRecipient,
-        uint96 highestBid,
-        address highestBidder,
-        uint48 duration,
-        uint48 startTime,
-        address currency,
-        uint96 firstBidTime
-        ) auction
-      )`,
+      uint256 indexed auctionId,
+      uint256 indexed tokenId,
+      address indexed tokenContract,
+      address tokenOwner,
+      address curator,
+      address winner,
+      uint256 amount,
+      uint256 curatorFee,
+      address auctionCurrency
+  )`,
   ]),
 };
