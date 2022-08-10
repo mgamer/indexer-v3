@@ -1,3 +1,18 @@
+# [5.155.0](https://github.com/reservoirprotocol/indexer/compare/v5.154.0...v5.155.0) (2022-08-10)
+
+
+### Bug Fixes
+
+* currency price in sales/v3 ([ba6d52b](https://github.com/reservoirprotocol/indexer/commit/ba6d52bce6ada28c773fffbbefb39ae535b9df37))
+* currency price in sales/v3 ([edcbde5](https://github.com/reservoirprotocol/indexer/commit/edcbde5db35ead6a63811a0da79449a963c5221d))
+
+
+### Features
+
+* allow sort tokens by token id (desc/asc) ([fbe9689](https://github.com/reservoirprotocol/indexer/commit/fbe96896eb1b5652bf2f28cc636860cf376a3baf))
+
+
+
 # [5.154.0](https://github.com/reservoirprotocol/indexer/compare/v5.153.0...v5.154.0) (2022-08-10)
 
 
