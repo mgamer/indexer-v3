@@ -1,3 +1,19 @@
+# [5.152.0](https://github.com/reservoirprotocol/indexer/compare/v5.151.0...v5.152.0) (2022-08-10)
+
+
+### Features
+
+* ability to flag tokens ([f9fc3e8](https://github.com/reservoirprotocol/indexer/commit/f9fc3e83f1e57e5ec427e99f7485d91b44216df3))
+* build token set only for tokens within the relevant collection ([a235a3d](https://github.com/reservoirprotocol/indexer/commit/a235a3dcab61a23c688240ed918541039bbccbb8))
+* filter flagged tokens ([05cde99](https://github.com/reservoirprotocol/indexer/commit/05cde9967305e1706791401b83999025908c02f6))
+* fix error ([510335b](https://github.com/reservoirprotocol/indexer/commit/510335ba1889943b476221c9da300195139920d9))
+* fix migration ([ba8f856](https://github.com/reservoirprotocol/indexer/commit/ba8f856d40bee5b6dbabed2b77b1d41215ee4e93))
+* read from master ([36fdbc3](https://github.com/reservoirprotocol/indexer/commit/36fdbc3fd0928a45c0779f73bfcc2342d67c7dcb))
+* read from replica ([665e2c5](https://github.com/reservoirprotocol/indexer/commit/665e2c559a826b31a3566f54019f6d5f8a18ae7e))
+* set is_flagged behind a flag ([9ac84b2](https://github.com/reservoirprotocol/indexer/commit/9ac84b283a8d93ab130f5040c9527c52702f51b2))
+
+
+
 # [5.151.0](https://github.com/reservoirprotocol/indexer/compare/v5.150.1...v5.151.0) (2022-08-10)
 
 
