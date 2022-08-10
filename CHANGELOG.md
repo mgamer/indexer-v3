@@ -1,3 +1,12 @@
+## [5.150.1](https://github.com/reservoirprotocol/indexer/compare/v5.150.0...v5.150.1) (2022-08-10)
+
+
+### Bug Fixes
+
+* properly update all relevant order statuses on approval revokes ([5d7e180](https://github.com/reservoirprotocol/indexer/commit/5d7e180f03bf4beefac9125370212611ff3513f6))
+
+
+
 # [5.150.0](https://github.com/reservoirprotocol/indexer/compare/v5.149.0...v5.150.0) (2022-08-09)
 
 
