@@ -1,3 +1,13 @@
+# [5.153.0](https://github.com/reservoirprotocol/indexer/compare/v5.152.0...v5.153.0) (2022-08-10)
+
+
+### Features
+
+* added score to sales api, added whitelisting / blacklisting ([#1437](https://github.com/reservoirprotocol/indexer/issues/1437)) ([110272f](https://github.com/reservoirprotocol/indexer/commit/110272fda39b9942111b8448275dcb5a8652991e))
+* fix sources ([9ddbd07](https://github.com/reservoirprotocol/indexer/commit/9ddbd073a4a92012cb03f6d45ef50d109e9d9b43))
+
+
+
 # [5.152.0](https://github.com/reservoirprotocol/indexer/compare/v5.151.0...v5.152.0) (2022-08-10)
 
 
