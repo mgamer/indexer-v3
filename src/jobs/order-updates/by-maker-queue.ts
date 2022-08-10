@@ -363,15 +363,12 @@ if (config.doBackgroundWork) {
                   SELECT
                     orders.id
                   FROM orders
-                  JOIN token_sets_tokens
-                    ON orders.token_set_id = token_sets_tokens.token_set_id
-                  WHERE token_sets_tokens.contract = $/contract/
+                  WHERE orders.contract = $/contract/
                     AND orders.maker = $/maker/
                     AND orders.side = 'sell'
                     AND orders.conduit = $/operator/
                     AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
                     AND orders.approval_status != $/approvalStatus/
-                  LIMIT 1
                 ) x
                 WHERE orders.id = x.id
                 RETURNING orders.id
