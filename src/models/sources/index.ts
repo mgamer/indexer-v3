@@ -78,7 +78,7 @@ export class Sources {
   public static getDefaultSource(): SourcesEntity {
     return new SourcesEntity({
       id: 0,
-      domain: "reservoir.market",
+      domain: "reservoir.tools",
       address: AddressZero,
       name: "Reservoir",
       metadata: {
