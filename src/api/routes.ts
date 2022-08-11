@@ -705,6 +705,12 @@ export const setupRoutes = (server: Server) => {
     options: tokensEndpoints.postSimulateFloorV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/tokens/ids/v1",
+    options: tokensEndpoints.getTokensIdsV4Options,
+  });
+
   // Token sets
 
   server.route({

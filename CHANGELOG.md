@@ -1,3 +1,12 @@
+# [5.157.0](https://github.com/reservoirprotocol/indexer/compare/v5.156.0...v5.157.0) (2022-08-11)
+
+
+### Features
+
+* added api v1 ([#1441](https://github.com/reservoirprotocol/indexer/issues/1441)) ([61aed0e](https://github.com/reservoirprotocol/indexer/commit/61aed0e709feef4878d7861e699dcd199e73ee38))
+
+
+
 # [5.156.0](https://github.com/reservoirprotocol/indexer/compare/v5.155.0...v5.156.0) (2022-08-10)
 
 
