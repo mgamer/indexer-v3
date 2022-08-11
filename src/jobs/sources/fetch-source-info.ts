@@ -6,7 +6,6 @@ import axios from "axios";
 import _ from "lodash";
 import { HTMLElement, parse } from "node-html-parser";
 import { Sources } from "@/models/sources";
-import isRelativeUrl from "is-relative-url";
 
 const QUEUE_NAME = "fetch-source-info-queue";
 
@@ -65,10 +64,10 @@ if (config.doBackgroundWork) {
       }
 
       // If this a relative url
-      if (iconUrl && isRelativeUrl(iconUrl)) {
-        iconUrl = `${url}${iconUrl}`;
-      } else if (iconUrl && _.startsWith(iconUrl, "//")) {
+      if (iconUrl && _.startsWith(iconUrl, "//")) {
         iconUrl = `${_.trimStart(iconUrl, "//")}`;
+      } else if (iconUrl && _.startsWith(iconUrl, "/")) {
+        iconUrl = `${url}${iconUrl}`;
       }
 
       const tokenUrlMainnet = getTokenUrl(html, url, "mainnet");
@@ -104,7 +103,7 @@ function getTokenUrl(html: HTMLElement, domain: string, network: string) {
     tokenUrl = reservoirTokenUrl.getAttribute("content");
 
     // If this a relative url
-    if (tokenUrl && isRelativeUrl(tokenUrl)) {
+    if (tokenUrl && _.startsWith(tokenUrl, "/")) {
       tokenUrl = `${domain}${tokenUrl}`;
     }
   }
