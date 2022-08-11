@@ -78,13 +78,13 @@ export class Sources {
   public static getDefaultSource(): SourcesEntity {
     return new SourcesEntity({
       id: 0,
-      domain: "reservoir.market",
+      domain: "reservoir.tools",
       address: AddressZero,
       name: "Reservoir",
       metadata: {
         icon: "https://www.reservoir.market/reservoir.svg",
-        tokenUrlMainnet: "https://www.reservoir.market/collections/${contract}/${tokenId}",
-        tokenUrlRinkeby: "https://www.reservoir.fun/collections/${contract}/${tokenId}",
+        tokenUrlMainnet: "https://www.reservoir.market/${contract}/${tokenId}",
+        tokenUrlRinkeby: "https://dev.reservoir.market/${contract}/${tokenId}",
       },
     });
   }
@@ -105,7 +105,7 @@ export class Sources {
     const query = `INSERT INTO sources_v2 (id, domain, name, address, metadata)
                    VALUES ($/id/, $/domain/, $/name/, $/address/, $/metadata:json/)
                    ON CONFLICT (id) DO UPDATE
-                   SET metadata = $/metadata:json/, name = $/name/, domain = $/domain/`;
+                   SET metadata = $/metadata:json/, domain = $/domain/`;
 
     const values = {
       id,
@@ -121,7 +121,7 @@ export class Sources {
   public async create(domain: string, address: string, metadata: object = {}) {
     const query = `INSERT INTO sources_v2 (domain, name, address, metadata)
                    VALUES ($/domain/, $/domain/, $/address/, $/metadata:json/)
-                   ON CONFLICT (domain) DO UPDATE SET domain = EXCLUDED.domain
+                   ON CONFLICT DO NOTHING
                    RETURNING *`;
 
     const values = {
@@ -171,13 +171,17 @@ export class Sources {
     await redis.publish(channels.sourcesUpdated, `Updated source ${domain}`);
   }
 
-  public get(id: number): SourcesEntity {
+  public get(id: number, contract?: string, tokenId?: string): SourcesEntity {
     let sourceEntity;
 
     if (id in this.sources) {
       sourceEntity = (this.sources as any)[id];
     } else {
       sourceEntity = Sources.getDefaultSource();
+    }
+
+    if (sourceEntity && contract && tokenId) {
+      sourceEntity.metadata.url = this.getTokenUrl(sourceEntity, contract, tokenId);
     }
 
     return sourceEntity;

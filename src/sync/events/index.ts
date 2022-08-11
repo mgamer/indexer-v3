@@ -8,11 +8,13 @@ import pLimit from "p-limit";
 
 import { logger } from "@/common/logger";
 import { idb, pgp, redb } from "@/common/db";
-import { baseProvider } from "@/common/provider";
+import { baseProvider, slowProvider } from "@/common/provider";
 import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { getNetworkSettings } from "@/config/network";
 import { EventDataKind, getEventData } from "@/events-sync/data";
 import * as es from "@/events-sync/storage";
+import * as syncEventsUtils from "@/events-sync/utils";
 import { parseEvent } from "@/events-sync/parser";
 import * as blockCheck from "@/jobs/events-sync/block-check-queue";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
@@ -25,8 +27,7 @@ import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsync
 import * as blocksModel from "@/models/blocks";
 import { OrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
-import * as syncEventsUtils from "@/events-sync/utils";
-import { getNetworkSettings } from "@/config/network";
+import { getUSDAndNativePrices } from "@/utils/prices";
 
 // TODO: Split into multiple files (by exchange)
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
@@ -41,6 +42,7 @@ export const syncEvents = async (
   options?: {
     backfill?: boolean;
     eventDataKinds?: EventDataKind[];
+    useSlowProvider?: boolean;
   }
 ) => {
   // --- Handle: fetch and process events ---
@@ -56,18 +58,20 @@ export const syncEvents = async (
   const makerInfos: orderUpdatesByMaker.MakerInfo[] = [];
   const mintInfos: tokenUpdatesMint.MintInfo[] = [];
 
+  const provider = options?.useSlowProvider ? slowProvider : baseProvider;
+
   // Before proceeding, fetch all individual blocks within the current range
   const limit = pLimit(5);
   await Promise.all(
     _.range(fromBlock, toBlock + 1).map((block) =>
-      limit(() => baseProvider.getBlockWithTransactions(block))
+      limit(() => provider.getBlockWithTransactions(block))
     )
   );
 
   // When backfilling, certain processes are disabled
   const backfill = Boolean(options?.backfill);
   const eventDatas = getEventData(options?.eventDataKinds);
-  await baseProvider
+  await provider
     .getLogs({
       // Only keep unique topics (eg. an example of duplicated topics are
       // erc721 and erc20 transfers which have the exact same signature)
@@ -559,7 +563,7 @@ export const syncEvents = async (
                   Sdk.Common.Addresses.Eth[config.chainId],
                 ].includes(currency)
               ) {
-                // Skip if the payment token is not supported.
+                // Skip if the payment token is not supported
                 break;
               }
 
@@ -601,8 +605,15 @@ export const syncEvents = async (
               }
 
               const orderSide = [1, 5].includes(op) ? "sell" : "buy";
-              const price = item.price.toString();
               const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
+
+              // Handle: prices
+              const currencyPrice = item.price.toString();
+              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
 
               fillEvents.push({
                 orderKind,
@@ -611,7 +622,10 @@ export const syncEvents = async (
                 orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
-                price,
+                price: prices.nativePrice,
+                currency,
+                currencyPrice,
+                usdPrice: prices.usdPrice,
                 contract,
                 tokenId,
                 // X2Y2 only supports ERC721 for now
@@ -638,7 +652,7 @@ export const syncEvents = async (
                 contract,
                 tokenId,
                 amount: "1",
-                price,
+                price: prices.nativePrice,
                 timestamp: baseEventParams.timestamp,
               });
 
@@ -697,7 +711,6 @@ export const syncEvents = async (
               const protocolFee = parsedLog.args["protocolFee"].toString();
 
               const orderId = keccak256(["address", "uint256"], [contract, tokenId]);
-
               const orderKind = "foundation";
 
               // Handle attribution
@@ -709,9 +722,17 @@ export const syncEvents = async (
                 taker = data.taker;
               }
 
-              // Deduce the price from the protocol fee (which is 5%)
-              const price = bn(protocolFee).mul(10000).div(50).toString();
               const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
+
+              // Handle: prices
+              const currency = Sdk.Common.Addresses.Eth[config.chainId];
+              // Deduce the price from the protocol fee (which is 5%)
+              const currencyPrice = bn(protocolFee).mul(10000).div(50).toString();
+              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
 
               // Custom handling to support on-chain orderbook quirks.
               fillEventsFoundation.push({
@@ -721,7 +742,10 @@ export const syncEvents = async (
                 orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
-                price,
+                price: prices.nativePrice,
+                currency,
+                currencyPrice,
+                usdPrice: prices.usdPrice,
                 contract,
                 tokenId,
                 // Foundation only supports erc721 for now
@@ -748,7 +772,7 @@ export const syncEvents = async (
                 contract,
                 tokenId,
                 amount: "1",
-                price,
+                price: prices.nativePrice,
                 timestamp: baseEventParams.timestamp,
               });
 
@@ -830,7 +854,7 @@ export const syncEvents = async (
               const maker = parsedLog.args["maker"].toLowerCase();
               let taker = parsedLog.args["taker"].toLowerCase();
               const currency = parsedLog.args["currency"].toLowerCase();
-              const price = parsedLog.args["price"].toString();
+              let currencyPrice = parsedLog.args["price"].toString();
               const contract = parsedLog.args["collection"].toLowerCase();
               const tokenId = parsedLog.args["tokenId"].toString();
               const amount = parsedLog.args["amount"].toString();
@@ -853,6 +877,14 @@ export const syncEvents = async (
 
               const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
+              // Handle: prices
+              currencyPrice = bn(currencyPrice).div(amount).toString();
+              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
+
               fillEvents.push({
                 orderKind,
                 orderId,
@@ -860,7 +892,10 @@ export const syncEvents = async (
                 orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
-                price,
+                price: prices.nativePrice,
+                currency,
+                currencyPrice,
+                usdPrice: prices.usdPrice,
                 contract,
                 tokenId,
                 amount,
@@ -894,7 +929,7 @@ export const syncEvents = async (
                 contract,
                 tokenId,
                 amount,
-                price,
+                price: prices.nativePrice,
                 timestamp: baseEventParams.timestamp,
               });
 
@@ -925,7 +960,7 @@ export const syncEvents = async (
               const maker = parsedLog.args["maker"].toLowerCase();
               let taker = parsedLog.args["taker"].toLowerCase();
               const currency = parsedLog.args["currency"].toLowerCase();
-              const price = parsedLog.args["price"].toString();
+              let currencyPrice = parsedLog.args["price"].toString();
               const contract = parsedLog.args["collection"].toLowerCase();
               const tokenId = parsedLog.args["tokenId"].toString();
               const amount = parsedLog.args["amount"].toString();
@@ -948,6 +983,14 @@ export const syncEvents = async (
 
               const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
+              // Handle: prices
+              currencyPrice = bn(currencyPrice).div(amount).toString();
+              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
+
               fillEvents.push({
                 orderKind,
                 orderId,
@@ -955,7 +998,10 @@ export const syncEvents = async (
                 orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
-                price,
+                price: prices.nativePrice,
+                currency,
+                currencyPrice,
+                usdPrice: prices.usdPrice,
                 contract,
                 tokenId,
                 amount,
@@ -989,7 +1035,7 @@ export const syncEvents = async (
                 contract,
                 tokenId,
                 amount,
-                price,
+                price: prices.nativePrice,
                 timestamp: baseEventParams.timestamp,
               });
 
@@ -1026,7 +1072,7 @@ export const syncEvents = async (
               const sellOrderId = parsedLog.args["sellHash"].toLowerCase();
               const maker = parsedLog.args["maker"].toLowerCase();
               let taker = parsedLog.args["taker"].toLowerCase();
-              const price = parsedLog.args["price"].toString();
+              const currencyPrice = parsedLog.args["price"].toString();
 
               // The code below assumes that events are retrieved in chronological
               // order from the blockchain (this is safe to assume in most cases).
@@ -1060,7 +1106,7 @@ export const syncEvents = async (
               }
 
               // Detect the payment token
-              let paymentToken = Sdk.Common.Addresses.Eth[config.chainId];
+              let currency = Sdk.Common.Addresses.Eth[config.chainId];
               for (const event of currentTxEvents.slice(0, -1).reverse()) {
                 // Skip once we detect another fill in the same transaction
                 // (this will happen if filling through an aggregator).
@@ -1082,9 +1128,9 @@ export const syncEvents = async (
                   const amount = parsed.args["amount"].toString();
                   if (
                     ((maker === from && taker === to) || (maker === to && taker === from)) &&
-                    amount <= price
+                    amount <= currencyPrice
                   ) {
-                    paymentToken = event.log.address.toLowerCase();
+                    currency = event.log.address.toLowerCase();
                     break;
                   }
                 }
@@ -1094,7 +1140,7 @@ export const syncEvents = async (
                 ![
                   Sdk.Common.Addresses.Eth[config.chainId],
                   Sdk.Common.Addresses.Weth[config.chainId],
-                ].includes(paymentToken)
+                ].includes(currency)
               ) {
                 // Skip if the payment token is not supported
                 break;
@@ -1113,6 +1159,13 @@ export const syncEvents = async (
                 taker = data.taker;
               }
 
+              // Handle: prices
+              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
+
               const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
               let batchIndex = 1;
@@ -1124,7 +1177,10 @@ export const syncEvents = async (
                   orderSourceIdInt: orderSource?.id,
                   maker,
                   taker,
-                  price,
+                  price: prices.nativePrice,
+                  currency,
+                  currencyPrice,
+                  usdPrice: prices.usdPrice,
                   contract: associatedNftTransferEvent.baseEventParams.address,
                   tokenId: associatedNftTransferEvent.tokenId,
                   amount: associatedNftTransferEvent.amount,
@@ -1144,7 +1200,10 @@ export const syncEvents = async (
                   orderSourceIdInt: orderSource?.id,
                   maker,
                   taker,
-                  price,
+                  price: prices.nativePrice,
+                  currency,
+                  currencyPrice,
+                  usdPrice: prices.usdPrice,
                   contract: associatedNftTransferEvent.baseEventParams.address,
                   tokenId: associatedNftTransferEvent.tokenId,
                   amount: associatedNftTransferEvent.amount,
@@ -1188,14 +1247,13 @@ export const syncEvents = async (
               let taker = parsedLog.args["taker"].toLowerCase();
               const nonce = parsedLog.args["nonce"].toString();
               const erc20Token = parsedLog.args["erc20Token"].toLowerCase();
-              let erc20TokenAmount = parsedLog.args["erc20TokenAmount"].toString();
+              const erc20TokenAmount = parsedLog.args["erc20TokenAmount"].toString();
               const erc721Token = parsedLog.args["erc721Token"].toLowerCase();
               const erc721TokenId = parsedLog.args["erc721TokenId"].toString();
 
               if (
                 ![
                   Sdk.ZeroExV4.Addresses.Eth[config.chainId],
-                  Sdk.OpenDao.Addresses.Eth[config.chainId],
                   Sdk.Common.Addresses.Weth[config.chainId],
                 ].includes(erc20Token)
               ) {
@@ -1214,8 +1272,8 @@ export const syncEvents = async (
                 taker = data.taker;
               }
 
-              const orderSide = direction === 0 ? "sell" : "buy";
-              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
+              // By default, use the price without fees
+              let currencyPrice = erc20TokenAmount;
 
               let orderId: string | undefined;
               if (!backfill) {
@@ -1249,10 +1307,26 @@ export const syncEvents = async (
                     if (result) {
                       orderId = result.id;
                       // Workaround the fact that 0xv4 fill events exclude the fee from the price
-                      erc20TokenAmount = result.price;
+                      currencyPrice = result.price;
                     }
                   });
               }
+
+              // Handle: prices
+              let currency = erc20Token;
+              if (currency === Sdk.ZeroExV4.Addresses.Eth[config.chainId]) {
+                // Map the weird 0x ETH address
+                currency = Sdk.Common.Addresses.Eth[config.chainId];
+              }
+
+              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
+
+              const orderSide = direction === 0 ? "sell" : "buy";
+              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
               fillEvents.push({
                 orderKind,
@@ -1261,7 +1335,10 @@ export const syncEvents = async (
                 orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
-                price: erc20TokenAmount,
+                price: prices.nativePrice,
+                currency,
+                currencyPrice,
+                usdPrice: prices.usdPrice,
                 contract: erc721Token,
                 tokenId: erc721TokenId,
                 amount: "1",
@@ -1297,7 +1374,7 @@ export const syncEvents = async (
                 contract: erc721Token,
                 tokenId: erc721TokenId,
                 amount: "1",
-                price: erc20TokenAmount,
+                price: prices.nativePrice,
                 timestamp: baseEventParams.timestamp,
               });
 
@@ -1329,7 +1406,7 @@ export const syncEvents = async (
               let taker = parsedLog.args["taker"].toLowerCase();
               const nonce = parsedLog.args["nonce"].toString();
               const erc20Token = parsedLog.args["erc20Token"].toLowerCase();
-              let erc20FillAmount = parsedLog.args["erc20FillAmount"].toString();
+              const erc20FillAmount = parsedLog.args["erc20FillAmount"].toString();
               const erc1155Token = parsedLog.args["erc1155Token"].toLowerCase();
               const erc1155TokenId = parsedLog.args["erc1155TokenId"].toString();
               const erc1155FillAmount = parsedLog.args["erc1155FillAmount"].toString();
@@ -1337,7 +1414,6 @@ export const syncEvents = async (
               if (
                 ![
                   Sdk.ZeroExV4.Addresses.Eth[config.chainId],
-                  Sdk.OpenDao.Addresses.Eth[config.chainId],
                   Sdk.Common.Addresses.Weth[config.chainId],
                 ].includes(erc20Token)
               ) {
@@ -1356,8 +1432,8 @@ export const syncEvents = async (
                 taker = data.taker;
               }
 
-              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
-              const value = bn(erc20FillAmount).div(erc1155FillAmount).toString();
+              // By default, use the price without fees
+              let currencyPrice = bn(erc20FillAmount).div(erc1155FillAmount).toString();
 
               let orderId: string | undefined;
               if (!backfill) {
@@ -1390,20 +1466,39 @@ export const syncEvents = async (
                     if (result) {
                       orderId = result.id;
                       // Workaround the fact that 0xv4 fill events exclude the fee from the price
-                      erc20FillAmount = bn(result.price).mul(erc1155FillAmount).toString();
+                      currencyPrice = bn(result.price).mul(erc1155FillAmount).toString();
                     }
                   });
               }
+
+              // Handle: prices
+              let currency = erc20Token;
+              if (currency === Sdk.ZeroExV4.Addresses.Eth[config.chainId]) {
+                // Map the weird 0x ETH address
+                currency = Sdk.Common.Addresses.Eth[config.chainId];
+              }
+
+              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
+
+              const orderSide = direction === 0 ? "sell" : "buy";
+              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
               // Custom handling to support partial filling
               fillEventsPartial.push({
                 orderKind,
                 orderId,
-                orderSide: direction === 0 ? "sell" : "buy",
+                orderSide,
                 orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
-                price: erc20FillAmount,
+                price: prices.nativePrice,
+                currency,
+                currencyPrice,
+                usdPrice: prices.usdPrice,
                 contract: erc1155Token,
                 tokenId: erc1155TokenId,
                 amount: erc1155FillAmount,
@@ -1427,11 +1522,11 @@ export const syncEvents = async (
               fillInfos.push({
                 context: orderId || `${maker}-${nonce}`,
                 orderId: orderId,
-                orderSide: direction === 0 ? "sell" : "buy",
+                orderSide,
                 contract: erc1155Token,
                 tokenId: erc1155TokenId,
                 amount: erc1155FillAmount,
-                price: value,
+                price: prices.nativePrice,
                 timestamp: baseEventParams.timestamp,
               });
 
@@ -1509,6 +1604,400 @@ export const syncEvents = async (
                 consideration
               );
               if (saleInfo) {
+                const orderSide = saleInfo.side as "sell" | "buy";
+                const orderKind = "seaport";
+
+                // Handle: prices
+                const currency = saleInfo.paymentToken;
+                const currencyPrice = bn(saleInfo.price).div(saleInfo.amount).toString();
+                const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+                if (!prices.nativePrice) {
+                  // We must always have the native price
+                  break;
+                }
+
+                // Handle: attribution
+                const data = await syncEventsUtils.extractAttributionData(
+                  baseEventParams.txHash,
+                  orderKind
+                );
+                if (data.taker) {
+                  taker = data.taker;
+                }
+
+                if (saleInfo.recipientOverride) {
+                  taker = saleInfo.recipientOverride;
+                }
+
+                const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
+
+                // Custom handling to support partial filling
+                fillEventsPartial.push({
+                  orderKind,
+                  orderId,
+                  orderSide,
+                  orderSourceIdInt: orderSource?.id,
+                  maker,
+                  taker,
+                  price: prices.nativePrice,
+                  currency,
+                  currencyPrice,
+                  usdPrice: prices.usdPrice,
+                  contract: saleInfo.contract,
+                  tokenId: saleInfo.tokenId,
+                  amount: saleInfo.amount,
+                  aggregatorSourceId: data.aggregatorSource?.id,
+                  fillSourceId: data.fillSource?.id,
+                  baseEventParams,
+                });
+
+                fillInfos.push({
+                  context: `${orderId}-${baseEventParams.txHash}`,
+                  orderId: orderId,
+                  orderSide,
+                  contract: saleInfo.contract,
+                  tokenId: saleInfo.tokenId,
+                  amount: saleInfo.amount,
+                  price: prices.nativePrice,
+                  timestamp: baseEventParams.timestamp,
+                });
+              }
+
+              orderInfos.push({
+                context: `filled-${orderId}-${baseEventParams.txHash}`,
+                id: orderId,
+                trigger: {
+                  kind: "sale",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+              });
+
+              break;
+            }
+
+            case "rarible-match": {
+              const { args } = eventData.abi.parseLog(log);
+              const leftHash = args["leftHash"].toLowerCase();
+              const leftMaker = args["leftMaker"].toLowerCase();
+              const rightMaker = args["rightMaker"].toLowerCase();
+              const newLeftFill = args["newLeftFill"].toString();
+              const newRightFill = args["newRightFill"].toString();
+              const leftAsset = args["leftAsset"];
+              const rightAsset = args["rightAsset"];
+
+              // Keccak-256 hash
+              const ERC20 = "0x8ae85d84";
+              const ETH = "0xaaaebeba";
+              const ERC721 = "0x73ad2146";
+              const ERC1155 = "0x973bb640";
+
+              const assetTypes = [ERC721, ERC1155, ERC20, ETH];
+
+              if (
+                ([ERC20].includes(leftAsset[0]) &&
+                  ![Sdk.Common.Addresses.Weth[config.chainId]].includes(leftAsset[1])) ||
+                ([ERC20].includes(rightAsset[0]) &&
+                  ![Sdk.Common.Addresses.Weth[config.chainId]].includes(rightAsset[1]))
+              ) {
+                // Skip if the payment token is not supported
+                break;
+              }
+
+              // Exclude orders with exotic asset types
+              if (!assetTypes.includes(leftAsset[0]) || !assetTypes.includes(rightAsset[0])) {
+                break;
+              }
+
+              // Assume the left order is the maker's order
+              const side = [ERC721, ERC1155].includes(leftAsset[0]) ? "sell" : "buy";
+
+              const decodedAsset = defaultAbiCoder.decode(
+                ["(address token, uint tokenId)"],
+                side === "sell" ? leftAsset.data : rightAsset.data
+              );
+
+              const contract = decodedAsset[0][0].toLowerCase();
+              const tokenId = decodedAsset[0][1].toString();
+
+              // Handle: prices
+              const currency =
+                side === "sell"
+                  ? Sdk.Common.Addresses.Eth[config.chainId]
+                  : Sdk.Common.Addresses.Weth[config.chainId];
+
+              let currencyPrice = side === "sell" ? newLeftFill : newRightFill;
+              const amount = side === "sell" ? newRightFill : newLeftFill;
+
+              currencyPrice = bn(currencyPrice).div(amount).toString();
+
+              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
+
+              const orderKind = "rarible";
+
+              let taker = rightMaker;
+
+              // Handle attribution
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+
+              if (data.taker) {
+                taker = data.taker;
+              }
+
+              fillEventsPartial.push({
+                orderKind: "rarible",
+                orderId: leftHash,
+                orderSide: side,
+                maker: leftMaker,
+                taker,
+                price: prices.nativePrice,
+                currency,
+                currencyPrice,
+                usdPrice: prices.usdPrice,
+                contract,
+                tokenId,
+                amount,
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "element-erc721-sell-order-filled": {
+              const { args } = eventData.abi.parseLog(log);
+              const maker = args["maker"].toLowerCase();
+              const taker = args["taker"].toLowerCase();
+              const erc20Token = args["erc20Token"].toLowerCase();
+              const erc20TokenAmount = args["erc20TokenAmount"].toString();
+              const erc721Token = args["erc721Token"].toLowerCase();
+              const erc721TokenId = args["erc721TokenId"].toString();
+              const orderHash = args["orderHash"].toLowerCase();
+
+              if (
+                ![
+                  Sdk.Common.Addresses.Weth[config.chainId],
+                  Sdk.ZeroExV4.Addresses.Eth[config.chainId],
+                ].includes(erc20Token)
+              ) {
+                // Skip if the payment token is not supported
+                break;
+              }
+
+              // Handle: prices
+              let currency = erc20Token;
+              if (currency === Sdk.ZeroExV4.Addresses.Eth[config.chainId]) {
+                // Map the weird 0x ETH address
+                currency = Sdk.Common.Addresses.Eth[config.chainId];
+              }
+              const currencyPrice = erc20TokenAmount;
+
+              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
+
+              fillEventsPartial.push({
+                orderKind: "element-erc721",
+                orderId: orderHash,
+                orderSide: "sell",
+                maker,
+                taker,
+                price: prices.nativePrice,
+                currency,
+                currencyPrice,
+                usdPrice: prices.usdPrice,
+                contract: erc721Token,
+                tokenId: erc721TokenId,
+                amount: "1",
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "element-erc721-buy-order-filled": {
+              const { args } = eventData.abi.parseLog(log);
+              const maker = args["maker"].toLowerCase();
+              const taker = args["taker"].toLowerCase();
+              const erc20Token = args["erc20Token"].toLowerCase();
+              const erc20TokenAmount = args["erc20TokenAmount"].toString();
+              const erc721Token = args["erc721Token"].toLowerCase();
+              const erc721TokenId = args["erc721TokenId"].toString();
+              const orderHash = args["orderHash"].toLowerCase();
+
+              if (
+                ![
+                  Sdk.Common.Addresses.Weth[config.chainId],
+                  Sdk.ZeroExV4.Addresses.Eth[config.chainId],
+                ].includes(erc20Token)
+              ) {
+                // Skip if the payment token is not supported
+                break;
+              }
+
+              // Handle: prices
+              let currency = erc20Token;
+              if (currency === Sdk.ZeroExV4.Addresses.Eth[config.chainId]) {
+                // Map the weird 0x ETH address
+                currency = Sdk.Common.Addresses.Eth[config.chainId];
+              }
+              const currencyPrice = erc20TokenAmount;
+
+              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
+
+              fillEventsPartial.push({
+                orderKind: "element-erc721",
+                orderId: orderHash,
+                orderSide: "buy",
+                maker,
+                taker,
+                price: prices.nativePrice,
+                currency,
+                currencyPrice,
+                usdPrice: prices.usdPrice,
+                contract: erc721Token,
+                tokenId: erc721TokenId,
+                amount: "1",
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "element-erc1155-sell-order-filled": {
+              const { args } = eventData.abi.parseLog(log);
+              const maker = args["maker"].toLowerCase();
+              const taker = args["taker"].toLowerCase();
+              const erc20Token = args["erc20Token"].toLowerCase();
+              const erc20FillAmount = args["erc20FillAmount"].toString();
+              const erc1155Token = args["erc1155Token"].toLowerCase();
+              const erc1155TokenId = args["erc1155TokenId"].toString();
+              const erc1155FillAmount = args["erc1155FillAmount"].toString();
+              const orderHash = args["orderHash"].toLowerCase();
+
+              if (
+                ![
+                  Sdk.Common.Addresses.Weth[config.chainId],
+                  Sdk.ZeroExV4.Addresses.Eth[config.chainId],
+                ].includes(erc20Token)
+              ) {
+                // Skip if the payment token is not supported.
+                break;
+              }
+
+              // Handle: prices
+              let currency = erc20Token;
+              if (currency === Sdk.ZeroExV4.Addresses.Eth[config.chainId]) {
+                // Map the weird 0x ETH address
+                currency = Sdk.Common.Addresses.Eth[config.chainId];
+              }
+              const currencyPrice = bn(erc20FillAmount).div(erc1155FillAmount).toString();
+
+              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
+
+              fillEventsPartial.push({
+                orderKind: "element-erc1155",
+                orderId: orderHash,
+                orderSide: "sell",
+                maker,
+                taker,
+                price: prices.nativePrice,
+                currency,
+                currencyPrice,
+                usdPrice: prices.usdPrice,
+                contract: erc1155Token,
+                tokenId: erc1155TokenId,
+                amount: erc1155FillAmount,
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "element-erc1155-buy-order-filled": {
+              const { args } = eventData.abi.parseLog(log);
+              const maker = args["maker"].toLowerCase();
+              const taker = args["taker"].toLowerCase();
+              const erc20Token = args["erc20Token"].toLowerCase();
+              const erc20FillAmount = args["erc20FillAmount"].toString();
+              const erc1155Token = args["erc1155Token"].toLowerCase();
+              const erc1155TokenId = args["erc1155TokenId"].toString();
+              const erc1155FillAmount = args["erc1155FillAmount"].toString();
+              const orderHash = args["orderHash"].toLowerCase();
+
+              if (
+                ![
+                  Sdk.Common.Addresses.Weth[config.chainId],
+                  Sdk.ZeroExV4.Addresses.Eth[config.chainId],
+                ].includes(erc20Token)
+              ) {
+                // Skip if the payment token is not supported
+                break;
+              }
+
+              // Handle: prices
+              let currency = erc20Token;
+              if (currency === Sdk.ZeroExV4.Addresses.Eth[config.chainId]) {
+                // Map the weird 0x ETH address
+                currency = Sdk.Common.Addresses.Eth[config.chainId];
+              }
+              const currencyPrice = bn(erc20FillAmount).div(erc1155FillAmount).toString();
+
+              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
+
+              fillEventsPartial.push({
+                orderKind: "element-erc1155",
+                orderId: orderHash,
+                orderSide: "buy",
+                maker,
+                taker,
+                price: prices.nativePrice,
+                currency,
+                currencyPrice,
+                usdPrice: prices.usdPrice,
+                contract: erc1155Token,
+                tokenId: erc1155TokenId,
+                amount: erc1155FillAmount,
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "quixotic-order-filled": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const orderId = parsedLog.args["orderHash"].toLowerCase();
+              const maker = parsedLog.args["offerer"].toLowerCase();
+              let taker = parsedLog.args["recipient"].toLowerCase();
+              const offer = parsedLog.args["offer"];
+              const consideration = parsedLog.args["consideration"];
+
+              // TODO: Switch to `Quixotic` class once integrated
+              const saleInfo = new Sdk.Seaport.Exchange(config.chainId).deriveBasicSale(
+                offer,
+                consideration
+              );
+              if (saleInfo) {
                 let side: "sell" | "buy";
                 if (saleInfo.paymentToken === Sdk.Common.Addresses.Eth[config.chainId]) {
                   side = "sell";
@@ -1522,7 +2011,7 @@ export const syncEvents = async (
                   taker = saleInfo.recipientOverride;
                 }
 
-                const orderKind = "seaport";
+                const orderKind = "quixotic";
 
                 // Handle attribution
                 const data = await syncEventsUtils.extractAttributionData(
@@ -1533,7 +2022,14 @@ export const syncEvents = async (
                   taker = data.taker;
                 }
 
-                const price = bn(saleInfo.price).div(saleInfo.amount).toString();
+                // Handle: prices
+                const currency = saleInfo.paymentToken;
+                const currencyPrice = bn(saleInfo.price).div(saleInfo.amount).toString();
+                const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+                if (!prices.nativePrice) {
+                  // We must always have the native price
+                  break;
+                }
 
                 const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
 
@@ -1545,7 +2041,10 @@ export const syncEvents = async (
                   orderSourceIdInt: orderSource?.id,
                   maker,
                   taker,
-                  price,
+                  price: prices.nativePrice,
+                  currency,
+                  currencyPrice,
+                  usdPrice: prices.usdPrice,
                   contract: saleInfo.contract,
                   tokenId: saleInfo.tokenId,
                   amount: saleInfo.amount,
@@ -1561,7 +2060,7 @@ export const syncEvents = async (
                   contract: saleInfo.contract,
                   tokenId: saleInfo.tokenId,
                   amount: saleInfo.amount,
-                  price,
+                  price: prices.nativePrice,
                   timestamp: baseEventParams.timestamp,
                 });
               }
@@ -1816,9 +2315,23 @@ const assignWashTradingScoreToFillEvents = async (fillEvents: es.fills.Event[]) 
   try {
     const inverseFillEvents: { contract: Buffer; maker: Buffer; taker: Buffer }[] = [];
 
-    const fillEventsChunks = _.chunk(fillEvents, 100);
+    const washTradingExcludedContracts = getNetworkSettings().washTradingExcludedContracts;
+    const washTradingWhitelistedAddresses = getNetworkSettings().washTradingWhitelistedAddresses;
+    const washTradingBlacklistedAddresses = getNetworkSettings().washTradingBlacklistedAddresses;
 
-    for (const fillEventsChunk of fillEventsChunks) {
+    // Filter events that don't need to be checked for inverse sales
+    const fillEventsPendingInverseCheck = fillEvents.filter(
+      (e) =>
+        !washTradingExcludedContracts.includes(e.contract) &&
+        !washTradingWhitelistedAddresses.includes(e.maker) &&
+        !washTradingWhitelistedAddresses.includes(e.taker) &&
+        !washTradingBlacklistedAddresses.includes(e.maker) &&
+        !washTradingBlacklistedAddresses.includes(e.taker)
+    );
+
+    const fillEventsPendingInverseCheckChunks = _.chunk(fillEventsPendingInverseCheck, 100);
+
+    for (const fillEventsChunk of fillEventsPendingInverseCheckChunks) {
       const inverseFillEventsFilter = fillEventsChunk.map(
         (fillEvent) =>
           `('${_.replace(fillEvent.taker, "0x", "\\x")}', '${_.replace(
@@ -1844,17 +2357,55 @@ const assignWashTradingScoreToFillEvents = async (fillEvents: es.fills.Event[]) 
     }
 
     fillEvents.forEach((event, index) => {
-      const washTradingDetected = inverseFillEvents.some((inverseFillEvent) => {
-        return (
-          event.maker == fromBuffer(inverseFillEvent.taker) &&
-          event.taker == fromBuffer(inverseFillEvent.maker) &&
-          event.contract == fromBuffer(inverseFillEvent.contract)
-        );
-      });
+      // Mark event as wash trading for any blacklisted addresses
+      let washTradingDetected =
+        washTradingBlacklistedAddresses.includes(event.maker) ||
+        washTradingBlacklistedAddresses.includes(event.taker);
+
+      if (!washTradingDetected) {
+        // Mark event as wash trading if we find a corresponding transfer from taker
+        washTradingDetected = inverseFillEvents.some((inverseFillEvent) => {
+          return (
+            event.maker == fromBuffer(inverseFillEvent.taker) &&
+            event.taker == fromBuffer(inverseFillEvent.maker) &&
+            event.contract == fromBuffer(inverseFillEvent.contract)
+          );
+        });
+      }
+
+      if (washTradingDetected) {
+        logger.info("sync-events", `Wash trading detected. event: ${JSON.stringify(event)}`);
+      }
 
       fillEvents[index].washTradingScore = Number(washTradingDetected);
     });
   } catch (e) {
     logger.error("sync-events", `Failed to assign wash trading score to fill events: ${e}`);
   }
+};
+
+type Prices = {
+  nativePrice?: string;
+  usdPrice?: string;
+};
+
+const getPrices = async (
+  currency: string,
+  currencyPrice: string,
+  timestamp: number
+): Promise<Prices> => {
+  const prices = await getUSDAndNativePrices(currency, currencyPrice, timestamp);
+
+  const nativePrice = [
+    Sdk.Common.Addresses.Eth[config.chainId],
+    Sdk.Common.Addresses.Weth[config.chainId],
+  ].includes(currency)
+    ? currencyPrice
+    : prices.nativePrice;
+  const usdPrice = prices.usdPrice;
+
+  return {
+    nativePrice,
+    usdPrice,
+  };
 };

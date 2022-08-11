@@ -157,14 +157,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const isReservoir = false;
 
       // Handle: conduit
-      let conduit = Sdk.X2Y2.Addresses.Exchange[config.chainId];
-      if (order.params.type === "sell") {
-        const contractKind = await commonHelpers.getContractKind(order.params.nft.token);
-        conduit =
-          contractKind === "erc721"
-            ? Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]
-            : Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId];
-      }
+      const conduit = Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId];
 
       const validFrom = `date_trunc('seconds', to_timestamp(0))`;
       const validTo = `date_trunc('seconds', to_timestamp(${order.params.deadline}))`;

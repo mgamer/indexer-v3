@@ -3,9 +3,13 @@ import { Interface } from "@ethersproject/abi";
 import * as erc721 from "@/events-sync/data/erc721";
 import * as erc1155 from "@/events-sync/data/erc1155";
 import * as weth from "@/events-sync/data/weth";
+
+import * as element from "@/events-sync/data/element";
 import * as foundation from "@/events-sync/data/foundation";
 import * as looksRare from "@/events-sync/data/looks-rare";
 import * as openDao from "@/events-sync/data/opendao";
+import * as quixotic from "@/events-sync/data/quixotic";
+import * as rarible from "@/events-sync/data/rarible";
 import * as seaport from "@/events-sync/data/seaport";
 import * as wyvernV2 from "@/events-sync/data/wyvern-v2";
 import * as wyvernV23 from "@/events-sync/data/wyvern-v2.3";
@@ -48,7 +52,13 @@ export type EventDataKind =
   | "x2y2-order-inventory"
   | "seaport-order-cancelled"
   | "seaport-order-filled"
-  | "seaport-counter-incremented";
+  | "seaport-counter-incremented"
+  | "rarible-match"
+  | "element-erc721-sell-order-filled"
+  | "element-erc721-buy-order-filled"
+  | "element-erc1155-sell-order-filled"
+  | "element-erc1155-buy-order-filled"
+  | "quixotic-order-filled";
 
 export type EventData = {
   kind: EventDataKind;
@@ -92,6 +102,12 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       zeroExV4.erc1155OrderFilled,
       x2y2.orderCancelled,
       x2y2.orderInventory,
+      rarible.match,
+      element.erc721BuyOrderFilled,
+      element.erc721SellOrderFilled,
+      element.erc1155BuyOrderFilled,
+      element.erc1155SellOrderFilled,
+      quixotic.orderFulfilled,
     ];
   } else {
     return (
@@ -168,6 +184,18 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return seaport.orderCancelled;
     case "seaport-order-filled":
       return seaport.orderFulfilled;
+    case "rarible-match":
+      return rarible.match;
+    case "element-erc721-sell-order-filled":
+      return element.erc721SellOrderFilled;
+    case "element-erc721-buy-order-filled":
+      return element.erc721BuyOrderFilled;
+    case "element-erc1155-sell-order-filled":
+      return element.erc1155SellOrderFilled;
+    case "element-erc1155-buy-order-filled":
+      return element.erc1155BuyOrderFilled;
+    case "quixotic-order-filled":
+      return quixotic.orderFulfilled;
     default:
       return undefined;
   }

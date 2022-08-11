@@ -22,6 +22,7 @@ import "@/jobs/orderbook";
 import "@/jobs/sources";
 import "@/jobs/token-updates";
 import "@/jobs/update-attribute";
+import "@/jobs/user-received-bids";
 
 // Export all job queues for monitoring through the BullMQ UI
 
@@ -85,6 +86,7 @@ import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
 
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 import * as tokenRefreshCache from "@/jobs/token-updates/token-refresh-cache";
+import * as nonFlaggedTokenSet from "@/jobs/token-updates/non-flagged-token-set";
 
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
@@ -97,6 +99,9 @@ import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attr
 import * as orderbookPostOrderExternal from "@/jobs/orderbook/post-order-external";
 
 import * as fetchSourceInfo from "@/jobs/sources/fetch-source-info";
+
+import * as addUserReceivedBids from "@/jobs/user-received-bids/add-user-received-bids";
+import * as cleanUserReceivedBids from "@/jobs/user-received-bids/clean-user-received-bids";
 
 export const allJobQueues = [
   fixActivitiesMissingCollection.queue,
@@ -159,6 +164,7 @@ export const allJobQueues = [
 
   tokenUpdatesMint.queue,
   tokenRefreshCache.queue,
+  nonFlaggedTokenSet.queue,
 
   handleNewSellOrder.queue,
   handleNewBuyOrder.queue,
@@ -171,4 +177,7 @@ export const allJobQueues = [
   orderbookPostOrderExternal.queue,
 
   fetchSourceInfo.queue,
+
+  addUserReceivedBids.queue,
+  cleanUserReceivedBids.queue,
 ];

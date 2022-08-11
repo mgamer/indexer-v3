@@ -32,21 +32,25 @@ if (config.doBackgroundWork) {
 
       const results = await idb.manyOrNone(
         `
-          WITH x AS (
-            SELECT
-              orders.id
-            FROM orders
-            WHERE orders.kind = 'wyvern-v2.3'
-              AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
-              AND orders.id > $/id/
-            ORDER BY orders.id
-            LIMIT $/limit/
-          )
-          UPDATE orders SET
-            fillability_status = 'cancelled'
-          FROM x
-          WHERE orders.id = x.id
-          RETURNING orders.id
+          WITH
+            x AS (
+              SELECT
+                orders.id,
+                orders.fillability_status
+              FROM orders
+              WHERE orders.kind = 'wyvern-v2.3'
+                AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+                AND orders.id > $/id/
+              ORDER BY orders.id
+              LIMIT $/limit/
+            ),
+            y AS (
+              UPDATE orders SET
+                fillability_status = 'cancelled'
+              FROM x
+              WHERE orders.id = x.id
+            )
+          SELECT * FROM x
         `,
         {
           id,
@@ -55,16 +59,18 @@ if (config.doBackgroundWork) {
       );
 
       await orderUpdatesById.addToQueue(
-        results.map(
-          ({ id }) =>
-            ({
-              context: `cancelled-${id}`,
-              id,
-              trigger: {
-                kind: "cancel",
-              },
-            } as orderUpdatesById.OrderInfo)
-        )
+        results
+          .filter(({ fillability_status }) => fillability_status === "fillable")
+          .map(
+            ({ id }) =>
+              ({
+                context: `cancelled-${id}`,
+                id,
+                trigger: {
+                  kind: "cancel",
+                },
+              } as orderUpdatesById.OrderInfo)
+          )
       );
 
       if (results.length >= limit) {

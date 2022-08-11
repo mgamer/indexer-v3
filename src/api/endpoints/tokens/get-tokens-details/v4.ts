@@ -63,17 +63,21 @@ export const getTokensDetailsV4Options: RouteOptions = {
       attributes: Joi.object()
         .unknown()
         .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
-      source: Joi.string().description("Name of the order source. Example `OpenSea`"),
+      source: Joi.string().description("Domain of the order source. Example `opensea.io`"),
       sortBy: Joi.string()
-        .valid("floorAskPrice", "topBidValue")
+        .valid("floorAskPrice", "tokenId")
         .default("floorAskPrice")
         .description("Order the items are returned in the response."),
+      sortDirection: Joi.string().lowercase().valid("asc", "desc"),
       limit: Joi.number()
         .integer()
         .min(1)
         .max(50)
         .default(20)
         .description("Amount of items returned in response."),
+      includeTopBid: Joi.boolean()
+        .default(false)
+        .description("If true, top bid will be returned in the response."),
       continuation: Joi.string()
         .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
@@ -95,6 +99,8 @@ export const getTokensDetailsV4Options: RouteOptions = {
             image: Joi.string().allow(null, ""),
             media: Joi.string().allow(null, ""),
             kind: Joi.string().allow(null, ""),
+            isFlagged: Joi.boolean().default(false),
+            lastFlagUpdate: Joi.string().allow(null, ""),
             collection: Joi.object({
               id: Joi.string().allow(null),
               name: Joi.string().allow(null, ""),
@@ -136,7 +142,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
               maker: Joi.string().lowercase().pattern(regex.address).allow(null),
               validFrom: Joi.number().unsafe().allow(null),
               validUntil: Joi.number().unsafe().allow(null),
-            }),
+            }).optional(),
           }),
         })
       ),
@@ -150,6 +156,33 @@ export const getTokensDetailsV4Options: RouteOptions = {
   handler: async (request: Request) => {
     const query = request.query as any;
 
+    let selectTopBid = "";
+    let topBidQuery = "";
+    if (query.includeTopBid) {
+      selectTopBid = "y.top_buy_id, y.top_buy_value, y.top_buy_maker,";
+      topBidQuery = `
+        LEFT JOIN LATERAL (
+          SELECT o.id AS "top_buy_id", o.value AS "top_buy_value", o.maker AS "top_buy_maker"
+          FROM "orders" "o"
+          JOIN "token_sets_tokens" "tst" ON "o"."token_set_id" = "tst"."token_set_id"
+          WHERE "tst"."contract" = "t"."contract"
+          AND "tst"."token_id" = "t"."token_id"
+          AND "o"."side" = 'buy'
+          AND "o"."fillability_status" = 'fillable'
+          AND "o"."approval_status" = 'approved'
+          AND EXISTS(
+            SELECT FROM "nft_balances" "nb"
+              WHERE "nb"."contract" = "t"."contract"
+              AND "nb"."token_id" = "t"."token_id"
+              AND "nb"."amount" > 0
+              AND "nb"."owner" != "o"."maker"
+          )
+          ORDER BY "o"."value" DESC
+          LIMIT 1
+        ) "y" ON TRUE
+      `;
+    }
+
     try {
       let baseQuery = `
         SELECT
@@ -162,12 +195,14 @@ export const getTokensDetailsV4Options: RouteOptions = {
           "t"."collection_id",
           "c"."name" as "collection_name",
           "con"."kind",
-          ("c".metadata ->> 'imageUrl')::TEXT AS "collection_image",
+          "t"."is_flagged",
+          "t"."last_flag_update",
           "c"."slug",
           "t"."last_buy_value",
           "t"."last_buy_timestamp",
           "t"."last_sell_value",
           "t"."last_sell_timestamp",
+          ("c".metadata ->> 'imageUrl')::TEXT AS "collection_image",
           (
             SELECT "nb"."owner" FROM "nft_balances" "nb"
             WHERE "nb"."contract" = "t"."contract"
@@ -195,21 +230,17 @@ export const getTokensDetailsV4Options: RouteOptions = {
           "t"."floor_sell_valid_from",
           "t"."floor_sell_valid_to",
           "t"."floor_sell_source_id_int",
-          "t"."top_buy_id",
-          "t"."top_buy_value",
-          "t"."top_buy_maker",
+          ${selectTopBid}
           DATE_PART('epoch', LOWER("ob"."valid_between")) AS "top_buy_valid_from",
           COALESCE(
             NULLIF(DATE_PART('epoch', UPPER("ob"."valid_between")), 'Infinity'),
             0
           ) AS "top_buy_valid_until"
         FROM "tokens" "t"
-        LEFT JOIN "orders" "ob"
-          ON "t"."top_buy_id" = "ob"."id"
-        JOIN "collections" "c"
-          ON "t"."collection_id" = "c"."id"
-        JOIN "contracts" "con"
-          ON "t"."contract" = "con"."address"
+        ${topBidQuery}
+        LEFT JOIN "orders" "ob" ON "t"."top_buy_id" = "ob"."id"
+        JOIN "collections" "c" ON "t"."collection_id" = "c"."id"
+        JOIN "contracts" "con" ON "t"."contract" = "con"."address"
       `;
 
       if (query.tokenSetId) {
@@ -289,9 +320,12 @@ export const getTokensDetailsV4Options: RouteOptions = {
 
       // Continue with the next page, this depends on the sorting used
       if (query.continuation && !query.token) {
-        const contArr = splitContinuation(query.continuation, /^((\d+|null)_\d+|\d+)$/);
+        const contArr = splitContinuation(
+          query.continuation,
+          /^((([0-9]+\.?[0-9]*|\.[0-9]+)|null|0x[a-fA-F0-9]+)_\d+|\d+)$/
+        );
 
-        if (query.collection || query.attributes) {
+        if (query.collection || query.attributes || query.tokenSetId) {
           if (contArr.length !== 2) {
             logger.error(
               "get-tokens",
@@ -303,38 +337,41 @@ export const getTokensDetailsV4Options: RouteOptions = {
 
             throw new Error("Invalid continuation string used");
           }
+
           switch (query.sortBy) {
-            case "topBidValue":
-              if (contArr[0] !== "null") {
-                conditions.push(`
-                  ("t"."top_buy_value", "t"."token_id") < ($/topBuyValue:raw/, $/tokenId:raw/)
-                  OR (t.top_buy_value is null)
-                 `);
-                (query as any).topBuyValue = contArr[0];
-                (query as any).tokenId = contArr[1];
-              } else {
-                conditions.push(`(t.top_buy_value is null AND t.token_id < $/tokenId/)`);
-                (query as any).tokenId = contArr[1];
-              }
+            case "tokenId": {
+              const sign = query.sortDirection == "desc" ? "<" : ">";
+              conditions.push(
+                `("t"."contract", "t"."token_id") ${sign} ($/contContract/, $/contTokenId/)`
+              );
+              (query as any).contContract = toBuffer(contArr[0]);
+              (query as any).contTokenId = contArr[1];
               break;
+            }
+
             case "floorAskPrice":
             default:
-              if (contArr[0] !== "null") {
-                conditions.push(`(
-                  (t.floor_sell_value, "t"."token_id") > ($/floorSellValue/, $/tokenId/)
+              {
+                const sign = query.sortDirection == "desc" ? "<" : ">";
+
+                if (contArr[0] !== "null") {
+                  conditions.push(`(
+                  (t.floor_sell_value, "t"."token_id") ${sign} ($/floorSellValue/, $/tokenId/)
                   OR (t.floor_sell_value is null)
                 )
                 `);
-                (query as any).floorSellValue = contArr[0];
-                (query as any).tokenId = contArr[1];
-              } else {
-                conditions.push(`(t.floor_sell_value is null AND t.token_id > $/tokenId/)`);
-                (query as any).tokenId = contArr[1];
+                  (query as any).floorSellValue = contArr[0];
+                  (query as any).tokenId = contArr[1];
+                } else {
+                  conditions.push(`(t.floor_sell_value is null AND t.token_id ${sign} $/tokenId/)`);
+                  (query as any).tokenId = contArr[1];
+                }
               }
               break;
           }
         } else {
-          conditions.push(`"t"."token_id" > $/tokenId/`);
+          const sign = query.sortDirection == "desc" ? "<" : ">";
+          conditions.push(`"t"."token_id" ${sign} $/tokenId/`);
           (query as any).tokenId = contArr[1] ? contArr[1] : contArr[0];
         }
       }
@@ -344,22 +381,24 @@ export const getTokensDetailsV4Options: RouteOptions = {
       }
 
       // Sorting
-      // Only allow sorting on floorSell and topBid when we filter by collection or attributes
-      if (query.collection || query.attributes) {
+      // Only allow sorting on floorSell when we filter by collection / attributes / tokenSetId
+      if (query.collection || query.attributes || query.tokenSetId) {
         switch (query.sortBy) {
-          case "topBidValue": {
-            baseQuery += ` ORDER BY "t"."top_buy_value" DESC NULLS LAST, "t"."token_id" DESC`;
+          case "tokenId": {
+            baseQuery += ` ORDER BY "t"."contract", "t"."token_id" ${query.sortDirection || "ASC"}`;
             break;
           }
 
           case "floorAskPrice":
           default: {
-            baseQuery += ` ORDER BY "t"."floor_sell_value" ASC NULLS LAST, "t"."token_id"`;
+            baseQuery += ` ORDER BY "t"."floor_sell_value" ${
+              query.sortDirection || "ASC"
+            } NULLS LAST, "t"."token_id"`;
             break;
           }
         }
       } else if (query.contract) {
-        baseQuery += ` ORDER BY "t"."token_id" ASC`;
+        baseQuery += ` ORDER BY "t"."token_id" ${query.sortDirection || "ASC"}`;
       }
 
       baseQuery += ` LIMIT $/limit/`;
@@ -368,8 +407,8 @@ export const getTokensDetailsV4Options: RouteOptions = {
 
       /** Depending on how we sorted, we use that sorting key to determine the next page of results
           Possible formats:
-            topBidValue_tokenid
             floorAskPrice_tokenid
+            contract_tokenid
             tokenid
        **/
       let continuation = null;
@@ -379,11 +418,12 @@ export const getTokensDetailsV4Options: RouteOptions = {
         // Only build a "value_tokenid" continuation string when we filter on collection or attributes
         // Otherwise continuation string will just be based on the last tokenId. This is because only use sorting
         // when we have collection/attributes
-        if (query.collection || query.attributes) {
+        if (query.collection || query.attributes || query.tokenSetId) {
           switch (query.sortBy) {
-            case "topBidValue":
-              continuation = rawResult[rawResult.length - 1].top_buy_value || "null";
+            case "tokenId":
+              continuation = fromBuffer(rawResult[rawResult.length - 1].contract);
               break;
+
             case "floorAskPrice":
               continuation = rawResult[rawResult.length - 1].floor_sell_value || "null";
               break;
@@ -401,16 +441,24 @@ export const getTokensDetailsV4Options: RouteOptions = {
 
       const sources = await Sources.getInstance();
       const result = rawResult.map((r) => {
-        const source = sources.get(r.floor_sell_source_id_int);
+        const contract = fromBuffer(r.contract);
+        const tokenId = r.token_id;
+
+        const source = r.floor_sell_value
+          ? sources.get(Number(r.floor_sell_source_id_int), contract, tokenId)
+          : undefined;
+
         return {
           token: {
-            contract: fromBuffer(r.contract),
-            tokenId: r.token_id,
+            contract,
+            tokenId,
             name: r.name,
             description: r.description,
             image: r.image,
             media: r.media,
             kind: r.kind,
+            isFlagged: Boolean(Number(r.is_flagged)),
+            lastFlagUpdate: r.last_flag_update,
             collection: {
               id: r.collection_id,
               name: r.collection_name,
@@ -450,18 +498,21 @@ export const getTokensDetailsV4Options: RouteOptions = {
               validUntil: r.floor_sell_value ? r.floor_sell_valid_to : null,
               source: {
                 id: source?.address,
+                domain: source?.domain,
                 name: source?.name,
                 icon: source?.metadata.icon,
                 url: source?.metadata.url,
               },
             },
-            topBid: {
-              id: r.top_buy_id,
-              value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-              maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
-              validFrom: r.top_buy_valid_from,
-              validUntil: r.top_buy_value ? r.top_buy_valid_until : null,
-            },
+            topBid: query.includeTopBid
+              ? {
+                  id: r.top_buy_id,
+                  value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+                  maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
+                  validFrom: r.top_buy_valid_from,
+                  validUntil: r.top_buy_value ? r.top_buy_valid_until : null,
+                }
+              : undefined,
           },
         };
       });

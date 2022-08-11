@@ -22,7 +22,7 @@ export const getRedirectTokenV2Options: RouteOptions = {
   },
   validate: {
     params: Joi.object({
-      source: Joi.string().required().description("Name of the order source. Example `OpenSea`"),
+      source: Joi.string().required().description("Name of the order source. Example `opensea.io`"),
       token: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
@@ -45,7 +45,11 @@ export const getRedirectTokenV2Options: RouteOptions = {
       const [contract, tokenId] = params.token.split(":");
       const tokenUrl = sources.getTokenUrl(source, contract, tokenId);
 
-      return response.redirect(tokenUrl);
+      if (tokenUrl) {
+        return response.redirect(tokenUrl);
+      }
+
+      return response.redirect(source.domain);
     } catch (error) {
       logger.error(`get-redirect-token-${version}-handler`, `Handler failure: ${error}`);
       throw error;

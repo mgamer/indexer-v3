@@ -13,10 +13,12 @@ import { offChainCheck, offChainCheckBundle } from "@/orderbook/orders/seaport/c
 import * as bundles from "@/orderbook/bundles";
 import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
+import * as addUserReceivedBids from "@/jobs/user-received-bids/add-user-received-bids";
 
 export type OrderInfo = {
   orderParams: Sdk.Seaport.Types.OrderComponents;
   metadata: OrderMetadata;
+  isReservoir?: boolean;
 };
 
 type SaveResult = {
@@ -31,6 +33,7 @@ export const save = async (
 ): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
+  const fillableBuyOrdersIds: string[] = [];
 
   const arweaveData: {
     order: Sdk.Seaport.Order | Sdk.Seaport.BundleOrder;
@@ -38,7 +41,7 @@ export const save = async (
     source?: string;
   }[] = [];
 
-  const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
+  const handleOrder = async ({ orderParams, isReservoir, metadata }: OrderInfo) => {
     try {
       const order = new Sdk.Seaport.Order(config.chainId, orderParams);
       const info = order.getInfo();
@@ -255,27 +258,33 @@ export const save = async (
         });
       }
 
-      // Handle: native Reservoir orders
-      let isReservoir = false;
-
-      // Handle: source
-      const sources = await Sources.getInstance();
-      let source = await sources.getOrInsert("opensea.io");
-      if (metadata.source) {
-        source = await sources.getOrInsert(metadata.source);
-        isReservoir = true;
-      }
-
       // Handle: fee breakdown
       const openSeaFeeRecipients = [
         "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073",
         "0x8de9c5a032463c561423387a9648c5c7bcc5bc90",
       ];
+
       const feeBreakdown = info.fees.map(({ recipient, amount }) => ({
         kind: openSeaFeeRecipients.includes(recipient.toLowerCase()) ? "marketplace" : "royalty",
         recipient,
         bps: price.eq(0) ? 0 : bn(amount).mul(10000).div(price).toNumber(),
       }));
+
+      // Handle: source
+      const sources = await Sources.getInstance();
+      let source;
+
+      if (metadata.source) {
+        source = await sources.getOrInsert(metadata.source);
+      } else {
+        // If one of the fees is marketplace the source of the order is opensea
+        for (const fee of feeBreakdown) {
+          if (fee.kind == "marketplace") {
+            source = await sources.getOrInsert("opensea.io");
+            break;
+          }
+        }
+      }
 
       const validFrom = `date_trunc('seconds', to_timestamp(${startTime}))`;
       const validTo = endTime
@@ -311,12 +320,18 @@ export const save = async (
         expiration: validTo,
       });
 
+      const unfillable =
+        fillabilityStatus !== "fillable" || approvalStatus !== "approved" ? true : undefined;
+
       results.push({
         id,
         status: "success",
-        unfillable:
-          fillabilityStatus !== "fillable" || approvalStatus !== "approved" ? true : undefined,
+        unfillable,
       });
+
+      if (info.side === "buy" && !unfillable) {
+        fillableBuyOrdersIds.push(id);
+      }
 
       if (relayToArweave) {
         arweaveData.push({ order, schemaHash, source: source?.domain });
@@ -332,7 +347,7 @@ export const save = async (
     }
   };
 
-  const handleBundleOrder = async ({ orderParams, metadata }: OrderInfo) => {
+  const handleBundleOrder = async ({ orderParams, isReservoir, metadata }: OrderInfo) => {
     try {
       const order = new Sdk.Seaport.BundleOrder(config.chainId, orderParams);
       const info = order.getInfo();
@@ -494,6 +509,7 @@ export const save = async (
         "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073",
         "0x8de9c5a032463c561423387a9648c5c7bcc5bc90",
       ];
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const feeBreakdown = ((info as any) || []).fees.map(
         ({ recipient, amount }: { recipient: string; amount: string }) => ({
@@ -503,15 +519,20 @@ export const save = async (
         })
       );
 
-      // Handle: native Reservoir orders
-      let isReservoir = false;
-
       // Handle: source
       const sources = await Sources.getInstance();
-      let source = await sources.getOrInsert("opensea.io");
+      let source;
+
       if (metadata.source) {
         source = await sources.getOrInsert(metadata.source);
-        isReservoir = true;
+      } else {
+        // If one of the fees is marketplace the source of the order is opensea
+        for (const fee of feeBreakdown) {
+          if (fee.kind == "marketplace") {
+            source = await sources.getOrInsert("opensea.io");
+            break;
+          }
+        }
       }
 
       const validFrom = `date_trunc('seconds', to_timestamp(${startTime}))`;
@@ -629,6 +650,15 @@ export const save = async (
               },
             } as ordersUpdateById.OrderInfo)
         )
+    );
+
+    await addUserReceivedBids.addToQueue(
+      fillableBuyOrdersIds.map(
+        (id) =>
+          ({
+            orderId: id,
+          } as addUserReceivedBids.AddUserReceivedBidsParams)
+      )
     );
 
     if (relayToArweave) {

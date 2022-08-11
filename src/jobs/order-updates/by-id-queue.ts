@@ -15,7 +15,6 @@ import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-ord
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
 import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
-import * as topBidUpdateQueue from "@/jobs/bid-updates/top-bid-update-queue";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -58,6 +57,7 @@ if (config.doBackgroundWork) {
                 orders.valid_between AS "validBetween",
                 COALESCE(orders.quantity_remaining, 1) AS "quantityRemaining",
                 orders.maker,
+                orders.price,
                 orders.value,
                 orders.fillability_status AS "fillabilityStatus",
                 orders.approval_status AS "approvalStatus",
@@ -266,8 +266,6 @@ if (config.doBackgroundWork) {
                 : null;
               await collectionUpdatesFloorAsk.addToQueue([sellOrderResult]);
             }
-          } else if (side === "buy") {
-            await topBidUpdateQueue.addToQueue(tokenSetId!);
           }
 
           if (order) {
@@ -337,6 +335,68 @@ if (config.doBackgroundWork) {
               };
 
               await updateNftBalanceFloorAskPriceQueue.addToQueue([updateFloorAskPriceInfo]);
+            }
+            if (side === "buy") {
+              // Insert a corresponding bid event
+              await idb.none(
+                `
+                  INSERT INTO bid_events (
+                    kind,
+                    status,
+                    contract,
+                    token_set_id,
+                    order_id,
+                    order_source_id_int,
+                    order_valid_between,
+                    order_quantity_remaining,
+                    maker,
+                    price,
+                    value,
+                    tx_hash,
+                    tx_timestamp
+                  )
+                  VALUES (
+                    $/kind/,
+                    (
+                      CASE
+                        WHEN $/fillabilityStatus/ = 'filled' THEN 'filled'
+                        WHEN $/fillabilityStatus/ = 'cancelled' THEN 'cancelled'
+                        WHEN $/fillabilityStatus/ = 'expired' THEN 'expired'
+                        WHEN $/fillabilityStatus/ = 'no-balance' THEN 'inactive'
+                        WHEN $/approvalStatus/ = 'no-approval' THEN 'inactive'
+                        ELSE 'active'
+                      END
+                    )::order_event_status_t,
+                    $/contract/,
+                    $/tokenSetId/,
+                    $/orderId/,
+                    $/orderSourceIdInt/,
+                    $/validBetween/,
+                    $/quantityRemaining/,
+                    $/maker/,
+                    $/price/,
+                    $/value/,
+                    $/txHash/,
+                    $/txTimestamp/
+                  )
+                `,
+                {
+                  fillabilityStatus: order.fillabilityStatus,
+                  approvalStatus: order.approvalStatus,
+                  contract: order.contract,
+                  tokenSetId: order.tokenSetId,
+                  orderId: order.id,
+                  orderSourceIdInt: order.sourceIdInt,
+                  validBetween: order.validBetween,
+                  quantityRemaining: order.quantityRemaining,
+                  maker: order.maker,
+                  price: order.price,
+                  value: order.value,
+                  kind: trigger.kind,
+                  txHash: trigger.txHash ? toBuffer(trigger.txHash) : null,
+                  txTimestamp: trigger.txTimestamp || null,
+                }
+              );
             }
 
             let eventInfo;
