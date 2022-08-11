@@ -59,6 +59,7 @@
     "hapi-swagger": "14.2.4",
     "husky": "^7.0.4",
     "ioredis": "^4.28.0",
+    "is-relative-url": "^4.0.0",
     "joi": "17.x",
     "json-stable-stringify": "^1.0.1",
     "module-alias": "^2.2.2",
