@@ -1,3 +1,12 @@
+# [5.159.0](https://github.com/reservoirprotocol/indexer/compare/v5.158.0...v5.159.0) (2022-08-11)
+
+
+### Features
+
+* return default source if null ([a244fc8](https://github.com/reservoirprotocol/indexer/commit/a244fc88449b1d961feae613636b7ead005ccbc8))
+
+
+
 # [5.158.0](https://github.com/reservoirprotocol/indexer/compare/v5.157.0...v5.158.0) (2022-08-11)
 
 

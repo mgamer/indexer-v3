@@ -300,10 +300,8 @@ export const getSalesV3Options: RouteOptions = {
 
       const sources = await Sources.getInstance();
       const result = rawResult.map((r) => {
-        const orderSource = r.order_source_id_int ? sources.get(r.order_source_id_int)?.name : null;
-        const orderSourceDomain = r.order_source_id_int
-          ? sources.get(r.order_source_id_int)?.domain
-          : null;
+        const orderSource = sources.get(Number(r.order_source_id_int))?.name;
+        const orderSourceDomain = sources.get(Number(r.order_source_id_int))?.domain;
 
         return {
           id: crypto
