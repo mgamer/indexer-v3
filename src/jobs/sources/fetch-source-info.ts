@@ -67,7 +67,7 @@ if (config.doBackgroundWork) {
       // If this a relative url
       if (iconUrl && isRelativeUrl(iconUrl)) {
         iconUrl = `${url}${iconUrl}`;
-      } else if (_.startsWith(iconUrl, "//")) {
+      } else if (iconUrl && _.startsWith(iconUrl, "//")) {
         iconUrl = `${_.trimStart(iconUrl, "//")}`;
       }
 
