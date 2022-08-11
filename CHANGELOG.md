@@ -1,3 +1,12 @@
+# [5.160.0](https://github.com/reservoirprotocol/indexer/compare/v5.159.0...v5.160.0) (2022-08-11)
+
+
+### Features
+
+* on conflict api key just return ([94a476b](https://github.com/reservoirprotocol/indexer/commit/94a476bc2a73296f4ed77293ed2d8f5c7fb005ad))
+
+
+
 # [5.159.0](https://github.com/reservoirprotocol/indexer/compare/v5.158.0...v5.159.0) (2022-08-11)
 
 
