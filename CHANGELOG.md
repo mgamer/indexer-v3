@@ -1,3 +1,20 @@
+# [5.158.0](https://github.com/reservoirprotocol/indexer/compare/v5.157.0...v5.158.0) (2022-08-11)
+
+
+### Bug Fixes
+
+* source icon fetching ([f4056ca](https://github.com/reservoirprotocol/indexer/commit/f4056ca9be8fe3b95b270c4a5de17104a77d76f0))
+* source icon fetching ([32bac76](https://github.com/reservoirprotocol/indexer/commit/32bac7606f89b1ca8e6f5362cc70320c2a5f8022))
+
+
+### Features
+
+* fix fetch source icon ([8c9f1f7](https://github.com/reservoirprotocol/indexer/commit/8c9f1f73061560ff793ae1889a03747842a9a274))
+* fix fetch source icon ([2a73212](https://github.com/reservoirprotocol/indexer/commit/2a73212c6b634b90ab4e0d6c5a6a02967d2e1640))
+* redirect to domain if no token schema ([266a24c](https://github.com/reservoirprotocol/indexer/commit/266a24c4d8a13fe7f30ac600c09c7b61b89f8de0))
+
+
+
 # [5.157.0](https://github.com/reservoirprotocol/indexer/compare/v5.156.0...v5.157.0) (2022-08-11)
 
 
