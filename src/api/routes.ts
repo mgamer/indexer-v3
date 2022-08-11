@@ -333,10 +333,17 @@ export const setupRoutes = (server: Server) => {
     path: "/events/orders/v1",
     options: eventsEndpoints.getOrderEventsV1Options,
   });
+
   server.route({
     method: "GET",
     path: "/events/tokens/floor-ask/v2",
     options: eventsEndpoints.getTokensFloorAskV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/events/bids/v1",
+    options: eventsEndpoints.getBidEventsV1Options,
   });
 
   // Execute
@@ -609,6 +616,12 @@ export const setupRoutes = (server: Server) => {
   // Tokens
 
   server.route({
+    method: "POST",
+    path: "/tokens/flag/v1",
+    options: tokensEndpoints.postFlagTokenV1Options,
+  });
+
+  server.route({
     method: "GET",
     path: "/tokens/v1",
     options: tokensEndpoints.getTokensV1Options,
@@ -690,6 +703,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/tokens/simulate-floor/v1",
     options: tokensEndpoints.postSimulateFloorV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/tokens/ids/v1",
+    options: tokensEndpoints.getTokensIdsV4Options,
   });
 
   // Token sets
