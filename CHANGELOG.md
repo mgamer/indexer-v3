@@ -1,3 +1,12 @@
+# [5.162.0](https://github.com/reservoirprotocol/indexer/compare/v5.161.0...v5.162.0) (2022-08-12)
+
+
+### Features
+
+* update collection metadata refresh locking ([fc92186](https://github.com/reservoirprotocol/indexer/commit/fc92186a5864d8b8d3e11eca7835429becfa942e))
+
+
+
 # [5.161.0](https://github.com/reservoirprotocol/indexer/compare/v5.160.0...v5.161.0) (2022-08-12)
 
 
