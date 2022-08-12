@@ -28,13 +28,12 @@ if (config.doBackgroundWork) {
 
       if (await acquireLock(QUEUE_NAME, 1)) {
         logger.info(QUEUE_NAME, `Refresh collection metadata=${contract}`);
+        await acquireLock(`${QUEUE_NAME}:${contract}`, 60 * 60); // lock this contract for the next hour
 
         try {
           await Collections.updateCollectionCache(contract, tokenId);
-          await acquireLock(`${QUEUE_NAME}:${contract}`, 60 * 60); // lock this contract for the next hour
         } catch (error) {
           logger.error(QUEUE_NAME, `Failed to update collection metadata=${error}`);
-          job.data.addToQueue = true;
         }
       } else {
         job.data.addToQueue = true;
