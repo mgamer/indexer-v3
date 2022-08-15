@@ -217,7 +217,16 @@ export const getOrdersAllV1Options: RouteOptions = {
 
         if (query.source) {
           const sources = await Sources.getInstance();
-          const source = sources.getByDomain(query.source);
+          let source;
+
+          // Try to get the source by name
+          source = sources.getByName(query.source, false);
+
+          // If the source was not found try to get it by domain
+          if (!source) {
+            source = sources.getByDomain(query.source, false);
+          }
+
           if (!source) {
             return { orders: [] };
           }

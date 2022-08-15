@@ -9,7 +9,7 @@ import Joi from "joi";
 import _ from "lodash";
 
 import { logger } from "@/common/logger";
-import { slowProvider } from "@/common/provider";
+import { baseProvider } from "@/common/provider";
 import { regex } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
@@ -239,8 +239,8 @@ export const getExecuteListV3Options: RouteOptions = {
                   const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
                   approvalTx = (
                     kind === "erc721"
-                      ? new Sdk.Common.Helpers.Erc721(slowProvider, order.params.nft)
-                      : new Sdk.Common.Helpers.Erc1155(slowProvider, order.params.nft)
+                      ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.nft)
+                      : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.nft)
                   ).approveTransaction(maker, Sdk.OpenDao.Addresses.Exchange[config.chainId]);
 
                   break;
@@ -258,7 +258,7 @@ export const getExecuteListV3Options: RouteOptions = {
               data: {
                 sign: order.getSignatureData(),
                 post: {
-                  endpoint: "/order/v2",
+                  endpoint: "/order/v3",
                   method: "POST",
                   body: {
                     order: {
@@ -325,8 +325,8 @@ export const getExecuteListV3Options: RouteOptions = {
                   const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
                   approvalTx = (
                     kind === "erc721"
-                      ? new Sdk.Common.Helpers.Erc721(slowProvider, order.params.nft)
-                      : new Sdk.Common.Helpers.Erc1155(slowProvider, order.params.nft)
+                      ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.nft)
+                      : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.nft)
                   ).approveTransaction(maker, Sdk.ZeroExV4.Addresses.Exchange[config.chainId]);
 
                   break;
@@ -344,7 +344,7 @@ export const getExecuteListV3Options: RouteOptions = {
               data: {
                 sign: order.getSignatureData(),
                 post: {
-                  endpoint: "/order/v2",
+                  endpoint: "/order/v3",
                   method: "POST",
                   body: {
                     order: {
@@ -415,8 +415,8 @@ export const getExecuteListV3Options: RouteOptions = {
                   const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
                   approvalTx = (
                     kind === "erc721"
-                      ? new Sdk.Common.Helpers.Erc721(slowProvider, info.contract)
-                      : new Sdk.Common.Helpers.Erc1155(slowProvider, info.contract)
+                      ? new Sdk.Common.Helpers.Erc721(baseProvider, info.contract)
+                      : new Sdk.Common.Helpers.Erc1155(baseProvider, info.contract)
                   ).approveTransaction(maker, exchange.deriveConduit(order.params.conduitKey));
 
                   break;
@@ -434,7 +434,7 @@ export const getExecuteListV3Options: RouteOptions = {
               data: {
                 sign: order.getSignatureData(),
                 post: {
-                  endpoint: "/order/v2",
+                  endpoint: "/order/v3",
                   method: "POST",
                   body: {
                     order: {
@@ -497,8 +497,8 @@ export const getExecuteListV3Options: RouteOptions = {
                   // Generate an approval transaction
                   approvalTx = (
                     contractKind === "erc721"
-                      ? new Sdk.Common.Helpers.Erc721(slowProvider, order.params.collection)
-                      : new Sdk.Common.Helpers.Erc1155(slowProvider, order.params.collection)
+                      ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.collection)
+                      : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.collection)
                   ).approveTransaction(
                     maker,
                     contractKind === "erc721"
@@ -521,7 +521,7 @@ export const getExecuteListV3Options: RouteOptions = {
               data: {
                 sign: order.getSignatureData(),
                 post: {
-                  endpoint: "/order/v2",
+                  endpoint: "/order/v3",
                   method: "POST",
                   body: {
                     order: {

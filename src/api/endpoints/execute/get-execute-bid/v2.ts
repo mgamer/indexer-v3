@@ -9,7 +9,7 @@ import { TxData } from "@reservoir0x/sdk/dist/utils";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import { slowProvider } from "@/common/provider";
+import { baseProvider } from "@/common/provider";
 import { bn, regex } from "@/common/utils";
 import { config } from "@/config/index";
 
@@ -193,10 +193,10 @@ export const getExecuteBidV2Options: RouteOptions = {
 
       // Check the maker's Weth/Eth balance
       let wrapEthTx: TxData | undefined;
-      const weth = new Sdk.Common.Helpers.Weth(slowProvider, config.chainId);
+      const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
       const wethBalance = await weth.getBalance(query.maker);
       if (bn(wethBalance).lt(query.weiPrice)) {
-        const ethBalance = await slowProvider.getBalance(query.maker);
+        const ethBalance = await baseProvider.getBalance(query.maker);
         if (bn(wethBalance).add(ethBalance).lt(query.weiPrice)) {
           // We cannot do anything if the maker doesn't have sufficient balance
           throw Boom.badData("Maker does not have sufficient balance");
@@ -284,7 +284,7 @@ export const getExecuteBidV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v2",
+                      endpoint: "/order/v3",
                       method: "POST",
                       body: {
                         order: {
@@ -410,7 +410,7 @@ export const getExecuteBidV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v2",
+                      endpoint: "/order/v3",
                       method: "POST",
                       body: {
                         order: {
@@ -536,7 +536,7 @@ export const getExecuteBidV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v2",
+                      endpoint: "/order/v3",
                       method: "POST",
                       body: {
                         order: {
