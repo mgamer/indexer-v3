@@ -1,3 +1,12 @@
+## [5.164.1](https://github.com/reservoirprotocol/indexer/compare/v5.164.0...v5.164.1) (2022-08-15)
+
+
+### Bug Fixes
+
+* call order v3 ([#1473](https://github.com/reservoirprotocol/indexer/issues/1473)) ([5876622](https://github.com/reservoirprotocol/indexer/commit/5876622288513a2342b05e4feb1c92dcba32464f))
+
+
+
 # [5.164.0](https://github.com/reservoirprotocol/indexer/compare/v5.163.2...v5.164.0) (2022-08-15)
 
 
