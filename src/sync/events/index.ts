@@ -2089,13 +2089,10 @@ export const syncEvents = async (
               const askCurrency = ask["askCurrency"].toLowerCase();
               const askPrice = ask["askPrice"].toString();
 
-              if (
-                ![
-                  Sdk.Common.Addresses.Weth[config.chainId],
-                  Sdk.Common.Addresses.Eth[config.chainId],
-                ].includes(askCurrency)
-              ) {
-                // Skip if the payment token is not supported.
+              const prices = await getPrices(askCurrency, askPrice, baseEventParams.timestamp);
+
+              if (!prices.nativePrice) {
+                // We must always have the native price
                 break;
               }
 
@@ -2105,7 +2102,8 @@ export const syncEvents = async (
                 orderSide: "sell",
                 taker: seller,
                 maker: buyer,
-                price: askPrice,
+                price: prices.nativePrice,
+                usdPrice: prices.usdPrice,
                 contract: tokenContract,
                 tokenId,
                 amount: "1",
