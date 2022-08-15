@@ -173,17 +173,19 @@ export const save = async (
       }
 
       // Check and save: associated token set
-      let tokenSetId: string | undefined;
       const schemaHash = metadata.schemaHash ?? generateSchemaHash(metadata.schema);
 
+      let tokenSetId: string | undefined;
       switch (order.params.kind) {
         case "single-token": {
           const typedInfo = info as typeof info & { tokenId: string };
           const tokenId = typedInfo.tokenId;
+
+          tokenSetId = `token:${info.contract}:${tokenId}`;
           if (tokenId) {
-            [{ id: tokenSetId }] = await tokenSet.singleToken.save([
+            await tokenSet.singleToken.save([
               {
-                id: `token:${info.contract}:${tokenId}`,
+                id: tokenSetId,
                 schemaHash,
                 contract: info.contract,
                 tokenId,
@@ -195,9 +197,10 @@ export const save = async (
         }
 
         case "contract-wide": {
-          [{ id: tokenSetId }] = await tokenSet.contractWide.save([
+          tokenSetId = `contract:${info.contract}`;
+          await tokenSet.contractWide.save([
             {
-              id: `contract:${info.contract}`,
+              id: tokenSetId,
               schemaHash,
               contract: info.contract,
             },
@@ -209,10 +212,12 @@ export const save = async (
         case "token-list": {
           const typedInfo = info as typeof info & { merkleRoot: string };
           const merkleRoot = typedInfo.merkleRoot;
+
+          tokenSetId = `list:${info.contract}:${merkleRoot}`;
           if (merkleRoot) {
-            [{ id: tokenSetId }] = await tokenSet.tokenList.save([
+            await tokenSet.tokenList.save([
               {
-                id: `list:${info.contract}:${merkleRoot}`,
+                id: tokenSetId,
                 schemaHash,
                 schema: metadata.schema,
               },
