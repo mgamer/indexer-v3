@@ -1,3 +1,12 @@
+## [5.163.2](https://github.com/reservoirprotocol/indexer/compare/v5.163.1...v5.163.2) (2022-08-15)
+
+
+### Bug Fixes
+
+* build ([c0beb98](https://github.com/reservoirprotocol/indexer/commit/c0beb9869c96740e70f76b4ac65301708487ac00))
+
+
+
 ## [5.163.1](https://github.com/reservoirprotocol/indexer/compare/v5.163.0...v5.163.1) (2022-08-15)
 
 
