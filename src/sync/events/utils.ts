@@ -3,7 +3,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import { getReferrer } from "@reservoir0x/sdk/dist/utils";
 import pLimit from "p-limit";
 
-import { baseProvider, slowProvider } from "@/common/provider";
+import { baseProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 import { getBlocks, saveBlock } from "@/models/blocks";
@@ -69,7 +69,7 @@ export const fetchTransaction = async (txHash: string) =>
 
     let tx = await baseProvider.getTransaction(txHash);
     if (!tx) {
-      tx = await slowProvider.getTransaction(txHash);
+      tx = await baseProvider.getTransaction(txHash);
     }
 
     // Also fetch all transactions within the block
