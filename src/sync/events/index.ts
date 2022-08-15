@@ -8,7 +8,7 @@ import pLimit from "p-limit";
 
 import { logger } from "@/common/logger";
 import { idb, pgp, redb } from "@/common/db";
-import { baseProvider, slowProvider } from "@/common/provider";
+import { baseProvider } from "@/common/provider";
 import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
@@ -58,7 +58,7 @@ export const syncEvents = async (
   const makerInfos: orderUpdatesByMaker.MakerInfo[] = [];
   const mintInfos: tokenUpdatesMint.MintInfo[] = [];
 
-  const provider = options?.useSlowProvider ? slowProvider : baseProvider;
+  const provider = options?.useSlowProvider ? baseProvider : baseProvider;
 
   // Before proceeding, fetch all individual blocks within the current range
   const limit = pLimit(5);

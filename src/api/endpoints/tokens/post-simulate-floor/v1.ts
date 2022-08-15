@@ -6,14 +6,14 @@ import Joi from "joi";
 import { inject } from "@/api/index";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { toBuffer } from "@/common/utils";
+import { regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { genericTaker, ensureBuyTxSucceeds } from "@/utils/simulation";
 
 const version = "v1";
 
 export const postSimulateFloorV1Options: RouteOptions = {
-  description: "Simulate the floor ask of any token for guaranteed fillability coverage",
+  description: "Simulate the floor ask of any token",
   tags: ["api", "Management"],
   plugins: {
     "hapi-swagger": {
@@ -25,9 +25,7 @@ export const postSimulateFloorV1Options: RouteOptions = {
   },
   validate: {
     payload: Joi.object({
-      token: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/),
+      token: Joi.string().lowercase().pattern(regex.token),
     }),
   },
   response: {
