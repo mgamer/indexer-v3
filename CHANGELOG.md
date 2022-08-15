@@ -1,3 +1,19 @@
+# [5.163.0](https://github.com/reservoirprotocol/indexer/compare/v5.162.0...v5.163.0) (2022-08-15)
+
+
+### Bug Fixes
+
+* collection update query ([0af368d](https://github.com/reservoirprotocol/indexer/commit/0af368d46a2e118b4365cb7e8af6f78a9001008f))
+* properly invalidate x2y2 orders ([26f7d35](https://github.com/reservoirprotocol/indexer/commit/26f7d35d2e8ca35741d795e603c13513563f747f))
+
+
+### Features
+
+* added log ([67f1de1](https://github.com/reservoirprotocol/indexer/commit/67f1de1be8bdbd0a80e6d3bedbd8ca944e743c8b))
+* update collection metadata refresh locking ([5627249](https://github.com/reservoirprotocol/indexer/commit/562724971a658d8faaca53e0382de2dd2d08e9cd))
+
+
+
 # [5.162.0](https://github.com/reservoirprotocol/indexer/compare/v5.161.0...v5.162.0) (2022-08-12)
 
 
