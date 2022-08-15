@@ -294,7 +294,7 @@ export const getExecuteBidV3Options: RouteOptions = {
               data: {
                 sign: order.getSignatureData(),
                 post: {
-                  endpoint: "/order/v2",
+                  endpoint: "/order/v3",
                   method: "POST",
                   body: {
                     order: {
@@ -406,7 +406,7 @@ export const getExecuteBidV3Options: RouteOptions = {
               data: {
                 sign: order.getSignatureData(),
                 post: {
-                  endpoint: "/order/v2",
+                  endpoint: "/order/v3",
                   method: "POST",
                   body: {
                     order: {
@@ -518,7 +518,7 @@ export const getExecuteBidV3Options: RouteOptions = {
               data: {
                 sign: order.getSignatureData(),
                 post: {
-                  endpoint: "/order/v2",
+                  endpoint: "/order/v3",
                   method: "POST",
                   body: {
                     order: {
