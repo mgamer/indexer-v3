@@ -2084,14 +2084,24 @@ export const syncEvents = async (
               const winner = args["winner"].toLowerCase();
               const amount = args["amount"].toString();
 
+              const currency = Sdk.Common.Addresses.Eth[config.chainId];
+
+              const prices = await getPrices(currency, amount, baseEventParams.timestamp);
+
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
+
               fillEvents.push({
                 orderKind: "nouns",
                 orderSide: "sell",
                 maker: Sdk.Nouns.Addresses.AuctionHouse[config.chainId]?.toLowerCase(),
                 taker: winner,
                 amount: "1",
-                currency: Sdk.Common.Addresses.Eth[config.chainId],
-                price: amount,
+                currency,
+                price: prices.nativePrice,
+                usdPrice: prices.usdPrice,
                 contract: Sdk.Nouns.Addresses.TokenContract[config.chainId]?.toLowerCase(),
                 tokenId: nounId,
                 baseEventParams,
