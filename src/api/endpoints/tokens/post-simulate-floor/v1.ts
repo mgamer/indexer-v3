@@ -96,12 +96,32 @@ export const postSimulateFloorV1Options: RouteOptions = {
         }
       });
 
-      // Hacky
-      const message = (response as any).message;
-      if (message) {
-        return { message };
-      } else {
-        response = response as ServerInjectResponse;
+      if (JSON.parse(response.payload).statusCode === 500) {
+        const floorAsk = await redb.oneOrNone(
+          `
+            SELECT
+              tokens.floor_sell_id
+            FROM tokens
+            LEFT JOIN orders
+              ON tokens.floor_sell_id = orders.id
+            WHERE tokens.contract = $/contract/
+              AND tokens.token_id = $/tokenId/
+              AND orders.kind = 'x2y2'
+          `,
+          {
+            contract: toBuffer(token.split(":")[0]),
+            tokenId: token.split(":")[1],
+          }
+        );
+
+        // If the "/execute/buy" API failed, most of the time it's because of
+        // failing to generate the fill signature for X2Y2 orders since their
+        // backend sees that particular order as unfillable (usually it's off
+        // chain cancelled). In those cases, we cancel the floor ask order.
+        if (floorAsk?.floor_sell_id) {
+          await invalidateOrder(floorAsk.floor_sell_id);
+          return { message: "Floor order is not fillable (got invalidated)" };
+        }
       }
 
       if (response.payload.includes("No available orders")) {
