@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Request, RouteOptions } from "@hapi/hapi";
+import { Request, RouteOptions, ServerInjectResponse } from "@hapi/hapi";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
@@ -60,12 +60,40 @@ export const postSimulateFloorV1Options: RouteOptions = {
     try {
       const token = payload.token;
 
-      const response = await inject({
+      let response = await inject({
         method: "GET",
         url: `/execute/buy/v2?token=${token}&taker=${genericTaker}&skipBalanceCheck=true`,
         headers: {
           "Content-Type": "application/json",
         },
+      }).catch(async (error) => {
+        const floorAsk = await redb.oneOrNone(
+          `
+            SELECT
+              tokens.floor_sell_id
+            FROM tokens
+            LEFT JOIN orders
+              ON tokens.floor_sell_id = orders.id
+            WHERE tokens.contract = $/contract/
+              AND tokens.token_id = $/tokenId/
+              AND orders.kind = 'x2y2'
+          `,
+          {
+            contract: toBuffer(token.split(":")[0]),
+            tokenId: token.split(":")[1],
+          }
+        );
+
+        // If the "/execute/buy" API failed, most of the time it's because of
+        // failing to generate the fill signature for X2Y2 orders since their
+        // backend sees that particular order as unfillable (usually it's off
+        // chain cancelled). In those cases, we cancel the floor ask order.
+        if (floorAsk?.id) {
+          await invalidateOrder(floorAsk.id);
+          return { message: "Floor order is not fillable (got invalidated)" };
+        } else {
+          throw error;
+        }
       });
 
       if (JSON.parse(response.payload).statusCode === 500) {
