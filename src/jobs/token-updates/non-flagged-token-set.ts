@@ -13,6 +13,7 @@ import { Collections } from "@/models/collections";
 import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
 import * as tokenSet from "@/orderbook/token-sets";
 import { generateSchemaHash } from "@/orderbook/orders/utils";
+import { TokenSet } from "@/orderbook/token-sets/token-list";
 
 const QUEUE_NAME = "non-flagged-token-set";
 
@@ -45,17 +46,24 @@ if (config.doBackgroundWork) {
 
       const merkleTree = generateMerkleTree(tokenIds);
       const tokenSetId = `list:${contract}:${merkleTree.getHexRoot()}`;
+      const schema = {
+        kind: "collection-non-flagged",
+        data: {
+          collection: collection.id,
+        },
+      };
 
       // Create new token set for non flagged tokens
       await tokenSet.tokenList.save([
         {
           id: tokenSetId,
-          schemaHash: generateSchemaHash(undefined),
+          schema,
+          schemaHash: generateSchemaHash(schema),
           items: {
             contract,
             tokenIds,
           },
-        },
+        } as TokenSet,
       ]);
 
       // Set the new non flagged tokens token set
