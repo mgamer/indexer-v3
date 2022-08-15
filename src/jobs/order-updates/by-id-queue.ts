@@ -130,7 +130,7 @@ if (config.doBackgroundWork) {
                   {
                     collectionId: result.collectionId,
                     kind: trigger.kind,
-                    txHash: trigger.txHash ? toBuffer(trigger.txHash) : null,
+                    txHash: trigger.txHash || null,
                     txTimestamp: trigger.txTimestamp || null,
                   } as collectionUpdatesTopBid.TopBidInfo,
                 ]);
