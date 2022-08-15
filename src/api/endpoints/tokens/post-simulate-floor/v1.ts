@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Request, RouteOptions, ServerInjectResponse } from "@hapi/hapi";
+import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
@@ -60,13 +60,15 @@ export const postSimulateFloorV1Options: RouteOptions = {
     try {
       const token = payload.token;
 
-      let response = await inject({
+      const response = await inject({
         method: "GET",
         url: `/execute/buy/v2?token=${token}&taker=${genericTaker}&skipBalanceCheck=true`,
         headers: {
           "Content-Type": "application/json",
         },
-      }).catch(async (error) => {
+      });
+
+      if (JSON.parse(response.payload).statusCode === 500) {
         const floorAsk = await redb.oneOrNone(
           `
             SELECT
@@ -88,20 +90,10 @@ export const postSimulateFloorV1Options: RouteOptions = {
         // failing to generate the fill signature for X2Y2 orders since their
         // backend sees that particular order as unfillable (usually it's off
         // chain cancelled). In those cases, we cancel the floor ask order.
-        if (floorAsk?.id) {
-          await invalidateOrder(floorAsk.id);
+        if (floorAsk?.floor_sell_id) {
+          await invalidateOrder(floorAsk.floor_sell_id);
           return { message: "Floor order is not fillable (got invalidated)" };
-        } else {
-          throw error;
         }
-      });
-
-      // Hacky
-      const message = (response as any).message;
-      if (message) {
-        return { message };
-      } else {
-        response = response as ServerInjectResponse;
       }
 
       if (response.payload.includes("No available orders")) {
