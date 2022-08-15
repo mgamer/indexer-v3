@@ -1,3 +1,40 @@
+## [5.164.1](https://github.com/reservoirprotocol/indexer/compare/v5.164.0...v5.164.1) (2022-08-15)
+
+
+### Bug Fixes
+
+* call order v3 ([#1473](https://github.com/reservoirprotocol/indexer/issues/1473)) ([5876622](https://github.com/reservoirprotocol/indexer/commit/5876622288513a2342b05e4feb1c92dcba32464f))
+
+
+
+# [5.164.0](https://github.com/reservoirprotocol/indexer/compare/v5.163.2...v5.164.0) (2022-08-15)
+
+
+### Features
+
+* support ingesting orders without coresponding token sets ([2738fdc](https://github.com/reservoirprotocol/indexer/commit/2738fdc808d66430b085db7ebd2ac6fb2cd15f75))
+
+
+
+## [5.163.2](https://github.com/reservoirprotocol/indexer/compare/v5.163.1...v5.163.2) (2022-08-15)
+
+
+### Bug Fixes
+
+* build ([c0beb98](https://github.com/reservoirprotocol/indexer/commit/c0beb9869c96740e70f76b4ac65301708487ac00))
+
+
+
+## [5.163.1](https://github.com/reservoirprotocol/indexer/compare/v5.163.0...v5.163.1) (2022-08-15)
+
+
+### Bug Fixes
+
+* properly invalidate x2y2 orders ([21ac13d](https://github.com/reservoirprotocol/indexer/commit/21ac13d83b5b720d11877e188e8c9579d4c0365d))
+* x2y2 order simulation ([e87fa48](https://github.com/reservoirprotocol/indexer/commit/e87fa4840aefb6b54c5bc51e66a4a7daa0f0d481))
+
+
+
 # [5.163.0](https://github.com/reservoirprotocol/indexer/compare/v5.162.0...v5.163.0) (2022-08-15)
 
 
