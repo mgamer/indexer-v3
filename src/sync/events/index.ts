@@ -2125,13 +2125,10 @@ export const syncEvents = async (
               // const curatorFee = args["curatorFee"].toString();
               const auctionCurrency = args["auctionCurrency"].toLowerCase();
 
-              if (
-                ![
-                  Sdk.Common.Addresses.Weth[config.chainId],
-                  Sdk.Common.Addresses.Eth[config.chainId],
-                ].includes(auctionCurrency)
-              ) {
-                // Skip if the payment token is not supported.
+              const prices = await getPrices(auctionCurrency, amount, baseEventParams.timestamp);
+
+              if (!prices.nativePrice) {
+                // We must always have the native price
                 break;
               }
 
@@ -2141,7 +2138,8 @@ export const syncEvents = async (
                 orderSide: "sell",
                 taker: winner,
                 maker: tokenOwner,
-                price: amount,
+                price: prices.nativePrice,
+                usdPrice: prices.usdPrice,
                 contract: tokenContract,
                 tokenId,
                 amount: "1",
