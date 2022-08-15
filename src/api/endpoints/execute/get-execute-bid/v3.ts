@@ -9,7 +9,7 @@ import Joi from "joi";
 import _ from "lodash";
 
 import { logger } from "@/common/logger";
-import { slowProvider } from "@/common/provider";
+import { baseProvider } from "@/common/provider";
 import { bn, regex } from "@/common/utils";
 import { config } from "@/config/index";
 
@@ -209,10 +209,10 @@ export const getExecuteBidV3Options: RouteOptions = {
 
         // Check the maker's Weth/Eth balance
         let wrapEthTx: TxData | undefined;
-        const weth = new Sdk.Common.Helpers.Weth(slowProvider, config.chainId);
+        const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
         const wethBalance = await weth.getBalance(maker);
         if (bn(wethBalance).lt(params.weiPrice)) {
-          const ethBalance = await slowProvider.getBalance(maker);
+          const ethBalance = await baseProvider.getBalance(maker);
           if (bn(wethBalance).add(ethBalance).lt(params.weiPrice)) {
             // We cannot do anything if the maker doesn't have sufficient balance
             throw Boom.badData("Maker does not have sufficient balance");
@@ -557,7 +557,7 @@ export const getExecuteBidV3Options: RouteOptions = {
 
       // We should only have a single ETH wrapping transaction
       if (steps[0].items.length > 1) {
-        const weth = new Sdk.Common.Helpers.Weth(slowProvider, config.chainId);
+        const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
         const wethWrapTx = weth.depositTransaction(
           maker,
           steps[0].items.map((i) => bn(i.data?.value || 0)).reduce((a, b) => a.add(b), bn(0))
