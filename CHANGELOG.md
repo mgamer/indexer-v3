@@ -1,3 +1,13 @@
+## [5.163.1](https://github.com/reservoirprotocol/indexer/compare/v5.163.0...v5.163.1) (2022-08-15)
+
+
+### Bug Fixes
+
+* properly invalidate x2y2 orders ([21ac13d](https://github.com/reservoirprotocol/indexer/commit/21ac13d83b5b720d11877e188e8c9579d4c0365d))
+* x2y2 order simulation ([e87fa48](https://github.com/reservoirprotocol/indexer/commit/e87fa4840aefb6b54c5bc51e66a4a7daa0f0d481))
+
+
+
 # [5.163.0](https://github.com/reservoirprotocol/indexer/compare/v5.162.0...v5.163.0) (2022-08-15)
 
 
