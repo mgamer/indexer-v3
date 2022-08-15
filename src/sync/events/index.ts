@@ -384,7 +384,6 @@ export const syncEvents = async (
                   kind: "sell-approval",
                   contract: baseEventParams.address,
                   operator,
-                  approved,
                 },
               });
 
