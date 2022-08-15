@@ -102,7 +102,9 @@ if (config.doBackgroundWork) {
               $/txTimestamp/
             FROM y
             JOIN LATERAL (
-              SELECT orders.token_set_id
+              SELECT
+                orders.contract,
+                orders.token_set_id
               FROM orders
               WHERE orders.id = y.top_buy_id
               LIMIT 1
