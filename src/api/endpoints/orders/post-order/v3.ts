@@ -240,6 +240,11 @@ export const postOrderV3Options: RouteOptions = {
             throw new Error("Unsupported orderbook");
           }
 
+          // We do not save the order directly since X2Y2 orders are not fillable
+          // unless their backend has processed them first. So we just need to be
+          // patient until the relayer acknowledges the order (via X2Y2's server)
+          // before us being able to ingest it.
+
           await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
 
           logger.info(
