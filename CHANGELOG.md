@@ -1,3 +1,12 @@
+# [5.167.0](https://github.com/reservoirprotocol/indexer/compare/v5.166.0...v5.167.0) (2022-08-16)
+
+
+### Features
+
+* add support for creating x2y2 bids ([d6a110e](https://github.com/reservoirprotocol/indexer/commit/d6a110e4fb9e93575e2d3dc9a10c0e1451d5ba55))
+
+
+
 # [5.166.0](https://github.com/reservoirprotocol/indexer/compare/v5.165.0...v5.166.0) (2022-08-16)
 
 
