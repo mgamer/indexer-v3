@@ -27,6 +27,10 @@ import * as seaportBuyAttribute from "@/orderbook/orders/seaport/build/buy/attri
 import * as seaportBuyToken from "@/orderbook/orders/seaport/build/buy/token";
 import * as seaportBuyCollection from "@/orderbook/orders/seaport/build/buy/collection";
 
+// X2Y2
+import * as x2y2BuyCollection from "@/orderbook/orders/x2y2/build/buy/collection";
+import * as x2y2BuyToken from "@/orderbook/orders/x2y2/build/buy/token";
+
 // ZeroExV4
 import * as zeroExV4BuyAttribute from "@/orderbook/orders/zeroex-v4/build/buy/attribute";
 import * as zeroExV4BuyToken from "@/orderbook/orders/zeroex-v4/build/buy/token";
@@ -86,11 +90,11 @@ export const getExecuteBidV3Options: RouteOptions = {
             .description("Amount bidder is willing to offer in wei. Example: `1000000000000000000`")
             .required(),
           orderKind: Joi.string()
-            .valid("721ex", "zeroex-v4", "seaport", "looks-rare")
+            .valid("721ex", "zeroex-v4", "seaport", "looks-rare", "x2y2")
             .default("seaport")
             .description("Exchange protocol used to create order. Example: `seaport`"),
           orderbook: Joi.string()
-            .valid("reservoir", "opensea", "looks-rare")
+            .valid("reservoir", "opensea", "looks-rare", "x2y2")
             .default("reservoir")
             .description("Orderbook where order is placed. Example: `Reservoir`"),
           automatedRoyalties: Joi.boolean()
@@ -575,12 +579,14 @@ export const getExecuteBidV3Options: RouteOptions = {
               const [contract, tokenId] = token.split(":");
               order = await looksRareBuyToken.build({
                 ...params,
+                maker,
                 contract,
                 tokenId,
               });
             } else if (collection && !attributeKey && !attributeValue) {
               order = await looksRareBuyCollection.build({
                 ...params,
+                maker,
                 collection,
               });
             } else {
@@ -619,13 +625,104 @@ export const getExecuteBidV3Options: RouteOptions = {
               data: {
                 sign: order.getSignatureData(),
                 post: {
-                  endpoint: "/order/v2",
+                  endpoint: "/order/v3",
                   method: "POST",
                   body: {
                     order: {
                       kind: "looks-rare",
                       data: {
                         ...order.params,
+                      },
+                    },
+                    tokenSetId,
+                    collection:
+                      collection && !attributeKey && !attributeValue ? collection : undefined,
+                    orderbook: params.orderbook,
+                    source,
+                  },
+                },
+              },
+              orderIndex: i,
+            });
+
+            // Go on with the next bid
+            continue;
+          }
+
+          case "x2y2": {
+            if (!["x2y2"].includes(params.orderbook)) {
+              throw Boom.badRequest("Unsupported orderbook");
+            }
+            if (params.fee || params.feeRecipient) {
+              throw Boom.badRequest("X2Y2 does not support explicit fees");
+            }
+            if (params.excludeFlaggedTokens) {
+              throw Boom.badRequest("X2Y2 does not support token-list bids");
+            }
+
+            let order: Sdk.X2Y2.Types.LocalOrder | undefined;
+            if (token) {
+              const [contract, tokenId] = token.split(":");
+              order = await x2y2BuyToken.build({
+                ...params,
+                maker,
+                contract,
+                tokenId,
+              });
+            } else if (collection && !attributeKey && !attributeValue) {
+              order = await x2y2BuyCollection.build({
+                ...params,
+                maker,
+                collection,
+              });
+            } else {
+              throw Boom.badRequest("X2Y2 only supports single-token or collection-wide bids");
+            }
+
+            if (!order) {
+              throw Boom.internal("Failed to generate order");
+            }
+
+            const upstreamOrder = Sdk.X2Y2.Order.fromLocalOrder(config.chainId, order);
+
+            // Check the maker's approval
+            let approvalTx: TxData | undefined;
+            const wethApproval = await weth.getAllowance(
+              maker,
+              Sdk.X2Y2.Addresses.Exchange[config.chainId]
+            );
+            if (bn(wethApproval).lt(bn(upstreamOrder.params.price))) {
+              approvalTx = weth.approveTransaction(
+                maker,
+                Sdk.X2Y2.Addresses.Exchange[config.chainId]
+              );
+            }
+
+            steps[0].items.push({
+              status: !wrapEthTx ? "complete" : "incomplete",
+              data: wrapEthTx,
+              orderIndex: i,
+            });
+            steps[1].items.push({
+              status: !approvalTx ? "complete" : "incomplete",
+              data: approvalTx,
+              orderIndex: i,
+            });
+            steps[2].items.push({
+              status: "incomplete",
+              data: {
+                sign: new Sdk.X2Y2.Exchange(
+                  config.chainId,
+                  config.x2y2ApiKey
+                ).getOrderSignatureData(order),
+                post: {
+                  endpoint: "/order/v3",
+                  method: "POST",
+                  body: {
+                    order: {
+                      kind: "x2y2",
+                      data: {
+                        ...order,
                       },
                     },
                     tokenSetId,
