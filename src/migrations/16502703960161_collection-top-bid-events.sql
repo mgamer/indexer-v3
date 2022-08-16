@@ -19,7 +19,7 @@ CREATE TABLE "collection_top_bid_events" (
 );
 
 ALTER TABLE "collection_top_bid_events"
-  ADD CONSTRAINT "collection_ceiling_bid_events_pk"
+  ADD CONSTRAINT "collection_top_bid_events_pk"
   PRIMARY KEY ("id");
 
 CREATE INDEX "collection_top_bid_events_created_at_id_index"
