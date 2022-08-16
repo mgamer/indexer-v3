@@ -1,3 +1,12 @@
+# [5.165.0](https://github.com/reservoirprotocol/indexer/compare/v5.164.1...v5.165.0) (2022-08-15)
+
+
+### Features
+
+* add support for creating looks-rare bids ([ffbf45f](https://github.com/reservoirprotocol/indexer/commit/ffbf45fbe4d34a80e0a6d78086842ccb7f219385))
+
+
+
 ## [5.164.1](https://github.com/reservoirprotocol/indexer/compare/v5.164.0...v5.164.1) (2022-08-15)
 
 
