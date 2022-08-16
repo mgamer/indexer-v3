@@ -42,6 +42,7 @@ import * as backfillFillEventsWashTradingScore from "@/jobs/backfill/backfill-fi
 import * as backfillLooksRareFills from "@/jobs/backfill/backfill-looks-rare-fills";
 import * as backfillTransactionBlockFields from "@/jobs/backfill/backfill-transaction-block-fields";
 import * as backfillTransactions from "@/jobs/backfill/backfill-transactions";
+import * as backfillCollectionsTopBid from "@/jobs/backfill/backfill-collections-top-bid";
 
 import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
 
@@ -121,6 +122,7 @@ export const allJobQueues = [
   backfillLooksRareFills.queue,
   backfillTransactionBlockFields.queue,
   backfillTransactions.queue,
+  backfillCollectionsTopBid.queue,
 
   topBidUpdate.queue,
 
