@@ -1,3 +1,4 @@
+import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuildParams } from "@reservoir0x/sdk/dist/looks-rare/builders/base";
 import axios from "axios";
 
@@ -43,6 +44,10 @@ export const getBuildInfo = async (
     collection: options.contract,
     signer: options.maker,
     price: options.weiPrice,
+    currency:
+      side === "sell"
+        ? Sdk.Common.Addresses.Eth[config.chainId]
+        : Sdk.Common.Addresses.Weth[config.chainId],
     // TODO: We should only use LooksRare's nonce when cross-posting to their orderbook
     nonce: await axios
       .get(
