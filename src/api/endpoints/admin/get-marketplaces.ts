@@ -67,7 +67,7 @@ export const getMarketplaces: RouteOptions = {
         feeBps: 0.05,
         orderbook: null,
         orderKind: null,
-        listingEnabled: false,
+        listingEnabled: true,
       },
       {
         name: "Foundation",
