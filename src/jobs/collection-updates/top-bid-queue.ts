@@ -42,18 +42,25 @@ if (config.doBackgroundWork) {
                 top_buy_valid_between = x.valid_between,
                 updated_at = now()
               FROM (
-                SELECT
-                  token_sets.top_buy_id,
-                  token_sets.top_buy_value,
-                  token_sets.top_buy_maker,
-                  orders.source_id_int,
-                  orders.valid_between
-                FROM token_sets
-                JOIN orders
-                  ON token_sets.top_buy_id = orders.id
-                WHERE token_sets.collection_id = $/collectionId/
-                ORDER BY token_sets.top_buy_value DESC
-                LIMIT 1
+                  SELECT
+                    collections.id AS collection_id,
+                    y.*
+                  FROM collections
+                  LEFT JOIN LATERAL (
+                  SELECT
+                    token_sets.top_buy_id,
+                    token_sets.top_buy_value,
+                    token_sets.top_buy_maker,
+                    orders.source_id_int,
+                    orders.valid_between
+                  FROM token_sets
+                  JOIN orders
+                    ON token_sets.top_buy_id = orders.id
+                  WHERE token_sets.collection_id = collections.id\t                
+                  ORDER BY token_sets.top_buy_value DESC
+                  LIMIT 1
+                  ) y ON TRUE
+                  WHERE collections.id = $/collectionId/   
               ) x
               WHERE collections.id = $/collectionId/
                 AND (
