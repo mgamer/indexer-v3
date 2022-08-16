@@ -22,6 +22,7 @@ import "@/jobs/orderbook";
 import "@/jobs/sources";
 import "@/jobs/token-updates";
 import "@/jobs/update-attribute";
+import "@/jobs/user-received-bids";
 
 // Export all job queues for monitoring through the BullMQ UI
 
@@ -41,6 +42,7 @@ import * as backfillFillEventsWashTradingScore from "@/jobs/backfill/backfill-fi
 import * as backfillLooksRareFills from "@/jobs/backfill/backfill-looks-rare-fills";
 import * as backfillTransactionBlockFields from "@/jobs/backfill/backfill-transaction-block-fields";
 import * as backfillTransactions from "@/jobs/backfill/backfill-transactions";
+import * as backfillCollectionsTopBid from "@/jobs/backfill/backfill-collections-top-bid";
 
 import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
 
@@ -50,6 +52,7 @@ import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as rarity from "@/jobs/collection-updates/rarity-queue";
+import * as collectionUpdatesTopBid from "@/jobs/collection-updates/top-bid-queue";
 
 import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
 
@@ -86,6 +89,7 @@ import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
 
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 import * as tokenRefreshCache from "@/jobs/token-updates/token-refresh-cache";
+import * as nonFlaggedTokenSet from "@/jobs/token-updates/non-flagged-token-set";
 
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
@@ -96,6 +100,9 @@ import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attrib
 import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
 
 import * as fetchSourceInfo from "@/jobs/sources/fetch-source-info";
+
+import * as addUserReceivedBids from "@/jobs/user-received-bids/add-user-received-bids";
+import * as cleanUserReceivedBids from "@/jobs/user-received-bids/clean-user-received-bids";
 
 export const allJobQueues = [
   fixActivitiesMissingCollection.queue,
@@ -114,6 +121,7 @@ export const allJobQueues = [
   backfillLooksRareFills.queue,
   backfillTransactionBlockFields.queue,
   backfillTransactions.queue,
+  backfillCollectionsTopBid.queue,
 
   topBidUpdate.queue,
 
@@ -123,6 +131,7 @@ export const allJobQueues = [
   collectionUpdatesFloorAsk.queue,
   collectionUpdatesMetadata.queue,
   rarity.queue,
+  collectionUpdatesTopBid.queue,
 
   dailyVolumes.queue,
 
@@ -159,6 +168,7 @@ export const allJobQueues = [
 
   tokenUpdatesMint.queue,
   tokenRefreshCache.queue,
+  nonFlaggedTokenSet.queue,
 
   handleNewSellOrder.queue,
   handleNewBuyOrder.queue,
@@ -171,4 +181,7 @@ export const allJobQueues = [
   orderbookPostOrderExternal.queue,
 
   fetchSourceInfo.queue,
+
+  addUserReceivedBids.queue,
+  cleanUserReceivedBids.queue,
 ];

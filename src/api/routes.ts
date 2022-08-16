@@ -333,10 +333,23 @@ export const setupRoutes = (server: Server) => {
     path: "/events/orders/v1",
     options: eventsEndpoints.getOrderEventsV1Options,
   });
+
   server.route({
     method: "GET",
     path: "/events/tokens/floor-ask/v2",
     options: eventsEndpoints.getTokensFloorAskV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/events/bids/v1",
+    options: eventsEndpoints.getBidEventsV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/events/collections/top-bid/v1",
+    options: eventsEndpoints.getCollectionsTopBidV1Options,
   });
 
   // Execute
@@ -503,6 +516,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   server.route({
+    method: "GET",
+    path: "/liquidity/users/v2",
+    options: ordersEndpoints.getUsersLiquidityV2Options,
+  });
+
+  server.route({
     method: "POST",
     path: "/order/v1",
     options: ordersEndpoints.postOrderV1Options,
@@ -603,6 +622,12 @@ export const setupRoutes = (server: Server) => {
   // Tokens
 
   server.route({
+    method: "POST",
+    path: "/tokens/flag/v1",
+    options: tokensEndpoints.postFlagTokenV1Options,
+  });
+
+  server.route({
     method: "GET",
     path: "/tokens/v1",
     options: tokensEndpoints.getTokensV1Options,
@@ -669,6 +694,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   server.route({
+    method: "GET",
+    path: "/users/{user}/tokens/v3",
+    options: tokensEndpoints.getUserTokensV3Options,
+  });
+
+  server.route({
     method: "POST",
     path: "/tokens/refresh/v1",
     options: tokensEndpoints.postTokensRefreshV1Options,
@@ -678,6 +709,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/tokens/simulate-floor/v1",
     options: tokensEndpoints.postSimulateFloorV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/tokens/ids/v1",
+    options: tokensEndpoints.getTokensIdsV4Options,
   });
 
   // Token sets
@@ -732,5 +769,11 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/transfers/bulk/v1",
     options: transfersEndpoints.getTransfersBulkV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/received-bids/v1",
+    options: ordersEndpoints.getReceivedBidsV1Options,
   });
 };

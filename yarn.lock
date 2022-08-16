@@ -1029,10 +1029,10 @@
   resolved "https://registry.yarnpkg.com/@protobufjs/utf8/-/utf8-1.1.0.tgz#a777360b5b39a1a2e5106f8e858f2fd2d060c570"
   integrity sha1-p3c2C1s5oaLlEG+OhY8v0tBgxXA=
 
-"@reservoir0x/sdk@0.0.138":
-  version "0.0.138"
-  resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.0.138.tgz#dd91c28cea3ca5bd71b248e96cdee4722dc11d5d"
-  integrity sha512-af3F+3VSW0kGQ5mqSunJVuxOCLqlhkM0Dk7Ua66h/36hvX3iORoif4P/m+yc/R4dzpQsR1BW85gH71GwuU6TTg==
+"@reservoir0x/sdk@0.0.154":
+  version "0.0.154"
+  resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.0.154.tgz#d7db2619167e3474f2e71b1ac9e67db6a4de1298"
+  integrity sha512-FaGQeUz5QlLK+dA2iFaJmFXA93cy8MtUDALW64U0SMRiUxwvd9JrAeZf9JRsJIArxHGEBc2irhp5QloQdLJttg==
   dependencies:
     ethers "^5.6.8"
     merkletreejs "0.2.31"
@@ -3681,6 +3681,16 @@ joi@17.x, joi@^17.3.0:
     "@sideway/formula" "^3.0.0"
     "@sideway/pinpoint" "^2.0.0"
 
+js-md5@^0.7.3:
+  version "0.7.3"
+  resolved "https://registry.yarnpkg.com/js-md5/-/js-md5-0.7.3.tgz#b4f2fbb0b327455f598d6727e38ec272cd09c3f2"
+  integrity sha512-ZC41vPSTLKGwIRjqDh8DfXoCrdQIyBgspJVPXHBGu4nZlAEvG3nf+jO9avM9RmLiGakg7vz974ms99nEV0tmTQ==
+
+js-sha1@^0.6.0:
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/js-sha1/-/js-sha1-0.6.0.tgz#adbee10f0e8e18aa07cdea807cf08e9183dbc7f9"
+  integrity sha512-01gwBFreYydzmU9BmZxpVk6svJJHrVxEN3IOiGl6VO93bVKYETJ0sIth6DASI6mIFdt7NmfX9UiByRzsYHGU9w==
+
 js-sha3@0.8.0, js-sha3@^0.8.0:
   version "0.8.0"
   resolved "https://registry.yarnpkg.com/js-sha3/-/js-sha3-0.8.0.tgz#b9b7a5da73afad7dedd0f8c463954cbde6818840"
@@ -5845,6 +5855,14 @@ util@^0.12.4:
     is-typed-array "^1.1.3"
     safe-buffer "^5.1.2"
     which-typed-array "^1.1.2"
+
+uuid-by-string@^3.0.7:
+  version "3.0.7"
+  resolved "https://registry.yarnpkg.com/uuid-by-string/-/uuid-by-string-3.0.7.tgz#3c9b7e60c3d4a1bf5da5dfb2601721acc813d8fc"
+  integrity sha512-9xf+GAcwzLLGL2Z2Vb7hmi7jWIAKSiuaI5cLFsKw1IIlm7S5VpqvdJ5S7N36hqdy0v7DAwnnENJVAeev57/H1A==
+  dependencies:
+    js-md5 "^0.7.3"
+    js-sha1 "^0.6.0"
 
 uuid@8.0.0:
   version "8.0.0"

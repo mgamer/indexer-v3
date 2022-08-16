@@ -27,6 +27,12 @@ export type TokenSet = {
         data: {
           collection: string;
         };
+      }
+    | {
+        kind: "token-set";
+        data: {
+          tokenSetId: string;
+        };
       };
   items?: {
     contract: string;
@@ -70,20 +76,21 @@ const isValid = async (tokenSet: TokenSet) => {
           return false;
         }
 
-        // TODO: Include `NOT is_flagged` filter in the query
+        const excludeFlaggedTokens = tokenSet.schema.data.isNonFlagged
+          ? "AND tokens.is_flagged = 0"
+          : "";
+
         tokens = await redb.manyOrNone(
           `
-            SELECT
-              token_attributes.contract,
-              token_attributes.token_id
+            SELECT token_attributes.contract, token_attributes.token_id
             FROM token_attributes
-            JOIN attributes
-              ON token_attributes.attribute_id = attributes.id
-            JOIN attribute_keys
-              ON attributes.attribute_key_id = attribute_keys.id
+            JOIN attributes ON token_attributes.attribute_id = attributes.id
+            JOIN attribute_keys ON attributes.attribute_key_id = attribute_keys.id
+            JOIN tokens ON token_attributes.contract = tokens.contract AND token_attributes.token_id = tokens.token_id
             WHERE attribute_keys.collection_id = $/collection/
-              AND attribute_keys.key = $/key/
-              AND attributes.value = $/value/
+            AND attribute_keys.key = $/key/
+            AND attributes.value = $/value/
+            ${excludeFlaggedTokens}
           `,
           {
             collection: tokenSet.schema!.data.collection,
@@ -92,7 +99,6 @@ const isValid = async (tokenSet: TokenSet) => {
           }
         );
       } else if (tokenSet.schema.kind === "collection-non-flagged") {
-        // TODO: Include `NOT is_flagged` filter in the query
         tokens = await redb.manyOrNone(
           `
             SELECT
@@ -100,9 +106,23 @@ const isValid = async (tokenSet: TokenSet) => {
               tokens.token_id
             FROM tokens
             WHERE tokens.collection_id = $/collection/
+            AND tokens.is_flagged = 0
           `,
           {
             collection: tokenSet.schema!.data.collection,
+          }
+        );
+      } else if (tokenSet.schema.kind === "token-set") {
+        tokens = await redb.manyOrNone(
+          `
+            SELECT
+              token_sets_tokens.contract,
+              token_sets_tokens.token_id
+            FROM token_sets_tokens
+            WHERE token_sets_tokens.token_set_id = $/tokenSetId/
+          `,
+          {
+            tokenSetId: tokenSet.schema.data.tokenSetId,
           }
         );
       }

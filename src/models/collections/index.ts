@@ -84,9 +84,9 @@ export class Collections {
 
     const values = {
       id: collection.id,
-      metadata: collection.metadata,
+      metadata: collection.metadata || {},
       name: collection.name,
-      royalties: collection.royalties,
+      royalties: collection.royalties || [],
       slug: collection.slug,
       tokenCount,
     };

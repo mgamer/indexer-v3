@@ -9,9 +9,13 @@ import Joi from "joi";
 import _ from "lodash";
 
 import { logger } from "@/common/logger";
-import { slowProvider } from "@/common/provider";
+import { baseProvider } from "@/common/provider";
 import { bn, regex } from "@/common/utils";
 import { config } from "@/config/index";
+
+// LooksRare
+import * as looksRareBuyToken from "@/orderbook/orders/looks-rare/build/buy/token";
+import * as looksRareBuyCollection from "@/orderbook/orders/looks-rare/build/buy/collection";
 
 // OpenDao
 import * as openDaoBuyAttribute from "@/orderbook/orders/opendao/build/buy/attribute";
@@ -22,6 +26,10 @@ import * as openDaoBuyCollection from "@/orderbook/orders/opendao/build/buy/coll
 import * as seaportBuyAttribute from "@/orderbook/orders/seaport/build/buy/attribute";
 import * as seaportBuyToken from "@/orderbook/orders/seaport/build/buy/token";
 import * as seaportBuyCollection from "@/orderbook/orders/seaport/build/buy/collection";
+
+// X2Y2
+import * as x2y2BuyCollection from "@/orderbook/orders/x2y2/build/buy/collection";
+import * as x2y2BuyToken from "@/orderbook/orders/x2y2/build/buy/token";
 
 // ZeroExV4
 import * as zeroExV4BuyAttribute from "@/orderbook/orders/zeroex-v4/build/buy/attribute";
@@ -62,6 +70,7 @@ export const getExecuteBidV3Options: RouteOptions = {
             .description(
               "Bid on a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
             ),
+          tokenSetId: Joi.string().lowercase().description("Bid on a particular token set."),
           collection: Joi.string()
             .lowercase()
             .description(
@@ -81,11 +90,11 @@ export const getExecuteBidV3Options: RouteOptions = {
             .description("Amount bidder is willing to offer in wei. Example: `1000000000000000000`")
             .required(),
           orderKind: Joi.string()
-            .valid("721ex", "zeroex-v4", "seaport")
+            .valid("721ex", "zeroex-v4", "seaport", "looks-rare", "x2y2")
             .default("seaport")
             .description("Exchange protocol used to create order. Example: `seaport`"),
           orderbook: Joi.string()
-            .valid("reservoir", "opensea")
+            .valid("reservoir", "opensea", "looks-rare", "x2y2")
             .default("reservoir")
             .description("Orderbook where order is placed. Example: `Reservoir`"),
           automatedRoyalties: Joi.boolean()
@@ -104,25 +113,23 @@ export const getExecuteBidV3Options: RouteOptions = {
               "Wallet address of fee recipient. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
             )
             .disallow(AddressZero),
-          listingTime: Joi.alternatives(
-            Joi.string().pattern(regex.number),
-            Joi.number()
-          ).description(
-            "Unix timestamp indicating when listing will be listed. Example: `1656080318`"
-          ),
-          expirationTime: Joi.alternatives(
-            Joi.string().pattern(regex.number),
-            Joi.number()
-          ).description(
-            "Unix timestamp indicating when listing will expire. Example: `1656080318`"
-          ),
+          listingTime: Joi.string()
+            .pattern(regex.unix_timestamp)
+            .description(
+              "Unix timestamp (seconds) indicating when listing will be listed. Example: `1656080318`"
+            ),
+          expirationTime: Joi.string()
+            .pattern(regex.unix_timestamp)
+            .description(
+              "Unix timestamp (seconds) indicating when listing will expire. Example: `1656080318`"
+            ),
           salt: Joi.string()
             .pattern(regex.number)
             .description("Optional. Random string to make the order unique"),
           nonce: Joi.string().pattern(regex.number).description("Optional. Set a custom nonce"),
         })
-          .or("token", "collection")
-          .oxor("token", "collection")
+          .or("token", "collection", "tokenSetId")
+          .oxor("token", "collection", "tokenSetId")
           .with("attributeValue", "attributeKey")
           .with("attributeKey", "attributeValue")
           .with("attributeKey", "collection")
@@ -199,6 +206,7 @@ export const getExecuteBidV3Options: RouteOptions = {
 
         const token = params.token;
         const collection = params.collection;
+        const tokenSetId = params.tokenSetId;
         const attributeKey = params.attributeKey;
         const attributeValue = params.attributeValue;
 
@@ -209,10 +217,10 @@ export const getExecuteBidV3Options: RouteOptions = {
 
         // Check the maker's Weth/Eth balance
         let wrapEthTx: TxData | undefined;
-        const weth = new Sdk.Common.Helpers.Weth(slowProvider, config.chainId);
+        const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
         const wethBalance = await weth.getBalance(maker);
         if (bn(wethBalance).lt(params.weiPrice)) {
-          const ethBalance = await slowProvider.getBalance(maker);
+          const ethBalance = await baseProvider.getBalance(maker);
           if (bn(wethBalance).add(ethBalance).lt(params.weiPrice)) {
             // We cannot do anything if the maker doesn't have sufficient balance
             throw Boom.badData("Maker does not have sufficient balance");
@@ -247,7 +255,7 @@ export const getExecuteBidV3Options: RouteOptions = {
                 contract,
                 tokenId,
               });
-            } else if (collection && attributeKey && attributeValue) {
+            } else if (tokenSetId || (collection && attributeKey && attributeValue)) {
               order = await seaportBuyAttribute.build({
                 ...params,
                 maker,
@@ -294,7 +302,7 @@ export const getExecuteBidV3Options: RouteOptions = {
               data: {
                 sign: order.getSignatureData(),
                 post: {
-                  endpoint: "/order/v2",
+                  endpoint: "/order/v3",
                   method: "POST",
                   body: {
                     order: {
@@ -303,6 +311,7 @@ export const getExecuteBidV3Options: RouteOptions = {
                         ...order.params,
                       },
                     },
+                    tokenSetId,
                     attribute:
                       collection && attributeKey && attributeValue
                         ? {
@@ -353,7 +362,7 @@ export const getExecuteBidV3Options: RouteOptions = {
                 contract,
                 tokenId,
               });
-            } else if (collection && attributeKey && attributeValue) {
+            } else if (tokenSetId || (collection && attributeKey && attributeValue)) {
               order = await openDaoBuyAttribute.build({
                 ...params,
                 maker,
@@ -405,7 +414,7 @@ export const getExecuteBidV3Options: RouteOptions = {
               data: {
                 sign: order.getSignatureData(),
                 post: {
-                  endpoint: "/order/v2",
+                  endpoint: "/order/v3",
                   method: "POST",
                   body: {
                     order: {
@@ -414,6 +423,7 @@ export const getExecuteBidV3Options: RouteOptions = {
                         ...order.params,
                       },
                     },
+                    tokenSetId,
                     attribute:
                       collection && attributeKey && attributeValue
                         ? {
@@ -464,7 +474,7 @@ export const getExecuteBidV3Options: RouteOptions = {
                 contract,
                 tokenId,
               });
-            } else if (collection && attributeKey && attributeValue) {
+            } else if (tokenSetId || (collection && attributeKey && attributeValue)) {
               order = await zeroExV4BuyAttribute.build({
                 ...params,
                 maker,
@@ -516,7 +526,7 @@ export const getExecuteBidV3Options: RouteOptions = {
               data: {
                 sign: order.getSignatureData(),
                 post: {
-                  endpoint: "/order/v2",
+                  endpoint: "/order/v3",
                   method: "POST",
                   body: {
                     order: {
@@ -525,6 +535,7 @@ export const getExecuteBidV3Options: RouteOptions = {
                         ...order.params,
                       },
                     },
+                    tokenSetId,
                     attribute:
                       collection && attributeKey && attributeValue
                         ? {
@@ -549,12 +560,191 @@ export const getExecuteBidV3Options: RouteOptions = {
             // Go on with the next bid
             continue;
           }
+
+          case "looks-rare": {
+            if (!["reservoir", "looks-rare"].includes(params.orderbook)) {
+              throw Boom.badRequest("Unsupported orderbook");
+            }
+
+            if (params.fee || params.feeRecipient) {
+              throw Boom.badRequest("LooksRare does not support explicit fees");
+            }
+
+            if (params.excludeFlaggedTokens) {
+              throw Boom.badRequest("LooksRare does not support token-list bids");
+            }
+
+            let order: Sdk.LooksRare.Order | undefined;
+            if (token) {
+              const [contract, tokenId] = token.split(":");
+              order = await looksRareBuyToken.build({
+                ...params,
+                maker,
+                contract,
+                tokenId,
+              });
+            } else if (collection && !attributeKey && !attributeValue) {
+              order = await looksRareBuyCollection.build({
+                ...params,
+                maker,
+                collection,
+              });
+            } else {
+              throw Boom.badRequest("LooksRare only supports single-token or collection-wide bids");
+            }
+
+            if (!order) {
+              throw Boom.internal("Failed to generate order");
+            }
+
+            // Check the maker's approval
+            let approvalTx: TxData | undefined;
+            const wethApproval = await weth.getAllowance(
+              maker,
+              Sdk.LooksRare.Addresses.Exchange[config.chainId]
+            );
+            if (bn(wethApproval).lt(bn(order.params.price))) {
+              approvalTx = weth.approveTransaction(
+                maker,
+                Sdk.LooksRare.Addresses.Exchange[config.chainId]
+              );
+            }
+
+            steps[0].items.push({
+              status: !wrapEthTx ? "complete" : "incomplete",
+              data: wrapEthTx,
+              orderIndex: i,
+            });
+            steps[1].items.push({
+              status: !approvalTx ? "complete" : "incomplete",
+              data: approvalTx,
+              orderIndex: i,
+            });
+            steps[2].items.push({
+              status: "incomplete",
+              data: {
+                sign: order.getSignatureData(),
+                post: {
+                  endpoint: "/order/v3",
+                  method: "POST",
+                  body: {
+                    order: {
+                      kind: "looks-rare",
+                      data: {
+                        ...order.params,
+                      },
+                    },
+                    tokenSetId,
+                    collection:
+                      collection && !attributeKey && !attributeValue ? collection : undefined,
+                    orderbook: params.orderbook,
+                    source,
+                  },
+                },
+              },
+              orderIndex: i,
+            });
+
+            // Go on with the next bid
+            continue;
+          }
+
+          case "x2y2": {
+            if (!["x2y2"].includes(params.orderbook)) {
+              throw Boom.badRequest("Unsupported orderbook");
+            }
+            if (params.fee || params.feeRecipient) {
+              throw Boom.badRequest("X2Y2 does not support explicit fees");
+            }
+            if (params.excludeFlaggedTokens) {
+              throw Boom.badRequest("X2Y2 does not support token-list bids");
+            }
+
+            let order: Sdk.X2Y2.Types.LocalOrder | undefined;
+            if (token) {
+              const [contract, tokenId] = token.split(":");
+              order = await x2y2BuyToken.build({
+                ...params,
+                maker,
+                contract,
+                tokenId,
+              });
+            } else if (collection && !attributeKey && !attributeValue) {
+              order = await x2y2BuyCollection.build({
+                ...params,
+                maker,
+                collection,
+              });
+            } else {
+              throw Boom.badRequest("X2Y2 only supports single-token or collection-wide bids");
+            }
+
+            if (!order) {
+              throw Boom.internal("Failed to generate order");
+            }
+
+            const upstreamOrder = Sdk.X2Y2.Order.fromLocalOrder(config.chainId, order);
+
+            // Check the maker's approval
+            let approvalTx: TxData | undefined;
+            const wethApproval = await weth.getAllowance(
+              maker,
+              Sdk.X2Y2.Addresses.Exchange[config.chainId]
+            );
+            if (bn(wethApproval).lt(bn(upstreamOrder.params.price))) {
+              approvalTx = weth.approveTransaction(
+                maker,
+                Sdk.X2Y2.Addresses.Exchange[config.chainId]
+              );
+            }
+
+            steps[0].items.push({
+              status: !wrapEthTx ? "complete" : "incomplete",
+              data: wrapEthTx,
+              orderIndex: i,
+            });
+            steps[1].items.push({
+              status: !approvalTx ? "complete" : "incomplete",
+              data: approvalTx,
+              orderIndex: i,
+            });
+            steps[2].items.push({
+              status: "incomplete",
+              data: {
+                sign: new Sdk.X2Y2.Exchange(
+                  config.chainId,
+                  config.x2y2ApiKey
+                ).getOrderSignatureData(order),
+                post: {
+                  endpoint: "/order/v3",
+                  method: "POST",
+                  body: {
+                    order: {
+                      kind: "x2y2",
+                      data: {
+                        ...order,
+                      },
+                    },
+                    tokenSetId,
+                    collection:
+                      collection && !attributeKey && !attributeValue ? collection : undefined,
+                    orderbook: params.orderbook,
+                    source,
+                  },
+                },
+              },
+              orderIndex: i,
+            });
+
+            // Go on with the next bid
+            continue;
+          }
         }
       }
 
       // We should only have a single ETH wrapping transaction
       if (steps[0].items.length > 1) {
-        const weth = new Sdk.Common.Helpers.Weth(slowProvider, config.chainId);
+        const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
         const wethWrapTx = weth.depositTransaction(
           maker,
           steps[0].items.map((i) => bn(i.data?.value || 0)).reduce((a, b) => a.add(b), bn(0))

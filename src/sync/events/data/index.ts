@@ -3,15 +3,20 @@ import { Interface } from "@ethersproject/abi";
 import * as erc721 from "@/events-sync/data/erc721";
 import * as erc1155 from "@/events-sync/data/erc1155";
 import * as weth from "@/events-sync/data/weth";
+
+import * as element from "@/events-sync/data/element";
 import * as foundation from "@/events-sync/data/foundation";
 import * as looksRare from "@/events-sync/data/looks-rare";
+import * as nouns from "@/events-sync/data/nouns";
 import * as openDao from "@/events-sync/data/opendao";
+import * as quixotic from "@/events-sync/data/quixotic";
+import * as rarible from "@/events-sync/data/rarible";
 import * as seaport from "@/events-sync/data/seaport";
 import * as wyvernV2 from "@/events-sync/data/wyvern-v2";
 import * as wyvernV23 from "@/events-sync/data/wyvern-v2.3";
 import * as x2y2 from "@/events-sync/data/x2y2";
 import * as zeroExV4 from "@/events-sync/data/zeroex-v4";
-import * as rarible from "@/events-sync/data/rarible";
+import * as zora from "@/events-sync/data/zora";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -50,7 +55,15 @@ export type EventDataKind =
   | "seaport-order-cancelled"
   | "seaport-order-filled"
   | "seaport-counter-incremented"
-  | "rarible-match";
+  | "rarible-match"
+  | "element-erc721-sell-order-filled"
+  | "element-erc721-buy-order-filled"
+  | "element-erc1155-sell-order-filled"
+  | "element-erc1155-buy-order-filled"
+  | "quixotic-order-filled"
+  | "nouns-auction-settled"
+  | "zora-ask-filled"
+  | "zora-auction-ended";
 
 export type EventData = {
   kind: EventDataKind;
@@ -95,6 +108,14 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       x2y2.orderCancelled,
       x2y2.orderInventory,
       rarible.match,
+      element.erc721BuyOrderFilled,
+      element.erc721SellOrderFilled,
+      element.erc1155BuyOrderFilled,
+      element.erc1155SellOrderFilled,
+      quixotic.orderFulfilled,
+      zora.askFilled,
+      zora.auctionEnded,
+      nouns.auctionSettled,
     ];
   } else {
     return (
@@ -173,6 +194,22 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return seaport.orderFulfilled;
     case "rarible-match":
       return rarible.match;
+    case "element-erc721-sell-order-filled":
+      return element.erc721SellOrderFilled;
+    case "element-erc721-buy-order-filled":
+      return element.erc721BuyOrderFilled;
+    case "element-erc1155-sell-order-filled":
+      return element.erc1155SellOrderFilled;
+    case "element-erc1155-buy-order-filled":
+      return element.erc1155BuyOrderFilled;
+    case "quixotic-order-filled":
+      return quixotic.orderFulfilled;
+    case "nouns-auction-settled":
+      return nouns.auctionSettled;
+    case "zora-ask-filled":
+      return zora.askFilled;
+    case "zora-auction-ended":
+      return zora.auctionEnded;
     default:
       return undefined;
   }

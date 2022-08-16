@@ -5,7 +5,9 @@ import { formatEther, formatUnits } from "@ethersproject/units";
 
 export const bn = (value: BigNumberish) => BigNumber.from(value);
 
-export const formatEth = (wei: BigNumberish) => Number(Number(formatEther(wei)).toFixed(5));
+export const formatEth = (value: BigNumberish) => Number(Number(formatEther(value)).toFixed(5));
+
+export const formatUsd = (value: BigNumberish) => Number(Number(formatUnits(value, 6)).toFixed(5));
 
 export const formatPrice = (value: BigNumberish, decimals = 18) =>
   Number(Number(formatUnits(value, decimals)).toFixed(5));
@@ -45,4 +47,5 @@ export const regex = {
   bytes32: /^0x[a-fA-F0-9]{64}$/,
   token: /^0x[a-fA-F0-9]{40}:[0-9]+$/,
   number: /^[0-9]+$/,
+  unix_timestamp: /^[0-9]{10}$/,
 };

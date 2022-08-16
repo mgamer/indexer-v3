@@ -3,6 +3,7 @@
 // Any new network that is supported should have a corresponding
 // entry in the configuration methods below
 
+import { idb } from "@/common/db";
 import { config } from "@/config/index";
 
 export const getNetworkName = () => {
@@ -15,6 +16,8 @@ export const getNetworkName = () => {
       return "goerli";
     case 10:
       return "optimism";
+    case 137:
+      return "polygon";
     default:
       return "unknown";
   }
@@ -23,20 +26,36 @@ export const getNetworkName = () => {
 type NetworkSettings = {
   enableWebSocket: boolean;
   enableReorgCheck: boolean;
+  backfillFetchAllBlocks: boolean;
+  reorgCheckFrequency: number[];
   realtimeSyncFrequencySeconds: number;
   realtimeSyncMaxBlockLag: number;
   backfillBlockBatchSize: number;
+  metadataMintDelay: number;
+  enableMetadataAutoRefresh: boolean;
   washTradingExcludedContracts: string[];
+  washTradingWhitelistedAddresses: string[];
+  washTradingBlacklistedAddresses: string[];
+  coingecko?: {
+    networkId: string;
+  };
+  onStartup?: () => Promise<void>;
 };
 
 export const getNetworkSettings = (): NetworkSettings => {
   const defaultNetworkSettings: NetworkSettings = {
     enableWebSocket: true,
     enableReorgCheck: true,
+    backfillFetchAllBlocks: true,
     realtimeSyncFrequencySeconds: 15,
     realtimeSyncMaxBlockLag: 16,
     backfillBlockBatchSize: 16,
+    metadataMintDelay: 120,
+    enableMetadataAutoRefresh: false,
     washTradingExcludedContracts: [],
+    washTradingWhitelistedAddresses: [],
+    washTradingBlacklistedAddresses: [],
+    reorgCheckFrequency: [1, 5, 10, 30, 60], // In Minutes
   };
 
   switch (config.chainId) {
@@ -44,11 +63,39 @@ export const getNetworkSettings = (): NetworkSettings => {
     case 1:
       return {
         ...defaultNetworkSettings,
+        metadataMintDelay: 30,
+        enableMetadataAutoRefresh: true,
         washTradingExcludedContracts: [
           // ArtBlocks Contracts
           "0x059edd72cd353df5106d2b9cc5ab83a52287ac3a",
           "0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270",
         ],
+        washTradingBlacklistedAddresses: ["0xac335e6855df862410f96f345f93af4f96351a87"],
+        coingecko: {
+          networkId: "ethereum",
+        },
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\x0000000000000000000000000000000000000000',
+                  'Ether',
+                  'ETH',
+                  18,
+                  '{"coingeckoCurrencyId": "ethereum"}'
+                ) ON CONFLICT DO NOTHING
+              `
+            ),
+          ]);
+        },
       };
     // Rinkeby
     case 4:
@@ -72,6 +119,44 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 10,
         realtimeSyncMaxBlockLag: 128,
         backfillBlockBatchSize: 512,
+        coingecko: {
+          networkId: "optimistic-ethereum",
+        },
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\x0000000000000000000000000000000000000000',
+                  'Ether',
+                  'ETH',
+                  18,
+                  '{"coingeckoCurrencyId": "ethereum"}'
+                ) ON CONFLICT DO NOTHING
+              `
+            ),
+          ]);
+        },
+      };
+    }
+    // Polygon
+    case 137: {
+      return {
+        ...defaultNetworkSettings,
+        enableWebSocket: false,
+        enableReorgCheck: true,
+        backfillFetchAllBlocks: false,
+        realtimeSyncFrequencySeconds: 10,
+        realtimeSyncMaxBlockLag: 128,
+        backfillBlockBatchSize: 512,
+        reorgCheckFrequency: [30],
       };
     }
     // Default

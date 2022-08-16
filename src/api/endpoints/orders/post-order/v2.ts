@@ -3,6 +3,7 @@
 import { splitSignature } from "@ethersproject/bytes";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
+import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
@@ -47,8 +48,9 @@ export const postOrderV2Options: RouteOptions = {
         value: Joi.string().required(),
       }),
       collection: Joi.string(),
+      tokenSetId: Joi.string(),
       isNonFlagged: Joi.boolean(),
-    }),
+    }).oxor("tokenSetId", "collection", "attribute"),
   },
   handler: async (request: Request) => {
     if (config.disableOrders) {
@@ -63,10 +65,15 @@ export const postOrderV2Options: RouteOptions = {
       const orderbook = payload.orderbook;
       const orderbookApiKey = payload.orderbookApiKey || null;
       const source = payload.source;
+
+      // We'll always have only one of the below cases:
       // Only relevant/present for attribute bids
       const attribute = payload.attribute;
       // Only relevant for collection bids
       const collection = payload.collection;
+      // Only relevant for token set bids
+      const tokenSetId = payload.tokenSetId;
+
       // Only relevant for non-flagged tokens bids
       const isNonFlagged = payload.isNonFlagged;
 
@@ -107,6 +114,13 @@ export const postOrderV2Options: RouteOptions = {
           kind: "collection-non-flagged",
           data: {
             collection,
+          },
+        };
+      } else if (tokenSetId) {
+        schema = {
+          kind: "token-set",
+          data: {
+            tokenSetId,
           },
         };
       }
@@ -154,11 +168,12 @@ export const postOrderV2Options: RouteOptions = {
 
         case "seaport": {
           if (!["opensea", "reservoir"].includes(orderbook)) {
-            throw new Error("Unknown orderbook");
+            throw new Error("Unsupported orderbook");
           }
 
           const orderInfo: orders.seaport.OrderInfo = {
             orderParams: order.data,
+            isReservoir: true,
             metadata: {
               schema,
               source,
@@ -186,9 +201,8 @@ export const postOrderV2Options: RouteOptions = {
         }
 
         case "looks-rare": {
-          // Only Reservoir and LooksRare are supported as orderbooks
           if (!["looks-rare", "reservoir"].includes(orderbook)) {
-            throw new Error("Unknown orderbook");
+            throw new Error("Unsupported orderbook");
           }
 
           const orderInfo: orders.looksRare.OrderInfo = {
@@ -214,6 +228,33 @@ export const postOrderV2Options: RouteOptions = {
                 result.id
               }`
             );
+          }
+
+          return { message: "Success", orderId: result.id };
+        }
+
+        case "opensea": {
+          if (orderbook !== "reservoir") {
+            throw new Error("Unsupported orderbook");
+          }
+
+          const orderObject = new Sdk.Seaport.Order(config.chainId, {
+            ...order.data.parameters,
+            signature: order.data.signature,
+          });
+
+          const orderInfo: orders.seaport.OrderInfo = {
+            orderParams: orderObject.params,
+            metadata: {
+              schema,
+              source,
+            },
+          };
+
+          const [result] = await orders.seaport.save([orderInfo]);
+
+          if (result.status !== "success") {
+            throw Boom.badRequest(result.status);
           }
 
           return { message: "Success", orderId: result.id };
