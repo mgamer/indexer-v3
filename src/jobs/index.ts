@@ -42,6 +42,7 @@ import * as backfillFillEventsWashTradingScore from "@/jobs/backfill/backfill-fi
 import * as backfillLooksRareFills from "@/jobs/backfill/backfill-looks-rare-fills";
 import * as backfillTransactionBlockFields from "@/jobs/backfill/backfill-transaction-block-fields";
 import * as backfillTransactions from "@/jobs/backfill/backfill-transactions";
+import * as backfillCollectionsTopBid from "@/jobs/backfill/backfill-collections-top-bid";
 
 import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
 
@@ -51,6 +52,7 @@ import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as rarity from "@/jobs/collection-updates/rarity-queue";
+import * as collectionUpdatesTopBid from "@/jobs/collection-updates/top-bid-queue";
 
 import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
 
@@ -120,6 +122,7 @@ export const allJobQueues = [
   backfillLooksRareFills.queue,
   backfillTransactionBlockFields.queue,
   backfillTransactions.queue,
+  backfillCollectionsTopBid.queue,
 
   topBidUpdate.queue,
 
@@ -129,6 +132,7 @@ export const allJobQueues = [
   collectionUpdatesFloorAsk.queue,
   collectionUpdatesMetadata.queue,
   rarity.queue,
+  collectionUpdatesTopBid.queue,
 
   dailyVolumes.queue,
 
