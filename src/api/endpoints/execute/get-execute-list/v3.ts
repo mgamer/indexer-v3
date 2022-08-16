@@ -26,6 +26,10 @@ import * as openDaoCheck from "@/orderbook/orders/opendao/check";
 import * as seaportSellToken from "@/orderbook/orders/seaport/build/sell/token";
 import * as seaportCheck from "@/orderbook/orders/seaport/check";
 
+// X2Y2
+import * as x2y2SellToken from "@/orderbook/orders/x2y2/build/sell/token";
+import * as x2y2Check from "@/orderbook/orders/x2y2/check";
+
 // ZeroExV4
 import * as zeroExV4SellToken from "@/orderbook/orders/zeroex-v4/build/sell/token";
 import * as zeroExV4Check from "@/orderbook/orders/zeroex-v4/check";
@@ -75,11 +79,11 @@ export const getExecuteListV3Options: RouteOptions = {
               "Amount seller is willing to sell for in wei. Example: `1000000000000000000`"
             ),
           orderKind: Joi.string()
-            .valid("721ex", "looks-rare", "zeroex-v4", "seaport")
+            .valid("721ex", "looks-rare", "zeroex-v4", "seaport", "x2y2")
             .default("seaport")
             .description("Exchange protocol used to create order. Example: `seaport`"),
           orderbook: Joi.string()
-            .valid("opensea", "looks-rare", "reservoir")
+            .valid("opensea", "looks-rare", "reservoir", "x2y2")
             .default("reservoir")
             .description("Orderbook where order is placed. Example: `Reservoir`"),
           automatedRoyalties: Joi.boolean()
@@ -540,6 +544,88 @@ export const getExecuteListV3Options: RouteOptions = {
 
             // Go on with the next listing
             continue;
+          }
+
+          case "x2y2": {
+            if (!["x2y2"].includes(params.orderbook)) {
+              throw Boom.badRequest("Unsupported orderbook");
+            }
+            if (params.fee || params.feeRecipient) {
+              throw Boom.badRequest("X2Y2 does not supported custom fees");
+            }
+
+            const order = await x2y2SellToken.build({
+              ...params,
+              contract,
+              tokenId,
+            });
+            if (!order) {
+              throw Boom.internal("Failed to generate order");
+            }
+
+            // Will be set if an approval is needed before listing
+            let approvalTx: TxData | undefined;
+
+            // Check the order's fillability
+            const upstreamOrder = Sdk.X2Y2.Order.fromLocalOrder(config.chainId, order);
+            try {
+              await x2y2Check.offChainCheck(upstreamOrder, {
+                onChainApprovalRecheck: true,
+              });
+            } catch (error: any) {
+              switch (error.message) {
+                case "no-balance-no-approval":
+                case "no-balance": {
+                  // We cannot do anything if the user doesn't own the listed token
+                  throw Boom.badData("Maker does not own the listed token");
+                }
+
+                case "no-approval": {
+                  const contractKind = await commonHelpers.getContractKind(contract);
+                  if (!contractKind) {
+                    throw Boom.internal("Missing contract kind");
+                  }
+
+                  // Generate an approval transaction
+                  approvalTx = new Sdk.Common.Helpers.Erc721(
+                    baseProvider,
+                    upstreamOrder.params.nft.token
+                  ).approveTransaction(maker, Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId]);
+
+                  break;
+                }
+              }
+            }
+
+            steps[1].items.push({
+              status: approvalTx ? "incomplete" : "complete",
+              data: approvalTx,
+              orderIndex: i,
+            });
+            steps[2].items.push({
+              status: "incomplete",
+              data: {
+                sign: new Sdk.X2Y2.Exchange(
+                  config.chainId,
+                  config.x2y2ApiKey
+                ).getOrderSignatureData(order),
+                post: {
+                  endpoint: "/order/v3",
+                  method: "POST",
+                  body: {
+                    order: {
+                      kind: "x2y2",
+                      data: {
+                        ...order,
+                      },
+                    },
+                    orderbook: params.orderbook,
+                    source,
+                  },
+                },
+              },
+              orderIndex: i,
+            });
           }
         }
       }
