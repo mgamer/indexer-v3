@@ -3,7 +3,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import { getReferrer } from "@reservoir0x/sdk/dist/utils";
 import pLimit from "p-limit";
 
-import { baseProvider, slowProvider } from "@/common/provider";
+import { baseProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 import { getBlocks, saveBlock } from "@/models/blocks";
@@ -69,7 +69,7 @@ export const fetchTransaction = async (txHash: string) =>
 
     let tx = await baseProvider.getTransaction(txHash);
     if (!tx) {
-      tx = await slowProvider.getTransaction(txHash);
+      tx = await baseProvider.getTransaction(txHash);
     }
 
     // Also fetch all transactions within the block
@@ -102,22 +102,22 @@ export const getOrderSourceByOrderKind = async (
 
     switch (orderKind) {
       case "x2y2":
-        return sources.getByDomain("x2y2.io");
+        return sources.getOrInsert("x2y2.io");
       case "foundation":
-        return sources.getByDomain("foundation.app");
+        return sources.getOrInsert("foundation.app");
       case "looks-rare":
-        return sources.getByDomain("looksrare.org");
+        return sources.getOrInsert("looksrare.org");
       case "seaport":
       case "wyvern-v2":
       case "wyvern-v2.3":
-        return sources.getByDomain("opensea.io");
+        return sources.getOrInsert("opensea.io");
       case "rarible":
-        return sources.getByDomain("rarible.com");
+        return sources.getOrInsert("rarible.com");
       case "element-erc721":
       case "element-erc1155":
-        return sources.getByDomain("element.market");
+        return sources.getOrInsert("element.market");
       case "quixotic":
-        return sources.getByDomain("quixotic.io");
+        return sources.getOrInsert("quixotic.io");
       default:
         // For all other order kinds we cannot default the source
         return null;
@@ -136,7 +136,7 @@ export const extractAttributionData = async (txHash: string, orderKind: string) 
 
   // Properly set the taker when filling through router contracts
   const tx = await fetchTransaction(txHash);
-  const router = Sdk.Common.Addresses.Routers[config.chainId][tx.to];
+  const router = Sdk.Common.Addresses.Routers[config.chainId]?.[tx.to];
   if (router) {
     taker = tx.from;
   }

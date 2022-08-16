@@ -25,7 +25,7 @@ export const getOrdersAllV1Options: RouteOptions = {
       id: Joi.alternatives(Joi.string(), Joi.array().items(Joi.string())).description(
         "Order id(s)."
       ),
-      source: Joi.string().description("Filter to a source. Example: `OpenSea`"),
+      source: Joi.string().description("Filter to a source by domain. Example: `opensea.io`"),
       native: Joi.boolean().description("If true, results will filter only Reservoir orders."),
       side: Joi.string().valid("sell", "buy").default("sell").description("Sell or buy side."),
       includeMetadata: Joi.boolean()
@@ -217,7 +217,16 @@ export const getOrdersAllV1Options: RouteOptions = {
 
         if (query.source) {
           const sources = await Sources.getInstance();
-          const source = sources.getByDomain(query.source);
+          let source;
+
+          // Try to get the source by name
+          source = sources.getByName(query.source, false);
+
+          // If the source was not found try to get it by domain
+          if (!source) {
+            source = sources.getByDomain(query.source, false);
+          }
+
           if (!source) {
             return { orders: [] };
           }

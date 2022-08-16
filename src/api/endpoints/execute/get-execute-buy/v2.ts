@@ -9,7 +9,7 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { slowProvider } from "@/common/provider";
+import { baseProvider } from "@/common/provider";
 import { bn, formatEth, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
@@ -359,7 +359,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
         }
       }
 
-      const router = new Sdk.Router.Router(config.chainId, slowProvider);
+      const router = new Sdk.Router.Router(config.chainId, baseProvider);
       const tx = await router.fillListingsTx(listingDetails, query.taker, {
         referrer: query.source,
         fee: {
@@ -372,7 +372,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
       });
 
       // Check that the taker has enough funds to fill all requested tokens
-      const balance = await slowProvider.getBalance(query.taker);
+      const balance = await baseProvider.getBalance(query.taker);
       if (!query.skipBalanceCheck && bn(balance).lt(tx.value!)) {
         throw Boom.badData("ETH balance too low to proceed with transaction");
       }

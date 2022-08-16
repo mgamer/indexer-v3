@@ -98,6 +98,7 @@ export const getSalesV3Options: RouteOptions = {
             }),
           }),
           orderSource: Joi.string().allow(null, ""),
+          orderSourceDomain: Joi.string().allow(null, ""),
           orderSide: Joi.string().valid("ask", "bid"),
           orderKind: Joi.string(),
           from: Joi.string().lowercase().pattern(regex.address),
@@ -112,6 +113,7 @@ export const getSalesV3Options: RouteOptions = {
           currency: Joi.string().pattern(regex.address),
           currencyPrice: Joi.number().unsafe().allow(null),
           usdPrice: Joi.number().unsafe().allow(null),
+          washTradingScore: Joi.number(),
         })
       ),
       continuation: Joi.string().pattern(regex.base64).allow(null),
@@ -247,12 +249,13 @@ export const getSalesV3Options: RouteOptions = {
             fill_events_2.timestamp,
             fill_events_2.price,
             fill_events_2.currency,
-            fill_events_2.currency_price,
+            TRUNC(fill_events_2.currency_price, 0),
             currencies.decimals,
             fill_events_2.usd_price,
             fill_events_2.block,
             fill_events_2.log_index,
-            fill_events_2.batch_index
+            fill_events_2.batch_index,
+            fill_events_2.wash_trading_score
           FROM fill_events_2
           LEFT JOIN currencies
             ON fill_events_2.currency = currencies.contract
@@ -297,7 +300,8 @@ export const getSalesV3Options: RouteOptions = {
 
       const sources = await Sources.getInstance();
       const result = rawResult.map((r) => {
-        const orderSource = r.order_source_id_int ? sources.get(r.order_source_id_int)?.name : null;
+        const orderSource = sources.get(Number(r.order_source_id_int))?.name;
+        const orderSourceDomain = sources.get(Number(r.order_source_id_int))?.domain;
 
         return {
           id: crypto
@@ -321,6 +325,7 @@ export const getSalesV3Options: RouteOptions = {
             },
           },
           orderSource,
+          orderSourceDomain,
           orderSide: r.order_side === "sell" ? "ask" : "bid",
           orderKind: r.order_kind,
           from: r.order_side === "sell" ? fromBuffer(r.maker) : fromBuffer(r.taker),
@@ -344,6 +349,7 @@ export const getSalesV3Options: RouteOptions = {
             ? formatEth(r.price)
             : null,
           usdPrice: r.usd_price ? formatUsd(r.usd_price) : null,
+          washTradingScore: r.wash_trading_score,
         };
       });
 

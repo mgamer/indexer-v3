@@ -74,6 +74,7 @@ export const getSalesBulkV1Options: RouteOptions = {
             tokenId: Joi.string().pattern(regex.number),
           }),
           orderSource: Joi.string().allow(null, ""),
+          orderSourceDomain: Joi.string().allow(null, ""),
           orderSide: Joi.string().valid("ask", "bid"),
           orderKind: Joi.string(),
           from: Joi.string().lowercase().pattern(regex.address),
@@ -193,6 +194,9 @@ export const getSalesBulkV1Options: RouteOptions = {
       const sources = await Sources.getInstance();
       const result = rawResult.map((r) => {
         const orderSource = r.order_source_id_int ? sources.get(r.order_source_id_int)?.name : null;
+        const orderSourceDomain = r.order_source_id_int
+          ? sources.get(r.order_source_id_int)?.domain
+          : null;
 
         return {
           id: crypto
@@ -210,6 +214,7 @@ export const getSalesBulkV1Options: RouteOptions = {
             tokenId: r.token_id,
           },
           orderSource,
+          orderSourceDomain,
           orderSide: r.order_side === "sell" ? "ask" : "bid",
           orderKind: r.order_kind,
           from: r.order_side === "sell" ? fromBuffer(r.maker) : fromBuffer(r.taker),
