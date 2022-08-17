@@ -1,3 +1,12 @@
+# [5.168.0](https://github.com/reservoirprotocol/indexer/compare/v5.167.1...v5.168.0) (2022-08-17)
+
+
+### Features
+
+* support ingesting x2y2 collection offers ([811e97e](https://github.com/reservoirprotocol/indexer/commit/811e97e800d48b87cf3ca530c3da4af61f8710f7))
+
+
+
 ## [5.167.1](https://github.com/reservoirprotocol/indexer/compare/v5.167.0...v5.167.1) (2022-08-17)
 
 
