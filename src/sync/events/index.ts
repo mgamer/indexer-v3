@@ -1689,6 +1689,7 @@ export const syncEvents = async (
               }
 
               const orderKind = "rarible";
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
 
               let taker = rightMaker;
 
@@ -1706,6 +1707,7 @@ export const syncEvents = async (
                 orderKind: "rarible",
                 orderId: leftHash,
                 orderSide: side,
+                orderSourceIdInt: orderSource?.id,
                 maker: leftMaker,
                 taker,
                 price: prices.nativePrice,
@@ -1745,10 +1747,14 @@ export const syncEvents = async (
                 break;
               }
 
+              const orderKind = "element-erc721";
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
+
               fillEventsPartial.push({
-                orderKind: "element-erc721",
+                orderKind,
                 orderId: orderHash,
                 orderSide: "sell",
+                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -1788,10 +1794,14 @@ export const syncEvents = async (
                 break;
               }
 
+              const orderKind = "element-erc721";
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
+
               fillEventsPartial.push({
-                orderKind: "element-erc721",
+                orderKind,
                 orderId: orderHash,
                 orderSide: "buy",
+                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -1832,10 +1842,14 @@ export const syncEvents = async (
                 break;
               }
 
+              const orderKind = "element-erc1155";
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
+
               fillEventsPartial.push({
-                orderKind: "element-erc1155",
+                orderKind,
                 orderId: orderHash,
                 orderSide: "sell",
+                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -1876,10 +1890,14 @@ export const syncEvents = async (
                 break;
               }
 
+              const orderKind = "element-erc1155";
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
+
               fillEventsPartial.push({
-                orderKind: "element-erc1155",
+                orderKind,
                 orderId: orderHash,
                 orderSide: "buy",
+                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
