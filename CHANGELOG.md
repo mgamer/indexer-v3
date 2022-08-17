@@ -1,3 +1,12 @@
+# [5.169.0](https://github.com/reservoirprotocol/indexer/compare/v5.168.0...v5.169.0) (2022-08-17)
+
+
+### Features
+
+* add job queue for retrying failed currency fetch attempts ([99cd2a2](https://github.com/reservoirprotocol/indexer/commit/99cd2a23874e628ce158763302e56467a77912e9))
+
+
+
 # [5.168.0](https://github.com/reservoirprotocol/indexer/compare/v5.167.1...v5.168.0) (2022-08-17)
 
 

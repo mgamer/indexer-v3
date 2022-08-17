@@ -7,6 +7,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { toBuffer } from "@/common/utils";
 import { getNetworkSettings } from "@/config/network";
+import * as currenciesQueue from "@/jobs/currencies/index";
 
 type CurrencyMetadata = {
   coingeckoCurrencyId?: string;
@@ -52,34 +53,13 @@ export const getCurrency = async (currencyAddress: string): Promise<Currency> =>
 
     // If the currency is not available, then we try to retrieve its details
     try {
-      // `name`, `symbol` and `decimals` are fetched from on-chain
-      const iface = new Interface([
-        "function name() view returns (string)",
-        "function symbol() view returns (string)",
-        "function decimals() view returns (uint8)",
-      ]);
-
-      const contract = new Contract(currencyAddress, iface, baseProvider);
-      name = await contract.name();
-      symbol = await contract.symbol();
-      decimals = await contract.decimals();
-      metadata = {};
-
-      const coingeckoNetworkId = getNetworkSettings().coingecko?.networkId;
-      if (coingeckoNetworkId) {
-        const result: { id?: string } = await axios
-          .get(
-            `https://api.coingecko.com/api/v3/coins/${coingeckoNetworkId}/contract/${currencyAddress}`,
-            { timeout: 10 * 1000 }
-          )
-          .then((response) => response.data);
-        if (result.id) {
-          metadata.coingeckoCurrencyId = result.id;
-        }
-      }
+      ({ name, symbol, decimals, metadata } = await tryGetCurrencyDetails(currencyAddress));
     } catch (error) {
-      // TODO: Retry via a job queue
-      logger.error("currencies", `Failed to fetch ${currencyAddress} currency details: ${error}`);
+      logger.error(
+        "currencies",
+        `Failed to initially fetch ${currencyAddress} currency details: ${error}`
+      );
+      await currenciesQueue.addToQueue({ currency: currencyAddress });
     }
 
     await idb.none(
@@ -115,4 +95,39 @@ export const getCurrency = async (currencyAddress: string): Promise<Currency> =>
       metadata,
     };
   }
+};
+
+export const tryGetCurrencyDetails = async (currencyAddress: string) => {
+  // `name`, `symbol` and `decimals` are fetched from on-chain
+  const iface = new Interface([
+    "function name() view returns (string)",
+    "function symbol() view returns (string)",
+    "function decimals() view returns (uint8)",
+  ]);
+
+  const contract = new Contract(currencyAddress, iface, baseProvider);
+  const name = await contract.name();
+  const symbol = await contract.symbol();
+  const decimals = await contract.decimals();
+  const metadata: CurrencyMetadata = {};
+
+  const coingeckoNetworkId = getNetworkSettings().coingecko?.networkId;
+  if (coingeckoNetworkId) {
+    const result: { id?: string } = await axios
+      .get(
+        `https://api.coingecko.com/api/v3/coins/${coingeckoNetworkId}/contract/${currencyAddress}`,
+        { timeout: 10 * 1000 }
+      )
+      .then((response) => response.data);
+    if (result.id) {
+      metadata.coingeckoCurrencyId = result.id;
+    }
+  }
+
+  return {
+    name,
+    symbol,
+    decimals,
+    metadata,
+  };
 };
