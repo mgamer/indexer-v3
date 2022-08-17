@@ -253,7 +253,7 @@ export const getExecuteListV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v2",
                       method: "POST",
                       body: {
                         order: {
@@ -352,7 +352,7 @@ export const getExecuteListV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v2",
                       method: "POST",
                       body: {
                         order: {
@@ -455,7 +455,7 @@ export const getExecuteListV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v2",
                       method: "POST",
                       body: {
                         order: {
@@ -555,7 +555,7 @@ export const getExecuteListV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v2",
                       method: "POST",
                       body: {
                         order: {
@@ -659,7 +659,7 @@ export const getExecuteListV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v2",
                       method: "POST",
                       body: {
                         order: {
