@@ -44,10 +44,8 @@ export const getBuildInfo = async (
     collection: options.contract,
     signer: options.maker,
     price: options.weiPrice,
-    currency:
-      side === "sell"
-        ? Sdk.Common.Addresses.Eth[config.chainId]
-        : Sdk.Common.Addresses.Weth[config.chainId],
+    // LooksRare uses WETH instead of ETH for sell orders too
+    currency: Sdk.Common.Addresses.Weth[config.chainId],
     // TODO: We should only use LooksRare's nonce when cross-posting to their orderbook
     nonce: await axios
       .get(
