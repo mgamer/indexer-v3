@@ -1,3 +1,23 @@
+## [5.171.2](https://github.com/reservoirprotocol/indexer/compare/v5.171.1...v5.171.2) (2022-08-17)
+
+
+### Bug Fixes
+
+* added default source for nouns ([68c8c9f](https://github.com/reservoirprotocol/indexer/commit/68c8c9fc5f967c52a622fbc3cc5493d869b8ec0a))
+* added nouns ([41e8ea0](https://github.com/reservoirprotocol/indexer/commit/41e8ea01a2760996bcf124642d00c106dee715f6))
+* added price data ([2a279d3](https://github.com/reservoirprotocol/indexer/commit/2a279d3dacb50d78dab93dc5197b8dc2208b16a9))
+
+
+
+## [5.171.1](https://github.com/reservoirprotocol/indexer/compare/v5.171.0...v5.171.1) (2022-08-17)
+
+
+### Bug Fixes
+
+* missing sources ([ecd8248](https://github.com/reservoirprotocol/indexer/commit/ecd8248629f28ba3d7f32f6826b7a908960bc471))
+
+
+
 # [5.171.0](https://github.com/reservoirprotocol/indexer/compare/v5.170.0...v5.171.0) (2022-08-17)
 
 
