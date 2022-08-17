@@ -2006,6 +2006,42 @@ export const syncEvents = async (
 
               break;
             }
+
+            case "nouns-auction-settled": {
+              const { args } = eventData.abi.parseLog(log);
+              const nounId = args["nounId"].toString();
+              const winner = args["winner"].toLowerCase();
+              const amount = args["amount"].toString();
+
+              const currency = Sdk.Common.Addresses.Eth[config.chainId];
+
+              const prices = await getPrices(currency, amount, baseEventParams.timestamp);
+
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
+
+              const orderKind = "nouns";
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
+
+              fillEvents.push({
+                orderKind,
+                orderSourceIdInt: orderSource?.id,
+                orderSide: "sell",
+                maker: Sdk.Nouns.Addresses.AuctionHouse[config.chainId]?.toLowerCase(),
+                taker: winner,
+                amount: "1",
+                currency,
+                price: prices.nativePrice,
+                usdPrice: prices.usdPrice,
+                contract: Sdk.Nouns.Addresses.TokenContract[config.chainId]?.toLowerCase(),
+                tokenId: nounId,
+                baseEventParams,
+              });
+
+              break;
+            }
           }
         } catch (error) {
           logger.info("sync-events", `Failed to handle events: ${error}`);
