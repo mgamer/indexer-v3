@@ -2093,8 +2093,12 @@ export const syncEvents = async (
                 break;
               }
 
+              const orderKind = "nouns";
+              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
+
               fillEvents.push({
-                orderKind: "nouns",
+                orderKind,
+                orderSourceIdInt: orderSource?.id,
                 orderSide: "sell",
                 maker: Sdk.Nouns.Addresses.AuctionHouse[config.chainId]?.toLowerCase(),
                 taker: winner,
