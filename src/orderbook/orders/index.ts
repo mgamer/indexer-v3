@@ -19,4 +19,6 @@ export type OrderKind =
   | "rarible"
   | "element-erc721"
   | "element-erc1155"
-  | "quixotic";
+  | "quixotic"
+  | "nouns"
+  | "zora-v3";
