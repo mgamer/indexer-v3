@@ -1,3 +1,12 @@
+## [5.171.3](https://github.com/reservoirprotocol/indexer/compare/v5.171.2...v5.171.3) (2022-08-17)
+
+
+### Bug Fixes
+
+* preserve backwards-compatibility ([4ecbce6](https://github.com/reservoirprotocol/indexer/commit/4ecbce6203ef4895ec7ef794f3a058019fab1f29))
+
+
+
 ## [5.171.2](https://github.com/reservoirprotocol/indexer/compare/v5.171.1...v5.171.2) (2022-08-17)
 
 
