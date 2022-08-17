@@ -63,9 +63,9 @@ export const getMarketplaces: RouteOptions = {
         listingEnabled: false,
       },
       {
-        name: "x2y2",
+        name: "X2Y2",
         imageUrl: "https://api.reservoir.tools/redirect/sources/x2y2/logo/v2",
-        feeBps: 0.05,
+        feeBps: 0.005,
         orderbook: "x2y2",
         orderKind: "x2y2",
         listingEnabled: false,
