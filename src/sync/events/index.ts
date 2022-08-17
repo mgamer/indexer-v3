@@ -27,6 +27,7 @@ import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsync
 import * as blocksModel from "@/models/blocks";
 import { OrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
+import { getOrderSourceByOrderKind } from "@/orderbook/orders/utils";
 import { getUSDAndNativePrices } from "@/utils/prices";
 
 // TODO: Split into multiple files (by exchange)
@@ -604,7 +605,7 @@ export const syncEvents = async (
               }
 
               const orderSide = [1, 5].includes(op) ? "sell" : "buy";
-              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
 
               // Handle: prices
               const currencyPrice = item.price.toString();
@@ -721,7 +722,7 @@ export const syncEvents = async (
                 taker = data.taker;
               }
 
-              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
 
               // Handle: prices
               const currency = Sdk.Common.Addresses.Eth[config.chainId];
@@ -874,7 +875,7 @@ export const syncEvents = async (
                 taker = data.taker;
               }
 
-              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
 
               // Handle: prices
               currencyPrice = bn(currencyPrice).div(amount).toString();
@@ -980,7 +981,7 @@ export const syncEvents = async (
                 taker = data.taker;
               }
 
-              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
 
               // Handle: prices
               currencyPrice = bn(currencyPrice).div(amount).toString();
@@ -1165,7 +1166,7 @@ export const syncEvents = async (
                 break;
               }
 
-              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
 
               let batchIndex = 1;
               if (buyOrderId !== HashZero) {
@@ -1325,7 +1326,7 @@ export const syncEvents = async (
               }
 
               const orderSide = direction === 0 ? "sell" : "buy";
-              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
 
               fillEvents.push({
                 orderKind,
@@ -1484,7 +1485,7 @@ export const syncEvents = async (
               }
 
               const orderSide = direction === 0 ? "sell" : "buy";
-              const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
 
               // Custom handling to support partial filling
               fillEventsPartial.push({
@@ -1628,7 +1629,7 @@ export const syncEvents = async (
                   taker = saleInfo.recipientOverride;
                 }
 
-                const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
+                const orderSource = await getOrderSourceByOrderKind(orderKind);
 
                 // Custom handling to support partial filling
                 fillEventsPartial.push({
@@ -2030,7 +2031,7 @@ export const syncEvents = async (
                   break;
                 }
 
-                const orderSource = await syncEventsUtils.getOrderSourceByOrderKind(orderKind);
+                const orderSource = await getOrderSourceByOrderKind(orderKind);
 
                 // Custom handling to support partial filling
                 fillEventsPartial.push({
