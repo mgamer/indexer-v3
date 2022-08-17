@@ -68,17 +68,21 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       }
 
-      if (order.params.type !== "sell") {
-        return results.push({
-          id,
-          status: "unsupported-side",
-        });
-      }
-
       // Check: sell order has Eth as payment token
       if (
         order.params.type === "sell" &&
         order.params.currency !== Sdk.Common.Addresses.Eth[config.chainId]
+      ) {
+        return results.push({
+          id,
+          status: "unsupported-payment-token",
+        });
+      }
+
+      // Check: buy order has Weth as payment token
+      if (
+        order.params.type === "buy" &&
+        order.params.currency !== Sdk.Common.Addresses.Weth[config.chainId]
       ) {
         return results.push({
           id,
@@ -117,10 +121,22 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         case "single-token": {
           [{ id: tokenSetId }] = await tokenSet.singleToken.save([
             {
-              id: `token:${order.params.nft.token}:${order.params.nft.tokenId}`,
+              id: `token:${order.params.nft.token}:${order.params.nft.tokenId!}`,
               schemaHash,
               contract: order.params.nft.token,
-              tokenId: order.params.nft.tokenId,
+              tokenId: order.params.nft.tokenId!,
+            },
+          ]);
+
+          break;
+        }
+
+        case "collection-wide": {
+          [{ id: tokenSetId }] = await tokenSet.contractWide.save([
+            {
+              id: `contract:${order.params.nft.token}`,
+              schemaHash,
+              contract: order.params.nft.token,
             },
           ]);
 
@@ -157,14 +173,17 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const isReservoir = false;
 
       // Handle: conduit
-      const conduit = Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId];
+      let conduit = Sdk.X2Y2.Addresses.Exchange[config.chainId];
+      if (order.params.type === "sell") {
+        conduit = Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId];
+      }
 
       const validFrom = `date_trunc('seconds', to_timestamp(0))`;
       const validTo = `date_trunc('seconds', to_timestamp(${order.params.deadline}))`;
       orderValues.push({
         id,
         kind: "x2y2",
-        side: "sell",
+        side: order.params.type === "sell" ? "sell" : "buy",
         fillability_status: fillabilityStatus,
         approval_status: approvalStatus,
         token_set_id: tokenSetId,
