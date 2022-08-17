@@ -32,7 +32,7 @@ if (config.doBackgroundWork) {
       await redlock
         .acquire(["expired-orders-check-lock"], (10 - 5) * 1000)
         .then(async () => {
-          logger.info(`expired-orders-check`, "Invalidating expired orders");
+          logger.info("expired-orders-check", "Invalidating expired orders");
 
           try {
             const expiredOrders: { id: string }[] = await idb.manyOrNone(
@@ -55,6 +55,7 @@ if (config.doBackgroundWork) {
                 RETURNING orders.id
               `
             );
+            logger.info("expired-orders-check", `Invalidated ${expiredOrders.length} orders`);
 
             await orderUpdatesById.addToQueue(
               expiredOrders.map(

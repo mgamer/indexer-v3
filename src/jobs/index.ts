@@ -9,6 +9,7 @@ import "@/jobs/bid-updates";
 import "@/jobs/cache-check";
 import "@/jobs/collections-refresh";
 import "@/jobs/collection-updates";
+import "@/jobs/currencies";
 import "@/jobs/daily-volumes";
 import "@/jobs/data-export";
 import "@/jobs/events-sync";
@@ -54,6 +55,8 @@ import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-q
 import * as rarity from "@/jobs/collection-updates/rarity-queue";
 import * as collectionUpdatesTopBid from "@/jobs/collection-updates/top-bid-queue";
 
+import * as currencies from "@/jobs/currencies/index";
+
 import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
 
 import * as exportData from "@/jobs/data-export/export-data";
@@ -87,6 +90,8 @@ import * as orderbookPostOrderExternal from "@/jobs/orderbook/post-order-externa
 import * as resyncOrdersSource from "@/jobs/orderbook/resync-orders-source";
 import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
 
+import * as fetchSourceInfo from "@/jobs/sources/fetch-source-info";
+
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 import * as tokenRefreshCache from "@/jobs/token-updates/token-refresh-cache";
 import * as nonFlaggedTokenSet from "@/jobs/token-updates/non-flagged-token-set";
@@ -98,8 +103,6 @@ import * as resyncAttributeCollection from "@/jobs/update-attribute/resync-attri
 import * as resyncAttributeFloorSell from "@/jobs/update-attribute/resync-attribute-floor-sell";
 import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attribute-key-counts";
 import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
-
-import * as fetchSourceInfo from "@/jobs/sources/fetch-source-info";
 
 import * as addUserReceivedBids from "@/jobs/user-received-bids/add-user-received-bids";
 import * as cleanUserReceivedBids from "@/jobs/user-received-bids/clean-user-received-bids";
@@ -122,6 +125,8 @@ export const allJobQueues = [
   backfillTransactionBlockFields.queue,
   backfillTransactions.queue,
   backfillCollectionsTopBid.queue,
+
+  currencies.queue,
 
   topBidUpdate.queue,
 
@@ -166,6 +171,8 @@ export const allJobQueues = [
   orderbookTokenSets.queue,
   resyncOrdersSource.queue,
 
+  fetchSourceInfo.queue,
+
   tokenUpdatesMint.queue,
   tokenRefreshCache.queue,
   nonFlaggedTokenSet.queue,
@@ -177,10 +184,6 @@ export const allJobQueues = [
   resyncAttributeFloorSell.queue,
   resyncAttributeKeyCounts.queue,
   resyncAttributeValueCounts.queue,
-
-  orderbookPostOrderExternal.queue,
-
-  fetchSourceInfo.queue,
 
   addUserReceivedBids.queue,
   cleanUserReceivedBids.queue,

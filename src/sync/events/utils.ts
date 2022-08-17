@@ -10,6 +10,8 @@ import { getBlocks, saveBlock } from "@/models/blocks";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { getTransaction, saveTransaction } from "@/models/transactions";
+import { OrderKind } from "@/orderbook/orders";
+import { getOrderSourceByOrderKind } from "@/orderbook/orders/utils";
 
 export const fetchBlock = async (blockNumber: number, force = false) =>
   getBlocks(blockNumber)
@@ -94,42 +96,7 @@ export const fetchTransaction = async (txHash: string) =>
     });
   });
 
-export const getOrderSourceByOrderKind = async (
-  orderKind: string
-): Promise<SourcesEntity | null> => {
-  try {
-    const sources = await Sources.getInstance();
-
-    switch (orderKind) {
-      case "x2y2":
-        return sources.getOrInsert("x2y2.io");
-      case "foundation":
-        return sources.getOrInsert("foundation.app");
-      case "looks-rare":
-        return sources.getOrInsert("looksrare.org");
-      case "seaport":
-      case "wyvern-v2":
-      case "wyvern-v2.3":
-        return sources.getOrInsert("opensea.io");
-      case "rarible":
-        return sources.getOrInsert("rarible.com");
-      case "element-erc721":
-      case "element-erc1155":
-        return sources.getOrInsert("element.market");
-      case "quixotic":
-        return sources.getOrInsert("quixotic.io");
-      case "zora-v3":
-        return sources.getOrInsert("zora.co");
-      default:
-        // For all other order kinds we cannot default the source
-        return null;
-    }
-  } catch (error) {
-    return null;
-  }
-};
-
-export const extractAttributionData = async (txHash: string, orderKind: string) => {
+export const extractAttributionData = async (txHash: string, orderKind: OrderKind) => {
   const sources = await Sources.getInstance();
 
   let aggregatorSource: SourcesEntity | undefined;
