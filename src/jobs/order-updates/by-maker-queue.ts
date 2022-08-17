@@ -521,8 +521,8 @@ export type MakerInfo = {
         // tokens, the allowance is reduced but no associated `Approval` event gets emitted
         // to be able to fully keep track of it off-chain). For this reason, we don't track
         // ERC20 approvals off-chain, but fetch them directly from the blockchain when it's
-        // detected than an approval might have changed. There are three scenarios where an
-        // an approval could have changed:
+        // detected than an approval might have changed. There are two cases when approvals
+        // could have changed (both in the context of a single maker):
         // - we detect an ERC20 `Approval` event (in this case `operator` will be set and
         //   so we recheck the approvals of all orders having that `operator` as conduit)
         // - a `Transfer` event and a sale occur within the same transaction (in this case
