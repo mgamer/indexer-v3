@@ -34,7 +34,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { contract, tokenId } = job.data as MintInfo;
+      const { contract, tokenId, mintedTimestamp } = job.data as MintInfo;
 
       try {
         // First, check the database for any matching collection
@@ -135,7 +135,13 @@ if (config.doBackgroundWork) {
           }
         } else {
           // we fetch the collection metadata from upstream
-          await fetchCollectionMetadata.addToQueue([job.data]);
+          await fetchCollectionMetadata.addToQueue([
+            {
+              contract,
+              tokenId,
+              mintedTimestamp,
+            },
+          ]);
         }
 
         // Set any cached information (eg. floor sell, top buy)
