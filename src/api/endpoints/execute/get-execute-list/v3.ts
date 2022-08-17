@@ -556,6 +556,7 @@ export const getExecuteListV3Options: RouteOptions = {
 
             const order = await x2y2SellToken.build({
               ...params,
+              maker,
               contract,
               tokenId,
             });
