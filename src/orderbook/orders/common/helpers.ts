@@ -2,6 +2,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 
 import { redb } from "@/common/db";
 import { toBuffer, bn } from "@/common/utils";
+import { OrderKind } from "@/orderbook/orders";
 
 export const getContractKind = async (
   contract: string
@@ -79,7 +80,7 @@ export const getNftApproval = async (
   return approvalResult ? approvalResult.approved : false;
 };
 
-export const getMinNonce = async (orderKind: string, maker: string): Promise<BigNumber> => {
+export const getMinNonce = async (orderKind: OrderKind, maker: string): Promise<BigNumber> => {
   const bulkCancelResult: { nonce: string } | null = await redb.oneOrNone(
     `
       SELECT coalesce(
@@ -103,7 +104,7 @@ export const getMinNonce = async (orderKind: string, maker: string): Promise<Big
 };
 
 export const isNonceCancelled = async (
-  orderKind: string,
+  orderKind: OrderKind,
   maker: string,
   nonce: string
 ): Promise<boolean> => {
