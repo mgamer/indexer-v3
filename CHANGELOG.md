@@ -1,3 +1,18 @@
+# [5.170.0](https://github.com/reservoirprotocol/indexer/compare/v5.169.0...v5.170.0) (2022-08-17)
+
+
+### Bug Fixes
+
+* add orderbook and orderKind for x2y2 marketplace ([4b623ac](https://github.com/reservoirprotocol/indexer/commit/4b623ac4c80449497448850ff99c089eb7165d97))
+
+
+### Features
+
+* dynamic listing enabled field for marketplaces based on chain id ([80e9c8b](https://github.com/reservoirprotocol/indexer/commit/80e9c8b66719c7dc1ed1e5b0dfd65ac9514b5b66))
+* enable x2y2 marketplace listing ([26f94bb](https://github.com/reservoirprotocol/indexer/commit/26f94bbdf3f055830c4a14714bab54fdb99dd1eb))
+
+
+
 # [5.169.0](https://github.com/reservoirprotocol/indexer/compare/v5.168.0...v5.169.0) (2022-08-17)
 
 
