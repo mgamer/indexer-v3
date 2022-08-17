@@ -346,6 +346,12 @@ export const setupRoutes = (server: Server) => {
     options: eventsEndpoints.getBidEventsV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/events/collections/top-bid/v1",
+    options: eventsEndpoints.getCollectionsTopBidV1Options,
+  });
+
   // Execute
 
   server.route({
@@ -703,6 +709,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/tokens/simulate-floor/v1",
     options: tokensEndpoints.postSimulateFloorV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/tokens/ids/v1",
+    options: tokensEndpoints.getTokensIdsV4Options,
   });
 
   // Token sets

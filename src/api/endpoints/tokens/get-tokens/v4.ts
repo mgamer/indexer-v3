@@ -425,14 +425,12 @@ export const getTokensV4Options: RouteOptions = {
             image: r.collection_image,
             slug: r.slug,
           },
-          source:
-            r.floor_sell_source_id_int !== null
-              ? sources.get(r.floor_sell_source_id_int)?.name
-              : undefined,
-          sourceDomain:
-            r.floor_sell_source_id_int !== null
-              ? sources.get(r.floor_sell_source_id_int)?.domain
-              : undefined,
+          source: r.floor_sell_value
+            ? sources.get(Number(r.floor_sell_source_id_int))?.name
+            : undefined,
+          sourceDomain: r.floor_sell_value
+            ? sources.get(Number(r.floor_sell_source_id_int))?.domain
+            : undefined,
           floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
           topBidValue: query.includeTopBid
             ? r.top_buy_value
