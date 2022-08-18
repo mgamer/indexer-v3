@@ -1,3 +1,12 @@
+## [5.171.4](https://github.com/reservoirprotocol/indexer/compare/v5.171.3...v5.171.4) (2022-08-18)
+
+
+### Bug Fixes
+
+* always use a default source for opensea ([1e14263](https://github.com/reservoirprotocol/indexer/commit/1e14263fd793bdb7f65a974e6bbb288ce3a5e267))
+
+
+
 ## [5.171.3](https://github.com/reservoirprotocol/indexer/compare/v5.171.2...v5.171.3) (2022-08-17)
 
 
