@@ -36,6 +36,7 @@ type NetworkSettings = {
   washTradingExcludedContracts: string[];
   washTradingWhitelistedAddresses: string[];
   washTradingBlacklistedAddresses: string[];
+  multiCollectionContracts: string[];
   coingecko?: {
     networkId: string;
   };
@@ -55,6 +56,7 @@ export const getNetworkSettings = (): NetworkSettings => {
     washTradingExcludedContracts: [],
     washTradingWhitelistedAddresses: [],
     washTradingBlacklistedAddresses: [],
+    multiCollectionContracts: [],
     reorgCheckFrequency: [1, 5, 10, 30, 60], // In Minutes
   };
 
@@ -71,6 +73,11 @@ export const getNetworkSettings = (): NetworkSettings => {
           "0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270",
         ],
         washTradingBlacklistedAddresses: ["0xac335e6855df862410f96f345f93af4f96351a87"],
+        multiCollectionContracts: [
+          // ArtBlocks Contracts
+          "0x059edd72cd353df5106d2b9cc5ab83a52287ac3a",
+          "0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270",
+        ],
         coingecko: {
           networkId: "ethereum",
         },
