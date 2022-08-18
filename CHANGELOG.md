@@ -1,3 +1,12 @@
+## [5.171.6](https://github.com/reservoirprotocol/indexer/compare/v5.171.5...v5.171.6) (2022-08-18)
+
+
+### Bug Fixes
+
+* added migration ([cd8c1eb](https://github.com/reservoirprotocol/indexer/commit/cd8c1eb2c804514888c11c0df1a0ac7a73ff7400))
+
+
+
 ## [5.171.5](https://github.com/reservoirprotocol/indexer/compare/v5.171.4...v5.171.5) (2022-08-18)
 
 

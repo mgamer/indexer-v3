@@ -9,7 +9,6 @@ import { redis, redlock } from "@/common/redis";
 import { config } from "@/config/index";
 
 import { idb } from "@/common/db";
-import { fromBuffer } from "@/common/utils";
 
 const QUEUE_NAME = "backfill-collections-top-bid-queue";
 
@@ -42,7 +41,7 @@ if (config.doBackgroundWork) {
       }
 
       if (cursor) {
-        continuationFilter = `WHERE (id) > ($/collectionId/)`;
+        continuationFilter = `WHERE (c.id) > ($/collectionId/)`;
       }
 
       const results = await idb.manyOrNone(
@@ -55,7 +54,8 @@ if (config.doBackgroundWork) {
                 top_buy_valid_between = x.valid_between,
                 updated_at = now()
               FROM (
-                SELECT c.id as collectionId, y.* from collections c
+                SELECT c.id as collectionId, y.*
+                FROM collections c
                 LEFT JOIN LATERAL (
                     SELECT
                       "ts"."top_buy_id",
@@ -71,7 +71,7 @@ if (config.doBackgroundWork) {
                     LIMIT 1
                    ) "y" ON TRUE
                 ${continuationFilter}
-                ORDER BY id
+                ORDER BY c.id
                 LIMIT $/limit/
               ) x
               WHERE collections.id = x.collectionId
@@ -83,11 +83,13 @@ if (config.doBackgroundWork) {
         }
       );
 
+      let nextCursor;
+
       if (results.length == limit) {
         const lastResult = _.last(results);
 
-        const nextCursor = {
-          collectionId: fromBuffer(lastResult.id),
+        nextCursor = {
+          collectionId: lastResult.id,
         };
 
         await redis.set(`${QUEUE_NAME}-next-cursor`, JSON.stringify(nextCursor));
@@ -97,7 +99,9 @@ if (config.doBackgroundWork) {
 
       logger.info(
         QUEUE_NAME,
-        `Processed ${results.length} collections.  limit=${limit}, cursor=${JSON.stringify(cursor)}`
+        `Processed ${results.length} collections.  limit=${limit}, cursor=${JSON.stringify(
+          cursor
+        )}, nextCursor=${JSON.stringify(nextCursor)}`
       );
     },
     { connection: redis.duplicate(), concurrency: 1 }
