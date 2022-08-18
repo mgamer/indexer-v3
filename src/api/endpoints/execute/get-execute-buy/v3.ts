@@ -253,6 +253,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
                 AND orders.fillability_status = 'fillable'
                 AND orders.approval_status = 'approved'
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                AND orders.currency = '\\x0000000000000000000000000000000000000000'
               ORDER BY orders.value
               LIMIT 1
             `,
@@ -315,6 +316,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
                   AND orders.fillability_status = 'fillable'
                   AND orders.approval_status = 'approved'
                   AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                  AND orders.currency = '\\x0000000000000000000000000000000000000000'
               ) x WHERE x.quantity < $/quantity/
             `,
             {

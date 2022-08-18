@@ -26,6 +26,7 @@ import "@/jobs/order-updates/remove-buy-order-events";
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
+  // Handle expired orders
   cron.schedule(
     "*/10 * * * * *",
     async () =>
@@ -76,6 +77,7 @@ if (config.doBackgroundWork) {
         })
   );
 
+  // Handle dynamic orders
   cron.schedule(
     "*/10 * * * *",
     async () =>
@@ -162,4 +164,6 @@ if (config.doBackgroundWork) {
           // Skip on any errors
         })
   );
+
+  // Handle ERC20 orders
 }
