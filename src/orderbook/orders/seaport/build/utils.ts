@@ -104,7 +104,7 @@ export const getBuildInfo = async (
 
     options.fee.push(250);
     // OpenSea's Seaport fee recipient
-    options.feeRecipient.push("0x8de9c5a032463c561423387a9648c5c7bcc5bc90");
+    options.feeRecipient.push("0x0000a26b00c1f0df003000390027140000faa719");
   }
 
   if (options.fee && options.feeRecipient) {

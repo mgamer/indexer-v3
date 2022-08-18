@@ -18,6 +18,23 @@ export const getContractKind = async (
   return contractResult?.kind;
 };
 
+export const getRoyalties = async (
+  collection: string
+): Promise<{ bps: number; recipient: string }[]> => {
+  const collectionResult = await redb.oneOrNone(
+    `
+      SELECT
+        collections.royalties
+      FROM collections
+      WHERE collections.id = $/collection/
+      LIMIT 1
+    `,
+    { collection }
+  );
+
+  return collectionResult?.royalties || [];
+};
+
 export const getFtBalance = async (contract: string, owner: string): Promise<BigNumber> => {
   const balanceResult = await redb.oneOrNone(
     `

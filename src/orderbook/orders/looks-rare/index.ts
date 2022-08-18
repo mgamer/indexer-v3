@@ -2,7 +2,7 @@ import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
 
-import { idb, pgp, redb } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -169,20 +169,25 @@ export const save = async (
       const side = order.params.isOrderAsk ? "sell" : "buy";
 
       // Handle: fees
-      let feeBps = 200;
+      let feeBreakdown = [
+        {
+          kind: "marketplace",
+          recipient: "0x5924a28caaf1cc016617874a2f0c3710d881f3c1",
+          bps: 200,
+        },
+      ];
 
       // Handle: royalties
-      const royaltiesResult = await redb.oneOrNone(
-        `
-          SELECT collections.royalties FROM collections
-          WHERE collections.contract = $/contract/
-          LIMIT 1
-        `,
-        { contract: toBuffer(order.params.collection) }
-      );
-      for (const { bps } of royaltiesResult?.royalties || []) {
-        feeBps += Number(bps);
-      }
+      const royalties = await commonHelpers.getRoyalties(order.params.collection);
+      feeBreakdown = [
+        ...feeBreakdown,
+        ...royalties.map(({ bps, recipient }) => ({
+          kind: "royalty",
+          recipient,
+          bps,
+        })),
+      ];
+      const feeBps = feeBreakdown.map(({ bps }) => bps).reduce((a, b) => Number(a) + Number(b), 0);
 
       // Handle: price and value
       const price = order.params.price;
@@ -205,16 +210,6 @@ export const save = async (
       if (metadata.source) {
         source = await sources.getOrInsert(metadata.source);
       }
-
-      // Handle fee breakdown
-      const feeBreakdown = [
-        {
-          kind: "marketplace",
-          recipient: "0x5924a28caaf1cc016617874a2f0c3710d881f3c1",
-          bps: 200,
-        },
-        // TODO: Include royalty fees as well (looksrare has on-chain royalties)
-      ];
 
       // Handle: native Reservoir orders
       const isReservoir = false;
