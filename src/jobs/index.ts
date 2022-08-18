@@ -128,6 +128,7 @@ export const allJobQueues = [
   backfillCollectionsTopBid.queue,
 
   currencies.queue,
+  backfillCollectionsTopBid.queue,
 
   topBidUpdate.queue,
 
