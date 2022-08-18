@@ -59,6 +59,8 @@ export const getCurrency = async (currencyAddress: string): Promise<Currency> =>
         "currencies",
         `Failed to initially fetch ${currencyAddress} currency details: ${error}`
       );
+
+      // Retry fetching the currency details
       await currenciesQueue.addToQueue({ currency: currencyAddress });
     }
 
