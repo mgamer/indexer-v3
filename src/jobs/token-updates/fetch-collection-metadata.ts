@@ -35,8 +35,6 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { contract, tokenId, mintedTimestamp } = job.data as FetchCollectionMetadataInfo;
 
-      logger.info(QUEUE_NAME, `Start. ${JSON.stringify(job.data)}`);
-
       try {
         const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, {
           allowFallback: true,
@@ -114,11 +112,6 @@ if (config.doBackgroundWork) {
 
         await idb.none(pgp.helpers.concat(queries));
 
-        logger.info(
-          QUEUE_NAME,
-          `Collection. ${JSON.stringify(job.data)}:${JSON.stringify(collection)}`
-        );
-
         if (collection?.id && !config.disableRealtimeMetadataRefresh) {
           await metadataIndexFetch.addToQueue(
             [
@@ -158,15 +151,10 @@ export type FetchCollectionMetadataInfo = {
 };
 
 export const addToQueue = async (infos: FetchCollectionMetadataInfo[]) => {
-  const artBlocksContracts = [
-    "0x059edd72cd353df5106d2b9cc5ab83a52287ac3a",
-    "0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270",
-  ];
-
   await queue.addBulk(
     infos.map((info) => {
-      // Deterministic job id so that we don't perform duplicated work
-      const jobId = artBlocksContracts.includes(info.contract)
+      // For contracts with multiple collections, we have to include the token in order the fetch the right collection
+      const jobId = getNetworkSettings().multiCollectionContracts.includes(info.contract)
         ? `${info.contract}-${info.tokenId}`
         : info.contract;
 
