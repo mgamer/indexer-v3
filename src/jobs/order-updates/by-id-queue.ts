@@ -155,6 +155,8 @@ if (config.doBackgroundWork) {
                     x.token_id,
                     y.order_id,
                     y.value,
+                    y.currency,
+                    y.currency_value,
                     y.maker,
                     y.valid_between,
                     y.nonce,
