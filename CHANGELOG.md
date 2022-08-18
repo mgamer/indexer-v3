@@ -1,3 +1,134 @@
+## [5.171.5](https://github.com/reservoirprotocol/indexer/compare/v5.171.4...v5.171.5) (2022-08-18)
+
+
+### Bug Fixes
+
+* various tweaks ([ea9bce1](https://github.com/reservoirprotocol/indexer/commit/ea9bce1f68fb22cba102d3387e25c4fec5b2a77c))
+
+
+
+## [5.171.4](https://github.com/reservoirprotocol/indexer/compare/v5.171.3...v5.171.4) (2022-08-18)
+
+
+### Bug Fixes
+
+* always use a default source for opensea ([1e14263](https://github.com/reservoirprotocol/indexer/commit/1e14263fd793bdb7f65a974e6bbb288ce3a5e267))
+
+
+
+## [5.171.3](https://github.com/reservoirprotocol/indexer/compare/v5.171.2...v5.171.3) (2022-08-17)
+
+
+### Bug Fixes
+
+* preserve backwards-compatibility ([4ecbce6](https://github.com/reservoirprotocol/indexer/commit/4ecbce6203ef4895ec7ef794f3a058019fab1f29))
+
+
+
+## [5.171.2](https://github.com/reservoirprotocol/indexer/compare/v5.171.1...v5.171.2) (2022-08-17)
+
+
+### Bug Fixes
+
+* added default source for nouns ([68c8c9f](https://github.com/reservoirprotocol/indexer/commit/68c8c9fc5f967c52a622fbc3cc5493d869b8ec0a))
+* added nouns ([41e8ea0](https://github.com/reservoirprotocol/indexer/commit/41e8ea01a2760996bcf124642d00c106dee715f6))
+* added price data ([2a279d3](https://github.com/reservoirprotocol/indexer/commit/2a279d3dacb50d78dab93dc5197b8dc2208b16a9))
+
+
+
+## [5.171.1](https://github.com/reservoirprotocol/indexer/compare/v5.171.0...v5.171.1) (2022-08-17)
+
+
+### Bug Fixes
+
+* missing sources ([ecd8248](https://github.com/reservoirprotocol/indexer/commit/ecd8248629f28ba3d7f32f6826b7a908960bc471))
+
+
+
+# [5.171.0](https://github.com/reservoirprotocol/indexer/compare/v5.170.0...v5.171.0) (2022-08-17)
+
+
+### Bug Fixes
+
+* x2y2 listings ([69e1d91](https://github.com/reservoirprotocol/indexer/commit/69e1d91e6bc6bc56939edea3ff43aa69b20c21ce))
+* x2y2 marketplace fee ([9b6021a](https://github.com/reservoirprotocol/indexer/commit/9b6021a930507d1bf179db5f251388b66b722961))
+
+
+### Features
+
+* wip ([b0f8bd1](https://github.com/reservoirprotocol/indexer/commit/b0f8bd18923f58126792274916429e0f48978ced))
+
+
+
+# [5.170.0](https://github.com/reservoirprotocol/indexer/compare/v5.169.0...v5.170.0) (2022-08-17)
+
+
+### Bug Fixes
+
+* add orderbook and orderKind for x2y2 marketplace ([4b623ac](https://github.com/reservoirprotocol/indexer/commit/4b623ac4c80449497448850ff99c089eb7165d97))
+
+
+### Features
+
+* dynamic listing enabled field for marketplaces based on chain id ([80e9c8b](https://github.com/reservoirprotocol/indexer/commit/80e9c8b66719c7dc1ed1e5b0dfd65ac9514b5b66))
+* enable x2y2 marketplace listing ([26f94bb](https://github.com/reservoirprotocol/indexer/commit/26f94bbdf3f055830c4a14714bab54fdb99dd1eb))
+
+
+
+# [5.169.0](https://github.com/reservoirprotocol/indexer/compare/v5.168.0...v5.169.0) (2022-08-17)
+
+
+### Features
+
+* add job queue for retrying failed currency fetch attempts ([99cd2a2](https://github.com/reservoirprotocol/indexer/commit/99cd2a23874e628ce158763302e56467a77912e9))
+
+
+
+# [5.168.0](https://github.com/reservoirprotocol/indexer/compare/v5.167.1...v5.168.0) (2022-08-17)
+
+
+### Features
+
+* support ingesting x2y2 collection offers ([811e97e](https://github.com/reservoirprotocol/indexer/commit/811e97e800d48b87cf3ca530c3da4af61f8710f7))
+
+
+
+## [5.167.1](https://github.com/reservoirprotocol/indexer/compare/v5.167.0...v5.167.1) (2022-08-17)
+
+
+### Bug Fixes
+
+* update looksrare sell order currency from eth to weth ([c03fe10](https://github.com/reservoirprotocol/indexer/commit/c03fe10f8fbf81ef746c3ae6e78c1c984e984fcb))
+
+
+
+# [5.167.0](https://github.com/reservoirprotocol/indexer/compare/v5.166.0...v5.167.0) (2022-08-16)
+
+
+### Features
+
+* add support for creating x2y2 bids ([d6a110e](https://github.com/reservoirprotocol/indexer/commit/d6a110e4fb9e93575e2d3dc9a10c0e1451d5ba55))
+
+
+
+# [5.166.0](https://github.com/reservoirprotocol/indexer/compare/v5.165.0...v5.166.0) (2022-08-16)
+
+
+### Features
+
+* add support for creating and posting x2y2 orders ([dea4614](https://github.com/reservoirprotocol/indexer/commit/dea4614207c494cc742520231c958d78847dbbb7))
+
+
+
+# [5.165.0](https://github.com/reservoirprotocol/indexer/compare/v5.164.1...v5.165.0) (2022-08-15)
+
+
+### Features
+
+* add support for creating looks-rare bids ([ffbf45f](https://github.com/reservoirprotocol/indexer/commit/ffbf45fbe4d34a80e0a6d78086842ccb7f219385))
+
+
+
 ## [5.164.1](https://github.com/reservoirprotocol/indexer/compare/v5.164.0...v5.164.1) (2022-08-15)
 
 
