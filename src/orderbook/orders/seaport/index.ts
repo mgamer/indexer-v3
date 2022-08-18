@@ -173,17 +173,19 @@ export const save = async (
       }
 
       // Check and save: associated token set
-      let tokenSetId: string | undefined;
       const schemaHash = metadata.schemaHash ?? generateSchemaHash(metadata.schema);
 
+      let tokenSetId: string | undefined;
       switch (order.params.kind) {
         case "single-token": {
           const typedInfo = info as typeof info & { tokenId: string };
           const tokenId = typedInfo.tokenId;
+
+          tokenSetId = `token:${info.contract}:${tokenId}`;
           if (tokenId) {
-            [{ id: tokenSetId }] = await tokenSet.singleToken.save([
+            await tokenSet.singleToken.save([
               {
-                id: `token:${info.contract}:${tokenId}`,
+                id: tokenSetId,
                 schemaHash,
                 contract: info.contract,
                 tokenId,
@@ -195,9 +197,10 @@ export const save = async (
         }
 
         case "contract-wide": {
-          [{ id: tokenSetId }] = await tokenSet.contractWide.save([
+          tokenSetId = `contract:${info.contract}`;
+          await tokenSet.contractWide.save([
             {
-              id: `contract:${info.contract}`,
+              id: tokenSetId,
               schemaHash,
               contract: info.contract,
             },
@@ -209,10 +212,12 @@ export const save = async (
         case "token-list": {
           const typedInfo = info as typeof info & { merkleRoot: string };
           const merkleRoot = typedInfo.merkleRoot;
+
+          tokenSetId = `list:${info.contract}:${merkleRoot}`;
           if (merkleRoot) {
-            [{ id: tokenSetId }] = await tokenSet.tokenList.save([
+            await tokenSet.tokenList.save([
               {
-                id: `list:${info.contract}:${merkleRoot}`,
+                id: tokenSetId,
                 schemaHash,
                 schema: metadata.schema,
               },
@@ -262,6 +267,7 @@ export const save = async (
       const openSeaFeeRecipients = [
         "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073",
         "0x8de9c5a032463c561423387a9648c5c7bcc5bc90",
+        "0x0000a26b00c1f0df003000390027140000faa719",
       ];
 
       const feeBreakdown = info.fees.map(({ recipient, amount }) => ({
@@ -272,18 +278,10 @@ export const save = async (
 
       // Handle: source
       const sources = await Sources.getInstance();
-      let source;
+      let source = await sources.getOrInsert("opensea.io");
 
       if (metadata.source) {
         source = await sources.getOrInsert(metadata.source);
-      } else {
-        // If one of the fees is marketplace the source of the order is opensea
-        for (const fee of feeBreakdown) {
-          if (fee.kind == "marketplace") {
-            source = await sources.getOrInsert("opensea.io");
-            break;
-          }
-        }
       }
 
       const validFrom = `date_trunc('seconds', to_timestamp(${startTime}))`;
