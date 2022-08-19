@@ -2189,7 +2189,11 @@ export const syncEvents = async (
               const askCurrency = ask["askCurrency"].toLowerCase();
               const askPrice = ask["askPrice"].toString();
 
-              const prices = await getPrices(askCurrency, askPrice, baseEventParams.timestamp);
+              const prices = await getUSDAndNativePrices(
+                askCurrency,
+                askPrice,
+                baseEventParams.timestamp
+              );
 
               if (!prices.nativePrice) {
                 // We must always have the native price
@@ -2225,7 +2229,11 @@ export const syncEvents = async (
               // const curatorFee = args["curatorFee"].toString();
               const auctionCurrency = args["auctionCurrency"].toLowerCase();
 
-              const prices = await getPrices(auctionCurrency, amount, baseEventParams.timestamp);
+              const prices = await getUSDAndNativePrices(
+                auctionCurrency,
+                amount,
+                baseEventParams.timestamp
+              );
 
               if (!prices.nativePrice) {
                 // We must always have the native price
