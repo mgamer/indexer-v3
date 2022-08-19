@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { AddressZero } from "@ethersproject/constants";
 import { Request, RouteOptions } from "@hapi/hapi";
+import * as Sdk from "@reservoir0x/sdk";
+import _ from "lodash";
 import Joi from "joi";
 
 import { redb } from "@/common/db";
@@ -13,9 +16,9 @@ import {
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
+import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
-import _ from "lodash";
 
 const version = "v2";
 
@@ -384,6 +387,12 @@ export const getOrdersAsksV2Options: RouteOptions = {
             r.side === "buy"
               ? formatEth(r.value)
               : formatEth(r.value) - (formatEth(r.value) * Number(r.fee_bps)) / 10000,
+          currency:
+            fromBuffer(r.currency) === AddressZero
+              ? r.order_side === "sell"
+                ? Sdk.Common.Addresses.Eth[config.chainId]
+                : Sdk.Common.Addresses.Weth[config.chainId]
+              : fromBuffer(r.currency),
           validFrom: Number(r.valid_from),
           validUntil: Number(r.valid_until),
           metadata: r.metadata,
