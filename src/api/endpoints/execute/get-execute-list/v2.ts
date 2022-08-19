@@ -26,6 +26,10 @@ import * as openDaoCheck from "@/orderbook/orders/opendao/check";
 import * as seaportSellToken from "@/orderbook/orders/seaport/build/sell/token";
 import * as seaportCheck from "@/orderbook/orders/seaport/check";
 
+// X2Y2
+import * as x2y2SellToken from "@/orderbook/orders/x2y2/build/sell/token";
+import * as x2y2Check from "@/orderbook/orders/x2y2/check";
+
 // ZeroExV4
 import * as zeroExV4SellToken from "@/orderbook/orders/zeroex-v4/build/sell/token";
 import * as zeroExV4Check from "@/orderbook/orders/zeroex-v4/check";
@@ -65,11 +69,11 @@ export const getExecuteListV2Options: RouteOptions = {
         .required()
         .description("Amount seller is willing to sell for in wei. Example: `1000000000000000000`"),
       orderKind: Joi.string()
-        .valid("721ex", "looks-rare", "zeroex-v4", "seaport")
+        .valid("721ex", "looks-rare", "zeroex-v4", "seaport", "x2y2")
         .default("seaport")
         .description("Exchange protocol used to create order. Example: `seaport`"),
       orderbook: Joi.string()
-        .valid("opensea", "looks-rare", "reservoir")
+        .valid("opensea", "looks-rare", "reservoir", "x2y2")
         .default("reservoir")
         .description("Orderbook where order is placed. Example: `Reservoir`"),
       source: Joi.string().description(
@@ -248,7 +252,7 @@ export const getExecuteListV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v2",
                       method: "POST",
                       body: {
                         order: {
@@ -347,7 +351,7 @@ export const getExecuteListV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v2",
                       method: "POST",
                       body: {
                         order: {
@@ -450,7 +454,7 @@ export const getExecuteListV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v2",
                       method: "POST",
                       body: {
                         order: {
@@ -478,12 +482,11 @@ export const getExecuteListV2Options: RouteOptions = {
         }
 
         case "looks-rare": {
-          // Exchange-specific checks
           if (!["reservoir", "looks-rare"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
           }
           if (query.fee) {
-            throw Boom.badRequest("Exchange does not supported a custom fee");
+            throw Boom.badRequest("LooksRare does not supported custom fees");
           }
 
           const order = await looksRareSellToken.build({
@@ -551,7 +554,7 @@ export const getExecuteListV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v2",
                       method: "POST",
                       body: {
                         order: {
@@ -574,6 +577,109 @@ export const getExecuteListV2Options: RouteOptions = {
               listingTime: order.params.startTime,
               expirationTime: order.params.endTime,
               nonce: order.params.nonce,
+            },
+          };
+        }
+
+        case "x2y2": {
+          if (!["x2y2"].includes(query.orderbook)) {
+            throw Boom.badRequest("Unsupported orderbook");
+          }
+          if (query.fee || query.feeRecipient) {
+            throw Boom.badRequest("X2Y2 does not supported custom fees");
+          }
+
+          const order = await x2y2SellToken.build({
+            ...query,
+            contract,
+            tokenId,
+          });
+          if (!order) {
+            throw Boom.internal("Failed to generate order");
+          }
+
+          // Will be set if an approval is needed before listing
+          let approvalTx: TxData | undefined;
+
+          // Check the order's fillability
+          const upstreamOrder = Sdk.X2Y2.Order.fromLocalOrder(config.chainId, order);
+          try {
+            await x2y2Check.offChainCheck(upstreamOrder, {
+              onChainApprovalRecheck: true,
+            });
+          } catch (error: any) {
+            switch (error.message) {
+              case "no-balance-no-approval":
+              case "no-balance": {
+                // We cannot do anything if the user doesn't own the listed token
+                throw Boom.badData("Maker does not own the listed token");
+              }
+
+              case "no-approval": {
+                const contractKind = await commonHelpers.getContractKind(contract);
+                if (!contractKind) {
+                  throw Boom.internal("Missing contract kind");
+                }
+
+                // Generate an approval transaction
+                approvalTx = new Sdk.Common.Helpers.Erc721(
+                  baseProvider,
+                  upstreamOrder.params.nft.token
+                ).approveTransaction(
+                  query.maker,
+                  Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId]
+                );
+
+                break;
+              }
+            }
+          }
+
+          const hasSignature = query.v && query.r && query.s;
+          return {
+            steps: [
+              {
+                ...steps[1],
+                status: approvalTx ? "incomplete" : "complete",
+                data: approvalTx,
+              },
+              {
+                ...steps[2],
+                status: hasSignature ? "complete" : "incomplete",
+                data: hasSignature
+                  ? undefined
+                  : new Sdk.X2Y2.Exchange(config.chainId, config.x2y2ApiKey).getOrderSignatureData(
+                      order
+                    ),
+              },
+              {
+                ...steps[3],
+                status: "incomplete",
+                data: !hasSignature
+                  ? undefined
+                  : {
+                      endpoint: "/order/v2",
+                      method: "POST",
+                      body: {
+                        order: {
+                          kind: "x2y2",
+                          data: {
+                            ...order,
+                            v: query.v,
+                            r: query.r,
+                            s: query.s,
+                          },
+                        },
+                        orderbook: query.orderbook,
+                        source: query.source,
+                      },
+                    },
+              },
+            ],
+            query: {
+              ...query,
+              expirationTime: order.deadline,
+              salt: order.salt,
             },
           };
         }
