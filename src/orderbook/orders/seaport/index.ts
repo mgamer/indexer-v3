@@ -267,6 +267,7 @@ export const save = async (
       const openSeaFeeRecipients = [
         "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073",
         "0x8de9c5a032463c561423387a9648c5c7bcc5bc90",
+        "0x0000a26b00c1f0df003000390027140000faa719",
       ];
 
       const feeBreakdown = info.fees.map(({ recipient, amount }) => ({
@@ -277,18 +278,10 @@ export const save = async (
 
       // Handle: source
       const sources = await Sources.getInstance();
-      let source;
+      let source = await sources.getOrInsert("opensea.io");
 
       if (metadata.source) {
         source = await sources.getOrInsert(metadata.source);
-      } else {
-        // If one of the fees is marketplace the source of the order is opensea
-        for (const fee of feeBreakdown) {
-          if (fee.kind == "marketplace") {
-            source = await sources.getOrInsert("opensea.io");
-            break;
-          }
-        }
       }
 
       const validFrom = `date_trunc('seconds', to_timestamp(${startTime}))`;

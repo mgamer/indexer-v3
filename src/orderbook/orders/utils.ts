@@ -93,6 +93,8 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("element.market");
       case "quixotic":
         return sources.getOrInsert("quixotic.io");
+      case "nouns":
+        return sources.getOrInsert("nouns.wtf");
       default:
         // For all other order kinds we cannot default the source
         return null;

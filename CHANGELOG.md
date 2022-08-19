@@ -1,3 +1,59 @@
+## [5.171.6](https://github.com/reservoirprotocol/indexer/compare/v5.171.5...v5.171.6) (2022-08-18)
+
+
+### Bug Fixes
+
+* added migration ([cd8c1eb](https://github.com/reservoirprotocol/indexer/commit/cd8c1eb2c804514888c11c0df1a0ac7a73ff7400))
+
+
+
+## [5.171.5](https://github.com/reservoirprotocol/indexer/compare/v5.171.4...v5.171.5) (2022-08-18)
+
+
+### Bug Fixes
+
+* various tweaks ([ea9bce1](https://github.com/reservoirprotocol/indexer/commit/ea9bce1f68fb22cba102d3387e25c4fec5b2a77c))
+
+
+
+## [5.171.4](https://github.com/reservoirprotocol/indexer/compare/v5.171.3...v5.171.4) (2022-08-18)
+
+
+### Bug Fixes
+
+* always use a default source for opensea ([1e14263](https://github.com/reservoirprotocol/indexer/commit/1e14263fd793bdb7f65a974e6bbb288ce3a5e267))
+
+
+
+## [5.171.3](https://github.com/reservoirprotocol/indexer/compare/v5.171.2...v5.171.3) (2022-08-17)
+
+
+### Bug Fixes
+
+* preserve backwards-compatibility ([4ecbce6](https://github.com/reservoirprotocol/indexer/commit/4ecbce6203ef4895ec7ef794f3a058019fab1f29))
+
+
+
+## [5.171.2](https://github.com/reservoirprotocol/indexer/compare/v5.171.1...v5.171.2) (2022-08-17)
+
+
+### Bug Fixes
+
+* added default source for nouns ([68c8c9f](https://github.com/reservoirprotocol/indexer/commit/68c8c9fc5f967c52a622fbc3cc5493d869b8ec0a))
+* added nouns ([41e8ea0](https://github.com/reservoirprotocol/indexer/commit/41e8ea01a2760996bcf124642d00c106dee715f6))
+* added price data ([2a279d3](https://github.com/reservoirprotocol/indexer/commit/2a279d3dacb50d78dab93dc5197b8dc2208b16a9))
+
+
+
+## [5.171.1](https://github.com/reservoirprotocol/indexer/compare/v5.171.0...v5.171.1) (2022-08-17)
+
+
+### Bug Fixes
+
+* missing sources ([ecd8248](https://github.com/reservoirprotocol/indexer/commit/ecd8248629f28ba3d7f32f6826b7a908960bc471))
+
+
+
 # [5.171.0](https://github.com/reservoirprotocol/indexer/compare/v5.170.0...v5.171.0) (2022-08-17)
 
 

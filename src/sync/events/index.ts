@@ -1689,6 +1689,7 @@ export const syncEvents = async (
               }
 
               const orderKind = "rarible";
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
 
               let taker = rightMaker;
 
@@ -1706,6 +1707,7 @@ export const syncEvents = async (
                 orderKind: "rarible",
                 orderId: leftHash,
                 orderSide: side,
+                orderSourceIdInt: orderSource?.id,
                 maker: leftMaker,
                 taker,
                 price: prices.nativePrice,
@@ -1745,10 +1747,14 @@ export const syncEvents = async (
                 break;
               }
 
+              const orderKind = "element-erc721";
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
+
               fillEventsPartial.push({
-                orderKind: "element-erc721",
+                orderKind,
                 orderId: orderHash,
                 orderSide: "sell",
+                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -1788,10 +1794,14 @@ export const syncEvents = async (
                 break;
               }
 
+              const orderKind = "element-erc721";
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
+
               fillEventsPartial.push({
-                orderKind: "element-erc721",
+                orderKind,
                 orderId: orderHash,
                 orderSide: "buy",
+                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -1832,10 +1842,14 @@ export const syncEvents = async (
                 break;
               }
 
+              const orderKind = "element-erc1155";
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
+
               fillEventsPartial.push({
-                orderKind: "element-erc1155",
+                orderKind,
                 orderId: orderHash,
                 orderSide: "sell",
+                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -1876,10 +1890,14 @@ export const syncEvents = async (
                 break;
               }
 
+              const orderKind = "element-erc1155";
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
+
               fillEventsPartial.push({
-                orderKind: "element-erc1155",
+                orderKind,
                 orderId: orderHash,
                 orderSide: "buy",
+                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -1984,6 +2002,42 @@ export const syncEvents = async (
                   txHash: baseEventParams.txHash,
                   txTimestamp: baseEventParams.timestamp,
                 },
+              });
+
+              break;
+            }
+
+            case "nouns-auction-settled": {
+              const { args } = eventData.abi.parseLog(log);
+              const nounId = args["nounId"].toString();
+              const winner = args["winner"].toLowerCase();
+              const amount = args["amount"].toString();
+
+              const currency = Sdk.Common.Addresses.Eth[config.chainId];
+
+              const prices = await getPrices(currency, amount, baseEventParams.timestamp);
+
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
+
+              const orderKind = "nouns";
+              const orderSource = await getOrderSourceByOrderKind(orderKind);
+
+              fillEvents.push({
+                orderKind,
+                orderSourceIdInt: orderSource?.id,
+                orderSide: "sell",
+                maker: Sdk.Nouns.Addresses.AuctionHouse[config.chainId]?.toLowerCase(),
+                taker: winner,
+                amount: "1",
+                currency,
+                price: prices.nativePrice,
+                usdPrice: prices.usdPrice,
+                contract: Sdk.Nouns.Addresses.TokenContract[config.chainId]?.toLowerCase(),
+                tokenId: nounId,
+                baseEventParams,
               });
 
               break;

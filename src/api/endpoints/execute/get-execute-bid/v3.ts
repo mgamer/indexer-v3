@@ -222,7 +222,6 @@ export const getExecuteBidV3Options: RouteOptions = {
         if (bn(wethBalance).lt(params.weiPrice)) {
           const ethBalance = await baseProvider.getBalance(maker);
           if (bn(wethBalance).add(ethBalance).lt(params.weiPrice)) {
-            // We cannot do anything if the maker doesn't have sufficient balance
             throw Boom.badData("Maker does not have sufficient balance");
           } else {
             wrapEthTx = weth.depositTransaction(maker, bn(params.weiPrice).sub(wethBalance));
@@ -744,18 +743,27 @@ export const getExecuteBidV3Options: RouteOptions = {
 
       // We should only have a single ETH wrapping transaction
       if (steps[0].items.length > 1) {
-        const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
-        const wethWrapTx = weth.depositTransaction(
-          maker,
-          steps[0].items.map((i) => bn(i.data?.value || 0)).reduce((a, b) => a.add(b), bn(0))
-        );
+        let amount = bn(0);
+        for (let i = 0; i < steps[0].items.length; i++) {
+          const itemAmount = bn(steps[0].items[0].data?.value || 0);
+          if (itemAmount.gt(amount)) {
+            amount = itemAmount;
+          }
+        }
 
-        steps[0].items = [
-          {
-            status: "incomplete",
-            data: wethWrapTx,
-          },
-        ];
+        if (amount.gt(0)) {
+          const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
+          const wethWrapTx = weth.depositTransaction(maker, amount);
+
+          steps[0].items = [
+            {
+              status: "incomplete",
+              data: wethWrapTx,
+            },
+          ];
+        } else {
+          steps[0].items = [];
+        }
       }
 
       // De-duplicate step items
