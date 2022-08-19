@@ -107,6 +107,10 @@ if (config.doBackgroundWork) {
 
           if (await extendLock(getLockName(method), 60 * 5)) {
             await addToQueue(method);
+
+            logger.info(QUEUE_NAME, `Too Many Requests - Extended Lock.`);
+          } else {
+            logger.info(QUEUE_NAME, `Too Many Requests - Unable To Extend Lock.`);
           }
 
           return;
