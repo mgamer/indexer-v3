@@ -51,16 +51,20 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { method } = job.data;
 
+      let useMetadataApiBaseUrlAlt = false;
+
       const rateLimitExpiresIn = await getLockExpiration(getRateLimitLockName(method));
 
       if (rateLimitExpiresIn > 0) {
         logger.info(QUEUE_NAME, `Rate Limited. rateLimitExpiresIn: ${rateLimitExpiresIn}`);
 
-        if (await extendLock(getLockName(method), 60 * 5)) {
-          await addToQueue(method, 1000);
-        }
+        useMetadataApiBaseUrlAlt = true;
 
-        return;
+        // if (await extendLock(getLockName(method), 60 * 5)) {
+        //   await addToQueue(method, 1000);
+        // }
+        //
+        // return;
       }
 
       const count = 20;
@@ -87,7 +91,7 @@ if (config.doBackgroundWork) {
 
       // Get the metadata for the tokens
       const url = `${
-        config.metadataApiBaseUrl
+        useMetadataApiBaseUrlAlt ? config.metadataApiBaseUrlAlt : config.metadataApiBaseUrl
       }/v4/${getNetworkName()}/metadata/token?${queryParams.toString()}`;
 
       let metadataResult;
@@ -101,12 +105,14 @@ if (config.doBackgroundWork) {
             `Too Many Requests. error: ${JSON.stringify((error as any).response.data)}`
           );
 
-          await acquireLock(getRateLimitLockName(method), 5);
+          if (!useMetadataApiBaseUrlAlt) {
+            await acquireLock(getRateLimitLockName(method), 5);
+          }
 
           await pendingRefreshTokens.add(refreshTokens, true);
 
           if (await extendLock(getLockName(method), 60 * 5)) {
-            await addToQueue(method, 1000);
+            await addToQueue(method);
           }
 
           return;
