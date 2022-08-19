@@ -103,6 +103,12 @@ if (config.doBackgroundWork) {
 
           await acquireLock(getRateLimitLockName(method), 60 * 5);
 
+          await pendingRefreshTokens.add(refreshTokens, true);
+
+          if (await extendLock(getLockName(method), 60 * 5)) {
+            await addToQueue(method);
+          }
+
           return;
         }
 
