@@ -617,7 +617,11 @@ export const syncEvents = async (
 
               // Handle: prices
               const currencyPrice = item.price.toString();
-              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              const prices = await getUSDAndNativePrices(
+                currency,
+                currencyPrice,
+                baseEventParams.timestamp
+              );
               if (!prices.nativePrice) {
                 // We must always have the native price
                 break;
@@ -744,7 +748,11 @@ export const syncEvents = async (
               const currency = Sdk.Common.Addresses.Eth[config.chainId];
               // Deduce the price from the protocol fee (which is 5%)
               const currencyPrice = bn(protocolFee).mul(10000).div(50).toString();
-              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              const prices = await getUSDAndNativePrices(
+                currency,
+                currencyPrice,
+                baseEventParams.timestamp
+              );
               if (!prices.nativePrice) {
                 // We must always have the native price
                 break;
@@ -898,7 +906,11 @@ export const syncEvents = async (
 
               // Handle: prices
               currencyPrice = bn(currencyPrice).div(amount).toString();
-              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              const prices = await getUSDAndNativePrices(
+                currency,
+                currencyPrice,
+                baseEventParams.timestamp
+              );
               if (!prices.nativePrice) {
                 // We must always have the native price
                 break;
@@ -1007,7 +1019,11 @@ export const syncEvents = async (
 
               // Handle: prices
               currencyPrice = bn(currencyPrice).div(amount).toString();
-              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              const prices = await getUSDAndNativePrices(
+                currency,
+                currencyPrice,
+                baseEventParams.timestamp
+              );
               if (!prices.nativePrice) {
                 // We must always have the native price
                 break;
@@ -1180,7 +1196,11 @@ export const syncEvents = async (
               }
 
               // Handle: prices
-              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              const prices = await getUSDAndNativePrices(
+                currency,
+                currencyPrice,
+                baseEventParams.timestamp
+              );
               if (!prices.nativePrice) {
                 // We must always have the native price
                 break;
@@ -1337,7 +1357,11 @@ export const syncEvents = async (
                 currency = Sdk.Common.Addresses.Eth[config.chainId];
               }
 
-              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              const prices = await getUSDAndNativePrices(
+                currency,
+                currencyPrice,
+                baseEventParams.timestamp
+              );
               if (!prices.nativePrice) {
                 // We must always have the native price
                 break;
@@ -1494,7 +1518,11 @@ export const syncEvents = async (
                 currency = Sdk.Common.Addresses.Eth[config.chainId];
               }
 
-              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              const prices = await getUSDAndNativePrices(
+                currency,
+                currencyPrice,
+                baseEventParams.timestamp
+              );
               if (!prices.nativePrice) {
                 // We must always have the native price
                 break;
@@ -1626,7 +1654,11 @@ export const syncEvents = async (
                 // Handle: prices
                 const currency = saleInfo.paymentToken;
                 const currencyPrice = bn(saleInfo.price).div(saleInfo.amount).toString();
-                const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+                const prices = await getUSDAndNativePrices(
+                  currency,
+                  currencyPrice,
+                  baseEventParams.timestamp
+                );
                 if (!prices.nativePrice) {
                   // We must always have the native price
                   break;
@@ -1756,7 +1788,11 @@ export const syncEvents = async (
               const amount = side === "sell" ? newRightFill : newLeftFill;
               currencyPrice = bn(currencyPrice).div(amount).toString();
 
-              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              const prices = await getUSDAndNativePrices(
+                currency,
+                currencyPrice,
+                baseEventParams.timestamp
+              );
               if (!prices.nativePrice) {
                 // We must always have the native price
                 break;
@@ -1816,7 +1852,11 @@ export const syncEvents = async (
               }
               const currencyPrice = erc20TokenAmount;
 
-              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              const prices = await getUSDAndNativePrices(
+                currency,
+                currencyPrice,
+                baseEventParams.timestamp
+              );
               if (!prices.nativePrice) {
                 // We must always have the native price
                 break;
@@ -1863,7 +1903,11 @@ export const syncEvents = async (
               }
               const currencyPrice = erc20TokenAmount;
 
-              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              const prices = await getUSDAndNativePrices(
+                currency,
+                currencyPrice,
+                baseEventParams.timestamp
+              );
               if (!prices.nativePrice) {
                 // We must always have the native price
                 break;
@@ -1911,7 +1955,11 @@ export const syncEvents = async (
               }
               const currencyPrice = bn(erc20FillAmount).div(erc1155FillAmount).toString();
 
-              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              const prices = await getUSDAndNativePrices(
+                currency,
+                currencyPrice,
+                baseEventParams.timestamp
+              );
               if (!prices.nativePrice) {
                 // We must always have the native price
                 break;
@@ -1959,7 +2007,11 @@ export const syncEvents = async (
               }
               const currencyPrice = bn(erc20FillAmount).div(erc1155FillAmount).toString();
 
-              const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+              const prices = await getUSDAndNativePrices(
+                currency,
+                currencyPrice,
+                baseEventParams.timestamp
+              );
               if (!prices.nativePrice) {
                 // We must always have the native price
                 break;
@@ -2029,7 +2081,11 @@ export const syncEvents = async (
                 // Handle: prices
                 const currency = saleInfo.paymentToken;
                 const currencyPrice = bn(saleInfo.price).div(saleInfo.amount).toString();
-                const prices = await getPrices(currency, currencyPrice, baseEventParams.timestamp);
+                const prices = await getUSDAndNativePrices(
+                  currency,
+                  currencyPrice,
+                  baseEventParams.timestamp
+                );
                 if (!prices.nativePrice) {
                   // We must always have the native price
                   break;
@@ -2090,7 +2146,11 @@ export const syncEvents = async (
 
               const currency = Sdk.Common.Addresses.Eth[config.chainId];
 
-              const prices = await getPrices(currency, amount, baseEventParams.timestamp);
+              const prices = await getUSDAndNativePrices(
+                currency,
+                amount,
+                baseEventParams.timestamp
+              );
 
               if (!prices.nativePrice) {
                 // We must always have the native price
@@ -2489,30 +2549,4 @@ const assignWashTradingScoreToFillEvents = async (fillEvents: es.fills.Event[]) 
   } catch (e) {
     logger.error("sync-events", `Failed to assign wash trading score to fill events: ${e}`);
   }
-};
-
-type Prices = {
-  nativePrice?: string;
-  usdPrice?: string;
-};
-
-const getPrices = async (
-  currency: string,
-  currencyPrice: string,
-  timestamp: number
-): Promise<Prices> => {
-  const prices = await getUSDAndNativePrices(currency, currencyPrice, timestamp);
-
-  const nativePrice = [
-    Sdk.Common.Addresses.Eth[config.chainId],
-    Sdk.Common.Addresses.Weth[config.chainId],
-  ].includes(currency)
-    ? currencyPrice
-    : prices.nativePrice;
-  const usdPrice = prices.usdPrice;
-
-  return {
-    nativePrice,
-    usdPrice,
-  };
 };

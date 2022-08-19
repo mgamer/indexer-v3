@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Request, RouteOptions } from "@hapi/hapi";
+import _ from "lodash";
 import Joi from "joi";
 
 import { redb } from "@/common/db";
@@ -15,7 +16,6 @@ import {
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
-import _ from "lodash";
 
 const version = "v2";
 

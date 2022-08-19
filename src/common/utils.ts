@@ -1,9 +1,11 @@
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { formatEther, formatUnits } from "@ethersproject/units";
 
-// --- BigNumbers and prices ---
+// --- BigNumbers ---
 
 export const bn = (value: BigNumberish) => BigNumber.from(value);
+
+// --- Prices ---
 
 export const formatEth = (value: BigNumberish) => Number(Number(formatEther(value)).toFixed(5));
 
@@ -11,6 +13,9 @@ export const formatUsd = (value: BigNumberish) => Number(Number(formatUnits(valu
 
 export const formatPrice = (value: BigNumberish, decimals = 18) =>
   Number(Number(formatUnits(value, decimals)).toFixed(5));
+
+export const getNetAmount = (value: BigNumberish, bps: number) =>
+  bn(value).sub(bn(value).mul(bps).div(10000)).toString();
 
 // --- Buffers ---
 
