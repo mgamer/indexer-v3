@@ -101,7 +101,7 @@ if (config.doBackgroundWork) {
             `Too Many Requests. error: ${JSON.stringify((error as any).response.data)}`
           );
 
-          await acquireLock(getRateLimitLockName(method), 60 * 5);
+          await acquireLock(getRateLimitLockName(method), 5);
 
           await pendingRefreshTokens.add(refreshTokens, true);
 
