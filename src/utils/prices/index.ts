@@ -114,26 +114,35 @@ const getCachedUSDPrice = async (
     )
     .catch(() => undefined);
 
+const USD_PRICE_MEMORY_CACHE = new Map<string, Price>();
 const getAvailableUSDPrice = async (currencyAddress: string, timestamp: number) => {
   // At the moment, we support day-level granularity for prices
   const DAY = 24 * 3600;
 
-  // By default, use any available cached price
-  let cachedPrice = await getCachedUSDPrice(currencyAddress, timestamp);
-  if (
-    // If the cached price is not available
-    !cachedPrice ||
-    // Or if the cached price is stale (older than what is requested)
-    Math.floor(cachedPrice.timestamp / DAY) !== Math.floor(timestamp / DAY)
-  ) {
-    // Then try to fetch the price from upstream
-    const upstreamPrice = await getUpstreamUSDPrice(currencyAddress, timestamp);
-    if (upstreamPrice) {
-      cachedPrice = upstreamPrice;
+  const normalizedTimestamp = Math.floor(timestamp / DAY);
+  const key = `${currencyAddress}-${normalizedTimestamp}`.toLowerCase();
+  if (!USD_PRICE_MEMORY_CACHE.has(key)) {
+    // If the price is not available in the memory cache, use any available database cached price
+    let cachedPrice = await getCachedUSDPrice(currencyAddress, timestamp);
+    if (
+      // If the database cached price is not available
+      !cachedPrice ||
+      // Or if the database cached price is stale (older than what is requested)
+      Math.floor(cachedPrice.timestamp / DAY) !== normalizedTimestamp
+    ) {
+      // Then try to fetch the price from upstream
+      const upstreamPrice = await getUpstreamUSDPrice(currencyAddress, timestamp);
+      if (upstreamPrice) {
+        cachedPrice = upstreamPrice;
+      }
+    }
+
+    if (cachedPrice) {
+      USD_PRICE_MEMORY_CACHE.set(key, cachedPrice);
     }
   }
 
-  return cachedPrice;
+  return USD_PRICE_MEMORY_CACHE.get(key);
 };
 
 type USDAndNativePrices = {

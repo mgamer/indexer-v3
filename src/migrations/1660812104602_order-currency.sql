@@ -5,7 +5,7 @@ ALTER TABLE "orders" ADD COLUMN "currency_price" NUMERIC(78, 0);
 ALTER TABLE "orders" ADD COLUMN "currency_value" NUMERIC(78, 0);
 ALTER TABLE "orders" ADD COLUMN "needs_conversion" BOOLEAN;
 
-ALTER TABLE "tokens" ADD COLUMN "floor_sell_currency" BYTEA NOT NULL DEFAULT ('\x0000000000000000000000000000000000000000');
+ALTER TABLE "tokens" ADD COLUMN "floor_sell_currency" BYTEA;
 ALTER TABLE "tokens" ADD COLUMN "floor_sell_currency_value" NUMERIC(78, 0);
 
 -- Down Migration
