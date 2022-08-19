@@ -130,7 +130,7 @@ export const getOrdersAsksV2Options: RouteOptions = {
             .items(
               Joi.object({
                 kind: Joi.string(),
-                recipient: Joi.string().lowercase().pattern(regex.address).allow(null),
+                recipient: Joi.string().allow("", null),
                 bps: Joi.number(),
               })
             )
