@@ -57,7 +57,7 @@ if (config.doBackgroundWork) {
         logger.info(QUEUE_NAME, `Rate Limited. rateLimitExpiresIn: ${rateLimitExpiresIn}`);
 
         if (await extendLock(getLockName(method), 60 * 5)) {
-          await addToQueue(method);
+          await addToQueue(method, 1000);
         }
 
         return;
@@ -106,11 +106,7 @@ if (config.doBackgroundWork) {
           await pendingRefreshTokens.add(refreshTokens, true);
 
           if (await extendLock(getLockName(method), 60 * 5)) {
-            await addToQueue(method);
-
-            logger.info(QUEUE_NAME, `Too Many Requests - Extended Lock.`);
-          } else {
-            logger.info(QUEUE_NAME, `Too Many Requests - Unable To Extend Lock.`);
+            await addToQueue(method, 1000);
           }
 
           return;
