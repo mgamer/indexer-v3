@@ -327,6 +327,13 @@ export const save = async (
         bps: price.eq(0) ? bn(0) : bn(amount).mul(10000).div(price).toNumber(),
       }));
 
+      // Handle: currency
+      let currency = order.params.erc20Token;
+      if (currency === Sdk.ZeroExV4.Addresses.Eth[config.chainId]) {
+        // ZeroEx-like exchanges use a non-standard ETH address
+        currency = Sdk.Common.Addresses.Eth[config.chainId];
+      }
+
       const validFrom = `date_trunc('seconds', to_timestamp(0))`;
       const validTo = `date_trunc('seconds', to_timestamp(${order.params.expiry}))`;
       orderValues.push({
@@ -341,7 +348,7 @@ export const save = async (
         taker: toBuffer(order.params.taker),
         price: price.toString(),
         value: value.toString(),
-        currency: toBuffer(order.params.erc20Token),
+        currency: toBuffer(currency),
         currency_price: price.toString(),
         currency_value: value.toString(),
         needs_conversion: null,

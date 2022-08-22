@@ -248,7 +248,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
                 orders.id,
                 orders.kind,
                 contracts.kind AS token_kind,
-                orders.currency_price AS price,
+                coalesce(orders.currency_price, orders.price) AS price,
                 orders.raw_data,
                 orders.source_id_int,
                 orders.currency
@@ -313,7 +313,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
               SELECT
                 x.id,
                 x.kind,
-                x.price,
+                coalesce(x.currency_price, x.price) AS price,
                 x.quantity_remaining,
                 x.source_id_int,
                 x.currency,
