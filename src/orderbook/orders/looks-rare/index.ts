@@ -4,7 +4,7 @@ import pLimit from "p-limit";
 
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
-import { bn, toBuffer } from "@/common/utils";
+import { bn, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
@@ -56,7 +56,7 @@ export const save = async (
         });
       }
 
-      const currentTime = Math.floor(Date.now() / 1000);
+      const currentTime = now();
 
       // Check: order has a valid listing time
       const listingTime = order.params.startTime;

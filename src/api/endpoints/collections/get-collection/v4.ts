@@ -42,7 +42,7 @@ export const getCollectionV4Options: RouteOptions = {
     schema: Joi.object({
       collection: Joi.object({
         id: Joi.string(),
-        slug: Joi.string().description("OpenSea slug"),
+        slug: Joi.string().allow(null, "").description("Open Sea slug"),
         name: Joi.string().allow(null, ""),
         metadata: Joi.object().allow(null),
         sampleImages: Joi.array().items(Joi.string().allow(null, "")),

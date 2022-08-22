@@ -23,6 +23,10 @@ export const fromBuffer = (buffer: Buffer) => "0x" + buffer.toString("hex");
 
 export const toBuffer = (hexValue: string) => Buffer.from(hexValue.slice(2), "hex");
 
+// --- Time ---
+
+export const now = () => Math.floor(Date.now() / 1000);
+
 // --- Continuations ---
 
 export const splitContinuation = (c: string, regEx: RegExp) => {
