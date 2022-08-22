@@ -4,7 +4,7 @@ import cron from "node-cron";
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redlock } from "@/common/redis";
-import { fromBuffer } from "@/common/utils";
+import { fromBuffer, now } from "@/common/utils";
 import { config } from "@/config/index";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import { getUSDAndNativePrices } from "@/utils/prices";
@@ -59,11 +59,12 @@ if (config.doBackgroundWork) {
             );
             logger.info("expired-orders-check", `Invalidated ${expiredOrders.length} orders`);
 
+            const currentTime = now();
             await orderUpdatesById.addToQueue(
               expiredOrders.map(
                 ({ id }) =>
                   ({
-                    context: `expired-orders-check-${Math.floor(Date.now() / 1000)}-${id}`,
+                    context: `expired-orders-check-${currentTime}-${id}`,
                     id,
                     trigger: { kind: "expiry" },
                   } as orderUpdatesById.OrderInfo)
@@ -142,12 +143,12 @@ if (config.doBackgroundWork) {
                 await idb.none(pgp.helpers.update(values, columns) + " WHERE t.id = v.id");
               }
 
-              const now = Math.floor(Date.now() / 1000);
+              const currentTime = now();
               await orderUpdatesById.addToQueue(
                 dynamicOrders.map(
                   ({ id }) =>
                     ({
-                      context: `dynamic-orders-update-${now}-${id}`,
+                      context: `dynamic-orders-update-${currentTime}-${id}`,
                       id,
                       trigger: { kind: "reprice" },
                     } as orderUpdatesById.OrderInfo)
@@ -211,10 +212,18 @@ if (config.doBackgroundWork) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const values: any[] = [];
 
-              const now = Math.floor(Date.now() / 1000);
+              const currentTime = now();
               for (const { id, currency, price, value } of erc20Orders) {
-                const dataForPrice = await getUSDAndNativePrices(fromBuffer(currency), price, now);
-                const dataForValue = await getUSDAndNativePrices(fromBuffer(currency), value, now);
+                const dataForPrice = await getUSDAndNativePrices(
+                  fromBuffer(currency),
+                  price,
+                  currentTime
+                );
+                const dataForValue = await getUSDAndNativePrices(
+                  fromBuffer(currency),
+                  value,
+                  currentTime
+                );
                 if (dataForPrice.nativePrice && dataForValue.nativePrice) {
                   values.push({
                     id,

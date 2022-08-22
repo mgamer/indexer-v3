@@ -4,7 +4,7 @@ import pLimit from "p-limit";
 
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
-import { bn, toBuffer } from "@/common/utils";
+import { bn, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
@@ -74,7 +74,7 @@ export const save = async (
         });
       }
 
-      const currentTime = Math.floor(Date.now() / 1000);
+      const currentTime = now();
 
       // Check: order has a valid start time
       const startTime = order.params.startTime;
@@ -295,11 +295,7 @@ export const save = async (
         // `price` and `value` from that currency denominations to the
         // ETH denomination
         {
-          const prices = await getUSDAndNativePrices(
-            currency,
-            price.toString(),
-            Math.floor(Date.now() / 1000)
-          );
+          const prices = await getUSDAndNativePrices(currency, price.toString(), currentTime);
           if (!prices.nativePrice) {
             // Getting the native price is a must
             return results.push({
@@ -310,11 +306,7 @@ export const save = async (
           price = bn(prices.nativePrice);
         }
         {
-          const prices = await getUSDAndNativePrices(
-            currency,
-            value.toString(),
-            Math.floor(Date.now() / 1000)
-          );
+          const prices = await getUSDAndNativePrices(currency, value.toString(), currentTime);
           if (!prices.nativePrice) {
             // Getting the native price is a must
             return results.push({
@@ -416,7 +408,7 @@ export const save = async (
   //       });
   //     }
 
-  //     const currentTime = Math.floor(Date.now() / 1000);
+  //     const currentTime = now();
 
   //     // Check: order has a valid start time
   //     const startTime = order.params.startTime;
@@ -576,7 +568,7 @@ export const save = async (
   //       const prices = await getUSDAndNativePrices(
   //         currency,
   //         price.toString(),
-  //         Math.floor(Date.now() / 1000)
+  //         currentTime
   //       );
   //       if (!prices.nativePrice) {
   //         // Getting the native price is a must
@@ -591,7 +583,7 @@ export const save = async (
   //       const prices = await getUSDAndNativePrices(
   //         currency,
   //         value.toString(),
-  //         Math.floor(Date.now() / 1000)
+  //         currentTime
   //       );
   //       if (!prices.nativePrice) {
   //         // Getting the native price is a must

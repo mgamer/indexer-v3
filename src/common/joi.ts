@@ -1,6 +1,6 @@
 import Joi from "joi";
 
-import { formatEth, formatPrice, formatUsd, regex } from "@/common/utils";
+import { formatEth, formatPrice, formatUsd, now, regex } from "@/common/utils";
 import { Currency, getCurrency } from "@/utils/currencies";
 import { getUSDAndNativePrices } from "@/utils/prices";
 
@@ -35,7 +35,7 @@ export const getJoiAmountObject = async (
   let usdPrice = usdAmount;
   if (amount && !usdPrice) {
     usdPrice = (
-      await getUSDAndNativePrices(currency.contract, amount, Math.floor(Date.now() / 1000), {
+      await getUSDAndNativePrices(currency.contract, amount, now(), {
         onlyUSD: true,
       })
     ).usdPrice;
