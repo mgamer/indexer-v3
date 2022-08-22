@@ -16,6 +16,7 @@ import * as wyvernV2 from "@/events-sync/data/wyvern-v2";
 import * as wyvernV23 from "@/events-sync/data/wyvern-v2.3";
 import * as x2y2 from "@/events-sync/data/x2y2";
 import * as zeroExV4 from "@/events-sync/data/zeroex-v4";
+import * as cryptoPunks from "@/events-sync/data/cryptopunks";
 import * as zora from "@/events-sync/data/zora";
 
 // All events we're syncing should have an associated `EventData`
@@ -62,6 +63,8 @@ export type EventDataKind =
   | "element-erc1155-buy-order-filled"
   | "quixotic-order-filled"
   | "nouns-auction-settled"
+  | "cryptopunks-punk-bought"
+  | "cryptopunks-transfer"
   | "zora-ask-filled"
   | "zora-auction-ended";
 
@@ -116,6 +119,8 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       zora.askFilled,
       zora.auctionEnded,
       nouns.auctionSettled,
+      cryptoPunks.punkBought,
+      cryptoPunks.transfer,
     ];
   } else {
     return (
@@ -206,6 +211,10 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return quixotic.orderFulfilled;
     case "nouns-auction-settled":
       return nouns.auctionSettled;
+    case "cryptopunks-punk-bought":
+      return cryptoPunks.punkBought;
+    case "cryptopunks-transfer":
+      return cryptoPunks.transfer;
     case "zora-ask-filled":
       return zora.askFilled;
     case "zora-auction-ended":

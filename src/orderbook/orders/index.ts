@@ -21,4 +21,5 @@ export type OrderKind =
   | "element-erc1155"
   | "quixotic"
   | "nouns"
+  | "cryptopunks"
   | "zora-v3";
