@@ -304,8 +304,10 @@ export const getSalesV4Options: RouteOptions = {
 
       const sources = await Sources.getInstance();
       const result = rawResult.map(async (r) => {
-        const orderSource = sources.get(Number(r.order_source_id_int));
-        const fillSource = sources.get(Number(r.fill_source_id));
+        const orderSource =
+          r.order_source_id_int !== null ? sources.get(Number(r.order_source_id_int)) : undefined;
+        const fillSource =
+          r.fill_source_id !== null ? sources.get(Number(r.fill_source_id)) : undefined;
 
         return {
           id: crypto
