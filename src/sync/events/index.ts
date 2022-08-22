@@ -2276,11 +2276,10 @@ export const syncEvents = async (
               // with toAddress = 0x00...00 and value = 0
               // https://github.com/larvalabs/cryptopunks/issues/19
 
-              // To get the correct `toAddress` we take the `to` value
+              // To get the correct `toAddress` we take the `to` value from
               // the `Transfer` event emitted before `PunkBought` in the
               // `acceptBidForPunk` function
               // https://github.com/larvalabs/cryptopunks/blob/master/contracts/CryptoPunksMarket.sol#L223-L229
-              //
               if (
                 cryptopunksTransferEvents.length &&
                 cryptopunksTransferEvents[cryptopunksTransferEvents.length - 1].txHash ===
@@ -2291,6 +2290,7 @@ export const syncEvents = async (
 
               // To get the correct `price` that the bid was settled at
               // We extract the `minPrice` from the `acceptBidForPunk` function
+              // https://github.com/larvalabs/cryptopunks/blob/master/contracts/CryptoPunksMarket.sol#L211
               const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
               const iface = new Interface([
                 "function acceptBidForPunk(uint punkIndex, uint minPrice)",
