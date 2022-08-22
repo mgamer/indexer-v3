@@ -1,3 +1,13 @@
+## [5.172.2](https://github.com/reservoirprotocol/indexer/compare/v5.172.1...v5.172.2) (2022-08-22)
+
+
+### Bug Fixes
+
+* erc1155 filling ([ad83573](https://github.com/reservoirprotocol/indexer/commit/ad83573a0fa8310725769268f71e6cf7bf1adc57))
+* wrong order and fill sources ([09145c9](https://github.com/reservoirprotocol/indexer/commit/09145c90e6cb4920a0e628b5fb1575f472d3cb1a))
+
+
+
 ## [5.172.1](https://github.com/reservoirprotocol/indexer/compare/v5.172.0...v5.172.1) (2022-08-22)
 
 
