@@ -249,7 +249,7 @@ export const getSalesV3Options: RouteOptions = {
             fill_events_2.timestamp,
             fill_events_2.price,
             fill_events_2.currency,
-            TRUNC(fill_events_2.currency_price, 0),
+            TRUNC(fill_events_2.currency_price, 0) AS currency_price,
             currencies.decimals,
             fill_events_2.usd_price,
             fill_events_2.block,

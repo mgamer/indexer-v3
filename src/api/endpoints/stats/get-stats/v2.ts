@@ -63,7 +63,7 @@ export const getStatsV2Options: RouteOptions = {
           }),
           topBid: {
             id: Joi.string().allow(null),
-            value: JoiPrice.allow(null),
+            price: JoiPrice.allow(null),
             maker: Joi.string().lowercase().pattern(regex.address).allow(null),
             validFrom: Joi.number().unsafe().allow(null),
             validUntil: Joi.number().unsafe().allow(null),
@@ -126,6 +126,7 @@ export const getStatsV2Options: RouteOptions = {
               nullif(date_part('epoch', upper("ob"."valid_between")), 'Infinity'),
               0
             ) AS "top_buy_valid_until",
+            ob.price AS top_buy_price,
             ob.currency AS top_buy_currency,
             ob.currency_price AS top_buy_currency_price,
             ob.currency_value AS top_buy_currency_value
@@ -216,6 +217,7 @@ export const getStatsV2Options: RouteOptions = {
                 nullif(date_part('epoch', upper("ob"."valid_between")), 'Infinity'),
                 0
               ) AS "top_buy_valid_until",
+              ob.price AS top_buy_price,
               ob.currency AS top_buy_currency,
               ob.currency_price AS top_buy_currency_price,
               ob.currency_value AS top_buy_currency_value
@@ -323,6 +325,7 @@ export const getStatsV2Options: RouteOptions = {
                 nullif(date_part('epoch', upper("ob"."valid_between")), 'Infinity'),
                 0
               ) AS "top_buy_valid_until",
+              ob.price AS top_buy_price,
               ob.currency AS top_buy_currency,
               ob.currency_price AS top_buy_currency_price,
               ob.currency_value AS top_buy_currency_value
