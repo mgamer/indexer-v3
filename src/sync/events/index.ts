@@ -2327,8 +2327,6 @@ export const syncEvents = async (
         }
 
         // Put all fetched blocks on a queue for handling block reorgs
-        // (recheck each block in 1m, 5m, 10m and 60m).
-        // TODO: The check frequency should be a per-chain setting
         await Promise.all(
           [...blocksSet.values()].map(async (blockData) => {
             const block = Number(blockData.split("-")[0]);
