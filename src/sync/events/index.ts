@@ -2182,6 +2182,7 @@ export const syncEvents = async (
 
               break;
             }
+
             case "zora-ask-filled": {
               const { args } = eventData.abi.parseLog(log);
               const tokenContract = args["tokenContract"].toLowerCase();
