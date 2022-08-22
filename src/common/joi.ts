@@ -1,8 +1,8 @@
 import Joi from "joi";
 
 import { formatEth, formatPrice, formatUsd, regex } from "@/common/utils";
-import { getUSDAndNativePrices } from "@/utils/prices";
 import { Currency, getCurrency } from "@/utils/currencies";
+import { getUSDAndNativePrices } from "@/utils/prices";
 
 // --- Prices ---
 
@@ -23,16 +23,17 @@ const JoiPriceCurrency = Joi.object({
 export const JoiPrice = Joi.object({
   currency: JoiPriceCurrency,
   amount: JoiPriceAmount,
-  netAmount: JoiPriceAmount,
+  netAmount: JoiPriceAmount.optional(),
 });
 
 export const getJoiAmountObject = async (
+  currency: Currency,
   amount: string,
   nativeAmount: string,
-  currency: Currency
+  usdAmount?: string
 ) => {
-  let usdPrice: string | undefined;
-  if (amount) {
+  let usdPrice = usdAmount;
+  if (amount && !usdPrice) {
     usdPrice = (
       await getUSDAndNativePrices(currency.contract, amount, Math.floor(Date.now() / 1000), {
         onlyUSD: true,
@@ -53,10 +54,12 @@ export const getJoiPriceObject = async (
     gross: {
       amount: string;
       nativeAmount: string;
+      usdAmount?: string;
     };
-    net: {
+    net?: {
       amount: string;
       nativeAmount: string;
+      usdAmount?: string;
     };
   },
   currencyAddress: string
@@ -69,7 +72,19 @@ export const getJoiPriceObject = async (
       symbol: currency.symbol,
       decimals: currency.decimals,
     },
-    amount: await getJoiAmountObject(prices.gross.amount, prices.gross.nativeAmount, currency),
-    netAmount: await getJoiAmountObject(prices.net.amount, prices.net.nativeAmount, currency),
+    amount: await getJoiAmountObject(
+      currency,
+      prices.gross.amount,
+      prices.gross.nativeAmount,
+      prices.gross.usdAmount
+    ),
+    netAmount:
+      prices.net &&
+      (await getJoiAmountObject(
+        currency,
+        prices.net.amount,
+        prices.net.nativeAmount,
+        prices.net.usdAmount
+      )),
   };
 };

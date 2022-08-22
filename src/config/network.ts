@@ -57,7 +57,6 @@ export const getNetworkSettings = (): NetworkSettings => {
     washTradingWhitelistedAddresses: [],
     washTradingBlacklistedAddresses: [],
     multiCollectionContracts: [],
-    reorgCheckFrequency: [1, 5, 10, 30, 60], // In Minutes
   };
 
   switch (config.chainId) {
