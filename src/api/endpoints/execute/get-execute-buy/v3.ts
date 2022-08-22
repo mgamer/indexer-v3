@@ -324,6 +324,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
                   SUM(orders.quantity_remaining) OVER (ORDER BY price, id) - orders.quantity_remaining AS quantity
                 FROM orders
                 WHERE orders.token_set_id = $/tokenSetId/
+                  AND orders.side = 'sell'
                   AND orders.fillability_status = 'fillable'
                   AND orders.approval_status = 'approved'
                   AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
