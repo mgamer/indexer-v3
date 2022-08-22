@@ -2182,7 +2182,7 @@ export const syncEvents = async (
 
               break;
             }
-case "zora-ask-filled": {
+            case "zora-ask-filled": {
               const { args } = eventData.abi.parseLog(log);
               const tokenContract = args["tokenContract"].toLowerCase();
               const tokenId = args["tokenId"].toString();
@@ -2193,7 +2193,11 @@ case "zora-ask-filled": {
               const askCurrency = ask["askCurrency"].toLowerCase();
               const askPrice = ask["askPrice"].toString();
 
-              const prices = await getPrices(askCurrency, askPrice, baseEventParams.timestamp);
+              const prices = await getUSDAndNativePrices(
+                askCurrency,
+                askPrice,
+                baseEventParams.timestamp
+              );
 
               if (!prices.nativePrice) {
                 // We must always have the native price
@@ -2229,7 +2233,11 @@ case "zora-ask-filled": {
               // const curatorFee = args["curatorFee"].toString();
               const auctionCurrency = args["auctionCurrency"].toLowerCase();
 
-              const prices = await getPrices(auctionCurrency, amount, baseEventParams.timestamp);
+              const prices = await getUSDAndNativePrices(
+                auctionCurrency,
+                amount,
+                baseEventParams.timestamp
+              );
 
               if (!prices.nativePrice) {
                 // We must always have the native price
@@ -2252,7 +2260,7 @@ case "zora-ask-filled": {
 
               break;
             }
-            
+
             case "cryptopunks-punk-bought": {
               const { args } = eventData.abi.parseLog(log);
               const punkIndex = args["punkIndex"].toString();
