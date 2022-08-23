@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Request, RouteOptions } from "@hapi/hapi";
+import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 import _ from "lodash";
 
@@ -11,11 +12,11 @@ import {
   buildContinuation,
   formatEth,
   fromBuffer,
-  getNetAmount,
   regex,
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
+import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 
 const version = "v5";
@@ -80,6 +81,9 @@ export const getTokensV5Options: RouteOptions = {
       includeTopBid: Joi.boolean()
         .default(false)
         .description("If true, top bid will be returned in the response."),
+      includeAttributes: Joi.boolean()
+        .default(false)
+        .description("If true, attributes will be returned in the response."),
       continuation: Joi.string()
         .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
@@ -118,16 +122,18 @@ export const getTokensV5Options: RouteOptions = {
               timestamp: Joi.number().unsafe().allow(null),
             },
             owner: Joi.string().allow(null),
-            attributes: Joi.array().items(
-              Joi.object({
-                key: Joi.string(),
-                value: Joi.string(),
-                tokenCount: Joi.number(),
-                onSaleCount: Joi.number(),
-                floorAskPrice: Joi.number().allow(null),
-                topBidValue: Joi.number().allow(null),
-              })
-            ),
+            attributes: Joi.array()
+              .items(
+                Joi.object({
+                  key: Joi.string(),
+                  value: Joi.string(),
+                  tokenCount: Joi.number(),
+                  onSaleCount: Joi.number(),
+                  floorAskPrice: Joi.number().allow(null),
+                  topBidValue: Joi.number().allow(null),
+                })
+              )
+              .optional(),
           }),
           market: Joi.object({
             floorAsk: {
@@ -158,11 +164,11 @@ export const getTokensV5Options: RouteOptions = {
   handler: async (request: Request) => {
     const query = request.query as any;
 
+    // Include top bid
     let selectTopBid = "";
     let topBidQuery = "";
     if (query.includeTopBid) {
       selectTopBid = `, y.*`;
-
       topBidQuery = `
         LEFT JOIN LATERAL (
           SELECT
@@ -199,6 +205,32 @@ export const getTokensV5Options: RouteOptions = {
       `;
     }
 
+    // Include attributes
+    let selectAttributes = "";
+    if (query.includeAttributes) {
+      selectAttributes = `
+        , (
+          SELECT
+            array_agg(
+              json_build_object(
+                'key', ta.key,
+                'value', ta.value,
+                'tokenCount', attributes.token_count,
+                'onSaleCount', attributes.on_sale_count,
+                'floorAskPrice', attributes.floor_sell_value::TEXT,
+                'topBidValue', attributes.top_buy_value::TEXT
+              )
+            )
+          FROM token_attributes ta
+          JOIN attributes
+            ON ta.attribute_id = attributes.id
+          WHERE ta.contract = t.contract
+            AND ta.token_id = t.token_id
+            AND ta.key != ''
+        ) AS attributes
+      `;
+    }
+
     try {
       let baseQuery = `
         SELECT
@@ -217,9 +249,8 @@ export const getTokensV5Options: RouteOptions = {
           t.floor_sell_valid_to,
           t.floor_sell_source_id_int,
           t.floor_sell_value,
-          os.currency AS floor_sell_currency,
-          os.currency_value AS floor_sell_currency_value,
-          os.fee_bps AS floor_sell_fee_bps,
+          t.floor_sell_currency,
+          t.floor_sell_currency_value,
           t.is_flagged,
           t.last_flag_update,
           c.slug,
@@ -236,26 +267,8 @@ export const getTokensV5Options: RouteOptions = {
               AND nb.token_id = t.token_id
               AND nb.amount > 0
             LIMIT 1
-          ) AS owner,
-          (
-            SELECT
-              array_agg(
-                json_build_object(
-                  'key', ta.key,
-                  'value', ta.value,
-                  'tokenCount', attributes.token_count,
-                  'onSaleCount', attributes.on_sale_count,
-                  'floorAskPrice', attributes.floor_sell_value::TEXT,
-                  'topBidValue', attributes.top_buy_value::TEXT
-                )
-              )
-            FROM token_attributes ta
-            JOIN attributes
-              ON ta.attribute_id = attributes.id
-            WHERE ta.contract = t.contract
-              AND ta.token_id = t.token_id
-              AND ta.key != ''
-          ) AS attributes
+          ) AS owner
+          ${selectAttributes}
           ${selectTopBid}
         FROM tokens t
         ${topBidQuery}
@@ -263,8 +276,6 @@ export const getTokensV5Options: RouteOptions = {
           ON t.collection_id = c.id
         JOIN contracts con
           ON t.contract = con.address
-        LEFT JOIN orders os
-          ON t.floor_sell_id = os.id
       `;
 
       if (query.tokenSetId) {
@@ -463,8 +474,14 @@ export const getTokensV5Options: RouteOptions = {
           ? sources.get(Number(r.floor_sell_source_id_int), contract, tokenId)
           : undefined;
 
-        const floorAskCurrency = r.floor_sell_currency ? fromBuffer(r.floor_sell_currency) : null;
-        const topBidCurrency = r.top_buy_currency ? fromBuffer(r.top_buy_currency) : null;
+        // Use default currencies for backwards compatibility with entries
+        // that don't have the currencies cached in the tokens table
+        const floorAskCurrency = r.floor_sell_currency
+          ? fromBuffer(r.floor_sell_currency)
+          : Sdk.Common.Addresses.Eth[config.chainId];
+        const topBidCurrency = r.top_buy_currency
+          ? fromBuffer(r.top_buy_currency)
+          : Sdk.Common.Addresses.Weth[config.chainId];
 
         return {
           token: {
@@ -492,20 +509,22 @@ export const getTokensV5Options: RouteOptions = {
               timestamp: r.last_sell_timestamp,
             },
             owner: r.owner ? fromBuffer(r.owner) : null,
-            attributes: r.attributes
-              ? _.map(r.attributes, (attribute) => ({
-                  key: attribute.key,
-                  value: attribute.value,
-                  tokenCount: attribute.tokenCount,
-                  onSaleCount: attribute.onSaleCount,
-                  floorAskPrice: attribute.floorAskPrice
-                    ? formatEth(attribute.floorAskPrice)
-                    : attribute.floorAskPrice,
-                  topBidValue: attribute.topBidValue
-                    ? formatEth(attribute.topBidValue)
-                    : attribute.topBidValue,
-                }))
-              : [],
+            attributes: query.includeAttributes
+              ? r.attributes
+                ? _.map(r.attributes, (attribute) => ({
+                    key: attribute.key,
+                    value: attribute.value,
+                    tokenCount: attribute.tokenCount,
+                    onSaleCount: attribute.onSaleCount,
+                    floorAskPrice: attribute.floorAskPrice
+                      ? formatEth(attribute.floorAskPrice)
+                      : attribute.floorAskPrice,
+                    topBidValue: attribute.topBidValue
+                      ? formatEth(attribute.topBidValue)
+                      : attribute.topBidValue,
+                  }))
+                : []
+              : undefined,
           },
           market: {
             floorAsk: {
@@ -513,13 +532,6 @@ export const getTokensV5Options: RouteOptions = {
               price: r.floor_sell_id
                 ? await getJoiPriceObject(
                     {
-                      net: {
-                        amount: getNetAmount(
-                          r.floor_sell_currency_value ?? r.floor_sell_value,
-                          r.floor_sell_fee_bps
-                        ),
-                        nativeAmount: getNetAmount(r.floor_sell_value, r.floor_sell_fee_bps),
-                      },
                       gross: {
                         amount: r.floor_sell_currency_value ?? r.floor_sell_value,
                         nativeAmount: r.floor_sell_value,

@@ -22,10 +22,10 @@ export const getTokensV4Options: RouteOptions = {
   description: "Tokens",
   notes:
     "This API is optimized for quickly fetching a list of tokens in a collection, sorted by price, with only the most important information returned. If you need more metadata, use the tokens/details API",
-  tags: ["api", "Tokens"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 9,
+      deprecated: true,
     },
   },
   validate: {
