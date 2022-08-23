@@ -1,3 +1,39 @@
+## [5.174.2](https://github.com/reservoirprotocol/indexer/compare/v5.174.1...v5.174.2) (2022-08-23)
+
+
+### Bug Fixes
+
+* migrations ([e4bcaa3](https://github.com/reservoirprotocol/indexer/commit/e4bcaa3ec1b47c68b2f6fc35314596ea0f856f00))
+
+
+
+## [5.174.1](https://github.com/reservoirprotocol/indexer/compare/v5.174.0...v5.174.1) (2022-08-23)
+
+
+### Bug Fixes
+
+* response validation errors ([3d34bd8](https://github.com/reservoirprotocol/indexer/commit/3d34bd8b935cc9b1d677a2a3b1a240f21e57579b))
+
+
+
+# [5.174.0](https://github.com/reservoirprotocol/indexer/compare/v5.173.1...v5.174.0) (2022-08-23)
+
+
+### Features
+
+* enable listing in erc20 and ingesting native erc20 liquidity ([7eca180](https://github.com/reservoirprotocol/indexer/commit/7eca180af7a403bf3a1f6455a8067b756b3815f4))
+
+
+
+## [5.173.1](https://github.com/reservoirprotocol/indexer/compare/v5.173.0...v5.173.1) (2022-08-23)
+
+
+### Bug Fixes
+
+* response validation ([a05bd36](https://github.com/reservoirprotocol/indexer/commit/a05bd36b296a482c18f78dbdb0b680ced8934b3f))
+
+
+
 # [5.173.0](https://github.com/reservoirprotocol/indexer/compare/v5.172.3...v5.173.0) (2022-08-23)
 
 
