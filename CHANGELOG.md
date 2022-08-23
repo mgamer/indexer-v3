@@ -1,3 +1,12 @@
+# [5.174.0](https://github.com/reservoirprotocol/indexer/compare/v5.173.1...v5.174.0) (2022-08-23)
+
+
+### Features
+
+* enable listing in erc20 and ingesting native erc20 liquidity ([7eca180](https://github.com/reservoirprotocol/indexer/commit/7eca180af7a403bf3a1f6455a8067b756b3815f4))
+
+
+
 ## [5.173.1](https://github.com/reservoirprotocol/indexer/compare/v5.173.0...v5.173.1) (2022-08-23)
 
 
