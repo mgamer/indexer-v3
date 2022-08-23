@@ -12,6 +12,7 @@ export interface BaseOrderBuildOptions {
   contract: string;
   weiPrice: string;
   orderbook: "opensea" | "reservoir";
+  currency?: string;
   quantity?: number;
   nonce?: string;
   fee?: number[];
@@ -58,10 +59,11 @@ export const getBuildInfo = async (
     tokenKind: collectionResult.kind,
     contract: options.contract,
     price: options.weiPrice,
-    paymentToken:
-      side === "buy"
-        ? Sdk.Common.Addresses.Weth[config.chainId]
-        : Sdk.Common.Addresses.Eth[config.chainId],
+    paymentToken: options.currency
+      ? options.currency
+      : side === "buy"
+      ? Sdk.Common.Addresses.Weth[config.chainId]
+      : Sdk.Common.Addresses.Eth[config.chainId],
     fees: [],
     // Use OpenSea's pausable zone when posting to OpenSea
     zone:

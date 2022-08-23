@@ -156,7 +156,7 @@ export const getReceivedBidsV1Options: RouteOptions = {
             metadata: r.metadata,
             source: {
               id: source?.address,
-              name: source?.name,
+              name: source?.metadata.title || source?.name,
               icon: source?.metadata.icon,
               url: source?.metadata.url,
             },

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Request, RouteOptions } from "@hapi/hapi";
+import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 import _ from "lodash";
 
@@ -15,6 +16,7 @@ import {
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
+import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 
@@ -396,21 +398,25 @@ export const getOrdersAsksV3Options: RouteOptions = {
             {
               gross: {
                 amount: r.price,
-                nativeAmount: r.currency_price,
+                nativeAmount: r.currency_price ?? r.price,
               },
               net: {
                 amount: getNetAmount(r.price, r.fee_bps),
-                nativeAmount: getNetAmount(r.currency_price, r.fee_bps),
+                nativeAmount: getNetAmount(r.currency_price ?? r.price, r.fee_bps),
               },
             },
-            fromBuffer(r.currency)
+            r.currency
+              ? fromBuffer(r.currency)
+              : r.side === "sell"
+              ? Sdk.Common.Addresses.Eth[config.chainId]
+              : Sdk.Common.Addresses.Weth[config.chainId]
           ),
           validFrom: Number(r.valid_from),
           validUntil: Number(r.valid_until),
           metadata: r.metadata,
           source: {
             id: source?.address,
-            name: source?.name,
+            name: source?.metadata.title || source?.name,
             icon: source?.metadata.icon,
             url: source?.metadata.url,
           },

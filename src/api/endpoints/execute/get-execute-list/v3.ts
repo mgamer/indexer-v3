@@ -39,11 +39,10 @@ const version = "v3";
 export const getExecuteListV3Options: RouteOptions = {
   description: "Create ask (listing)",
   notes: "Generate a listing and submit it to multiple marketplaces",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Orderbook"],
   plugins: {
     "hapi-swagger": {
-      order: 1,
-      deprecated: true,
+      order: 11,
     },
   },
   validate: {
@@ -117,6 +116,9 @@ export const getExecuteListV3Options: RouteOptions = {
             .pattern(regex.number)
             .description("Optional. Random string to make the order unique"),
           nonce: Joi.string().pattern(regex.number).description("Optional. Set a custom nonce"),
+          currency: Joi.string()
+            .pattern(regex.address)
+            .default(Sdk.Common.Addresses.Eth[config.chainId]),
         })
           .with("feeRecipient", "fee")
           .with("fee", "feeRecipient")
@@ -194,6 +196,13 @@ export const getExecuteListV3Options: RouteOptions = {
         // On Rinkeby, proxy ZeroEx V4 to 721ex
         if (params.orderKind === "zeroex-v4" && config.chainId === 4) {
           params.orderKind = "721ex";
+        }
+
+        if (
+          params.orderKind !== "seaport" &&
+          params.currency !== Sdk.Common.Addresses.Eth[config.chainId]
+        ) {
+          throw new Error("ERC20 listings are only supported on Seaport");
         }
 
         switch (params.orderKind) {

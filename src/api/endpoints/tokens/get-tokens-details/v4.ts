@@ -22,10 +22,10 @@ export const getTokensDetailsV4Options: RouteOptions = {
   description: "Tokens (detailed response)",
   notes:
     "Get a list of tokens with full metadata. This is useful for showing a single token page, or scenarios that require more metadata. If you don't need this metadata, you should use the <a href='#/tokens/getTokensV1'>tokens</a> API, which is much faster.",
-  tags: ["api", "Tokens"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 9,
+      deprecated: true,
     },
   },
   validate: {
@@ -499,7 +499,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
               source: {
                 id: source?.address,
                 domain: source?.domain,
-                name: source?.name,
+                name: source?.metadata.title || source?.name,
                 icon: source?.metadata.icon,
                 url: source?.metadata.url,
               },
