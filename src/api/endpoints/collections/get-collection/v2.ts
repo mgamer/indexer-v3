@@ -117,9 +117,9 @@ export const getCollectionV2Options: RouteOptions = {
         ownerCount: Joi.number(),
         attributes: Joi.array().items(
           Joi.object({
-            key: Joi.string().allow(null),
-            kind: Joi.string().allow(null),
-            count: Joi.number().allow(null),
+            key: Joi.string().allow(null, ""),
+            kind: Joi.string().allow(null, ""),
+            count: Joi.number().allow(null, ""),
           })
         ),
       }).allow(null),
