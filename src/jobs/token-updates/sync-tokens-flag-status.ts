@@ -45,7 +45,7 @@ if (config.doBackgroundWork) {
       }
 
       job.data.addToQueue = false;
-      job.data.addToQueueDelay = 0;
+      job.data.addToQueueDelay = 1000;
 
       for (const pendingSyncFlagStatusToken of pendingSyncFlagStatusTokens) {
         try {
