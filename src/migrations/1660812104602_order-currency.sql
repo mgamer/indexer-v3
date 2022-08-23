@@ -8,7 +8,13 @@ ALTER TABLE "orders" ADD COLUMN "needs_conversion" BOOLEAN;
 ALTER TABLE "tokens" ADD COLUMN "floor_sell_currency" BYTEA;
 ALTER TABLE "tokens" ADD COLUMN "floor_sell_currency_value" NUMERIC(78, 0);
 
+CREATE INDEX "orders_conversion_index"
+  ON "orders" ("id")
+  WHERE ("needs_conversion" AND "fillability_status" = 'fillable' AND "approval_status" = 'approved');
+
 -- Down Migration
+
+DROP INDEX "orders_conversion_index";
 
 ALTER TABLE "tokens" DROP COLUMN "floor_sell_currency_value";
 ALTER TABLE "tokens" DROP COLUMN "floor_sell_currency";
