@@ -1,25 +1,25 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
-import { randomUUID } from "crypto";
-import _ from "lodash";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 
 import { Tokens } from "@/models/tokens";
-import { Collections } from "@/models/collections";
 import * as nonFlaggedTokenSet from "@/jobs/token-updates/non-flagged-token-set";
 import MetadataApi from "@/utils/metadata-api";
+import _ from "lodash";
+import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
 
 const QUEUE_NAME = "sync-tokens-flag-status";
+const LIMIT = 1;
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 10,
-    removeOnComplete: 100,
-    removeOnFail: 100,
+    removeOnComplete: true,
+    removeOnFail: true,
   },
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
@@ -29,29 +29,45 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { collectionId } = job.data;
-      const collection = await Collections.getById(collectionId);
+      const { collectionId, contract } = job.data;
 
-      // Don't check collections with too many tokens
-      if (!collection || collection.tokenCount > config.maxItemsPerBid) {
+      // Get the tokens from the list
+      const pendingFlagStatusSyncTokensQueue = new PendingFlagStatusSyncTokens(collectionId);
+      const pendingSyncFlagStatusTokens = await pendingFlagStatusSyncTokensQueue.get(LIMIT);
+
+      // If no more tokens
+      if (_.isEmpty(pendingSyncFlagStatusTokens)) {
+        logger.info(QUEUE_NAME, `Recalc TokenSet. contract:${contract}`);
+
+        await nonFlaggedTokenSet.addToQueue(contract, collectionId);
+
         return;
       }
 
-      const queryParams = new URLSearchParams();
-      queryParams.append("method", config.metadataIndexingMethod);
+      job.data.addToQueue = false;
+      job.data.addToQueueDelay = 0;
 
-      const tokenIds = await Tokens.getTokenIdsInCollection(collectionId);
-
-      for (const tokenId of tokenIds) {
-        const tokens = [];
-        tokens.push({ contract: collection.contract, tokenId });
-
+      for (const pendingSyncFlagStatusToken of pendingSyncFlagStatusTokens) {
         try {
-          const metadata = await MetadataApi.getTokenMetadata(tokens);
+          const metadata = await MetadataApi.getTokenMetadata([
+            { contract, tokenId: pendingSyncFlagStatusToken.tokenId },
+          ]);
 
-          if (_.isEmpty(metadata)) {
-            await Tokens.update(collection.contract, tokenId, {
-              isFlagged: Number(metadata[0].flagged),
+          const metadataIsFlagged = Number(metadata[0].flagged);
+
+          logger.info(
+            QUEUE_NAME,
+            `Flag Status. contract:${contract}, tokenId: ${pendingSyncFlagStatusToken.tokenId}, isFlagged:${pendingSyncFlagStatusToken.isFlagged}, metadataIsFlagged:${metadataIsFlagged}`
+          );
+
+          if (pendingSyncFlagStatusToken.isFlagged != metadataIsFlagged) {
+            logger.info(
+              QUEUE_NAME,
+              `Flag Status Diff. contract:${contract}, tokenId: ${pendingSyncFlagStatusToken.tokenId}, isFlagged:${pendingSyncFlagStatusToken.isFlagged}, metadataIsFlagged:${metadataIsFlagged}`
+            );
+
+            await Tokens.update(contract, pendingSyncFlagStatusToken.tokenId, {
+              isFlagged: metadataIsFlagged,
               lastFlagUpdate: new Date().toISOString(),
             });
           }
@@ -61,20 +77,38 @@ if (config.doBackgroundWork) {
               QUEUE_NAME,
               `Too Many Requests. error: ${JSON.stringify((error as any).response.data)}`
             );
+
+            job.data.addToQueueDelay = 5000;
+
+            await pendingFlagStatusSyncTokensQueue.add([pendingSyncFlagStatusToken], true);
+          } else {
+            logger.error(
+              QUEUE_NAME,
+              `getTokenMetadata error. contract:${contract}, tokenId: ${pendingSyncFlagStatusToken.tokenId}, error:${error}`
+            );
           }
         }
       }
 
-      await nonFlaggedTokenSet.addToQueue(collection.contract, collectionId);
+      if (_.size(pendingSyncFlagStatusTokens) == LIMIT) {
+        job.data.addToQueue = true;
+      }
     },
     { connection: redis.duplicate(), concurrency: 1 }
   );
+
+  worker.on("completed", async (job) => {
+    if (job.data.addToQueue) {
+      await addToQueue(job.data.collectionId, job.data.contract, job.data.addToQueueDelay);
+    }
+  });
 
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
 }
 
-export const addToQueue = async (collectionId: string) => {
-  await queue.add(randomUUID(), { collectionId });
+export const addToQueue = async (collectionId: string, contract: string, delay = 0) => {
+  const jobId = `${collectionId}:${contract}`;
+  await queue.add(jobId, { collectionId, contract }, { jobId, delay });
 };

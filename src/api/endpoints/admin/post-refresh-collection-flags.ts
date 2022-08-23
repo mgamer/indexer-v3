@@ -8,7 +8,7 @@ import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { regex } from "@/common/utils";
 
-import * as syncTokensFlagStatus from "@/jobs/token-updates/sync-tokens-flag-status";
+import * as syncCollectionFlagStatus from "@/jobs/token-updates/sync-collection-flag-status";
 
 export const postRefreshCollectionFlagsOptions: RouteOptions = {
   description: "Refresh tokens flag status for the given collection",
@@ -25,6 +25,7 @@ export const postRefreshCollectionFlagsOptions: RouteOptions = {
           "Refresh tokens for the given collection. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         )
         .required(),
+      backfill: Joi.boolean().default(false),
     }),
   },
   handler: async (request: Request) => {
@@ -35,7 +36,7 @@ export const postRefreshCollectionFlagsOptions: RouteOptions = {
     const payload = request.payload as any;
 
     try {
-      await syncTokensFlagStatus.addToQueue(payload.collection);
+      await syncCollectionFlagStatus.addToQueue(payload.collection, payload.backfill);
       return { message: "Request accepted" };
     } catch (error) {
       logger.error(`post-refresh-collection-flags-handler`, `Handler failure: ${error}`);
