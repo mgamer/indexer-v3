@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Request, RouteOptions } from "@hapi/hapi";
+import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 import _ from "lodash";
 
@@ -8,6 +9,7 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { JoiPrice, getJoiPriceObject } from "@/common/joi";
 import { buildContinuation, fromBuffer, regex, splitContinuation, toBuffer } from "@/common/utils";
+import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 
@@ -401,14 +403,18 @@ export const getOrdersBidsV3Options: RouteOptions = {
             {
               gross: {
                 amount: r.price,
-                nativeAmount: r.currency_price,
+                nativeAmount: r.currency_price ?? r.price,
               },
               net: {
                 amount: r.value,
-                nativeAmount: r.currency_value,
+                nativeAmount: r.currency_value ?? r.value,
               },
             },
-            fromBuffer(r.currency)
+            r.currency
+              ? fromBuffer(r.currency)
+              : r.side === "sell"
+              ? Sdk.Common.Addresses.Eth[config.chainId]
+              : Sdk.Common.Addresses.Weth[config.chainId]
           ),
           validFrom: Number(r.valid_from),
           validUntil: Number(r.valid_until),
