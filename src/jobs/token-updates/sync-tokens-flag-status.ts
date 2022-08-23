@@ -49,9 +49,10 @@ if (config.doBackgroundWork) {
 
       for (const pendingSyncFlagStatusToken of pendingSyncFlagStatusTokens) {
         try {
-          const metadata = await MetadataApi.getTokenMetadata([
-            { contract, tokenId: pendingSyncFlagStatusToken.tokenId },
-          ]);
+          const metadata = await MetadataApi.getTokenMetadata(
+            [{ contract, tokenId: pendingSyncFlagStatusToken.tokenId }],
+            true
+          );
 
           const metadataIsFlagged = Number(metadata[0].flagged);
 

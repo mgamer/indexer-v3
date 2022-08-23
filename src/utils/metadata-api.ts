@@ -69,14 +69,19 @@ export class MetadataApi {
     }
   }
 
-  public static async getTokenMetadata(tokens: { contract: string; tokenId: string }[]) {
+  public static async getTokenMetadata(
+    tokens: { contract: string; tokenId: string }[],
+    useAltUrl = false
+  ) {
     const queryParams = new URLSearchParams();
 
     for (const token of tokens) {
       queryParams.append("token", `${token.contract}:${token.tokenId}`);
     }
 
-    const url = `${config.metadataApiBaseUrl}/v4/${getNetworkName()}/metadata/token?method=${
+    const url = `${
+      useAltUrl ? config.metadataApiBaseUrlAlt : config.metadataApiBaseUrl
+    }/v4/${getNetworkName()}/metadata/token?method=${
       config.metadataIndexingMethod
     }&${queryParams.toString()}`;
 
