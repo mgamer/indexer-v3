@@ -1,3 +1,13 @@
+## [5.174.3](https://github.com/reservoirprotocol/indexer/compare/v5.174.2...v5.174.3) (2022-08-23)
+
+
+### Bug Fixes
+
+* add cryptopunks ([4f76f7d](https://github.com/reservoirprotocol/indexer/commit/4f76f7df94425a0042fbbb7027673d6e5f85e9c5))
+* fixed missing clean valeu logic ([#1556](https://github.com/reservoirprotocol/indexer/issues/1556)) ([321e9b5](https://github.com/reservoirprotocol/indexer/commit/321e9b57cee133cd1867c0f95c20eae1f03620a6))
+
+
+
 ## [5.174.2](https://github.com/reservoirprotocol/indexer/compare/v5.174.1...v5.174.2) (2022-08-23)
 
 
