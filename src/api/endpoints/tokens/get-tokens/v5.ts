@@ -493,7 +493,7 @@ export const getTokensV5Options: RouteOptions = {
             media: r.media,
             kind: r.kind,
             isFlagged: Boolean(Number(r.is_flagged)),
-            lastFlagUpdate: r.last_flag_update,
+            lastFlagUpdate: r.last_flag_update ? new Date(r.last_flag_update).toISOString() : null,
             collection: {
               id: r.collection_id,
               name: r.collection_name,
