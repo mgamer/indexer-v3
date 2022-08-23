@@ -55,23 +55,17 @@ if (config.doBackgroundWork) {
           );
 
           const metadataIsFlagged = Number(metadata[0].flagged);
+          const flagStatusDiff = pendingSyncFlagStatusToken.isFlagged != metadataIsFlagged;
 
           logger.info(
             QUEUE_NAME,
-            `Flag Status. contract:${contract}, tokenId: ${pendingSyncFlagStatusToken.tokenId}, isFlagged:${pendingSyncFlagStatusToken.isFlagged}, metadataIsFlagged:${metadataIsFlagged}`
+            `Flag Status. contract:${contract}, tokenId: ${pendingSyncFlagStatusToken.tokenId}, isFlagged:${pendingSyncFlagStatusToken.isFlagged}, metadataIsFlagged:${metadataIsFlagged}, flagStatusDiff=${flagStatusDiff}`
           );
 
-          if (pendingSyncFlagStatusToken.isFlagged != metadataIsFlagged) {
-            logger.info(
-              QUEUE_NAME,
-              `Flag Status Diff. contract:${contract}, tokenId: ${pendingSyncFlagStatusToken.tokenId}, isFlagged:${pendingSyncFlagStatusToken.isFlagged}, metadataIsFlagged:${metadataIsFlagged}`
-            );
-
-            await Tokens.update(contract, pendingSyncFlagStatusToken.tokenId, {
-              isFlagged: metadataIsFlagged,
-              lastFlagUpdate: new Date().toISOString(),
-            });
-          }
+          await Tokens.update(contract, pendingSyncFlagStatusToken.tokenId, {
+            isFlagged: metadataIsFlagged,
+            lastFlagUpdate: new Date().toISOString(),
+          });
         } catch (error) {
           if ((error as any).response?.status === 429) {
             logger.info(
