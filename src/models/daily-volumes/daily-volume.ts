@@ -604,13 +604,10 @@ export class DailyVolume {
 
     try {
       await idb.none(pgp.helpers.concat(queries));
-    } catch (e: any) {
+    } catch (error) {
       logger.error(
         "daily-volumes",
-        JSON.stringify({
-          msg: `Error while updating the floor_sell_value of period ${period} in the collections table`,
-          exception: e.message,
-        })
+        `Error while updating the floor_sell_value of period ${period} in the collections table: ${error}`
       );
       return false;
     }
