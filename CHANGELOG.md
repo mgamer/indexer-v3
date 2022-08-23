@@ -1,3 +1,23 @@
+# [5.175.0](https://github.com/reservoirprotocol/indexer/compare/v5.174.3...v5.175.0) (2022-08-23)
+
+
+### Features
+
+* default to title then name for sources ([1fffc7c](https://github.com/reservoirprotocol/indexer/commit/1fffc7cc9d70d44436c6375d0e0eff406e70d38b))
+* default to title then name for sources ([ee0ffdc](https://github.com/reservoirprotocol/indexer/commit/ee0ffdc40c18732ddfa707e40cc603c6c390dc80))
+
+
+
+## [5.174.3](https://github.com/reservoirprotocol/indexer/compare/v5.174.2...v5.174.3) (2022-08-23)
+
+
+### Bug Fixes
+
+* add cryptopunks ([4f76f7d](https://github.com/reservoirprotocol/indexer/commit/4f76f7df94425a0042fbbb7027673d6e5f85e9c5))
+* fixed missing clean valeu logic ([#1556](https://github.com/reservoirprotocol/indexer/issues/1556)) ([321e9b5](https://github.com/reservoirprotocol/indexer/commit/321e9b57cee133cd1867c0f95c20eae1f03620a6))
+
+
+
 ## [5.174.2](https://github.com/reservoirprotocol/indexer/compare/v5.174.1...v5.174.2) (2022-08-23)
 
 

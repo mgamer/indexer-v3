@@ -45,13 +45,14 @@ if (config.doBackgroundWork) {
       }
 
       job.data.addToQueue = false;
-      job.data.addToQueueDelay = 0;
+      job.data.addToQueueDelay = 1000;
 
       for (const pendingSyncFlagStatusToken of pendingSyncFlagStatusTokens) {
         try {
-          const metadata = await MetadataApi.getTokenMetadata([
-            { contract, tokenId: pendingSyncFlagStatusToken.tokenId },
-          ]);
+          const metadata = await MetadataApi.getTokenMetadata(
+            [{ contract, tokenId: pendingSyncFlagStatusToken.tokenId }],
+            true
+          );
 
           const metadataIsFlagged = Number(metadata[0].flagged);
 
