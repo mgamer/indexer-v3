@@ -537,7 +537,7 @@ export const getTokensV5Options: RouteOptions = {
                         nativeAmount: r.floor_sell_value,
                       },
                     },
-                    floorAskCurrency!
+                    floorAskCurrency
                   )
                 : null,
               maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
@@ -567,7 +567,7 @@ export const getTokensV5Options: RouteOptions = {
                               nativeAmount: r.top_buy_price,
                             },
                           },
-                          topBidCurrency!
+                          topBidCurrency
                         )
                       : null,
                     maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
