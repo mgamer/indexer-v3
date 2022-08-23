@@ -190,7 +190,6 @@ export const getUSDAndNativePrices = async (
 
   // Make sure to handle the case where the currency is the native one (or the wrapped equivalent)
   if (
-    !nativePrice &&
     [Sdk.Common.Addresses.Eth[config.chainId], Sdk.Common.Addresses.Weth[config.chainId]].includes(
       currencyAddress
     )

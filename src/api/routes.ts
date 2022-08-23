@@ -248,6 +248,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/collections/v5",
+    options: collectionsEndpoints.getCollectionsV5Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/collections/{collectionOrSlug}/v1",
     options: collectionsEndpoints.getCollectionDeprecatedV1Options,
   });
@@ -268,12 +274,6 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/collection/v3",
     options: collectionsEndpoints.getCollectionV3Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/collection/v4",
-    options: collectionsEndpoints.getCollectionV4Options,
   });
 
   server.route({
@@ -477,6 +477,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/orders/all/v1",
     options: ordersEndpoints.getOrdersAllV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/orders/all/v2",
+    options: ordersEndpoints.getOrdersAllV2Options,
   });
 
   server.route({

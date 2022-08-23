@@ -29,7 +29,7 @@ export const now = () => Math.floor(Date.now() / 1000);
 
 // --- Continuations ---
 
-export const splitContinuation = (c: string, regEx: RegExp) => {
+export const splitContinuation = (c: string, regEx?: RegExp) => {
   if (c.includes("_")) {
     return c.split("_");
   }
@@ -37,12 +37,14 @@ export const splitContinuation = (c: string, regEx: RegExp) => {
   c = decodeURIComponent(c);
   if (c.match(regex.base64)) {
     const decoded = Buffer.from(c, "base64").toString("ascii");
-    if (decoded.match(regEx)) {
+    if (regEx && decoded.match(regEx)) {
       return decoded.split("_");
+    } else {
+      return [decoded];
     }
+  } else {
+    return [c];
   }
-
-  return c;
 };
 
 export const buildContinuation = (c: string) => Buffer.from(c).toString("base64");

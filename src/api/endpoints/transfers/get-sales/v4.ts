@@ -18,8 +18,7 @@ const version = "v4";
 
 export const getSalesV4Options: RouteOptions = {
   description: "Historical sales",
-  notes:
-    "Get recent sales for a contract or token. Note: this API is returns rich metadata, and has advanced filters, so is only designed for small amounts of recent sales. If you want access to sales in bulk, use the `Aggregator > Bulk Sales` API.",
+  notes: "Get recent sales for a contract or token.",
   tags: ["api", "Sales"],
   plugins: {
     "hapi-swagger": {
