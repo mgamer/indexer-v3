@@ -546,7 +546,7 @@ export const getTokensV5Options: RouteOptions = {
               source: {
                 id: source?.address,
                 domain: source?.domain,
-                name: source?.name,
+                name: source?.metadata.title || source?.name,
                 icon: source?.metadata.icon,
                 url: source?.metadata.url,
               },
