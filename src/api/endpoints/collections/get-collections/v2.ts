@@ -52,7 +52,7 @@ export const getCollectionsV2Options: RouteOptions = {
       collections: Joi.array().items(
         Joi.object({
           id: Joi.string(),
-          slug: Joi.string(),
+          slug: Joi.string().allow(null, ""),
           name: Joi.string().allow(null, ""),
           image: Joi.string().allow(null, ""),
           banner: Joi.string().allow(null, ""),

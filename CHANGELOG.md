@@ -1,3 +1,29 @@
+# [5.173.0](https://github.com/reservoirprotocol/indexer/compare/v5.172.3...v5.173.0) (2022-08-23)
+
+
+### Bug Fixes
+
+* improve error message ([96cc16b](https://github.com/reservoirprotocol/indexer/commit/96cc16b538da013e008da221b3f9c2700db0a74b))
+* treat weth as eth for pricing ([2a96f93](https://github.com/reservoirprotocol/indexer/commit/2a96f93e6b8625c8911e295d0707da688361821c))
+* tweaks ([869930f](https://github.com/reservoirprotocol/indexer/commit/869930f8ee6b66bb68a3d480ccc8a688f8c54609))
+* tweaks to sales/v4 and tokens/v5 ([ccab31c](https://github.com/reservoirprotocol/indexer/commit/ccab31cc2f309915fb342e9ad7ece5d9cb5c7bc8))
+
+
+### Features
+
+* add orders all v2 api ([3353661](https://github.com/reservoirprotocol/indexer/commit/33536617944699132cbf5d15453ae88bcce21f13))
+
+
+
+## [5.172.3](https://github.com/reservoirprotocol/indexer/compare/v5.172.2...v5.172.3) (2022-08-23)
+
+
+### Bug Fixes
+
+* do not always use the default source ([bcafa83](https://github.com/reservoirprotocol/indexer/commit/bcafa8309506316dfb636d3d7df57705cbcf4aa5))
+
+
+
 ## [5.172.2](https://github.com/reservoirprotocol/indexer/compare/v5.172.1...v5.172.2) (2022-08-22)
 
 

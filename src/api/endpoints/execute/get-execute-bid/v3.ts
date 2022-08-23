@@ -41,12 +41,11 @@ const version = "v3";
 export const getExecuteBidV3Options: RouteOptions = {
   description: "Create bid (offer)",
   notes: "Generate a bid and submit it to multiple marketplaces",
-  tags: ["api", "x-deprecated"],
   timeout: { server: 60000 },
+  tags: ["api", "Orderbook"],
   plugins: {
     "hapi-swagger": {
-      order: 1,
-      deprecated: true,
+      order: 11,
     },
   },
   validate: {

@@ -50,7 +50,7 @@ export const getCollectionsV1Options: RouteOptions = {
       collections: Joi.array().items(
         Joi.object({
           id: Joi.string(),
-          slug: Joi.string(),
+          slug: Joi.string().allow(null, ""),
           name: Joi.string().allow(null, ""),
           metadata: Joi.object().allow(null),
           sampleImages: Joi.array().items(Joi.string().allow(null, "")),
