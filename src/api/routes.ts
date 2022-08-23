@@ -56,6 +56,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/refresh-collection-flags",
+    options: adminEndpoints.postRefreshCollectionFlagsOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/update-source",
     options: adminEndpoints.postUpdateSourceOptions,
   });
