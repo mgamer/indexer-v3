@@ -1,23 +1,32 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Request, RouteOptions } from "@hapi/hapi";
+import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { buildContinuation, formatEth, fromBuffer, regex, splitContinuation } from "@/common/utils";
+import { JoiPrice, getJoiPriceObject } from "@/common/joi";
+import {
+  buildContinuation,
+  fromBuffer,
+  getNetAmount,
+  regex,
+  splitContinuation,
+} from "@/common/utils";
+import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 
-const version = "v1";
+const version = "v2";
 
-export const getOrdersAllV1Options: RouteOptions = {
+export const getOrdersAllV2Options: RouteOptions = {
   description: "Bulk historical orders",
   notes:
     "This API is designed for efficiently ingesting large volumes of orders, for external processing",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Orders"],
   plugins: {
     "hapi-swagger": {
-      deprecated: true,
+      order: 5,
     },
   },
   validate: {
@@ -57,8 +66,7 @@ export const getOrdersAllV1Options: RouteOptions = {
           contract: Joi.string().lowercase().pattern(regex.address),
           maker: Joi.string().lowercase().pattern(regex.address).required(),
           taker: Joi.string().lowercase().pattern(regex.address).required(),
-          price: Joi.number().unsafe().required(),
-          value: Joi.number().unsafe().required(),
+          price: JoiPrice,
           validFrom: Joi.number().required(),
           validUntil: Joi.number().required(),
           source: Joi.string().allow(null, ""),
@@ -269,7 +277,7 @@ export const getOrdersAllV1Options: RouteOptions = {
       }
 
       const sources = await Sources.getInstance();
-      const result = rawResult.map((r) => ({
+      const result = rawResult.map(async (r) => ({
         id: r.id,
         kind: r.kind,
         side: r.side,
@@ -278,12 +286,23 @@ export const getOrdersAllV1Options: RouteOptions = {
         contract: fromBuffer(r.contract),
         maker: fromBuffer(r.maker),
         taker: fromBuffer(r.taker),
-        price: formatEth(r.price),
-        // For consistency, we set the value of "sell" orders as price - fee
-        value:
-          r.side === "buy"
-            ? formatEth(r.value)
-            : formatEth(r.value) - (formatEth(r.value) * Number(r.fee_bps)) / 10000,
+        price: await getJoiPriceObject(
+          {
+            gross: {
+              amount: r.price,
+              nativeAmount: r.currency_price ?? r.price,
+            },
+            net: {
+              amount: getNetAmount(r.price, r.fee_bps),
+              nativeAmount: getNetAmount(r.currency_price ?? r.price, r.fee_bps),
+            },
+          },
+          r.currency
+            ? fromBuffer(r.currency)
+            : r.side === "sell"
+            ? Sdk.Common.Addresses.Eth[config.chainId]
+            : Sdk.Common.Addresses.Weth[config.chainId]
+        ),
         validFrom: Number(r.valid_from),
         validUntil: Number(r.valid_until),
         source: sources.get(r.source_id_int)?.name,
@@ -298,7 +317,7 @@ export const getOrdersAllV1Options: RouteOptions = {
       }));
 
       return {
-        orders: result,
+        orders: await Promise.all(result),
         continuation,
       };
     } catch (error) {
