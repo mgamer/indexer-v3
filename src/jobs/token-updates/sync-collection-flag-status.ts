@@ -74,7 +74,7 @@ if (config.doBackgroundWork) {
         pendingSyncFlagStatusTokens.push(
           ...tokens.map((r) => ({
             tokenId: r.token_id,
-            isFlagged: r.token_id,
+            isFlagged: r.is_flagged,
           }))
         );
       } else {
