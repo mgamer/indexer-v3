@@ -1,3 +1,12 @@
+## [5.175.2](https://github.com/reservoirprotocol/indexer/compare/v5.175.1...v5.175.2) (2022-08-24)
+
+
+### Bug Fixes
+
+* various fixes for the buy api ([5e88b6b](https://github.com/reservoirprotocol/indexer/commit/5e88b6be0776776448f16e2997e07d798efb5542))
+
+
+
 ## [5.175.1](https://github.com/reservoirprotocol/indexer/compare/v5.175.0...v5.175.1) (2022-08-23)
 
 
