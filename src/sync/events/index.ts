@@ -46,6 +46,7 @@ export const syncEvents = async (
   }
 ) => {
   // --- Handle: fetch and process events ---
+  const excludedNFTMintAddresses = getNetworkSettings().excludedNFTMintAddresses;
 
   // Cache blocks for efficiency
   const blocksCache = new Map<number, blocksModel.Block>();
@@ -174,6 +175,11 @@ export const syncEvents = async (
             // Erc721
 
             case "erc721-transfer": {
+              // Exclude NFT mints from the blacklist
+              if (excludedNFTMintAddresses.includes(baseEventParams.address)) {
+                break;
+              }
+
               const parsedLog = eventData.abi.parseLog(log);
               const from = parsedLog.args["from"].toLowerCase();
               const to = parsedLog.args["to"].toLowerCase();
@@ -245,6 +251,11 @@ export const syncEvents = async (
             // Erc1155
 
             case "erc1155-transfer-single": {
+              // Exclude NFT mints from the blacklist
+              if (excludedNFTMintAddresses.includes(baseEventParams.address)) {
+                break;
+              }
+
               const parsedLog = eventData.abi.parseLog(log);
               const from = parsedLog.args["from"].toLowerCase();
               const to = parsedLog.args["to"].toLowerCase();
@@ -314,6 +325,11 @@ export const syncEvents = async (
             }
 
             case "erc1155-transfer-batch": {
+              // Exclude NFT mints from the blacklist
+              if (excludedNFTMintAddresses.includes(baseEventParams.address)) {
+                break;
+              }
+
               const parsedLog = eventData.abi.parseLog(log);
               const from = parsedLog.args["from"].toLowerCase();
               const to = parsedLog.args["to"].toLowerCase();
