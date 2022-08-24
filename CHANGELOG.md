@@ -1,3 +1,12 @@
+# [5.177.0](https://github.com/reservoirprotocol/indexer/compare/v5.176.1...v5.177.0) (2022-08-24)
+
+
+### Bug Fixes
+
+* clone the source object ([58cc4c7](https://github.com/reservoirprotocol/indexer/commit/58cc4c7956494db9a49e90957d2c3a8368150116))
+
+
+
 ## [5.176.1](https://github.com/reservoirprotocol/indexer/compare/v5.176.0...v5.176.1) (2022-08-24)
 
 
