@@ -1,3 +1,12 @@
+# [5.176.0](https://github.com/reservoirprotocol/indexer/compare/v5.175.3...v5.176.0) (2022-08-24)
+
+
+### Features
+
+* add execute buy v4 api ([55011b7](https://github.com/reservoirprotocol/indexer/commit/55011b76ade0701dc091d9584198b77086badd98))
+
+
+
 ## [5.175.3](https://github.com/reservoirprotocol/indexer/compare/v5.175.2...v5.175.3) (2022-08-24)
 
 
