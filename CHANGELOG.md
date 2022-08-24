@@ -1,3 +1,12 @@
+## [5.175.3](https://github.com/reservoirprotocol/indexer/compare/v5.175.2...v5.175.3) (2022-08-24)
+
+
+### Bug Fixes
+
+* tokens v5 with include top bid ([26dceaa](https://github.com/reservoirprotocol/indexer/commit/26dceaab4614fe27a811fa92bc6c4b5690526a39))
+
+
+
 ## [5.175.2](https://github.com/reservoirprotocol/indexer/compare/v5.175.1...v5.175.2) (2022-08-24)
 
 
