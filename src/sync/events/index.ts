@@ -175,11 +175,6 @@ export const syncEvents = async (
             // Erc721
 
             case "erc721-transfer": {
-              // Exclude NFT mints from the blacklist
-              if (excludedNFTMintAddresses.includes(baseEventParams.address)) {
-                break;
-              }
-
               const parsedLog = eventData.abi.parseLog(log);
               const from = parsedLog.args["from"].toLowerCase();
               const to = parsedLog.args["to"].toLowerCase();
@@ -233,16 +228,19 @@ export const syncEvents = async (
                   mintedTimestamp: baseEventParams.timestamp,
                 });
 
-                if (!tokensMinted.has(baseEventParams.txHash)) {
-                  tokensMinted.set(baseEventParams.txHash, []);
+                // Exclude NFT mints from the blacklist
+                if (!excludedNFTMintAddresses.includes(baseEventParams.address)) {
+                  if (!tokensMinted.has(baseEventParams.txHash)) {
+                    tokensMinted.set(baseEventParams.txHash, []);
+                  }
+                  tokensMinted.get(baseEventParams.txHash)!.push({
+                    contract: baseEventParams.address,
+                    tokenId,
+                    from,
+                    amount: "1",
+                    baseEventParams,
+                  });
                 }
-                tokensMinted.get(baseEventParams.txHash)!.push({
-                  contract: baseEventParams.address,
-                  tokenId,
-                  from,
-                  amount: "1",
-                  baseEventParams,
-                });
               }
 
               break;
@@ -251,11 +249,6 @@ export const syncEvents = async (
             // Erc1155
 
             case "erc1155-transfer-single": {
-              // Exclude NFT mints from the blacklist
-              if (excludedNFTMintAddresses.includes(baseEventParams.address)) {
-                break;
-              }
-
               const parsedLog = eventData.abi.parseLog(log);
               const from = parsedLog.args["from"].toLowerCase();
               const to = parsedLog.args["to"].toLowerCase();
@@ -310,26 +303,24 @@ export const syncEvents = async (
                   mintedTimestamp: baseEventParams.timestamp,
                 });
 
-                tokensMinted.set(baseEventParams.txHash, []);
+                // Exclude NFT mints from the blacklist
+                if (!excludedNFTMintAddresses.includes(baseEventParams.address)) {
+                  tokensMinted.set(baseEventParams.txHash, []);
 
-                tokensMinted.get(baseEventParams.txHash)!.push({
-                  contract: baseEventParams.address,
-                  tokenId,
-                  from,
-                  amount,
-                  baseEventParams,
-                });
+                  tokensMinted.get(baseEventParams.txHash)!.push({
+                    contract: baseEventParams.address,
+                    tokenId,
+                    from,
+                    amount,
+                    baseEventParams,
+                  });
+                }
               }
 
               break;
             }
 
             case "erc1155-transfer-batch": {
-              // Exclude NFT mints from the blacklist
-              if (excludedNFTMintAddresses.includes(baseEventParams.address)) {
-                break;
-              }
-
               const parsedLog = eventData.abi.parseLog(log);
               const from = parsedLog.args["from"].toLowerCase();
               const to = parsedLog.args["to"].toLowerCase();
@@ -391,13 +382,17 @@ export const syncEvents = async (
                     tokenId: tokenIds[i],
                     mintedTimestamp: baseEventParams.timestamp,
                   });
-                  tokensMinted.get(baseEventParams.txHash)!.push({
-                    contract: baseEventParams.address,
-                    tokenId: tokenIds[i],
-                    amount: amounts[i],
-                    from,
-                    baseEventParams,
-                  });
+
+                  // Exclude NFT mints from the blacklist
+                  if (!excludedNFTMintAddresses.includes(baseEventParams.address)) {
+                    tokensMinted.get(baseEventParams.txHash)!.push({
+                      contract: baseEventParams.address,
+                      tokenId: tokenIds[i],
+                      amount: amounts[i],
+                      from,
+                      baseEventParams,
+                    });
+                  }
                 }
               }
 
