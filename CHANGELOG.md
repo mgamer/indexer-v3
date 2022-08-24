@@ -1,3 +1,12 @@
+## [5.177.3](https://github.com/reservoirprotocol/indexer/compare/v5.177.2...v5.177.3) (2022-08-24)
+
+
+### Bug Fixes
+
+* stats v2 api ([cdf3286](https://github.com/reservoirprotocol/indexer/commit/cdf3286d75f2adb55b6d050695c461b2cb36fe2d))
+
+
+
 ## [5.177.2](https://github.com/reservoirprotocol/indexer/compare/v5.177.1...v5.177.2) (2022-08-24)
 
 
