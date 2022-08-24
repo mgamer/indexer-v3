@@ -1,3 +1,21 @@
+## [5.176.1](https://github.com/reservoirprotocol/indexer/compare/v5.176.0...v5.176.1) (2022-08-24)
+
+
+### Bug Fixes
+
+* add Zora ([7ba6ea3](https://github.com/reservoirprotocol/indexer/commit/7ba6ea3b7928618b33b96610f97659911832adc0))
+* add zora default source ([5998546](https://github.com/reservoirprotocol/indexer/commit/599854696543aa587cdfc55ff37d75bec0838a65))
+* added auction hosue events ([579ea19](https://github.com/reservoirprotocol/indexer/commit/579ea1992dac41cf3871a29b883a0fc7c4a51544))
+* added support for ERC20 tokens ([0b027da](https://github.com/reservoirprotocol/indexer/commit/0b027daa456470998cbe6fdb9d4a9d21f2cfdb9d))
+* added zora auction house ([280b990](https://github.com/reservoirprotocol/indexer/commit/280b9908ef465f6c942b760e07d09aba9168d1eb))
+* bump user tokens api limit ([8b2928c](https://github.com/reservoirprotocol/indexer/commit/8b2928c1a60a682a9e4d7aa088a4c5df01c6eada))
+* collections v5 contract filter ([d0ea849](https://github.com/reservoirprotocol/indexer/commit/d0ea8492d2f1170226c9388fa97f22b318df5bc9))
+* fix ERC20 support ([950d501](https://github.com/reservoirprotocol/indexer/commit/950d501bc705d043f55a9d028f1c3ab8033283ca))
+* fix to and from fields ([8f78bb5](https://github.com/reservoirprotocol/indexer/commit/8f78bb553f52847d60c9a102e3abb9270f91b97c))
+* misc fixes ([731a016](https://github.com/reservoirprotocol/indexer/commit/731a01696b25907d320a76ac7505d4830d3f7e37))
+
+
+
 # [5.176.0](https://github.com/reservoirprotocol/indexer/compare/v5.175.3...v5.176.0) (2022-08-24)
 
 

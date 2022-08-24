@@ -2067,6 +2067,85 @@ export const syncEvents = async (
               break;
             }
 
+            case "zora-ask-filled": {
+              const { args } = eventData.abi.parseLog(log);
+              const tokenContract = args["tokenContract"].toLowerCase();
+              const tokenId = args["tokenId"].toString();
+              const buyer = args["buyer"].toLowerCase();
+              const ask = args["ask"];
+
+              const seller = ask["seller"].toLowerCase();
+              const askCurrency = ask["askCurrency"].toLowerCase();
+              const askPrice = ask["askPrice"].toString();
+
+              const prices = await getUSDAndNativePrices(
+                askCurrency,
+                askPrice,
+                baseEventParams.timestamp
+              );
+
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
+
+              fillEvents.push({
+                orderKind: "zora-v3",
+                currency: askCurrency,
+                orderSide: "sell",
+                maker: seller,
+                taker: buyer,
+                price: prices.nativePrice,
+                usdPrice: prices.usdPrice,
+                contract: tokenContract,
+                tokenId,
+                amount: "1",
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "zora-auction-ended": {
+              const { args } = eventData.abi.parseLog(log);
+              // const auctionId = args["auctionId"].toString();
+              const tokenId = args["tokenId"].toString();
+              const tokenContract = args["tokenContract"].toLowerCase();
+              const tokenOwner = args["tokenOwner"].toLowerCase();
+              // const curator = args["curator"].toLowerCase();
+              const winner = args["winner"].toLowerCase();
+              const amount = args["amount"].toString();
+              // const curatorFee = args["curatorFee"].toString();
+              const auctionCurrency = args["auctionCurrency"].toLowerCase();
+
+              const prices = await getUSDAndNativePrices(
+                auctionCurrency,
+                amount,
+                baseEventParams.timestamp
+              );
+
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
+
+              fillEvents.push({
+                orderKind: "zora-v3",
+                currency: auctionCurrency,
+                orderSide: "sell",
+                taker: winner,
+                maker: tokenOwner,
+                price: prices.nativePrice,
+                usdPrice: prices.usdPrice,
+                contract: tokenContract,
+                tokenId,
+                amount: "1",
+                baseEventParams,
+              });
+
+              break;
+            }
+
             case "nouns-auction-settled": {
               const { args } = eventData.abi.parseLog(log);
               const nounId = args["nounId"].toString();
