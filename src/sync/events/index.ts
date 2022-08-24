@@ -1,4 +1,4 @@
-import { defaultAbiCoder } from "@ethersproject/abi";
+import { Interface, defaultAbiCoder } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
@@ -57,6 +57,11 @@ export const syncEvents = async (
   const orderInfos: orderUpdatesById.OrderInfo[] = [];
   const makerInfos: orderUpdatesByMaker.MakerInfo[] = [];
   const mintInfos: tokenUpdatesMint.MintInfo[] = [];
+
+  const cryptopunksTransferEvents: {
+    to: string;
+    txHash: string;
+  }[] = [];
 
   const provider = options?.useSlowProvider ? baseProvider : baseProvider;
 
@@ -2097,6 +2102,90 @@ export const syncEvents = async (
                 contract: Sdk.Nouns.Addresses.TokenContract[config.chainId]?.toLowerCase(),
                 tokenId: nounId,
                 baseEventParams,
+              });
+
+              break;
+            }
+
+            case "cryptopunks-punk-bought": {
+              const { args } = eventData.abi.parseLog(log);
+              const punkIndex = args["punkIndex"].toString();
+              let value = args["value"].toString();
+              const fromAddress = args["fromAddress"].toLowerCase();
+              let toAddress = args["toAddress"].toLowerCase();
+
+              const orderSide = toAddress === AddressZero ? "buy" : "sell";
+
+              // Due to an issue with the cryptopunks smart contract, the
+              // `PunkBought` event is emitted from `acceptBidForPunk`
+              // with toAddress = 0x00...00 and value = 0
+              // https://github.com/larvalabs/cryptopunks/issues/19
+
+              // To get the correct `toAddress` we take the `to` value
+              // the `Transfer` event emitted before `PunkBought` in the
+              // `acceptBidForPunk` function
+              // https://github.com/larvalabs/cryptopunks/blob/master/contracts/CryptoPunksMarket.sol#L223-L229
+              //
+              if (
+                cryptopunksTransferEvents.length &&
+                cryptopunksTransferEvents[cryptopunksTransferEvents.length - 1].txHash ===
+                  baseEventParams.txHash
+              ) {
+                toAddress = cryptopunksTransferEvents[cryptopunksTransferEvents.length - 1].to;
+              }
+
+              // To get the correct `price` that the bid was settled at
+              // We extract the `minPrice` from the `acceptBidForPunk` function
+              const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
+              const iface = new Interface([
+                "function acceptBidForPunk(uint punkIndex, uint minPrice)",
+              ]);
+
+              try {
+                const result = iface.decodeFunctionData("acceptBidForPunk", tx.data);
+                value = result.minPrice.toString();
+              } catch {
+                // Skip any errors
+              }
+
+              const prices = await getUSDAndNativePrices(
+                Sdk.Common.Addresses.Eth[config.chainId],
+                value,
+                baseEventParams.timestamp
+              );
+
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
+              }
+
+              const maker = orderSide === "sell" ? fromAddress : toAddress;
+              const taker = orderSide === "sell" ? toAddress : fromAddress;
+
+              fillEventsPartial.push({
+                orderKind: "cryptopunks",
+                orderSide,
+                maker,
+                taker,
+                price: prices.nativePrice,
+                usdPrice: prices.usdPrice,
+                currency: Sdk.Common.Addresses.Eth[config.chainId],
+                contract: baseEventParams.address?.toLowerCase(),
+                tokenId: punkIndex,
+                amount: "1",
+                baseEventParams,
+              });
+
+              break;
+            }
+
+            case "cryptopunks-transfer": {
+              const { args } = eventData.abi.parseLog(log);
+              const to = args["to"].toLowerCase();
+
+              cryptopunksTransferEvents.push({
+                to,
+                txHash: baseEventParams.txHash,
               });
 
               break;
