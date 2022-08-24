@@ -37,7 +37,8 @@ export type OrderKind =
   | "element-erc1155"
   | "quixotic"
   | "nouns"
-  | "cryptopunks";
+  | "cryptopunks"
+  | "zora-v3";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol

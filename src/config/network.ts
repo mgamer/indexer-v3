@@ -16,6 +16,8 @@ export const getNetworkName = () => {
       return "goerli";
     case 10:
       return "optimism";
+    case 137:
+      return "polygon";
     default:
       return "unknown";
   }
@@ -24,6 +26,8 @@ export const getNetworkName = () => {
 type NetworkSettings = {
   enableWebSocket: boolean;
   enableReorgCheck: boolean;
+  backfillFetchAllBlocks: boolean;
+  reorgCheckFrequency: number[];
   realtimeSyncFrequencySeconds: number;
   realtimeSyncMaxBlockLag: number;
   backfillBlockBatchSize: number;
@@ -43,6 +47,7 @@ export const getNetworkSettings = (): NetworkSettings => {
   const defaultNetworkSettings: NetworkSettings = {
     enableWebSocket: true,
     enableReorgCheck: true,
+    backfillFetchAllBlocks: true,
     realtimeSyncFrequencySeconds: 15,
     realtimeSyncMaxBlockLag: 16,
     backfillBlockBatchSize: 16,
@@ -52,6 +57,7 @@ export const getNetworkSettings = (): NetworkSettings => {
     washTradingWhitelistedAddresses: [],
     washTradingBlacklistedAddresses: [],
     multiCollectionContracts: [],
+    reorgCheckFrequency: [1, 5, 10, 30, 60],
   };
 
   switch (config.chainId) {
@@ -189,6 +195,19 @@ export const getNetworkSettings = (): NetworkSettings => {
             ),
           ]);
         },
+      };
+    }
+    // Polygon
+    case 137: {
+      return {
+        ...defaultNetworkSettings,
+        enableWebSocket: false,
+        enableReorgCheck: true,
+        backfillFetchAllBlocks: false,
+        realtimeSyncFrequencySeconds: 10,
+        realtimeSyncMaxBlockLag: 128,
+        backfillBlockBatchSize: 512,
+        reorgCheckFrequency: [30],
       };
     }
     // Default
