@@ -228,11 +228,11 @@ export const syncEvents = async (
                   mintedTimestamp: baseEventParams.timestamp,
                 });
 
+                if (!tokensMinted.has(baseEventParams.txHash)) {
+                  tokensMinted.set(baseEventParams.txHash, []);
+                }
                 // Exclude NFT mints from the blacklist
                 if (!excludedNFTMintAddresses.includes(baseEventParams.address)) {
-                  if (!tokensMinted.has(baseEventParams.txHash)) {
-                    tokensMinted.set(baseEventParams.txHash, []);
-                  }
                   tokensMinted.get(baseEventParams.txHash)!.push({
                     contract: baseEventParams.address,
                     tokenId,
@@ -303,10 +303,11 @@ export const syncEvents = async (
                   mintedTimestamp: baseEventParams.timestamp,
                 });
 
+                if (!tokensMinted.has(baseEventParams.txHash)) {
+                  tokensMinted.set(baseEventParams.txHash, []);
+                }
                 // Exclude NFT mints from the blacklist
                 if (!excludedNFTMintAddresses.includes(baseEventParams.address)) {
-                  tokensMinted.set(baseEventParams.txHash, []);
-
                   tokensMinted.get(baseEventParams.txHash)!.push({
                     contract: baseEventParams.address,
                     tokenId,
@@ -329,7 +330,9 @@ export const syncEvents = async (
 
               const count = Math.min(tokenIds.length, amounts.length);
 
-              tokensMinted.set(baseEventParams.txHash, []);
+              if (!tokensMinted.has(baseEventParams.txHash)) {
+                tokensMinted.set(baseEventParams.txHash, []);
+              }
 
               for (let i = 0; i < count; i++) {
                 nftTransferEvents.push({
