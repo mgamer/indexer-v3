@@ -14,6 +14,8 @@ import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
+import { OrderKind } from "@/orderbook/orders";
+import { generateListingDetails } from "@/orderbook/orders";
 import { getCurrency } from "@/utils/currencies";
 
 const version = "v4";
@@ -145,79 +147,8 @@ export const getExecuteBuyV4Options: RouteOptions = {
       // We need each filled order's source for the path
       const sources = await Sources.getInstance();
 
-      // Keep track of the listings to fill
+      // Keep track of the listings and path to fill
       const listingDetails: ListingDetails[] = [];
-      const addListingDetail = (
-        kind: string,
-        contractKind: "erc721" | "erc1155",
-        contract: string,
-        tokenId: string,
-        currency: string,
-        amount: number,
-        rawData: any
-      ) => {
-        const common = {
-          contractKind,
-          contract,
-          tokenId,
-          currency,
-          amount,
-        };
-
-        switch (kind) {
-          case "foundation": {
-            return listingDetails.push({
-              kind: "foundation",
-              ...common,
-              order: new Sdk.Foundation.Order(config.chainId, rawData),
-            });
-          }
-
-          case "looks-rare": {
-            return listingDetails.push({
-              kind: "looks-rare",
-              ...common,
-              order: new Sdk.LooksRare.Order(config.chainId, rawData),
-            });
-          }
-
-          case "opendao-erc721":
-          case "opendao-erc1155": {
-            return listingDetails.push({
-              kind: "opendao",
-              ...common,
-              order: new Sdk.OpenDao.Order(config.chainId, rawData),
-            });
-          }
-
-          case "x2y2": {
-            return listingDetails.push({
-              kind: "x2y2",
-              ...common,
-              order: new Sdk.X2Y2.Order(config.chainId, rawData),
-            });
-          }
-
-          case "zeroex-v4-erc721":
-          case "zeroex-v4-erc1155": {
-            return listingDetails.push({
-              kind: "zeroex-v4",
-              ...common,
-              order: new Sdk.ZeroExV4.Order(config.chainId, rawData),
-            });
-          }
-
-          case "seaport": {
-            return listingDetails.push({
-              kind: "seaport",
-              ...common,
-              order: new Sdk.Seaport.Order(config.chainId, rawData),
-            });
-          }
-        }
-      };
-
-      // Keep track of the path to fill
       const path: {
         orderId: string;
         contract: string;
@@ -231,40 +162,46 @@ export const getExecuteBuyV4Options: RouteOptions = {
       const addToPath = async (
         order: {
           id: string;
-          kind: string;
+          kind: OrderKind;
           price: string;
           sourceId: number | null;
           currency: string;
           rawData: string;
-          quantity?: number;
         },
         token: {
           kind: "erc721" | "erc1155";
           contract: string;
           tokenId: string;
+          quantity?: number;
         }
       ) => {
-        const totalPrice = bn(order.price).mul(order.quantity ?? 1);
+        const totalPrice = bn(order.price).mul(token.quantity ?? 1);
         const rawQuote = totalPrice.add(totalPrice.mul(payload.referrerFeeBps).div(10000));
         path.push({
           orderId: order.id,
           contract: token.contract,
           tokenId: token.tokenId,
-          quantity: order.quantity ?? 1,
+          quantity: token.quantity ?? 1,
           source: order.sourceId !== null ? sources.get(order.sourceId)?.domain : null,
           currency: order.currency,
           quote: formatPrice(rawQuote, (await getCurrency(order.currency)).decimals),
           rawQuote: rawQuote.toString(),
         });
 
-        addListingDetail(
-          order.kind,
-          token.kind,
-          token.contract,
-          token.tokenId,
-          order.currency,
-          order.quantity ?? 1,
-          order.rawData
+        listingDetails.push(
+          generateListingDetails(
+            {
+              kind: order.kind,
+              currency: order.currency,
+              rawData: order.rawData,
+            },
+            {
+              kind: token.kind,
+              contract: token.contract,
+              tokenId: token.tokenId,
+              amount: token.quantity,
+            }
+          )
         );
       };
 
@@ -493,12 +430,12 @@ export const getExecuteBuyV4Options: RouteOptions = {
                   sourceId: source_id_int,
                   currency: fromBuffer(currency),
                   rawData: raw_data,
-                  quantity: quantityFilled,
                 },
                 {
                   kind: token_kind,
                   contract,
                   tokenId,
+                  quantity: quantityFilled,
                 }
               );
             }
