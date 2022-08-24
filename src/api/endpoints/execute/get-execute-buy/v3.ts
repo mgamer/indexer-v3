@@ -77,7 +77,6 @@ export const getExecuteBuyV3Options: RouteOptions = {
         ),
       referrerFeeBps: Joi.number()
         .integer()
-        .positive()
         .min(0)
         .max(10000)
         .default(0)
@@ -260,7 +259,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
                 AND orders.approval_status = 'approved'
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
                 AND orders.currency = $/currency/
-              ORDER BY orders.value
+              ORDER BY orders.value, orders.fee_bps
               LIMIT 1
             `,
             {
@@ -320,7 +319,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
               FROM (
                 SELECT
                   orders.*,
-                  SUM(orders.quantity_remaining) OVER (ORDER BY price, id) - orders.quantity_remaining AS quantity
+                  SUM(orders.quantity_remaining) OVER (ORDER BY price, fee_bps, id) - orders.quantity_remaining AS quantity
                 FROM orders
                 WHERE orders.token_set_id = $/tokenSetId/
                   AND orders.side = 'sell'

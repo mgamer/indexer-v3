@@ -243,7 +243,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
                 AND orders.approval_status = 'approved'
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
                 AND orders.currency = '\\x0000000000000000000000000000000000000000'
-              ORDER BY orders.value
+              ORDER BY orders.value, orders.fee_bps
               LIMIT 1
             `,
             { tokenSetId: `token:${contract}:${tokenId}` }
@@ -297,7 +297,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
               FROM (
                 SELECT
                   orders.*,
-                  SUM(orders.quantity_remaining) OVER (ORDER BY price, id) - orders.quantity_remaining AS quantity
+                  SUM(orders.quantity_remaining) OVER (ORDER BY price, fee_bps, id) - orders.quantity_remaining AS quantity
                 FROM orders
                 WHERE orders.token_set_id = $/tokenSetId/
                   AND orders.side = 'sell'
