@@ -14,7 +14,6 @@ import { BidDetails, ListingDetails } from "@reservoir0x/sdk/dist/router/types";
 
 import { redb } from "@/common/db";
 import { config } from "@/config/index";
-
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 
