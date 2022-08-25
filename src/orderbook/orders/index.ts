@@ -37,8 +37,9 @@ export type OrderKind =
   | "element-erc1155"
   | "quixotic"
   | "nouns"
-  | "cryptopunks"
-  | "zora-v3";
+  | "zora-v3"
+  | "mint"
+  | "cryptopunks";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -67,6 +68,8 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("element.market");
       case "quixotic":
         return sources.getOrInsert("quixotic.io");
+      case "zora-v3":
+        return sources.getOrInsert("zora.co");
       case "nouns":
         return sources.getOrInsert("nouns.wtf");
       default:
