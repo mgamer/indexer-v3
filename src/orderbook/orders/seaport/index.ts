@@ -14,6 +14,7 @@ import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
 import * as addUserReceivedBids from "@/jobs/user-received-bids/add-user-received-bids";
 import { getUSDAndNativePrices } from "@/utils/prices";
+import { BigNumber } from "@ethersproject/bignumber";
 
 export type OrderInfo = {
   orderParams: Sdk.Seaport.Types.OrderComponents;
@@ -217,8 +218,9 @@ export const save = async (
           const typedInfo = info as typeof info & { merkleRoot: string };
           const merkleRoot = typedInfo.merkleRoot;
 
-          tokenSetId = `list:${info.contract}:${merkleRoot}`;
           if (merkleRoot) {
+            tokenSetId = `list:${info.contract}:${BigNumber.from(merkleRoot).toHexString()}`;
+
             await tokenSet.tokenList.save([
               {
                 id: tokenSetId,
