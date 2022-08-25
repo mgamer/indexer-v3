@@ -1,3 +1,48 @@
+## [5.177.4](https://github.com/reservoirprotocol/indexer/compare/v5.177.3...v5.177.4) (2022-08-25)
+
+
+### Bug Fixes
+
+* deprecate orders all ([95a7350](https://github.com/reservoirprotocol/indexer/commit/95a7350a03948e2725f1b16aa4e61d089689493d))
+
+
+
+## [5.177.3](https://github.com/reservoirprotocol/indexer/compare/v5.177.2...v5.177.3) (2022-08-24)
+
+
+### Bug Fixes
+
+* stats v2 api ([cdf3286](https://github.com/reservoirprotocol/indexer/commit/cdf3286d75f2adb55b6d050695c461b2cb36fe2d))
+
+
+
+## [5.177.2](https://github.com/reservoirprotocol/indexer/compare/v5.177.1...v5.177.2) (2022-08-24)
+
+
+### Bug Fixes
+
+* clone the source object ([1f088d9](https://github.com/reservoirprotocol/indexer/commit/1f088d91cfaa41986a1497c0f7913e15cbe30d50))
+
+
+
+## [5.177.1](https://github.com/reservoirprotocol/indexer/compare/v5.177.0...v5.177.1) (2022-08-24)
+
+
+### Bug Fixes
+
+* response validation ([b42ca66](https://github.com/reservoirprotocol/indexer/commit/b42ca66925d5c285d0a90d6b7411ee8b6779e09a))
+
+
+
+# [5.177.0](https://github.com/reservoirprotocol/indexer/compare/v5.176.1...v5.177.0) (2022-08-24)
+
+
+### Bug Fixes
+
+* clone the source object ([58cc4c7](https://github.com/reservoirprotocol/indexer/commit/58cc4c7956494db9a49e90957d2c3a8368150116))
+
+
+
 ## [5.176.1](https://github.com/reservoirprotocol/indexer/compare/v5.176.0...v5.176.1) (2022-08-24)
 
 
