@@ -1,3 +1,12 @@
+# [5.180.0](https://github.com/reservoirprotocol/indexer/compare/v5.179.0...v5.180.0) (2022-08-25)
+
+
+### Features
+
+* updated query for sync, updated toke set id logic ([#1593](https://github.com/reservoirprotocol/indexer/issues/1593)) ([e69b100](https://github.com/reservoirprotocol/indexer/commit/e69b100ca1014e691d296fa8ebaadc3457658e7c))
+
+
+
 # [5.179.0](https://github.com/reservoirprotocol/indexer/compare/v5.178.0...v5.179.0) (2022-08-25)
 
 
