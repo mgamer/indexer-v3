@@ -56,6 +56,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
           maker: Joi.string()
             .lowercase()
             .pattern(/^0x[a-fA-F0-9]{40}$/),
+          createdAt: Joi.string(),
           validFrom: Joi.number().unsafe(),
           validUntil: Joi.number().unsafe(),
           source: Joi.object().allow(null),
@@ -173,7 +174,8 @@ export const getUserTopBidsV1Options: RouteOptions = {
               ) AS bid_context
         FROM nft_balances nb
         JOIN LATERAL (
-            SELECT o.token_set_id, o.id AS "top_bid_id", o.price AS "top_bid_price", o.value AS "top_bid_value", o.maker AS "top_bid_maker", source_id_int,
+            SELECT o.token_set_id, o.id AS "top_bid_id", o.price AS "top_bid_price", o.value AS "top_bid_value",
+                   o.maker AS "top_bid_maker", source_id_int, o.created_at AS "order_created_at",
                    DATE_PART('epoch', LOWER(o.valid_between)) AS "top_bid_valid_from",
                    COALESCE(
                      NULLIF(DATE_PART('epoch', UPPER(o.valid_between)), 'Infinity'),
@@ -221,6 +223,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
           price: formatEth(r.top_bid_price),
           value: formatEth(r.top_bid_value),
           maker: fromBuffer(r.top_bid_maker),
+          createdAt: new Date(r.order_created_at).toISOString(),
           validFrom: r.top_bid_valid_from,
           validUntil: r.top_bid_valid_until,
           source: {
