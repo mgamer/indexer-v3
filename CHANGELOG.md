@@ -1,3 +1,12 @@
+# [5.178.0](https://github.com/reservoirprotocol/indexer/compare/v5.177.4...v5.178.0) (2022-08-25)
+
+
+### Features
+
+* added top bids api for user ([4bfc6c5](https://github.com/reservoirprotocol/indexer/commit/4bfc6c598af42b8a417edff68e5f2db3205aaf3d))
+
+
+
 ## [5.177.4](https://github.com/reservoirprotocol/indexer/compare/v5.177.3...v5.177.4) (2022-08-25)
 
 
