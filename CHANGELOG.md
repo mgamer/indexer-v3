@@ -1,3 +1,13 @@
+# [5.179.0](https://github.com/reservoirprotocol/indexer/compare/v5.178.0...v5.179.0) (2022-08-25)
+
+
+### Features
+
+* added context in top bids api ([5561908](https://github.com/reservoirprotocol/indexer/commit/5561908924be4eb9f2a174dc116cc59861063f11))
+* added createdAt in top bids api ([2455367](https://github.com/reservoirprotocol/indexer/commit/2455367d11398e4aebabe8edb42a230c3ec4e55e))
+
+
+
 # [5.178.0](https://github.com/reservoirprotocol/indexer/compare/v5.177.4...v5.178.0) (2022-08-25)
 
 
