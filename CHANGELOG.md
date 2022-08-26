@@ -1,3 +1,12 @@
+## [5.180.3](https://github.com/reservoirprotocol/indexer/compare/v5.180.2...v5.180.3) (2022-08-26)
+
+
+### Bug Fixes
+
+* response validation ([661c693](https://github.com/reservoirprotocol/indexer/commit/661c693f8a70686c3d979550a9312573c0d3e542))
+
+
+
 ## [5.180.2](https://github.com/reservoirprotocol/indexer/compare/v5.180.1...v5.180.2) (2022-08-26)
 
 
