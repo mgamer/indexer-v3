@@ -151,24 +151,13 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       }
 
-      // Handle: fees
-      let feeBreakdown = [
+      // Handle: fees (X2Y2 has optional royalties)
+      const feeBreakdown = [
         {
           kind: "marketplace",
           recipient: Sdk.X2Y2.Addresses.FeeManager[config.chainId],
           bps: 50,
         },
-      ];
-
-      // Handle: royalties
-      const royalties = await commonHelpers.getRoyalties(order.params.nft.token);
-      feeBreakdown = [
-        ...feeBreakdown,
-        ...royalties.map(({ bps, recipient }) => ({
-          kind: "royalty",
-          recipient,
-          bps,
-        })),
       ];
       const feeBps = feeBreakdown.map(({ bps }) => bps).reduce((a, b) => Number(a) + Number(b), 0);
 
