@@ -1,3 +1,12 @@
+## [5.180.1](https://github.com/reservoirprotocol/indexer/compare/v5.180.0...v5.180.1) (2022-08-26)
+
+
+### Bug Fixes
+
+* remove royalties from x2y2 orders ([a4d257e](https://github.com/reservoirprotocol/indexer/commit/a4d257eb4dd75f11742842016bfd73880a63869c))
+
+
+
 # [5.180.0](https://github.com/reservoirprotocol/indexer/compare/v5.179.0...v5.180.0) (2022-08-25)
 
 
