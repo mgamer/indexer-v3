@@ -18,7 +18,8 @@ import _ from "lodash";
 const version = "v1";
 
 export const getUserTopBidsV1Options: RouteOptions = {
-  description: "Get top bids for the given user tokens",
+  description: "User Top Bids",
+  notes: "Return the top bids for the given user tokens",
   tags: ["api", "Orders"],
   plugins: {
     "hapi-swagger": {
