@@ -38,6 +38,7 @@ export type OrderKind =
   | "quixotic"
   | "nouns"
   | "zora-v3"
+  | "mint"
   | "cryptopunks";
 
 // In case we don't have the source of an order readily available, we use

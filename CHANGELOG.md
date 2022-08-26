@@ -1,3 +1,12 @@
+## [5.180.4](https://github.com/reservoirprotocol/indexer/compare/v5.180.3...v5.180.4) (2022-08-26)
+
+
+### Bug Fixes
+
+* add mints as sales ([fa7d429](https://github.com/reservoirprotocol/indexer/commit/fa7d42909fb12c870956abdadef09cd34166d211))
+
+
+
 ## [5.180.3](https://github.com/reservoirprotocol/indexer/compare/v5.180.2...v5.180.3) (2022-08-26)
 
 

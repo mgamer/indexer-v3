@@ -15,7 +15,7 @@ import { getNetworkSettings } from "@/config/network";
 import { EventDataKind, getEventData } from "@/events-sync/data";
 import * as es from "@/events-sync/storage";
 import * as syncEventsUtils from "@/events-sync/utils";
-import { parseEvent } from "@/events-sync/parser";
+import { BaseEventParams, parseEvent } from "@/events-sync/parser";
 import * as blockCheck from "@/jobs/events-sync/block-check-queue";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
@@ -46,6 +46,7 @@ export const syncEvents = async (
   }
 ) => {
   // --- Handle: fetch and process events ---
+  const excludedNFTMintAddresses = getNetworkSettings().excludedNFTMintAddresses;
 
   // Cache blocks for efficiency
   const blocksCache = new Map<number, blocksModel.Block>();
@@ -62,6 +63,17 @@ export const syncEvents = async (
     to: string;
     txHash: string;
   }[] = [];
+
+  const tokensMinted = new Map<
+    string,
+    {
+      contract: string;
+      from: string;
+      tokenId: string;
+      amount: string;
+      baseEventParams: BaseEventParams;
+    }[]
+  >();
 
   const provider = options?.useSlowProvider ? baseProvider : baseProvider;
 
@@ -215,6 +227,20 @@ export const syncEvents = async (
                   tokenId,
                   mintedTimestamp: baseEventParams.timestamp,
                 });
+
+                if (!tokensMinted.has(baseEventParams.txHash)) {
+                  tokensMinted.set(baseEventParams.txHash, []);
+                }
+                // Exclude NFT mints from the blacklist
+                if (!excludedNFTMintAddresses.includes(baseEventParams.address)) {
+                  tokensMinted.get(baseEventParams.txHash)!.push({
+                    contract: baseEventParams.address,
+                    tokenId,
+                    from,
+                    amount: "1",
+                    baseEventParams,
+                  });
+                }
               }
 
               break;
@@ -276,6 +302,20 @@ export const syncEvents = async (
                   tokenId,
                   mintedTimestamp: baseEventParams.timestamp,
                 });
+
+                if (!tokensMinted.has(baseEventParams.txHash)) {
+                  tokensMinted.set(baseEventParams.txHash, []);
+                }
+                // Exclude NFT mints from the blacklist
+                if (!excludedNFTMintAddresses.includes(baseEventParams.address)) {
+                  tokensMinted.get(baseEventParams.txHash)!.push({
+                    contract: baseEventParams.address,
+                    tokenId,
+                    from,
+                    amount,
+                    baseEventParams,
+                  });
+                }
               }
 
               break;
@@ -289,6 +329,11 @@ export const syncEvents = async (
               const amounts = parsedLog.args["amounts"].map(String);
 
               const count = Math.min(tokenIds.length, amounts.length);
+
+              if (!tokensMinted.has(baseEventParams.txHash)) {
+                tokensMinted.set(baseEventParams.txHash, []);
+              }
+
               for (let i = 0; i < count; i++) {
                 nftTransferEvents.push({
                   kind: "erc1155",
@@ -340,6 +385,17 @@ export const syncEvents = async (
                     tokenId: tokenIds[i],
                     mintedTimestamp: baseEventParams.timestamp,
                   });
+
+                  // Exclude NFT mints from the blacklist
+                  if (!excludedNFTMintAddresses.includes(baseEventParams.address)) {
+                    tokensMinted.get(baseEventParams.txHash)!.push({
+                      contract: baseEventParams.address,
+                      tokenId: tokenIds[i],
+                      amount: amounts[i],
+                      from,
+                      baseEventParams,
+                    });
+                  }
                 }
               }
 
@@ -2291,6 +2347,46 @@ export const syncEvents = async (
         ]);
       } else {
         logger.warn("sync-events", `Skipping assigning orders source assigned to fill events`);
+      }
+
+      for (const [txHash, mints] of tokensMinted.entries()) {
+        if (mints.length > 0) {
+          const tx = await syncEventsUtils.fetchTransaction(txHash);
+
+          if (tx.value === "0") {
+            continue;
+          }
+
+          const totalAmount = mints
+            .map(({ amount }) => amount)
+            .reduce((a, b) => bn(a).add(b).toString());
+
+          const price = bn(tx.value).div(totalAmount).toString();
+
+          const currency = Sdk.Common.Addresses.Eth[config.chainId];
+
+          for (const mint of mints) {
+            const prices = await getUSDAndNativePrices(
+              currency,
+              price,
+              mint.baseEventParams.timestamp
+            );
+
+            fillEvents.push({
+              orderKind: "mint",
+              orderSide: "sell",
+              taker: tx.from,
+              maker: mint.from,
+              amount: mint.amount,
+              currency,
+              price: price,
+              usdPrice: prices.usdPrice,
+              contract: mint.contract,
+              tokenId: mint.tokenId,
+              baseEventParams: mint.baseEventParams,
+            });
+          }
+        }
       }
 
       // WARNING! Ordering matters (fills should come in front of cancels).
