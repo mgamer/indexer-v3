@@ -558,6 +558,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   server.route({
+    method: "GET",
+    path: "/orders/users/{user}/top-bids/v1",
+    options: ordersEndpoints.getUserTopBidsV1Options,
+  });
+
+  server.route({
     method: "POST",
     path: "/order/v1",
     options: ordersEndpoints.postOrderV1Options,
