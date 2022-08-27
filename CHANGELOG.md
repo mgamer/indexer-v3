@@ -1,3 +1,12 @@
+# [5.182.0](https://github.com/reservoirprotocol/indexer/compare/v5.181.0...v5.182.0) (2022-08-27)
+
+
+### Features
+
+* add new refactored execute list and bid apis ([20e0008](https://github.com/reservoirprotocol/indexer/commit/20e00088dd3530554c435847267416072f5d82e2))
+
+
+
 # [5.181.0](https://github.com/reservoirprotocol/indexer/compare/v5.180.4...v5.181.0) (2022-08-27)
 
 
