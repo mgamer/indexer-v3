@@ -379,6 +379,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   server.route({
+    method: "POST",
+    path: "/execute/bid/v4",
+    options: executeEndpoints.getExecuteBidV4Options,
+  });
+
+  server.route({
     method: "GET",
     path: "/execute/buy/v1",
     options: executeEndpoints.getExecuteBuyV1Options,
@@ -424,6 +430,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/execute/list/v3",
     options: executeEndpoints.getExecuteListV3Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/execute/list/v4",
+    options: executeEndpoints.getExecuteListV4Options,
   });
 
   server.route({
