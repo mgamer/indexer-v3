@@ -46,7 +46,6 @@ export const syncEvents = async (
   }
 ) => {
   // --- Handle: fetch and process events ---
-  const excludedNFTMintAddresses = getNetworkSettings().excludedNFTMintAddresses;
 
   // Cache blocks for efficiency
   const blocksCache = new Map<number, blocksModel.Block>();
@@ -64,6 +63,8 @@ export const syncEvents = async (
     txHash: string;
   }[] = [];
 
+  // For handling mints as sales
+  const mintsAsSalesBlacklist = getNetworkSettings().mintsAsSalesBlacklist;
   const tokensMinted = new Map<
     string,
     {
@@ -238,11 +239,11 @@ export const syncEvents = async (
                   mintedTimestamp: baseEventParams.timestamp,
                 });
 
-                if (!tokensMinted.has(baseEventParams.txHash)) {
-                  tokensMinted.set(baseEventParams.txHash, []);
-                }
-                // Exclude NFT mints from the blacklist
-                if (!excludedNFTMintAddresses.includes(baseEventParams.address)) {
+                // Treat mints as sales
+                if (!mintsAsSalesBlacklist.includes(baseEventParams.address)) {
+                  if (!tokensMinted.has(baseEventParams.txHash)) {
+                    tokensMinted.set(baseEventParams.txHash, []);
+                  }
                   tokensMinted.get(baseEventParams.txHash)!.push({
                     contract: baseEventParams.address,
                     tokenId,
@@ -313,11 +314,11 @@ export const syncEvents = async (
                   mintedTimestamp: baseEventParams.timestamp,
                 });
 
-                if (!tokensMinted.has(baseEventParams.txHash)) {
-                  tokensMinted.set(baseEventParams.txHash, []);
-                }
-                // Exclude NFT mints from the blacklist
-                if (!excludedNFTMintAddresses.includes(baseEventParams.address)) {
+                // Treat mints as sales
+                if (!mintsAsSalesBlacklist.includes(baseEventParams.address)) {
+                  if (!tokensMinted.has(baseEventParams.txHash)) {
+                    tokensMinted.set(baseEventParams.txHash, []);
+                  }
                   tokensMinted.get(baseEventParams.txHash)!.push({
                     contract: baseEventParams.address,
                     tokenId,
@@ -339,11 +340,6 @@ export const syncEvents = async (
               const amounts = parsedLog.args["amounts"].map(String);
 
               const count = Math.min(tokenIds.length, amounts.length);
-
-              if (!tokensMinted.has(baseEventParams.txHash)) {
-                tokensMinted.set(baseEventParams.txHash, []);
-              }
-
               for (let i = 0; i < count; i++) {
                 nftTransferEvents.push({
                   kind: "erc1155",
@@ -396,8 +392,11 @@ export const syncEvents = async (
                     mintedTimestamp: baseEventParams.timestamp,
                   });
 
-                  // Exclude NFT mints from the blacklist
-                  if (!excludedNFTMintAddresses.includes(baseEventParams.address)) {
+                  // Treat mints as sales
+                  if (!mintsAsSalesBlacklist.includes(baseEventParams.address)) {
+                    if (!tokensMinted.has(baseEventParams.txHash)) {
+                      tokensMinted.set(baseEventParams.txHash, []);
+                    }
                     tokensMinted.get(baseEventParams.txHash)!.push({
                       contract: baseEventParams.address,
                       tokenId: tokenIds[i],

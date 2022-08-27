@@ -59,6 +59,7 @@ if (config.doBackgroundWork) {
                 orders.source_id_int AS "sourceIdInt",
                 orders.valid_between AS "validBetween",
                 COALESCE(orders.quantity_remaining, 1) AS "quantityRemaining",
+                orders.nonce,
                 orders.maker,
                 orders.price,
                 orders.value,
@@ -308,6 +309,7 @@ if (config.doBackgroundWork) {
                     order_source_id_int,
                     order_valid_between,
                     order_quantity_remaining,
+                    order_nonce,
                     maker,
                     price,
                     tx_hash,
@@ -331,6 +333,7 @@ if (config.doBackgroundWork) {
                     $/sourceIdInt/,
                     $/validBetween/,
                     $/quantityRemaining/,
+                    $/nonce/,
                     $/maker/,
                     $/value/,
                     $/txHash/,
@@ -346,6 +349,7 @@ if (config.doBackgroundWork) {
                   sourceIdInt: order.sourceIdInt,
                   validBetween: order.validBetween,
                   quantityRemaining: order.quantityRemaining,
+                  nonce: order.nonce,
                   maker: order.maker,
                   value: order.value,
                   kind: trigger.kind,
@@ -361,8 +365,7 @@ if (config.doBackgroundWork) {
               };
 
               await updateNftBalanceFloorAskPriceQueue.addToQueue([updateFloorAskPriceInfo]);
-            }
-            if (side === "buy") {
+            } else if (order.side === "buy") {
               // Insert a corresponding bid event
               await idb.none(
                 `
@@ -375,6 +378,7 @@ if (config.doBackgroundWork) {
                     order_source_id_int,
                     order_valid_between,
                     order_quantity_remaining,
+                    order_nonce,
                     maker,
                     price,
                     value,
@@ -399,6 +403,7 @@ if (config.doBackgroundWork) {
                     $/orderSourceIdInt/,
                     $/validBetween/,
                     $/quantityRemaining/,
+                    $/nonce/,
                     $/maker/,
                     $/price/,
                     $/value/,
@@ -415,6 +420,7 @@ if (config.doBackgroundWork) {
                   orderSourceIdInt: order.sourceIdInt,
                   validBetween: order.validBetween,
                   quantityRemaining: order.quantityRemaining,
+                  nonce: order.nonce,
                   maker: order.maker,
                   price: order.price,
                   value: order.value,
