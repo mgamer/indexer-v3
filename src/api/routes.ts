@@ -456,6 +456,12 @@ export const setupRoutes = (server: Server) => {
     options: executeEndpoints.getExecuteSellV3Options,
   });
 
+  server.route({
+    method: "POST",
+    path: "/execute/sell/v4",
+    options: executeEndpoints.getExecuteSellV4Options,
+  });
+
   // Health
 
   // Both `/readyz` and `/livez` point to the same handler,

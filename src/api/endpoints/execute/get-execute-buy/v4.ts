@@ -225,7 +225,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
         }
       }
 
-      // Scenario 2: explicitly passing the existing orders to fill
+      // Scenario 2: explicitly passing existing orders to fill
       if (payload.orderIds) {
         for (const orderId of payload.orderIds) {
           const orderResult = await redb.oneOrNone(

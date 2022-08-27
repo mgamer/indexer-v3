@@ -13,3 +13,4 @@ export * from "@/api/endpoints/execute/get-execute-list/v4";
 export * from "@/api/endpoints/execute/get-execute-sell/v1";
 export * from "@/api/endpoints/execute/get-execute-sell/v2";
 export * from "@/api/endpoints/execute/get-execute-sell/v3";
+export * from "@/api/endpoints/execute/get-execute-sell/v4";
