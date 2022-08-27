@@ -1,3 +1,13 @@
+# [5.181.0](https://github.com/reservoirprotocol/indexer/compare/v5.180.4...v5.181.0) (2022-08-27)
+
+
+### Features
+
+* include order nonce in the order event tables ([61569d1](https://github.com/reservoirprotocol/indexer/commit/61569d1798985a23f9bfdb159d8c64946da64eb5))
+* updated doc ([9fd423d](https://github.com/reservoirprotocol/indexer/commit/9fd423dfffdde0295aa4a8522faf2584695815e3))
+
+
+
 ## [5.180.4](https://github.com/reservoirprotocol/indexer/compare/v5.180.3...v5.180.4) (2022-08-26)
 
 
