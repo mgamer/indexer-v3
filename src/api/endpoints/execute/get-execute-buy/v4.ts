@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { AddressZero } from "@ethersproject/constants";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
@@ -76,19 +75,11 @@ export const getExecuteBuyV4Options: RouteOptions = {
         .pattern(regex.domain)
         .required()
         .description("Filling source used for attribution. Example: `reservoir.market`"),
-      referrer: Joi.string()
-        .lowercase()
-        .pattern(regex.address)
-        .default(AddressZero)
+      feesOnTop: Joi.array()
+        .items(Joi.string().pattern(regex.fee))
         .description(
-          "Wallet address of referrer. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
+          "List of fees (formatted as `feeRecipient:feeBps`) to be taken when filling. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00:100`"
         ),
-      referrerFeeBps: Joi.number()
-        .integer()
-        .min(0)
-        .max(10000)
-        .default(0)
-        .description("Fee amount in BPS. Example: `100`."),
       partial: Joi.boolean()
         .default(false)
         .description("If true, partial orders will be accepted."),
@@ -234,7 +225,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
         }
       }
 
-      // Scenario 2: explicitly passing the existing orders to fill
+      // Scenario 2: explicitly passing existing orders to fill
       if (payload.orderIds) {
         for (const orderId of payload.orderIds) {
           const orderResult = await redb.oneOrNone(
@@ -462,6 +453,14 @@ export const getExecuteBuyV4Options: RouteOptions = {
       if (payload.onlyPath) {
         // Only return the path if that's what was requested
         return { path };
+      }
+
+      if (payload.feesOnTop?.length > 1) {
+        throw Boom.badData("For now, only a single fee on top is supported");
+      } else if (payload.feesOnTop?.length === 1) {
+        const [referrer, referrerFeeBps] = payload.feesOnTop[0].split(":");
+        payload.referrer = referrer;
+        payload.referrerFeeBps = referrerFeeBps;
       }
 
       const router = new Sdk.Router.Router(config.chainId, baseProvider);
