@@ -1,3 +1,12 @@
+# [5.183.0](https://github.com/reservoirprotocol/indexer/compare/v5.182.0...v5.183.0) (2022-08-27)
+
+
+### Features
+
+* add new execute sell v4 api ([a9324c3](https://github.com/reservoirprotocol/indexer/commit/a9324c355da0eac6efbf4d91c28180117cfc2a6a))
+
+
+
 # [5.182.0](https://github.com/reservoirprotocol/indexer/compare/v5.181.0...v5.182.0) (2022-08-27)
 
 
