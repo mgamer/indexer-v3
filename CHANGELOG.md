@@ -1,3 +1,12 @@
+## [5.183.1](https://github.com/reservoirprotocol/indexer/compare/v5.183.0...v5.183.1) (2022-08-27)
+
+
+### Bug Fixes
+
+* prices ([193d20b](https://github.com/reservoirprotocol/indexer/commit/193d20b85b9627c74f71abdcd0cc688074af5061))
+
+
+
 # [5.183.0](https://github.com/reservoirprotocol/indexer/compare/v5.182.0...v5.183.0) (2022-08-27)
 
 
