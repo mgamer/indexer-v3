@@ -2424,21 +2424,13 @@ export const syncEvents = async (
         logger.warn("sync-events", `Skipping assigning orders source assigned to fill events`);
       }
 
-      // --- Handle: mints as sales ---
-
-      // ERC1155
-      // 0x11 -> (99, 5)
-      // 0x11 -> (100, 10)
-      // 0x12 -> (101, 5)
-
-      // 0x11 -> 1.5ETH
-      // 0x12 -> 0.5ETH
-
       for (const [txHash, mints] of tokensMinted.entries()) {
         if (mints.length > 0) {
           const tx = await syncEventsUtils.fetchTransaction(txHash);
 
-          if (tx.value === "0") continue;
+          if (tx.value === "0") {
+            continue;
+          }
 
           const totalAmount = mints
             .map(({ amount }) => amount)
@@ -2456,7 +2448,6 @@ export const syncEvents = async (
             );
 
             fillEvents.push({
-              // Do we want to differentiate between erc721 vs erc1155?
               orderKind: "mint",
               orderSide: "sell",
               taker: tx.from,
