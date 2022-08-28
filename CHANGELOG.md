@@ -1,3 +1,13 @@
+## [5.183.3](https://github.com/reservoirprotocol/indexer/compare/v5.183.2...v5.183.3) (2022-08-28)
+
+
+### Bug Fixes
+
+* is reservoir field for cross-posted orders ([acf96bf](https://github.com/reservoirprotocol/indexer/commit/acf96bf302f4325fe53c34dece0dc66fe312da6b))
+* skip saving the source for cross-posted orders ([fcca46a](https://github.com/reservoirprotocol/indexer/commit/fcca46aa1456d874d9d61869c647135235616d02))
+
+
+
 ## [5.183.2](https://github.com/reservoirprotocol/indexer/compare/v5.183.1...v5.183.2) (2022-08-27)
 
 
