@@ -174,7 +174,7 @@ export const postOrderV3Options: RouteOptions = {
 
           const orderInfo: orders.seaport.OrderInfo = {
             orderParams: order.data,
-            isReservoir: true,
+            isReservoir: orderbook === "reservoir",
             metadata: {
               schema,
               source,
