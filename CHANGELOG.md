@@ -1,3 +1,12 @@
+## [5.183.5](https://github.com/reservoirprotocol/indexer/compare/v5.183.4...v5.183.5) (2022-08-28)
+
+
+### Bug Fixes
+
+* execute bid weth wrapping ([4237072](https://github.com/reservoirprotocol/indexer/commit/42370727ccdda8d6617a7f88829d9592531b33ac))
+
+
+
 ## [5.183.4](https://github.com/reservoirprotocol/indexer/compare/v5.183.3...v5.183.4) (2022-08-28)
 
 

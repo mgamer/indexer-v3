@@ -744,7 +744,7 @@ export const getExecuteBidV3Options: RouteOptions = {
       if (steps[0].items.length > 1) {
         let amount = bn(0);
         for (let i = 0; i < steps[0].items.length; i++) {
-          const itemAmount = bn(steps[0].items[0].data?.value || 0);
+          const itemAmount = bn(steps[0].items[i].data?.value || 0);
           if (itemAmount.gt(amount)) {
             amount = itemAmount;
           }
