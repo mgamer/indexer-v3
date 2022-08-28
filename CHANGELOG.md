@@ -1,3 +1,12 @@
+## [5.183.4](https://github.com/reservoirprotocol/indexer/compare/v5.183.3...v5.183.4) (2022-08-28)
+
+
+### Bug Fixes
+
+* use fees to detect and avoid overriding sources ([3a8f799](https://github.com/reservoirprotocol/indexer/commit/3a8f7996b9519964a2e10604fab35a2d6ff5fc95))
+
+
+
 ## [5.183.3](https://github.com/reservoirprotocol/indexer/compare/v5.183.2...v5.183.3) (2022-08-28)
 
 
