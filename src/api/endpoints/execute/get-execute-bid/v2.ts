@@ -37,10 +37,10 @@ const version = "v2";
 export const getExecuteBidV2Options: RouteOptions = {
   description: "Create bid (offer)",
   notes: "Generate a bid and submit it to multiple marketplaces",
-  tags: ["api", "Orderbook"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 11,
+      deprecated: true,
     },
   },
   validate: {
@@ -105,12 +105,12 @@ export const getExecuteBidV2Options: RouteOptions = {
         )
         .disallow(AddressZero),
       listingTime: Joi.string()
-        .pattern(regex.unix_timestamp)
+        .pattern(regex.unixTimestamp)
         .description(
           "Unix timestamp (seconds) indicating when listing will be listed. Example: `1656080318`"
         ),
       expirationTime: Joi.string()
-        .pattern(regex.unix_timestamp)
+        .pattern(regex.unixTimestamp)
         .description(
           "Unix timestamp (seconds) indicating when listing will expire. Example: `1656080318`"
         ),
@@ -288,7 +288,7 @@ export const getExecuteBidV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v2",
                       method: "POST",
                       body: {
                         order: {
@@ -414,7 +414,7 @@ export const getExecuteBidV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v2",
                       method: "POST",
                       body: {
                         order: {
@@ -540,7 +540,7 @@ export const getExecuteBidV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v2",
                       method: "POST",
                       body: {
                         order: {

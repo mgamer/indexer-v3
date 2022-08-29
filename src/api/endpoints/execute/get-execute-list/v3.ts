@@ -42,7 +42,6 @@ export const getExecuteListV3Options: RouteOptions = {
   tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 1,
       deprecated: true,
     },
   },
@@ -104,12 +103,12 @@ export const getExecuteListV3Options: RouteOptions = {
               )
           ),
           listingTime: Joi.string()
-            .pattern(regex.unix_timestamp)
+            .pattern(regex.unixTimestamp)
             .description(
               "Unix timestamp (seconds) indicating when listing will be listed. Example: `1656080318`"
             ),
           expirationTime: Joi.string()
-            .pattern(regex.unix_timestamp)
+            .pattern(regex.unixTimestamp)
             .description(
               "Unix timestamp (seconds) indicating when listing will expire. Example: `1656080318`"
             ),
@@ -117,6 +116,9 @@ export const getExecuteListV3Options: RouteOptions = {
             .pattern(regex.number)
             .description("Optional. Random string to make the order unique"),
           nonce: Joi.string().pattern(regex.number).description("Optional. Set a custom nonce"),
+          currency: Joi.string()
+            .pattern(regex.address)
+            .default(Sdk.Common.Addresses.Eth[config.chainId]),
         })
           .with("feeRecipient", "fee")
           .with("fee", "feeRecipient")
@@ -194,6 +196,13 @@ export const getExecuteListV3Options: RouteOptions = {
         // On Rinkeby, proxy ZeroEx V4 to 721ex
         if (params.orderKind === "zeroex-v4" && config.chainId === 4) {
           params.orderKind = "721ex";
+        }
+
+        if (
+          params.orderKind !== "seaport" &&
+          params.currency !== Sdk.Common.Addresses.Eth[config.chainId]
+        ) {
+          throw new Error("ERC20 listings are only supported on Seaport");
         }
 
         switch (params.orderKind) {
@@ -556,6 +565,7 @@ export const getExecuteListV3Options: RouteOptions = {
 
             const order = await x2y2SellToken.build({
               ...params,
+              maker,
               contract,
               tokenId,
             });

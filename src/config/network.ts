@@ -36,6 +36,8 @@ type NetworkSettings = {
   washTradingExcludedContracts: string[];
   washTradingWhitelistedAddresses: string[];
   washTradingBlacklistedAddresses: string[];
+  mintsAsSalesBlacklist: string[];
+  multiCollectionContracts: string[];
   coingecko?: {
     networkId: string;
   };
@@ -55,6 +57,8 @@ export const getNetworkSettings = (): NetworkSettings => {
     washTradingExcludedContracts: [],
     washTradingWhitelistedAddresses: [],
     washTradingBlacklistedAddresses: [],
+    multiCollectionContracts: [],
+    mintsAsSalesBlacklist: [],
     reorgCheckFrequency: [1, 5, 10, 30, 60], // In Minutes
   };
 
@@ -71,6 +75,15 @@ export const getNetworkSettings = (): NetworkSettings => {
           "0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270",
         ],
         washTradingBlacklistedAddresses: ["0xac335e6855df862410f96f345f93af4f96351a87"],
+        multiCollectionContracts: [
+          // ArtBlocks Contracts
+          "0x059edd72cd353df5106d2b9cc5ab83a52287ac3a",
+          "0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270",
+        ],
+        mintsAsSalesBlacklist: [
+          // Uniswap V3: Positions NFT
+          "0xc36442b4a4522e871399cd717abdd847ab11fe88",
+        ],
         coingecko: {
           networkId: "ethereum",
         },
@@ -102,12 +115,56 @@ export const getNetworkSettings = (): NetworkSettings => {
       return {
         ...defaultNetworkSettings,
         backfillBlockBatchSize: 128,
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\x0000000000000000000000000000000000000000',
+                  'Ether',
+                  'ETH',
+                  18,
+                  '{}'
+                ) ON CONFLICT DO NOTHING
+              `
+            ),
+          ]);
+        },
       };
     // Goerli
     case 5: {
       return {
         ...defaultNetworkSettings,
         backfillBlockBatchSize: 128,
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\x0000000000000000000000000000000000000000',
+                  'Ether',
+                  'ETH',
+                  18,
+                  '{}'
+                ) ON CONFLICT DO NOTHING
+              `
+            ),
+          ]);
+        },
       };
     }
     // Optimism

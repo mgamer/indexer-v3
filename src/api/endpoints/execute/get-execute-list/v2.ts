@@ -39,10 +39,10 @@ const version = "v2";
 export const getExecuteListV2Options: RouteOptions = {
   description: "Create ask (listing)",
   notes: "Generate a listing and submit it to multiple marketplaces",
-  tags: ["api", "Orderbook"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 11,
+      deprecated: true,
     },
   },
   validate: {
@@ -100,7 +100,7 @@ export const getExecuteListV2Options: RouteOptions = {
         "Unix timestamp indicating when listing will be listed. Example: `1656080318`"
       ),
       expirationTime: Joi.string()
-        .pattern(regex.unix_timestamp)
+        .pattern(regex.unixTimestamp)
         .description(
           "Unix timestamp (seconds) indicating when listing will expire. Example: `1656080318`"
         ),
@@ -252,7 +252,7 @@ export const getExecuteListV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v2",
                       method: "POST",
                       body: {
                         order: {
@@ -351,7 +351,7 @@ export const getExecuteListV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v2",
                       method: "POST",
                       body: {
                         order: {
@@ -454,7 +454,7 @@ export const getExecuteListV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v2",
                       method: "POST",
                       body: {
                         order: {
@@ -554,7 +554,7 @@ export const getExecuteListV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v2",
                       method: "POST",
                       body: {
                         order: {
@@ -658,7 +658,7 @@ export const getExecuteListV2Options: RouteOptions = {
                 data: !hasSignature
                   ? undefined
                   : {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v2",
                       method: "POST",
                       body: {
                         order: {

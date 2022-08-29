@@ -14,10 +14,10 @@ export const getOrdersAllV1Options: RouteOptions = {
   description: "Bulk historical orders",
   notes:
     "This API is designed for efficiently ingesting large volumes of orders, for external processing",
-  tags: ["api", "Orders"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 5,
+      deprecated: true,
     },
   },
   validate: {
@@ -67,7 +67,7 @@ export const getOrdersAllV1Options: RouteOptions = {
             .items(
               Joi.object({
                 kind: Joi.string(),
-                recipient: Joi.string().lowercase().pattern(regex.address).allow(null),
+                recipient: Joi.string().allow("", null),
                 // Should be `Joi.number().allow(null)` but we set to `Joi.any()` to cover
                 // objects eith wrong schema that were inserted by mistake into the db
                 bps: Joi.any(),

@@ -14,9 +14,6 @@ export const config = {
 
   baseNetworkHttpUrl: String(process.env.BASE_NETWORK_HTTP_URL),
   baseNetworkWsUrl: String(process.env.BASE_NETWORK_WS_URL),
-  slowNetworkHttpUrl: String(
-    process.env.SLOW_NETWORK_HTTP_URL ?? process.env.BASE_NETWORK_HTTP_URL
-  ),
   traceNetworkHttpUrl: String(
     process.env.TRACE_NETWORK_HTTP_URL ?? process.env.BASE_NETWORK_HTTP_URL
   ),
@@ -26,6 +23,9 @@ export const config = {
   liquidityOnly: !process.env.METADATA_API_BASE_URL,
   metadataIndexingMethod: String(process.env.METADATA_INDEXING_METHOD || "opensea"),
   metadataApiBaseUrl: String(process.env.METADATA_API_BASE_URL),
+  metadataApiBaseUrlAlt: String(
+    process.env.METADATA_API_BASE_URL_ALT || process.env.METADATA_API_BASE_URL
+  ),
   disableRealtimeMetadataRefresh: Boolean(Number(process.env.DISABLE_REALTIME_METADATA_REFRESH)),
 
   databaseUrl: String(process.env.DATABASE_URL),
@@ -38,6 +38,7 @@ export const config = {
   master: Boolean(Number(process.env.MASTER)),
   catchup: Boolean(Number(process.env.CATCHUP)),
   doBackgroundWork: Boolean(Number(process.env.DO_BACKGROUND_WORK)),
+  doEventsSyncBackfill: Boolean(Number(process.env.DO_EVENTS_SYNC_BACKFILL)),
   disableOrders: Boolean(Number(process.env.DISABLE_ORDERS)),
 
   maxItemsPerBid: 50000,

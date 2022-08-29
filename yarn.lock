@@ -1029,10 +1029,10 @@
   resolved "https://registry.yarnpkg.com/@protobufjs/utf8/-/utf8-1.1.0.tgz#a777360b5b39a1a2e5106f8e858f2fd2d060c570"
   integrity sha1-p3c2C1s5oaLlEG+OhY8v0tBgxXA=
 
-"@reservoir0x/sdk@0.0.154":
-  version "0.0.154"
-  resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.0.154.tgz#d7db2619167e3474f2e71b1ac9e67db6a4de1298"
-  integrity sha512-FaGQeUz5QlLK+dA2iFaJmFXA93cy8MtUDALW64U0SMRiUxwvd9JrAeZf9JRsJIArxHGEBc2irhp5QloQdLJttg==
+"@reservoir0x/sdk@0.0.161":
+  version "0.0.161"
+  resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.0.161.tgz#1e0c1f1c20825fae727ab6212a08e46df0b4cf7c"
+  integrity sha512-MISFQMIUch8AahgVDbgsi2kWB72yZxUgGBNdppU9t812Tgb19C0t33uXDfWIKZq3WnAGH/mJWPB/46WAJ4h+5w==
   dependencies:
     ethers "^5.6.8"
     merkletreejs "0.2.31"
@@ -5755,10 +5755,10 @@ typescript@^4.4.3:
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-4.6.2.tgz#fe12d2727b708f4eef40f51598b3398baa9611d4"
   integrity sha512-HM/hFigTBHZhLXshn9sN37H085+hQGeJHJ/X7LpBWLID/fbc2acUMfU+lGD98X81sKP+pFa9f0DZmCwB9GnbAg==
 
-typescript@^4.4.4:
-  version "4.7.2"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-4.7.2.tgz#1f9aa2ceb9af87cca227813b4310fff0b51593c4"
-  integrity sha512-Mamb1iX2FDUpcTRzltPxgWMKy3fhg0TN378ylbktPGPK/99KbDtMQ4W1hwgsbPAsG3a0xKa1vmw4VKZQbkvz5A==
+typescript@^4.6.4:
+  version "4.6.4"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-4.6.4.tgz#caa78bbc3a59e6a5c510d35703f6a09877ce45e9"
+  integrity sha512-9ia/jWHIEbo49HfjrLGfKbZSuWo9iTMwXO+Ca3pRsSpbsMbc7/IU8NKdCZVRRBafVPGnoJeFL76ZOAA84I9fEg==
 
 uglify-js@^3.1.4:
   version "3.15.2"
