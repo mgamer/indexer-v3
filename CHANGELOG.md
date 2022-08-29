@@ -1,3 +1,12 @@
+# [5.184.0](https://github.com/reservoirprotocol/indexer/compare/v5.183.6...v5.184.0) (2022-08-29)
+
+
+### Features
+
+* add support for direct filling x2y2 bids ([0709abd](https://github.com/reservoirprotocol/indexer/commit/0709abdb2252d13b1fa46b4d493792113a69e6a2))
+
+
+
 ## [5.183.6](https://github.com/reservoirprotocol/indexer/compare/v5.183.5...v5.183.6) (2022-08-29)
 
 
