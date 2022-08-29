@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { AddressZero } from "@ethersproject/constants";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
@@ -135,6 +136,15 @@ export const getExecuteBuyV4Options: RouteOptions = {
     const payload = request.payload as any;
 
     try {
+      // Handle fees on top
+      if (payload.feesOnTop?.length > 1) {
+        throw Boom.badData("For now, only a single fee on top is supported");
+      } else if (payload.feesOnTop?.length === 1) {
+        const [referrer, referrerFeeBps] = payload.feesOnTop[0].split(":");
+        payload.referrer = referrer;
+        payload.referrerFeeBps = referrerFeeBps;
+      }
+
       // We need each filled order's source for the path
       const sources = await Sources.getInstance();
 
@@ -167,7 +177,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
         }
       ) => {
         const totalPrice = bn(order.price).mul(token.quantity ?? 1);
-        const rawQuote = totalPrice.add(totalPrice.mul(payload.referrerFeeBps).div(10000));
+        const rawQuote = totalPrice.add(totalPrice.mul(payload.referrerFeeBps ?? 0).div(10000));
         path.push({
           orderId: order.id,
           contract: token.contract,
@@ -455,20 +465,12 @@ export const getExecuteBuyV4Options: RouteOptions = {
         return { path };
       }
 
-      if (payload.feesOnTop?.length > 1) {
-        throw Boom.badData("For now, only a single fee on top is supported");
-      } else if (payload.feesOnTop?.length === 1) {
-        const [referrer, referrerFeeBps] = payload.feesOnTop[0].split(":");
-        payload.referrer = referrer;
-        payload.referrerFeeBps = referrerFeeBps;
-      }
-
       const router = new Sdk.Router.Router(config.chainId, baseProvider);
       const tx = await router.fillListingsTx(listingDetails, payload.taker, {
         referrer: payload.source,
         fee: {
-          recipient: payload.referrer,
-          bps: payload.referrerFeeBps,
+          recipient: payload.referrer ?? AddressZero,
+          bps: payload.referrerFeeBps ?? 0,
         },
         partial: payload.partial,
         forceRouter: payload.forceRouter,
