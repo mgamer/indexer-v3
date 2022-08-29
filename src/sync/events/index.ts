@@ -2133,19 +2133,29 @@ export const syncEvents = async (
               const askCurrency = ask["askCurrency"].toLowerCase();
               const askPrice = ask["askPrice"].toString();
 
+              const orderKind = "zora-v3";
+
+              // Handle: attribution
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+
+              // Handle: prices
               const prices = await getUSDAndNativePrices(
                 askCurrency,
                 askPrice,
                 baseEventParams.timestamp
               );
-
               if (!prices.nativePrice) {
                 // We must always have the native price
                 break;
               }
 
+              const source = await getOrderSourceByOrderKind(orderKind);
               fillEvents.push({
-                orderKind: "zora-v3",
+                orderKind,
+                orderSourceIdInt: source?.id,
                 currency: askCurrency,
                 orderSide: "sell",
                 maker: seller,
@@ -2155,6 +2165,8 @@ export const syncEvents = async (
                 contract: tokenContract,
                 tokenId,
                 amount: "1",
+                fillSourceId: data.fillSource?.id,
+                aggregatorSourceId: data.aggregatorSource?.id,
                 baseEventParams,
               });
 
@@ -2163,29 +2175,36 @@ export const syncEvents = async (
 
             case "zora-auction-ended": {
               const { args } = eventData.abi.parseLog(log);
-              // const auctionId = args["auctionId"].toString();
               const tokenId = args["tokenId"].toString();
               const tokenContract = args["tokenContract"].toLowerCase();
               const tokenOwner = args["tokenOwner"].toLowerCase();
-              // const curator = args["curator"].toLowerCase();
               const winner = args["winner"].toLowerCase();
               const amount = args["amount"].toString();
-              // const curatorFee = args["curatorFee"].toString();
               const auctionCurrency = args["auctionCurrency"].toLowerCase();
 
+              const orderKind = "zora-v3";
+
+              // Handle: attribution
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+
+              // Handle: prices
               const prices = await getUSDAndNativePrices(
                 auctionCurrency,
                 amount,
                 baseEventParams.timestamp
               );
-
               if (!prices.nativePrice) {
                 // We must always have the native price
                 break;
               }
 
+              const source = await getOrderSourceByOrderKind(orderKind);
               fillEvents.push({
-                orderKind: "zora-v3",
+                orderKind,
+                orderSourceIdInt: source?.id,
                 currency: auctionCurrency,
                 orderSide: "sell",
                 taker: winner,
@@ -2195,6 +2214,8 @@ export const syncEvents = async (
                 contract: tokenContract,
                 tokenId,
                 amount: "1",
+                fillSourceId: data.fillSource?.id,
+                aggregatorSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -2207,22 +2228,27 @@ export const syncEvents = async (
               const winner = args["winner"].toLowerCase();
               const amount = args["amount"].toString();
 
-              const currency = Sdk.Common.Addresses.Eth[config.chainId];
+              const orderKind = "nouns";
 
+              // Handle: attribution
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+
+              // Handle: prices
+              const currency = Sdk.Common.Addresses.Eth[config.chainId];
               const prices = await getUSDAndNativePrices(
                 currency,
                 amount,
                 baseEventParams.timestamp
               );
-
               if (!prices.nativePrice) {
                 // We must always have the native price
                 break;
               }
 
-              const orderKind = "nouns";
               const orderSource = await getOrderSourceByOrderKind(orderKind);
-
               fillEvents.push({
                 orderKind,
                 orderSourceIdInt: orderSource?.id,
@@ -2235,6 +2261,8 @@ export const syncEvents = async (
                 usdPrice: prices.usdPrice,
                 contract: Sdk.Nouns.Addresses.TokenContract[config.chainId]?.toLowerCase(),
                 tokenId: nounId,
+                fillSourceId: data.fillSource?.id,
+                aggregatorSourceId: data.aggregatorSource?.id,
                 baseEventParams,
               });
 
@@ -2250,16 +2278,13 @@ export const syncEvents = async (
 
               const orderSide = toAddress === AddressZero ? "buy" : "sell";
 
-              // Due to an issue with the cryptopunks smart contract, the
-              // `PunkBought` event is emitted from `acceptBidForPunk`
-              // with toAddress = 0x00...00 and value = 0
+              // Due to an upstream issue with the Punks contract, the `PunkBought`
+              // event is emitted with zeroed `toAddress` and `value` fields when a
+              // bid acceptance transaction is triggered. See the following issue:
               // https://github.com/larvalabs/cryptopunks/issues/19
 
-              // To get the correct `toAddress` we take the `to` value
-              // the `Transfer` event emitted before `PunkBought` in the
-              // `acceptBidForPunk` function
-              // https://github.com/larvalabs/cryptopunks/blob/master/contracts/CryptoPunksMarket.sol#L223-L229
-              //
+              // To work around this, we get the correct `toAddress` from the most
+              // recent `Transfer` event which includes the correct taker
               if (
                 cryptopunksTransferEvents.length &&
                 cryptopunksTransferEvents[cryptopunksTransferEvents.length - 1].txHash ===
@@ -2268,13 +2293,13 @@ export const syncEvents = async (
                 toAddress = cryptopunksTransferEvents[cryptopunksTransferEvents.length - 1].to;
               }
 
-              // To get the correct `price` that the bid was settled at
-              // We extract the `minPrice` from the `acceptBidForPunk` function
+              // To get the correct price that the bid was settled at we have to
+              // parse the transaction's calldata and extract the `minPrice` arg
+              // where applicable (if the transaction was a bid acceptance one)
               const tx = await syncEventsUtils.fetchTransaction(baseEventParams.txHash);
               const iface = new Interface([
                 "function acceptBidForPunk(uint punkIndex, uint minPrice)",
               ]);
-
               try {
                 const result = iface.decodeFunctionData("acceptBidForPunk", tx.data);
                 value = result.minPrice.toString();
@@ -2282,23 +2307,35 @@ export const syncEvents = async (
                 // Skip any errors
               }
 
+              const orderKind = "cryptopunks";
+              const maker = orderSide === "sell" ? fromAddress : toAddress;
+              let taker = orderSide === "sell" ? toAddress : fromAddress;
+
+              // Handle: attribution
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
+              }
+
+              // Handle: prices
               const prices = await getUSDAndNativePrices(
                 Sdk.Common.Addresses.Eth[config.chainId],
                 value,
                 baseEventParams.timestamp
               );
-
               if (!prices.nativePrice) {
                 // We must always have the native price
                 break;
               }
 
-              const maker = orderSide === "sell" ? fromAddress : toAddress;
-              const taker = orderSide === "sell" ? toAddress : fromAddress;
-
+              const source = await getOrderSourceByOrderKind(orderKind, baseEventParams.address);
               fillEventsPartial.push({
-                orderKind: "cryptopunks",
+                orderKind,
                 orderSide,
+                orderSourceIdInt: source?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -2307,6 +2344,8 @@ export const syncEvents = async (
                 contract: baseEventParams.address?.toLowerCase(),
                 tokenId: punkIndex,
                 amount: "1",
+                fillSourceId: data.fillSource?.id,
+                aggregatorSourceId: data.aggregatorSource?.id,
                 baseEventParams,
               });
 
@@ -2348,10 +2387,13 @@ export const syncEvents = async (
         logger.warn("sync-events", `Skipping assigning orders source assigned to fill events`);
       }
 
+      // --- Handle: mints as sales ---
+
       for (const [txHash, mints] of tokensMinted.entries()) {
         if (mints.length > 0) {
           const tx = await syncEventsUtils.fetchTransaction(txHash);
 
+          // Skip free mints
           if (tx.value === "0") {
             continue;
           }
@@ -2359,9 +2401,7 @@ export const syncEvents = async (
           const totalAmount = mints
             .map(({ amount }) => amount)
             .reduce((a, b) => bn(a).add(b).toString());
-
           const price = bn(tx.value).div(totalAmount).toString();
-
           const currency = Sdk.Common.Addresses.Eth[config.chainId];
 
           for (const mint of mints) {
@@ -2370,11 +2410,29 @@ export const syncEvents = async (
               price,
               mint.baseEventParams.timestamp
             );
+            if (!prices.nativePrice) {
+              // We must always have the native price
+              continue;
+            }
 
+            let taker = tx.from;
+            const orderKind = "mint";
+
+            // Handle: attribution
+            const data = await syncEventsUtils.extractAttributionData(
+              mint.baseEventParams.txHash,
+              orderKind
+            );
+            if (data.taker) {
+              taker = data.taker;
+            }
+
+            const source = await getOrderSourceByOrderKind(orderKind, mint.baseEventParams.address);
             fillEvents.push({
-              orderKind: "mint",
+              orderKind,
               orderSide: "sell",
-              taker: tx.from,
+              orderSourceIdInt: source?.id,
+              taker,
               maker: mint.from,
               amount: mint.amount,
               currency,
@@ -2382,6 +2440,8 @@ export const syncEvents = async (
               usdPrice: prices.usdPrice,
               contract: mint.contract,
               tokenId: mint.tokenId,
+              fillSourceId: data.fillSource?.id,
+              aggregatorSourceId: data.aggregatorSource?.id,
               baseEventParams: mint.baseEventParams,
             });
           }

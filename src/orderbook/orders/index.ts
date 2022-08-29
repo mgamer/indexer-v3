@@ -45,8 +45,20 @@ export type OrderKind =
 // a default value where possible (since very often the exchange protocol
 // is tightly coupled to a source marketplace and we just assume that the
 // bulk of orders from a protocol come from known that marketplace).
+
+const mintsSources = new Map<string, string>();
+mintsSources.set("0x059edd72cd353df5106d2b9cc5ab83a52287ac3a", "artblocks.io");
+mintsSources.set("0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270", "artblocks.io");
+mintsSources.set("0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85", "ens.domains");
+mintsSources.set("0x495f947276749ce646f68ac8c248420045cb7b5e", "opensea.io");
+mintsSources.set("0xc9154424b823b10579895ccbe442d41b9abd96ed", "rarible.com");
+mintsSources.set("0xb66a603f4cfe17e3d27b87a8bfcad319856518b8", "rarible.com");
+mintsSources.set("0xc143bbfcdbdbed6d454803804752a064a622c1f3", "async.art");
+mintsSources.set("0xfbeef911dc5821886e1dda71586d90ed28174b7d", "knownorigin.io");
+
 export const getOrderSourceByOrderKind = async (
-  orderKind: OrderKind
+  orderKind: OrderKind,
+  address?: string
 ): Promise<SourcesEntity | null> => {
   try {
     const sources = await Sources.getInstance();
@@ -72,6 +84,13 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("zora.co");
       case "nouns":
         return sources.getOrInsert("nouns.wtf");
+      case "mint": {
+        if (address && mintsSources.has(address)) {
+          return sources.getOrInsert(mintsSources.get(address)!);
+        } else {
+          return null;
+        }
+      }
       default:
         // For all other order kinds we cannot default the source
         return null;
