@@ -78,20 +78,12 @@ export const syncEvents = async (
     }[]
   >();
 
-  // Before proceeding, fetch all individual blocks within the current range
-  const limit = pLimit(5);
-  await Promise.all(
-    _.range(fromBlock, toBlock + 1).map((block) =>
-      limit(() => baseProvider.getBlockWithTransactions(block))
-    )
-  );
-
   // When backfilling, certain processes are disabled
   const backfill = Boolean(options?.backfill);
 
   let handleAttribution = false;
 
-  if (!backfill || networkSettings.backfillFetchAllBlocks) {
+  if (!backfill || NS.backfillFetchAllBlocks) {
     // Before proceeding, fetch all individual blocks within the current range
     const limit = pLimit(5);
     await Promise.all(
@@ -2585,7 +2577,7 @@ export const syncEvents = async (
             const blockHash = blockData.split("-")[1];
 
             return Promise.all(
-              networkSettings.reorgCheckFrequency.map((frequency) =>
+              NS.reorgCheckFrequency.map((frequency) =>
                 blockCheck.addToQueue(block, blockHash, frequency * 60)
               )
             );

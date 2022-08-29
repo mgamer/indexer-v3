@@ -59,7 +59,7 @@ export const getNetworkSettings = (): NetworkSettings => {
     washTradingBlacklistedAddresses: [],
     multiCollectionContracts: [],
     mintsAsSalesBlacklist: [],
-    reorgCheckFrequency: [1, 5, 10, 30, 60],
+    reorgCheckFrequency: [1, 5, 10, 30, 60], // In Minutes
   };
 
   switch (config.chainId) {
