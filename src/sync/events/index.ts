@@ -41,8 +41,8 @@ export const syncEvents = async (
   toBlock: number,
   options?: {
     backfill?: boolean;
+    skipNonFillWrites?: boolean;
     eventDataKinds?: EventDataKind[];
-    useSlowProvider?: boolean;
   }
 ) => {
   // --- Handle: fetch and process events ---
@@ -76,20 +76,18 @@ export const syncEvents = async (
     }[]
   >();
 
-  const provider = options?.useSlowProvider ? baseProvider : baseProvider;
-
   // Before proceeding, fetch all individual blocks within the current range
   const limit = pLimit(5);
   await Promise.all(
     _.range(fromBlock, toBlock + 1).map((block) =>
-      limit(() => provider.getBlockWithTransactions(block))
+      limit(() => baseProvider.getBlockWithTransactions(block))
     )
   );
 
   // When backfilling, certain processes are disabled
   const backfill = Boolean(options?.backfill);
   const eventDatas = getEventData(options?.eventDataKinds);
-  await provider
+  await baseProvider
     .getLogs({
       // Only keep unique topics (eg. an example of duplicated topics are
       // erc721 and erc20 transfers which have the exact same signature)
@@ -2455,15 +2453,17 @@ export const syncEvents = async (
         es.fills.addEventsFoundation(fillEventsFoundation),
       ]);
 
-      await Promise.all([
-        es.nonceCancels.addEvents(nonceCancelEvents, backfill),
-        es.bulkCancels.addEvents(bulkCancelEvents, backfill),
-        es.cancels.addEvents(cancelEvents),
-        es.cancels.addEventsFoundation(cancelEventsFoundation),
-        es.ftTransfers.addEvents(ftTransferEvents, backfill),
-        es.nftApprovals.addEvents(nftApprovalEvents),
-        es.nftTransfers.addEvents(nftTransferEvents, backfill),
-      ]);
+      if (!options?.skipNonFillWrites) {
+        await Promise.all([
+          es.nonceCancels.addEvents(nonceCancelEvents, backfill),
+          es.bulkCancels.addEvents(bulkCancelEvents, backfill),
+          es.cancels.addEvents(cancelEvents),
+          es.cancels.addEventsFoundation(cancelEventsFoundation),
+          es.ftTransfers.addEvents(ftTransferEvents, backfill),
+          es.nftApprovals.addEvents(nftApprovalEvents),
+          es.nftTransfers.addEvents(nftTransferEvents, backfill),
+        ]);
+      }
 
       if (!backfill) {
         // WARNING! It's very important to guarantee that the previous
