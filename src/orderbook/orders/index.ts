@@ -84,6 +84,8 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("zora.co");
       case "nouns":
         return sources.getOrInsert("nouns.wtf");
+      case "cryptopunks":
+        return sources.getOrInsert("cryptopunks.app");
       case "mint": {
         if (address && mintsSources.has(address)) {
           return sources.getOrInsert(mintsSources.get(address)!);
