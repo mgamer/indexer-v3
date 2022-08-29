@@ -1,3 +1,12 @@
+## [5.183.6](https://github.com/reservoirprotocol/indexer/compare/v5.183.5...v5.183.6) (2022-08-29)
+
+
+### Bug Fixes
+
+* collection floor sale change computation ([495acb4](https://github.com/reservoirprotocol/indexer/commit/495acb4c9b1e49de045c4be57f838159a020cd4a))
+
+
+
 ## [5.183.5](https://github.com/reservoirprotocol/indexer/compare/v5.183.4...v5.183.5) (2022-08-28)
 
 
