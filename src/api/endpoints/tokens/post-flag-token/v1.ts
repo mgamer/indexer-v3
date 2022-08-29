@@ -66,6 +66,10 @@ export const postFlagTokenV1Options: RouteOptions = {
       throw Boom.badData(`Token ${payload.token} not found`);
     }
 
+    if (token.isFlagged === payload.flag) {
+      return { message: "Success" };
+    }
+
     try {
       const currentUtcTime = new Date().toISOString();
 
