@@ -36,13 +36,16 @@ import { getUSDAndNativePrices } from "@/utils/prices";
 // to be performant enough. This might imply separate code to handle
 // backfill vs realtime events.
 
+// Cache the network settings
+const NS = getNetworkSettings();
+
 export const syncEvents = async (
   fromBlock: number,
   toBlock: number,
   options?: {
     backfill?: boolean;
+    skipNonFillWrites?: boolean;
     eventDataKinds?: EventDataKind[];
-    useSlowProvider?: boolean;
   }
 ) => {
   // --- Handle: fetch and process events ---
@@ -64,7 +67,6 @@ export const syncEvents = async (
   }[] = [];
 
   // For handling mints as sales
-  const mintsAsSalesBlacklist = getNetworkSettings().mintsAsSalesBlacklist;
   const tokensMinted = new Map<
     string,
     {
@@ -76,20 +78,18 @@ export const syncEvents = async (
     }[]
   >();
 
-  const provider = options?.useSlowProvider ? baseProvider : baseProvider;
-
   // Before proceeding, fetch all individual blocks within the current range
   const limit = pLimit(5);
   await Promise.all(
     _.range(fromBlock, toBlock + 1).map((block) =>
-      limit(() => provider.getBlockWithTransactions(block))
+      limit(() => baseProvider.getBlockWithTransactions(block))
     )
   );
 
   // When backfilling, certain processes are disabled
   const backfill = Boolean(options?.backfill);
   const eventDatas = getEventData(options?.eventDataKinds);
-  await provider
+  await baseProvider
     .getLogs({
       // Only keep unique topics (eg. an example of duplicated topics are
       // erc721 and erc20 transfers which have the exact same signature)
@@ -230,7 +230,7 @@ export const syncEvents = async (
                 });
 
                 // Treat mints as sales
-                if (!mintsAsSalesBlacklist.includes(baseEventParams.address)) {
+                if (!NS.mintsAsSalesBlacklist.includes(baseEventParams.address)) {
                   if (!tokensMinted.has(baseEventParams.txHash)) {
                     tokensMinted.set(baseEventParams.txHash, []);
                   }
@@ -305,7 +305,7 @@ export const syncEvents = async (
                 });
 
                 // Treat mints as sales
-                if (!mintsAsSalesBlacklist.includes(baseEventParams.address)) {
+                if (!NS.mintsAsSalesBlacklist.includes(baseEventParams.address)) {
                   if (!tokensMinted.has(baseEventParams.txHash)) {
                     tokensMinted.set(baseEventParams.txHash, []);
                   }
@@ -383,7 +383,7 @@ export const syncEvents = async (
                   });
 
                   // Treat mints as sales
-                  if (!mintsAsSalesBlacklist.includes(baseEventParams.address)) {
+                  if (!NS.mintsAsSalesBlacklist.includes(baseEventParams.address)) {
                     if (!tokensMinted.has(baseEventParams.txHash)) {
                       tokensMinted.set(baseEventParams.txHash, []);
                     }
@@ -2455,15 +2455,17 @@ export const syncEvents = async (
         es.fills.addEventsFoundation(fillEventsFoundation),
       ]);
 
-      await Promise.all([
-        es.nonceCancels.addEvents(nonceCancelEvents, backfill),
-        es.bulkCancels.addEvents(bulkCancelEvents, backfill),
-        es.cancels.addEvents(cancelEvents),
-        es.cancels.addEventsFoundation(cancelEventsFoundation),
-        es.ftTransfers.addEvents(ftTransferEvents, backfill),
-        es.nftApprovals.addEvents(nftApprovalEvents),
-        es.nftTransfers.addEvents(nftTransferEvents, backfill),
-      ]);
+      if (!options?.skipNonFillWrites) {
+        await Promise.all([
+          es.nonceCancels.addEvents(nonceCancelEvents, backfill),
+          es.bulkCancels.addEvents(bulkCancelEvents, backfill),
+          es.cancels.addEvents(cancelEvents),
+          es.cancels.addEventsFoundation(cancelEventsFoundation),
+          es.ftTransfers.addEvents(ftTransferEvents, backfill),
+          es.nftApprovals.addEvents(nftApprovalEvents),
+          es.nftTransfers.addEvents(nftTransferEvents, backfill),
+        ]);
+      }
 
       if (!backfill) {
         // WARNING! It's very important to guarantee that the previous
@@ -2483,8 +2485,7 @@ export const syncEvents = async (
 
       // --- Handle: orphan blocks ---
 
-      const networkSettings = getNetworkSettings();
-      if (!backfill && networkSettings.enableReorgCheck) {
+      if (!backfill && NS.enableReorgCheck) {
         for (const blockData of blocksSet.values()) {
           const block = Number(blockData.split("-")[0]);
           const blockHash = blockData.split("-")[1];
@@ -2660,9 +2661,9 @@ const assignWashTradingScoreToFillEvents = async (fillEvents: es.fills.Event[]) 
   try {
     const inverseFillEvents: { contract: Buffer; maker: Buffer; taker: Buffer }[] = [];
 
-    const washTradingExcludedContracts = getNetworkSettings().washTradingExcludedContracts;
-    const washTradingWhitelistedAddresses = getNetworkSettings().washTradingWhitelistedAddresses;
-    const washTradingBlacklistedAddresses = getNetworkSettings().washTradingBlacklistedAddresses;
+    const washTradingExcludedContracts = NS.washTradingExcludedContracts;
+    const washTradingWhitelistedAddresses = NS.washTradingWhitelistedAddresses;
+    const washTradingBlacklistedAddresses = NS.washTradingBlacklistedAddresses;
 
     // Filter events that don't need to be checked for inverse sales
     const fillEventsPendingInverseCheck = fillEvents.filter(
