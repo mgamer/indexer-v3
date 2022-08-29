@@ -1,3 +1,12 @@
+## [5.184.3](https://github.com/reservoirprotocol/indexer/compare/v5.184.2...v5.184.3) (2022-08-29)
+
+
+### Performance Improvements
+
+* restrict backfilling to selected processes ([00887b5](https://github.com/reservoirprotocol/indexer/commit/00887b5b387dde35efff3c969b99be011aba0ddc))
+
+
+
 ## [5.184.2](https://github.com/reservoirprotocol/indexer/compare/v5.184.1...v5.184.2) (2022-08-29)
 
 
