@@ -245,6 +245,15 @@ export const generateBidDetails = async (
       };
     }
 
+    case "x2y2": {
+      const sdkOrder = new Sdk.X2Y2.Order(config.chainId, order.rawData);
+      return {
+        kind: "x2y2",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
     default: {
       throw new Error("Unsupported order kind");
     }
