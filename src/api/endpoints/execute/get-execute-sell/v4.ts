@@ -12,6 +12,7 @@ import { bn, formatEth, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { generateBidDetails } from "@/orderbook/orders";
+import { getNftApproval } from "@/orderbook/orders/common/helpers";
 
 const version = "v4";
 
@@ -219,6 +220,13 @@ export const getExecuteSellV4Options: RouteOptions = {
         }[];
       }[] = [
         {
+          action: "Approve NFT contract",
+          description:
+            "Each NFT collection you want to trade requires a one-time approval transaction",
+          kind: "transaction",
+          items: [],
+        },
+        {
           action: "Accept offer",
           description: "To sell this item you must confirm the transaction and pay the gas fee",
           kind: "transaction",
@@ -226,7 +234,36 @@ export const getExecuteSellV4Options: RouteOptions = {
         },
       ];
 
-      steps[0].items.push({
+      // X2Y2 bids are to be filled directly (because the V5 router does not support them)
+      if (bidDetails.kind === "x2y2") {
+        const isApproved = await getNftApproval(
+          bidDetails.contract,
+          payload.taker,
+          Sdk.X2Y2.Addresses.Exchange[config.chainId]
+        );
+        if (!isApproved) {
+          // TODO: Add support for X2Y2 ERC1155 orders
+          const approveTx = new Sdk.Common.Helpers.Erc721(
+            baseProvider,
+            bidDetails.contract
+          ).approveTransaction(payload.taker, Sdk.X2Y2.Addresses.Exchange[config.chainId]);
+
+          steps[0].items.push({
+            status: "incomplete",
+            data: {
+              ...approveTx,
+              maxFeePerGas: payload.maxFeePerGas
+                ? bn(payload.maxFeePerGas).toHexString()
+                : undefined,
+              maxPriorityFeePerGas: payload.maxPriorityFeePerGas
+                ? bn(payload.maxPriorityFeePerGas).toHexString()
+                : undefined,
+            },
+          });
+        }
+      }
+
+      steps[1].items.push({
         status: "incomplete",
         data: {
           ...tx,
