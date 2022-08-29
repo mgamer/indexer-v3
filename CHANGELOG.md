@@ -1,3 +1,12 @@
+## [5.184.2](https://github.com/reservoirprotocol/indexer/compare/v5.184.1...v5.184.2) (2022-08-29)
+
+
+### Bug Fixes
+
+* set a default source for cryptopunks ([ff05728](https://github.com/reservoirprotocol/indexer/commit/ff057289dca8bf277b9c0f4f17ad112a55d118e7))
+
+
+
 ## [5.184.1](https://github.com/reservoirprotocol/indexer/compare/v5.184.0...v5.184.1) (2022-08-29)
 
 
