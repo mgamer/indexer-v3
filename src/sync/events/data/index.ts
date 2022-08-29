@@ -66,7 +66,9 @@ export type EventDataKind =
   | "zora-auction-ended"
   | "nouns-auction-settled"
   | "cryptopunks-punk-bought"
-  | "cryptopunks-transfer";
+  | "cryptopunks-transfer"
+  | "zora-ask-filled"
+  | "zora-auction-ended";
 
 export type EventData = {
   kind: EventDataKind;
