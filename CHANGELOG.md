@@ -1,3 +1,12 @@
+## [5.184.4](https://github.com/reservoirprotocol/indexer/compare/v5.184.3...v5.184.4) (2022-08-29)
+
+
+### Performance Improvements
+
+* various tweaks for backfilling performance ([120fa4e](https://github.com/reservoirprotocol/indexer/commit/120fa4ea0b0c4668a279f49e013e0216af7fd3a3))
+
+
+
 ## [5.184.3](https://github.com/reservoirprotocol/indexer/compare/v5.184.2...v5.184.3) (2022-08-29)
 
 
