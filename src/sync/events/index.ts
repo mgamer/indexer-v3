@@ -36,6 +36,9 @@ import { getUSDAndNativePrices } from "@/utils/prices";
 // to be performant enough. This might imply separate code to handle
 // backfill vs realtime events.
 
+// Cache the network settings
+const NS = getNetworkSettings();
+
 export const syncEvents = async (
   fromBlock: number,
   toBlock: number,
@@ -64,7 +67,6 @@ export const syncEvents = async (
   }[] = [];
 
   // For handling mints as sales
-  const mintsAsSalesBlacklist = getNetworkSettings().mintsAsSalesBlacklist;
   const tokensMinted = new Map<
     string,
     {
@@ -228,7 +230,7 @@ export const syncEvents = async (
                 });
 
                 // Treat mints as sales
-                if (!mintsAsSalesBlacklist.includes(baseEventParams.address)) {
+                if (!NS.mintsAsSalesBlacklist.includes(baseEventParams.address)) {
                   if (!tokensMinted.has(baseEventParams.txHash)) {
                     tokensMinted.set(baseEventParams.txHash, []);
                   }
@@ -303,7 +305,7 @@ export const syncEvents = async (
                 });
 
                 // Treat mints as sales
-                if (!mintsAsSalesBlacklist.includes(baseEventParams.address)) {
+                if (!NS.mintsAsSalesBlacklist.includes(baseEventParams.address)) {
                   if (!tokensMinted.has(baseEventParams.txHash)) {
                     tokensMinted.set(baseEventParams.txHash, []);
                   }
@@ -381,7 +383,7 @@ export const syncEvents = async (
                   });
 
                   // Treat mints as sales
-                  if (!mintsAsSalesBlacklist.includes(baseEventParams.address)) {
+                  if (!NS.mintsAsSalesBlacklist.includes(baseEventParams.address)) {
                     if (!tokensMinted.has(baseEventParams.txHash)) {
                       tokensMinted.set(baseEventParams.txHash, []);
                     }
@@ -2483,8 +2485,7 @@ export const syncEvents = async (
 
       // --- Handle: orphan blocks ---
 
-      const networkSettings = getNetworkSettings();
-      if (!backfill && networkSettings.enableReorgCheck) {
+      if (!backfill && NS.enableReorgCheck) {
         for (const blockData of blocksSet.values()) {
           const block = Number(blockData.split("-")[0]);
           const blockHash = blockData.split("-")[1];
@@ -2660,9 +2661,9 @@ const assignWashTradingScoreToFillEvents = async (fillEvents: es.fills.Event[]) 
   try {
     const inverseFillEvents: { contract: Buffer; maker: Buffer; taker: Buffer }[] = [];
 
-    const washTradingExcludedContracts = getNetworkSettings().washTradingExcludedContracts;
-    const washTradingWhitelistedAddresses = getNetworkSettings().washTradingWhitelistedAddresses;
-    const washTradingBlacklistedAddresses = getNetworkSettings().washTradingBlacklistedAddresses;
+    const washTradingExcludedContracts = NS.washTradingExcludedContracts;
+    const washTradingWhitelistedAddresses = NS.washTradingWhitelistedAddresses;
+    const washTradingBlacklistedAddresses = NS.washTradingBlacklistedAddresses;
 
     // Filter events that don't need to be checked for inverse sales
     const fillEventsPendingInverseCheck = fillEvents.filter(
