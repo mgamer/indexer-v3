@@ -1,3 +1,12 @@
+## [5.184.5](https://github.com/reservoirprotocol/indexer/compare/v5.184.4...v5.184.5) (2022-08-29)
+
+
+### Bug Fixes
+
+* price retrieval ([34d4c97](https://github.com/reservoirprotocol/indexer/commit/34d4c976f4a1598e34ea67072ce72484af38a7df))
+
+
+
 ## [5.184.4](https://github.com/reservoirprotocol/indexer/compare/v5.184.3...v5.184.4) (2022-08-29)
 
 
