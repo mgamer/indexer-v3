@@ -52,10 +52,10 @@ if (config.doBackgroundWork) {
             fill_events_2.log_index,
             fill_events_2.batch_index,
             fill_events_2.created_at,
-            extract(epoch from fill_events_2.created_at) created_ts,
+            extract(epoch from fill_events_2.created_at) created_ts
           FROM fill_events_2
           ${continuationFilter}
-          ORDER BY fill_events_2.created_ts, fill_events_2.tx_hash, fill_events_2.log_index, fill_events_2.batch_index
+          ORDER BY fill_events_2.created_at, fill_events_2.tx_hash, fill_events_2.log_index, fill_events_2.batch_index
           LIMIT $/limit/
           )
           UPDATE fill_events_2 SET
@@ -105,7 +105,7 @@ if (config.doBackgroundWork) {
   redlock
     .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
-      // await addToQueue();
+      await addToQueue();
     })
     .catch(() => {
       // Skip on any errors
