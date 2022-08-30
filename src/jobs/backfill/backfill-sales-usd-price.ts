@@ -31,7 +31,7 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job) => {
       const { timestamp, txHash, logIndex, batchIndex } = job.data;
-      const limit = 200;
+      const limit = 1000;
 
       const results = await idb.manyOrNone(
         `
