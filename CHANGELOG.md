@@ -1,3 +1,12 @@
+## [5.184.7](https://github.com/reservoirprotocol/indexer/compare/v5.184.6...v5.184.7) (2022-08-30)
+
+
+### Bug Fixes
+
+* orders api query params validation ([556f878](https://github.com/reservoirprotocol/indexer/commit/556f8784edeb921b58ca013e7bef9380cdbd838c))
+
+
+
 ## [5.184.6](https://github.com/reservoirprotocol/indexer/compare/v5.184.5...v5.184.6) (2022-08-30)
 
 
