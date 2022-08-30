@@ -9,6 +9,7 @@ import { logger } from "@/common/logger";
 import { redis, redlock } from "@/common/redis";
 import { fromBuffer, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { getNetworkSettings } from "@/config/network";
 import { getUSDAndNativePrices } from "@/utils/prices";
 
 const QUEUE_NAME = "backfill-sales-usd-price";
@@ -125,7 +126,7 @@ if (config.doBackgroundWork) {
             const prices = await getUSDAndNativePrices(fromBuffer(currency), price, timestamp, {
               onlyUSD: true,
             });
-            if (!prices.usdPrice) {
+            if (!prices.usdPrice && getNetworkSettings().coingecko) {
               throw new Error("Missing USD price");
             }
 
@@ -134,7 +135,7 @@ if (config.doBackgroundWork) {
               log_index,
               batch_index,
               currency_price: price,
-              usd_price: prices.usdPrice,
+              usd_price: prices.usdPrice ?? null,
             });
           }
         }
