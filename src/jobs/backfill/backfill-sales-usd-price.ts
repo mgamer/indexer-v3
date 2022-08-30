@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { HashZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
@@ -159,7 +160,12 @@ if (config.doBackgroundWork) {
 
       if (results.length >= limit) {
         const lastResult = results[results.length - 1];
-        await addToQueue(lastResult.timestamp, lastResult.logIndex, lastResult.batchIndex);
+        await addToQueue(
+          lastResult.timestamp,
+          fromBuffer(lastResult.tx_hash),
+          lastResult.log_index,
+          lastResult.batch_index
+        );
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }
@@ -170,15 +176,20 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
+    .acquire([`${QUEUE_NAME}-lock-2`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
-      await addToQueue(now(), 0, 0);
+      await addToQueue(now(), HashZero, 0, 0);
     })
     .catch(() => {
       // Skip on any errors
     });
 }
 
-export const addToQueue = async (timestamp: number, logIndex: number, batchIndex: number) => {
-  await queue.add(randomUUID(), { timestamp, logIndex, batchIndex });
+export const addToQueue = async (
+  timestamp: number,
+  txHash: string,
+  logIndex: number,
+  batchIndex: number
+) => {
+  await queue.add(randomUUID(), { timestamp, txHash, logIndex, batchIndex });
 };
