@@ -5,7 +5,7 @@ import { randomUUID } from "crypto";
 
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
-import { redis, redlock } from "@/common/redis";
+import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 
@@ -92,16 +92,18 @@ if (config.doBackgroundWork) {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
 
-  if (config.chainId === 1) {
-    redlock
-      .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
-      .then(async () => {
-        await addToQueue("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-      })
-      .catch(() => {
-        // Skip on any errors
-      });
-  }
+  // !!! DISABLED
+
+  // if (config.chainId === 1) {
+  //   redlock
+  //     .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
+  //     .then(async () => {
+  //       await addToQueue("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+  //     })
+  //     .catch(() => {
+  //       // Skip on any errors
+  //     });
+  // }
 }
 
 export const addToQueue = async (orderId: string) => {
