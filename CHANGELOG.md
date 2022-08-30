@@ -1,3 +1,12 @@
+## [5.184.6](https://github.com/reservoirprotocol/indexer/compare/v5.184.5...v5.184.6) (2022-08-30)
+
+
+### Bug Fixes
+
+* collections v5 api filtering by collection set id ([92d8299](https://github.com/reservoirprotocol/indexer/commit/92d82991d2f9adb137250b4062f803afa0346d2d))
+
+
+
 ## [5.184.5](https://github.com/reservoirprotocol/indexer/compare/v5.184.4...v5.184.5) (2022-08-29)
 
 
