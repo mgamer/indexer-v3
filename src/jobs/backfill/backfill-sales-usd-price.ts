@@ -52,7 +52,7 @@ if (config.doBackgroundWork) {
             fill_events_2.log_index,
             fill_events_2.batch_index
           ) < (
-            to_timestamp($/timestamp/),
+            $/timestamp/,
             $/txHash/,
             $/logIndex/,
             $/batchIndex/
