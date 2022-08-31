@@ -2654,6 +2654,7 @@ export const syncEvents = async (
 
               break;
             }
+
             case "universe-cancel": {
               const { args } = eventData.abi.parseLog(log);
               const orderId = args["hash"].toLowerCase();
