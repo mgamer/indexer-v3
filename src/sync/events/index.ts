@@ -2657,9 +2657,6 @@ export const syncEvents = async (
             case "universe-cancel": {
               const { args } = eventData.abi.parseLog(log);
               const orderId = args["hash"].toLowerCase();
-              // const maker = args["maker"].toLowerCase();
-              // const makeAssetType = args["makeAssetType"].toLowerCase();
-              // const takeAssetType = args["takeAssetType"].toLowerCase();
 
               cancelEvents.push({
                 orderKind: "universe",
