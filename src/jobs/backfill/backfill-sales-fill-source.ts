@@ -88,6 +88,12 @@ if (config.doBackgroundWork) {
       } of results) {
         if (order_source_id_int && !fill_source_id) {
           const data = await extractAttributionData(fromBuffer(tx_hash), order_kind);
+          logger.info(
+            QUEUE_NAME,
+            `Data for tx ${fromBuffer(
+              tx_hash
+            )}: ${order_source_id_int}, ${fill_source_id}, ${JSON.stringify(data, null, 2)}`
+          );
           if (data.fillSource) {
             values.push({
               tx_hash,
@@ -134,7 +140,7 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
+    .acquire([`${QUEUE_NAME}-lock-2`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       await addToQueue(now(), HashZero, 0, 0);
     })
