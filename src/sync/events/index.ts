@@ -2230,14 +2230,6 @@ export const syncEvents = async (
               const winner = args["winner"].toLowerCase();
               const amount = args["amount"].toString();
 
-              const orderKind = "nouns";
-
-              // Handle: attribution
-              const data = await syncEventsUtils.extractAttributionData(
-                baseEventParams.txHash,
-                orderKind
-              );
-
               // Handle: prices
               const currency = Sdk.Common.Addresses.Eth[config.chainId];
               const prices = await getUSDAndNativePrices(
@@ -2250,6 +2242,7 @@ export const syncEvents = async (
                 break;
               }
 
+              const orderKind = "nouns";
               const orderSource = await getOrderSourceByOrderKind(orderKind);
               fillEvents.push({
                 orderKind,
@@ -2264,8 +2257,7 @@ export const syncEvents = async (
                 usdPrice: prices.usdPrice,
                 contract: Sdk.Nouns.Addresses.TokenContract[config.chainId]?.toLowerCase(),
                 tokenId: nounId,
-                fillSourceId: data.fillSource?.id,
-                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: orderSource?.id,
                 baseEventParams,
               });
 
@@ -2419,24 +2411,13 @@ export const syncEvents = async (
               continue;
             }
 
-            let taker = tx.from;
             const orderKind = "mint";
-
-            // Handle: attribution
-            const data = await syncEventsUtils.extractAttributionData(
-              mint.baseEventParams.txHash,
-              orderKind
-            );
-            if (data.taker) {
-              taker = data.taker;
-            }
-
             const source = await getOrderSourceByOrderKind(orderKind, mint.baseEventParams.address);
             fillEvents.push({
               orderKind,
               orderSide: "sell",
               orderSourceIdInt: source?.id,
-              taker,
+              taker: tx.from,
               maker: mint.from,
               amount: mint.amount,
               currency,
@@ -2445,8 +2426,7 @@ export const syncEvents = async (
               usdPrice: prices.usdPrice,
               contract: mint.contract,
               tokenId: mint.tokenId,
-              fillSourceId: data.fillSource?.id,
-              aggregatorSourceId: data.aggregatorSource?.id,
+              fillSourceId: source?.id,
               baseEventParams: mint.baseEventParams,
             });
           }
