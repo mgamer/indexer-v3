@@ -1781,6 +1781,7 @@ export const syncEvents = async (
               break;
             }
 
+            case "universe-match":
             case "rarible-match": {
               const { args } = eventData.abi.parseLog(log);
               const leftHash = args["leftHash"].toLowerCase();
@@ -1847,7 +1848,7 @@ export const syncEvents = async (
                 break;
               }
 
-              const orderKind = "rarible";
+              const orderKind = eventData.kind.startsWith("universe") ? "universe" : "rarible";
               const orderSource = await getOrderSourceByOrderKind(orderKind);
 
               let taker = rightMaker;
@@ -1869,7 +1870,7 @@ export const syncEvents = async (
               }
 
               fillEventsPartial.push({
-                orderKind: "rarible",
+                orderKind,
                 orderId: leftHash,
                 orderSide: side,
                 orderSourceIdInt: orderSource?.id,
@@ -2549,6 +2550,32 @@ export const syncEvents = async (
               cryptopunksTransferEvents.push({
                 to,
                 txHash: baseEventParams.txHash,
+              });
+
+              break;
+            }
+
+            case "universe-cancel": {
+              const { args } = eventData.abi.parseLog(log);
+              const orderId = args["hash"].toLowerCase();
+
+              cancelEvents.push({
+                orderKind: "universe",
+                orderId,
+                baseEventParams,
+              });
+
+              orderInfos.push({
+                context: `cancelled-${orderId}`,
+                id: orderId,
+                trigger: {
+                  kind: "cancel",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                  logIndex: baseEventParams.logIndex,
+                  batchIndex: baseEventParams.batchIndex,
+                  blockHash: baseEventParams.blockHash,
+                },
               });
 
               break;
