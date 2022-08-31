@@ -6,6 +6,8 @@ import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle"
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
+import { regex } from "@/common/utils";
+import { config } from "@/config/index";
 import { generateSchemaHash } from "@/orderbook/orders/utils";
 import * as tokenSet from "@/orderbook/token-sets";
 
@@ -20,13 +22,14 @@ export const postTokenSetsV1Options: RouteOptions = {
     },
   },
   payload: {
+    // 10 MB
     maxBytes: 1048576 * 10,
   },
   validate: {
     payload: Joi.object({
       contract: Joi.string()
         .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
+        .pattern(regex.address)
         .description(
           "Array of tokens to gather in a set. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         )
@@ -53,12 +56,11 @@ export const postTokenSetsV1Options: RouteOptions = {
       if (tokenIds.length <= 1) {
         throw Boom.badRequest("Token sets should contain at least 2 tokens");
       }
-      if (tokenIds.length > 10000) {
+      if (tokenIds.length > config.maxTokenSetSize) {
         throw Boom.badRequest("Token sets are restricted to at most 10000 tokens");
       }
 
       const merkleTree = generateMerkleTree(tokenIds);
-
       const ts = await tokenSet.tokenList.save([
         {
           id: `list:${contract}:${merkleTree.getHexRoot()}`,
