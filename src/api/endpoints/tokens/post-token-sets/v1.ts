@@ -19,6 +19,9 @@ export const postTokenSetsV1Options: RouteOptions = {
       order: 13,
     },
   },
+  payload: {
+    maxBytes: 1048576 * 10,
+  },
   validate: {
     payload: Joi.object({
       contract: Joi.string()
