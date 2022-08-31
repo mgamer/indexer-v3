@@ -93,7 +93,7 @@ if (config.doBackgroundWork) {
             log_index,
             batch_index,
             fill_source_id: data.fillSource?.id ?? order_source_id_int,
-            taker: data.taker ?? taker,
+            taker: data.taker ? toBuffer(data.taker) : taker,
           });
         }
       }
