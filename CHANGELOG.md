@@ -1,3 +1,12 @@
+# [5.187.0](https://github.com/reservoirprotocol/indexer/compare/v5.186.3...v5.187.0) (2022-08-31)
+
+
+### Features
+
+* store activities source and expose them when available ([bf52a86](https://github.com/reservoirprotocol/indexer/commit/bf52a86ad56bcffe97c6b9cbf349a4cc8ea5b3ce))
+
+
+
 ## [5.186.3](https://github.com/reservoirprotocol/indexer/compare/v5.186.2...v5.186.3) (2022-08-31)
 
 

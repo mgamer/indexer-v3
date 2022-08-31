@@ -8,6 +8,7 @@ import { logger } from "@/common/logger";
 import { formatEth, regex } from "@/common/utils";
 import { ActivityType } from "@/models/activities/activities-entity";
 import { UserActivities } from "@/models/user-activities";
+import { Sources } from "@/models/sources";
 
 const version = "v2";
 
@@ -86,6 +87,7 @@ export const getUserActivityV2Options: RouteOptions = {
           txHash: Joi.string().lowercase().pattern(regex.bytes32).allow(null),
           logIndex: Joi.number().allow(null),
           batchIndex: Joi.number().allow(null),
+          source: Joi.object().allow(null),
         })
       ),
     }).label(`getUserActivity${version.toUpperCase()}Response`),
@@ -118,20 +120,35 @@ export const getUserActivityV2Options: RouteOptions = {
         return { activities: [] };
       }
 
+      const sources = await Sources.getInstance();
+
       // Iterate over the activities
-      const result = _.map(activities, (activity) => ({
-        type: activity.type,
-        fromAddress: activity.fromAddress,
-        toAddress: activity.toAddress,
-        price: formatEth(activity.price),
-        amount: activity.amount,
-        timestamp: activity.eventTimestamp,
-        token: activity.token,
-        collection: activity.collection,
-        txHash: activity.metadata.transactionHash,
-        logIndex: activity.metadata.logIndex,
-        batchIndex: activity.metadata.batchIndex,
-      }));
+      const result = _.map(activities, (activity) => {
+        const source = activity.metadata.sourceIdInt
+          ? sources.get(activity.metadata.sourceIdInt)
+          : undefined;
+
+        return {
+          type: activity.type,
+          fromAddress: activity.fromAddress,
+          toAddress: activity.toAddress,
+          price: formatEth(activity.price),
+          amount: activity.amount,
+          timestamp: activity.eventTimestamp,
+          token: activity.token,
+          collection: activity.collection,
+          txHash: activity.metadata.transactionHash,
+          logIndex: activity.metadata.logIndex,
+          batchIndex: activity.metadata.batchIndex,
+          source: source
+            ? {
+                domain: source?.domain,
+                name: source?.metadata.title || source?.name,
+                icon: source?.metadata.icon,
+              }
+            : undefined,
+        };
+      });
 
       // Set the continuation node
       let continuation = null;
