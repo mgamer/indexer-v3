@@ -1,3 +1,25 @@
+# [5.186.0](https://github.com/reservoirprotocol/indexer/compare/v5.185.4...v5.186.0) (2022-08-31)
+
+
+### Bug Fixes
+
+* add backfill job for fixing missing sale currency price ([7354ba7](https://github.com/reservoirprotocol/indexer/commit/7354ba77be3bc116c53dc25640f85231f5253efb))
+* allow null royalties ([df38b24](https://github.com/reservoirprotocol/indexer/commit/df38b24ca7f9c8d7bb9dc55b641d24384067c74f))
+* allow null royalties ([e431e8d](https://github.com/reservoirprotocol/indexer/commit/e431e8dc5666069e6a4355997a54c0198dd99808))
+* backfill job for missing fill sources ([0b918a2](https://github.com/reservoirprotocol/indexer/commit/0b918a277c92d144a3c373a1c8f17ec0b8327b7e))
+* do not use the default source for native seaport orders ([d2d076f](https://github.com/reservoirprotocol/indexer/commit/d2d076f4dd93621f1ebe8d3976b6218d00c858bb))
+* minor tweaks ([de01a76](https://github.com/reservoirprotocol/indexer/commit/de01a76ce833d47c2036404126c510adab92a5e9))
+* minor tweaks ([1944133](https://github.com/reservoirprotocol/indexer/commit/1944133da670c24f52718c8732cd09394e6859d7))
+* minor tweaks ([99b2628](https://github.com/reservoirprotocol/indexer/commit/99b2628613bbc28ae0345985e89c7e0b8fff96f8))
+* minor tweaks ([56c1c0c](https://github.com/reservoirprotocol/indexer/commit/56c1c0ccf2abb851c7ad90abd8b2613be0f737fa))
+
+
+### Features
+
+* increase token set size limit to 100k ([9a55609](https://github.com/reservoirprotocol/indexer/commit/9a55609927d06dd75523057de2e66813943fc943))
+
+
+
 ## [5.185.4](https://github.com/reservoirprotocol/indexer/compare/v5.185.3...v5.185.4) (2022-08-31)
 
 
