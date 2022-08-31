@@ -21,6 +21,9 @@ export const postTokenSetsV1Options: RouteOptions = {
       order: 13,
     },
   },
+  timeout: {
+    server: 60 * 1000,
+  },
   payload: {
     // 10 MB
     maxBytes: 1048576 * 10,
