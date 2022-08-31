@@ -106,6 +106,7 @@ export class SalesDataSource extends BaseDataSource {
           fill_source: fillSource?.domain ?? orderSource?.domain,
           aggregator_source: aggregatorSource?.domain,
           wash_trading_score: Number(r.wash_trading_score),
+          is_primary: false,
           tx_hash: fromBuffer(r.tx_hash),
           tx_log_index: r.log_index,
           tx_batch_index: r.batch_index,
