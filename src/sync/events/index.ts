@@ -1848,7 +1848,7 @@ export const syncEvents = async (
                 break;
               }
 
-              const orderKind = "rarible";
+              const orderKind = eventData.kind.startsWith("universe") ? "universe" : "rarible";
               const orderSource = await getOrderSourceByOrderKind(orderKind);
 
               let taker = rightMaker;
@@ -1870,7 +1870,7 @@ export const syncEvents = async (
               }
 
               fillEventsPartial.push({
-                orderKind: "rarible",
+                orderKind,
                 orderId: leftHash,
                 orderSide: side,
                 orderSourceIdInt: orderSource?.id,
