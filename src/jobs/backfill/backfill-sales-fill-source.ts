@@ -86,21 +86,15 @@ if (config.doBackgroundWork) {
         taker,
         fill_source_id,
       } of results) {
-        logger.info(
-          QUEUE_NAME,
-          `Data for tx ${fromBuffer(tx_hash)}: ${order_source_id_int}, ${fill_source_id}`
-        );
         if (order_source_id_int && !fill_source_id) {
           const data = await extractAttributionData(fromBuffer(tx_hash), order_kind);
-          if (data.fillSource) {
-            values.push({
-              tx_hash,
-              log_index,
-              batch_index,
-              fill_source_id: data.fillSource?.id,
-              taker: data.taker ?? taker,
-            });
-          }
+          values.push({
+            tx_hash,
+            log_index,
+            batch_index,
+            fill_source_id: data.fillSource?.id ?? order_source_id_int,
+            taker: data.taker ?? taker,
+          });
         }
       }
 
