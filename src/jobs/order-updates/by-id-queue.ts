@@ -436,6 +436,7 @@ if (config.doBackgroundWork) {
             if (trigger.kind == "cancel") {
               const eventData = {
                 orderId: order.id,
+                orderSourceIdInt: order.sourceIdInt,
                 contract: fromBuffer(order.contract),
                 tokenId: order.tokenId,
                 maker: fromBuffer(order.maker),
@@ -466,6 +467,7 @@ if (config.doBackgroundWork) {
             ) {
               const eventData = {
                 orderId: order.id,
+                orderSourceIdInt: order.sourceIdInt,
                 contract: fromBuffer(order.contract),
                 tokenId: order.tokenId,
                 maker: fromBuffer(order.maker),
