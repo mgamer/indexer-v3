@@ -1,3 +1,12 @@
+## [5.186.1](https://github.com/reservoirprotocol/indexer/compare/v5.186.0...v5.186.1) (2022-08-31)
+
+
+### Bug Fixes
+
+* x2y2 collection offers ([43d92fa](https://github.com/reservoirprotocol/indexer/commit/43d92fa8417ea65772357fd5c3b002c107f559db))
+
+
+
 # [5.186.0](https://github.com/reservoirprotocol/indexer/compare/v5.185.4...v5.186.0) (2022-08-31)
 
 
