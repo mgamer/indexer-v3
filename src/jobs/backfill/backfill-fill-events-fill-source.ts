@@ -33,6 +33,8 @@ if (config.doBackgroundWork) {
     async (job) => {
       const { timestamp, logIndex, batchIndex } = job.data;
 
+      return;
+
       const limit = 500;
       const result = await idb.manyOrNone(
         `
