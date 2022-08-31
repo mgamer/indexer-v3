@@ -1,3 +1,12 @@
+## [5.186.2](https://github.com/reservoirprotocol/indexer/compare/v5.186.1...v5.186.2) (2022-08-31)
+
+
+### Bug Fixes
+
+* stop backfill ([4d34d6e](https://github.com/reservoirprotocol/indexer/commit/4d34d6eb019ca4b43a7f34d60a01d21533e8b654))
+
+
+
 ## [5.186.1](https://github.com/reservoirprotocol/indexer/compare/v5.186.0...v5.186.1) (2022-08-31)
 
 
