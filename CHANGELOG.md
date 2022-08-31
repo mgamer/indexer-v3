@@ -1,3 +1,13 @@
+## [5.186.3](https://github.com/reservoirprotocol/indexer/compare/v5.186.2...v5.186.3) (2022-08-31)
+
+
+### Bug Fixes
+
+* temporarily increase post token set api timeout ([8e7c463](https://github.com/reservoirprotocol/indexer/commit/8e7c463b6858cef0581671985ee497bb90861ee9))
+* tweaks ([f793d53](https://github.com/reservoirprotocol/indexer/commit/f793d531143a38ce4bd23bf9fdd972a8bcbb4370))
+
+
+
 ## [5.186.2](https://github.com/reservoirprotocol/indexer/compare/v5.186.1...v5.186.2) (2022-08-31)
 
 
