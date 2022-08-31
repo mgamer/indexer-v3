@@ -124,8 +124,8 @@ export const getUserActivityV2Options: RouteOptions = {
 
       // Iterate over the activities
       const result = _.map(activities, (activity) => {
-        const source = activity.metadata.sourceIdInt
-          ? sources.get(activity.metadata.sourceIdInt)
+        const source = activity.metadata.orderSourceIdInt
+          ? sources.get(activity.metadata.orderSourceIdInt)
           : undefined;
 
         return {

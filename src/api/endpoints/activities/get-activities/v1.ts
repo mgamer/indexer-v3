@@ -69,8 +69,8 @@ export const getActivityV1Options: RouteOptions = {
       const sources = await Sources.getInstance();
 
       const result = _.map(activities, (activity) => {
-        const source = activity.metadata.sourceIdInt
-          ? sources.get(activity.metadata.sourceIdInt)
+        const source = activity.metadata.orderSourceIdInt
+          ? sources.get(activity.metadata.orderSourceIdInt)
           : undefined;
 
         return {
