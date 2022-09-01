@@ -68,7 +68,7 @@ export const getTokensV5Options: RouteOptions = {
         .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
       source: Joi.string().description("Domain of the order source. Example `opensea.io`"),
       sortBy: Joi.string()
-        .valid("floorAskPrice", "tokenId")
+        .valid("floorAskPrice", "tokenId", "rarity")
         .default("floorAskPrice")
         .description("Order the items are returned in the response."),
       sortDirection: Joi.string().lowercase().valid("asc", "desc"),
@@ -107,6 +107,8 @@ export const getTokensV5Options: RouteOptions = {
             kind: Joi.string().allow(null, ""),
             isFlagged: Joi.boolean().default(false),
             lastFlagUpdate: Joi.string().allow(null, ""),
+            rarity: Joi.number().unsafe().allow(null),
+            rarityRank: Joi.number().unsafe().allow(null),
             collection: Joi.object({
               id: Joi.string().allow(null),
               name: Joi.string().allow(null, ""),
@@ -251,6 +253,8 @@ export const getTokensV5Options: RouteOptions = {
           t.floor_sell_value,
           t.floor_sell_currency,
           t.floor_sell_currency_value,
+          t.rarity_score,
+          t.rarity_rank,
           t.is_flagged,
           t.last_flag_update,
           c.slug,
@@ -367,6 +371,17 @@ export const getTokensV5Options: RouteOptions = {
           }
 
           switch (query.sortBy) {
+            case "rarity": {
+              query.sortDirection = query.sortDirection || "desc"; // Default sorting for rarity is DESC
+              const sign = query.sortDirection == "desc" ? "<" : ">";
+              conditions.push(
+                `(t.rarity_score, t.token_id) ${sign} ($/contRarity/, $/contTokenId/)`
+              );
+              (query as any).contRarity = contArr[0];
+              (query as any).contTokenId = contArr[1];
+              break;
+            }
+
             case "tokenId": {
               const sign = query.sortDirection == "desc" ? "<" : ">";
               conditions.push(`(t.contract, t.token_id) ${sign} ($/contContract/, $/contTokenId/)`);
@@ -407,9 +422,16 @@ export const getTokensV5Options: RouteOptions = {
 
       // Sorting
 
-      // Only allow sorting on floorSell when we filter by collection / attributes / tokenSetId
-      if (query.collection || query.attributes || query.tokenSetId) {
+      // Only allow sorting on floorSell when we filter by collection / attributes / tokenSetId / rarity
+      if (query.collection || query.attributes || query.tokenSetId || query.rarity) {
         switch (query.sortBy) {
+          case "rarity": {
+            baseQuery += ` ORDER BY t.rarity_score ${
+              query.sortDirection || "DESC"
+            } NULLS LAST, t.token_id ${query.sortDirection || "DESC"}`;
+            break;
+          }
+
           case "tokenId": {
             baseQuery += ` ORDER BY t.contract, t.token_id ${query.sortDirection || "ASC"}`;
             break;
@@ -433,6 +455,7 @@ export const getTokensV5Options: RouteOptions = {
 
       /** Depending on how we sorted, we use that sorting key to determine the next page of results
           Possible formats:
+            rarity_tokenid
             floorAskPrice_tokenid
             contract_tokenid
             tokenid
@@ -446,6 +469,10 @@ export const getTokensV5Options: RouteOptions = {
         // when we have collection/attributes
         if (query.collection || query.attributes || query.tokenSetId) {
           switch (query.sortBy) {
+            case "rarity":
+              continuation = rawResult[rawResult.length - 1].rarity_score || "null";
+              break;
+
             case "tokenId":
               continuation = fromBuffer(rawResult[rawResult.length - 1].contract);
               break;
@@ -494,6 +521,8 @@ export const getTokensV5Options: RouteOptions = {
             kind: r.kind,
             isFlagged: Boolean(Number(r.is_flagged)),
             lastFlagUpdate: r.last_flag_update ? new Date(r.last_flag_update).toISOString() : null,
+            rarity: r.rarity_score,
+            rarityRank: r.rarity_rank,
             collection: {
               id: r.collection_id,
               name: r.collection_name,
