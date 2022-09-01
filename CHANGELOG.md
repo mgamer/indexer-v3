@@ -1,3 +1,12 @@
+# [5.188.0](https://github.com/reservoirprotocol/indexer/compare/v5.187.0...v5.188.0) (2022-09-01)
+
+
+### Bug Fixes
+
+* looksrare collection bids ([afbc97d](https://github.com/reservoirprotocol/indexer/commit/afbc97d4ca233aa55f68dafe0d2c44cebaa44e82))
+
+
+
 # [5.187.0](https://github.com/reservoirprotocol/indexer/compare/v5.186.3...v5.187.0) (2022-08-31)
 
 
