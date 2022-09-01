@@ -2613,7 +2613,7 @@ export const syncEvents = async (
               blockHash: event.baseEventParams.blockHash,
               timestamp: event.baseEventParams.timestamp,
               orderId: event.orderId || "",
-              orderSourceIdInt: Number(event.orderSourceIdInt),
+              orderSourceIdInt: Number(event.orderSourceId),
             },
           };
         }
