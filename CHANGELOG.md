@@ -1,3 +1,17 @@
+# [5.189.0](https://github.com/reservoirprotocol/indexer/compare/v5.188.4...v5.189.0) (2022-09-01)
+
+
+### Bug Fixes
+
+* sales fill source backfill ([acd315e](https://github.com/reservoirprotocol/indexer/commit/acd315e77fad22adb9aa9962a2c31d0211c05fa4))
+
+
+### Features
+
+* store the currency image from coingecko currency response ([384573c](https://github.com/reservoirprotocol/indexer/commit/384573cb62f5c320181486c2728a7a3ad4459092))
+
+
+
 ## [5.188.4](https://github.com/reservoirprotocol/indexer/compare/v5.188.3...v5.188.4) (2022-09-01)
 
 
