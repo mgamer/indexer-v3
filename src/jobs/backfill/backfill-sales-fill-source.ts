@@ -122,15 +122,15 @@ if (config.doBackgroundWork) {
         );
       }
 
-      if (results.length >= limit) {
-        const lastResult = results[results.length - 1];
-        await addToQueue(
-          lastResult.timestamp,
-          fromBuffer(lastResult.tx_hash),
-          lastResult.log_index,
-          lastResult.batch_index
-        );
-      }
+      // if (results.length >= limit) {
+      //   const lastResult = results[results.length - 1];
+      //   await addToQueue(
+      //     lastResult.timestamp,
+      //     fromBuffer(lastResult.tx_hash),
+      //     lastResult.log_index,
+      //     lastResult.batch_index
+      //   );
+      // }
     },
     { connection: redis.duplicate(), concurrency: 1 }
   );

@@ -1,3 +1,103 @@
+## [5.188.3](https://github.com/reservoirprotocol/indexer/compare/v5.188.2...v5.188.3) (2022-09-01)
+
+
+### Bug Fixes
+
+* stop backfill job ([5bca2d7](https://github.com/reservoirprotocol/indexer/commit/5bca2d78bad196dccdd33a88f15f46ca19563307))
+
+
+
+## [5.188.2](https://github.com/reservoirprotocol/indexer/compare/v5.188.1...v5.188.2) (2022-09-01)
+
+
+### Bug Fixes
+
+* tweak the dynamic jobs update logic to handle different currencies ([ce72ac3](https://github.com/reservoirprotocol/indexer/commit/ce72ac35fd5234dcb346f97b8b4feea204d01a12))
+
+
+### Performance Improvements
+
+* increase order updates by id queue concurrency ([b92e28f](https://github.com/reservoirprotocol/indexer/commit/b92e28ff1fe0fe3785ba9c7882ac5086b6251c03))
+
+
+
+## [5.188.1](https://github.com/reservoirprotocol/indexer/compare/v5.188.0...v5.188.1) (2022-09-01)
+
+
+### Bug Fixes
+
+* sales fill source backfill ([85cad2a](https://github.com/reservoirprotocol/indexer/commit/85cad2a676dbc16db4192fc1cd6b770529020dd0))
+
+
+
+# [5.188.0](https://github.com/reservoirprotocol/indexer/compare/v5.187.0...v5.188.0) (2022-09-01)
+
+
+### Bug Fixes
+
+* looksrare collection bids ([afbc97d](https://github.com/reservoirprotocol/indexer/commit/afbc97d4ca233aa55f68dafe0d2c44cebaa44e82))
+
+
+
+# [5.187.0](https://github.com/reservoirprotocol/indexer/compare/v5.186.3...v5.187.0) (2022-08-31)
+
+
+### Features
+
+* store activities source and expose them when available ([bf52a86](https://github.com/reservoirprotocol/indexer/commit/bf52a86ad56bcffe97c6b9cbf349a4cc8ea5b3ce))
+
+
+
+## [5.186.3](https://github.com/reservoirprotocol/indexer/compare/v5.186.2...v5.186.3) (2022-08-31)
+
+
+### Bug Fixes
+
+* temporarily increase post token set api timeout ([8e7c463](https://github.com/reservoirprotocol/indexer/commit/8e7c463b6858cef0581671985ee497bb90861ee9))
+* tweaks ([f793d53](https://github.com/reservoirprotocol/indexer/commit/f793d531143a38ce4bd23bf9fdd972a8bcbb4370))
+
+
+
+## [5.186.2](https://github.com/reservoirprotocol/indexer/compare/v5.186.1...v5.186.2) (2022-08-31)
+
+
+### Bug Fixes
+
+* stop backfill ([4d34d6e](https://github.com/reservoirprotocol/indexer/commit/4d34d6eb019ca4b43a7f34d60a01d21533e8b654))
+
+
+
+## [5.186.1](https://github.com/reservoirprotocol/indexer/compare/v5.186.0...v5.186.1) (2022-08-31)
+
+
+### Bug Fixes
+
+* x2y2 collection offers ([43d92fa](https://github.com/reservoirprotocol/indexer/commit/43d92fa8417ea65772357fd5c3b002c107f559db))
+
+
+
+# [5.186.0](https://github.com/reservoirprotocol/indexer/compare/v5.185.4...v5.186.0) (2022-08-31)
+
+
+### Bug Fixes
+
+* add backfill job for fixing missing sale currency price ([7354ba7](https://github.com/reservoirprotocol/indexer/commit/7354ba77be3bc116c53dc25640f85231f5253efb))
+* allow null royalties ([df38b24](https://github.com/reservoirprotocol/indexer/commit/df38b24ca7f9c8d7bb9dc55b641d24384067c74f))
+* allow null royalties ([e431e8d](https://github.com/reservoirprotocol/indexer/commit/e431e8dc5666069e6a4355997a54c0198dd99808))
+* backfill job for missing fill sources ([0b918a2](https://github.com/reservoirprotocol/indexer/commit/0b918a277c92d144a3c373a1c8f17ec0b8327b7e))
+* do not use the default source for native seaport orders ([d2d076f](https://github.com/reservoirprotocol/indexer/commit/d2d076f4dd93621f1ebe8d3976b6218d00c858bb))
+* minor tweaks ([de01a76](https://github.com/reservoirprotocol/indexer/commit/de01a76ce833d47c2036404126c510adab92a5e9))
+* minor tweaks ([1944133](https://github.com/reservoirprotocol/indexer/commit/1944133da670c24f52718c8732cd09394e6859d7))
+* minor tweaks ([99b2628](https://github.com/reservoirprotocol/indexer/commit/99b2628613bbc28ae0345985e89c7e0b8fff96f8))
+* minor tweaks ([56c1c0c](https://github.com/reservoirprotocol/indexer/commit/56c1c0ccf2abb851c7ad90abd8b2613be0f737fa))
+
+
+### Features
+
+* increase token set size limit to 100k ([9a55609](https://github.com/reservoirprotocol/indexer/commit/9a55609927d06dd75523057de2e66813943fc943))
+
+
+
 ## [5.185.4](https://github.com/reservoirprotocol/indexer/compare/v5.185.3...v5.185.4) (2022-08-31)
 
 
