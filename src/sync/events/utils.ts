@@ -95,7 +95,11 @@ export const fetchTransaction = async (txHash: string) =>
     });
   });
 
-export const extractAttributionData = async (txHash: string, orderKind: OrderKind) => {
+export const extractAttributionData = async (
+  txHash: string,
+  orderKind: OrderKind,
+  address?: string
+) => {
   const sources = await Sources.getInstance();
 
   let aggregatorSource: SourcesEntity | undefined;
@@ -126,7 +130,7 @@ export const extractAttributionData = async (txHash: string, orderKind: OrderKin
     aggregatorSource = await sources.getOrInsert(router);
     fillSource = await sources.getOrInsert(router);
   } else {
-    const defaultSourceId = await getOrderSourceByOrderKind(orderKind);
+    const defaultSourceId = await getOrderSourceByOrderKind(orderKind, address);
     if (defaultSourceId) {
       fillSource = defaultSourceId;
     }
