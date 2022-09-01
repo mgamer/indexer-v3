@@ -17,7 +17,7 @@ export const addEventsFoundation = async (events: Event[]) => {
       order_kind: event.orderKind,
       order_id: event.orderId || null,
       order_side: event.orderSide,
-      order_source_id_int: event.orderSourceIdInt || null,
+      order_source_id_int: event.orderSourceId || null,
       maker: toBuffer(event.maker),
       taker: toBuffer(event.taker),
       price: event.price,

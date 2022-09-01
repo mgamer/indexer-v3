@@ -59,7 +59,7 @@ mintsSources.set("0xfbeef911dc5821886e1dda71586d90ed28174b7d", "knownorigin.io")
 export const getOrderSourceByOrderKind = async (
   orderKind: OrderKind,
   address?: string
-): Promise<SourcesEntity | null> => {
+): Promise<SourcesEntity | undefined> => {
   try {
     const sources = await Sources.getInstance();
     switch (orderKind) {
@@ -89,18 +89,14 @@ export const getOrderSourceByOrderKind = async (
       case "mint": {
         if (address && mintsSources.has(address)) {
           return sources.getOrInsert(mintsSources.get(address)!);
-        } else {
-          return null;
         }
       }
-      default:
-        // For all other order kinds we cannot default the source
-        return null;
     }
   } catch {
-    // Return the null source in case of any errors
-    return null;
+    // Skip on any errors
   }
+
+  // In case nothing matched, return `undefined` by default
 };
 
 // Support for filling listings
