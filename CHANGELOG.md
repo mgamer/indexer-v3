@@ -1,3 +1,12 @@
+## [5.188.3](https://github.com/reservoirprotocol/indexer/compare/v5.188.2...v5.188.3) (2022-09-01)
+
+
+### Bug Fixes
+
+* stop backfill job ([5bca2d7](https://github.com/reservoirprotocol/indexer/commit/5bca2d78bad196dccdd33a88f15f46ca19563307))
+
+
+
 ## [5.188.2](https://github.com/reservoirprotocol/indexer/compare/v5.188.1...v5.188.2) (2022-09-01)
 
 
