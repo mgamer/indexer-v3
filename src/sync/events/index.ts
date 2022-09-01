@@ -1710,6 +1710,7 @@ export const syncEvents = async (
               break;
             }
 
+            case "universe-match":
             case "rarible-match": {
               const { args } = eventData.abi.parseLog(log);
               const leftHash = args["leftHash"].toLowerCase();
@@ -1743,7 +1744,7 @@ export const syncEvents = async (
 
               // Handle: attribution
 
-              const orderKind = "rarible";
+              const orderKind = eventData.kind.startsWith("universe") ? "universe" : "rarible";
               const data = await syncEventsUtils.extractAttributionData(
                 baseEventParams.txHash,
                 orderKind
@@ -1790,7 +1791,7 @@ export const syncEvents = async (
               }
 
               fillEventsPartial.push({
-                orderKind: "rarible",
+                orderKind,
                 orderId: leftHash,
                 orderSide: side,
                 maker: leftMaker,
@@ -2407,6 +2408,32 @@ export const syncEvents = async (
 
               break;
             }
+
+            case "universe-cancel": {
+              const { args } = eventData.abi.parseLog(log);
+              const orderId = args["hash"].toLowerCase();
+
+              cancelEvents.push({
+                orderKind: "universe",
+                orderId,
+                baseEventParams,
+              });
+
+              orderInfos.push({
+                context: `cancelled-${orderId}`,
+                id: orderId,
+                trigger: {
+                  kind: "cancel",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                  logIndex: baseEventParams.logIndex,
+                  batchIndex: baseEventParams.batchIndex,
+                  blockHash: baseEventParams.blockHash,
+                },
+              });
+
+              break;
+            }
           }
         } catch (error) {
           logger.info(COMPONENT_NAME, `Failed to handle events: ${error}`);
@@ -2586,6 +2613,7 @@ export const syncEvents = async (
               blockHash: event.baseEventParams.blockHash,
               timestamp: event.baseEventParams.timestamp,
               orderId: event.orderId || "",
+              orderSourceIdInt: Number(event.orderSourceIdInt),
             },
           };
         }
