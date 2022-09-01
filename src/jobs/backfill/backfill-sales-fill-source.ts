@@ -38,6 +38,7 @@ if (config.doBackgroundWork) {
             fill_events_2.log_index,
             fill_events_2.batch_index,
             fill_events_2.timestamp,
+            fill_events_2.address,
             fill_events_2.taker,
             fill_events_2.order_kind,
             fill_events_2.order_source_id_int,
@@ -81,20 +82,27 @@ if (config.doBackgroundWork) {
         tx_hash,
         log_index,
         batch_index,
+        address,
         order_kind,
         order_source_id_int,
         taker,
         fill_source_id,
       } of results) {
         if (order_source_id_int && !fill_source_id) {
-          const data = await extractAttributionData(fromBuffer(tx_hash), order_kind);
-          values.push({
-            tx_hash,
-            log_index,
-            batch_index,
-            fill_source_id: data.fillSource?.id ?? order_source_id_int,
-            taker: data.taker ? toBuffer(data.taker) : taker,
-          });
+          const data = await extractAttributionData(
+            fromBuffer(tx_hash),
+            order_kind,
+            fromBuffer(address)
+          );
+          if (data.fillSource || data.taker) {
+            values.push({
+              tx_hash,
+              log_index,
+              batch_index,
+              fill_source_id: data.fillSource ? data.fillSource.id : fill_source_id,
+              taker: data.taker ? toBuffer(data.taker) : taker,
+            });
+          }
         }
       }
 
