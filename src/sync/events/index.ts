@@ -6,28 +6,29 @@ import * as Sdk from "@reservoir0x/sdk";
 import _ from "lodash";
 import pLimit from "p-limit";
 
-import { logger } from "@/common/logger";
 import { idb, pgp, redb } from "@/common/db";
+import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { EventDataKind, getEventData } from "@/events-sync/data";
+import { BaseEventParams, parseEvent } from "@/events-sync/parser";
 import * as es from "@/events-sync/storage";
 import * as syncEventsUtils from "@/events-sync/utils";
-import { BaseEventParams, parseEvent } from "@/events-sync/parser";
+import * as blocksModel from "@/models/blocks";
+import { OrderKind, getOrderSourceByOrderKind } from "@/orderbook/orders";
+import * as Foundation from "@/orderbook/orders/foundation";
+import { getUSDAndNativePrices } from "@/utils/prices";
+
+import * as processActivityEvent from "@/jobs/activities/process-activity-event";
+import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
 import * as blockCheck from "@/jobs/events-sync/block-check-queue";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
-import * as processActivityEvent from "@/jobs/activities/process-activity-event";
-import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
-import * as blocksModel from "@/models/blocks";
-import { OrderKind, getOrderSourceByOrderKind } from "@/orderbook/orders";
-import * as Foundation from "@/orderbook/orders/foundation";
-import { getUSDAndNativePrices } from "@/utils/prices";
 
 // TODO: Split into multiple files (by exchange)
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
