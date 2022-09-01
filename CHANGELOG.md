@@ -1,3 +1,17 @@
+## [5.188.2](https://github.com/reservoirprotocol/indexer/compare/v5.188.1...v5.188.2) (2022-09-01)
+
+
+### Bug Fixes
+
+* tweak the dynamic jobs update logic to handle different currencies ([ce72ac3](https://github.com/reservoirprotocol/indexer/commit/ce72ac35fd5234dcb346f97b8b4feea204d01a12))
+
+
+### Performance Improvements
+
+* increase order updates by id queue concurrency ([b92e28f](https://github.com/reservoirprotocol/indexer/commit/b92e28ff1fe0fe3785ba9c7882ac5086b6251c03))
+
+
+
 ## [5.188.1](https://github.com/reservoirprotocol/indexer/compare/v5.188.0...v5.188.1) (2022-09-01)
 
 
