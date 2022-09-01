@@ -9,13 +9,13 @@ export type Event = {
   orderKind: OrderKind;
   orderId?: string;
   orderSide: "buy" | "sell";
-  orderSourceIdInt?: number;
   maker: string;
   taker: string;
   price: string;
   contract: string;
   tokenId: string;
   amount: string;
+  orderSourceId?: number;
   aggregatorSourceId?: number;
   fillSourceId?: number;
   washTradingScore?: number;

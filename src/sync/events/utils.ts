@@ -106,6 +106,8 @@ export const extractAttributionData = async (
   let fillSource: SourcesEntity | undefined;
   let taker: string | undefined;
 
+  const orderSource = await getOrderSourceByOrderKind(orderKind, address);
+
   // Properly set the taker when filling through router contracts
   const tx = await fetchTransaction(txHash);
   const router = Sdk.Common.Addresses.Routers[config.chainId]?.[tx.to];
@@ -130,13 +132,11 @@ export const extractAttributionData = async (
     aggregatorSource = await sources.getOrInsert(router);
     fillSource = await sources.getOrInsert(router);
   } else {
-    const defaultSourceId = await getOrderSourceByOrderKind(orderKind, address);
-    if (defaultSourceId) {
-      fillSource = defaultSourceId;
-    }
+    fillSource = orderSource;
   }
 
   return {
+    orderSource,
     fillSource,
     aggregatorSource,
     taker,
