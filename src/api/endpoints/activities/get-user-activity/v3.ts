@@ -5,17 +5,17 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import { formatEth, regex } from "@/common/utils";
+import { buildContinuation, formatEth, regex, splitContinuation } from "@/common/utils";
 import { ActivityType } from "@/models/activities/activities-entity";
 import { UserActivities } from "@/models/user-activities";
 import { Sources } from "@/models/sources";
 
-const version = "v2";
+const version = "v3";
 
-export const getUserActivityV2Options: RouteOptions = {
+export const getUserActivityV3Options: RouteOptions = {
   description: "Users activity",
   notes: "This API can be used to build a feed for a user",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Activity"],
   plugins: {
     "hapi-swagger": {
       order: 1,
@@ -46,7 +46,13 @@ export const getUserActivityV2Options: RouteOptions = {
         .max(20)
         .default(20)
         .description("Amount of items returned in response."),
-      continuation: Joi.string().description(
+      sortBy: Joi.string()
+        .valid("eventTimestamp", "createdAt")
+        .default("eventTimestamp")
+        .description(
+          "Order the items are returned in the response, eventTimestamp = The blockchain event time, createdAt - The time in which event was recorded"
+        ),
+      continuation: Joi.number().description(
         "Use continuation token to request next offset of items."
       ),
       types: Joi.alternatives()
@@ -65,7 +71,7 @@ export const getUserActivityV2Options: RouteOptions = {
   },
   response: {
     schema: Joi.object({
-      continuation: Joi.string().allow(null),
+      continuation: Joi.number().allow(null),
       activities: Joi.array().items(
         Joi.object({
           type: Joi.string(),
@@ -107,12 +113,17 @@ export const getUserActivityV2Options: RouteOptions = {
       query.users = [query.users];
     }
 
+    if (query.continuation) {
+      query.continuation = splitContinuation(query.continuation)[0];
+    }
+
     try {
       const activities = await UserActivities.getActivities(
         query.users,
         query.continuation,
         query.types,
-        query.limit
+        query.limit,
+        query.sortBy
       );
 
       // If no activities found
@@ -135,6 +146,7 @@ export const getUserActivityV2Options: RouteOptions = {
           price: formatEth(activity.price),
           amount: activity.amount,
           timestamp: activity.eventTimestamp,
+          createdAt: activity.createdAt.toISOString(),
           token: activity.token,
           collection: activity.collection,
           txHash: activity.metadata.transactionHash,
@@ -156,7 +168,11 @@ export const getUserActivityV2Options: RouteOptions = {
         const lastActivity = _.last(activities);
 
         if (lastActivity) {
-          continuation = lastActivity.eventTimestamp;
+          const continuationValue =
+            query.sortBy == "eventTimestamp"
+              ? lastActivity.eventTimestamp
+              : lastActivity.createdAt.toISOString();
+          continuation = buildContinuation(`${continuationValue}`);
         }
       }
 
