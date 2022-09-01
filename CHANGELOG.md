@@ -1,3 +1,15 @@
+## [5.190.2](https://github.com/reservoirprotocol/indexer/compare/v5.190.1...v5.190.2) (2022-09-01)
+
+
+### Bug Fixes
+
+* added currency redirect api ([161465e](https://github.com/reservoirprotocol/indexer/commit/161465e9eb42c38051f4fc390925deaa94dd29ba))
+* debug logs ([b1a734f](https://github.com/reservoirprotocol/indexer/commit/b1a734f0e5b0a5178cb5b0504e7db2edcd422742))
+* docs category ([bb88c98](https://github.com/reservoirprotocol/indexer/commit/bb88c984fea7676964bbafab05546d5f9ed5f57b))
+* user activity ([f0c46e7](https://github.com/reservoirprotocol/indexer/commit/f0c46e741f5b6ff89a9bbfa9a87c3146994111c4))
+
+
+
 ## [5.190.1](https://github.com/reservoirprotocol/indexer/compare/v5.190.0...v5.190.1) (2022-09-01)
 
 
