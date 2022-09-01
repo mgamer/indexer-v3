@@ -29,7 +29,7 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job) => {
       const { timestamp, txHash, logIndex, batchIndex } = job.data;
-      const limit = 1000;
+      const limit = 300;
 
       const results = await idb.manyOrNone(
         `
@@ -72,6 +72,8 @@ if (config.doBackgroundWork) {
         }
       );
 
+      logger.info(QUEUE_NAME, `Got ${results.length} results`);
+
       const values: any[] = [];
       const columns = new pgp.helpers.ColumnSet(
         ["tx_hash", "log_index", "batch_index", "fill_source_id", "aggregator_source_id", "taker"],
@@ -91,6 +93,7 @@ if (config.doBackgroundWork) {
         fill_source_id,
       } of results) {
         if (order_source_id_int && (!fill_source_id || !aggregator_source_id)) {
+          logger.info(QUEUE_NAME, `Handling ${fromBuffer(tx_hash)}`);
           const data = await extractAttributionData(
             fromBuffer(tx_hash),
             order_kind,
