@@ -1,3 +1,13 @@
+# [5.190.0](https://github.com/reservoirprotocol/indexer/compare/v5.189.0...v5.190.0) (2022-09-01)
+
+
+### Features
+
+* allow to sort activities by created at and sort tokens by rarity ([54469d3](https://github.com/reservoirprotocol/indexer/commit/54469d3c293ce436e56edc163dd4616f78ecfda0))
+* fix sources id read ([c0c4dbd](https://github.com/reservoirprotocol/indexer/commit/c0c4dbd10df04e03b11570ce36485e54380fedba))
+
+
+
 # [5.189.0](https://github.com/reservoirprotocol/indexer/compare/v5.188.4...v5.189.0) (2022-09-01)
 
 
