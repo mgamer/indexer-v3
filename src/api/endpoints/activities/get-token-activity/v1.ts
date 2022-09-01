@@ -15,7 +15,7 @@ const version = "v1";
 export const getTokenActivityV1Options: RouteOptions = {
   description: "Token activity",
   notes: "This API can be used to build a feed for a token",
-  tags: ["api", "Activity"],
+  tags: ["api", "x-depracated"],
   plugins: {
     "hapi-swagger": {
       order: 1,
@@ -114,8 +114,8 @@ export const getTokenActivityV1Options: RouteOptions = {
       const sources = await Sources.getInstance();
 
       const result = _.map(activities, (activity) => {
-        const source = activity.metadata.sourceIdInt
-          ? sources.get(activity.metadata.sourceIdInt)
+        const source = activity.metadata.orderSourceIdInt
+          ? sources.get(activity.metadata.orderSourceIdInt)
           : undefined;
 
         return {
