@@ -1,3 +1,12 @@
+## [5.188.4](https://github.com/reservoirprotocol/indexer/compare/v5.188.3...v5.188.4) (2022-09-01)
+
+
+### Bug Fixes
+
+* build ([f749786](https://github.com/reservoirprotocol/indexer/commit/f749786bf0acf5e7cbfe9bd60d2b6d7963db2e5d))
+
+
+
 ## [5.188.3](https://github.com/reservoirprotocol/indexer/compare/v5.188.2...v5.188.3) (2022-09-01)
 
 
