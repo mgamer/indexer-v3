@@ -39,6 +39,8 @@ import { getUSDAndNativePrices } from "@/utils/prices";
 // Cache the network settings
 const NS = getNetworkSettings();
 
+const COMPONENT_NAME = "sync-events";
+
 export const syncEvents = async (
   fromBlock: number,
   toBlock: number,
@@ -61,11 +63,6 @@ export const syncEvents = async (
   const makerInfos: orderUpdatesByMaker.MakerInfo[] = [];
   const mintInfos: tokenUpdatesMint.MintInfo[] = [];
 
-  const cryptopunksTransferEvents: {
-    to: string;
-    txHash: string;
-  }[] = [];
-
   // For handling mints as sales
   const tokensMinted = new Map<
     string,
@@ -81,20 +78,11 @@ export const syncEvents = async (
   // When backfilling, certain processes are disabled
   const backfill = Boolean(options?.backfill);
 
-  let handleAttribution = false;
-
-  if (!backfill || NS.backfillFetchAllBlocks) {
-    // Before proceeding, fetch all individual blocks within the current range
-    const limit = pLimit(5);
-    await Promise.all(
-      _.range(fromBlock, toBlock + 1).map((block) =>
-        limit(() => baseProvider.getBlockWithTransactions(block))
-      )
-    );
-
-    // Only allow attribution logic if we prefetched all blocks for efficiency.
-    handleAttribution = true;
-  }
+  // Before proceeding, fetch all individual blocks within the current range
+  const limit = pLimit(5);
+  await Promise.all(
+    _.range(fromBlock, toBlock + 1).map((block) => limit(() => syncEventsUtils.fetchBlock(block)))
+  );
 
   const eventDatas = getEventData(options?.eventDataKinds);
   await baseProvider
@@ -139,6 +127,12 @@ export const syncEvents = async (
         }
         return false;
       };
+
+      // For working around some bug in the CryptoPunks contract
+      const cryptopunksTransferEvents: {
+        to: string;
+        txHash: string;
+      }[] = [];
 
       for (const log of logs) {
         try {
@@ -632,22 +626,28 @@ export const syncEvents = async (
                 break;
               }
 
+              // Handle: attribution
+
               const orderKind = "x2y2";
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
+              }
 
-              let aggregatorSourceId: number | undefined;
-              let fillSourceId: number | undefined;
-              if (handleAttribution) {
-                // Handle attribution
-                const data = await syncEventsUtils.extractAttributionData(
-                  baseEventParams.txHash,
-                  orderKind
-                );
-                if (data.taker) {
-                  taker = data.taker;
-                }
+              // Handle: prices
 
-                aggregatorSourceId = data.aggregatorSource?.id;
-                fillSourceId = data.fillSource?.id;
+              const currencyPrice = item.price.toString();
+              const prices = await getUSDAndNativePrices(
+                currency,
+                currencyPrice,
+                baseEventParams.timestamp
+              );
+              if (!prices.nativePrice) {
+                // We must always have the native price
+                break;
               }
 
               // Decode the sold token (ignoring bundles)
@@ -669,25 +669,10 @@ export const syncEvents = async (
               }
 
               const orderSide = [1, 5].includes(op) ? "sell" : "buy";
-              const orderSource = await getOrderSourceByOrderKind(orderKind);
-
-              // Handle: prices
-              const currencyPrice = item.price.toString();
-              const prices = await getUSDAndNativePrices(
-                currency,
-                currencyPrice,
-                baseEventParams.timestamp
-              );
-              if (!prices.nativePrice) {
-                // We must always have the native price
-                break;
-              }
-
               fillEvents.push({
                 orderKind,
                 orderId,
                 orderSide,
-                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -698,8 +683,9 @@ export const syncEvents = async (
                 tokenId,
                 // TODO: Support X2Y2 ERC1155 orders
                 amount: "1",
-                aggregatorSourceId,
-                fillSourceId: fillSourceId ?? orderSource?.id,
+                orderSourceId: data.orderSource?.id,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -779,27 +765,20 @@ export const syncEvents = async (
               const protocolFee = parsedLog.args["protocolFee"].toString();
 
               const orderId = keccak256(["address", "uint256"], [contract, tokenId]);
+
+              // Handle: attribution
+
               const orderKind = "foundation";
-
-              let aggregatorSourceId: number | undefined;
-              let fillSourceId: number | undefined;
-              if (handleAttribution) {
-                // Handle attribution
-                const data = await syncEventsUtils.extractAttributionData(
-                  baseEventParams.txHash,
-                  orderKind
-                );
-                if (data.taker) {
-                  taker = data.taker;
-                }
-
-                aggregatorSourceId = data.aggregatorSource?.id;
-                fillSourceId = data.fillSource?.id;
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
               }
 
-              const orderSource = await getOrderSourceByOrderKind(orderKind);
-
               // Handle: prices
+
               const currency = Sdk.Common.Addresses.Eth[config.chainId];
               // Deduce the price from the protocol fee (which is 5%)
               const currencyPrice = bn(protocolFee).mul(10000).div(50).toString();
@@ -818,7 +797,6 @@ export const syncEvents = async (
                 orderKind,
                 orderId,
                 orderSide: "sell",
-                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -827,10 +805,11 @@ export const syncEvents = async (
                 usdPrice: prices.usdPrice,
                 contract,
                 tokenId,
-                // Foundation only supports erc721 for now
+                // Foundation only supports ERC721
                 amount: "1",
-                aggregatorSourceId,
-                fillSourceId: fillSourceId ?? orderSource?.id,
+                orderSourceId: data.orderSource?.id,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -938,27 +917,19 @@ export const syncEvents = async (
               const tokenId = parsedLog.args["tokenId"].toString();
               const amount = parsedLog.args["amount"].toString();
 
+              // Handle: attribution
+
               const orderKind = "looks-rare";
-
-              let aggregatorSourceId: number | undefined;
-              let fillSourceId: number | undefined;
-              if (handleAttribution) {
-                // Handle attribution
-                const data = await syncEventsUtils.extractAttributionData(
-                  baseEventParams.txHash,
-                  orderKind
-                );
-                if (data.taker) {
-                  taker = data.taker;
-                }
-
-                aggregatorSourceId = data.aggregatorSource?.id;
-                fillSourceId = data.fillSource?.id;
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
               }
 
-              const orderSource = await getOrderSourceByOrderKind(orderKind);
-
               // Handle: prices
+
               currencyPrice = bn(currencyPrice).div(amount).toString();
               const prices = await getUSDAndNativePrices(
                 currency,
@@ -974,7 +945,6 @@ export const syncEvents = async (
                 orderKind,
                 orderId,
                 orderSide: "buy",
-                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -984,8 +954,9 @@ export const syncEvents = async (
                 contract,
                 tokenId,
                 amount,
-                aggregatorSourceId,
-                fillSourceId: fillSourceId ?? orderSource?.id,
+                orderSourceId: data.orderSource?.id,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -1050,27 +1021,19 @@ export const syncEvents = async (
               const tokenId = parsedLog.args["tokenId"].toString();
               const amount = parsedLog.args["amount"].toString();
 
+              // Handle: attribution
+
               const orderKind = "looks-rare";
-
-              let aggregatorSourceId: number | undefined;
-              let fillSourceId: number | undefined;
-              if (handleAttribution) {
-                // Handle attribution
-                const data = await syncEventsUtils.extractAttributionData(
-                  baseEventParams.txHash,
-                  orderKind
-                );
-                if (data.taker) {
-                  taker = data.taker;
-                }
-
-                aggregatorSourceId = data.aggregatorSource?.id;
-                fillSourceId = data.fillSource?.id;
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
               }
 
-              const orderSource = await getOrderSourceByOrderKind(orderKind);
-
               // Handle: prices
+
               currencyPrice = bn(currencyPrice).div(amount).toString();
               const prices = await getUSDAndNativePrices(
                 currency,
@@ -1086,7 +1049,6 @@ export const syncEvents = async (
                 orderKind,
                 orderId,
                 orderSide: "sell",
-                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -1096,8 +1058,9 @@ export const syncEvents = async (
                 contract,
                 tokenId,
                 amount,
-                aggregatorSourceId,
-                fillSourceId: fillSourceId ?? orderSource?.id,
+                orderSourceId: data.orderSource?.id,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -1227,27 +1190,21 @@ export const syncEvents = async (
                 }
               }
 
+              // Handle: attribution
+
               const orderKind = eventData.kind.startsWith("wyvern-v2.3")
                 ? "wyvern-v2.3"
                 : "wyvern-v2";
-
-              let aggregatorSourceId: number | undefined;
-              let fillSourceId: number | undefined;
-              if (handleAttribution) {
-                // Handle attribution
-                const data = await syncEventsUtils.extractAttributionData(
-                  baseEventParams.txHash,
-                  orderKind
-                );
-                if (data.taker) {
-                  taker = data.taker;
-                }
-
-                aggregatorSourceId = data.aggregatorSource?.id;
-                fillSourceId = data.fillSource?.id;
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
               }
 
               // Handle: prices
+
               const prices = await getUSDAndNativePrices(
                 currency,
                 currencyPrice,
@@ -1258,15 +1215,12 @@ export const syncEvents = async (
                 break;
               }
 
-              const orderSource = await getOrderSourceByOrderKind(orderKind);
-
               let batchIndex = 1;
               if (buyOrderId !== HashZero) {
                 fillEvents.push({
                   orderKind,
                   orderId: buyOrderId,
                   orderSide: "buy",
-                  orderSourceIdInt: orderSource?.id,
                   maker,
                   taker,
                   price: prices.nativePrice,
@@ -1276,8 +1230,9 @@ export const syncEvents = async (
                   contract: associatedNftTransferEvent.baseEventParams.address,
                   tokenId: associatedNftTransferEvent.tokenId,
                   amount: associatedNftTransferEvent.amount,
-                  aggregatorSourceId,
-                  fillSourceId: fillSourceId ?? orderSource?.id,
+                  orderSourceId: data.orderSource?.id,
+                  aggregatorSourceId: data.aggregatorSource?.id,
+                  fillSourceId: data.fillSource?.id,
                   baseEventParams: {
                     ...baseEventParams,
                     batchIndex: batchIndex++,
@@ -1289,7 +1244,6 @@ export const syncEvents = async (
                   orderKind,
                   orderId: sellOrderId,
                   orderSide: "sell",
-                  orderSourceIdInt: orderSource?.id,
                   maker,
                   taker,
                   price: prices.nativePrice,
@@ -1299,8 +1253,9 @@ export const syncEvents = async (
                   contract: associatedNftTransferEvent.baseEventParams.address,
                   tokenId: associatedNftTransferEvent.tokenId,
                   amount: associatedNftTransferEvent.amount,
-                  aggregatorSourceId,
-                  fillSourceId: fillSourceId ?? orderSource?.id,
+                  orderSourceId: data.orderSource?.id,
+                  aggregatorSourceId: data.aggregatorSource?.id,
+                  fillSourceId: data.fillSource?.id,
                   baseEventParams: {
                     ...baseEventParams,
                     batchIndex: batchIndex++,
@@ -1343,23 +1298,18 @@ export const syncEvents = async (
               const erc721Token = parsedLog.args["erc721Token"].toLowerCase();
               const erc721TokenId = parsedLog.args["erc721TokenId"].toString();
 
+              // Handle: attribution
+
               const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
-
-              let aggregatorSourceId: number | undefined;
-              let fillSourceId: number | undefined;
-              if (handleAttribution) {
-                // Handle attribution
-                const data = await syncEventsUtils.extractAttributionData(
-                  baseEventParams.txHash,
-                  orderKind
-                );
-                if (data.taker) {
-                  taker = data.taker;
-                }
-
-                aggregatorSourceId = data.aggregatorSource?.id;
-                fillSourceId = data.fillSource?.id;
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
               }
+
+              // Handle: prices
 
               // By default, use the price without fees
               let currencyPrice = erc20TokenAmount;
@@ -1401,7 +1351,6 @@ export const syncEvents = async (
                   });
               }
 
-              // Handle: prices
               let currency = erc20Token;
               if (currency === Sdk.ZeroExV4.Addresses.Eth[config.chainId]) {
                 // Map the weird 0x ETH address
@@ -1419,13 +1368,10 @@ export const syncEvents = async (
               }
 
               const orderSide = direction === 0 ? "sell" : "buy";
-              const orderSource = await getOrderSourceByOrderKind(orderKind);
-
               fillEvents.push({
                 orderKind,
                 orderId,
                 orderSide,
-                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -1435,8 +1381,9 @@ export const syncEvents = async (
                 contract: erc721Token,
                 tokenId: erc721TokenId,
                 amount: "1",
-                aggregatorSourceId,
-                fillSourceId: fillSourceId ?? orderSource?.id,
+                orderSourceId: data.orderSource?.id,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -1504,23 +1451,18 @@ export const syncEvents = async (
               const erc1155TokenId = parsedLog.args["erc1155TokenId"].toString();
               const erc1155FillAmount = parsedLog.args["erc1155FillAmount"].toString();
 
+              // Handle: attribution
+
               const orderKind = eventData!.kind.split("-").slice(0, -2).join("-") as OrderKind;
-
-              let aggregatorSourceId: number | undefined;
-              let fillSourceId: number | undefined;
-              if (handleAttribution) {
-                // Handle attribution
-                const data = await syncEventsUtils.extractAttributionData(
-                  baseEventParams.txHash,
-                  orderKind
-                );
-                if (data.taker) {
-                  taker = data.taker;
-                }
-
-                aggregatorSourceId = data.aggregatorSource?.id;
-                fillSourceId = data.fillSource?.id;
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
               }
+
+              // Handle: prices
 
               // By default, use the price without fees
               let currencyPrice = bn(erc20FillAmount).div(erc1155FillAmount).toString();
@@ -1561,7 +1503,6 @@ export const syncEvents = async (
                   });
               }
 
-              // Handle: prices
               let currency = erc20Token;
               if (currency === Sdk.ZeroExV4.Addresses.Eth[config.chainId]) {
                 // Map the weird 0x ETH address
@@ -1579,14 +1520,10 @@ export const syncEvents = async (
               }
 
               const orderSide = direction === 0 ? "sell" : "buy";
-              const orderSource = await getOrderSourceByOrderKind(orderKind);
-
-              // Custom handling to support partial filling
               fillEventsPartial.push({
                 orderKind,
                 orderId,
                 orderSide,
-                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -1596,8 +1533,9 @@ export const syncEvents = async (
                 contract: erc1155Token,
                 tokenId: erc1155TokenId,
                 amount: erc1155FillAmount,
-                aggregatorSourceId,
-                fillSourceId: fillSourceId ?? orderSource?.id,
+                orderSourceId: data.orderSource?.id,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -1698,10 +1636,23 @@ export const syncEvents = async (
                 consideration
               );
               if (saleInfo) {
-                const orderSide = saleInfo.side as "sell" | "buy";
+                // Handle: attribution
+
                 const orderKind = "seaport";
+                const data = await syncEventsUtils.extractAttributionData(
+                  baseEventParams.txHash,
+                  orderKind
+                );
+                if (data.taker) {
+                  taker = data.taker;
+                }
+
+                if (saleInfo.recipientOverride) {
+                  taker = saleInfo.recipientOverride;
+                }
 
                 // Handle: prices
+
                 const currency = saleInfo.paymentToken;
                 const currencyPrice = bn(saleInfo.price).div(saleInfo.amount).toString();
                 const prices = await getUSDAndNativePrices(
@@ -1714,34 +1665,11 @@ export const syncEvents = async (
                   break;
                 }
 
-                let aggregatorSourceId: number | undefined;
-                let fillSourceId: number | undefined;
-                if (handleAttribution) {
-                  // Handle attribution
-                  const data = await syncEventsUtils.extractAttributionData(
-                    baseEventParams.txHash,
-                    orderKind
-                  );
-                  if (data.taker) {
-                    taker = data.taker;
-                  }
-
-                  aggregatorSourceId = data.aggregatorSource?.id;
-                  fillSourceId = data.fillSource?.id;
-                }
-
-                if (saleInfo.recipientOverride) {
-                  taker = saleInfo.recipientOverride;
-                }
-
-                const orderSource = await getOrderSourceByOrderKind(orderKind);
-
-                // Custom handling to support partial filling
+                const orderSide = saleInfo.side as "sell" | "buy";
                 fillEventsPartial.push({
                   orderKind,
                   orderId,
                   orderSide,
-                  orderSourceIdInt: orderSource?.id,
                   maker,
                   taker,
                   price: prices.nativePrice,
@@ -1751,8 +1679,9 @@ export const syncEvents = async (
                   contract: saleInfo.contract,
                   tokenId: saleInfo.tokenId,
                   amount: saleInfo.amount,
-                  aggregatorSourceId,
-                  fillSourceId: fillSourceId ?? orderSource?.id,
+                  orderSourceId: data.orderSource?.id,
+                  aggregatorSourceId: data.aggregatorSource?.id,
+                  fillSourceId: data.fillSource?.id,
                   baseEventParams,
                 });
 
@@ -1786,7 +1715,7 @@ export const syncEvents = async (
               const { args } = eventData.abi.parseLog(log);
               const leftHash = args["leftHash"].toLowerCase();
               const leftMaker = args["leftMaker"].toLowerCase();
-              const rightMaker = args["rightMaker"].toLowerCase();
+              let taker = args["rightMaker"].toLowerCase();
               const newLeftFill = args["newLeftFill"].toString();
               const newRightFill = args["newRightFill"].toString();
               const leftAsset = args["leftAsset"];
@@ -1812,6 +1741,19 @@ export const syncEvents = async (
 
               const currencyAsset = side === "sell" ? rightAsset : leftAsset;
               const nftAsset = side === "sell" ? leftAsset : rightAsset;
+
+              // Handle: attribution
+
+              const orderKind = eventData.kind.startsWith("universe") ? "universe" : "rarible";
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
+              }
+
+              // Handle: prices
 
               let currency: string;
               if (currencyAsset.assetClass === ETH) {
@@ -1848,32 +1790,10 @@ export const syncEvents = async (
                 break;
               }
 
-              const orderKind = eventData.kind.startsWith("universe") ? "universe" : "rarible";
-              const orderSource = await getOrderSourceByOrderKind(orderKind);
-
-              let taker = rightMaker;
-
-              let aggregatorSourceId: number | undefined;
-              let fillSourceId: number | undefined;
-              if (handleAttribution) {
-                // Handle attribution
-                const data = await syncEventsUtils.extractAttributionData(
-                  baseEventParams.txHash,
-                  orderKind
-                );
-                if (data.taker) {
-                  taker = data.taker;
-                }
-
-                aggregatorSourceId = data.aggregatorSource?.id;
-                fillSourceId = data.fillSource?.id;
-              }
-
               fillEventsPartial.push({
                 orderKind,
                 orderId: leftHash,
                 orderSide: side,
-                orderSourceIdInt: orderSource?.id,
                 maker: leftMaker,
                 taker,
                 price: prices.nativePrice,
@@ -1883,8 +1803,9 @@ export const syncEvents = async (
                 contract,
                 tokenId,
                 amount,
-                aggregatorSourceId,
-                fillSourceId: fillSourceId ?? orderSource?.id,
+                orderSourceId: data.orderSource?.id,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -1901,6 +1822,17 @@ export const syncEvents = async (
               const erc721TokenId = args["erc721TokenId"].toString();
               const orderHash = args["orderHash"].toLowerCase();
 
+              // Handle: attribution
+
+              const orderKind = "element-erc721";
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
+              }
+
               // Handle: prices
 
               let currency = erc20Token;
@@ -1920,31 +1852,10 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle: attribution
-
-              const orderKind = "element-erc721";
-              const orderSource = await getOrderSourceByOrderKind(orderKind);
-
-              let aggregatorSourceId: number | undefined;
-              let fillSourceId: number | undefined;
-              if (handleAttribution) {
-                const data = await syncEventsUtils.extractAttributionData(
-                  baseEventParams.txHash,
-                  orderKind
-                );
-                if (data.taker) {
-                  taker = data.taker;
-                }
-
-                aggregatorSourceId = data.aggregatorSource?.id;
-                fillSourceId = data.fillSource?.id;
-              }
-
               fillEventsPartial.push({
                 orderKind,
                 orderId: orderHash,
                 orderSide: "sell",
-                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -1954,8 +1865,9 @@ export const syncEvents = async (
                 contract: erc721Token,
                 tokenId: erc721TokenId,
                 amount: "1",
-                aggregatorSourceId,
-                fillSourceId: fillSourceId ?? orderSource?.id,
+                orderSourceId: data.orderSource?.id,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -1972,6 +1884,17 @@ export const syncEvents = async (
               const erc721TokenId = args["erc721TokenId"].toString();
               const orderHash = args["orderHash"].toLowerCase();
 
+              // Handle: attribution
+
+              const orderKind = "element-erc721";
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
+              }
+
               // Handle: prices
 
               let currency = erc20Token;
@@ -1991,31 +1914,10 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle: attribution
-
-              const orderKind = "element-erc721";
-              const orderSource = await getOrderSourceByOrderKind(orderKind);
-
-              let aggregatorSourceId: number | undefined;
-              let fillSourceId: number | undefined;
-              if (handleAttribution) {
-                const data = await syncEventsUtils.extractAttributionData(
-                  baseEventParams.txHash,
-                  orderKind
-                );
-                if (data.taker) {
-                  taker = data.taker;
-                }
-
-                aggregatorSourceId = data.aggregatorSource?.id;
-                fillSourceId = data.fillSource?.id;
-              }
-
               fillEventsPartial.push({
                 orderKind,
                 orderId: orderHash,
                 orderSide: "buy",
-                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -2025,8 +1927,9 @@ export const syncEvents = async (
                 contract: erc721Token,
                 tokenId: erc721TokenId,
                 amount: "1",
-                aggregatorSourceId,
-                fillSourceId: fillSourceId ?? orderSource?.id,
+                orderSourceId: data.orderSource?.id,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -2044,6 +1947,17 @@ export const syncEvents = async (
               const erc1155FillAmount = args["erc1155FillAmount"].toString();
               const orderHash = args["orderHash"].toLowerCase();
 
+              // Handle: attribution
+
+              const orderKind = "element-erc1155";
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
+              }
+
               // Handle: prices
 
               let currency = erc20Token;
@@ -2063,31 +1977,10 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle: attribution
-
-              const orderKind = "element-erc1155";
-              const orderSource = await getOrderSourceByOrderKind(orderKind);
-
-              let aggregatorSourceId: number | undefined;
-              let fillSourceId: number | undefined;
-              if (handleAttribution) {
-                const data = await syncEventsUtils.extractAttributionData(
-                  baseEventParams.txHash,
-                  orderKind
-                );
-                if (data.taker) {
-                  taker = data.taker;
-                }
-
-                aggregatorSourceId = data.aggregatorSource?.id;
-                fillSourceId = data.fillSource?.id;
-              }
-
               fillEventsPartial.push({
                 orderKind,
                 orderId: orderHash,
                 orderSide: "sell",
-                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -2097,8 +1990,9 @@ export const syncEvents = async (
                 contract: erc1155Token,
                 tokenId: erc1155TokenId,
                 amount: erc1155FillAmount,
-                aggregatorSourceId,
-                fillSourceId: fillSourceId ?? orderSource?.id,
+                orderSourceId: data.orderSource?.id,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -2116,6 +2010,17 @@ export const syncEvents = async (
               const erc1155FillAmount = args["erc1155FillAmount"].toString();
               const orderHash = args["orderHash"].toLowerCase();
 
+              // Handle: attribution
+
+              const orderKind = "element-erc1155";
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
+              }
+
               // Handle: prices
 
               let currency = erc20Token;
@@ -2135,31 +2040,10 @@ export const syncEvents = async (
                 break;
               }
 
-              // Handle: attribution
-
-              const orderKind = "element-erc1155";
-              const orderSource = await getOrderSourceByOrderKind(orderKind);
-
-              let aggregatorSourceId: number | undefined;
-              let fillSourceId: number | undefined;
-              if (handleAttribution) {
-                const data = await syncEventsUtils.extractAttributionData(
-                  baseEventParams.txHash,
-                  orderKind
-                );
-                if (data.taker) {
-                  taker = data.taker;
-                }
-
-                aggregatorSourceId = data.aggregatorSource?.id;
-                fillSourceId = data.fillSource?.id;
-              }
-
               fillEventsPartial.push({
                 orderKind,
                 orderId: orderHash,
                 orderSide: "buy",
-                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -2169,8 +2053,9 @@ export const syncEvents = async (
                 contract: erc1155Token,
                 tokenId: erc1155TokenId,
                 amount: erc1155FillAmount,
-                aggregatorSourceId,
-                fillSourceId: fillSourceId ?? orderSource?.id,
+                orderSourceId: data.orderSource?.id,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -2200,11 +2085,23 @@ export const syncEvents = async (
                   break;
                 }
 
+                // Handle: attribution
+
+                const orderKind = "quixotic";
+                const data = await syncEventsUtils.extractAttributionData(
+                  baseEventParams.txHash,
+                  orderKind
+                );
+                if (data.taker) {
+                  taker = data.taker;
+                }
+
                 if (saleInfo.recipientOverride) {
                   taker = saleInfo.recipientOverride;
                 }
 
                 // Handle: prices
+
                 const currency = saleInfo.paymentToken;
                 const currencyPrice = bn(saleInfo.price).div(saleInfo.amount).toString();
                 const prices = await getUSDAndNativePrices(
@@ -2217,32 +2114,10 @@ export const syncEvents = async (
                   break;
                 }
 
-                // Handle: attribution
-
-                const orderKind = "quixotic";
-                const orderSource = await getOrderSourceByOrderKind(orderKind);
-
-                let aggregatorSourceId: number | undefined;
-                let fillSourceId: number | undefined;
-                if (handleAttribution) {
-                  const data = await syncEventsUtils.extractAttributionData(
-                    baseEventParams.txHash,
-                    orderKind
-                  );
-                  if (data.taker) {
-                    taker = data.taker;
-                  }
-
-                  aggregatorSourceId = data.aggregatorSource?.id;
-                  fillSourceId = data.fillSource?.id;
-                }
-
-                // Custom handling to support partial filling
                 fillEventsPartial.push({
                   orderKind,
                   orderId,
                   orderSide: side,
-                  orderSourceIdInt: orderSource?.id,
                   maker,
                   taker,
                   price: prices.nativePrice,
@@ -2252,8 +2127,9 @@ export const syncEvents = async (
                   contract: saleInfo.contract,
                   tokenId: saleInfo.tokenId,
                   amount: saleInfo.amount,
-                  aggregatorSourceId,
-                  fillSourceId: fillSourceId ?? orderSource?.id,
+                  orderSourceId: data.orderSource?.id,
+                  aggregatorSourceId: data.aggregatorSource?.id,
+                  fillSourceId: data.fillSource?.id,
                   baseEventParams,
                 });
 
@@ -2288,7 +2164,6 @@ export const syncEvents = async (
               const tokenId = args["tokenId"].toString();
               let taker = args["buyer"].toLowerCase();
               const ask = args["ask"];
-
               const seller = ask["seller"].toLowerCase();
               const askCurrency = ask["askCurrency"].toLowerCase();
               const askPrice = ask["askPrice"].toString();
@@ -2296,21 +2171,12 @@ export const syncEvents = async (
               // Handle: attribution
 
               const orderKind = "zora-v3";
-              const orderSource = await getOrderSourceByOrderKind(orderKind);
-
-              let aggregatorSourceId: number | undefined;
-              let fillSourceId: number | undefined;
-              if (handleAttribution) {
-                const data = await syncEventsUtils.extractAttributionData(
-                  baseEventParams.txHash,
-                  orderKind
-                );
-                if (data.taker) {
-                  taker = data.taker;
-                }
-
-                aggregatorSourceId = data.aggregatorSource?.id;
-                fillSourceId = data.fillSource?.id;
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
               }
 
               // Handle: prices
@@ -2327,7 +2193,6 @@ export const syncEvents = async (
 
               fillEvents.push({
                 orderKind,
-                orderSourceIdInt: orderSource?.id,
                 currency: askCurrency,
                 orderSide: "sell",
                 maker: seller,
@@ -2338,8 +2203,9 @@ export const syncEvents = async (
                 contract: tokenContract,
                 tokenId,
                 amount: "1",
-                aggregatorSourceId,
-                fillSourceId: fillSourceId ?? orderSource?.id,
+                orderSourceId: data.orderSource?.id,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -2355,22 +2221,15 @@ export const syncEvents = async (
               const amount = args["amount"].toString();
               const auctionCurrency = args["auctionCurrency"].toLowerCase();
 
-              const orderKind = "zora-v3";
-
               // Handle: attribution
-              let aggregatorSourceId: number | undefined;
-              let fillSourceId: number | undefined;
-              if (handleAttribution) {
-                const data = await syncEventsUtils.extractAttributionData(
-                  baseEventParams.txHash,
-                  orderKind
-                );
-                if (data.taker) {
-                  taker = data.taker;
-                }
 
-                aggregatorSourceId = data.aggregatorSource?.id;
-                fillSourceId = data.fillSource?.id;
+              const orderKind = "zora-v3";
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
               }
 
               // Handle: prices
@@ -2385,10 +2244,8 @@ export const syncEvents = async (
                 break;
               }
 
-              const orderSource = await getOrderSourceByOrderKind(orderKind);
               fillEvents.push({
                 orderKind,
-                orderSourceIdInt: orderSource?.id,
                 currency: auctionCurrency,
                 orderSide: "sell",
                 taker,
@@ -2399,8 +2256,9 @@ export const syncEvents = async (
                 contract: tokenContract,
                 tokenId,
                 amount: "1",
-                aggregatorSourceId,
-                fillSourceId: fillSourceId ?? orderSource?.id,
+                orderSourceId: data.orderSource?.id,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -2413,7 +2271,16 @@ export const syncEvents = async (
               const winner = args["winner"].toLowerCase();
               const amount = args["amount"].toString();
 
+              // Handle: attribution
+
+              const orderKind = "nouns";
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+
               // Handle: prices
+
               const currency = Sdk.Common.Addresses.Eth[config.chainId];
               const prices = await getUSDAndNativePrices(
                 currency,
@@ -2425,11 +2292,8 @@ export const syncEvents = async (
                 break;
               }
 
-              const orderKind = "nouns";
-              const orderSource = await getOrderSourceByOrderKind(orderKind);
               fillEvents.push({
                 orderKind,
-                orderSourceIdInt: orderSource?.id,
                 orderSide: "sell",
                 maker: Sdk.Nouns.Addresses.AuctionHouse[config.chainId]?.toLowerCase(),
                 taker: winner,
@@ -2440,7 +2304,9 @@ export const syncEvents = async (
                 usdPrice: prices.usdPrice,
                 contract: Sdk.Nouns.Addresses.TokenContract[config.chainId]?.toLowerCase(),
                 tokenId: nounId,
-                fillSourceId: orderSource?.id,
+                // Mints have matching order and fill sources but no aggregator source
+                orderSourceId: data.orderSource?.id,
+                fillSourceId: data.orderSource?.id,
                 baseEventParams,
               });
 
@@ -2453,8 +2319,6 @@ export const syncEvents = async (
               let value = args["value"].toString();
               const fromAddress = args["fromAddress"].toLowerCase();
               let toAddress = args["toAddress"].toLowerCase();
-
-              const orderSide = toAddress === AddressZero ? "buy" : "sell";
 
               // Due to an upstream issue with the Punks contract, the `PunkBought`
               // event is emitted with zeroed `toAddress` and `value` fields when a
@@ -2485,25 +2349,19 @@ export const syncEvents = async (
                 // Skip any errors
               }
 
-              const orderKind = "cryptopunks";
+              const orderSide = toAddress === AddressZero ? "buy" : "sell";
               const maker = orderSide === "sell" ? fromAddress : toAddress;
               let taker = orderSide === "sell" ? toAddress : fromAddress;
 
               // Handle: attribution
 
-              let aggregatorSourceId: number | undefined;
-              let fillSourceId: number | undefined;
-              if (handleAttribution) {
-                const data = await syncEventsUtils.extractAttributionData(
-                  baseEventParams.txHash,
-                  orderKind
-                );
-                if (data.taker) {
-                  taker = data.taker;
-                }
-
-                aggregatorSourceId = data.aggregatorSource?.id;
-                fillSourceId = data.fillSource?.id;
+              const orderKind = "cryptopunks";
+              const data = await syncEventsUtils.extractAttributionData(
+                baseEventParams.txHash,
+                orderKind
+              );
+              if (data.taker) {
+                taker = data.taker;
               }
 
               // Handle: prices
@@ -2518,14 +2376,9 @@ export const syncEvents = async (
                 break;
               }
 
-              const orderSource = await getOrderSourceByOrderKind(
-                orderKind,
-                baseEventParams.address
-              );
               fillEventsPartial.push({
                 orderKind,
                 orderSide,
-                orderSourceIdInt: orderSource?.id,
                 maker,
                 taker,
                 price: prices.nativePrice,
@@ -2535,8 +2388,9 @@ export const syncEvents = async (
                 contract: baseEventParams.address?.toLowerCase(),
                 tokenId: punkIndex,
                 amount: "1",
-                aggregatorSourceId,
-                fillSourceId: fillSourceId ?? orderSource?.id,
+                orderSourceId: data.orderSource?.id,
+                aggregatorSourceId: data.aggregatorSource?.id,
+                fillSourceId: data.fillSource?.id,
                 baseEventParams,
               });
 
@@ -2582,26 +2436,27 @@ export const syncEvents = async (
             }
           }
         } catch (error) {
-          logger.info("sync-events", `Failed to handle events: ${error}`);
+          logger.info(COMPONENT_NAME, `Failed to handle events: ${error}`);
           throw error;
         }
       }
 
+      // -- Handle: accurate data ---
+
       if (!backfill) {
-        // Assign source based on order for each fill.
+        // Assign accurate sources to the fill events
         await Promise.all([
-          assignOrderSourceToFillEvents(fillEvents),
-          assignOrderSourceToFillEvents(fillEventsPartial),
-          assignOrderSourceToFillEvents(fillEventsFoundation),
+          assignSourceToFillEvents(fillEvents),
+          assignSourceToFillEvents(fillEventsPartial),
+          assignSourceToFillEvents(fillEventsFoundation),
         ]);
 
+        // Assign wash trading scores to the fill events
         await Promise.all([
           assignWashTradingScoreToFillEvents(fillEvents),
           assignWashTradingScoreToFillEvents(fillEventsPartial),
           assignWashTradingScoreToFillEvents(fillEventsFoundation),
         ]);
-      } else {
-        logger.warn("sync-events", `Skipping assigning orders source assigned to fill events`);
       }
 
       // --- Handle: mints as sales ---
@@ -2622,6 +2477,16 @@ export const syncEvents = async (
           const currency = Sdk.Common.Addresses.Eth[config.chainId];
 
           for (const mint of mints) {
+            // Handle: attribution
+
+            const orderKind = "mint";
+            const orderSource = await getOrderSourceByOrderKind(
+              orderKind,
+              mint.baseEventParams.address
+            );
+
+            // Handle: prices
+
             const prices = await getUSDAndNativePrices(
               currency,
               price,
@@ -2632,15 +2497,9 @@ export const syncEvents = async (
               continue;
             }
 
-            const orderKind = "mint";
-            const orderSource = await getOrderSourceByOrderKind(
-              orderKind,
-              mint.baseEventParams.address
-            );
             fillEvents.push({
               orderKind,
               orderSide: "sell",
-              orderSourceIdInt: orderSource?.id,
               taker: tx.from,
               maker: mint.from,
               amount: mint.amount,
@@ -2650,12 +2509,16 @@ export const syncEvents = async (
               usdPrice: prices.usdPrice,
               contract: mint.contract,
               tokenId: mint.tokenId,
+              // Mints have matching order and fill sources but no aggregator source
+              orderSourceId: orderSource?.id,
               fillSourceId: orderSource?.id,
               baseEventParams: mint.baseEventParams,
             });
           }
         }
       }
+
+      // --- Handle: trigger further jobs ---
 
       // WARNING! Ordering matters (fills should come in front of cancels).
       await Promise.all([
@@ -2810,13 +2673,19 @@ export const unsyncEvents = async (block: number, blockHash: string) => {
   ]);
 };
 
-const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
+// In the code above each fill event is assigned a default order source
+// based on the order kind. However, that's not accurate at all, so the
+// method below will join any fill events that have a known order id to
+// the orders table and get the accurate order source from there.
+const assignSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
   try {
-    const orderIds = fillEvents.filter((e) => e.orderId !== undefined).map((e) => e.orderId);
+    // Fetch the order ids associated to the passed in fill events
+    const orderIds = fillEvents.map((e) => e.orderId).filter(Boolean);
     if (orderIds.length) {
       const orders = [];
-      const orderIdChunks = _.chunk(orderIds, 100);
 
+      // Get the associated order source for each of the above orders
+      const orderIdChunks = _.chunk(orderIds, 100);
       for (const chunk of orderIdChunks) {
         const ordersChunk = await redb.manyOrNone(
           `
@@ -2824,8 +2693,8 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
               orders.id,
               orders.source_id_int
             FROM orders
-            WHERE id IN ($/orderIds:list/)
-              AND source_id_int IS NOT NULL
+            WHERE orders.id IN ($/orderIds:list/)
+              AND orders.source_id_int IS NOT NULL
           `,
           { orderIds: chunk }
         );
@@ -2833,38 +2702,44 @@ const assignOrderSourceToFillEvents = async (fillEvents: es.fills.Event[]) => {
       }
 
       if (orders.length) {
+        // Create a mapping from order id to its source id
         const orderSourceIdByOrderId = new Map<string, number>();
         for (const order of orders) {
           orderSourceIdByOrderId.set(order.id, order.source_id_int);
         }
 
         fillEvents.forEach((event) => {
-          if (event.orderId == undefined) {
+          if (!event.orderId) {
             return;
           }
 
+          // If the current fill event's order has an associated source,
+          // then use that as the order source for the fill event
           const orderSourceId = orderSourceIdByOrderId.get(event.orderId!);
-
-          // If the source id exists on the order, use it as the default in the fill event
           if (orderSourceId) {
-            logger.info(
-              "sync-events",
-              `Default source '${orderSourceId}' assigned to fill event: ${JSON.stringify(event)}`
-            );
+            event.orderSourceId = orderSourceId;
 
-            event.orderSourceIdInt = orderSourceId;
+            // If the fill event has no aggregator or fill source, then default the fill source to the order source
             if (!event.aggregatorSourceId && !event.fillSourceId) {
               event.fillSourceId = orderSourceId;
             }
+
+            logger.info(
+              COMPONENT_NAME,
+              `Source '${orderSourceId}' assigned to fill event: ${JSON.stringify(event)}`
+            );
           }
         });
       }
     }
   } catch (error) {
-    logger.error("sync-events", `Failed to assign default sources to fill events: ${error}`);
+    logger.error(COMPONENT_NAME, `Failed to assign sources to fill events: ${error}`);
   }
 };
 
+// Each fill event is assigned a wash trading score which is used
+// for filtering any wash trading sales from the calculation made
+// by the collection volumes processes.
 const assignWashTradingScoreToFillEvents = async (fillEvents: es.fills.Event[]) => {
   try {
     const inverseFillEvents: { contract: Buffer; maker: Buffer; taker: Buffer }[] = [];
@@ -2884,8 +2759,9 @@ const assignWashTradingScoreToFillEvents = async (fillEvents: es.fills.Event[]) 
     );
 
     const fillEventsPendingInverseCheckChunks = _.chunk(fillEventsPendingInverseCheck, 100);
-
     for (const fillEventsChunk of fillEventsPendingInverseCheckChunks) {
+      // TODO: We should never use `raw` queries
+
       const inverseFillEventsFilter = fillEventsChunk.map(
         (fillEvent) =>
           `('${_.replace(fillEvent.taker, "0x", "\\x")}', '${_.replace(
@@ -2897,16 +2773,15 @@ const assignWashTradingScoreToFillEvents = async (fillEvents: es.fills.Event[]) 
 
       const inverseFillEventsChunkQuery = pgp.as.format(
         `
-            SELECT DISTINCT contract, maker, taker from fill_events_2
-            WHERE (maker, taker, contract) IN ($/inverseFillEventsFilter:raw/)
-          `,
+          SELECT DISTINCT contract, maker, taker from fill_events_2
+          WHERE (maker, taker, contract) IN ($/inverseFillEventsFilter:raw/)
+        `,
         {
           inverseFillEventsFilter: inverseFillEventsFilter.join(","),
         }
       );
 
       const inverseFillEventsChunk = await redb.manyOrNone(inverseFillEventsChunkQuery);
-
       inverseFillEvents.push(...inverseFillEventsChunk);
     }
 
@@ -2928,12 +2803,12 @@ const assignWashTradingScoreToFillEvents = async (fillEvents: es.fills.Event[]) 
       }
 
       if (washTradingDetected) {
-        logger.info("sync-events", `Wash trading detected. event: ${JSON.stringify(event)}`);
+        logger.info(COMPONENT_NAME, `Wash trading detected on event: ${JSON.stringify(event)}`);
       }
 
       fillEvents[index].washTradingScore = Number(washTradingDetected);
     });
-  } catch (e) {
-    logger.error("sync-events", `Failed to assign wash trading score to fill events: ${e}`);
+  } catch (error) {
+    logger.error(COMPONENT_NAME, `Failed to assign wash trading score to fill events: ${error}`);
   }
 };
