@@ -56,7 +56,6 @@ if (config.doBackgroundWork) {
         await syncEvents(fromBlock, headBlock);
 
         // Send any remaining blocks to the backfill queue
-        logger.info(QUEUE_NAME, `Checkingbackfill: ${localBlock}, ${fromBlock}`);
         if (localBlock < fromBlock) {
           await eventsSyncBackfill.addToQueue(localBlock, fromBlock - 1);
         }
