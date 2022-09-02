@@ -1,3 +1,18 @@
+# [5.192.0](https://github.com/reservoirprotocol/indexer/compare/v5.191.2...v5.192.0) (2022-09-02)
+
+
+### Bug Fixes
+
+* query ([0235803](https://github.com/reservoirprotocol/indexer/commit/02358034226f6bcb1c8ea2ce3e85b23b2932a2c6))
+* remove debug logs ([d187ab5](https://github.com/reservoirprotocol/indexer/commit/d187ab5b4982a1431d5a32e4e91252f2d34e9b53))
+
+
+### Features
+
+* differentiate primary vs secondary sales ([3e68a02](https://github.com/reservoirprotocol/indexer/commit/3e68a02a2fbeb35d41631690bbe0e4023ca0d0e3))
+
+
+
 ## [5.191.2](https://github.com/reservoirprotocol/indexer/compare/v5.191.1...v5.191.2) (2022-09-02)
 
 
