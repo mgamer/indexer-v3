@@ -101,7 +101,7 @@ export const getNetworkSettings = (): NetworkSettings => {
                   'Ether',
                   'ETH',
                   18,
-                  '{"coingeckoCurrencyId": "ethereum"}'
+                  '{"coingeckoCurrencyId": "ethereum", "image": "https://assets.coingecko.com/coins/images/279/large/ethereum.png"}'
                 ) ON CONFLICT DO NOTHING
               `
             ),
@@ -193,7 +193,7 @@ export const getNetworkSettings = (): NetworkSettings => {
                   'Ether',
                   'ETH',
                   18,
-                  '{"coingeckoCurrencyId": "ethereum"}'
+                  '{"coingeckoCurrencyId": "ethereum", "image": "https://assets.coingecko.com/coins/images/279/large/ethereum.png"}'
                 ) ON CONFLICT DO NOTHING
               `
             ),
