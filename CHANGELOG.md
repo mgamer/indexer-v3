@@ -1,3 +1,91 @@
+# [5.193.0](https://github.com/reservoirprotocol/indexer/compare/v5.192.2...v5.193.0) (2022-09-02)
+
+
+### Bug Fixes
+
+* fix activities migrations ([d9c7950](https://github.com/reservoirprotocol/indexer/commit/d9c7950cba540af527aa97ed38f8f9cb99f3caba))
+
+
+### Features
+
+* include top bid source in tokens/v5 ([79e8520](https://github.com/reservoirprotocol/indexer/commit/79e8520bc5490fdab5df1cbd70703e6e0c5d9290))
+
+
+
+## [5.192.2](https://github.com/reservoirprotocol/indexer/compare/v5.192.1...v5.192.2) (2022-09-02)
+
+
+### Bug Fixes
+
+* transfers v2 api sorting ([96451d0](https://github.com/reservoirprotocol/indexer/commit/96451d00eff1f2917b414abbdf26f1eaeac12f1e))
+
+
+
+## [5.192.1](https://github.com/reservoirprotocol/indexer/compare/v5.192.0...v5.192.1) (2022-09-02)
+
+
+### Bug Fixes
+
+* migrations ([9b87474](https://github.com/reservoirprotocol/indexer/commit/9b874747df53cccf46c92fe5896459fe925d56bc))
+
+
+
+# [5.192.0](https://github.com/reservoirprotocol/indexer/compare/v5.191.2...v5.192.0) (2022-09-02)
+
+
+### Bug Fixes
+
+* query ([0235803](https://github.com/reservoirprotocol/indexer/commit/02358034226f6bcb1c8ea2ce3e85b23b2932a2c6))
+* remove debug logs ([d187ab5](https://github.com/reservoirprotocol/indexer/commit/d187ab5b4982a1431d5a32e4e91252f2d34e9b53))
+
+
+### Features
+
+* differentiate primary vs secondary sales ([3e68a02](https://github.com/reservoirprotocol/indexer/commit/3e68a02a2fbeb35d41631690bbe0e4023ca0d0e3))
+
+
+
+## [5.191.2](https://github.com/reservoirprotocol/indexer/compare/v5.191.1...v5.191.2) (2022-09-02)
+
+
+### Bug Fixes
+
+* debug logs ([2ad492e](https://github.com/reservoirprotocol/indexer/commit/2ad492e491d50fd8f9d26752fe71a66bc3bdcdfd))
+
+
+
+## [5.191.1](https://github.com/reservoirprotocol/indexer/compare/v5.191.0...v5.191.1) (2022-09-02)
+
+
+### Bug Fixes
+
+* debug logs ([5aadfc5](https://github.com/reservoirprotocol/indexer/commit/5aadfc5df72ef11f5de46393d073344f31ac0d70))
+
+
+
+# [5.191.0](https://github.com/reservoirprotocol/indexer/compare/v5.190.3...v5.191.0) (2022-09-02)
+
+
+### Bug Fixes
+
+* debug logs ([e5279dc](https://github.com/reservoirprotocol/indexer/commit/e5279dc1d870112c9a8bad7f3a92a7e68b45a7d7))
+
+
+### Features
+
+* increase tokens v5 api limit from 50 to 100 ([04b8f58](https://github.com/reservoirprotocol/indexer/commit/04b8f58580faa45fa4f64fdbfa02462e33f7b758))
+
+
+
+## [5.190.3](https://github.com/reservoirprotocol/indexer/compare/v5.190.2...v5.190.3) (2022-09-02)
+
+
+### Bug Fixes
+
+* debug logs ([573ba3b](https://github.com/reservoirprotocol/indexer/commit/573ba3b930afb22be04a2345a14c7ba078d2ab09))
+
+
+
 ## [5.190.2](https://github.com/reservoirprotocol/indexer/compare/v5.190.1...v5.190.2) (2022-09-01)
 
 
