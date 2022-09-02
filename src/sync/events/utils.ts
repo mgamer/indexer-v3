@@ -3,6 +3,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import { getReferrer } from "@reservoir0x/sdk/dist/utils";
 import pLimit from "p-limit";
 
+import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
@@ -58,7 +59,7 @@ export const fetchBlock = async (blockNumber: number, force = false) =>
     });
 
 export const fetchTransaction = async (txHash: string) =>
-  getTransaction(txHash).catch(async () => {
+  getTransaction(txHash).catch(async (error) => {
     // TODO: This should happen very rarely since all transactions
     // should be readily available. The only case when data misses
     // is when a block reorg happens and the replacing block takes
@@ -68,6 +69,7 @@ export const fetchTransaction = async (txHash: string) =>
     // a good assumption so we should force re-fetch the new block
     // together with its transactions when a reorg happens.
 
+    logger.info("fetch-transaction", `Calling upstream provider for tx ${txHash}: ${error}`);
     let tx = await baseProvider.getTransaction(txHash);
     if (!tx) {
       tx = await baseProvider.getTransaction(txHash);
