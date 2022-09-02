@@ -96,7 +96,7 @@ export const addEvents = async (events: Event[]) => {
           "currency",
           "currency_price",
           "usd_price",
-          "is_primary",
+          "is_primary"
         ) VALUES ${pgp.helpers.values(fillValues, columns)}
         ON CONFLICT DO NOTHING
         RETURNING "order_kind", "order_id", "timestamp"
