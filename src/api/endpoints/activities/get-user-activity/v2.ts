@@ -46,7 +46,7 @@ export const getUserActivityV2Options: RouteOptions = {
         .max(20)
         .default(20)
         .description("Amount of items returned in response."),
-      continuation: Joi.string().description(
+      continuation: Joi.number().description(
         "Use continuation token to request next offset of items."
       ),
       types: Joi.alternatives()
@@ -65,7 +65,7 @@ export const getUserActivityV2Options: RouteOptions = {
   },
   response: {
     schema: Joi.object({
-      continuation: Joi.string().allow(null),
+      continuation: Joi.number().allow(null),
       activities: Joi.array().items(
         Joi.object({
           type: Joi.string(),

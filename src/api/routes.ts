@@ -681,6 +681,12 @@ export const setupRoutes = (server: Server) => {
     options: redirectsEndpoints.getRedirectCollectionImageV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/redirect/currency/{address}/icon/v1",
+    options: redirectsEndpoints.getRedirectCurrencyIconV1Options,
+  });
+
   // Search
 
   server.route({

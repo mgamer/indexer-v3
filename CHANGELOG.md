@@ -1,3 +1,113 @@
+# [5.192.0](https://github.com/reservoirprotocol/indexer/compare/v5.191.2...v5.192.0) (2022-09-02)
+
+
+### Bug Fixes
+
+* query ([0235803](https://github.com/reservoirprotocol/indexer/commit/02358034226f6bcb1c8ea2ce3e85b23b2932a2c6))
+* remove debug logs ([d187ab5](https://github.com/reservoirprotocol/indexer/commit/d187ab5b4982a1431d5a32e4e91252f2d34e9b53))
+
+
+### Features
+
+* differentiate primary vs secondary sales ([3e68a02](https://github.com/reservoirprotocol/indexer/commit/3e68a02a2fbeb35d41631690bbe0e4023ca0d0e3))
+
+
+
+## [5.191.2](https://github.com/reservoirprotocol/indexer/compare/v5.191.1...v5.191.2) (2022-09-02)
+
+
+### Bug Fixes
+
+* debug logs ([2ad492e](https://github.com/reservoirprotocol/indexer/commit/2ad492e491d50fd8f9d26752fe71a66bc3bdcdfd))
+
+
+
+## [5.191.1](https://github.com/reservoirprotocol/indexer/compare/v5.191.0...v5.191.1) (2022-09-02)
+
+
+### Bug Fixes
+
+* debug logs ([5aadfc5](https://github.com/reservoirprotocol/indexer/commit/5aadfc5df72ef11f5de46393d073344f31ac0d70))
+
+
+
+# [5.191.0](https://github.com/reservoirprotocol/indexer/compare/v5.190.3...v5.191.0) (2022-09-02)
+
+
+### Bug Fixes
+
+* debug logs ([e5279dc](https://github.com/reservoirprotocol/indexer/commit/e5279dc1d870112c9a8bad7f3a92a7e68b45a7d7))
+
+
+### Features
+
+* increase tokens v5 api limit from 50 to 100 ([04b8f58](https://github.com/reservoirprotocol/indexer/commit/04b8f58580faa45fa4f64fdbfa02462e33f7b758))
+
+
+
+## [5.190.3](https://github.com/reservoirprotocol/indexer/compare/v5.190.2...v5.190.3) (2022-09-02)
+
+
+### Bug Fixes
+
+* debug logs ([573ba3b](https://github.com/reservoirprotocol/indexer/commit/573ba3b930afb22be04a2345a14c7ba078d2ab09))
+
+
+
+## [5.190.2](https://github.com/reservoirprotocol/indexer/compare/v5.190.1...v5.190.2) (2022-09-01)
+
+
+### Bug Fixes
+
+* added currency redirect api ([161465e](https://github.com/reservoirprotocol/indexer/commit/161465e9eb42c38051f4fc390925deaa94dd29ba))
+* debug logs ([b1a734f](https://github.com/reservoirprotocol/indexer/commit/b1a734f0e5b0a5178cb5b0504e7db2edcd422742))
+* docs category ([bb88c98](https://github.com/reservoirprotocol/indexer/commit/bb88c984fea7676964bbafab05546d5f9ed5f57b))
+* user activity ([f0c46e7](https://github.com/reservoirprotocol/indexer/commit/f0c46e741f5b6ff89a9bbfa9a87c3146994111c4))
+
+
+
+## [5.190.1](https://github.com/reservoirprotocol/indexer/compare/v5.190.0...v5.190.1) (2022-09-01)
+
+
+### Bug Fixes
+
+* change lock name ([2f6a3e7](https://github.com/reservoirprotocol/indexer/commit/2f6a3e71ec1ecfa982332457232d20c21b54e096))
+
+
+
+# [5.190.0](https://github.com/reservoirprotocol/indexer/compare/v5.189.0...v5.190.0) (2022-09-01)
+
+
+### Features
+
+* allow to sort activities by created at and sort tokens by rarity ([54469d3](https://github.com/reservoirprotocol/indexer/commit/54469d3c293ce436e56edc163dd4616f78ecfda0))
+* fix sources id read ([c0c4dbd](https://github.com/reservoirprotocol/indexer/commit/c0c4dbd10df04e03b11570ce36485e54380fedba))
+
+
+
+# [5.189.0](https://github.com/reservoirprotocol/indexer/compare/v5.188.4...v5.189.0) (2022-09-01)
+
+
+### Bug Fixes
+
+* sales fill source backfill ([acd315e](https://github.com/reservoirprotocol/indexer/commit/acd315e77fad22adb9aa9962a2c31d0211c05fa4))
+
+
+### Features
+
+* store the currency image from coingecko currency response ([384573c](https://github.com/reservoirprotocol/indexer/commit/384573cb62f5c320181486c2728a7a3ad4459092))
+
+
+
+## [5.188.4](https://github.com/reservoirprotocol/indexer/compare/v5.188.3...v5.188.4) (2022-09-01)
+
+
+### Bug Fixes
+
+* build ([f749786](https://github.com/reservoirprotocol/indexer/commit/f749786bf0acf5e7cbfe9bd60d2b6d7963db2e5d))
+
+
+
 ## [5.188.3](https://github.com/reservoirprotocol/indexer/compare/v5.188.2...v5.188.3) (2022-09-01)
 
 
