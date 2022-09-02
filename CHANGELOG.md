@@ -1,3 +1,12 @@
+## [5.192.1](https://github.com/reservoirprotocol/indexer/compare/v5.192.0...v5.192.1) (2022-09-02)
+
+
+### Bug Fixes
+
+* migrations ([9b87474](https://github.com/reservoirprotocol/indexer/commit/9b874747df53cccf46c92fe5896459fe925d56bc))
+
+
+
 # [5.192.0](https://github.com/reservoirprotocol/indexer/compare/v5.191.2...v5.192.0) (2022-09-02)
 
 
