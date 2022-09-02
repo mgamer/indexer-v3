@@ -1,3 +1,12 @@
+## [5.192.2](https://github.com/reservoirprotocol/indexer/compare/v5.192.1...v5.192.2) (2022-09-02)
+
+
+### Bug Fixes
+
+* transfers v2 api sorting ([96451d0](https://github.com/reservoirprotocol/indexer/commit/96451d00eff1f2917b414abbdf26f1eaeac12f1e))
+
+
+
 ## [5.192.1](https://github.com/reservoirprotocol/indexer/compare/v5.192.0...v5.192.1) (2022-09-02)
 
 
