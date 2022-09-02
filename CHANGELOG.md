@@ -1,3 +1,17 @@
+# [5.191.0](https://github.com/reservoirprotocol/indexer/compare/v5.190.3...v5.191.0) (2022-09-02)
+
+
+### Bug Fixes
+
+* debug logs ([e5279dc](https://github.com/reservoirprotocol/indexer/commit/e5279dc1d870112c9a8bad7f3a92a7e68b45a7d7))
+
+
+### Features
+
+* increase tokens v5 api limit from 50 to 100 ([04b8f58](https://github.com/reservoirprotocol/indexer/commit/04b8f58580faa45fa4f64fdbfa02462e33f7b758))
+
+
+
 ## [5.190.3](https://github.com/reservoirprotocol/indexer/compare/v5.190.2...v5.190.3) (2022-09-02)
 
 
