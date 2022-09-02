@@ -22,6 +22,7 @@ export type Event = {
   currency: string;
   currencyPrice?: string;
   usdPrice?: string;
+  isPrimary?: boolean;
   baseEventParams: BaseEventParams;
 };
 
@@ -50,4 +51,5 @@ export type DbEvent = {
   currency: Buffer;
   currency_price: string | null;
   usd_price: string | null;
+  is_primary: boolean | null;
 };

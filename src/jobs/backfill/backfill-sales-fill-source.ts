@@ -3,6 +3,7 @@
 import { HashZero } from "@ethersproject/constants";
 import { Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
+import pLimit from "p-limit";
 
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
@@ -29,7 +30,7 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job) => {
       const { timestamp, txHash, logIndex, batchIndex } = job.data;
-      const limit = 1000;
+      const limit = 300;
 
       const results = await idb.manyOrNone(
         `
@@ -79,37 +80,53 @@ if (config.doBackgroundWork) {
           table: "fill_events_2",
         }
       );
-      for (const {
-        tx_hash,
-        log_index,
-        batch_index,
-        address,
-        order_kind,
-        order_source_id_int,
-        aggregator_source_id,
-        taker,
-        fill_source_id,
-      } of results) {
-        if (order_source_id_int && (!fill_source_id || !aggregator_source_id)) {
-          const data = await extractAttributionData(
-            fromBuffer(tx_hash),
+
+      const timeBefore = performance.now();
+
+      const plimit = pLimit(50);
+      await Promise.all(
+        results.map(
+          ({
+            tx_hash,
+            log_index,
+            batch_index,
+            address,
             order_kind,
-            fromBuffer(address)
-          );
-          if (data.fillSource || data.aggregatorSource || data.taker) {
-            values.push({
-              tx_hash,
-              log_index,
-              batch_index,
-              fill_source_id: data.fillSource ? data.fillSource.id : fill_source_id,
-              aggregator_source_id: data.aggregatorSource
-                ? data.aggregatorSource.id
-                : aggregator_source_id,
-              taker: data.taker ? toBuffer(data.taker) : taker,
-            });
-          }
-        }
-      }
+            order_source_id_int,
+            aggregator_source_id,
+            taker,
+            fill_source_id,
+          }) =>
+            plimit(async () => {
+              if (order_source_id_int && (!fill_source_id || !aggregator_source_id)) {
+                const data = await extractAttributionData(
+                  fromBuffer(tx_hash),
+                  order_kind,
+                  fromBuffer(address)
+                );
+                if (data.fillSource || data.aggregatorSource || data.taker) {
+                  values.push({
+                    tx_hash,
+                    log_index,
+                    batch_index,
+                    fill_source_id: data.fillSource ? data.fillSource.id : fill_source_id,
+                    aggregator_source_id: data.aggregatorSource
+                      ? data.aggregatorSource.id
+                      : aggregator_source_id,
+                    taker: data.taker ? toBuffer(data.taker) : taker,
+                  });
+                }
+              }
+            })
+        )
+      );
+
+      const timeAfter = performance.now();
+
+      logger.info(
+        QUEUE_NAME,
+        `Processed ${results.length} results in ${timeAfter - timeBefore} milliseconds`
+      );
 
       if (values.length) {
         await idb.none(
