@@ -1,3 +1,12 @@
+## [5.190.3](https://github.com/reservoirprotocol/indexer/compare/v5.190.2...v5.190.3) (2022-09-02)
+
+
+### Bug Fixes
+
+* debug logs ([573ba3b](https://github.com/reservoirprotocol/indexer/commit/573ba3b930afb22be04a2345a14c7ba078d2ab09))
+
+
+
 ## [5.190.2](https://github.com/reservoirprotocol/indexer/compare/v5.190.1...v5.190.2) (2022-09-01)
 
 
