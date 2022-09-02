@@ -1,3 +1,17 @@
+# [5.193.0](https://github.com/reservoirprotocol/indexer/compare/v5.192.2...v5.193.0) (2022-09-02)
+
+
+### Bug Fixes
+
+* fix activities migrations ([d9c7950](https://github.com/reservoirprotocol/indexer/commit/d9c7950cba540af527aa97ed38f8f9cb99f3caba))
+
+
+### Features
+
+* include top bid source in tokens/v5 ([79e8520](https://github.com/reservoirprotocol/indexer/commit/79e8520bc5490fdab5df1cbd70703e6e0c5d9290))
+
+
+
 ## [5.192.2](https://github.com/reservoirprotocol/indexer/compare/v5.192.1...v5.192.2) (2022-09-02)
 
 
