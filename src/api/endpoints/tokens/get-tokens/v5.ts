@@ -70,6 +70,11 @@ export const getTokensV5Options: RouteOptions = {
       sortBy: Joi.string()
         .valid("floorAskPrice", "tokenId", "rarity")
         .default("floorAskPrice")
+        .when("source", {
+          is: Joi.exist(),
+          then: Joi.invalid("floorAskPrice"),
+        })
+        .default((parent) => (parent && parent.source ? "tokenId" : "floorAskPrice"))
         .description("Order the items are returned in the response."),
       sortDirection: Joi.string().lowercase().valid("asc", "desc"),
       limit: Joi.number()
