@@ -2307,6 +2307,7 @@ export const syncEvents = async (
                 // Mints have matching order and fill sources but no aggregator source
                 orderSourceId: data.orderSource?.id,
                 fillSourceId: data.orderSource?.id,
+                isPrimary: true,
                 baseEventParams,
               });
 
@@ -2486,6 +2487,7 @@ export const syncEvents = async (
               // Mints have matching order and fill sources but no aggregator source
               orderSourceId: orderSource?.id,
               fillSourceId: orderSource?.id,
+              isPrimary: true,
               baseEventParams: mint.baseEventParams,
             });
           }
