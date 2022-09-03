@@ -139,6 +139,7 @@ export const addEventsPartial = async (events: Event[]) => {
           END
         ),
         updated_at = now()
+      WHERE orders.quantity_remaining > 0
     `);
   }
 };
