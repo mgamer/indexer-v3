@@ -1,3 +1,12 @@
+## [5.193.2](https://github.com/reservoirprotocol/indexer/compare/v5.193.1...v5.193.2) (2022-09-03)
+
+
+### Bug Fixes
+
+* debug slow events syncing ([b3af8e4](https://github.com/reservoirprotocol/indexer/commit/b3af8e44fe1039a5abedece5cfd3c4b7654974d6))
+
+
+
 ## [5.193.1](https://github.com/reservoirprotocol/indexer/compare/v5.193.0...v5.193.1) (2022-09-03)
 
 
