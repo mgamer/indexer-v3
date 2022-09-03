@@ -84,6 +84,10 @@ if (config.doBackgroundWork) {
     }
   });
 
+  worker.on("failed", async (job) => {
+    logger.error(QUEUE_NAME, `Worker failed: ${job}`);
+  });
+
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
