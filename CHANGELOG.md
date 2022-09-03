@@ -1,3 +1,12 @@
+## [5.193.1](https://github.com/reservoirprotocol/indexer/compare/v5.193.0...v5.193.1) (2022-09-03)
+
+
+### Bug Fixes
+
+* proper handling of partially fillable orders ([c59b4eb](https://github.com/reservoirprotocol/indexer/commit/c59b4eb40e5823d7d4b47028ecda77b2b34a11db))
+
+
+
 # [5.193.0](https://github.com/reservoirprotocol/indexer/compare/v5.192.2...v5.193.0) (2022-09-02)
 
 
