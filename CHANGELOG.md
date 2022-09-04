@@ -1,3 +1,12 @@
+## [5.193.3](https://github.com/reservoirprotocol/indexer/compare/v5.193.2...v5.193.3) (2022-09-04)
+
+
+### Bug Fixes
+
+* properly set the quantity remaining on seaport orders ([9dcd0ce](https://github.com/reservoirprotocol/indexer/commit/9dcd0ce87e9fb67917531514c5f06cfaca5d2404))
+
+
+
 ## [5.193.2](https://github.com/reservoirprotocol/indexer/compare/v5.193.1...v5.193.2) (2022-09-03)
 
 
