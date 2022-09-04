@@ -85,8 +85,6 @@ export const syncEvents = async (
     _.range(fromBlock, toBlock + 1).map((block) => limit(() => syncEventsUtils.fetchBlock(block)))
   );
 
-  const timeBefore = performance.now();
-
   const eventDatas = getEventData(options?.eventDataKinds);
   await baseProvider
     .getLogs({
@@ -2418,10 +2416,6 @@ export const syncEvents = async (
         }
       }
 
-      const timeAfter = performance.now();
-
-      logger.info(COMPONENT_NAME, `Time to fetch events: ${timeAfter - timeBefore} milliseconds`);
-
       // -- Handle: accurate data ---
 
       if (!backfill) {
@@ -2639,12 +2633,6 @@ export const syncEvents = async (
 
       // We want to get metadata when backfilling as well
       await tokenUpdatesMint.addToQueue(mintInfos);
-
-      const timeAfterAfter = performance.now();
-      logger.info(
-        COMPONENT_NAME,
-        `Time to end events syncing: ${timeAfterAfter - timeAfter} milliseconds`
-      );
     });
 };
 
