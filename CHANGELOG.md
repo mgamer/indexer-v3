@@ -1,3 +1,12 @@
+## [5.193.6](https://github.com/reservoirprotocol/indexer/compare/v5.193.5...v5.193.6) (2022-09-05)
+
+
+### Bug Fixes
+
+* stats v2 ([a2eed2b](https://github.com/reservoirprotocol/indexer/commit/a2eed2b3451e11c0c5814fcb18232250dabff336))
+
+
+
 ## [5.193.5](https://github.com/reservoirprotocol/indexer/compare/v5.193.4...v5.193.5) (2022-09-05)
 
 
