@@ -42,7 +42,7 @@ if (config.doBackgroundWork) {
       try {
         switch (by) {
           case "id": {
-            // If the order is valid or potentially valid, recheck is status
+            // If the order is valid or potentially valid, recheck it's status
             const result = await redb.oneOrNone(
               `
                 SELECT
@@ -51,7 +51,7 @@ if (config.doBackgroundWork) {
                 FROM orders
                 WHERE orders.id = $/id/
                   AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
-                  AND orders.approval_status = 'approved'
+                  AND (orders.approval_status = 'approved' OR orders.approval_status = 'no-approval')
               `,
               { id: data.id }
             );
