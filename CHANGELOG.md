@@ -1,3 +1,12 @@
+## [5.193.7](https://github.com/reservoirprotocol/indexer/compare/v5.193.6...v5.193.7) (2022-09-05)
+
+
+### Bug Fixes
+
+* trigger backfill job ([c2e5fc3](https://github.com/reservoirprotocol/indexer/commit/c2e5fc3eed1634f258928c2f14a0e81523ceb919))
+
+
+
 ## [5.193.6](https://github.com/reservoirprotocol/indexer/compare/v5.193.5...v5.193.6) (2022-09-05)
 
 
