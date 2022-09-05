@@ -1,3 +1,12 @@
+## [5.193.4](https://github.com/reservoirprotocol/indexer/compare/v5.193.3...v5.193.4) (2022-09-05)
+
+
+### Bug Fixes
+
+* allow fixing potentially fillable orders ([044c4a0](https://github.com/reservoirprotocol/indexer/commit/044c4a05093fbd8d521c9361e04eee39e01b5d50))
+
+
+
 ## [5.193.3](https://github.com/reservoirprotocol/indexer/compare/v5.193.2...v5.193.3) (2022-09-04)
 
 
