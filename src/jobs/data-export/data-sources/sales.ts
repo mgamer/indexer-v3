@@ -13,7 +13,7 @@ export class SalesDataSource extends BaseDataSource {
     let continuationFilter = "";
 
     if (cursor) {
-      continuationFilter = `AND (created_at, tx_hash, log_index, batch_index) > (to_timestamp($/updatedAt/), $/txHash/, $/logIndex/, $/batchIndex/)`;
+      continuationFilter = `AND (updated_at, tx_hash, log_index, batch_index) > (to_timestamp($/updatedAt/), $/txHash/, $/logIndex/, $/batchIndex/)`;
     }
 
     //Only get records that are older than 5 min to take removed blocks into consideration.
@@ -41,13 +41,13 @@ export class SalesDataSource extends BaseDataSource {
           batch_index,
           wash_trading_score,
           is_primary,
-          extract(epoch from created_at) created_ts,
-          extract(epoch from created_at) updated_ts
+          created_at: new Date(r.created_at).toISOString(),
+          extract(epoch from updated_at) updated_ts
         FROM fill_events_2
         WHERE created_at < NOW() - INTERVAL '5 minutes'
         AND aggregator_source_id is not null
         ${continuationFilter}
-        ORDER BY created_at, tx_hash, log_index, batch_index
+        ORDER BY updated_at, tx_hash, log_index, batch_index
         LIMIT $/limit/;  
       `;
 
@@ -112,7 +112,7 @@ export class SalesDataSource extends BaseDataSource {
           tx_log_index: r.log_index,
           tx_batch_index: r.batch_index,
           tx_timestamp: r.timestamp,
-          created_at: new Date(r.created_ts * 1000).toISOString(),
+          created_at: new Date(r.created_at).toISOString(),
           updated_at: new Date(r.updated_ts * 1000).toISOString(),
         });
       }
