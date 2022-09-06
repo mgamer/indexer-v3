@@ -26,6 +26,10 @@ export const config = {
   metadataApiBaseUrlAlt: String(
     process.env.METADATA_API_BASE_URL_ALT || process.env.METADATA_API_BASE_URL
   ),
+  metadataApiBaseUrlFlagStatus: String(
+    process.env.METADATA_API_BASE_URL_FLAG_STATUS || process.env.METADATA_API_BASE_URL
+  ),
+
   disableRealtimeMetadataRefresh: Boolean(Number(process.env.DISABLE_REALTIME_METADATA_REFRESH)),
 
   databaseUrl: String(process.env.DATABASE_URL),
@@ -41,7 +45,7 @@ export const config = {
   doEventsSyncBackfill: Boolean(Number(process.env.DO_EVENTS_SYNC_BACKFILL)),
   disableOrders: Boolean(Number(process.env.DISABLE_ORDERS)),
 
-  maxItemsPerBid: 50000,
+  maxTokenSetSize: 100000,
 
   awsAccessKeyId: String(process.env.AWS_ACCESS_KEY_ID),
   awsSecretAccessKey: String(process.env.AWS_SECRET_ACCESS_KEY),

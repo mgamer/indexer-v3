@@ -74,7 +74,6 @@ export const getExecuteBuyV4Options: RouteOptions = {
       source: Joi.string()
         .lowercase()
         .pattern(regex.domain)
-        .required()
         .description("Filling source used for attribution. Example: `reservoir.market`"),
       feesOnTop: Joi.array()
         .items(Joi.string().pattern(regex.fee))
@@ -474,6 +473,12 @@ export const getExecuteBuyV4Options: RouteOptions = {
         },
         partial: payload.partial,
         forceRouter: payload.forceRouter,
+        directFillingData: {
+          conduitKey:
+            config.chainId === 1
+              ? "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000"
+              : undefined,
+        },
       });
 
       // Set up generic filling steps
