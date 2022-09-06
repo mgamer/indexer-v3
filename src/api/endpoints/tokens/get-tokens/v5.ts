@@ -152,6 +152,7 @@ export const getTokensV5Options: RouteOptions = {
               maker: Joi.string().lowercase().pattern(regex.address).allow(null),
               validFrom: Joi.number().unsafe().allow(null),
               validUntil: Joi.number().unsafe().allow(null),
+              source: Joi.object().allow(null),
             }).optional(),
           }),
         })
@@ -181,6 +182,7 @@ export const getTokensV5Options: RouteOptions = {
             o.currency_value AS top_buy_currency_value,
             o.price AS top_buy_price,
             o.value AS top_buy_value,
+            o.source_id_int AS top_buy_source_id_int,
             DATE_PART('epoch', LOWER(o.valid_between)) AS top_buy_valid_from,
             COALESCE(
               NULLIF(DATE_PART('epoch', UPPER(o.valid_between)), 'Infinity'),
@@ -497,8 +499,12 @@ export const getTokensV5Options: RouteOptions = {
         const contract = fromBuffer(r.contract);
         const tokenId = r.token_id;
 
-        const source = r.floor_sell_value
+        const floorSellSource = r.floor_sell_value
           ? sources.get(Number(r.floor_sell_source_id_int), contract, tokenId)
+          : undefined;
+
+        const topBuySource = r.top_buy_id
+          ? sources.get(Number(r.top_buy_source_id_int), contract, tokenId)
           : undefined;
 
         // Use default currencies for backwards compatibility with entries
@@ -573,11 +579,11 @@ export const getTokensV5Options: RouteOptions = {
               validFrom: r.floor_sell_value ? r.floor_sell_valid_from : null,
               validUntil: r.floor_sell_value ? r.floor_sell_valid_to : null,
               source: {
-                id: source?.address,
-                domain: source?.domain,
-                name: source?.metadata.title || source?.name,
-                icon: source?.metadata.icon,
-                url: source?.metadata.url,
+                id: floorSellSource?.address,
+                domain: floorSellSource?.domain,
+                name: floorSellSource?.metadata.title || floorSellSource?.name,
+                icon: floorSellSource?.metadata.icon,
+                url: floorSellSource?.metadata.url,
               },
             },
             topBid: query.includeTopBid
@@ -601,6 +607,13 @@ export const getTokensV5Options: RouteOptions = {
                   maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
                   validFrom: r.top_buy_valid_from,
                   validUntil: r.top_buy_value ? r.top_buy_valid_until : null,
+                  source: {
+                    id: topBuySource?.address,
+                    domain: topBuySource?.domain,
+                    name: topBuySource?.metadata.title || topBuySource?.name,
+                    icon: topBuySource?.metadata.icon,
+                    url: topBuySource?.metadata.url,
+                  },
                 }
               : undefined,
           },

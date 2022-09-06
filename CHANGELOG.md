@@ -1,3 +1,89 @@
+## [5.193.6](https://github.com/reservoirprotocol/indexer/compare/v5.193.5...v5.193.6) (2022-09-05)
+
+
+### Bug Fixes
+
+* stats v2 ([a2eed2b](https://github.com/reservoirprotocol/indexer/commit/a2eed2b3451e11c0c5814fcb18232250dabff336))
+
+
+
+## [5.193.5](https://github.com/reservoirprotocol/indexer/compare/v5.193.4...v5.193.5) (2022-09-05)
+
+
+### Bug Fixes
+
+* minor tweaks ([6019bfb](https://github.com/reservoirprotocol/indexer/commit/6019bfb852bec53dea2618243a9093a9895144fd))
+
+
+
+## [5.193.4](https://github.com/reservoirprotocol/indexer/compare/v5.193.3...v5.193.4) (2022-09-05)
+
+
+### Bug Fixes
+
+* allow fixing potentially fillable orders ([044c4a0](https://github.com/reservoirprotocol/indexer/commit/044c4a05093fbd8d521c9361e04eee39e01b5d50))
+
+
+
+## [5.193.3](https://github.com/reservoirprotocol/indexer/compare/v5.193.2...v5.193.3) (2022-09-04)
+
+
+### Bug Fixes
+
+* properly set the quantity remaining on seaport orders ([9dcd0ce](https://github.com/reservoirprotocol/indexer/commit/9dcd0ce87e9fb67917531514c5f06cfaca5d2404))
+
+
+
+## [5.193.2](https://github.com/reservoirprotocol/indexer/compare/v5.193.1...v5.193.2) (2022-09-03)
+
+
+### Bug Fixes
+
+* debug slow events syncing ([b3af8e4](https://github.com/reservoirprotocol/indexer/commit/b3af8e44fe1039a5abedece5cfd3c4b7654974d6))
+
+
+
+## [5.193.1](https://github.com/reservoirprotocol/indexer/compare/v5.193.0...v5.193.1) (2022-09-03)
+
+
+### Bug Fixes
+
+* proper handling of partially fillable orders ([c59b4eb](https://github.com/reservoirprotocol/indexer/commit/c59b4eb40e5823d7d4b47028ecda77b2b34a11db))
+
+
+
+# [5.193.0](https://github.com/reservoirprotocol/indexer/compare/v5.192.2...v5.193.0) (2022-09-02)
+
+
+### Bug Fixes
+
+* fix activities migrations ([d9c7950](https://github.com/reservoirprotocol/indexer/commit/d9c7950cba540af527aa97ed38f8f9cb99f3caba))
+
+
+### Features
+
+* include top bid source in tokens/v5 ([79e8520](https://github.com/reservoirprotocol/indexer/commit/79e8520bc5490fdab5df1cbd70703e6e0c5d9290))
+
+
+
+## [5.192.2](https://github.com/reservoirprotocol/indexer/compare/v5.192.1...v5.192.2) (2022-09-02)
+
+
+### Bug Fixes
+
+* transfers v2 api sorting ([96451d0](https://github.com/reservoirprotocol/indexer/commit/96451d00eff1f2917b414abbdf26f1eaeac12f1e))
+
+
+
+## [5.192.1](https://github.com/reservoirprotocol/indexer/compare/v5.192.0...v5.192.1) (2022-09-02)
+
+
+### Bug Fixes
+
+* migrations ([9b87474](https://github.com/reservoirprotocol/indexer/commit/9b874747df53cccf46c92fe5896459fe925d56bc))
+
+
+
 # [5.192.0](https://github.com/reservoirprotocol/indexer/compare/v5.191.2...v5.192.0) (2022-09-02)
 
 
