@@ -1,3 +1,17 @@
+# [5.196.0](https://github.com/reservoirprotocol/indexer/compare/v5.195.0...v5.196.0) (2022-09-06)
+
+
+### Bug Fixes
+
+* when filling erc20 orders use opensea's shared conduit ([8125aea](https://github.com/reservoirprotocol/indexer/commit/8125aea56b14982d9c1b728f3ca91b85e4be0fb5))
+
+
+### Features
+
+* merge universe support to prod ([8f8196b](https://github.com/reservoirprotocol/indexer/commit/8f8196beaa4f927fa64901accf2c239c4ecd8c30))
+
+
+
 # [5.195.0](https://github.com/reservoirprotocol/indexer/compare/v5.194.0...v5.195.0) (2022-09-06)
 
 
