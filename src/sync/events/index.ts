@@ -21,6 +21,7 @@ import * as blocksModel from "@/models/blocks";
 import { OrderKind, getOrderSourceByOrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
 import { getUSDAndNativePrices } from "@/utils/prices";
+import { getPoolDetails } from "@/utils/sudoswap";
 
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
@@ -30,7 +31,6 @@ import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
-import { getPoolDetails } from "@/utils/sudoswap";
 
 // TODO: Split into multiple files (by exchange)
 // TODO: For simplicity, don't use bulk inserts/upserts for realtime
