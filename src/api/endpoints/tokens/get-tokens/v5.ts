@@ -235,6 +235,55 @@ export const getTokensV5Options: RouteOptions = {
       `;
     }
 
+    let selectFloorData = `
+      t.floor_sell_id,
+      t.floor_sell_maker,
+      t.floor_sell_valid_from,
+      t.floor_sell_valid_to,
+      t.floor_sell_source_id_int,
+      t.floor_sell_value,
+      t.floor_sell_currency,
+      t.floor_sell_currency_value
+    `;
+
+    let sourceQuery = "";
+    if (query.source) {
+      const sources = await Sources.getInstance();
+      let source = sources.getByName(query.source, false);
+      if (!source) {
+        source = sources.getByDomain(query.source);
+      }
+
+      (query as any).source = source?.id;
+      selectFloorData = "s.*";
+      sourceQuery = `
+        LEFT JOIN LATERAL (
+          SELECT o.id AS floor_sell_id,
+                 o.maker AS floor_sell_maker,
+                 o.id AS source_floor_sell_id,
+                 date_part('epoch', lower(o.valid_between)) AS floor_sell_valid_from,
+                 coalesce(
+                    nullif(date_part('epoch', upper(o.valid_between)), 'Infinity'),
+                    0
+                 ) AS floor_sell_valid_to,
+                 o.source_id_int AS floor_sell_source_id_int,
+                 o.value AS floor_sell_value,
+                 o.currency AS floor_sell_currency,
+                 o.currency_value AS floor_sell_currency_value
+          FROM orders o
+          JOIN token_sets_tokens tst ON o.token_set_id = tst.token_set_id
+          WHERE tst.contract = t.contract
+          AND tst.token_id = t.token_id
+          AND o.side = 'sell'
+          AND o.fillability_status = 'fillable'
+          AND o.approval_status = 'approved'
+          AND o.source_id_int = $/source/
+          ORDER BY o.value
+          LIMIT 1
+        ) s ON TRUE
+      `;
+    }
+
     try {
       let baseQuery = `
         SELECT
@@ -247,14 +296,7 @@ export const getTokensV5Options: RouteOptions = {
           t.collection_id,
           c.name AS collection_name,
           con.kind,
-          t.floor_sell_id,
-          t.floor_sell_maker,
-          t.floor_sell_valid_from,
-          t.floor_sell_valid_to,
-          t.floor_sell_source_id_int,
-          t.floor_sell_value,
-          t.floor_sell_currency,
-          t.floor_sell_currency_value,
+          ${selectFloorData},
           t.rarity_score,
           t.rarity_rank,
           t.is_flagged,
@@ -278,10 +320,9 @@ export const getTokensV5Options: RouteOptions = {
           ${selectTopBid}
         FROM tokens t
         ${topBidQuery}
-        JOIN collections c
-          ON t.collection_id = c.id
-        JOIN contracts con
-          ON t.contract = con.address
+        ${sourceQuery}
+        JOIN collections c ON t.collection_id = c.id
+        JOIN contracts con ON t.contract = con.address
       `;
 
       if (query.tokenSetId) {
@@ -349,17 +390,6 @@ export const getTokensV5Options: RouteOptions = {
         conditions.push(`tst.token_set_id = $/tokenSetId/`);
       }
 
-      if (query.source) {
-        const sources = await Sources.getInstance();
-        let source = sources.getByName(query.source, false);
-        if (!source) {
-          source = sources.getByDomain(query.source);
-        }
-
-        (query as any).source = source?.id;
-        conditions.push(`t.floor_sell_source_id_int = $/source/`);
-      }
-
       // Continue with the next page, this depends on the sorting used
       if (query.continuation && !query.token) {
         const contArr = splitContinuation(
@@ -397,15 +427,17 @@ export const getTokensV5Options: RouteOptions = {
             default:
               {
                 const sign = query.sortDirection == "desc" ? "<" : ">";
+                const sortColumn = query.source ? "s.floor_sell_value" : "t.floor_sell_value";
+
                 if (contArr[0] !== "null") {
                   conditions.push(`(
-                    (t.floor_sell_value, t.token_id) ${sign} ($/floorSellValue/, $/tokenId/)
-                    OR (t.floor_sell_value IS null)
+                    (${sortColumn}, t.token_id) ${sign} ($/floorSellValue/, $/tokenId/)
+                    OR (${sortColumn} IS null)
                   )`);
                   (query as any).floorSellValue = contArr[0];
                   (query as any).tokenId = contArr[1];
                 } else {
-                  conditions.push(`(t.floor_sell_value is null AND t.token_id ${sign} $/tokenId/)`);
+                  conditions.push(`(${sortColumn} is null AND t.token_id ${sign} $/tokenId/)`);
                   (query as any).tokenId = contArr[1];
                 }
               }
@@ -441,7 +473,8 @@ export const getTokensV5Options: RouteOptions = {
 
           case "floorAskPrice":
           default: {
-            baseQuery += ` ORDER BY t.floor_sell_value ${
+            const sortColumn = query.source ? "s.floor_sell_value" : "t.floor_sell_value";
+            baseQuery += ` ORDER BY ${sortColumn} ${
               query.sortDirection || "ASC"
             } NULLS LAST, t.token_id`;
             break;
