@@ -94,6 +94,7 @@ export const getUserActivityV3Options: RouteOptions = {
           logIndex: Joi.number().allow(null),
           batchIndex: Joi.number().allow(null),
           source: Joi.object().allow(null),
+          createdAt: Joi.string(),
         })
       ),
     }).label(`getUserActivity${version.toUpperCase()}Response`),
