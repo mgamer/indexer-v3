@@ -1,3 +1,12 @@
+# [5.197.0](https://github.com/reservoirprotocol/indexer/compare/v5.196.0...v5.197.0) (2022-09-06)
+
+
+### Features
+
+* expose block in various apis ([81152f4](https://github.com/reservoirprotocol/indexer/commit/81152f43534bfea2e82b72be0ebad316890051d2))
+
+
+
 # [5.196.0](https://github.com/reservoirprotocol/indexer/compare/v5.195.0...v5.196.0) (2022-09-06)
 
 
