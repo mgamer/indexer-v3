@@ -19,6 +19,7 @@ import * as zeroExV4 from "@/events-sync/data/zeroex-v4";
 import * as zora from "@/events-sync/data/zora";
 import * as cryptoPunks from "@/events-sync/data/cryptopunks";
 import * as sudoswap from "@/events-sync/data/sudoswap";
+import * as universe from "@/events-sync/data/universe";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -69,7 +70,8 @@ export type EventDataKind =
   | "cryptopunks-punk-bought"
   | "cryptopunks-transfer"
   | "sudoswap-buy"
-  | "sudoswap-sell";
+  | "sudoswap-sell"
+  | "universe-match";
 
 export type EventData = {
   kind: EventDataKind;
@@ -126,6 +128,7 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       cryptoPunks.transfer,
       sudoswap.buy,
       sudoswap.sell,
+      universe.match,
     ];
   } else {
     return (
@@ -228,6 +231,8 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return sudoswap.buy;
     case "sudoswap-sell":
       return sudoswap.sell;
+    case "universe-match":
+      return universe.match;
     default:
       return undefined;
   }

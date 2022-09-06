@@ -1721,8 +1721,9 @@ export const syncEvents = async (
               break;
             }
 
-            // Rarible
+            // Rarible / Universe
 
+            case "universe-match":
             case "rarible-match": {
               const { args } = eventData.abi.parseLog(log);
               const leftHash = args["leftHash"].toLowerCase();
@@ -1756,7 +1757,7 @@ export const syncEvents = async (
 
               // Handle: attribution
 
-              const orderKind = "rarible";
+              const orderKind = eventData.kind.startsWith("universe") ? "universe" : "rarible";
               const data = await syncEventsUtils.extractAttributionData(
                 baseEventParams.txHash,
                 orderKind
@@ -1803,7 +1804,7 @@ export const syncEvents = async (
               }
 
               fillEventsPartial.push({
-                orderKind: "rarible",
+                orderKind,
                 orderId: leftHash,
                 orderSide: side,
                 maker: leftMaker,
