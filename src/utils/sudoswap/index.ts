@@ -7,8 +7,8 @@ import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import { getSudoswapPool, saveSudoswapPool } from "@/models/sudoswap-pools";
 
-export const getPoolDetails = async (poolContract: string) =>
-  getSudoswapPool(poolContract).catch(async () => {
+export const getPoolDetails = async (address: string) =>
+  getSudoswapPool(address).catch(async () => {
     if (Sdk.Sudoswap.Addresses.PairFactory[config.chainId]) {
       const iface = new Interface([
         "function nft() view returns (address)",
@@ -20,25 +20,25 @@ export const getPoolDetails = async (poolContract: string) =>
       ]);
 
       try {
-        const pool = new Contract(poolContract, iface, baseProvider);
+        const pool = new Contract(address, iface, baseProvider);
 
-        const nftContract = await pool.nft();
-        const bondingCurveContract = await pool.bondingCurve();
+        const nft = await pool.nft();
+        const bondingCurve = await pool.bondingCurve();
         const poolKind = await pool.poolType();
         const pairKind = await pool.pairVariant();
-        const tokenContract = pairKind > 1 ? await pool.token() : AddressZero;
+        const token = pairKind > 1 ? await pool.token() : AddressZero;
 
         const factory = new Contract(
           Sdk.Sudoswap.Addresses.PairFactory[config.chainId],
           iface,
           baseProvider
         );
-        if (await factory.isPair(poolContract, pairKind)) {
+        if (await factory.isPair(address, pairKind)) {
           return saveSudoswapPool({
-            poolContract,
-            nftContract,
-            tokenContract,
-            bondingCurveContract,
+            address,
+            nft,
+            token,
+            bondingCurve,
             poolKind,
             pairKind,
           });

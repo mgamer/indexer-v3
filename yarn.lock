@@ -641,10 +641,10 @@
   resolved "https://registry.yarnpkg.com/@exodus/schemasafe/-/schemasafe-1.0.0-rc.6.tgz#7985f681564cff4ffaebb5896eb4be20af3aae7a"
   integrity sha512-dDnQizD94EdBwEj/fh3zPRa/HWCS9O5au2PuHhZBbuM3xWHxuaKzPBOEWze7Nn0xW68MIpZ7Xdyn1CoCpjKCuQ==
 
-"@georgeroman/evm-tx-simulator@^0.0.6":
-  version "0.0.6"
-  resolved "https://registry.yarnpkg.com/@georgeroman/evm-tx-simulator/-/evm-tx-simulator-0.0.6.tgz#630f64ef008b0af8078d58627fdc668b39ce1eb7"
-  integrity sha512-bfGp5AW6h01KUyMZxZAE0kmG69BNMPe11uKNMtX0oP6Oo5p4o8QvKh044cnUyufctOqHpjpUvDosyE4aX+xh0w==
+"@georgeroman/evm-tx-simulator@^0.0.7":
+  version "0.0.7"
+  resolved "https://registry.yarnpkg.com/@georgeroman/evm-tx-simulator/-/evm-tx-simulator-0.0.7.tgz#0f4581f3f97cf5f6a27625b6c87334c5feacbb2e"
+  integrity sha512-SNuO7OLHawlLLw38wC1vOsa5aa+NKKOUVZzmsxhvzG1cpUKAd1mgq8ZIKzdkZKSO6nRt3CXqUzgYOeQg7VrFGg==
   dependencies:
     ethers "^5.6.9"
 

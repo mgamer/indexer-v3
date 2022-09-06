@@ -2,8 +2,7 @@ import { Interface, defaultAbiCoder } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
-import { parseCallTrace } from "@georgeroman/evm-tx-simulator";
-import { CallTrace } from "@georgeroman/evm-tx-simulator/dist/types";
+import { parseCallTrace, searchForCall } from "@georgeroman/evm-tx-simulator";
 import * as Sdk from "@reservoir0x/sdk";
 import _ from "lodash";
 import pLimit from "p-limit";
@@ -2440,49 +2439,35 @@ export const syncEvents = async (
             // we detect sales in order to get more detailed information.
 
             case "sudoswap-buy": {
-              const allowedSigHashes = [
-                // swapTokenForAnyNFTs
-                "0x28b8aee1",
-                // swapTokenForSpecificNFTs
-                "0x6d8b99f7",
-              ];
-
-              const searchForPoolCall = (
-                trace: CallTrace,
-                pool: string,
-                tradeEventRank: number
-              ): CallTrace | undefined => {
-                if (
-                  trace.type === "CALL" &&
-                  trace.to === pool &&
-                  allowedSigHashes.includes(trace.input.slice(0, 10))
-                ) {
-                  if (tradeEventRank === 0) {
-                    return trace;
-                  } else {
-                    tradeEventRank--;
-                  }
-                }
-
-                for (const call of trace.calls ?? []) {
-                  const result = searchForPoolCall(call, pool, tradeEventRank);
-                  if (result) {
-                    return result;
-                  }
-                }
-              };
+              const swapTokenForAnyNFTs = "0x28b8aee1";
+              const swapTokenForSpecificNFTs = "0x6d8b99f7";
 
               const txHash = baseEventParams.txHash;
               const address = baseEventParams.address;
 
               const txTrace = await syncEventsUtils.fetchTransactionTrace(txHash);
+              if (!txTrace) {
+                // Skip any failed attempts to get the trace
+                continue;
+              }
+
+              // Search for the corresponding internal call to the Sudoswap pool
               const tradeRank = sudoswapTrades.buy.get(`${txHash}-${address}`) ?? 0;
-              const poolCallTrace = searchForPoolCall(txTrace.calls, address, tradeRank);
+              const poolCallTrace = searchForCall(
+                txTrace.calls,
+                {
+                  to: address,
+                  type: "CALL",
+                  sigHashes: [swapTokenForAnyNFTs, swapTokenForSpecificNFTs],
+                },
+                tradeRank
+              );
+
               if (poolCallTrace) {
                 const sighash = poolCallTrace.input.slice(0, 10);
 
                 const pool = await getPoolDetails(baseEventParams.address);
-                if (pool && sighash === "0x28b8aee1") {
+                if (pool && sighash === swapTokenForAnyNFTs) {
                   const iface = new Interface([
                     `
                       function swapTokenForAnyNFTs(
@@ -2529,6 +2514,7 @@ export const syncEvents = async (
                     break;
                   }
 
+                  // Detect the traded tokens from the trace's state changes
                   const state = parseCallTrace(poolCallTrace);
 
                   let i = 0;
@@ -2538,14 +2524,13 @@ export const syncEvents = async (
                       fillEvents.push({
                         orderKind,
                         orderSide: "sell",
-                        // TODO: Should the pool or the pool owner be the maker?
                         maker: baseEventParams.address,
                         taker,
                         price: prices.nativePrice,
                         currencyPrice: price,
                         usdPrice: prices.usdPrice,
-                        currency: pool.tokenContract,
-                        contract: baseEventParams.address,
+                        currency: pool.token,
+                        contract: pool.nft,
                         tokenId,
                         amount: "1",
                         orderSourceId: data.orderSource?.id,
@@ -2561,7 +2546,7 @@ export const syncEvents = async (
                       i++;
                     }
                   }
-                } else if (pool && sighash === "0x6d8b99f7") {
+                } else if (pool && sighash === swapTokenForSpecificNFTs) {
                   const iface = new Interface([
                     `
                       function swapTokenForSpecificNFTs(
@@ -2614,14 +2599,13 @@ export const syncEvents = async (
                     fillEvents.push({
                       orderKind,
                       orderSide: "sell",
-                      // TODO: Should the pool or the pool owner be the maker?
                       maker: baseEventParams.address,
                       taker,
                       price: prices.nativePrice,
                       currencyPrice: price,
                       usdPrice: prices.usdPrice,
-                      currency: pool.tokenContract,
-                      contract: baseEventParams.address,
+                      currency: pool.token,
+                      contract: pool.nft,
                       tokenId: decodedInput.nftIds[i].toString(),
                       amount: "1",
                       orderSourceId: data.orderSource?.id,
@@ -2643,47 +2627,30 @@ export const syncEvents = async (
             }
 
             case "sudoswap-sell": {
-              const allowedSigHashes = [
-                // swapNFTsForToken
-                "0xb1d3f1c1",
-              ];
-
-              const searchForPoolCall = (
-                trace: CallTrace,
-                pool: string,
-                tradeEventRank: number
-              ): CallTrace | undefined => {
-                if (
-                  trace.type === "CALL" &&
-                  trace.to === pool &&
-                  allowedSigHashes.includes(trace.input.slice(0, 10))
-                ) {
-                  if (tradeEventRank === 0) {
-                    return trace;
-                  } else {
-                    tradeEventRank--;
-                  }
-                }
-
-                for (const call of trace.calls ?? []) {
-                  const result = searchForPoolCall(call, pool, tradeEventRank);
-                  if (result) {
-                    return result;
-                  }
-                }
-              };
+              const swapNFTsForToken = "0xb1d3f1c1";
 
               const txHash = baseEventParams.txHash;
               const address = baseEventParams.address;
 
               const txTrace = await syncEventsUtils.fetchTransactionTrace(txHash);
+              if (!txTrace) {
+                // Skip any failed attempts to get the trace
+                continue;
+              }
+
+              // Search for the corresponding internal call to the Sudoswap pool
               const tradeRank = sudoswapTrades.sell.get(`${txHash}-${address}`) ?? 0;
-              const poolCallTrace = searchForPoolCall(txTrace.calls, address, tradeRank);
+              const poolCallTrace = searchForCall(
+                txTrace.calls,
+                { to: address, type: "CALL", sigHashes: [swapNFTsForToken] },
+                tradeRank
+              );
+
               if (poolCallTrace) {
                 const sighash = poolCallTrace.input.slice(0, 10);
 
                 const pool = await getPoolDetails(baseEventParams.address);
-                if (pool && sighash === "0xb1d3f1c1") {
+                if (pool && sighash === swapNFTsForToken) {
                   const iface = new Interface([
                     `
                       function swapNFTsForToken(
@@ -2736,14 +2703,13 @@ export const syncEvents = async (
                     fillEvents.push({
                       orderKind,
                       orderSide: "buy",
-                      // TODO: Should the pool or the pool owner be the maker?
                       maker: baseEventParams.address,
                       taker,
                       price: prices.nativePrice,
                       currencyPrice: price,
                       usdPrice: prices.usdPrice,
-                      currency: pool.tokenContract,
-                      contract: baseEventParams.address,
+                      currency: pool.token,
+                      contract: pool.nft,
                       tokenId: decodedInput.nftIds[i].toString(),
                       amount: "1",
                       orderSourceId: data.orderSource?.id,

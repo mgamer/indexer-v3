@@ -2,10 +2,10 @@ import { idb } from "@/common/db";
 import { fromBuffer, toBuffer } from "@/common/utils";
 
 export type SudoswapPool = {
-  poolContract: string;
-  nftContract: string;
-  tokenContract: string;
-  bondingCurveContract: string;
+  address: string;
+  nft: string;
+  token: string;
+  bondingCurve: string;
   poolKind: number;
   pairKind: number;
 };
@@ -14,27 +14,27 @@ export const saveSudoswapPool = async (sudoswapPool: SudoswapPool) => {
   await idb.none(
     `
       INSERT INTO sudoswap_pools (
-        pool_contract,
-        nft_contract,
-        token_contract,
-        bonding_curve_contract,
+        address,
+        nft,
+        token,
+        bonding_curve,
         pool_kind,
         pair_kind
       ) VALUES (
-        $/poolContract/,
-        $/nftContract/,
-        $/tokenContract/,
-        $/bondingCurveContract/,
+        $/address/,
+        $/nft/,
+        $/token/,
+        $/bondingCurve/,
         $/poolKind/,
         $/pairKind/
       )
       ON CONFLICT DO NOTHING
     `,
     {
-      poolContract: toBuffer(sudoswapPool.poolContract),
-      nftContract: toBuffer(sudoswapPool.nftContract),
-      tokenContract: toBuffer(sudoswapPool.tokenContract),
-      bondingCurveContract: toBuffer(sudoswapPool.bondingCurveContract),
+      address: toBuffer(sudoswapPool.address),
+      nft: toBuffer(sudoswapPool.nft),
+      token: toBuffer(sudoswapPool.token),
+      bondingCurve: toBuffer(sudoswapPool.bondingCurve),
       poolKind: sudoswapPool.poolKind,
       pairKind: sudoswapPool.pairKind,
     }
@@ -43,27 +43,27 @@ export const saveSudoswapPool = async (sudoswapPool: SudoswapPool) => {
   return sudoswapPool;
 };
 
-export const getSudoswapPool = async (poolContract: string): Promise<SudoswapPool> => {
+export const getSudoswapPool = async (address: string): Promise<SudoswapPool> => {
   const result = await idb.oneOrNone(
     `
       SELECT
-        sudoswap_pools.pool_contract,
-        sudoswap_pools.nft_contract,
-        sudoswap_pools.token_contract,
-        sudoswap_pools.bonding_curve_contract,
+        sudoswap_pools.address,
+        sudoswap_pools.nft,
+        sudoswap_pools.token,
+        sudoswap_pools.bonding_curve,
         sudoswap_pools.pool_kind,
         sudoswap_pools.pair_kind
       FROM sudoswap_pools
-      WHERE sudoswap_pools.pool_contract = $/poolContract/
+      WHERE sudoswap_pools.address = $/address/
     `,
-    { poolContract: toBuffer(poolContract) }
+    { address: toBuffer(address) }
   );
 
   return {
-    poolContract,
-    nftContract: fromBuffer(result.nft_contract),
-    tokenContract: fromBuffer(result.token_contract),
-    bondingCurveContract: fromBuffer(result.bonding_curve_contract),
+    address,
+    nft: fromBuffer(result.nft),
+    token: fromBuffer(result.token),
+    bondingCurve: fromBuffer(result.bonding_curve),
     poolKind: result.pool_kind,
     pairKind: result.pair_kind,
   };

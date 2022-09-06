@@ -1,5 +1,5 @@
 import { AddressZero } from "@ethersproject/constants";
-import * as TraceSdk from "@georgeroman/evm-tx-simulator";
+import { getTxTrace } from "@georgeroman/evm-tx-simulator";
 import * as Sdk from "@reservoir0x/sdk";
 import { getReferrer } from "@reservoir0x/sdk/dist/utils";
 import pLimit from "p-limit";
@@ -98,14 +98,16 @@ export const fetchTransaction = async (txHash: string) =>
   });
 
 export const fetchTransactionTrace = async (txHash: string) =>
-  getTransactionTrace(txHash).catch(async () => {
-    const transactionTrace = await TraceSdk.getTransactionTrace(txHash, baseProvider);
+  getTransactionTrace(txHash)
+    .catch(async () => {
+      const transactionTrace = await getTxTrace({ hash: txHash }, baseProvider);
 
-    return saveTransactionTrace({
-      hash: txHash,
-      calls: transactionTrace,
-    });
-  });
+      return saveTransactionTrace({
+        hash: txHash,
+        calls: transactionTrace,
+      });
+    })
+    .catch(() => undefined);
 
 export const extractAttributionData = async (
   txHash: string,
