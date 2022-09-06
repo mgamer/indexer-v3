@@ -1,4 +1,5 @@
 import { AddressZero } from "@ethersproject/constants";
+import { getTxTrace } from "@georgeroman/evm-tx-simulator";
 import * as Sdk from "@reservoir0x/sdk";
 import { getReferrer } from "@reservoir0x/sdk/dist/utils";
 import pLimit from "p-limit";
@@ -10,6 +11,7 @@ import { getBlocks, saveBlock } from "@/models/blocks";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { getTransaction, saveTransaction } from "@/models/transactions";
+import { getTransactionTrace, saveTransactionTrace } from "@/models/transaction-traces";
 import { OrderKind, getOrderSourceByOrderKind } from "@/orderbook/orders";
 
 export const fetchBlock = async (blockNumber: number, force = false) =>
@@ -94,6 +96,18 @@ export const fetchTransaction = async (txHash: string) =>
       // gasFee: txReceipt.gasUsed.mul(gasPrice).toString(),
     });
   });
+
+export const fetchTransactionTrace = async (txHash: string) =>
+  getTransactionTrace(txHash)
+    .catch(async () => {
+      const transactionTrace = await getTxTrace({ hash: txHash }, baseProvider);
+
+      return saveTransactionTrace({
+        hash: txHash,
+        calls: transactionTrace,
+      });
+    })
+    .catch(() => undefined);
 
 export const extractAttributionData = async (
   txHash: string,

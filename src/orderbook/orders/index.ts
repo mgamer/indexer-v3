@@ -40,6 +40,7 @@ export type OrderKind =
   | "zora-v3"
   | "mint"
   | "cryptopunks"
+  | "sudoswap"
   | "universe";
 
 // In case we don't have the source of an order readily available, we use
@@ -87,6 +88,8 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("nouns.wtf");
       case "cryptopunks":
         return sources.getOrInsert("cryptopunks.app");
+      case "sudoswap":
+        return sources.getOrInsert("sudoswap.xyz");
       case "universe":
         return sources.getOrInsert("universe.xyz");
       case "mint": {
