@@ -52,9 +52,9 @@ export const getUserActivityV3Options: RouteOptions = {
         .description(
           "Order the items are returned in the response, eventTimestamp = The blockchain event time, createdAt - The time in which event was recorded"
         ),
-      continuation: Joi.number().description(
-        "Use continuation token to request next offset of items."
-      ),
+      continuation: Joi.string()
+        .pattern(regex.base64)
+        .description("Use continuation token to request next offset of items."),
       types: Joi.alternatives()
         .try(
           Joi.array().items(
@@ -71,7 +71,7 @@ export const getUserActivityV3Options: RouteOptions = {
   },
   response: {
     schema: Joi.object({
-      continuation: Joi.number().allow(null),
+      continuation: Joi.string().pattern(regex.base64).allow(null),
       activities: Joi.array().items(
         Joi.object({
           type: Joi.string(),
