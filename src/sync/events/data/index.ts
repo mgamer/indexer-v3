@@ -70,9 +70,8 @@ export type EventDataKind =
   | "cryptopunks-punk-bought"
   | "cryptopunks-transfer"
   | "sudoswap-buy"
-  | "sudoswap-sell";
-  | "universe-match"
-  | "universe-cancel";
+  | "sudoswap-sell"
+  | "universe-match";
 
 export type EventData = {
   kind: EventDataKind;
@@ -130,7 +129,6 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       sudoswap.buy,
       sudoswap.sell,
       universe.match,
-      universe.cancel,
     ];
   } else {
     return (
@@ -235,8 +233,6 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return sudoswap.sell;
     case "universe-match":
       return universe.match;
-    case "universe-cancel":
-      return universe.cancel;
     default:
       return undefined;
   }
