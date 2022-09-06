@@ -1,3 +1,58 @@
+# [5.197.0](https://github.com/reservoirprotocol/indexer/compare/v5.196.0...v5.197.0) (2022-09-06)
+
+
+### Features
+
+* expose block in various apis ([81152f4](https://github.com/reservoirprotocol/indexer/commit/81152f43534bfea2e82b72be0ebad316890051d2))
+
+
+
+# [5.196.0](https://github.com/reservoirprotocol/indexer/compare/v5.195.0...v5.196.0) (2022-09-06)
+
+
+### Bug Fixes
+
+* when filling erc20 orders use opensea's shared conduit ([8125aea](https://github.com/reservoirprotocol/indexer/commit/8125aea56b14982d9c1b728f3ca91b85e4be0fb5))
+
+
+### Features
+
+* merge universe support to prod ([8f8196b](https://github.com/reservoirprotocol/indexer/commit/8f8196beaa4f927fa64901accf2c239c4ecd8c30))
+
+
+
+# [5.195.0](https://github.com/reservoirprotocol/indexer/compare/v5.194.0...v5.195.0) (2022-09-06)
+
+
+### Bug Fixes
+
+* sudoswap support tweaks ([97cc4bd](https://github.com/reservoirprotocol/indexer/commit/97cc4bd587917238e25b84136a4dd27ef7eec093))
+
+
+### Features
+
+* add support for sudoswap sales ([7bb2954](https://github.com/reservoirprotocol/indexer/commit/7bb29540ea6ed71765e73d760985f1a27a777307))
+
+
+
+# [5.194.0](https://github.com/reservoirprotocol/indexer/compare/v5.193.7...v5.194.0) (2022-09-06)
+
+
+### Features
+
+* tweak index collection admin api ([01f86bd](https://github.com/reservoirprotocol/indexer/commit/01f86bd89cb63768c43e9044def779b294cf9873))
+
+
+
+## [5.193.7](https://github.com/reservoirprotocol/indexer/compare/v5.193.6...v5.193.7) (2022-09-05)
+
+
+### Bug Fixes
+
+* trigger backfill job ([c2e5fc3](https://github.com/reservoirprotocol/indexer/commit/c2e5fc3eed1634f258928c2f14a0e81523ceb919))
+
+
+
 ## [5.193.6](https://github.com/reservoirprotocol/indexer/compare/v5.193.5...v5.193.6) (2022-09-05)
 
 
