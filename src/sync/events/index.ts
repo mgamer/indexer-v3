@@ -2727,7 +2727,7 @@ export const syncEvents = async (
 
               // Keep track of the "sell" trade
               sudoswapTrades.sell.set(`${txHash}-${address}`, tradeRank + 1);
-              
+
               break;
             }
           }
