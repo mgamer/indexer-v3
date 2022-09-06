@@ -1,3 +1,13 @@
+# [5.198.0](https://github.com/reservoirprotocol/indexer/compare/v5.197.0...v5.198.0) (2022-09-06)
+
+
+### Features
+
+* filter tokens source ([43f5db5](https://github.com/reservoirprotocol/indexer/commit/43f5db5f8a3daf0ec24e71f65eb2bc7f1230c6bf))
+* when filtering tokens by source get ALL and ONLY source orders ([b068973](https://github.com/reservoirprotocol/indexer/commit/b068973022ba1fd3741c2e054315543d9b20e046))
+
+
+
 # [5.197.0](https://github.com/reservoirprotocol/indexer/compare/v5.196.0...v5.197.0) (2022-09-06)
 
 
