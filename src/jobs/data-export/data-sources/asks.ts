@@ -111,6 +111,7 @@ export class AsksDataSource extends BaseDataSource {
           maker: fromBuffer(r.maker),
           taker: fromBuffer(r.taker),
           price: r.price.toString(),
+          currency_address: currency.contract,
           currency_symbol: currency.symbol,
           currency_price: currencyPrice ? currencyPrice.toString() : null,
           start_price: startPrice.toString(),

@@ -39,6 +39,8 @@ export class SalesDataSource extends BaseDataSource {
           block,
           log_index,
           batch_index,
+          wash_trading_score,
+          is_primary,
           extract(epoch from created_at) created_ts,
           extract(epoch from created_at) updated_ts
         FROM fill_events_2
@@ -98,11 +100,14 @@ export class SalesDataSource extends BaseDataSource {
           to: r.order_side === "sell" ? fromBuffer(r.taker) : fromBuffer(r.maker),
           price: r.price ? r.price.toString() : null,
           usd_price: r.usd_price,
+          currency_address: currency.contract,
           currency_symbol: currency.symbol,
           currency_price: currencyPrice ? currencyPrice.toString() : null,
           amount: Number(r.amount),
           fill_source: fillSource?.domain ?? orderSource?.domain,
           aggregator_source: aggregatorSource?.domain,
+          wash_trading_score: Number(r.wash_trading_score),
+          is_primary: Boolean(r.is_primary),
           tx_hash: fromBuffer(r.tx_hash),
           tx_log_index: r.log_index,
           tx_batch_index: r.batch_index,
