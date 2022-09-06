@@ -21,7 +21,7 @@ import * as blocksModel from "@/models/blocks";
 import { OrderKind, getOrderSourceByOrderKind } from "@/orderbook/orders";
 import * as Foundation from "@/orderbook/orders/foundation";
 import { getUSDAndNativePrices } from "@/utils/prices";
-import { getPoolDetails } from "@/utils/sudoswap";
+import * as sudoswapUtils from "@/utils/sudoswap";
 
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
@@ -2467,7 +2467,7 @@ export const syncEvents = async (
               if (poolCallTrace) {
                 const sighash = poolCallTrace.input.slice(0, 10);
 
-                const pool = await getPoolDetails(baseEventParams.address);
+                const pool = await sudoswapUtils.getPoolDetails(baseEventParams.address);
                 if (pool && sighash === swapTokenForAnyNFTs) {
                   const iface = new Interface([
                     `
@@ -2650,7 +2650,7 @@ export const syncEvents = async (
               if (poolCallTrace) {
                 const sighash = poolCallTrace.input.slice(0, 10);
 
-                const pool = await getPoolDetails(baseEventParams.address);
+                const pool = await sudoswapUtils.getPoolDetails(baseEventParams.address);
                 if (pool && sighash === swapNFTsForToken) {
                   const iface = new Interface([
                     `
@@ -2727,6 +2727,20 @@ export const syncEvents = async (
 
               // Keep track of the "sell" trade
               sudoswapTrades.sell.set(`${txHash}-${address}`, tradeRank + 1);
+
+              break;
+            }
+
+            // NFTX
+
+            case "nftx-minted": {
+              // TODO
+
+              break;
+            }
+
+            case "nftx-redeemed": {
+              // TODO
 
               break;
             }

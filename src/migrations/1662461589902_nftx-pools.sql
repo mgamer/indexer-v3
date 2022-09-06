@@ -2,7 +2,8 @@
 
 CREATE TABLE "nftx_nft_pools" (
   "address" BYTEA NOT NULL,
-  "nft" BYTEA NOT NULL
+  "nft" BYTEA NOT NULL,
+  "vault_id" INTEGER NOT NULL
 );
 
 ALTER TABLE "nftx_nft_pools"

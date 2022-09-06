@@ -4,22 +4,23 @@ import * as erc721 from "@/events-sync/data/erc721";
 import * as erc1155 from "@/events-sync/data/erc1155";
 import * as weth from "@/events-sync/data/weth";
 
+import * as cryptoPunks from "@/events-sync/data/cryptopunks";
 import * as element from "@/events-sync/data/element";
 import * as foundation from "@/events-sync/data/foundation";
 import * as looksRare from "@/events-sync/data/looks-rare";
+import * as nftx from "@/events-sync/data/nftx";
 import * as nouns from "@/events-sync/data/nouns";
 import * as openDao from "@/events-sync/data/opendao";
 import * as quixotic from "@/events-sync/data/quixotic";
 import * as rarible from "@/events-sync/data/rarible";
 import * as seaport from "@/events-sync/data/seaport";
+import * as sudoswap from "@/events-sync/data/sudoswap";
+import * as universe from "@/events-sync/data/universe";
 import * as wyvernV2 from "@/events-sync/data/wyvern-v2";
 import * as wyvernV23 from "@/events-sync/data/wyvern-v2.3";
 import * as x2y2 from "@/events-sync/data/x2y2";
 import * as zeroExV4 from "@/events-sync/data/zeroex-v4";
 import * as zora from "@/events-sync/data/zora";
-import * as cryptoPunks from "@/events-sync/data/cryptopunks";
-import * as sudoswap from "@/events-sync/data/sudoswap";
-import * as universe from "@/events-sync/data/universe";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -71,7 +72,9 @@ export type EventDataKind =
   | "cryptopunks-transfer"
   | "sudoswap-buy"
   | "sudoswap-sell"
-  | "universe-match";
+  | "universe-match"
+  | "nftx-redeemed"
+  | "nftx-minted";
 
 export type EventData = {
   kind: EventDataKind;
@@ -129,6 +132,8 @@ export const getEventData = (eventDataKinds: EventDataKind[] | undefined) => {
       sudoswap.buy,
       sudoswap.sell,
       universe.match,
+      nftx.minted,
+      nftx.redeemed,
     ];
   } else {
     return (
@@ -233,6 +238,10 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return sudoswap.sell;
     case "universe-match":
       return universe.match;
+    case "nftx-minted":
+      return nftx.minted;
+    case "nftx-redeemed":
+      return nftx.redeemed;
     default:
       return undefined;
   }
