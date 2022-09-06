@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { HashZero } from "@ethersproject/constants";
 import { Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 import pLimit from "p-limit";
@@ -8,7 +7,7 @@ import pLimit from "p-limit";
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis, redlock } from "@/common/redis";
-import { fromBuffer, now, toBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { extractAttributionData } from "@/events-sync/utils";
 
@@ -163,9 +162,14 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire([`${QUEUE_NAME}-lock-6`], 60 * 60 * 24 * 30 * 1000)
+    .acquire([`${QUEUE_NAME}-lock-7`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
-      await addToQueue(now(), HashZero, 0, 0);
+      await addToQueue(
+        1650422378,
+        "0xdb0bca5017162b442bbe11e53c3209f0030f5e43842fe841d40977f93391d614",
+        156,
+        1
+      );
     })
     .catch(() => {
       // Skip on any errors
