@@ -1,3 +1,12 @@
+# [5.194.0](https://github.com/reservoirprotocol/indexer/compare/v5.193.7...v5.194.0) (2022-09-06)
+
+
+### Features
+
+* tweak index collection admin api ([01f86bd](https://github.com/reservoirprotocol/indexer/commit/01f86bd89cb63768c43e9044def779b294cf9873))
+
+
+
 ## [5.193.7](https://github.com/reservoirprotocol/indexer/compare/v5.193.6...v5.193.7) (2022-09-05)
 
 
