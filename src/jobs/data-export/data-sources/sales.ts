@@ -41,7 +41,7 @@ export class SalesDataSource extends BaseDataSource {
           batch_index,
           wash_trading_score,
           is_primary,
-          created_at: new Date(r.created_at).toISOString(),
+          created_at,
           extract(epoch from updated_at) updated_ts
         FROM fill_events_2
         WHERE created_at < NOW() - INTERVAL '5 minutes'
