@@ -2466,10 +2466,16 @@ export const syncEvents = async (
               );
 
               if (poolCallTrace && poolCallTrace.output === "0x") {
-                logger.info("sudoswap-error", baseEventParams.txHash);
+                // Sometimes there can be upstream bugs and the call's output gets truncated
+                logger.error(
+                  COMPONENT_NAME,
+                  `Trace missing output: ${baseEventParams.block} - ${baseEventParams.txHash}`
+                );
+
+                break;
               }
 
-              if (poolCallTrace && poolCallTrace.output !== "0x") {
+              if (poolCallTrace) {
                 const sighash = poolCallTrace.input.slice(0, 10);
 
                 const pool = await sudoswapUtils.getPoolDetails(baseEventParams.address);
@@ -2653,10 +2659,16 @@ export const syncEvents = async (
               );
 
               if (poolCallTrace && poolCallTrace.output === "0x") {
-                logger.info("sudoswap-error", baseEventParams.txHash);
+                // Sometimes there can be upstream bugs and the call's output gets truncated
+                logger.error(
+                  COMPONENT_NAME,
+                  `Trace missing output: ${baseEventParams.block} - ${baseEventParams.txHash}`
+                );
+
+                break;
               }
 
-              if (poolCallTrace && poolCallTrace.output !== "0x") {
+              if (poolCallTrace) {
                 const sighash = poolCallTrace.input.slice(0, 10);
 
                 const pool = await sudoswapUtils.getPoolDetails(baseEventParams.address);
