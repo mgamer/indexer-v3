@@ -2465,6 +2465,16 @@ export const syncEvents = async (
                 tradeRank
               );
 
+              if (poolCallTrace && poolCallTrace.output === "0x") {
+                // Sometimes there can be upstream bugs and the call's output gets truncated
+                logger.error(
+                  COMPONENT_NAME,
+                  `Trace missing output: ${baseEventParams.block} - ${baseEventParams.txHash}`
+                );
+
+                break;
+              }
+
               if (poolCallTrace) {
                 const sighash = poolCallTrace.input.slice(0, 10);
 
@@ -2647,6 +2657,16 @@ export const syncEvents = async (
                 { to: address, type: "CALL", sigHashes: [swapNFTsForToken] },
                 tradeRank
               );
+
+              if (poolCallTrace && poolCallTrace.output === "0x") {
+                // Sometimes there can be upstream bugs and the call's output gets truncated
+                logger.error(
+                  COMPONENT_NAME,
+                  `Trace missing output: ${baseEventParams.block} - ${baseEventParams.txHash}`
+                );
+
+                break;
+              }
 
               if (poolCallTrace) {
                 const sighash = poolCallTrace.input.slice(0, 10);
