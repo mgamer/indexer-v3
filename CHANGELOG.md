@@ -1,3 +1,12 @@
+# [5.200.0](https://github.com/reservoirprotocol/indexer/compare/v5.199.2...v5.200.0) (2022-09-07)
+
+
+### Features
+
+* allow to sort top bids by expiry/date created ([b7dfc42](https://github.com/reservoirprotocol/indexer/commit/b7dfc42769da5df115f9d07c09537bf5401d90db))
+
+
+
 ## [5.199.2](https://github.com/reservoirprotocol/indexer/compare/v5.199.1...v5.199.2) (2022-09-07)
 
 
