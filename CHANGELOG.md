@@ -1,3 +1,12 @@
+## [5.199.1](https://github.com/reservoirprotocol/indexer/compare/v5.199.0...v5.199.1) (2022-09-07)
+
+
+### Bug Fixes
+
+* debug sudoswap errors ([89b31fc](https://github.com/reservoirprotocol/indexer/commit/89b31fceec4e6f90df2a05508d5273db41018ac4))
+
+
+
 # [5.199.0](https://github.com/reservoirprotocol/indexer/compare/v5.198.2...v5.199.0) (2022-09-07)
 
 

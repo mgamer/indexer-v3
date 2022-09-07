@@ -2465,7 +2465,11 @@ export const syncEvents = async (
                 tradeRank
               );
 
-              if (poolCallTrace) {
+              if (poolCallTrace && poolCallTrace.output === "0x") {
+                logger.info("sudoswap-error", baseEventParams.txHash);
+              }
+
+              if (poolCallTrace && poolCallTrace.output !== "0x") {
                 const sighash = poolCallTrace.input.slice(0, 10);
 
                 const pool = await sudoswapUtils.getPoolDetails(baseEventParams.address);
@@ -2648,7 +2652,11 @@ export const syncEvents = async (
                 tradeRank
               );
 
-              if (poolCallTrace) {
+              if (poolCallTrace && poolCallTrace.output === "0x") {
+                logger.info("sudoswap-error", baseEventParams.txHash);
+              }
+
+              if (poolCallTrace && poolCallTrace.output !== "0x") {
                 const sighash = poolCallTrace.input.slice(0, 10);
 
                 const pool = await sudoswapUtils.getPoolDetails(baseEventParams.address);
