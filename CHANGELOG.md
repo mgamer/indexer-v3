@@ -1,3 +1,14 @@
+## [5.198.2](https://github.com/reservoirprotocol/indexer/compare/v5.198.1...v5.198.2) (2022-09-07)
+
+
+### Bug Fixes
+
+* nfts sales ([5498bb5](https://github.com/reservoirprotocol/indexer/commit/5498bb5b667aff3a34fd8efbc18c0a4a945d5376))
+* wip ([884cbbe](https://github.com/reservoirprotocol/indexer/commit/884cbbea4b97115aef2d507e6814744c76aedb2f))
+* wip ([956fe89](https://github.com/reservoirprotocol/indexer/commit/956fe89b92ebc803a439de875d534cd4fc62fce6))
+
+
+
 ## [5.198.1](https://github.com/reservoirprotocol/indexer/compare/v5.198.0...v5.198.1) (2022-09-07)
 
 
