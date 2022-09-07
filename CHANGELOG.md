@@ -1,3 +1,12 @@
+## [5.199.2](https://github.com/reservoirprotocol/indexer/compare/v5.199.1...v5.199.2) (2022-09-07)
+
+
+### Bug Fixes
+
+* protect against traces having no output ([3f4fe3b](https://github.com/reservoirprotocol/indexer/commit/3f4fe3b0493225362c5b2972d4a958e40877aeb6))
+
+
+
 ## [5.199.1](https://github.com/reservoirprotocol/indexer/compare/v5.199.0...v5.199.1) (2022-09-07)
 
 
