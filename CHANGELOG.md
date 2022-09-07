@@ -1,3 +1,12 @@
+## [5.198.1](https://github.com/reservoirprotocol/indexer/compare/v5.198.0...v5.198.1) (2022-09-07)
+
+
+### Bug Fixes
+
+* set updated at on fill events backfill ([5c5dcbb](https://github.com/reservoirprotocol/indexer/commit/5c5dcbb3d277b3a5c8107a34029d5b072e519443))
+
+
+
 # [5.198.0](https://github.com/reservoirprotocol/indexer/compare/v5.197.0...v5.198.0) (2022-09-06)
 
 

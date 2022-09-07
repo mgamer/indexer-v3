@@ -133,7 +133,8 @@ if (config.doBackgroundWork) {
           UPDATE fill_events_2 SET
             fill_source_id = x.fill_source_id::INT,
             aggregator_source_id = x.aggregator_source_id::INT,
-            taker = x.taker::BYTEA
+            taker = x.taker::BYTEA,
+            updated_at = now()
           FROM (
             VALUES ${pgp.helpers.values(values, columns)}
           ) AS x(tx_hash, log_index, batch_index, fill_source_id, aggregator_source_id, taker)
