@@ -10,7 +10,7 @@ export type NftxNftPool = {
 export const saveNftxNftPool = async (nftxNftPool: NftxNftPool) => {
   await idb.none(
     `
-      INSERT INTO nftx_nft_pool (
+      INSERT INTO nftx_nft_pools (
         address,
         nft,
         vault_id
@@ -60,7 +60,7 @@ export type NftxFtPool = {
 export const saveNftxFtPool = async (nftxFtPool: NftxFtPool) => {
   await idb.none(
     `
-      INSERT INTO nftx_ft_pool (
+      INSERT INTO nftx_ft_pools (
         address,
         token0,
         token1
