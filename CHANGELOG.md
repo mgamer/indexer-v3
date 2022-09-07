@@ -1,3 +1,12 @@
+# [5.199.0](https://github.com/reservoirprotocol/indexer/compare/v5.198.2...v5.199.0) (2022-09-07)
+
+
+### Features
+
+* update currency startup to include image ([b309c1d](https://github.com/reservoirprotocol/indexer/commit/b309c1ddc3999e826769fa15e8e3076816edbbe6))
+
+
+
 ## [5.198.2](https://github.com/reservoirprotocol/indexer/compare/v5.198.1...v5.198.2) (2022-09-07)
 
 
