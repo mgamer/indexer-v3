@@ -1,3 +1,30 @@
+## [5.199.2](https://github.com/reservoirprotocol/indexer/compare/v5.199.1...v5.199.2) (2022-09-07)
+
+
+### Bug Fixes
+
+* protect against traces having no output ([3f4fe3b](https://github.com/reservoirprotocol/indexer/commit/3f4fe3b0493225362c5b2972d4a958e40877aeb6))
+
+
+
+## [5.199.1](https://github.com/reservoirprotocol/indexer/compare/v5.199.0...v5.199.1) (2022-09-07)
+
+
+### Bug Fixes
+
+* debug sudoswap errors ([89b31fc](https://github.com/reservoirprotocol/indexer/commit/89b31fceec4e6f90df2a05508d5273db41018ac4))
+
+
+
+# [5.199.0](https://github.com/reservoirprotocol/indexer/compare/v5.198.2...v5.199.0) (2022-09-07)
+
+
+### Features
+
+* update currency startup to include image ([b309c1d](https://github.com/reservoirprotocol/indexer/commit/b309c1ddc3999e826769fa15e8e3076816edbbe6))
+
+
+
 ## [5.198.2](https://github.com/reservoirprotocol/indexer/compare/v5.198.1...v5.198.2) (2022-09-07)
 
 
