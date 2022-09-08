@@ -1,3 +1,17 @@
+# [5.202.0](https://github.com/reservoirprotocol/indexer/compare/v5.201.0...v5.202.0) (2022-09-08)
+
+
+### Bug Fixes
+
+* minor tweaks ([a0805a0](https://github.com/reservoirprotocol/indexer/commit/a0805a0f5de09fecb6cf8eb7d462d3f5cf585bed))
+
+
+### Features
+
+* add support for cryptopunks liquidity ([0ced12a](https://github.com/reservoirprotocol/indexer/commit/0ced12a1bc2cf5888c4d35eb9959306adaddf788))
+
+
+
 # [5.201.0](https://github.com/reservoirprotocol/indexer/compare/v5.200.2...v5.201.0) (2022-09-08)
 
 
