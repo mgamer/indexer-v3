@@ -641,10 +641,10 @@
   resolved "https://registry.yarnpkg.com/@exodus/schemasafe/-/schemasafe-1.0.0-rc.6.tgz#7985f681564cff4ffaebb5896eb4be20af3aae7a"
   integrity sha512-dDnQizD94EdBwEj/fh3zPRa/HWCS9O5au2PuHhZBbuM3xWHxuaKzPBOEWze7Nn0xW68MIpZ7Xdyn1CoCpjKCuQ==
 
-"@georgeroman/evm-tx-simulator@^0.0.8":
-  version "0.0.8"
-  resolved "https://registry.yarnpkg.com/@georgeroman/evm-tx-simulator/-/evm-tx-simulator-0.0.8.tgz#f84bb9d7555d2b316a7564f06801e4cefdc38431"
-  integrity sha512-YIgco7nZuCf9uyAje2yoNMD+SgGKI5ijUuKrOgsA8K/hPOZJ7ZXpnHfHh08jo8itnHSC7hVzlHfQkvbssnEi6w==
+"@georgeroman/evm-tx-simulator@^0.0.9":
+  version "0.0.9"
+  resolved "https://registry.yarnpkg.com/@georgeroman/evm-tx-simulator/-/evm-tx-simulator-0.0.9.tgz#4abd2f1d00f8e4ad26d64117ebbffa95f5dbe230"
+  integrity sha512-tc7M5xusZ5Cinv2kAseIBq/s0P9sJz6UFx9wtIu//cOOQxfUf35IRtrncXVDwIr3dJTuxxmtIGopeufCNXfEiQ==
   dependencies:
     ethers "^5.6.9"
 
@@ -1029,10 +1029,10 @@
   resolved "https://registry.yarnpkg.com/@protobufjs/utf8/-/utf8-1.1.0.tgz#a777360b5b39a1a2e5106f8e858f2fd2d060c570"
   integrity sha1-p3c2C1s5oaLlEG+OhY8v0tBgxXA=
 
-"@reservoir0x/sdk@0.0.167":
-  version "0.0.167"
-  resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.0.167.tgz#607acc5a429dee6da190ae81b89f95d1d0127c20"
-  integrity sha512-1UwW5tGLC/1scq5qy2uN2q/cDsIcyXWrslxXcm5Gpi8WbAEGVX7rJaqT8mxbMoarfVos+rgs2B/6048RA4Us1Q==
+"@reservoir0x/sdk@0.0.169":
+  version "0.0.169"
+  resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.0.169.tgz#c46e92f6dfc0371383773fae1ec3a37d54f4bc1c"
+  integrity sha512-7QeD01xJf2mnRVN6YQY+CjIW8XZdQLH9A9+q+wFN/XfFpD3sSr4bR3SpfZJh/0yGOa4H2LWR9DMQqLXmHOa+4g==
   dependencies:
     ethers "^5.6.8"
     merkletreejs "0.2.31"

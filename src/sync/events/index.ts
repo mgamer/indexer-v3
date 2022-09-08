@@ -19,9 +19,11 @@ import * as es from "@/events-sync/storage";
 import * as syncEventsUtils from "@/events-sync/utils";
 import * as blocksModel from "@/models/blocks";
 import { OrderKind, getOrderSourceByOrderKind } from "@/orderbook/orders";
+import * as Cryptopunks from "@/orderbook/orders/cryptopunks";
 import * as Foundation from "@/orderbook/orders/foundation";
 import { getUSDAndNativePrices } from "@/utils/prices";
-import { getPoolDetails } from "@/utils/sudoswap";
+import * as nftxUtils from "@/utils/nftx";
+import * as sudoswapUtils from "@/utils/sudoswap";
 
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
@@ -103,10 +105,11 @@ export const syncEvents = async (
       const bulkCancelEvents: es.bulkCancels.Event[] = [];
       const nonceCancelEvents: es.nonceCancels.Event[] = [];
       const cancelEvents: es.cancels.Event[] = [];
-      const cancelEventsFoundation: es.cancels.Event[] = [];
+      const cancelEventsOnChain: es.cancels.Event[] = [];
       const fillEvents: es.fills.Event[] = [];
       const fillEventsPartial: es.fills.Event[] = [];
-      const fillEventsFoundation: es.fills.Event[] = [];
+      const fillEventsOnChain: es.fills.Event[] = [];
+      const cryptopunksOrders: Cryptopunks.OrderInfo[] = [];
       const foundationOrders: Foundation.OrderInfo[] = [];
 
       // Keep track of all events within the currently processing transaction
@@ -757,9 +760,7 @@ export const syncEvents = async (
                   txHash: baseEventParams.txHash,
                   txTimestamp: baseEventParams.timestamp,
                 },
-                metadata: {
-                  source: "Foundation",
-                },
+                metadata: {},
               });
 
               break;
@@ -802,7 +803,7 @@ export const syncEvents = async (
               }
 
               // Custom handling to support on-chain orderbook quirks.
-              fillEventsFoundation.push({
+              fillEventsOnChain.push({
                 orderKind,
                 orderId,
                 orderSide: "sell",
@@ -855,7 +856,7 @@ export const syncEvents = async (
               const orderId = keccak256(["address", "uint256"], [contract, tokenId]);
 
               // Custom handling to support on-chain orderbook quirks.
-              cancelEventsFoundation.push({
+              cancelEventsOnChain.push({
                 orderKind: "foundation",
                 orderId,
                 baseEventParams,
@@ -1247,6 +1248,17 @@ export const syncEvents = async (
                     batchIndex: batchIndex++,
                   },
                 });
+
+                fillInfos.push({
+                  context: `${buyOrderId}-${baseEventParams.txHash}`,
+                  orderId: buyOrderId,
+                  orderSide: "buy",
+                  contract: associatedNftTransferEvent.baseEventParams.address,
+                  tokenId: associatedNftTransferEvent.tokenId,
+                  amount: associatedNftTransferEvent.amount,
+                  price: prices.nativePrice,
+                  timestamp: baseEventParams.timestamp,
+                });
               }
               if (sellOrderId !== HashZero) {
                 fillEvents.push({
@@ -1269,6 +1281,17 @@ export const syncEvents = async (
                     ...baseEventParams,
                     batchIndex: batchIndex++,
                   },
+                });
+
+                fillInfos.push({
+                  context: `${sellOrderId}-${baseEventParams.txHash}`,
+                  orderId: sellOrderId,
+                  orderSide: "sell",
+                  contract: associatedNftTransferEvent.baseEventParams.address,
+                  tokenId: associatedNftTransferEvent.tokenId,
+                  amount: associatedNftTransferEvent.amount,
+                  price: prices.nativePrice,
+                  timestamp: baseEventParams.timestamp,
                 });
               }
 
@@ -1822,6 +1845,17 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              fillInfos.push({
+                context: leftHash,
+                orderId: leftHash,
+                orderSide: side,
+                contract,
+                tokenId,
+                amount,
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
+              });
+
               break;
             }
 
@@ -1886,6 +1920,17 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              fillInfos.push({
+                context: orderHash,
+                orderId: orderHash,
+                orderSide: "sell",
+                contract: erc721Token,
+                tokenId: erc721TokenId,
+                amount: "1",
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
+              });
+
               break;
             }
 
@@ -1946,6 +1991,17 @@ export const syncEvents = async (
                 aggregatorSourceId: data.aggregatorSource?.id,
                 fillSourceId: data.fillSource?.id,
                 baseEventParams,
+              });
+
+              fillInfos.push({
+                context: orderHash,
+                orderId: orderHash,
+                orderSide: "buy",
+                contract: erc721Token,
+                tokenId: erc721TokenId,
+                amount: "1",
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
               });
 
               break;
@@ -2011,6 +2067,17 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              fillInfos.push({
+                context: orderHash,
+                orderId: orderHash,
+                orderSide: "sell",
+                contract: erc1155Token,
+                tokenId: erc1155TokenId,
+                amount: erc1155FillAmount,
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
+              });
+
               break;
             }
 
@@ -2072,6 +2139,17 @@ export const syncEvents = async (
                 aggregatorSourceId: data.aggregatorSource?.id,
                 fillSourceId: data.fillSource?.id,
                 baseEventParams,
+              });
+
+              fillInfos.push({
+                context: orderHash,
+                orderId: orderHash,
+                orderSide: "buy",
+                contract: erc1155Token,
+                tokenId: erc1155TokenId,
+                amount: erc1155FillAmount,
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
               });
 
               break;
@@ -2228,6 +2306,16 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              fillInfos.push({
+                context: `zora-${tokenContract}-${tokenId}-${baseEventParams.txHash}`,
+                orderSide: "sell",
+                contract: tokenContract,
+                tokenId,
+                amount: "1",
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
+              });
+
               break;
             }
 
@@ -2281,6 +2369,16 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              fillInfos.push({
+                context: `zora-${tokenContract}-${tokenId}-${baseEventParams.txHash}`,
+                orderSide: "sell",
+                contract: tokenContract,
+                tokenId,
+                amount: "1",
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
+              });
+
               break;
             }
 
@@ -2332,10 +2430,72 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              fillInfos.push({
+                context: `nouns-${nounId}-${baseEventParams.txHash}`,
+                orderSide: "sell",
+                contract: Sdk.Nouns.Addresses.TokenContract[config.chainId]?.toLowerCase(),
+                tokenId: nounId,
+                amount: "1",
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
+              });
+
               break;
             }
 
             // Cryptopunks
+
+            case "cryptopunks-punk-offered": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const tokenId = parsedLog.args["punkIndex"].toString();
+              const price = parsedLog.args["minValue"].toString();
+              const taker = parsedLog.args["toAddress"].toLowerCase();
+
+              cryptopunksOrders.push({
+                orderParams: {
+                  maker: (
+                    await syncEventsUtils.fetchTransaction(baseEventParams.txHash)
+                  ).from.toLowerCase(),
+                  side: "sell",
+                  tokenId,
+                  price,
+                  taker: taker !== AddressZero ? taker : undefined,
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+                metadata: {},
+              });
+
+              break;
+            }
+
+            case "cryptopunks-punk-no-longer-for-sale": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const tokenId = parsedLog.args["punkIndex"].toString();
+
+              const orderId = keccak256(["string", "uint256"], ["cryptopunks", tokenId]);
+
+              // Custom handling to support on-chain orderbook quirks
+              cancelEventsOnChain.push({
+                orderKind: "cryptopunks",
+                orderId,
+                baseEventParams,
+              });
+              orderInfos.push({
+                context: `cancelled-${orderId}-${baseEventParams.txHash}`,
+                id: orderId,
+                trigger: {
+                  kind: "cancel",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                  logIndex: baseEventParams.logIndex,
+                  batchIndex: baseEventParams.batchIndex,
+                  blockHash: baseEventParams.blockHash,
+                },
+              });
+
+              break;
+            }
 
             case "cryptopunks-punk-bought": {
               const { args } = eventData.abi.parseLog(log);
@@ -2400,7 +2560,9 @@ export const syncEvents = async (
                 break;
               }
 
-              fillEventsPartial.push({
+              const orderId = keccak256(["string", "uint256"], ["cryptopunks", punkIndex]);
+              fillEventsOnChain.push({
+                orderId,
                 orderKind,
                 orderSide,
                 maker,
@@ -2416,6 +2578,27 @@ export const syncEvents = async (
                 aggregatorSourceId: data.aggregatorSource?.id,
                 fillSourceId: data.fillSource?.id,
                 baseEventParams,
+              });
+
+              orderInfos.push({
+                context: `filled-${orderId}-${baseEventParams.txHash}`,
+                id: orderId,
+                trigger: {
+                  kind: "sale",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+              });
+
+              fillInfos.push({
+                context: orderId,
+                orderId: orderId,
+                orderSide: "sell",
+                contract: Sdk.CryptoPunks.Addresses.Exchange[config.chainId],
+                tokenId: punkIndex,
+                amount: "1",
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
               });
 
               break;
@@ -2449,7 +2632,7 @@ export const syncEvents = async (
               const txTrace = await syncEventsUtils.fetchTransactionTrace(txHash);
               if (!txTrace) {
                 // Skip any failed attempts to get the trace
-                continue;
+                break;
               }
 
               // Search for the corresponding internal call to the Sudoswap pool
@@ -2464,10 +2647,18 @@ export const syncEvents = async (
                 tradeRank
               );
 
+              if (poolCallTrace?.output === "0x") {
+                // Sometimes there can be upstream bugs and the call's output gets truncated
+                logger.error(
+                  COMPONENT_NAME,
+                  `Trace missing output: ${baseEventParams.block} - ${baseEventParams.txHash}`
+                );
+              }
+
               if (poolCallTrace) {
                 const sighash = poolCallTrace.input.slice(0, 10);
+                const pool = await sudoswapUtils.getPoolDetails(baseEventParams.address);
 
-                const pool = await getPoolDetails(baseEventParams.address);
                 if (pool && sighash === swapTokenForAnyNFTs) {
                   const iface = new Interface([
                     `
@@ -2484,13 +2675,26 @@ export const syncEvents = async (
                     "swapTokenForAnyNFTs",
                     poolCallTrace.input
                   );
-                  const decodedOutput = iface.decodeFunctionResult(
-                    "swapTokenForAnyNFTs",
-                    poolCallTrace.output
-                  );
+
+                  // Reference: https://github.com/ledgerwatch/erigon/issues/5308
+                  let estimatedInputAmount: string | undefined;
+                  if (poolCallTrace.output !== "0x") {
+                    // If the trace's output is available, decode the input amount from that
+                    estimatedInputAmount = iface
+                      .decodeFunctionResult("swapTokenForAnyNFTs", poolCallTrace.output)
+                      .inputAmount.toString();
+                  } else {
+                    // Otherwise, estimate the input amount
+                    estimatedInputAmount = decodedInput.maxExpectedTokenInput.toString();
+                  }
+
+                  if (!estimatedInputAmount) {
+                    // Skip if we can't extract the input amount
+                    break;
+                  }
 
                   let taker = decodedInput.nftRecipient;
-                  const price = decodedOutput.inputAmount.div(decodedInput.numNFTs).toString();
+                  const price = bn(estimatedInputAmount).div(decodedInput.numNFTs).toString();
 
                   // Handle: attribution
 
@@ -2543,6 +2747,16 @@ export const syncEvents = async (
                         },
                       });
 
+                      fillInfos.push({
+                        context: `sudoswap-${pool.nft}-${tokenId}-${baseEventParams.txHash}`,
+                        orderSide: "sell",
+                        contract: pool.nft,
+                        tokenId: tokenId,
+                        amount: "1",
+                        price: prices.nativePrice,
+                        timestamp: baseEventParams.timestamp,
+                      });
+
                       // Make sure to increment the batch counter
                       i++;
                     }
@@ -2563,15 +2777,26 @@ export const syncEvents = async (
                     "swapTokenForSpecificNFTs",
                     poolCallTrace.input
                   );
-                  const decodedOutput = iface.decodeFunctionResult(
-                    "swapTokenForSpecificNFTs",
-                    poolCallTrace.output
-                  );
+
+                  // Reference: https://github.com/ledgerwatch/erigon/issues/5308
+                  let estimatedInputAmount: string | undefined;
+                  if (poolCallTrace.output !== "0x") {
+                    // If the trace's output is available, decode the input amount from that
+                    estimatedInputAmount = iface
+                      .decodeFunctionResult("swapTokenForSpecificNFTs", poolCallTrace.output)
+                      .inputAmount.toString();
+                  } else {
+                    // Otherwise, estimate the input amount
+                    estimatedInputAmount = decodedInput.maxExpectedTokenInput.toString();
+                  }
+
+                  if (!estimatedInputAmount) {
+                    // Skip if we can't extract the input amount
+                    break;
+                  }
 
                   let taker = decodedInput.nftRecipient;
-                  const price = decodedOutput.inputAmount
-                    .div(decodedInput.nftIds.length)
-                    .toString();
+                  const price = bn(estimatedInputAmount).div(decodedInput.nftIds.length).toString();
 
                   // Handle: attribution
 
@@ -2597,6 +2822,8 @@ export const syncEvents = async (
                   }
 
                   for (let i = 0; i < decodedInput.nftIds.length; i++) {
+                    const tokenId = decodedInput.nftIds[i].toString();
+
                     fillEvents.push({
                       orderKind,
                       orderSide: "sell",
@@ -2607,7 +2834,7 @@ export const syncEvents = async (
                       usdPrice: prices.usdPrice,
                       currency: pool.token,
                       contract: pool.nft,
-                      tokenId: decodedInput.nftIds[i].toString(),
+                      tokenId,
                       amount: "1",
                       orderSourceId: data.orderSource?.id,
                       aggregatorSourceId: data.aggregatorSource?.id,
@@ -2616,6 +2843,16 @@ export const syncEvents = async (
                         ...baseEventParams,
                         batchIndex: i + 1,
                       },
+                    });
+
+                    fillInfos.push({
+                      context: `sudoswap-${pool.nft}-${tokenId}-${baseEventParams.txHash}`,
+                      orderSide: "sell",
+                      contract: pool.nft,
+                      tokenId: tokenId,
+                      amount: "1",
+                      price: prices.nativePrice,
+                      timestamp: baseEventParams.timestamp,
                     });
                   }
                 }
@@ -2636,7 +2873,7 @@ export const syncEvents = async (
               const txTrace = await syncEventsUtils.fetchTransactionTrace(txHash);
               if (!txTrace) {
                 // Skip any failed attempts to get the trace
-                continue;
+                break;
               }
 
               // Search for the corresponding internal call to the Sudoswap pool
@@ -2647,10 +2884,18 @@ export const syncEvents = async (
                 tradeRank
               );
 
+              if (poolCallTrace?.output === "0x") {
+                // Sometimes there can be upstream bugs and the call's output gets truncated
+                logger.error(
+                  COMPONENT_NAME,
+                  `Trace missing output: ${baseEventParams.block} - ${baseEventParams.txHash}`
+                );
+              }
+
               if (poolCallTrace) {
                 const sighash = poolCallTrace.input.slice(0, 10);
+                const pool = await sudoswapUtils.getPoolDetails(baseEventParams.address);
 
-                const pool = await getPoolDetails(baseEventParams.address);
                 if (pool && sighash === swapNFTsForToken) {
                   const iface = new Interface([
                     `
@@ -2667,13 +2912,29 @@ export const syncEvents = async (
                     "swapNFTsForToken",
                     poolCallTrace.input
                   );
-                  const decodedOutput = iface.decodeFunctionResult(
-                    "swapNFTsForToken",
-                    poolCallTrace.output
-                  );
+
+                  // Reference: https://github.com/ledgerwatch/erigon/issues/5308
+                  let estimatedOutputAmount: string | undefined;
+                  if (poolCallTrace.output !== "0x") {
+                    // If the trace's output is available, decode the output amount from that
+                    estimatedOutputAmount = iface
+                      .decodeFunctionResult("swapNFTsForToken", poolCallTrace.output)
+                      .outputAmount.toString();
+                  } else {
+                    // Otherwise, estimate the output amount
+                    estimatedOutputAmount = decodedInput.minExpectedTokenOutput;
+                    if (estimatedOutputAmount === "0") {
+                      estimatedOutputAmount = undefined;
+                    }
+                  }
+
+                  if (!estimatedOutputAmount) {
+                    // Skip if we can't extract the output amount
+                    break;
+                  }
 
                   let taker = decodedInput.tokenRecipient;
-                  const price = decodedOutput.outputAmount
+                  const price = bn(estimatedOutputAmount)
                     .div(decodedInput.nftIds.length)
                     .toString();
 
@@ -2701,6 +2962,8 @@ export const syncEvents = async (
                   }
 
                   for (let i = 0; i < decodedInput.nftIds.length; i++) {
+                    const tokenId = decodedInput.nftIds[i].toString();
+
                     fillEvents.push({
                       orderKind,
                       orderSide: "buy",
@@ -2711,7 +2974,7 @@ export const syncEvents = async (
                       usdPrice: prices.usdPrice,
                       currency: pool.token,
                       contract: pool.nft,
-                      tokenId: decodedInput.nftIds[i].toString(),
+                      tokenId,
                       amount: "1",
                       orderSourceId: data.orderSource?.id,
                       aggregatorSourceId: data.aggregatorSource?.id,
@@ -2721,12 +2984,256 @@ export const syncEvents = async (
                         batchIndex: i + 1,
                       },
                     });
+
+                    fillInfos.push({
+                      context: `sudoswap-${pool.nft}-${tokenId}-${baseEventParams.txHash}`,
+                      orderSide: "buy",
+                      contract: pool.nft,
+                      tokenId: tokenId,
+                      amount: "1",
+                      price: prices.nativePrice,
+                      timestamp: baseEventParams.timestamp,
+                    });
                   }
                 }
               }
 
               // Keep track of the "sell" trade
               sudoswapTrades.sell.set(`${txHash}-${address}`, tradeRank + 1);
+
+              break;
+            }
+
+            // NFTX
+
+            case "nftx-minted": {
+              const { args } = eventData.abi.parseLog(log);
+              const tokenIds = args.nftIds.map(String);
+              const amounts = args.amounts.map(String);
+
+              // Determine the total quantity of NFTs sold
+              let nftCount = 0;
+              for (let i = 0; i < tokenIds.length; i++) {
+                nftCount += amounts.length ? Number(amounts[i]) : 1;
+              }
+
+              const nftPool = await nftxUtils.getNftPoolDetails(baseEventParams.address);
+              if (!nftPool) {
+                // Skip any failed attempts to get the pool details
+                break;
+              }
+
+              // Fetch all logs from the current transaction
+              const { logs } = await syncEventsUtils.fetchTransactionLogs(baseEventParams.txHash);
+
+              // Ensure there is a single `Minted` event for the same pool
+              const mintEventsCount = logs.filter((log) =>
+                nftxUtils.isMint(log, baseEventParams.address)
+              ).length;
+              if (mintEventsCount > 1) {
+                break;
+              }
+
+              // Ensure there is a single `Swap` event for the same pool
+              const swapEventsCount = logs.filter((log) => nftxUtils.isSwap(log)).length;
+              if (swapEventsCount > 1) {
+                break;
+              }
+
+              for (const log of logs) {
+                const result = await nftxUtils.tryParseSwap(log);
+                if (
+                  result &&
+                  // The swap occured after the mint
+                  log.logIndex > baseEventParams.logIndex &&
+                  // The swap included the nft pool token
+                  [result.ftPool.token0, result.ftPool.token1].includes(nftPool.address)
+                ) {
+                  let currency: string | undefined;
+                  let currencyPrice: string | undefined;
+                  if (nftPool.address === result.ftPool.token0 && result.amount1Out !== "0") {
+                    currency = result.ftPool.token1;
+                    currencyPrice = bn(result.amount1Out).div(nftCount).toString();
+                  } else if (
+                    nftPool.address === result.ftPool.token1 &&
+                    result.amount0Out !== "0"
+                  ) {
+                    currency = result.ftPool.token0;
+                    currencyPrice = bn(result.amount0Out).div(nftCount).toString();
+                  }
+
+                  if (currency && currencyPrice) {
+                    // Handle: attribution
+
+                    const orderKind = "nftx";
+                    const data = await syncEventsUtils.extractAttributionData(
+                      baseEventParams.txHash,
+                      orderKind
+                    );
+
+                    // Handle: prices
+
+                    const prices = await getUSDAndNativePrices(
+                      currency,
+                      currencyPrice,
+                      baseEventParams.timestamp
+                    );
+                    if (!prices.nativePrice) {
+                      // We must always have the native price
+                      break;
+                    }
+
+                    // Always set the taker as the transaction's sender in order to cover
+                    // trades made through the default NFTX marketplace zap contract that
+                    // acts as a router
+                    const taker = (await syncEventsUtils.fetchTransaction(baseEventParams.txHash))
+                      .from;
+                    for (let i = 0; i < tokenIds.length; i++) {
+                      fillEvents.push({
+                        orderKind,
+                        orderSide: "buy",
+                        maker: baseEventParams.address,
+                        taker,
+                        price: prices.nativePrice,
+                        currencyPrice,
+                        usdPrice: prices.usdPrice,
+                        currency,
+                        contract: nftPool.nft,
+                        tokenId: tokenIds[i],
+                        amount: amounts.length ? amounts[i] : "1",
+                        orderSourceId: data.orderSource?.id,
+                        aggregatorSourceId: data.aggregatorSource?.id,
+                        fillSourceId: data.fillSource?.id,
+                        baseEventParams: {
+                          ...baseEventParams,
+                          batchIndex: i + 1,
+                        },
+                      });
+
+                      fillInfos.push({
+                        context: `nftx-${nftPool.nft}-${tokenIds[i]}-${baseEventParams.txHash}`,
+                        orderSide: "buy",
+                        contract: nftPool.nft,
+                        tokenId: tokenIds[i],
+                        amount: amounts.length ? amounts[i] : "1",
+                        price: prices.nativePrice,
+                        timestamp: baseEventParams.timestamp,
+                      });
+                    }
+                  }
+                }
+              }
+
+              break;
+            }
+
+            case "nftx-redeemed": {
+              const { args } = eventData.abi.parseLog(log);
+              const tokenIds = args.nftIds.map(String);
+
+              const nftPool = await nftxUtils.getNftPoolDetails(baseEventParams.address);
+              if (!nftPool) {
+                // Skip any failed attempts to get the pool details
+                break;
+              }
+
+              // Fetch all logs from the current transaction
+              const { logs } = await syncEventsUtils.fetchTransactionLogs(baseEventParams.txHash);
+
+              // Ensure there is a single `Redeemed` event for the same pool
+              const redeemEventsCount = logs.filter((log) =>
+                nftxUtils.isRedeem(log, baseEventParams.address)
+              ).length;
+              if (redeemEventsCount > 1) {
+                break;
+              }
+
+              // Ensure there is a single `Swap` event for the same pool
+              const swapEventsCount = logs.filter((log) => nftxUtils.isSwap(log)).length;
+              if (swapEventsCount > 1) {
+                break;
+              }
+
+              for (const log of logs) {
+                const result = await nftxUtils.tryParseSwap(log);
+                if (
+                  result &&
+                  // The swap occured before the redeem
+                  log.logIndex < baseEventParams.logIndex &&
+                  // The swap included the nft pool token
+                  [result.ftPool.token0, result.ftPool.token1].includes(nftPool.address)
+                ) {
+                  let currency: string | undefined;
+                  let currencyPrice: string | undefined;
+                  if (nftPool.address === result.ftPool.token0 && result.amount1In !== "0") {
+                    currency = result.ftPool.token1;
+                    currencyPrice = bn(result.amount1In).div(tokenIds.length).toString();
+                  } else if (nftPool.address === result.ftPool.token1 && result.amount0In !== "0") {
+                    currency = result.ftPool.token0;
+                    currencyPrice = bn(result.amount0In).div(tokenIds.length).toString();
+                  }
+
+                  if (currency && currencyPrice) {
+                    // Handle: attribution
+
+                    const orderKind = "nftx";
+                    const data = await syncEventsUtils.extractAttributionData(
+                      baseEventParams.txHash,
+                      orderKind
+                    );
+
+                    // Handle: prices
+
+                    const prices = await getUSDAndNativePrices(
+                      currency,
+                      currencyPrice,
+                      baseEventParams.timestamp
+                    );
+                    if (!prices.nativePrice) {
+                      // We must always have the native price
+                      break;
+                    }
+
+                    // Always set the taker as the transaction's sender in order to cover
+                    // trades made through the default NFTX marketplace zap contract that
+                    // acts as a router
+                    const taker = (await syncEventsUtils.fetchTransaction(baseEventParams.txHash))
+                      .from;
+                    for (let i = 0; i < tokenIds.length; i++) {
+                      fillEvents.push({
+                        orderKind,
+                        orderSide: "sell",
+                        maker: baseEventParams.address,
+                        taker,
+                        price: prices.nativePrice,
+                        currencyPrice,
+                        usdPrice: prices.usdPrice,
+                        currency,
+                        contract: nftPool.nft,
+                        tokenId: tokenIds[i],
+                        amount: "1",
+                        orderSourceId: data.orderSource?.id,
+                        aggregatorSourceId: data.aggregatorSource?.id,
+                        fillSourceId: data.fillSource?.id,
+                        baseEventParams: {
+                          ...baseEventParams,
+                          batchIndex: i + 1,
+                        },
+                      });
+
+                      fillInfos.push({
+                        context: `nftx-${nftPool.nft}-${tokenIds[i]}-${baseEventParams.txHash}`,
+                        orderSide: "sell",
+                        contract: nftPool.nft,
+                        tokenId: tokenIds[i],
+                        amount: "1",
+                        price: prices.nativePrice,
+                        timestamp: baseEventParams.timestamp,
+                      });
+                    }
+                  }
+                }
+              }
 
               break;
             }
@@ -2744,14 +3251,14 @@ export const syncEvents = async (
         await Promise.all([
           assignSourceToFillEvents(fillEvents),
           assignSourceToFillEvents(fillEventsPartial),
-          assignSourceToFillEvents(fillEventsFoundation),
+          assignSourceToFillEvents(fillEventsOnChain),
         ]);
 
         // Assign wash trading scores to the fill events
         await Promise.all([
           assignWashTradingScoreToFillEvents(fillEvents),
           assignWashTradingScoreToFillEvents(fillEventsPartial),
-          assignWashTradingScoreToFillEvents(fillEventsFoundation),
+          assignWashTradingScoreToFillEvents(fillEventsOnChain),
         ]);
       }
 
@@ -2821,7 +3328,7 @@ export const syncEvents = async (
       await Promise.all([
         es.fills.addEvents(fillEvents),
         es.fills.addEventsPartial(fillEventsPartial),
-        es.fills.addEventsFoundation(fillEventsFoundation),
+        es.fills.addEventsOnChain(fillEventsOnChain),
       ]);
 
       if (!options?.skipNonFillWrites) {
@@ -2829,7 +3336,7 @@ export const syncEvents = async (
           es.nonceCancels.addEvents(nonceCancelEvents, backfill),
           es.bulkCancels.addEvents(bulkCancelEvents, backfill),
           es.cancels.addEvents(cancelEvents),
-          es.cancels.addEventsFoundation(cancelEventsFoundation),
+          es.cancels.addEventsOnChain(cancelEventsOnChain),
           es.ftTransfers.addEvents(ftTransferEvents, backfill),
           es.nftApprovals.addEvents(nftApprovalEvents),
           es.nftTransfers.addEvents(nftTransferEvents, backfill),
@@ -2846,9 +3353,10 @@ export const syncEvents = async (
           fillUpdates.addToQueue(fillInfos),
           orderUpdatesById.addToQueue(orderInfos),
           orderUpdatesByMaker.addToQueue(makerInfos),
-          orderbookOrders.addToQueue(
-            foundationOrders.map((info) => ({ kind: "foundation", info }))
-          ),
+          orderbookOrders.addToQueue([
+            ...foundationOrders.map((info) => ({ kind: "foundation", info })),
+            ...cryptopunksOrders.map((info) => ({ kind: "cryptopunks", info })),
+          ] as orderbookOrders.GenericOrderInfo[]),
         ]);
       }
 
@@ -2885,7 +3393,7 @@ export const syncEvents = async (
 
       // Add all the fill events to the activity queue
       const fillActivitiesInfo: processActivityEvent.EventInfo[] = _.map(
-        _.concat(fillEvents, fillEventsPartial, fillEventsFoundation),
+        _.concat(fillEvents, fillEventsPartial, fillEventsOnChain),
         (event) => {
           let fromAddress = event.maker;
           let toAddress = event.taker;

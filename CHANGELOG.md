@@ -1,3 +1,118 @@
+# [5.203.0](https://github.com/reservoirprotocol/indexer/compare/v5.202.1...v5.203.0) (2022-09-08)
+
+
+### Features
+
+* updated logic to better handle queue ([#1777](https://github.com/reservoirprotocol/indexer/issues/1777)) ([dc22c60](https://github.com/reservoirprotocol/indexer/commit/dc22c60b22192c1d28410856348a9d13bc4fcac0))
+
+
+
+## [5.202.1](https://github.com/reservoirprotocol/indexer/compare/v5.202.0...v5.202.1) (2022-09-08)
+
+
+### Bug Fixes
+
+* handle cryptopunks as an on-chain orderbook ([1f999f8](https://github.com/reservoirprotocol/indexer/commit/1f999f87c4d2bb5b435abb89c1885e29b6c33c94))
+
+
+
+# [5.202.0](https://github.com/reservoirprotocol/indexer/compare/v5.201.0...v5.202.0) (2022-09-08)
+
+
+### Bug Fixes
+
+* minor tweaks ([a0805a0](https://github.com/reservoirprotocol/indexer/commit/a0805a0f5de09fecb6cf8eb7d462d3f5cf585bed))
+
+
+### Features
+
+* add support for cryptopunks liquidity ([0ced12a](https://github.com/reservoirprotocol/indexer/commit/0ced12a1bc2cf5888c4d35eb9959306adaddf788))
+
+
+
+# [5.201.0](https://github.com/reservoirprotocol/indexer/compare/v5.200.2...v5.201.0) (2022-09-08)
+
+
+### Features
+
+* add api for batch posting raw opensea seaport offers ([d464046](https://github.com/reservoirprotocol/indexer/commit/d464046baf14597bdf91e7370df3b4d429d06624))
+
+
+
+## [5.200.2](https://github.com/reservoirprotocol/indexer/compare/v5.200.1...v5.200.2) (2022-09-08)
+
+
+### Bug Fixes
+
+* debug ([8b9d78e](https://github.com/reservoirprotocol/indexer/commit/8b9d78ee452bc29e860d3f5777e3b2bf35e3880d))
+
+
+
+## [5.200.1](https://github.com/reservoirprotocol/indexer/compare/v5.200.0...v5.200.1) (2022-09-08)
+
+
+### Bug Fixes
+
+* workaround missing trace output ([80a5b2e](https://github.com/reservoirprotocol/indexer/commit/80a5b2e189bd054bbb78e9671eb7e99e5ceae87e))
+
+
+
+# [5.200.0](https://github.com/reservoirprotocol/indexer/compare/v5.199.2...v5.200.0) (2022-09-07)
+
+
+### Features
+
+* allow to sort top bids by expiry/date created ([b7dfc42](https://github.com/reservoirprotocol/indexer/commit/b7dfc42769da5df115f9d07c09537bf5401d90db))
+
+
+
+## [5.199.2](https://github.com/reservoirprotocol/indexer/compare/v5.199.1...v5.199.2) (2022-09-07)
+
+
+### Bug Fixes
+
+* protect against traces having no output ([3f4fe3b](https://github.com/reservoirprotocol/indexer/commit/3f4fe3b0493225362c5b2972d4a958e40877aeb6))
+
+
+
+## [5.199.1](https://github.com/reservoirprotocol/indexer/compare/v5.199.0...v5.199.1) (2022-09-07)
+
+
+### Bug Fixes
+
+* debug sudoswap errors ([89b31fc](https://github.com/reservoirprotocol/indexer/commit/89b31fceec4e6f90df2a05508d5273db41018ac4))
+
+
+
+# [5.199.0](https://github.com/reservoirprotocol/indexer/compare/v5.198.2...v5.199.0) (2022-09-07)
+
+
+### Features
+
+* update currency startup to include image ([b309c1d](https://github.com/reservoirprotocol/indexer/commit/b309c1ddc3999e826769fa15e8e3076816edbbe6))
+
+
+
+## [5.198.2](https://github.com/reservoirprotocol/indexer/compare/v5.198.1...v5.198.2) (2022-09-07)
+
+
+### Bug Fixes
+
+* nfts sales ([5498bb5](https://github.com/reservoirprotocol/indexer/commit/5498bb5b667aff3a34fd8efbc18c0a4a945d5376))
+* wip ([884cbbe](https://github.com/reservoirprotocol/indexer/commit/884cbbea4b97115aef2d507e6814744c76aedb2f))
+* wip ([956fe89](https://github.com/reservoirprotocol/indexer/commit/956fe89b92ebc803a439de875d534cd4fc62fce6))
+
+
+
+## [5.198.1](https://github.com/reservoirprotocol/indexer/compare/v5.198.0...v5.198.1) (2022-09-07)
+
+
+### Bug Fixes
+
+* set updated at on fill events backfill ([5c5dcbb](https://github.com/reservoirprotocol/indexer/commit/5c5dcbb3d277b3a5c8107a34029d5b072e519443))
+
+
+
 # [5.198.0](https://github.com/reservoirprotocol/indexer/compare/v5.197.0...v5.198.0) (2022-09-06)
 
 

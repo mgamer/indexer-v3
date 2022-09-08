@@ -11,6 +11,7 @@ import { getBlocks, saveBlock } from "@/models/blocks";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { getTransaction, saveTransaction } from "@/models/transactions";
+import { getTransactionLogs, saveTransactionLogs } from "@/models/transaction-logs";
 import { getTransactionTrace, saveTransactionTrace } from "@/models/transaction-traces";
 import { OrderKind, getOrderSourceByOrderKind } from "@/orderbook/orders";
 
@@ -108,6 +109,16 @@ export const fetchTransactionTrace = async (txHash: string) =>
       });
     })
     .catch(() => undefined);
+
+export const fetchTransactionLogs = async (txHash: string) =>
+  getTransactionLogs(txHash).catch(async () => {
+    const receipt = await baseProvider.getTransactionReceipt(txHash);
+
+    return saveTransactionLogs({
+      hash: txHash,
+      logs: receipt.logs,
+    });
+  });
 
 export const extractAttributionData = async (
   txHash: string,
