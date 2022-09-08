@@ -1,3 +1,19 @@
+# [5.204.0](https://github.com/reservoirprotocol/indexer/compare/v5.203.0...v5.204.0) (2022-09-08)
+
+
+### Features
+
+* cache response ([31bff9a](https://github.com/reservoirprotocol/indexer/commit/31bff9a473ca09146915169303ac46aeccee80d1))
+* cache response ([212c41e](https://github.com/reservoirprotocol/indexer/commit/212c41ea6071eea8afce296a1f91e530918cd523))
+* cache response ([38f515c](https://github.com/reservoirprotocol/indexer/commit/38f515cd23f948121c537cdc7d9245db57dfa442))
+* cache response ([dea70e6](https://github.com/reservoirprotocol/indexer/commit/dea70e6562f7a48a7a9ff1ac2d75fe41454c46d9))
+* return local url ([16602ac](https://github.com/reservoirprotocol/indexer/commit/16602ac18aba72285cb2cf43d45c5d19aaaa1d5d))
+* return local url assets ([f81b8ab](https://github.com/reservoirprotocol/indexer/commit/f81b8ab96cadae0fc3b10fe8c81d1d263605c6d2))
+* return local url assets ([7914973](https://github.com/reservoirprotocol/indexer/commit/79149730a2171cea818847a7b383144f861d288f))
+* return local url assets ([b78e5bd](https://github.com/reservoirprotocol/indexer/commit/b78e5bdcb0eb3d142ba0a16d4e2b1a98cbe064e2))
+
+
+
 # [5.203.0](https://github.com/reservoirprotocol/indexer/compare/v5.202.1...v5.203.0) (2022-09-08)
 
 
