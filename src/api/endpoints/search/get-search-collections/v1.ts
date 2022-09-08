@@ -8,6 +8,7 @@ import { logger } from "@/common/logger";
 import { redb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
+import { Assets } from "@/utils/assets";
 
 const version = "v1";
 
@@ -100,7 +101,7 @@ export const getSearchCollectionsV1Options: RouteOptions = {
         collectionId: collection.id,
         name: collection.name,
         contract: fromBuffer(collection.contract),
-        image: collection.image,
+        image: Assets.getLocalAssetsLink(collection.image),
       })),
     };
   },
