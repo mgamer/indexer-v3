@@ -1,3 +1,12 @@
+## [5.200.1](https://github.com/reservoirprotocol/indexer/compare/v5.200.0...v5.200.1) (2022-09-08)
+
+
+### Bug Fixes
+
+* workaround missing trace output ([80a5b2e](https://github.com/reservoirprotocol/indexer/commit/80a5b2e189bd054bbb78e9671eb7e99e5ceae87e))
+
+
+
 # [5.200.0](https://github.com/reservoirprotocol/indexer/compare/v5.199.2...v5.200.0) (2022-09-07)
 
 
