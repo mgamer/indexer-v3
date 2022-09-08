@@ -12,14 +12,13 @@ const version = "v1";
 export const getAssetV1Options: RouteOptions = {
   cache: {
     privacy: "public",
-    expiresIn: 1000 * 60 * 60 * 24 * 30,
+    expiresIn: 2592000000,
   },
   description: "Return the asset based on the given param",
   tags: ["api", "Assets"],
   plugins: {
     "hapi-swagger": {
-      order: 53,
-      deprecated: true,
+      order: 3,
     },
   },
   validate: {
