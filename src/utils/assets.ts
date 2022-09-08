@@ -4,6 +4,10 @@ import { encrypt } from "@/common/utils";
 
 export class Assets {
   public static getLocalAssetsLink(assets: string | string[]) {
+    if (_.isEmpty(assets) || assets == "") {
+      return "";
+    }
+
     const baseUrl = `https://api${
       config.chainId == 1 ? "" : "-rinkeby"
     }.reservoir.tools/assets/v1?`;

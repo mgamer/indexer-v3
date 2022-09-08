@@ -8,6 +8,7 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
+import { Assets } from "@/utils/assets";
 
 const version = "v3";
 
@@ -254,11 +255,11 @@ export const getUserTokensV3Options: RouteOptions = {
           contract: fromBuffer(r.contract),
           tokenId: r.token_id,
           name: r.name,
-          image: r.image,
+          image: Assets.getLocalAssetsLink(r.image),
           collection: {
             id: r.collection_id,
             name: r.collection_name,
-            imageUrl: r.metadata?.imageUrl,
+            imageUrl: Assets.getLocalAssetsLink(r.metadata?.imageUrl),
             floorAskPrice: r.collection_floor_sell_value
               ? formatEth(r.collection_floor_sell_value)
               : null,
