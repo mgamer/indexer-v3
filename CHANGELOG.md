@@ -1,3 +1,12 @@
+## [5.202.1](https://github.com/reservoirprotocol/indexer/compare/v5.202.0...v5.202.1) (2022-09-08)
+
+
+### Bug Fixes
+
+* handle cryptopunks as an on-chain orderbook ([1f999f8](https://github.com/reservoirprotocol/indexer/commit/1f999f87c4d2bb5b435abb89c1885e29b6c33c94))
+
+
+
 # [5.202.0](https://github.com/reservoirprotocol/indexer/compare/v5.201.0...v5.202.0) (2022-09-08)
 
 
