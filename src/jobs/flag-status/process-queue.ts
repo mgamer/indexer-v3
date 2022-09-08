@@ -41,10 +41,10 @@ if (config.doBackgroundWork) {
       if (await acquireLock(flagStatusSyncJob.getLockName(), 60 * 5)) {
         logger.info(QUEUE_NAME, `Lock acquired.`);
 
-        const pendingJobs = await pendingFlagStatusSyncJobs.get();
+        const pendingJob = await pendingFlagStatusSyncJobs.next();
 
-        if (pendingJobs.length) {
-          const { kind, data } = pendingJobs[0];
+        if (pendingJob) {
+          const { kind, data } = pendingJob;
 
           logger.info(QUEUE_NAME, `Processing job. kind=${kind}, data=${JSON.stringify(data)}`);
 

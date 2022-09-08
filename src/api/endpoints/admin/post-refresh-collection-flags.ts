@@ -38,15 +38,13 @@ export const postRefreshCollectionFlagsOptions: RouteOptions = {
 
     try {
       const pendingFlagStatusSyncJobs = new PendingFlagStatusSyncJobs();
-      await pendingFlagStatusSyncJobs.add([
-        {
-          kind: "collection",
-          data: {
-            collectionId: payload.collection,
-            backfill: payload.backfill,
-          },
+      await pendingFlagStatusSyncJobs.add({
+        kind: "collection",
+        data: {
+          collectionId: payload.collection,
+          backfill: payload.backfill,
         },
-      ]);
+      });
 
       await flagStatusProcessQueue.addToQueue();
 
