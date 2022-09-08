@@ -6,6 +6,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
+import { Assets } from "@/utils/assets";
 
 const version = "v1";
 
@@ -191,7 +192,7 @@ export const getAttributesExploreV1Options: RouteOptions = {
           key: r.key,
           value: r.value,
           tokenCount: Number(r.token_count),
-          sampleImages: r.sample_images || [],
+          sampleImages: Assets.getLocalAssetsLink(r.sample_images) || [],
           lastBuys: (r.last_buys || []).map(({ value, timestamp }: any) => ({
             value: formatEth(value),
             timestamp: Number(timestamp),
