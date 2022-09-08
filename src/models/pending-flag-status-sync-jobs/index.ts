@@ -1,4 +1,3 @@
-import _ from "lodash";
 import { redis } from "@/common/redis";
 
 export type SyncFlagStatusJobInfo =
@@ -25,30 +24,12 @@ export type SyncFlagStatusJobInfo =
 export class PendingFlagStatusSyncJobs {
   public key = "pending-flag-status-sync-jobs";
 
-  public async add(jobs: SyncFlagStatusJobInfo[], prioritized = false) {
-    if (prioritized) {
-      return await redis.lpush(
-        this.key,
-        _.map(jobs, (job) => JSON.stringify(job))
-      );
-    } else {
-      return await redis.rpush(
-        this.key,
-        _.map(jobs, (job) => JSON.stringify(job))
-      );
-    }
+  public async add(job: SyncFlagStatusJobInfo) {
+    return await redis.zadd(this.key, "NX", Date.now(), JSON.stringify(job));
   }
 
-  public async get(count = 1): Promise<SyncFlagStatusJobInfo[]> {
-    const jobs = await redis.lpop(this.key, count);
-    if (jobs) {
-      return _.map(jobs, (job) => JSON.parse(job) as SyncFlagStatusJobInfo);
-    }
-
-    return [];
-  }
-
-  public async count(): Promise<number> {
-    return await redis.llen(this.key);
+  public async next(): Promise<SyncFlagStatusJobInfo | null> {
+    const result = await redis.zpopmin(this.key);
+    return result.length ? JSON.parse(result[0]) : null;
   }
 }

@@ -77,20 +77,15 @@ export const postFlagTokenV1Options: RouteOptions = {
       });
 
       const pendingFlagStatusSyncJobs = new PendingFlagStatusSyncJobs();
-      await pendingFlagStatusSyncJobs.add(
-        [
-          {
-            kind: "token",
-            data: {
-              collectionId: token.collectionId,
-              contract: contract,
-              tokenId: tokenId,
-              tokenIsFlagged: payload.flag,
-            },
-          },
-        ],
-        true
-      );
+      await pendingFlagStatusSyncJobs.add({
+        kind: "token",
+        data: {
+          collectionId: token.collectionId,
+          contract: contract,
+          tokenId: tokenId,
+          tokenIsFlagged: payload.flag,
+        },
+      });
 
       await flagStatusProcessQueue.addToQueue();
 

@@ -32,8 +32,6 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { collectionId, contract } = job.data;
 
-      logger.info(QUEUE_NAME, `Sync started. collectionId:${collectionId}, contract:${contract}`);
-
       let delay = 5000;
 
       // Get the tokens from the list
