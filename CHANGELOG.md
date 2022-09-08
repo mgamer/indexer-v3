@@ -1,3 +1,12 @@
+# [5.203.0](https://github.com/reservoirprotocol/indexer/compare/v5.202.1...v5.203.0) (2022-09-08)
+
+
+### Features
+
+* updated logic to better handle queue ([#1777](https://github.com/reservoirprotocol/indexer/issues/1777)) ([dc22c60](https://github.com/reservoirprotocol/indexer/commit/dc22c60b22192c1d28410856348a9d13bc4fcac0))
+
+
+
 ## [5.202.1](https://github.com/reservoirprotocol/indexer/compare/v5.202.0...v5.202.1) (2022-09-08)
 
 
