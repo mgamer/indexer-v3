@@ -1,3 +1,12 @@
+# [5.206.0](https://github.com/reservoirprotocol/indexer/compare/v5.205.0...v5.206.0) (2022-09-08)
+
+
+### Bug Fixes
+
+* redirects cache headers ([b7238c5](https://github.com/reservoirprotocol/indexer/commit/b7238c55aa61035fd0c13d340fa1515c57808836))
+
+
+
 # [5.205.0](https://github.com/reservoirprotocol/indexer/compare/v5.204.0...v5.205.0) (2022-09-08)
 
 
