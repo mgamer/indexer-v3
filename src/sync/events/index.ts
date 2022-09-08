@@ -19,6 +19,7 @@ import * as es from "@/events-sync/storage";
 import * as syncEventsUtils from "@/events-sync/utils";
 import * as blocksModel from "@/models/blocks";
 import { OrderKind, getOrderSourceByOrderKind } from "@/orderbook/orders";
+import * as Cryptopunks from "@/orderbook/orders/cryptopunks";
 import * as Foundation from "@/orderbook/orders/foundation";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as nftxUtils from "@/utils/nftx";
@@ -108,6 +109,7 @@ export const syncEvents = async (
       const fillEvents: es.fills.Event[] = [];
       const fillEventsPartial: es.fills.Event[] = [];
       const fillEventsFoundation: es.fills.Event[] = [];
+      const cryptopunksOrders: Cryptopunks.OrderInfo[] = [];
       const foundationOrders: Foundation.OrderInfo[] = [];
 
       // Keep track of all events within the currently processing transaction
@@ -758,9 +760,7 @@ export const syncEvents = async (
                   txHash: baseEventParams.txHash,
                   txTimestamp: baseEventParams.timestamp,
                 },
-                metadata: {
-                  source: "Foundation",
-                },
+                metadata: {},
               });
 
               break;
@@ -1248,6 +1248,17 @@ export const syncEvents = async (
                     batchIndex: batchIndex++,
                   },
                 });
+
+                fillInfos.push({
+                  context: `${buyOrderId}-${baseEventParams.txHash}`,
+                  orderId: buyOrderId,
+                  orderSide: "buy",
+                  contract: associatedNftTransferEvent.baseEventParams.address,
+                  tokenId: associatedNftTransferEvent.tokenId,
+                  amount: associatedNftTransferEvent.amount,
+                  price: prices.nativePrice,
+                  timestamp: baseEventParams.timestamp,
+                });
               }
               if (sellOrderId !== HashZero) {
                 fillEvents.push({
@@ -1270,6 +1281,17 @@ export const syncEvents = async (
                     ...baseEventParams,
                     batchIndex: batchIndex++,
                   },
+                });
+
+                fillInfos.push({
+                  context: `${sellOrderId}-${baseEventParams.txHash}`,
+                  orderId: sellOrderId,
+                  orderSide: "sell",
+                  contract: associatedNftTransferEvent.baseEventParams.address,
+                  tokenId: associatedNftTransferEvent.tokenId,
+                  amount: associatedNftTransferEvent.amount,
+                  price: prices.nativePrice,
+                  timestamp: baseEventParams.timestamp,
                 });
               }
 
@@ -1823,6 +1845,17 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              fillInfos.push({
+                context: leftHash,
+                orderId: leftHash,
+                orderSide: side,
+                contract,
+                tokenId,
+                amount,
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
+              });
+
               break;
             }
 
@@ -1887,6 +1920,17 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              fillInfos.push({
+                context: orderHash,
+                orderId: orderHash,
+                orderSide: "sell",
+                contract: erc721Token,
+                tokenId: erc721TokenId,
+                amount: "1",
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
+              });
+
               break;
             }
 
@@ -1947,6 +1991,17 @@ export const syncEvents = async (
                 aggregatorSourceId: data.aggregatorSource?.id,
                 fillSourceId: data.fillSource?.id,
                 baseEventParams,
+              });
+
+              fillInfos.push({
+                context: orderHash,
+                orderId: orderHash,
+                orderSide: "buy",
+                contract: erc721Token,
+                tokenId: erc721TokenId,
+                amount: "1",
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
               });
 
               break;
@@ -2012,6 +2067,17 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              fillInfos.push({
+                context: orderHash,
+                orderId: orderHash,
+                orderSide: "sell",
+                contract: erc1155Token,
+                tokenId: erc1155TokenId,
+                amount: erc1155FillAmount,
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
+              });
+
               break;
             }
 
@@ -2073,6 +2139,17 @@ export const syncEvents = async (
                 aggregatorSourceId: data.aggregatorSource?.id,
                 fillSourceId: data.fillSource?.id,
                 baseEventParams,
+              });
+
+              fillInfos.push({
+                context: orderHash,
+                orderId: orderHash,
+                orderSide: "buy",
+                contract: erc1155Token,
+                tokenId: erc1155TokenId,
+                amount: erc1155FillAmount,
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
               });
 
               break;
@@ -2229,6 +2306,16 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              fillInfos.push({
+                context: `zora-${tokenContract}-${tokenId}-${baseEventParams.txHash}`,
+                orderSide: "sell",
+                contract: tokenContract,
+                tokenId,
+                amount: "1",
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
+              });
+
               break;
             }
 
@@ -2282,6 +2369,16 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              fillInfos.push({
+                context: `zora-${tokenContract}-${tokenId}-${baseEventParams.txHash}`,
+                orderSide: "sell",
+                contract: tokenContract,
+                tokenId,
+                amount: "1",
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
+              });
+
               break;
             }
 
@@ -2333,10 +2430,72 @@ export const syncEvents = async (
                 baseEventParams,
               });
 
+              fillInfos.push({
+                context: `nouns-${nounId}-${baseEventParams.txHash}`,
+                orderSide: "sell",
+                contract: Sdk.Nouns.Addresses.TokenContract[config.chainId]?.toLowerCase(),
+                tokenId: nounId,
+                amount: "1",
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
+              });
+
               break;
             }
 
             // Cryptopunks
+
+            case "cryptopunks-punk-offered": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const tokenId = parsedLog.args["punkIndex"].toString();
+              const price = parsedLog.args["minValue"].toString();
+              const taker = parsedLog.args["toAddress"].toLowerCase();
+
+              cryptopunksOrders.push({
+                orderParams: {
+                  maker: (
+                    await syncEventsUtils.fetchTransaction(baseEventParams.txHash)
+                  ).from.toLowerCase(),
+                  side: "sell",
+                  tokenId,
+                  price,
+                  taker: taker !== AddressZero ? taker : undefined,
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+                metadata: {},
+              });
+
+              break;
+            }
+
+            case "cryptopunks-punk-no-longer-for-sale": {
+              const parsedLog = eventData.abi.parseLog(log);
+              const tokenId = parsedLog.args["punkIndex"].toString();
+
+              const orderId = keccak256(["string", "uint256"], ["cryptopunks", tokenId]);
+
+              // Custom handling to support on-chain orderbook quirks
+              cancelEventsFoundation.push({
+                orderKind: "cryptopunks",
+                orderId,
+                baseEventParams,
+              });
+              orderInfos.push({
+                context: `cancelled-${orderId}-${baseEventParams.txHash}`,
+                id: orderId,
+                trigger: {
+                  kind: "cancel",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                  logIndex: baseEventParams.logIndex,
+                  batchIndex: baseEventParams.batchIndex,
+                  blockHash: baseEventParams.blockHash,
+                },
+              });
+
+              break;
+            }
 
             case "cryptopunks-punk-bought": {
               const { args } = eventData.abi.parseLog(log);
@@ -2401,7 +2560,9 @@ export const syncEvents = async (
                 break;
               }
 
+              const orderId = keccak256(["string", "uint256"], ["cryptopunks", punkIndex]);
               fillEventsPartial.push({
+                orderId,
                 orderKind,
                 orderSide,
                 maker,
@@ -2417,6 +2578,27 @@ export const syncEvents = async (
                 aggregatorSourceId: data.aggregatorSource?.id,
                 fillSourceId: data.fillSource?.id,
                 baseEventParams,
+              });
+
+              orderInfos.push({
+                context: `filled-${orderId}-${baseEventParams.txHash}`,
+                id: orderId,
+                trigger: {
+                  kind: "sale",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
+              });
+
+              fillInfos.push({
+                context: orderId,
+                orderId: orderId,
+                orderSide: "sell",
+                contract: Sdk.CryptoPunks.Addresses.Exchange[config.chainId],
+                tokenId: punkIndex,
+                amount: "1",
+                price: prices.nativePrice,
+                timestamp: baseEventParams.timestamp,
               });
 
               break;
@@ -2565,6 +2747,16 @@ export const syncEvents = async (
                         },
                       });
 
+                      fillInfos.push({
+                        context: `sudoswap-${pool.nft}-${tokenId}-${baseEventParams.txHash}`,
+                        orderSide: "sell",
+                        contract: pool.nft,
+                        tokenId: tokenId,
+                        amount: "1",
+                        price: prices.nativePrice,
+                        timestamp: baseEventParams.timestamp,
+                      });
+
                       // Make sure to increment the batch counter
                       i++;
                     }
@@ -2630,6 +2822,8 @@ export const syncEvents = async (
                   }
 
                   for (let i = 0; i < decodedInput.nftIds.length; i++) {
+                    const tokenId = decodedInput.nftIds[i].toString();
+
                     fillEvents.push({
                       orderKind,
                       orderSide: "sell",
@@ -2640,7 +2834,7 @@ export const syncEvents = async (
                       usdPrice: prices.usdPrice,
                       currency: pool.token,
                       contract: pool.nft,
-                      tokenId: decodedInput.nftIds[i].toString(),
+                      tokenId,
                       amount: "1",
                       orderSourceId: data.orderSource?.id,
                       aggregatorSourceId: data.aggregatorSource?.id,
@@ -2649,6 +2843,16 @@ export const syncEvents = async (
                         ...baseEventParams,
                         batchIndex: i + 1,
                       },
+                    });
+
+                    fillInfos.push({
+                      context: `sudoswap-${pool.nft}-${tokenId}-${baseEventParams.txHash}`,
+                      orderSide: "sell",
+                      contract: pool.nft,
+                      tokenId: tokenId,
+                      amount: "1",
+                      price: prices.nativePrice,
+                      timestamp: baseEventParams.timestamp,
                     });
                   }
                 }
@@ -2758,6 +2962,8 @@ export const syncEvents = async (
                   }
 
                   for (let i = 0; i < decodedInput.nftIds.length; i++) {
+                    const tokenId = decodedInput.nftIds[i].toString();
+
                     fillEvents.push({
                       orderKind,
                       orderSide: "buy",
@@ -2768,7 +2974,7 @@ export const syncEvents = async (
                       usdPrice: prices.usdPrice,
                       currency: pool.token,
                       contract: pool.nft,
-                      tokenId: decodedInput.nftIds[i].toString(),
+                      tokenId,
                       amount: "1",
                       orderSourceId: data.orderSource?.id,
                       aggregatorSourceId: data.aggregatorSource?.id,
@@ -2777,6 +2983,16 @@ export const syncEvents = async (
                         ...baseEventParams,
                         batchIndex: i + 1,
                       },
+                    });
+
+                    fillInfos.push({
+                      context: `sudoswap-${pool.nft}-${tokenId}-${baseEventParams.txHash}`,
+                      orderSide: "buy",
+                      contract: pool.nft,
+                      tokenId: tokenId,
+                      amount: "1",
+                      price: prices.nativePrice,
+                      timestamp: baseEventParams.timestamp,
                     });
                   }
                 }
@@ -2893,6 +3109,16 @@ export const syncEvents = async (
                           batchIndex: i + 1,
                         },
                       });
+
+                      fillInfos.push({
+                        context: `nftx-${nftPool.nft}-${tokenIds[i]}-${baseEventParams.txHash}`,
+                        orderSide: "buy",
+                        contract: nftPool.nft,
+                        tokenId: tokenIds[i],
+                        amount: amounts.length ? amounts[i] : "1",
+                        price: prices.nativePrice,
+                        timestamp: baseEventParams.timestamp,
+                      });
                     }
                   }
                 }
@@ -2993,6 +3219,16 @@ export const syncEvents = async (
                           ...baseEventParams,
                           batchIndex: i + 1,
                         },
+                      });
+
+                      fillInfos.push({
+                        context: `nftx-${nftPool.nft}-${tokenIds[i]}-${baseEventParams.txHash}`,
+                        orderSide: "sell",
+                        contract: nftPool.nft,
+                        tokenId: tokenIds[i],
+                        amount: "1",
+                        price: prices.nativePrice,
+                        timestamp: baseEventParams.timestamp,
                       });
                     }
                   }
@@ -3117,9 +3353,10 @@ export const syncEvents = async (
           fillUpdates.addToQueue(fillInfos),
           orderUpdatesById.addToQueue(orderInfos),
           orderUpdatesByMaker.addToQueue(makerInfos),
-          orderbookOrders.addToQueue(
-            foundationOrders.map((info) => ({ kind: "foundation", info }))
-          ),
+          orderbookOrders.addToQueue([
+            ...foundationOrders.map((info) => ({ kind: "foundation", info })),
+            ...cryptopunksOrders.map((info) => ({ kind: "cryptopunks", info })),
+          ] as orderbookOrders.GenericOrderInfo[]),
         ]);
       }
 
