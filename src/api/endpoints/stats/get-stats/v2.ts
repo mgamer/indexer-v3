@@ -9,6 +9,7 @@ import { logger } from "@/common/logger";
 import { JoiPrice, getJoiPriceObject } from "@/common/joi";
 import { fromBuffer, getNetAmount, regex, toBuffer } from "@/common/utils";
 import { Tokens } from "@/models/tokens";
+import { Assets } from "@/utils/assets";
 
 const version = "v2";
 
@@ -344,7 +345,7 @@ export const getStatsV2Options: RouteOptions = {
           ? {
               tokenCount: Number(r.token_count),
               onSaleCount: Number(r.on_sale_count),
-              sampleImages: r.sample_images || [],
+              sampleImages: Assets.getLocalAssetsLink(r.sample_images) || [],
               market: {
                 floorAsk: {
                   id: r.floor_sell_id,
@@ -373,7 +374,7 @@ export const getStatsV2Options: RouteOptions = {
                     contract: r.contract ? fromBuffer(r.contract) : null,
                     tokenId: r.token_id,
                     name: r.name,
-                    image: r.image,
+                    image: Assets.getLocalAssetsLink(r.image),
                   },
                 },
                 topBid: {

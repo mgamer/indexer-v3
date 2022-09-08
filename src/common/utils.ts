@@ -1,5 +1,7 @@
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { formatEther, formatUnits } from "@ethersproject/units";
+import crypto from "crypto";
+import { config } from "@/config/index";
 
 // --- BigNumbers ---
 
@@ -16,6 +18,22 @@ export const formatPrice = (value: BigNumberish, decimals = 18) =>
 
 export const getNetAmount = (value: BigNumberish, bps: number) =>
   bn(value).sub(bn(value).mul(bps).div(10000)).toString();
+
+// -- Encrypt / Decrypt
+export const encrypt = (text: string) => {
+  const cipher = crypto.createCipheriv("aes-256-ecb", config.cipherSecret, null);
+  const encryptedText = Buffer.concat([cipher.update(text), cipher.final()]);
+  return encryptedText.toString("hex");
+};
+
+export const decrypt = (text: string) => {
+  const decipher = crypto.createDecipheriv("aes-256-ecb", config.cipherSecret, null);
+  const decryptedAsset = Buffer.concat([
+    decipher.update(Buffer.from(text, "hex")),
+    decipher.final(),
+  ]);
+  return decryptedAsset.toString();
+};
 
 // --- Buffers ---
 

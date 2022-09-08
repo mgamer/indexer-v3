@@ -43,7 +43,7 @@ export const getRedirectTokenImageV1Options: RouteOptions = {
         throw Boom.badData(`Token ${params.token} not found`);
       }
 
-      return response.redirect(token.image);
+      return response.redirect(token.image).header("cache-control", `${1000 * 60}`);
     } catch (error) {
       logger.error(`get-redirect-token-image-${version}-handler`, `Handler failure: ${error}`);
       throw error;

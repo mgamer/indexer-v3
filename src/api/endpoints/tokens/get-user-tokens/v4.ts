@@ -2,17 +2,18 @@
 
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
-import _ from "lodash";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
-import { Assets } from "@/utils/assets";
+import * as Sdk from "@reservoir0x/sdk";
+import { config } from "@/config/index";
+import { getJoiPriceObject, JoiPrice } from "@/common/joi";
 
-const version = "v3";
+const version = "v4";
 
-export const getUserTokensV3Options: RouteOptions = {
+export const getUserTokensV4Options: RouteOptions = {
   cache: {
     privacy: "public",
     expiresIn: 60000,
@@ -96,13 +97,13 @@ export const getUserTokensV3Options: RouteOptions = {
             }),
             topBid: Joi.object({
               id: Joi.string().allow(null),
-              value: Joi.number().unsafe().allow(null),
+              price: JoiPrice.allow(null),
             }).optional(),
           }),
           ownership: Joi.object({
             tokenCount: Joi.string(),
             onSaleCount: Joi.string(),
-            floorAskPrice: Joi.number().unsafe().allow(null),
+            floorAskPrice: JoiPrice.allow(null),
             acquiredAt: Joi.string().allow(null),
           }),
         })
@@ -185,7 +186,21 @@ export const getUserTokensV3Options: RouteOptions = {
 
     let tokensJoin = `
       JOIN LATERAL (
-        SELECT t.token_id, t.name, t.image, t.collection_id, null AS top_bid_id, null AS top_bid_value
+        SELECT 
+          t.token_id,
+          t.name,
+          t.image,
+          t.collection_id,
+          t.floor_sell_id,
+          t.floor_sell_value,
+          t.floor_sell_currency,
+          t.floor_sell_currency_value,
+          null AS top_bid_id,
+          null AS top_bid_price,
+          null AS top_bid_value,
+          null AS top_bid_currency,
+          null AS top_bid_currency_price,
+          null AS top_bid_currency_value
         FROM tokens t
         WHERE b.token_id = t.token_id
         AND b.contract = t.contract
@@ -195,13 +210,27 @@ export const getUserTokensV3Options: RouteOptions = {
     if (query.includeTopBid) {
       tokensJoin = `
         JOIN LATERAL (
-          SELECT t.token_id, t.name, t.image, t.collection_id
+          SELECT 
+            t.token_id,
+            t.name,
+            t.image,
+            t.collection_id,
+            t.floor_sell_id,
+            t.floor_sell_value,
+            t.floor_sell_currency,
+            t.floor_sell_currency_value
           FROM tokens t
           WHERE b.token_id = t.token_id
           AND b.contract = t.contract
         ) t ON TRUE
         LEFT JOIN LATERAL (
-          SELECT "o"."id" AS "top_bid_id", o.value AS "top_bid_value"
+          SELECT 
+            o.id AS "top_bid_id",
+            o.price AS "top_bid_price",
+            o.value AS "top_bid_value",
+            o.currency AS "top_bid_currency",
+            o.currency_price AS "top_bid_currency_price",
+            o.currency_value AS "top_bid_currency_value"
           FROM "orders" "o"
           JOIN "token_sets_tokens" "tst" ON "o"."token_set_id" = "tst"."token_set_id"
           WHERE "tst"."contract" = "b"."contract"
@@ -224,18 +253,18 @@ export const getUserTokensV3Options: RouteOptions = {
 
     try {
       const baseQuery = `
-        SELECT b.contract, b.token_id, b.token_count, b.acquired_at, t.name,
-               t.image, t.collection_id, b.floor_sell_id, b.floor_sell_value, top_bid_id,
-               top_bid_value, c.name as collection_name, c.metadata,
-               c.floor_sell_value AS "collection_floor_sell_value",
+        SELECT b.contract, b.token_id, b.token_count, b.acquired_at,
+               t.name, t.image, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.floor_sell_currency, t.floor_sell_currency_value, 
+               top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value,
+               c.name as collection_name, c.metadata, c.floor_sell_value AS "collection_floor_sell_value",
                (
-                    CASE WHEN b.floor_sell_value IS NOT NULL
+                    CASE WHEN t.floor_sell_value IS NOT NULL
                     THEN 1
                     ELSE 0
                     END
                ) AS on_sale_count
         FROM (
-            SELECT amount AS token_count, token_id, contract, acquired_at, floor_sell_id, floor_sell_value
+            SELECT amount AS token_count, token_id, contract, acquired_at
             FROM nft_balances
             WHERE owner = $/user/
               AND ${collectionFilters.length ? "(" + collectionFilters.join(" OR ") + ")" : "TRUE"}
@@ -250,36 +279,71 @@ export const getUserTokensV3Options: RouteOptions = {
 
       const userTokens = await redb.manyOrNone(baseQuery, { ...query, ...params });
 
-      const result = _.map(userTokens, (r) => ({
-        token: {
-          contract: fromBuffer(r.contract),
-          tokenId: r.token_id,
-          name: r.name,
-          image: Assets.getLocalAssetsLink(r.image),
-          collection: {
-            id: r.collection_id,
-            name: r.collection_name,
-            imageUrl: Assets.getLocalAssetsLink(r.metadata?.imageUrl),
-            floorAskPrice: r.collection_floor_sell_value
-              ? formatEth(r.collection_floor_sell_value)
-              : null,
-          },
-          topBid: query.includeTopBid
-            ? {
-                id: r.top_bid_id,
-                value: r.top_bid_value ? formatEth(r.top_bid_value) : null,
-              }
-            : undefined,
-        },
-        ownership: {
-          tokenCount: String(r.token_count),
-          onSaleCount: String(r.on_sale_count),
-          floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-          acquiredAt: r.acquired_at ? new Date(r.acquired_at).toISOString() : null,
-        },
-      }));
+      const result = userTokens.map(async (r) => {
+        // Use default currencies for backwards compatibility with entries
+        // that don't have the currencies cached in the tokens table
+        const floorAskCurrency = r.floor_sell_currency
+          ? fromBuffer(r.floor_sell_currency)
+          : Sdk.Common.Addresses.Eth[config.chainId];
+        const topBidCurrency = r.top_bid_currency
+          ? fromBuffer(r.top_bid_currency)
+          : Sdk.Common.Addresses.Weth[config.chainId];
 
-      return { tokens: result };
+        return {
+          token: {
+            contract: fromBuffer(r.contract),
+            tokenId: r.token_id,
+            name: r.name,
+            image: r.image,
+            collection: {
+              id: r.collection_id,
+              name: r.collection_name,
+              imageUrl: r.metadata?.imageUrl,
+              floorAskPrice: r.collection_floor_sell_value
+                ? formatEth(r.collection_floor_sell_value)
+                : null,
+            },
+            topBid: query.includeTopBid
+              ? {
+                  id: r.top_bid_id,
+                  price: r.top_bid_value
+                    ? await getJoiPriceObject(
+                        {
+                          net: {
+                            amount: r.top_bid_currency_value ?? r.top_bid_value,
+                            nativeAmount: r.top_bid_value,
+                          },
+                          gross: {
+                            amount: r.top_bid_currency_price ?? r.top_bid_price,
+                            nativeAmount: r.top_bid_price,
+                          },
+                        },
+                        topBidCurrency
+                      )
+                    : null,
+                }
+              : undefined,
+          },
+          ownership: {
+            tokenCount: String(r.token_count),
+            onSaleCount: String(r.on_sale_count),
+            floorAskPrice: r.floor_sell_id
+              ? await getJoiPriceObject(
+                  {
+                    gross: {
+                      amount: r.floor_sell_currency_value ?? r.floor_sell_value,
+                      nativeAmount: r.floor_sell_value,
+                    },
+                  },
+                  floorAskCurrency
+                )
+              : null,
+            acquiredAt: r.acquired_at ? new Date(r.acquired_at).toISOString() : null,
+          },
+        };
+      });
+
+      return { tokens: await Promise.all(result) };
     } catch (error) {
       logger.error(`get-user-tokens-${version}-handler`, `Handler failure: ${error}`);
       throw error;

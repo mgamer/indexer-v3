@@ -36,7 +36,7 @@ export const getRedirectLogoV2Options: RouteOptions = {
       }
 
       if (source.metadata.adminIcon) {
-        return response.redirect(source.metadata.adminIcon);
+        return response.redirect(source.metadata.adminIcon).header("cache-control", `${1000 * 60}`);
       }
 
       return response.redirect(source.metadata.icon);

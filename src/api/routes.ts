@@ -18,6 +18,7 @@ import * as statsEndpoints from "@/api/endpoints/stats";
 import * as tokensEndpoints from "@/api/endpoints/tokens";
 import * as transactionsEndpoints from "@/api/endpoints/transactions";
 import * as transfersEndpoints from "@/api/endpoints/transfers";
+import * as assetsEndpoints from "@/api/endpoints/assets";
 
 export const setupRoutes = (server: Server) => {
   // Activity
@@ -715,6 +716,14 @@ export const setupRoutes = (server: Server) => {
     options: statsEndpoints.getStatsV2Options,
   });
 
+  // Assets
+
+  server.route({
+    method: "GET",
+    path: "/assets/v1",
+    options: assetsEndpoints.getAssetV1Options,
+  });
+
   // Tokens
 
   server.route({
@@ -799,6 +808,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/users/{user}/tokens/v3",
     options: tokensEndpoints.getUserTokensV3Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/users/{user}/tokens/v4",
+    options: tokensEndpoints.getUserTokensV4Options,
   });
 
   server.route({

@@ -19,6 +19,7 @@ import {
 import { config } from "@/config/index";
 import { CollectionSets } from "@/models/collection-sets";
 import { Sources } from "@/models/sources";
+import { Assets } from "@/utils/assets";
 
 const version = "v5";
 
@@ -439,13 +440,15 @@ export const getCollectionsV5Options: RouteOptions = {
             id: r.id,
             slug: r.slug,
             name: r.name,
-            image: r.image ?? (r.sample_images?.length ? r.sample_images[0] : null),
+            image:
+              r.image ??
+              (r.sample_images?.length ? Assets.getLocalAssetsLink(r.sample_images[0]) : null),
             banner: r.banner,
             discordUrl: r.discord_url,
             externalUrl: r.external_url,
             twitterUsername: r.twitter_username,
             description: r.description,
-            sampleImages: r.sample_images ?? [],
+            sampleImages: Assets.getLocalAssetsLink(r.sample_images) ?? [],
             tokenCount: String(r.token_count),
             onSaleCount: String(r.on_sale_count),
             primaryContract: fromBuffer(r.contract),
@@ -478,7 +481,7 @@ export const getCollectionsV5Options: RouteOptions = {
                   : null,
                 tokenId: r.floor_sell_token_id,
                 name: r.floor_sell_token_name,
-                image: r.floor_sell_token_image,
+                image: Assets.getLocalAssetsLink(r.floor_sell_token_image),
               },
             },
             topBid: query.includeTopBid

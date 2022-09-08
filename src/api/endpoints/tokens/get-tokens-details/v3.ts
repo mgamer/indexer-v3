@@ -16,6 +16,7 @@ import {
   toBuffer,
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
+import { Assets } from "@/utils/assets";
 
 const version = "v3";
 
@@ -408,12 +409,12 @@ export const getTokensDetailsV3Options: RouteOptions = {
             tokenId,
             name: r.name,
             description: r.description,
-            image: r.image,
+            image: Assets.getLocalAssetsLink(r.image),
             kind: r.kind,
             collection: {
               id: r.collection_id,
               name: r.collection_name,
-              image: r.collection_image,
+              image: Assets.getLocalAssetsLink(r.collection_image),
               slug: r.slug,
             },
             lastBuy: {
