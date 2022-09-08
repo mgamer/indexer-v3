@@ -18,6 +18,7 @@ import {
 } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
+import { Assets } from "@/utils/assets";
 
 const version = "v5";
 
@@ -555,7 +556,7 @@ export const getTokensV5Options: RouteOptions = {
             tokenId,
             name: r.name,
             description: r.description,
-            image: r.image,
+            image: Assets.getLocalAssetsLink(r.image),
             media: r.media,
             kind: r.kind,
             isFlagged: Boolean(Number(r.is_flagged)),
@@ -565,7 +566,7 @@ export const getTokensV5Options: RouteOptions = {
             collection: {
               id: r.collection_id,
               name: r.collection_name,
-              image: r.collection_image,
+              image: Assets.getLocalAssetsLink(r.collection_image),
               slug: r.slug,
             },
             lastBuy: {
