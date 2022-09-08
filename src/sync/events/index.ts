@@ -105,10 +105,10 @@ export const syncEvents = async (
       const bulkCancelEvents: es.bulkCancels.Event[] = [];
       const nonceCancelEvents: es.nonceCancels.Event[] = [];
       const cancelEvents: es.cancels.Event[] = [];
-      const cancelEventsFoundation: es.cancels.Event[] = [];
+      const cancelEventsOnChain: es.cancels.Event[] = [];
       const fillEvents: es.fills.Event[] = [];
       const fillEventsPartial: es.fills.Event[] = [];
-      const fillEventsFoundation: es.fills.Event[] = [];
+      const fillEventsOnChain: es.fills.Event[] = [];
       const cryptopunksOrders: Cryptopunks.OrderInfo[] = [];
       const foundationOrders: Foundation.OrderInfo[] = [];
 
@@ -803,7 +803,7 @@ export const syncEvents = async (
               }
 
               // Custom handling to support on-chain orderbook quirks.
-              fillEventsFoundation.push({
+              fillEventsOnChain.push({
                 orderKind,
                 orderId,
                 orderSide: "sell",
@@ -856,7 +856,7 @@ export const syncEvents = async (
               const orderId = keccak256(["address", "uint256"], [contract, tokenId]);
 
               // Custom handling to support on-chain orderbook quirks.
-              cancelEventsFoundation.push({
+              cancelEventsOnChain.push({
                 orderKind: "foundation",
                 orderId,
                 baseEventParams,
@@ -2476,7 +2476,7 @@ export const syncEvents = async (
               const orderId = keccak256(["string", "uint256"], ["cryptopunks", tokenId]);
 
               // Custom handling to support on-chain orderbook quirks
-              cancelEventsFoundation.push({
+              cancelEventsOnChain.push({
                 orderKind: "cryptopunks",
                 orderId,
                 baseEventParams,
@@ -2561,7 +2561,7 @@ export const syncEvents = async (
               }
 
               const orderId = keccak256(["string", "uint256"], ["cryptopunks", punkIndex]);
-              fillEventsPartial.push({
+              fillEventsOnChain.push({
                 orderId,
                 orderKind,
                 orderSide,
@@ -3251,14 +3251,14 @@ export const syncEvents = async (
         await Promise.all([
           assignSourceToFillEvents(fillEvents),
           assignSourceToFillEvents(fillEventsPartial),
-          assignSourceToFillEvents(fillEventsFoundation),
+          assignSourceToFillEvents(fillEventsOnChain),
         ]);
 
         // Assign wash trading scores to the fill events
         await Promise.all([
           assignWashTradingScoreToFillEvents(fillEvents),
           assignWashTradingScoreToFillEvents(fillEventsPartial),
-          assignWashTradingScoreToFillEvents(fillEventsFoundation),
+          assignWashTradingScoreToFillEvents(fillEventsOnChain),
         ]);
       }
 
@@ -3328,7 +3328,7 @@ export const syncEvents = async (
       await Promise.all([
         es.fills.addEvents(fillEvents),
         es.fills.addEventsPartial(fillEventsPartial),
-        es.fills.addEventsFoundation(fillEventsFoundation),
+        es.fills.addEventsOnChain(fillEventsOnChain),
       ]);
 
       if (!options?.skipNonFillWrites) {
@@ -3336,7 +3336,7 @@ export const syncEvents = async (
           es.nonceCancels.addEvents(nonceCancelEvents, backfill),
           es.bulkCancels.addEvents(bulkCancelEvents, backfill),
           es.cancels.addEvents(cancelEvents),
-          es.cancels.addEventsFoundation(cancelEventsFoundation),
+          es.cancels.addEventsOnChain(cancelEventsOnChain),
           es.ftTransfers.addEvents(ftTransferEvents, backfill),
           es.nftApprovals.addEvents(nftApprovalEvents),
           es.nftTransfers.addEvents(nftTransferEvents, backfill),
@@ -3393,7 +3393,7 @@ export const syncEvents = async (
 
       // Add all the fill events to the activity queue
       const fillActivitiesInfo: processActivityEvent.EventInfo[] = _.map(
-        _.concat(fillEvents, fillEventsPartial, fillEventsFoundation),
+        _.concat(fillEvents, fillEventsPartial, fillEventsOnChain),
         (event) => {
           let fromAddress = event.maker;
           let toAddress = event.taker;
