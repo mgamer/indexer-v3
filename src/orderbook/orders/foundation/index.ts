@@ -38,6 +38,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
+      // TODO: Add the marketplace identifier to the order id (see Cryptopunks)
       // On Foundation, we can only have a single currently active order per NFT
       const id = keccak256(["address", "uint256"], [orderParams.contract, orderParams.tokenId]);
 
@@ -97,7 +98,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 price = $/price/,
                 currency_price = $/price/,
                 value = $/price/,
-                currency_value = $/value/,
+                currency_value = $/price/,
                 valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
                 expiration = 'Infinity',
                 updated_at = now()
