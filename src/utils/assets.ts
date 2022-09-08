@@ -5,7 +5,7 @@ import { encrypt } from "@/common/utils";
 export class Assets {
   public static getLocalAssetsLink(assets: string | string[]) {
     if (_.isEmpty(assets) || assets == "") {
-      return "";
+      return undefined;
     }
 
     const baseUrl = `https://api${
