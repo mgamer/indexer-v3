@@ -10,6 +10,7 @@ import { logger } from "@/common/logger";
 import { JoiPrice, getJoiPriceObject } from "@/common/joi";
 import { buildContinuation, fromBuffer, regex, splitContinuation, toBuffer } from "@/common/utils";
 import { Sources } from "@/models/sources";
+import { Assets } from "@/utils/assets";
 
 const version = "v4";
 
@@ -322,7 +323,7 @@ export const getSalesV4Options: RouteOptions = {
             contract: fromBuffer(r.contract),
             tokenId: r.token_id,
             name: r.name ?? null,
-            image: r.image ?? null,
+            image: Assets.getLocalAssetsLink(r.image) ?? null,
             collection: {
               id: r.collection_id ?? null,
               name: r.collection_name ?? null,

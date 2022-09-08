@@ -14,6 +14,7 @@ import {
   toBuffer,
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
+import { Assets } from "@/utils/assets";
 
 const version = "v1";
 
@@ -131,7 +132,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
         return {
           contract: fromBuffer(r.contract),
           tokenId: r.token_id,
-          image: r.image,
+          image: Assets.getLocalAssetsLink(r.image),
           orderId: r.floor_sell_id,
           maker: fromBuffer(r.floor_sell_maker),
           price: formatEth(r.floor_sell_value),
