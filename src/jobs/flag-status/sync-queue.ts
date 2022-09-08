@@ -10,6 +10,7 @@ import * as nonFlaggedTokenSet from "@/jobs/token-updates/non-flagged-token-set"
 import MetadataApi from "@/utils/metadata-api";
 import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
 import * as flagStatusProcessQueue from "@/jobs/flag-status/process-queue";
+import { randomUUID } from "crypto";
 
 const QUEUE_NAME = "flag-status-sync-queue";
 const LIMIT = 4;
@@ -109,5 +110,5 @@ export const getLockName = () => {
 };
 
 export const addToQueue = async (collectionId: string, contract: string, delay = 0) => {
-  await queue.add(QUEUE_NAME, { collectionId, contract }, { jobId: QUEUE_NAME, delay });
+  await queue.add(randomUUID(), { collectionId, contract }, { delay });
 };
