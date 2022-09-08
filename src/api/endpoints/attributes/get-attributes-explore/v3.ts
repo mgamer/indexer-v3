@@ -7,7 +7,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
-import { Assets } from "../../../../../dist/utils/assets";
+import { Assets } from "@/utils/assets";
 
 const version = "v3";
 
