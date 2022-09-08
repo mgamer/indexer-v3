@@ -7,6 +7,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
+import { Assets } from "@/utils/assets";
 
 const version = "v2";
 
@@ -187,7 +188,7 @@ export const getAttributesExploreV2Options: RouteOptions = {
         value: r.value,
         tokenCount: Number(r.token_count),
         onSaleCount: Number(r.on_sale_count),
-        sampleImages: r.sample_images || [],
+        sampleImages: Assets.getLocalAssetsLink(r.sample_images) || [],
         floorAskPrices:
           query.maxFloorAskPrices > 1
             ? (r.floor_sell_values || []).map(formatEth)

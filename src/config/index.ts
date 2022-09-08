@@ -60,4 +60,6 @@ export const config = {
   x2y2ApiKey: String(process.env.X2Y2_API_KEY),
 
   railwayStaticUrl: String(process.env.RAILWAY_STATIC_URL),
+
+  cipherSecret: String(process.env.CIPHER_SECRET),
 };
