@@ -2494,13 +2494,15 @@ export const syncEvents = async (
                     poolCallTrace.input
                   );
 
-                  // If the trace's output is available, decode the input amount from that
+                  // Reference: https://github.com/ledgerwatch/erigon/issues/5308
                   let estimatedInputAmount: string | undefined;
                   if (poolCallTrace.output !== "0x") {
+                    // If the trace's output is available, decode the input amount from that
                     estimatedInputAmount = iface
                       .decodeFunctionResult("swapTokenForAnyNFTs", poolCallTrace.output)
                       .inputAmount.toString();
                   } else {
+                    // Otherwise, estimate the input amount
                     estimatedInputAmount = decodedInput.maxExpectedTokenInput.toString();
                   }
 
