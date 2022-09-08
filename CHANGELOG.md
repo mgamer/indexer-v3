@@ -1,3 +1,12 @@
+# [5.201.0](https://github.com/reservoirprotocol/indexer/compare/v5.200.2...v5.201.0) (2022-09-08)
+
+
+### Features
+
+* add api for batch posting raw opensea seaport offers ([d464046](https://github.com/reservoirprotocol/indexer/commit/d464046baf14597bdf91e7370df3b4d429d06624))
+
+
+
 ## [5.200.2](https://github.com/reservoirprotocol/indexer/compare/v5.200.1...v5.200.2) (2022-09-08)
 
 
