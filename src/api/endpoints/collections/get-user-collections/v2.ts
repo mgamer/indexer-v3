@@ -7,6 +7,7 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
+import { Assets } from "@/utils/assets";
 
 const version = "v2";
 
@@ -262,13 +263,15 @@ export const getUserCollectionsV2Options: RouteOptions = {
             id: r.id,
             slug: r.slug,
             name: r.name,
-            image: r.image || (r.sample_images?.length ? r.sample_images[0] : null),
+            image:
+              Assets.getLocalAssetsLink(r.image) ||
+              (r.sample_images?.length ? Assets.getLocalAssetsLink(r.sample_images[0]) : null),
             banner: r.banner,
             discordUrl: r.discord_url,
             externalUrl: r.external_url,
             twitterUsername: r.twitter_username,
             description: r.description,
-            sampleImages: r.sample_images || [],
+            sampleImages: Assets.getLocalAssetsLink(r.sample_images) || [],
             tokenCount: String(r.token_count),
             primaryContract: fromBuffer(r.contract),
             tokenSetId: r.token_set_id,

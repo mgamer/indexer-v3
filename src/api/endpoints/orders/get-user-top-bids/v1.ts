@@ -14,6 +14,7 @@ import {
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
 import _ from "lodash";
+import { Assets } from "@/utils/assets";
 
 const version = "v1";
 
@@ -280,11 +281,11 @@ export const getUserTopBidsV1Options: RouteOptions = {
             contract: contract,
             tokenId: tokenId,
             name: r.name,
-            image: r.image,
+            image: Assets.getLocalAssetsLink(r.image),
             collection: {
               id: r.collection_id,
               name: r.collection_name,
-              imageUrl: r.collection_metadata?.imageUrl,
+              imageUrl: Assets.getLocalAssetsLink(r.collection_metadata?.imageUrl),
               floorAskPrice: r.collection_floor_sell_value
                 ? formatEth(r.collection_floor_sell_value)
                 : null,
