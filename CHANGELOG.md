@@ -1,3 +1,12 @@
+# [5.205.0](https://github.com/reservoirprotocol/indexer/compare/v5.204.0...v5.205.0) (2022-09-08)
+
+
+### Features
+
+* return local url ([ccd581b](https://github.com/reservoirprotocol/indexer/commit/ccd581b919229c2a5eb2ee45bc00dbc4293cb89e))
+
+
+
 # [5.204.0](https://github.com/reservoirprotocol/indexer/compare/v5.203.0...v5.204.0) (2022-09-08)
 
 
