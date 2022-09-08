@@ -43,7 +43,9 @@ export const getRedirectCollectionImageV1Options: RouteOptions = {
         throw Boom.badData(`Collection ${params.collection} not found`);
       }
 
-      return response.redirect(collection.metadata.imageUrl);
+      return response
+        .redirect(collection.metadata.imageUrl)
+        .header("cache-control", `${1000 * 60}`);
     } catch (error) {
       logger.error(`get-redirect-collection-image-${version}-handler`, `Handler failure: ${error}`);
       throw error;
