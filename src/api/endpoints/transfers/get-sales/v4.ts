@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { AddressZero } from "@ethersproject/constants";
 import { Request, RouteOptions } from "@hapi/hapi";
-import * as Sdk from "@reservoir0x/sdk";
 import crypto from "crypto";
 import Joi from "joi";
 import _ from "lodash";
@@ -11,7 +9,6 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { JoiPrice, getJoiPriceObject } from "@/common/joi";
 import { buildContinuation, fromBuffer, regex, splitContinuation, toBuffer } from "@/common/utils";
-import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 
 const version = "v4";
@@ -351,13 +348,7 @@ export const getSalesV4Options: RouteOptions = {
                 usdAmount: r.usd_price,
               },
             },
-            // Properly handle historical sales with missing currency
-            // (remember, we only supported ETH/WETH initially)
-            fromBuffer(r.currency) === AddressZero
-              ? r.order_side === "sell"
-                ? Sdk.Common.Addresses.Eth[config.chainId]
-                : Sdk.Common.Addresses.Weth[config.chainId]
-              : fromBuffer(r.currency)
+            fromBuffer(r.currency)
           ),
           washTradingScore: r.wash_trading_score,
         };

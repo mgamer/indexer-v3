@@ -1,3 +1,124 @@
+# [5.200.0](https://github.com/reservoirprotocol/indexer/compare/v5.199.2...v5.200.0) (2022-09-07)
+
+
+### Features
+
+* allow to sort top bids by expiry/date created ([b7dfc42](https://github.com/reservoirprotocol/indexer/commit/b7dfc42769da5df115f9d07c09537bf5401d90db))
+
+
+
+## [5.199.2](https://github.com/reservoirprotocol/indexer/compare/v5.199.1...v5.199.2) (2022-09-07)
+
+
+### Bug Fixes
+
+* protect against traces having no output ([3f4fe3b](https://github.com/reservoirprotocol/indexer/commit/3f4fe3b0493225362c5b2972d4a958e40877aeb6))
+
+
+
+## [5.199.1](https://github.com/reservoirprotocol/indexer/compare/v5.199.0...v5.199.1) (2022-09-07)
+
+
+### Bug Fixes
+
+* debug sudoswap errors ([89b31fc](https://github.com/reservoirprotocol/indexer/commit/89b31fceec4e6f90df2a05508d5273db41018ac4))
+
+
+
+# [5.199.0](https://github.com/reservoirprotocol/indexer/compare/v5.198.2...v5.199.0) (2022-09-07)
+
+
+### Features
+
+* update currency startup to include image ([b309c1d](https://github.com/reservoirprotocol/indexer/commit/b309c1ddc3999e826769fa15e8e3076816edbbe6))
+
+
+
+## [5.198.2](https://github.com/reservoirprotocol/indexer/compare/v5.198.1...v5.198.2) (2022-09-07)
+
+
+### Bug Fixes
+
+* nfts sales ([5498bb5](https://github.com/reservoirprotocol/indexer/commit/5498bb5b667aff3a34fd8efbc18c0a4a945d5376))
+* wip ([884cbbe](https://github.com/reservoirprotocol/indexer/commit/884cbbea4b97115aef2d507e6814744c76aedb2f))
+* wip ([956fe89](https://github.com/reservoirprotocol/indexer/commit/956fe89b92ebc803a439de875d534cd4fc62fce6))
+
+
+
+## [5.198.1](https://github.com/reservoirprotocol/indexer/compare/v5.198.0...v5.198.1) (2022-09-07)
+
+
+### Bug Fixes
+
+* set updated at on fill events backfill ([5c5dcbb](https://github.com/reservoirprotocol/indexer/commit/5c5dcbb3d277b3a5c8107a34029d5b072e519443))
+
+
+
+# [5.198.0](https://github.com/reservoirprotocol/indexer/compare/v5.197.0...v5.198.0) (2022-09-06)
+
+
+### Features
+
+* filter tokens source ([43f5db5](https://github.com/reservoirprotocol/indexer/commit/43f5db5f8a3daf0ec24e71f65eb2bc7f1230c6bf))
+* when filtering tokens by source get ALL and ONLY source orders ([b068973](https://github.com/reservoirprotocol/indexer/commit/b068973022ba1fd3741c2e054315543d9b20e046))
+
+
+
+# [5.197.0](https://github.com/reservoirprotocol/indexer/compare/v5.196.0...v5.197.0) (2022-09-06)
+
+
+### Features
+
+* expose block in various apis ([81152f4](https://github.com/reservoirprotocol/indexer/commit/81152f43534bfea2e82b72be0ebad316890051d2))
+
+
+
+# [5.196.0](https://github.com/reservoirprotocol/indexer/compare/v5.195.0...v5.196.0) (2022-09-06)
+
+
+### Bug Fixes
+
+* when filling erc20 orders use opensea's shared conduit ([8125aea](https://github.com/reservoirprotocol/indexer/commit/8125aea56b14982d9c1b728f3ca91b85e4be0fb5))
+
+
+### Features
+
+* merge universe support to prod ([8f8196b](https://github.com/reservoirprotocol/indexer/commit/8f8196beaa4f927fa64901accf2c239c4ecd8c30))
+
+
+
+# [5.195.0](https://github.com/reservoirprotocol/indexer/compare/v5.194.0...v5.195.0) (2022-09-06)
+
+
+### Bug Fixes
+
+* sudoswap support tweaks ([97cc4bd](https://github.com/reservoirprotocol/indexer/commit/97cc4bd587917238e25b84136a4dd27ef7eec093))
+
+
+### Features
+
+* add support for sudoswap sales ([7bb2954](https://github.com/reservoirprotocol/indexer/commit/7bb29540ea6ed71765e73d760985f1a27a777307))
+
+
+
+# [5.194.0](https://github.com/reservoirprotocol/indexer/compare/v5.193.7...v5.194.0) (2022-09-06)
+
+
+### Features
+
+* tweak index collection admin api ([01f86bd](https://github.com/reservoirprotocol/indexer/commit/01f86bd89cb63768c43e9044def779b294cf9873))
+
+
+
+## [5.193.7](https://github.com/reservoirprotocol/indexer/compare/v5.193.6...v5.193.7) (2022-09-05)
+
+
+### Bug Fixes
+
+* trigger backfill job ([c2e5fc3](https://github.com/reservoirprotocol/indexer/commit/c2e5fc3eed1634f258928c2f14a0e81523ceb919))
+
+
+
 ## [5.193.6](https://github.com/reservoirprotocol/indexer/compare/v5.193.5...v5.193.6) (2022-09-05)
 
 
