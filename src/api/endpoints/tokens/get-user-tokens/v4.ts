@@ -97,7 +97,7 @@ export const getUserTokensV4Options: RouteOptions = {
             }),
             topBid: Joi.object({
               id: Joi.string().allow(null),
-              value: JoiPrice.allow(null),
+              price: JoiPrice.allow(null),
             }).optional(),
           }),
           ownership: Joi.object({
@@ -306,7 +306,7 @@ export const getUserTokensV4Options: RouteOptions = {
             topBid: query.includeTopBid
               ? {
                   id: r.top_bid_id,
-                  value: r.top_bid_value
+                  price: r.top_bid_value
                     ? await getJoiPriceObject(
                         {
                           net: {
