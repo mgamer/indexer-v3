@@ -2465,20 +2465,18 @@ export const syncEvents = async (
                 tradeRank
               );
 
-              if (poolCallTrace && poolCallTrace.output === "0x") {
+              if (poolCallTrace?.output === "0x") {
                 // Sometimes there can be upstream bugs and the call's output gets truncated
                 logger.error(
                   COMPONENT_NAME,
                   `Trace missing output: ${baseEventParams.block} - ${baseEventParams.txHash}`
                 );
-
-                break;
               }
 
               if (poolCallTrace) {
                 const sighash = poolCallTrace.input.slice(0, 10);
-
                 const pool = await sudoswapUtils.getPoolDetails(baseEventParams.address);
+
                 if (pool && sighash === swapTokenForAnyNFTs) {
                   const iface = new Interface([
                     `
@@ -2495,13 +2493,24 @@ export const syncEvents = async (
                     "swapTokenForAnyNFTs",
                     poolCallTrace.input
                   );
-                  const decodedOutput = iface.decodeFunctionResult(
-                    "swapTokenForAnyNFTs",
-                    poolCallTrace.output
-                  );
+
+                  // If the trace's output is available, decode the input amount from that
+                  let estimatedInputAmount: string | undefined;
+                  if (poolCallTrace.output !== "0x") {
+                    estimatedInputAmount = iface
+                      .decodeFunctionResult("swapTokenForAnyNFTs", poolCallTrace.output)
+                      .inputAmount.toString();
+                  } else {
+                    estimatedInputAmount = decodedInput.maxExpectedTokenInput.toString();
+                  }
+
+                  if (!estimatedInputAmount) {
+                    // Skip if we can't extract the input amount
+                    break;
+                  }
 
                   let taker = decodedInput.nftRecipient;
-                  const price = decodedOutput.inputAmount.div(decodedInput.numNFTs).toString();
+                  const price = bn(estimatedInputAmount).div(decodedInput.numNFTs).toString();
 
                   // Handle: attribution
 
@@ -2574,15 +2583,26 @@ export const syncEvents = async (
                     "swapTokenForSpecificNFTs",
                     poolCallTrace.input
                   );
-                  const decodedOutput = iface.decodeFunctionResult(
-                    "swapTokenForSpecificNFTs",
-                    poolCallTrace.output
-                  );
+
+                  // Reference: https://github.com/ledgerwatch/erigon/issues/5308
+                  let estimatedInputAmount: string | undefined;
+                  if (poolCallTrace.output !== "0x") {
+                    // If the trace's output is available, decode the input amount from that
+                    estimatedInputAmount = iface
+                      .decodeFunctionResult("swapTokenForSpecificNFTs", poolCallTrace.output)
+                      .inputAmount.toString();
+                  } else {
+                    // Otherwise, estimate the input amount
+                    estimatedInputAmount = decodedInput.maxExpectedTokenInput.toString();
+                  }
+
+                  if (!estimatedInputAmount) {
+                    // Skip if we can't extract the input amount
+                    break;
+                  }
 
                   let taker = decodedInput.nftRecipient;
-                  const price = decodedOutput.inputAmount
-                    .div(decodedInput.nftIds.length)
-                    .toString();
+                  const price = bn(estimatedInputAmount).div(decodedInput.nftIds.length).toString();
 
                   // Handle: attribution
 
@@ -2658,20 +2678,18 @@ export const syncEvents = async (
                 tradeRank
               );
 
-              if (poolCallTrace && poolCallTrace.output === "0x") {
+              if (poolCallTrace?.output === "0x") {
                 // Sometimes there can be upstream bugs and the call's output gets truncated
                 logger.error(
                   COMPONENT_NAME,
                   `Trace missing output: ${baseEventParams.block} - ${baseEventParams.txHash}`
                 );
-
-                break;
               }
 
               if (poolCallTrace) {
                 const sighash = poolCallTrace.input.slice(0, 10);
-
                 const pool = await sudoswapUtils.getPoolDetails(baseEventParams.address);
+
                 if (pool && sighash === swapNFTsForToken) {
                   const iface = new Interface([
                     `
@@ -2688,13 +2706,29 @@ export const syncEvents = async (
                     "swapNFTsForToken",
                     poolCallTrace.input
                   );
-                  const decodedOutput = iface.decodeFunctionResult(
-                    "swapNFTsForToken",
-                    poolCallTrace.output
-                  );
+
+                  // Reference: https://github.com/ledgerwatch/erigon/issues/5308
+                  let estimatedOutputAmount: string | undefined;
+                  if (poolCallTrace.output !== "0x") {
+                    // If the trace's output is available, decode the output amount from that
+                    estimatedOutputAmount = iface
+                      .decodeFunctionResult("swapNFTsForToken", poolCallTrace.output)
+                      .outputAmount.toString();
+                  } else {
+                    // Otherwise, estimate the output amount
+                    estimatedOutputAmount = decodedInput.minExpectedTokenOutput;
+                    if (estimatedOutputAmount === "0") {
+                      estimatedOutputAmount = undefined;
+                    }
+                  }
+
+                  if (!estimatedOutputAmount) {
+                    // Skip if we can't extract the output amount
+                    break;
+                  }
 
                   let taker = decodedInput.tokenRecipient;
-                  const price = decodedOutput.outputAmount
+                  const price = bn(estimatedOutputAmount)
                     .div(decodedInput.nftIds.length)
                     .toString();
 
