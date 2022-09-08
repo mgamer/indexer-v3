@@ -1,3 +1,12 @@
+# [5.207.0](https://github.com/reservoirprotocol/indexer/compare/v5.206.0...v5.207.0) (2022-09-08)
+
+
+### Features
+
+* update more apis to use local asset url ([d70a7e4](https://github.com/reservoirprotocol/indexer/commit/d70a7e4dff71efc5d539a98080674931aa169a5b))
+
+
+
 # [5.206.0](https://github.com/reservoirprotocol/indexer/compare/v5.205.0...v5.206.0) (2022-09-08)
 
 

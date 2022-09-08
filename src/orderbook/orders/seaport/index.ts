@@ -14,8 +14,6 @@ import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { getUSDAndNativePrices } from "@/utils/prices";
-import { PendingFlagStatusSyncJobs } from "@/models/pending-flag-status-sync-jobs";
-import * as flagStatusProcessQueue from "@/jobs/flag-status/process-queue";
 
 export type OrderInfo = {
   orderParams: Sdk.Seaport.Types.OrderComponents;
@@ -230,21 +228,18 @@ export const save = async (
             ]);
 
             if (ts.length !== 1) {
-              const pendingFlagStatusSyncJobs = new PendingFlagStatusSyncJobs();
-              await pendingFlagStatusSyncJobs.add(
-                [
-                  {
-                    kind: "collection",
-                    data: {
-                      collectionId: info.contract,
-                      backfill: false,
-                    },
-                  },
-                ],
-                true
-              );
-
-              await flagStatusProcessQueue.addToQueue();
+              // const pendingFlagStatusSyncJobs = new PendingFlagStatusSyncJobs();
+              // await pendingFlagStatusSyncJobs.add(
+              //     {
+              //       kind: "collection",
+              //       data: {
+              //         collectionId: info.contract,
+              //         backfill: false,
+              //       },
+              //     },
+              // );
+              //
+              // await flagStatusProcessQueue.addToQueue();
 
               logger.info(
                 "orders-seaport-save",
