@@ -8,6 +8,7 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { Tokens } from "@/models/tokens";
+import { Assets } from "@/utils/assets";
 
 const version = "v1";
 
@@ -335,7 +336,7 @@ export const getStatsV1Options: RouteOptions = {
           ? {
               tokenCount: Number(r.token_count),
               onSaleCount: Number(r.on_sale_count),
-              sampleImages: r.sample_images || [],
+              sampleImages: Assets.getLocalAssetsLink(r.sample_images) || [],
               market: {
                 floorAsk: {
                   id: r.floor_sell_id,
@@ -347,7 +348,7 @@ export const getStatsV1Options: RouteOptions = {
                     contract: r.contract ? fromBuffer(r.contract) : null,
                     tokenId: r.token_id,
                     name: r.name,
-                    image: r.image,
+                    image: Assets.getLocalAssetsLink(r.image),
                   },
                 },
                 topBid: {
