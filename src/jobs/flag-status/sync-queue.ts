@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
+import { randomUUID } from "crypto";
 import { logger } from "@/common/logger";
 import { extendLock, redis, releaseLock } from "@/common/redis";
 import { config } from "@/config/index";
@@ -30,8 +31,6 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { collectionId, contract } = job.data;
-
-      logger.info(QUEUE_NAME, `Sync started. collectionId:${collectionId}, contract:${contract}`);
 
       let delay = 5000;
 
@@ -109,5 +108,5 @@ export const getLockName = () => {
 };
 
 export const addToQueue = async (collectionId: string, contract: string, delay = 0) => {
-  await queue.add(QUEUE_NAME, { collectionId, contract }, { jobId: QUEUE_NAME, delay });
+  await queue.add(randomUUID(), { collectionId, contract }, { delay });
 };

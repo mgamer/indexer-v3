@@ -16,16 +16,16 @@ import { logger } from "@/common/logger";
 import { bn, formatPrice, now } from "@/common/utils";
 import { config } from "@/config/index";
 
-const version = "v1";
+const version = "v2";
 
-export const getCollectionFloorAskOracleV1Options: RouteOptions = {
+export const getCollectionFloorAskOracleV2Options: RouteOptions = {
   description: "Collection floor",
   notes:
     "Get a signed message of any collection's floor price (spot or twap). The oracle signer address is 0x32da57e736e05f75aa4fae2e9be60fd904492726.",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Oracle"],
   plugins: {
     "hapi-swagger": {
-      deprecated: true,
+      order: 12,
     },
   },
   validate: {
@@ -170,12 +170,14 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
         ContractWideCollectionPrice: {
           ContractWideCollectionPrice: [
             { name: "kind", type: "uint8" },
+            { name: "twapHours", type: "uint256" },
             { name: "contract", type: "address" },
           ],
         },
         TokenRangeCollectionPrice: {
           TokenRangeCollectionPrice: [
             { name: "kind", type: "uint8" },
+            { name: "twapHours", type: "uint256" },
             { name: "startTokenId", type: "uint256" },
             { name: "endTokenId", type: "uint256" },
           ],
@@ -190,6 +192,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
           EIP712_TYPES.TokenRangeCollectionPrice,
           {
             kind,
+            twapHours: query.twapHours,
             contract,
             startTokenId,
             endTokenId,
@@ -201,6 +204,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
           EIP712_TYPES.ContractWideCollectionPrice,
           {
             kind,
+            twapHours: query.twapHours,
             contract: params.collection,
           }
         );

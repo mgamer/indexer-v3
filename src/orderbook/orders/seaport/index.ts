@@ -231,18 +231,13 @@ export const save = async (
 
             if (ts.length !== 1) {
               const pendingFlagStatusSyncJobs = new PendingFlagStatusSyncJobs();
-              await pendingFlagStatusSyncJobs.add(
-                [
-                  {
-                    kind: "collection",
-                    data: {
-                      collectionId: info.contract,
-                      backfill: false,
-                    },
-                  },
-                ],
-                true
-              );
+              await pendingFlagStatusSyncJobs.add({
+                kind: "collection",
+                data: {
+                  collectionId: info.contract,
+                  backfill: false,
+                },
+              });
 
               await flagStatusProcessQueue.addToQueue();
 

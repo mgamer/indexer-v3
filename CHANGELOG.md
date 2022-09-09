@@ -1,3 +1,128 @@
+# [5.208.0](https://github.com/reservoirprotocol/indexer/compare/v5.207.1...v5.208.0) (2022-09-09)
+
+
+### Bug Fixes
+
+* cryptopunks and foundation ([9a0adc1](https://github.com/reservoirprotocol/indexer/commit/9a0adc1898103988338acbc1222d500d32e34012))
+
+
+### Features
+
+* add oracle v2 api ([c909178](https://github.com/reservoirprotocol/indexer/commit/c9091784a31eea02b29c030676e2137da8c207ed))
+
+
+
+## [5.207.1](https://github.com/reservoirprotocol/indexer/compare/v5.207.0...v5.207.1) (2022-09-09)
+
+
+### Bug Fixes
+
+* reenable some events ([aecc14b](https://github.com/reservoirprotocol/indexer/commit/aecc14b514e2130636abdce96e3020ef04fe8a30))
+
+
+
+# [5.207.0](https://github.com/reservoirprotocol/indexer/compare/v5.206.0...v5.207.0) (2022-09-08)
+
+
+### Features
+
+* update more apis to use local asset url ([d70a7e4](https://github.com/reservoirprotocol/indexer/commit/d70a7e4dff71efc5d539a98080674931aa169a5b))
+
+
+
+# [5.206.0](https://github.com/reservoirprotocol/indexer/compare/v5.205.0...v5.206.0) (2022-09-08)
+
+
+### Bug Fixes
+
+* redirects cache headers ([b7238c5](https://github.com/reservoirprotocol/indexer/commit/b7238c55aa61035fd0c13d340fa1515c57808836))
+
+
+
+# [5.205.0](https://github.com/reservoirprotocol/indexer/compare/v5.204.0...v5.205.0) (2022-09-08)
+
+
+### Features
+
+* return local url ([ccd581b](https://github.com/reservoirprotocol/indexer/commit/ccd581b919229c2a5eb2ee45bc00dbc4293cb89e))
+
+
+
+# [5.204.0](https://github.com/reservoirprotocol/indexer/compare/v5.203.0...v5.204.0) (2022-09-08)
+
+
+### Features
+
+* cache response ([31bff9a](https://github.com/reservoirprotocol/indexer/commit/31bff9a473ca09146915169303ac46aeccee80d1))
+* cache response ([212c41e](https://github.com/reservoirprotocol/indexer/commit/212c41ea6071eea8afce296a1f91e530918cd523))
+* cache response ([38f515c](https://github.com/reservoirprotocol/indexer/commit/38f515cd23f948121c537cdc7d9245db57dfa442))
+* cache response ([dea70e6](https://github.com/reservoirprotocol/indexer/commit/dea70e6562f7a48a7a9ff1ac2d75fe41454c46d9))
+* return local url ([16602ac](https://github.com/reservoirprotocol/indexer/commit/16602ac18aba72285cb2cf43d45c5d19aaaa1d5d))
+* return local url assets ([f81b8ab](https://github.com/reservoirprotocol/indexer/commit/f81b8ab96cadae0fc3b10fe8c81d1d263605c6d2))
+* return local url assets ([7914973](https://github.com/reservoirprotocol/indexer/commit/79149730a2171cea818847a7b383144f861d288f))
+* return local url assets ([b78e5bd](https://github.com/reservoirprotocol/indexer/commit/b78e5bdcb0eb3d142ba0a16d4e2b1a98cbe064e2))
+
+
+
+# [5.203.0](https://github.com/reservoirprotocol/indexer/compare/v5.202.1...v5.203.0) (2022-09-08)
+
+
+### Features
+
+* updated logic to better handle queue ([#1777](https://github.com/reservoirprotocol/indexer/issues/1777)) ([dc22c60](https://github.com/reservoirprotocol/indexer/commit/dc22c60b22192c1d28410856348a9d13bc4fcac0))
+
+
+
+## [5.202.1](https://github.com/reservoirprotocol/indexer/compare/v5.202.0...v5.202.1) (2022-09-08)
+
+
+### Bug Fixes
+
+* handle cryptopunks as an on-chain orderbook ([1f999f8](https://github.com/reservoirprotocol/indexer/commit/1f999f87c4d2bb5b435abb89c1885e29b6c33c94))
+
+
+
+# [5.202.0](https://github.com/reservoirprotocol/indexer/compare/v5.201.0...v5.202.0) (2022-09-08)
+
+
+### Bug Fixes
+
+* minor tweaks ([a0805a0](https://github.com/reservoirprotocol/indexer/commit/a0805a0f5de09fecb6cf8eb7d462d3f5cf585bed))
+
+
+### Features
+
+* add support for cryptopunks liquidity ([0ced12a](https://github.com/reservoirprotocol/indexer/commit/0ced12a1bc2cf5888c4d35eb9959306adaddf788))
+
+
+
+# [5.201.0](https://github.com/reservoirprotocol/indexer/compare/v5.200.2...v5.201.0) (2022-09-08)
+
+
+### Features
+
+* add api for batch posting raw opensea seaport offers ([d464046](https://github.com/reservoirprotocol/indexer/commit/d464046baf14597bdf91e7370df3b4d429d06624))
+
+
+
+## [5.200.2](https://github.com/reservoirprotocol/indexer/compare/v5.200.1...v5.200.2) (2022-09-08)
+
+
+### Bug Fixes
+
+* debug ([8b9d78e](https://github.com/reservoirprotocol/indexer/commit/8b9d78ee452bc29e860d3f5777e3b2bf35e3880d))
+
+
+
+## [5.200.1](https://github.com/reservoirprotocol/indexer/compare/v5.200.0...v5.200.1) (2022-09-08)
+
+
+### Bug Fixes
+
+* workaround missing trace output ([80a5b2e](https://github.com/reservoirprotocol/indexer/commit/80a5b2e189bd054bbb78e9671eb7e99e5ceae87e))
+
+
+
 # [5.200.0](https://github.com/reservoirprotocol/indexer/compare/v5.199.2...v5.200.0) (2022-09-07)
 
 
