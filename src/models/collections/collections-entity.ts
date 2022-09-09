@@ -10,7 +10,7 @@ export type CollectionsEntityUpdateParams = {
   contract?: string;
   tokenIdRange?: string;
   tokenSetId?: string;
-  nonFlaggedTokenSetId?: string;
+  nonFlaggedTokenSetId?: string | null;
   tokenCount?: number;
   createdAt?: string;
   updatedAt?: string;
