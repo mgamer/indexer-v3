@@ -8,12 +8,13 @@ import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 
-import { Tokens } from "@/models/tokens";
 import { Collections } from "@/models/collections";
 import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
 import * as tokenSet from "@/orderbook/token-sets";
 import { generateSchemaHash } from "@/orderbook/orders/utils";
 import { TokenSet } from "@/orderbook/token-sets/token-list";
+import { redb } from "@/common/db";
+import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 
 const QUEUE_NAME = "non-flagged-token-set";
 
@@ -39,46 +40,108 @@ if (config.doBackgroundWork) {
         return;
       }
 
-      const tokenIds = await Tokens.getTokenIdsInCollection(collectionId, contract, true);
-      if (_.isEmpty(tokenIds)) {
-        logger.warn(QUEUE_NAME, `No tokens for contract=${contract}, collectionId=${collectionId}`);
+      const tokens = await getTokenInCollection(collectionId);
+
+      const flaggedTokens = tokens.filter((r) => r.isFlagged);
+
+      if (flaggedTokens.length === 0) {
+        logger.info(
+          QUEUE_NAME,
+          `No Non Flagged tokens. contract=${contract}, collectionId=${collectionId}`
+        );
+
+        if (collection.nonFlaggedTokenSetId) {
+          logger.info(
+            QUEUE_NAME,
+            `Removed Non Flagged TokenSet from collection. contract=${contract}, collectionId=${collectionId}, tokenSetId=${collection.tokenSetId}, nonFlaggedTokenSetId=${collection.nonFlaggedTokenSetId}`
+          );
+
+          // Set the new non flagged tokens token set
+          await Collections.update(collectionId, { nonFlaggedTokenSetId: null });
+        }
+
+        return;
       }
 
-      const merkleTree = generateMerkleTree(tokenIds);
+      const nonFlaggedTokensIds = tokens.filter((r) => !r.isFlagged).map((r) => r.tokenId);
+
+      const merkleTree = generateMerkleTree(nonFlaggedTokensIds);
       const tokenSetId = `list:${contract}:${merkleTree.getHexRoot()}`;
-      const schema = {
-        kind: "collection-non-flagged",
-        data: {
-          collection: collection.id,
-        },
-      };
 
-      // Create new token set for non flagged tokens
-      const ts = await tokenSet.tokenList.save([
-        {
-          id: tokenSetId,
-          schema,
-          schemaHash: generateSchemaHash(schema),
-          items: {
-            contract,
-            tokenIds,
+      if (tokenSetId != collection.nonFlaggedTokenSetId) {
+        const schema = {
+          kind: "collection-non-flagged",
+          data: {
+            collection: collection.id,
           },
-        } as TokenSet,
-      ]);
+        };
 
-      if (ts.length !== 1) {
-        logger.warn(
-          QUEUE_NAME,
-          `No tokens for contract=${contract}, collectionId=${collectionId}, tokenSetId=${tokenSetId}`
-        );
+        // Create new token set for non flagged tokens
+        const ts = await tokenSet.tokenList.save([
+          {
+            id: tokenSetId,
+            schema,
+            schemaHash: generateSchemaHash(schema),
+            items: {
+              contract,
+              tokenIds: nonFlaggedTokensIds,
+            },
+          } as TokenSet,
+        ]);
+
+        if (ts.length !== 1) {
+          logger.warn(
+            QUEUE_NAME,
+            `Invalid Token Set. contract=${contract}, collectionId=${collectionId}, tokenSetId=${tokenSetId}`
+          );
+        } else {
+          logger.info(
+            QUEUE_NAME,
+            `Generated New Non Flagged TokenSet. contract=${contract}, collectionId=${collectionId}, tokenSetId=${collection.tokenSetId}, nonFlaggedTokenSetId=${collection.nonFlaggedTokenSetId}, generatedNonFlaggedTokenSetId=${tokenSetId}, flaggedTokenCount=${flaggedTokens.length}`
+          );
+
+          // Set the new non flagged tokens token set
+          await Collections.update(collectionId, { nonFlaggedTokenSetId: tokenSetId });
+
+          const ordersQuery = `
+                SELECT
+                  orders.id,
+                FROM orders
+                WHERE orders.side = 'buy'
+                AND orders.fillability_status = 'fillable'
+                AND orders.approval_status = 'approved'
+                AND orders.token_set_id = $/tokenSetId/
+              `;
+
+          const orders = await redb.manyOrNone(ordersQuery, {
+            tokenSetId,
+          });
+
+          if (orders?.length) {
+            logger.info(
+              QUEUE_NAME,
+              `Orders Found!. contract=${contract}, collectionId=${collectionId}, tokenSetId=${collection.tokenSetId}, nonFlaggedTokenSetId=${collection.nonFlaggedTokenSetId}, generatedNonFlaggedTokenSetId=${tokenSetId}`
+            );
+
+            await ordersUpdateById.addToQueue(
+              orders.map(
+                ({ id }) =>
+                  ({
+                    context: `new-order-${id}`,
+                    id,
+                    trigger: {
+                      kind: "new-order",
+                    },
+                  } as ordersUpdateById.OrderInfo)
+              )
+            );
+          }
+        }
       } else {
         logger.info(
           QUEUE_NAME,
-          `Non Flagged Token set generated for contract=${contract}, collectionId=${collectionId}, tokenSetId=${collection.tokenSetId}, nonFlaggedTokenSetId=${collection.nonFlaggedTokenSetId}, generatedMonFlaggedTokenSetId=${tokenSetId}`
+          `Non Flagged TokenSet Already Exists. contract=${contract}, collectionId=${collectionId}, tokenSetId=${collection.tokenSetId}, nonFlaggedTokenSetId=${collection.nonFlaggedTokenSetId}, generatedNonFlaggedTokenSetId=${tokenSetId}`
         );
-
-        // Set the new non flagged tokens token set
-        await Collections.update(collectionId, { nonFlaggedTokenSetId: tokenSetId });
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }
@@ -88,6 +151,46 @@ if (config.doBackgroundWork) {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
 }
+
+const getTokenInCollection = async (collectionId: string) => {
+  const limit = 5000;
+  let checkForMore = true;
+  let continuation = "";
+
+  let tokens: { tokenId: string; isFlagged: number }[] = [];
+
+  while (checkForMore) {
+    const query = `
+        SELECT token_id, is_flagged
+        FROM tokens
+        WHERE collection_id = $/collectionId/
+        ${continuation}
+        ORDER BY token_id ASC
+        LIMIT ${limit}
+      `;
+
+    const result = await redb.manyOrNone(query, {
+      collectionId,
+    });
+
+    if (!_.isEmpty(result)) {
+      tokens = _.concat(
+        tokens,
+        _.map(result, (r) => ({
+          tokenId: r.token_id,
+          isFlagged: r.is_flagged,
+        }))
+      );
+      continuation = `AND token_id > ${_.last(result).token_id}`;
+    }
+
+    if (limit > _.size(result)) {
+      checkForMore = false;
+    }
+  }
+
+  return tokens;
+};
 
 export const addToQueue = async (contract: string, collectionId: string) => {
   await queue.add(randomUUID(), { contract, collectionId });
