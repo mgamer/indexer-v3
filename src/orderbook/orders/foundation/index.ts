@@ -81,7 +81,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const orderResult = await redb.oneOrNone(
         `
           SELECT
-            lower(orders.valid_between) AS valid_from
+            extract('epoch' from lower(orders.valid_between)) AS valid_from
           FROM orders
           WHERE orders.id = $/id/
         `,
