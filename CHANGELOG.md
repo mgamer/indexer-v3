@@ -1,3 +1,12 @@
+## [5.207.1](https://github.com/reservoirprotocol/indexer/compare/v5.207.0...v5.207.1) (2022-09-09)
+
+
+### Bug Fixes
+
+* reenable some events ([aecc14b](https://github.com/reservoirprotocol/indexer/commit/aecc14b514e2130636abdce96e3020ef04fe8a30))
+
+
+
 # [5.207.0](https://github.com/reservoirprotocol/indexer/compare/v5.206.0...v5.207.0) (2022-09-08)
 
 
