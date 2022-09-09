@@ -163,7 +163,9 @@ export const getUSDAndNativePrices = async (
   let nativePrice: string | undefined;
 
   // Only try to get pricing data if the network supports it
-  if (getNetworkSettings().coingecko?.networkId) {
+  const force =
+    config.chainId === 4 && currencyAddress === "0xeb8f08a975ab53e34d8a0330e0d34de942c95926";
+  if (getNetworkSettings().coingecko?.networkId || force) {
     const currencyUSDPrice = await getAvailableUSDPrice(currencyAddress, timestamp);
 
     let nativeUSDPrice: Price | undefined;
