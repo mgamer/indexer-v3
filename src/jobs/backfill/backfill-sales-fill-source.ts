@@ -163,12 +163,12 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire([`${QUEUE_NAME}-lock-7`], 60 * 60 * 24 * 30 * 1000)
+    .acquire([`${QUEUE_NAME}-lock-8`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       await addToQueue(
-        1650422378,
-        "0xdb0bca5017162b442bbe11e53c3209f0030f5e43842fe841d40977f93391d614",
-        156,
+        1649801271,
+        "0xf36edd2401ca4a72c5d474b918caffec50e58e040c8b559eaf1f58e81c821918",
+        217,
         1
       );
     })
@@ -183,5 +183,11 @@ export const addToQueue = async (
   logIndex: number,
   batchIndex: number
 ) => {
-  await queue.add(randomUUID(), { timestamp, txHash, logIndex, batchIndex });
+  await queue.add(
+    randomUUID(),
+    { timestamp, txHash, logIndex, batchIndex },
+    {
+      jobId: `${timestamp}-${txHash}-${logIndex}-${batchIndex}`,
+    }
+  );
 };
