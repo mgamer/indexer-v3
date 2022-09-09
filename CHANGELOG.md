@@ -1,3 +1,49 @@
+# [5.209.0](https://github.com/reservoirprotocol/indexer/compare/v5.208.1...v5.209.0) (2022-09-09)
+
+
+### Features
+
+* comment out flag check queue ([d1a3aba](https://github.com/reservoirprotocol/indexer/commit/d1a3aba942800e3dcbd6cfad9f1be7eba31c42e3))
+* disable images cdn ([23a371e](https://github.com/reservoirprotocol/indexer/commit/23a371e4664529124cdc1dbfac8957e15cf67688))
+* enable images cdn ([a6ed007](https://github.com/reservoirprotocol/indexer/commit/a6ed007aebb481108332a3698ca10f9cb2f05e15))
+* enable pending flag status ([e99652f](https://github.com/reservoirprotocol/indexer/commit/e99652f5fd081d72748dfa809980392b52519325))
+* update redirect cache ([694cd25](https://github.com/reservoirprotocol/indexer/commit/694cd2577620fb49b46ba1a140a106cc61c46c44))
+
+
+
+## [5.208.1](https://github.com/reservoirprotocol/indexer/compare/v5.208.0...v5.208.1) (2022-09-09)
+
+
+### Bug Fixes
+
+* duplicated sales fill source backfill jobs ([18bc89e](https://github.com/reservoirprotocol/indexer/commit/18bc89ec2e637de3263600a7fb579c0f65a051c4))
+* hardcode rule for ease of testing erc20 listings on dev ([1fb6c52](https://github.com/reservoirprotocol/indexer/commit/1fb6c527b017cb757bedb6775d756daa28f75eb0))
+
+
+
+# [5.208.0](https://github.com/reservoirprotocol/indexer/compare/v5.207.1...v5.208.0) (2022-09-09)
+
+
+### Bug Fixes
+
+* cryptopunks and foundation ([9a0adc1](https://github.com/reservoirprotocol/indexer/commit/9a0adc1898103988338acbc1222d500d32e34012))
+
+
+### Features
+
+* add oracle v2 api ([c909178](https://github.com/reservoirprotocol/indexer/commit/c9091784a31eea02b29c030676e2137da8c207ed))
+
+
+
+## [5.207.1](https://github.com/reservoirprotocol/indexer/compare/v5.207.0...v5.207.1) (2022-09-09)
+
+
+### Bug Fixes
+
+* reenable some events ([aecc14b](https://github.com/reservoirprotocol/indexer/commit/aecc14b514e2130636abdce96e3020ef04fe8a30))
+
+
+
 # [5.207.0](https://github.com/reservoirprotocol/indexer/compare/v5.206.0...v5.207.0) (2022-09-08)
 
 
