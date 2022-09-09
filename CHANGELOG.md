@@ -1,3 +1,13 @@
+## [5.208.1](https://github.com/reservoirprotocol/indexer/compare/v5.208.0...v5.208.1) (2022-09-09)
+
+
+### Bug Fixes
+
+* duplicated sales fill source backfill jobs ([18bc89e](https://github.com/reservoirprotocol/indexer/commit/18bc89ec2e637de3263600a7fb579c0f65a051c4))
+* hardcode rule for ease of testing erc20 listings on dev ([1fb6c52](https://github.com/reservoirprotocol/indexer/commit/1fb6c527b017cb757bedb6775d756daa28f75eb0))
+
+
+
 # [5.208.0](https://github.com/reservoirprotocol/indexer/compare/v5.207.1...v5.208.0) (2022-09-09)
 
 
