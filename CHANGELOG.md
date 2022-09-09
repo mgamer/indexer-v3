@@ -1,3 +1,17 @@
+# [5.208.0](https://github.com/reservoirprotocol/indexer/compare/v5.207.1...v5.208.0) (2022-09-09)
+
+
+### Bug Fixes
+
+* cryptopunks and foundation ([9a0adc1](https://github.com/reservoirprotocol/indexer/commit/9a0adc1898103988338acbc1222d500d32e34012))
+
+
+### Features
+
+* add oracle v2 api ([c909178](https://github.com/reservoirprotocol/indexer/commit/c9091784a31eea02b29c030676e2137da8c207ed))
+
+
+
 ## [5.207.1](https://github.com/reservoirprotocol/indexer/compare/v5.207.0...v5.207.1) (2022-09-09)
 
 
