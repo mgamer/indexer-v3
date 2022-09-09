@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
-import { randomUUID } from "crypto";
 import { logger } from "@/common/logger";
 import { extendLock, redis, releaseLock } from "@/common/redis";
 import { config } from "@/config/index";
@@ -11,6 +10,7 @@ import * as nonFlaggedTokenSet from "@/jobs/token-updates/non-flagged-token-set"
 import MetadataApi from "@/utils/metadata-api";
 import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
 import * as flagStatusProcessQueue from "@/jobs/flag-status/process-queue";
+import { randomUUID } from "crypto";
 
 const QUEUE_NAME = "flag-status-sync-queue";
 const LIMIT = 4;
