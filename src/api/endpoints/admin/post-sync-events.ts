@@ -23,11 +23,11 @@ export const postSyncEventsOptions: RouteOptions = {
       // WARNING: Some events should always be fetched together!
       syncDetails: Joi.alternatives(
         Joi.object({
-          kind: Joi.string().valid("event-data-kind"),
+          method: Joi.string().valid("event-data-kind"),
           eventDataKinds: Joi.array().items(Joi.string()),
         }),
         Joi.object({
-          kind: Joi.string().valid("address"),
+          method: Joi.string().valid("address"),
           address: Joi.string().pattern(regex.address),
         })
       ),
