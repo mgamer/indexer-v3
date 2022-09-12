@@ -1,7 +1,7 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
+import { acquireLock, redis, releaseLock } from "@/common/redis";
 import { config } from "@/config/index";
 import { idb } from "@/common/db";
 import { randomUUID } from "crypto";
@@ -44,31 +44,44 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { kind } = job.data;
 
-      try {
-        const { cursor, sequenceNumber } = await getSequenceInfo(kind);
-        const { data, nextCursor } = await getDataSource(kind).getSequenceData(cursor, QUERY_LIMIT);
+      logger.info(QUEUE_NAME, `Worker started: ${kind}`);
 
-        if (data.length) {
-          const sequenceNumberPadded = ("000000000000000" + sequenceNumber).slice(-15);
-          const targetName = kind.replace(/-/g, "_");
+      if (await acquireLock(getLockName(kind), 60 * 5)) {
+        logger.info(QUEUE_NAME, `Lock acquired: ${kind}`);
 
-          let sequence = "";
+        try {
+          const { cursor, sequenceNumber } = await getSequenceInfo(kind);
+          const { data, nextCursor } = await getDataSource(kind).getSequenceData(
+            cursor,
+            QUERY_LIMIT
+          );
 
-          for (const dataRecord of data) {
-            sequence += JSON.stringify(dataRecord) + EOL;
+          if (data.length) {
+            const sequenceNumberPadded = ("000000000000000" + sequenceNumber).slice(-15);
+            const targetName = kind.replace(/-/g, "_");
+
+            let sequence = "";
+
+            for (const dataRecord of data) {
+              sequence += JSON.stringify(dataRecord) + EOL;
+            }
+
+            await uploadSequenceToS3(
+              `${targetName}/reservoir_${sequenceNumberPadded}.json`,
+              sequence
+            );
+            await setNextSequenceInfo(kind, nextCursor);
           }
 
-          await uploadSequenceToS3(
-            `${targetName}/reservoir_${sequenceNumberPadded}.json`,
-            sequence
-          );
-          await setNextSequenceInfo(kind, nextCursor);
+          // Trigger next sequence only if there are more results
+          job.data.addToQueue = data.length >= QUERY_LIMIT;
+        } catch (error) {
+          logger.error(QUEUE_NAME, `Export ${kind} failed: ${error}`);
         }
 
-        // Trigger next sequence only if there are more results
-        job.data.addToQueue = data.length >= QUERY_LIMIT;
-      } catch (error) {
-        logger.error(QUEUE_NAME, `Export ${kind} failed: ${error}`);
+        await releaseLock(getLockName(kind));
+      } else {
+        logger.info(QUEUE_NAME, `Lock NOT acquired: ${kind}`);
       }
     },
     { connection: redis.duplicate(), concurrency: 15 }
@@ -81,7 +94,7 @@ if (config.doBackgroundWork) {
   });
 
   worker.on("failed", async (job) => {
-    logger.error(QUEUE_NAME, `Worker failed: ${job}`);
+    logger.error(QUEUE_NAME, `Worker failed: ${JSON.stringify(job)}`);
   });
 
   worker.on("error", (error) => {
@@ -102,8 +115,12 @@ export enum DataSourceKind {
   tokenAttributes = "token-attributes",
 }
 
+export const getLockName = (kind: DataSourceKind) => {
+  return `${QUEUE_NAME}:${kind}-lock`;
+};
+
 export const addToQueue = async (kind: DataSourceKind) => {
-  await queue.add(randomUUID(), { kind }, { jobId: kind });
+  await queue.add(randomUUID(), { kind });
 };
 
 const getSequenceInfo = async (kind: DataSourceKind) => {
