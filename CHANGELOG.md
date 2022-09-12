@@ -1,3 +1,12 @@
+## [5.209.4](https://github.com/reservoirprotocol/indexer/compare/v5.209.3...v5.209.4) (2022-09-12)
+
+
+### Bug Fixes
+
+* payload types ([c51f0a9](https://github.com/reservoirprotocol/indexer/commit/c51f0a94833d3c018ace1f6eecbe231896fa0d3c))
+
+
+
 ## [5.209.3](https://github.com/reservoirprotocol/indexer/compare/v5.209.2...v5.209.3) (2022-09-12)
 
 
