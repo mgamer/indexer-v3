@@ -1,3 +1,12 @@
+# [5.211.0](https://github.com/reservoirprotocol/indexer/compare/v5.210.1...v5.211.0) (2022-09-12)
+
+
+### Features
+
+* return all time volume in search API ([3a177ad](https://github.com/reservoirprotocol/indexer/commit/3a177ad4d51c460c9bdc3aa87b3dc4affa3fdf19))
+
+
+
 ## [5.210.1](https://github.com/reservoirprotocol/indexer/compare/v5.210.0...v5.210.1) (2022-09-12)
 
 
