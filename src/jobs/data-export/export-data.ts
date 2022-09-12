@@ -44,9 +44,7 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { kind } = job.data;
 
-      logger.info(QUEUE_NAME, `Worker started: ${kind}`);
-
-      if (await acquireLock(getLockName(kind), 60 * 5)) {
+      if (await acquireLock(getLockName(kind), 60 * 15)) {
         logger.info(QUEUE_NAME, `Lock acquired: ${kind}`);
 
         try {
@@ -80,6 +78,8 @@ if (config.doBackgroundWork) {
         }
 
         await releaseLock(getLockName(kind));
+
+        logger.info(QUEUE_NAME, `Lock released: ${kind}`);
       } else {
         logger.info(QUEUE_NAME, `Lock NOT acquired: ${kind}`);
       }
