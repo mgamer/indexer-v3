@@ -1,3 +1,12 @@
+## [5.209.3](https://github.com/reservoirprotocol/indexer/compare/v5.209.2...v5.209.3) (2022-09-12)
+
+
+### Bug Fixes
+
+* undefined access ([fb6e8bc](https://github.com/reservoirprotocol/indexer/commit/fb6e8bc9e171ba9373b66c4632e2de2c63e4749f))
+
+
+
 ## [5.209.2](https://github.com/reservoirprotocol/indexer/compare/v5.209.1...v5.209.2) (2022-09-12)
 
 
