@@ -1,3 +1,17 @@
+## [5.209.2](https://github.com/reservoirprotocol/indexer/compare/v5.209.1...v5.209.2) (2022-09-12)
+
+
+### Bug Fixes
+
+* set seaport orders start time 1 minute in the past ([fee4202](https://github.com/reservoirprotocol/indexer/commit/fee420237f45b8b0d30a3d7bba6f0af79489b25c))
+
+
+### Performance Improvements
+
+* more efficient backfilling for single contracts ([954af57](https://github.com/reservoirprotocol/indexer/commit/954af57707e6347525858743e9fba14d509b96c3))
+
+
+
 ## [5.209.1](https://github.com/reservoirprotocol/indexer/compare/v5.209.0...v5.209.1) (2022-09-09)
 
 
