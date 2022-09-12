@@ -114,17 +114,17 @@ export const syncEvents = async (
     toBlock,
   };
 
-  if (options?.syncDetails.method === "event-data-kind") {
+  if (options?.syncDetails?.method === "event-data-kind") {
     // Filter by a subset of topics
     eventFilter = {
       // Convert to a set in order to skip duplicate topics
       topics: [
-        [...new Set(getEventData(options?.syncDetails.eventDataKinds).map(({ topic }) => topic))],
+        [...new Set(getEventData(options.syncDetails.eventDataKinds).map(({ topic }) => topic))],
       ],
       fromBlock,
       toBlock,
     };
-  } else if (options?.syncDetails.method === "address") {
+  } else if (options?.syncDetails?.method === "address") {
     // Filter by contract address
     eventFilter = {
       address: options.syncDetails.address,
