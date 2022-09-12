@@ -1,3 +1,12 @@
+# [5.210.0](https://github.com/reservoirprotocol/indexer/compare/v5.209.4...v5.210.0) (2022-09-12)
+
+
+### Features
+
+* enable seaport erc20 listings ([52ed0a3](https://github.com/reservoirprotocol/indexer/commit/52ed0a31c508b2f7459a037c6305e956b7b85961))
+
+
+
 ## [5.209.4](https://github.com/reservoirprotocol/indexer/compare/v5.209.3...v5.209.4) (2022-09-12)
 
 
