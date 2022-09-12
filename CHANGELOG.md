@@ -1,3 +1,12 @@
+# [5.212.0](https://github.com/reservoirprotocol/indexer/compare/v5.211.0...v5.212.0) (2022-09-12)
+
+
+### Features
+
+* return floor sell value in search API ([2aa269f](https://github.com/reservoirprotocol/indexer/commit/2aa269fbbf367111178b2a8fe1579718932fda19))
+
+
+
 # [5.211.0](https://github.com/reservoirprotocol/indexer/compare/v5.210.1...v5.211.0) (2022-09-12)
 
 
