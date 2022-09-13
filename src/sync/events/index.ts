@@ -114,9 +114,13 @@ export const syncEvents = async (
     toBlock,
   };
 
-  logger.info(COMPONENT_NAME, `Backfill sync details: ${JSON.stringify(options)}`);
   if (options?.syncDetails?.method === "event-data-kind") {
-    logger.info(COMPONENT_NAME, `In here`);
+    logger.info(
+      COMPONENT_NAME,
+      `Topics: ${JSON.stringify([
+        ...new Set(getEventData(options.syncDetails.eventDataKinds).map(({ topic }) => topic)),
+      ])}`
+    );
     // Filter by a subset of topics
     eventFilter = {
       // Convert to a set in order to skip duplicate topics
