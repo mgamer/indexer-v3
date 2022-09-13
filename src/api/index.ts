@@ -174,7 +174,7 @@ export const start = async (): Promise<void> => {
           ) {
             logger.warn(
               "rate-limiter",
-              `${rateLimitKey} reached allowed rate limit ${
+              `${rateLimitKey} ${apiKey?.appName} reached allowed rate limit ${
                 rateLimitRule.options.points
               } requests in ${rateLimitRule.options.duration}s by calling ${
                 error.consumedPoints
