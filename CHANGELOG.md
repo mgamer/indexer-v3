@@ -1,3 +1,12 @@
+# [5.213.0](https://github.com/reservoirprotocol/indexer/compare/v5.212.2...v5.213.0) (2022-09-13)
+
+
+### Features
+
+* finalize support for cryptopunks ([8cc7e17](https://github.com/reservoirprotocol/indexer/commit/8cc7e1728eaaaf6ac4220f9f7fc80f8d1f082a22))
+
+
+
 ## [5.212.2](https://github.com/reservoirprotocol/indexer/compare/v5.212.1...v5.212.2) (2022-09-13)
 
 
