@@ -1,3 +1,12 @@
+## [5.213.4](https://github.com/reservoirprotocol/indexer/compare/v5.213.3...v5.213.4) (2022-09-13)
+
+
+### Bug Fixes
+
+* temporary disable cryptopunks ([830044d](https://github.com/reservoirprotocol/indexer/commit/830044d5af70b2de936f90c992b0a9590a50d561))
+
+
+
 ## [5.213.3](https://github.com/reservoirprotocol/indexer/compare/v5.213.2...v5.213.3) (2022-09-13)
 
 
