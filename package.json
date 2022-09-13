@@ -71,6 +71,7 @@
     "pg-promise": "^10.11.1",
     "prettier": "^2.5.1",
     "qs": "^6.10.1",
+    "rate-limiter-flexible": "^2.3.9",
     "redlock": "^5.0.0-beta.1",
     "slugify": "^1.6.5",
     "standard-version": "^9.3.2",

@@ -4914,6 +4914,11 @@ randombytes@^2.1.0:
   dependencies:
     safe-buffer "^5.1.0"
 
+rate-limiter-flexible@^2.3.9:
+  version "2.3.9"
+  resolved "https://registry.yarnpkg.com/rate-limiter-flexible/-/rate-limiter-flexible-2.3.9.tgz#67e2ac539ea01f57e000f69bebb85ae041d4c3ca"
+  integrity sha512-N8VlhY2yztqpF+YUqb2TX7ROV9naBLlnpacxJVA5FkZ3LQZplM7dIy9qU8wFzpgmMER2GfVb5n++kmMVChfvXA==
+
 rc@^1.2.8:
   version "1.2.8"
   resolved "https://registry.yarnpkg.com/rc/-/rc-1.2.8.tgz#cd924bf5200a075b83c188cd6b9e211b7fc0d3ed"
