@@ -2645,23 +2645,46 @@ export const syncEvents = async (
             break;
           }
 
-          // case "cryptopunks-punk-transfer": {
-          //   const { args } = eventData.abi.parseLog(log);
-          //   const from = args["from"].toLowerCase();
-          //   const to = args["to"].toLowerCase();
-          //   const tokenId = args["punkIndex"].toString();
+          case "cryptopunks-punk-transfer": {
+            const { args } = eventData.abi.parseLog(log);
+            const from = args["from"].toLowerCase();
+            const to = args["to"].toLowerCase();
+            const tokenId = args["punkIndex"].toString();
 
-          //   nftTransferEvents.push({
-          //     kind: "cryptopunks",
-          //     from,
-          //     to,
-          //     tokenId,
-          //     amount: "1",
-          //     baseEventParams,
-          //   });
+            nftTransferEvents.push({
+              kind: "cryptopunks",
+              from,
+              to,
+              tokenId,
+              amount: "1",
+              baseEventParams,
+            });
 
-          //   break;
-          // }
+            break;
+          }
+
+          case "cryptopunks-assign": {
+            const { args } = eventData.abi.parseLog(log);
+            const to = args["to"].toLowerCase();
+            const tokenId = args["punkIndex"].toLowerCase();
+
+            nftTransferEvents.push({
+              kind: "cryptopunks",
+              from: AddressZero,
+              to,
+              tokenId,
+              amount: "1",
+              baseEventParams,
+            });
+
+            mintInfos.push({
+              contract: baseEventParams.address,
+              tokenId,
+              mintedTimestamp: baseEventParams.timestamp,
+            });
+
+            break;
+          }
 
           case "cryptopunks-transfer": {
             const { args } = eventData.abi.parseLog(log);
