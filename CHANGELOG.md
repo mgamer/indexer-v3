@@ -1,3 +1,12 @@
+## [5.213.3](https://github.com/reservoirprotocol/indexer/compare/v5.213.2...v5.213.3) (2022-09-13)
+
+
+### Bug Fixes
+
+* cryptopunks and foundation order updates ([bff11c7](https://github.com/reservoirprotocol/indexer/commit/bff11c74497af62c53158d094a4397ce7ee1282f))
+
+
+
 ## [5.213.2](https://github.com/reservoirprotocol/indexer/compare/v5.213.1...v5.213.2) (2022-09-13)
 
 
