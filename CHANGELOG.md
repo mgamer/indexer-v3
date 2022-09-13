@@ -1,3 +1,12 @@
+## [5.213.2](https://github.com/reservoirprotocol/indexer/compare/v5.213.1...v5.213.2) (2022-09-13)
+
+
+### Bug Fixes
+
+* cryptopunks assign event handling ([187155b](https://github.com/reservoirprotocol/indexer/commit/187155b62130775e706a1521e8836424f6a0b1bd))
+
+
+
 ## [5.213.1](https://github.com/reservoirprotocol/indexer/compare/v5.213.0...v5.213.1) (2022-09-13)
 
 
