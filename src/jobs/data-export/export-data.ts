@@ -26,13 +26,9 @@ export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 10,
-    backoff: {
-      type: "fixed",
-      delay: 5000,
-    },
     removeOnComplete: true,
-    removeOnFail: true,
-    timeout: 60000,
+    removeOnFail: 100,
+    timeout: 120000,
   },
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
@@ -44,9 +40,7 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { kind } = job.data;
 
-      if (await acquireLock(getLockName(kind), 60 * 15)) {
-        logger.info(QUEUE_NAME, `Lock acquired: ${kind}`);
-
+      if (await acquireLock(getLockName(kind), 60 * 5)) {
         try {
           const { cursor, sequenceNumber } = await getSequenceInfo(kind);
           const { data, nextCursor } = await getDataSource(kind).getSequenceData(
@@ -78,10 +72,8 @@ if (config.doBackgroundWork) {
         }
 
         await releaseLock(getLockName(kind));
-
-        logger.info(QUEUE_NAME, `Lock released: ${kind}`);
       } else {
-        logger.info(QUEUE_NAME, `Lock NOT acquired: ${kind}`);
+        logger.info(QUEUE_NAME, `Unable to acquire lock: ${kind}`);
       }
     },
     { connection: redis.duplicate(), concurrency: 15 }
