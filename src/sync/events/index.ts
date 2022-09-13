@@ -95,21 +95,23 @@ export const syncEvents = async (
   const backfill = Boolean(options?.backfill);
 
   // Before proceeding, fetch all individual blocks within the current range
-  const limit = pLimit(32);
-  const before = performance.now();
-  logger.info(COMPONENT_NAME, `Fetching blocks ${fromBlock} - ${toBlock + 1}`);
-  await Promise.all(
-    _.range(fromBlock, toBlock + 1).map((block) =>
-      limit(async () => {
-        await syncEventsUtils.fetchBlock(block);
-      })
-    )
-  );
-  const after = performance.now();
-  logger.info(
-    COMPONENT_NAME,
-    `Fetched blocks ${fromBlock} - ${toBlock + 1} in ${after - before} milliseconds`
-  );
+  if (!backfill) {
+    const limit = pLimit(32);
+    const before = performance.now();
+    logger.info(COMPONENT_NAME, `Fetching blocks ${fromBlock} - ${toBlock + 1}`);
+    await Promise.all(
+      _.range(fromBlock, toBlock + 1).map((block) =>
+        limit(async () => {
+          await syncEventsUtils.fetchBlock(block);
+        })
+      )
+    );
+    const after = performance.now();
+    logger.info(
+      COMPONENT_NAME,
+      `Fetched blocks ${fromBlock} - ${toBlock + 1} in ${after - before} milliseconds`
+    );
+  }
 
   // --- Generate the event filtering parameters ---
 
@@ -2415,11 +2417,12 @@ export const syncEvents = async (
       // stale data which will cause inconsistencies (eg. orders can
       // have wrong statuses).
       await Promise.all([
-        fillUpdates.addToQueue(fillInfos),
         orderUpdatesById.addToQueue(orderInfos),
         orderUpdatesByMaker.addToQueue(makerInfos),
       ]);
     }
+
+    await fillUpdates.addToQueue(fillInfos);
 
     // --- Handle: orphan blocks ---
 

@@ -1,3 +1,12 @@
+## [5.217.1](https://github.com/reservoirprotocol/indexer/compare/v5.217.0...v5.217.1) (2022-09-13)
+
+
+### Bug Fixes
+
+* do not fetch all blocks in range when backfilling ([6e3d871](https://github.com/reservoirprotocol/indexer/commit/6e3d871860db0df3ba74f16ce49c28bdf029853f))
+
+
+
 # [5.217.0](https://github.com/reservoirprotocol/indexer/compare/v5.216.1...v5.217.0) (2022-09-13)
 
 
