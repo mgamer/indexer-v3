@@ -1,3 +1,12 @@
+# [5.215.0](https://github.com/reservoirprotocol/indexer/compare/v5.214.1...v5.215.0) (2022-09-13)
+
+
+### Features
+
+* update migration ([03a50ba](https://github.com/reservoirprotocol/indexer/commit/03a50baeb51b7d8972c76eb46b1df10ef73f8b01))
+
+
+
 ## [5.214.1](https://github.com/reservoirprotocol/indexer/compare/v5.214.0...v5.214.1) (2022-09-13)
 
 
