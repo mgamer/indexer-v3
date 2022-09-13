@@ -221,7 +221,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
       case "cryptopunks-assign": {
         const { args } = eventData.abi.parseLog(log);
         const to = args["to"].toLowerCase();
-        const tokenId = args["punkIndex"].toLowerCase();
+        const tokenId = args["punkIndex"].toString();
 
         nftTransferEvents.push({
           kind: "cryptopunks",
