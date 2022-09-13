@@ -168,14 +168,19 @@ export const start = async (): Promise<void> => {
         )}`;
       } catch (error) {
         if (error instanceof RateLimiterRes) {
-          logger.warn(
-            "rate-limiter",
-            `${rateLimitKey} reached allowed rate limit ${
-              rateLimitRule.options.points
-            } requests in ${rateLimitRule.options.duration}s in rule ${JSON.stringify(
-              rateLimitRule
-            )}`
-          );
+          if (
+            error.consumedPoints == Number(rateLimitRule.options.points) + 1 ||
+            error.consumedPoints % 50 == 0
+          ) {
+            logger.warn(
+              "rate-limiter",
+              `${rateLimitKey} ${apiKey?.appName} reached allowed rate limit ${
+                rateLimitRule.options.points
+              } requests in ${rateLimitRule.options.duration}s by calling ${
+                error.consumedPoints
+              } times in rule ${JSON.stringify(rateLimitRule)}`
+            );
+          }
 
           // const tooManyRequestsResponse = {
           //   statusCode: 429,

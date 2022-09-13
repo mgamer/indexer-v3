@@ -94,8 +94,8 @@ export const getOrdersBidsV3Options: RouteOptions = {
         .default(50)
         .description("Amount of items returned in response."),
     })
-      .or("token", "tokenSetId", "maker", "contracts")
-      .oxor("token", "tokenSetId"),
+      .or("token", "tokenSetId", "maker", "contracts", "ids")
+      .oxor("token", "tokenSetId", "ids"),
   },
   response: {
     schema: Joi.object({

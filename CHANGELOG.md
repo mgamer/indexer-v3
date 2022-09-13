@@ -1,3 +1,167 @@
+## [5.217.1](https://github.com/reservoirprotocol/indexer/compare/v5.217.0...v5.217.1) (2022-09-13)
+
+
+### Bug Fixes
+
+* do not fetch all blocks in range when backfilling ([6e3d871](https://github.com/reservoirprotocol/indexer/commit/6e3d871860db0df3ba74f16ce49c28bdf029853f))
+
+
+
+# [5.217.0](https://github.com/reservoirprotocol/indexer/compare/v5.216.1...v5.217.0) (2022-09-13)
+
+
+### Features
+
+* update log ([b872ab0](https://github.com/reservoirprotocol/indexer/commit/b872ab0fd86dc3fa2df3e18f9a7c669c4d7550eb))
+
+
+
+## [5.216.1](https://github.com/reservoirprotocol/indexer/compare/v5.216.0...v5.216.1) (2022-09-13)
+
+
+### Bug Fixes
+
+* debug ([7c7fdb6](https://github.com/reservoirprotocol/indexer/commit/7c7fdb659043c67043029a285a6443104ff554e1))
+
+
+
+# [5.216.0](https://github.com/reservoirprotocol/indexer/compare/v5.215.1...v5.216.0) (2022-09-13)
+
+
+### Features
+
+* update log ([e527da5](https://github.com/reservoirprotocol/indexer/commit/e527da5b1d2bce6a20934d1fcd9fe407521b7f53))
+
+
+
+## [5.215.1](https://github.com/reservoirprotocol/indexer/compare/v5.215.0...v5.215.1) (2022-09-13)
+
+
+### Performance Improvements
+
+* increase concurrency when fetching blocks ([bfaf01c](https://github.com/reservoirprotocol/indexer/commit/bfaf01c094d2874a6a3df5ee1b5509dc26ece0c5))
+
+
+
+# [5.215.0](https://github.com/reservoirprotocol/indexer/compare/v5.214.1...v5.215.0) (2022-09-13)
+
+
+### Features
+
+* update migration ([03a50ba](https://github.com/reservoirprotocol/indexer/commit/03a50baeb51b7d8972c76eb46b1df10ef73f8b01))
+
+
+
+## [5.214.1](https://github.com/reservoirprotocol/indexer/compare/v5.214.0...v5.214.1) (2022-09-13)
+
+
+### Bug Fixes
+
+* tweaks ([8a3aa28](https://github.com/reservoirprotocol/indexer/commit/8a3aa28b0968313e8453ec0b776d91faef112170))
+
+
+
+# [5.214.0](https://github.com/reservoirprotocol/indexer/compare/v5.213.5...v5.214.0) (2022-09-13)
+
+
+### Features
+
+* added rate limit by tier ([a1ad1be](https://github.com/reservoirprotocol/indexer/commit/a1ad1be5ec7a92d59d360148579ce58a526cf0b2))
+* update migration ([3df5f12](https://github.com/reservoirprotocol/indexer/commit/3df5f12fd47d8f21a686d5fcaf345c6e73b0a55c))
+
+
+
+## [5.213.5](https://github.com/reservoirprotocol/indexer/compare/v5.213.4...v5.213.5) (2022-09-13)
+
+
+### Bug Fixes
+
+* reenable cryptopunks ([1b3ddf6](https://github.com/reservoirprotocol/indexer/commit/1b3ddf6692908de2a1f190d4c29a2aae45d98095))
+* skip stalled jobs ([a140fab](https://github.com/reservoirprotocol/indexer/commit/a140fab0cf6bb905fb5f61e04d9465c999573e68))
+
+
+
+## [5.213.4](https://github.com/reservoirprotocol/indexer/compare/v5.213.3...v5.213.4) (2022-09-13)
+
+
+### Bug Fixes
+
+* temporary disable cryptopunks ([830044d](https://github.com/reservoirprotocol/indexer/commit/830044d5af70b2de936f90c992b0a9590a50d561))
+
+
+
+## [5.213.3](https://github.com/reservoirprotocol/indexer/compare/v5.213.2...v5.213.3) (2022-09-13)
+
+
+### Bug Fixes
+
+* cryptopunks and foundation order updates ([bff11c7](https://github.com/reservoirprotocol/indexer/commit/bff11c74497af62c53158d094a4397ce7ee1282f))
+
+
+
+## [5.213.2](https://github.com/reservoirprotocol/indexer/compare/v5.213.1...v5.213.2) (2022-09-13)
+
+
+### Bug Fixes
+
+* cryptopunks assign event handling ([187155b](https://github.com/reservoirprotocol/indexer/commit/187155b62130775e706a1521e8836424f6a0b1bd))
+
+
+
+## [5.213.1](https://github.com/reservoirprotocol/indexer/compare/v5.213.0...v5.213.1) (2022-09-13)
+
+
+### Performance Improvements
+
+* asynchronous event handling ([05ab929](https://github.com/reservoirprotocol/indexer/commit/05ab929a800f5e879e3148f2412cd5f1e3901e53))
+
+
+
+# [5.213.0](https://github.com/reservoirprotocol/indexer/compare/v5.212.2...v5.213.0) (2022-09-13)
+
+
+### Features
+
+* finalize support for cryptopunks ([8cc7e17](https://github.com/reservoirprotocol/indexer/commit/8cc7e1728eaaaf6ac4220f9f7fc80f8d1f082a22))
+
+
+
+## [5.212.2](https://github.com/reservoirprotocol/indexer/compare/v5.212.1...v5.212.2) (2022-09-13)
+
+
+### Bug Fixes
+
+* debug ([7eed7b2](https://github.com/reservoirprotocol/indexer/commit/7eed7b2b311ef7bcee7070b0172fb543c9ff3c93))
+
+
+
+## [5.212.1](https://github.com/reservoirprotocol/indexer/compare/v5.212.0...v5.212.1) (2022-09-13)
+
+
+### Bug Fixes
+
+* debug ([f8a8f66](https://github.com/reservoirprotocol/indexer/commit/f8a8f667a9d1559ebaef7cd6d7f34bd1be12da7e))
+
+
+
+# [5.212.0](https://github.com/reservoirprotocol/indexer/compare/v5.211.0...v5.212.0) (2022-09-12)
+
+
+### Features
+
+* return floor sell value in search API ([2aa269f](https://github.com/reservoirprotocol/indexer/commit/2aa269fbbf367111178b2a8fe1579718932fda19))
+
+
+
+# [5.211.0](https://github.com/reservoirprotocol/indexer/compare/v5.210.1...v5.211.0) (2022-09-12)
+
+
+### Features
+
+* return all time volume in search API ([3a177ad](https://github.com/reservoirprotocol/indexer/commit/3a177ad4d51c460c9bdc3aa87b3dc4affa3fdf19))
+
+
+
 ## [5.210.1](https://github.com/reservoirprotocol/indexer/compare/v5.210.0...v5.210.1) (2022-09-12)
 
 
