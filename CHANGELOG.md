@@ -1,3 +1,12 @@
+## [5.215.1](https://github.com/reservoirprotocol/indexer/compare/v5.215.0...v5.215.1) (2022-09-13)
+
+
+### Performance Improvements
+
+* increase concurrency when fetching blocks ([bfaf01c](https://github.com/reservoirprotocol/indexer/commit/bfaf01c094d2874a6a3df5ee1b5509dc26ece0c5))
+
+
+
 # [5.215.0](https://github.com/reservoirprotocol/indexer/compare/v5.214.1...v5.215.0) (2022-09-13)
 
 
