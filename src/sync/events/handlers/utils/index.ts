@@ -60,7 +60,6 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
   ]);
 
   // Trigger further processes:
-  // - cache last sale
   // - revalidate potentially-affected orders
   // - store on-chain orders
   if (!backfill) {
@@ -70,11 +69,12 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
     // stale data which will cause inconsistencies (eg. orders can
     // have wrong statuses)
     await Promise.all([
-      fillUpdates.addToQueue(data.fillInfos ?? []),
       orderUpdatesById.addToQueue(data.orderInfos ?? []),
       orderbookOrders.addToQueue(data.orders ?? []),
     ]);
   }
+
+  await fillUpdates.addToQueue(data.fillInfos ?? []);
 
   // Process fill activities
   const fillActivityInfos: processActivityEvent.EventInfo[] = allFillEvents.map((event) => {
