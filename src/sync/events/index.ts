@@ -93,6 +93,9 @@ export const syncEvents = async (
 
   // When backfilling, certain processes are disabled
   const backfill = Boolean(options?.backfill);
+  if (backfill && 1 + 1 === 2) {
+    return;
+  }
 
   // Before proceeding, fetch all individual blocks within the current range
   const limit = pLimit(5);
