@@ -1,3 +1,12 @@
+# [5.217.0](https://github.com/reservoirprotocol/indexer/compare/v5.216.1...v5.217.0) (2022-09-13)
+
+
+### Features
+
+* update log ([b872ab0](https://github.com/reservoirprotocol/indexer/commit/b872ab0fd86dc3fa2df3e18f9a7c669c4d7550eb))
+
+
+
 ## [5.216.1](https://github.com/reservoirprotocol/indexer/compare/v5.216.0...v5.216.1) (2022-09-13)
 
 
