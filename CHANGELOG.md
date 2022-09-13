@@ -1,3 +1,13 @@
+# [5.218.0](https://github.com/reservoirprotocol/indexer/compare/v5.217.1...v5.218.0) (2022-09-13)
+
+
+### Features
+
+* return fee breakdown for top bid in tokens/v5 ([ed6bc32](https://github.com/reservoirprotocol/indexer/commit/ed6bc324a57f74c9a075f1bb77dc14a3634d2a4c))
+* update docs ([a06e0e0](https://github.com/reservoirprotocol/indexer/commit/a06e0e0cd801a3f2e0472841847a50ae52a16170))
+
+
+
 ## [5.217.1](https://github.com/reservoirprotocol/indexer/compare/v5.217.0...v5.217.1) (2022-09-13)
 
 
