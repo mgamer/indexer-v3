@@ -1,3 +1,13 @@
+## [5.213.5](https://github.com/reservoirprotocol/indexer/compare/v5.213.4...v5.213.5) (2022-09-13)
+
+
+### Bug Fixes
+
+* reenable cryptopunks ([1b3ddf6](https://github.com/reservoirprotocol/indexer/commit/1b3ddf6692908de2a1f190d4c29a2aae45d98095))
+* skip stalled jobs ([a140fab](https://github.com/reservoirprotocol/indexer/commit/a140fab0cf6bb905fb5f61e04d9465c999573e68))
+
+
+
 ## [5.213.4](https://github.com/reservoirprotocol/indexer/compare/v5.213.3...v5.213.4) (2022-09-13)
 
 
