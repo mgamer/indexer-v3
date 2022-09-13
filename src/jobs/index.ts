@@ -53,11 +53,16 @@ import * as exportData from "@/jobs/data-export/export-data";
 
 import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
 import * as eventsSyncBlockCheck from "@/jobs/events-sync/block-check-queue";
+import * as eventsSyncBackfillProcess from "@/jobs/events-sync/process/backfill";
+import * as eventsSyncRealtimeProcess from "@/jobs/events-sync/process/realtime";
 import * as eventsSyncRealtime from "@/jobs/events-sync/realtime-queue";
 import * as eventsSyncFtTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/ft-transfers";
 import * as eventsSyncNftTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/nft-transfers";
 
 import * as fillUpdates from "@/jobs/fill-updates/queue";
+
+import * as flagStatusProcessJob from "@/jobs/flag-status/process-queue";
+import * as flagStatusSyncJob from "@/jobs/flag-status/sync-queue";
 
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as metadataIndexProcess from "@/jobs/metadata-index/process-queue";
@@ -90,9 +95,6 @@ import * as resyncAttributeFloorSell from "@/jobs/update-attribute/resync-attrib
 import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attribute-key-counts";
 import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
 
-import * as flagStatusProcessJob from "@/jobs/flag-status/process-queue";
-import * as flagStatusSyncJob from "@/jobs/flag-status/sync-queue";
-
 export const allJobQueues = [
   fixActivitiesMissingCollection.queue,
   processActivityEvent.queue,
@@ -121,11 +123,16 @@ export const allJobQueues = [
 
   eventsSyncBackfill.queue,
   eventsSyncBlockCheck.queue,
+  eventsSyncBackfillProcess.queue,
+  eventsSyncRealtimeProcess.queue,
   eventsSyncRealtime.queue,
   eventsSyncFtTransfersWriteBuffer.queue,
   eventsSyncNftTransfersWriteBuffer.queue,
 
   fillUpdates.queue,
+
+  flagStatusProcessJob.queue,
+  flagStatusSyncJob.queue,
 
   metadataIndexFetch.queue,
   metadataIndexProcess.queue,
@@ -149,9 +156,6 @@ export const allJobQueues = [
   tokenRefreshCache.queue,
   nonFlaggedTokenSet.queue,
   fetchCollectionMetadata.queue,
-
-  flagStatusProcessJob.queue,
-  flagStatusSyncJob.queue,
 
   handleNewSellOrder.queue,
   handleNewBuyOrder.queue,
