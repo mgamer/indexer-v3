@@ -95,7 +95,7 @@ export const syncEvents = async (
   const backfill = Boolean(options?.backfill);
 
   // Before proceeding, fetch all individual blocks within the current range
-  const limit = pLimit(5);
+  const limit = pLimit(32);
   await Promise.all(
     _.range(fromBlock, toBlock + 1).map((block) => limit(() => syncEventsUtils.fetchBlock(block)))
   );
