@@ -95,7 +95,7 @@ export const syncEvents = async (
   const backfill = Boolean(options?.backfill);
 
   // Before proceeding, fetch all individual blocks within the current range
-  const limit = pLimit(5);
+  const limit = pLimit(32);
   await Promise.all(
     _.range(fromBlock, toBlock + 1).map((block) => limit(() => syncEventsUtils.fetchBlock(block)))
   );
@@ -2419,8 +2419,8 @@ export const syncEvents = async (
 
         // Act right away if the current block is a duplicate
         if ((await blocksModel.getBlocks(block)).length > 1) {
-          blockCheck.addToQueue(block, blockHash, 10);
-          blockCheck.addToQueue(block, blockHash, 30);
+          await blockCheck.addToQueue(block, blockHash, 10);
+          await blockCheck.addToQueue(block, blockHash, 30);
         }
       }
 
