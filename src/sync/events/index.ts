@@ -93,9 +93,6 @@ export const syncEvents = async (
 
   // When backfilling, certain processes are disabled
   const backfill = Boolean(options?.backfill);
-  if (backfill && 1 + 1 === 2) {
-    return;
-  }
 
   // Before proceeding, fetch all individual blocks within the current range
   const limit = pLimit(5);
@@ -2422,8 +2419,8 @@ export const syncEvents = async (
 
         // Act right away if the current block is a duplicate
         if ((await blocksModel.getBlocks(block)).length > 1) {
-          blockCheck.addToQueue(block, blockHash, 10);
-          blockCheck.addToQueue(block, blockHash, 30);
+          await blockCheck.addToQueue(block, blockHash, 10);
+          await blockCheck.addToQueue(block, blockHash, 30);
         }
       }
 
