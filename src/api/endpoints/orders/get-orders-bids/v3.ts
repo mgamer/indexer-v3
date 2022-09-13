@@ -28,7 +28,7 @@ export const getOrdersBidsV3Options: RouteOptions = {
   validate: {
     query: Joi.object({
       ids: Joi.alternatives(Joi.string(), Joi.array().items(Joi.string())).description(
-        "Order id(s) to search for."
+        "Order id(s) to search for (only fillable and approved orders will be returned)"
       ),
       token: Joi.string()
         .lowercase()
