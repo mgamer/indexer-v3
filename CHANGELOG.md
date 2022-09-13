@@ -1,3 +1,13 @@
+# [5.214.0](https://github.com/reservoirprotocol/indexer/compare/v5.213.5...v5.214.0) (2022-09-13)
+
+
+### Features
+
+* added rate limit by tier ([a1ad1be](https://github.com/reservoirprotocol/indexer/commit/a1ad1be5ec7a92d59d360148579ce58a526cf0b2))
+* update migration ([3df5f12](https://github.com/reservoirprotocol/indexer/commit/3df5f12fd47d8f21a686d5fcaf345c6e73b0a55c))
+
+
+
 ## [5.213.5](https://github.com/reservoirprotocol/indexer/compare/v5.213.4...v5.213.5) (2022-09-13)
 
 
