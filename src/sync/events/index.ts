@@ -115,12 +115,6 @@ export const syncEvents = async (
   };
 
   if (options?.syncDetails?.method === "event-data-kind") {
-    logger.info(
-      COMPONENT_NAME,
-      `Topics: ${JSON.stringify([
-        ...new Set(getEventData(options.syncDetails.eventDataKinds).map(({ topic }) => topic)),
-      ])}`
-    );
     // Filter by a subset of topics
     eventFilter = {
       // Convert to a set in order to skip duplicate topics
