@@ -1,3 +1,12 @@
+## [5.213.1](https://github.com/reservoirprotocol/indexer/compare/v5.213.0...v5.213.1) (2022-09-13)
+
+
+### Performance Improvements
+
+* asynchronous event handling ([05ab929](https://github.com/reservoirprotocol/indexer/commit/05ab929a800f5e879e3148f2412cd5f1e3901e53))
+
+
+
 # [5.213.0](https://github.com/reservoirprotocol/indexer/compare/v5.212.2...v5.213.0) (2022-09-13)
 
 
