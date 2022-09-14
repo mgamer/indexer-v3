@@ -1,3 +1,12 @@
+# [5.219.0](https://github.com/reservoirprotocol/indexer/compare/v5.218.0...v5.219.0) (2022-09-14)
+
+
+### Features
+
+* added support for non flaggeed tokens set orders ([#1836](https://github.com/reservoirprotocol/indexer/issues/1836)) ([943cac0](https://github.com/reservoirprotocol/indexer/commit/943cac0d744addd80d0e96cbbe8bb6d0605e9f13))
+
+
+
 # [5.218.0](https://github.com/reservoirprotocol/indexer/compare/v5.217.1...v5.218.0) (2022-09-13)
 
 
