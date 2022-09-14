@@ -1,3 +1,12 @@
+## [5.220.3](https://github.com/reservoirprotocol/indexer/compare/v5.220.2...v5.220.3) (2022-09-14)
+
+
+### Bug Fixes
+
+* cryptopunks orders ([91ff783](https://github.com/reservoirprotocol/indexer/commit/91ff783acc9476ff27351f847e6faf2311e4db54))
+
+
+
 ## [5.220.2](https://github.com/reservoirprotocol/indexer/compare/v5.220.1...v5.220.2) (2022-09-14)
 
 
