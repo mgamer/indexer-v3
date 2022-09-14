@@ -1,3 +1,12 @@
+## [5.220.1](https://github.com/reservoirprotocol/indexer/compare/v5.220.0...v5.220.1) (2022-09-14)
+
+
+### Performance Improvements
+
+* tweaks ([059320f](https://github.com/reservoirprotocol/indexer/commit/059320f17351015284f8fe802cff50810fb83de6))
+
+
+
 # [5.220.0](https://github.com/reservoirprotocol/indexer/compare/v5.219.0...v5.220.0) (2022-09-14)
 
 
