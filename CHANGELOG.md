@@ -1,3 +1,12 @@
+# [5.221.0](https://github.com/reservoirprotocol/indexer/compare/v5.220.10...v5.221.0) (2022-09-14)
+
+
+### Bug Fixes
+
+* tweak execute bid step descriptions ([27c0b28](https://github.com/reservoirprotocol/indexer/commit/27c0b28054657fe31a3039774a6780845fb6be73))
+
+
+
 ## [5.220.10](https://github.com/reservoirprotocol/indexer/compare/v5.220.9...v5.220.10) (2022-09-14)
 
 
