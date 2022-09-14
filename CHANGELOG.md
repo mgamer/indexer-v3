@@ -1,3 +1,12 @@
+## [5.220.8](https://github.com/reservoirprotocol/indexer/compare/v5.220.7...v5.220.8) (2022-09-14)
+
+
+### Bug Fixes
+
+* temporary workaround for updating some zora sale prices ([fecf525](https://github.com/reservoirprotocol/indexer/commit/fecf52540d010f3350c8fe15eba31cd7c8b715bb))
+
+
+
 ## [5.220.7](https://github.com/reservoirprotocol/indexer/compare/v5.220.6...v5.220.7) (2022-09-14)
 
 
