@@ -2217,7 +2217,10 @@ export const syncEvents = async (
             const tokenOwner = args["tokenOwner"].toLowerCase();
             let taker = args["winner"].toLowerCase();
             const amount = args["amount"].toString();
+            const curatorFee = args["curatorFee"].toString();
             const auctionCurrency = args["auctionCurrency"].toLowerCase();
+
+            const price = bn(amount).add(curatorFee).toString();
 
             // Handle: attribution
 
@@ -2234,7 +2237,7 @@ export const syncEvents = async (
 
             const prices = await getUSDAndNativePrices(
               auctionCurrency,
-              amount,
+              price,
               baseEventParams.timestamp
             );
             if (!prices.nativePrice) {
@@ -2249,7 +2252,7 @@ export const syncEvents = async (
               taker,
               maker: tokenOwner,
               price: prices.nativePrice,
-              currencyPrice: amount,
+              currencyPrice: price,
               usdPrice: prices.usdPrice,
               contract: tokenContract,
               tokenId,
