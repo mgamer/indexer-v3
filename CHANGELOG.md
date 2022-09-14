@@ -1,3 +1,12 @@
+## [5.220.6](https://github.com/reservoirprotocol/indexer/compare/v5.220.5...v5.220.6) (2022-09-14)
+
+
+### Bug Fixes
+
+* sudoswap currency ([c9c6455](https://github.com/reservoirprotocol/indexer/commit/c9c64552982a7c742f1b3d3db5067c17d74a1f6a))
+
+
+
 ## [5.220.5](https://github.com/reservoirprotocol/indexer/compare/v5.220.4...v5.220.5) (2022-09-14)
 
 
