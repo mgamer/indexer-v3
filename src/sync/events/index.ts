@@ -95,21 +95,10 @@ export const syncEvents = async (
   const backfill = Boolean(options?.backfill);
 
   // Before proceeding, fetch all individual blocks within the current range
-  if (!backfill) {
+  if (toBlock - fromBlock + 1 <= 32) {
     const limit = pLimit(32);
-    const before = performance.now();
-    logger.info(COMPONENT_NAME, `Fetching blocks ${fromBlock} - ${toBlock + 1}`);
     await Promise.all(
-      _.range(fromBlock, toBlock + 1).map((block) =>
-        limit(async () => {
-          await syncEventsUtils.fetchBlock(block);
-        })
-      )
-    );
-    const after = performance.now();
-    logger.info(
-      COMPONENT_NAME,
-      `Fetched blocks ${fromBlock} - ${toBlock + 1} in ${after - before} milliseconds`
+      _.range(fromBlock, toBlock + 1).map((block) => limit(() => syncEventsUtils.fetchBlock(block)))
     );
   }
 
