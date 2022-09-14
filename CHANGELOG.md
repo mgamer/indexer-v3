@@ -1,3 +1,12 @@
+## [5.220.5](https://github.com/reservoirprotocol/indexer/compare/v5.220.4...v5.220.5) (2022-09-14)
+
+
+### Bug Fixes
+
+* skip zero price cryptopunks sales ([9377a12](https://github.com/reservoirprotocol/indexer/commit/9377a12336103223aefd4ae8b4179da6f84ac97e))
+
+
+
 ## [5.220.4](https://github.com/reservoirprotocol/indexer/compare/v5.220.3...v5.220.4) (2022-09-14)
 
 
