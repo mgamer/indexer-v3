@@ -141,6 +141,7 @@ export const start = async (): Promise<void> => {
     const apiKey = await ApiKeyManager.getApiKey(key);
     const tier = apiKey?.tier || 0;
 
+    // Get the rule for the incoming request
     const rateLimitRules = await RateLimitRules.getInstance();
     const rateLimitRule = rateLimitRules.getRule(request.route.path, request.route.method, tier);
 
@@ -168,19 +169,14 @@ export const start = async (): Promise<void> => {
         )}`;
       } catch (error) {
         if (error instanceof RateLimiterRes) {
-          if (
-            error.consumedPoints == Number(rateLimitRule.options.points) + 1 ||
-            error.consumedPoints % 50 == 0
-          ) {
-            logger.warn(
-              "rate-limiter",
-              `${rateLimitKey} ${apiKey?.appName} reached allowed rate limit ${
-                rateLimitRule.options.points
-              } requests in ${rateLimitRule.options.duration}s by calling ${
-                error.consumedPoints
-              } times in rule ${JSON.stringify(rateLimitRule)}`
-            );
-          }
+          logger.warn(
+            "rate-limiter",
+            `${rateLimitKey} ${apiKey?.appName} reached allowed rate limit ${
+              rateLimitRule.options.points
+            } requests in ${rateLimitRule.options.duration}s by calling ${
+              error.consumedPoints
+            } times in rule ${JSON.stringify(rateLimitRule)}`
+          );
 
           const tooManyRequestsResponse = {
             statusCode: 429,
