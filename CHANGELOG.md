@@ -1,3 +1,12 @@
+# [5.223.0](https://github.com/reservoirprotocol/indexer/compare/v5.222.0...v5.223.0) (2022-09-14)
+
+
+### Features
+
+* fixed block hash convestion ([#1856](https://github.com/reservoirprotocol/indexer/issues/1856)) ([2c2b810](https://github.com/reservoirprotocol/indexer/commit/2c2b810a06376cde8cc12ea923faf3a84e1168cf))
+
+
+
 # [5.222.0](https://github.com/reservoirprotocol/indexer/compare/v5.221.0...v5.222.0) (2022-09-14)
 
 
