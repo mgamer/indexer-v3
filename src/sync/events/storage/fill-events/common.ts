@@ -98,7 +98,10 @@ export const addEvents = async (events: Event[]) => {
           "usd_price",
           "is_primary"
         ) VALUES ${pgp.helpers.values(fillValues, columns)}
-        ON CONFLICT DO NOTHING
+        ON CONFLICT ("tx_hash", "log_index", "batch_index") DO UPDATE SET
+          "price" = EXCLUDED.price,
+          "currency_price" = EXCLUDED.currency_price,
+          "updated_at" = now()
         RETURNING "order_kind", "order_id", "timestamp"
       )
       INSERT INTO "orders" (
