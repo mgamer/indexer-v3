@@ -1,3 +1,12 @@
+# [5.220.0](https://github.com/reservoirprotocol/indexer/compare/v5.219.0...v5.220.0) (2022-09-14)
+
+
+### Features
+
+* added logic to generate token set ([#1837](https://github.com/reservoirprotocol/indexer/issues/1837)) ([02a0952](https://github.com/reservoirprotocol/indexer/commit/02a095216a85dae2632cb62371bc565bc24ddc75))
+
+
+
 # [5.219.0](https://github.com/reservoirprotocol/indexer/compare/v5.218.0...v5.219.0) (2022-09-14)
 
 

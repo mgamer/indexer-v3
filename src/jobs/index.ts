@@ -63,6 +63,8 @@ import * as fillUpdates from "@/jobs/fill-updates/queue";
 
 import * as flagStatusProcessJob from "@/jobs/flag-status/process-queue";
 import * as flagStatusSyncJob from "@/jobs/flag-status/sync-queue";
+import * as flagStatusGenerateAttributeTokenSet from "@/jobs/flag-status/generate-attribute-token-set";
+import * as flagStatusGenerateCollectionTokenSet from "@/jobs/flag-status/generate-collection-token-set";
 
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as metadataIndexProcess from "@/jobs/metadata-index/process-queue";
@@ -84,7 +86,6 @@ import * as fetchSourceInfo from "@/jobs/sources/fetch-source-info";
 
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 import * as tokenRefreshCache from "@/jobs/token-updates/token-refresh-cache";
-import * as nonFlaggedTokenSet from "@/jobs/token-updates/non-flagged-token-set";
 import * as fetchCollectionMetadata from "@/jobs/token-updates/fetch-collection-metadata";
 
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
@@ -133,6 +134,8 @@ export const allJobQueues = [
 
   flagStatusProcessJob.queue,
   flagStatusSyncJob.queue,
+  flagStatusGenerateAttributeTokenSet.queue,
+  flagStatusGenerateCollectionTokenSet.queue,
 
   metadataIndexFetch.queue,
   metadataIndexProcess.queue,
@@ -154,7 +157,6 @@ export const allJobQueues = [
 
   tokenUpdatesMint.queue,
   tokenRefreshCache.queue,
-  nonFlaggedTokenSet.queue,
   fetchCollectionMetadata.queue,
 
   handleNewSellOrder.queue,
