@@ -98,7 +98,8 @@ export const addEventsOnChain = async (events: Event[]) => {
           "usd_price",
           "is_primary"
         ) VALUES ${pgp.helpers.values(fillValues, columns)}
-        ON CONFLICT DO NOTHING
+        ON CONFLICT ("tx_hash", "log_index", "batch_index") DO UPDATE
+          SET "is_primary" = false
         RETURNING "order_kind", "order_id", "timestamp"
       )
       UPDATE "orders" SET
