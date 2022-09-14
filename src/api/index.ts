@@ -143,7 +143,12 @@ export const start = async (): Promise<void> => {
 
     // Get the rule for the incoming request
     const rateLimitRules = await RateLimitRules.getInstance();
-    const rateLimitRule = rateLimitRules.getRule(request.route.path, request.route.method, tier);
+    const rateLimitRule = rateLimitRules.getRule(
+      request.route.path,
+      request.route.method,
+      tier,
+      apiKey?.key
+    );
 
     // If matching rule was found
     if (rateLimitRule) {
@@ -186,7 +191,6 @@ export const start = async (): Promise<void> => {
 
           return reply
             .response(tooManyRequestsResponse)
-            .header("x-cf-block", "true")
             .type("application/json")
             .code(429)
             .takeover();
