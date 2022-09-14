@@ -1,3 +1,12 @@
+## [5.220.7](https://github.com/reservoirprotocol/indexer/compare/v5.220.6...v5.220.7) (2022-09-14)
+
+
+### Bug Fixes
+
+* zora auction house pricing ([62da91a](https://github.com/reservoirprotocol/indexer/commit/62da91a017574c29b81067056de6ae565a7b042c))
+
+
+
 ## [5.220.6](https://github.com/reservoirprotocol/indexer/compare/v5.220.5...v5.220.6) (2022-09-14)
 
 
