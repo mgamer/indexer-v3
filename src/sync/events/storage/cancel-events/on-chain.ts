@@ -37,6 +37,10 @@ export const addEventsOnChain = async (events: Event[]) => {
     );
 
     // Atomically insert the cancel events and update order statuses
+    // NOTE: Ideally we have an `ON CONFLICT NO NOTHING` clause, but
+    // in order to be able to sync sales/cancels before orders we do
+    // a redundant update (so that the update on the orders table is
+    // triggered).
     queries.push(`
       WITH "x" AS (
         INSERT INTO "cancel_events" (
