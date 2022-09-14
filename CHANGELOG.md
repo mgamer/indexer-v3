@@ -1,3 +1,12 @@
+## [5.220.9](https://github.com/reservoirprotocol/indexer/compare/v5.220.8...v5.220.9) (2022-09-14)
+
+
+### Bug Fixes
+
+* revert temporary fix ([1bcf35c](https://github.com/reservoirprotocol/indexer/commit/1bcf35c4013ed795c8576ae80491d643eaf87a45))
+
+
+
 ## [5.220.8](https://github.com/reservoirprotocol/indexer/compare/v5.220.7...v5.220.8) (2022-09-14)
 
 
