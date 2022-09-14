@@ -1,3 +1,12 @@
+# [5.222.0](https://github.com/reservoirprotocol/indexer/compare/v5.221.0...v5.222.0) (2022-09-14)
+
+
+### Features
+
+* added support for goerli ([#1854](https://github.com/reservoirprotocol/indexer/issues/1854)) ([1c52cad](https://github.com/reservoirprotocol/indexer/commit/1c52cad834d872d55f47457040e7fa148e772830))
+
+
+
 # [5.221.0](https://github.com/reservoirprotocol/indexer/compare/v5.220.10...v5.221.0) (2022-09-14)
 
 
