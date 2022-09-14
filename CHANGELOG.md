@@ -1,3 +1,12 @@
+## [5.220.10](https://github.com/reservoirprotocol/indexer/compare/v5.220.9...v5.220.10) (2022-09-14)
+
+
+### Bug Fixes
+
+* properly attribute router-filled bids ([2872b56](https://github.com/reservoirprotocol/indexer/commit/2872b5660897b2a7f47b03a33802da806f203640))
+
+
+
 ## [5.220.9](https://github.com/reservoirprotocol/indexer/compare/v5.220.8...v5.220.9) (2022-09-14)
 
 
