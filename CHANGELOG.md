@@ -1,3 +1,21 @@
+# [5.225.0](https://github.com/reservoirprotocol/indexer/compare/v5.224.0...v5.225.0) (2022-09-14)
+
+
+### Features
+
+* update bids/asks sortBy docs ([0b478bb](https://github.com/reservoirprotocol/indexer/commit/0b478bba147754a74464a3913d25219ec4b70dca))
+
+
+
+# [5.224.0](https://github.com/reservoirprotocol/indexer/compare/v5.223.0...v5.224.0) (2022-09-14)
+
+
+### Features
+
+* add additional headers for reporting rk version ([d714ce3](https://github.com/reservoirprotocol/indexer/commit/d714ce3021a8ce0f7af4902b5a6d9ab5be357655))
+
+
+
 # [5.223.0](https://github.com/reservoirprotocol/indexer/compare/v5.222.0...v5.223.0) (2022-09-14)
 
 
