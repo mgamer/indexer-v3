@@ -403,6 +403,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/events/asks/v2",
+    options: eventsEndpoints.getAsksEventsV2Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/events/tokens/floor-ask/v2",
     options: eventsEndpoints.getTokensFloorAskV2Options,
   });
