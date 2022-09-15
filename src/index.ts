@@ -6,6 +6,7 @@ import "@/jobs/index";
 import "@/pubsub/index";
 
 import { start } from "@/api/index";
+import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 import { getNetworkSettings } from "@/config/network";
 
@@ -17,9 +18,11 @@ process.on("unhandledRejection", (error) => {
 });
 
 const setup = async () => {
-  const networkSettings = getNetworkSettings();
-  if (networkSettings.onStartup) {
-    await networkSettings.onStartup();
+  if (config.doBackgroundWork) {
+    const networkSettings = getNetworkSettings();
+    if (networkSettings.onStartup) {
+      await networkSettings.onStartup();
+    }
   }
 };
 
