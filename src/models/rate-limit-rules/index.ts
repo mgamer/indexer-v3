@@ -104,7 +104,7 @@ export class RateLimitRules {
                    WHERE id = $/id/`;
 
     await idb.none(query, replacementValues);
-    await redis.publish(channels.rateLimitRuleUpdated, JSON.stringify(`Updated rule id ${id}`));
+    await redis.publish(channels.rateLimitRuleUpdated, `Updated rule id ${id}`);
   }
 
   public getRule(route: string, method: string, tier: number) {
