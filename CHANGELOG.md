@@ -1,3 +1,12 @@
+# [5.232.0](https://github.com/reservoirprotocol/indexer/compare/v5.231.0...v5.232.0) (2022-09-15)
+
+
+### Features
+
+* return only listed tokens when filtering by source ([eb63607](https://github.com/reservoirprotocol/indexer/commit/eb63607411f11583b4e2d759748dd0ef5a92510c))
+
+
+
 # [5.231.0](https://github.com/reservoirprotocol/indexer/compare/v5.230.0...v5.231.0) (2022-09-15)
 
 
