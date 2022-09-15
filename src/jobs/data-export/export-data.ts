@@ -67,6 +67,13 @@ if (config.doBackgroundWork) {
 
           // Trigger next sequence only if there are more results
           job.data.addToQueue = data.length >= QUERY_LIMIT;
+
+          logger.info(
+            QUEUE_NAME,
+            `Export finished. kind:${kind}, cursor:${JSON.stringify(
+              cursor
+            )}, sequenceNumber:${sequenceNumber}, nextCursor:${JSON.stringify(nextCursor)}`
+          );
         } catch (error) {
           logger.error(QUEUE_NAME, `Export ${kind} failed: ${error}`);
         }
@@ -183,6 +190,24 @@ const uploadSequenceToS3 = async (key: string, data: string) => {
       ACL: "bucket-owner-full-control",
     })
     .promise();
+
+  if (config.dataExportS3ArchiveBucketName) {
+    try {
+      await new AWS.S3({
+        accessKeyId: config.awsAccessKeyId,
+        secretAccessKey: config.awsSecretAccessKey,
+      })
+        .putObject({
+          Bucket: config.dataExportS3ArchiveBucketName,
+          Key: key,
+          Body: data,
+          ContentType: "application/json",
+        })
+        .promise();
+    } catch (error) {
+      logger.error(QUEUE_NAME, `Upload ${key} to archive failed: ${error}`);
+    }
+  }
 };
 
 const getAwsCredentials = async () => {

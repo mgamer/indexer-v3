@@ -150,7 +150,6 @@ export class RateLimitRules {
                    WHERE id = $/id/`;
 
     await idb.none(query, replacementValues);
-    await RateLimitRules.forceDataReload(); // reload the cache
     await redis.publish(channels.rateLimitRuleUpdated, `Updated rule id ${id}`);
   }
 
