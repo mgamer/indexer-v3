@@ -129,6 +129,7 @@ export const getCollectionsV5Options: RouteOptions = {
           },
           topBid: Joi.object({
             id: Joi.string().allow(null),
+            sourceDomain: Joi.string().allow(null, ""),
             price: JoiPrice.allow(null),
             maker: Joi.string().lowercase().pattern(regex.address).allow(null),
             validFrom: Joi.number().unsafe().allow(null),
@@ -204,6 +205,7 @@ export const getCollectionsV5Options: RouteOptions = {
             orders.price AS top_buy_price,
             orders.value AS top_buy_value,
             orders.currency_price AS top_buy_currency_price,
+            orders.source_id_int AS top_buy_source_id_int,
             orders.currency_value AS top_buy_currency_value
           FROM token_sets
           LEFT JOIN orders
@@ -432,6 +434,7 @@ export const getCollectionsV5Options: RouteOptions = {
           const floorAskCurrency = r.floor_sell_currency
             ? fromBuffer(r.floor_sell_currency)
             : Sdk.Common.Addresses.Eth[config.chainId];
+
           const topBidCurrency = r.top_buy_currency
             ? fromBuffer(r.top_buy_currency)
             : Sdk.Common.Addresses.Weth[config.chainId];
@@ -487,6 +490,7 @@ export const getCollectionsV5Options: RouteOptions = {
             topBid: query.includeTopBid
               ? {
                   id: r.top_buy_id,
+                  sourceDomain: sources.get(r.top_buy_source_id_int)?.domain,
                   price: r.top_buy_id
                     ? await getJoiPriceObject(
                         {
