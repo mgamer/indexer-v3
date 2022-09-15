@@ -216,19 +216,21 @@ export const save = async (
 
             if (ts.length !== 1) {
               const pendingFlagStatusSyncJobs = new PendingFlagStatusSyncJobs();
-              await pendingFlagStatusSyncJobs.add({
-                kind: "collection",
-                data: {
-                  collectionId: info.contract,
-                  backfill: false,
+              await pendingFlagStatusSyncJobs.add([
+                {
+                  kind: "collection",
+                  data: {
+                    collectionId: info.contract,
+                    backfill: false,
+                  },
                 },
-              });
+              ]);
 
               await flagStatusProcessQueue.addToQueue();
 
               logger.info(
                 "orders-seaport-save",
-                `No token set for contract=${info.contract}, tokenSetId=${tokenSetId}`
+                `Invalid tokenSet. orderId=${id}, contract=${info.contract}, tokenSetId=${tokenSetId}`
               );
             }
           }

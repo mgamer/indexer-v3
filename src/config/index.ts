@@ -38,6 +38,7 @@ export const config = {
     process.env.WRITE_REPLICA_DATABASE_URL || process.env.DATABASE_URL
   ),
   redisUrl: String(process.env.REDIS_URL),
+  rateLimitRedisUrl: String(process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL),
 
   master: Boolean(Number(process.env.MASTER)),
   catchup: Boolean(Number(process.env.CATCHUP)),
@@ -54,6 +55,9 @@ export const config = {
   dataExportAwsAccessRole: String(process.env.DATA_EXPORT_AWS_ACCESS_ROLE),
   dataExportAwsS3UploadRole: String(process.env.DATA_EXPORT_AWS_S3_UPLOAD_ROLE),
   dataExportAwsS3UploadExternalId: String(process.env.DATA_EXPORT_AWS_S3_UPLOAD_EXTERNAL_ID),
+  dataExportS3ArchiveBucketName: process.env.DATA_EXPORT_S3_ARCHIVE_BUCKET_NAME
+    ? String(process.env.DATA_EXPORT_S3_ARCHIVE_BUCKET_NAME)
+    : undefined,
 
   looksRareApiKey: String(process.env.LOOKSRARE_API_KEY),
   openSeaApiKey: String(process.env.OPENSEA_API_KEY),
