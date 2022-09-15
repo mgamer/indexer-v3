@@ -1,3 +1,13 @@
+# [5.233.0](https://github.com/reservoirprotocol/indexer/compare/v5.232.0...v5.233.0) (2022-09-15)
+
+
+### Features
+
+* log x-rkui-version and x-rkc-version ([d1ce496](https://github.com/reservoirprotocol/indexer/commit/d1ce49631045bb37f5e1b8f87dca4ec5d42c3dc6))
+* return source domain for collections/v5 top bid ([9844011](https://github.com/reservoirprotocol/indexer/commit/9844011d4391ab3a0d62ac592eac707e2a0d744e))
+
+
+
 # [5.232.0](https://github.com/reservoirprotocol/indexer/compare/v5.231.0...v5.232.0) (2022-09-15)
 
 
