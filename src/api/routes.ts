@@ -415,6 +415,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/events/tokens/floor-ask/v3",
+    options: eventsEndpoints.getTokensFloorAskV3Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/events/bids/v1",
     options: eventsEndpoints.getBidEventsV1Options,
   });
