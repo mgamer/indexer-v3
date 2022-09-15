@@ -5,15 +5,9 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import {
-  buildContinuation,
-  formatEth,
-  fromBuffer,
-  splitContinuation,
-  regex,
-  toBuffer,
-} from "@/common/utils";
+import { buildContinuation, fromBuffer, splitContinuation, regex, toBuffer } from "@/common/utils";
 import { Sources } from "@/models/sources";
+import { getJoiPriceObject, JoiPrice } from "@/common/joi";
 
 const version = "v2";
 
@@ -69,7 +63,7 @@ export const getAsksEventsV2Options: RouteOptions = {
             contract: Joi.string().lowercase().pattern(regex.address),
             tokenId: Joi.string().pattern(regex.number),
             maker: Joi.string().lowercase().pattern(regex.address).allow(null),
-            price: Joi.number().unsafe().allow(null),
+            price: JoiPrice.allow(null),
             quantityRemaining: Joi.number().unsafe(),
             nonce: Joi.string().pattern(regex.number).allow(null),
             validFrom: Joi.number().unsafe().allow(null),
@@ -118,6 +112,8 @@ export const getAsksEventsV2Options: RouteOptions = {
           order_events.order_nonce,
           order_events.maker,
           order_events.price,
+          orders.currency,
+          TRUNC(orders.currency_price, 0) AS currency_price,
           order_events.order_source_id_int,
           coalesce(
             nullif(date_part('epoch', upper(order_events.order_valid_between)), 'Infinity'),
@@ -128,6 +124,11 @@ export const getAsksEventsV2Options: RouteOptions = {
           order_events.tx_timestamp,
           extract(epoch from order_events.created_at) AS created_at
         FROM order_events
+        LEFT JOIN LATERAL (
+           SELECT currency, currency_price
+           FROM orders
+           WHERE orders.id = order_events.order_id
+        ) orders ON TRUE
       `;
 
       // We default in the code so that these values don't appear in the docs
@@ -182,28 +183,39 @@ export const getAsksEventsV2Options: RouteOptions = {
       }
 
       const sources = await Sources.getInstance();
-      const result = rawResult.map((r) => ({
-        order: {
-          id: r.order_id,
-          status: r.status,
-          contract: fromBuffer(r.contract),
-          tokenId: r.token_id,
-          maker: r.maker ? fromBuffer(r.maker) : null,
-          price: r.price ? formatEth(r.price) : null,
-          quantityRemaining: Number(r.order_quantity_remaining),
-          nonce: r.order_nonce ?? null,
-          validFrom: r.valid_from ? Number(r.valid_from) : null,
-          validUntil: r.valid_until ? Number(r.valid_until) : null,
-          source: sources.get(r.order_source_id_int)?.name,
-        },
-        event: {
-          id: r.id,
-          kind: r.kind,
-          txHash: r.tx_hash ? fromBuffer(r.tx_hash) : null,
-          txTimestamp: r.tx_timestamp ? Number(r.tx_timestamp) : null,
-          createdAt: new Date(r.created_at * 1000).toISOString(),
-        },
-      }));
+      const result = await Promise.all(
+        rawResult.map(async (r) => ({
+          order: {
+            id: r.order_id,
+            status: r.status,
+            contract: fromBuffer(r.contract),
+            tokenId: r.token_id,
+            maker: r.maker ? fromBuffer(r.maker) : null,
+            price: await getJoiPriceObject(
+              {
+                gross: {
+                  amount: r.currency_price ?? r.price,
+                  nativeAmount: r.price,
+                  usdAmount: r.usd_price,
+                },
+              },
+              fromBuffer(r.currency)
+            ),
+            quantityRemaining: Number(r.order_quantity_remaining),
+            nonce: r.order_nonce ?? null,
+            validFrom: r.valid_from ? Number(r.valid_from) : null,
+            validUntil: r.valid_until ? Number(r.valid_until) : null,
+            source: sources.get(r.order_source_id_int)?.name,
+          },
+          event: {
+            id: r.id,
+            kind: r.kind,
+            txHash: r.tx_hash ? fromBuffer(r.tx_hash) : null,
+            txTimestamp: r.tx_timestamp ? Number(r.tx_timestamp) : null,
+            createdAt: new Date(r.created_at * 1000).toISOString(),
+          },
+        }))
+      );
 
       return {
         events: result,
