@@ -1,3 +1,12 @@
+# [5.230.0](https://github.com/reservoirprotocol/indexer/compare/v5.229.0...v5.230.0) (2022-09-15)
+
+
+### Features
+
+* update orders events to asks ([4bb33e8](https://github.com/reservoirprotocol/indexer/commit/4bb33e8d96c74e7f04e3743c65a70afcba25b934))
+
+
+
 # [5.229.0](https://github.com/reservoirprotocol/indexer/compare/v5.228.0...v5.229.0) (2022-09-15)
 
 
