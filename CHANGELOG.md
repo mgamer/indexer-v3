@@ -1,3 +1,13 @@
+## [5.226.1](https://github.com/reservoirprotocol/indexer/compare/v5.226.0...v5.226.1) (2022-09-15)
+
+
+### Bug Fixes
+
+* only run startup insertions in background worker mode ([67dae16](https://github.com/reservoirprotocol/indexer/commit/67dae1632067c97305db4ef5fdec642965223488))
+* only sync initial sources if running in background worker mode ([5644eff](https://github.com/reservoirprotocol/indexer/commit/5644eff2c1c33284527bc5f35513fe95c878fe28))
+
+
+
 # [5.226.0](https://github.com/reservoirprotocol/indexer/compare/v5.225.0...v5.226.0) (2022-09-15)
 
 
