@@ -170,9 +170,10 @@ export class RateLimitRules {
     const apiKey = await ApiKeyManager.getApiKey(key);
     const tier = apiKey?.tier || 0;
 
-    const query = `SELECT *
+    const query = `SELECT DISTINCT ON (route) *
                    FROM rate_limit_rules
-                   WHERE tier = $/tier/ OR tier IS NULL OR api_key = $/key/`;
+                   WHERE tier = $/tier/ OR tier IS NULL OR api_key = $/key/
+                   ORDER BY route, api_key DESC`;
 
     const values = {
       tier,
