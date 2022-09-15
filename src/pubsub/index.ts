@@ -20,6 +20,8 @@ redisSubscriber.subscribe(channels.sourcesUpdated, (err, count) => {
 });
 
 redisSubscriber.on("message", async (channel, message) => {
+  logger.info("pubsub", `Received message on channel ${channel}, message = ${message}`);
+
   switch (channel) {
     case channels.sourcesUpdated:
       await SourcesUpdatedEvent.handleEvent(message);
