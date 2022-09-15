@@ -25,6 +25,7 @@ export type EnhancedEvent = {
 export type OnChainData = {
   // Fills
   fillEvents?: es.fills.Event[];
+  fillEventsPartial?: es.fills.Event[];
   fillEventsOnChain?: es.fills.Event[];
 
   // Cancels
@@ -51,7 +52,7 @@ export type OnChainData = {
 // Process on-chain data (save to db, trigger any further processes, ...)
 export const processOnChainData = async (data: OnChainData, backfill?: boolean) => {
   // Post-process fill events
-  const allFillEvents = concat(data.fillEvents, data.fillEventsOnChain);
+  const allFillEvents = concat(data.fillEvents, data.fillEventsPartial, data.fillEventsOnChain);
   if (!backfill) {
     await Promise.all([
       assignSourceToFillEvents(allFillEvents),
@@ -64,6 +65,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
   // the fillability status of orders as 'filled' and not 'no-balance'
   await Promise.all([
     es.fills.addEvents(data.fillEvents ?? []),
+    es.fills.addEventsPartial(data.fillEventsPartial ?? []),
     es.fills.addEventsOnChain(data.fillEventsOnChain ?? []),
   ]);
   await Promise.all([
