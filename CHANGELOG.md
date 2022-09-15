@@ -1,3 +1,12 @@
+# [5.231.0](https://github.com/reservoirprotocol/indexer/compare/v5.230.0...v5.231.0) (2022-09-15)
+
+
+### Features
+
+* return price object for asks ([58484c8](https://github.com/reservoirprotocol/indexer/commit/58484c8ffaf86d6bc05ae1ebc7f0a717b28f8ebd))
+
+
+
 # [5.230.0](https://github.com/reservoirprotocol/indexer/compare/v5.229.0...v5.230.0) (2022-09-15)
 
 
