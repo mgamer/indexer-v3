@@ -1,3 +1,12 @@
+# [5.227.0](https://github.com/reservoirprotocol/indexer/compare/v5.226.2...v5.227.0) (2022-09-15)
+
+
+### Features
+
+* log full api key info ([bfdcf25](https://github.com/reservoirprotocol/indexer/commit/bfdcf256c1ad915ac891f8d4fd6ce575ce77346e))
+
+
+
 ## [5.226.2](https://github.com/reservoirprotocol/indexer/compare/v5.226.1...v5.226.2) (2022-09-15)
 
 
