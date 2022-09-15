@@ -1,3 +1,19 @@
+# [5.226.0](https://github.com/reservoirprotocol/indexer/compare/v5.225.0...v5.226.0) (2022-09-15)
+
+
+### Bug Fixes
+
+* erc20 orders price update cron ([d20491c](https://github.com/reservoirprotocol/indexer/commit/d20491cee6d4d1ed1ab2a5618cff7e081f43669b))
+* subscribe to all channels ([3b30f70](https://github.com/reservoirprotocol/indexer/commit/3b30f70f7d79d6bb980dab97a5b52f2c51bd0d35))
+
+
+### Features
+
+* added log ([b9dd78f](https://github.com/reservoirprotocol/indexer/commit/b9dd78fb56fc19c6678f0073c3bd19c11c51ede0))
+* update publish message ([16d0af7](https://github.com/reservoirprotocol/indexer/commit/16d0af7df4052fa8c8445d3e933a452ccc74947c))
+
+
+
 # [5.225.0](https://github.com/reservoirprotocol/indexer/compare/v5.224.0...v5.225.0) (2022-09-14)
 
 

@@ -2,24 +2,23 @@ import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { HapiAdapter } from "@bull-board/hapi";
 import Basic from "@hapi/basic";
+import { Boom } from "@hapi/boom";
 import Hapi from "@hapi/hapi";
 import Inert from "@hapi/inert";
 import Vision from "@hapi/vision";
 import HapiSwagger from "hapi-swagger";
-import qs from "qs";
 import _ from "lodash";
+import { RateLimiterRedis, RateLimiterRes } from "rate-limiter-flexible";
+import qs from "qs";
 
 import { setupRoutes } from "@/api/routes";
 import { logger } from "@/common/logger";
+import { rateLimitRedis } from "@/common/redis";
 import { config } from "@/config/index";
 import { getNetworkName } from "@/config/network";
-import { ApiKeyManager } from "@/models/api-keys";
-import { Sources } from "@/models/sources";
 import { allJobQueues } from "@/jobs/index";
+import { ApiKeyManager } from "@/models/api-keys";
 import { RateLimitRules } from "@/models/rate-limit-rules";
-import { RateLimiterRedis, RateLimiterRes } from "rate-limiter-flexible";
-import { rateLimitRedis } from "@/common/redis";
-import { Boom } from "@hapi/boom";
 
 let server: Hapi.Server;
 
@@ -88,9 +87,6 @@ export const start = async (): Promise<void> => {
       routes: { prefix: "/admin/bullmq" },
     }
   );
-
-  // Create all supported sources
-  await Sources.syncSources();
 
   // Getting rate limit instance will load rate limit rules into memory
   await RateLimitRules.getInstance();
