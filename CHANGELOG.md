@@ -1,3 +1,12 @@
+## [5.226.2](https://github.com/reservoirprotocol/indexer/compare/v5.226.1...v5.226.2) (2022-09-15)
+
+
+### Bug Fixes
+
+* disable collection/attribute bids to external orderbooks ([3129d91](https://github.com/reservoirprotocol/indexer/commit/3129d9137f8f7e01829a425916fc528279582857))
+
+
+
 ## [5.226.1](https://github.com/reservoirprotocol/indexer/compare/v5.226.0...v5.226.1) (2022-09-15)
 
 
