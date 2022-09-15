@@ -13,7 +13,6 @@ import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { getNetworkName } from "@/config/network";
 import { ApiKeyManager } from "@/models/api-keys";
-import { Sources } from "@/models/sources";
 import { allJobQueues } from "@/jobs/index";
 
 let server: Hapi.Server;
@@ -83,9 +82,6 @@ export const start = async (): Promise<void> => {
       routes: { prefix: "/admin/bullmq" },
     }
   );
-
-  // Create all supported sources
-  await Sources.syncSources();
 
   const apiDescription =
     "You are viewing the reference docs for the Reservoir API.\
