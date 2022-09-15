@@ -1,3 +1,12 @@
+# [5.229.0](https://github.com/reservoirprotocol/indexer/compare/v5.228.0...v5.229.0) (2022-09-15)
+
+
+### Features
+
+* added logic to check if token set exists ([#1874](https://github.com/reservoirprotocol/indexer/issues/1874)) ([75fe76b](https://github.com/reservoirprotocol/indexer/commit/75fe76b2967f5bb3dd385be17faebd112ae338ed))
+
+
+
 # [5.228.0](https://github.com/reservoirprotocol/indexer/compare/v5.227.0...v5.228.0) (2022-09-15)
 
 
