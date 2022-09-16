@@ -1,7 +1,5 @@
 import { AddressZero } from "@ethersproject/constants";
-import * as Sdk from "@reservoir0x/sdk";
 
-import { config } from "@/config/index";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import * as es from "@/events-sync/storage";
@@ -82,7 +80,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           },
           data: {
             kind: "buy-approval",
-            contract: Sdk.Common.Addresses.Weth[config.chainId],
+            contract: baseEventParams.address,
             operator: spender,
           },
         });
