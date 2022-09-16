@@ -69,6 +69,7 @@ export const getAsksEventsV2Options: RouteOptions = {
             validFrom: Joi.number().unsafe().allow(null),
             validUntil: Joi.number().unsafe().allow(null),
             source: Joi.string().allow(null, ""),
+            isDynamic: Joi.boolean(),
           }),
           event: Joi.object({
             id: Joi.number().unsafe(),
@@ -113,6 +114,7 @@ export const getAsksEventsV2Options: RouteOptions = {
           order_events.maker,
           order_events.price,
           orders.currency,
+          orders.dynamic,
           TRUNC(orders.currency_price, 0) AS currency_price,
           order_events.order_source_id_int,
           coalesce(
@@ -125,7 +127,7 @@ export const getAsksEventsV2Options: RouteOptions = {
           extract(epoch from order_events.created_at) AS created_at
         FROM order_events
         LEFT JOIN LATERAL (
-           SELECT currency, currency_price
+           SELECT currency, currency_price, dynamic
            FROM orders
            WHERE orders.id = order_events.order_id
         ) orders ON TRUE
@@ -208,6 +210,7 @@ export const getAsksEventsV2Options: RouteOptions = {
             validFrom: r.valid_from ? Number(r.valid_from) : null,
             validUntil: r.valid_until ? Number(r.valid_until) : null,
             source: sources.get(r.order_source_id_int)?.name,
+            isDynamic: Boolean(r.dynamic),
           },
           event: {
             id: r.id,
