@@ -182,7 +182,9 @@ export const start = async (): Promise<void> => {
                 rateLimitRule.options.points
               } requests in ${rateLimitRule.options.duration}s by calling ${
                 error.consumedPoints
-              } times on route ${request.route.path} in rule ${JSON.stringify(rateLimitRule)}`
+              } times on route ${request.route.path} from referrer ${
+                request.info.referrer
+              } for rule ${JSON.stringify(rateLimitRule)}`
             );
           }
 
