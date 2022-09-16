@@ -84,6 +84,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
     es.cancels.addEventsOnChain(data.cancelEventsOnChain ?? []),
     es.bulkCancels.addEvents(data.bulkCancelEvents ?? []),
     es.nonceCancels.addEvents(data.nonceCancelEvents ?? []),
+    es.nftApprovals.addEvents(data.nftApprovalEvents ?? []),
     es.ftTransfers.addEvents(data.ftTransferEvents ?? [], Boolean(backfill)),
     es.nftTransfers.addEvents(data.nftTransferEvents ?? [], Boolean(backfill)),
   ]);
