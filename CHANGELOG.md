@@ -1,3 +1,18 @@
+# [5.235.0](https://github.com/reservoirprotocol/indexer/compare/v5.234.0...v5.235.0) (2022-09-16)
+
+
+### Features
+
+* added log for no ip ([0471041](https://github.com/reservoirprotocol/indexer/commit/0471041fffad02f669d4f133bfd6179cfb67380d))
+* added log for no ip ([7fbf241](https://github.com/reservoirprotocol/indexer/commit/7fbf24166391c1631765a9cfb7dafce1728fb041))
+* added log for no ip ([01fd646](https://github.com/reservoirprotocol/indexer/commit/01fd646653eb2791baa3d6cef955c332ebc25c5c))
+* cache asset error ([a296145](https://github.com/reservoirprotocol/indexer/commit/a296145369ca67b60347ab1f1694f007e23a6ee9))
+* remove logs ([1306476](https://github.com/reservoirprotocol/indexer/commit/1306476cd0aa77c7157df96375c294e83789cfe1))
+* return price object in token floor ask ([43588c9](https://github.com/reservoirprotocol/indexer/commit/43588c94afc7177f38dacd6911af73928c9d7866))
+* update rate limit log ([a22891f](https://github.com/reservoirprotocol/indexer/commit/a22891fd40292d35663c3bc83e62b03bcbdf8b13))
+
+
+
 # [5.234.0](https://github.com/reservoirprotocol/indexer/compare/v5.233.2...v5.234.0) (2022-09-16)
 
 
