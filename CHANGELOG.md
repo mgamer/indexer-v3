@@ -1,3 +1,12 @@
+## [5.233.2](https://github.com/reservoirprotocol/indexer/compare/v5.233.1...v5.233.2) (2022-09-16)
+
+
+### Bug Fixes
+
+* tweaks ([d8449b7](https://github.com/reservoirprotocol/indexer/commit/d8449b71dc8d8d3ae43b1f397be6e84448a79900))
+
+
+
 ## [5.233.1](https://github.com/reservoirprotocol/indexer/compare/v5.233.0...v5.233.1) (2022-09-16)
 
 
