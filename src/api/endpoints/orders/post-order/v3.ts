@@ -117,6 +117,13 @@ export const postOrderV3Options: RouteOptions = {
             collection,
           },
         };
+      } else if (collection) {
+        schema = {
+          kind: "collection",
+          data: {
+            collection,
+          },
+        };
       } else if (tokenSetId) {
         schema = {
           kind: "token-set",
