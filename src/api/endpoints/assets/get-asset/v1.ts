@@ -38,7 +38,10 @@ export const getAssetV1Options: RouteOptions = {
         `get-asset-${version}-handler`,
         `Asset: ${query.asset} Handler failure: ${error}`
       );
-      throw Boom.notFound(`Asset not found`);
+
+      const err = Boom.notFound(`Asset not found`);
+      err.output.headers["cache-control"] = `${1000 * 60 * 60 * 24}`;
+      throw err;
     }
   },
 };
