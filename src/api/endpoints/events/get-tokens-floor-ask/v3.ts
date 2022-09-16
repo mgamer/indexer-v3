@@ -68,6 +68,7 @@ export const getTokensFloorAskV3Options: RouteOptions = {
             validFrom: Joi.number().unsafe().allow(null),
             validUntil: Joi.number().unsafe().allow(null),
             source: Joi.string().allow(null, ""),
+            isDynamic: Joi.boolean(),
           }),
           event: Joi.object({
             id: Joi.number().unsafe(),
@@ -120,11 +121,12 @@ export const getTokensFloorAskV3Options: RouteOptions = {
           token_floor_sell_events.tx_hash,
           token_floor_sell_events.tx_timestamp,
           orders.currency,
+          orders.dynamic,
           TRUNC(orders.currency_price, 0) AS currency_price,
           extract(epoch from token_floor_sell_events.created_at) AS created_at
         FROM token_floor_sell_events
         LEFT JOIN LATERAL (
-           SELECT currency, currency_price
+           SELECT currency, currency_price, dynamic
            FROM orders
            WHERE orders.id = token_floor_sell_events.order_id
         ) orders ON TRUE
@@ -215,6 +217,7 @@ export const getTokensFloorAskV3Options: RouteOptions = {
             validFrom: r.price ? Number(r.valid_from) : null,
             validUntil: r.price ? Number(r.valid_until) : null,
             source: sources.get(r.source_id_int)?.name,
+            isDynamic: Boolean(r.dynamic),
           },
           event: {
             id: r.id,
