@@ -315,9 +315,7 @@ export const getExecuteBidV3Options: RouteOptions = {
                           }
                         : undefined,
                     collection:
-                      collection && params.excludeFlaggedTokens && !attributeKey && !attributeValue
-                        ? collection
-                        : undefined,
+                      collection && !attributeKey && !attributeValue ? collection : undefined,
                     isNonFlagged: params.excludeFlaggedTokens,
                     orderbook: params.orderbook,
                     source,
@@ -427,9 +425,7 @@ export const getExecuteBidV3Options: RouteOptions = {
                           }
                         : undefined,
                     collection:
-                      collection && params.excludeFlaggedTokens && !attributeKey && !attributeValue
-                        ? collection
-                        : undefined,
+                      collection && !attributeKey && !attributeValue ? collection : undefined,
                     isNonFlagged: params.excludeFlaggedTokens,
                     orderbook: params.orderbook,
                     source,
