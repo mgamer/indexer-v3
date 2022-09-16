@@ -2,7 +2,10 @@ import { Log } from "@ethersproject/abstract-provider";
 
 import { concat } from "@/common/utils";
 import { EventDataKind } from "@/events-sync/data";
-import { assignSourceToFillEvents, assignWashTradingScoreToFillEvents } from "@/events-sync/index";
+import {
+  assignSourceToFillEvents,
+  assignWashTradingScoreToFillEvents,
+} from "@/events-sync/handlers/utils/fills";
 import { BaseEventParams } from "@/events-sync/parser";
 
 import * as es from "@/events-sync/storage";
@@ -34,7 +37,15 @@ export type OnChainData = {
   bulkCancelEvents?: es.bulkCancels.Event[];
   nonceCancelEvents?: es.nonceCancels.Event[];
 
+  // Approvals
+  // Due to some complexities around them, ft approvals are handled
+  // differently (eg. ft approvals can decrease implicitly when the
+  // spender transfers from the owner's balance, without any events
+  // getting emitted)
+  nftApprovalEvents?: es.nftApprovals.Event[];
+
   // Transfers
+  ftTransferEvents?: es.ftTransfers.Event[];
   nftTransferEvents?: es.nftTransfers.Event[];
 
   // For keeping track of mints and last sales
@@ -73,6 +84,8 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
     es.cancels.addEventsOnChain(data.cancelEventsOnChain ?? []),
     es.bulkCancels.addEvents(data.bulkCancelEvents ?? []),
     es.nonceCancels.addEvents(data.nonceCancelEvents ?? []),
+    es.nftApprovals.addEvents(data.nftApprovalEvents ?? []),
+    es.ftTransfers.addEvents(data.ftTransferEvents ?? [], Boolean(backfill)),
     es.nftTransfers.addEvents(data.nftTransferEvents ?? [], Boolean(backfill)),
   ]);
 
@@ -95,6 +108,8 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
   // Mints and last sales
   await tokenUpdatesMint.addToQueue(data.mintInfos ?? []);
   await fillUpdates.addToQueue(data.fillInfos ?? []);
+
+  // TODO: Is this the best place to handle activities?
 
   // Process fill activities
   const fillActivityInfos: processActivityEvent.EventInfo[] = allFillEvents.map((event) => {
