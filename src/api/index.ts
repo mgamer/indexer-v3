@@ -176,11 +176,20 @@ export const start = async (): Promise<void> => {
           ) {
             logger.warn(
               "rate-limiter",
-              `${rateLimitKey} ${apiKey?.appName} reached allowed rate limit ${
+              `${rateLimitKey} ${apiKey?.appName || ""} reached allowed rate limit ${
                 rateLimitRule.options.points
               } requests in ${rateLimitRule.options.duration}s by calling ${
                 error.consumedPoints
               } times on route ${request.route.path} in rule ${JSON.stringify(rateLimitRule)}`
+            );
+          }
+
+          if (_.isUndefined(rateLimitKey) || rateLimitKey == "" || _.isEmpty(rateLimitKey)) {
+            logger.info(
+              "rate-limiter",
+              `No IP headers = ${JSON.stringify(request.headers)}, info = ${JSON.stringify(
+                request.info
+              )}`
             );
           }
 
