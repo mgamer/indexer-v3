@@ -1,3 +1,12 @@
+## [5.233.1](https://github.com/reservoirprotocol/indexer/compare/v5.233.0...v5.233.1) (2022-09-16)
+
+
+### Bug Fixes
+
+* support collection-wide bids on token range orders via seaport ([5c55096](https://github.com/reservoirprotocol/indexer/commit/5c550961c854f3f6f116803e0bf7d5580bc58786))
+
+
+
 # [5.233.0](https://github.com/reservoirprotocol/indexer/compare/v5.232.0...v5.233.0) (2022-09-15)
 
 
