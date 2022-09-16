@@ -158,7 +158,7 @@ export const start = async (): Promise<void> => {
         ? _.split(request.headers["x-forwarded-for"], ",")[0]
         : request.info.remoteAddress;
 
-      if (_.isUndefined(remoteAddress)) {
+      if (_.isUndefined(remoteAddress) || remoteAddress == "" || _.isEmpty(remoteAddress)) {
         logger.info(
           "rate-limiter",
           `No IP headers = ${JSON.stringify(request.headers)}, info = ${JSON.stringify(
