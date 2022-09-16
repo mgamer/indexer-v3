@@ -305,12 +305,7 @@ export const getExecuteBidV2Options: RouteOptions = {
                               }
                             : undefined,
                         collection:
-                          collection &&
-                          query.excludeFlaggedTokens &&
-                          !attributeKey &&
-                          !attributeValue
-                            ? collection
-                            : undefined,
+                          collection && !attributeKey && !attributeValue ? collection : undefined,
                         isNonFlagged: query.excludeFlaggedTokens,
                         orderbook: query.orderbook,
                         source: query.source,
@@ -432,12 +427,7 @@ export const getExecuteBidV2Options: RouteOptions = {
                               }
                             : undefined,
                         collection:
-                          collection &&
-                          query.excludeFlaggedTokens &&
-                          !attributeKey &&
-                          !attributeValue
-                            ? collection
-                            : undefined,
+                          collection && !attributeKey && !attributeValue ? collection : undefined,
                         isNonFlagged: query.excludeFlaggedTokens,
                         orderbook: query.orderbook,
                         source: query.source,
