@@ -21,7 +21,7 @@ export const postOrderV1Options: RouteOptions = {
   validate: {
     payload: Joi.object({
       order: Joi.object({
-        kind: Joi.string().lowercase().valid("opensea", "721ex", "zeroex-v4").required(),
+        kind: Joi.string().lowercase().valid("opensea", "zeroex-v4").required(),
         data: Joi.object().required(),
       }),
       orderbook: Joi.string().lowercase().valid("reservoir").default("reservoir"),
@@ -50,28 +50,6 @@ export const postOrderV1Options: RouteOptions = {
       const attribute = payload.attribute;
 
       switch (order.kind) {
-        case "721ex": {
-          if (orderbook !== "reservoir") {
-            throw new Error("Unsupported orderbook");
-          }
-          if (attribute) {
-            throw new Error("Unsupported metadata");
-          }
-
-          const orderInfo: orders.openDao.OrderInfo = {
-            orderParams: order.data,
-            metadata: {
-              source,
-            },
-          };
-          const [result] = await orders.openDao.save([orderInfo]);
-          if (result.status === "success") {
-            return { message: "Success" };
-          } else {
-            throw Boom.badRequest(result.status);
-          }
-        }
-
         case "zeroex-v4": {
           if (orderbook !== "reservoir") {
             throw new Error("Unsupported orderbook");
