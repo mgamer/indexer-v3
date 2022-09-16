@@ -112,6 +112,8 @@ export const getOrdersAsksV3Options: RouteOptions = {
           price: JoiPrice,
           validFrom: Joi.number().required(),
           validUntil: Joi.number().required(),
+          quantityFilled: Joi.number().unsafe(),
+          quantityRemaining: Joi.number().unsafe(),
           metadata: Joi.alternatives(
             Joi.object({
               kind: "token",
@@ -259,6 +261,8 @@ export const getOrdersAsksV3Options: RouteOptions = {
             0
           ) AS valid_until,
           orders.source_id_int,
+          orders.quantity_filled,
+          orders.quantity_remaining,
           orders.fee_bps,
           orders.fee_breakdown,
           COALESCE(
@@ -425,6 +429,8 @@ export const getOrdersAsksV3Options: RouteOptions = {
           ),
           validFrom: Number(r.valid_from),
           validUntil: Number(r.valid_until),
+          quantityFilled: Number(r.quantity_filled),
+          quantityRemaining: Number(r.quantity_remaining),
           metadata: query.includeMetadata ? r.metadata : undefined,
           source: {
             id: source?.address,
