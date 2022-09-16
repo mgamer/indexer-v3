@@ -138,7 +138,7 @@ const isValid = async (tokenSet: TokenSet) => {
               }
           `,
           {
-            collection: tokenSet.schema!.data.collection,
+            collection: tokenSet.schema.data.collection,
           }
         );
       }
