@@ -169,6 +169,13 @@ export const start = async (): Promise<void> => {
 
       const rateLimitKey = _.isUndefined(key) || _.isEmpty(key) ? remoteAddress : key; // If no api key use IP
 
+      if (_.isUndefined(remoteAddress)) {
+        logger.info(
+          "rate-limiter",
+          `Undefined rateLimitKey remoteAddress = ${remoteAddress}, key = ${key}`
+        );
+      }
+
       try {
         const rateLimiterRes = await rateLimiterRedis.consume(rateLimitKey, 1);
 
