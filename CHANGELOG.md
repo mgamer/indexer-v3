@@ -1,3 +1,22 @@
+# [5.234.0](https://github.com/reservoirprotocol/indexer/compare/v5.233.2...v5.234.0) (2022-09-16)
+
+
+### Bug Fixes
+
+* deploy ([a57f19e](https://github.com/reservoirprotocol/indexer/commit/a57f19e3b86b3b40d63c52948c6d2b0ee31ed917))
+* deploy ([1266d33](https://github.com/reservoirprotocol/indexer/commit/1266d33b5e808a04952200f41db8b5c1a9234397))
+* missing write ([90d3f4a](https://github.com/reservoirprotocol/indexer/commit/90d3f4a7fe21674cac4f2fe17c0728330fecb99a))
+* tweaks ([269b9b0](https://github.com/reservoirprotocol/indexer/commit/269b9b08ae82bdf6793f8b5331c6d769bab20527))
+* tweaks ([05ae8ad](https://github.com/reservoirprotocol/indexer/commit/05ae8ad022798538a96a82dcbc3c5413a59dd136))
+
+
+### Features
+
+* expose quantity fields in the order apis ([b7d2cc6](https://github.com/reservoirprotocol/indexer/commit/b7d2cc60f44ae11403f505b82102d21cb3425b36))
+* log the asset ([8d6e05d](https://github.com/reservoirprotocol/indexer/commit/8d6e05d794b59be39ba7124834b54ccb053caaff))
+
+
+
 ## [5.233.2](https://github.com/reservoirprotocol/indexer/compare/v5.233.1...v5.233.2) (2022-09-16)
 
 
