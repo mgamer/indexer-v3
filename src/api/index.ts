@@ -157,6 +157,16 @@ export const start = async (): Promise<void> => {
       const remoteAddress = request.headers["x-forwarded-for"]
         ? _.split(request.headers["x-forwarded-for"], ",")[0]
         : request.info.remoteAddress;
+
+      if (_.isUndefined(remoteAddress)) {
+        logger.info(
+          "rate-limiter",
+          `No IP headers = ${JSON.stringify(request.headers)}, info = ${JSON.stringify(
+            request.info
+          )}`
+        );
+      }
+
       const rateLimitKey = _.isUndefined(key) || _.isEmpty(key) ? remoteAddress : key; // If no api key use IP
 
       try {
