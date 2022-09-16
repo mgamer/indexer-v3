@@ -208,6 +208,10 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
       const totalAmount = mints
         .map(({ amount }) => amount)
         .reduce((a, b) => bn(a).add(b).toString());
+      if (totalAmount === "0") {
+        continue;
+      }
+
       const price = bn(tx.value).div(totalAmount).toString();
       const currency = Sdk.Common.Addresses.Eth[config.chainId];
 
