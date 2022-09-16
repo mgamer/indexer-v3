@@ -157,24 +157,7 @@ export const start = async (): Promise<void> => {
       const remoteAddress = request.headers["x-forwarded-for"]
         ? _.split(request.headers["x-forwarded-for"], ",")[0]
         : request.info.remoteAddress;
-
-      if (_.isUndefined(remoteAddress) || remoteAddress == "" || _.isEmpty(remoteAddress)) {
-        logger.info(
-          "rate-limiter",
-          `No IP headers = ${JSON.stringify(request.headers)}, info = ${JSON.stringify(
-            request.info
-          )}`
-        );
-      }
-
       const rateLimitKey = _.isUndefined(key) || _.isEmpty(key) ? remoteAddress : key; // If no api key use IP
-
-      if (_.isUndefined(remoteAddress)) {
-        logger.info(
-          "rate-limiter",
-          `Undefined rateLimitKey remoteAddress = ${remoteAddress}, key = ${key}`
-        );
-      }
 
       try {
         const rateLimiterRes = await rateLimiterRedis.consume(rateLimitKey, 1);
@@ -197,7 +180,7 @@ export const start = async (): Promise<void> => {
                 rateLimitRule.options.points
               } requests in ${rateLimitRule.options.duration}s by calling ${
                 error.consumedPoints
-              } times in rule ${JSON.stringify(rateLimitRule)}`
+              } times on route ${request.route.path} in rule ${JSON.stringify(rateLimitRule)}`
             );
           }
 
