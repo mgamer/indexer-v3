@@ -157,7 +157,9 @@ export const start = async (): Promise<void> => {
       const remoteAddress = request.headers["x-forwarded-for"]
         ? _.split(request.headers["x-forwarded-for"], ",")[0]
         : request.info.remoteAddress;
-      const rateLimitKey = _.isUndefined(key) || _.isEmpty(key) ? remoteAddress : key; // If no api key use IP
+
+      const rateLimitKey =
+        _.isUndefined(key) || _.isEmpty(key) || _.isNull(apiKey) ? remoteAddress : key; // If no api key or the api key is invalid use IP
 
       try {
         const rateLimiterRes = await rateLimiterRedis.consume(rateLimitKey, 1);
