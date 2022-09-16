@@ -182,15 +182,15 @@ export const start = async (): Promise<void> => {
                 error.consumedPoints
               } times on route ${request.route.path} in rule ${JSON.stringify(rateLimitRule)}`
             );
-          }
 
-          if (_.isUndefined(rateLimitKey) || rateLimitKey == "" || _.isEmpty(rateLimitKey)) {
-            logger.info(
-              "rate-limiter",
-              `No IP headers = ${JSON.stringify(request.headers)}, info = ${JSON.stringify(
-                request.info
-              )}`
-            );
+            if (request.route.path == "/tokens/v5") {
+              logger.info(
+                "rate-limiter",
+                `${error.consumedPoints} No IP headers = ${JSON.stringify(
+                  request.headers
+                )}, info = ${JSON.stringify(request.info)}`
+              );
+            }
           }
 
           // const tooManyRequestsResponse = {
