@@ -1,3 +1,12 @@
+# [5.236.0](https://github.com/reservoirprotocol/indexer/compare/v5.235.0...v5.236.0) (2022-09-16)
+
+
+### Features
+
+* return isDynamic node ([3d5444c](https://github.com/reservoirprotocol/indexer/commit/3d5444c024fef25a4e4b303d50506425d357a210))
+
+
+
 # [5.235.0](https://github.com/reservoirprotocol/indexer/compare/v5.234.0...v5.235.0) (2022-09-16)
 
 
