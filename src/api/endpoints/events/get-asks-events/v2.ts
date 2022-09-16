@@ -191,16 +191,18 @@ export const getAsksEventsV2Options: RouteOptions = {
             contract: fromBuffer(r.contract),
             tokenId: r.token_id,
             maker: r.maker ? fromBuffer(r.maker) : null,
-            price: await getJoiPriceObject(
-              {
-                gross: {
-                  amount: r.currency_price ?? r.price,
-                  nativeAmount: r.price,
-                  usdAmount: r.usd_price,
-                },
-              },
-              fromBuffer(r.currency)
-            ),
+            price: r.price
+              ? await getJoiPriceObject(
+                  {
+                    gross: {
+                      amount: r.currency_price ?? r.price,
+                      nativeAmount: r.price,
+                      usdAmount: r.usd_price,
+                    },
+                  },
+                  fromBuffer(r.currency)
+                )
+              : null,
             quantityRemaining: Number(r.order_quantity_remaining),
             nonce: r.order_nonce ?? null,
             validFrom: r.valid_from ? Number(r.valid_from) : null,
