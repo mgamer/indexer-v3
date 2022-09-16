@@ -34,7 +34,10 @@ export const getAssetV1Options: RouteOptions = {
         .redirect(decrypt(query.asset))
         .header("cache-control", `${1000 * 60 * 60 * 24 * 30}`);
     } catch (error) {
-      logger.error(`get-asset-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(
+        `get-asset-${version}-handler`,
+        `Asset: ${query.asset} Handler failure: ${error}`
+      );
       throw Boom.notFound(`Asset not found`);
     }
   },
