@@ -23,9 +23,13 @@
       "@/utils/*": ["utils/*"],
       "@/models/*": ["models/*"],
       "@/pubsub/*": ["pubsub/*"],
+      "@/exchanges/*": ["exchanges/*"],
       "@/events-sync/*": ["sync/events/*"]
     },
     "typeRoots": ["node_modules/@types", "./custom-typings"]
   },
-  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.json"]
+  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.json"],
+  "ts-node": {
+    "require": ["tsconfig-paths/register"]
+  }
 }

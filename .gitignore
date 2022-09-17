@@ -16,3 +16,4 @@ postgres/
 *.iml
 .idea
 .yarnclean
+coverage/

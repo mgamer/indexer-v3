@@ -1,0 +1,221 @@
+import { AddressZero } from "@ethersproject/constants";
+import * as Sdk from "@reservoir0x/sdk";
+import pLimit from "p-limit";
+import { keccak256 } from "@ethersproject/solidity";
+
+import { idb, pgp } from "@/common/db";
+import { logger } from "@/common/logger";
+import { toBuffer } from "@/common/utils";
+import { config } from "@/config/index";
+import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
+import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
+import { offChainCheck } from "./check";
+import * as tokenSet from "@/orderbook/token-sets";
+import { Sources } from "@/models/sources";
+
+export type OrderIdParams = {
+  tokenContract: string; // address
+  tokenId: string; // uint256
+};
+
+export type OrderInfo = {
+  orderParams: {
+    seller: string;
+    maker: string;
+    tokenContract: string; // address
+    tokenId: string; // uint256
+    askPrice: string; // uint256
+    askCurrency: string; // address
+    sellerFundsRecipient: string; // address
+    findersFeeBps: number; // uint16
+    side: "sell" | "buy";
+    // Additional types for validation (eg. ensuring only the latest event is relevant)
+    txHash: string;
+    txTimestamp: number;
+  };
+  metadata: OrderMetadata;
+};
+
+export function getOrderId(orderParams: OrderIdParams) {
+  const orderId = keccak256(
+    ["string", "string", "uint256"],
+    ["zora-v3", orderParams.tokenContract, orderParams.tokenId]
+  );
+  return orderId;
+}
+
+type SaveResult = {
+  id: string;
+  status: string;
+  unfillable?: boolean;
+};
+
+export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
+  const results: SaveResult[] = [];
+  const orderValues: DbOrder[] = [];
+
+  const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
+    try {
+      const id = getOrderId(orderParams);
+      // Check: order doesn't already exist
+      const orderExists = await idb.oneOrNone(`SELECT 1 FROM "orders" "o" WHERE "o"."id" = $/id/`, {
+        id,
+      });
+
+      if (orderExists) {
+        return results.push({
+          id,
+          status: "already-exists",
+        });
+      }
+
+      // Check: order fillability
+      let fillabilityStatus = "fillable";
+      let approvalStatus = "approved";
+      try {
+        await offChainCheck(orderParams, { onChainApprovalRecheck: true });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        // Keep any orders that can potentially get valid in the future
+        if (error.message === "no-balance-no-approval") {
+          fillabilityStatus = "no-balance";
+          approvalStatus = "no-approval";
+        } else if (error.message === "no-approval") {
+          approvalStatus = "no-approval";
+        } else if (error.message === "no-balance") {
+          fillabilityStatus = "no-balance";
+        } else {
+          return results.push({
+            id,
+            status: "not-fillable",
+          });
+        }
+      }
+
+      // Check and save: associated token set
+      const schemaHash = metadata.schemaHash ?? generateSchemaHash(metadata.schema);
+      const contract = Sdk.Zora.Addresses.Exchange[config.chainId];
+
+      const [{ id: tokenSetId }] = await tokenSet.singleToken.save([
+        {
+          id: `token:${contract}:${orderParams.tokenId}`,
+          schemaHash,
+          contract: contract,
+          tokenId: orderParams.tokenId.toString(),
+        },
+      ]);
+
+      // Handle: source
+      const sources = await Sources.getInstance();
+      let source = await sources.getOrInsert("zora.co");
+      if (metadata.source) {
+        source = await sources.getOrInsert(metadata.source);
+      }
+
+      const validFrom = `date_trunc('seconds', to_timestamp(${orderParams.txTimestamp}))`;
+      const validTo = `'Infinity'`;
+
+      orderValues.push({
+        id,
+        kind: "zora-v3",
+        side: orderParams.side,
+        fillability_status: fillabilityStatus,
+        approval_status: approvalStatus,
+        token_set_id: tokenSetId,
+        token_set_schema_hash: toBuffer(schemaHash),
+        maker: toBuffer(orderParams.maker),
+        taker: toBuffer(AddressZero),
+        price: orderParams.askPrice.toString(),
+        value: orderParams.askPrice.toString(),
+        currency: toBuffer(orderParams.askCurrency),
+        currency_price: orderParams.askPrice.toString(),
+        currency_value: orderParams.askPrice.toString(),
+        needs_conversion: null,
+        quantity_remaining: "1",
+        valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
+        nonce: null,
+        source_id_int: source?.id,
+        is_reservoir: null,
+        contract: toBuffer(contract),
+        conduit: null,
+        fee_bps: 0,
+        fee_breakdown: [],
+        dynamic: null,
+        raw_data: orderParams,
+        expiration: validTo,
+      });
+
+      const unfillable =
+        fillabilityStatus !== "fillable" || approvalStatus !== "approved" ? true : undefined;
+
+      results.push({
+        id,
+        status: "success",
+        unfillable,
+      });
+    } catch (error) {
+      logger.error(
+        "orders-zora-v3-save",
+        `Failed to handle order with params ${JSON.stringify(orderParams)}: ${error}`
+      );
+    }
+  };
+
+  // Process all orders concurrently
+  const limit = pLimit(20);
+  await Promise.all(orderInfos.map((orderInfo) => limit(() => handleOrder(orderInfo))));
+
+  if (orderValues.length) {
+    const columns = new pgp.helpers.ColumnSet(
+      [
+        "id",
+        "kind",
+        "side",
+        "fillability_status",
+        "approval_status",
+        "token_set_id",
+        "token_set_schema_hash",
+        "maker",
+        "taker",
+        "price",
+        "value",
+        "currency",
+        "currency_price",
+        "currency_value",
+        "needs_conversion",
+        { name: "valid_between", mod: ":raw" },
+        "nonce",
+        "source_id_int",
+        "is_reservoir",
+        "contract",
+        "conduit",
+        "fee_bps",
+        { name: "fee_breakdown", mod: ":json" },
+        "dynamic",
+        "raw_data",
+        { name: "expiration", mod: ":raw" },
+      ],
+      {
+        table: "orders",
+      }
+    );
+    await idb.none(pgp.helpers.insert(orderValues, columns) + " ON CONFLICT DO NOTHING");
+
+    await ordersUpdateById.addToQueue(
+      results
+        .filter((r) => r.status === "success" && !r.unfillable)
+        .map(
+          ({ id }) =>
+            ({
+              context: `new-order-${id}`,
+              id,
+              trigger: {
+                kind: "new-order",
+              },
+            } as ordersUpdateById.OrderInfo)
+        )
+    );
+  }
+
+  return results;
+};

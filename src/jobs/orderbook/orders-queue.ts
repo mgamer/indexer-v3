@@ -6,6 +6,7 @@ import { logger } from "@/common/logger";
 import { redis, redlock } from "@/common/redis";
 import { config } from "@/config/index";
 import * as orders from "@/orderbook/orders";
+import * as exchanges from "@/exchanges/index";
 
 const QUEUE_NAME = "orderbook-orders-queue";
 
@@ -51,6 +52,14 @@ if (config.doBackgroundWork) {
             const result = await orders.cryptopunks.save([info as orders.cryptopunks.OrderInfo]);
             logger.info(QUEUE_NAME, `[cryptopunks] Order save result: ${JSON.stringify(result)}`);
 
+            break;
+          }
+
+          case "zora-v3": {
+            const result = await exchanges.zora.orders.save([
+              info as exchanges.zora.orders.OrderInfo,
+            ]);
+            logger.info(QUEUE_NAME, `[zora-3] Order save result: ${JSON.stringify(result)}`);
             break;
           }
 
@@ -159,6 +168,11 @@ export type GenericOrderInfo =
   | {
       kind: "cryptopunks";
       info: orders.cryptopunks.OrderInfo;
+      relayToArweave?: boolean;
+    }
+  | {
+      kind: "zora-v3";
+      info: exchanges.zora.orders.OrderInfo;
       relayToArweave?: boolean;
     };
 
