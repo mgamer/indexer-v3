@@ -1,9 +1,7 @@
 import { Result } from "@ethersproject/abi";
-import * as Sdk from "@reservoir0x/sdk";
-import { bn, fromBuffer, toBuffer } from "@/common/utils";
-import { config } from "@/config/index";
+import { bn } from "@/common/utils";
 import { getEventData } from "@/events-sync/data";
-import { EnhancedEvent, OnChainData, processOnChainData } from "@/events-sync/handlers/utils";
+import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import * as es from "@/events-sync/storage";
 import * as utils from "@/events-sync/utils";
 import { OrderInfo, getOrderId } from "./orderbook";

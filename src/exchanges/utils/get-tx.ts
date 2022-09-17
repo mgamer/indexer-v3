@@ -6,5 +6,5 @@ const args = process.argv.splice(2);
 
 (async () => {
   const tx = await baseProvider.getTransactionReceipt(args[0]);
-  console.log(JSON.stringify(tx, null, 2));
+  process.stdout.write(JSON.stringify(tx, null, 2));
 })();

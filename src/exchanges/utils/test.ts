@@ -1,7 +1,8 @@
 import { EnhancedEvent } from "@/events-sync/handlers/utils";
 import { getEventData } from "@/events-sync/data";
+import { TransactionReceipt, Log } from "@ethersproject/abstract-provider";
 
-export function getEventParams(log: any, tx: any) {
+export function getEventParams(log: Log) {
   const address = log.address.toLowerCase() as string;
   const block = log.blockNumber as number;
   const blockHash = log.blockHash.toLowerCase() as string;
@@ -20,7 +21,7 @@ export function getEventParams(log: any, tx: any) {
   };
 }
 
-export function getEventsFromTx(tx: any) {
+export function getEventsFromTx(tx: TransactionReceipt) {
   const enhancedEvents: EnhancedEvent[] = [];
   const availableEventData = getEventData();
   for (let index = 0; index < tx.logs.length; index++) {
@@ -34,7 +35,7 @@ export function getEventsFromTx(tx: any) {
     if (eventData) {
       enhancedEvents.push({
         kind: eventData.kind,
-        baseEventParams: getEventParams(log, tx),
+        baseEventParams: getEventParams(log),
         log,
       });
     }

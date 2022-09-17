@@ -57,6 +57,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
       const id = getOrderId(orderParams);
+
       // Check: order doesn't already exist
       const orderExists = await idb.oneOrNone(`SELECT 1 FROM "orders" "o" WHERE "o"."id" = $/id/`, {
         id,
