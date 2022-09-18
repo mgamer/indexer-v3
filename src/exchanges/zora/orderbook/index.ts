@@ -63,13 +63,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         id,
       });
 
-      if (orderExists) {
-        return results.push({
-          id,
-          status: "already-exists",
-        });
-      }
-
       // Check: order fillability
       let fillabilityStatus = "fillable";
       let approvalStatus = "approved";
@@ -91,6 +84,42 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             status: "not-fillable",
           });
         }
+      }
+
+      if (orderExists) {
+        // If an older order already exists then we just update some fields on it
+        await idb.none(
+          `
+           UPDATE orders SET
+             fillability_status = $/fillabilityStatus/,
+             approval_status = $/approval_status/,
+             maker = $/maker/,
+             price = $/price/,
+             currency_price = $/price/,
+             value = $/price/,
+             currency_value = $/price/,
+             valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
+             expiration = 'Infinity',
+             updated_at = now(),
+             taker = $/taker/,
+             raw_data = $/orderParams:json/
+           WHERE orders.id = $/id/
+         `,
+          {
+            fillability_status: fillabilityStatus,
+            approval_status: approvalStatus,
+            maker: toBuffer(orderParams.maker),
+            taker: toBuffer(AddressZero),
+            price: orderParams.askPrice,
+            orderParams,
+            id,
+          }
+        );
+
+        return results.push({
+          id,
+          status: "success",
+        });
       }
 
       // Check and save: associated token set

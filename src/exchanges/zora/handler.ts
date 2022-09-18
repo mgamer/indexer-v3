@@ -158,19 +158,18 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
       case "zora-ask-price-updated": {
         const { args } = eventData.abi.parseLog(log);
         const orderParams = getOrderParams(args);
-        const orderId = getOrderId(orderParams);
-
-        orderInfos.push({
-          context: `reprice-${orderId}-${baseEventParams.txHash}`,
-          id: orderId,
-          trigger: {
-            kind: "reprice",
+        const seller = args["ask"]["seller"].toLowerCase();
+        orders.push({
+          orderParams: {
+            seller,
+            maker: seller,
+            // only seller can call
+            side: "sell",
+            ...orderParams,
             txHash: baseEventParams.txHash,
             txTimestamp: baseEventParams.timestamp,
-            logIndex: baseEventParams.logIndex,
-            batchIndex: baseEventParams.batchIndex,
-            blockHash: baseEventParams.blockHash,
           },
+          metadata: {},
         });
 
         break;
