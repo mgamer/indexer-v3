@@ -51,7 +51,7 @@ export const getBuildInfo = async (
     nonce: await axios
       .get(
         `https://${
-          config.chainId === 4 ? "api-rinkeby." : "api."
+          config.chainId === 5 ? "api-goerli." : "api."
         }looksrare.org/api/v1/orders/nonce?address=${options.maker}`,
         {
           headers: {
