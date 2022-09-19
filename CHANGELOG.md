@@ -1,3 +1,12 @@
+# [5.241.0](https://github.com/reservoirprotocol/indexer/compare/v5.240.0...v5.241.0) (2022-09-19)
+
+
+### Features
+
+* allow to filter user top bids by collection ([cc976a2](https://github.com/reservoirprotocol/indexer/commit/cc976a2aeded400fff38c60dbee7742ca1091168))
+
+
+
 # [5.240.0](https://github.com/reservoirprotocol/indexer/compare/v5.239.0...v5.240.0) (2022-09-19)
 
 
