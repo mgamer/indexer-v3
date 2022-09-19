@@ -102,9 +102,9 @@ export const getBuildInfo = async (
       options.feeRecipient = [];
     }
 
-    options.fee.push(250);
-    // OpenSea's Seaport fee recipient
-    options.feeRecipient.push("0x0000a26b00c1f0df003000390027140000faa719");
+    // options.fee.push(250);
+    // // OpenSea's Seaport fee recipient
+    // options.feeRecipient.push("0x0000a26b00c1f0df003000390027140000faa719");
   }
 
   if (options.fee && options.feeRecipient) {

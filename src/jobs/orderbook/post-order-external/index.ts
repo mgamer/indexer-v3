@@ -289,10 +289,15 @@ const postLooksRare = async (order: Sdk.LooksRare.Order, apiKey: string) => {
       `https://${config.chainId === 5 ? "api-goerli." : "api."}looksrare.org/api/v1/orders`,
       JSON.stringify(lrOrder),
       {
-        headers: {
-          "Content-Type": "application/json",
-          "X-Looks-Api-Key": apiKey || (config.chainId === 1 ? config.looksRareApiKey : ""),
-        },
+        headers:
+          config.chainId === 1
+            ? {
+                "Content-Type": "application/json",
+                "X-Looks-Api-Key": apiKey || config.looksRareApiKey,
+              }
+            : {
+                "Content-Type": "application/json",
+              },
       }
     )
     .catch((error) => {
