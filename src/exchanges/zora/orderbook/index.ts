@@ -91,7 +91,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         await idb.none(
           `
            UPDATE orders SET
-             fillability_status = $/fillabilityStatus/,
+             fillability_status = $/fillability_status/,
              approval_status = $/approval_status/,
              maker = $/maker/,
              price = $/price/,

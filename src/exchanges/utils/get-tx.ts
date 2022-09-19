@@ -1,5 +1,5 @@
 import { config as dotEnvConfig } from "dotenv";
-// dotEnvConfig();
+dotEnvConfig();
 import { baseProvider } from "@/common/provider";
 
 const args = process.argv.splice(2);

@@ -9,7 +9,7 @@ import { getEventsFromTx } from "../../utils/test";
 import { handleEvents } from "../handler";
 import { processOnChainData } from "@/events-sync/handlers/utils";
 
-jest.setTimeout(30000);
+jest.setTimeout(50000);
 
 describe("ZoraEvent", () => {
   test("order", async () => {
@@ -24,22 +24,14 @@ describe("ZoraEvent", () => {
     const cancelAsk = await baseProvider.getTransactionReceipt(allTx.cancelAskTx);
     const createEvents = getEventsFromTx(groupCreateTx);
     const events = getEventsFromTx(cancelAsk);
-    const result = await handleEvents(createEvents.concat(events));
+    const createResult = await handleEvents(createEvents);
+    const cancelAskResult = await handleEvents(events);
     // expect(result.cancelEventsOnChain?.length).toEqual(1);
-    await processOnChainData(result);
-  });
-
-  test("order-cancel", async () => {
-    const cancelAsk = await baseProvider.getTransactionReceipt(allTx.cancelAskTx);
-    const events = getEventsFromTx(cancelAsk);
-    const result = await handleEvents(events);
-    // await processOnChainData(result);
-    expect(result.cancelEventsOnChain?.length).toEqual(1);
-    expect(result.orderInfos?.filter((_) => _.context.startsWith("cancel")).length).toEqual(1);
-    // if (result.orders?.length) {
-    //   console.log(result.orders[0])
-    // }
-    // console.log(result)
+    await processOnChainData(createResult);
+    await new Promise((resolve) => {
+      setTimeout(resolve, 3 * 1000);
+    });
+    await processOnChainData(cancelAskResult);
   });
 
   test("order-update", async () => {
@@ -47,7 +39,13 @@ describe("ZoraEvent", () => {
     const setAskTx = await baseProvider.getTransactionReceipt(allTx.setAskTx);
     const eventsCreate = getEventsFromTx(setAskCreateTx);
     const eventsSet = getEventsFromTx(setAskTx);
-    const result = await handleEvents(eventsCreate.concat(eventsSet));
-    expect(result.orderInfos?.filter((_) => _.context.startsWith("reprice")).length).toEqual(1);
+    const result1 = await handleEvents(eventsCreate);
+    const result2 = await handleEvents(eventsSet);
+    // expect(result.orders?.length).toEqual(2);
+    await processOnChainData(result1);
+    await new Promise((resolve) => {
+      setTimeout(resolve, 3 * 1000);
+    });
+    await processOnChainData(result2);
   });
 });
