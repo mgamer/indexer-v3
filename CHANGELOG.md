@@ -1,3 +1,12 @@
+# [5.240.0](https://github.com/reservoirprotocol/indexer/compare/v5.239.0...v5.240.0) (2022-09-19)
+
+
+### Features
+
+* return top bid source in user collections API ([ae44e1b](https://github.com/reservoirprotocol/indexer/commit/ae44e1b77afb1a56b3f0a3ff39135ae5f0c88197))
+
+
+
 # [5.239.0](https://github.com/reservoirprotocol/indexer/compare/v5.238.1...v5.239.0) (2022-09-19)
 
 
