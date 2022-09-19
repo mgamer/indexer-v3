@@ -16,7 +16,6 @@ import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import { PendingFlagStatusSyncJobs } from "@/models/pending-flag-status-sync-jobs";
-import { Collections } from "@/models/collections";
 
 export type OrderInfo = {
   orderParams: Sdk.Seaport.Types.OrderComponents;
@@ -299,9 +298,13 @@ export const save = async (
 
       const royaltyRecipients: string[] = [];
 
-      const collection = await Collections.getById(info.contract, true);
-      if (collection) {
-        for (const royalty of collection.royalties) {
+      const collectionRoyalties = await redb.oneOrNone(
+        `SELECT royalties FROM collections WHERE id = $/id/`,
+        { id: info.contract }
+      );
+
+      if (collectionRoyalties) {
+        for (const royalty of collectionRoyalties.royalties) {
           royaltyRecipients.push(royalty.recipient);
         }
       }
