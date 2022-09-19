@@ -34,9 +34,13 @@ export const getCollectionActivityV2Options: RouteOptions = {
       limit: Joi.number()
         .integer()
         .min(1)
-        .max(20)
         .default(20)
-        .description("Amount of items returned in response."),
+        .description("Amount of items returned in response.")
+        .when("includeMetadata", {
+          is: true,
+          then: Joi.number().integer().max(20),
+          otherwise: Joi.number().integer().max(1000),
+        }),
       sortBy: Joi.string()
         .valid("eventTimestamp", "createdAt")
         .default("eventTimestamp")
@@ -46,6 +50,9 @@ export const getCollectionActivityV2Options: RouteOptions = {
       continuation: Joi.string().description(
         "Use continuation token to request next offset of items."
       ),
+      includeMetadata: Joi.boolean()
+        .default(true)
+        .description("If true, metadata is included in the response."),
       types: Joi.alternatives()
         .try(
           Joi.array().items(
@@ -112,7 +119,8 @@ export const getCollectionActivityV2Options: RouteOptions = {
         query.continuation,
         query.types,
         query.limit,
-        query.sortBy
+        query.sortBy,
+        query.includeMetadata
       );
 
       // If no activities found
