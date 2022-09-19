@@ -1,3 +1,41 @@
+## [5.238.1](https://github.com/reservoirprotocol/indexer/compare/v5.238.0...v5.238.1) (2022-09-19)
+
+
+### Bug Fixes
+
+* fixed field names ([#1895](https://github.com/reservoirprotocol/indexer/issues/1895)) ([73770e6](https://github.com/reservoirprotocol/indexer/commit/73770e6bc5bb3a812427803b51cd5e77b22ceae6))
+
+
+
+# [5.238.0](https://github.com/reservoirprotocol/indexer/compare/v5.237.0...v5.238.0) (2022-09-19)
+
+
+### Features
+
+* added support for higher limit ([#1894](https://github.com/reservoirprotocol/indexer/issues/1894)) ([459da5f](https://github.com/reservoirprotocol/indexer/commit/459da5f505a88c02508cbb95b4e2c17b5c2888b0))
+
+
+
+# [5.237.0](https://github.com/reservoirprotocol/indexer/compare/v5.236.0...v5.237.0) (2022-09-19)
+
+
+### Bug Fixes
+
+* attribute bids ingestion ([a4712b7](https://github.com/reservoirprotocol/indexer/commit/a4712b74b422aa271b15313c3b3c12eab1981bc3))
+
+
+### Features
+
+* added referrer to rate limit log ([6e87ed8](https://github.com/reservoirprotocol/indexer/commit/6e87ed83b8f5089a7cd220e2bd4a60e6c1362bd6))
+* added referrer to rate limit log ([001c942](https://github.com/reservoirprotocol/indexer/commit/001c9420b70c103d98ab7ea7cd4b5857b7c8bb18))
+* check if api key was found ([ed8b158](https://github.com/reservoirprotocol/indexer/commit/ed8b158b0dfc3b6225db1eb7cdf5c67d355c15d0))
+* remove logs ([80110ee](https://github.com/reservoirprotocol/indexer/commit/80110ee0822703d8102264ddda78dc1faea68399))
+* return order id in sales api ([8149688](https://github.com/reservoirprotocol/indexer/commit/8149688cb8fa3795a197eb448374fe0196ee9b4d))
+* store and return opensea collection verification status ([3e0900f](https://github.com/reservoirprotocol/indexer/commit/3e0900f08cde9ae41c23d49969d91a64f01b38fb))
+* update rate limit log ([8bf77c8](https://github.com/reservoirprotocol/indexer/commit/8bf77c871565447b2d85b425062fb5be2c420242))
+
+
+
 # [5.236.0](https://github.com/reservoirprotocol/indexer/compare/v5.235.0...v5.236.0) (2022-09-16)
 
 

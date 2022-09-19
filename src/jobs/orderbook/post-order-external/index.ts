@@ -214,8 +214,8 @@ const postOrder = async (
 const postOpenSea = async (order: Sdk.Seaport.Order, apiKey: string) => {
   await axios
     .post(
-      `https://${config.chainId === 4 ? "testnets-api." : "api."}opensea.io/v2/orders/${
-        config.chainId === 4 ? "rinkeby" : "ethereum"
+      `https://${config.chainId === 5 ? "testnets-api." : "api."}opensea.io/v2/orders/${
+        config.chainId === 5 ? "goerli" : "ethereum"
       }/seaport/${order.getInfo()?.side === "sell" ? "listings" : "offers"}`,
       JSON.stringify({
         parameters: {
@@ -286,7 +286,7 @@ const postLooksRare = async (order: Sdk.LooksRare.Order, apiKey: string) => {
 
   await axios
     .post(
-      `https://${config.chainId === 4 ? "api-rinkeby." : "api."}looksrare.org/api/v1/orders`,
+      `https://${config.chainId === 5 ? "api-goerli." : "api."}looksrare.org/api/v1/orders`,
       JSON.stringify(lrOrder),
       {
         headers: {
