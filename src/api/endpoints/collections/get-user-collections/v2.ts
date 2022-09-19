@@ -8,6 +8,7 @@ import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
 import { Assets } from "@/utils/assets";
+import { Sources } from "@/models/sources";
 
 const version = "v2";
 
@@ -89,6 +90,7 @@ export const getUserCollectionsV2Options: RouteOptions = {
               .lowercase()
               .pattern(/^0x[a-fA-F0-9]{40}$/)
               .allow(null),
+            topBidSourceDomain: Joi.string().allow(null, ""),
             rank: Joi.object({
               "1day": Joi.number().unsafe().allow(null),
               "7day": Joi.number().unsafe().allow(null),
@@ -247,6 +249,19 @@ export const getUserCollectionsV2Options: RouteOptions = {
           ORDER BY token_sets.top_buy_value DESC
           LIMIT 1
         ) y ON TRUE`;
+
+        topBidQuery = `LEFT JOIN LATERAL (
+          SELECT
+            ts.top_buy_id,
+            ts.top_buy_value,
+            o.source_id_int AS top_buy_source_id_int,
+            ts.top_buy_maker
+          FROM token_sets ts
+          LEFT JOIN orders o ON ts.top_buy_id = o.id
+          WHERE ts.id = x.token_set_id
+          ORDER BY ts.top_buy_value DESC NULLS LAST
+          LIMIT 1
+        ) y ON TRUE`;
       }
 
       baseQuery = `
@@ -257,6 +272,9 @@ export const getUserCollectionsV2Options: RouteOptions = {
       `;
 
       const result = await redb.manyOrNone(baseQuery, { ...params, ...query });
+
+      const sources = await Sources.getInstance();
+
       const collections = _.map(result, (r) => {
         const response = {
           collection: {
@@ -312,8 +330,13 @@ export const getUserCollectionsV2Options: RouteOptions = {
           (response as any).collection.topBidValue = r.top_buy_value
             ? formatEth(r.top_buy_value)
             : null;
+
           (response as any).collection.topBidMaker = r.top_buy_maker
             ? fromBuffer(r.top_buy_maker)
+            : null;
+
+          (response as any).collection.topBidSourceDomain = r.top_buy_source_id_int
+            ? sources.get(r.top_buy_source_id_int)?.domain
             : null;
         }
 

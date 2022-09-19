@@ -1,3 +1,51 @@
+# [5.243.0](https://github.com/reservoirprotocol/indexer/compare/v5.242.0...v5.243.0) (2022-09-19)
+
+
+### Features
+
+* check for opensea fees address in order to decide the soruce ([fccaa82](https://github.com/reservoirprotocol/indexer/commit/fccaa82cc9ef3670fc59dff72e44a32a55ab53bb))
+
+
+
+# [5.242.0](https://github.com/reservoirprotocol/indexer/compare/v5.241.0...v5.242.0) (2022-09-19)
+
+
+### Features
+
+* always update last update timestamp ([#1901](https://github.com/reservoirprotocol/indexer/issues/1901)) ([bcb9d33](https://github.com/reservoirprotocol/indexer/commit/bcb9d33db82784af2aa3ff488bf6a288f9370a85))
+
+
+
+# [5.241.0](https://github.com/reservoirprotocol/indexer/compare/v5.240.0...v5.241.0) (2022-09-19)
+
+
+### Features
+
+* allow to filter user top bids by collection ([cc976a2](https://github.com/reservoirprotocol/indexer/commit/cc976a2aeded400fff38c60dbee7742ca1091168))
+
+
+
+# [5.240.0](https://github.com/reservoirprotocol/indexer/compare/v5.239.0...v5.240.0) (2022-09-19)
+
+
+### Features
+
+* return top bid source in user collections API ([ae44e1b](https://github.com/reservoirprotocol/indexer/commit/ae44e1b77afb1a56b3f0a3ff39135ae5f0c88197))
+
+
+
+# [5.239.0](https://github.com/reservoirprotocol/indexer/compare/v5.238.1...v5.239.0) (2022-09-19)
+
+
+### Features
+
+* check for collection royalties ([5d88c17](https://github.com/reservoirprotocol/indexer/commit/5d88c17cc227ebda3a865ddb0de3ee2ad18fd3bd))
+* check for collection royalties ([d7199da](https://github.com/reservoirprotocol/indexer/commit/d7199da802e7c7bd71ae412810e3bb8ae96c30d8))
+* check for collection royalties ([19112bc](https://github.com/reservoirprotocol/indexer/commit/19112bc335a605e816b4bd8ffeaa7108749eaa6d))
+* increase metadata mint delay ([84de924](https://github.com/reservoirprotocol/indexer/commit/84de9247f0f45e06666b32639cc9d508c4668d3b))
+
+
+
 ## [5.238.1](https://github.com/reservoirprotocol/indexer/compare/v5.238.0...v5.238.1) (2022-09-19)
 
 
