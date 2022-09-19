@@ -1,3 +1,12 @@
+## [5.238.1](https://github.com/reservoirprotocol/indexer/compare/v5.238.0...v5.238.1) (2022-09-19)
+
+
+### Bug Fixes
+
+* fixed field names ([#1895](https://github.com/reservoirprotocol/indexer/issues/1895)) ([73770e6](https://github.com/reservoirprotocol/indexer/commit/73770e6bc5bb3a812427803b51cd5e77b22ceae6))
+
+
+
 # [5.238.0](https://github.com/reservoirprotocol/indexer/compare/v5.237.0...v5.238.0) (2022-09-19)
 
 
