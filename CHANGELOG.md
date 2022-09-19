@@ -1,3 +1,24 @@
+# [5.240.0](https://github.com/reservoirprotocol/indexer/compare/v5.239.0...v5.240.0) (2022-09-19)
+
+
+### Features
+
+* return top bid source in user collections API ([ae44e1b](https://github.com/reservoirprotocol/indexer/commit/ae44e1b77afb1a56b3f0a3ff39135ae5f0c88197))
+
+
+
+# [5.239.0](https://github.com/reservoirprotocol/indexer/compare/v5.238.1...v5.239.0) (2022-09-19)
+
+
+### Features
+
+* check for collection royalties ([5d88c17](https://github.com/reservoirprotocol/indexer/commit/5d88c17cc227ebda3a865ddb0de3ee2ad18fd3bd))
+* check for collection royalties ([d7199da](https://github.com/reservoirprotocol/indexer/commit/d7199da802e7c7bd71ae412810e3bb8ae96c30d8))
+* check for collection royalties ([19112bc](https://github.com/reservoirprotocol/indexer/commit/19112bc335a605e816b4bd8ffeaa7108749eaa6d))
+* increase metadata mint delay ([84de924](https://github.com/reservoirprotocol/indexer/commit/84de9247f0f45e06666b32639cc9d508c4668d3b))
+
+
+
 ## [5.238.1](https://github.com/reservoirprotocol/indexer/compare/v5.238.0...v5.238.1) (2022-09-19)
 
 
