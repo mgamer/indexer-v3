@@ -37,6 +37,11 @@ export const getUserTopBidsV1Options: RouteOptions = {
         ),
     }),
     query: Joi.object({
+      collection: Joi.string()
+        .lowercase()
+        .description(
+          "Filter to a particular collection with collection-id. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        ),
       continuation: Joi.string().description(
         "Use continuation token to request next offset of items."
       ),
@@ -119,6 +124,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
     const params = request.params as any;
     const query = request.query as any;
     let continuationFilter = "";
+    let collectionFilter = "";
     let sortField = "top_bid_value";
 
     // Set the user value for the query
@@ -162,6 +168,10 @@ export const getUserTopBidsV1Options: RouteOptions = {
           continuationFilter = `AND (top_bid_value, t.token_id) ${sign} ($/contColumn/, $/contTokenId/)`;
         }
         break;
+    }
+
+    if (query.collection) {
+      collectionFilter = `AND id = $/collection/`;
     }
 
     try {
@@ -259,10 +269,11 @@ export const getUserTopBidsV1Options: RouteOptions = {
             WHERE t.contract = nb.contract
             AND t.token_id = nb.token_id
         ) t ON TRUE
-        LEFT JOIN LATERAL (
+        ${query.collection ? "" : "LEFT"} JOIN LATERAL (
             SELECT id AS "collection_id", name AS "collection_name", metadata AS "collection_metadata", floor_sell_value AS "collection_floor_sell_value"
             FROM collections c
             WHERE id = t.collection_id
+            ${collectionFilter}
         ) c ON TRUE
         WHERE owner = $/user/
         AND amount > 0
