@@ -5,6 +5,7 @@ import axios from "axios";
 import { redb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { logger } from "@/common/logger";
 
 export interface BaseOrderBuildOptions {
   maker: string;
@@ -39,6 +40,15 @@ export const getBuildInfo = async (
     // Skip if we cannot retrieve the collection
     throw new Error("Could not fetch token collection");
   }
+
+  const url = `https://${
+    config.chainId === 5 ? "api-goerli." : "api."
+  }looksrare.org/api/v1/orders/nonce?address=${options.maker}`;
+
+  logger.info(
+    "looks-rare-build-sell-token-order",
+    `url=${url}, chainId=${config.chainId}, looksRareApiKey=${config.looksRareApiKey}`
+  );
 
   const buildParams: BaseBuildParams = {
     isOrderAsk: side === "sell",
