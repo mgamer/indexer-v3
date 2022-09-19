@@ -5,7 +5,7 @@ export type CollectionsEntityUpdateParams = {
   slug?: string;
   name?: string;
   metadata?: string;
-  royalties?: string;
+  royalties?: object;
   community?: string;
   contract?: string;
   tokenIdRange?: string;
@@ -36,12 +36,17 @@ export type CollectionsMetadata = {
   openseaVerificationStatus?: string | undefined;
 };
 
+export type CollectionsRoyalties = {
+  bps: number;
+  recipient: string;
+};
+
 export type CollectionsEntityParams = {
   id: string;
   slug: string;
   name: string;
   metadata: CollectionsMetadata;
-  royalties: Buffer;
+  royalties: CollectionsRoyalties[];
   community: string;
   contract: Buffer;
   token_id_range: string;
@@ -68,7 +73,7 @@ export class CollectionsEntity {
   slug: string;
   name: string;
   metadata: CollectionsMetadata;
-  royalties: string;
+  royalties: CollectionsRoyalties[];
   community: string;
   contract: string;
   tokenIdRange: number[];
@@ -94,7 +99,7 @@ export class CollectionsEntity {
     this.slug = params.slug;
     this.name = params.name;
     this.metadata = params.metadata;
-    this.royalties = params.royalties ? fromBuffer(params.royalties) : params.royalties;
+    this.royalties = params.royalties ? params.royalties : [];
     this.community = params.community;
     this.contract = fromBuffer(params.contract);
     this.tokenIdRange = params.token_id_range != "(,)" ? JSON.parse(params.token_id_range) : [];

@@ -16,6 +16,7 @@ import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import { PendingFlagStatusSyncJobs } from "@/models/pending-flag-status-sync-jobs";
+import { Collections } from "@/models/collections";
 
 export type OrderInfo = {
   orderParams: Sdk.Seaport.Types.OrderComponents;
@@ -289,15 +290,24 @@ export const save = async (
         });
       }
 
-      // Handle: fee breakdown
-      const openSeaFeeRecipients = [
-        "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073",
-        "0x8de9c5a032463c561423387a9648c5c7bcc5bc90",
-        "0x0000a26b00c1f0df003000390027140000faa719",
-      ];
+      // // Handle: fee breakdown
+      // const openSeaFeeRecipients = [
+      //   "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073",
+      //   "0x8de9c5a032463c561423387a9648c5c7bcc5bc90",
+      //   "0x0000a26b00c1f0df003000390027140000faa719",
+      // ];
+
+      const royaltyRecipients: string[] = [];
+
+      const collection = await Collections.getById(info.contract, true);
+      if (collection) {
+        for (const royalty of collection.royalties) {
+          royaltyRecipients.push(royalty.recipient);
+        }
+      }
 
       const feeBreakdown = info.fees.map(({ recipient, amount }) => ({
-        kind: openSeaFeeRecipients.includes(recipient.toLowerCase()) ? "marketplace" : "royalty",
+        kind: royaltyRecipients.includes(recipient.toLowerCase()) ? "royalty" : "marketplace",
         recipient,
         bps: price.eq(0) ? 0 : bn(amount).mul(10000).div(price).toNumber(),
       }));
