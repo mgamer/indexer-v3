@@ -1,3 +1,30 @@
+# [5.243.0](https://github.com/reservoirprotocol/indexer/compare/v5.242.0...v5.243.0) (2022-09-19)
+
+
+### Features
+
+* check for opensea fees address in order to decide the soruce ([fccaa82](https://github.com/reservoirprotocol/indexer/commit/fccaa82cc9ef3670fc59dff72e44a32a55ab53bb))
+
+
+
+# [5.242.0](https://github.com/reservoirprotocol/indexer/compare/v5.241.0...v5.242.0) (2022-09-19)
+
+
+### Features
+
+* always update last update timestamp ([#1901](https://github.com/reservoirprotocol/indexer/issues/1901)) ([bcb9d33](https://github.com/reservoirprotocol/indexer/commit/bcb9d33db82784af2aa3ff488bf6a288f9370a85))
+
+
+
+# [5.241.0](https://github.com/reservoirprotocol/indexer/compare/v5.240.0...v5.241.0) (2022-09-19)
+
+
+### Features
+
+* allow to filter user top bids by collection ([cc976a2](https://github.com/reservoirprotocol/indexer/commit/cc976a2aeded400fff38c60dbee7742ca1091168))
+
+
+
 # [5.240.0](https://github.com/reservoirprotocol/indexer/compare/v5.239.0...v5.240.0) (2022-09-19)
 
 
