@@ -49,7 +49,7 @@ export const getBuildInfo = async (
     "looks-rare-build-sell-token-order",
     `url=${url}, chainId=${config.chainId}, looksRareApiKey=${
       config.looksRareApiKey
-    }, looksRareApiKey2=${config.looksRareApiKey || ""}`
+    }, looksRareApiKey3=${config.chainId === 1 ? config.looksRareApiKey : ""}`
   );
 
   const buildParams: BaseBuildParams = {
@@ -68,7 +68,7 @@ export const getBuildInfo = async (
         {
           headers: {
             "Content-Type": "application/json",
-            "X-Looks-Api-Key": config.looksRareApiKey || "",
+            "X-Looks-Api-Key": config.chainId === 1 ? config.looksRareApiKey : "",
           },
         }
       )
