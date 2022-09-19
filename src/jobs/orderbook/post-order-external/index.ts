@@ -291,7 +291,7 @@ const postLooksRare = async (order: Sdk.LooksRare.Order, apiKey: string) => {
       {
         headers: {
           "Content-Type": "application/json",
-          "X-Looks-Api-Key": apiKey || config.looksRareApiKey,
+          "X-Looks-Api-Key": apiKey || (config.chainId === 1 ? config.looksRareApiKey : ""),
         },
       }
     )
