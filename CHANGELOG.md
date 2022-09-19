@@ -1,3 +1,12 @@
+# [5.242.0](https://github.com/reservoirprotocol/indexer/compare/v5.241.0...v5.242.0) (2022-09-19)
+
+
+### Features
+
+* always update last update timestamp ([#1901](https://github.com/reservoirprotocol/indexer/issues/1901)) ([bcb9d33](https://github.com/reservoirprotocol/indexer/commit/bcb9d33db82784af2aa3ff488bf6a288f9370a85))
+
+
+
 # [5.241.0](https://github.com/reservoirprotocol/indexer/compare/v5.240.0...v5.241.0) (2022-09-19)
 
 
