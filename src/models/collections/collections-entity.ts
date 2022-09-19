@@ -5,7 +5,7 @@ export type CollectionsEntityUpdateParams = {
   slug?: string;
   name?: string;
   metadata?: string;
-  royalties?: object;
+  royalties?: string;
   community?: string;
   contract?: string;
   tokenIdRange?: string;
