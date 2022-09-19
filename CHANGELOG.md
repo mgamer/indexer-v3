@@ -1,3 +1,12 @@
+# [5.238.0](https://github.com/reservoirprotocol/indexer/compare/v5.237.0...v5.238.0) (2022-09-19)
+
+
+### Features
+
+* added support for higher limit ([#1894](https://github.com/reservoirprotocol/indexer/issues/1894)) ([459da5f](https://github.com/reservoirprotocol/indexer/commit/459da5f505a88c02508cbb95b4e2c17b5c2888b0))
+
+
+
 # [5.237.0](https://github.com/reservoirprotocol/indexer/compare/v5.236.0...v5.237.0) (2022-09-19)
 
 
