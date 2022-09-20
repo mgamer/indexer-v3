@@ -68,10 +68,10 @@
               "fromParameterStore": "fc.indexer-mainnet.env.production.5zd800he.FORCE_REDEPLOY"
             },
             "DATADOG_API_KEY": {
-              "fromParameterStore": "fc.indexer-mainnet.env.production.wpc10io8.DATADOG_API_KEY"
+              "fromParameterStore": "fc.indexer-mainnet.env.production.5zd200as.DATADOG_API_KEY"
             },
             "OPENSEA_API_KEY": {
-              "fromParameterStore": "fc.indexer-mainnet.env.production.5zd200as.DATADOG_API_KEY"
+              "fromParameterStore": "fc.indexer-mainnet.env.production.5zdc003p.OPENSEA_API_KEY"
             },
             "TENDERLY_PROJECT": {
               "fromParameterStore": "fc.indexer-mainnet.env.production.5zdm005j.TENDERLY_PROJECT"
