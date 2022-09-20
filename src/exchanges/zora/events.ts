@@ -62,7 +62,7 @@ const askCreatedABI = new Interface([
 export const askCreated: EventData = {
   kind: "zora-ask-created",
   addresses: { [Zora.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
-  topic: Interface.getEventTopic(askCreatedABI.getEvent("AskCreated")),
+  topic: askCreatedABI.getEventTopic("AskCreated"),
   numTopics: 3,
   abi: askCreatedABI,
 };
@@ -84,7 +84,7 @@ const askPriceUpdatedABI = new Interface([
 export const askPriceUpdated: EventData = {
   kind: "zora-ask-price-updated",
   addresses: { [Zora.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
-  topic: Interface.getEventTopic(askPriceUpdatedABI.getEvent("AskPriceUpdated")),
+  topic: askPriceUpdatedABI.getEventTopic("AskPriceUpdated"),
   numTopics: 3,
   abi: askPriceUpdatedABI,
 };
@@ -106,9 +106,7 @@ const askCanceledABI = new Interface([
 export const askCanceled: EventData = {
   kind: "zora-ask-canceled",
   addresses: { [Zora.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
-  topic: Interface.getEventTopic(askCanceledABI.getEvent("AskCanceled")),
+  topic: askCanceledABI.getEventTopic("AskCanceled"),
   numTopics: 3,
   abi: askCanceledABI,
 };
-
-// console.log('askCanceled', askCanceled)

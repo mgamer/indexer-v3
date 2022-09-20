@@ -1979,6 +1979,10 @@ export const syncEvents = async (
     const eventsSyncProcess = backfill ? eventsSyncBackfillProcess : eventsSyncRealtimeProcess;
     await eventsSyncProcess.addToQueue([
       {
+        kind: "zora",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("zora")),
+      },
+      {
         kind: "cryptopunks",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("cryptopunks")),
       },

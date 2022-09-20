@@ -1,8 +1,9 @@
 import { EnhancedEvent } from "@/events-sync/handlers/utils";
 import { getEventData } from "@/events-sync/data";
-import { TransactionReceipt, Log } from "@ethersproject/abstract-provider";
+import { TransactionReceipt, Log, Block } from "@ethersproject/abstract-provider";
+import { baseProvider } from "@/common/provider";
 
-export function getEventParams(log: Log) {
+export function getEventParams(log: Log, blockResult: Block) {
   const address = log.address.toLowerCase() as string;
   const block = log.blockNumber as number;
   const blockHash = log.blockHash.toLowerCase() as string;
@@ -16,14 +17,15 @@ export function getEventParams(log: Log) {
     block,
     blockHash,
     logIndex,
-    timestamp: Math.floor(Date.now() / 1000),
+    timestamp: blockResult.timestamp,
     batchIndex: 1,
   };
 }
 
-export function getEventsFromTx(tx: TransactionReceipt) {
+export async function getEventsFromTx(tx: TransactionReceipt) {
   const enhancedEvents: EnhancedEvent[] = [];
   const availableEventData = getEventData();
+  const blockResult = await baseProvider.getBlock(tx.blockNumber);
   for (let index = 0; index < tx.logs.length; index++) {
     const log = tx.logs[index];
     const eventData = availableEventData.find(
@@ -35,10 +37,16 @@ export function getEventsFromTx(tx: TransactionReceipt) {
     if (eventData) {
       enhancedEvents.push({
         kind: eventData.kind,
-        baseEventParams: getEventParams(log),
+        baseEventParams: getEventParams(log, blockResult),
         log,
       });
     }
   }
   return enhancedEvents;
+}
+
+export function wait(ms: number) {
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
