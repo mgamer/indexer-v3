@@ -17,7 +17,6 @@
           "memory": 4,
           "minInstances": 4,
           "maxInstances": 6,
-          "domain": "1wxwbjtf5qaina.cloudfront.net",
           "healthCheckPath": "/livez",
           "envVariables": {
             "PORT": {
