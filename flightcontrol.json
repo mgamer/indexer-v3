@@ -20,109 +20,109 @@
           "healthCheckPath": "/livez",
           "envVariables": {
             "PORT": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.1zxm04ng.PORT"
+              "fromParameterStore": "fc.indexer.env.production.fn220dpe.PORT"
             },
             "CATCHUP": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.kqy304ln.CATCHUP"
+              "fromParameterStore": "fc.indexer.env.production.4i1z0dc3.CATCHUP"
             },
             "VERSION": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.61xc04ws.VERSION"
+              "fromParameterStore": "fc.indexer.env.production.to1w0dyq.VERSION"
             },
             "CHAIN_ID": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.hdy204kf.CHAIN_ID"
+              "fromParameterStore": "fc.indexer.env.production.wpby0iez.CHAIN_ID"
             },
             "REDEPLOY": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.sfxj04d7.REDEPLOY"
+              "fromParameterStore": "fc.indexer.env.production.wpch0ins.REDEPLOY"
             },
             "REDIS_URL": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.pdxi04i1.REDIS_URL"
+              "fromParameterStore": "fc.indexer.env.production.wpci0i4d.REDIS_URL"
             },
             "DATABASE_URL": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.vry104u6.DATABASE_URL"
+              "fromParameterStore": "fc.indexer.env.production.wpbz0ixh.DATABASE_URL"
             },
             "X2Y2_API_KEY": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.tlxa04lh.X2Y2_API_KEY"
+              "fromParameterStore": "fc.indexer.env.production.wpcq0iho.X2Y2_API_KEY"
             },
             "ADMIN_API_KEY": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.rfy804rb.ADMIN_API_KEY"
+              "fromParameterStore": "fc.indexer.env.production.wpbu0ixc.ADMIN_API_KEY"
             },
             "CIPHER_SECRET": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.uiog046s.CIPHER_SECRET"
+              "fromParameterStore": "fc.indexer.env.production.wpbt0i58.CIPHER_SECRET"
             },
             "TENDERLY_USER": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.cpxe044s.TENDERLY_USER"
+              "fromParameterStore": "fc.indexer.env.production.wpcm0i7m.TENDERLY_USER"
             },
             "FORCE_REDEPLOY": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.oixt0408.FORCE_REDEPLOY"
+              "fromParameterStore": "fc.indexer.env.production.wpc70ity.FORCE_REDEPLOY"
             },
             "DATADOG_API_KEY": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.otxz045x.DATADOG_API_KEY"
+              "fromParameterStore": "fc.indexer.env.production.wpc10io8.DATADOG_API_KEY"
             },
             "OPENSEA_API_KEY": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.bkxp04l5.OPENSEA_API_KEY"
+              "fromParameterStore": "fc.indexer.env.production.wpcb0iqu.OPENSEA_API_KEY"
             },
             "TENDERLY_PROJECT": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.fzxf04cw.TENDERLY_PROJECT"
+              "fromParameterStore": "fc.indexer.env.production.wpcl0iox.TENDERLY_PROJECT"
             },
             "DATADOG_AGENT_URL": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.say0042i.DATADOG_AGENT_URL"
+              "fromParameterStore": "fc.indexer.env.production.wpc00ivv.DATADOG_AGENT_URL"
             },
             "LOOKSRARE_API_KEY": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.lnxs04y4.LOOKSRARE_API_KEY"
+              "fromParameterStore": "fc.indexer.env.production.wpc80ir2.LOOKSRARE_API_KEY"
             },
             "DO_BACKGROUND_WORK": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.jjxu04ce.DO_BACKGROUND_WORK"
+              "fromParameterStore": "fc.indexer.env.production.wpc60iw8.DO_BACKGROUND_WORK"
             },
             "ORACLE_PRIVATE_KEY": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.55xn04cx.ORACLE_PRIVATE_KEY"
+              "fromParameterStore": "fc.indexer.env.production.wpcd0i93.ORACLE_PRIVATE_KEY"
             },
             "ARWEAVE_RELAYER_KEY": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.o8y704sw.ARWEAVE_RELAYER_KEY"
+              "fromParameterStore": "fc.indexer.env.production.wpbv0i0f.ARWEAVE_RELAYER_KEY"
             },
             "TENDERLY_ACCESS_KEY": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.jaxg04gs.TENDERLY_ACCESS_KEY"
+              "fromParameterStore": "fc.indexer.env.production.wpck0ijs.TENDERLY_ACCESS_KEY"
             },
             "RATE_LIMIT_REDIS_URL": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.2bq0lrf.RATE_LIMIT_REDIS_URL"
+              "fromParameterStore": "fc.indexer.env.production.wpbs0iys.RATE_LIMIT_REDIS_URL"
             },
             "BASE_NETWORK_HTTP_URL": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.o0y404we.BASE_NETWORK_HTTP_URL"
+              "fromParameterStore": "fc.indexer.env.production.wpbw0ipg.BASE_NETWORK_HTTP_URL"
             },
             "METADATA_API_BASE_URL": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.i8xr04ze.METADATA_API_BASE_URL"
+              "fromParameterStore": "fc.indexer.env.production.wpc90ixs.METADATA_API_BASE_URL"
             },
             "SLOW_NETWORK_HTTP_URL": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.m3xh04d1.SLOW_NETWORK_HTTP_URL"
+              "fromParameterStore": "fc.indexer.env.production.wpcj0imk.SLOW_NETWORK_HTTP_URL"
             },
             "TRACE_NETWORK_HTTP_URL": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.9gxd04mp.TRACE_NETWORK_HTTP_URL"
+              "fromParameterStore": "fc.indexer.env.production.wpcn0i0a.TRACE_NETWORK_HTTP_URL"
             },
             "METADATA_API_BASE_URL_ALT": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.f6xq04kf.METADATA_API_BASE_URL_ALT"
+              "fromParameterStore": "fc.indexer.env.production.wpca0ivm.METADATA_API_BASE_URL_ALT"
             },
             "READ_REPLICA_DATABASE_URL": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.vhxk04f6.READ_REPLICA_DATABASE_URL"
+              "fromParameterStore": "fc.indexer.env.production.wpcg0ibd.READ_REPLICA_DATABASE_URL"
             },
             "DATA_EXPORT_S3_BUCKET_NAME": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.q1xv04nd.DATA_EXPORT_S3_BUCKET_NAME"
+              "fromParameterStore": "fc.indexer.env.production.wpc50ikh.DATA_EXPORT_S3_BUCKET_NAME"
             },
             "WRITE_REPLICA_DATABASE_URL": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.2ixb04g4.WRITE_REPLICA_DATABASE_URL"
+              "fromParameterStore": "fc.indexer.env.production.wpcp0iev.WRITE_REPLICA_DATABASE_URL"
             },
             "DATA_EXPORT_AWS_ACCESS_ROLE": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.lsxy04ml.DATA_EXPORT_AWS_ACCESS_ROLE"
+              "fromParameterStore": "fc.indexer.env.production.wpc20irp.DATA_EXPORT_AWS_ACCESS_ROLE"
             },
             "OPENSEA_INDEXER_API_BASE_URL": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.8fxo04a1.OPENSEA_INDEXER_API_BASE_URL"
+              "fromParameterStore": "fc.indexer.env.production.wpcc0ir8.OPENSEA_INDEXER_API_BASE_URL"
             },
             "DATA_EXPORT_AWS_S3_UPLOAD_ROLE": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.4txw04yk.DATA_EXPORT_AWS_S3_UPLOAD_ROLE"
+              "fromParameterStore": "fc.indexer.env.production.wpc40ifs.DATA_EXPORT_AWS_S3_UPLOAD_ROLE"
             },
             "RAILWAY_DEPLOYMENT_OVERLAP_SECONDS": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.ysxl0442.RAILWAY_DEPLOYMENT_OVERLAP_SECONDS"
+              "fromParameterStore": "fc.indexer.env.production.wpcf0iib.RAILWAY_DEPLOYMENT_OVERLAP_SECONDS"
             },
             "DATA_EXPORT_AWS_S3_UPLOAD_EXTERNAL_ID": {
-              "fromParameterStore": "fc.indexer.env.production-tezh0pki.ipxx04eq.DATA_EXPORT_AWS_S3_UPLOAD_EXTERNAL_ID"
+              "fromParameterStore": "fc.indexer.env.production.wpc30ig6.DATA_EXPORT_AWS_S3_UPLOAD_EXTERNAL_ID"
             }
           },
           "port": 3000,
