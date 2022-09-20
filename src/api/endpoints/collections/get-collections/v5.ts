@@ -99,6 +99,7 @@ export const getCollectionsV5Options: RouteOptions = {
           discordUrl: Joi.string().allow(null, ""),
           externalUrl: Joi.string().allow(null, ""),
           twitterUsername: Joi.string().allow(null, ""),
+          openseaVerificationStatus: Joi.string().allow(null, ""),
           description: Joi.string().allow(null, ""),
           sampleImages: Joi.array().items(Joi.string().allow(null, "")),
           tokenCount: Joi.string(),
@@ -129,6 +130,7 @@ export const getCollectionsV5Options: RouteOptions = {
           },
           topBid: Joi.object({
             id: Joi.string().allow(null),
+            sourceDomain: Joi.string().allow(null, ""),
             price: JoiPrice.allow(null),
             maker: Joi.string().lowercase().pattern(regex.address).allow(null),
             validFrom: Joi.number().unsafe().allow(null),
@@ -204,6 +206,7 @@ export const getCollectionsV5Options: RouteOptions = {
             orders.price AS top_buy_price,
             orders.value AS top_buy_value,
             orders.currency_price AS top_buy_currency_price,
+            orders.source_id_int AS top_buy_source_id_int,
             orders.currency_value AS top_buy_currency_value
           FROM token_sets
           LEFT JOIN orders
@@ -265,6 +268,7 @@ export const getCollectionsV5Options: RouteOptions = {
           (collections.metadata ->> 'description')::TEXT AS "description",
           (collections.metadata ->> 'externalUrl')::TEXT AS "external_url",
           (collections.metadata ->> 'twitterUsername')::TEXT AS "twitter_username",
+          (collections.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
           collections.royalties,
           collections.contract,
           collections.token_id_range,
@@ -432,6 +436,7 @@ export const getCollectionsV5Options: RouteOptions = {
           const floorAskCurrency = r.floor_sell_currency
             ? fromBuffer(r.floor_sell_currency)
             : Sdk.Common.Addresses.Eth[config.chainId];
+
           const topBidCurrency = r.top_buy_currency
             ? fromBuffer(r.top_buy_currency)
             : Sdk.Common.Addresses.Weth[config.chainId];
@@ -447,6 +452,7 @@ export const getCollectionsV5Options: RouteOptions = {
             discordUrl: r.discord_url,
             externalUrl: r.external_url,
             twitterUsername: r.twitter_username,
+            openseaVerificationStatus: r.opensea_verification_status,
             description: r.description,
             sampleImages: Assets.getLocalAssetsLink(r.sample_images) ?? [],
             tokenCount: String(r.token_count),
@@ -487,6 +493,7 @@ export const getCollectionsV5Options: RouteOptions = {
             topBid: query.includeTopBid
               ? {
                   id: r.top_buy_id,
+                  sourceDomain: sources.get(r.top_buy_source_id_int)?.domain,
                   price: r.top_buy_id
                     ? await getJoiPriceObject(
                         {

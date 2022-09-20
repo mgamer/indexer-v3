@@ -2,7 +2,7 @@ import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 import { baseProvider } from "@/common/provider";
 import allTx from "../__fixtures__/tx";
-import { idb, pgp } from "@/common/db";
+import { idb } from "@/common/db";
 import { getEventsFromTx, wait } from "../../utils/test";
 import { handleEvents } from "../handler";
 import { processOnChainData } from "@/events-sync/handlers/utils";

@@ -9,7 +9,7 @@ import { config } from "@/config/index";
 import { RateLimitRules } from "@/models/rate-limit-rules";
 
 export const postUpdateRateLimitRuleOptions: RouteOptions = {
-  description: "Update the the rate limit for the given ID",
+  description: "Update the rate limit for the given ID",
   tags: ["api", "x-admin"],
   validate: {
     headers: Joi.object({
@@ -44,7 +44,7 @@ export const postUpdateRateLimitRuleOptions: RouteOptions = {
         message: `Rule ID ${payload.ruleId} was updated with params=${JSON.stringify(payload)}`,
       };
     } catch (error) {
-      logger.error("post-update-api-key-tier-handler", `Handler failure: ${error}`);
+      logger.error("post-update-rate-limit-handler", `Handler failure: ${error}`);
       throw error;
     }
   },
