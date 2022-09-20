@@ -18,6 +18,18 @@
           "minInstances": 4,
           "maxInstances": 6,
           "healthCheckPath": "/livez",
+          "dockerLabels": {
+            "com.datadoghq.ad.instances": "[{\"host\": \"%%host%%\", \"port\": \"%%port%%\"}]",
+            "com.datadoghq.ad.check_names": "[\"flightcontrol\"]",
+            "com.datadoghq.ad.init_configs": "[{}]"
+          },
+          "experimental": {
+            "datadog": {
+              "enabled": true,
+              "datadogSite": "us5.datadoghq.com",
+              "datadogApiKey": "DD_API_KEY.from.parameter.store"
+            }
+          },
           "envVariables": {
             "PORT": {
               "fromParameterStore": "fc.indexer.env.production.fn220dpe.PORT"
