@@ -1,3 +1,12 @@
+## [5.243.1](https://github.com/reservoirprotocol/indexer/compare/v5.243.0...v5.243.1) (2022-09-20)
+
+
+### Bug Fixes
+
+* exclude all escrowed orders from balance/approval checks ([562a642](https://github.com/reservoirprotocol/indexer/commit/562a642be2b3918788e85ed375f9fa47356fd428))
+
+
+
 # [5.243.0](https://github.com/reservoirprotocol/indexer/compare/v5.242.0...v5.243.0) (2022-09-19)
 
 
