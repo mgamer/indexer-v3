@@ -63,7 +63,16 @@ if (config.doBackgroundWork) {
             (tokenMetadata) => tokenMetadata.tokenId === pendingSyncFlagStatusToken.tokenId
           );
 
-          const isFlagged = Number(tokenMetadata!.flagged);
+          if (!tokenMetadata) {
+            logger.warn(
+              QUEUE_NAME,
+              `Missing Token Metadata. contract:${contract}, tokenId: ${pendingSyncFlagStatusToken.tokenId}, tokenIsFlagged:${pendingSyncFlagStatusToken.isFlagged}`
+            );
+
+            continue;
+          }
+
+          const isFlagged = Number(tokenMetadata.flagged);
 
           if (pendingSyncFlagStatusToken.isFlagged != isFlagged) {
             logger.info(
