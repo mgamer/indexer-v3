@@ -189,7 +189,11 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         source_id_int: source?.id,
         is_reservoir: null,
         contract: toBuffer(contract),
-        conduit: toBuffer(Sdk.Zora.Addresses.Erc721TransferHelper[config.chainId]),
+        conduit: toBuffer(
+          orderParams.side === "sell"
+            ? Sdk.Zora.Addresses.Erc721TransferHelper[config.chainId]
+            : Sdk.Zora.Addresses.Erc20TransferHelper[config.chainId]
+        ),
         fee_bps: 0,
         fee_breakdown: [],
         dynamic: null,
