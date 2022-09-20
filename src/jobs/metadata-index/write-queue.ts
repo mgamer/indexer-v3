@@ -48,6 +48,14 @@ if (config.doBackgroundWork) {
       } = job.data as TokenMetadataInfo;
 
       try {
+        const flaggedQueryPart =
+          flagged === undefined
+            ? ""
+            : `
+              is_flagged = $/isFlagged/,
+              last_flag_update = now(),
+        `;
+
         // Update the token's metadata.
         const result = await idb.oneOrNone(
           `
@@ -56,8 +64,7 @@ if (config.doBackgroundWork) {
               description = $/description/,
               image = $/image/,
               media = $/media/,
-              is_flagged = $/isFlagged/,
-              last_flag_update = now(),
+              ${flaggedQueryPart}
               updated_at = now()
             WHERE tokens.contract = $/contract/
               AND tokens.token_id = $/tokenId/
@@ -70,7 +77,7 @@ if (config.doBackgroundWork) {
             description: description || null,
             image: imageUrl || null,
             media: mediaUrl || null,
-            isFlagged: Number(flagged),
+            isFlagged: flagged === undefined ? null : Number(flagged),
           }
         );
         if (!result) {
@@ -381,7 +388,7 @@ export type TokenMetadataInfo = {
   description?: string;
   imageUrl?: string;
   mediaUrl?: string;
-  flagged: boolean;
+  flagged?: boolean;
   attributes: {
     key: string;
     value: string;
