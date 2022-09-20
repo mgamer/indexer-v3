@@ -1,6 +1,5 @@
 import { EnhancedEvent, OnChainData, processOnChainData } from "@/events-sync/handlers/utils";
 
-import * as zora from "@/exchanges/zora/handler";
 import * as erc20 from "@/events-sync/handlers/erc20";
 import * as erc721 from "@/events-sync/handlers/erc721";
 import * as erc1155 from "@/events-sync/handlers/erc1155";
@@ -16,10 +15,10 @@ import * as sudoswap from "@/events-sync/handlers/sudoswap";
 import * as wyvern from "@/events-sync/handlers/wyvern";
 import * as x2y2 from "@/events-sync/handlers/x2y2";
 import * as zeroExV4 from "@/events-sync/handlers/zeroex-v4";
+import * as zora from "@/events-sync/handlers/zora";
 
 export type EventsInfo = {
   kind:
-    | "zora"
     | "erc20"
     | "erc721"
     | "erc1155"
@@ -34,7 +33,8 @@ export type EventsInfo = {
     | "sudoswap"
     | "wyvern"
     | "x2y2"
-    | "zeroex-v4";
+    | "zeroex-v4"
+    | "zora";
   events: EnhancedEvent[];
   backfill?: boolean;
 };

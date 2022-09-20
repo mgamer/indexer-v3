@@ -1,14 +1,12 @@
 import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 import { baseProvider } from "@/common/provider";
-import allTx from "../__fixtures__/tx";
+import allTx from "./__fixtures__/tx";
 import { idb } from "@/common/db";
-import { getEventsFromTx, wait } from "../../utils/test";
-import { handleEvents } from "../handler";
+import { getEventsFromTx, wait } from "../utils/test";
+import { handleEvents } from "@/events-sync/handlers/zora";
 import { processOnChainData } from "@/events-sync/handlers/utils";
 import { keccak256 } from "@ethersproject/solidity";
-
-jest.setTimeout(50000);
 
 describe("ZoraExchange", () => {
   test("order", async () => {
@@ -28,10 +26,10 @@ describe("ZoraExchange", () => {
     // if (createResult.orders?.length) console.log(createResult.orders[0])
     // console.log(cancelAskResult.cancelEventsOnChain)
     await processOnChainData(createResult);
-    await wait(3 * 1000);
+    await wait(10 * 1000);
     await processOnChainData(cancelAskResult);
 
-    await wait(3 * 1000);
+    await wait(10 * 1000);
 
     const orderId = keccak256(
       ["string", "string", "uint256"],
@@ -59,10 +57,9 @@ describe("ZoraExchange", () => {
     const result1 = await handleEvents(eventsCreate);
     const result2 = await handleEvents(eventsSet);
     await processOnChainData(result1);
-    await wait(3 * 1000);
+    await wait(10 * 1000);
     await processOnChainData(result2);
-    await wait(3 * 1000);
-
+    await wait(10 * 1000);
     const orderId = keccak256(
       ["string", "string", "uint256"],
       ["zora-v3", "0xabEFBc9fD2F806065b4f3C237d4b59D9A97Bcac7", "10042"]

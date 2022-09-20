@@ -19,7 +19,7 @@ import * as wyvernV2 from "@/events-sync/data/wyvern-v2";
 import * as wyvernV23 from "@/events-sync/data/wyvern-v2.3";
 import * as x2y2 from "@/events-sync/data/x2y2";
 import * as zeroExV4 from "@/events-sync/data/zeroex-v4";
-import * as zora from "@/exchanges/zora/events";
+import * as zora from "@/events-sync/data/zora";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then

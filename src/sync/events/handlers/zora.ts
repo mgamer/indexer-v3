@@ -4,12 +4,11 @@ import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import * as es from "@/events-sync/storage";
 import * as utils from "@/events-sync/utils";
-import { OrderInfo, getOrderId } from "./orderbook";
+import { OrderInfo, getOrderId } from "@/orderbook/orders/zora";
 import { getUSDAndNativePrices } from "@/utils/prices";
 
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
-import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 
 function getOrderParams(args: Result) {
   const tokenId = args["tokenId"].toString();
@@ -32,10 +31,8 @@ function getOrderParams(args: Result) {
 export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData> => {
   const cancelEventsOnChain: es.cancels.Event[] = [];
   const fillEventsOnChain: es.fills.Event[] = [];
-  const nftTransferEvents: es.nftTransfers.Event[] = [];
 
   const fillInfos: fillUpdates.FillInfo[] = [];
-  const mintInfos: tokenUpdatesMint.MintInfo[] = [];
   const orderInfos: orderUpdatesById.OrderInfo[] = [];
 
   // Keep track of any on-chain orders
@@ -76,8 +73,12 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           break;
         }
 
+        const orderParams = getOrderParams(args);
+        const orderId = getOrderId(orderParams);
+
         fillEventsOnChain.push({
           orderKind,
+          orderId,
           currency: askCurrency,
           orderSide: "sell",
           maker: seller,
@@ -243,11 +244,9 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
   return {
     fillEventsOnChain,
     cancelEventsOnChain,
-    nftTransferEvents,
 
     fillInfos,
     orderInfos,
-    mintInfos,
 
     orders: orders.map((info) => ({
       kind: "zora-v3",

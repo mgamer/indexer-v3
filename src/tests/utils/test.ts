@@ -46,7 +46,7 @@ export async function getEventsFromTx(tx: TransactionReceipt) {
 }
 
 export function wait(ms: number) {
-  new Promise((resolve) => {
+  return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
 }

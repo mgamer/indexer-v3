@@ -100,7 +100,7 @@ module.exports = {
 
   // A preset that is used as a base for Jest's configuration
   preset:  "ts-jest",
-
+  testTimeout: 60 * 1000,
   // Run tests from one or more projects
   // projects: undefined,
 

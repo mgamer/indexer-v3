@@ -6,7 +6,6 @@ import { logger } from "@/common/logger";
 import { redis, redlock } from "@/common/redis";
 import { config } from "@/config/index";
 import * as orders from "@/orderbook/orders";
-import * as exchanges from "@/exchanges/index";
 
 const QUEUE_NAME = "orderbook-orders-queue";
 
@@ -56,10 +55,8 @@ if (config.doBackgroundWork) {
           }
 
           case "zora-v3": {
-            const result = await exchanges.zora.orders.save([
-              info as exchanges.zora.orders.OrderInfo,
-            ]);
-            logger.info(QUEUE_NAME, `[zora-3] Order save result: ${JSON.stringify(result)}`);
+            const result = await orders.zora.save([info as orders.zora.OrderInfo]);
+            logger.info(QUEUE_NAME, `[zora-v3] Order save result: ${JSON.stringify(result)}`);
             break;
           }
 
@@ -157,7 +154,7 @@ export type GenericOrderInfo =
     }
   | {
       kind: "zora-v3";
-      info: exchanges.zora.orders.OrderInfo;
+      info: orders.zora.OrderInfo;
       relayToArweave?: boolean;
     };
 

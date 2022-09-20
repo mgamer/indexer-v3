@@ -3,7 +3,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
 import { keccak256 } from "@ethersproject/solidity";
 
-import { idb, pgp } from "@/common/db";
+import { idb, redb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -58,10 +58,24 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
     try {
       const id = getOrderId(orderParams);
 
+      // Check: sell order has Eth as payment token
+      if (orderParams.askCurrency !== AddressZero) {
+        return results.push({
+          id,
+          status: "unsupported-payment-token",
+        });
+      }
+
       // Check: order doesn't already exist
-      const orderExists = await idb.oneOrNone(`SELECT 1 FROM "orders" "o" WHERE "o"."id" = $/id/`, {
-        id,
-      });
+      const orderResult = await redb.oneOrNone(
+        ` 
+          SELECT 
+            extract('epoch' from lower(orders.valid_between)) AS valid_from 
+          FROM orders 
+          WHERE orders.id = $/id/ 
+        `,
+        { id }
+      );
 
       // Check: order fillability
       let fillabilityStatus = "fillable";
@@ -86,45 +100,53 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         }
       }
 
-      if (orderExists) {
-        // If an older order already exists then we just update some fields on it
-        await idb.none(
-          `
-           UPDATE orders SET
-             fillability_status = $/fillability_status/,
-             approval_status = $/approval_status/,
-             maker = $/maker/,
-             price = $/price/,
-             currency_price = $/price/,
-             value = $/price/,
-             currency_value = $/price/,
-             valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
-             expiration = 'Infinity',
-             updated_at = now(),
-             taker = $/taker/,
-             raw_data = $/orderParams:json/
-           WHERE orders.id = $/id/
-         `,
-          {
-            fillability_status: fillabilityStatus,
-            approval_status: approvalStatus,
-            maker: toBuffer(orderParams.maker),
-            taker: toBuffer(AddressZero),
-            price: orderParams.askPrice,
-            orderParams,
-            id,
-          }
-        );
+      if (orderResult) {
+        if (Number(orderResult.valid_from) < orderParams.txTimestamp) {
+          // If an older order already exists then we just update some fields on it
+          await idb.none(
+            `
+            UPDATE orders SET
+              fillability_status = $/fillability_status/,
+              approval_status = $/approval_status/,
+              maker = $/maker/,
+              price = $/price/,
+              currency_price = $/price/,
+              value = $/price/,
+              currency_value = $/price/,
+              valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
+              expiration = 'Infinity',
+              updated_at = now(),
+              taker = $/taker/,
+              raw_data = $/orderParams:json/
+            WHERE orders.id = $/id/
+          `,
+            {
+              fillability_status: fillabilityStatus,
+              approval_status: approvalStatus,
+              maker: toBuffer(orderParams.maker),
+              taker: toBuffer(AddressZero),
+              price: orderParams.askPrice,
+              orderParams,
+              id,
+            }
+          );
 
-        return results.push({
-          id,
-          status: "success",
-        });
+          return results.push({
+            id,
+            status: "success",
+          });
+        } else {
+          // If a newer order already exists, then we just skip processing
+          return results.push({
+            id,
+            status: "redundant",
+          });
+        }
       }
 
       // Check and save: associated token set
       const schemaHash = metadata.schemaHash ?? generateSchemaHash(metadata.schema);
-      const contract = Sdk.Zora.Addresses.Exchange[config.chainId];
+      const contract = orderParams.tokenContract;
 
       const [{ id: tokenSetId }] = await tokenSet.singleToken.save([
         {
@@ -167,7 +189,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         source_id_int: source?.id,
         is_reservoir: null,
         contract: toBuffer(contract),
-        conduit: null,
+        conduit: toBuffer(Sdk.Zora.Addresses.Erc721TransferHelper[config.chainId]),
         fee_bps: 0,
         fee_breakdown: [],
         dynamic: null,

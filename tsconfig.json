@@ -23,7 +23,6 @@
       "@/utils/*": ["utils/*"],
       "@/models/*": ["models/*"],
       "@/pubsub/*": ["pubsub/*"],
-      "@/exchanges/*": ["exchanges/*"],
       "@/events-sync/*": ["sync/events/*"]
     },
     "typeRoots": ["node_modules/@types", "./custom-typings"]
