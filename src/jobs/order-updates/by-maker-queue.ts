@@ -293,8 +293,8 @@ if (config.doBackgroundWork) {
             // Filter any orders that didn't change status
             const values = fillabilityStatuses
               .filter(({ old_status, new_status }) => old_status !== new_status)
-              // Exclude 'foundation' orders (which need special rules because of the escrowed orderbook)
-              .filter(({ kind }) => kind !== "foundation")
+              // Exclude escrowed orders
+              .filter(({ kind }) => kind !== "foundation" && kind !== "cryptopunks")
               // When a token gets transferred, X2Y2 will off-chain cancel all the
               // orders from the initial owner, so that if they ever get the token
               // back in their wallet no order will get reactivated (they are able
@@ -392,8 +392,8 @@ if (config.doBackgroundWork) {
             // Filter any orders that didn't change status
             const values = approvalStatuses
               .filter(({ old_status, new_status }) => old_status !== new_status)
-              // Exclude 'foundation' orders (which need special rules because of the escrowed orderbook)
-              .filter(({ kind }) => kind !== "foundation")
+              // Exclude escrowed orders
+              .filter(({ kind }) => kind !== "foundation" && kind !== "cryptopunks")
               .map(({ id, new_status, expiration }) => ({
                 id,
                 approval_status: new_status,
