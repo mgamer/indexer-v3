@@ -54,10 +54,15 @@ export const getBuildInfo = async (
           config.chainId === 5 ? "api-goerli." : "api."
         }looksrare.org/api/v1/orders/nonce?address=${options.maker}`,
         {
-          headers: {
-            "Content-Type": "application/json",
-            "X-Looks-Api-Key": config.chainId === 1 ? config.looksRareApiKey : "",
-          },
+          headers:
+            config.chainId === 1
+              ? {
+                  "Content-Type": "application/json",
+                  "X-Looks-Api-Key": config.looksRareApiKey,
+                }
+              : {
+                  "Content-Type": "application/json",
+                },
         }
       )
       .then(({ data }: { data: { data: string } }) => data.data),
