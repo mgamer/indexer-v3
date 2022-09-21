@@ -18,18 +18,6 @@
           "minInstances": 4,
           "maxInstances": 6,
           "healthCheckPath": "/livez",
-          "dockerLabels": {
-            "com.datadoghq.ad.instances": "[{\"host\": \"%%host%%\", \"port\": 3000}]",
-            "com.datadoghq.ad.check_names": "[\"indexer\"]",
-            "com.datadoghq.ad.init_configs": "[{}]"
-          },
-          "experimental": {
-            "datadog": {
-              "enabled": true,
-              "datadogSite": "datadoghq.com",
-              "datadogApiKey": "DD_API_KEY.from.parameter.store"
-            }
-          },
           "envVariables": {
             "PORT": {
               "fromParameterStore": "fc.indexer-mainnet.env.production.5zdf00lx.PORT"
