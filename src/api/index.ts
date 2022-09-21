@@ -185,6 +185,7 @@ export const start = async (): Promise<void> => {
                 request.info.referrer ? ` from referrer ${request.info.referrer} ` : " "
               }for rule ${JSON.stringify(rateLimitRule)}`,
               route: request.route.path,
+              appName: apiKey?.appName || "",
               key: rateLimitKey,
               referrer: request.info.referrer,
             };
