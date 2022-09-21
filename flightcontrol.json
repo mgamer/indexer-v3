@@ -27,7 +27,7 @@
             "datadog": {
               "enabled": true,
               "datadogSite": "datadoghq.com",
-              "datadogApiKey": "DD_API_KEY.from.parameter.store"
+              "datadogApiKey": "DD_API_KEY"
             }
           },
           "envVariables": {
