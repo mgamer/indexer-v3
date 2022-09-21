@@ -20,7 +20,7 @@
           "healthCheckPath": "/livez",
           "dockerLabels": {
             "com.datadoghq.ad.instances": "[{\"host\": \"%%host%%\", \"port\": 3000}]",
-            "com.datadoghq.ad.check_names": "[\"indexer\"]",
+            "com.datadoghq.ad.check_names": "[\"fc-indexer\"]",
             "com.datadoghq.ad.init_configs": "[{}]"
           },
           "experimental": {
