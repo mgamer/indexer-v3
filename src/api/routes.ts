@@ -75,6 +75,18 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/delete-rate-limit-rule",
+    options: adminEndpoints.postDeleteRateLimitRuleOptions,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/admin/create-rate-limit-rule",
+    options: adminEndpoints.postCreateRateLimitRuleOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/update-rate-limit-rule",
     options: adminEndpoints.postUpdateRateLimitRuleOptions,
   });
@@ -211,6 +223,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/api-keys",
     options: apiKeysEndpoints.postApiKey,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/api-keys/{key}/rate-limits",
+    options: apiKeysEndpoints.getApuKeyRateLimits,
   });
 
   // Attributes
@@ -385,8 +403,20 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/events/asks/v2",
+    options: eventsEndpoints.getAsksEventsV2Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/events/tokens/floor-ask/v2",
     options: eventsEndpoints.getTokensFloorAskV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/events/tokens/floor-ask/v3",
+    options: eventsEndpoints.getTokensFloorAskV3Options,
   });
 
   server.route({

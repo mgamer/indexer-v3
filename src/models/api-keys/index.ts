@@ -144,6 +144,14 @@ export class ApiKeyManager {
       log.origin = request.headers["origin"];
     }
 
+    if (request.headers["x-rkui-version"]) {
+      log.rkuiVersion = request.headers["x-rkui-version"];
+    }
+
+    if (request.headers["x-rkc-version"]) {
+      log.rkcVersion = request.headers["x-rkc-version"];
+    }
+
     if (request.info.referrer) {
       log.referrer = request.info.referrer;
     }
@@ -155,8 +163,7 @@ export class ApiKeyManager {
     // Add key information if it exists
     if (key) {
       try {
-        //  const apiKey = await ApiKeyManager.getApiKey(key);
-        const apiKey = null;
+        const apiKey = await ApiKeyManager.getApiKey(key);
 
         // There is a key, set that key information
         if (apiKey) {

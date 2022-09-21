@@ -44,3 +44,63 @@ export const auctionEnded: EventData = {
     )`,
   ]),
 };
+
+export const askCreated: EventData = {
+  kind: "zora-ask-created",
+  addresses: { [Zora.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
+  topic: "0x5b65b398e1d736436510f4da442eaec71466d2abee0816567088c892c4bcee70",
+  numTopics: 3,
+  abi: new Interface([
+    `event AskCreated(
+        address indexed tokenContract,
+        uint256 indexed tokenId,
+        (
+          address seller,
+          address sellerFundsRecipient,
+          address askCurrency,
+          uint16 findersFeeBps,
+          uint256 askPrice
+        ) ask
+      )`,
+  ]),
+};
+
+export const askPriceUpdated: EventData = {
+  kind: "zora-ask-price-updated",
+  addresses: { [Zora.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
+  topic: "0x1a24bcf5290feab70f35cfb4870c294ebf497e608d4262b0ec0debe045008140",
+  numTopics: 3,
+  abi: new Interface([
+    `event AskPriceUpdated(
+        address indexed tokenContract,
+        uint256 indexed tokenId,
+        (
+          address seller,
+          address sellerFundsRecipient,
+          address askCurrency,
+          uint16 findersFeeBps,
+          uint256 askPrice
+        ) ask
+      )`,
+  ]),
+};
+
+export const askCanceled: EventData = {
+  kind: "zora-ask-canceled",
+  addresses: { [Zora.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
+  topic: "0x871956abf85befb7c955eacd40fcabe7e01b1702d75764bf7f54bf481933fd35",
+  numTopics: 3,
+  abi: new Interface([
+    `event AskCanceled(
+        address indexed tokenContract,
+        uint256 indexed tokenId,
+        (
+          address seller,
+          address sellerFundsRecipient,
+          address askCurrency,
+          uint16 findersFeeBps,
+          uint256 askPrice
+        ) ask
+      )`,
+  ]),
+};

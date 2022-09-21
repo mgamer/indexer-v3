@@ -1,0 +1,136 @@
+{
+  "environments": [
+    {
+      "id": "production",
+      "name": "Production",
+      "region": "us-west-2",
+      "source": {
+        "branch": "main"
+      },
+      "services": [
+        {
+          "id": "api-1-Aah3Lq",
+          "name": "api-1",
+          "type": "fargate",
+          "buildType": "docker",
+          "cpu": 2,
+          "memory": 4,
+          "minInstances": 4,
+          "maxInstances": 6,
+          "healthCheckPath": "/livez",
+          "envVariables": {
+            "PORT": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.1zxm04ng.PORT"
+            },
+            "CATCHUP": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.kqy304ln.CATCHUP"
+            },
+            "VERSION": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.61xc04ws.VERSION"
+            },
+            "CHAIN_ID": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.hdy204kf.CHAIN_ID"
+            },
+            "REDEPLOY": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.sfxj04d7.REDEPLOY"
+            },
+            "REDIS_URL": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.pdxi04i1.REDIS_URL"
+            },
+            "DATABASE_URL": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.vry104u6.DATABASE_URL"
+            },
+            "X2Y2_API_KEY": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.tlxa04lh.X2Y2_API_KEY"
+            },
+            "ADMIN_API_KEY": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.rfy804rb.ADMIN_API_KEY"
+            },
+            "CIPHER_SECRET": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.uiog046s.CIPHER_SECRET"
+            },
+            "TENDERLY_USER": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.cpxe044s.TENDERLY_USER"
+            },
+            "FORCE_REDEPLOY": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.oixt0408.FORCE_REDEPLOY"
+            },
+            "DATADOG_API_KEY": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.otxz045x.DATADOG_API_KEY"
+            },
+            "OPENSEA_API_KEY": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.bkxp04l5.OPENSEA_API_KEY"
+            },
+            "TENDERLY_PROJECT": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.fzxf04cw.TENDERLY_PROJECT"
+            },
+            "DATADOG_AGENT_URL": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.say0042i.DATADOG_AGENT_URL"
+            },
+            "LOOKSRARE_API_KEY": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.lnxs04y4.LOOKSRARE_API_KEY"
+            },
+            "DO_BACKGROUND_WORK": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.jjxu04ce.DO_BACKGROUND_WORK"
+            },
+            "ORACLE_PRIVATE_KEY": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.55xn04cx.ORACLE_PRIVATE_KEY"
+            },
+            "ARWEAVE_RELAYER_KEY": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.o8y704sw.ARWEAVE_RELAYER_KEY"
+            },
+            "TENDERLY_ACCESS_KEY": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.jaxg04gs.TENDERLY_ACCESS_KEY"
+            },
+            "RATE_LIMIT_REDIS_URL": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.2bq0lrf.RATE_LIMIT_REDIS_URL"
+            },
+            "BASE_NETWORK_HTTP_URL": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.o0y404we.BASE_NETWORK_HTTP_URL"
+            },
+            "METADATA_API_BASE_URL": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.i8xr04ze.METADATA_API_BASE_URL"
+            },
+            "SLOW_NETWORK_HTTP_URL": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.m3xh04d1.SLOW_NETWORK_HTTP_URL"
+            },
+            "TRACE_NETWORK_HTTP_URL": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.9gxd04mp.TRACE_NETWORK_HTTP_URL"
+            },
+            "METADATA_API_BASE_URL_ALT": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.f6xq04kf.METADATA_API_BASE_URL_ALT"
+            },
+            "READ_REPLICA_DATABASE_URL": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.vhxk04f6.READ_REPLICA_DATABASE_URL"
+            },
+            "DATA_EXPORT_S3_BUCKET_NAME": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.q1xv04nd.DATA_EXPORT_S3_BUCKET_NAME"
+            },
+            "WRITE_REPLICA_DATABASE_URL": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.2ixb04g4.WRITE_REPLICA_DATABASE_URL"
+            },
+            "DATA_EXPORT_AWS_ACCESS_ROLE": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.lsxy04ml.DATA_EXPORT_AWS_ACCESS_ROLE"
+            },
+            "OPENSEA_INDEXER_API_BASE_URL": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.8fxo04a1.OPENSEA_INDEXER_API_BASE_URL"
+            },
+            "DATA_EXPORT_AWS_S3_UPLOAD_ROLE": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.4txw04yk.DATA_EXPORT_AWS_S3_UPLOAD_ROLE"
+            },
+            "RAILWAY_DEPLOYMENT_OVERLAP_SECONDS": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.ysxl0442.RAILWAY_DEPLOYMENT_OVERLAP_SECONDS"
+            },
+            "DATA_EXPORT_AWS_S3_UPLOAD_EXTERNAL_ID": {
+              "fromParameterStore": "fc.indexer.env.production-tezh0pki.ipxx04eq.DATA_EXPORT_AWS_S3_UPLOAD_EXTERNAL_ID"
+            }
+          },
+          "port": 3000,
+          "enableCloudfrontSwr": false,
+          "dockerfilePath": "Dockerfile",
+          "dockerContext": "."
+        }
+      ]
+    }
+  ]
+}
