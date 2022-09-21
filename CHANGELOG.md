@@ -1,3 +1,14 @@
+# [5.247.0](https://github.com/reservoirprotocol/indexer/compare/v5.246.0...v5.247.0) (2022-09-21)
+
+
+### Features
+
+* fix floor ask value ([#1916](https://github.com/reservoirprotocol/indexer/issues/1916)) ([393f82a](https://github.com/reservoirprotocol/indexer/commit/393f82a289be26fe671a6854012f0be8eaf0ec11))
+* set rate limit command timeout ([d4009ea](https://github.com/reservoirprotocol/indexer/commit/d4009eab425d6d5da1a90ecc9f4235a19dbb6743))
+* set rate limit command timeout ([44ae92c](https://github.com/reservoirprotocol/indexer/commit/44ae92ca38d2c1643b40e8c549c18267a6a31ebd))
+
+
+
 # [5.246.0](https://github.com/reservoirprotocol/indexer/compare/v5.245.0...v5.246.0) (2022-09-21)
 
 
