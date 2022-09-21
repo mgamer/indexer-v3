@@ -1,6 +1,7 @@
 import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
+import _ from "lodash";
 
 import { idb, pgp, redb } from "@/common/db";
 import { logger } from "@/common/logger";
@@ -289,15 +290,28 @@ export const save = async (
         });
       }
 
-      // Handle: fee breakdown
+      // // Handle: fee breakdown
       const openSeaFeeRecipients = [
         "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073",
         "0x8de9c5a032463c561423387a9648c5c7bcc5bc90",
         "0x0000a26b00c1f0df003000390027140000faa719",
       ];
 
+      const royaltyRecipients: string[] = [];
+
+      const collectionRoyalties = await redb.oneOrNone(
+        `SELECT royalties FROM collections WHERE id = $/id/`,
+        { id: info.contract }
+      );
+
+      if (collectionRoyalties) {
+        for (const royalty of collectionRoyalties.royalties) {
+          royaltyRecipients.push(royalty.recipient);
+        }
+      }
+
       const feeBreakdown = info.fees.map(({ recipient, amount }) => ({
-        kind: openSeaFeeRecipients.includes(recipient.toLowerCase()) ? "marketplace" : "royalty",
+        kind: royaltyRecipients.includes(recipient.toLowerCase()) ? "royalty" : "marketplace",
         recipient,
         bps: price.eq(0) ? 0 : bn(amount).mul(10000).div(price).toNumber(),
       }));
@@ -309,9 +323,14 @@ export const save = async (
       // If the order is native, override any default source
       if (isReservoir) {
         if (metadata.source) {
+          // If we can detect the marketplace (only OpenSea for now) do not override
           if (
-            // If we can detect the marketplace (only OpenSea for now) do not override
-            !feeBreakdown.map(({ kind }) => kind).includes("marketplace")
+            _.isEmpty(
+              _.intersection(
+                feeBreakdown.map(({ recipient }) => recipient),
+                openSeaFeeRecipients
+              )
+            )
           ) {
             source = await sources.getOrInsert(metadata.source);
           }

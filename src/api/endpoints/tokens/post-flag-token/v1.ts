@@ -60,12 +60,9 @@ export const postFlagTokenV1Options: RouteOptions = {
     const [contract, tokenId] = payload.token.split(":");
 
     const token = await Tokens.getByContractAndTokenId(contract, tokenId);
+
     if (!token) {
       throw Boom.badData(`Token ${payload.token} not found`);
-    }
-
-    if (token.isFlagged === payload.flag) {
-      return { message: "Success" };
     }
 
     try {
@@ -76,20 +73,22 @@ export const postFlagTokenV1Options: RouteOptions = {
         lastFlagUpdate: currentUtcTime,
       });
 
-      const pendingFlagStatusSyncJobs = new PendingFlagStatusSyncJobs();
-      await pendingFlagStatusSyncJobs.add([
-        {
-          kind: "token",
-          data: {
-            collectionId: token.collectionId,
-            contract: contract,
-            tokenId: tokenId,
-            tokenIsFlagged: payload.flag,
+      if (token.isFlagged != payload.flag) {
+        const pendingFlagStatusSyncJobs = new PendingFlagStatusSyncJobs();
+        await pendingFlagStatusSyncJobs.add([
+          {
+            kind: "token",
+            data: {
+              collectionId: token.collectionId,
+              contract: contract,
+              tokenId: tokenId,
+              tokenIsFlagged: payload.flag,
+            },
           },
-        },
-      ]);
+        ]);
 
-      await flagStatusProcessQueue.addToQueue();
+        await flagStatusProcessQueue.addToQueue();
+      }
 
       logger.info(
         `post-flag-token-${version}-handler`,
