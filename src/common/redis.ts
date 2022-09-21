@@ -19,7 +19,7 @@ export const redisSubscriber = new Redis(config.redisUrl, {
 });
 
 export const rateLimitRedis = new Redis(config.rateLimitRedisUrl, {
-  maxRetriesPerRequest: null,
+  maxRetriesPerRequest: 1,
   enableReadyCheck: false,
   enableOfflineQueue: false,
   commandTimeout: 3000,
