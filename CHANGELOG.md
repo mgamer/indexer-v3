@@ -1,3 +1,13 @@
+# [5.246.0](https://github.com/reservoirprotocol/indexer/compare/v5.245.0...v5.246.0) (2022-09-21)
+
+
+### Features
+
+* update docs ([de25dcb](https://github.com/reservoirprotocol/indexer/commit/de25dcb302908639f3d437bfb865d4ec866992dd))
+* updated daily volume logic to exclude paid mints ([#1914](https://github.com/reservoirprotocol/indexer/issues/1914)) ([ba9b5c1](https://github.com/reservoirprotocol/indexer/commit/ba9b5c1a0a770fe453a749721fa8a8f3ad73cf07))
+
+
+
 # [5.245.0](https://github.com/reservoirprotocol/indexer/compare/v5.244.0...v5.245.0) (2022-09-21)
 
 
