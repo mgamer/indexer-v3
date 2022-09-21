@@ -1,3 +1,13 @@
+# [5.245.0](https://github.com/reservoirprotocol/indexer/compare/v5.244.0...v5.245.0) (2022-09-21)
+
+
+### Features
+
+* update rate limit log ([1d0a4d5](https://github.com/reservoirprotocol/indexer/commit/1d0a4d566c03eccdf62b0233c80fbb2e6fd37467))
+* update rate limit log ([e028164](https://github.com/reservoirprotocol/indexer/commit/e028164148fedb707678426be587f013f24bab57))
+
+
+
 # [5.244.0](https://github.com/reservoirprotocol/indexer/compare/v5.243.1...v5.244.0) (2022-09-21)
 
 
