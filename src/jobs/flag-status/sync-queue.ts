@@ -79,11 +79,6 @@ if (config.doBackgroundWork) {
               QUEUE_NAME,
               `Flag Status Diff. contract:${contract}, tokenId: ${pendingSyncFlagStatusToken.tokenId}, tokenIsFlagged:${pendingSyncFlagStatusToken.isFlagged}, isFlagged:${isFlagged}`
             );
-          } else {
-            logger.info(
-              QUEUE_NAME,
-              `Flag Status Match. contract:${contract}, tokenId: ${pendingSyncFlagStatusToken.tokenId}, tokenIsFlagged:${pendingSyncFlagStatusToken.isFlagged}, isFlagged:${isFlagged}`
-            );
           }
 
           await Tokens.update(contract, pendingSyncFlagStatusToken.tokenId, {
