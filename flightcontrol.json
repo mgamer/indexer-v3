@@ -18,6 +18,11 @@
           "minInstances": 4,
           "maxInstances": 6,
           "healthCheckPath": "/livez",
+          "dockerLabels": {
+            "com.datadoghq.ad.instances": "[{\"host\": \"%%host%%\", \"port\": 3000}]",
+            "com.datadoghq.ad.check_names": "[\"flightcontrol\"]",
+            "com.datadoghq.ad.init_configs": "[{}]"
+          },
           "experimental": {
             "datadog": {
               "enabled": true,
