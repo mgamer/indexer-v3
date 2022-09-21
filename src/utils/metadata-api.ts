@@ -43,7 +43,7 @@ export class MetadataApi {
       const url = `${
         config.metadataApiBaseUrlAlt
       }/v4/${getNetworkName()}/metadata/collection?method=${
-        config.metadataIndexingMethod
+        config.metadataIndexingMethodCollection
       }&token=${contract}:${tokenId}`;
 
       const { data } = await axios.get(url);
