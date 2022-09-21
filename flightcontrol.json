@@ -76,9 +76,6 @@
             "TENDERLY_PROJECT": {
               "fromParameterStore": "fc.indexer-mainnet.env.production.5zdm005j.TENDERLY_PROJECT"
             },
-            "DATADOG_AGENT_URL": {
-              "fromParameterStore": "fc.indexer-mainnet.env.production.5zd100ca.DATADOG_AGENT_URL"
-            },
             "LOOKSRARE_API_KEY": {
               "fromParameterStore": "fc.indexer-mainnet.env.production.5zd900y1.LOOKSRARE_API_KEY"
             },
