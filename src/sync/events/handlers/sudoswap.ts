@@ -6,6 +6,7 @@ import { bn } from "@/common/utils";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import * as es from "@/events-sync/storage";
 import * as utils from "@/events-sync/utils";
+import * as sudoswap from "@/orderbook/orders/sudoswap";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as sudoswapUtils from "@/utils/sudoswap";
 
@@ -15,6 +16,9 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
   const fillEvents: es.fills.Event[] = [];
 
   const fillInfos: fillUpdates.FillInfo[] = [];
+
+  // Keep track of any orders
+  const orders: sudoswap.OrderInfo[] = [];
 
   // For keeping track of all individual trades per transaction
   const trades = {
@@ -403,6 +407,41 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         // Keep track of the "sell" trade
         trades.sell.set(`${txHash}-${address}`, tradeRank + 1);
 
+        orders.push({
+          orderParams: {
+            pool: baseEventParams.address,
+            txHash: baseEventParams.txHash,
+            txTimestamp: baseEventParams.timestamp,
+          },
+          metadata: {},
+        });
+
+        break;
+      }
+
+      case "sudoswap-token-deposit": {
+        orders.push({
+          orderParams: {
+            pool: baseEventParams.address,
+            txHash: baseEventParams.txHash,
+            txTimestamp: baseEventParams.timestamp,
+          },
+          metadata: {},
+        });
+
+        break;
+      }
+
+      case "sudoswap-token-withdrawal": {
+        orders.push({
+          orderParams: {
+            pool: baseEventParams.address,
+            txHash: baseEventParams.txHash,
+            txTimestamp: baseEventParams.timestamp,
+          },
+          metadata: {},
+        });
+
         break;
       }
     }
@@ -412,5 +451,10 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
     fillEvents,
 
     fillInfos,
+
+    orders: orders.map((info) => ({
+      kind: "sudoswap",
+      info,
+    })),
   };
 };
