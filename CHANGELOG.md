@@ -1,3 +1,14 @@
+# [5.251.0](https://github.com/reservoirprotocol/indexer/compare/v5.250.4...v5.251.0) (2022-09-22)
+
+
+### Features
+
+* set timeout on getting api key ([4c79813](https://github.com/reservoirprotocol/indexer/commit/4c79813b8869c519f27a27e7e04062a725670b05))
+* set timeout on som redis commands ([9cd7dfb](https://github.com/reservoirprotocol/indexer/commit/9cd7dfb78b26b1e1d967507920c27274e4fb67c4))
+* set timeout on som redis commands ([cd3caf1](https://github.com/reservoirprotocol/indexer/commit/cd3caf1723baf0c67a6e2ed83b5db67c3ab067f6))
+
+
+
 ## [5.250.4](https://github.com/reservoirprotocol/indexer/compare/v5.250.3...v5.250.4) (2022-09-22)
 
 
