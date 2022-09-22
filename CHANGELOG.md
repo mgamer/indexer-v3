@@ -1,3 +1,12 @@
+# [5.248.0](https://github.com/reservoirprotocol/indexer/compare/v5.247.0...v5.248.0) (2022-09-22)
+
+
+### Features
+
+* support sudoswap bids ([5616b0b](https://github.com/reservoirprotocol/indexer/commit/5616b0baa4e8af8691aef6e4326b48ff78456a9e))
+
+
+
 # [5.247.0](https://github.com/reservoirprotocol/indexer/compare/v5.246.0...v5.247.0) (2022-09-21)
 
 
