@@ -17,7 +17,7 @@ export const postUpdateRateLimitRuleOptions: RouteOptions = {
     }).options({ allowUnknown: true }),
     payload: Joi.object({
       ruleId: Joi.number().description("The rule ID to update").required(),
-      tier: Joi.number().valid(0, 1, 2, 3, null).optional(),
+      tier: Joi.number().valid(0, 1, 2, 3, 4, null).optional(),
       points: Joi.number().optional(),
       duration: Joi.number().optional(),
       method: Joi.string().valid("get", "post", "delete", "put", "").optional(),
