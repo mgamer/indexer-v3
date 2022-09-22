@@ -1,3 +1,13 @@
+# [5.252.0](https://github.com/reservoirprotocol/indexer/compare/v5.251.0...v5.252.0) (2022-09-22)
+
+
+### Features
+
+* added floor ask price to token in user top bids ([ae930bc](https://github.com/reservoirprotocol/indexer/commit/ae930bc611546466f3d2adf31f530bbe1f808091))
+* added tier 4 ([a74ea39](https://github.com/reservoirprotocol/indexer/commit/a74ea392bdb8423fe19bed641ae4ece36c710a25))
+
+
+
 # [5.251.0](https://github.com/reservoirprotocol/indexer/compare/v5.250.4...v5.251.0) (2022-09-22)
 
 
