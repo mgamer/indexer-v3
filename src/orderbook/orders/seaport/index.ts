@@ -114,11 +114,6 @@ export const save = async (
           Sdk.Seaport.Addresses.PausableZone[config.chainId],
         ].includes(order.params.zone)
       ) {
-        logger.info(
-          "orders-seaport-save",
-          `start. id=${id}, side=${info?.side}, zone=${order.params.zone} `
-        );
-
         return results.push({
           id,
           status: "unsupported-zone",
@@ -433,6 +428,10 @@ export const save = async (
         status: "success",
         unfillable,
       });
+
+      if (info.side === "buy") {
+        logger.info("orders-seaport-save", `success. id=${id}`);
+      }
 
       if (relayToArweave) {
         arweaveData.push({ order, schemaHash, source: source?.domain });
