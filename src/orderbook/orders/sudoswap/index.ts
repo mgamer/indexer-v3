@@ -123,13 +123,13 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           // Subtract the royalties from the price
           const value = prices[1].sub(prices[1].mul(feeBps - 50).div(10000)).toString();
 
-          const rawData: Sdk.Sudoswap.Order = new Sdk.Sudoswap.Order(config.chainId, {
+          const sdkOrder: Sdk.Sudoswap.Order = new Sdk.Sudoswap.Order(config.chainId, {
             pair: orderParams.pool,
             price: value.toString(),
           });
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (rawData.params as any).extra = {
+          (sdkOrder.params as any).extra = {
             values: prices
               .slice(1)
               .map((p) => p.mul(feeBps - 50).div(10000))
@@ -189,7 +189,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               fee_bps: feeBps,
               fee_breakdown: feeBreakdown,
               dynamic: null,
-              raw_data: rawData,
+              raw_data: sdkOrder.params,
               expiration: validTo,
             });
 
@@ -216,7 +216,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               {
                 price,
                 value,
-                rawData,
+                rawData: sdkOrder.params,
                 id,
               }
             );
