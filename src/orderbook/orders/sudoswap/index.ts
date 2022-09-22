@@ -227,7 +227,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           await idb.none(
             `
               UPDATE orders SET
-                fillability_status = 'no-balance'
+                fillability_status = 'no-balance',
+                expiration = to_timestamp(${orderParams.txTimestamp}),
+                updated_at = now()
               WHERE orders.id = $/id/
             `,
             { id }
