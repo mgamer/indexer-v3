@@ -260,6 +260,15 @@ export const generateBidDetails = async (
       };
     }
 
+    case "sudoswap": {
+      const sdkOrder = new Sdk.Sudoswap.Order(config.chainId, order.rawData);
+      return {
+        kind: "sudoswap",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
     default: {
       throw new Error("Unsupported order kind");
     }
