@@ -79,10 +79,15 @@ export class ApiKeyManager {
       return cachedApiKey;
     }
 
+    // Timeout for redis
+    const timeout = new Promise<null>((resolve) => {
+      setTimeout(resolve, 1000, null);
+    });
+
     const redisKey = `api-key:${key}`;
 
     try {
-      const apiKey = await redis.get(redisKey);
+      const apiKey = await Promise.race([redis.get(redisKey), timeout]);
 
       if (apiKey) {
         if (apiKey == "empty") {
@@ -95,13 +100,15 @@ export class ApiKeyManager {
         const fromDb = await redb.oneOrNone(`SELECT * FROM api_keys WHERE key = $/key/`, { key });
 
         if (fromDb) {
-          await redis.set(redisKey, JSON.stringify(fromDb)); // Set in redis
+          Promise.race([redis.set(redisKey, JSON.stringify(fromDb)), timeout]); // Set in redis (no need to wait)
           const apiKey = new ApiKeyEntity(fromDb);
           ApiKeyManager.apiKeys.set(key, apiKey); // Set in local memory storage
           return apiKey;
         } else {
-          await redis.set(redisKey, "empty");
-          await redis.expire(redisKey, 3600 * 24);
+          const pipeline = redis.pipeline();
+          pipeline.set(redisKey, "empty");
+          pipeline.expire(redisKey, 3600 * 24);
+          Promise.race([pipeline.exec(), timeout]); // Set in redis (no need to wait)
         }
       }
     } catch (error) {

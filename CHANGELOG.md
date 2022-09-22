@@ -1,3 +1,51 @@
+# [5.252.0](https://github.com/reservoirprotocol/indexer/compare/v5.251.0...v5.252.0) (2022-09-22)
+
+
+### Features
+
+* added floor ask price to token in user top bids ([ae930bc](https://github.com/reservoirprotocol/indexer/commit/ae930bc611546466f3d2adf31f530bbe1f808091))
+* added tier 4 ([a74ea39](https://github.com/reservoirprotocol/indexer/commit/a74ea392bdb8423fe19bed641ae4ece36c710a25))
+
+
+
+# [5.251.0](https://github.com/reservoirprotocol/indexer/compare/v5.250.4...v5.251.0) (2022-09-22)
+
+
+### Features
+
+* set timeout on getting api key ([4c79813](https://github.com/reservoirprotocol/indexer/commit/4c79813b8869c519f27a27e7e04062a725670b05))
+* set timeout on som redis commands ([9cd7dfb](https://github.com/reservoirprotocol/indexer/commit/9cd7dfb78b26b1e1d967507920c27274e4fb67c4))
+* set timeout on som redis commands ([cd3caf1](https://github.com/reservoirprotocol/indexer/commit/cd3caf1723baf0c67a6e2ed83b5db67c3ab067f6))
+
+
+
+## [5.250.4](https://github.com/reservoirprotocol/indexer/compare/v5.250.3...v5.250.4) (2022-09-22)
+
+
+### Bug Fixes
+
+* minor tweaks ([1953d7d](https://github.com/reservoirprotocol/indexer/commit/1953d7d5eb7d1d0c6a54b1ac20d74bab0b4c04d3))
+
+
+
+## [5.250.3](https://github.com/reservoirprotocol/indexer/compare/v5.250.2...v5.250.3) (2022-09-22)
+
+
+### Bug Fixes
+
+* minor tweaks ([0c34e1b](https://github.com/reservoirprotocol/indexer/commit/0c34e1b12b9dd0b192a8ea79774561ce03bdc768))
+
+
+
+## [5.250.2](https://github.com/reservoirprotocol/indexer/compare/v5.250.1...v5.250.2) (2022-09-22)
+
+
+### Bug Fixes
+
+* minor tweaks ([cef9ae1](https://github.com/reservoirprotocol/indexer/commit/cef9ae17f40802f6adea7ea8a8a26cf358b091d4))
+
+
+
 ## [5.250.1](https://github.com/reservoirprotocol/indexer/compare/v5.250.0...v5.250.1) (2022-09-22)
 
 
