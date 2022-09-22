@@ -100,7 +100,15 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           const price = prices[1].add(prices[1].mul(50).div(10000)).toString();
           const value = prices[1].toString();
 
-          const rawData = { values: prices.slice(1).map(String) };
+          const rawData: Sdk.Sudoswap.Order = new Sdk.Sudoswap.Order(config.chainId, {
+            pair: orderParams.pool,
+            price: prices[1].toString(),
+          });
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (rawData.params as any).extra = {
+            values: prices.slice(1).map(String),
+          };
 
           const orderResult = await redb.oneOrNone(
             `
