@@ -1,3 +1,12 @@
+## [5.248.1](https://github.com/reservoirprotocol/indexer/compare/v5.248.0...v5.248.1) (2022-09-22)
+
+
+### Bug Fixes
+
+* debug sudoswap ([b293120](https://github.com/reservoirprotocol/indexer/commit/b29312023bc8c21e301a380779765dc532933b6f))
+
+
+
 # [5.248.0](https://github.com/reservoirprotocol/indexer/compare/v5.247.0...v5.248.0) (2022-09-22)
 
 
