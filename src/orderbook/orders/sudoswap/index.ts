@@ -64,7 +64,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       );
 
       if (
-        [SudoswapPoolKind.NFT, SudoswapPoolKind.TRADE].includes(pool.poolKind) &&
+        [SudoswapPoolKind.TOKEN, SudoswapPoolKind.TRADE].includes(pool.poolKind) &&
         pool.token === Sdk.Common.Addresses.Eth[config.chainId]
       ) {
         const tokenBalance = await baseProvider.getBalance(pool.address);
