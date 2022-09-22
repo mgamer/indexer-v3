@@ -117,7 +117,7 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
 
       valid.push(tokenSet);
     } catch (error) {
-      logger.error(
+      logger.info(
         "orderbook-contract-wide-set",
         `Failed to check/save token set ${JSON.stringify(tokenSet)}: ${error}`
       );
