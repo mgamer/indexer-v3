@@ -41,6 +41,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
   const handleOrder = async ({ orderParams }: OrderInfo) => {
     try {
+      logger.info("order-sudoswap-save", JSON.stringify(orderParams));
+
       // Only testing for now
       if (orderParams.pool !== "0x0da43ef82ae7684c39f5be76f3ef647922721327") {
         return;
@@ -77,8 +79,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         const prices = [bn(0)];
         let totalPrice = bn(0);
 
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
+        // For now, we get at most 10 prices (ideally we use off-chain simulation or multicall)
+        let i = 0;
+        while (i < 10) {
           const result = await poolContract.getSellNFTQuote(prices.length);
           if (result.error !== 0 || result.outputAmount.gt(tokenBalance)) {
             break;
@@ -86,6 +89,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
           prices.push(result.outputAmount.sub(totalPrice));
           totalPrice = totalPrice.add(prices[prices.length - 1]);
+
+          i++;
         }
 
         // We can only have a single currently active order per pool and side
