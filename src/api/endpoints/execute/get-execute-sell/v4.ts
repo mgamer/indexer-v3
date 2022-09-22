@@ -233,7 +233,7 @@ export const getExecuteSellV4Options: RouteOptions = {
         },
       ];
 
-      // X2Y2 bids are to be filled directly (because the V5 router does not support them)
+      // X2Y2/Sudoswap bids are to be filled directly (because the V5 router does not support them)
       if (bidDetails.kind === "x2y2") {
         const isApproved = await getNftApproval(
           bidDetails.contract,
@@ -246,6 +246,35 @@ export const getExecuteSellV4Options: RouteOptions = {
             baseProvider,
             bidDetails.contract
           ).approveTransaction(payload.taker, Sdk.X2Y2.Addresses.Exchange[config.chainId]);
+
+          steps[0].items.push({
+            status: "incomplete",
+            data: {
+              ...approveTx,
+              maxFeePerGas: payload.maxFeePerGas
+                ? bn(payload.maxFeePerGas).toHexString()
+                : undefined,
+              maxPriorityFeePerGas: payload.maxPriorityFeePerGas
+                ? bn(payload.maxPriorityFeePerGas).toHexString()
+                : undefined,
+            },
+          });
+        }
+      }
+      if (bidDetails.kind === "sudoswap") {
+        const isApproved = await getNftApproval(
+          bidDetails.contract,
+          payload.taker,
+          Sdk.Sudoswap.Addresses.RouterWithRoyalties[config.chainId]
+        );
+        if (!isApproved) {
+          const approveTx = new Sdk.Common.Helpers.Erc721(
+            baseProvider,
+            bidDetails.contract
+          ).approveTransaction(
+            payload.taker,
+            Sdk.Sudoswap.Addresses.RouterWithRoyalties[config.chainId]
+          );
 
           steps[0].items.push({
             status: "incomplete",

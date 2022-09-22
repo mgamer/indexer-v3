@@ -36,7 +36,7 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
   const valid: TokenSet[] = [];
   for (const tokenSet of tokenSets) {
     if (!isValid(tokenSet)) {
-      continue;
+      throw new Error("Invalid token set");
     }
 
     const { id, schemaHash, schema, contract } = tokenSet;
@@ -55,8 +55,8 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
         }
       );
       if (!collectionResult || Number(collectionResult.token_count) > config.maxTokenSetSize) {
-        // We don't support collection orders on large collections.
-        continue;
+        // We don't support collection orders on large collections
+        throw new Error("Collection missing or too large");
       }
 
       queries.push({
@@ -117,7 +117,7 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
 
       valid.push(tokenSet);
     } catch (error) {
-      logger.error(
+      logger.info(
         "orderbook-contract-wide-set",
         `Failed to check/save token set ${JSON.stringify(tokenSet)}: ${error}`
       );

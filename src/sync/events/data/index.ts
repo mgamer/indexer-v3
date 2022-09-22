@@ -74,6 +74,8 @@ export type EventDataKind =
   | "cryptopunks-transfer"
   | "sudoswap-buy"
   | "sudoswap-sell"
+  | "sudoswap-token-deposit"
+  | "sudoswap-token-withdrawal"
   | "universe-match"
   | "nftx-redeemed"
   | "nftx-minted";
@@ -136,6 +138,8 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
       cryptoPunks.transfer,
       sudoswap.buy,
       sudoswap.sell,
+      sudoswap.tokenDeposit,
+      sudoswap.tokenWithdrawal,
       universe.match,
       nftx.minted,
       nftx.redeemed,
@@ -247,6 +251,10 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return sudoswap.buy;
     case "sudoswap-sell":
       return sudoswap.sell;
+    case "sudoswap-token-deposit":
+      return sudoswap.tokenDeposit;
+    case "sudoswap-token-withdrawal":
+      return sudoswap.tokenWithdrawal;
     case "universe-match":
       return universe.match;
     case "nftx-minted":

@@ -1,4 +1,3 @@
-import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
 
 import { bn } from "@/common/utils";
@@ -57,8 +56,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         let taker = parsedLog.args["buyer"].toLowerCase();
         const protocolFee = parsedLog.args["protocolFee"].toString();
 
-        // TODO: Order id generation should belong in the orderbook logic
-        const orderId = keccak256(["address", "uint256"], [contract, tokenId]);
+        const orderId = foundation.getOrderId(contract, tokenId);
 
         // Handle: attribution
 
@@ -136,8 +134,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const contract = parsedLog.args["nftContract"].toLowerCase();
         const tokenId = parsedLog.args["tokenId"].toString();
 
-        // TODO: Order id generation should belong in the orderbook logic
-        const orderId = keccak256(["address", "uint256"], [contract, tokenId]);
+        const orderId = foundation.getOrderId(contract, tokenId);
 
         cancelEventsOnChain.push({
           orderKind: "foundation",

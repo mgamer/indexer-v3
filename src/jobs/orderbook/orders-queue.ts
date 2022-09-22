@@ -80,6 +80,13 @@ if (config.doBackgroundWork) {
             break;
           }
 
+          case "sudoswap": {
+            const result = await orders.sudoswap.save([info as orders.sudoswap.OrderInfo]);
+            logger.info(QUEUE_NAME, `[sudoswap] Order save result: ${JSON.stringify(result)}`);
+
+            break;
+          }
+
           case "zeroex-v4": {
             const result = await orders.zeroExV4.save(
               [info as orders.zeroExV4.OrderInfo],
@@ -155,6 +162,11 @@ export type GenericOrderInfo =
   | {
       kind: "zora-v3";
       info: orders.zora.OrderInfo;
+      relayToArweave?: boolean;
+    }
+  | {
+      kind: "sudoswap";
+      info: orders.sudoswap.OrderInfo;
       relayToArweave?: boolean;
     };
 
