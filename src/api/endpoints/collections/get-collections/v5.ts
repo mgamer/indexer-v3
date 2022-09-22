@@ -349,30 +349,30 @@ export const getCollectionsV5Options: RouteOptions = {
       switch (query.sortBy) {
         case "1DayVolume": {
           if (query.continuation) {
-            const sign = query.continuation == "0" ? "<=" : "<";
+            const sign = query.continuation == "0" ? "<" : "<";
             conditions.push(`collections.day1_volume ${sign} $/continuation/`);
           }
-          orderBy = ` ORDER BY collections.day1_volume DESC, collections.name`;
+          orderBy = ` ORDER BY collections.day1_volume DESC`;
 
           break;
         }
 
         case "7DayVolume": {
           if (query.continuation) {
-            const sign = query.continuation == "0" ? "<=" : "<";
+            const sign = query.continuation == "0" ? "<" : "<";
             conditions.push(`collections.day7_volume ${sign} $/continuation/`);
           }
-          orderBy = ` ORDER BY collections.day7_volume DESC, collections.name`;
+          orderBy = ` ORDER BY collections.day7_volume DESC`;
 
           break;
         }
 
         case "30DayVolume": {
           if (query.continuation) {
-            const sign = query.continuation == "0" ? "<=" : "<";
+            const sign = query.continuation == "0" ? "<" : "<";
             conditions.push(`collections.day30_volume ${sign} $/continuation/`);
           }
-          orderBy = ` ORDER BY collections.day30_volume DESC, collections.name`;
+          orderBy = ` ORDER BY collections.day30_volume DESC`;
 
           break;
         }
@@ -380,11 +380,11 @@ export const getCollectionsV5Options: RouteOptions = {
         case "allTimeVolume":
         default: {
           if (query.continuation) {
-            const sign = query.continuation == "0" ? "<=" : "<";
+            const sign = query.continuation == "0" ? "<" : "<";
             conditions.push(`collections.all_time_volume ${sign} $/continuation/`);
           }
 
-          orderBy = ` ORDER BY collections.all_time_volume DESC, collections.name`;
+          orderBy = ` ORDER BY collections.all_time_volume DESC`;
 
           break;
         }
