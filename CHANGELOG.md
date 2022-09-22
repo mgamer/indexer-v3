@@ -1,3 +1,12 @@
+# [5.253.0](https://github.com/reservoirprotocol/indexer/compare/v5.252.0...v5.253.0) (2022-09-22)
+
+
+### Features
+
+* sort collections by name once reaching 0 volume ([63dbf1b](https://github.com/reservoirprotocol/indexer/commit/63dbf1befab787654a79739cd922a8866aae42f1))
+
+
+
 # [5.252.0](https://github.com/reservoirprotocol/indexer/compare/v5.251.0...v5.252.0) (2022-09-22)
 
 
