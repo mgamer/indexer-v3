@@ -1,3 +1,12 @@
+# [5.250.0](https://github.com/reservoirprotocol/indexer/compare/v5.249.0...v5.250.0) (2022-09-22)
+
+
+### Features
+
+* fill sudoswap with royalties ([71bc846](https://github.com/reservoirprotocol/indexer/commit/71bc846e6c54a440a0c43a3ed22ed92bc6579c1f))
+
+
+
 # [5.249.0](https://github.com/reservoirprotocol/indexer/compare/v5.248.1...v5.249.0) (2022-09-22)
 
 
