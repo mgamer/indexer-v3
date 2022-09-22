@@ -42,10 +42,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
   const handleOrder = async ({ orderParams }: OrderInfo) => {
     try {
-      if (orderParams.pool !== "0x7eec5ae05bc5067c9f74d8d30725cf806084d761") {
-        return;
-      }
-
       const pool = await sudoswap.getPoolDetails(orderParams.pool);
       if (!pool) {
         throw new Error("Could not fetch pool details");
