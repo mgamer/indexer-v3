@@ -429,10 +429,6 @@ export const save = async (
         unfillable,
       });
 
-      if (info.side === "buy") {
-        logger.info("orders-seaport-save", `success. id=${id}`);
-      }
-
       if (relayToArweave) {
         arweaveData.push({ order, schemaHash, source: source?.domain });
       }

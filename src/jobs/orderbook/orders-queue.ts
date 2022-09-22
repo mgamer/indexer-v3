@@ -69,7 +69,10 @@ if (config.doBackgroundWork) {
               [info as orders.seaport.OrderInfo],
               relayToArweave
             );
-            logger.info(QUEUE_NAME, `[seaport] Order save result: ${JSON.stringify(result)}`);
+            logger.info(
+              QUEUE_NAME,
+              `[seaport] Order save result: ${JSON.stringify(result)}, info=${JSON.stringify(info)}`
+            );
 
             break;
           }
