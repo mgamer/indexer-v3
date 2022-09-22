@@ -49,6 +49,8 @@ export const save = async (
       const info = order.getInfo();
       const id = order.hash();
 
+      logger.info("orders-seaport-save", `start. id=${id}, side=${info?.side}`);
+
       // Check: order has a valid format
       if (!info) {
         return results.push({
@@ -753,6 +755,10 @@ export const save = async (
       }
     );
     await idb.none(pgp.helpers.insert(orderValues, columns) + " ON CONFLICT DO NOTHING");
+
+    for (const result in results) {
+      logger.info("orders-seaport-save", `result. result=${JSON.stringify(result)}`);
+    }
 
     await ordersUpdateById.addToQueue(
       results
