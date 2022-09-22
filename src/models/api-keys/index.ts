@@ -82,7 +82,12 @@ export class ApiKeyManager {
     const redisKey = `api-key:${key}`;
 
     try {
-      const apiKey = await redis.get(redisKey);
+      // Timeout for fetching
+      const timeout = new Promise<null>((resolve) => {
+        setTimeout(resolve, 2000, null);
+      });
+
+      const apiKey = await Promise.race([redis.get(redisKey), timeout]);
 
       if (apiKey) {
         if (apiKey == "empty") {
