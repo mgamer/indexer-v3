@@ -15,6 +15,7 @@ import { Sources } from "@/models/sources";
 import { SudoswapPoolKind } from "@/models/sudoswap-pools";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import * as tokenSet from "@/orderbook/token-sets";
+import * as royalties from "@/utils/royalties";
 import * as sudoswap from "@/utils/sudoswap";
 
 export type OrderInfo = {
@@ -41,10 +42,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
   const handleOrder = async ({ orderParams }: OrderInfo) => {
     try {
-      logger.info("order-sudoswap-save", JSON.stringify(orderParams));
-
-      // Only testing for now
-      if (orderParams.pool !== "0x0da43ef82ae7684c39f5be76f3ef647922721327") {
+      if (orderParams.pool !== "0x7eec5ae05bc5067c9f74d8d30725cf806084d761") {
         return;
       }
 
@@ -96,18 +94,46 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         // We can only have a single currently active order per pool and side
         const id = getOrderId(orderParams.pool, "buy");
         if (prices.length > 1) {
-          // Include the protocol fee
+          // Handle: fees
+          let feeBps = 50;
+          const feeBreakdown: {
+            kind: string;
+            recipient: string;
+            bps: number;
+          }[] = [
+            {
+              kind: "marketplace",
+              recipient: "0x4e2f98c96e2d595a83afa35888c4af58ac343e44",
+              bps: 50,
+            },
+          ];
+
+          const eip2981Royalties = await royalties.eip2981.refreshEIP2981Royalties(pool.nft);
+          for (const { recipient, bps } of eip2981Royalties) {
+            feeBps += bps;
+            feeBreakdown.push({
+              kind: "royalty",
+              recipient,
+              bps,
+            });
+          }
+
+          // Add the protocol fee to the price
           const price = prices[1].add(prices[1].mul(50).div(10000)).toString();
-          const value = prices[1].toString();
+          // Subtract the royalties from the price
+          const value = prices[1].sub(prices[1].mul(feeBps - 50).div(10000)).toString();
 
           const rawData: Sdk.Sudoswap.Order = new Sdk.Sudoswap.Order(config.chainId, {
             pair: orderParams.pool,
-            price: prices[1].toString(),
+            price: value.toString(),
           });
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (rawData.params as any).extra = {
-            values: prices.slice(1).map(String),
+            values: prices
+              .slice(1)
+              .map((p) => p.mul(feeBps - 50).div(10000))
+              .map(String),
           };
 
           const orderResult = await redb.oneOrNone(
@@ -160,14 +186,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               is_reservoir: null,
               contract: toBuffer(pool.nft),
               conduit: null,
-              fee_bps: 50,
-              fee_breakdown: [
-                {
-                  kind: "marketplace",
-                  recipient: "0x4e2f98c96e2d595a83afa35888c4af58ac343e44",
-                  bps: 50,
-                },
-              ],
+              fee_bps: feeBps,
+              fee_breakdown: feeBreakdown,
               dynamic: null,
               raw_data: rawData,
               expiration: validTo,

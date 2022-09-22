@@ -265,13 +265,16 @@ export const getExecuteSellV4Options: RouteOptions = {
         const isApproved = await getNftApproval(
           bidDetails.contract,
           payload.taker,
-          Sdk.Sudoswap.Addresses.Router[config.chainId]
+          Sdk.Sudoswap.Addresses.RouterWithRoyalties[config.chainId]
         );
         if (!isApproved) {
           const approveTx = new Sdk.Common.Helpers.Erc721(
             baseProvider,
             bidDetails.contract
-          ).approveTransaction(payload.taker, Sdk.Sudoswap.Addresses.Router[config.chainId]);
+          ).approveTransaction(
+            payload.taker,
+            Sdk.Sudoswap.Addresses.RouterWithRoyalties[config.chainId]
+          );
 
           steps[0].items.push({
             status: "incomplete",
