@@ -217,6 +217,7 @@ if (config.doBackgroundWork) {
                     token: toBuffer(data.contract),
                     maker: toBuffer(maker),
                     conduit: toBuffer(data.operator!),
+                    timestamp: trigger.txTimestamp,
                   }
                 );
 
