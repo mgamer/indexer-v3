@@ -182,7 +182,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
           contract: token.contract,
           tokenId: token.tokenId,
           quantity: token.quantity ?? 1,
-          source: order.sourceId !== null ? sources.get(order.sourceId)?.domain : null,
+          source: order.sourceId !== null ? sources.get(order.sourceId)?.domain ?? null : null,
           currency: order.currency,
           quote: formatPrice(rawQuote, (await getCurrency(order.currency)).decimals),
           rawQuote: rawQuote.toString(),

@@ -38,9 +38,13 @@ export const getRedirectTokenV2Options: RouteOptions = {
     const sources = await Sources.getInstance();
 
     try {
-      let source = await sources.getByName(params.source, false);
+      let source = sources.getByName(params.source, false);
       if (!source) {
-        source = await sources.getByDomain(params.source);
+        source = sources.getByDomain(params.source);
+      }
+
+      if (!source) {
+        throw new Error("Unknown source");
       }
 
       const [contract, tokenId] = params.token.split(":");

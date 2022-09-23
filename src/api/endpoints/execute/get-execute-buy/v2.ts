@@ -191,7 +191,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
             contract,
             tokenId,
             quantity: 1,
-            source: sources.get(source_id_int)?.name,
+            source: sources.get(source_id_int)?.name ?? null,
             quote: formatEth(bn(price).add(bn(price).mul(query.referrerFeeBps).div(10000))),
           });
           if (query.onlyQuote) {
@@ -278,7 +278,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
               contract,
               tokenId,
               quantity: quantityFilled,
-              source: sources.get(source_id_int)?.name,
+              source: sources.get(source_id_int)?.name ?? null,
               quote: formatEth(totalPrice.add(totalPrice.mul(query.referrerFeeBps).div(10000))),
             });
             if (query.onlyQuote) {
