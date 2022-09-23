@@ -14,6 +14,7 @@ export type ApiKeyRecord = {
   app_name: string;
   website: string;
   email: string;
+  tier: number;
   key?: string;
 };
 
