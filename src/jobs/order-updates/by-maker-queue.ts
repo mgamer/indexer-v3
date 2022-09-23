@@ -86,7 +86,7 @@ if (config.doBackgroundWork) {
             // Filter any orders that didn't change status
             const values = fillabilityStatuses
               .filter(({ old_status, new_status }) => old_status !== new_status)
-              // We mark X2Y2 orders are cancelled if the balance ever gets underwater
+              // We mark X2Y2 orders as cancelled if the balance ever gets underwater
               // in order to be consistent with the way they handle things (see below
               // description on handling X2Y2 "sell-balance" changes)
               .map((data) =>
