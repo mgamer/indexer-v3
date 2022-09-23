@@ -27,6 +27,9 @@ const setup = async () => {
       await networkSettings.onStartup();
     }
   }
+
+  await Sources.getInstance();
+  await Sources.forceDataReload();
 };
 
 setup().then(() => start());
