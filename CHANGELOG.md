@@ -1,3 +1,12 @@
+## [5.254.3](https://github.com/reservoirprotocol/indexer/compare/v5.254.2...v5.254.3) (2022-09-23)
+
+
+### Bug Fixes
+
+* deploy ([9b46d30](https://github.com/reservoirprotocol/indexer/commit/9b46d30258961c5c1e712b8de139a7f68a77fbda))
+
+
+
 ## [5.254.2](https://github.com/reservoirprotocol/indexer/compare/v5.254.1...v5.254.2) (2022-09-23)
 
 
