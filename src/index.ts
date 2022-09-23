@@ -47,16 +47,18 @@ const setup = async () => {
     values.push({ domain, domain_hash: domainHash });
   }
 
-  await idb.none(
-    `
-      UPDATE sources_v2 SET
-        domain_hash = x.domain_hash::TEXT
-      FROM (
-        VALUES ${pgp.helpers.values(values, columns)}
-      ) AS x(domain, domain_hash)
-      WHERE sources_v2.domain = x.domain::TEXT
-    `
-  );
+  if (values.length) {
+    await idb.none(
+      `
+        UPDATE sources_v2 SET
+          domain_hash = x.domain_hash::TEXT
+        FROM (
+          VALUES ${pgp.helpers.values(values, columns)}
+        ) AS x(domain, domain_hash)
+        WHERE sources_v2.domain = x.domain::TEXT
+      `
+    );
+  }
 };
 
 setup().then(() => start());
