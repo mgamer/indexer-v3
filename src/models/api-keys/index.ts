@@ -94,8 +94,9 @@ export class ApiKeyManager {
         if (apiKey == "empty") {
           return null;
         } else {
-          ApiKeyManager.apiKeys.set(key, JSON.parse(apiKey)); // Set in local memory storage
-          return new ApiKeyEntity(JSON.parse(apiKey));
+          const apiKeyEntity = new ApiKeyEntity(JSON.parse(apiKey));
+          ApiKeyManager.apiKeys.set(key, apiKeyEntity); // Set in local memory storage
+          return apiKeyEntity;
         }
       } else {
         // check if it exists in the database
@@ -103,9 +104,9 @@ export class ApiKeyManager {
 
         if (fromDb) {
           Promise.race([redis.set(redisKey, JSON.stringify(fromDb)), timeout]); // Set in redis (no need to wait)
-          const apiKey = new ApiKeyEntity(fromDb);
-          ApiKeyManager.apiKeys.set(key, apiKey); // Set in local memory storage
-          return apiKey;
+          const apiKeyEntity = new ApiKeyEntity(fromDb);
+          ApiKeyManager.apiKeys.set(key, apiKeyEntity); // Set in local memory storage
+          return apiKeyEntity;
         } else {
           const pipeline = redis.pipeline();
           pipeline.set(redisKey, "empty");
