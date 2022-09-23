@@ -210,7 +210,7 @@ if (config.doBackgroundWork) {
                     RETURNING
                       orders.kind,
                       orders.approval_status,
-                      orders.expiration
+                      orders.expiration,
                       orders.id
                   `,
                   {
