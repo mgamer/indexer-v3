@@ -1,7 +1,6 @@
 import { PgPromiseQuery, idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
-import { generateSchemaHash } from "@/orderbook/orders/utils";
 
 export type TokenSet = {
   id: string;
@@ -15,11 +14,6 @@ export type TokenSet = {
 const isValid = (tokenSet: TokenSet) => {
   try {
     if (tokenSet.id !== `token:${tokenSet.contract}:${tokenSet.tokenId}`) {
-      return false;
-    }
-
-    const schemaHash = generateSchemaHash(tokenSet.schema);
-    if (schemaHash !== tokenSet.schemaHash) {
       return false;
     }
   } catch {

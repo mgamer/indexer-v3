@@ -1,3 +1,16 @@
+## [5.255.1](https://github.com/reservoirprotocol/indexer/compare/v5.255.0...v5.255.1) (2022-09-23)
+
+
+### Bug Fixes
+
+* cancel x2y2 bids on invalidation ([da29f75](https://github.com/reservoirprotocol/indexer/commit/da29f75df0933708ff71c7b7c05082a0b78ed5da))
+* ignore schema hash for contract-wide and single-token bids ([ffd491b](https://github.com/reservoirprotocol/indexer/commit/ffd491b03af213aa1f0b953270c31df7ea98d786))
+* query ([3b37bc9](https://github.com/reservoirprotocol/indexer/commit/3b37bc9c89dc7ac2781dd6a41ef44b7001953d65))
+* query ([343020b](https://github.com/reservoirprotocol/indexer/commit/343020b613732770d72dd0318e132d333f78ef9f))
+* query ([62cf6b5](https://github.com/reservoirprotocol/indexer/commit/62cf6b50150047a485b2b69538b753ea03049a22))
+
+
+
 # [5.255.0](https://github.com/reservoirprotocol/indexer/compare/v5.254.4...v5.255.0) (2022-09-23)
 
 
