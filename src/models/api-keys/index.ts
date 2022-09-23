@@ -39,7 +39,7 @@ export class ApiKeyManager {
     // Create the record in the database
     try {
       await idb.none(
-        "INSERT INTO api_keys (${this:name}) values (${this:csv}) ON CONFLICT DO NOTHING",
+        "INSERT INTO api_keys (${this:name}) VALUES (${this:csv}) ON CONFLICT DO NOTHING",
         values
       );
     } catch (e) {
