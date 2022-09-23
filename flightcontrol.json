@@ -27,7 +27,14 @@
             "datadog": {
               "enabled": true,
               "datadogSite": "datadoghq.com",
-              "datadogApiKey": "fc.indexer-mainnet.env.production.d1ex0izx.DD_API_KEY"
+              "datadogApiKey": "fc.indexer-mainnet.env.production.d1ex0izx.DD_API_KEY",
+              "envVariables":{
+                "DD_APM_ENABLED": true,
+                "NON_LOCAL_TRAFFIC": true,
+                "DD_APM_NON_LOCAL_TRAFFIC": true,
+                "DD_DOGSTATSD_NON_LOCAL_TRAFFIC": true,
+                "DD_LOGS_ENABLED": true
+              }
             }
           },
           "envVariables": {
