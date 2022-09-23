@@ -1,3 +1,12 @@
+# [5.256.0](https://github.com/reservoirprotocol/indexer/compare/v5.255.2...v5.256.0) (2022-09-23)
+
+
+### Features
+
+* fix collections sort ([cc79a53](https://github.com/reservoirprotocol/indexer/commit/cc79a5300e39449db88d15016bbc5d10214bf633))
+
+
+
 ## [5.255.2](https://github.com/reservoirprotocol/indexer/compare/v5.255.1...v5.255.2) (2022-09-23)
 
 
