@@ -1,3 +1,20 @@
+# [5.254.0](https://github.com/reservoirprotocol/indexer/compare/v5.253.0...v5.254.0) (2022-09-23)
+
+
+### Bug Fixes
+
+* fix user top bids ([f10571c](https://github.com/reservoirprotocol/indexer/commit/f10571c23e558239e524265729d79c3f490b2133))
+* tweaks ([1e6329c](https://github.com/reservoirprotocol/indexer/commit/1e6329ce9215f06c159336a8d47d8757e56212ba))
+* tweaks ([3820fc4](https://github.com/reservoirprotocol/indexer/commit/3820fc4028ad8804db135ef3f6b72e49c2173ddc))
+
+
+### Features
+
+* add support for attribution v2 ([0bb145c](https://github.com/reservoirprotocol/indexer/commit/0bb145cdcaf572402b62efadc9937184f862975a))
+* fix collections sort ([dbcfa41](https://github.com/reservoirprotocol/indexer/commit/dbcfa41834aeb2663462885035021f7162257313))
+
+
+
 # [5.253.0](https://github.com/reservoirprotocol/indexer/compare/v5.252.0...v5.253.0) (2022-09-22)
 
 
