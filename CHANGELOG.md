@@ -1,3 +1,19 @@
+# [5.257.0](https://github.com/reservoirprotocol/indexer/compare/v5.256.2...v5.257.0) (2022-09-23)
+
+
+### Bug Fixes
+
+* deploy ([2e76041](https://github.com/reservoirprotocol/indexer/commit/2e760415ff8ed0e53be95de690043290a592e404))
+
+
+### Features
+
+* create new oracle api version ([264bd46](https://github.com/reservoirprotocol/indexer/commit/264bd461e469dafa6f7d23280aed924087de80ad))
+* fix read key from cache ([20baf14](https://github.com/reservoirprotocol/indexer/commit/20baf1409d61df77afed4f1fd3fde03bf80a8765))
+* set api keys to tier 1 by default ([aad02a5](https://github.com/reservoirprotocol/indexer/commit/aad02a530f596e6c2d4d45bbd18665c6a28f6905))
+
+
+
 ## [5.256.2](https://github.com/reservoirprotocol/indexer/compare/v5.256.1...v5.256.2) (2022-09-23)
 
 

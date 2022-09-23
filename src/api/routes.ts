@@ -562,6 +562,12 @@ export const setupRoutes = (server: Server) => {
     options: oracleEndpoints.getCollectionFloorAskOracleV2Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/oracle/collections/{collection}/floor-ask/v3",
+    options: oracleEndpoints.getCollectionFloorAskOracleV3Options,
+  });
+
   // Orders
 
   server.route({
