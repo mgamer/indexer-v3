@@ -1,3 +1,12 @@
+## [5.256.2](https://github.com/reservoirprotocol/indexer/compare/v5.256.1...v5.256.2) (2022-09-23)
+
+
+### Bug Fixes
+
+* domain hash ([0c6dcee](https://github.com/reservoirprotocol/indexer/commit/0c6dcee30f15725586cdf35161a548ecd5acab9f))
+
+
+
 ## [5.256.1](https://github.com/reservoirprotocol/indexer/compare/v5.256.0...v5.256.1) (2022-09-23)
 
 

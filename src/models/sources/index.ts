@@ -177,7 +177,7 @@ export class Sources {
       `,
       {
         domain,
-        domainHash: "0x" + keccak256(["string"], [domain]).slice(0, 10),
+        domainHash: keccak256(["string"], [domain]).slice(0, 10),
         name: domain,
         address,
         metadata,
