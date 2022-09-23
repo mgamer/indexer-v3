@@ -1,3 +1,12 @@
+## [5.254.4](https://github.com/reservoirprotocol/indexer/compare/v5.254.3...v5.254.4) (2022-09-23)
+
+
+### Bug Fixes
+
+* force reload sources data ([b18843a](https://github.com/reservoirprotocol/indexer/commit/b18843a79f51e5135a6cef7c1adf61e8997613e5))
+
+
+
 ## [5.254.3](https://github.com/reservoirprotocol/indexer/compare/v5.254.2...v5.254.3) (2022-09-23)
 
 
