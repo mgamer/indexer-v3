@@ -94,6 +94,7 @@ export class ApiKeyManager {
         if (apiKey == "empty") {
           return null;
         } else {
+          ApiKeyManager.apiKeys.set(key, JSON.parse(apiKey)); // Set in local memory storage
           return new ApiKeyEntity(JSON.parse(apiKey));
         }
       } else {
