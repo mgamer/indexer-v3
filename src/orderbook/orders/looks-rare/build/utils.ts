@@ -51,13 +51,18 @@ export const getBuildInfo = async (
     nonce: await axios
       .get(
         `https://${
-          config.chainId === 4 ? "api-rinkeby." : "api."
+          config.chainId === 5 ? "api-goerli." : "api."
         }looksrare.org/api/v1/orders/nonce?address=${options.maker}`,
         {
-          headers: {
-            "Content-Type": "application/json",
-            "X-Looks-Api-Key": config.looksRareApiKey,
-          },
+          headers:
+            config.chainId === 1
+              ? {
+                  "Content-Type": "application/json",
+                  "X-Looks-Api-Key": config.looksRareApiKey,
+                }
+              : {
+                  "Content-Type": "application/json",
+                },
         }
       )
       .then(({ data }: { data: { data: string } }) => data.data),

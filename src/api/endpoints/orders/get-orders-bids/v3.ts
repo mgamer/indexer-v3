@@ -70,6 +70,10 @@ export const getOrdersBidsV3Options: RouteOptions = {
         .description(
           "active = currently valid, inactive = temporarily invalid, expired = permanently invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
         ),
+      source: Joi.string()
+        .pattern(regex.domain)
+        .description("Filter to a source by domain. Example: `opensea.io`"),
+      native: Joi.boolean().description("If true, results will filter only Reservoir orders."),
       includeMetadata: Joi.boolean()
         .default(false)
         .description("If true, metadata is included in the response."),
@@ -217,39 +221,33 @@ export const getOrdersBidsV3Options: RouteOptions = {
               FROM collections
               WHERE collections.id = substring(orders.token_set_id from 7))
 
-            WHEN orders.token_set_id LIKE 'list:%' THEN
+            WHEN orders.token_set_id LIKE 'list:%' AND token_sets.attribute_id IS NOT NULL THEN
               (SELECT
-                CASE
-                  WHEN token_sets.attribute_id IS NULL THEN
-                    (SELECT
-                      json_build_object(
-                        'kind', 'collection',
-                        'data', json_build_object(
-                          'collectionName', collections.name,
-                          'image', (collections.metadata ->> 'imageUrl')::TEXT
-                        )
-                      )
-                    FROM collections
-                    WHERE token_sets.collection_id = collections.id)
-                  ELSE
-                    (SELECT
-                      json_build_object(
-                        'kind', 'attribute',
-                        'data', json_build_object(
-                          'collectionName', collections.name,
-                          'attributes', ARRAY[json_build_object('key', attribute_keys.key, 'value', attributes.value)],
-                          'image', (collections.metadata ->> 'imageUrl')::TEXT
-                        )
-                      )
-                    FROM attributes
-                    JOIN attribute_keys
-                    ON attributes.attribute_key_id = attribute_keys.id
-                    JOIN collections
-                    ON attribute_keys.collection_id = collections.id
-                    WHERE token_sets.attribute_id = attributes.id)
-                END  
-              FROM token_sets
-              WHERE token_sets.id = orders.token_set_id)        
+                json_build_object(
+                  'kind', 'attribute',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'attributes', ARRAY[json_build_object('key', attribute_keys.key, 'value', attributes.value)],
+                    'image', (collections.metadata ->> 'imageUrl')::TEXT
+                  )
+                )
+              FROM attributes
+              JOIN attribute_keys
+                ON attributes.attribute_key_id = attribute_keys.id
+              JOIN collections
+                ON attribute_keys.collection_id = collections.id
+             WHERE token_sets.attribute_id = attributes.id)      
+            WHEN orders.token_set_id LIKE 'list:%' AND token_sets.attribute_id IS NULL THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'collection',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'image', (collections.metadata ->> 'imageUrl')::TEXT
+                  )
+                )
+              FROM collections
+              WHERE token_sets.collection_id = collections.id)       
             ELSE NULL
           END
         ) AS metadata
@@ -300,6 +298,7 @@ export const getOrdersBidsV3Options: RouteOptions = {
           ${query.includeRawData ? ", orders.raw_data" : ""}
           ${query.includeMetadata ? `, ${metadataBuildQuery}` : ""}
         FROM orders
+        JOIN token_sets ON token_sets.id = orders.token_set_id
       `;
 
       // Filters
@@ -352,6 +351,22 @@ export const getOrdersBidsV3Options: RouteOptions = {
 
         (query as any).maker = toBuffer(query.maker);
         conditions.push(`orders.maker = $/maker/`);
+      }
+
+      if (query.source) {
+        const sources = await Sources.getInstance();
+        const source = sources.getByDomain(query.source);
+
+        if (!source) {
+          return { orders: [] };
+        }
+
+        (query as any).source = source.id;
+        conditions.push(`orders.source_id_int = $/source/`);
+      }
+
+      if (query.native) {
+        conditions.push(`orders.is_reservoir`);
       }
 
       conditions.push(orderStatusFilter);

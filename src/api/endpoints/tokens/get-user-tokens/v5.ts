@@ -5,15 +5,16 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { formatEth, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
 import { getJoiPriceObject, JoiPrice } from "@/common/joi";
+import { Sources } from "@/models/sources";
 
-const version = "v4";
+const version = "v5";
 
-export const getUserTokensV4Options: RouteOptions = {
+export const getUserTokensV5Options: RouteOptions = {
   cache: {
     privacy: "public",
     expiresIn: 60000,
@@ -21,7 +22,7 @@ export const getUserTokensV4Options: RouteOptions = {
   description: "User Tokens",
   notes:
     "Get tokens held by a user, along with ownership information such as associated orders and date acquired.",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Tokens"],
   plugins: {
     "hapi-swagger": {
       order: 9,
@@ -103,7 +104,14 @@ export const getUserTokensV4Options: RouteOptions = {
           ownership: Joi.object({
             tokenCount: Joi.string(),
             onSaleCount: Joi.string(),
-            floorAskPrice: JoiPrice.allow(null),
+            floorAsk: {
+              id: Joi.string().allow(null),
+              price: JoiPrice.allow(null),
+              maker: Joi.string().lowercase().pattern(regex.address).allow(null),
+              validFrom: Joi.number().unsafe().allow(null),
+              validUntil: Joi.number().unsafe().allow(null),
+              source: Joi.object().allow(null),
+            },
             acquiredAt: Joi.string().allow(null),
           }),
         })
@@ -195,6 +203,10 @@ export const getUserTokensV4Options: RouteOptions = {
           t.floor_sell_value,
           t.floor_sell_currency,
           t.floor_sell_currency_value,
+          t.floor_sell_maker,
+          t.floor_sell_valid_from,
+          t.floor_sell_valid_to,
+          t.floor_sell_source_id_int,
           null AS top_bid_id,
           null AS top_bid_price,
           null AS top_bid_value,
@@ -218,7 +230,11 @@ export const getUserTokensV4Options: RouteOptions = {
             t.floor_sell_id,
             t.floor_sell_value,
             t.floor_sell_currency,
-            t.floor_sell_currency_value
+            t.floor_sell_currency_value,
+            t.floor_sell_maker,
+            t.floor_sell_valid_from,
+            t.floor_sell_valid_to,
+            t.floor_sell_source_id_int
           FROM tokens t
           WHERE b.token_id = t.token_id
           AND b.contract = t.contract
@@ -254,7 +270,8 @@ export const getUserTokensV4Options: RouteOptions = {
     try {
       const baseQuery = `
         SELECT b.contract, b.token_id, b.token_count, b.acquired_at,
-               t.name, t.image, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.floor_sell_currency, t.floor_sell_currency_value, 
+               t.name, t.image, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.floor_sell_currency, t.floor_sell_currency_value,
+               t.floor_sell_maker, t.floor_sell_valid_from, t.floor_sell_valid_to, t.floor_sell_source_id_int,
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value,
                c.name as collection_name, c.metadata, c.floor_sell_value AS "collection_floor_sell_value",
                (
@@ -278,8 +295,12 @@ export const getUserTokensV4Options: RouteOptions = {
       `;
 
       const userTokens = await redb.manyOrNone(baseQuery, { ...query, ...params });
+      const sources = await Sources.getInstance();
 
       const result = userTokens.map(async (r) => {
+        const contract = fromBuffer(r.contract);
+        const tokenId = r.token_id;
+
         // Use default currencies for backwards compatibility with entries
         // that don't have the currencies cached in the tokens table
         const floorAskCurrency = r.floor_sell_currency
@@ -288,11 +309,14 @@ export const getUserTokensV4Options: RouteOptions = {
         const topBidCurrency = r.top_bid_currency
           ? fromBuffer(r.top_bid_currency)
           : Sdk.Common.Addresses.Weth[config.chainId];
+        const floorSellSource = r.floor_sell_value
+          ? sources.get(Number(r.floor_sell_source_id_int), contract, tokenId)
+          : undefined;
 
         return {
           token: {
-            contract: fromBuffer(r.contract),
-            tokenId: r.token_id,
+            contract: contract,
+            tokenId: tokenId,
             name: r.name,
             image: r.image,
             collection: {
@@ -327,17 +351,30 @@ export const getUserTokensV4Options: RouteOptions = {
           ownership: {
             tokenCount: String(r.token_count),
             onSaleCount: String(r.on_sale_count),
-            floorAskPrice: r.floor_sell_id
-              ? await getJoiPriceObject(
-                  {
-                    gross: {
-                      amount: r.floor_sell_currency_value ?? r.floor_sell_value,
-                      nativeAmount: r.floor_sell_value,
+            floorAsk: {
+              id: r.floor_sell_id,
+              price: r.floor_sell_id
+                ? await getJoiPriceObject(
+                    {
+                      gross: {
+                        amount: r.floor_sell_currency_value ?? r.floor_sell_value,
+                        nativeAmount: r.floor_sell_value,
+                      },
                     },
-                  },
-                  floorAskCurrency
-                )
-              : null,
+                    floorAskCurrency
+                  )
+                : null,
+              maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
+              validFrom: r.floor_sell_value ? r.floor_sell_valid_from : null,
+              validUntil: r.floor_sell_value ? r.floor_sell_valid_to : null,
+              source: {
+                id: floorSellSource?.address,
+                domain: floorSellSource?.domain,
+                name: floorSellSource?.metadata.title || floorSellSource?.name,
+                icon: floorSellSource?.metadata.icon,
+                url: floorSellSource?.metadata.url,
+              },
+            },
             acquiredAt: r.acquired_at ? new Date(r.acquired_at).toISOString() : null,
           },
         };

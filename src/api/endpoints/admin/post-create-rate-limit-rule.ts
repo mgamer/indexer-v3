@@ -19,7 +19,7 @@ export const postCreateRateLimitRuleOptions: RouteOptions = {
       route: Joi.string().description("The route for which the rule is created").required(),
       points: Joi.number().required(),
       duration: Joi.number().required(),
-      tier: Joi.number().valid(0, 1, 2, 3, null).default(null).optional(),
+      tier: Joi.number().valid(0, 1, 2, 3, 4, null).default(null).optional(),
       apiKey: Joi.string().default("").uuid().optional(),
       method: Joi.string().valid("get", "post", "delete", "put", "").default("").optional(),
     }),

@@ -4,6 +4,7 @@ export * as cryptopunks from "@/orderbook/orders/cryptopunks";
 export * as foundation from "@/orderbook/orders/foundation";
 export * as looksRare from "@/orderbook/orders/looks-rare";
 export * as seaport from "@/orderbook/orders/seaport";
+export * as sudoswap from "@/orderbook/orders/sudoswap";
 export * as x2y2 from "@/orderbook/orders/x2y2";
 export * as zeroExV4 from "@/orderbook/orders/zeroex-v4";
 
@@ -254,6 +255,15 @@ export const generateBidDetails = async (
       const sdkOrder = new Sdk.X2Y2.Order(config.chainId, order.rawData);
       return {
         kind: "x2y2",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
+    case "sudoswap": {
+      const sdkOrder = new Sdk.Sudoswap.Order(config.chainId, order.rawData);
+      return {
+        kind: "sudoswap",
         ...common,
         order: sdkOrder,
       };

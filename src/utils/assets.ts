@@ -8,9 +8,7 @@ export class Assets {
       return undefined;
     }
 
-    const baseUrl = `https://api${
-      config.chainId == 1 ? "" : "-rinkeby"
-    }.reservoir.tools/assets/v1?`;
+    const baseUrl = `https://api${config.chainId == 1 ? "" : "-goerli"}.reservoir.tools/assets/v1?`;
 
     if (_.isArray(assets)) {
       const assetsResult = [];

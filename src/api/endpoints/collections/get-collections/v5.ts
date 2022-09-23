@@ -67,10 +67,14 @@ export const getCollectionsV5Options: RouteOptions = {
         .description("If true, top bid will be returned in the response."),
       includeAttributes: Joi.boolean()
         .when("id", { is: Joi.exist(), then: Joi.allow(), otherwise: Joi.forbidden() })
-        .description("If true, attributes will be included in the response."),
+        .description(
+          "If true, attributes will be included in the response. (supported only when filtering to a particular collection using `id`)"
+        ),
       includeOwnerCount: Joi.boolean()
         .when("id", { is: Joi.exist(), then: Joi.allow(), otherwise: Joi.forbidden() })
-        .description("If true, owner count will be included in the response."),
+        .description(
+          "If true, owner count will be included in the response. (supported only when filtering to a particular collection using `id`)"
+        ),
       sortBy: Joi.string()
         .valid("1DayVolume", "7DayVolume", "30DayVolume", "allTimeVolume")
         .default("allTimeVolume")
@@ -338,34 +342,42 @@ export const getCollectionsV5Options: RouteOptions = {
       // Sorting and pagination
 
       if (query.continuation) {
-        query.continuation = splitContinuation(query.continuation)[0];
+        const [contVolume, contName] = splitContinuation(query.continuation, /^\d+(.\d+)?_.+$/);
+        query.contVolume = contVolume;
+        query.contName = contName;
       }
 
       let orderBy = "";
       switch (query.sortBy) {
         case "1DayVolume": {
           if (query.continuation) {
-            conditions.push(`collections.day1_volume < $/continuation/`);
+            conditions.push(
+              `(collections.day1_volume, collections.name) < ($/contVolume/, $/contName/)`
+            );
           }
-          orderBy = ` ORDER BY collections.day1_volume DESC`;
+          orderBy = ` ORDER BY collections.day1_volume DESC, collections.name DESC`;
 
           break;
         }
 
         case "7DayVolume": {
           if (query.continuation) {
-            conditions.push(`collections.day7_volume < $/continuation/`);
+            conditions.push(
+              `(collections.day7_volume, collections.name) < ($/contVolume/, $/contName/)`
+            );
           }
-          orderBy = ` ORDER BY collections.day7_volume DESC`;
+          orderBy = ` ORDER BY collections.day7_volume DESC, collections.name DESC`;
 
           break;
         }
 
         case "30DayVolume": {
           if (query.continuation) {
-            conditions.push(`collections.day30_volume < $/continuation/`);
+            conditions.push(
+              `(collections.day30_volume, collections.name) < ($/contVolume/, $/contName/)`
+            );
           }
-          orderBy = ` ORDER BY collections.day30_volume DESC`;
+          orderBy = ` ORDER BY collections.day30_volume DESC, collections.name DESC`;
 
           break;
         }
@@ -373,9 +385,12 @@ export const getCollectionsV5Options: RouteOptions = {
         case "allTimeVolume":
         default: {
           if (query.continuation) {
-            conditions.push(`collections.all_time_volume < $/continuation/`);
+            conditions.push(
+              `(collections.all_time_volume, collections.name) < ($/contVolume/, $/contName/)`
+            );
           }
-          orderBy = ` ORDER BY collections.all_time_volume DESC`;
+
+          orderBy = ` ORDER BY collections.all_time_volume DESC, collections.name DESC`;
 
           break;
         }
@@ -424,7 +439,7 @@ export const getCollectionsV5Options: RouteOptions = {
       `;
 
       // Any further joins might not preserve sorting
-      baseQuery += orderBy.replace("collections", "x");
+      baseQuery += orderBy.replace(/collections/g, "x");
 
       const results = await redb.manyOrNone(baseQuery, query);
 
@@ -562,29 +577,37 @@ export const getCollectionsV5Options: RouteOptions = {
 
       // Pagination
 
-      let continuation: number | null = null;
+      let continuation: string | null = null;
       if (results.length >= query.limit) {
         const lastCollection = _.last(results);
         if (lastCollection) {
           switch (query.sortBy) {
             case "1DayVolume": {
-              continuation = lastCollection.day1_volume;
+              continuation = buildContinuation(
+                `${lastCollection.day1_volume}_${lastCollection.name}`
+              );
               break;
             }
 
             case "7DayVolume": {
-              continuation = lastCollection.day7_volume;
+              continuation = buildContinuation(
+                `${lastCollection.day7_volume}_${lastCollection.name}`
+              );
               break;
             }
 
             case "30DayVolume": {
-              continuation = lastCollection.day30_volume;
+              continuation = buildContinuation(
+                `${lastCollection.day30_volume}_${lastCollection.name}`
+              );
               break;
             }
 
             case "allTimeVolume":
             default: {
-              continuation = lastCollection.all_time_volume;
+              continuation = buildContinuation(
+                `${lastCollection.all_time_volume}_${lastCollection.name}`
+              );
               break;
             }
           }
@@ -593,7 +616,7 @@ export const getCollectionsV5Options: RouteOptions = {
 
       return {
         collections,
-        continuation: continuation ? buildContinuation(continuation.toString()) : undefined,
+        continuation: continuation ? continuation : undefined,
       };
     } catch (error) {
       logger.error(`get-collections-${version}-handler`, `Handler failure: ${error}`);

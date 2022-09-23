@@ -32,15 +32,18 @@ type SaveResult = {
   status: string;
 };
 
+export const getOrderId = (contract: string, tokenId: string) =>
+  // TODO: Add the marketplace identifier to the order id (see Cryptopunks)
+  keccak256(["address", "uint256"], [contract, tokenId]);
+
 export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
 
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
-      // TODO: Add the marketplace identifier to the order id (see Cryptopunks)
       // On Foundation, we can only have a single currently active order per NFT
-      const id = keccak256(["address", "uint256"], [orderParams.contract, orderParams.tokenId]);
+      const id = getOrderId(orderParams.contract, orderParams.tokenId);
 
       // Ensure that the order is not cancelled
       const cancelResult = await redb.oneOrNone(

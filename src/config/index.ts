@@ -22,12 +22,14 @@ export const config = {
   // When running in liquidity-only mode, all metadata processes are disabled
   liquidityOnly: !process.env.METADATA_API_BASE_URL,
   metadataIndexingMethod: String(process.env.METADATA_INDEXING_METHOD || "opensea"),
+  metadataIndexingMethodCollection: String(
+    process.env.METADATA_INDEXING_METHOD_COLLECTION ||
+      process.env.METADATA_INDEXING_METHOD ||
+      "opensea"
+  ),
   metadataApiBaseUrl: String(process.env.METADATA_API_BASE_URL),
   metadataApiBaseUrlAlt: String(
     process.env.METADATA_API_BASE_URL_ALT || process.env.METADATA_API_BASE_URL
-  ),
-  metadataApiBaseUrlFlagStatus: String(
-    process.env.METADATA_API_BASE_URL_FLAG_STATUS || process.env.METADATA_API_BASE_URL
   ),
 
   disableRealtimeMetadataRefresh: Boolean(Number(process.env.DISABLE_REALTIME_METADATA_REFRESH)),

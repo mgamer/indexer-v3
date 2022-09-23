@@ -14,6 +14,7 @@ export type ApiKeyRecord = {
   app_name: string;
   website: string;
   email: string;
+  tier: number;
   key?: string;
 };
 
@@ -38,7 +39,7 @@ export class ApiKeyManager {
     // Create the record in the database
     try {
       await idb.none(
-        "INSERT INTO api_keys (${this:name}) values (${this:csv}) ON CONFLICT DO NOTHING",
+        "INSERT INTO api_keys (${this:name}) VALUES (${this:csv}) ON CONFLICT DO NOTHING",
         values
       );
     } catch (e) {
@@ -79,29 +80,38 @@ export class ApiKeyManager {
       return cachedApiKey;
     }
 
+    // Timeout for redis
+    const timeout = new Promise<null>((resolve) => {
+      setTimeout(resolve, 1000, null);
+    });
+
     const redisKey = `api-key:${key}`;
 
     try {
-      const apiKey = await redis.get(redisKey);
+      const apiKey = await Promise.race([redis.get(redisKey), timeout]);
 
       if (apiKey) {
         if (apiKey == "empty") {
           return null;
         } else {
-          return new ApiKeyEntity(JSON.parse(apiKey));
+          const apiKeyEntity = new ApiKeyEntity(JSON.parse(apiKey));
+          ApiKeyManager.apiKeys.set(key, apiKeyEntity); // Set in local memory storage
+          return apiKeyEntity;
         }
       } else {
         // check if it exists in the database
         const fromDb = await redb.oneOrNone(`SELECT * FROM api_keys WHERE key = $/key/`, { key });
 
         if (fromDb) {
-          await redis.set(redisKey, JSON.stringify(fromDb)); // Set in redis
-          const apiKey = new ApiKeyEntity(fromDb);
-          ApiKeyManager.apiKeys.set(key, apiKey); // Set in local memory storage
-          return apiKey;
+          Promise.race([redis.set(redisKey, JSON.stringify(fromDb)), timeout]); // Set in redis (no need to wait)
+          const apiKeyEntity = new ApiKeyEntity(fromDb);
+          ApiKeyManager.apiKeys.set(key, apiKeyEntity); // Set in local memory storage
+          return apiKeyEntity;
         } else {
-          await redis.set(redisKey, "empty");
-          await redis.expire(redisKey, 3600 * 24);
+          const pipeline = redis.pipeline();
+          pipeline.set(redisKey, "empty");
+          pipeline.expire(redisKey, 3600 * 24);
+          Promise.race([pipeline.exec(), timeout]); // Set in redis (no need to wait)
         }
       }
     } catch (error) {

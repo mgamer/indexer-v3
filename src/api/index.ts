@@ -206,7 +206,7 @@ export const start = async (): Promise<void> => {
           //   .code(429)
           //   .takeover();
         } else {
-          throw error;
+          logger.error("rate-limiter", `Rate limit error ${error}`);
         }
       }
     }

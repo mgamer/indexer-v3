@@ -33,6 +33,9 @@ type SaveResult = {
   status: string;
 };
 
+export const getOrderId = (tokenId: string) =>
+  keccak256(["string", "uint256"], ["cryptopunks", tokenId]);
+
 export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
@@ -40,7 +43,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
       // We can only have a single currently active order per token
-      const id = keccak256(["string", "uint256"], ["cryptopunks", orderParams.tokenId]);
+      const id = getOrderId(orderParams.tokenId);
 
       // We only support listings at the moment
       if (orderParams.side !== "sell") {
@@ -162,7 +165,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const validTo = `'Infinity'`;
       orderValues.push({
         id,
-        kind: `cryptopunks`,
+        kind: "cryptopunks",
         side: orderParams.side,
         fillability_status: "fillable",
         approval_status: "approved",
