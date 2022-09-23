@@ -1,3 +1,12 @@
+## [5.255.2](https://github.com/reservoirprotocol/indexer/compare/v5.255.1...v5.255.2) (2022-09-23)
+
+
+### Bug Fixes
+
+* remove forced sources reload ([b1e1ba2](https://github.com/reservoirprotocol/indexer/commit/b1e1ba26e8bc236fab4bf01546f57430d2cbed44))
+
+
+
 ## [5.255.1](https://github.com/reservoirprotocol/indexer/compare/v5.255.0...v5.255.1) (2022-09-23)
 
 
