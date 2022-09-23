@@ -1,3 +1,12 @@
+# [5.255.0](https://github.com/reservoirprotocol/indexer/compare/v5.254.4...v5.255.0) (2022-09-23)
+
+
+### Features
+
+* support querying by source and/or native in the order apis ([7f04b1e](https://github.com/reservoirprotocol/indexer/commit/7f04b1ea00dbd17b28e9796322ef5b52ee1602b7))
+
+
+
 ## [5.254.4](https://github.com/reservoirprotocol/indexer/compare/v5.254.3...v5.254.4) (2022-09-23)
 
 

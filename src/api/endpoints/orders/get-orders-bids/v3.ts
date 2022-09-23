@@ -70,6 +70,10 @@ export const getOrdersBidsV3Options: RouteOptions = {
         .description(
           "active = currently valid, inactive = temporarily invalid, expired = permanently invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
         ),
+      source: Joi.string()
+        .pattern(regex.domain)
+        .description("Filter to a source by domain. Example: `opensea.io`"),
+      native: Joi.boolean().description("If true, results will filter only Reservoir orders."),
       includeMetadata: Joi.boolean()
         .default(false)
         .description("If true, metadata is included in the response."),
@@ -347,6 +351,22 @@ export const getOrdersBidsV3Options: RouteOptions = {
 
         (query as any).maker = toBuffer(query.maker);
         conditions.push(`orders.maker = $/maker/`);
+      }
+
+      if (query.source) {
+        const sources = await Sources.getInstance();
+        const source = sources.getByDomain(query.source);
+
+        if (!source) {
+          return { orders: [] };
+        }
+
+        (query as any).source = source.id;
+        conditions.push(`orders.source_id_int = $/source/`);
+      }
+
+      if (query.native) {
+        conditions.push(`orders.is_reservoir`);
       }
 
       conditions.push(orderStatusFilter);
