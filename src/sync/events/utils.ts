@@ -5,6 +5,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import { getReferrer } from "@reservoir0x/sdk/dist/utils";
 import pLimit from "p-limit";
 
+import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
@@ -161,6 +162,13 @@ export const extractAttributionData = async (
   if (!referrer) {
     const last4Bytes = "0x" + tx.data.slice(-8);
     referrer = sources.getByDomainHash(last4Bytes)?.domain;
+
+    logger.info(
+      "debug",
+      `Hash ${txHash} has last 4 bytes ${last4Bytes} and source ${JSON.stringify(
+        sources.getByDomainHash(last4Bytes)
+      )}`
+    );
   }
 
   // Reference: https://github.com/reservoirprotocol/core/issues/22#issuecomment-1191040945
