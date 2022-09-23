@@ -28,6 +28,7 @@ const setup = async () => {
     }
   }
 
+  await Sources.getInstance();
   await Sources.forceDataReload();
 };
 
