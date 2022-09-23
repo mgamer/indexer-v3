@@ -157,7 +157,11 @@ export const extractAttributionData = async (
     taker = tx.from;
   }
 
-  const referrer = getReferrer(tx.data);
+  let referrer = getReferrer(tx.data);
+  if (!referrer) {
+    const last4Bytes = "0x" + tx.data.slice(-8);
+    referrer = sources.getByDomainHash(last4Bytes)?.domain;
+  }
 
   // Reference: https://github.com/reservoirprotocol/core/issues/22#issuecomment-1191040945
   if (referrer) {
