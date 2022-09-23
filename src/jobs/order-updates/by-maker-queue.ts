@@ -193,8 +193,8 @@ if (config.doBackgroundWork) {
                       )::order_approval_status_t,
                       expiration = (
                         CASE
-                          WHEN orders.price > y.value THEN nullif(upper(orders.valid_between), 'infinity')
-                          ELSE to_timestamp($/timestamp/)
+                          WHEN orders.price > y.value THEN to_timestamp($/timestamp/)
+                          ELSE nullif(upper(orders.valid_between), 'infinity')
                         END
                       )::timestamptz,
                       updated_at = now()
