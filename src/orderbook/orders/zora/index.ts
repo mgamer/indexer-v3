@@ -58,24 +58,58 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
     try {
       const id = getOrderId(orderParams);
 
-      // Check: sell order has Eth as payment token
-      if (orderParams.askCurrency !== AddressZero) {
-        return results.push({
-          id,
-          status: "unsupported-payment-token",
-        });
-      }
-
       // Check: order doesn't already exist
       const orderResult = await redb.oneOrNone(
         ` 
           SELECT 
-            extract('epoch' from lower(orders.valid_between)) AS valid_from 
+            extract('epoch' from lower(orders.valid_between)) AS valid_from, fillability_status
           FROM orders 
           WHERE orders.id = $/id/ 
         `,
         { id }
       );
+
+      // Check: sell order has Eth as payment token
+      if (orderParams.askCurrency !== AddressZero) {
+        if (!orderResult) {
+          return results.push({
+            id,
+            status: "unsupported-payment-token",
+          });
+        } else {
+          // If Order already exists set fillability_status=cancelled
+          await idb.none(
+            `
+            UPDATE orders SET
+              fillability_status = $/fillability_status/,
+              maker = $/maker/,
+              price = $/price/,
+              currency_price = $/price/,
+              value = $/price/,
+              currency_value = $/price/,
+              valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
+              expiration = 'Infinity',
+              updated_at = now(),
+              taker = $/taker/,
+              raw_data = $/orderParams:json/
+            WHERE orders.id = $/id/
+          `,
+            {
+              fillability_status: "cancelled",
+              maker: toBuffer(orderParams.maker),
+              taker: toBuffer(AddressZero),
+              price: orderParams.askPrice,
+              orderParams,
+              id,
+            }
+          );
+
+          return results.push({
+            id,
+            status: "success",
+          });
+        }
+      }
 
       // Check: order fillability
       let fillabilityStatus = "fillable";
