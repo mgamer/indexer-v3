@@ -1,3 +1,13 @@
+## [5.257.1](https://github.com/reservoirprotocol/indexer/compare/v5.257.0...v5.257.1) (2022-09-26)
+
+
+### Bug Fixes
+
+* deploy ([6328eab](https://github.com/reservoirprotocol/indexer/commit/6328eabfd8624e928117439a7aa074a25821b76c))
+* skip negative prices ([9b5eb94](https://github.com/reservoirprotocol/indexer/commit/9b5eb9433edd1e416638bcc318d4b2e5fdc50dd7))
+
+
+
 # [5.257.0](https://github.com/reservoirprotocol/indexer/compare/v5.256.2...v5.257.0) (2022-09-23)
 
 
