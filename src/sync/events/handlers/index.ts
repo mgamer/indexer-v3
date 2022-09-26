@@ -15,6 +15,7 @@ import * as sudoswap from "@/events-sync/handlers/sudoswap";
 import * as wyvern from "@/events-sync/handlers/wyvern";
 import * as x2y2 from "@/events-sync/handlers/x2y2";
 import * as zeroExV4 from "@/events-sync/handlers/zeroex-v4";
+import * as zora from "@/events-sync/handlers/zora";
 
 export type EventsInfo = {
   kind:
@@ -32,7 +33,8 @@ export type EventsInfo = {
     | "sudoswap"
     | "wyvern"
     | "x2y2"
-    | "zeroex-v4";
+    | "zeroex-v4"
+    | "zora";
   events: EnhancedEvent[];
   backfill?: boolean;
 };
@@ -112,6 +114,11 @@ export const processEvents = async (info: EventsInfo) => {
 
     case "zeroex-v4": {
       data = await zeroExV4.handleEvents(info.events, info.backfill);
+      break;
+    }
+
+    case "zora": {
+      data = await zora.handleEvents(info.events);
       break;
     }
   }

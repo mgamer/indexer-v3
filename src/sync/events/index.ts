@@ -263,138 +263,6 @@ export const syncEvents = async (
 
             break;
           }
-
-          // Zora
-
-          case "zora-ask-filled": {
-            const { args } = eventData.abi.parseLog(log);
-            const tokenContract = args["tokenContract"].toLowerCase();
-            const tokenId = args["tokenId"].toString();
-            let taker = args["buyer"].toLowerCase();
-            const ask = args["ask"];
-            const seller = ask["seller"].toLowerCase();
-            const askCurrency = ask["askCurrency"].toLowerCase();
-            const askPrice = ask["askPrice"].toString();
-
-            // Handle: attribution
-
-            const orderKind = "zora-v3";
-            const data = await syncEventsUtils.extractAttributionData(
-              baseEventParams.txHash,
-              orderKind
-            );
-            if (data.taker) {
-              taker = data.taker;
-            }
-
-            // Handle: prices
-
-            const prices = await getUSDAndNativePrices(
-              askCurrency,
-              askPrice,
-              baseEventParams.timestamp
-            );
-            if (!prices.nativePrice) {
-              // We must always have the native price
-              break;
-            }
-
-            fillEvents.push({
-              orderKind,
-              currency: askCurrency,
-              orderSide: "sell",
-              maker: seller,
-              taker,
-              price: prices.nativePrice,
-              currencyPrice: askPrice,
-              usdPrice: prices.usdPrice,
-              contract: tokenContract,
-              tokenId,
-              amount: "1",
-              orderSourceId: data.orderSource?.id,
-              aggregatorSourceId: data.aggregatorSource?.id,
-              fillSourceId: data.fillSource?.id,
-              baseEventParams,
-            });
-
-            fillInfos.push({
-              context: `zora-${tokenContract}-${tokenId}-${baseEventParams.txHash}`,
-              orderSide: "sell",
-              contract: tokenContract,
-              tokenId,
-              amount: "1",
-              price: prices.nativePrice,
-              timestamp: baseEventParams.timestamp,
-            });
-
-            break;
-          }
-
-          case "zora-auction-ended": {
-            const { args } = eventData.abi.parseLog(log);
-            const tokenId = args["tokenId"].toString();
-            const tokenContract = args["tokenContract"].toLowerCase();
-            const tokenOwner = args["tokenOwner"].toLowerCase();
-            let taker = args["winner"].toLowerCase();
-            const amount = args["amount"].toString();
-            const curatorFee = args["curatorFee"].toString();
-            const auctionCurrency = args["auctionCurrency"].toLowerCase();
-
-            const price = bn(amount).add(curatorFee).toString();
-
-            // Handle: attribution
-
-            const orderKind = "zora-v3";
-            const data = await syncEventsUtils.extractAttributionData(
-              baseEventParams.txHash,
-              orderKind
-            );
-            if (data.taker) {
-              taker = data.taker;
-            }
-
-            // Handle: prices
-
-            const prices = await getUSDAndNativePrices(
-              auctionCurrency,
-              price,
-              baseEventParams.timestamp
-            );
-            if (!prices.nativePrice) {
-              // We must always have the native price
-              break;
-            }
-
-            fillEvents.push({
-              orderKind,
-              currency: auctionCurrency,
-              orderSide: "sell",
-              taker,
-              maker: tokenOwner,
-              price: prices.nativePrice,
-              currencyPrice: price,
-              usdPrice: prices.usdPrice,
-              contract: tokenContract,
-              tokenId,
-              amount: "1",
-              orderSourceId: data.orderSource?.id,
-              aggregatorSourceId: data.aggregatorSource?.id,
-              fillSourceId: data.fillSource?.id,
-              baseEventParams,
-            });
-
-            fillInfos.push({
-              context: `zora-${tokenContract}-${tokenId}-${baseEventParams.txHash}`,
-              orderSide: "sell",
-              contract: tokenContract,
-              tokenId,
-              amount: "1",
-              price: prices.nativePrice,
-              timestamp: baseEventParams.timestamp,
-            });
-
-            break;
-          }
         }
         // TODO: Remove
       } catch (error) {
@@ -494,6 +362,10 @@ export const syncEvents = async (
             // To properly validate bids, we need some additional events
             kind === "erc20-transfer"
         ),
+      },
+      {
+        kind: "zora",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("zora")),
       },
     ]);
 
