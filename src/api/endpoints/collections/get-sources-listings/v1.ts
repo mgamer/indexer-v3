@@ -49,7 +49,7 @@ export const getSourcesListingsV1Options: RouteOptions = {
 
     try {
       const baseQuery = `
-        SELECT source_id_int, count(*) AS "on_sale_count", MIN(value) AS "floor_sell_value"
+        SELECT source_id_int, count(DISTINCT token_id) AS "on_sale_count", MIN(value) AS "floor_sell_value"
         FROM (
           SELECT contract, token_id
           FROM tokens
