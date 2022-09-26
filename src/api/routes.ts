@@ -285,7 +285,7 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/sources/collections/v1",
+    path: "/collections/sources/v1",
     options: collectionsEndpoints.getSourcesListingsV1Options,
   });
 
