@@ -11,7 +11,7 @@ import { Sources } from "@/models/sources";
 const version = "v1";
 
 export const getSourcesListingsV1Options: RouteOptions = {
-  description: "Aggregated Source Data",
+  description: "Collection Source Stats",
   notes: "This API returns aggregated listings info for the given collection per source",
   tags: ["api", "Collections"],
   plugins: {
@@ -23,6 +23,7 @@ export const getSourcesListingsV1Options: RouteOptions = {
     query: Joi.object({
       collection: Joi.string()
         .lowercase()
+        .required()
         .description(
           "Filter to a particular collection, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
