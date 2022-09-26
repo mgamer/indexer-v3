@@ -106,13 +106,27 @@ export const addEventsOnChain = async (events: Event[]) => {
           SET "order_id" = EXCLUDED.order_id
         RETURNING "order_kind", "order_id", "timestamp"
       )
-      UPDATE "orders" SET
+      INSERT INTO "orders" (
+        "id",
+        "kind",
+        "fillability_status",
+        "expiration"
+      ) (
+        SELECT
+          "x"."order_id",
+          "x"."order_kind",
+          'filled'::order_fillability_status_t,
+          to_timestamp("x"."timestamp") AS "expiration"
+        FROM "x"
+        WHERE "x"."order_id" IS NOT NULL
+      )
+      ON CONFLICT ("id") DO
+      UPDATE SET
         "fillability_status" = 'filled',
-        "expiration" = to_timestamp("x"."timestamp"),
+        "expiration" = EXCLUDED."expiration",
         "updated_at" = now()
-      FROM "x"
       WHERE "orders"."id" = "x"."order_id"
-        AND lower("orders"."valid_between") < to_timestamp("x"."timestamp")
+        AND coalesce(lower("orders"."valid_between"), to_timestamp(0)) < to_timestamp("x"."timestamp")
     `);
   }
 
