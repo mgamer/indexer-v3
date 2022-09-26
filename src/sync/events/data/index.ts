@@ -61,6 +61,9 @@ export type EventDataKind =
   | "element-erc1155-buy-order-filled"
   | "quixotic-order-filled"
   | "zora-ask-filled"
+  | "zora-ask-created"
+  | "zora-ask-price-updated"
+  | "zora-ask-canceled"
   | "zora-auction-ended"
   | "nouns-auction-settled"
   | "cryptopunks-punk-offered"
@@ -122,6 +125,9 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
       element.erc1155SellOrderFilled,
       quixotic.orderFulfilled,
       zora.askFilled,
+      zora.askCreated,
+      zora.askCanceled,
+      zora.askPriceUpdated,
       zora.auctionEnded,
       nouns.auctionSettled,
       cryptoPunks.punkOffered,
@@ -219,6 +225,12 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return quixotic.orderFulfilled;
     case "zora-ask-filled":
       return zora.askFilled;
+    case "zora-ask-created":
+      return zora.askCreated;
+    case "zora-ask-canceled":
+      return zora.askCanceled;
+    case "zora-ask-price-updated":
+      return zora.askPriceUpdated;
     case "zora-auction-ended":
       return zora.auctionEnded;
     case "nouns-auction-settled":
