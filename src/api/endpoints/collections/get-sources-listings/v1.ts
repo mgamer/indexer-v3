@@ -13,7 +13,7 @@ const version = "v1";
 export const getSourcesListingsV1Options: RouteOptions = {
   description: "Aggregated Source Data",
   notes: "This API returns aggregated listings info for the given collection per source",
-  tags: ["api", "Orders"],
+  tags: ["api", "Collections"],
   plugins: {
     "hapi-swagger": {
       order: 9,
