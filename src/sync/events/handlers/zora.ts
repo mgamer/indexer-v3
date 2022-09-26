@@ -12,12 +12,13 @@ import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 
 function getOrderParams(args: Result) {
   const tokenId = args["tokenId"].toString();
-  const tokenContract = args["tokenContract"].toString();
+  const tokenContract = args["tokenContract"].toLowerCase();
   const ask = args["ask"];
   const askPrice = ask["askPrice"].toString();
-  const askCurrency = ask["askCurrency"].toString();
-  const sellerFundsRecipient = ask["sellerFundsRecipient"].toString();
+  const askCurrency = ask["askCurrency"].toLowerCase();
+  const sellerFundsRecipient = ask["sellerFundsRecipient"].toLowerCase();
   const findersFeeBps = ask["findersFeeBps"];
+
   return {
     tokenContract,
     tokenId,
@@ -113,12 +114,12 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const orderParams = getOrderParams(args);
         const maker = (await utils.fetchTransaction(baseEventParams.txHash)).from.toLowerCase();
         const seller = args["ask"]["seller"].toLowerCase();
-        const side = maker == seller ? "sell" : "buy";
+
         orders.push({
           orderParams: {
             seller,
             maker,
-            side: side,
+            side: "sell",
             ...orderParams,
             txHash: baseEventParams.txHash,
             txTimestamp: baseEventParams.timestamp,
@@ -160,11 +161,11 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const { args } = eventData.abi.parseLog(log);
         const orderParams = getOrderParams(args);
         const seller = args["ask"]["seller"].toLowerCase();
+
         orders.push({
           orderParams: {
             seller,
             maker: seller,
-            // only seller can call
             side: "sell",
             ...orderParams,
             txHash: baseEventParams.txHash,

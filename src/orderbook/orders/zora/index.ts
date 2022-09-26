@@ -1,17 +1,17 @@
 import { AddressZero } from "@ethersproject/constants";
+import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
-import { keccak256 } from "@ethersproject/solidity";
 
 import { idb, redb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
-import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
-import { offChainCheck } from "./check";
-import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
+import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
+import { offChainCheck } from "@/orderbook/orders/zora/check";
+import * as tokenSet from "@/orderbook/token-sets";
 
 export type OrderIdParams = {
   tokenContract: string; // address
@@ -47,6 +47,7 @@ export function getOrderId(orderParams: OrderIdParams) {
 type SaveResult = {
   id: string;
   status: string;
+  txHash: string;
   unfillable?: boolean;
 };
 
@@ -62,7 +63,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const orderResult = await redb.oneOrNone(
         ` 
           SELECT 
-            extract('epoch' from lower(orders.valid_between)) AS valid_from, fillability_status
+            extract('epoch' from lower(orders.valid_between)) AS valid_from,
+            fillability_status
           FROM orders 
           WHERE orders.id = $/id/ 
         `,
@@ -70,14 +72,16 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       );
 
       // Check: sell order has Eth as payment token
-      if (orderParams.askCurrency !== AddressZero) {
+      if (orderParams.askCurrency !== Sdk.Common.Addresses.Eth[config.chainId]) {
         if (!orderResult) {
           return results.push({
             id,
+            txHash: orderParams.txHash,
             status: "unsupported-payment-token",
           });
         } else {
-          // If Order already exists set fillability_status=cancelled
+          // If the order already exists set its fillability status as cancelled
+          // See https://github.com/reservoirprotocol/indexer/pull/1903/files#r976148340
           await idb.none(
             `
             UPDATE orders SET
@@ -106,6 +110,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
           return results.push({
             id,
+            txHash: orderParams.txHash,
             status: "success",
           });
         }
@@ -129,6 +134,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         } else {
           return results.push({
             id,
+            txHash: orderParams.txHash,
             status: "not-fillable",
           });
         }
@@ -167,12 +173,14 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
           return results.push({
             id,
+            txHash: orderParams.txHash,
             status: "success",
           });
         } else {
           // If a newer order already exists, then we just skip processing
           return results.push({
             id,
+            txHash: orderParams.txHash,
             status: "redundant",
           });
         }
@@ -240,6 +248,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       results.push({
         id,
+        txHash: orderParams.txHash,
         status: "success",
         unfillable,
       });
@@ -295,9 +304,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       results
         .filter((r) => r.status === "success" && !r.unfillable)
         .map(
-          ({ id }) =>
+          ({ id, txHash }) =>
             ({
-              context: `new-order-${id}`,
+              context: `new-order-${id}-${txHash}`,
               id,
               trigger: {
                 kind: "new-order",

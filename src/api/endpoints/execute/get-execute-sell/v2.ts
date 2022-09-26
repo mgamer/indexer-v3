@@ -52,9 +52,6 @@ export const getExecuteSellV2Options: RouteOptions = {
           "Wallet address of referrer. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
       onlyQuote: Joi.boolean().default(false).description("If true, only quote will be returned."),
-      noDirectFilling: Joi.boolean().description(
-        "If true, all fills will be executed through the router"
-      ),
       maxFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional. Set custom gas price."),

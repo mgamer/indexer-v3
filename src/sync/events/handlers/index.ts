@@ -42,10 +42,6 @@ export type EventsInfo = {
 export const processEvents = async (info: EventsInfo) => {
   let data: OnChainData | undefined;
   switch (info.kind) {
-    case "zora": {
-      data = await zora.handleEvents(info.events);
-      break;
-    }
     case "erc20": {
       data = await erc20.handleEvents(info.events);
       break;
@@ -118,6 +114,11 @@ export const processEvents = async (info: EventsInfo) => {
 
     case "zeroex-v4": {
       data = await zeroExV4.handleEvents(info.events, info.backfill);
+      break;
+    }
+
+    case "zora": {
+      data = await zora.handleEvents(info.events);
       break;
     }
   }

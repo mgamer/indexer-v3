@@ -75,9 +75,6 @@ export const getExecuteBuyV2Options: RouteOptions = {
       partial: Joi.boolean()
         .default(false)
         .description("If true, partial orders will be accepted."),
-      noDirectFilling: Joi.boolean().description(
-        "If true, all fills will be executed through the router."
-      ),
       maxFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional. Set custom gas price."),

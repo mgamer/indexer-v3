@@ -275,10 +275,6 @@ export const syncEvents = async (
     const eventsSyncProcess = backfill ? eventsSyncBackfillProcess : eventsSyncRealtimeProcess;
     await eventsSyncProcess.addToQueue([
       {
-        kind: "zora",
-        events: enhancedEvents.filter(({ kind }) => kind.startsWith("zora")),
-      },
-      {
         kind: "erc20",
         events: enhancedEvents.filter(
           ({ kind }) => kind.startsWith("erc20") || kind.startsWith("weth")
@@ -366,6 +362,10 @@ export const syncEvents = async (
             // To properly validate bids, we need some additional events
             kind === "erc20-transfer"
         ),
+      },
+      {
+        kind: "zora",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("zora")),
       },
     ]);
 
