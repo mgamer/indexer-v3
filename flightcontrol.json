@@ -33,7 +33,8 @@
                 "NON_LOCAL_TRAFFIC": true,
                 "DD_APM_NON_LOCAL_TRAFFIC": true,
                 "DD_DOGSTATSD_NON_LOCAL_TRAFFIC": true,
-                "DD_LOGS_ENABLED": true
+                "DD_LOGS_ENABLED": true,
+                "ECS_FARGATE": true
               }
             }
           },
