@@ -173,6 +173,14 @@ export const generateListingDetails = (
       };
     }
 
+    case "zora-v3": {
+      return {
+        kind: "zora",
+        ...common,
+        order: new Sdk.Zora.Order(config.chainId, order.rawData),
+      };
+    }
+
     default: {
       throw new Error("Unsupported order kind");
     }
