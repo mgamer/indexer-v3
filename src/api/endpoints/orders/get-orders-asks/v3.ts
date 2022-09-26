@@ -456,6 +456,7 @@ export const getOrdersAsksV3Options: RouteOptions = {
           metadata: query.includeMetadata ? r.metadata : undefined,
           source: {
             id: source?.address,
+            domain: source?.domain,
             name: source?.metadata.title || source?.name,
             icon: source?.metadata.icon,
             url: source?.metadata.url,
