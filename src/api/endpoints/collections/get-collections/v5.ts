@@ -342,10 +342,7 @@ export const getCollectionsV5Options: RouteOptions = {
       // Sorting and pagination
 
       if (query.continuation) {
-        const [contVolume, contId] = splitContinuation(
-          query.continuation,
-          /^\d+(.\d+)?_0x[a-fA-F0-9]{40}$/
-        );
+        const [contVolume, contId] = splitContinuation(query.continuation, /^\d+(.\d+)?_.+$/);
         query.contVolume = contVolume;
         query.contId = contId;
       }
