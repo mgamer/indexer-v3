@@ -62,6 +62,7 @@ export const postOrdersV1Options: RouteOptions = {
             metadata: {},
           },
           relayToArweave: true,
+          validateBidValue: true,
         });
       }
 
