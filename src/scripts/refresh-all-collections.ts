@@ -21,7 +21,7 @@ const main = async () => {
     }
 
     const query = `
-      SELECT contract
+      SELECT id, contract
       FROM collections
       ${idFilter}
       ORDER BY id ASC
