@@ -7,6 +7,7 @@ export * as seaport from "@/orderbook/orders/seaport";
 export * as sudoswap from "@/orderbook/orders/sudoswap";
 export * as x2y2 from "@/orderbook/orders/x2y2";
 export * as zeroExV4 from "@/orderbook/orders/zeroex-v4";
+export * as zora from "@/orderbook/orders/zora";
 
 // Imports
 
@@ -169,6 +170,14 @@ export const generateListingDetails = (
         kind: "seaport",
         ...common,
         order: new Sdk.Seaport.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "zora-v3": {
+      return {
+        kind: "zora",
+        ...common,
+        order: new Sdk.Zora.Order(config.chainId, order.rawData),
       };
     }
 

@@ -240,14 +240,15 @@ export const getUserTopBidsV1Options: RouteOptions = {
                           WHERE token_sets.attribute_id = attributes.id)
                       END  
                    FROM token_sets
-                   WHERE token_sets.id = y.token_set_id) 
+                   WHERE token_sets.id = y.token_set_id
+                   AND token_sets.schema_hash = y.token_set_schema_hash) 
                   ELSE NULL
                 END
               ) AS bid_context
         FROM nft_balances nb
         JOIN LATERAL (
             SELECT o.token_set_id, o.id AS "top_bid_id", o.price AS "top_bid_price", o.value AS "top_bid_value",
-                   o.maker AS "top_bid_maker", source_id_int, o.created_at "order_created_at",
+                   o.maker AS "top_bid_maker", source_id_int, o.created_at "order_created_at", o.token_set_schema_hash,
                    extract(epoch from o.created_at) * 1000000 AS "order_created_at_micro",
                    DATE_PART('epoch', LOWER(o.valid_between)) AS "top_bid_valid_from",
                    COALESCE(

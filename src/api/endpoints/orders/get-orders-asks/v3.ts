@@ -66,6 +66,10 @@ export const getOrdersAsksV3Options: RouteOptions = {
         .description(
           "active = currently valid, inactive = temporarily invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
         ),
+      source: Joi.string()
+        .pattern(regex.domain)
+        .description("Filter to a source by domain. Example: `opensea.io`"),
+      native: Joi.boolean().description("If true, results will filter only Reservoir orders."),
       includePrivate: Joi.boolean()
         .default(false)
         .description("If true, private orders are included in the response."),
@@ -339,6 +343,22 @@ export const getOrdersAsksV3Options: RouteOptions = {
         conditions.push(`orders.maker = $/maker/`);
       }
 
+      if (query.source) {
+        const sources = await Sources.getInstance();
+        const source = sources.getByDomain(query.source);
+
+        if (!source) {
+          return { orders: [] };
+        }
+
+        (query as any).source = source.id;
+        conditions.push(`orders.source_id_int = $/source/`);
+      }
+
+      if (query.native) {
+        conditions.push(`orders.is_reservoir`);
+      }
+
       if (!query.includePrivate) {
         conditions.push(
           `orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL`
@@ -436,6 +456,7 @@ export const getOrdersAsksV3Options: RouteOptions = {
           metadata: query.includeMetadata ? r.metadata : undefined,
           source: {
             id: source?.address,
+            domain: source?.domain,
             name: source?.metadata.title || source?.name,
             icon: source?.metadata.icon,
             url: source?.metadata.url,

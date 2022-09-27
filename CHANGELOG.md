@@ -1,3 +1,142 @@
+## [5.257.1](https://github.com/reservoirprotocol/indexer/compare/v5.257.0...v5.257.1) (2022-09-26)
+
+
+### Bug Fixes
+
+* deploy ([6328eab](https://github.com/reservoirprotocol/indexer/commit/6328eabfd8624e928117439a7aa074a25821b76c))
+* skip negative prices ([9b5eb94](https://github.com/reservoirprotocol/indexer/commit/9b5eb9433edd1e416638bcc318d4b2e5fdc50dd7))
+
+
+
+# [5.257.0](https://github.com/reservoirprotocol/indexer/compare/v5.256.2...v5.257.0) (2022-09-23)
+
+
+### Bug Fixes
+
+* deploy ([2e76041](https://github.com/reservoirprotocol/indexer/commit/2e760415ff8ed0e53be95de690043290a592e404))
+
+
+### Features
+
+* create new oracle api version ([264bd46](https://github.com/reservoirprotocol/indexer/commit/264bd461e469dafa6f7d23280aed924087de80ad))
+* fix read key from cache ([20baf14](https://github.com/reservoirprotocol/indexer/commit/20baf1409d61df77afed4f1fd3fde03bf80a8765))
+* set api keys to tier 1 by default ([aad02a5](https://github.com/reservoirprotocol/indexer/commit/aad02a530f596e6c2d4d45bbd18665c6a28f6905))
+
+
+
+## [5.256.2](https://github.com/reservoirprotocol/indexer/compare/v5.256.1...v5.256.2) (2022-09-23)
+
+
+### Bug Fixes
+
+* domain hash ([0c6dcee](https://github.com/reservoirprotocol/indexer/commit/0c6dcee30f15725586cdf35161a548ecd5acab9f))
+
+
+
+## [5.256.1](https://github.com/reservoirprotocol/indexer/compare/v5.256.0...v5.256.1) (2022-09-23)
+
+
+### Bug Fixes
+
+* force reload sources ([4126ec4](https://github.com/reservoirprotocol/indexer/commit/4126ec4290dc8ca7bb32128f87196044ae360f12))
+
+
+
+# [5.256.0](https://github.com/reservoirprotocol/indexer/compare/v5.255.2...v5.256.0) (2022-09-23)
+
+
+### Features
+
+* fix collections sort ([cc79a53](https://github.com/reservoirprotocol/indexer/commit/cc79a5300e39449db88d15016bbc5d10214bf633))
+
+
+
+## [5.255.2](https://github.com/reservoirprotocol/indexer/compare/v5.255.1...v5.255.2) (2022-09-23)
+
+
+### Bug Fixes
+
+* remove forced sources reload ([b1e1ba2](https://github.com/reservoirprotocol/indexer/commit/b1e1ba26e8bc236fab4bf01546f57430d2cbed44))
+
+
+
+## [5.255.1](https://github.com/reservoirprotocol/indexer/compare/v5.255.0...v5.255.1) (2022-09-23)
+
+
+### Bug Fixes
+
+* cancel x2y2 bids on invalidation ([da29f75](https://github.com/reservoirprotocol/indexer/commit/da29f75df0933708ff71c7b7c05082a0b78ed5da))
+* ignore schema hash for contract-wide and single-token bids ([ffd491b](https://github.com/reservoirprotocol/indexer/commit/ffd491b03af213aa1f0b953270c31df7ea98d786))
+* query ([3b37bc9](https://github.com/reservoirprotocol/indexer/commit/3b37bc9c89dc7ac2781dd6a41ef44b7001953d65))
+* query ([343020b](https://github.com/reservoirprotocol/indexer/commit/343020b613732770d72dd0318e132d333f78ef9f))
+* query ([62cf6b5](https://github.com/reservoirprotocol/indexer/commit/62cf6b50150047a485b2b69538b753ea03049a22))
+
+
+
+# [5.255.0](https://github.com/reservoirprotocol/indexer/compare/v5.254.4...v5.255.0) (2022-09-23)
+
+
+### Features
+
+* support querying by source and/or native in the order apis ([7f04b1e](https://github.com/reservoirprotocol/indexer/commit/7f04b1ea00dbd17b28e9796322ef5b52ee1602b7))
+
+
+
+## [5.254.4](https://github.com/reservoirprotocol/indexer/compare/v5.254.3...v5.254.4) (2022-09-23)
+
+
+### Bug Fixes
+
+* force reload sources data ([b18843a](https://github.com/reservoirprotocol/indexer/commit/b18843a79f51e5135a6cef7c1adf61e8997613e5))
+
+
+
+## [5.254.3](https://github.com/reservoirprotocol/indexer/compare/v5.254.2...v5.254.3) (2022-09-23)
+
+
+### Bug Fixes
+
+* deploy ([9b46d30](https://github.com/reservoirprotocol/indexer/commit/9b46d30258961c5c1e712b8de139a7f68a77fbda))
+
+
+
+## [5.254.2](https://github.com/reservoirprotocol/indexer/compare/v5.254.1...v5.254.2) (2022-09-23)
+
+
+### Bug Fixes
+
+* debug ([a48c717](https://github.com/reservoirprotocol/indexer/commit/a48c71763db160f56e762be5a4c4342000cb4e2c))
+* deploy ([52a281f](https://github.com/reservoirprotocol/indexer/commit/52a281fb640e1d513ba03be151a6875d9e6bf9bc))
+* source images ([7cdfcdb](https://github.com/reservoirprotocol/indexer/commit/7cdfcdb19d22ef8d359ac07536c87eb99eaf80c9))
+
+
+
+## [5.254.1](https://github.com/reservoirprotocol/indexer/compare/v5.254.0...v5.254.1) (2022-09-23)
+
+
+### Bug Fixes
+
+* minor tweaks ([04562ba](https://github.com/reservoirprotocol/indexer/commit/04562bac962af31ac92e2260028bded01af77b7e))
+
+
+
+# [5.254.0](https://github.com/reservoirprotocol/indexer/compare/v5.253.0...v5.254.0) (2022-09-23)
+
+
+### Bug Fixes
+
+* fix user top bids ([f10571c](https://github.com/reservoirprotocol/indexer/commit/f10571c23e558239e524265729d79c3f490b2133))
+* tweaks ([1e6329c](https://github.com/reservoirprotocol/indexer/commit/1e6329ce9215f06c159336a8d47d8757e56212ba))
+* tweaks ([3820fc4](https://github.com/reservoirprotocol/indexer/commit/3820fc4028ad8804db135ef3f6b72e49c2173ddc))
+
+
+### Features
+
+* add support for attribution v2 ([0bb145c](https://github.com/reservoirprotocol/indexer/commit/0bb145cdcaf572402b62efadc9937184f862975a))
+* fix collections sort ([dbcfa41](https://github.com/reservoirprotocol/indexer/commit/dbcfa41834aeb2663462885035021f7162257313))
+
+
+
 # [5.253.0](https://github.com/reservoirprotocol/indexer/compare/v5.252.0...v5.253.0) (2022-09-22)
 
 

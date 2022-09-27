@@ -57,6 +57,7 @@ if (config.doBackgroundWork) {
             const fillabilityStatuses = await idb.manyOrNone(
               `
                 SELECT
+                  orders.kind,
                   orders.id,
                   orders.fillability_status AS old_status,
                   (CASE
@@ -85,6 +86,14 @@ if (config.doBackgroundWork) {
             // Filter any orders that didn't change status
             const values = fillabilityStatuses
               .filter(({ old_status, new_status }) => old_status !== new_status)
+              // We mark X2Y2 orders as cancelled if the balance ever gets underwater
+              // in order to be consistent with the way they handle things (see below
+              // description on handling X2Y2 "sell-balance" changes)
+              .map((data) =>
+                data.kind === "x2y2" && data.new_status === "no-balance"
+                  ? { ...data, new_status: "cancelled" }
+                  : data
+              )
               .map(({ id, new_status, expiration }) => ({
                 id,
                 fillability_status: new_status,
@@ -181,7 +190,14 @@ if (config.doBackgroundWork) {
                           WHEN orders.price > y.value THEN 'no-approval'
                           ELSE 'approved'
                         END
-                      )::order_approval_status_t
+                      )::order_approval_status_t,
+                      expiration = (
+                        CASE
+                          WHEN orders.price > y.value THEN to_timestamp($/timestamp/)
+                          ELSE nullif(upper(orders.valid_between), 'infinity')
+                        END
+                      )::timestamptz,
+                      updated_at = now()
                     FROM x
                     LEFT JOIN y ON TRUE
                     WHERE orders.id = x.id
@@ -191,14 +207,58 @@ if (config.doBackgroundWork) {
                           ELSE 'approved'
                         END
                       )::order_approval_status_t
-                    RETURNING orders.id
+                    RETURNING
+                      orders.kind,
+                      orders.approval_status,
+                      orders.expiration,
+                      orders.id
                   `,
                   {
                     token: toBuffer(data.contract),
                     maker: toBuffer(maker),
                     conduit: toBuffer(data.operator!),
+                    timestamp: trigger.txTimestamp,
                   }
                 );
+
+                const cancelledValues = result
+                  .filter(
+                    // When an approval gets revoked, X2Y2 will off-chain cancel all the
+                    // orders from the same owner, so that if they ever re-approve, none
+                    // of these orders will get reactivated (they are able to do that by
+                    // having their backend refuse to sign on such orders).
+                    ({ kind, approval_status }) =>
+                      kind === "x2y2" && approval_status === "no-approval"
+                  )
+                  .map(({ id, expiration }) => ({
+                    id,
+                    fillability_status: "cancelled",
+                    expiration: expiration || "infinity",
+                  }));
+
+                // Cancel any orders if needed
+                if (cancelledValues.length) {
+                  const columns = new pgp.helpers.ColumnSet(
+                    ["id", "fillability_status", "expiration"],
+                    {
+                      table: "orders",
+                    }
+                  );
+
+                  await idb.none(
+                    `
+                      UPDATE orders SET
+                        fillability_status = x.fillability_status::order_fillability_status_t,
+                        expiration = x.expiration::TIMESTAMPTZ,
+                        updated_at = now()
+                      FROM (VALUES ${pgp.helpers.values(
+                        cancelledValues,
+                        columns
+                      )}) AS x(id, fillability_status, expiration)
+                      WHERE orders.id = x.id::TEXT
+                    `
+                  );
+                }
 
                 // Recheck all affected orders
                 await orderUpdatesById.addToQueue(

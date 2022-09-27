@@ -1,37 +1,38 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { AddressZero } from "@ethersproject/constants";
+import { keccak256 } from "@ethersproject/solidity";
+import { randomBytes } from "crypto";
 import _ from "lodash";
 
-import { randomBytes } from "crypto";
-import { redis } from "@/common/redis";
-import { config } from "@/config/index";
 import { idb, redb } from "@/common/db";
+import { logger } from "@/common/logger";
+import { redis } from "@/common/redis";
 import { regex } from "@/common/utils";
+import { config } from "@/config/index";
+import * as fetchSourceInfo from "@/jobs/sources/fetch-source-info";
 import {
   SourcesEntity,
   SourcesEntityParams,
   SourcesMetadata,
 } from "@/models/sources/sources-entity";
-import { AddressZero } from "@ethersproject/constants";
+import { channels } from "@/pubsub/channels";
 
 import { default as sourcesFromJson } from "./sources.json";
-import { logger } from "@/common/logger";
-import * as fetchSourceInfo from "@/jobs/sources/fetch-source-info";
-import { channels } from "@/pubsub/channels";
 
 export class Sources {
   private static instance: Sources;
 
-  public sources: object;
-  public sourcesByNames: object;
-  public sourcesByAddress: object;
-  public sourcesByDomains: object;
+  public sources: { [id: number]: SourcesEntity };
+  public sourcesByName: { [name: string]: SourcesEntity };
+  public sourcesByAddress: { [address: string]: SourcesEntity };
+  public sourcesByDomain: { [domain: string]: SourcesEntity };
+  public sourcesByDomainHash: { [domainHash: string]: SourcesEntity };
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {
     this.sources = {};
-    this.sourcesByNames = {};
+    this.sourcesByName = {};
     this.sourcesByAddress = {};
-    this.sourcesByDomains = {};
+    this.sourcesByDomain = {};
+    this.sourcesByDomainHash = {};
   }
 
   private async loadData(forceDbLoad = false) {
@@ -40,19 +41,31 @@ export class Sources {
     let sources: SourcesEntityParams[];
 
     if (_.isNull(sourcesCache) || forceDbLoad) {
-      // If no cache load from DB
-      sources = await redb.manyOrNone(`SELECT * FROM sources_v2`);
+      // If no cache is available, then load from the database
+      sources = await redb.manyOrNone(
+        `
+          SELECT
+            sources_v2.id,
+            sources_v2.domain,
+            sources_v2.domain_hash AS "domainHash",
+            sources_v2.name,
+            sources_v2.address,
+            sources_v2.metadata
+          FROM sources_v2
+        `
+      );
       await redis.set(Sources.getCacheKey(), JSON.stringify(sources), "EX", 60 * 60 * 24);
     } else {
-      // Parse the cache data
+      // Parse the data
       sources = JSON.parse(sourcesCache);
     }
 
     for (const source of sources) {
-      (this.sources as any)[source.id] = new SourcesEntity(source);
-      (this.sourcesByNames as any)[_.toLower(source.name)] = new SourcesEntity(source);
-      (this.sourcesByAddress as any)[_.toLower(source.address)] = new SourcesEntity(source);
-      (this.sourcesByDomains as any)[_.toLower(source.domain)] = new SourcesEntity(source);
+      this.sources[source.id] = new SourcesEntity(source);
+      this.sourcesByName[_.toLower(source.name)] = new SourcesEntity(source);
+      this.sourcesByAddress[_.toLower(source.address)] = new SourcesEntity(source);
+      this.sourcesByDomain[_.toLower(source.domain)] = new SourcesEntity(source);
+      this.sourcesByDomainHash[_.toLower(source.domainHash)] = new SourcesEntity(source);
     }
   }
 
@@ -79,6 +92,7 @@ export class Sources {
     return new SourcesEntity({
       id: 0,
       domain: "reservoir.tools",
+      domainHash: "0x1d4da48b",
       address: AddressZero,
       name: "Reservoir",
       metadata: {
@@ -91,91 +105,131 @@ export class Sources {
 
   public static async syncSources() {
     _.forEach(sourcesFromJson, (item, id) => {
-      Sources.addFromJson(Number(id), item.domain, item.name, item.address, item.data);
+      Sources.addFromJson(
+        Number(id),
+        item.domain,
+        item.domainHash,
+        item.name,
+        item.address,
+        item.data
+      );
     });
   }
 
   public static async addFromJson(
     id: number,
     domain: string,
+    domainHash: string,
     name: string,
     address: string,
     metadata: object
   ) {
-    const query = `INSERT INTO sources_v2 (id, domain, name, address, metadata)
-                   VALUES ($/id/, $/domain/, $/name/, $/address/, $/metadata:json/)
-                   ON CONFLICT (id) DO UPDATE
-                   SET metadata = $/metadata:json/, domain = $/domain/`;
-
-    const values = {
-      id,
-      domain,
-      name,
-      address,
-      metadata,
-    };
-
-    await idb.none(query, values);
+    await idb.none(
+      `
+        INSERT INTO sources_v2(
+          id,
+          domain,
+          domain_hash,
+          name,
+          address,
+          metadata
+        ) VALUES (
+          $/id/,
+          $/domain/,
+          $/domainHash/,
+          $/name/,
+          $/address/,
+          $/metadata:json/
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          metadata = $/metadata:json/,
+          domain = $/domain/
+      `,
+      {
+        id,
+        domain,
+        domainHash,
+        name,
+        address,
+        metadata,
+      }
+    );
   }
 
   public async create(domain: string, address: string, metadata: object = {}) {
-    const query = `INSERT INTO sources_v2 (domain, name, address, metadata)
-                   VALUES ($/domain/, $/domain/, $/address/, $/metadata:json/)
-                   ON CONFLICT DO NOTHING
-                   RETURNING *`;
+    const source = await idb.oneOrNone(
+      `
+        INSERT INTO sources_v2(
+          domain,
+          domain_hash,
+          name,
+          address,
+          metadata
+        ) VALUES (
+          $/domain/,
+          $/domainHash/,
+          $/name/,
+          $/address/,
+          $/metadata:json/
+        )
+        ON CONFLICT DO NOTHING
+        RETURNING *
+      `,
+      {
+        domain,
+        domainHash: keccak256(["string"], [domain]).slice(0, 10),
+        name: domain,
+        address,
+        metadata,
+      }
+    );
 
-    const values = {
-      domain,
-      address,
-      metadata,
-    };
+    // Reload the cache
+    await Sources.instance.loadData(true);
+    // Fetch domain info
+    await fetchSourceInfo.addToQueue(domain);
 
-    const source = await idb.oneOrNone(query, values);
-    const sourcesEntity = new SourcesEntity(source);
-
-    await Sources.instance.loadData(true); // reload the cache
-    await fetchSourceInfo.addToQueue(domain); // Fetch domain info
     await redis.publish(channels.sourcesUpdated, `New source ${domain}`);
+    logger.info("sources", `New source '${domain}' was added`);
 
-    logger.info("sources", `New source ${domain} - ${address} was added`);
-
-    return sourcesEntity;
+    return new SourcesEntity(source);
   }
 
   public async update(domain: string, metadata: SourcesMetadata = {}) {
-    const values = {
+    const values: { [key: string]: string } = {
       domain,
     };
 
     let jsonBuildObject = "";
     _.forEach(metadata, (value, key) => {
-      if (!_.isUndefined(value)) {
+      if (value) {
         jsonBuildObject += `'${key}', $/${key}/,`;
-        (values as any)[key] = value;
+        values[key] = value;
       }
     });
-
-    if (jsonBuildObject == "") {
+    if (!jsonBuildObject.length) {
       return;
     }
-
     jsonBuildObject = _.trimEnd(jsonBuildObject, ",");
 
-    const query = `UPDATE sources_v2
-                   SET metadata = metadata || jsonb_build_object (${jsonBuildObject})
-                   WHERE domain = $/domain/`;
+    await idb.none(
+      `
+        UPDATE sources_v2 SET
+          metadata = metadata || jsonb_build_object (${jsonBuildObject})
+        WHERE domain = $/domain/
+      `,
+      values
+    );
 
-    await idb.none(query, values);
-
-    await Sources.instance.loadData(true); // reload the cache
+    // Reload the cache
+    await Sources.instance.loadData(true);
     await redis.publish(channels.sourcesUpdated, `Updated source ${domain}`);
   }
 
-  public get(id: number, contract?: string, tokenId?: string): SourcesEntity {
-    let sourceEntity;
-
+  public get(id: number, contract?: string, tokenId?: string): SourcesEntity | undefined {
+    let sourceEntity: SourcesEntity;
     if (id in this.sources) {
-      sourceEntity = _.cloneDeep((this.sources as any)[id]);
+      sourceEntity = _.cloneDeep(this.sources[id]);
     } else {
       sourceEntity = _.cloneDeep(Sources.getDefaultSource());
     }
@@ -187,11 +241,11 @@ export class Sources {
     return sourceEntity;
   }
 
-  public getByDomain(domain: string, returnDefault = true): SourcesEntity {
-    let sourceEntity;
+  public getByDomain(domain: string, returnDefault = true): SourcesEntity | undefined {
+    let sourceEntity: SourcesEntity | undefined;
 
-    if (_.toLower(domain) in this.sourcesByDomains) {
-      sourceEntity = (this.sourcesByDomains as any)[_.toLower(domain)];
+    if (_.toLower(domain) in this.sourcesByDomain) {
+      sourceEntity = this.sourcesByDomain[_.toLower(domain)];
     } else if (returnDefault) {
       sourceEntity = Sources.getDefaultSource();
     }
@@ -199,11 +253,17 @@ export class Sources {
     return sourceEntity;
   }
 
-  public getByName(name: string, returnDefault = true): SourcesEntity {
-    let sourceEntity;
+  public getByDomainHash(domainHash: string): SourcesEntity | undefined {
+    if (this.sourcesByDomainHash[domainHash]) {
+      return this.sourcesByDomainHash[domainHash];
+    }
+  }
 
-    if (_.toLower(name) in this.sourcesByNames) {
-      sourceEntity = (this.sourcesByNames as any)[_.toLower(name)];
+  public getByName(name: string, returnDefault = true): SourcesEntity | undefined {
+    let sourceEntity: SourcesEntity | undefined;
+
+    if (_.toLower(name) in this.sourcesByName) {
+      sourceEntity = this.sourcesByName[_.toLower(name)];
     } else if (returnDefault) {
       sourceEntity = Sources.getDefaultSource();
     }
@@ -223,7 +283,7 @@ export class Sources {
 
     address = _.toLower(address);
     if (address in this.sourcesByAddress) {
-      sourceEntity = (this.sourcesByAddress as any)[address];
+      sourceEntity = this.sourcesByAddress[address];
     } else if (options?.returnDefault) {
       sourceEntity = Sources.getDefaultSource();
     }

@@ -48,6 +48,7 @@ export const postApiKey: RouteOptions = {
         app_name: payload.appName,
         website: payload.website,
         email: payload.email,
+        tier: 1,
       });
 
       if (!key) {
