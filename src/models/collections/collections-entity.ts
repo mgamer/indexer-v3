@@ -24,6 +24,7 @@ export type CollectionsEntityUpdateParams = {
   allTimeRank?: number;
   indexMetadata?: boolean;
   lastMetadataSync?: string;
+  floorSellValue?: number;
 };
 
 export type CollectionsMetadata = {
@@ -66,6 +67,7 @@ export type CollectionsEntityParams = {
   index_metadata: boolean;
   last_metadata_sync: string;
   minted_timestamp: number;
+  floor_sell_value: number;
 };
 
 export class CollectionsEntity {
@@ -93,6 +95,7 @@ export class CollectionsEntity {
   indexMetadata: boolean;
   lastMetadataSync: string;
   mintedTimestamp: number;
+  floorSellValue: number;
 
   constructor(params: CollectionsEntityParams) {
     this.id = params.id;
@@ -119,5 +122,6 @@ export class CollectionsEntity {
     this.indexMetadata = params.index_metadata;
     this.lastMetadataSync = params.last_metadata_sync;
     this.mintedTimestamp = params.minted_timestamp;
+    this.floorSellValue = params.floor_sell_value;
   }
 }

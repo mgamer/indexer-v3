@@ -17,6 +17,9 @@ import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import { PendingFlagStatusSyncJobs } from "@/models/pending-flag-status-sync-jobs";
+import { redis } from "@/common/redis";
+import { getNetworkSettings } from "@/config/network";
+import { Collections } from "@/models/collections";
 
 export type OrderInfo = {
   orderParams: Sdk.Seaport.Types.OrderComponents;
@@ -32,7 +35,8 @@ type SaveResult = {
 
 export const save = async (
   orderInfos: OrderInfo[],
-  relayToArweave?: boolean
+  relayToArweave?: boolean,
+  validateBidValue?: boolean
 ): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
@@ -378,6 +382,51 @@ export const save = async (
             });
           }
           value = bn(prices.nativePrice);
+        }
+      }
+
+      if (info.side === "buy" && order.params.kind === "single-token" && validateBidValue) {
+        const typedInfo = info as typeof info & { tokenId: string };
+        const tokenId = typedInfo.tokenId;
+        const seaportBidPercentageThreshold = 90;
+
+        logger.info(
+          "orders-seaport-save",
+          `Bid value validation - start. orderId=${id}, contract=${
+            info.contract
+          }, tokenId=${tokenId}, info=${JSON.stringify(info)}`
+        );
+
+        try {
+          const collectionFloorAskValue = await getCollectionFloorAskValue(
+            info.contract,
+            Number(tokenId)
+          );
+
+          if (collectionFloorAskValue) {
+            const percentage = (Number(value.toString()) / collectionFloorAskValue) * 100;
+
+            logger.info(
+              "orders-seaport-save",
+              `Bid value validation - check. orderId=${id}, contract=${
+                info.contract
+              }, tokenId=${tokenId}, value=${value.toString()}, collectionFloorAskValue=${collectionFloorAskValue}, percentage=${percentage.toString()}, seaportBidPercentageThreshold=${seaportBidPercentageThreshold}. bitTooLow=${
+                percentage < seaportBidPercentageThreshold
+              }`
+            );
+
+            if (percentage < seaportBidPercentageThreshold) {
+              return results.push({
+                id,
+                status: "bid-too-low",
+              });
+            }
+          }
+        } catch (error) {
+          logger.error(
+            "orders-seaport-save",
+            `Bid value validation - error. orderId=${id}, contract=${info.contract}, tokenId=${tokenId}, error=${error}`
+          );
         }
       }
 
@@ -775,4 +824,24 @@ export const save = async (
   }
 
   return results;
+};
+
+export const getCollectionFloorAskValue = async (contract: string, tokenId: number) => {
+  if (getNetworkSettings().multiCollectionContracts.includes(contract)) {
+    const collection = await Collections.getByContractAndTokenId(contract, tokenId);
+    return collection?.floorSellValue;
+  } else {
+    const collectionFloorAskValue = await redis.get(`collection-floor-ask:${contract}`);
+
+    if (collectionFloorAskValue) {
+      return Number(collectionFloorAskValue);
+    } else {
+      const collection = await Collections.getByContractAndTokenId(contract, tokenId);
+      const collectionFloorAskValue = collection!.floorSellValue || 0;
+
+      await redis.set(`collection-floor-ask:${contract}`, collectionFloorAskValue, "EX", 3600);
+
+      return collectionFloorAskValue;
+    }
+  }
 };
