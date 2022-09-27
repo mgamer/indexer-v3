@@ -7,6 +7,7 @@ dotEnvConfig();
 import _ from "lodash";
 import { redb } from "@/common/db";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
+import { fromBuffer } from "@/common/utils";
 
 const main = async () => {
   const limit = 5000;
@@ -29,7 +30,7 @@ const main = async () => {
     `;
 
     const collections = await redb.manyOrNone(query);
-    const contracts = _.map(collections, (collection) => collection.contract);
+    const contracts = _.map(collections, (collection) => fromBuffer(collection.contract));
     await collectionUpdatesMetadata.addToQueue(contracts);
 
     if (_.size(collections) < limit) {
