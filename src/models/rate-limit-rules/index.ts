@@ -37,10 +37,12 @@ export class RateLimitRules {
       rules = JSON.parse(rulesCache);
     }
 
+    const newRules = new Map(); // Reset current rules
+
     for (const rule of rules) {
       const rateLimitRule = new RateLimitRuleEntity(rule);
 
-      this.rules.set(
+      newRules.set(
         RateLimitRules.getRuleKey(
           rateLimitRule.route,
           rateLimitRule.method,
@@ -50,6 +52,8 @@ export class RateLimitRules {
         rateLimitRule
       );
     }
+
+    this.rules = newRules;
   }
 
   public static getRuleKey(route: string, method: string, tier: number | null, apiKey: string) {
