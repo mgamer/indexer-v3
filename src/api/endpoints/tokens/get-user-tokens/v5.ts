@@ -11,6 +11,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
 import { getJoiPriceObject, JoiPrice } from "@/common/joi";
 import { Sources } from "@/models/sources";
+import _ from "lodash";
 
 const version = "v5";
 
@@ -56,6 +57,20 @@ export const getUserTokensV5Options: RouteOptions = {
         .description(
           "Filter to a particular contract, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
+      tokens: Joi.alternatives().try(
+        Joi.array()
+          .max(50)
+          .items(Joi.string().lowercase().pattern(regex.token))
+          .description(
+            "Array of tokens. Example: `tokens[0]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:704 tokens[1]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:979`"
+          ),
+        Joi.string()
+          .lowercase()
+          .pattern(regex.token)
+          .description(
+            "Array of tokens. Example: `tokens[0]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:704 tokens[1]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:979`"
+          )
+      ),
       sortBy: Joi.string()
         .valid("acquiredAt")
         .description("Order the items are returned in the response."),
@@ -132,6 +147,7 @@ export const getUserTokensV5Options: RouteOptions = {
     (params as any).limit = query.limit;
 
     const collectionFilters: string[] = [];
+
     const addCollectionToFilter = (id: string) => {
       const i = collectionFilters.length;
       if (id.match(/^0x[a-f0-9]{40}:\d+:\d+$/g)) {
@@ -179,6 +195,23 @@ export const getUserTokensV5Options: RouteOptions = {
 
     if (query.collection) {
       addCollectionToFilter(query.collection);
+    }
+
+    const tokensFilter: string[] = [];
+
+    if (query.tokens) {
+      if (!_.isArray(query.tokens)) {
+        query.tokens = [query.tokens];
+      }
+
+      for (const token of query.tokens) {
+        const [contract, tokenId] = token.split(":");
+        const tokenFilter = `('${_.replace(contract, "0x", "\\x")}', '${tokenId}')`;
+
+        tokensFilter.push(tokenFilter);
+      }
+
+      (query as any).tokensFilter = _.join(tokensFilter, ",");
     }
 
     let sortByFilter = "";
@@ -285,6 +318,11 @@ export const getUserTokensV5Options: RouteOptions = {
             FROM nft_balances
             WHERE owner = $/user/
               AND ${collectionFilters.length ? "(" + collectionFilters.join(" OR ") + ")" : "TRUE"}
+              AND ${
+                tokensFilter.length
+                  ? "(nft_balances.contract, nft_balances.token_id) IN ($/tokensFilter:raw/)"
+                  : "TRUE"
+              }
               AND amount > 0
           ) AS b
           ${tokensJoin}
