@@ -76,7 +76,7 @@ export const getCollectionsV5Options: RouteOptions = {
           "If true, owner count will be included in the response. (supported only when filtering to a particular collection using `id`)"
         ),
       sortBy: Joi.string()
-        .valid("1DayVolume", "7DayVolume", "30DayVolume", "allTimeVolume")
+        .valid("1DayVolume", "7DayVolume", "30DayVolume", "allTimeVolume", "createdAt")
         .default("allTimeVolume")
         .description("Order the items are returned in the response."),
       limit: Joi.number()
@@ -97,6 +97,7 @@ export const getCollectionsV5Options: RouteOptions = {
         Joi.object({
           id: Joi.string(),
           slug: Joi.string().allow(null, "").description("Open Sea slug"),
+          createdAt: Joi.string(),
           name: Joi.string().allow(null, ""),
           image: Joi.string().allow(null, ""),
           banner: Joi.string().allow(null, ""),
@@ -292,6 +293,7 @@ export const getCollectionsV5Options: RouteOptions = {
           collections.day7_floor_sell_value,
           collections.day30_floor_sell_value,
           collections.token_count,
+          collections.created_at,
           (
             SELECT
               COUNT(*)
@@ -342,8 +344,8 @@ export const getCollectionsV5Options: RouteOptions = {
       // Sorting and pagination
 
       if (query.continuation) {
-        const [contVolume, contId] = splitContinuation(query.continuation, /^\d+(.\d+)?_.+$/);
-        query.contVolume = contVolume;
+        const [contParam, contId] = _.split(splitContinuation(query.continuation)[0], "_");
+        query.contParam = contParam;
         query.contId = contId;
       }
 
@@ -352,7 +354,7 @@ export const getCollectionsV5Options: RouteOptions = {
         case "1DayVolume": {
           if (query.continuation) {
             conditions.push(
-              `(collections.day1_volume, collections.id) < ($/contVolume/, $/contId/)`
+              `(collections.day1_volume, collections.id) < ($/contParam/, $/contId/)`
             );
           }
           orderBy = ` ORDER BY collections.day1_volume DESC, collections.id DESC`;
@@ -363,7 +365,7 @@ export const getCollectionsV5Options: RouteOptions = {
         case "7DayVolume": {
           if (query.continuation) {
             conditions.push(
-              `(collections.day7_volume, collections.id) < ($/contVolume/, $/contId/)`
+              `(collections.day7_volume, collections.id) < ($/contParam/, $/contId/)`
             );
           }
           orderBy = ` ORDER BY collections.day7_volume DESC, collections.id DESC`;
@@ -374,10 +376,19 @@ export const getCollectionsV5Options: RouteOptions = {
         case "30DayVolume": {
           if (query.continuation) {
             conditions.push(
-              `(collections.day30_volume, collections.id) < ($/contVolume/, $/contId/)`
+              `(collections.day30_volume, collections.id) < ($/contParam/, $/contId/)`
             );
           }
           orderBy = ` ORDER BY collections.day30_volume DESC, collections.id DESC`;
+
+          break;
+        }
+
+        case "createdAt": {
+          if (query.continuation) {
+            conditions.push(`(collections.created_at, collections.id) < ($/contParam/, $/contId/)`);
+          }
+          orderBy = ` ORDER BY collections.created_at DESC, collections.id DESC`;
 
           break;
         }
@@ -386,7 +397,7 @@ export const getCollectionsV5Options: RouteOptions = {
         default: {
           if (query.continuation) {
             conditions.push(
-              `(collections.all_time_volume, collections.id) < ($/contVolume/, $/contId/)`
+              `(collections.all_time_volume, collections.id) < ($/contParam/, $/contId/)`
             );
           }
 
@@ -459,6 +470,7 @@ export const getCollectionsV5Options: RouteOptions = {
           return {
             id: r.id,
             slug: r.slug,
+            createdAt: new Date(r.created_at).toISOString(),
             name: r.name,
             image:
               r.image ??
@@ -599,6 +611,13 @@ export const getCollectionsV5Options: RouteOptions = {
             case "30DayVolume": {
               continuation = buildContinuation(
                 `${lastCollection.day30_volume}_${lastCollection.id}`
+              );
+              break;
+            }
+
+            case "createdAt": {
+              continuation = buildContinuation(
+                `${new Date(lastCollection.created_at).toISOString()}_${lastCollection.id}`
               );
               break;
             }
