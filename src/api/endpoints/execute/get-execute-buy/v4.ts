@@ -226,10 +226,10 @@ export const getExecuteBuyV4Options: RouteOptions = {
             },
             payload: { order },
           }).then((response) => JSON.parse(response.payload));
-          if (!response.orderId) {
-            throw Boom.badData("Raw order already exists or failed to be processed");
-          } else {
+          if (response.orderId) {
             payload.orderIds.push(response.orderId);
+          } else {
+            throw Boom.badData("Raw order failed to get processed");
           }
         }
       }
