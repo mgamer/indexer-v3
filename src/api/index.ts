@@ -148,6 +148,11 @@ export const start = async (): Promise<void> => {
 
     // If matching rule was found
     if (rateLimitRule) {
+      // If the requested path has no limit
+      if (rateLimitRule.options.points === -1) {
+        return reply.continue;
+      }
+
       const rateLimiterRedis = new RateLimiterRedis({
         storeClient: rateLimitRedis,
         points: rateLimitRule.options.points,
