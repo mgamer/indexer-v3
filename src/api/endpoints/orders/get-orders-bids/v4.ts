@@ -13,13 +13,13 @@ import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 
-const version = "v3";
+const version = "v4";
 
-export const getOrdersBidsV3Options: RouteOptions = {
+export const getOrdersBidsV4Options: RouteOptions = {
   description: "Bids (offers)",
   notes:
     "Get a list of bids (offers), filtered by token, collection or maker. This API is designed for efficiently ingesting large volumes of orders, for external processing",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Orders"],
   plugins: {
     "hapi-swagger": {
       order: 5,
@@ -313,11 +313,20 @@ export const getOrdersBidsV3Options: RouteOptions = {
         }
       }
 
-      if (query.token || query.tokenSetId) {
-        if (query.token) {
-          (query as any).tokenSetId = `token:${query.token}`;
-        }
+      if (query.tokenSetId) {
         conditions.push(`orders.token_set_id = $/tokenSetId/`);
+      }
+
+      if (query.token) {
+        baseQuery += ` JOIN token_sets_tokens ON token_sets_tokens.token_set_id = orders.token_set_id`;
+
+        const [contract, tokenId] = query.token.split(":");
+
+        (query as any).tokenContract = toBuffer(contract);
+        (query as any).tokenId = tokenId;
+
+        conditions.push(`token_sets_tokens.contract = $/tokenContract/`);
+        conditions.push(`token_sets_tokens.token_id = $/tokenId/`);
       }
 
       if (query.contracts) {
