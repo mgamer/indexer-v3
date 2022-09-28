@@ -6,6 +6,7 @@ export * from "@/api/endpoints/orders/get-orders-all/v2";
 export * from "@/api/endpoints/orders/get-orders-bids/v1";
 export * from "@/api/endpoints/orders/get-orders-bids/v2";
 export * from "@/api/endpoints/orders/get-orders-bids/v3";
+export * from "@/api/endpoints/orders/get-orders-bids/v4";
 export * from "@/api/endpoints/orders/get-orders-asks/v1";
 export * from "@/api/endpoints/orders/get-orders-asks/v2";
 export * from "@/api/endpoints/orders/get-orders-asks/v3";
