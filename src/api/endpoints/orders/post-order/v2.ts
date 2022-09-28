@@ -32,7 +32,7 @@ export const postOrderV2Options: RouteOptions = {
       order: Joi.object({
         kind: Joi.string()
           .lowercase()
-          .valid("opensea", "looks-rare", "zeroex-v4", "seaport")
+          .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2")
           .required(),
         data: Joi.object().required(),
       }),
@@ -149,7 +149,9 @@ export const postOrderV2Options: RouteOptions = {
           if (result.status === "success") {
             return { message: "Success", orderId: result.id };
           } else {
-            throw Boom.badRequest(result.status);
+            const error = Boom.badRequest(result.status);
+            error.output.payload.orderId = result.id;
+            throw error;
           }
         }
 
@@ -170,7 +172,9 @@ export const postOrderV2Options: RouteOptions = {
           const [result] = await orders.seaport.save([orderInfo]);
 
           if (result.status !== "success") {
-            throw Boom.badRequest(result.status);
+            const error = Boom.badRequest(result.status);
+            error.output.payload.orderId = result.id;
+            throw error;
           }
 
           if (orderbook === "opensea") {
@@ -203,7 +207,9 @@ export const postOrderV2Options: RouteOptions = {
           const [result] = await orders.looksRare.save([orderInfo]);
 
           if (result.status !== "success") {
-            throw Boom.badRequest(result.status);
+            const error = Boom.badRequest(result.status);
+            error.output.payload.orderId = result.id;
+            throw error;
           }
 
           if (orderbook === "looks-rare") {
@@ -240,7 +246,32 @@ export const postOrderV2Options: RouteOptions = {
           const [result] = await orders.seaport.save([orderInfo]);
 
           if (result.status !== "success") {
-            throw Boom.badRequest(result.status);
+            const error = Boom.badRequest(result.status);
+            error.output.payload.orderId = result.id;
+            throw error;
+          }
+
+          return { message: "Success", orderId: result.id };
+        }
+
+        case "x2y2": {
+          if (orderbook !== "reservoir") {
+            throw new Error("Unsupported orderbook");
+          }
+
+          const orderInfo: orders.x2y2.OrderInfo = {
+            orderParams: order.data,
+            metadata: {
+              schema,
+            },
+          };
+
+          const [result] = await orders.x2y2.save([orderInfo]);
+
+          if (result.status !== "success") {
+            const error = Boom.badRequest(result.status);
+            error.output.payload.orderId = result.id;
+            throw error;
           }
 
           return { message: "Success", orderId: result.id };
