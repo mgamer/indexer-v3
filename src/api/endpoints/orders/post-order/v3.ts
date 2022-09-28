@@ -150,7 +150,9 @@ export const postOrderV3Options: RouteOptions = {
           if (result.status === "success") {
             return { message: "Success", orderId: result.id };
           } else {
-            throw Boom.badRequest(result.status);
+            const error = Boom.badRequest(result.status);
+            error.output.payload.orderId = result.id;
+            throw error;
           }
         }
 
@@ -171,7 +173,9 @@ export const postOrderV3Options: RouteOptions = {
           const [result] = await orders.seaport.save([orderInfo]);
 
           if (result.status !== "success") {
-            throw Boom.badRequest(result.status);
+            const error = Boom.badRequest(result.status);
+            error.output.payload.orderId = result.id;
+            throw error;
           }
 
           if (orderbook === "opensea") {
@@ -204,7 +208,9 @@ export const postOrderV3Options: RouteOptions = {
           const [result] = await orders.looksRare.save([orderInfo]);
 
           if (result.status !== "success") {
-            throw Boom.badRequest(result.status);
+            const error = Boom.badRequest(result.status);
+            error.output.payload.orderId = result.id;
+            throw error;
           }
 
           if (orderbook === "looks-rare") {
@@ -222,16 +228,34 @@ export const postOrderV3Options: RouteOptions = {
         }
 
         case "x2y2": {
-          if (!["x2y2"].includes(orderbook)) {
+          if (!["x2y2", "reservoir"].includes(orderbook)) {
             throw new Error("Unsupported orderbook");
           }
 
-          // We do not save the order directly since X2Y2 orders are not fillable
-          // unless their backend has processed them first. So we just need to be
-          // patient until the relayer acknowledges the order (via X2Y2's server)
-          // before us being able to ingest it.
+          if (orderbook === "x2y2") {
+            // We do not save the order directly since X2Y2 orders are not fillable
+            // unless their backend has processed them first. So we just need to be
+            // patient until the relayer acknowledges the order (via X2Y2's server)
+            // before us being able to ingest it.
+            await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
+          } else {
+            const orderInfo: orders.x2y2.OrderInfo = {
+              orderParams: order.data,
+              metadata: {
+                schema,
+              },
+            };
 
-          await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
+            const [result] = await orders.x2y2.save([orderInfo]);
+
+            if (result.status !== "success") {
+              const error = Boom.badRequest(result.status);
+              error.output.payload.orderId = result.id;
+              throw error;
+            }
+
+            return { message: "Success", orderId: result.id };
+          }
 
           logger.info(
             `post-order-${version}-handler`,
