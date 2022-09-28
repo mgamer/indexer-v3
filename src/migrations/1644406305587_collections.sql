@@ -38,6 +38,9 @@ CREATE INDEX "collections_community_index"
 CREATE INDEX "collections_slug_index"
   ON "collections" ("slug");
 
+CREATE INDEX "collections_created_at_index"
+  ON "collections"("created_at");
+
 CREATE EXTENSION pg_trgm;
 
 CREATE INDEX "collections_name_index"
