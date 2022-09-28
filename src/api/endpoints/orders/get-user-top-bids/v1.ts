@@ -72,6 +72,15 @@ export const getUserTopBidsV1Options: RouteOptions = {
           validFrom: Joi.number().unsafe(),
           validUntil: Joi.number().unsafe(),
           source: Joi.object().allow(null),
+          feeBreakdown: Joi.array()
+            .items(
+              Joi.object({
+                kind: Joi.string(),
+                recipient: Joi.string().allow("", null),
+                bps: Joi.number(),
+              })
+            )
+            .allow(null),
           context: Joi.alternatives(
             Joi.object({
               kind: "token",
@@ -250,7 +259,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
             SELECT o.token_set_id, o.id AS "top_bid_id", o.price AS "top_bid_price", o.value AS "top_bid_value",
                    o.maker AS "top_bid_maker", source_id_int, o.created_at "order_created_at", o.token_set_schema_hash,
                    extract(epoch from o.created_at) * 1000000 AS "order_created_at_micro",
-                   DATE_PART('epoch', LOWER(o.valid_between)) AS "top_bid_valid_from",
+                   DATE_PART('epoch', LOWER(o.valid_between)) AS "top_bid_valid_from", o.fee_breakdown,
                    COALESCE(
                      NULLIF(DATE_PART('epoch', UPPER(o.valid_between)), 'Infinity'),
                      0
@@ -308,6 +317,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
             icon: source?.metadata.icon,
             url: source?.metadata.url,
           },
+          feeBreakdown: r.fee_breakdown,
           context: r.bid_context,
           token: {
             contract: contract,
