@@ -6,7 +6,7 @@ import { logger } from "@/common/logger";
 import { redis, acquireLock } from "@/common/redis";
 import { config } from "@/config/index";
 import { Collections } from "@/models/collections";
-import { refreshEIP2981Royalties } from "@/utils/royalties/eip2981";
+import { refreshRegistryRoyalties } from "@/utils/royalties/registry";
 
 const QUEUE_NAME = "collections-metadata-queue";
 
@@ -33,7 +33,7 @@ if (config.doBackgroundWork) {
 
         try {
           await Collections.updateCollectionCache(contract, tokenId);
-          await refreshEIP2981Royalties(contract);
+          await refreshRegistryRoyalties(contract);
         } catch (error) {
           logger.error(QUEUE_NAME, `Failed to update collection metadata=${error}`);
         }
