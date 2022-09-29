@@ -104,8 +104,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             },
           ];
 
-          const eip2981Royalties = await royalties.eip2981.refreshEIP2981Royalties(pool.nft);
-          for (const { recipient, bps } of eip2981Royalties) {
+          const registryRoyalties = await royalties.registry.refreshRegistryRoyalties(pool.nft);
+          for (const { recipient, bps } of registryRoyalties) {
             feeBps += bps;
             feeBreakdown.push({
               kind: "royalty",
