@@ -217,6 +217,12 @@ export const setupRoutes = (server: Server) => {
     options: adminEndpoints.getMarketplaces,
   });
 
+  server.route({
+    method: "POST",
+    path: "/admin/flag-address",
+    options: adminEndpoints.postFlagAddressOptions,
+  });
+
   // API keys
 
   server.route({
