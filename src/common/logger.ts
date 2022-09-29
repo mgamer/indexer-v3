@@ -1,7 +1,5 @@
 import { createLogger, format, transports } from "winston";
-
-import { config } from "@/config/index";
-import { getNetworkName } from "@/config/network";
+import { getServiceName } from "@/config/network";
 
 import { networkInterfaces } from "os";
 
@@ -23,7 +21,7 @@ for (const name of Object.keys(nets)) {
 }
 
 const log = (level: "error" | "info" | "warn") => {
-  const service = `indexer-${config.version}-${getNetworkName()}`;
+  const service = getServiceName();
 
   const logger = createLogger({
     exitOnError: false,

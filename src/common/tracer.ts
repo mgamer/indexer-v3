@@ -1,11 +1,8 @@
 import tracer from "dd-trace";
-
-import { config } from "@/config/index";
-import { getNetworkName } from "@/config/network";
+import { getServiceName } from "@/config/network";
 
 if (process.env.DATADOG_AGENT_URL) {
-  const isRailway = config.railwayStaticUrl !== "";
-  const service = `indexer-${isRailway ? "" : "fc-"}${config.version}-${getNetworkName()}`;
+  const service = getServiceName();
 
   tracer.init({
     profiling: true,
