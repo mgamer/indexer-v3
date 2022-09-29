@@ -1,4 +1,4 @@
-export * as eip2981 from "@/utils/royalties/eip2981";
+export * as registry from "@/utils/royalties/registry";
 
 export type Royalty = {
   recipient: string;
