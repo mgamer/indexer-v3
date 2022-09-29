@@ -85,19 +85,21 @@ if (config.doBackgroundWork) {
             );
 
             await flagStatusSyncJob.addToQueue(collectionId, collection.contract);
-          } else if (kind === "token") {
-            const { collectionId, contract, tokenId, tokenIsFlagged } = data;
+          } else if (kind === "tokens") {
+            const { collectionId, contract, tokens } = data;
 
             const pendingFlagStatusSyncTokensQueue = new PendingFlagStatusSyncTokens(collectionId);
-
-            await pendingFlagStatusSyncTokensQueue.add([
-              {
-                collectionId: collectionId,
-                contract: contract,
-                tokenId: tokenId,
-                isFlagged: tokenIsFlagged,
-              } as PendingFlagStatusSyncToken,
-            ]);
+            await pendingFlagStatusSyncTokensQueue.add(
+              tokens.map(
+                (token) =>
+                  ({
+                    collectionId: collectionId,
+                    contract: contract,
+                    tokenId: token.tokenId,
+                    isFlagged: token.tokenIsFlagged,
+                  } as PendingFlagStatusSyncToken)
+              )
+            );
 
             await flagStatusSyncJob.addToQueue(collectionId, contract);
           }
