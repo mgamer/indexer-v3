@@ -32,7 +32,9 @@ const setup = async () => {
 
   await Sources.getInstance();
   await Sources.forceDataReload();
+};
 
+const foo = async () => {
   if (config.master) {
     const result = await redb.manyOrNone(
       `
@@ -50,4 +52,5 @@ const setup = async () => {
   }
 };
 
+foo();
 setup().then(() => start());
