@@ -221,33 +221,39 @@ export const getOrdersBidsV4Options: RouteOptions = {
               FROM collections
               WHERE collections.id = substring(orders.token_set_id from 7))
 
-            WHEN orders.token_set_id LIKE 'list:%' AND token_sets.attribute_id IS NOT NULL THEN
+            WHEN orders.token_set_id LIKE 'list:%' THEN
               (SELECT
-                json_build_object(
-                  'kind', 'attribute',
-                  'data', json_build_object(
-                    'collectionName', collections.name,
-                    'attributes', ARRAY[json_build_object('key', attribute_keys.key, 'value', attributes.value)],
-                    'image', (collections.metadata ->> 'imageUrl')::TEXT
-                  )
-                )
-              FROM attributes
-              JOIN attribute_keys
-                ON attributes.attribute_key_id = attribute_keys.id
-              JOIN collections
-                ON attribute_keys.collection_id = collections.id
-             WHERE token_sets.attribute_id = attributes.id)      
-            WHEN orders.token_set_id LIKE 'list:%' AND token_sets.attribute_id IS NULL THEN
-              (SELECT
-                json_build_object(
-                  'kind', 'collection',
-                  'data', json_build_object(
-                    'collectionName', collections.name,
-                    'image', (collections.metadata ->> 'imageUrl')::TEXT
-                  )
-                )
-              FROM collections
-              WHERE token_sets.collection_id = collections.id)       
+                CASE
+                  WHEN token_sets.attribute_id IS NULL THEN
+                    (SELECT
+                      json_build_object(
+                        'kind', 'collection',
+                        'data', json_build_object(
+                          'collectionName', collections.name,
+                          'image', (collections.metadata ->> 'imageUrl')::TEXT
+                        )
+                      )
+                    FROM collections
+                    WHERE token_sets.collection_id = collections.id)
+                  ELSE
+                    (SELECT
+                      json_build_object(
+                        'kind', 'attribute',
+                        'data', json_build_object(
+                          'collectionName', collections.name,
+                          'attributes', ARRAY[json_build_object('key', attribute_keys.key, 'value', attributes.value)],
+                          'image', (collections.metadata ->> 'imageUrl')::TEXT
+                        )
+                      )
+                    FROM attributes
+                    JOIN attribute_keys
+                    ON attributes.attribute_key_id = attribute_keys.id
+                    JOIN collections
+                    ON attribute_keys.collection_id = collections.id
+                    WHERE token_sets.attribute_id = attributes.id)
+                END  
+              FROM token_sets
+              WHERE token_sets.id = orders.token_set_id)
             ELSE NULL
           END
         ) AS metadata
@@ -298,11 +304,14 @@ export const getOrdersBidsV4Options: RouteOptions = {
           ${query.includeRawData ? ", orders.raw_data" : ""}
           ${query.includeMetadata ? `, ${metadataBuildQuery}` : ""}
         FROM orders
-        JOIN token_sets ON token_sets.id = orders.token_set_id
       `;
 
       // Filters
-      const conditions: string[] = [`orders.side = 'buy'`];
+      const conditions: string[] = [
+        "EXISTS (SELECT FROM token_sets WHERE id = orders.token_set_id)",
+        "orders.side = 'buy'",
+      ];
+
       let orderStatusFilter = `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`;
 
       if (query.ids) {
