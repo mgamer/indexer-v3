@@ -83,6 +83,9 @@ export const getExecuteBuyV4Options: RouteOptions = {
       partial: Joi.boolean()
         .default(false)
         .description("If true, partial orders will be accepted."),
+      skipErrors: Joi.boolean()
+        .default(false)
+        .description("If true, then skip any errors in processing."),
       maxFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional. Set custom gas price."),
@@ -477,6 +480,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
           bps: payload.referrerFeeBps ?? 0,
         },
         partial: payload.partial,
+        skipErrors: payload.skipErrors,
         forceRouter: payload.forceRouter,
         directFillingData: {
           conduitKey:
