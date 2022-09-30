@@ -165,13 +165,15 @@ export const extractAttributionData = async (
 
   // Reference: https://github.com/reservoirprotocol/core/issues/22#issuecomment-1191040945
   if (referrer) {
-    aggregatorSource = await sources.getOrInsert("reservoir.tools");
-    fillSource = await sources.getOrInsert(referrer);
-
-    // Special rule for handling Gem filling directly on Seaport
-    if (fillSource?.domain === "gem.xyz") {
-      aggregatorSource = fillSource;
+    // TODO: Properly handle aggregator detection
+    if (referrer !== "opensea.io" && referrer !== "gem.xyz") {
+      // Do not associate OpenSea / Gem direct fills to Reservoir
+      aggregatorSource = await sources.getOrInsert("reservoir.tools");
+    } else if (referrer === "gem.xyz") {
+      // Associate Gem direct fills to Gem
+      aggregatorSource = await sources.getOrInsert("gem.xyz");
     }
+    fillSource = await sources.getOrInsert(referrer);
   } else if (router === "reservoir.tools") {
     aggregatorSource = await sources.getOrInsert("reservoir.tools");
   } else if (router) {
