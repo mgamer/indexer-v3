@@ -167,14 +167,24 @@ export const start = async (): Promise<void> => {
         _.isUndefined(key) || _.isEmpty(key) || _.isNull(apiKey) ? remoteAddress : key; // If no api key or the api key is invalid use IP
 
       try {
-        const rateLimiterRes = await rateLimiterRedis.consume(rateLimitKey, 1);
+        // Timeout for redis
+        const timeout = new Promise<null>((resolve) => {
+          setTimeout(resolve, 1000, null);
+        });
 
-        // Generate the rate limiting header and add them to the request object to be added to the response in the onPreResponse event
-        request.headers["X-RateLimit-Limit"] = `${rateLimitRule.options.points}`;
-        request.headers["X-RateLimit-Remaining"] = `${rateLimiterRes.remainingPoints}`;
-        request.headers["X-RateLimit-Reset"] = `${new Date(
-          Date.now() + rateLimiterRes.msBeforeNext
-        )}`;
+        const rateLimiterRes = await Promise.race([
+          rateLimiterRedis.consume(rateLimitKey, 1),
+          timeout,
+        ]);
+
+        if (rateLimiterRes) {
+          // Generate the rate limiting header and add them to the request object to be added to the response in the onPreResponse event
+          request.headers["X-RateLimit-Limit"] = `${rateLimitRule.options.points}`;
+          request.headers["X-RateLimit-Remaining"] = `${rateLimiterRes.remainingPoints}`;
+          request.headers["X-RateLimit-Reset"] = `${new Date(
+            Date.now() + rateLimiterRes.msBeforeNext
+          )}`;
+        }
       } catch (error) {
         if (error instanceof RateLimiterRes) {
           if (
