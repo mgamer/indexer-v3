@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Request, RouteOptions } from "@hapi/hapi";
+import * as Boom from "@hapi/boom";
 import * as Sdk from "@reservoir0x/sdk";
 import _ from "lodash";
 import Joi from "joi";
@@ -327,6 +328,10 @@ export const getCollectionsV5Options: RouteOptions = {
       }
       if (query.collectionsSetId) {
         query.collectionsIds = await CollectionSets.getCollectionsIds(query.collectionsSetId);
+        if (_.isEmpty(query.collectionsIds)) {
+          throw Boom.badRequest(`No collections for collection set ${query.collectionsSetId}`);
+        }
+
         conditions.push(`collections.id IN ($/collectionsIds:csv/)`);
       }
       if (query.contract) {
