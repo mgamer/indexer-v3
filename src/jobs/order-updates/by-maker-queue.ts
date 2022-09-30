@@ -36,6 +36,10 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { context, maker, trigger, data } = job.data as MakerInfo;
 
+      if (trigger.txTimestamp < 1664362447) {
+        return;
+      }
+
       try {
         // TODO: Right now, it is assumed all results from the below queries
         // are small enough so that they can be retrieved in one go. This is
