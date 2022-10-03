@@ -53,7 +53,7 @@ export const postFlagTokenV1Options: RouteOptions = {
     const apiKey = await ApiKeyManager.getApiKey(request.headers["x-api-key"]);
 
     if (_.isNull(apiKey)) {
-      throw Boom.unauthorized("Wrong or missing API key");
+      throw Boom.unauthorized("Invalid API key");
     }
 
     const payload = request.payload as any;
