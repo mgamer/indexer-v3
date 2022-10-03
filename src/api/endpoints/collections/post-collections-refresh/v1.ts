@@ -15,6 +15,7 @@ import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as orderFixes from "@/jobs/order-fixes/queue";
 import { Collections } from "@/models/collections";
 import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
+import { ApiKeyManager } from "@/models/api-keys";
 
 const version = "v1";
 
@@ -34,6 +35,9 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
           "Refresh the given collection. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         )
         .required(),
+      overrideCoolDown: Joi.boolean()
+        .default(false)
+        .description("If true, will force a refresh regardless of cooldown."),
     }),
   },
   response: {
@@ -51,8 +55,23 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
   handler: async (request: Request) => {
     const payload = request.payload as any;
     let refreshCoolDownMin = 60 * 4; // How many minutes between each refresh
+    let overrideCoolDown = false;
 
     try {
+      if (payload.overrideCoolDown) {
+        const apiKey = await ApiKeyManager.getApiKey(request.headers["x-api-key"]);
+
+        if (_.isNull(apiKey)) {
+          throw Boom.unauthorized("Invalid API key");
+        }
+
+        if (!apiKey.permissions?.override_collection_refresh_cool_down) {
+          throw Boom.unauthorized("Not allowed");
+        }
+
+        overrideCoolDown = true;
+      }
+
       const collection = await Collections.getById(payload.collection);
 
       // If no collection found
@@ -62,18 +81,20 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
 
       const isLargeCollection = collection.tokenCount > 30000;
 
-      // For large collections allow refresh once a day
-      if (isLargeCollection) {
-        refreshCoolDownMin = 60 * 24;
-      }
+      if (!overrideCoolDown) {
+        // For large collections allow refresh once a day
+        if (isLargeCollection) {
+          refreshCoolDownMin = 60 * 24;
+        }
 
-      // Check when the last sync was performed
-      const nextAvailableSync = add(new Date(collection.lastMetadataSync), {
-        minutes: refreshCoolDownMin,
-      });
+        // Check when the last sync was performed
+        const nextAvailableSync = add(new Date(collection.lastMetadataSync), {
+          minutes: refreshCoolDownMin,
+        });
 
-      if (!_.isNull(collection.lastMetadataSync) && isAfter(nextAvailableSync, Date.now())) {
-        throw Boom.tooEarly(`Next available sync ${formatISO9075(nextAvailableSync)} UTC`);
+        if (!_.isNull(collection.lastMetadataSync) && isAfter(nextAvailableSync, Date.now())) {
+          throw Boom.tooEarly(`Next available sync ${formatISO9075(nextAvailableSync)} UTC`);
+        }
       }
 
       // Update the last sync date
