@@ -208,18 +208,17 @@ export const start = async (): Promise<void> => {
             logger.warn("rate-limiter", JSON.stringify(log));
           }
 
-          // const tooManyRequestsResponse = {
-          //   statusCode: 429,
-          //   error: "Too Many Requests",
-          //   message: `Max ${rateLimitRule.options.points} requests in ${rateLimitRule.options.duration}s reached`,
-          // };
-          //
-          // return reply
-          //   .response(tooManyRequestsResponse)
-          //   .header("x-cf-block", "true")
-          //   .type("application/json")
-          //   .code(429)
-          //   .takeover();
+          const tooManyRequestsResponse = {
+            statusCode: 429,
+            error: "Too Many Requests",
+            message: `Max ${rateLimitRule.options.points} requests in ${rateLimitRule.options.duration}s reached`,
+          };
+
+          return reply
+            .response(tooManyRequestsResponse)
+            .type("application/json")
+            .code(429)
+            .takeover();
         } else {
           logger.error("rate-limiter", `Rate limit error ${error}`);
         }
