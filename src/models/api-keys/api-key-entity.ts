@@ -1,3 +1,7 @@
+export enum ApiKeyPermission {
+  override_collection_refresh_cool_down = "override_collection_refresh_cool_down",
+}
+
 // Define the fields we can update
 export type ApiKeyUpdateParams = {
   website?: string;
@@ -12,6 +16,7 @@ export type ApiKeyEntityParams = {
   created_at: string;
   active: boolean;
   tier: number;
+  permissions: Record<string, unknown>;
 };
 
 export class ApiKeyEntity {
@@ -22,6 +27,7 @@ export class ApiKeyEntity {
   createdAt: string;
   active: boolean;
   tier: number;
+  permissions: Record<ApiKeyPermission, unknown>;
 
   constructor(params: ApiKeyEntityParams) {
     this.key = params.key;
@@ -31,5 +37,6 @@ export class ApiKeyEntity {
     this.createdAt = params.created_at;
     this.active = Boolean(params.active);
     this.tier = Number(params.tier);
+    this.permissions = params.permissions;
   }
 }
