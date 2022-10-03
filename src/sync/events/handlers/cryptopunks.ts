@@ -1,6 +1,5 @@
 import { Interface } from "@ethersproject/abi";
 import { AddressZero } from "@ethersproject/constants";
-import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
 
 import { config } from "@/config/index";
@@ -63,8 +62,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const parsedLog = eventData.abi.parseLog(log);
         const tokenId = parsedLog.args["punkIndex"].toString();
 
-        // TODO: Order id generation should belong in the orderbook logic
-        const orderId = keccak256(["string", "uint256"], ["cryptopunks", tokenId]);
+        const orderId = cryptopunks.getOrderId(tokenId);
 
         cancelEventsOnChain.push({
           orderKind: "cryptopunks",
@@ -160,8 +158,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           baseEventParams,
         });
 
-        // TODO: Order id generation should belong in the orderbook logic
-        const orderId = keccak256(["string", "uint256"], ["cryptopunks", tokenId]);
+        const orderId = cryptopunks.getOrderId(tokenId);
 
         fillEventsOnChain.push({
           orderId,

@@ -20,29 +20,27 @@ export class CollectionSets {
       RETURNING id
     `;
 
-    const collectionsSetsResult = await idb.oneOrNone(query, {
+    await idb.oneOrNone(query, {
       collectionsHash,
     });
 
-    if (collectionsSetsResult) {
-      const replacementParams = {};
-      let assignCollectionToSetString = "";
+    const replacementParams = {};
+    let assignCollectionToSetString = "";
 
-      _.forEach(collectionIds, (collectionId) => {
-        (replacementParams as any)[`${collectionId}`] = collectionId;
-        assignCollectionToSetString += `('${collectionsHash}', $/${collectionId}/),`;
-      });
+    _.forEach(collectionIds, (collectionId, index) => {
+      (replacementParams as any)[`${index}`] = collectionId;
+      assignCollectionToSetString += `('${collectionsHash}', $/${index}/),`;
+    });
 
-      assignCollectionToSetString = _.trimEnd(assignCollectionToSetString, ",");
+    assignCollectionToSetString = _.trimEnd(assignCollectionToSetString, ",");
 
-      query = `
+    query = `
         INSERT INTO collections_sets_collections (collections_set_id, collection_id)
         VALUES ${assignCollectionToSetString}
         ON CONFLICT DO NOTHING
-      `;
+    `;
 
-      await idb.none(query, replacementParams);
-    }
+    await idb.none(query, replacementParams);
 
     return collectionsHash;
   }

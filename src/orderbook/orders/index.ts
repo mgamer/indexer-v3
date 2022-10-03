@@ -3,10 +3,11 @@
 export * as cryptopunks from "@/orderbook/orders/cryptopunks";
 export * as foundation from "@/orderbook/orders/foundation";
 export * as looksRare from "@/orderbook/orders/looks-rare";
-export * as openDao from "@/orderbook/orders/opendao";
 export * as seaport from "@/orderbook/orders/seaport";
+export * as sudoswap from "@/orderbook/orders/sudoswap";
 export * as x2y2 from "@/orderbook/orders/x2y2";
 export * as zeroExV4 from "@/orderbook/orders/zeroex-v4";
+export * as zora from "@/orderbook/orders/zora";
 
 // Imports
 
@@ -28,8 +29,6 @@ export type OrderKind =
   | "looks-rare"
   | "zeroex-v4-erc721"
   | "zeroex-v4-erc1155"
-  | "opendao-erc721"
-  | "opendao-erc1155"
   | "foundation"
   | "x2y2"
   | "seaport"
@@ -149,15 +148,6 @@ export const generateListingDetails = (
       };
     }
 
-    case "opendao-erc721":
-    case "opendao-erc1155": {
-      return {
-        kind: "opendao",
-        ...common,
-        order: new Sdk.OpenDao.Order(config.chainId, order.rawData),
-      };
-    }
-
     case "x2y2": {
       return {
         kind: "x2y2",
@@ -180,6 +170,14 @@ export const generateListingDetails = (
         kind: "seaport",
         ...common,
         order: new Sdk.Seaport.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "zora-v3": {
+      return {
+        kind: "zora",
+        ...common,
+        order: new Sdk.Zora.Order(config.chainId, order.rawData),
       };
     }
 
@@ -252,16 +250,6 @@ export const generateBidDetails = async (
       };
     }
 
-    case "opendao-erc721":
-    case "opendao-erc1155": {
-      const sdkOrder = new Sdk.OpenDao.Order(config.chainId, order.rawData);
-      return {
-        kind: "opendao",
-        ...common,
-        order: sdkOrder,
-      };
-    }
-
     case "zeroex-v4-erc721":
     case "zeroex-v4-erc1155": {
       const sdkOrder = new Sdk.ZeroExV4.Order(config.chainId, order.rawData);
@@ -276,6 +264,15 @@ export const generateBidDetails = async (
       const sdkOrder = new Sdk.X2Y2.Order(config.chainId, order.rawData);
       return {
         kind: "x2y2",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
+    case "sudoswap": {
+      const sdkOrder = new Sdk.Sudoswap.Order(config.chainId, order.rawData);
+      return {
+        kind: "sudoswap",
         ...common,
         order: sdkOrder,
       };

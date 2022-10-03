@@ -67,7 +67,9 @@ export const getTokensV5Options: RouteOptions = {
       attributes: Joi.object()
         .unknown()
         .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
-      source: Joi.string().description("Domain of the order source. Example `opensea.io`"),
+      source: Joi.string().description(
+        "Domain of the order source. Example `opensea.io` (Only listed tokens are returned when filtering by source)"
+      ),
       sortBy: Joi.string()
         .valid("floorAskPrice", "tokenId", "rarity")
         .default("floorAskPrice")
@@ -132,8 +134,8 @@ export const getTokensV5Options: RouteOptions = {
                   value: Joi.string(),
                   tokenCount: Joi.number(),
                   onSaleCount: Joi.number(),
-                  floorAskPrice: Joi.number().allow(null),
-                  topBidValue: Joi.number().allow(null),
+                  floorAskPrice: Joi.number().unsafe().allow(null),
+                  topBidValue: Joi.number().unsafe().allow(null),
                 })
               )
               .optional(),
@@ -271,7 +273,7 @@ export const getTokensV5Options: RouteOptions = {
       (query as any).source = source?.id;
       selectFloorData = "s.*";
       sourceQuery = `
-        LEFT JOIN LATERAL (
+        JOIN LATERAL (
           SELECT o.id AS floor_sell_id,
                  o.maker AS floor_sell_maker,
                  o.id AS source_floor_sell_id,

@@ -1,12 +1,18 @@
 import { idb } from "@/common/db";
 import { fromBuffer, toBuffer } from "@/common/utils";
 
+export enum SudoswapPoolKind {
+  TOKEN = 0,
+  NFT = 1,
+  TRADE = 2,
+}
+
 export type SudoswapPool = {
   address: string;
   nft: string;
   token: string;
   bondingCurve: string;
-  poolKind: number;
+  poolKind: SudoswapPoolKind;
   pairKind: number;
 };
 

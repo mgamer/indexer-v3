@@ -19,7 +19,7 @@ export const getOrdersBidsV3Options: RouteOptions = {
   description: "Bids (offers)",
   notes:
     "Get a list of bids (offers), filtered by token, collection or maker. This API is designed for efficiently ingesting large volumes of orders, for external processing",
-  tags: ["api", "Orders"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 5,
@@ -70,6 +70,10 @@ export const getOrdersBidsV3Options: RouteOptions = {
         .description(
           "active = currently valid, inactive = temporarily invalid, expired = permanently invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
         ),
+      source: Joi.string()
+        .pattern(regex.domain)
+        .description("Filter to a source by domain. Example: `opensea.io`"),
+      native: Joi.boolean().description("If true, results will filter only Reservoir orders."),
       includeMetadata: Joi.boolean()
         .default(false)
         .description("If true, metadata is included in the response."),
@@ -96,9 +100,7 @@ export const getOrdersBidsV3Options: RouteOptions = {
         .max(1000)
         .default(50)
         .description("Amount of items returned in response."),
-    })
-      .or("token", "tokenSetId", "maker", "contracts", "ids")
-      .oxor("token", "tokenSetId", "ids"),
+    }).oxor("token", "tokenSetId", "contracts", "ids", "source", "native"),
   },
   response: {
     schema: Joi.object({
@@ -116,6 +118,8 @@ export const getOrdersBidsV3Options: RouteOptions = {
           price: JoiPrice,
           validFrom: Joi.number().required(),
           validUntil: Joi.number().required(),
+          quantityFilled: Joi.number().unsafe(),
+          quantityRemaining: Joi.number().unsafe(),
           metadata: Joi.alternatives(
             Joi.object({
               kind: "token",
@@ -249,7 +253,7 @@ export const getOrdersBidsV3Options: RouteOptions = {
                     WHERE token_sets.attribute_id = attributes.id)
                 END  
               FROM token_sets
-              WHERE token_sets.id = orders.token_set_id)        
+              WHERE token_sets.id = orders.token_set_id)  
             ELSE NULL
           END
         ) AS metadata
@@ -286,6 +290,8 @@ export const getOrdersBidsV3Options: RouteOptions = {
             0
           ) AS valid_until,
           orders.source_id_int,
+          orders.quantity_filled,
+          orders.quantity_remaining,
           orders.fee_bps,
           orders.fee_breakdown,
           COALESCE(
@@ -301,7 +307,11 @@ export const getOrdersBidsV3Options: RouteOptions = {
       `;
 
       // Filters
-      const conditions: string[] = [`orders.side = 'buy'`];
+      const conditions: string[] = [
+        "EXISTS (SELECT FROM token_sets WHERE id = orders.token_set_id)",
+        "orders.side = 'buy'",
+      ];
+
       let orderStatusFilter = `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`;
 
       if (query.ids) {
@@ -350,6 +360,22 @@ export const getOrdersBidsV3Options: RouteOptions = {
 
         (query as any).maker = toBuffer(query.maker);
         conditions.push(`orders.maker = $/maker/`);
+      }
+
+      if (query.source) {
+        const sources = await Sources.getInstance();
+        const source = sources.getByDomain(query.source);
+
+        if (!source) {
+          return { orders: [] };
+        }
+
+        (query as any).source = source.id;
+        conditions.push(`orders.source_id_int = $/source/`);
+      }
+
+      if (query.native) {
+        conditions.push(`orders.is_reservoir`);
       }
 
       conditions.push(orderStatusFilter);
@@ -439,6 +465,8 @@ export const getOrdersBidsV3Options: RouteOptions = {
           ),
           validFrom: Number(r.valid_from),
           validUntil: Number(r.valid_until),
+          quantityFilled: Number(r.quantity_filled),
+          quantityRemaining: Number(r.quantity_remaining),
           metadata: query.includeMetadata ? r.metadata : undefined,
           source: {
             id: source?.address,

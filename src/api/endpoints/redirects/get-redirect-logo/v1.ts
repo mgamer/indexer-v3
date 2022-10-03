@@ -36,11 +36,13 @@ export const getRedirectLogoV1Options: RouteOptions = {
         source = sources.getByDomain(query.source);
       }
 
-      if (source.metadata.adminIcon) {
-        return response.redirect(source.metadata.adminIcon).header("cache-control", `${1000 * 60}`);
+      if (source?.metadata.adminIcon) {
+        return response
+          .redirect(source?.metadata.adminIcon)
+          .header("cache-control", `${1000 * 60}`);
       }
 
-      return response.redirect(source.metadata.icon);
+      return response.redirect(source?.metadata.icon);
     } catch (error) {
       logger.error(`get-redirect-logo-${version}-handler`, `Handler failure: ${error}`);
       throw error;

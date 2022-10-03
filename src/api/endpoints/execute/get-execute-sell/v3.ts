@@ -150,7 +150,7 @@ export const getExecuteSellV3Options: RouteOptions = {
           contract,
           tokenId,
           quantity: 1,
-          source: sourceId ? sources.get(sourceId).domain : null,
+          source: sourceId ? sources.get(sourceId)?.domain ?? null : null,
           // TODO: Add support for multiple currencies
           currency: Sdk.Common.Addresses.Weth[config.chainId],
           quote: formatEth(bestOrderResult.price),
@@ -205,7 +205,7 @@ export const getExecuteSellV3Options: RouteOptions = {
         },
       ];
 
-      // X2Y2 bids are to be filled directly (because the V5 router does not support them)
+      // X2Y2/Sudoswap bids are to be filled directly (because the V5 router does not support them)
       if (bidDetails.kind === "x2y2") {
         const isApproved = await getNftApproval(
           bidDetails.contract,
@@ -218,6 +218,33 @@ export const getExecuteSellV3Options: RouteOptions = {
             baseProvider,
             bidDetails.contract
           ).approveTransaction(query.taker, Sdk.X2Y2.Addresses.Exchange[config.chainId]);
+
+          steps[0].items.push({
+            status: "incomplete",
+            data: {
+              ...approveTx,
+              maxFeePerGas: query.maxFeePerGas ? bn(query.maxFeePerGas).toHexString() : undefined,
+              maxPriorityFeePerGas: query.maxPriorityFeePerGas
+                ? bn(query.maxPriorityFeePerGas).toHexString()
+                : undefined,
+            },
+          });
+        }
+      }
+      if (bidDetails.kind === "sudoswap") {
+        const isApproved = await getNftApproval(
+          bidDetails.contract,
+          query.taker,
+          Sdk.Sudoswap.Addresses.RouterWithRoyalties[config.chainId]
+        );
+        if (!isApproved) {
+          const approveTx = new Sdk.Common.Helpers.Erc721(
+            baseProvider,
+            bidDetails.contract
+          ).approveTransaction(
+            query.taker,
+            Sdk.Sudoswap.Addresses.RouterWithRoyalties[config.chainId]
+          );
 
           steps[0].items.push({
             status: "incomplete",

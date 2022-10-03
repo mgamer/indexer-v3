@@ -37,6 +37,11 @@ export const getUserTopBidsV1Options: RouteOptions = {
         ),
     }),
     query: Joi.object({
+      collection: Joi.string()
+        .lowercase()
+        .description(
+          "Filter to a particular collection with collection-id. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        ),
       continuation: Joi.string().description(
         "Use continuation token to request next offset of items."
       ),
@@ -67,6 +72,15 @@ export const getUserTopBidsV1Options: RouteOptions = {
           validFrom: Joi.number().unsafe(),
           validUntil: Joi.number().unsafe(),
           source: Joi.object().allow(null),
+          feeBreakdown: Joi.array()
+            .items(
+              Joi.object({
+                kind: Joi.string(),
+                recipient: Joi.string().allow("", null),
+                bps: Joi.number(),
+              })
+            )
+            .allow(null),
           context: Joi.alternatives(
             Joi.object({
               kind: "token",
@@ -99,6 +113,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
             tokenId: Joi.string(),
             name: Joi.string().allow(null, ""),
             image: Joi.string().allow(null, ""),
+            floorAskPrice: Joi.number().unsafe().allow(null),
             collection: Joi.object({
               id: Joi.string().allow(null),
               name: Joi.string().allow(null, ""),
@@ -119,6 +134,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
     const params = request.params as any;
     const query = request.query as any;
     let continuationFilter = "";
+    let collectionFilter = "";
     let sortField = "top_bid_value";
 
     // Set the user value for the query
@@ -162,6 +178,10 @@ export const getUserTopBidsV1Options: RouteOptions = {
           continuationFilter = `AND (top_bid_value, t.token_id) ${sign} ($/contColumn/, $/contTokenId/)`;
         }
         break;
+    }
+
+    if (query.collection) {
+      collectionFilter = `AND id = $/collection/`;
     }
 
     try {
@@ -229,16 +249,17 @@ export const getUserTopBidsV1Options: RouteOptions = {
                           WHERE token_sets.attribute_id = attributes.id)
                       END  
                    FROM token_sets
-                   WHERE token_sets.id = y.token_set_id) 
+                   WHERE token_sets.id = y.token_set_id
+                   AND token_sets.schema_hash = y.token_set_schema_hash) 
                   ELSE NULL
                 END
               ) AS bid_context
         FROM nft_balances nb
         JOIN LATERAL (
             SELECT o.token_set_id, o.id AS "top_bid_id", o.price AS "top_bid_price", o.value AS "top_bid_value",
-                   o.maker AS "top_bid_maker", source_id_int, o.created_at "order_created_at",
+                   o.maker AS "top_bid_maker", source_id_int, o.created_at "order_created_at", o.token_set_schema_hash,
                    extract(epoch from o.created_at) * 1000000 AS "order_created_at_micro",
-                   DATE_PART('epoch', LOWER(o.valid_between)) AS "top_bid_valid_from",
+                   DATE_PART('epoch', LOWER(o.valid_between)) AS "top_bid_valid_from", o.fee_breakdown,
                    COALESCE(
                      NULLIF(DATE_PART('epoch', UPPER(o.valid_between)), 'Infinity'),
                      0
@@ -254,15 +275,16 @@ export const getUserTopBidsV1Options: RouteOptions = {
             LIMIT 1
         ) y ON TRUE
         LEFT JOIN LATERAL (
-            SELECT t.token_id, t.name, t.image, t.collection_id
+            SELECT t.token_id, t.name, t.image, t.collection_id, floor_sell_value AS "token_floor_sell_value"
             FROM tokens t
             WHERE t.contract = nb.contract
             AND t.token_id = nb.token_id
         ) t ON TRUE
-        LEFT JOIN LATERAL (
+        ${query.collection ? "" : "LEFT"} JOIN LATERAL (
             SELECT id AS "collection_id", name AS "collection_name", metadata AS "collection_metadata", floor_sell_value AS "collection_floor_sell_value"
             FROM collections c
             WHERE id = t.collection_id
+            ${collectionFilter}
         ) c ON TRUE
         WHERE owner = $/user/
         AND amount > 0
@@ -295,12 +317,14 @@ export const getUserTopBidsV1Options: RouteOptions = {
             icon: source?.metadata.icon,
             url: source?.metadata.url,
           },
+          feeBreakdown: r.fee_breakdown,
           context: r.bid_context,
           token: {
             contract: contract,
             tokenId: tokenId,
             name: r.name,
             image: Assets.getLocalAssetsLink(r.image),
+            floorAskPrice: r.token_floor_sell_value ? formatEth(r.token_floor_sell_value) : null,
             collection: {
               id: r.collection_id,
               name: r.collection_name,

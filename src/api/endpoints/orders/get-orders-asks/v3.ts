@@ -66,6 +66,10 @@ export const getOrdersAsksV3Options: RouteOptions = {
         .description(
           "active = currently valid, inactive = temporarily invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
         ),
+      source: Joi.string()
+        .pattern(regex.domain)
+        .description("Filter to a source by domain. Example: `opensea.io`"),
+      native: Joi.boolean().description("If true, results will filter only Reservoir orders."),
       includePrivate: Joi.boolean()
         .default(false)
         .description("If true, private orders are included in the response."),
@@ -95,7 +99,7 @@ export const getOrdersAsksV3Options: RouteOptions = {
         .max(1000)
         .default(50)
         .description("Amount of items returned in response."),
-    }).or("ids", "token", "contracts", "maker"),
+    }).oxor("ids", "token", "contracts", "maker", "source", "native"),
   },
   response: {
     schema: Joi.object({
@@ -112,6 +116,8 @@ export const getOrdersAsksV3Options: RouteOptions = {
           price: JoiPrice,
           validFrom: Joi.number().required(),
           validUntil: Joi.number().required(),
+          quantityFilled: Joi.number().unsafe(),
+          quantityRemaining: Joi.number().unsafe(),
           metadata: Joi.alternatives(
             Joi.object({
               kind: "token",
@@ -155,6 +161,7 @@ export const getOrdersAsksV3Options: RouteOptions = {
             .allow(null),
           expiration: Joi.number().required(),
           isReservoir: Joi.boolean().allow(null),
+          isDynamic: Joi.boolean(),
           createdAt: Joi.string().required(),
           updatedAt: Joi.string().required(),
           rawData: Joi.object().optional(),
@@ -253,12 +260,15 @@ export const getOrdersAsksV3Options: RouteOptions = {
           orders.value,
           orders.currency_price,
           orders.currency_value,
+          dynamic,
           DATE_PART('epoch', LOWER(orders.valid_between)) AS valid_from,
           COALESCE(
             NULLIF(DATE_PART('epoch', UPPER(orders.valid_between)), 'Infinity'),
             0
           ) AS valid_until,
           orders.source_id_int,
+          orders.quantity_filled,
+          orders.quantity_remaining,
           orders.fee_bps,
           orders.fee_breakdown,
           COALESCE(
@@ -331,6 +341,22 @@ export const getOrdersAsksV3Options: RouteOptions = {
 
         (query as any).maker = toBuffer(query.maker);
         conditions.push(`orders.maker = $/maker/`);
+      }
+
+      if (query.source) {
+        const sources = await Sources.getInstance();
+        const source = sources.getByDomain(query.source);
+
+        if (!source) {
+          return { orders: [] };
+        }
+
+        (query as any).source = source.id;
+        conditions.push(`orders.source_id_int = $/source/`);
+      }
+
+      if (query.native) {
+        conditions.push(`orders.is_reservoir`);
       }
 
       if (!query.includePrivate) {
@@ -425,9 +451,12 @@ export const getOrdersAsksV3Options: RouteOptions = {
           ),
           validFrom: Number(r.valid_from),
           validUntil: Number(r.valid_until),
+          quantityFilled: Number(r.quantity_filled),
+          quantityRemaining: Number(r.quantity_remaining),
           metadata: query.includeMetadata ? r.metadata : undefined,
           source: {
             id: source?.address,
+            domain: source?.domain,
             name: source?.metadata.title || source?.name,
             icon: source?.metadata.icon,
             url: source?.metadata.url,
@@ -436,6 +465,7 @@ export const getOrdersAsksV3Options: RouteOptions = {
           feeBreakdown: r.fee_breakdown,
           expiration: Number(r.expiration),
           isReservoir: r.is_reservoir,
+          isDynamic: Boolean(r.dynamic),
           createdAt: new Date(r.created_at * 1000).toISOString(),
           updatedAt: new Date(r.updated_at).toISOString(),
           rawData: query.includeRawData ? r.raw_data : undefined,

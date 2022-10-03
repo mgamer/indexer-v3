@@ -9,11 +9,15 @@ import { redis } from "@/common/redis";
 import { ApiKeyEntity, ApiKeyUpdateParams } from "@/models/api-keys/api-key-entity";
 import getUuidByString from "uuid-by-string";
 import { channels } from "@/pubsub/channels";
+import axios from "axios";
+import { getNetworkName } from "@/config/network";
+import { config } from "@/config/index";
 
 export type ApiKeyRecord = {
   app_name: string;
   website: string;
   email: string;
+  tier: number;
   key?: string;
 };
 
@@ -35,10 +39,12 @@ export class ApiKeyManager {
       values.key = getUuidByString(`${values.key}${values.email}${values.website}`);
     }
 
+    let created;
+
     // Create the record in the database
     try {
-      await idb.none(
-        "INSERT INTO api_keys (${this:name}) values (${this:csv}) ON CONFLICT DO NOTHING",
+      created = await idb.oneOrNone(
+        "INSERT INTO api_keys (${this:name}) VALUES (${this:csv}) ON CONFLICT DO NOTHING RETURNING 1",
         values
       );
     } catch (e) {
@@ -53,6 +59,10 @@ export class ApiKeyManager {
     } catch (e) {
       logger.error("api-key", `Unable to set the redis hash: ${e}`);
       // Let's continue here, even if we can't write to redis, we should be able to check the values against the db
+    }
+
+    if (created) {
+      await ApiKeyManager.notifyApiKeyCreated(values);
     }
 
     return {
@@ -79,29 +89,38 @@ export class ApiKeyManager {
       return cachedApiKey;
     }
 
+    // Timeout for redis
+    const timeout = new Promise<null>((resolve) => {
+      setTimeout(resolve, 1000, null);
+    });
+
     const redisKey = `api-key:${key}`;
 
     try {
-      const apiKey = await redis.get(redisKey);
+      const apiKey = await Promise.race([redis.get(redisKey), timeout]);
 
       if (apiKey) {
         if (apiKey == "empty") {
           return null;
         } else {
-          return new ApiKeyEntity(JSON.parse(apiKey));
+          const apiKeyEntity = new ApiKeyEntity(JSON.parse(apiKey));
+          ApiKeyManager.apiKeys.set(key, apiKeyEntity); // Set in local memory storage
+          return apiKeyEntity;
         }
       } else {
         // check if it exists in the database
         const fromDb = await redb.oneOrNone(`SELECT * FROM api_keys WHERE key = $/key/`, { key });
 
         if (fromDb) {
-          await redis.set(redisKey, JSON.stringify(fromDb)); // Set in redis
-          const apiKey = new ApiKeyEntity(fromDb);
-          ApiKeyManager.apiKeys.set(key, apiKey); // Set in local memory storage
-          return apiKey;
+          Promise.race([redis.set(redisKey, JSON.stringify(fromDb)), timeout]); // Set in redis (no need to wait)
+          const apiKeyEntity = new ApiKeyEntity(fromDb);
+          ApiKeyManager.apiKeys.set(key, apiKeyEntity); // Set in local memory storage
+          return apiKeyEntity;
         } else {
-          await redis.set(redisKey, "empty");
-          await redis.expire(redisKey, 3600 * 24);
+          const pipeline = redis.pipeline();
+          pipeline.set(redisKey, "empty");
+          pipeline.expire(redisKey, 3600 * 24);
+          Promise.race([pipeline.exec(), timeout]); // Set in redis (no need to wait)
         }
       }
     } catch (error) {
@@ -144,6 +163,14 @@ export class ApiKeyManager {
       log.origin = request.headers["origin"];
     }
 
+    if (request.headers["x-rkui-version"]) {
+      log.rkuiVersion = request.headers["x-rkui-version"];
+    }
+
+    if (request.headers["x-rkc-version"]) {
+      log.rkcVersion = request.headers["x-rkc-version"];
+    }
+
     if (request.info.referrer) {
       log.referrer = request.info.referrer;
     }
@@ -155,8 +182,7 @@ export class ApiKeyManager {
     // Add key information if it exists
     if (key) {
       try {
-        //  const apiKey = await ApiKeyManager.getApiKey(key);
-        const apiKey = null;
+        const apiKey = await ApiKeyManager.getApiKey(key);
 
         // There is a key, set that key information
         if (apiKey) {
@@ -199,5 +225,67 @@ export class ApiKeyManager {
 
     await ApiKeyManager.deleteCachedApiKey(key); // reload the cache
     await redis.publish(channels.apiKeyUpdated, JSON.stringify({ key }));
+  }
+
+  static async notifyApiKeyCreated(values: ApiKeyRecord) {
+    await axios
+      .post(
+        config.slackApiKeyWebhookUrl,
+        JSON.stringify({
+          text: "API Key created",
+          blocks: [
+            {
+              type: "header",
+              text: {
+                type: "plain_text",
+                text: "API Key created",
+              },
+            },
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `New API Key created on *${getNetworkName()}*`,
+              },
+            },
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `*Key:* ${values.key}`,
+              },
+            },
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `*AppName:* ${values.app_name}`,
+              },
+            },
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `*Website:* ${values.website}`,
+              },
+            },
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `*Email:* ${values.email}`,
+              },
+            },
+          ],
+        }),
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      )
+      .catch(() => {
+        // Skip on any errors
+      });
   }
 }

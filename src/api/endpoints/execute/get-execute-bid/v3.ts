@@ -17,11 +17,6 @@ import { config } from "@/config/index";
 import * as looksRareBuyToken from "@/orderbook/orders/looks-rare/build/buy/token";
 import * as looksRareBuyCollection from "@/orderbook/orders/looks-rare/build/buy/collection";
 
-// OpenDao
-import * as openDaoBuyAttribute from "@/orderbook/orders/opendao/build/buy/attribute";
-import * as openDaoBuyToken from "@/orderbook/orders/opendao/build/buy/token";
-import * as openDaoBuyCollection from "@/orderbook/orders/opendao/build/buy/collection";
-
 // Seaport
 import * as seaportBuyAttribute from "@/orderbook/orders/seaport/build/buy/attribute";
 import * as seaportBuyToken from "@/orderbook/orders/seaport/build/buy/token";
@@ -89,7 +84,7 @@ export const getExecuteBidV3Options: RouteOptions = {
             .description("Amount bidder is willing to offer in wei. Example: `1000000000000000000`")
             .required(),
           orderKind: Joi.string()
-            .valid("721ex", "zeroex-v4", "seaport", "looks-rare", "x2y2")
+            .valid("zeroex-v4", "seaport", "looks-rare", "x2y2")
             .default("seaport")
             .description("Exchange protocol used to create order. Example: `seaport`"),
           orderbook: Joi.string()
@@ -182,14 +177,14 @@ export const getExecuteBidV3Options: RouteOptions = {
       }[] = [
         {
           action: "Wrapping ETH",
-          description: "We’ll ask your approval for converting ETH to WETH. Gas fee required.",
+          description: "We'll ask your approval for converting ETH to WETH. Gas fee required.",
           kind: "transaction",
           items: [],
         },
         {
           action: "Approve WETH contract",
           description:
-            "We’ll ask your approval for the exchange to access your token. This is a one-time only operation per exchange.",
+            "We'll ask your approval for the exchange to access your token. This is a one-time only operation per exchange.",
           kind: "transaction",
           items: [],
         },
@@ -210,9 +205,9 @@ export const getExecuteBidV3Options: RouteOptions = {
         const attributeKey = params.attributeKey;
         const attributeValue = params.attributeValue;
 
-        // On Rinkeby, proxy ZeroEx V4 to 721ex
-        if (params.orderKind === "zeroex-v4" && config.chainId === 4) {
-          params.orderKind = "721ex";
+        // TODO: Re-enable collection/attribute bids on external orderbooks
+        if (!token && params.orderbook !== "reservoir") {
+          throw Boom.badRequest("Only single-token bids are supported on external orderbooks");
         }
 
         // Check the maker's Weth/Eth balance
@@ -320,121 +315,7 @@ export const getExecuteBidV3Options: RouteOptions = {
                           }
                         : undefined,
                     collection:
-                      collection && params.excludeFlaggedTokens && !attributeKey && !attributeValue
-                        ? collection
-                        : undefined,
-                    isNonFlagged: params.excludeFlaggedTokens,
-                    orderbook: params.orderbook,
-                    source,
-                  },
-                },
-              },
-              orderIndex: i,
-            });
-
-            // Go on with the next bid
-            continue;
-          }
-
-          case "721ex": {
-            if (!["reservoir"].includes(params.orderbook)) {
-              throw Boom.badRequest("Unsupported orderbook");
-            }
-
-            // Make sure the fee information is correctly typed
-            if (params.fee && !Array.isArray(params.fee)) {
-              params.fee = [params.fee];
-            }
-            if (params.feeRecipient && !Array.isArray(params.feeRecipient)) {
-              params.feeRecipient = [params.feeRecipient];
-            }
-            if (params.fee?.length !== params.feeRecipient?.length) {
-              throw Boom.badRequest("Invalid fee information");
-            }
-
-            let order: Sdk.OpenDao.Order | undefined;
-            if (token) {
-              const [contract, tokenId] = token.split(":");
-              order = await openDaoBuyToken.build({
-                ...params,
-                maker,
-                contract,
-                tokenId,
-              });
-            } else if (tokenSetId || (collection && attributeKey && attributeValue)) {
-              order = await openDaoBuyAttribute.build({
-                ...params,
-                maker,
-                collection,
-                attributes: [
-                  {
-                    key: attributeKey,
-                    value: attributeValue,
-                  },
-                ],
-              });
-            } else if (collection) {
-              order = await openDaoBuyCollection.build({
-                ...params,
-                maker,
-                collection,
-              });
-            }
-
-            if (!order) {
-              throw Boom.internal("Failed to generate order");
-            }
-
-            // Check the maker's approval
-            let approvalTx: TxData | undefined;
-            const wethApproval = await weth.getAllowance(
-              maker,
-              Sdk.OpenDao.Addresses.Exchange[config.chainId]
-            );
-            if (bn(wethApproval).lt(bn(order.params.erc20TokenAmount).add(order.getFeeAmount()))) {
-              approvalTx = weth.approveTransaction(
-                maker,
-                Sdk.OpenDao.Addresses.Exchange[config.chainId]
-              );
-            }
-
-            steps[0].items.push({
-              status: !wrapEthTx ? "complete" : "incomplete",
-              data: wrapEthTx,
-              orderIndex: i,
-            });
-            steps[1].items.push({
-              status: !approvalTx ? "complete" : "incomplete",
-              data: approvalTx,
-              orderIndex: i,
-            });
-            steps[2].items.push({
-              status: "incomplete",
-              data: {
-                sign: order.getSignatureData(),
-                post: {
-                  endpoint: "/order/v3",
-                  method: "POST",
-                  body: {
-                    order: {
-                      kind: "721ex",
-                      data: {
-                        ...order.params,
-                      },
-                    },
-                    tokenSetId,
-                    attribute:
-                      collection && attributeKey && attributeValue
-                        ? {
-                            collection,
-                            key: attributeKey,
-                            value: attributeValue,
-                          }
-                        : undefined,
-                    collection:
-                      collection && params.excludeFlaggedTokens && !attributeKey && !attributeValue
-                        ? collection
-                        : undefined,
+                      collection && !attributeKey && !attributeValue ? collection : undefined,
                     isNonFlagged: params.excludeFlaggedTokens,
                     orderbook: params.orderbook,
                     source,
@@ -544,9 +425,7 @@ export const getExecuteBidV3Options: RouteOptions = {
                           }
                         : undefined,
                     collection:
-                      collection && params.excludeFlaggedTokens && !attributeKey && !attributeValue
-                        ? collection
-                        : undefined,
+                      collection && !attributeKey && !attributeValue ? collection : undefined,
                     isNonFlagged: params.excludeFlaggedTokens,
                     orderbook: params.orderbook,
                     source,

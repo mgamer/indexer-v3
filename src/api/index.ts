@@ -2,24 +2,23 @@ import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { HapiAdapter } from "@bull-board/hapi";
 import Basic from "@hapi/basic";
+import { Boom } from "@hapi/boom";
 import Hapi from "@hapi/hapi";
 import Inert from "@hapi/inert";
 import Vision from "@hapi/vision";
 import HapiSwagger from "hapi-swagger";
-import qs from "qs";
 import _ from "lodash";
+import { RateLimiterRedis, RateLimiterRes } from "rate-limiter-flexible";
+import qs from "qs";
 
 import { setupRoutes } from "@/api/routes";
 import { logger } from "@/common/logger";
+import { rateLimitRedis } from "@/common/redis";
 import { config } from "@/config/index";
 import { getNetworkName } from "@/config/network";
-import { ApiKeyManager } from "@/models/api-keys";
-import { Sources } from "@/models/sources";
 import { allJobQueues } from "@/jobs/index";
+import { ApiKeyManager } from "@/models/api-keys";
 import { RateLimitRules } from "@/models/rate-limit-rules";
-import { RateLimiterRedis, RateLimiterRes } from "rate-limiter-flexible";
-import { rateLimitRedis } from "@/common/redis";
-import { Boom } from "@hapi/boom";
 
 let server: Hapi.Server;
 
@@ -89,9 +88,6 @@ export const start = async (): Promise<void> => {
     }
   );
 
-  // Create all supported sources
-  await Sources.syncSources();
-
   // Getting rate limit instance will load rate limit rules into memory
   await RateLimitRules.getInstance();
 
@@ -152,6 +148,11 @@ export const start = async (): Promise<void> => {
 
     // If matching rule was found
     if (rateLimitRule) {
+      // If the requested path has no limit
+      if (rateLimitRule.options.points === -1) {
+        return reply.continue;
+      }
+
       const rateLimiterRedis = new RateLimiterRedis({
         storeClient: rateLimitRedis,
         points: rateLimitRule.options.points,
@@ -161,31 +162,50 @@ export const start = async (): Promise<void> => {
       const remoteAddress = request.headers["x-forwarded-for"]
         ? _.split(request.headers["x-forwarded-for"], ",")[0]
         : request.info.remoteAddress;
-      const rateLimitKey = _.isUndefined(key) || _.isEmpty(key) ? remoteAddress : key; // If no api key use IP
+
+      const rateLimitKey =
+        _.isUndefined(key) || _.isEmpty(key) || _.isNull(apiKey) ? remoteAddress : key; // If no api key or the api key is invalid use IP
 
       try {
-        const rateLimiterRes = await rateLimiterRedis.consume(rateLimitKey, 1);
+        // Timeout for redis
+        const timeout = new Promise<null>((resolve) => {
+          setTimeout(resolve, 1000, null);
+        });
 
-        // Generate the rate limiting header and add them to the request object to be added to the response in the onPreResponse event
-        request.headers["X-RateLimit-Limit"] = `${rateLimitRule.options.points}`;
-        request.headers["X-RateLimit-Remaining"] = `${rateLimiterRes.remainingPoints}`;
-        request.headers["X-RateLimit-Reset"] = `${new Date(
-          Date.now() + rateLimiterRes.msBeforeNext
-        )}`;
+        const rateLimiterRes = await Promise.race([
+          rateLimiterRedis.consume(rateLimitKey, 1),
+          timeout,
+        ]);
+
+        if (rateLimiterRes) {
+          // Generate the rate limiting header and add them to the request object to be added to the response in the onPreResponse event
+          request.headers["X-RateLimit-Limit"] = `${rateLimitRule.options.points}`;
+          request.headers["X-RateLimit-Remaining"] = `${rateLimiterRes.remainingPoints}`;
+          request.headers["X-RateLimit-Reset"] = `${new Date(
+            Date.now() + rateLimiterRes.msBeforeNext
+          )}`;
+        }
       } catch (error) {
         if (error instanceof RateLimiterRes) {
           if (
             error.consumedPoints == Number(rateLimitRule.options.points) + 1 ||
             error.consumedPoints % 50 == 0
           ) {
-            logger.warn(
-              "rate-limiter",
-              `${rateLimitKey} ${apiKey?.appName} reached allowed rate limit ${
+            const log = {
+              message: `${rateLimitKey} ${apiKey?.appName || ""} reached allowed rate limit ${
                 rateLimitRule.options.points
               } requests in ${rateLimitRule.options.duration}s by calling ${
                 error.consumedPoints
-              } times in rule ${JSON.stringify(rateLimitRule)}`
-            );
+              } times on route ${request.route.path}${
+                request.info.referrer ? ` from referrer ${request.info.referrer} ` : " "
+              }for rule ${JSON.stringify(rateLimitRule)}`,
+              route: request.route.path,
+              appName: apiKey?.appName || "",
+              key: rateLimitKey,
+              referrer: request.info.referrer,
+            };
+
+            logger.warn("rate-limiter", JSON.stringify(log));
           }
 
           const tooManyRequestsResponse = {
@@ -200,7 +220,7 @@ export const start = async (): Promise<void> => {
             .code(429)
             .takeover();
         } else {
-          throw error;
+          logger.error("rate-limiter", `Rate limit error ${error}`);
         }
       }
     }

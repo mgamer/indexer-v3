@@ -109,11 +109,13 @@ export class Activities {
     createdBefore: null | string = null,
     types: string[] = [],
     limit = 20,
-    sortBy = "eventTimestamp"
+    sortBy = "eventTimestamp",
+    includeMetadata = true
   ) {
     const sortByColumn = sortBy == "eventTimestamp" ? "event_timestamp" : "created_at";
     let continuation = "";
     let typesFilter = "";
+    let metadataQuery = "";
 
     if (!_.isNull(createdBefore)) {
       continuation = `AND ${sortByColumn} < $/createdBefore/`;
@@ -123,10 +125,9 @@ export class Activities {
       typesFilter = `AND type IN ('$/types:raw/')`;
     }
 
-    const activities: ActivitiesEntityParams[] | null = await redb.manyOrNone(
-      `SELECT *
-             FROM activities
-             LEFT JOIN LATERAL (
+    if (includeMetadata) {
+      metadataQuery = `
+                 LEFT JOIN LATERAL (
                 SELECT name AS "token_name", image AS "token_image"
                 FROM tokens
                 WHERE activities.contract = tokens.contract
@@ -136,7 +137,13 @@ export class Activities {
                 SELECT name AS "collection_name", metadata AS "collection_metadata"
                 FROM collections
                 WHERE activities.collection_id = collections.id
-             ) c ON TRUE
+             ) c ON TRUE`;
+    }
+
+    const activities: ActivitiesEntityParams[] | null = await redb.manyOrNone(
+      `SELECT *
+             FROM activities
+             ${metadataQuery}
              WHERE collection_id = $/collectionId/
              ${continuation}
              ${typesFilter}

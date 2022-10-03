@@ -24,6 +24,7 @@ export type CollectionsEntityUpdateParams = {
   allTimeRank?: number;
   indexMetadata?: boolean;
   lastMetadataSync?: string;
+  floorSellValue?: number;
 };
 
 export type CollectionsMetadata = {
@@ -33,6 +34,12 @@ export type CollectionsMetadata = {
   externalUrl?: string | undefined;
   bannerImageUrl?: string | undefined;
   twitterUsername?: string | undefined;
+  openseaVerificationStatus?: string | undefined;
+};
+
+export type CollectionsRoyalties = {
+  bps: number;
+  recipient: string;
 };
 
 export type CollectionsEntityParams = {
@@ -40,7 +47,7 @@ export type CollectionsEntityParams = {
   slug: string;
   name: string;
   metadata: CollectionsMetadata;
-  royalties: Buffer;
+  royalties: CollectionsRoyalties[];
   community: string;
   contract: Buffer;
   token_id_range: string;
@@ -60,6 +67,7 @@ export type CollectionsEntityParams = {
   index_metadata: boolean;
   last_metadata_sync: string;
   minted_timestamp: number;
+  floor_sell_value: number;
 };
 
 export class CollectionsEntity {
@@ -67,7 +75,7 @@ export class CollectionsEntity {
   slug: string;
   name: string;
   metadata: CollectionsMetadata;
-  royalties: string;
+  royalties: CollectionsRoyalties[];
   community: string;
   contract: string;
   tokenIdRange: number[];
@@ -87,13 +95,14 @@ export class CollectionsEntity {
   indexMetadata: boolean;
   lastMetadataSync: string;
   mintedTimestamp: number;
+  floorSellValue: number;
 
   constructor(params: CollectionsEntityParams) {
     this.id = params.id;
     this.slug = params.slug;
     this.name = params.name;
     this.metadata = params.metadata;
-    this.royalties = params.royalties ? fromBuffer(params.royalties) : params.royalties;
+    this.royalties = params.royalties ? params.royalties : [];
     this.community = params.community;
     this.contract = fromBuffer(params.contract);
     this.tokenIdRange = params.token_id_range != "(,)" ? JSON.parse(params.token_id_range) : [];
@@ -113,5 +122,6 @@ export class CollectionsEntity {
     this.indexMetadata = params.index_metadata;
     this.lastMetadataSync = params.last_metadata_sync;
     this.mintedTimestamp = params.minted_timestamp;
+    this.floorSellValue = params.floor_sell_value;
   }
 }

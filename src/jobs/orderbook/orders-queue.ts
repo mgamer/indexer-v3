@@ -29,7 +29,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { kind, info, relayToArweave } = job.data as GenericOrderInfo;
+      const { kind, info, relayToArweave, validateBidValue } = job.data as GenericOrderInfo;
 
       try {
         switch (kind) {
@@ -54,6 +54,12 @@ if (config.doBackgroundWork) {
             break;
           }
 
+          case "zora-v3": {
+            const result = await orders.zora.save([info as orders.zora.OrderInfo]);
+            logger.info(QUEUE_NAME, `[zora-v3] Order save result: ${JSON.stringify(result)}`);
+            break;
+          }
+
           case "looks-rare": {
             const result = await orders.looksRare.save(
               [info as orders.looksRare.OrderInfo],
@@ -64,22 +70,20 @@ if (config.doBackgroundWork) {
             break;
           }
 
-          case "opendao": {
-            const result = await orders.openDao.save(
-              [info as orders.openDao.OrderInfo],
-              relayToArweave
+          case "seaport": {
+            const result = await orders.seaport.save(
+              [info as orders.seaport.OrderInfo],
+              relayToArweave,
+              validateBidValue
             );
-            logger.info(QUEUE_NAME, `[opendao] Order save result: ${JSON.stringify(result)}`);
+            logger.info(QUEUE_NAME, `[seaport] Order save result: ${JSON.stringify(result)}`);
 
             break;
           }
 
-          case "seaport": {
-            const result = await orders.seaport.save(
-              [info as orders.seaport.OrderInfo],
-              relayToArweave
-            );
-            logger.info(QUEUE_NAME, `[seaport] Order save result: ${JSON.stringify(result)}`);
+          case "sudoswap": {
+            const result = await orders.sudoswap.save([info as orders.sudoswap.OrderInfo]);
+            logger.info(QUEUE_NAME, `[sudoswap] Order save result: ${JSON.stringify(result)}`);
 
             break;
           }
@@ -130,36 +134,49 @@ export type GenericOrderInfo =
       kind: "looks-rare";
       info: orders.looksRare.OrderInfo;
       relayToArweave?: boolean;
-    }
-  | {
-      kind: "opendao";
-      info: orders.openDao.OrderInfo;
-      relayToArweave?: boolean;
+      validateBidValue?: boolean;
     }
   | {
       kind: "zeroex-v4";
       info: orders.zeroExV4.OrderInfo;
       relayToArweave?: boolean;
+      validateBidValue?: boolean;
     }
   | {
       kind: "foundation";
       info: orders.foundation.OrderInfo;
       relayToArweave?: boolean;
+      validateBidValue?: boolean;
     }
   | {
       kind: "x2y2";
       info: orders.x2y2.OrderInfo;
       relayToArweave?: boolean;
+      validateBidValue?: boolean;
     }
   | {
       kind: "seaport";
       info: orders.seaport.OrderInfo;
       relayToArweave?: boolean;
+      validateBidValue?: boolean;
     }
   | {
       kind: "cryptopunks";
       info: orders.cryptopunks.OrderInfo;
       relayToArweave?: boolean;
+      validateBidValue?: boolean;
+    }
+  | {
+      kind: "zora-v3";
+      info: orders.zora.OrderInfo;
+      relayToArweave?: boolean;
+      validateBidValue?: boolean;
+    }
+  | {
+      kind: "sudoswap";
+      info: orders.sudoswap.OrderInfo;
+      relayToArweave?: boolean;
+      validateBidValue?: boolean;
     };
 
 export const addToQueue = async (orderInfos: GenericOrderInfo[], prioritized = false) => {

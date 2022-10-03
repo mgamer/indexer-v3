@@ -217,6 +217,12 @@ export const setupRoutes = (server: Server) => {
     options: adminEndpoints.getMarketplaces,
   });
 
+  server.route({
+    method: "POST",
+    path: "/admin/flag-address",
+    options: adminEndpoints.postFlagAddressOptions,
+  });
+
   // API keys
 
   server.route({
@@ -282,6 +288,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   // Collections
+
+  server.route({
+    method: "GET",
+    path: "/collections/sources/v1",
+    options: collectionsEndpoints.getSourcesListingsV1Options,
+  });
 
   server.route({
     method: "GET",
@@ -403,8 +415,20 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/events/asks/v2",
+    options: eventsEndpoints.getAsksEventsV2Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/events/tokens/floor-ask/v2",
     options: eventsEndpoints.getTokensFloorAskV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/events/tokens/floor-ask/v3",
+    options: eventsEndpoints.getTokensFloorAskV3Options,
   });
 
   server.route({
@@ -550,6 +574,12 @@ export const setupRoutes = (server: Server) => {
     options: oracleEndpoints.getCollectionFloorAskOracleV2Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/oracle/collections/{collection}/floor-ask/v3",
+    options: oracleEndpoints.getCollectionFloorAskOracleV3Options,
+  });
+
   // Orders
 
   server.route({
@@ -614,6 +644,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/orders/bids/v4",
+    options: ordersEndpoints.getOrdersBidsV4Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/orders/executed/v1",
     options: ordersEndpoints.getOrderExecutedV1Options,
   });
@@ -640,12 +676,6 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/orders/users/{user}/top-bids/v1",
     options: ordersEndpoints.getUserTopBidsV1Options,
-  });
-
-  server.route({
-    method: "POST",
-    path: "/order/v1",
-    options: ordersEndpoints.postOrderV1Options,
   });
 
   server.route({
@@ -856,6 +886,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/users/{user}/tokens/v4",
     options: tokensEndpoints.getUserTokensV4Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/users/{user}/tokens/v5",
+    options: tokensEndpoints.getUserTokensV5Options,
   });
 
   server.route({

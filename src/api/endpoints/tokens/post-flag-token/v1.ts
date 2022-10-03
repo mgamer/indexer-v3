@@ -53,19 +53,16 @@ export const postFlagTokenV1Options: RouteOptions = {
     const apiKey = await ApiKeyManager.getApiKey(request.headers["x-api-key"]);
 
     if (_.isNull(apiKey)) {
-      throw Boom.unauthorized("Wrong or missing API key");
+      throw Boom.unauthorized("Invalid API key");
     }
 
     const payload = request.payload as any;
     const [contract, tokenId] = payload.token.split(":");
 
     const token = await Tokens.getByContractAndTokenId(contract, tokenId);
+
     if (!token) {
       throw Boom.badData(`Token ${payload.token} not found`);
-    }
-
-    if (token.isFlagged === payload.flag) {
-      return { message: "Success" };
     }
 
     try {
@@ -76,20 +73,26 @@ export const postFlagTokenV1Options: RouteOptions = {
         lastFlagUpdate: currentUtcTime,
       });
 
-      const pendingFlagStatusSyncJobs = new PendingFlagStatusSyncJobs();
-      await pendingFlagStatusSyncJobs.add([
-        {
-          kind: "token",
-          data: {
-            collectionId: token.collectionId,
-            contract: contract,
-            tokenId: tokenId,
-            tokenIsFlagged: payload.flag,
+      if (token.isFlagged != payload.flag) {
+        const pendingFlagStatusSyncJobs = new PendingFlagStatusSyncJobs();
+        await pendingFlagStatusSyncJobs.add([
+          {
+            kind: "tokens",
+            data: {
+              collectionId: token.collectionId,
+              contract: contract,
+              tokens: [
+                {
+                  tokenId: tokenId,
+                  tokenIsFlagged: payload.flag,
+                },
+              ],
+            },
           },
-        },
-      ]);
+        ]);
 
-      await flagStatusProcessQueue.addToQueue();
+        await flagStatusProcessQueue.addToQueue();
+      }
 
       logger.info(
         `post-flag-token-${version}-handler`,

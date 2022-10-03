@@ -35,7 +35,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
         Joi.object({
           kind: Joi.string()
             .lowercase()
-            .valid("opensea", "looks-rare", "721ex", "zeroex-v4", "seaport", "x2y2")
+            .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2")
             .required(),
           data: Joi.object().required(),
         })
@@ -83,6 +83,9 @@ export const getExecuteBuyV4Options: RouteOptions = {
       partial: Joi.boolean()
         .default(false)
         .description("If true, partial orders will be accepted."),
+      skipErrors: Joi.boolean()
+        .default(false)
+        .description("If true, then skip any errors in processing."),
       maxFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional. Set custom gas price."),
@@ -182,7 +185,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
           contract: token.contract,
           tokenId: token.tokenId,
           quantity: token.quantity ?? 1,
-          source: order.sourceId !== null ? sources.get(order.sourceId)?.domain : null,
+          source: order.sourceId !== null ? sources.get(order.sourceId)?.domain ?? null : null,
           currency: order.currency,
           quote: formatPrice(rawQuote, (await getCurrency(order.currency)).decimals),
           rawQuote: rawQuote.toString(),
@@ -226,10 +229,10 @@ export const getExecuteBuyV4Options: RouteOptions = {
             },
             payload: { order },
           }).then((response) => JSON.parse(response.payload));
-          if (!response.orderId) {
-            throw Boom.badData("Raw order already exists or failed to be processed");
-          } else {
+          if (response.orderId) {
             payload.orderIds.push(response.orderId);
+          } else {
+            throw Boom.badData("Raw order failed to get processed");
           }
         }
       }
@@ -408,6 +411,16 @@ export const getExecuteBuyV4Options: RouteOptions = {
               throw Boom.badRequest("No available orders");
             }
 
+            if (
+              bestOrdersResult.length &&
+              bestOrdersResult[0].token_kind === "erc1155" &&
+              payload.tokens.length > 1
+            ) {
+              throw Boom.badData(
+                "When specifying a quantity greater than one, only a single ERC1155 token can get filled"
+              );
+            }
+
             let totalQuantityToFill = Number(payload.quantity);
             for (const {
               id,
@@ -452,11 +465,6 @@ export const getExecuteBuyV4Options: RouteOptions = {
         if (!listingDetails.every((d) => d.contractKind === "erc1155")) {
           throw Boom.badData("Only ERC1155 tokens support a quantity greater than one");
         }
-        if (listingDetails.length > 1) {
-          throw Boom.badData(
-            "When specifying a quantity greater than one, only a single ERC1155 token can get filled"
-          );
-        }
       }
 
       if (payload.onlyPath) {
@@ -464,6 +472,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
         return { path };
       }
 
+      const skippedIndexes: number[] = [];
       const router = new Sdk.Router.Router(config.chainId, baseProvider);
       const tx = await router.fillListingsTx(listingDetails, payload.taker, {
         referrer: payload.source,
@@ -472,6 +481,8 @@ export const getExecuteBuyV4Options: RouteOptions = {
           bps: payload.referrerFeeBps ?? 0,
         },
         partial: payload.partial,
+        skipErrors: payload.skipErrors,
+        skippedIndexes,
         forceRouter: payload.forceRouter,
         directFillingData: {
           conduitKey:
@@ -562,7 +573,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
 
       return {
         steps,
-        path,
+        path: path.filter((_, i) => !skippedIndexes.includes(i)),
       };
     } catch (error) {
       logger.error(`get-execute-buy-${version}-handler`, `Handler failure: ${error}`);

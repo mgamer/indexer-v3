@@ -10,7 +10,6 @@ import * as foundation from "@/events-sync/data/foundation";
 import * as looksRare from "@/events-sync/data/looks-rare";
 import * as nftx from "@/events-sync/data/nftx";
 import * as nouns from "@/events-sync/data/nouns";
-import * as openDao from "@/events-sync/data/opendao";
 import * as quixotic from "@/events-sync/data/quixotic";
 import * as rarible from "@/events-sync/data/rarible";
 import * as seaport from "@/events-sync/data/seaport";
@@ -46,10 +45,6 @@ export type EventDataKind =
   | "zeroex-v4-erc1155-order-cancelled"
   | "zeroex-v4-erc721-order-filled"
   | "zeroex-v4-erc1155-order-filled"
-  | "opendao-erc721-order-cancelled"
-  | "opendao-erc1155-order-cancelled"
-  | "opendao-erc721-order-filled"
-  | "opendao-erc1155-order-filled"
   | "foundation-buy-price-set"
   | "foundation-buy-price-invalidated"
   | "foundation-buy-price-cancelled"
@@ -66,6 +61,9 @@ export type EventDataKind =
   | "element-erc1155-buy-order-filled"
   | "quixotic-order-filled"
   | "zora-ask-filled"
+  | "zora-ask-created"
+  | "zora-ask-price-updated"
+  | "zora-ask-cancelled"
   | "zora-auction-ended"
   | "nouns-auction-settled"
   | "cryptopunks-punk-offered"
@@ -76,6 +74,8 @@ export type EventDataKind =
   | "cryptopunks-transfer"
   | "sudoswap-buy"
   | "sudoswap-sell"
+  | "sudoswap-token-deposit"
+  | "sudoswap-token-withdrawal"
   | "universe-match"
   | "nftx-redeemed"
   | "nftx-minted";
@@ -107,10 +107,6 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
       looksRare.cancelMultipleOrders,
       looksRare.takerAsk,
       looksRare.takerBid,
-      openDao.erc721OrderCancelled,
-      openDao.erc1155OrderCancelled,
-      openDao.erc721OrderFilled,
-      openDao.erc1155OrderFilled,
       seaport.counterIncremented,
       seaport.orderCancelled,
       seaport.orderFulfilled,
@@ -129,6 +125,9 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
       element.erc1155SellOrderFilled,
       quixotic.orderFulfilled,
       zora.askFilled,
+      zora.askCreated,
+      zora.askCancelled,
+      zora.askPriceUpdated,
       zora.auctionEnded,
       nouns.auctionSettled,
       cryptoPunks.punkOffered,
@@ -139,6 +138,8 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
       cryptoPunks.transfer,
       sudoswap.buy,
       sudoswap.sell,
+      sudoswap.tokenDeposit,
+      sudoswap.tokenWithdrawal,
       universe.match,
       nftx.minted,
       nftx.redeemed,
@@ -193,21 +194,13 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
     case "looks-rare-taker-bid":
       return looksRare.takerBid;
     case "zeroex-v4-erc721-order-cancelled":
-      return openDao.erc721OrderCancelled;
+      return zeroExV4.erc721OrderCancelled;
     case "zeroex-v4-erc1155-order-cancelled":
-      return openDao.erc1155OrderCancelled;
+      return zeroExV4.erc1155OrderCancelled;
     case "zeroex-v4-erc721-order-filled":
-      return openDao.erc721OrderFilled;
+      return zeroExV4.erc721OrderFilled;
     case "zeroex-v4-erc1155-order-filled":
-      return openDao.erc1155OrderFilled;
-    case "opendao-erc721-order-cancelled":
-      return openDao.erc721OrderCancelled;
-    case "opendao-erc1155-order-cancelled":
-      return openDao.erc1155OrderCancelled;
-    case "opendao-erc721-order-filled":
-      return openDao.erc721OrderFilled;
-    case "opendao-erc1155-order-filled":
-      return openDao.erc1155OrderFilled;
+      return zeroExV4.erc1155OrderFilled;
     case "x2y2-order-cancelled":
       return x2y2.orderCancelled;
     case "x2y2-order-inventory":
@@ -232,6 +225,12 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return quixotic.orderFulfilled;
     case "zora-ask-filled":
       return zora.askFilled;
+    case "zora-ask-created":
+      return zora.askCreated;
+    case "zora-ask-cancelled":
+      return zora.askCancelled;
+    case "zora-ask-price-updated":
+      return zora.askPriceUpdated;
     case "zora-auction-ended":
       return zora.auctionEnded;
     case "nouns-auction-settled":
@@ -252,6 +251,10 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return sudoswap.buy;
     case "sudoswap-sell":
       return sudoswap.sell;
+    case "sudoswap-token-deposit":
+      return sudoswap.tokenDeposit;
+    case "sudoswap-token-withdrawal":
+      return sudoswap.tokenWithdrawal;
     case "universe-match":
       return universe.match;
     case "nftx-minted":

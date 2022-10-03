@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Request, RouteOptions } from "@hapi/hapi";
+import * as Boom from "@hapi/boom";
 import * as Sdk from "@reservoir0x/sdk";
 import _ from "lodash";
 import Joi from "joi";
@@ -67,12 +68,16 @@ export const getCollectionsV5Options: RouteOptions = {
         .description("If true, top bid will be returned in the response."),
       includeAttributes: Joi.boolean()
         .when("id", { is: Joi.exist(), then: Joi.allow(), otherwise: Joi.forbidden() })
-        .description("If true, attributes will be included in the response."),
+        .description(
+          "If true, attributes will be included in the response. (supported only when filtering to a particular collection using `id`)"
+        ),
       includeOwnerCount: Joi.boolean()
         .when("id", { is: Joi.exist(), then: Joi.allow(), otherwise: Joi.forbidden() })
-        .description("If true, owner count will be included in the response."),
+        .description(
+          "If true, owner count will be included in the response. (supported only when filtering to a particular collection using `id`)"
+        ),
       sortBy: Joi.string()
-        .valid("1DayVolume", "7DayVolume", "30DayVolume", "allTimeVolume")
+        .valid("1DayVolume", "7DayVolume", "30DayVolume", "allTimeVolume", "createdAt")
         .default("allTimeVolume")
         .description("Order the items are returned in the response."),
       limit: Joi.number()
@@ -93,12 +98,14 @@ export const getCollectionsV5Options: RouteOptions = {
         Joi.object({
           id: Joi.string(),
           slug: Joi.string().allow(null, "").description("Open Sea slug"),
+          createdAt: Joi.string(),
           name: Joi.string().allow(null, ""),
           image: Joi.string().allow(null, ""),
           banner: Joi.string().allow(null, ""),
           discordUrl: Joi.string().allow(null, ""),
           externalUrl: Joi.string().allow(null, ""),
           twitterUsername: Joi.string().allow(null, ""),
+          openseaVerificationStatus: Joi.string().allow(null, ""),
           description: Joi.string().allow(null, ""),
           sampleImages: Joi.array().items(Joi.string().allow(null, "")),
           tokenCount: Joi.string(),
@@ -129,6 +136,7 @@ export const getCollectionsV5Options: RouteOptions = {
           },
           topBid: Joi.object({
             id: Joi.string().allow(null),
+            sourceDomain: Joi.string().allow(null, ""),
             price: JoiPrice.allow(null),
             maker: Joi.string().lowercase().pattern(regex.address).allow(null),
             validFrom: Joi.number().unsafe().allow(null),
@@ -204,6 +212,7 @@ export const getCollectionsV5Options: RouteOptions = {
             orders.price AS top_buy_price,
             orders.value AS top_buy_value,
             orders.currency_price AS top_buy_currency_price,
+            orders.source_id_int AS top_buy_source_id_int,
             orders.currency_value AS top_buy_currency_value
           FROM token_sets
           LEFT JOIN orders
@@ -265,6 +274,7 @@ export const getCollectionsV5Options: RouteOptions = {
           (collections.metadata ->> 'description')::TEXT AS "description",
           (collections.metadata ->> 'externalUrl')::TEXT AS "external_url",
           (collections.metadata ->> 'twitterUsername')::TEXT AS "twitter_username",
+          (collections.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
           collections.royalties,
           collections.contract,
           collections.token_id_range,
@@ -284,6 +294,7 @@ export const getCollectionsV5Options: RouteOptions = {
           collections.day7_floor_sell_value,
           collections.day30_floor_sell_value,
           collections.token_count,
+          collections.created_at,
           (
             SELECT
               COUNT(*)
@@ -317,6 +328,10 @@ export const getCollectionsV5Options: RouteOptions = {
       }
       if (query.collectionsSetId) {
         query.collectionsIds = await CollectionSets.getCollectionsIds(query.collectionsSetId);
+        if (_.isEmpty(query.collectionsIds)) {
+          throw Boom.badRequest(`No collections for collection set ${query.collectionsSetId}`);
+        }
+
         conditions.push(`collections.id IN ($/collectionsIds:csv/)`);
       }
       if (query.contract) {
@@ -334,34 +349,51 @@ export const getCollectionsV5Options: RouteOptions = {
       // Sorting and pagination
 
       if (query.continuation) {
-        query.continuation = splitContinuation(query.continuation)[0];
+        const [contParam, contId] = _.split(splitContinuation(query.continuation)[0], "_");
+        query.contParam = contParam;
+        query.contId = contId;
       }
 
       let orderBy = "";
       switch (query.sortBy) {
         case "1DayVolume": {
           if (query.continuation) {
-            conditions.push(`collections.day1_volume < $/continuation/`);
+            conditions.push(
+              `(collections.day1_volume, collections.id) < ($/contParam/, $/contId/)`
+            );
           }
-          orderBy = ` ORDER BY collections.day1_volume DESC`;
+          orderBy = ` ORDER BY collections.day1_volume DESC, collections.id DESC`;
 
           break;
         }
 
         case "7DayVolume": {
           if (query.continuation) {
-            conditions.push(`collections.day7_volume < $/continuation/`);
+            conditions.push(
+              `(collections.day7_volume, collections.id) < ($/contParam/, $/contId/)`
+            );
           }
-          orderBy = ` ORDER BY collections.day7_volume DESC`;
+          orderBy = ` ORDER BY collections.day7_volume DESC, collections.id DESC`;
 
           break;
         }
 
         case "30DayVolume": {
           if (query.continuation) {
-            conditions.push(`collections.day30_volume < $/continuation/`);
+            conditions.push(
+              `(collections.day30_volume, collections.id) < ($/contParam/, $/contId/)`
+            );
           }
-          orderBy = ` ORDER BY collections.day30_volume DESC`;
+          orderBy = ` ORDER BY collections.day30_volume DESC, collections.id DESC`;
+
+          break;
+        }
+
+        case "createdAt": {
+          if (query.continuation) {
+            conditions.push(`(collections.created_at, collections.id) < ($/contParam/, $/contId/)`);
+          }
+          orderBy = ` ORDER BY collections.created_at DESC, collections.id DESC`;
 
           break;
         }
@@ -369,9 +401,12 @@ export const getCollectionsV5Options: RouteOptions = {
         case "allTimeVolume":
         default: {
           if (query.continuation) {
-            conditions.push(`collections.all_time_volume < $/continuation/`);
+            conditions.push(
+              `(collections.all_time_volume, collections.id) < ($/contParam/, $/contId/)`
+            );
           }
-          orderBy = ` ORDER BY collections.all_time_volume DESC`;
+
+          orderBy = ` ORDER BY collections.all_time_volume DESC, collections.id DESC`;
 
           break;
         }
@@ -420,7 +455,7 @@ export const getCollectionsV5Options: RouteOptions = {
       `;
 
       // Any further joins might not preserve sorting
-      baseQuery += orderBy.replace("collections", "x");
+      baseQuery += orderBy.replace(/collections/g, "x");
 
       const results = await redb.manyOrNone(baseQuery, query);
 
@@ -432,6 +467,7 @@ export const getCollectionsV5Options: RouteOptions = {
           const floorAskCurrency = r.floor_sell_currency
             ? fromBuffer(r.floor_sell_currency)
             : Sdk.Common.Addresses.Eth[config.chainId];
+
           const topBidCurrency = r.top_buy_currency
             ? fromBuffer(r.top_buy_currency)
             : Sdk.Common.Addresses.Weth[config.chainId];
@@ -439,6 +475,7 @@ export const getCollectionsV5Options: RouteOptions = {
           return {
             id: r.id,
             slug: r.slug,
+            createdAt: new Date(r.created_at).toISOString(),
             name: r.name,
             image:
               r.image ??
@@ -447,6 +484,7 @@ export const getCollectionsV5Options: RouteOptions = {
             discordUrl: r.discord_url,
             externalUrl: r.external_url,
             twitterUsername: r.twitter_username,
+            openseaVerificationStatus: r.opensea_verification_status,
             description: r.description,
             sampleImages: Assets.getLocalAssetsLink(r.sample_images) ?? [],
             tokenCount: String(r.token_count),
@@ -487,6 +525,7 @@ export const getCollectionsV5Options: RouteOptions = {
             topBid: query.includeTopBid
               ? {
                   id: r.top_buy_id,
+                  sourceDomain: sources.get(r.top_buy_source_id_int)?.domain,
                   price: r.top_buy_id
                     ? await getJoiPriceObject(
                         {
@@ -555,29 +594,44 @@ export const getCollectionsV5Options: RouteOptions = {
 
       // Pagination
 
-      let continuation: number | null = null;
+      let continuation: string | null = null;
       if (results.length >= query.limit) {
         const lastCollection = _.last(results);
         if (lastCollection) {
           switch (query.sortBy) {
             case "1DayVolume": {
-              continuation = lastCollection.day1_volume;
+              continuation = buildContinuation(
+                `${lastCollection.day1_volume}_${lastCollection.id}`
+              );
               break;
             }
 
             case "7DayVolume": {
-              continuation = lastCollection.day7_volume;
+              continuation = buildContinuation(
+                `${lastCollection.day7_volume}_${lastCollection.id}`
+              );
               break;
             }
 
             case "30DayVolume": {
-              continuation = lastCollection.day30_volume;
+              continuation = buildContinuation(
+                `${lastCollection.day30_volume}_${lastCollection.id}`
+              );
+              break;
+            }
+
+            case "createdAt": {
+              continuation = buildContinuation(
+                `${new Date(lastCollection.created_at).toISOString()}_${lastCollection.id}`
+              );
               break;
             }
 
             case "allTimeVolume":
             default: {
-              continuation = lastCollection.all_time_volume;
+              continuation = buildContinuation(
+                `${lastCollection.all_time_volume}_${lastCollection.id}`
+              );
               break;
             }
           }
@@ -586,7 +640,7 @@ export const getCollectionsV5Options: RouteOptions = {
 
       return {
         collections,
-        continuation: continuation ? buildContinuation(continuation.toString()) : undefined,
+        continuation: continuation ? continuation : undefined,
       };
     } catch (error) {
       logger.error(`get-collections-${version}-handler`, `Handler failure: ${error}`);

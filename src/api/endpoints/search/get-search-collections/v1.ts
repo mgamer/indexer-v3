@@ -53,6 +53,7 @@ export const getSearchCollectionsV1Options: RouteOptions = {
           name: Joi.string().allow(null, ""),
           allTimeVolume: Joi.number().unsafe().allow(null),
           floorAskPrice: Joi.number().unsafe().allow(null),
+          openseaVerificationStatus: Joi.string().allow(null, ""),
         })
       ),
     }).label(`getSearchCollections${version.toUpperCase()}Response`),
@@ -89,7 +90,8 @@ export const getSearchCollectionsV1Options: RouteOptions = {
     }
 
     const baseQuery = `
-            SELECT id, name, contract, (metadata ->> 'imageUrl')::TEXT AS image, all_time_volume, floor_sell_value
+            SELECT id, name, contract, (metadata ->> 'imageUrl')::TEXT AS image, all_time_volume, floor_sell_value,
+                   (metadata ->> 'safelistRequestStatus')::TEXT AS opensea_verification_status
             FROM collections
             ${whereClause}
             ORDER BY all_time_volume DESC
@@ -106,6 +108,7 @@ export const getSearchCollectionsV1Options: RouteOptions = {
         image: Assets.getLocalAssetsLink(collection.image),
         allTimeVolume: collection.all_time_volume ? formatEth(collection.all_time_volume) : null,
         floorAskPrice: collection.floor_sell_value ? formatEth(collection.floor_sell_value) : null,
+        openseaVerificationStatus: collection.opensea_verification_status,
       })),
     };
   },

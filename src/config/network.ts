@@ -23,6 +23,11 @@ export const getNetworkName = () => {
   }
 };
 
+export const getServiceName = () => {
+  const isRailway = config.railwayStaticUrl !== "";
+  return `indexer-${isRailway ? "" : "fc-"}${config.version}-${getNetworkName()}`;
+};
+
 type NetworkSettings = {
   enableWebSocket: boolean;
   enableReorgCheck: boolean;
@@ -65,7 +70,7 @@ export const getNetworkSettings = (): NetworkSettings => {
     case 1:
       return {
         ...defaultNetworkSettings,
-        metadataMintDelay: 30,
+        metadataMintDelay: 900,
         enableMetadataAutoRefresh: true,
         washTradingExcludedContracts: [
           // ArtBlocks Contracts

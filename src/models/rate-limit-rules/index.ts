@@ -37,10 +37,12 @@ export class RateLimitRules {
       rules = JSON.parse(rulesCache);
     }
 
+    const newRules = new Map(); // Reset current rules
+
     for (const rule of rules) {
       const rateLimitRule = new RateLimitRuleEntity(rule);
 
-      this.rules.set(
+      newRules.set(
         RateLimitRules.getRuleKey(
           rateLimitRule.route,
           rateLimitRule.method,
@@ -50,6 +52,8 @@ export class RateLimitRules {
         rateLimitRule
       );
     }
+
+    this.rules = newRules;
   }
 
   public static getRuleKey(route: string, method: string, tier: number | null, apiKey: string) {
@@ -170,9 +174,10 @@ export class RateLimitRules {
     const apiKey = await ApiKeyManager.getApiKey(key);
     const tier = apiKey?.tier || 0;
 
-    const query = `SELECT *
+    const query = `SELECT DISTINCT ON (route) *
                    FROM rate_limit_rules
-                   WHERE tier = $/tier/ OR tier IS NULL OR api_key = $/key/`;
+                   WHERE tier = $/tier/ OR tier IS NULL OR api_key = $/key/
+                   ORDER BY route, api_key DESC`;
 
     const values = {
       tier,
