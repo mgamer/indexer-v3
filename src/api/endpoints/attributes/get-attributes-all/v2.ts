@@ -6,6 +6,7 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
+import { formatEth } from "@/common/utils";
 
 const version = "v2";
 
@@ -39,6 +40,7 @@ export const getAttributesAllV2Options: RouteOptions = {
             Joi.object({
               value: Joi.string().required(),
               count: Joi.number(),
+              floorAskPrice: Joi.number().unsafe().allow(null),
             })
           ),
         })
@@ -64,7 +66,7 @@ export const getAttributesAllV2Options: RouteOptions = {
         UNION
         
         SELECT attribute_keys.key, attribute_keys.kind, rank, attribute_count,
-           array_agg(jsonb_build_object('value', attributes.value, 'count', attributes.token_count)) AS "values"
+               array_agg(jsonb_build_object('value', attributes.value, 'count', attributes.token_count, 'floor_sell_value', attributes.floor_sell_value::text)) AS "values"
         FROM attribute_keys
         JOIN attributes ON attribute_keys.id = attributes.attribute_key_id
         WHERE attribute_keys.collection_id = $/collection/
@@ -96,7 +98,13 @@ export const getAttributesAllV2Options: RouteOptions = {
               key: r.key,
               attributeCount: Number(r.attribute_count),
               kind: r.kind,
-              values: r.values,
+              values: _.map(r.values, (value) => ({
+                count: value.count,
+                value: value.value,
+                floorAskPrice: value.floor_sell_value
+                  ? formatEth(value.floor_sell_value)
+                  : undefined,
+              })),
             };
           }
         });
