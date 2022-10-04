@@ -15,7 +15,7 @@ export interface BaseOrderBuildOptions {
   listingTime: number;
   expirationTime: number;
   signature: string;
-  fees: Sdk.Universe.Types.IPart[];
+  fees: string[];
 }
 
 type OrderBuildInfo = {

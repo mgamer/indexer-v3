@@ -58,7 +58,7 @@ export const offChainCheck = async (
   if (side === "buy") {
     // Check: maker has enough balance
     const ftBalance = await commonHelpers.getFtBalance(
-      order.params.take.assetType.contract!,
+      order.params.make.assetType.contract!,
       order.params.maker
     );
     if (ftBalance.lt(order.params.make.value)) {
@@ -70,7 +70,7 @@ export const offChainCheck = async (
         bn(
           await onChainData
             .fetchAndUpdateFtApproval(
-              order.params.take.assetType.contract!,
+              order.params.make.assetType.contract!,
               order.params.maker,
               Sdk.Universe.Addresses.Exchange[config.chainId]
             )

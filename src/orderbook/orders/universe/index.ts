@@ -102,6 +102,7 @@ export const save = async (
             break;
         }
       } else {
+        // This will always be WETH for now
         currency = order.params.make.assetType.contract!;
       }
 

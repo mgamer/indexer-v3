@@ -616,6 +616,8 @@ export const getExecuteBidV4Options: RouteOptions = {
                 maker,
                 contract,
                 tokenId,
+                // This should change after bids support more ERC20 tokens
+                currency: Sdk.Common.Addresses.Weth[config.chainId],
               });
             }
 
