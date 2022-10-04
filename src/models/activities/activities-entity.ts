@@ -18,6 +18,7 @@ export type ActivitiesEntityInsertParams = {
   contract: string;
   collectionId: string;
   tokenId: string | null;
+  orderId: string | null;
   fromAddress: string;
   toAddress: string | null;
   price: number;
@@ -35,6 +36,7 @@ export type ActivitiesEntityParams = {
   contract: Buffer;
   collection_id: string;
   token_id: string | null;
+  order_id: string | null;
   from_address: Buffer;
   to_address: Buffer | null;
   price: number;
@@ -77,6 +79,7 @@ export class ActivitiesEntity {
   contract: string;
   collectionId: string;
   tokenId: string | null;
+  orderId: string | null;
   fromAddress: string;
   toAddress: string | null;
   price: number;
@@ -95,6 +98,7 @@ export class ActivitiesEntity {
     this.contract = fromBuffer(params.contract);
     this.collectionId = params.collection_id;
     this.tokenId = params.token_id;
+    this.orderId = params.order_id;
     this.fromAddress = fromBuffer(params.from_address);
     this.toAddress = params.to_address ? fromBuffer(params.to_address) : null;
     this.price = params.price;

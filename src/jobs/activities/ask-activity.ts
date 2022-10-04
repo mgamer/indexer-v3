@@ -15,6 +15,7 @@ export class AskActivity {
       contract: data.contract,
       collectionId: data.contract,
       tokenId: data.tokenId,
+      orderId: data.orderId,
       fromAddress: data.maker,
       toAddress: null,
       price: data.price,

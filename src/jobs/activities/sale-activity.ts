@@ -34,6 +34,7 @@ export class SaleActivity {
       contract: data.contract,
       collectionId: token.collectionId,
       tokenId: data.tokenId,
+      orderId: data.orderId,
       fromAddress: data.fromAddress,
       toAddress: data.toAddress,
       price: data.price,

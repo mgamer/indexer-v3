@@ -23,6 +23,7 @@ export class BidActivity {
       contract: data.contract,
       collectionId: collectionId,
       tokenId: tokenId,
+      orderId: data.orderId,
       fromAddress: data.maker,
       toAddress: null,
       price: data.price,
