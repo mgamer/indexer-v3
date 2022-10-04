@@ -12,7 +12,7 @@ if (process.env.DATADOG_AGENT_URL) {
   });
 
   // Debug sending some header to X2Y2
-  tracer.use("hapi", {
+  tracer.use("http", {
     headers: ["X-Api-Used-By"],
   });
 }
