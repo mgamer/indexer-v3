@@ -142,6 +142,9 @@ export const getOrderEventsV1Options: RouteOptions = {
       const conditions: string[] = [
         `order_events.created_at >= to_timestamp($/startTimestamp/)`,
         `order_events.created_at <= to_timestamp($/endTimestamp/)`,
+        // Fix for the issue with negative prices for dutch auction orders
+        // (eg. due to orders not properly expired on time)
+        `coalesce(order_events.price, 0) >= 0`,
       ];
       if (query.contract) {
         (query as any).contract = toBuffer(query.contract);
