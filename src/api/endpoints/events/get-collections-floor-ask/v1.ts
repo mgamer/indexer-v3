@@ -134,6 +134,9 @@ export const getCollectionsFloorAskV1Options: RouteOptions = {
       const conditions: string[] = [
         `collection_floor_sell_events.created_at >= to_timestamp($/startTimestamp/)`,
         `collection_floor_sell_events.created_at <= to_timestamp($/endTimestamp/)`,
+        // Fix for the issue with negative prices for dutch auction orders
+        // (eg. due to orders not properly expired on time)
+        `coalesce(collection_floor_sell_events.price, 0) >= 0`,
       ];
       if (query.collection) {
         conditions.push(`collection_floor_sell_events.collection_id = $/collection/`);
