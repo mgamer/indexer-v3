@@ -393,10 +393,14 @@ const postX2Y2 = async (order: Sdk.X2Y2.Types.LocalOrder, apiKey: string) => {
 };
 
 const postUniverse = async (order: Sdk.Universe.Order) => {
+  const apiOrder = JSON.parse(JSON.stringify(order));
+  delete apiOrder.params.kind;
   await axios
     .post(
-      `https://${config.chainId === 4 ? "dev.marketplace-api." : "prod-marketplace"}.universe.xyz`,
-      JSON.stringify(order),
+      `https://${
+        config.chainId === 4 ? "dev.marketplace-api." : "prod-marketplace"
+      }.universe.xyz/v1/orders/order`,
+      JSON.stringify(apiOrder.params),
       {
         headers: {
           "Content-Type": "application/json",

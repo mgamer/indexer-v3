@@ -284,6 +284,17 @@ export const postOrderV3Options: RouteOptions = {
             throw Boom.badRequest(result.status);
           }
 
+          if (orderbook === "universe") {
+            await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
+
+            logger.info(
+              `post-order-${version}-handler`,
+              `orderbook: ${orderbook}, orderData: ${JSON.stringify(order.data)}, orderId: ${
+                result.id
+              }`
+            );
+          }
+
           return { message: "Success", orderId: result.id };
         }
       }
