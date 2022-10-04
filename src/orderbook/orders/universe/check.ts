@@ -46,10 +46,9 @@ export const offChainCheck = async (
     }
 
     // Check: order is not filled
-    //TODO: Not sure if this will work. Ask George@Reservoir?
     const quantityFilled = await commonHelpers.getQuantityFilled(id);
-    const filled = side === "buy" ? order.params.take.value : order.params.make.value;
-    if (quantityFilled.gte(filled)) {
+    const orderAmount = side === "buy" ? order.params.take.value : order.params.make.value;
+    if (quantityFilled.gte(orderAmount)) {
       throw new Error("filled");
     }
   }

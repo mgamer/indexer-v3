@@ -216,7 +216,7 @@ export const getExecuteBidV4Options: RouteOptions = {
           params.feeRecipient.push(feeRecipient);
         }
 
-        //TODO: Add support for more ERC20 tokens
+        //TODO: Add support for more ERC20 tokens in the future after it's supported by the indexer
         // Check the maker's Weth/Eth balance
         let wrapEthTx: TxData | undefined;
         const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);

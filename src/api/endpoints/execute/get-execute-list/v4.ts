@@ -515,13 +515,14 @@ export const getExecuteListV4Options: RouteOptions = {
               },
               orderIndex: i,
             });
+
+            // Go on with the next listing
+            continue;
           }
 
-          // Not sure why eslint isn't happy
-          // eslint-disable-next-line no-fallthrough
           case "universe": {
             if (!["universe"].includes(params.orderbook)) {
-              throw Boom.badRequest("Only `reservoir` is supported as orderbook");
+              throw Boom.badRequest("Only `universe` is supported as orderbook");
             }
 
             const order = await universeSellToken.build({

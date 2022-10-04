@@ -530,18 +530,20 @@ export const getExecuteBuyV4Options: RouteOptions = {
         if (!payload.skipBalanceCheck && bn(balance).lt(totalPrice)) {
           throw Boom.badData("Balance too low to proceed with transaction");
         }
+        let conduit = "";
 
-        if (!listingDetails.every((d) => d.kind === "seaport" || d.kind === "universe")) {
+        if (listingDetails.every((d) => d.kind === "seaport")) {
+          // TODO: Have a default conduit for each exchange per chain
+          conduit =
+            config.chainId === 1
+              ? // Use OpenSea's conduit for sharing approvals
+                "0x1e0049783f008a0085193e00003d00cd54003c71"
+              : Sdk.Seaport.Addresses.Exchange[config.chainId];
+        } else if (listingDetails.every((d) => d.kind === "universe")) {
+          conduit = Sdk.Universe.Addresses.Exchange[config.chainId];
+        } else {
           throw new Error("Only Seaport and Universe ERC20 listings are supported");
         }
-
-        // TODO: Have a default conduit for each exchange per chain
-        // TODO: Not sure how to rewrite this code to have Universe as an exception
-        const conduit =
-          config.chainId === 1
-            ? // Use OpenSea's conduit for sharing approvals
-              "0x1e0049783f008a0085193e00003d00cd54003c71"
-            : Sdk.Seaport.Addresses.Exchange[config.chainId];
 
         const allowance = await erc20.getAllowance(payload.taker, conduit);
         if (bn(allowance).lt(totalPrice)) {
