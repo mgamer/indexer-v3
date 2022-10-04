@@ -30,6 +30,9 @@ import * as zeroExV4BuyAttribute from "@/orderbook/orders/zeroex-v4/build/buy/at
 import * as zeroExV4BuyToken from "@/orderbook/orders/zeroex-v4/build/buy/token";
 import * as zeroExV4BuyCollection from "@/orderbook/orders/zeroex-v4/build/buy/collection";
 
+// Universe
+import * as universeBuyToken from "@/orderbook/orders/universe/build/buy/token";
+
 const version = "v4";
 
 export const getExecuteBidV4Options: RouteOptions = {
@@ -76,18 +79,18 @@ export const getExecuteBidV4Options: RouteOptions = {
             "Bid on a particular attribute value. Example: `Teddy (#33)`"
           ),
           quantity: Joi.number().description(
-            "Quanity of tokens user is buying. Only compatible with ERC1155 tokens. Example: `5`"
+            "Quantity of tokens user is buying. Only compatible with ERC1155 tokens. Example: `5`"
           ),
           weiPrice: Joi.string()
             .pattern(regex.number)
             .description("Amount bidder is willing to offer in wei. Example: `1000000000000000000`")
             .required(),
           orderKind: Joi.string()
-            .valid("zeroex-v4", "seaport", "looks-rare", "x2y2")
+            .valid("zeroex-v4", "seaport", "looks-rare", "x2y2", "universe")
             .default("seaport")
             .description("Exchange protocol used to create order. Example: `seaport`"),
           orderbook: Joi.string()
-            .valid("reservoir", "opensea", "looks-rare", "x2y2")
+            .valid("reservoir", "opensea", "looks-rare", "x2y2", "universe")
             .default("reservoir")
             .description("Orderbook where order is placed. Example: `Reservoir`"),
           automatedRoyalties: Joi.boolean()
@@ -213,6 +216,7 @@ export const getExecuteBidV4Options: RouteOptions = {
           params.feeRecipient.push(feeRecipient);
         }
 
+        //TODO: Add support for more ERC20 tokens
         // Check the maker's Weth/Eth balance
         let wrapEthTx: TxData | undefined;
         const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
@@ -587,6 +591,89 @@ export const getExecuteBidV4Options: RouteOptions = {
                     tokenSetId,
                     collection:
                       collection && !attributeKey && !attributeValue ? collection : undefined,
+                    orderbook: params.orderbook,
+                    source,
+                  },
+                },
+              },
+              orderIndex: i,
+            });
+
+            // Go on with the next bid
+            continue;
+          }
+
+          case "universe": {
+            if (!["universe"].includes(params.orderbook)) {
+              throw Boom.badRequest("Only `universe` is supported as orderbook");
+            }
+
+            let order: Sdk.Universe.Order | undefined;
+            if (token) {
+              const [contract, tokenId] = token.split(":");
+              order = await universeBuyToken.build({
+                ...params,
+                maker,
+                contract,
+                tokenId,
+              });
+            }
+
+            if (!order) {
+              throw Boom.internal("Failed to generate order");
+            }
+
+            // Check the maker's approval
+            let approvalTx: TxData | undefined;
+            const wethApproval = await weth.getAllowance(
+              maker,
+              Sdk.Universe.Addresses.Exchange[config.chainId]
+            );
+            if (bn(wethApproval).lt(bn(order.params.make.value))) {
+              approvalTx = weth.approveTransaction(
+                maker,
+                Sdk.Universe.Addresses.Exchange[config.chainId]
+              );
+            }
+
+            steps[0].items.push({
+              status: !wrapEthTx ? "complete" : "incomplete",
+              data: wrapEthTx,
+              orderIndex: i,
+            });
+            steps[1].items.push({
+              status: !approvalTx ? "complete" : "incomplete",
+              data: approvalTx,
+              orderIndex: i,
+            });
+            steps[2].items.push({
+              status: "incomplete",
+              data: {
+                sign: order.getSignatureData(),
+                post: {
+                  endpoint: "/order/v3",
+                  method: "POST",
+                  body: {
+                    order: {
+                      kind: "universe",
+                      data: {
+                        ...order.params,
+                      },
+                    },
+                    tokenSetId,
+                    attribute:
+                      collection && attributeKey && attributeValue
+                        ? {
+                            collection,
+                            key: attributeKey,
+                            value: attributeValue,
+                          }
+                        : undefined,
+                    collection:
+                      collection && params.excludeFlaggedTokens && !attributeKey && !attributeValue
+                        ? collection
+                        : undefined,
+                    isNonFlagged: params.excludeFlaggedTokens,
                     orderbook: params.orderbook,
                     source,
                   },

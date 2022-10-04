@@ -19,7 +19,7 @@ import { generateListingDetails } from "@/orderbook/orders";
 import { getCurrency } from "@/utils/currencies";
 
 const version = "v4";
-
+//TODO: Add Universe here
 export const getExecuteBuyV4Options: RouteOptions = {
   description: "Buy tokens",
   tags: ["api", "Router"],
@@ -35,7 +35,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
         Joi.object({
           kind: Joi.string()
             .lowercase()
-            .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2")
+            .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2", "universe")
             .required(),
           data: Joi.object().required(),
         })
@@ -49,7 +49,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
         .integer()
         .positive()
         .description(
-          "Quanity of tokens user is buying. Only compatible when buying a single ERC1155 token. Example: `5`"
+          "Quantity of tokens user is buying. Only compatible when buying a single ERC1155 token. Example: `5`"
         ),
       taker: Joi.string()
         .lowercase()
@@ -531,11 +531,12 @@ export const getExecuteBuyV4Options: RouteOptions = {
           throw Boom.badData("Balance too low to proceed with transaction");
         }
 
-        if (!listingDetails.every((d) => d.kind === "seaport")) {
-          throw new Error("Only Seaport ERC20 listings are supported");
+        if (!listingDetails.every((d) => d.kind === "seaport" || d.kind === "universe")) {
+          throw new Error("Only Seaport and Universe ERC20 listings are supported");
         }
 
         // TODO: Have a default conduit for each exchange per chain
+        // TODO: Not sure how to rewrite this code to have Universe as an exception
         const conduit =
           config.chainId === 1
             ? // Use OpenSea's conduit for sharing approvals

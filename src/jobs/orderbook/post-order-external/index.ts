@@ -30,6 +30,10 @@ const LOOKSRARE_RATE_LIMIT_INTERVAL = 1000 * 60;
 const X2Y2_RATE_LIMIT_REQUEST_COUNT = 120;
 const X2Y2_RATE_LIMIT_INTERVAL = 1000 * 60;
 
+// Universe default rate limit - 120 requests per minute
+const UNIVERSE_RATE_LIMIT_REQUEST_COUNT = 120;
+const UNIVERSE_RATE_LIMIT_INTERVAL = 1000 * 60;
+
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
@@ -52,7 +56,7 @@ if (config.doBackgroundWork) {
         throw new Error("Unsupported network");
       }
 
-      if (!["opensea", "looks-rare", "x2y2"].includes(orderbook)) {
+      if (!["opensea", "looks-rare", "x2y2", "universe"].includes(orderbook)) {
         throw new Error("Unsupported orderbook");
       }
 
@@ -148,6 +152,8 @@ const getOrderbookDefaultApiKey = (orderbook: string) => {
       return config.looksRareApiKey;
     case "x2y2":
       return config.x2y2ApiKey;
+    case "universe":
+      return "";
   }
 
   throw new Error(`Unsupported orderbook ${orderbook}`);
@@ -176,6 +182,13 @@ const getRateLimiter = (orderbook: string, orderbookApiKey: string) => {
         X2Y2_RATE_LIMIT_REQUEST_COUNT,
         X2Y2_RATE_LIMIT_INTERVAL
       );
+    case "universe":
+      return new OrderbookApiRateLimiter(
+        orderbook,
+        orderbookApiKey,
+        UNIVERSE_RATE_LIMIT_REQUEST_COUNT,
+        UNIVERSE_RATE_LIMIT_INTERVAL
+      );
   }
 
   throw new Error(`Unsupported orderbook ${orderbook}`);
@@ -201,6 +214,11 @@ const postOrder = async (
         orderData as Sdk.LooksRare.Types.MakerOrderParams
       );
       return postLooksRare(order, orderbookApiKey);
+    }
+
+    case "universe": {
+      const order = new Sdk.Universe.Order(config.chainId, orderData as Sdk.Universe.Types.Order);
+      return postUniverse(order);
     }
 
     case "x2y2": {
@@ -374,6 +392,37 @@ const postX2Y2 = async (order: Sdk.X2Y2.Types.LocalOrder, apiKey: string) => {
   });
 };
 
+const postUniverse = async (order: Sdk.Universe.Order) => {
+  await axios
+    .post(
+      `https://${config.chainId === 4 ? "dev.marketplace-api." : "prod-marketplace"}.universe.xyz`,
+      JSON.stringify(order),
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    )
+    .catch((error) => {
+      if (error.response) {
+        logger.error(
+          QUEUE_NAME,
+          `Failed to post order to Universe. order=${JSON.stringify(order)}, status: ${
+            error.response.status
+          }, data:${JSON.stringify(error.response.data)}`
+        );
+
+        switch (error.response.status) {
+          case 400:
+          case 401:
+            throw new InvalidRequestError("Request was rejected by Universe");
+        }
+      }
+
+      throw new Error(`Failed to post order to Universe`);
+    });
+};
+
 export type PostOrderExternalParams =
   | {
       orderData: Sdk.Seaport.Types.OrderComponents;
@@ -391,6 +440,11 @@ export type PostOrderExternalParams =
       orderData: Sdk.X2Y2.Types.LocalOrder;
       orderbook: "x2y2";
       orderbookApiKey: string;
+      retry: number;
+    }
+  | {
+      orderData: Sdk.Universe.Types.Order;
+      orderbook: "universe";
       retry: number;
     };
 

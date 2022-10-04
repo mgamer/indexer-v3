@@ -29,6 +29,10 @@ import * as x2y2Check from "@/orderbook/orders/x2y2/check";
 import * as zeroExV4SellToken from "@/orderbook/orders/zeroex-v4/build/sell/token";
 import * as zeroExV4Check from "@/orderbook/orders/zeroex-v4/check";
 
+// Universe
+import * as universeSellToken from "@/orderbook/orders/zeroex-v4/build/sell/token";
+import * as universeCheck from "@/orderbook/orders/zeroex-v4/check";
+
 const version = "v4";
 
 export const getExecuteListV4Options: RouteOptions = {
@@ -63,7 +67,7 @@ export const getExecuteListV4Options: RouteOptions = {
               "Filter to a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
             ),
           quantity: Joi.number().description(
-            "Quanity of tokens user is listing. Only compatible with ERC1155 tokens. Example: `5`"
+            "Quantity of tokens user is listing. Only compatible with ERC1155 tokens. Example: `5`"
           ),
           weiPrice: Joi.string()
             .pattern(regex.number)
@@ -72,11 +76,11 @@ export const getExecuteListV4Options: RouteOptions = {
               "Amount seller is willing to sell for in wei. Example: `1000000000000000000`"
             ),
           orderKind: Joi.string()
-            .valid("looks-rare", "zeroex-v4", "seaport", "x2y2")
+            .valid("looks-rare", "zeroex-v4", "seaport", "x2y2", "universe")
             .default("seaport")
             .description("Exchange protocol used to create order. Example: `seaport`"),
           orderbook: Joi.string()
-            .valid("opensea", "looks-rare", "reservoir", "x2y2")
+            .valid("opensea", "looks-rare", "reservoir", "x2y2", "universe")
             .default("reservoir")
             .description("Orderbook where order is placed. Example: `Reservoir`"),
           automatedRoyalties: Joi.boolean()
@@ -172,9 +176,10 @@ export const getExecuteListV4Options: RouteOptions = {
         // For now, ERC20 listings are only supported on Seaport
         if (
           params.orderKind !== "seaport" &&
+          params.orderKind !== "universe" &&
           params.currency !== Sdk.Common.Addresses.Eth[config.chainId]
         ) {
-          throw new Error("ERC20 listings are only supported on Seaport");
+          throw new Error("ERC20 listings are only supported on Seaport and Universe");
         }
 
         // Handle fees
@@ -510,6 +515,81 @@ export const getExecuteListV4Options: RouteOptions = {
               },
               orderIndex: i,
             });
+          }
+
+          // Not sure why eslint isn't happy
+          // eslint-disable-next-line no-fallthrough
+          case "universe": {
+            if (!["reservoir"].includes(params.orderbook)) {
+              throw Boom.badRequest("Only `reservoir` is supported as orderbook");
+            }
+
+            const order = await universeSellToken.build({
+              ...params,
+              maker,
+              contract,
+              tokenId,
+            });
+            if (!order) {
+              throw Boom.internal("Failed to generate order");
+            }
+
+            // Will be set if an approval is needed before listing
+            let approvalTx: TxData | undefined;
+
+            // Check the order's fillability
+            try {
+              await universeCheck.offChainCheck(order, { onChainApprovalRecheck: true });
+            } catch (error: any) {
+              switch (error.message) {
+                case "no-balance-no-approval":
+                case "no-balance": {
+                  // We cannot do anything if the user doesn't own the listed token
+                  throw Boom.badData("Maker does not own the listed token");
+                }
+
+                case "no-approval": {
+                  // Generate an approval transaction
+                  const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
+                  approvalTx = (
+                    kind === "erc721"
+                      ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.nft)
+                      : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.nft)
+                  ).approveTransaction(maker, Sdk.Universe.Addresses.Exchange[config.chainId]);
+
+                  break;
+                }
+              }
+            }
+
+            steps[0].items.push({
+              status: approvalTx ? "incomplete" : "complete",
+              data: approvalTx,
+              orderIndex: i,
+            });
+            steps[1].items.push({
+              status: "incomplete",
+              data: {
+                sign: order.getSignatureData(),
+                post: {
+                  endpoint: "/order/v3",
+                  method: "POST",
+                  body: {
+                    order: {
+                      kind: "universe",
+                      data: {
+                        ...order.params,
+                      },
+                    },
+                    orderbook: params.orderbook,
+                    source,
+                  },
+                },
+              },
+              orderIndex: i,
+            });
+            // Go on with the next listing
+            continue;
           }
         }
       }

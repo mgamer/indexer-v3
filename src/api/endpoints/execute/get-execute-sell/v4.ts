@@ -15,7 +15,6 @@ import { generateBidDetails } from "@/orderbook/orders";
 import { getNftApproval } from "@/orderbook/orders/common/helpers";
 
 const version = "v4";
-
 export const getExecuteSellV4Options: RouteOptions = {
   description: "Sell tokens (accept bids)",
   tags: ["api", "Router"],
@@ -181,6 +180,7 @@ export const getExecuteSellV4Options: RouteOptions = {
           quantity: 1,
           source: sourceId ? sources.get(sourceId)?.domain ?? null : null,
           // TODO: Add support for multiple currencies
+          // TODO: Ask George, how we can support APE coin?
           currency: Sdk.Common.Addresses.Weth[config.chainId],
           quote: formatEth(orderResult.price),
           rawQuote: orderResult.price,
