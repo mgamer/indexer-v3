@@ -118,17 +118,7 @@ export const save = async (
           break;
         // Sell order
         case "sell":
-          if (
-            (order.params.take.assetType.assetClass === "ERC20" &&
-              currency !== Sdk.Common.Addresses.Weth[config.chainId]) ||
-            order.params.take.assetType.assetClass !== "ETH"
-          ) {
-            return results.push({
-              id,
-              status: "unsupported-payment-token",
-            });
-          }
-
+          // We allow ETH and ERC20 orders so no need to validate here
           break;
         default:
           return results.push({

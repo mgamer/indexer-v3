@@ -2,20 +2,21 @@ import * as Sdk from "@reservoir0x/sdk";
 
 import { redb } from "@/common/db";
 import { OrderSide } from "@reservoir0x/sdk/dist/universe/types";
+import { toBuffer } from "@/common/utils";
 
 export interface BaseOrderBuildOptions {
   maker: string;
   contract: string;
   tokenId: string;
-  amount: number;
+  quantity: number;
   salt: number;
-  priceContract: string;
+  currency: string;
   nftAssetClass: string;
   weiPrice: string;
-  start: number;
-  end: number;
+  listingTime: number;
+  expirationTime: number;
   signature: string;
-  revenueSplits: Sdk.Universe.Types.IPart[];
+  fees: Sdk.Universe.Types.IPart[];
 }
 
 type OrderBuildInfo = {
@@ -49,20 +50,30 @@ export const getBuildInfo = async (
     throw new Error("Invalid NFT asset class");
   }
 
+  const makerOrdersCount = await redb.many(
+    `
+    SELECT
+      COUNT(orders.maker)
+    FROM orders
+    WHERE orders.maker = $/maker/
+  `,
+    { maker: toBuffer(options.maker) }
+  );
+
   const params: Sdk.Universe.Types.BaseBuildParams = {
     maker: options.maker,
     side: side === OrderSide.BUY ? "buy" : "sell",
     tokenKind: collectionResult.kind,
     contract: options.contract,
     tokenId: options.tokenId,
-    tokenAmount: options.amount,
+    tokenAmount: options.quantity,
     price: options.weiPrice,
-    paymentToken: options.priceContract,
-    fees: options.revenueSplits,
-    salt: options.salt,
-    startTime: options.start,
-    endTime: options.end,
-    signature: options.signature,
+    paymentToken: options.currency,
+    fees: options.fees,
+    salt: Number(makerOrdersCount[0].count ?? 0) + 1,
+    startTime: options.listingTime,
+    endTime: options.expirationTime,
+    signature: "",
   };
   return {
     params,

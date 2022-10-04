@@ -149,9 +149,7 @@ export const syncEvents = async (
 
         // TODO: Remove
         switch (eventData?.kind) {
-          // Rarible / Universe
-
-          case "universe-match":
+          // Rarible
           case "rarible-match": {
             const { args } = eventData.abi.parseLog(log);
             const leftHash = args["leftHash"].toLowerCase();
@@ -365,6 +363,10 @@ export const syncEvents = async (
       {
         kind: "zora",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("zora")),
+      },
+      {
+        kind: "universe",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("universe")),
       },
     ]);
 
