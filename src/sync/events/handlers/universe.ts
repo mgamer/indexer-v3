@@ -132,7 +132,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         currencyPrice = bn(currencyPrice).div(amount).toString();
 
         const prices = await getUSDAndNativePrices(
-          currency,
+          currency.toLowerCase(),
           currencyPrice,
           baseEventParams.timestamp
         );

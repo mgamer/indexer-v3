@@ -30,6 +30,7 @@ export const getBuildInfo = async (
   const collectionResult = await redb.oneOrNone(
     `
       SELECT
+        contracts.kind,
         contracts.address
       FROM collections
       JOIN contracts
@@ -44,14 +45,14 @@ export const getBuildInfo = async (
     throw new Error("Could not fetch token collection");
   }
 
-  if (options.nftAssetClass !== "erc721" && options.nftAssetClass !== "erc1155") {
+  if (collectionResult.kind !== "erc721" && collectionResult.kind !== "erc1155") {
     throw new Error("Invalid NFT asset class");
   }
 
   const params: Sdk.Universe.Types.BaseBuildParams = {
     maker: options.maker,
     side: side === OrderSide.BUY ? "buy" : "sell",
-    tokenKind: options.nftAssetClass,
+    tokenKind: collectionResult.kind,
     contract: options.contract,
     tokenId: options.tokenId,
     tokenAmount: options.amount,

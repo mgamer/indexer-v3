@@ -222,7 +222,7 @@ export const syncEvents = async (
             currencyPrice = bn(currencyPrice).div(amount).toString();
 
             const prices = await getUSDAndNativePrices(
-              currency,
+              currency.toLowerCase(),
               currencyPrice,
               baseEventParams.timestamp
             );
@@ -230,7 +230,6 @@ export const syncEvents = async (
               // We must always have the native price
               break;
             }
-
             fillEventsPartial.push({
               orderKind,
               orderId: leftHash,

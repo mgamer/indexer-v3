@@ -30,8 +30,8 @@ import * as zeroExV4SellToken from "@/orderbook/orders/zeroex-v4/build/sell/toke
 import * as zeroExV4Check from "@/orderbook/orders/zeroex-v4/check";
 
 // Universe
-import * as universeSellToken from "@/orderbook/orders/zeroex-v4/build/sell/token";
-import * as universeCheck from "@/orderbook/orders/zeroex-v4/check";
+import * as universeSellToken from "@/orderbook/orders/universe/build/sell/token";
+import * as universeCheck from "@/orderbook/orders/universe/check";
 
 const version = "v4";
 
@@ -520,7 +520,7 @@ export const getExecuteListV4Options: RouteOptions = {
           // Not sure why eslint isn't happy
           // eslint-disable-next-line no-fallthrough
           case "universe": {
-            if (!["reservoir"].includes(params.orderbook)) {
+            if (!["universe"].includes(params.orderbook)) {
               throw Boom.badRequest("Only `reservoir` is supported as orderbook");
             }
 
@@ -553,8 +553,14 @@ export const getExecuteListV4Options: RouteOptions = {
                   const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
                   approvalTx = (
                     kind === "erc721"
-                      ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.nft)
-                      : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.nft)
+                      ? new Sdk.Common.Helpers.Erc721(
+                          baseProvider,
+                          order.params.make.assetType.contract!
+                        )
+                      : new Sdk.Common.Helpers.Erc1155(
+                          baseProvider,
+                          order.params.make.assetType.contract!
+                        )
                   ).approveTransaction(maker, Sdk.Universe.Addresses.Exchange[config.chainId]);
 
                   break;
