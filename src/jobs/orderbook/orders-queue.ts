@@ -189,6 +189,7 @@ export type GenericOrderInfo =
       kind: "universe";
       info: orders.universe.OrderInfo;
       relayToArweave?: boolean;
+      validateBidValue?: boolean;
     };
 
 export const addToQueue = async (orderInfos: GenericOrderInfo[], prioritized = false) => {
