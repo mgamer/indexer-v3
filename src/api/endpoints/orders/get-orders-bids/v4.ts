@@ -253,7 +253,7 @@ export const getOrdersBidsV4Options: RouteOptions = {
                     WHERE token_sets.attribute_id = attributes.id)
                 END  
               FROM token_sets
-              WHERE token_sets.id = orders.token_set_id)
+              WHERE token_sets.id = orders.token_set_id AND token_sets.schema_hash = orders.token_set_schema_hash)
             ELSE NULL
           END
         ) AS metadata
