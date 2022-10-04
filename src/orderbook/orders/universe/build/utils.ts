@@ -2,7 +2,6 @@ import * as Sdk from "@reservoir0x/sdk";
 
 import { redb } from "@/common/db";
 import { OrderSide } from "@reservoir0x/sdk/dist/universe/types";
-import { toBuffer } from "@/common/utils";
 
 export interface BaseOrderBuildOptions {
   maker: string;
@@ -50,16 +49,6 @@ export const getBuildInfo = async (
     throw new Error("Invalid NFT asset class");
   }
 
-  const makerOrdersCount = await redb.many(
-    `
-    SELECT
-      COUNT(orders.maker)
-    FROM orders
-    WHERE orders.maker = $/maker/
-  `,
-    { maker: toBuffer(options.maker) }
-  );
-
   const params: Sdk.Universe.Types.BaseBuildParams = {
     maker: options.maker,
     side: side === OrderSide.BUY ? "buy" : "sell",
@@ -70,10 +59,8 @@ export const getBuildInfo = async (
     price: options.weiPrice,
     paymentToken: options.currency,
     fees: options.fees,
-    salt: Number(makerOrdersCount[0].count ?? 0) + 1,
     startTime: options.listingTime,
     endTime: options.expirationTime,
-    signature: "",
   };
   return {
     params,
