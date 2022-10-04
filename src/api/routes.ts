@@ -391,6 +391,12 @@ export const setupRoutes = (server: Server) => {
     options: collectionsEndpoints.postCreateCollectionsSetV1Options,
   });
 
+  server.route({
+    method: "PUT",
+    path: "/collections/{collection}/community/v1",
+    options: collectionsEndpoints.putSetCollectionCommunityV1Options,
+  });
+
   // Collections Sets
 
   server.route({

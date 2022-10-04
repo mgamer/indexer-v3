@@ -1,5 +1,6 @@
 export enum ApiKeyPermission {
   override_collection_refresh_cool_down = "override_collection_refresh_cool_down",
+  assign_collection_to_community = "assign_collection_to_community",
 }
 
 // Define the fields we can update
