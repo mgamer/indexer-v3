@@ -2,6 +2,7 @@
 
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
+import _ from "lodash";
 import { PgPromiseQuery, idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
@@ -40,9 +41,13 @@ if (config.doBackgroundWork) {
           allowFallback: true,
         });
 
-        const tokenIdRange = collection.tokenIdRange
-          ? `numrange(${collection.tokenIdRange[0]}, ${collection.tokenIdRange[1]}, '[]')`
-          : `'(,)'::numrange`;
+        let tokenIdRange = null;
+
+        if (collection.tokenIdRange) {
+          tokenIdRange = `numrange(${collection.tokenIdRange[0]}, ${collection.tokenIdRange[1]}, '[]')`;
+        } else if (collection.id === contract) {
+          tokenIdRange = `'(,)'::numrange`;
+        }
 
         const queries: PgPromiseQuery[] = [];
 
@@ -88,6 +93,11 @@ if (config.doBackgroundWork) {
 
         // Since this is the first time we run into this collection,
         // we update all tokens that match its token definition
+        let tokenFilter = `AND "token_id" <@ $/tokenIdRange:raw/`;
+        if (_.isNull(tokenIdRange)) {
+          tokenFilter = `AND "token_id" = $/tokenId/`;
+        }
+
         queries.push({
           query: `
               WITH "x" AS (
@@ -95,7 +105,7 @@ if (config.doBackgroundWork) {
                   "collection_id" = $/collection/,
                   "updated_at" = now()
                 WHERE "contract" = $/contract/
-                  AND "token_id" <@ $/tokenIdRange:raw/
+                ${tokenFilter}
                 RETURNING 1
               )
               UPDATE "collections" SET
@@ -106,6 +116,7 @@ if (config.doBackgroundWork) {
           values: {
             contract: toBuffer(collection.contract),
             tokenIdRange,
+            tokenId,
             collection: collection.id,
           },
         });
@@ -150,13 +161,15 @@ export type FetchCollectionMetadataInfo = {
   mintedTimestamp: number;
 };
 
-export const addToQueue = async (infos: FetchCollectionMetadataInfo[]) => {
+export const addToQueue = async (infos: FetchCollectionMetadataInfo[], jobId = "") => {
   await queue.addBulk(
     infos.map((info) => {
-      // For contracts with multiple collections, we have to include the token in order the fetch the right collection
-      const jobId = getNetworkSettings().multiCollectionContracts.includes(info.contract)
-        ? `${info.contract}-${info.tokenId}`
-        : info.contract;
+      if (jobId === "") {
+        // For contracts with multiple collections, we have to include the token in order the fetch the right collection
+        jobId = getNetworkSettings().multiCollectionContracts.includes(info.contract)
+          ? `${info.contract}-${info.tokenId}`
+          : info.contract;
+      }
 
       return {
         name: jobId,
