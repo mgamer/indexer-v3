@@ -92,6 +92,11 @@ if (config.doBackgroundWork) {
 
         // If the new collection ID is different from the collection ID currently stored
         if (result.collection_id != collection) {
+          logger.info(
+            "new-collection",
+            `New collection ${collection} for contract=${contract}, tokenId=${tokenId}, old collection=${result.collection_id}`
+          );
+
           await fetchCollectionMetadata.addToQueue(
             [
               {
