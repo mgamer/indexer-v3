@@ -31,13 +31,13 @@ export const postOrderV3Options: RouteOptions = {
       order: Joi.object({
         kind: Joi.string()
           .lowercase()
-          .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2")
+          .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2", "universe")
           .required(),
         data: Joi.object().required(),
       }),
       orderbook: Joi.string()
         .lowercase()
-        .valid("reservoir", "opensea", "looks-rare", "x2y2")
+        .valid("reservoir", "opensea", "looks-rare", "x2y2", "universe")
         .default("reservoir"),
       orderbookApiKey: Joi.string(),
       source: Joi.string()
@@ -263,6 +263,39 @@ export const postOrderV3Options: RouteOptions = {
           );
 
           return { message: "Success" };
+        }
+
+        case "universe": {
+          if (!["universe"].includes(orderbook)) {
+            throw new Error("Unknown orderbook");
+          }
+
+          const orderInfo: orders.universe.OrderInfo = {
+            orderParams: order.data,
+            metadata: {
+              schema,
+              source: orderbook === "universe" ? source : undefined,
+            },
+          };
+
+          const [result] = await orders.universe.save([orderInfo]);
+
+          if (result.status !== "success") {
+            throw Boom.badRequest(result.status);
+          }
+
+          if (orderbook === "universe") {
+            await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
+
+            logger.info(
+              `post-order-${version}-handler`,
+              `orderbook: ${orderbook}, orderData: ${JSON.stringify(order.data)}, orderId: ${
+                result.id
+              }`
+            );
+          }
+
+          return { message: "Success", orderId: result.id };
         }
       }
 

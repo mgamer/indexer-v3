@@ -8,6 +8,7 @@ export * as sudoswap from "@/orderbook/orders/sudoswap";
 export * as x2y2 from "@/orderbook/orders/x2y2";
 export * as zeroExV4 from "@/orderbook/orders/zeroex-v4";
 export * as zora from "@/orderbook/orders/zora";
+export * as universe from "@/orderbook/orders/universe";
 
 // Imports
 
@@ -181,6 +182,14 @@ export const generateListingDetails = (
       };
     }
 
+    case "universe": {
+      return {
+        kind: "universe",
+        ...common,
+        order: new Sdk.Universe.Order(config.chainId, order.rawData),
+      };
+    }
+
     default: {
       throw new Error("Unsupported order kind");
     }
@@ -273,6 +282,15 @@ export const generateBidDetails = async (
       const sdkOrder = new Sdk.Sudoswap.Order(config.chainId, order.rawData);
       return {
         kind: "sudoswap",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
+    case "universe": {
+      const sdkOrder = new Sdk.Universe.Order(config.chainId, order.rawData);
+      return {
+        kind: "universe",
         ...common,
         order: sdkOrder,
       };

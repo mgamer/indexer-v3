@@ -1,6 +1,5 @@
 import { Interface } from "@ethersproject/abi";
 import { Universe } from "@reservoir0x/sdk";
-
 import { config } from "@/config/index";
 import { EventData } from "@/events-sync/data";
 
@@ -19,6 +18,21 @@ export const match: EventData = {
       uint256 newRightFill,
       (bytes4 assetClass, bytes data) leftAsset,
       (bytes4 assetClass, bytes data) rightAsset
+    )`,
+  ]),
+};
+
+export const cancel: EventData = {
+  kind: "universe-cancel",
+  addresses: { [Universe.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
+  topic: "0xbbdc98cb2835f4f846e6a63700d0498b4674f0e8858fd50c6379314227afa04e",
+  numTopics: 3,
+  abi: new Interface([
+    `event Cancel(
+      bytes32 indexed hash,
+      address indexed maker,
+      (bytes4 assetClass, bytes data) makeAssetType,
+      (bytes4 assetClass, bytes data) takeAssetType
     )`,
   ]),
 };

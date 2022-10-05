@@ -15,7 +15,6 @@ import { generateBidDetails } from "@/orderbook/orders";
 import { getNftApproval } from "@/orderbook/orders/common/helpers";
 
 const version = "v4";
-
 export const getExecuteSellV4Options: RouteOptions = {
   description: "Sell tokens (accept bids)",
   tags: ["api", "Router"],
