@@ -190,7 +190,7 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
       `
         SELECT 1 FROM token_sets
         WHERE token_sets.id = $/id/
-          AND token_sets.schema_hash = $/schemHash/
+          AND token_sets.schema_hash = $/schemaHash/
       `,
       {
         id: tokenSet.id,
