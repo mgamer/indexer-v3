@@ -24,8 +24,8 @@ export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 10,
-    removeOnComplete: true,
-    removeOnFail: true,
+    removeOnComplete: 1000,
+    removeOnFail: 1000,
   },
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
@@ -39,7 +39,7 @@ if (config.doBackgroundWork) {
     async () => {
       const pendingFlagStatusSyncJobs = new PendingFlagStatusSyncJobs();
 
-      if (await acquireLock(flagStatusSyncJob.getLockName(), 60 * 5)) {
+      if (await acquireLock(flagStatusSyncJob.getLockName())) {
         logger.info(QUEUE_NAME, `Lock acquired.`);
 
         const pendingJob = await pendingFlagStatusSyncJobs.next();

@@ -425,6 +425,26 @@ export class DailyVolume {
       return false;
     }
 
+    try {
+      for (const row of mergedArr) {
+        await redis
+          .multi()
+          .zadd("collections_day1_rank", row.day1_rank, row.collection_id)
+          .zadd("collections_day7_rank", row.day7_rank, row.collection_id)
+          .zadd("collections_day30_rank", row.day30_rank, row.collection_id)
+          .zadd("collections_all_time_rank", row.all_time_rank, row.collection_id)
+          .exec();
+      }
+    } catch (e: any) {
+      logger.error(
+        "daily-volumes",
+        JSON.stringify({
+          msg: `Error while caching day30_rank on redis`,
+          exception: e.message,
+        })
+      );
+    }
+
     return true;
   }
 
