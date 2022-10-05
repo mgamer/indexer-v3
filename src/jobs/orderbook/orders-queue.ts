@@ -97,6 +97,13 @@ if (config.doBackgroundWork) {
 
             break;
           }
+
+          case "universe": {
+            const result = await orders.universe.save([info as orders.universe.OrderInfo]);
+            logger.info(QUEUE_NAME, `[universe] Order save result: ${JSON.stringify(result)}`);
+
+            break;
+          }
         }
       } catch (error) {
         logger.error(QUEUE_NAME, `Failed to process order ${job.data}: ${error}`);
@@ -175,6 +182,12 @@ export type GenericOrderInfo =
   | {
       kind: "sudoswap";
       info: orders.sudoswap.OrderInfo;
+      relayToArweave?: boolean;
+      validateBidValue?: boolean;
+    }
+  | {
+      kind: "universe";
+      info: orders.universe.OrderInfo;
       relayToArweave?: boolean;
       validateBidValue?: boolean;
     };

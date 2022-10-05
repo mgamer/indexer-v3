@@ -35,7 +35,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
         Joi.object({
           kind: Joi.string()
             .lowercase()
-            .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2")
+            .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2", "universe")
             .required(),
           data: Joi.object().required(),
         })
@@ -49,7 +49,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
         .integer()
         .positive()
         .description(
-          "Quanity of tokens user is buying. Only compatible when buying a single ERC1155 token. Example: `5`"
+          "Quantity of tokens user is buying. Only compatible when buying a single ERC1155 token. Example: `5`"
         ),
       taker: Joi.string()
         .lowercase()
@@ -531,16 +531,19 @@ export const getExecuteBuyV4Options: RouteOptions = {
           throw Boom.badData("Balance too low to proceed with transaction");
         }
 
-        if (!listingDetails.every((d) => d.kind === "seaport")) {
-          throw new Error("Only Seaport ERC20 listings are supported");
+        let conduit: string;
+        if (listingDetails.every((d) => d.kind === "seaport")) {
+          // TODO: Have a default conduit for each exchange per chain
+          conduit =
+            config.chainId === 1
+              ? // Use OpenSea's conduit for sharing approvals
+                "0x1e0049783f008a0085193e00003d00cd54003c71"
+              : Sdk.Seaport.Addresses.Exchange[config.chainId];
+        } else if (listingDetails.every((d) => d.kind === "universe")) {
+          conduit = Sdk.Universe.Addresses.Exchange[config.chainId];
+        } else {
+          throw new Error("Only Seaport and Universe ERC20 listings are supported");
         }
-
-        // TODO: Have a default conduit for each exchange per chain
-        const conduit =
-          config.chainId === 1
-            ? // Use OpenSea's conduit for sharing approvals
-              "0x1e0049783f008a0085193e00003d00cd54003c71"
-            : Sdk.Seaport.Addresses.Exchange[config.chainId];
 
         const allowance = await erc20.getAllowance(payload.taker, conduit);
         if (bn(allowance).lt(totalPrice)) {

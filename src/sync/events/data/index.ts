@@ -77,6 +77,7 @@ export type EventDataKind =
   | "sudoswap-token-deposit"
   | "sudoswap-token-withdrawal"
   | "universe-match"
+  | "universe-cancel"
   | "nftx-redeemed"
   | "nftx-minted";
 
@@ -141,6 +142,7 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
       sudoswap.tokenDeposit,
       sudoswap.tokenWithdrawal,
       universe.match,
+      universe.cancel,
       nftx.minted,
       nftx.redeemed,
     ];
@@ -257,6 +259,8 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return sudoswap.tokenWithdrawal;
     case "universe-match":
       return universe.match;
+    case "universe-cancel":
+      return universe.cancel;
     case "nftx-minted":
       return nftx.minted;
     case "nftx-redeemed":

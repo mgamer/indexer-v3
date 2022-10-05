@@ -16,6 +16,7 @@ import * as wyvern from "@/events-sync/handlers/wyvern";
 import * as x2y2 from "@/events-sync/handlers/x2y2";
 import * as zeroExV4 from "@/events-sync/handlers/zeroex-v4";
 import * as zora from "@/events-sync/handlers/zora";
+import * as universe from "@/events-sync/handlers/universe";
 
 export type EventsInfo = {
   kind:
@@ -34,7 +35,8 @@ export type EventsInfo = {
     | "wyvern"
     | "x2y2"
     | "zeroex-v4"
-    | "zora";
+    | "zora"
+    | "universe";
   events: EnhancedEvent[];
   backfill?: boolean;
 };
@@ -119,6 +121,11 @@ export const processEvents = async (info: EventsInfo) => {
 
     case "zora": {
       data = await zora.handleEvents(info.events);
+      break;
+    }
+
+    case "universe": {
+      data = await universe.handleEvents(info.events);
       break;
     }
   }
