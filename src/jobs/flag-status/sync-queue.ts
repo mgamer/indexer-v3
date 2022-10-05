@@ -2,7 +2,7 @@
 
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { logger } from "@/common/logger";
-import { extendLock, redis, releaseLock } from "@/common/redis";
+import { redis, releaseLock } from "@/common/redis";
 import { config } from "@/config/index";
 
 import { Tokens } from "@/models/tokens";
@@ -19,8 +19,8 @@ export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 10,
-    removeOnComplete: true,
-    removeOnFail: true,
+    removeOnComplete: 1,
+    removeOnFail: 1,
   },
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
@@ -101,9 +101,7 @@ if (config.doBackgroundWork) {
         }
       }
 
-      if (await extendLock(getLockName(), 60 * 5)) {
-        await addToQueue(collectionId, contract, delay);
-      }
+      await addToQueue(collectionId, contract, delay);
     },
     { connection: redis.duplicate(), concurrency: 1 }
   );
