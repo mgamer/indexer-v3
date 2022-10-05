@@ -184,7 +184,20 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
 
   const valid: TokenSet[] = [];
   for (const tokenSet of tokenSets) {
-    if (!(await isValid(tokenSet))) {
+    // For efficiency, first check if the token set exists before
+    // triggering a potentially-expensive validation of it
+    const tokenSetExists = await redb.oneOrNone(
+      `
+        SELECT 1 FROM token_sets
+        WHERE token_sets.id = $/id/
+          AND token_sets.schema_hash = $/schemHash/
+      `,
+      {
+        id: tokenSet.id,
+        schemaHash: toBuffer(tokenSet.schemaHash),
+      }
+    );
+    if (!tokenSetExists && !(await isValid(tokenSet))) {
       continue;
     }
 
