@@ -161,7 +161,7 @@ export const getOrdersAllV2Options: RouteOptions = {
                 ON attributes.attribute_key_id = attribute_keys.id
               JOIN collections
                 ON attribute_keys.collection_id = collections.id
-              WHERE token_sets.id = orders.token_set_id)
+              WHERE token_sets.id = orders.token_set_id AND token_sets.schema_hash = orders.token_set_schema_hash)
 
             ELSE NULL
           END
