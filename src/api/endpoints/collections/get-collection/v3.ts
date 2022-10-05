@@ -339,7 +339,7 @@ export const getCollectionV3Options: RouteOptions = {
                   ? Number(r.floor_sell_value) / Number(r.day30_floor_sell_value)
                   : null,
               },
-              collectionBidSupported: Number(r.token_count) <= config.maxTokenSetSize,
+              collectionBidSupported: Number(r.token_count) <= config.maxCollectionBidTokenSetSize,
               ownerCount: Number(r.ownerCount),
               attributes: _.map(_.sortBy(r.attributes, ["rank", "key"]), (attribute) => ({
                 key: attribute.key,
