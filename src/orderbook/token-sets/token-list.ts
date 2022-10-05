@@ -89,7 +89,6 @@ const isValid = async (tokenSet: TokenSet) => {
         tokens = await redb.manyOrNone(
           `
             SELECT
-              token_attributes.contract,
               token_attributes.token_id
             FROM token_attributes
             JOIN attributes
@@ -127,7 +126,6 @@ const isValid = async (tokenSet: TokenSet) => {
         tokens = await redb.manyOrNone(
           `
             SELECT
-              tokens.contract,
               tokens.token_id
             FROM tokens
             WHERE tokens.collection_id = $/collection/
@@ -148,7 +146,11 @@ const isValid = async (tokenSet: TokenSet) => {
       }
 
       // All tokens will share the same underlying contract
-      const contract = fromBuffer(tokens[0].contract);
+      const contract = tokens[0].contract
+        ? fromBuffer(tokens[0].contract)
+        : // Assume the collection id always starts with the contract
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (tokenSet.schema.data as any).collection.slice(0, 42);
       const tokenIds = tokens.map(({ token_id }) => token_id);
 
       // Generate the token set id corresponding to the passed schema
