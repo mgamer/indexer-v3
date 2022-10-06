@@ -43,6 +43,9 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
         .description(
           "If true, will force a refresh regardless of cool down. Requires an authorized api key to be passed."
         ),
+      metadataOnly: Joi.boolean()
+        .default(false)
+        .description("If true, will only refresh the collection metadata."),
     }),
   },
   response: {
@@ -84,31 +87,37 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
         throw Boom.badRequest(`Collection ${payload.collection} not found`);
       }
 
-      const isLargeCollection = collection.tokenCount > 30000;
-
-      if (!overrideCoolDown) {
-        // For large collections allow refresh once a day
-        if (isLargeCollection) {
-          refreshCoolDownMin = 60 * 24;
-        }
-
-        // Check when the last sync was performed
-        const nextAvailableSync = add(new Date(collection.lastMetadataSync), {
-          minutes: refreshCoolDownMin,
-        });
-
-        if (!_.isNull(collection.lastMetadataSync) && isAfter(nextAvailableSync, Date.now())) {
-          throw Boom.tooEarly(`Next available sync ${formatISO9075(nextAvailableSync)} UTC`);
-        }
-      }
-
-      // Update the last sync date
       const currentUtcTime = new Date().toISOString();
-      await Collections.update(payload.collection, { lastMetadataSync: currentUtcTime });
 
-      // Update the collection id of any missing tokens
-      await edb.none(
-        `
+      if (payload.metadataOnly) {
+        // Refresh the collection metadata
+        const tokenId = _.isEmpty(collection.tokenIdRange) ? "1" : `${collection.tokenIdRange[0]}`;
+        await collectionUpdatesMetadata.addToQueue(collection.contract, tokenId);
+      } else {
+        const isLargeCollection = collection.tokenCount > 30000;
+
+        if (!overrideCoolDown) {
+          // For large collections allow refresh once a day
+          if (isLargeCollection) {
+            refreshCoolDownMin = 60 * 24;
+          }
+
+          // Check when the last sync was performed
+          const nextAvailableSync = add(new Date(collection.lastMetadataSync), {
+            minutes: refreshCoolDownMin,
+          });
+
+          if (!_.isNull(collection.lastMetadataSync) && isAfter(nextAvailableSync, Date.now())) {
+            throw Boom.tooEarly(`Next available sync ${formatISO9075(nextAvailableSync)} UTC`);
+          }
+        }
+
+        // Update the last sync date
+        await Collections.update(payload.collection, { lastMetadataSync: currentUtcTime });
+
+        // Update the collection id of any missing tokens
+        await edb.none(
+          `
           WITH x AS (
             SELECT
               collections.contract,
@@ -124,39 +133,40 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
             AND tokens.token_id <@ x.token_id_range
             AND tokens.collection_id IS NULL
         `,
-        { collection: payload.collection }
-      );
-
-      // Refresh the collection metadata
-      const tokenId = _.isEmpty(collection.tokenIdRange) ? "1" : `${collection.tokenIdRange[0]}`;
-      await collectionUpdatesMetadata.addToQueue(collection.contract, tokenId);
-
-      // Refresh the contract floor sell and top bid
-      await collectionsRefreshCache.addToQueue(collection.contract);
-
-      // Revalidate the contract orders
-      await orderFixes.addToQueue([{ by: "contract", data: { contract: collection.contract } }]);
-
-      // Do these refresh operation only for small collections
-      if (!isLargeCollection) {
-        if (config.metadataIndexingMethod === "opensea") {
-          // Refresh contract orders from OpenSea
-          await OpenseaIndexerApi.fastContractSync(collection.contract);
-        }
-
-        // Refresh the collection tokens metadata
-        await metadataIndexFetch.addToQueue(
-          [
-            {
-              kind: "full-collection",
-              data: {
-                method: config.metadataIndexingMethod,
-                collection: collection.id,
-              },
-            },
-          ],
-          true
+          { collection: payload.collection }
         );
+
+        // Refresh the collection metadata
+        const tokenId = _.isEmpty(collection.tokenIdRange) ? "1" : `${collection.tokenIdRange[0]}`;
+        await collectionUpdatesMetadata.addToQueue(collection.contract, tokenId);
+
+        // Refresh the contract floor sell and top bid
+        await collectionsRefreshCache.addToQueue(collection.contract);
+
+        // Revalidate the contract orders
+        await orderFixes.addToQueue([{ by: "contract", data: { contract: collection.contract } }]);
+
+        // Do these refresh operation only for small collections
+        if (!isLargeCollection) {
+          if (config.metadataIndexingMethod === "opensea") {
+            // Refresh contract orders from OpenSea
+            await OpenseaIndexerApi.fastContractSync(collection.contract);
+          }
+
+          // Refresh the collection tokens metadata
+          await metadataIndexFetch.addToQueue(
+            [
+              {
+                kind: "full-collection",
+                data: {
+                  method: config.metadataIndexingMethod,
+                  collection: collection.id,
+                },
+              },
+            ],
+            true
+          );
+        }
       }
 
       logger.info(
