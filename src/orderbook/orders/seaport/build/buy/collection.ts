@@ -66,7 +66,7 @@ export const build = async (options: BuildOrderOptions) => {
         { id: options.collection }
       );
       if (result?.non_flagged_token_set_id) {
-        cachedMerkleRoot = result?.non_flagged_token_set_id;
+        cachedMerkleRoot = result?.non_flagged_token_set_id.split(":")[2];
       }
     }
 
