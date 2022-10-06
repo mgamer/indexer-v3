@@ -23,9 +23,6 @@ export const postFlagTokenV1Options: RouteOptions = {
     },
   },
   validate: {
-    headers: Joi.object({
-      "x-api-key": Joi.string().required(),
-    }).options({ allowUnknown: true }),
     payload: Joi.object({
       token: Joi.string()
         .lowercase()
@@ -50,12 +47,6 @@ export const postFlagTokenV1Options: RouteOptions = {
     },
   },
   handler: async (request: Request) => {
-    const apiKey = await ApiKeyManager.getApiKey(request.headers["x-api-key"]);
-
-    if (_.isNull(apiKey)) {
-      throw Boom.unauthorized("Invalid API key");
-    }
-
     const payload = request.payload as any;
     const [contract, tokenId] = payload.token.split(":");
 
@@ -94,9 +85,19 @@ export const postFlagTokenV1Options: RouteOptions = {
         await flagStatusProcessQueue.addToQueue();
       }
 
+      const key = request.headers["x-api-key"];
+      const apiKey = await ApiKeyManager.getApiKey(key);
+
+      const remoteAddress = request.headers["x-forwarded-for"]
+        ? _.split(request.headers["x-forwarded-for"], ",")[0]
+        : request.info.remoteAddress;
+
+      const callingUser =
+        _.isUndefined(key) || _.isEmpty(key) || _.isNull(apiKey) ? remoteAddress : apiKey.appName; // If no api key or the api key is invalid use IP
+
       logger.info(
         `post-flag-token-${version}-handler`,
-        `${apiKey.appName} updated ${payload.token} to ${payload.flag}`
+        `${callingUser} updated ${payload.token} to ${payload.flag}`
       );
       return { message: "Request accepted" };
     } catch (error) {
