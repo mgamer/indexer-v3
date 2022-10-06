@@ -268,8 +268,10 @@ export const getExecuteBuyV4Options: RouteOptions = {
               currency: toBuffer(payload.currency),
             }
           );
-          if (!orderResult) {
+          if (!orderResult && !payload.skipErrors) {
             throw Boom.badData(`Could not use order id ${orderId}`);
+          } else if (payload.skipErrors) {
+            continue;
           }
 
           await addToPath(
@@ -459,6 +461,10 @@ export const getExecuteBuyV4Options: RouteOptions = {
             }
           }
         }
+      }
+
+      if (!path.length) {
+        throw Boom.badRequest("No fillable orders");
       }
 
       if (payload.quantity > 1) {
