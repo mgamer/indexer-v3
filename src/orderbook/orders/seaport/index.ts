@@ -219,7 +219,9 @@ export const save = async (
               },
             ]);
 
-            await handleTokenList(id, info.contract, tokenSetId, merkleRoot);
+            if (!isReservoir) {
+              await handleTokenList(id, info.contract, tokenSetId, merkleRoot);
+            }
           }
 
           break;
@@ -367,25 +369,11 @@ export const save = async (
             const percentage = (Number(value.toString()) / collectionFloorAskValue) * 100;
 
             if (percentage < seaportBidPercentageThreshold) {
-              logger.info(
-                "orders-seaport-save",
-                `Bid value validation - too low. orderId=${id}, contract=${
-                  info.contract
-                }, tokenId=${tokenId}, value=${value.toString()}, collectionFloorAskValue=${collectionFloorAskValue}, percentage=${percentage.toString()}, threshold=${seaportBidPercentageThreshold}`
-              );
-
               return results.push({
                 id,
                 status: "bid-too-low",
               });
             }
-          } else {
-            logger.info(
-              "orders-seaport-save",
-              `Bid value validation - skip. orderId=${id}, contract=${
-                info.contract
-              }, tokenId=${tokenId}, value=${value.toString()}`
-            );
           }
         } catch (error) {
           logger.error(
@@ -798,11 +786,6 @@ export const handleTokenList = async (
   merkleRoot: string
 ) => {
   try {
-    logger.info(
-      "orders-seaport-save",
-      `handleTokenList - Start. orderId=${orderId}, contract=${contract}, merkleRoot=${merkleRoot}, tokenSetId=${tokenSetId}`
-    );
-
     const handleTokenSetId = await redis.set(
       `seaport-handle-token-list:${tokenSetId}`,
       Date.now(),
@@ -812,19 +795,9 @@ export const handleTokenList = async (
     );
 
     if (handleTokenSetId) {
-      logger.info(
-        "orders-seaport-save",
-        `handleTokenList - Rank Check - Start. orderId=${orderId}, contract=${contract}, merkleRoot=${merkleRoot}, tokenSetId=${tokenSetId}`
-      );
-
       const collectionDay30Rank = await redis.zscore("collections_day30_rank", contract);
 
       if (!collectionDay30Rank || Number(collectionDay30Rank) <= 1000) {
-        logger.info(
-          "orders-seaport-save",
-          `handleTokenList - Missing TokenSet Check - Start. orderId=${orderId}, contract=${contract}, merkleRoot=${merkleRoot}, tokenSetId=${tokenSetId}, collectionDay30Rank=${collectionDay30Rank}`
-        );
-
         const tokenSetTokensExist = await redb.oneOrNone(
           `
                   SELECT 1 FROM "token_sets" "ts"
@@ -847,6 +820,7 @@ export const handleTokenList = async (
               `
                       SELECT id FROM "collections" "c"
                       WHERE "c"."contract" = $/contract/
+                      AND day30_rank <= 1000
                     `,
               { contract: toBuffer(contract) }
             );
@@ -874,17 +848,7 @@ export const handleTokenList = async (
 
           await flagStatusProcessQueue.addToQueue();
         }
-      } else {
-        logger.info(
-          "orders-seaport-save",
-          `handleTokenList - Rank Check - Skip. orderId=${orderId}, contract=${contract}, merkleRoot=${merkleRoot}, tokenSetId=${tokenSetId}, collectionDay30Rank=${collectionDay30Rank}`
-        );
       }
-    } else {
-      logger.info(
-        "orders-seaport-save",
-        `handleTokenList - Skip. orderId=${orderId}, contract=${contract}, merkleRoot=${merkleRoot}, tokenSetId=${tokenSetId}`
-      );
     }
   } catch (error) {
     logger.error(
