@@ -72,7 +72,7 @@ if (config.doBackgroundWork) {
               created_at = created_at
             WHERE tokens.contract = $/contract/
             AND tokens.token_id = $/tokenId/
-            RETURNING collection_id
+            RETURNING collection_id, created_at
           `,
           {
             contract: toBuffer(contract),
