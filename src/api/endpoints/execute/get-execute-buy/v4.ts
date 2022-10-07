@@ -270,12 +270,14 @@ export const getExecuteBuyV4Options: RouteOptions = {
                 AND orders.side = 'sell'
                 AND orders.fillability_status = 'fillable'
                 AND orders.approval_status = 'approved'
+                AND orders.quantity_remaining >= $/quantity/
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
                 AND orders.currency = $/currency/
             `,
             {
               id: orderId,
               currency: toBuffer(payload.currency),
+              quantity: payload.quantity ?? 1,
             }
           );
           if (!orderResult) {
@@ -283,6 +285,17 @@ export const getExecuteBuyV4Options: RouteOptions = {
               throw Boom.badData(`Could not use order id ${orderId}`);
             } else {
               continue;
+            }
+          }
+
+          if (payload.quantity) {
+            if (orderResult.token_kind !== "erc1155") {
+              throw Boom.badRequest("Only ERC1155 orders support a quantity");
+            }
+            if (payload.orderIds.length > 1) {
+              throw Boom.badRequest(
+                "When specifying a quantity only a single ERC1155 order can get filled"
+              );
             }
           }
 
@@ -299,6 +312,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
               kind: orderResult.token_kind,
               contract: fromBuffer(orderResult.contract),
               tokenId: orderResult.token_id,
+              quantity: payload.quantity ?? 1,
             }
           );
         }
