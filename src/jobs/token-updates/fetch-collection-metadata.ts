@@ -2,6 +2,7 @@
 
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
+import _ from "lodash";
 import { PgPromiseQuery, idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
@@ -40,11 +41,15 @@ if (config.doBackgroundWork) {
           allowFallback: true,
         });
 
-        let tokenIdRange = `'(,)'::numrange`;
+        let tokenIdRange = null;
 
         if (collection.tokenIdRange) {
           tokenIdRange = `numrange(${collection.tokenIdRange[0]}, ${collection.tokenIdRange[1]}, '[]')`;
+        } else if (collection.id === contract) {
+          tokenIdRange = `'(,)'::numrange`;
         }
+
+        const tokenIdRangeParam = tokenIdRange ? "$/tokenIdRange:raw/" : "$/tokenIdRange/";
 
         const queries: PgPromiseQuery[] = [];
 
@@ -69,7 +74,7 @@ if (config.doBackgroundWork) {
                 $/metadata:json/,
                 $/royalties:json/,
                 $/contract/,
-                $/tokenIdRange:raw/,
+                ${tokenIdRangeParam},
                 $/tokenSetId/,
                 $/mintedTimestamp/
               ) ON CONFLICT DO NOTHING;
@@ -90,9 +95,9 @@ if (config.doBackgroundWork) {
 
         // Since this is the first time we run into this collection,
         // we update all tokens that match its token definition
-        let tokenFilter = `AND "token_id" <@ $/tokenIdRange:raw/`;
+        let tokenFilter = `AND "token_id" <@ ${tokenIdRangeParam}`;
 
-        if (!collection.tokenIdRange && collection.id !== contract) {
+        if (_.isNull(tokenIdRange)) {
           tokenFilter = `AND "token_id" = $/tokenId/`;
         }
 
