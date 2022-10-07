@@ -41,12 +41,10 @@ if (config.doBackgroundWork) {
           allowFallback: true,
         });
 
-        let tokenIdRange = "";
+        let tokenIdRange = `'(,)'::numrange`;
 
         if (collection.tokenIdRange) {
           tokenIdRange = `numrange(${collection.tokenIdRange[0]}, ${collection.tokenIdRange[1]}, '[]')`;
-        } else if (collection.id === contract) {
-          tokenIdRange = `'(,)'::numrange`;
         }
 
         const queries: PgPromiseQuery[] = [];
