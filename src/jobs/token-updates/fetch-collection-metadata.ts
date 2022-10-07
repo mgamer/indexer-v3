@@ -119,6 +119,7 @@ if (config.doBackgroundWork) {
           },
         });
 
+        logger.info("new-collection", pgp.helpers.concat(queries));
         await idb.none(pgp.helpers.concat(queries));
 
         if (collection?.id && !config.disableRealtimeMetadataRefresh) {
