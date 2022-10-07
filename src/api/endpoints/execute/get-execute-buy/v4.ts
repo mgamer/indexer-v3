@@ -13,6 +13,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
 import { OrderKind } from "@/orderbook/orders";
 import { generateListingDetails } from "@/orderbook/orders";
@@ -139,7 +140,9 @@ export const getExecuteBuyV4Options: RouteOptions = {
 
     try {
       // Terms of service not met
-      if (payload.taker === "0xb4e7b8946fa2b35912cc0581772cccd69a33000c") {
+      const key = request.headers["x-api-key"];
+      const apiKey = await ApiKeyManager.getApiKey(key);
+      if (apiKey?.appName === "NFTCLICK") {
         throw Boom.badRequest("Terms of service not met");
       }
 
