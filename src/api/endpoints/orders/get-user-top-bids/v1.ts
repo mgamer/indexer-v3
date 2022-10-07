@@ -43,6 +43,11 @@ export const getUserTopBidsV1Options: RouteOptions = {
       ).description(
         "Filter to a particular collections. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
       ),
+      optimizeCheckoutURL: Joi.boolean()
+        .default(false)
+        .description(
+          "If true, and marketplace isn't set to optimized in sources table, replace the marketplace URL with reservoir.market one"
+        ),
       continuation: Joi.string().description(
         "Use continuation token to request next offset of items."
       ),
@@ -305,7 +310,12 @@ export const getUserTopBidsV1Options: RouteOptions = {
         const contract = fromBuffer(r.contract);
         const tokenId = r.token_id;
 
-        const source = sources.get(Number(r.source_id_int), contract, tokenId);
+        const source = sources.get(
+          Number(r.source_id_int),
+          contract,
+          tokenId,
+          query.optimizeCheckoutURL
+        );
 
         return {
           id: r.top_bid_id,
