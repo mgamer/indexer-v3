@@ -78,6 +78,11 @@ export const getExecuteBuyV1Options: RouteOptions = {
     const query = request.query as any;
 
     try {
+      // Terms of service not met
+      if (query.taker === "0xb4e7b8946fa2b35912cc0581772cccd69a33000c") {
+        throw Boom.badRequest("Terms of service not met");
+      }
+
       // We need each filled order's source for the path
       const sources = await Sources.getInstance();
 

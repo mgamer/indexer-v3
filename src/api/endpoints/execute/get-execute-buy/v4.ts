@@ -140,6 +140,11 @@ export const getExecuteBuyV4Options: RouteOptions = {
     const payload = request.payload as any;
 
     try {
+      // Terms of service not met
+      if (payload.taker === "0xb4e7b8946fa2b35912cc0581772cccd69a33000c") {
+        throw Boom.badRequest("Terms of service not met");
+      }
+
       // Handle fees on top
       if (payload.feesOnTop?.length > 1) {
         throw Boom.badData("For now, only a single fee on top is supported");
@@ -270,10 +275,12 @@ export const getExecuteBuyV4Options: RouteOptions = {
               currency: toBuffer(payload.currency),
             }
           );
-          if (!orderResult && !payload.skipErrors) {
-            throw Boom.badData(`Could not use order id ${orderId}`);
-          } else if (payload.skipErrors) {
-            continue;
+          if (!orderResult) {
+            if (!payload.skipErrors) {
+              throw Boom.badData(`Could not use order id ${orderId}`);
+            } else {
+              continue;
+            }
           }
 
           await addToPath(
