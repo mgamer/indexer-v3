@@ -50,7 +50,8 @@ export class Sources {
             sources_v2.domain_hash AS "domainHash",
             sources_v2.name,
             sources_v2.address,
-            sources_v2.metadata
+            sources_v2.metadata,
+            sources_v2.optimized
           FROM sources_v2
         `
       );
@@ -100,6 +101,7 @@ export class Sources {
         tokenUrlMainnet: "https://www.reservoir.market/${contract}/${tokenId}",
         tokenUrlRinkeby: "https://dev.reservoir.market/${contract}/${tokenId}",
       },
+      optimized: true,
     });
   }
 
@@ -195,27 +197,44 @@ export class Sources {
     return new SourcesEntity(source);
   }
 
-  public async update(domain: string, metadata: SourcesMetadata = {}) {
-    const values: { [key: string]: string } = {
+  public async update(domain: string, metadata: SourcesMetadata = {}, optimized?: boolean) {
+    const values: { [key: string]: string | boolean } = {
       domain,
     };
 
-    let jsonBuildObject = "";
-    _.forEach(metadata, (value, key) => {
-      if (value) {
-        jsonBuildObject += `'${key}', $/${key}/,`;
-        values[key] = value;
+    const updates = [];
+
+    if (!_.isEmpty(metadata)) {
+      let jsonBuildObject = "";
+
+      _.forEach(metadata, (value, key) => {
+        if (value) {
+          jsonBuildObject += `'${key}', $/${key}/,`;
+          values[key] = value;
+        }
+      });
+
+      if (jsonBuildObject.length) {
+        jsonBuildObject = _.trimEnd(jsonBuildObject, ",");
+        updates.push(`metadata = metadata || jsonb_build_object (${jsonBuildObject})`);
       }
-    });
-    if (!jsonBuildObject.length) {
+    }
+
+    if (optimized != undefined) {
+      values["optimized"] = optimized;
+      updates.push(`optimized = $/optimized/`);
+    }
+
+    if (!updates.length) {
       return;
     }
-    jsonBuildObject = _.trimEnd(jsonBuildObject, ",");
+
+    const updatesString = updates.map((c) => `${c}`).join(",");
 
     await idb.none(
       `
         UPDATE sources_v2 SET
-          metadata = metadata || jsonb_build_object (${jsonBuildObject})
+          ${updatesString}
         WHERE domain = $/domain/
       `,
       values
@@ -226,7 +245,12 @@ export class Sources {
     await redis.publish(channels.sourcesUpdated, `Updated source ${domain}`);
   }
 
-  public get(id: number, contract?: string, tokenId?: string): SourcesEntity | undefined {
+  public get(
+    id: number,
+    contract?: string,
+    tokenId?: string,
+    optimizeCheckoutURL = false
+  ): SourcesEntity | undefined {
     let sourceEntity: SourcesEntity;
     if (id in this.sources) {
       sourceEntity = _.cloneDeep(this.sources[id]);
@@ -235,7 +259,12 @@ export class Sources {
     }
 
     if (sourceEntity && contract && tokenId) {
-      sourceEntity.metadata.url = this.getTokenUrl(sourceEntity, contract, tokenId);
+      if (!sourceEntity.optimized && optimizeCheckoutURL) {
+        const defaultSource = Sources.getDefaultSource();
+        sourceEntity.metadata.url = this.getTokenUrl(defaultSource, contract, tokenId);
+      } else {
+        sourceEntity.metadata.url = this.getTokenUrl(sourceEntity, contract, tokenId);
+      }
     }
 
     return sourceEntity;
