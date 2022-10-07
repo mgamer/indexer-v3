@@ -57,7 +57,7 @@ export class MetadataApi {
         royalties: object | null;
         contract: string;
         tokenIdRange: [string, string] | null;
-        tokenSetId: string;
+        tokenSetId: string | null;
         isFallback?: boolean;
       } = (data as any).collection;
 
