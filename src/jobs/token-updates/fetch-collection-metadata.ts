@@ -41,7 +41,7 @@ if (config.doBackgroundWork) {
           allowFallback: true,
         });
 
-        let tokenIdRange = null;
+        let tokenIdRange = "";
 
         if (collection.tokenIdRange) {
           tokenIdRange = `numrange(${collection.tokenIdRange[0]}, ${collection.tokenIdRange[1]}, '[]')`;
