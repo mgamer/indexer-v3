@@ -2,7 +2,6 @@
 
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
-import _ from "lodash";
 import { PgPromiseQuery, idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
@@ -73,7 +72,7 @@ if (config.doBackgroundWork) {
                 $/tokenIdRange:raw/,
                 $/tokenSetId/,
                 $/mintedTimestamp/
-              ) ON CONFLICT DO NOTHING
+              ) ON CONFLICT DO NOTHING;
             `,
           values: {
             id: collection.id,
@@ -92,7 +91,8 @@ if (config.doBackgroundWork) {
         // Since this is the first time we run into this collection,
         // we update all tokens that match its token definition
         let tokenFilter = `AND "token_id" <@ $/tokenIdRange:raw/`;
-        if (_.isNull(tokenIdRange)) {
+
+        if (!collection.tokenIdRange && collection.id !== contract) {
           tokenFilter = `AND "token_id" = $/tokenId/`;
         }
 
