@@ -207,12 +207,14 @@ export const generateBidDetails = async (
     kind: "erc721" | "erc1155";
     contract: string;
     tokenId: string;
+    amount?: number;
   }
 ): Promise<BidDetails> => {
   const common = {
     contractKind: token.kind,
     contract: token.contract,
     tokenId: token.tokenId,
+    amount: token.amount ?? 1,
   };
 
   switch (order.kind) {
