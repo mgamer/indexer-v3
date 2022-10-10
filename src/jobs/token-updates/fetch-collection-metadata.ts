@@ -35,9 +35,6 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { contract, tokenId, mintedTimestamp } = job.data as FetchCollectionMetadataInfo;
-      if (contract == "0x059edd72cd353df5106d2b9cc5ab83a52287ac3a") {
-        return;
-      }
 
       try {
         const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, {
