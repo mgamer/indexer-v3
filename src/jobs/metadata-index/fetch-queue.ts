@@ -97,7 +97,7 @@ if (config.doBackgroundWork) {
         await metadataIndexProcess.addToQueue(data.method);
       }
     },
-    { connection: redis.duplicate(), concurrency: 3 }
+    { connection: redis.duplicate(), concurrency: 5 }
   );
 
   worker.on("error", (error) => {
