@@ -96,9 +96,11 @@ if (config.doBackgroundWork) {
         // Since this is the first time we run into this collection,
         // we update all tokens that match its token definition
         let tokenFilter = `AND "token_id" <@ ${tokenIdRangeParam}`;
+        let count = `SELECT COUNT(*) FROM "x"`;
 
         if (_.isNull(tokenIdRange)) {
           tokenFilter = `AND "token_id" = $/tokenId/`;
+          count = `SELECT COUNT(*) FROM tokens WHERE collection_id = $/collection/`;
         }
 
         queries.push({
@@ -112,7 +114,7 @@ if (config.doBackgroundWork) {
                 RETURNING 1
               )
               UPDATE "collections" SET
-                "token_count" = (SELECT COUNT(*) FROM "x"),
+                "token_count" = (${count}),
                 "updated_at" = now()
               WHERE "id" = $/collection/
             `,
