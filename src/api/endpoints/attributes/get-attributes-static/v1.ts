@@ -9,6 +9,10 @@ import { logger } from "@/common/logger";
 const version = "v1";
 
 export const getAttributesStaticV1Options: RouteOptions = {
+  cache: {
+    privacy: "public",
+    expiresIn: 1000 * 60 * 60 * 24,
+  },
   description: "All attributes + token ids",
   tags: ["api", "Attributes"],
   plugins: {
