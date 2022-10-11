@@ -122,6 +122,25 @@ export class Tokens {
       .then((result) => (result ? result.count : 0));
   }
 
+  public static async getSingleToken(collectionId: string) {
+    const query = `
+        SELECT token_id
+        FROM tokens
+        WHERE collection_id = $/collectionId/
+        LIMIT 1
+      `;
+
+    const result = await redb.oneOrNone(query, {
+      collectionId,
+    });
+
+    if (result) {
+      return result.token_id;
+    }
+
+    return null;
+  }
+
   public static async getTokenIdsInCollection(
     collectionId: string,
     contract = "",

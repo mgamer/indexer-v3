@@ -14,6 +14,7 @@ import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as orderFixes from "@/jobs/order-fixes/queue";
 import { Collections } from "@/models/collections";
 import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
+import { Tokens } from "@/models/tokens";
 
 export const postRefreshCollectionOptions: RouteOptions = {
   description: "Refresh a collection's orders and metadata",
@@ -72,7 +73,13 @@ export const postRefreshCollectionOptions: RouteOptions = {
       );
 
       // Refresh the collection metadata
-      const tokenId = _.isEmpty(collection.tokenIdRange) ? "1" : `${collection.tokenIdRange[0]}`;
+      let tokenId;
+      if (_.isNull(collection.tokenIdRange)) {
+        tokenId = await Tokens.getSingleToken(payload.collection);
+      } else {
+        tokenId = _.isEmpty(collection.tokenIdRange) ? "1" : `${collection.tokenIdRange[0]}`;
+      }
+
       await collectionUpdatesMetadata.addToQueue(collection.contract, tokenId);
 
       // Refresh the contract floor sell and top bid
