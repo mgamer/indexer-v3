@@ -26,7 +26,7 @@ export const postApiKey: RouteOptions = {
         .description(
           "An e-mail address where you can be reached, in case of issues, to avoid service disruption"
         ),
-      website: Joi.string().uri().required().description("The website of your project"),
+      website: Joi.string().required().description("The website of your project"),
     }),
   },
   response: {
