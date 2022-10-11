@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import _ from "lodash";
 
-import { redis } from "@/common/redis";
+import { rateLimitRedis, redis } from "@/common/redis";
 import { idb, redb } from "@/common/db";
 import {
   RateLimitRuleEntity,
@@ -12,14 +12,17 @@ import {
 import { channels } from "@/pubsub/channels";
 import { logger } from "@/common/logger";
 import { ApiKeyManager } from "@/models/api-keys";
+import { RateLimiterRedis } from "rate-limiter-flexible";
 
 export class RateLimitRules {
   private static instance: RateLimitRules;
 
-  public rules: Map<string, RateLimitRuleEntity>;
+  public rulesEntities: Map<string, RateLimitRuleEntity>;
+  public rules: Map<string, RateLimiterRedis>;
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {
+    this.rulesEntities = new Map();
     this.rules = new Map();
   }
 
@@ -37,12 +40,13 @@ export class RateLimitRules {
       rules = JSON.parse(rulesCache);
     }
 
+    const newRulesMetadata = new Map(); // Reset current rules
     const newRules = new Map(); // Reset current rules
 
     for (const rule of rules) {
       const rateLimitRule = new RateLimitRuleEntity(rule);
 
-      newRules.set(
+      newRulesMetadata.set(
         RateLimitRules.getRuleKey(
           rateLimitRule.route,
           rateLimitRule.method,
@@ -51,8 +55,24 @@ export class RateLimitRules {
         ),
         rateLimitRule
       );
+
+      newRules.set(
+        RateLimitRules.getRuleKey(
+          rateLimitRule.route,
+          rateLimitRule.method,
+          rateLimitRule.tier,
+          rateLimitRule.apiKey
+        ),
+        new RateLimiterRedis({
+          storeClient: rateLimitRedis,
+          points: rateLimitRule.options.points,
+          duration: rateLimitRule.options.duration,
+          inMemoryBlockOnConsumed: rateLimitRule.options.points,
+        })
+      );
     }
 
+    this.rulesEntities = newRulesMetadata;
     this.rules = newRules;
   }
 
@@ -191,7 +211,7 @@ export class RateLimitRules {
   }
 
   public getRule(route: string, method: string, tier: number, apiKey = "") {
-    let rule: RateLimitRuleEntity | undefined;
+    let rule: RateLimiterRedis | undefined;
 
     // Check for api key specific rule on the route method
     rule = this.rules.get(RateLimitRules.getRuleKey(route, method, null, apiKey));
@@ -229,10 +249,15 @@ export class RateLimitRules {
       return rule;
     }
 
-    return this.rules.get(RateLimitRules.getDefaultRuleKeyForTier(tier));
+    rule = this.rules.get(RateLimitRules.getDefaultRuleKeyForTier(tier));
+    if (rule) {
+      return rule;
+    }
+
+    return null;
   }
 
   public getAllRules() {
-    return RateLimitRules.instance.rules;
+    return RateLimitRules.instance.rulesEntities;
   }
 }
