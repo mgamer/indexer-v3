@@ -173,7 +173,7 @@ export const start = async (): Promise<void> => {
       } catch (error) {
         if (error instanceof RateLimiterRes) {
           if (
-            rateLimitRule.points &&
+            error.consumedPoints &&
             (error.consumedPoints == Number(rateLimitRule.points) + 1 ||
               error.consumedPoints % 50 == 0)
           ) {
