@@ -10,12 +10,12 @@ import { Activities } from "@/models/activities";
 import { ActivityType } from "@/models/activities/activities-entity";
 import { Sources } from "@/models/sources";
 
-const version = "v2";
+const version = "v3";
 
-export const getCollectionActivityV2Options: RouteOptions = {
+export const getCollectionActivityV3Options: RouteOptions = {
   description: "Collection activity",
   notes: "This API can be used to build a feed for a collection",
-  tags: ["api", "x-depracated"],
+  tags: ["api", "Activity"],
   plugins: {
     "hapi-swagger": {
       order: 1,
@@ -81,6 +81,10 @@ export const getCollectionActivityV2Options: RouteOptions = {
           amount: Joi.number().unsafe(),
           timestamp: Joi.number(),
           createdAt: Joi.string(),
+          contract: Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}$/)
+            .allow(null),
           token: Joi.object({
             tokenId: Joi.string().allow(null),
             tokenName: Joi.string().allow("", null),
@@ -94,7 +98,11 @@ export const getCollectionActivityV2Options: RouteOptions = {
           txHash: Joi.string().lowercase().pattern(regex.bytes32).allow(null),
           logIndex: Joi.number().allow(null),
           batchIndex: Joi.number().allow(null),
-          source: Joi.object().allow(null),
+          order: Joi.object({
+            id: Joi.string().allow(null),
+            side: Joi.string().valid("ask", "bid").allow(null),
+            source: Joi.object().allow(null),
+          }),
         })
       ),
     }).label(`getCollectionActivity${version.toUpperCase()}Response`),
@@ -133,8 +141,8 @@ export const getCollectionActivityV2Options: RouteOptions = {
       const sources = await Sources.getInstance();
 
       const result = _.map(activities, (activity) => {
-        const source = activity.metadata.orderSourceIdInt
-          ? sources.get(activity.metadata.orderSourceIdInt)
+        const orderSource = activity.order?.sourceIdInt
+          ? sources.get(activity.order.sourceIdInt)
           : undefined;
 
         return {
@@ -145,16 +153,23 @@ export const getCollectionActivityV2Options: RouteOptions = {
           amount: activity.amount,
           timestamp: activity.eventTimestamp,
           createdAt: activity.createdAt.toISOString(),
+          contract: activity.contract,
           token: activity.token,
           collection: activity.collection,
           txHash: activity.metadata.transactionHash,
           logIndex: activity.metadata.logIndex,
           batchIndex: activity.metadata.batchIndex,
-          source: source
+          order: activity.order?.id
             ? {
-                domain: source?.domain,
-                name: source?.metadata.title || source?.name,
-                icon: source?.metadata.icon,
+                id: activity.order.id,
+                side: activity.order.side === "sell" ? "ask" : "bid",
+                source: orderSource
+                  ? {
+                      domain: orderSource?.domain,
+                      name: orderSource?.metadata.title || orderSource?.name,
+                      icon: orderSource?.metadata.icon,
+                    }
+                  : undefined,
               }
             : undefined,
         };

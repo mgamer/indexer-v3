@@ -109,6 +109,13 @@ export class UserActivities {
                 FROM collections
                 WHERE user_activities.collection_id = collections.id
              ) c ON TRUE
+             LEFT JOIN LATERAL (
+                SELECT 
+                    source_id_int AS "order_source_id_int",
+                    side AS "order_side"
+                FROM orders
+                WHERE user_activities.order_id = orders.id
+             ) o ON TRUE
              WHERE ${usersFilter}
              ${continuation}
              ${typesFilter}
