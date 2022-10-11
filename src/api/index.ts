@@ -8,12 +8,11 @@ import Inert from "@hapi/inert";
 import Vision from "@hapi/vision";
 import HapiSwagger from "hapi-swagger";
 import _ from "lodash";
-import { RateLimiterRedis, RateLimiterRes } from "rate-limiter-flexible";
+import { RateLimiterRes } from "rate-limiter-flexible";
 import qs from "qs";
 
 import { setupRoutes } from "@/api/routes";
 import { logger } from "@/common/logger";
-import { rateLimitRedis } from "@/common/redis";
 import { config } from "@/config/index";
 import { getNetworkName } from "@/config/network";
 import { allJobQueues } from "@/jobs/index";
@@ -149,15 +148,9 @@ export const start = async (): Promise<void> => {
     // If matching rule was found
     if (rateLimitRule) {
       // If the requested path has no limit
-      if (rateLimitRule.options.points === -1) {
+      if (rateLimitRule.points === -1) {
         return reply.continue;
       }
-
-      const rateLimiterRedis = new RateLimiterRedis({
-        storeClient: rateLimitRedis,
-        points: rateLimitRule.options.points,
-        duration: rateLimitRule.options.duration,
-      });
 
       const remoteAddress = request.headers["x-forwarded-for"]
         ? _.split(request.headers["x-forwarded-for"], ",")[0]
@@ -167,19 +160,11 @@ export const start = async (): Promise<void> => {
         _.isUndefined(key) || _.isEmpty(key) || _.isNull(apiKey) ? remoteAddress : key; // If no api key or the api key is invalid use IP
 
       try {
-        // Timeout for redis
-        const timeout = new Promise<null>((resolve) => {
-          setTimeout(resolve, 1000, null);
-        });
-
-        const rateLimiterRes = await Promise.race([
-          rateLimiterRedis.consume(rateLimitKey, 1),
-          timeout,
-        ]);
+        const rateLimiterRes = await rateLimitRule.consume(rateLimitKey, 1);
 
         if (rateLimiterRes) {
           // Generate the rate limiting header and add them to the request object to be added to the response in the onPreResponse event
-          request.headers["X-RateLimit-Limit"] = `${rateLimitRule.options.points}`;
+          request.headers["X-RateLimit-Limit"] = `${rateLimitRule.points}`;
           request.headers["X-RateLimit-Remaining"] = `${rateLimiterRes.remainingPoints}`;
           request.headers["X-RateLimit-Reset"] = `${new Date(
             Date.now() + rateLimiterRes.msBeforeNext
@@ -188,17 +173,17 @@ export const start = async (): Promise<void> => {
       } catch (error) {
         if (error instanceof RateLimiterRes) {
           if (
-            error.consumedPoints == Number(rateLimitRule.options.points) + 1 ||
+            error.consumedPoints == Number(rateLimitRule.points) + 1 ||
             error.consumedPoints % 50 == 0
           ) {
             const log = {
               message: `${rateLimitKey} ${apiKey?.appName || ""} reached allowed rate limit ${
-                rateLimitRule.options.points
-              } requests in ${rateLimitRule.options.duration}s by calling ${
+                rateLimitRule.points
+              } requests in ${rateLimitRule.duration}s by calling ${
                 error.consumedPoints
               } times on route ${request.route.path}${
-                request.info.referrer ? ` from referrer ${request.info.referrer} ` : " "
-              }for rule ${JSON.stringify(rateLimitRule)}`,
+                request.info.referrer ? ` from referrer ${request.info.referrer} ` : ""
+              }`,
               route: request.route.path,
               appName: apiKey?.appName || "",
               key: rateLimitKey,
@@ -211,7 +196,7 @@ export const start = async (): Promise<void> => {
           const tooManyRequestsResponse = {
             statusCode: 429,
             error: "Too Many Requests",
-            message: `Max ${rateLimitRule.options.points} requests in ${rateLimitRule.options.duration}s reached`,
+            message: `Max ${rateLimitRule.points} requests in ${rateLimitRule.duration}s reached`,
           };
 
           return reply
