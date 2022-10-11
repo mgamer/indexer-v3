@@ -173,8 +173,9 @@ export const start = async (): Promise<void> => {
       } catch (error) {
         if (error instanceof RateLimiterRes) {
           if (
-            error.consumedPoints == Number(rateLimitRule.points) + 1 ||
-            error.consumedPoints % 50 == 0
+            rateLimitRule.points &&
+            (error.consumedPoints == Number(rateLimitRule.points) + 1 ||
+              error.consumedPoints % 50 == 0)
           ) {
             const log = {
               message: `${rateLimitKey} ${apiKey?.appName || ""} reached allowed rate limit ${
