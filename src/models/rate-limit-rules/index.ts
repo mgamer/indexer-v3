@@ -17,12 +17,12 @@ import { RateLimiterRedis } from "rate-limiter-flexible";
 export class RateLimitRules {
   private static instance: RateLimitRules;
 
-  public rulesMetadata: Map<string, RateLimitRuleEntity>;
+  public rulesEntities: Map<string, RateLimitRuleEntity>;
   public rules: Map<string, RateLimiterRedis>;
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {
-    this.rulesMetadata = new Map();
+    this.rulesEntities = new Map();
     this.rules = new Map();
   }
 
@@ -72,7 +72,7 @@ export class RateLimitRules {
       );
     }
 
-    this.rulesMetadata = newRulesMetadata;
+    this.rulesEntities = newRulesMetadata;
     this.rules = newRules;
   }
 
@@ -258,6 +258,6 @@ export class RateLimitRules {
   }
 
   public getAllRules() {
-    return RateLimitRules.instance.rulesMetadata;
+    return RateLimitRules.instance.rulesEntities;
   }
 }
