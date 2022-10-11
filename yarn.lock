@@ -6451,6 +6451,14 @@ require-directory@^2.1.1:
   resolved "https://registry.npmjs.org/require-directory/-/require-directory-2.1.1.tgz"
   integrity sha1-jGStX9MNqxyXbiNE/+f3kqam30I=
 
+"reservoir0x-sdk-new@npm:@reservoir0x/sdk@^0.1.1":
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.1.1.tgz#f982f6230a6392a38008ef4c1a75d30893e05cb8"
+  integrity sha512-nd7dn5gFEmj5kADGAhdKs8l8AGg5LBQGV4Bs2t54BKXZE7QC73xCAWmNvePJpwtomjWafuRSwpGRFOgUuVRumQ==
+  dependencies:
+    ethers "^5.6.8"
+    merkletreejs "0.2.31"
+
 resolve-cwd@^3.0.0:
   version "3.0.0"
   resolved "https://registry.npmjs.org/resolve-cwd/-/resolve-cwd-3.0.0.tgz#0f0075f1bb2544766cf73ba6a6e2adfebcb13f2d"

@@ -13,7 +13,10 @@ export * as universe from "@/orderbook/orders/universe";
 // Imports
 
 import * as Sdk from "@reservoir0x/sdk";
-import { BidDetails, ListingDetails } from "@reservoir0x/sdk/dist/router/types";
+import * as SdkTypes from "@reservoir0x/sdk/dist/router/types";
+
+import * as NewSdk from "reservoir0x-sdk-new";
+import * as NewSdkTypes from "reservoir0x-sdk-new/dist/router/types";
 
 import { redb } from "@/common/db";
 import { config } from "@/config/index";
@@ -123,7 +126,7 @@ export const generateListingDetails = (
     tokenId: string;
     amount?: number;
   }
-): ListingDetails => {
+): SdkTypes.ListingDetails => {
   const common = {
     contractKind: token.kind,
     contract: token.contract,
@@ -209,7 +212,7 @@ export const generateBidDetails = async (
     tokenId: string;
     amount?: number;
   }
-): Promise<BidDetails> => {
+): Promise<SdkTypes.BidDetails> => {
   const common = {
     contractKind: token.kind,
     contract: token.contract,
@@ -298,6 +301,203 @@ export const generateBidDetails = async (
         extraArgs: {
           amount: sdkOrder.params.take.value,
         },
+      };
+    }
+
+    default: {
+      throw new Error("Unsupported order kind");
+    }
+  }
+};
+
+// NEW SDK METHODS
+
+// Support for filling listings
+export const generateListingDetailsNew = (
+  order: {
+    kind: OrderKind;
+    currency: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rawData: any;
+  },
+  token: {
+    kind: "erc721" | "erc1155";
+    contract: string;
+    tokenId: string;
+    amount?: number;
+  }
+): NewSdkTypes.ListingDetails => {
+  const common = {
+    contractKind: token.kind,
+    contract: token.contract,
+    tokenId: token.tokenId,
+    currency: order.currency,
+    amount: token.amount ?? 1,
+  };
+
+  switch (order.kind) {
+    case "foundation": {
+      return {
+        kind: "foundation",
+        ...common,
+        order: new NewSdk.Foundation.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "looks-rare": {
+      return {
+        kind: "looks-rare",
+        ...common,
+        order: new NewSdk.LooksRare.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "x2y2": {
+      return {
+        kind: "x2y2",
+        ...common,
+        order: new NewSdk.X2Y2.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "zeroex-v4-erc721":
+    case "zeroex-v4-erc1155": {
+      return {
+        kind: "zeroex-v4",
+        ...common,
+        order: new NewSdk.ZeroExV4.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "seaport": {
+      return {
+        kind: "seaport",
+        ...common,
+        order: new NewSdk.Seaport.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "zora-v3": {
+      return {
+        kind: "zora",
+        ...common,
+        order: new NewSdk.Zora.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "universe": {
+      return {
+        kind: "universe",
+        ...common,
+        order: new NewSdk.Universe.Order(config.chainId, order.rawData),
+      };
+    }
+
+    default: {
+      throw new Error("Unsupported order kind");
+    }
+  }
+};
+
+// Support for filling bids
+export const generateBidDetailsNew = async (
+  order: {
+    kind: OrderKind;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rawData: any;
+  },
+  token: {
+    kind: "erc721" | "erc1155";
+    contract: string;
+    tokenId: string;
+    amount?: number;
+  }
+): Promise<NewSdkTypes.BidDetails> => {
+  const common = {
+    contractKind: token.kind,
+    contract: token.contract,
+    tokenId: token.tokenId,
+    amount: token.amount ?? 1,
+  };
+
+  switch (order.kind) {
+    case "seaport": {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const extraArgs: any = {};
+
+      const sdkOrder = new NewSdk.Seaport.Order(config.chainId, order.rawData);
+      if (sdkOrder.params.kind?.includes("token-list")) {
+        // When filling a "token-list" order, we also need to pass in the
+        // full list of tokens the order was made on (in order to be able
+        // to generate a valid merkle proof)
+        const tokens = await redb.manyOrNone(
+          `
+            SELECT
+              token_sets_tokens.token_id
+            FROM token_sets_tokens
+            WHERE token_sets_tokens.token_set_id = (
+              SELECT
+                orders.token_set_id
+              FROM orders
+              WHERE orders.id = $/id/
+            )
+          `,
+          { id: sdkOrder.hash() }
+        );
+        extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
+      }
+
+      return {
+        kind: "seaport",
+        ...common,
+        extraArgs,
+        order: sdkOrder,
+      };
+    }
+
+    case "looks-rare": {
+      const sdkOrder = new NewSdk.LooksRare.Order(config.chainId, order.rawData);
+      return {
+        kind: "looks-rare",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
+    case "zeroex-v4-erc721":
+    case "zeroex-v4-erc1155": {
+      const sdkOrder = new NewSdk.ZeroExV4.Order(config.chainId, order.rawData);
+      return {
+        kind: "zeroex-v4",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
+    case "x2y2": {
+      const sdkOrder = new NewSdk.X2Y2.Order(config.chainId, order.rawData);
+      return {
+        kind: "x2y2",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
+    case "sudoswap": {
+      const sdkOrder = new NewSdk.Sudoswap.Order(config.chainId, order.rawData);
+      return {
+        kind: "sudoswap",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
+    case "universe": {
+      const sdkOrder = new NewSdk.Universe.Order(config.chainId, order.rawData);
+      return {
+        kind: "universe",
+        ...common,
+        order: sdkOrder,
       };
     }
 
