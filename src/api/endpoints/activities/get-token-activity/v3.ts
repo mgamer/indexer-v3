@@ -10,12 +10,12 @@ import { Activities } from "@/models/activities";
 import { ActivityType } from "@/models/activities/activities-entity";
 import { Sources } from "@/models/sources";
 
-const version = "v2";
+const version = "v3";
 
-export const getCollectionActivityV2Options: RouteOptions = {
-  description: "Collection activity",
-  notes: "This API can be used to build a feed for a collection",
-  tags: ["api", "x-depracated"],
+export const getTokenActivityV3Options: RouteOptions = {
+  description: "Token activity",
+  notes: "This API can be used to build a feed for a token",
+  tags: ["api", "Activity"],
   plugins: {
     "hapi-swagger": {
       order: 1,
@@ -23,26 +23,21 @@ export const getCollectionActivityV2Options: RouteOptions = {
   },
   validate: {
     params: Joi.object({
-      collection: Joi.string()
+      token: Joi.string()
         .lowercase()
-        .required()
+        .pattern(regex.token)
         .description(
-          "Filter to a particular collection with collection-id. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
-        ),
+          "Filter to a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+        )
+        .required(),
     }),
     query: Joi.object({
       limit: Joi.number()
         .integer()
         .min(1)
+        .max(20)
         .default(20)
-        .description(
-          "Amount of items returned in response. If `includeMetadata=true` max limit is 20, otherwise max limit is 1,000."
-        )
-        .when("includeMetadata", {
-          is: true,
-          then: Joi.number().integer().max(20),
-          otherwise: Joi.number().integer().max(1000),
-        }),
+        .description("Amount of items returned in response."),
       sortBy: Joi.string()
         .valid("eventTimestamp", "createdAt")
         .default("eventTimestamp")
@@ -52,9 +47,6 @@ export const getCollectionActivityV2Options: RouteOptions = {
       continuation: Joi.string().description(
         "Use continuation token to request next offset of items."
       ),
-      includeMetadata: Joi.boolean()
-        .default(true)
-        .description("If true, metadata is included in the response."),
       types: Joi.alternatives()
         .try(
           Joi.array().items(
@@ -81,6 +73,10 @@ export const getCollectionActivityV2Options: RouteOptions = {
           amount: Joi.number().unsafe(),
           timestamp: Joi.number(),
           createdAt: Joi.string(),
+          contract: Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}$/)
+            .allow(null),
           token: Joi.object({
             tokenId: Joi.string().allow(null),
             tokenName: Joi.string().allow("", null),
@@ -94,12 +90,16 @@ export const getCollectionActivityV2Options: RouteOptions = {
           txHash: Joi.string().lowercase().pattern(regex.bytes32).allow(null),
           logIndex: Joi.number().allow(null),
           batchIndex: Joi.number().allow(null),
-          source: Joi.object().allow(null),
+          order: Joi.object({
+            id: Joi.string().allow(null),
+            side: Joi.string().valid("ask", "bid").allow(null),
+            source: Joi.object().allow(null),
+          }),
         })
       ),
-    }).label(`getCollectionActivity${version.toUpperCase()}Response`),
+    }).label(`getTokenActivity${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(`get-collection-activity-${version}-handler`, `Wrong response schema: ${error}`);
+      logger.error(`get-token-activity-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -116,13 +116,14 @@ export const getCollectionActivityV2Options: RouteOptions = {
     }
 
     try {
-      const activities = await Activities.getCollectionActivities(
-        params.collection,
+      const [contract, tokenId] = params.token.split(":");
+      const activities = await Activities.getTokenActivities(
+        contract,
+        tokenId,
         query.continuation,
         query.types,
         query.limit,
-        query.sortBy,
-        query.includeMetadata
+        query.sortBy
       );
 
       // If no activities found
@@ -133,8 +134,8 @@ export const getCollectionActivityV2Options: RouteOptions = {
       const sources = await Sources.getInstance();
 
       const result = _.map(activities, (activity) => {
-        const source = activity.metadata.orderSourceIdInt
-          ? sources.get(activity.metadata.orderSourceIdInt)
+        const orderSource = activity.order?.sourceIdInt
+          ? sources.get(activity.order.sourceIdInt)
           : undefined;
 
         return {
@@ -145,16 +146,23 @@ export const getCollectionActivityV2Options: RouteOptions = {
           amount: activity.amount,
           timestamp: activity.eventTimestamp,
           createdAt: activity.createdAt.toISOString(),
+          contract: activity.contract,
           token: activity.token,
           collection: activity.collection,
           txHash: activity.metadata.transactionHash,
           logIndex: activity.metadata.logIndex,
           batchIndex: activity.metadata.batchIndex,
-          source: source
+          order: activity.order?.id
             ? {
-                domain: source?.domain,
-                name: source?.metadata.title || source?.name,
-                icon: source?.metadata.icon,
+                id: activity.order.id,
+                side: activity.order.side === "sell" ? "ask" : "bid",
+                source: orderSource
+                  ? {
+                      domain: orderSource?.domain,
+                      name: orderSource?.metadata.title || orderSource?.name,
+                      icon: orderSource?.metadata.icon,
+                    }
+                  : undefined,
               }
             : undefined,
         };
@@ -176,7 +184,7 @@ export const getCollectionActivityV2Options: RouteOptions = {
 
       return { activities: result, continuation };
     } catch (error) {
-      logger.error(`get-collection-activity-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(`get-token-activity-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

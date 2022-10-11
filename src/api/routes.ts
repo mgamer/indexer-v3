@@ -37,6 +37,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/collections/{collection}/activity/v3",
+    options: activitiesEndpoints.getCollectionActivityV3Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/tokens/{token}/activity/v1",
     options: activitiesEndpoints.getTokenActivityV1Options,
   });
@@ -45,6 +51,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/tokens/{token}/activity/v2",
     options: activitiesEndpoints.getTokenActivityV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/tokens/{token}/activity/v3",
+    options: activitiesEndpoints.getTokenActivityV3Options,
   });
 
   server.route({
@@ -67,8 +79,20 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/users/activity/v4",
+    options: activitiesEndpoints.getUserActivityV4Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/activity/v1",
     options: activitiesEndpoints.getActivityV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/activity/v2",
+    options: activitiesEndpoints.getActivityV2Options,
   });
 
   // Admin

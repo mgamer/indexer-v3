@@ -34,8 +34,6 @@ import * as arweaveSyncBackfill from "@/jobs/arweave-sync/backfill-queue";
 import * as arweaveSyncRealtime from "@/jobs/arweave-sync/realtime-queue";
 
 import * as backfillSalesFillSource from "@/jobs/backfill/backfill-sales-fill-source";
-import * as backfillActivitiesOrderId from "@/jobs/backfill/backfill-activities-order-id";
-import * as backfillUserActivitiesOrderId from "@/jobs/backfill/backfill-user-activities-order-id";
 
 import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
 
@@ -107,8 +105,6 @@ export const allJobQueues = [
   arweaveSyncRealtime.queue,
 
   backfillSalesFillSource.queue,
-  backfillActivitiesOrderId.queue,
-  backfillUserActivitiesOrderId.queue,
 
   currencies.queue,
 

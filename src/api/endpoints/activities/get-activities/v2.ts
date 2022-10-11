@@ -9,12 +9,12 @@ import { formatEth, regex } from "@/common/utils";
 import { Activities } from "@/models/activities";
 import { Sources } from "@/models/sources";
 
-const version = "v1";
+const version = "v2";
 
-export const getActivityV1Options: RouteOptions = {
+export const getActivityV2Options: RouteOptions = {
   description: "All activity",
   notes: "This API can be used to scrape all of the activities",
-  tags: ["api", "x-depracated"],
+  tags: ["api", "Activity"],
   plugins: {
     "hapi-swagger": {
       order: 1,
@@ -46,7 +46,11 @@ export const getActivityV1Options: RouteOptions = {
           txHash: Joi.string().lowercase().pattern(regex.bytes32).allow(null),
           logIndex: Joi.number().allow(null),
           batchIndex: Joi.number().allow(null),
-          source: Joi.object().allow(null),
+          order: Joi.object({
+            id: Joi.string().allow(null),
+            side: Joi.string().valid("ask", "bid").allow(null),
+            source: Joi.object().allow(null),
+          }),
         }).description("Amount of items returned in response.")
       ),
     }).label(`getActivity${version.toUpperCase()}Response`),
@@ -69,8 +73,8 @@ export const getActivityV1Options: RouteOptions = {
       const sources = await Sources.getInstance();
 
       const result = _.map(activities, (activity) => {
-        const source = activity.metadata.orderSourceIdInt
-          ? sources.get(activity.metadata.orderSourceIdInt)
+        const orderSource = activity.order?.sourceIdInt
+          ? sources.get(activity.order.sourceIdInt)
           : undefined;
 
         return {
@@ -87,11 +91,17 @@ export const getActivityV1Options: RouteOptions = {
           txHash: activity.metadata.transactionHash,
           logIndex: activity.metadata.logIndex,
           batchIndex: activity.metadata.batchIndex,
-          source: source
+          order: activity.order?.id
             ? {
-                domain: source?.domain,
-                name: source?.metadata.title || source?.name,
-                icon: source?.metadata.icon,
+                id: activity.order.id,
+                side: activity.order.side === "sell" ? "ask" : "bid",
+                source: orderSource
+                  ? {
+                      domain: orderSource?.domain,
+                      name: orderSource?.metadata.title || orderSource?.name,
+                      icon: orderSource?.metadata.icon,
+                    }
+                  : undefined,
               }
             : undefined,
         };
