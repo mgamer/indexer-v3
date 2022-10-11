@@ -16,6 +16,7 @@ import * as orderFixes from "@/jobs/order-fixes/queue";
 import { Collections } from "@/models/collections";
 import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
 import { ApiKeyManager } from "@/models/api-keys";
+import { Tokens } from "@/models/tokens";
 
 const version = "v1";
 
@@ -91,7 +92,13 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
 
       if (payload.metadataOnly) {
         // Refresh the collection metadata
-        const tokenId = _.isEmpty(collection.tokenIdRange) ? "1" : `${collection.tokenIdRange[0]}`;
+        let tokenId;
+        if (_.isNull(collection.tokenIdRange)) {
+          tokenId = await Tokens.getSingleToken(payload.collection);
+        } else {
+          tokenId = _.isEmpty(collection.tokenIdRange) ? "1" : `${collection.tokenIdRange[0]}`;
+        }
+
         await collectionUpdatesMetadata.addToQueue(collection.contract, tokenId, 0, true);
       } else {
         const isLargeCollection = collection.tokenCount > 30000;
@@ -137,7 +144,13 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
         );
 
         // Refresh the collection metadata
-        const tokenId = _.isEmpty(collection.tokenIdRange) ? "1" : `${collection.tokenIdRange[0]}`;
+        let tokenId;
+        if (_.isNull(collection.tokenIdRange)) {
+          tokenId = await Tokens.getSingleToken(payload.collection);
+        } else {
+          tokenId = _.isEmpty(collection.tokenIdRange) ? "1" : `${collection.tokenIdRange[0]}`;
+        }
+
         await collectionUpdatesMetadata.addToQueue(
           collection.contract,
           tokenId,
