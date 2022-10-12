@@ -2,7 +2,7 @@
 
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
-import * as Sdk from "@reservoir0x/sdk";
+import * as Sdk from "@reservoir0x/sdk-new";
 import Joi from "joi";
 
 import { redb } from "@/common/db";
@@ -11,14 +11,14 @@ import { baseProvider } from "@/common/provider";
 import { bn, formatEth, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
-import { generateBidDetails } from "@/orderbook/orders";
+import { generateBidDetailsNew } from "@/orderbook/orders";
 import { getNftApproval } from "@/orderbook/orders/common/helpers";
 
-const version = "v4";
+const version = "v5";
 
-export const getExecuteSellV4Options: RouteOptions = {
+export const getExecuteSellV5Options: RouteOptions = {
   description: "Sell tokens (accept bids)",
-  tags: ["api", "Router"],
+  tags: ["api", "x-experimental"],
   plugins: {
     "hapi-swagger": {
       order: 10,
@@ -50,9 +50,7 @@ export const getExecuteSellV4Options: RouteOptions = {
       source: Joi.string()
         .lowercase()
         .pattern(regex.domain)
-        .description(
-          `Domain of your app that is filling the order, e.g. \`myapp.xyz\`. This is used to attribute the "fill source" of sales in on-chain analytics, to help your app get discovered. Learn more <a href='https://docs.reservoir.tools/docs/calldata-attribution'>here</a>`
-        ),
+        .description("Filling source used for attribution. Example: `reservoir.market`"),
       onlyPath: Joi.boolean()
         .default(false)
         .description("If true, only the path will be returned."),
@@ -204,7 +202,7 @@ export const getExecuteSellV4Options: RouteOptions = {
           rawQuote: orderResult.price,
         },
       ];
-      const bidDetails = await generateBidDetails(
+      const bidDetails = await generateBidDetailsNew(
         {
           kind: orderResult.kind,
           rawData: orderResult.raw_data,
@@ -224,7 +222,7 @@ export const getExecuteSellV4Options: RouteOptions = {
 
       const router = new Sdk.Router.Router(config.chainId, baseProvider);
       const tx = await router.fillBidTx(bidDetails!, payload.taker, {
-        referrer: payload.source,
+        source: payload.source,
       });
 
       // Set up generic filling steps

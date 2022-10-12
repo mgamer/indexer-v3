@@ -1,10 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { AddressZero } from "@ethersproject/constants";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
-import * as Sdk from "@reservoir0x/sdk";
-import { ListingDetails } from "@reservoir0x/sdk/dist/router/types";
+import * as Sdk from "@reservoir0x/sdk-new";
+import { ListingDetails } from "@reservoir0x/sdk-new/dist/router/types";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
@@ -16,14 +15,14 @@ import { config } from "@/config/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
 import { OrderKind } from "@/orderbook/orders";
-import { generateListingDetails } from "@/orderbook/orders";
+import { generateListingDetailsNew } from "@/orderbook/orders";
 import { getCurrency } from "@/utils/currencies";
 
-const version = "v4";
+const version = "v5";
 
-export const getExecuteBuyV4Options: RouteOptions = {
+export const getExecuteBuyV5Options: RouteOptions = {
   description: "Buy tokens",
-  tags: ["api", "Router"],
+  tags: ["api", "x-experimental"],
   plugins: {
     "hapi-swagger": {
       order: 10,
@@ -75,13 +74,11 @@ export const getExecuteBuyV4Options: RouteOptions = {
       source: Joi.string()
         .lowercase()
         .pattern(regex.domain)
-        .description(
-          `Domain of your app that is filling the order, e.g. \`myapp.xyz\`. This is used to attribute the "fill source" of sales in on-chain analytics, to help your app get discovered. Learn more <a href='https://docs.reservoir.tools/docs/calldata-attribution'>here</a>`
-        ),
+        .description("Filling source used for attribution. Example: `reservoir.market`"),
       feesOnTop: Joi.array()
         .items(Joi.string().pattern(regex.fee))
         .description(
-          "List of fees (formatted as `feeRecipient:feeBps`) to be taken when filling. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00:100`"
+          "List of fees (formatted as `feeRecipient:feeAmount`) to be taken when filling. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00:1000000000000000`"
         ),
       partial: Joi.boolean()
         .default(false)
@@ -149,12 +146,15 @@ export const getExecuteBuyV4Options: RouteOptions = {
       }
 
       // Handle fees on top
-      if (payload.feesOnTop?.length > 1) {
-        throw Boom.badData("For now, only a single fee on top is supported");
-      } else if (payload.feesOnTop?.length === 1) {
-        const [referrer, referrerFeeBps] = payload.feesOnTop[0].split(":");
-        payload.referrer = referrer;
-        payload.referrerFeeBps = referrerFeeBps;
+      const feesOnTop: {
+        recipient: string;
+        amount: string;
+      }[] = [];
+      let totalFeesOnTop = bn(0);
+      for (const fee of payload.feesOnTop ?? []) {
+        const [recipient, amount] = fee.split(":");
+        feesOnTop.push({ recipient, amount });
+        totalFeesOnTop = totalFeesOnTop.add(amount);
       }
 
       // We need each filled order's source for the path
@@ -189,7 +189,6 @@ export const getExecuteBuyV4Options: RouteOptions = {
         }
       ) => {
         const totalPrice = bn(order.price).mul(token.quantity ?? 1);
-        const rawQuote = totalPrice.add(totalPrice.mul(payload.referrerFeeBps ?? 0).div(10000));
         path.push({
           orderId: order.id,
           contract: token.contract,
@@ -197,12 +196,12 @@ export const getExecuteBuyV4Options: RouteOptions = {
           quantity: token.quantity ?? 1,
           source: order.sourceId !== null ? sources.get(order.sourceId)?.domain ?? null : null,
           currency: order.currency,
-          quote: formatPrice(rawQuote, (await getCurrency(order.currency)).decimals),
-          rawQuote: rawQuote.toString(),
+          quote: formatPrice(totalPrice, (await getCurrency(order.currency)).decimals),
+          rawQuote: totalPrice.toString(),
         });
 
         listingDetails.push(
-          generateListingDetails(
+          generateListingDetailsNew(
             {
               kind: order.kind,
               currency: order.currency,
@@ -504,25 +503,25 @@ export const getExecuteBuyV4Options: RouteOptions = {
         return { path };
       }
 
-      const skippedIndexes: number[] = [];
       const router = new Sdk.Router.Router(config.chainId, baseProvider);
-      const tx = await router.fillListingsTx(listingDetails, payload.taker, {
-        referrer: payload.source,
-        fee: {
-          recipient: payload.referrer ?? AddressZero,
-          bps: payload.referrerFeeBps ?? 0,
-        },
-        partial: payload.partial,
-        skipErrors: payload.skipErrors,
-        skippedIndexes,
-        forceRouter: payload.forceRouter,
-        directFillingData: {
-          conduitKey:
-            config.chainId === 1
-              ? "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000"
-              : undefined,
-        },
-      });
+      const { txData, success } = await router.fillListingsTx(
+        listingDetails,
+        payload.taker,
+        payload.currency,
+        {
+          source: payload.source,
+          fees: feesOnTop,
+          partial: payload.partial,
+          skipErrors: payload.skipErrors,
+          forceRouter: payload.forceRouter,
+          directFillingData: {
+            conduitKey:
+              config.chainId === 1
+                ? "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000"
+                : undefined,
+          },
+        }
+      );
 
       // Set up generic filling steps
       const steps: {
@@ -598,7 +597,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
       steps[1].items.push({
         status: "incomplete",
         data: {
-          ...tx,
+          ...txData,
           maxFeePerGas: payload.maxFeePerGas ? bn(payload.maxFeePerGas).toHexString() : undefined,
           maxPriorityFeePerGas: payload.maxPriorityFeePerGas
             ? bn(payload.maxPriorityFeePerGas).toHexString()
@@ -608,7 +607,8 @@ export const getExecuteBuyV4Options: RouteOptions = {
 
       return {
         steps,
-        path: path.filter((_, i) => !skippedIndexes.includes(i)),
+        // Remove any unsuccessfully handled listings from the path
+        path: path.filter((_, i) => !success[i]),
       };
     } catch (error) {
       logger.error(`get-execute-buy-${version}-handler`, `Handler failure: ${error}`);
