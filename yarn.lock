@@ -1573,10 +1573,25 @@
   resolved "https://registry.npmjs.org/@protobufjs/utf8/-/utf8-1.1.0.tgz"
   integrity sha1-p3c2C1s5oaLlEG+OhY8v0tBgxXA=
 
+<<<<<<< HEAD
 "@reservoir0x/sdk@0.0.197":
   version "0.0.197"
   resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.0.197.tgz#6cba21e44f5d6bab8e24827c1a8245fa52080978"
   integrity sha512-M6BoTlwLfWjPucyVcCgZn//uHVpY5IP4c025BsiM9RfmL3tgTPE3QH58+ryKtH69XbDijdULlanAKQAzttvlGg==
+=======
+"@reservoir0x/sdk-new@npm:@reservoir0x/sdk@^0.1.5":
+  version "0.1.5"
+  resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.1.5.tgz#5c232c556ad7dde65be772386cc08b903f5ca04e"
+  integrity sha512-RhzpaHqgaNEBhUFmdpTHlQIYiQ0YMRjUKWy9UbJXWSu2vX/Pkh2lgn+bZEsEUf2W4tLjt4Y5dbql4hoP8jEM4w==
+  dependencies:
+    ethers "^5.6.8"
+    merkletreejs "0.2.31"
+
+"@reservoir0x/sdk@0.0.196":
+  version "0.0.196"
+  resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.0.196.tgz#545ee8b57000345b542a45459d548e73e2df2e36"
+  integrity sha512-Cnenot/bCTcEb++EJs2m6RbxiB6UKPmP7akWXbv3348AyzW5w1kzGDQ03nActUaV8qeYTvaXphTOG7hdUvVaRw==
+>>>>>>> d714fb69 (fix: minor tweaks)
   dependencies:
     ethers "^5.6.8"
     merkletreejs "0.2.31"
@@ -6450,14 +6465,6 @@ require-directory@^2.1.1:
   version "2.1.1"
   resolved "https://registry.npmjs.org/require-directory/-/require-directory-2.1.1.tgz"
   integrity sha1-jGStX9MNqxyXbiNE/+f3kqam30I=
-
-"reservoir0x-sdk-new@npm:@reservoir0x/sdk@^0.1.1":
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.1.1.tgz#f982f6230a6392a38008ef4c1a75d30893e05cb8"
-  integrity sha512-nd7dn5gFEmj5kADGAhdKs8l8AGg5LBQGV4Bs2t54BKXZE7QC73xCAWmNvePJpwtomjWafuRSwpGRFOgUuVRumQ==
-  dependencies:
-    ethers "^5.6.8"
-    merkletreejs "0.2.31"
 
 resolve-cwd@^3.0.0:
   version "3.0.0"

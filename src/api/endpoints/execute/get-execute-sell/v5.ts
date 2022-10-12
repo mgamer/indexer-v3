@@ -2,7 +2,7 @@
 
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
-import * as Sdk from "reservoir0x-sdk-new";
+import * as Sdk from "@reservoir0x/sdk-new";
 import Joi from "joi";
 
 import { redb } from "@/common/db";

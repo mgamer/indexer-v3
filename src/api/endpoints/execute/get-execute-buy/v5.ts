@@ -2,8 +2,8 @@
 
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
-import * as Sdk from "reservoir0x-sdk-new";
-import { ListingDetails } from "reservoir0x-sdk-new/dist/router/types";
+import * as Sdk from "@reservoir0x/sdk-new";
+import { ListingDetails } from "@reservoir0x/sdk-new/dist/router/types";
 import Joi from "joi";
 
 import { inject } from "@/api/index";

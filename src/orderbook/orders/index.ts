@@ -15,8 +15,8 @@ export * as universe from "@/orderbook/orders/universe";
 import * as Sdk from "@reservoir0x/sdk";
 import * as SdkTypes from "@reservoir0x/sdk/dist/router/types";
 
-import * as NewSdk from "reservoir0x-sdk-new";
-import * as NewSdkTypes from "reservoir0x-sdk-new/dist/router/types";
+import * as NewSdk from "@reservoir0x/sdk-new";
+import * as NewSdkTypes from "@reservoir0x/sdk-new/dist/router/types";
 
 import { redb } from "@/common/db";
 import { config } from "@/config/index";
