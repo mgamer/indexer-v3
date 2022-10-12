@@ -66,6 +66,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
   },
   response: {
     schema: Joi.object({
+      totalTokensWithBids: Joi.number(),
       topBids: Joi.array().items(
         Joi.object({
           id: Joi.string(),
@@ -197,7 +198,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
 
     try {
       const baseQuery = `
-        SELECT nb.contract, y.*, t.*, c.*,
+        SELECT nb.contract, y.*, t.*, c.*, count(*) OVER() AS "total_tokens_with_bids",
                (
                 CASE
                   WHEN y.token_set_id LIKE 'token:%' THEN
@@ -306,10 +307,12 @@ export const getUserTopBidsV1Options: RouteOptions = {
 
       const sources = await Sources.getInstance();
       const bids = await redb.manyOrNone(baseQuery, query);
+      let totalTokensWithBids = 0;
 
       const results = bids.map((r) => {
         const contract = fromBuffer(r.contract);
         const tokenId = r.token_id;
+        totalTokensWithBids = Number(r.total_tokens_with_bids);
 
         const source = sources.get(
           Number(r.source_id_int),
@@ -378,6 +381,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
       }
 
       return {
+        totalTokensWithBids,
         topBids: results,
         continuation: continuation ? buildContinuation(continuation.toString()) : undefined,
       };
