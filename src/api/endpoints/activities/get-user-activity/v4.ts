@@ -43,7 +43,7 @@ export const getUserActivityV4Options: RouteOptions = {
       limit: Joi.number()
         .integer()
         .min(1)
-        .max(20)
+        .max(200)
         .default(20)
         .description("Amount of items returned in response."),
       sortBy: Joi.string()
