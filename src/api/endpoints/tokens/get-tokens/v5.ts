@@ -39,6 +39,12 @@ export const getTokensV5Options: RouteOptions = {
         .description(
           "Filter to a particular collection with collection-id. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
+      collectionsSetId: Joi.string()
+        .lowercase()
+        .description("Filter to a particular collection set."),
+      community: Joi.string()
+        .lowercase()
+        .description("Filter to a particular community. Example: `artblocks`"),
       contract: Joi.string()
         .lowercase()
         .pattern(regex.address)
@@ -91,8 +97,8 @@ export const getTokensV5Options: RouteOptions = {
         .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
     })
-      .or("collection", "contract", "tokens", "tokenSetId")
-      .oxor("collection", "contract", "tokens", "tokenSetId")
+      .or("collection", "contract", "tokens", "tokenSetId", "community", "collectionsSetId")
+      .oxor("collection", "contract", "tokens", "tokenSetId", "community", "collectionsSetId")
       .with("attributes", "collection"),
   },
   response: {
@@ -348,6 +354,13 @@ export const getTokensV5Options: RouteOptions = {
         `;
       }
 
+      if (query.collectionsSetId) {
+        baseQuery += `
+          JOIN collections_sets_collections csc
+            ON t.collection_id = csc.collection_id
+        `;
+      }
+
       if (query.attributes) {
         const attributes: { key: string; value: any }[] = [];
         Object.entries(query.attributes).forEach(([key, value]) => attributes.push({ key, value }));
@@ -373,6 +386,10 @@ export const getTokensV5Options: RouteOptions = {
       const conditions: string[] = [];
       if (query.collection) {
         conditions.push(`t.collection_id = $/collection/`);
+      }
+
+      if (query.community) {
+        conditions.push("c.community = $/community/");
       }
 
       if (query.contract) {
@@ -403,6 +420,10 @@ export const getTokensV5Options: RouteOptions = {
 
       if (query.tokenSetId) {
         conditions.push(`tst.token_set_id = $/tokenSetId/`);
+      }
+
+      if (query.collectionsSetId) {
+        conditions.push(`csc.collections_set_id = $/collectionsSetId/`);
       }
 
       // Continue with the next page, this depends on the sorting used
