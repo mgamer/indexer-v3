@@ -6,7 +6,7 @@ import pLimit from "p-limit";
 
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
-import { redis, redlock } from "@/common/redis";
+import { redis } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { extractAttributionData } from "@/events-sync/utils";
@@ -162,19 +162,21 @@ if (config.doBackgroundWork) {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
 
-  redlock
-    .acquire([`${QUEUE_NAME}-lock-8`], 60 * 60 * 24 * 30 * 1000)
-    .then(async () => {
-      await addToQueue(
-        1649801271,
-        "0xf36edd2401ca4a72c5d474b918caffec50e58e040c8b559eaf1f58e81c821918",
-        217,
-        1
-      );
-    })
-    .catch(() => {
-      // Skip on any errors
-    });
+  // !!! DISABLED
+
+  // redlock
+  //   .acquire([`${QUEUE_NAME}-lock-8`], 60 * 60 * 24 * 30 * 1000)
+  //   .then(async () => {
+  //     await addToQueue(
+  //       1649801271,
+  //       "0xf36edd2401ca4a72c5d474b918caffec50e58e040c8b559eaf1f58e81c821918",
+  //       217,
+  //       1
+  //     );
+  //   })
+  //   .catch(() => {
+  //     // Skip on any errors
+  //   });
 }
 
 export const addToQueue = async (
