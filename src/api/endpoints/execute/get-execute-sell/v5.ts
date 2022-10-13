@@ -221,7 +221,7 @@ export const getExecuteSellV5Options: RouteOptions = {
       }
 
       const router = new Sdk.Router.Router(config.chainId, baseProvider);
-      const tx = await router.fillBidTx(bidDetails!, payload.taker, {
+      const { txData } = await router.fillBidTx(bidDetails!, payload.taker, {
         source: payload.source,
       });
 
@@ -311,7 +311,7 @@ export const getExecuteSellV5Options: RouteOptions = {
       steps[1].items.push({
         status: "incomplete",
         data: {
-          ...tx,
+          ...txData,
           maxFeePerGas: payload.maxFeePerGas ? bn(payload.maxFeePerGas).toHexString() : undefined,
           maxPriorityFeePerGas: payload.maxPriorityFeePerGas
             ? bn(payload.maxPriorityFeePerGas).toHexString()
