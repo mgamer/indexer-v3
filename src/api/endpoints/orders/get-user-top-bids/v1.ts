@@ -283,6 +283,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
             AND o.side = 'buy'
             AND o.fillability_status = 'fillable'
             AND o.approval_status = 'approved'
+            AND o.maker != $/user/
             ORDER BY o.value DESC
             LIMIT 1
         ) y ON TRUE
