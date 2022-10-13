@@ -4,16 +4,26 @@ import _ from "lodash";
 import { getActivityHash } from "@/jobs/activities/utils";
 import { UserActivitiesEntityInsertParams } from "@/models/user-activities/user-activities-entity";
 import { UserActivities } from "@/models/user-activities";
+import { Tokens } from "@/models/tokens";
+import { logger } from "@/common/logger";
 
 export class AskActivity {
   public static async handleEvent(data: NewSellOrderEventData) {
+    const token = await Tokens.getByContractAndTokenId(data.contract, data.tokenId, true);
+
+    // If no token found
+    if (_.isNull(token)) {
+      logger.warn("ask-activity", `No token found for ${JSON.stringify(data)}`);
+      return;
+    }
+
     const activityHash = getActivityHash(ActivityType.ask, data.orderId);
 
     const activity = {
       hash: activityHash,
       type: ActivityType.ask,
       contract: data.contract,
-      collectionId: data.contract,
+      collectionId: token.collectionId,
       tokenId: data.tokenId,
       orderId: data.orderId,
       fromAddress: data.maker,

@@ -4,9 +4,19 @@ import _ from "lodash";
 import { getActivityHash } from "@/jobs/activities/utils";
 import { UserActivitiesEntityInsertParams } from "@/models/user-activities/user-activities-entity";
 import { UserActivities } from "@/models/user-activities";
+import { Tokens } from "@/models/tokens";
+import { logger } from "@/common/logger";
 
 export class AskCancelActivity {
   public static async handleEvent(data: SellOrderCancelledEventData) {
+    const token = await Tokens.getByContractAndTokenId(data.contract, data.tokenId, true);
+
+    // If no token found
+    if (_.isNull(token)) {
+      logger.warn("ask-cancel-activity", `No token found for ${JSON.stringify(data)}`);
+      return;
+    }
+
     const activityHash = getActivityHash(
       data.transactionHash,
       data.logIndex.toString(),
@@ -17,7 +27,7 @@ export class AskCancelActivity {
       hash: activityHash,
       type: ActivityType.ask_cancel,
       contract: data.contract,
-      collectionId: data.contract,
+      collectionId: token.collectionId,
       tokenId: data.tokenId,
       orderId: data.orderId,
       fromAddress: data.maker,
