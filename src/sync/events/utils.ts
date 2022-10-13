@@ -1,7 +1,7 @@
 import { Interface } from "@ethersproject/abi";
 import { AddressZero } from "@ethersproject/constants";
 import { getTxTrace } from "@georgeroman/evm-tx-simulator";
-import * as Sdk from "@reservoir0x/sdk";
+import * as SdkNew from "@reservoir0x/sdk-new";
 import { getReferrer } from "@reservoir0x/sdk/dist/utils";
 import pLimit from "p-limit";
 
@@ -136,7 +136,7 @@ export const extractAttributionData = async (
 
   // Properly set the taker when filling through router contracts
   const tx = await fetchTransaction(txHash);
-  let router = Sdk.Common.Addresses.Routers[config.chainId]?.[tx.to];
+  let router = SdkNew.Common.Addresses.Routers[config.chainId]?.[tx.to];
   if (!router) {
     // Handle cases where we transfer directly to the router when filling bids
     if (tx.data.startsWith("0xb88d4fde")) {
@@ -144,13 +144,13 @@ export const extractAttributionData = async (
         "function safeTransferFrom(address from, address to, uint256 tokenId, bytes data)",
       ]);
       const result = iface.decodeFunctionData("safeTransferFrom", tx.data);
-      router = Sdk.Common.Addresses.Routers[config.chainId]?.[result.to.toLowerCase()];
+      router = SdkNew.Common.Addresses.Routers[config.chainId]?.[result.to.toLowerCase()];
     } else if (tx.data.startsWith("0xf242432a")) {
       const iface = new Interface([
         "function safeTransferFrom(address from, address to, uint256 id, uint256 value, bytes data)",
       ]);
       const result = iface.decodeFunctionData("safeTransferFrom", tx.data);
-      router = Sdk.Common.Addresses.Routers[config.chainId]?.[result.to.toLowerCase()];
+      router = SdkNew.Common.Addresses.Routers[config.chainId]?.[result.to.toLowerCase()];
     }
   }
   if (router) {
