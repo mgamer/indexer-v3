@@ -5,6 +5,8 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { ApiKeyManager } from "../../../models/api-keys";
+import { config } from "@/config/index";
+import * as Boom from "@hapi/boom";
 
 export const postApiKey: RouteOptions = {
   description: "Generate API Key",
@@ -18,6 +20,9 @@ export const postApiKey: RouteOptions = {
     },
   },
   validate: {
+    headers: Joi.object({
+      "x-admin-api-key": Joi.string().required(),
+    }).options({ allowUnknown: true }),
     payload: Joi.object({
       appName: Joi.string().required().description("The name of your app"),
       email: Joi.string()
@@ -39,6 +44,10 @@ export const postApiKey: RouteOptions = {
     },
   },
   handler: async (request: Request) => {
+    if (request.headers["x-admin-api-key"] !== config.adminApiKey) {
+      throw Boom.unauthorized("Wrong or missing admin API key");
+    }
+
     const payload = request.payload as any;
 
     try {
