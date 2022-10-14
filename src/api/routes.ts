@@ -95,6 +95,12 @@ export const setupRoutes = (server: Server) => {
     options: activitiesEndpoints.getActivityV2Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/activity/v3",
+    options: activitiesEndpoints.getActivityV3Options,
+  });
+
   // Admin
 
   server.route({

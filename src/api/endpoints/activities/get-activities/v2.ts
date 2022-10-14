@@ -14,7 +14,7 @@ const version = "v2";
 export const getActivityV2Options: RouteOptions = {
   description: "All activity",
   notes: "This API can be used to scrape all of the activities",
-  tags: ["api", "Activity"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 1,

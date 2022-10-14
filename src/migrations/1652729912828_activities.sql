@@ -36,6 +36,9 @@ CREATE INDEX activities_block_hash_index
 CREATE UNIQUE INDEX activities_hash_unique_index
     ON activities (hash);
 
+CREATE INDEX activities_event_timestamp_index
+  ON activities (event_timestamp DESC);
+
 -- Down Migration
 
 DROP TABLE activities;
