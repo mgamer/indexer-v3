@@ -41,7 +41,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
         Joi.string().lowercase(),
         Joi.array().items(Joi.string().lowercase())
       ).description(
-        "Filter to a particular collections. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        "Filter to one or more collections. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
       ),
       optimizeCheckoutURL: Joi.boolean()
         .default(false)
