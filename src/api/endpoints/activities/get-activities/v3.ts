@@ -5,16 +5,16 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import { formatEth, regex } from "@/common/utils";
+import { buildContinuation, formatEth, regex } from "@/common/utils";
 import { Activities } from "@/models/activities";
 import { Sources } from "@/models/sources";
 
-const version = "v1";
+const version = "v3";
 
-export const getActivityV1Options: RouteOptions = {
+export const getActivityV3Options: RouteOptions = {
   description: "All activity",
   notes: "This API can be used to scrape all of the activities",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Activity"],
   plugins: {
     "hapi-swagger": {
       order: 1,
@@ -23,14 +23,12 @@ export const getActivityV1Options: RouteOptions = {
   validate: {
     query: Joi.object({
       limit: Joi.number().integer().min(1).max(1000).default(20),
-      continuation: Joi.number(),
+      continuation: Joi.string().pattern(regex.base64),
     }),
   },
   response: {
     schema: Joi.object({
-      continuation: Joi.number()
-        .allow(null)
-        .description("Use continuation token to request next offset of items."),
+      continuation: Joi.string().pattern(regex.base64).allow(null),
       activities: Joi.array().items(
         Joi.object({
           id: Joi.number(),
@@ -46,7 +44,11 @@ export const getActivityV1Options: RouteOptions = {
           txHash: Joi.string().lowercase().pattern(regex.bytes32).allow(null),
           logIndex: Joi.number().allow(null),
           batchIndex: Joi.number().allow(null),
-          source: Joi.object().allow(null),
+          order: Joi.object({
+            id: Joi.string().allow(null),
+            side: Joi.string().valid("ask", "bid").allow(null),
+            source: Joi.object().allow(null),
+          }),
         }).description("Amount of items returned in response.")
       ),
     }).label(`getActivity${version.toUpperCase()}Response`),
@@ -59,7 +61,7 @@ export const getActivityV1Options: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const activities = await Activities.getActivities(query.continuation, query.limit);
+      const activities = await Activities.getActivities(query.continuation, query.limit, true);
 
       // If no activities found
       if (!activities.length) {
@@ -69,8 +71,8 @@ export const getActivityV1Options: RouteOptions = {
       const sources = await Sources.getInstance();
 
       const result = _.map(activities, (activity) => {
-        const source = activity.metadata.orderSourceIdInt
-          ? sources.get(activity.metadata.orderSourceIdInt)
+        const orderSource = activity.order?.sourceIdInt
+          ? sources.get(activity.order.sourceIdInt)
           : undefined;
 
         return {
@@ -87,11 +89,17 @@ export const getActivityV1Options: RouteOptions = {
           txHash: activity.metadata.transactionHash,
           logIndex: activity.metadata.logIndex,
           batchIndex: activity.metadata.batchIndex,
-          source: source
+          order: activity.order?.id
             ? {
-                domain: source?.domain,
-                name: source?.metadata.title || source?.name,
-                icon: source?.metadata.icon,
+                id: activity.order.id,
+                side: activity.order.side === "sell" ? "ask" : "bid",
+                source: orderSource
+                  ? {
+                      domain: orderSource?.domain,
+                      name: orderSource?.metadata.title || orderSource?.name,
+                      icon: orderSource?.metadata.icon,
+                    }
+                  : undefined,
               }
             : undefined,
         };
@@ -103,7 +111,7 @@ export const getActivityV1Options: RouteOptions = {
         const lastActivity = _.last(activities);
 
         if (lastActivity) {
-          continuation = Number(lastActivity.id);
+          continuation = buildContinuation(`${lastActivity.eventTimestamp}_${lastActivity.id}`);
         }
       }
 

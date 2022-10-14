@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { idb, pgp, redb } from "@/common/db";
-import { toBuffer } from "@/common/utils";
+import { splitContinuation, toBuffer } from "@/common/utils";
 import {
   ActivitiesEntity,
   ActivitiesEntityInsertParams,
@@ -60,31 +60,49 @@ export class Activities {
     return await idb.none(query, { blockHash });
   }
 
-  public static async getActivities(continuation: null | number = null, limit = 20) {
-    let continuationFilter = "";
+  public static async getActivities(
+    continuation: null | string = null,
+    limit = 20,
+    byEventTimestamp = false
+  ) {
+    let eventTimestamp;
+    let id;
 
-    if (!_.isNull(continuation)) {
-      continuationFilter = `WHERE id > $/continuation/`;
+    let baseQuery = `
+            SELECT *
+            FROM activities
+            LEFT JOIN LATERAL (
+               SELECT 
+                   source_id_int AS "order_source_id_int",
+                   side AS "order_side"
+               FROM orders
+               WHERE activities.order_id = orders.id
+            ) o ON TRUE
+            `;
+
+    if (byEventTimestamp) {
+      if (!_.isNull(continuation)) {
+        [eventTimestamp, id] = splitContinuation(continuation, /^(\d+)_(\d+)$/);
+        baseQuery += ` WHERE (event_timestamp, id) < ($/eventTimestamp/, $/id/)`;
+      }
+
+      baseQuery += ` ORDER BY event_timestamp, id DESC`;
+    } else {
+      if (!_.isNull(continuation)) {
+        id = continuation;
+        baseQuery += ` WHERE id > $/id/`;
+      }
+
+      baseQuery += ` ORDER BY id ASC`;
     }
 
-    const activities: ActivitiesEntityParams[] | null = await redb.manyOrNone(
-      `SELECT *
-             FROM activities
-             LEFT JOIN LATERAL (
-                SELECT 
-                    source_id_int AS "order_source_id_int",
-                    side AS "order_side"
-                FROM orders
-                WHERE activities.order_id = orders.id
-             ) o ON TRUE
-             ${continuationFilter}
-             ORDER BY id ASC
-             LIMIT $/limit/`,
-      {
-        limit,
-        continuation,
-      }
-    );
+    baseQuery += ` LIMIT $/limit/`;
+
+    const activities: ActivitiesEntityParams[] | null = await idb.manyOrNone(baseQuery, {
+      limit,
+      id,
+      eventTimestamp,
+    });
 
     if (activities) {
       return _.map(activities, (activity) => new ActivitiesEntity(activity));
