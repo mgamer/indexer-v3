@@ -302,7 +302,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
         WHERE owner = $/user/
         AND amount > 0
         ${continuationFilter}
-        ORDER BY ${sortField} ${query.sortDirection}, token_id
+        ORDER BY ${sortField} ${query.sortDirection}, token_id ${query.sortDirection}
         LIMIT $/limit/
       `;
 
