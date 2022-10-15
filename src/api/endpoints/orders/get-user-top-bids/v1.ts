@@ -157,7 +157,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
 
           const sign = query.sortDirection == "desc" ? "<" : ">";
           query.contColumn = Number(contArr[0]);
-          query.contTokenId = contArr[1];
+          query.contTokenId = Number(contArr[1]);
           continuationFilter = `AND (extract(epoch from order_created_at) * 1000000, t.token_id) ${sign} ($/contColumn/, $/contTokenId/)`;
         }
         break;
@@ -170,7 +170,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
 
           const sign = query.sortDirection == "desc" ? "<" : ">";
           query.contColumn = Number(contArr[0]);
-          query.contTokenId = contArr[1];
+          query.contTokenId = Number(contArr[1]);
           continuationFilter = `AND (top_bid_valid_until, t.token_id) ${sign} ($/contColumn/, $/contTokenId/)`;
         }
         break;
@@ -182,7 +182,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
 
           const sign = query.sortDirection == "desc" ? "<" : ">";
           query.contColumn = Number(contArr[0]);
-          query.contTokenId = contArr[1];
+          query.contTokenId = Number(contArr[1]);
           continuationFilter = `AND (top_bid_value, t.token_id) ${sign} ($/contColumn/, $/contTokenId/)`;
         }
         break;
