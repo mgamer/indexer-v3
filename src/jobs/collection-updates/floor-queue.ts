@@ -60,18 +60,30 @@ if (config.doBackgroundWork) {
                 floor_sell_valid_between = x.valid_between,
                 updated_at = now()
               FROM (
+                WITH collection_floor_sell AS (
+                    SELECT
+                      tokens.floor_sell_id,
+                      tokens.floor_sell_value,
+                      tokens.floor_sell_maker,
+                      orders.source_id_int,
+                      orders.valid_between
+                    FROM tokens
+                    JOIN orders
+                      ON tokens.floor_sell_id = orders.id
+                    WHERE tokens.collection_id = $/collection/
+                    ORDER BY tokens.floor_sell_value
+                    LIMIT 1
+                )
                 SELECT
-                  tokens.floor_sell_id,
-                  tokens.floor_sell_value,
-                  tokens.floor_sell_maker,
-                  orders.source_id_int,
-                  orders.valid_between
-                FROM tokens
-                JOIN orders
-                  ON tokens.floor_sell_id = orders.id
-                WHERE tokens.collection_id = $/collection/
-                ORDER BY tokens.floor_sell_value
-                LIMIT 1
+                    collection_floor_sell.floor_sell_id,
+                    collection_floor_sell.floor_sell_value,
+                    collection_floor_sell.floor_sell_maker,
+                    collection_floor_sell.source_id_int,
+                    collection_floor_sell.valid_between
+                FROM collection_floor_sell
+                UNION ALL
+                SELECT NULL, NULL, NULL, NULL, NULL
+                WHERE NOT EXISTS (SELECT 1 FROM collection_floor_sell)
               ) x
               WHERE collections.id = $/collection/
                 AND (
