@@ -146,6 +146,41 @@ export class Collections {
     return [];
   }
 
+  public static async recalculateCollectionFloorSell(collection: string) {
+    const query = `
+      UPDATE collections SET
+        floor_sell_id = x.floor_sell_id,
+        floor_sell_value = x.floor_sell_value,
+        floor_sell_maker = x.floor_sell_maker,
+        floor_sell_source_id_int = x.source_id_int,
+        floor_sell_valid_between = x.valid_between,
+        updated_at = now()
+      FROM (
+        SELECT
+          tokens.floor_sell_id,
+          tokens.floor_sell_value,
+          tokens.floor_sell_maker,
+          orders.source_id_int,
+          orders.valid_between
+        FROM tokens
+        JOIN orders
+        ON tokens.floor_sell_id = orders.id
+        WHERE tokens.collection_id = $/collection/
+        ORDER BY tokens.floor_sell_value
+        LIMIT 1
+      ) x
+      WHERE collections.id = $/collection/
+      AND (
+        collections.floor_sell_id IS DISTINCT FROM x.floor_sell_id
+        OR collections.floor_sell_value IS DISTINCT FROM x.floor_sell_value
+      )
+  `;
+
+    await idb.none(query, {
+      collection,
+    });
+  }
+
   public static async recalculateContractFloorSell(contract: string) {
     const result = await redb.manyOrNone(
       `
