@@ -103,6 +103,7 @@ if (config.doBackgroundWork) {
                 contract,
                 tokenId,
                 mintedTimestamp: getUnixTime(new Date(result.created_at)),
+                newCollection: true,
               },
             ],
             `${contract}-${tokenId}`

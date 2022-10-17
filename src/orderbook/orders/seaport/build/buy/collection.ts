@@ -41,7 +41,7 @@ export const build = async (options: BuildOrderOptions) => {
     "buy"
   );
 
-  const collectionIsContractWide = collectionResult.token_set_id.startsWith("contract:");
+  const collectionIsContractWide = collectionResult.token_set_id?.startsWith("contract:");
   if (!options.excludeFlaggedTokens && collectionIsContractWide) {
     // Use contract-wide order
     const builder: BaseBuilder = new Sdk.Seaport.Builders.ContractWide(config.chainId);

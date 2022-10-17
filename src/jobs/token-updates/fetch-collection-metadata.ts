@@ -11,6 +11,7 @@ import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import MetadataApi from "@/utils/metadata-api";
+import { Collections } from "@/models/collections";
 
 const QUEUE_NAME = "token-updates-fetch-collection-metadata-queue";
 
@@ -34,7 +35,8 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { contract, tokenId, mintedTimestamp } = job.data as FetchCollectionMetadataInfo;
+      const { contract, tokenId, mintedTimestamp, newCollection } =
+        job.data as FetchCollectionMetadataInfo;
 
       try {
         const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, {
@@ -126,6 +128,11 @@ if (config.doBackgroundWork) {
 
         await idb.none(pgp.helpers.concat(queries));
 
+        // id this is a new collection recalculate the collection floor price
+        if (collection?.id && newCollection) {
+          await Collections.recalculateCollectionFloorSell(collection.id);
+        }
+
         if (collection?.id && !config.disableRealtimeMetadataRefresh) {
           await metadataIndexFetch.addToQueue(
             [
@@ -162,6 +169,7 @@ export type FetchCollectionMetadataInfo = {
   contract: string;
   tokenId: string;
   mintedTimestamp: number;
+  newCollection?: boolean;
 };
 
 export const addToQueue = async (infos: FetchCollectionMetadataInfo[], jobId = "") => {
