@@ -77,7 +77,14 @@ export const getCollectionsV5Options: RouteOptions = {
           "If true, owner count will be included in the response. (supported only when filtering to a particular collection using `id`)"
         ),
       sortBy: Joi.string()
-        .valid("1DayVolume", "7DayVolume", "30DayVolume", "allTimeVolume", "createdAt")
+        .valid(
+          "1DayVolume",
+          "7DayVolume",
+          "30DayVolume",
+          "allTimeVolume",
+          "createdAt",
+          "floorAskPrice"
+        )
         .default("allTimeVolume")
         .description("Order the items are returned in the response."),
       limit: Joi.number()
@@ -293,6 +300,7 @@ export const getCollectionsV5Options: RouteOptions = {
           collections.day1_floor_sell_value,
           collections.day7_floor_sell_value,
           collections.day30_floor_sell_value,
+          collections.floor_sell_value,
           collections.token_count,
           collections.created_at,
           (
@@ -394,6 +402,17 @@ export const getCollectionsV5Options: RouteOptions = {
             conditions.push(`(collections.created_at, collections.id) < ($/contParam/, $/contId/)`);
           }
           orderBy = ` ORDER BY collections.created_at DESC, collections.id DESC`;
+
+          break;
+        }
+
+        case "floorAskPrice": {
+          if (query.continuation) {
+            conditions.push(
+              `(collections.floor_sell_value, collections.id) < ($/contParam/, $/contId/)`
+            );
+          }
+          orderBy = ` ORDER BY collections.floor_sell_value, collections.id`;
 
           break;
         }
@@ -623,6 +642,13 @@ export const getCollectionsV5Options: RouteOptions = {
             case "createdAt": {
               continuation = buildContinuation(
                 `${new Date(lastCollection.created_at).toISOString()}_${lastCollection.id}`
+              );
+              break;
+            }
+
+            case "floorAskPrice": {
+              continuation = buildContinuation(
+                `${lastCollection.floor_sell_value}_${lastCollection.id}`
               );
               break;
             }

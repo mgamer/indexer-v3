@@ -54,6 +54,9 @@ CREATE INDEX "collections_minted_timestamp_index"
 CREATE INDEX "collections_updated_at_id_index"
   ON "collections" ("updated_at", "id");
 
+CREATE INDEX "collections_floor_sell_value_index"
+  ON "collections" ("floor_sell_value", "id");
+
 CREATE EXTENSION tsm_system_rows;
 
 -- Down Migration
