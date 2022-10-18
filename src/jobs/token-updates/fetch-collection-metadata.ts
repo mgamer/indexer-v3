@@ -11,7 +11,7 @@ import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import MetadataApi from "@/utils/metadata-api";
-import { Collections } from "@/models/collections";
+import * as collectionRecalcFloorAsk from "@/jobs/collection-updates/recalc-floor-queue";
 
 const QUEUE_NAME = "token-updates-fetch-collection-metadata-queue";
 
@@ -23,7 +23,7 @@ export const queue = new Queue(QUEUE_NAME, {
       type: "exponential",
       delay: 20000,
     },
-    removeOnComplete: true,
+    removeOnComplete: 10,
     removeOnFail: 10000,
     timeout: 60000,
   },
@@ -130,7 +130,7 @@ if (config.doBackgroundWork) {
 
         // id this is a new collection recalculate the collection floor price
         if (collection?.id && newCollection) {
-          await Collections.recalculateCollectionFloorSell(collection.id);
+          await collectionRecalcFloorAsk.addToQueue(collection.id);
         }
 
         if (collection?.id && !config.disableRealtimeMetadataRefresh) {
