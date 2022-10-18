@@ -100,7 +100,7 @@ export const getOrdersBidsV4Options: RouteOptions = {
         .max(1000)
         .default(50)
         .description("Amount of items returned in response."),
-    }).oxor("token", "tokenSetId", "contracts", "ids", "source", "native"),
+    }).oxor("token", "tokenSetId", "contracts", "ids"),
   },
   response: {
     schema: Joi.object({

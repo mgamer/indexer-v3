@@ -8,7 +8,7 @@ export const pgp = PgPromise();
 export const edb = pgp({
   connectionString: config.databaseUrl,
   keepAlive: true,
-  max: 15,
+  max: 60,
   connectionTimeoutMillis: 10 * 1000,
   query_timeout: 10 * 1000,
   statement_timeout: 10 * 1000,
@@ -19,10 +19,21 @@ export const edb = pgp({
 export const idb = pgp({
   connectionString: config.databaseUrl,
   keepAlive: true,
-  max: 15,
+  max: 60,
   connectionTimeoutMillis: 30 * 1000,
   query_timeout: 5 * 60 * 1000,
   statement_timeout: 5 * 60 * 1000,
+  allowExitOnIdle: true,
+});
+
+// Database connection for health checks
+export const hdb = pgp({
+  connectionString: config.databaseUrl,
+  keepAlive: true,
+  max: 5,
+  connectionTimeoutMillis: 30 * 1000,
+  query_timeout: 10 * 1000,
+  statement_timeout: 10 * 1000,
   allowExitOnIdle: true,
 });
 
@@ -30,7 +41,7 @@ export const idb = pgp({
 export const redb = pgp({
   connectionString: config.readReplicaDatabaseUrl,
   keepAlive: true,
-  max: 30,
+  max: 60,
   connectionTimeoutMillis: 30 * 1000,
   query_timeout: 5 * 60 * 1000,
   statement_timeout: 5 * 60 * 1000,
