@@ -25,6 +25,7 @@ export const postCreateCollectionsSetV1Options: RouteOptions = {
               "Array of collections to gather in a set. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
             )
         )
+        .min(1)
         .max(500)
         .required(),
     }),
