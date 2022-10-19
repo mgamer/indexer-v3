@@ -57,7 +57,7 @@ export const postSeaportOffersV1Options: RouteOptions = {
         });
       }
 
-      await orderbookOrders.addToQueue(orderInfos, true);
+      await orderbookOrders.addToQueue(orderInfos);
 
       return { message: "Request accepted" };
     } catch (error) {
