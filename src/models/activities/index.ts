@@ -87,7 +87,7 @@ export class Activities {
         baseQuery += ` WHERE (event_timestamp, id) < ($/eventTimestamp/, $/id/)`;
       }
 
-      baseQuery += ` ORDER BY event_timestamp, id DESC`;
+      baseQuery += ` ORDER BY event_timestamp DESC, id DESC`;
     } else {
       if (!_.isNull(continuation)) {
         id = continuation;
