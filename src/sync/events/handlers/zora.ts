@@ -1,8 +1,9 @@
 import { Result } from "@ethersproject/abi";
+
 import { bn } from "@/common/utils";
 import { getEventData } from "@/events-sync/data";
-import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import * as es from "@/events-sync/storage";
+import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import * as utils from "@/events-sync/utils";
 import { OrderInfo, getOrderId } from "@/orderbook/orders/zora";
 import { getUSDAndNativePrices } from "@/utils/prices";
@@ -10,7 +11,7 @@ import { getUSDAndNativePrices } from "@/utils/prices";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 
-function getOrderParams(args: Result) {
+const getOrderParams = (args: Result) => {
   const tokenId = args["tokenId"].toString();
   const tokenContract = args["tokenContract"].toLowerCase();
   const ask = args["ask"];
@@ -27,7 +28,7 @@ function getOrderParams(args: Result) {
     sellerFundsRecipient,
     findersFeeBps,
   };
-}
+};
 
 export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData> => {
   const cancelEventsOnChain: es.cancels.Event[] = [];

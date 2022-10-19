@@ -286,6 +286,10 @@ export const syncEvents = async (
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("erc1155")),
       },
       {
+        kind: "blur",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("blur")),
+      },
+      {
         kind: "cryptopunks",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("cryptopunks")),
       },
