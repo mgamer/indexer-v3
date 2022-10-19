@@ -7,6 +7,7 @@ if (process.env.DATADOG_AGENT_URL) {
   tracer.init({
     profiling: true,
     logInjection: true,
+    runtimeMetrics: true,
     service,
     url: process.env.DATADOG_AGENT_URL,
   });
