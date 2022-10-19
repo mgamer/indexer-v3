@@ -4,6 +4,7 @@ import * as erc721 from "@/events-sync/data/erc721";
 import * as erc1155 from "@/events-sync/data/erc1155";
 import * as weth from "@/events-sync/data/weth";
 
+import * as blur from "@/events-sync/data/blur";
 import * as cryptoPunks from "@/events-sync/data/cryptopunks";
 import * as element from "@/events-sync/data/element";
 import * as foundation from "@/events-sync/data/foundation";
@@ -79,7 +80,8 @@ export type EventDataKind =
   | "universe-match"
   | "universe-cancel"
   | "nftx-redeemed"
-  | "nftx-minted";
+  | "nftx-minted"
+  | "blur-orders-matched";
 
 export type EventData = {
   kind: EventDataKind;
@@ -145,6 +147,7 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
       universe.cancel,
       nftx.minted,
       nftx.redeemed,
+      blur.ordersMatched,
     ];
   } else {
     return (
@@ -265,6 +268,8 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return nftx.minted;
     case "nftx-redeemed":
       return nftx.redeemed;
+    case "blur-orders-matched":
+      return blur.ordersMatched;
     default:
       return undefined;
   }

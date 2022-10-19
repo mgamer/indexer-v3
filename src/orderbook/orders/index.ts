@@ -46,7 +46,8 @@ export type OrderKind =
   | "cryptopunks"
   | "sudoswap"
   | "universe"
-  | "nftx";
+  | "nftx"
+  | "blur";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -99,6 +100,8 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("universe.xyz");
       case "nftx":
         return sources.getOrInsert("nftx.io");
+      case "blur":
+        return sources.getOrInsert("blur.io");
       case "mint": {
         if (address && mintsSources.has(address)) {
           return sources.getOrInsert(mintsSources.get(address)!);
