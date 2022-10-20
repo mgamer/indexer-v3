@@ -10,27 +10,30 @@ import { Activities } from "@/models/activities";
 import { ActivityType } from "@/models/activities/activities-entity";
 import { Sources } from "@/models/sources";
 
-const version = "v3";
+const version = "v4";
 
-export const getCollectionActivityV3Options: RouteOptions = {
+export const getCollectionActivityV4Options: RouteOptions = {
   description: "Collection activity",
   notes: "This API can be used to build a feed for a collection",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Activity"],
   plugins: {
     "hapi-swagger": {
       order: 1,
     },
   },
   validate: {
-    params: Joi.object({
+    query: Joi.object({
       collection: Joi.string()
         .lowercase()
-        .required()
         .description(
           "Filter to a particular collection with collection-id. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
-    }),
-    query: Joi.object({
+      collectionsSetId: Joi.string()
+        .lowercase()
+        .description("Filter to a particular collection set."),
+      community: Joi.string()
+        .lowercase()
+        .description("Filter to a particular community. Example: `artblocks`"),
       limit: Joi.number()
         .integer()
         .min(1)
@@ -67,7 +70,7 @@ export const getCollectionActivityV3Options: RouteOptions = {
             .valid(..._.values(ActivityType))
         )
         .description("Types of events returned in response. Example: 'types=sale'"),
-    }),
+    }).xor("collection", "collectionsSetId", "community"),
   },
   response: {
     schema: Joi.object({
@@ -112,7 +115,6 @@ export const getCollectionActivityV3Options: RouteOptions = {
     },
   },
   handler: async (request: Request) => {
-    const params = request.params as any;
     const query = request.query as any;
 
     if (query.types && !_.isArray(query.types)) {
@@ -125,9 +127,9 @@ export const getCollectionActivityV3Options: RouteOptions = {
 
     try {
       const activities = await Activities.getCollectionActivities(
-        params.collection,
-        "",
-        "",
+        query.collection,
+        query.community,
+        query.collectionsSetId,
         query.continuation,
         query.types,
         query.limit,

@@ -133,7 +133,9 @@ export class Activities {
   }
 
   public static async getCollectionActivities(
-    collectionId: string,
+    collectionId = "",
+    community = "",
+    collectionsSetId = "",
     createdBefore: null | string = null,
     types: string[] = [],
     limit = 20,
@@ -144,6 +146,8 @@ export class Activities {
     let continuation = "";
     let typesFilter = "";
     let metadataQuery = "";
+    let collectionFilter = "";
+    let joinCollectionsSet = "";
 
     if (!_.isNull(createdBefore)) {
       continuation = `AND ${sortByColumn} < $/createdBefore/`;
@@ -153,9 +157,24 @@ export class Activities {
       typesFilter = `AND type IN ('$/types:raw/')`;
     }
 
+    if (collectionsSetId) {
+      joinCollectionsSet =
+        "JOIN collections_sets_collections csc ON activities.collection_id = csc.collection_id";
+      collectionFilter = "WHERE csc.collections_set_id = $/collectionsSetId/";
+    } else if (community) {
+      collectionFilter =
+        "WHERE collection_id IN (SELECT id FROM collections WHERE community = $/community/)";
+    } else if (collectionId) {
+      collectionFilter = "WHERE collection_id = $/collectionId/";
+    }
+
+    if (!collectionFilter) {
+      return [];
+    }
+
     if (includeMetadata) {
       metadataQuery = `
-                 LEFT JOIN LATERAL (
+             LEFT JOIN LATERAL (
                 SELECT name AS "token_name", image AS "token_image"
                 FROM tokens
                 WHERE activities.contract = tokens.contract
@@ -179,15 +198,18 @@ export class Activities {
     const activities: ActivitiesEntityParams[] | null = await redb.manyOrNone(
       `SELECT *
              FROM activities
+             ${joinCollectionsSet}
              ${metadataQuery}
-             WHERE collection_id = $/collectionId/
+             ${collectionFilter}
              ${continuation}
              ${typesFilter}
-             ORDER BY ${sortByColumn} DESC NULLS LAST
+             ORDER BY activities.${sortByColumn} DESC NULLS LAST
              LIMIT $/limit/`,
       {
         collectionId,
         limit,
+        community,
+        collectionsSetId,
         createdBefore: sortBy == "eventTimestamp" ? Number(createdBefore) : createdBefore,
         types: _.join(types, "','"),
       }
