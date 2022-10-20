@@ -148,6 +148,7 @@ export class Activities {
     let metadataQuery = "";
     let collectionFilter = "";
     let joinCollectionsSet = "";
+    let nullsLast = "";
 
     if (!_.isNull(createdBefore)) {
       continuation = `AND ${sortByColumn} < $/createdBefore/`;
@@ -165,6 +166,7 @@ export class Activities {
       collectionFilter =
         "WHERE collection_id IN (SELECT id FROM collections WHERE community = $/community/)";
     } else if (collectionId) {
+      nullsLast = "NULLS LAST";
       collectionFilter = "WHERE collection_id = $/collectionId/";
     }
 
@@ -203,7 +205,7 @@ export class Activities {
              ${collectionFilter}
              ${continuation}
              ${typesFilter}
-             ORDER BY activities.${sortByColumn} DESC NULLS LAST
+             ORDER BY activities.${sortByColumn} DESC ${nullsLast}
              LIMIT $/limit/`,
       {
         collectionId,
