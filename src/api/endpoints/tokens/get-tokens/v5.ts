@@ -272,7 +272,14 @@ export const getTokensV5Options: RouteOptions = {
       const sources = await Sources.getInstance();
       let source = sources.getByName(query.source, false);
       if (!source) {
-        source = sources.getByDomain(query.source);
+        source = sources.getByDomain(query.source, false);
+      }
+
+      if (!source) {
+        return {
+          tokens: [],
+          continuation: null,
+        };
       }
 
       (query as any).source = source?.id;
