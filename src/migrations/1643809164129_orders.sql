@@ -103,9 +103,10 @@ CREATE INDEX "orders_side_created_at_id_index"
   ON "orders" ("side", "created_at" DESC, "id" DESC)
   WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
 
-CREATE INDEX "orders_side_source_id_created_at_id_index"
-  ON "orders" ("side", "source_id", "created_at" DESC, "id" DESC)
-  WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
+CREATE INDEX orders_side_source_id_int_value_index
+  ON public.orders USING btree
+  (side ASC NULLS LAST, source_id_int ASC NULLS LAST, value ASC NULLS LAST)
+  WHERE fillability_status = 'fillable' AND approval_status = 'approved';
 
 CREATE INDEX "orders_side_contract_created_at_id_index"
   ON "orders" ("side", "contract", "created_at" DESC, "id" DESC)

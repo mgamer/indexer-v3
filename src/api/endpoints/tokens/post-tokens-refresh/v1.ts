@@ -15,6 +15,7 @@ import * as tokenRefreshCacheQueue from "@/jobs/token-updates/token-refresh-cach
 import { Collections } from "@/models/collections";
 import { Tokens } from "@/models/tokens";
 import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
+import { ApiKeyManager } from "@/models/api-keys";
 
 const version = "v1";
 
@@ -35,6 +36,11 @@ export const postTokensRefreshV1Options: RouteOptions = {
           "Refresh the given token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         )
         .required(),
+      overrideCoolDown: Joi.boolean()
+        .default(false)
+        .description(
+          "If true, will force a refresh regardless of cool down. Requires an authorized api key to be passed."
+        ),
     }),
   },
   response: {
@@ -49,6 +55,7 @@ export const postTokensRefreshV1Options: RouteOptions = {
   handler: async (request: Request) => {
     const payload = request.payload as any;
     const refreshCoolDownMin = 60; // How many minutes between each refresh
+    let overrideCoolDown = false;
 
     try {
       const [contract, tokenId] = payload.token.split(":");
@@ -60,12 +67,29 @@ export const postTokensRefreshV1Options: RouteOptions = {
         throw Boom.badRequest(`Token ${payload.token} not found`);
       }
 
-      // Check when the last sync was performed
-      const nextAvailableSync = add(new Date(token.lastMetadataSync), {
-        minutes: refreshCoolDownMin,
-      });
-      if (!_.isNull(token.lastMetadataSync) && isAfter(nextAvailableSync, Date.now())) {
-        throw Boom.tooEarly(`Next available sync ${formatISO9075(nextAvailableSync)} UTC`);
+      if (payload.overrideCoolDown) {
+        const apiKey = await ApiKeyManager.getApiKey(request.headers["x-api-key"]);
+
+        if (_.isNull(apiKey)) {
+          throw Boom.unauthorized("Invalid API key");
+        }
+
+        if (!apiKey.permissions?.override_collection_refresh_cool_down) {
+          throw Boom.unauthorized("Not allowed");
+        }
+
+        overrideCoolDown = true;
+      }
+
+      if (!overrideCoolDown) {
+        // Check when the last sync was performed
+        const nextAvailableSync = add(new Date(token.lastMetadataSync), {
+          minutes: refreshCoolDownMin,
+        });
+
+        if (!_.isNull(token.lastMetadataSync) && isAfter(nextAvailableSync, Date.now())) {
+          throw Boom.tooEarly(`Next available sync ${formatISO9075(nextAvailableSync)} UTC`);
+        }
       }
 
       // Update the last sync date
@@ -101,14 +125,14 @@ export const postTokensRefreshV1Options: RouteOptions = {
       await orderFixes.addToQueue([{ by: "token", data: { token: payload.token } }]);
 
       // Revalidate the token attribute cache
-      await resyncAttributeCache.addToQueue(contract, tokenId, 0);
+      await resyncAttributeCache.addToQueue(contract, tokenId, 0, overrideCoolDown);
 
       // Refresh the token floor sell and top bid
       await tokenRefreshCacheQueue.addToQueue(contract, tokenId);
 
       logger.info(
         `post-tokens-refresh-${version}-handler`,
-        `Refresh token=${payload.token} at ${currentUtcTime}`
+        `Refresh token=${payload.token} at ${currentUtcTime} overrideCoolDown=${overrideCoolDown}`
       );
 
       return { message: "Request accepted" };
