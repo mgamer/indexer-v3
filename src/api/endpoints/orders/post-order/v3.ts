@@ -10,6 +10,7 @@ import { config } from "@/config/index";
 import * as orders from "@/orderbook/orders";
 
 import * as postOrderExternal from "@/jobs/orderbook/post-order-external";
+import { regex } from "@/common/utils";
 
 const version = "v3";
 
@@ -40,9 +41,7 @@ export const postOrderV3Options: RouteOptions = {
         .valid("reservoir", "opensea", "looks-rare", "x2y2", "universe")
         .default("reservoir"),
       orderbookApiKey: Joi.string(),
-      source: Joi.string()
-        .pattern(/^[a-zA-Z0-9][a-zA-Z0-9.-]+[a-zA-Z0-9]$/)
-        .description("The source domain"),
+      source: Joi.string().pattern(regex.domain).description("The source domain"),
       attribute: Joi.object({
         collection: Joi.string().required(),
         key: Joi.string().required(),

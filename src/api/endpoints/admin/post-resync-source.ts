@@ -7,6 +7,7 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import * as fetchSourceInfo from "@/jobs/sources/fetch-source-info";
+import { regex } from "@/common/utils";
 
 export const postResyncSourceOptions: RouteOptions = {
   description: "Trigger re-syncing of specific source domain",
@@ -17,7 +18,7 @@ export const postResyncSourceOptions: RouteOptions = {
     }).options({ allowUnknown: true }),
     payload: Joi.object({
       source: Joi.string()
-        .pattern(/^[a-zA-Z0-9][a-zA-Z0-9.-]+[a-zA-Z0-9]$/)
+        .pattern(regex.domain)
         .description("The source domain to sync. Example: `reservoir.market`"),
     }),
   },
