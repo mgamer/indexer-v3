@@ -98,6 +98,8 @@ export const getCollectionActivityV1Options: RouteOptions = {
     try {
       const activities = await Activities.getCollectionActivities(
         params.collection,
+        "",
+        "",
         query.continuation,
         query.types,
         query.limit
