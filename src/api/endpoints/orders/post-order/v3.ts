@@ -178,7 +178,7 @@ export const postOrderV3Options: RouteOptions = {
           }
 
           if (orderbook === "opensea") {
-            await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
+            await postOrderExternal.addToQueue(result.id, order.data, orderbook, orderbookApiKey);
 
             logger.info(
               `post-order-${version}-handler`,
@@ -213,7 +213,7 @@ export const postOrderV3Options: RouteOptions = {
           }
 
           if (orderbook === "looks-rare") {
-            await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
+            await postOrderExternal.addToQueue(result.id, order.data, orderbook, orderbookApiKey);
 
             logger.info(
               `post-order-${version}-handler`,
@@ -236,7 +236,7 @@ export const postOrderV3Options: RouteOptions = {
             // unless their backend has processed them first. So we just need to be
             // patient until the relayer acknowledges the order (via X2Y2's server)
             // before us being able to ingest it.
-            await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
+            await postOrderExternal.addToQueue(null, order.data, orderbook, orderbookApiKey);
           } else {
             const orderInfo: orders.x2y2.OrderInfo = {
               orderParams: order.data,
@@ -284,7 +284,7 @@ export const postOrderV3Options: RouteOptions = {
           }
 
           if (orderbook === "universe") {
-            await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
+            await postOrderExternal.addToQueue(result.id, order.data, orderbook, orderbookApiKey);
 
             logger.info(
               `post-order-${version}-handler`,

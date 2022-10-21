@@ -178,7 +178,7 @@ export const postOrderV2Options: RouteOptions = {
           }
 
           if (orderbook === "opensea") {
-            await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
+            await postOrderExternal.addToQueue(result.id, order.data, orderbook, orderbookApiKey);
 
             logger.info(
               `post-order-${version}-handler`,
@@ -213,7 +213,7 @@ export const postOrderV2Options: RouteOptions = {
           }
 
           if (orderbook === "looks-rare") {
-            await postOrderExternal.addToQueue(order.data, orderbook, orderbookApiKey);
+            await postOrderExternal.addToQueue(result.id, order.data, orderbook, orderbookApiKey);
 
             logger.info(
               `post-order-${version}-handler`,
