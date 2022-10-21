@@ -1,38 +1,25 @@
-import { joinSignature } from "@ethersproject/bytes";
 import * as Sdk from "@reservoir0x/sdk";
-import axios from "axios";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import * as crypto from "crypto";
 
-import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+
+import * as OpenSeaApi from "@/jobs/orderbook/post-order-external/api/opensea";
+import * as LooksrareApi from "@/jobs/orderbook/post-order-external/api/looksrare";
+import * as X2Y2Api from "@/jobs/orderbook/post-order-external/api/x2y2";
+import * as UniverseApi from "@/jobs/orderbook/post-order-external/api/universe";
+
 import { OrderbookApiRateLimiter } from "@/jobs/orderbook/post-order-external/api-rate-limiter";
 import {
   RequestWasThrottledError,
   InvalidRequestError,
-} from "@/jobs/orderbook/post-order-external/api-errors";
+} from "@/jobs/orderbook/post-order-external/api/errors";
+import { redb } from "@/common/db";
 
 const QUEUE_NAME = "orderbook-post-order-external-queue";
 const MAX_RETRIES = 5;
-
-// Open Sea default rate limit - 2 requests per second for post apis
-const OPENSEA_RATE_LIMIT_REQUEST_COUNT = 2;
-const OPENSEA_RATE_LIMIT_INTERVAL = 1000;
-
-// Looks Rare default rate limit - 120 requests per minute
-const LOOKSRARE_RATE_LIMIT_REQUEST_COUNT = 120;
-const LOOKSRARE_RATE_LIMIT_INTERVAL = 1000 * 60;
-
-// X2Y2 default rate limit - 120 requests per minute
-const X2Y2_RATE_LIMIT_REQUEST_COUNT = 120;
-const X2Y2_RATE_LIMIT_INTERVAL = 1000 * 60;
-
-// Universe default rate limit - 120 requests per minute
-const UNIVERSE_RATE_LIMIT_REQUEST_COUNT = 120;
-const UNIVERSE_RATE_LIMIT_INTERVAL = 1000 * 60;
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
@@ -49,7 +36,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { orderData, orderbook, retry } = job.data as PostOrderExternalParams;
+      const { orderId, orderData, orderbook, retry } = job.data as PostOrderExternalParams;
       let orderbookApiKey = job.data.orderbookApiKey;
 
       if (![1, 4, 5].includes(config.chainId)) {
@@ -70,19 +57,19 @@ if (config.doBackgroundWork) {
 
         logger.info(
           QUEUE_NAME,
-          `Post Order Rate Limited. orderbook: ${orderbook}, orderData=${JSON.stringify(
+          `Post Order Rate Limited. orderbook: ${orderbook}, orderId=${orderId}, orderData=${JSON.stringify(
             orderData
           )}, delay: ${delay}, retry: ${retry}`
         );
 
-        await addToQueue(orderData, orderbook, orderbookApiKey, retry, delay, true);
+        await addToQueue(orderId, orderData, orderbook, orderbookApiKey, retry, delay, true);
       } else {
         try {
-          await postOrder(orderbook, orderData, orderbookApiKey);
+          await postOrder(orderbook, orderId, orderData, orderbookApiKey);
 
           logger.info(
             QUEUE_NAME,
-            `Post Order Success. orderbook: ${orderbook}, orderData=${JSON.stringify(
+            `Post Order Success. orderbook: ${orderbook}, orderId=${orderId}, orderData=${JSON.stringify(
               orderData
             )}, retry: ${retry}`
           );
@@ -92,11 +79,11 @@ if (config.doBackgroundWork) {
             const delay = error.delay;
 
             await rateLimiter.setExpiration(delay);
-            await addToQueue(orderData, orderbook, orderbookApiKey, retry, delay, true);
+            await addToQueue(orderId, orderData, orderbook, orderbookApiKey, retry, delay, true);
 
             logger.info(
               QUEUE_NAME,
-              `Post Order Throttled. orderbook: ${orderbook}, orderData=${JSON.stringify(
+              `Post Order Throttled. orderbook: ${orderbook}, orderId=${orderId}, orderData=${JSON.stringify(
                 orderData
               )}, delay: ${delay}, retry: ${retry}`
             );
@@ -104,7 +91,7 @@ if (config.doBackgroundWork) {
             // If the order is invalid, fail the job.
             logger.error(
               QUEUE_NAME,
-              `Post Order Failed - Invalid Order. orderbook: ${orderbook}, orderData=${JSON.stringify(
+              `Post Order Failed - Invalid Order. orderbook: ${orderbook}, orderId=${orderId}, orderData=${JSON.stringify(
                 orderData
               )}, retry: ${retry}, error: ${error}`
             );
@@ -114,16 +101,24 @@ if (config.doBackgroundWork) {
             // If we got an unknown error from the api, reschedule job based on fixed delay.
             logger.info(
               QUEUE_NAME,
-              `Post Order Failed - Retrying. orderbook: ${orderbook}, orderData=${JSON.stringify(
+              `Post Order Failed - Retrying. orderbook: ${orderbook}, orderId=${orderId}, orderData=${JSON.stringify(
                 orderData
               )}, retry: ${retry}`
             );
 
-            await addToQueue(orderData, orderbook, orderbookApiKey, ++job.data.retry, 1000, true);
+            await addToQueue(
+              orderId,
+              orderData,
+              orderbook,
+              orderbookApiKey,
+              ++job.data.retry,
+              1000,
+              true
+            );
           } else {
             logger.error(
               QUEUE_NAME,
-              `Post Order Failed - Max Retries Reached. orderbook: ${orderbook}, orderData=${JSON.stringify(
+              `Post Order Failed - Max Retries Reached. orderbook: ${orderbook}, orderId=${orderId}, orderData=${JSON.stringify(
                 orderData
               )}, retry: ${retry}, error: ${error}`
             );
@@ -165,29 +160,29 @@ const getRateLimiter = (orderbook: string, orderbookApiKey: string) => {
       return new OrderbookApiRateLimiter(
         orderbook,
         orderbookApiKey,
-        LOOKSRARE_RATE_LIMIT_REQUEST_COUNT,
-        LOOKSRARE_RATE_LIMIT_INTERVAL
+        LooksrareApi.RATE_LIMIT_REQUEST_COUNT,
+        LooksrareApi.RATE_LIMIT_INTERVAL
       );
     case "opensea":
       return new OrderbookApiRateLimiter(
         orderbook,
         orderbookApiKey,
-        OPENSEA_RATE_LIMIT_REQUEST_COUNT,
-        OPENSEA_RATE_LIMIT_INTERVAL
+        OpenSeaApi.RATE_LIMIT_REQUEST_COUNT,
+        OpenSeaApi.RATE_LIMIT_INTERVAL
       );
     case "x2y2":
       return new OrderbookApiRateLimiter(
         orderbook,
         orderbookApiKey,
-        X2Y2_RATE_LIMIT_REQUEST_COUNT,
-        X2Y2_RATE_LIMIT_INTERVAL
+        X2Y2Api.RATE_LIMIT_REQUEST_COUNT,
+        X2Y2Api.RATE_LIMIT_INTERVAL
       );
     case "universe":
       return new OrderbookApiRateLimiter(
         orderbook,
         orderbookApiKey,
-        UNIVERSE_RATE_LIMIT_REQUEST_COUNT,
-        UNIVERSE_RATE_LIMIT_INTERVAL
+        UniverseApi.RATE_LIMIT_REQUEST_COUNT,
+        UniverseApi.RATE_LIMIT_INTERVAL
       );
   }
 
@@ -196,6 +191,7 @@ const getRateLimiter = (orderbook: string, orderbookApiKey: string) => {
 
 const postOrder = async (
   orderbook: string,
+  orderId: string,
   orderData: Record<string, unknown>,
   orderbookApiKey: string
 ) => {
@@ -205,7 +201,47 @@ const postOrder = async (
         config.chainId,
         orderData as Sdk.Seaport.Types.OrderComponents
       );
-      return postOpenSea(order, orderbookApiKey);
+
+      if (
+        order.getInfo()?.side === "buy" &&
+        ["contract-wide", "token-list"].includes(order.params.kind!)
+      ) {
+        const { collectionSlug } = await redb.oneOrNone(
+          `
+                SELECT c.slug AS "collectionSlug"
+                FROM orders o
+                JOIN token_sets ts
+                  ON o.token_set_id = ts.id
+                JOIN collections c   
+                  ON c.id = ts.collection_id  
+                WHERE o.id = $/orderId/
+                AND ts.collection_id IS NOT NULL
+                AND ts.attribute_id IS NULL
+                LIMIT 1
+            `,
+          {
+            orderId: orderId,
+          }
+        );
+
+        if (!collectionSlug) {
+          throw new Error("Invalid collection offer.");
+        }
+
+        const buildCollectionOfferParams = await OpenSeaApi.buildCollectionOffer(
+          order.params.offerer,
+          1,
+          collectionSlug,
+          orderbookApiKey
+        );
+
+        order.params.consideration[0] =
+          buildCollectionOfferParams.partialParameters.consideration[0];
+
+        return OpenSeaApi.postCollectionOffer(order, collectionSlug, orderbookApiKey);
+      }
+
+      return OpenSeaApi.postOrder(order, orderbookApiKey);
     }
 
     case "looks-rare": {
@@ -213,246 +249,53 @@ const postOrder = async (
         config.chainId,
         orderData as Sdk.LooksRare.Types.MakerOrderParams
       );
-      return postLooksRare(order, orderbookApiKey);
+      return LooksrareApi.postOrder(order, orderbookApiKey);
     }
 
     case "universe": {
       const order = new Sdk.Universe.Order(config.chainId, orderData as Sdk.Universe.Types.Order);
-      return postUniverse(order);
+      return UniverseApi.postOrder(order);
     }
 
     case "x2y2": {
-      return postX2Y2(orderData as Sdk.X2Y2.Types.LocalOrder, orderbookApiKey);
+      return X2Y2Api.postOrder(orderData as Sdk.X2Y2.Types.LocalOrder, orderbookApiKey);
     }
   }
 
   throw new Error(`Unsupported orderbook ${orderbook}`);
 };
 
-const postOpenSea = async (order: Sdk.Seaport.Order, apiKey: string) => {
-  await axios
-    .post(
-      `https://${config.chainId === 5 ? "testnets-api." : "api."}opensea.io/v2/orders/${
-        config.chainId === 5 ? "goerli" : "ethereum"
-      }/seaport/${order.getInfo()?.side === "sell" ? "listings" : "offers"}`,
-      JSON.stringify({
-        parameters: {
-          ...order.params,
-          totalOriginalConsiderationItems: order.params.consideration.length,
-        },
-        signature: order.params.signature!,
-      }),
-      {
-        headers:
-          config.chainId === 1
-            ? {
-                "Content-Type": "application/json",
-                "X-Api-Key": apiKey || config.openSeaApiKey,
-              }
-            : {
-                "Content-Type": "application/json",
-                // The request will fail if passing the API key on Rinkeby
-              },
-      }
-    )
-    .catch((error) => {
-      if (error.response) {
-        logger.error(
-          QUEUE_NAME,
-          `Failed to post order to OpenSea. order=${JSON.stringify(order)}, status: ${
-            error.response.status
-          }, data:${JSON.stringify(error.response.data)}`
-        );
-
-        switch (error.response.status) {
-          case 429: {
-            let delay = OPENSEA_RATE_LIMIT_INTERVAL;
-
-            if (
-              error.response.data.detail?.startsWith("Request was throttled. Expected available in")
-            ) {
-              try {
-                delay = error.response.data.detail.split(" ")[6] * 1000;
-              } catch {
-                // Skip on any errors
-              }
-            }
-
-            throw new RequestWasThrottledError("Request was throttled by OpenSea", delay);
-          }
-          case 400:
-            throw new InvalidRequestError("Request was rejected by OpenSea");
-        }
-      }
-
-      throw new Error(`Failed to post order to OpenSea`);
-    });
-};
-
-const postLooksRare = async (order: Sdk.LooksRare.Order, apiKey: string) => {
-  const lrOrder = {
-    ...order.params,
-    signature: joinSignature({
-      v: order.params.v!,
-      r: order.params.r!,
-      s: order.params.s!,
-    }),
-    tokenId: order.params.kind === "single-token" ? order.params.tokenId : null,
-    // For now, no order kinds have any additional params
-    params: [],
-  };
-
-  await axios
-    .post(
-      `https://${config.chainId === 5 ? "api-goerli." : "api."}looksrare.org/api/v1/orders`,
-      JSON.stringify(lrOrder),
-      {
-        headers:
-          config.chainId === 1
-            ? {
-                "Content-Type": "application/json",
-                "X-Looks-Api-Key": apiKey || config.looksRareApiKey,
-              }
-            : {
-                "Content-Type": "application/json",
-              },
-      }
-    )
-    .catch((error) => {
-      if (error.response) {
-        logger.error(
-          QUEUE_NAME,
-          `Failed to post order to LooksRare. order=${JSON.stringify(order)}, status: ${
-            error.response.status
-          }, data:${JSON.stringify(error.response.data)}`
-        );
-
-        switch (error.response.status) {
-          case 429: {
-            throw new RequestWasThrottledError(
-              "Request was throttled by LooksRare",
-              LOOKSRARE_RATE_LIMIT_INTERVAL
-            );
-          }
-          case 400:
-          case 401:
-            throw new InvalidRequestError("Request was rejected by LooksRare");
-        }
-      }
-
-      throw new Error(`Failed to post order to LooksRare`);
-    });
-};
-
-const postX2Y2 = async (order: Sdk.X2Y2.Types.LocalOrder, apiKey: string) => {
-  const exchange = new Sdk.X2Y2.Exchange(config.chainId, apiKey);
-
-  // When lowering the price of an existing listing, X2Y2 requires
-  // passing the order id of the previous listing, so here we have
-  // this check in place so that we can cover such scenarios.
-  let orderId: number | undefined;
-  const upstreamOrder = Sdk.X2Y2.Order.fromLocalOrder(config.chainId, order);
-  if (upstreamOrder.params.type === "sell") {
-    const activeOrder = await redb.oneOrNone(
-      `
-        SELECT
-          (orders.raw_data ->> 'id')::INT AS id
-        FROM orders
-        WHERE orders.token_set_id = $/tokenSetId/
-          AND orders.fillability_status = 'fillable'
-          AND orders.approval_status = 'approved'
-          AND orders.side = 'sell'
-          AND orders.maker = $/maker/
-          AND orders.kind = 'x2y2'
-        LIMIT 1
-      `,
-      {
-        tokenSetId:
-          `token:${upstreamOrder.params.nft.token}:${upstreamOrder.params.nft.tokenId}`.toLowerCase(),
-        maker: toBuffer(upstreamOrder.params.maker),
-      }
-    );
-
-    if (activeOrder?.id) {
-      orderId = activeOrder.id;
-    }
-  }
-
-  await exchange.postOrder(order, orderId).catch((error) => {
-    if (error.response) {
-      logger.error(
-        QUEUE_NAME,
-        `Failed to post order to X2Y2. order=${JSON.stringify(order)}, status: ${
-          error.response.status
-        }, data:${JSON.stringify(error.response.data)}`
-      );
-    }
-
-    throw new Error("Failed to post order to X2Y2");
-  });
-};
-
-const postUniverse = async (order: Sdk.Universe.Order) => {
-  const apiOrder = JSON.parse(JSON.stringify(order));
-  delete apiOrder.params.kind;
-  await axios
-    .post(
-      `https://${
-        config.chainId === 4 ? "dev.marketplace-api." : "prod-marketplace"
-      }.universe.xyz/v1/orders/order`,
-      JSON.stringify(apiOrder.params),
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    )
-    .catch((error) => {
-      if (error.response) {
-        logger.error(
-          QUEUE_NAME,
-          `Failed to post order to Universe. order=${JSON.stringify(order)}, status: ${
-            error.response.status
-          }, data:${JSON.stringify(error.response.data)}`
-        );
-
-        switch (error.response.status) {
-          case 400:
-          case 401:
-            throw new InvalidRequestError("Request was rejected by Universe");
-        }
-      }
-
-      throw new Error(`Failed to post order to Universe`);
-    });
-};
-
 export type PostOrderExternalParams =
   | {
+      orderId: string;
       orderData: Sdk.Seaport.Types.OrderComponents;
       orderbook: "opensea";
       orderbookApiKey: string;
       retry: number;
     }
   | {
+      orderId: string;
       orderData: Sdk.LooksRare.Types.MakerOrderParams;
       orderbook: "looks-rare";
       orderbookApiKey: string;
       retry: number;
     }
   | {
+      orderId: string;
       orderData: Sdk.X2Y2.Types.LocalOrder;
       orderbook: "x2y2";
       orderbookApiKey: string;
       retry: number;
     }
   | {
+      orderId: string;
       orderData: Sdk.Universe.Types.Order;
       orderbook: "universe";
       retry: number;
     };
 
 export const addToQueue = async (
+  orderId: string | null,
   orderData: Record<string, unknown>,
   orderbook: string,
   orderbookApiKey: string | null,
@@ -463,6 +306,7 @@ export const addToQueue = async (
   await queue.add(
     crypto.randomUUID(),
     {
+      orderId,
       orderData,
       orderbook,
       orderbookApiKey,
