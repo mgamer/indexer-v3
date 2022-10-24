@@ -31,26 +31,29 @@ if (config.doBackgroundWork) {
       if (await DailyVolume.tickLock()) {
         logger.info(
           "daily-volumes",
-          `All daily volumes are finished processing, updating the collections table`
+          `All daily volumes are finished processing, updating the collections table. startTime=${startTime}, retry=${retry}`
         );
 
         const updated = await DailyVolume.updateCollections(true);
 
         if (updated) {
-          logger.info("daily-volumes", `Finished updating the collections table`);
+          logger.info(
+            "daily-volumes",
+            `Finished updating the collections table. startTime=${startTime}, retry=${retry}`
+          );
         } else {
           if (retry < 5) {
-            retry++;
-            logger.info(
+            logger.warn(
               "daily-volumes",
-              `Something went wrong with updating the collections, will retry in a couple of minutes, retry ${retry}`
+              `Something went wrong with updating the collections, will retry in a couple of minutes. startTime=${startTime}, retry=${retry}`
             );
+            retry++;
 
             await addToQueue(startTime, true, retry);
           } else {
-            logger.info(
+            logger.error(
               "daily-volumes",
-              `Something went wrong with retrying during updating the collection, stopping...`
+              `Something went wrong with retrying during updating the collection, stopping. startTime=${startTime}, retry=${retry}`
             );
           }
         }
