@@ -42,6 +42,9 @@ export const getUserTopBidsV1Options: RouteOptions = {
       ).description(
         "Filter to one or more collections. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
       ),
+      community: Joi.string()
+        .lowercase()
+        .description("Filter to a particular community. Example: `artblocks`"),
       optimizeCheckoutURL: Joi.boolean()
         .default(false)
         .description(
@@ -141,6 +144,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
     const params = request.params as any;
     const query = request.query as any;
     let collectionFilter = "";
+    let communityFilter = "";
     let sortField = "top_bid_value";
     let offset = 0;
 
@@ -171,6 +175,10 @@ export const getUserTopBidsV1Options: RouteOptions = {
       } else {
         collectionFilter = `AND id = $/collection/`;
       }
+    }
+
+    if (query.community) {
+      communityFilter = `AND community = $/community/`;
     }
 
     try {
@@ -270,10 +278,11 @@ export const getUserTopBidsV1Options: RouteOptions = {
             WHERE t.contract = nb.contract
             AND t.token_id = nb.token_id
         ) t ON TRUE
-        ${query.collection ? "" : "LEFT"} JOIN LATERAL (
+        ${query.collection || query.community ? "" : "LEFT"} JOIN LATERAL (
             SELECT id AS "collection_id", name AS "collection_name", metadata AS "collection_metadata", floor_sell_value AS "collection_floor_sell_value"
             FROM collections c
             WHERE id = t.collection_id
+            ${communityFilter}
             ${collectionFilter}
         ) c ON TRUE
         WHERE owner = $/user/
