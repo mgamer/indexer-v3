@@ -47,6 +47,9 @@ export const getOrdersBidsV4Options: RouteOptions = {
         .description(
           "Filter to a particular user. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
+      community: Joi.string()
+        .lowercase()
+        .description("Filter to a particular community. Example: `artblocks`"),
       contracts: Joi.alternatives().try(
         Joi.array()
           .max(50)
@@ -100,7 +103,9 @@ export const getOrdersBidsV4Options: RouteOptions = {
         .max(1000)
         .default(50)
         .description("Amount of items returned in response."),
-    }).oxor("token", "tokenSetId", "contracts", "ids"),
+    })
+      .oxor("token", "tokenSetId", "contracts", "ids")
+      .with("community", "maker"),
   },
   response: {
     schema: Joi.object({
@@ -320,6 +325,7 @@ export const getOrdersBidsV4Options: RouteOptions = {
         "orders.side = 'buy'",
       ];
 
+      let communityFilter = "";
       let orderStatusFilter;
 
       if (query.ids) {
@@ -379,6 +385,12 @@ export const getOrdersBidsV4Options: RouteOptions = {
 
         (query as any).maker = toBuffer(query.maker);
         conditions.push(`orders.maker = $/maker/`);
+
+        // Community filter is valid only when maker filter is passed
+        if (query.community) {
+          communityFilter =
+            "JOIN collections ON orders.contract = collections.contract AND collections.community = $/community/";
+        }
       }
 
       if (query.source) {
@@ -417,6 +429,9 @@ export const getOrdersBidsV4Options: RouteOptions = {
           );
         }
       }
+
+      baseQuery += communityFilter;
+
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
