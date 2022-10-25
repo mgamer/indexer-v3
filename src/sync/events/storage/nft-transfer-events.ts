@@ -70,6 +70,8 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
 
     const tokenId = `${contractId}-${event.tokenId}`;
     if (!uniqueTokens.has(tokenId)) {
+      uniqueTokens.add(tokenId);
+
       tokenValues.push({
         collection_id: event.baseEventParams.address,
         contract: toBuffer(event.baseEventParams.address),
@@ -182,7 +184,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           "token_id",
           "minted_timestamp"
         ) VALUES ${pgp.helpers.values(tokenValues, columns)}
-        ON CONFLICT DO NOTHING
+        ON CONFLICT (contract, token_id) DO UPDATE SET minted_timestamp = EXCLUDED.minted_timestamp WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
       `);
     } else {
       const columns = new pgp.helpers.ColumnSet(
@@ -199,7 +201,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           "token_id",
           "minted_timestamp"
         ) VALUES ${pgp.helpers.values(tokenValues, columns)}
-        ON CONFLICT DO NOTHING
+        ON CONFLICT (contract, token_id) DO UPDATE SET minted_timestamp = EXCLUDED.minted_timestamp WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
       `);
     }
   }
