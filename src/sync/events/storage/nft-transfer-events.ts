@@ -182,7 +182,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           "token_id",
           "minted_timestamp"
         ) VALUES ${pgp.helpers.values(tokenValues, columns)}
-        ON CONFLICT (contract, token_id) DO UPDATE SET minted_timestamp = EXCLUDED.minted_timestamp WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
+        ON CONFLICT DO NOTHING
       `);
     } else {
       const columns = new pgp.helpers.ColumnSet(
@@ -199,7 +199,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           "token_id",
           "minted_timestamp"
         ) VALUES ${pgp.helpers.values(tokenValues, columns)}
-        ON CONFLICT (contract, token_id) DO UPDATE SET minted_timestamp = EXCLUDED.minted_timestamp WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
+        ON CONFLICT DO NOTHING
       `);
     }
   }
