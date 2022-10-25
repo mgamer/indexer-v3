@@ -12,10 +12,11 @@ const version = "v1";
 
 export const getOrderExecutedV1Options: RouteOptions = {
   description: "Order status",
-  tags: ["api", "Router"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 5,
+      deprecated: true,
     },
   },
   validate: {
