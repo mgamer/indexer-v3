@@ -166,12 +166,15 @@ export const extractAttributionData = async (
   // Reference: https://github.com/reservoirprotocol/core/issues/22#issuecomment-1191040945
   if (referrer) {
     // TODO: Properly handle aggregator detection
-    if (referrer !== "opensea.io" && referrer !== "gem.xyz") {
+    if (referrer !== "opensea.io" && referrer !== "gem.xyz" && referrer !== "blur.io") {
       // Do not associate OpenSea / Gem direct fills to Reservoir
       aggregatorSource = await sources.getOrInsert("reservoir.tools");
     } else if (referrer === "gem.xyz") {
       // Associate Gem direct fills to Gem
       aggregatorSource = await sources.getOrInsert("gem.xyz");
+    } else if (referrer === "blur.io") {
+      // Associate Blur direct fills to Blur
+      aggregatorSource = await sources.getOrInsert("blur.io");
     }
     fillSource = await sources.getOrInsert(referrer);
   } else if (router === "reservoir.tools") {
