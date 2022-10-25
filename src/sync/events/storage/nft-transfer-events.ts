@@ -42,6 +42,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
     collection_id: string;
     contract: Buffer;
     token_id: string;
+    minted_timestamp: number;
   }[] = [];
   for (const event of events) {
     transferValues.push({
@@ -73,6 +74,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
         collection_id: event.baseEventParams.address,
         contract: toBuffer(event.baseEventParams.address),
         token_id: event.tokenId,
+        minted_timestamp: event.baseEventParams.timestamp,
       });
     }
   }
@@ -170,29 +172,34 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
 
   if (tokenValues.length) {
     if (!config.liquidityOnly) {
-      const columns = new pgp.helpers.ColumnSet(["contract", "token_id"], {
+      const columns = new pgp.helpers.ColumnSet(["contract", "token_id", "minted_timestamp"], {
         table: "tokens",
       });
 
       queries.push(`
         INSERT INTO "tokens" (
           "contract",
-          "token_id"
+          "token_id",
+          "minted_timestamp"
         ) VALUES ${pgp.helpers.values(tokenValues, columns)}
-        ON CONFLICT DO NOTHING
+        ON CONFLICT (contract, token_id) DO UPDATE SET minted_timestamp = EXCLUDED.minted_timestamp WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
       `);
     } else {
-      const columns = new pgp.helpers.ColumnSet(["collection_id", "contract", "token_id"], {
-        table: "tokens",
-      });
+      const columns = new pgp.helpers.ColumnSet(
+        ["collection_id", "contract", "token_id", "minted_timestamp"],
+        {
+          table: "tokens",
+        }
+      );
 
       queries.push(`
         INSERT INTO "tokens" (
           "collection_id",
           "contract",
-          "token_id"
+          "token_id",
+          "minted_timestamp"
         ) VALUES ${pgp.helpers.values(tokenValues, columns)}
-        ON CONFLICT DO NOTHING
+        ON CONFLICT (contract, token_id) DO UPDATE SET minted_timestamp = EXCLUDED.minted_timestamp WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
       `);
     }
   }
