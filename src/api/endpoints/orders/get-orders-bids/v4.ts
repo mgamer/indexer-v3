@@ -327,6 +327,7 @@ export const getOrdersBidsV4Options: RouteOptions = {
 
       let communityFilter = "";
       let orderStatusFilter;
+      let groupBy = "";
 
       if (query.ids) {
         if (Array.isArray(query.ids)) {
@@ -388,6 +389,7 @@ export const getOrdersBidsV4Options: RouteOptions = {
 
         // Community filter is valid only when maker filter is passed
         if (query.community) {
+          groupBy = "GROUP BY orders.id";
           communityFilter =
             "JOIN collections ON orders.contract = collections.contract AND collections.community = $/community/";
         }
@@ -435,6 +437,8 @@ export const getOrdersBidsV4Options: RouteOptions = {
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
+
+      baseQuery += groupBy;
 
       // Sorting
       if (query.sortBy === "price") {
