@@ -183,6 +183,15 @@ export const syncEvents = async (
         backfill,
       },
       {
+        kind: "forward",
+        events: enhancedEvents.filter(
+          ({ kind }) =>
+            kind.startsWith("forward") ||
+            // To properly validate bids, we need some additional events
+            kind === "erc20-transfer"
+        ),
+      },
+      {
         kind: "foundation",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("foundation")),
         backfill,

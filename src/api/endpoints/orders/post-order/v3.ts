@@ -32,7 +32,7 @@ export const postOrderV3Options: RouteOptions = {
       order: Joi.object({
         kind: Joi.string()
           .lowercase()
-          .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2", "universe")
+          .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2", "universe", "forward")
           .required(),
         data: Joi.object().required(),
       }),
@@ -299,6 +299,28 @@ export const postOrderV3Options: RouteOptions = {
                 result.id
               }`
             );
+          }
+
+          return { message: "Success", orderId: result.id };
+        }
+
+        case "forward": {
+          if (!["reservoir"].includes(orderbook)) {
+            throw new Error("Unknown orderbook");
+          }
+
+          const orderInfo: orders.forward.OrderInfo = {
+            orderParams: order.data,
+            metadata: {
+              schema,
+              source,
+            },
+          };
+
+          const [result] = await orders.forward.save([orderInfo]);
+
+          if (result.status !== "success") {
+            throw Boom.badRequest(result.status);
           }
 
           return { message: "Success", orderId: result.id };
