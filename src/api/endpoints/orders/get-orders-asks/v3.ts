@@ -300,7 +300,6 @@ export const getOrdersAsksV3Options: RouteOptions = {
       const conditions: string[] = [`orders.side = 'sell'`];
       let orderStatusFilter = `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`;
       let communityFilter = "";
-      let groupBy = "";
 
       if (query.ids) {
         if (Array.isArray(query.ids)) {
@@ -349,9 +348,8 @@ export const getOrdersAsksV3Options: RouteOptions = {
 
         // Community filter is valid only when maker filter is passed
         if (query.community) {
-          groupBy = "GROUP BY orders.id";
           communityFilter =
-            "JOIN collections ON orders.contract = collections.contract AND collections.community = $/community/";
+            "JOIN (SELECT DISTINCT contract FROM collections WHERE community = $/community/) c ON orders.contract = c.contract";
         }
       }
 
@@ -401,8 +399,6 @@ export const getOrdersAsksV3Options: RouteOptions = {
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
-
-      baseQuery += groupBy;
 
       // Sorting
       if (query.sortBy === "price") {
