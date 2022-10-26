@@ -8,6 +8,7 @@ import { logger } from "@/common/logger";
 import { buildContinuation, formatEth, regex } from "@/common/utils";
 import { Activities } from "@/models/activities";
 import { Sources } from "@/models/sources";
+import { JoiOrderMetadata } from "@/common/joi";
 
 const version = "v3";
 
@@ -22,6 +23,9 @@ export const getActivityV3Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
+      includeMetadata: Joi.boolean()
+        .default(false)
+        .description("If true, metadata is included in the response."),
       limit: Joi.number().integer().min(1).max(1000).default(20),
       continuation: Joi.string().pattern(regex.base64),
     }),
@@ -48,6 +52,7 @@ export const getActivityV3Options: RouteOptions = {
             id: Joi.string().allow(null),
             side: Joi.string().valid("ask", "bid").allow(null),
             source: Joi.object().allow(null),
+            metadata: JoiOrderMetadata.allow(null).optional(),
           }),
         }).description("Amount of items returned in response.")
       ),
@@ -61,7 +66,12 @@ export const getActivityV3Options: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const activities = await Activities.getActivities(query.continuation, query.limit, true);
+      const activities = await Activities.getActivities(
+        query.continuation,
+        query.limit,
+        true,
+        query.includeMetadata
+      );
 
       // If no activities found
       if (!activities.length) {
@@ -92,7 +102,11 @@ export const getActivityV3Options: RouteOptions = {
           order: activity.order?.id
             ? {
                 id: activity.order.id,
-                side: activity.order.side === "sell" ? "ask" : "bid",
+                side: activity.order.side
+                  ? activity.order.side === "sell"
+                    ? "ask"
+                    : "bid"
+                  : undefined,
                 source: orderSource
                   ? {
                       domain: orderSource?.domain,
@@ -100,6 +114,7 @@ export const getActivityV3Options: RouteOptions = {
                       icon: orderSource?.metadata.icon,
                     }
                   : undefined,
+                metadata: activity.order.metadata || undefined,
               }
             : undefined,
         };
