@@ -95,6 +95,9 @@ import * as resyncAttributeFloorSell from "@/jobs/update-attribute/resync-attrib
 import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attribute-key-counts";
 import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
 
+import * as backfillBidActivitiesCollectionId from "@/jobs/backfill/backfill-bid-activities-collection-id";
+import * as backfillBidUserActivitiesCollectionId from "@/jobs/backfill/backfill-bid-user-activities-collection-id";
+
 export const allJobQueues = [
   fixActivitiesMissingCollection.queue,
   processActivityEvent.queue,
@@ -164,4 +167,7 @@ export const allJobQueues = [
   resyncAttributeFloorSell.queue,
   resyncAttributeKeyCounts.queue,
   resyncAttributeValueCounts.queue,
+
+  backfillBidActivitiesCollectionId.queue,
+  backfillBidUserActivitiesCollectionId.queue,
 ];

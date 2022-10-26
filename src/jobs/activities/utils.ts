@@ -19,7 +19,8 @@ export async function getBidInfoByOrderId(orderId: string) {
     `
                 SELECT
                   ts.id,
-                  ts.attribute_id
+                  ts.attribute_id,
+                  ts.collection_id
                 FROM orders
                 JOIN token_sets ts
                   ON orders.token_set_id = ts.id
@@ -39,8 +40,12 @@ export async function getBidInfoByOrderId(orderId: string) {
     const token = await Tokens.getByContractAndTokenId(contract, tokenId, true);
     collectionId = token?.collectionId;
   } else if (tokenSetByOrderIdResult.id.startsWith("list:")) {
-    const attribute = await Attributes.getById(tokenSetByOrderIdResult.attribute_id);
-    collectionId = attribute?.collectionId;
+    if (tokenSetByOrderIdResult.attribute_id) {
+      const attribute = await Attributes.getById(tokenSetByOrderIdResult.attribute_id);
+      collectionId = attribute?.collectionId;
+    } else {
+      collectionId = tokenSetByOrderIdResult.collection_id;
+    }
   } else if (tokenSetByOrderIdResult.id.startsWith("range:")) {
     const collection = await Collections.getByTokenSetId(tokenSetByOrderIdResult.id);
     collectionId = collection?.id;
