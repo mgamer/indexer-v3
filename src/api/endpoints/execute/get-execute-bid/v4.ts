@@ -34,7 +34,9 @@ import * as zeroExV4BuyCollection from "@/orderbook/orders/zeroex-v4/build/buy/c
 import * as universeBuyToken from "@/orderbook/orders/universe/build/buy/token";
 
 // Forward
+import * as forwardBuyAttribute from "@/orderbook/orders/forward/build/buy/attribute";
 import * as forwardBuyToken from "@/orderbook/orders/forward/build/buy/token";
+import * as forwardBuyCollection from "@/orderbook/orders/forward/build/buy/collection";
 
 const version = "v4";
 
@@ -711,8 +713,26 @@ export const getExecuteBidV4Options: RouteOptions = {
                 contract,
                 tokenId,
               });
+            } else if (tokenSetId || (collection && attributeKey && attributeValue)) {
+              order = await forwardBuyAttribute.build({
+                ...params,
+                maker,
+                collection,
+                attributes: [
+                  {
+                    key: attributeKey,
+                    value: attributeValue,
+                  },
+                ],
+              });
+            } else if (collection) {
+              order = await forwardBuyCollection.build({
+                ...params,
+                maker,
+                collection,
+              });
             } else {
-              throw Boom.notImplemented("Collection and attribute bids not yet implemented");
+              throw Boom.internal("Wrong metadata");
             }
 
             if (!order) {
