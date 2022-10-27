@@ -116,7 +116,7 @@ if (config.doBackgroundWork) {
           }
         }
       } catch (error) {
-        logger.error(QUEUE_NAME, `Failed to process order ${job.data}: ${error}`);
+        logger.error(QUEUE_NAME, `Failed to process order ${JSON.stringify(job.data)}: ${error}`);
         throw error;
       }
     },
