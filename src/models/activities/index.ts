@@ -63,7 +63,8 @@ export class Activities {
   public static async getActivities(
     continuation: null | string = null,
     limit = 20,
-    byEventTimestamp = false
+    byEventTimestamp = false,
+    sortDirection = "asc"
   ) {
     let eventTimestamp;
     let id;
@@ -83,18 +84,20 @@ export class Activities {
 
     if (byEventTimestamp) {
       if (!_.isNull(continuation)) {
+        const sign = sortDirection == "desc" ? "<" : ">";
         [eventTimestamp, id] = splitContinuation(continuation, /^(\d+)_(\d+)$/);
-        baseQuery += ` WHERE (event_timestamp, id) < ($/eventTimestamp/, $/id/)`;
+        baseQuery += ` WHERE (event_timestamp, id) ${sign} ($/eventTimestamp/, $/id/)`;
       }
 
-      baseQuery += ` ORDER BY event_timestamp DESC, id DESC`;
+      baseQuery += ` ORDER BY event_timestamp ${sortDirection}, id ${sortDirection}`;
     } else {
       if (!_.isNull(continuation)) {
         id = continuation;
-        baseQuery += ` WHERE id > $/id/`;
+        const sign = sortDirection == "desc" ? "<" : ">";
+        baseQuery += ` WHERE id ${sign} $/id/`;
       }
 
-      baseQuery += ` ORDER BY id ASC`;
+      baseQuery += ` ORDER BY id ${sortDirection}`;
     }
 
     baseQuery += ` LIMIT $/limit/`;
