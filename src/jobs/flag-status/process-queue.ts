@@ -39,7 +39,7 @@ if (config.doBackgroundWork) {
     async () => {
       const pendingFlagStatusSyncJobs = new PendingFlagStatusSyncJobs();
 
-      if (await acquireLock(flagStatusSyncJob.getLockName())) {
+      if (await acquireLock(flagStatusSyncJob.getLockName(), 86400)) {
         logger.info(QUEUE_NAME, `Lock acquired.`);
 
         const pendingJob = await pendingFlagStatusSyncJobs.next();

@@ -63,22 +63,122 @@ export class Activities {
   public static async getActivities(
     continuation: null | string = null,
     limit = 20,
-    byEventTimestamp = false
+    byEventTimestamp = false,
+    includeMetadata = true
   ) {
     let eventTimestamp;
     let id;
+    let metadataQuery;
+
+    if (includeMetadata) {
+      const orderMetadataBuildQuery = `
+        (
+          CASE
+            WHEN orders.token_set_id LIKE 'token:%' THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'token',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'tokenName', tokens.name,
+                    'image', tokens.image
+                  )
+                )
+              FROM tokens
+              JOIN collections
+                ON tokens.collection_id = collections.id
+              WHERE tokens.contract = decode(substring(split_part(orders.token_set_id, ':', 2) from 3), 'hex')
+                AND tokens.token_id = (split_part(orders.token_set_id, ':', 3)::NUMERIC(78, 0)))
+
+            WHEN orders.token_set_id LIKE 'contract:%' THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'collection',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'image', (collections.metadata ->> 'imageUrl')::TEXT
+                  )
+                )
+              FROM collections
+              WHERE collections.id = substring(orders.token_set_id from 10))
+
+            WHEN orders.token_set_id LIKE 'range:%' THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'collection',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'image', (collections.metadata ->> 'imageUrl')::TEXT
+                  )
+                )
+              FROM collections
+              WHERE collections.id = substring(orders.token_set_id from 7))
+
+            WHEN orders.token_set_id LIKE 'list:%' THEN
+              (SELECT
+                CASE
+                  WHEN token_sets.attribute_id IS NULL THEN
+                    (SELECT
+                      json_build_object(
+                        'kind', 'collection',
+                        'data', json_build_object(
+                          'collectionName', collections.name,
+                          'image', (collections.metadata ->> 'imageUrl')::TEXT
+                        )
+                      )
+                    FROM collections
+                    WHERE token_sets.collection_id = collections.id)
+                  ELSE
+                    (SELECT
+                      json_build_object(
+                        'kind', 'attribute',
+                        'data', json_build_object(
+                          'collectionName', collections.name,
+                          'attributes', ARRAY[json_build_object('key', attribute_keys.key, 'value', attributes.value)],
+                          'image', (collections.metadata ->> 'imageUrl')::TEXT
+                        )
+                      )
+                    FROM attributes
+                    JOIN attribute_keys
+                    ON attributes.attribute_key_id = attribute_keys.id
+                    JOIN collections
+                    ON attribute_keys.collection_id = collections.id
+                    WHERE token_sets.attribute_id = attributes.id)
+                END  
+              FROM token_sets
+              WHERE token_sets.id = orders.token_set_id AND token_sets.schema_hash = orders.token_set_schema_hash)
+            ELSE NULL
+          END
+        ) AS order_metadata
+      `;
+
+      metadataQuery = `
+             LEFT JOIN LATERAL (
+                SELECT name AS "token_name", image AS "token_image"
+                FROM tokens
+                WHERE activities.contract = tokens.contract
+                AND activities.token_id = tokens.token_id
+             ) t ON TRUE
+             LEFT JOIN LATERAL (
+                SELECT name AS "collection_name", metadata AS "collection_metadata"
+                FROM collections
+                WHERE activities.collection_id = collections.id
+             ) c ON TRUE
+             LEFT JOIN LATERAL (
+                SELECT 
+                    source_id_int AS "order_source_id_int",
+                    side AS "order_side",
+                    kind AS "order_kind",
+                    ${orderMetadataBuildQuery}
+                FROM orders
+                WHERE activities.order_id = orders.id
+             ) o ON TRUE`;
+    }
 
     let baseQuery = `
             SELECT *
             FROM activities
-            LEFT JOIN LATERAL (
-               SELECT 
-                   source_id_int AS "order_source_id_int",
-                   side AS "order_side",
-                   kind AS "order_kind"
-               FROM orders
-               WHERE activities.order_id = orders.id
-            ) o ON TRUE
+            ${metadataQuery}
             `;
 
     if (byEventTimestamp) {
@@ -175,6 +275,87 @@ export class Activities {
     }
 
     if (includeMetadata) {
+      const orderMetadataBuildQuery = `
+        (
+          CASE
+            WHEN orders.token_set_id LIKE 'token:%' THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'token',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'tokenName', tokens.name,
+                    'image', tokens.image
+                  )
+                )
+              FROM tokens
+              JOIN collections
+                ON tokens.collection_id = collections.id
+              WHERE tokens.contract = decode(substring(split_part(orders.token_set_id, ':', 2) from 3), 'hex')
+                AND tokens.token_id = (split_part(orders.token_set_id, ':', 3)::NUMERIC(78, 0)))
+
+            WHEN orders.token_set_id LIKE 'contract:%' THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'collection',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'image', (collections.metadata ->> 'imageUrl')::TEXT
+                  )
+                )
+              FROM collections
+              WHERE collections.id = substring(orders.token_set_id from 10))
+
+            WHEN orders.token_set_id LIKE 'range:%' THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'collection',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'image', (collections.metadata ->> 'imageUrl')::TEXT
+                  )
+                )
+              FROM collections
+              WHERE collections.id = substring(orders.token_set_id from 7))
+
+            WHEN orders.token_set_id LIKE 'list:%' THEN
+              (SELECT
+                CASE
+                  WHEN token_sets.attribute_id IS NULL THEN
+                    (SELECT
+                      json_build_object(
+                        'kind', 'collection',
+                        'data', json_build_object(
+                          'collectionName', collections.name,
+                          'image', (collections.metadata ->> 'imageUrl')::TEXT
+                        )
+                      )
+                    FROM collections
+                    WHERE token_sets.collection_id = collections.id)
+                  ELSE
+                    (SELECT
+                      json_build_object(
+                        'kind', 'attribute',
+                        'data', json_build_object(
+                          'collectionName', collections.name,
+                          'attributes', ARRAY[json_build_object('key', attribute_keys.key, 'value', attributes.value)],
+                          'image', (collections.metadata ->> 'imageUrl')::TEXT
+                        )
+                      )
+                    FROM attributes
+                    JOIN attribute_keys
+                    ON attributes.attribute_key_id = attribute_keys.id
+                    JOIN collections
+                    ON attribute_keys.collection_id = collections.id
+                    WHERE token_sets.attribute_id = attributes.id)
+                END  
+              FROM token_sets
+              WHERE token_sets.id = orders.token_set_id AND token_sets.schema_hash = orders.token_set_schema_hash)
+            ELSE NULL
+          END
+        ) AS order_metadata
+      `;
+
       metadataQuery = `
              LEFT JOIN LATERAL (
                 SELECT name AS "token_name", image AS "token_image"
@@ -191,7 +372,8 @@ export class Activities {
                 SELECT 
                     source_id_int AS "order_source_id_int",
                     side AS "order_side",
-                    kind AS "order_kind"
+                    kind AS "order_kind",
+                    ${orderMetadataBuildQuery}
                 FROM orders
                 WHERE activities.order_id = orders.id
              ) o ON TRUE`;
@@ -230,11 +412,13 @@ export class Activities {
     createdBefore: null | string = null,
     types: string[] = [],
     limit = 20,
-    sortBy = "eventTimestamp"
+    sortBy = "eventTimestamp",
+    includeMetadata = true
   ) {
     const sortByColumn = sortBy == "eventTimestamp" ? "event_timestamp" : "created_at";
     let continuation = "";
     let typesFilter = "";
+    let metadataQuery = "";
 
     if (!_.isNull(createdBefore)) {
       continuation = `AND ${sortByColumn} < $/createdBefore/`;
@@ -244,10 +428,90 @@ export class Activities {
       typesFilter = `AND type IN ('$/types:raw/')`;
     }
 
-    const activities: ActivitiesEntityParams[] | null = await redb.manyOrNone(
-      `SELECT *
-             FROM activities
-             LEFT JOIN LATERAL (
+    if (includeMetadata) {
+      const orderMetadataBuildQuery = `
+        (
+          CASE
+            WHEN orders.token_set_id LIKE 'token:%' THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'token',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'tokenName', tokens.name,
+                    'image', tokens.image
+                  )
+                )
+              FROM tokens
+              JOIN collections
+                ON tokens.collection_id = collections.id
+              WHERE tokens.contract = decode(substring(split_part(orders.token_set_id, ':', 2) from 3), 'hex')
+                AND tokens.token_id = (split_part(orders.token_set_id, ':', 3)::NUMERIC(78, 0)))
+
+            WHEN orders.token_set_id LIKE 'contract:%' THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'collection',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'image', (collections.metadata ->> 'imageUrl')::TEXT
+                  )
+                )
+              FROM collections
+              WHERE collections.id = substring(orders.token_set_id from 10))
+
+            WHEN orders.token_set_id LIKE 'range:%' THEN
+              (SELECT
+                json_build_object(
+                  'kind', 'collection',
+                  'data', json_build_object(
+                    'collectionName', collections.name,
+                    'image', (collections.metadata ->> 'imageUrl')::TEXT
+                  )
+                )
+              FROM collections
+              WHERE collections.id = substring(orders.token_set_id from 7))
+
+            WHEN orders.token_set_id LIKE 'list:%' THEN
+              (SELECT
+                CASE
+                  WHEN token_sets.attribute_id IS NULL THEN
+                    (SELECT
+                      json_build_object(
+                        'kind', 'collection',
+                        'data', json_build_object(
+                          'collectionName', collections.name,
+                          'image', (collections.metadata ->> 'imageUrl')::TEXT
+                        )
+                      )
+                    FROM collections
+                    WHERE token_sets.collection_id = collections.id)
+                  ELSE
+                    (SELECT
+                      json_build_object(
+                        'kind', 'attribute',
+                        'data', json_build_object(
+                          'collectionName', collections.name,
+                          'attributes', ARRAY[json_build_object('key', attribute_keys.key, 'value', attributes.value)],
+                          'image', (collections.metadata ->> 'imageUrl')::TEXT
+                        )
+                      )
+                    FROM attributes
+                    JOIN attribute_keys
+                    ON attributes.attribute_key_id = attribute_keys.id
+                    JOIN collections
+                    ON attribute_keys.collection_id = collections.id
+                    WHERE token_sets.attribute_id = attributes.id)
+                END  
+              FROM token_sets
+              WHERE token_sets.id = orders.token_set_id AND token_sets.schema_hash = orders.token_set_schema_hash)
+            ELSE NULL
+          END
+        ) AS order_metadata
+      `;
+
+      metadataQuery = `
+                 LEFT JOIN LATERAL (
                 SELECT name AS "token_name", image AS "token_image"
                 FROM tokens
                 WHERE activities.contract = tokens.contract
@@ -262,10 +526,17 @@ export class Activities {
                 SELECT 
                     source_id_int AS "order_source_id_int",
                     side AS "order_side",
-                    kind AS "order_kind"
+                    kind AS "order_kind",
+                    ${orderMetadataBuildQuery}
                 FROM orders
                 WHERE activities.order_id = orders.id
-             ) o ON TRUE
+             ) o ON TRUE`;
+    }
+
+    const activities: ActivitiesEntityParams[] | null = await redb.manyOrNone(
+      `SELECT *
+             FROM activities
+             ${metadataQuery}
              WHERE contract = $/contract/
              AND token_id = $/tokenId/
              ${continuation}

@@ -118,6 +118,11 @@ if (config.doBackgroundWork) {
     { connection: redis.duplicate(), concurrency: 1 }
   );
 
+  worker.on("failed", async (job) => {
+    logger.error(QUEUE_NAME, `Worker failed: ${JSON.stringify(job)}`);
+    await releaseLock(getLockName());
+  });
+
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
