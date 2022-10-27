@@ -161,7 +161,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       ];
 
       // Handle: royalties
-      const royalties = await commonHelpers.getRoyalties(order.params.nft.token);
+      const royalties = await commonHelpers.getOpenSeaRoyalties(order.params.nft.token);
       feeBreakdown = [
         ...feeBreakdown,
         ...royalties.map(({ bps, recipient }) => ({
