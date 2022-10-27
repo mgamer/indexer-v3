@@ -12,6 +12,7 @@ import { Sources } from "@/models/sources";
 import { getOrderSourceByOrderKind, OrderKind } from "@/orderbook/orders";
 import { CollectionSets } from "@/models/collection-sets";
 import * as Boom from "@hapi/boom";
+import { JoiOrderMetadata } from "@/common/joi";
 
 const version = "v4";
 
@@ -67,6 +68,9 @@ export const getUserActivityV4Options: RouteOptions = {
         .description(
           "Order the items are returned in the response, eventTimestamp = The blockchain event time, createdAt - The time in which event was recorded"
         ),
+      includeMetadata: Joi.boolean()
+        .default(true)
+        .description("If true, metadata is included in the response."),
       continuation: Joi.string().description(
         "Use continuation token to request next offset of items."
       ),
@@ -116,6 +120,7 @@ export const getUserActivityV4Options: RouteOptions = {
             id: Joi.string().allow(null),
             side: Joi.string().valid("ask", "bid").allow(null),
             source: Joi.object().allow(null),
+            metadata: JoiOrderMetadata.allow(null).optional(),
           }),
           createdAt: Joi.string(),
         })
@@ -156,7 +161,8 @@ export const getUserActivityV4Options: RouteOptions = {
         query.continuation,
         query.types,
         query.limit,
-        query.sortBy
+        query.sortBy,
+        query.includeMetadata
       );
 
       // If no activities found
@@ -196,7 +202,11 @@ export const getUserActivityV4Options: RouteOptions = {
           order: activity.order?.id
             ? {
                 id: activity.order.id,
-                side: activity.order.side === "sell" ? "ask" : "bid",
+                side: activity.order.side
+                  ? activity.order.side === "sell"
+                    ? "ask"
+                    : "bid"
+                  : undefined,
                 source: orderSource
                   ? {
                       domain: orderSource?.domain,
@@ -204,6 +214,7 @@ export const getUserActivityV4Options: RouteOptions = {
                       icon: orderSource?.metadata.icon,
                     }
                   : undefined,
+                metadata: activity.order.metadata || undefined,
               }
             : undefined,
         });
