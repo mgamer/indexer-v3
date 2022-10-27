@@ -28,16 +28,16 @@ export const getActivityV3Options: RouteOptions = {
         .description("If true, metadata is included in the response."),
       limit: Joi.number().integer().min(1).max(1000).default(20),
       continuation: Joi.string().pattern(regex.base64),
-    }),
-  },
-  response: {
-    schema: Joi.object({
-      continuation: Joi.string().pattern(regex.base64).allow(null),
       sortDirection: Joi.string()
         .lowercase()
         .valid("asc", "desc")
         .default("desc")
         .description("Order the items are returned in the response."),
+    }),
+  },
+  response: {
+    schema: Joi.object({
+      continuation: Joi.string().pattern(regex.base64).allow(null),
       activities: Joi.array().items(
         Joi.object({
           id: Joi.number(),
