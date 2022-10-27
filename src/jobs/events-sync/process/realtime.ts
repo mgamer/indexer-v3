@@ -16,7 +16,7 @@ export const queue = new Queue(QUEUE_NAME, {
       type: "exponential",
       delay: 10000,
     },
-    removeOnComplete: true,
+    removeOnComplete: 100,
     removeOnFail: 10000,
     timeout: 120000,
   },
@@ -37,7 +37,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 20 }
+    { connection: redis.duplicate(), concurrency: config.chainId === 137 ? 10 : 20 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
