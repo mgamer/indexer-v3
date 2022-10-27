@@ -49,7 +49,7 @@ export const getOnChainRoyalties = async (
     { collection }
   );
 
-  return collectionResult?.new_royalties || [];
+  return collectionResult?.new_royalties || {};
 };
 
 export const getFtBalance = async (contract: string, owner: string): Promise<BigNumber> => {
