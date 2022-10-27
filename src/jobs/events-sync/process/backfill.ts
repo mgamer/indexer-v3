@@ -46,9 +46,14 @@ if (config.doBackgroundWork) {
 }
 
 export const addToQueue = async (infos: EventsInfo[]) => {
-  if (_.isEmpty(infos)) {
-    return;
-  }
+  const jobs: { name: string; data: EventsInfo }[] = [];
+  infos.map((info) => {
+    if (!_.isEmpty(info.events)) {
+      jobs.push({ name: randomUUID(), data: info });
+    }
+  });
 
-  await queue.addBulk(infos.map((info) => ({ name: randomUUID(), data: info })));
+  if (!_.isEmpty(jobs)) {
+    await queue.addBulk(jobs);
+  }
 };
