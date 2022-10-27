@@ -70,6 +70,10 @@ export const saveTransaction = async (transaction: Transaction) => {
  * @param transactions
  */
 export const saveTransactions = async (transactions: Transaction[]) => {
+  if (_.isEmpty(transactions)) {
+    return;
+  }
+
   const columns = new pgp.helpers.ColumnSet(
     [
       "hash",
