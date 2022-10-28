@@ -103,21 +103,24 @@ export const addEventsPartial = async (events: Event[]) => {
           fill_events_2.order_kind,
           fill_events_2.order_id,
           fill_events_2.timestamp,
-          fill_events_2.amount
+          fill_events_2.amount,
+          fill_events_2.order_source_id_int
       )
       INSERT INTO orders (
         id,
         kind,
         quantity_filled,
         fillability_status,
-        expiration
+        expiration,
+        source_id_int
       ) (
         SELECT
           x.order_id,
           MIN(x.order_kind),
           SUM(x.amount) AS amount,
           'filled'::order_fillability_status_t,
-          MIN(to_timestamp(x.timestamp))
+          MIN(to_timestamp(x.timestamp)),
+          MIN(x.order_source_id_int)
         FROM x
         WHERE x.order_id IS NOT NULL
         GROUP BY x.order_id
