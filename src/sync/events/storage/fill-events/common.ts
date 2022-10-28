@@ -99,19 +99,21 @@ export const addEvents = async (events: Event[]) => {
           "is_primary"
         ) VALUES ${pgp.helpers.values(fillValues, columns)}
         ON CONFLICT DO NOTHING
-        RETURNING "order_kind", "order_id", "timestamp"
+        RETURNING "order_kind", "order_id", "timestamp", "order_source_id_int"
       )
       INSERT INTO "orders" (
         "id",
         "kind",
         "fillability_status",
-        "expiration"
+        "expiration",
+        "source_id_int"
       ) (
         SELECT
           "x"."order_id",
           "x"."order_kind",
           'filled'::order_fillability_status_t,
-          to_timestamp("x"."timestamp") AS "expiration"
+          to_timestamp("x"."timestamp") AS "expiration",
+          "x"."order_source_id_int"
         FROM "x"
         WHERE "x"."order_id" IS NOT NULL
       )
