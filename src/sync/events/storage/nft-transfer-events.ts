@@ -3,6 +3,7 @@ import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { BaseEventParams } from "@/events-sync/parser";
 import * as nftTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/nft-transfers";
+import _ from "lodash";
 
 export type Event = {
   kind: "erc721" | "erc1155" | "cryptopunks";
@@ -102,60 +103,62 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
       { table: "nft_transfer_events" }
     );
 
-    // Atomically insert the transfer events and update balances
-    queries.push(`
-      WITH "x" AS (
-        INSERT INTO "nft_transfer_events" (
-          "address",
-          "block",
-          "block_hash",
-          "tx_hash",
-          "tx_index",
-          "log_index",
-          "timestamp",
-          "batch_index",
-          "from",
-          "to",
-          "token_id",
-          "amount"
-        ) VALUES ${pgp.helpers.values(transferValues, columns)}
-        ON CONFLICT DO NOTHING
-        RETURNING
-          "address",
-          "token_id",
-          ARRAY["from", "to"] AS "owners",
-          ARRAY[-"amount", "amount"] AS "amount_deltas",
-          ARRAY[NULL, to_timestamp("timestamp")] AS "timestamps"
-      )
-      INSERT INTO "nft_balances" (
-        "contract",
-        "token_id",
-        "owner",
-        "amount",
-        "acquired_at"
-      ) (
-        SELECT
-          "y"."address",
-          "y"."token_id",
-          "y"."owner",
-          SUM("y"."amount_delta"),
-          MIN("y"."timestamp")
-        FROM (
-          SELECT
+    for (const chunk of _.chunk(transferValues, 50)) {
+      // Atomically insert the transfer events and update balances
+      queries.push(`
+        WITH "x" AS (
+          INSERT INTO "nft_transfer_events" (
+            "address",
+            "block",
+            "block_hash",
+            "tx_hash",
+            "tx_index",
+            "log_index",
+            "timestamp",
+            "batch_index",
+            "from",
+            "to",
+            "token_id",
+            "amount"
+          ) VALUES ${pgp.helpers.values(chunk, columns)}
+          ON CONFLICT DO NOTHING
+          RETURNING
             "address",
             "token_id",
-            unnest("owners") AS "owner",
-            unnest("amount_deltas") AS "amount_delta",
-            unnest("timestamps") AS "timestamp"
-          FROM "x"
-        ) "y"
-        GROUP BY "y"."address", "y"."token_id", "y"."owner"
-      )
-      ON CONFLICT ("contract", "token_id", "owner") DO
-      UPDATE SET 
-        "amount" = "nft_balances"."amount" + "excluded"."amount", 
-        "acquired_at" = COALESCE(GREATEST("excluded"."acquired_at", "nft_balances"."acquired_at"), "nft_balances"."acquired_at")
+            ARRAY["from", "to"] AS "owners",
+            ARRAY[-"amount", "amount"] AS "amount_deltas",
+            ARRAY[NULL, to_timestamp("timestamp")] AS "timestamps"
+        )
+        INSERT INTO "nft_balances" (
+          "contract",
+          "token_id",
+          "owner",
+          "amount",
+          "acquired_at"
+        ) (
+          SELECT
+            "y"."address",
+            "y"."token_id",
+            "y"."owner",
+            SUM("y"."amount_delta"),
+            MIN("y"."timestamp")
+          FROM (
+            SELECT
+              "address",
+              "token_id",
+              unnest("owners") AS "owner",
+              unnest("amount_deltas") AS "amount_delta",
+              unnest("timestamps") AS "timestamp"
+            FROM "x"
+          ) "y"
+          GROUP BY "y"."address", "y"."token_id", "y"."owner"
+        )
+        ON CONFLICT ("contract", "token_id", "owner") DO
+        UPDATE SET 
+          "amount" = "nft_balances"."amount" + "excluded"."amount", 
+          "acquired_at" = COALESCE(GREATEST("excluded"."acquired_at", "nft_balances"."acquired_at"), "nft_balances"."acquired_at")
     `);
+    }
   }
 
   if (contractValues.length) {
