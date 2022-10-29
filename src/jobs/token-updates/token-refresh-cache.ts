@@ -41,5 +41,5 @@ if (config.doBackgroundWork) {
 }
 
 export const addToQueue = async (contract: string, tokenId: string) => {
-  await queue.add(randomUUID(), { contract, tokenId });
+  await queue.add(randomUUID(), { contract, tokenId }, { jobId: `${contract}:${tokenId}` });
 };
