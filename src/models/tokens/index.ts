@@ -10,6 +10,7 @@ import {
   TokensEntityParams,
   TokensEntityUpdateParams,
 } from "@/models/tokens/tokens-entity";
+import { config } from "@/config/index";
 
 export type TokenAttributes = {
   attributeId: number;
@@ -40,6 +41,30 @@ export class Tokens {
 
     if (token) {
       return new TokensEntity(token);
+    }
+
+    return null;
+  }
+
+  public static async getCollectionId(contract: string, tokenId: string) {
+    // For polygon no shared contracts at the moment
+    if (config.chainId === 137) {
+      return contract;
+    }
+
+    const collectionId = await redb.oneOrNone(
+      `SELECT collection_id
+              FROM tokens
+              WHERE contract = $/contract/
+              AND token_id = $/tokenId/`,
+      {
+        contract: toBuffer(contract),
+        tokenId,
+      }
+    );
+
+    if (collectionId) {
+      return collectionId["collection_id"];
     }
 
     return null;

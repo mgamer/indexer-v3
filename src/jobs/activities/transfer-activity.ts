@@ -11,11 +11,11 @@ import * as fixActivitiesMissingCollection from "@/jobs/activities/fix-activitie
 
 export class TransferActivity {
   public static async handleEvent(data: NftTransferEventData) {
-    const token = await Tokens.getByContractAndTokenId(data.contract, data.tokenId, true);
+    const collectionId = await Tokens.getCollectionId(data.contract, data.tokenId);
 
-    // If no token found
-    if (_.isNull(token)) {
-      logger.warn("transfer-activity", `No token found for ${JSON.stringify(data)}`);
+    // If no collection found
+    if (_.isNull(collectionId)) {
+      logger.warn("transfer-activity", `No collection found for ${JSON.stringify(data)}`);
       return;
     }
 
@@ -29,7 +29,7 @@ export class TransferActivity {
       type: data.fromAddress == AddressZero ? ActivityType.mint : ActivityType.transfer,
       hash: activityHash,
       contract: data.contract,
-      collectionId: token.collectionId,
+      collectionId,
       tokenId: data.tokenId,
       fromAddress: data.fromAddress,
       toAddress: data.toAddress,
@@ -64,7 +64,7 @@ export class TransferActivity {
     ]);
 
     // If collection information is not available yet when a mint event
-    if (!token.collectionId && data.fromAddress == AddressZero) {
+    if (!collectionId && data.fromAddress == AddressZero) {
       await fixActivitiesMissingCollection.addToQueue(data.contract, data.tokenId);
     }
   }
