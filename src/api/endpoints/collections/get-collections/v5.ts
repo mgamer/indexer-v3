@@ -409,7 +409,7 @@ export const getCollectionsV5Options: RouteOptions = {
         case "floorAskPrice": {
           if (query.continuation) {
             conditions.push(
-              `(collections.floor_sell_value, collections.id) < ($/contParam/, $/contId/)`
+              `(collections.floor_sell_value, collections.id) > ($/contParam/, $/contId/)`
             );
           }
           orderBy = ` ORDER BY collections.floor_sell_value, collections.id`;
