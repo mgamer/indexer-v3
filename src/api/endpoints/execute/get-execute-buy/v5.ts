@@ -608,7 +608,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
       return {
         steps,
         // Remove any unsuccessfully handled listings from the path
-        path: path.filter((_, i) => !success[i]),
+        path: path.filter((_, i) => success[i]),
       };
     } catch (error) {
       logger.error(`get-execute-buy-${version}-handler`, `Handler failure: ${error}`);
