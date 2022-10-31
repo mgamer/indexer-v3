@@ -30,15 +30,15 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { contract, tokenId, retry } = job.data;
-      const token = await Tokens.getByContractAndTokenId(contract, tokenId, true);
+      const collectionId = await Tokens.getCollectionId(contract, tokenId);
 
       job.data.addToQueue = false;
 
-      if (token?.collectionId) {
+      if (collectionId) {
         // Update the collection id of any missing activities
         await Promise.all([
-          Activities.updateMissingCollectionId(contract, tokenId, token.collectionId),
-          UserActivities.updateMissingCollectionId(contract, tokenId, token.collectionId),
+          Activities.updateMissingCollectionId(contract, tokenId, collectionId),
+          UserActivities.updateMissingCollectionId(contract, tokenId, collectionId),
         ]);
       } else if (retry < MAX_RETRIES) {
         job.data.addToQueue = true;
