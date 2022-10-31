@@ -11,7 +11,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, formatEth, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import { generateBidDetails } from "@/orderbook/orders";
+import { generateBidDetailsV5 } from "@/orderbook/orders";
 
 const version = "v1";
 
@@ -102,7 +102,7 @@ export const getExecuteSellV1Options: RouteOptions = {
         return { quote };
       }
 
-      const bidDetails = await generateBidDetails(
+      const bidDetails = await generateBidDetailsV5(
         {
           kind: bestOrderResult.kind,
           rawData: bestOrderResult.raw_data,
@@ -114,9 +114,9 @@ export const getExecuteSellV1Options: RouteOptions = {
         }
       );
 
-      const router = new Sdk.Router.Router(config.chainId, baseProvider);
+      const router = new Sdk.RouterV5.Router(config.chainId, baseProvider);
       const tx = await router.fillBidTx(bidDetails, query.taker, {
-        referrer: query.source,
+        source: query.source,
       });
 
       // Set up generic filling steps

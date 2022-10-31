@@ -1,8 +1,8 @@
 import { Interface } from "@ethersproject/abi";
 import { AddressZero } from "@ethersproject/constants";
 import { getTxTrace } from "@georgeroman/evm-tx-simulator";
-import * as SdkNew from "@reservoir0x/sdk-new";
-import { getReferrer } from "@reservoir0x/sdk/dist/utils";
+import * as Sdk from "@reservoir0x/sdk";
+import { getSource } from "@reservoir0x/sdk/dist/utils";
 
 import { baseProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
@@ -133,7 +133,7 @@ export const extractAttributionData = async (
 
   // Properly set the taker when filling through router contracts
   const tx = await fetchTransaction(txHash);
-  let router = SdkNew.Common.Addresses.Routers[config.chainId]?.[tx.to];
+  let router = Sdk.Common.Addresses.Routers[config.chainId]?.[tx.to];
   if (!router) {
     // Handle cases where we transfer directly to the router when filling bids
     if (tx.data.startsWith("0xb88d4fde")) {
@@ -141,39 +141,39 @@ export const extractAttributionData = async (
         "function safeTransferFrom(address from, address to, uint256 tokenId, bytes data)",
       ]);
       const result = iface.decodeFunctionData("safeTransferFrom", tx.data);
-      router = SdkNew.Common.Addresses.Routers[config.chainId]?.[result.to.toLowerCase()];
+      router = Sdk.Common.Addresses.Routers[config.chainId]?.[result.to.toLowerCase()];
     } else if (tx.data.startsWith("0xf242432a")) {
       const iface = new Interface([
         "function safeTransferFrom(address from, address to, uint256 id, uint256 value, bytes data)",
       ]);
       const result = iface.decodeFunctionData("safeTransferFrom", tx.data);
-      router = SdkNew.Common.Addresses.Routers[config.chainId]?.[result.to.toLowerCase()];
+      router = Sdk.Common.Addresses.Routers[config.chainId]?.[result.to.toLowerCase()];
     }
   }
   if (router) {
     taker = tx.from;
   }
 
-  let referrer = getReferrer(tx.data);
-  if (!referrer) {
+  let source = getSource(tx.data);
+  if (!source) {
     const last4Bytes = "0x" + tx.data.slice(-8);
-    referrer = sources.getByDomainHash(last4Bytes)?.domain;
+    source = sources.getByDomainHash(last4Bytes)?.domain;
   }
 
   // Reference: https://github.com/reservoirprotocol/core/issues/22#issuecomment-1191040945
-  if (referrer) {
+  if (source) {
     // TODO: Properly handle aggregator detection
-    if (referrer !== "opensea.io" && referrer !== "gem.xyz" && referrer !== "blur.io") {
+    if (source !== "opensea.io" && source !== "gem.xyz" && source !== "blur.io") {
       // Do not associate OpenSea / Gem direct fills to Reservoir
       aggregatorSource = await sources.getOrInsert("reservoir.tools");
-    } else if (referrer === "gem.xyz") {
+    } else if (source === "gem.xyz") {
       // Associate Gem direct fills to Gem
       aggregatorSource = await sources.getOrInsert("gem.xyz");
-    } else if (referrer === "blur.io") {
+    } else if (source === "blur.io") {
       // Associate Blur direct fills to Blur
       aggregatorSource = await sources.getOrInsert("blur.io");
     }
-    fillSource = await sources.getOrInsert(referrer);
+    fillSource = await sources.getOrInsert(source);
   } else if (router === "reservoir.tools") {
     aggregatorSource = await sources.getOrInsert("reservoir.tools");
   } else if (router) {

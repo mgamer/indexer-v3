@@ -26,6 +26,7 @@ export const postSimulateFloorV1Options: RouteOptions = {
   validate: {
     payload: Joi.object({
       token: Joi.string().lowercase().pattern(regex.token),
+      router: Joi.string().valid("v5", "v6").default("v5"),
     }),
   },
   response: {
@@ -59,12 +60,20 @@ export const postSimulateFloorV1Options: RouteOptions = {
 
     try {
       const token = payload.token;
+      const router = payload.router;
 
       const response = await inject({
-        method: "GET",
-        url: `/execute/buy/v2?token=${token}&taker=${genericTaker}&skipBalanceCheck=true`,
+        method: "POST",
+        // Latest V5 router API is V4
+        // Latest V6 router API is V6
+        url: `/execute/buy/${router === "v5" ? "v4" : "v6"}`,
         headers: {
           "Content-Type": "application/json",
+        },
+        payload: {
+          tokens: [token],
+          taker: genericTaker,
+          skipBalanceCheck: true,
         },
       });
 
@@ -100,10 +109,6 @@ export const postSimulateFloorV1Options: RouteOptions = {
         return { message: "No orders to simulate" };
       }
 
-      // HACK: Extract the corresponding order id via regex
-      // TODO: Once we switch to the v3 APIs we should get the order ids from the path
-      const { groups } = /\?ids=(?<orderId>0x[0-9a-f]{64})/.exec(response.payload)!;
-
       const contractResult = await redb.one(
         `
           SELECT
@@ -115,19 +120,22 @@ export const postSimulateFloorV1Options: RouteOptions = {
       );
 
       const parsedPayload = JSON.parse(response.payload);
+      const pathItem = parsedPayload.path[0];
+
       const success = await ensureBuyTxSucceeds(
         {
           kind: contractResult.kind as "erc721" | "erc1155",
-          contract: parsedPayload.path[0].contract as string,
-          tokenId: parsedPayload.path[0].tokenId as string,
-          amount: parsedPayload.path[0].quantity as string,
+          contract: pathItem.contract as string,
+          tokenId: pathItem.tokenId as string,
+          amount: pathItem.quantity as string,
         },
-        parsedPayload.steps[0].data
+        // Step 0 is the approval transaction
+        parsedPayload.steps[1].items[0].data
       );
       if (success) {
         return { message: "Floor order is fillable" };
       } else {
-        await invalidateOrder((groups as any).orderId);
+        await invalidateOrder(pathItem.orderId);
         return { message: "Floor order is not fillable (got invalidated)" };
       }
     } catch (error) {
