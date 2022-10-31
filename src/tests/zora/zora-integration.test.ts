@@ -26,7 +26,7 @@ const operator2Provider = new Wallet(operator2Key, baseProvider);
 jest.setTimeout(600 * 1000);
 
 describe("ZoraTestnet", () => {
-  const tokenId = 1;
+  const tokenId = "1";
   const chainId = config.chainId;
   // test NFT contract
   const nftToken = new Contract(

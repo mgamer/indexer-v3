@@ -2,7 +2,7 @@
 
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
-import * as Sdk from "@reservoir0x/sdk-new";
+import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 
 import { redb } from "@/common/db";
@@ -11,7 +11,7 @@ import { baseProvider } from "@/common/provider";
 import { bn, formatEth, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
-import { generateBidDetailsNew } from "@/orderbook/orders";
+import { generateBidDetailsV6 } from "@/orderbook/orders";
 import { getNftApproval } from "@/orderbook/orders/common/helpers";
 
 const version = "v5";
@@ -202,7 +202,7 @@ export const getExecuteSellV5Options: RouteOptions = {
           rawQuote: orderResult.price,
         },
       ];
-      const bidDetails = await generateBidDetailsNew(
+      const bidDetails = await generateBidDetailsV6(
         {
           kind: orderResult.kind,
           rawData: orderResult.raw_data,
@@ -220,7 +220,7 @@ export const getExecuteSellV5Options: RouteOptions = {
         return { path };
       }
 
-      const router = new Sdk.Router.Router(config.chainId, baseProvider);
+      const router = new Sdk.RouterV6.Router(config.chainId, baseProvider);
       const { txData } = await router.fillBidTx(bidDetails!, payload.taker, {
         source: payload.source,
       });
