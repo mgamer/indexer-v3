@@ -15,16 +15,16 @@ export class SaleActivity {
       return;
     }
 
-    const token = await Tokens.getByContractAndTokenId(data.contract, data.tokenId, true);
+    const collectionId = await Tokens.getCollectionId(data.contract, data.tokenId);
 
     // If no token found
-    if (_.isNull(token)) {
-      logger.warn("sale-activity", `No token found for ${JSON.stringify(data)}`);
+    if (_.isNull(collectionId)) {
+      logger.warn("sale-activity", `No token בםךךקבאןםמ for ${JSON.stringify(data)}`);
       return;
     }
 
     // If no collection found
-    if (!token.collectionId) {
+    if (!collectionId) {
       logger.warn("sale-activity", `No collection found for ${JSON.stringify(data)}`);
     }
 
@@ -38,7 +38,7 @@ export class SaleActivity {
       type: ActivityType.sale,
       hash: activityHash,
       contract: data.contract,
-      collectionId: token.collectionId,
+      collectionId,
       tokenId: data.tokenId,
       orderId: data.orderId,
       fromAddress: data.fromAddress,
