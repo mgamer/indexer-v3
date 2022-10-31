@@ -1579,18 +1579,10 @@
   resolved "https://registry.yarnpkg.com/@protobufjs/utf8/-/utf8-1.1.0.tgz#a777360b5b39a1a2e5106f8e858f2fd2d060c570"
   integrity sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw==
 
-"@reservoir0x/sdk-new@npm:@reservoir0x/sdk@^0.1.9":
-  version "0.1.9"
-  resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.1.9.tgz#4c2523461182f426f0a59f798dcccaea4a765925"
-  integrity sha512-LUUPShG2Qp2b7Qqv2D5TbwY+ODkqCFQJcuZhOO8F9/QBRwkpoDfB+3uQtpO+FuNwyrQgv/bmS7BV78b33y2vGQ==
-  dependencies:
-    ethers "^5.6.8"
-    merkletreejs "0.2.31"
-
-"@reservoir0x/sdk@0.0.210":
-  version "0.0.210"
-  resolved "https://registry.npmjs.org/@reservoir0x/sdk/-/sdk-0.0.210.tgz#7a73838d808ba90df77e2f6dc935302da6be1ffd"
-  integrity sha512-EoqkN4DsE29njbjSAKz4EcCSxUWmAwHqEv35Rsu15XDo3m0CrlQ/YUaDYALXormf3eqHau6AfRaKe7IFVpaQfQ==
+"@reservoir0x/sdk@0.0.212":
+  version "0.0.212"
+  resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.0.212.tgz#a4b8780a4dad6c999f661f1ee70178c30e2182f9"
+  integrity sha512-7ufgXgRp859HpJZzIPGqEAHCT80MOxH21SabHWsinlItUiYdhz+AOMemfbOMPy/90tMg2HW2OJGWPqEQvt21lQ==
   dependencies:
     ethers "^5.6.8"
     merkletreejs "0.2.31"

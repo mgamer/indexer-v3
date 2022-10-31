@@ -2,8 +2,8 @@
 
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
-import * as Sdk from "@reservoir0x/sdk-new";
-import { ListingDetails } from "@reservoir0x/sdk-new/dist/router/types";
+import * as Sdk from "@reservoir0x/sdk";
+import { ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
@@ -15,7 +15,7 @@ import { config } from "@/config/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
 import { OrderKind } from "@/orderbook/orders";
-import { generateListingDetailsNew } from "@/orderbook/orders";
+import { generateListingDetailsV6 } from "@/orderbook/orders";
 import { getCurrency } from "@/utils/currencies";
 
 const version = "v5";
@@ -201,7 +201,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
         });
 
         listingDetails.push(
-          generateListingDetailsNew(
+          generateListingDetailsV6(
             {
               kind: order.kind,
               currency: order.currency,
@@ -503,7 +503,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
         return { path };
       }
 
-      const router = new Sdk.Router.Router(config.chainId, baseProvider);
+      const router = new Sdk.RouterV6.Router(config.chainId, baseProvider);
       const { txData, success } = await router.fillListingsTx(
         listingDetails,
         payload.taker,

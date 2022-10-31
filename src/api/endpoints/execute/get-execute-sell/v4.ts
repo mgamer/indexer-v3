@@ -11,7 +11,7 @@ import { baseProvider } from "@/common/provider";
 import { bn, formatEth, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
-import { generateBidDetails } from "@/orderbook/orders";
+import { generateBidDetailsV5 } from "@/orderbook/orders";
 import { getNftApproval } from "@/orderbook/orders/common/helpers";
 
 const version = "v4";
@@ -204,7 +204,7 @@ export const getExecuteSellV4Options: RouteOptions = {
           rawQuote: orderResult.price,
         },
       ];
-      const bidDetails = await generateBidDetails(
+      const bidDetails = await generateBidDetailsV5(
         {
           kind: orderResult.kind,
           rawData: orderResult.raw_data,
@@ -222,9 +222,9 @@ export const getExecuteSellV4Options: RouteOptions = {
         return { path };
       }
 
-      const router = new Sdk.Router.Router(config.chainId, baseProvider);
+      const router = new Sdk.RouterV5.Router(config.chainId, baseProvider);
       const tx = await router.fillBidTx(bidDetails!, payload.taker, {
-        referrer: payload.source,
+        source: payload.source,
       });
 
       // Set up generic filling steps

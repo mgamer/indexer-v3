@@ -4,7 +4,7 @@ import { AddressZero } from "@ethersproject/constants";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
-import { ListingDetails } from "@reservoir0x/sdk/dist/router/types";
+import { ListingDetails } from "@reservoir0x/sdk/dist/router/v5/types";
 import Joi from "joi";
 
 import { redb } from "@/common/db";
@@ -14,7 +14,7 @@ import { bn, formatEth, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
-import { generateListingDetails } from "@/orderbook/orders";
+import { generateListingDetailsV5 } from "@/orderbook/orders";
 
 const version = "v1";
 
@@ -166,7 +166,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
           }
 
           listingDetails.push(
-            generateListingDetails(
+            generateListingDetailsV5(
               {
                 kind,
                 currency: fromBuffer(currency),
@@ -253,7 +253,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
             }
 
             listingDetails.push(
-              generateListingDetails(
+              generateListingDetailsV5(
                 {
                   kind,
                   currency: fromBuffer(currency),
@@ -283,9 +283,9 @@ export const getExecuteBuyV1Options: RouteOptions = {
         return { quote, path };
       }
 
-      const router = new Sdk.Router.Router(config.chainId, baseProvider);
+      const router = new Sdk.RouterV5.Router(config.chainId, baseProvider);
       const tx = await router.fillListingsTx(listingDetails, query.taker, {
-        referrer: query.source,
+        source: query.source,
         fee: {
           recipient: query.referrer,
           bps: query.referrerFeeBps,

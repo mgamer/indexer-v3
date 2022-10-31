@@ -4,7 +4,7 @@ import { AddressZero } from "@ethersproject/constants";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
-import { ListingDetails } from "@reservoir0x/sdk/dist/router/types";
+import { ListingDetails } from "@reservoir0x/sdk/dist/router/v5/types";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
@@ -16,7 +16,7 @@ import { config } from "@/config/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
 import { OrderKind } from "@/orderbook/orders";
-import { generateListingDetails } from "@/orderbook/orders";
+import { generateListingDetailsV5 } from "@/orderbook/orders";
 import { getCurrency } from "@/utils/currencies";
 
 const version = "v4";
@@ -202,7 +202,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
         });
 
         listingDetails.push(
-          generateListingDetails(
+          generateListingDetailsV5(
             {
               kind: order.kind,
               currency: order.currency,
@@ -505,9 +505,9 @@ export const getExecuteBuyV4Options: RouteOptions = {
       }
 
       const skippedIndexes: number[] = [];
-      const router = new Sdk.Router.Router(config.chainId, baseProvider);
+      const router = new Sdk.RouterV5.Router(config.chainId, baseProvider);
       const tx = await router.fillListingsTx(listingDetails, payload.taker, {
-        referrer: payload.source,
+        source: payload.source,
         fee: {
           recipient: payload.referrer ?? AddressZero,
           bps: payload.referrerFeeBps ?? 0,
