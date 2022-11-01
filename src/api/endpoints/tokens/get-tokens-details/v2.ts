@@ -402,7 +402,7 @@ export const getTokensDetailsV2Options: RouteOptions = {
               source: {
                 id: source?.address,
                 name: source?.metadata.title || source?.name,
-                icon: source?.metadata.icon,
+                icon: source?.getIcon(),
                 url: source?.metadata.url,
               },
             },

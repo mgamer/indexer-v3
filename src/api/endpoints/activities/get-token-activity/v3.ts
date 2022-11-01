@@ -170,7 +170,7 @@ export const getTokenActivityV3Options: RouteOptions = {
                   ? {
                       domain: orderSource?.domain,
                       name: orderSource?.metadata.title || orderSource?.name,
-                      icon: orderSource?.metadata.icon,
+                      icon: orderSource?.getIcon(),
                     }
                   : undefined,
                 metadata: activity.order.metadata || undefined,

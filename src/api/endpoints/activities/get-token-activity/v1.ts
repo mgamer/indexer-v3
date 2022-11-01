@@ -134,7 +134,7 @@ export const getTokenActivityV1Options: RouteOptions = {
             ? {
                 domain: source?.domain,
                 name: source?.metadata.title || source?.name,
-                icon: source?.metadata.icon,
+                icon: source?.getIcon(),
               }
             : undefined,
         };

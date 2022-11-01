@@ -409,7 +409,7 @@ export const getUserTokensV5Options: RouteOptions = {
                 id: floorSellSource?.address,
                 domain: floorSellSource?.domain,
                 name: floorSellSource?.metadata.title || floorSellSource?.name,
-                icon: floorSellSource?.metadata.icon,
+                icon: floorSellSource?.getIcon(),
                 url: floorSellSource?.metadata.url,
               },
             },
