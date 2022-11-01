@@ -367,7 +367,7 @@ export const getOrdersBidsV1Options: RouteOptions = {
           source: {
             id: source?.address,
             name: source?.metadata.title || source?.name,
-            icon: source?.metadata.icon,
+            icon: source?.getIcon(),
             url: source?.metadata.url,
           },
           feeBps: Number(r.fee_bps),
