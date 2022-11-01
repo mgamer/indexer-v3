@@ -18,9 +18,9 @@ import { OrderKind } from "@/orderbook/orders";
 import { generateListingDetailsV6 } from "@/orderbook/orders";
 import { getCurrency } from "@/utils/currencies";
 
-const version = "v6";
+const version = "v5";
 
-export const getExecuteBuyV6Options: RouteOptions = {
+export const getExecuteBuyV5Options: RouteOptions = {
   description: "Buy tokens",
   tags: ["api", "x-deprecated"],
   plugins: {
