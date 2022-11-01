@@ -32,6 +32,7 @@
     "@hapi/hapi": "^20.0.0",
     "@hapi/inert": "^6.0.4",
     "@hapi/vision": "^6.1.0",
+    "@opensea/stream-js": "^0.0.21-rc.1",
     "@poprank/rankings": "^1.1.20",
     "@reservoir0x/sdk": "0.0.216",
     "@types/date-fns": "^2.6.0",
@@ -46,6 +47,7 @@
     "@types/node": "^17.0.0",
     "@types/node-cron": "^3.0.0",
     "@types/qs": "^6.9.7",
+    "@types/ws": "^8.5.3",
     "@typescript-eslint/eslint-plugin": "^5.14.0",
     "@typescript-eslint/parser": "^5.14.0",
     "arweave": "^1.10.23",
@@ -83,7 +85,8 @@
     "ts-node": "^10.4.0",
     "typescript": "^4.6.4",
     "uuid-by-string": "^3.0.7",
-    "winston": "^3.3.3"
+    "winston": "^3.3.3",
+    "ws": "^8.10.0"
   },
   "_moduleAliases": {
     "@/api": "dist/api",
@@ -95,7 +98,8 @@
     "@/jobs": "dist/jobs",
     "@/orderbook": "dist/orderbook",
     "@/events-sync": "dist/sync/events",
-    "@/pubsub": "dist/pubsub"
+    "@/pubsub": "dist/pubsub",
+    "@/websockets": "dist/websockets"
   },
   "devDependencies": {
     "tsconfig-paths": "^4.1.0"
