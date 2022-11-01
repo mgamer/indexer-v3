@@ -471,7 +471,7 @@ export const getOrdersAsksV3Options: RouteOptions = {
             id: source?.address,
             domain: source?.domain,
             name: source?.metadata.title || source?.name,
-            icon: source?.metadata.icon,
+            icon: source?.getIcon(),
             url: source?.metadata.url,
           },
           feeBps: Number(r.fee_bps),

@@ -319,7 +319,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
             id: source?.address,
             domain: source?.domain,
             name: source?.metadata.title || source?.name,
-            icon: source?.metadata.icon,
+            icon: source?.getIcon(),
             url: source?.metadata.url,
           },
           feeBreakdown: r.fee_breakdown,
