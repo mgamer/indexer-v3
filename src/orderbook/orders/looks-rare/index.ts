@@ -197,7 +197,7 @@ export const save = async (
         ];
       }
 
-      const price = order.params.price;
+      let price = order.params.price;
 
       // Handle: royalties on top
       const missingRoyalties = [];
@@ -206,9 +206,13 @@ export const save = async (
         for (const { bps, recipient } of openSeaRoyalties) {
           // Deduce the 0.5% royalty LooksRare will pay if needed
           const actualBps = recipient === onChainRoyaltyRecipient ? bps - 50 : bps;
+          const amount = bn(price).mul(actualBps).div(10000).toString();
+
+          // The royalties are included in the price
+          price = bn(price).add(amount).toString();
 
           missingRoyalties.push({
-            amount: bn(price).mul(actualBps).div(10000),
+            amount,
             recipient,
           });
 
