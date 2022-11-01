@@ -4,6 +4,7 @@ dotEnvConfig();
 import "@/common/tracer";
 import "@/jobs/index";
 import "@/pubsub/index";
+import "@/websockets/index";
 
 import { start } from "@/api/index";
 import { config } from "@/config/index";
