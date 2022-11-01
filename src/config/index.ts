@@ -45,6 +45,7 @@ export const config = {
   master: Boolean(Number(process.env.MASTER)),
   catchup: Boolean(Number(process.env.CATCHUP)),
   doBackgroundWork: Boolean(Number(process.env.DO_BACKGROUND_WORK)),
+  doWebsocketWork: Boolean(Number(process.env.DO_WEBSOCKET_WORK)),
   doEventsSyncBackfill: Boolean(Number(process.env.DO_EVENTS_SYNC_BACKFILL)),
   disableOrders: Boolean(Number(process.env.DISABLE_ORDERS)),
 
