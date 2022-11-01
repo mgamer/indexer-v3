@@ -183,20 +183,49 @@ export const save = async (
       ];
 
       // Handle: royalties
-      const royalties = await commonHelpers.getOnChainRoyalties(order.params.collection);
-      feeBreakdown = [
-        ...feeBreakdown,
-        ...(royalties["eip2981"] ?? []).map(({ recipient }) => ({
-          kind: "royalty",
-          recipient,
-          // LooksRare has fixed 0.5% royalties
-          bps: 50,
-        })),
-      ];
+      const onChainRoyalties = await commonHelpers.getOnChainRoyalties(order.params.collection);
+      const onChainRoyaltyRecipient = onChainRoyalties["eip2981"]?.[0].recipient;
+      if (onChainRoyaltyRecipient) {
+        feeBreakdown = [
+          ...feeBreakdown,
+          {
+            kind: "royalty",
+            recipient: onChainRoyaltyRecipient,
+            // LooksRare has fixed 0.5% royalties
+            bps: 50,
+          },
+        ];
+      }
+
+      const price = order.params.price;
+
+      // Handle: royalties on top
+      const missingRoyalties = [];
+      if (side === "sell") {
+        const openSeaRoyalties = await commonHelpers.getOpenSeaRoyalties(order.params.collection);
+        for (const { bps, recipient } of openSeaRoyalties) {
+          // Deduce the 0.5% royalty LooksRare will pay if needed
+          const actualBps = recipient === onChainRoyaltyRecipient ? bps - 50 : bps;
+
+          missingRoyalties.push({
+            amount: bn(price).mul(actualBps).div(10000),
+            recipient,
+          });
+
+          feeBreakdown = [
+            ...feeBreakdown,
+            {
+              kind: "royalty",
+              recipient,
+              bps: actualBps,
+            },
+          ];
+        }
+      }
+
       const feeBps = feeBreakdown.map(({ bps }) => bps).reduce((a, b) => Number(a) + Number(b), 0);
 
       // Handle: price and value
-      const price = order.params.price;
       let value: string;
       if (side === "buy") {
         // For buy orders, we set the value as `price - fee` since it
@@ -259,6 +288,7 @@ export const save = async (
         dynamic: null,
         raw_data: order.params,
         expiration: validTo,
+        missing_royalties: missingRoyalties,
       });
 
       const unfillable =
@@ -314,6 +344,7 @@ export const save = async (
         "dynamic",
         "raw_data",
         { name: "expiration", mod: ":raw" },
+        { name: "missing_royalties", mod: ":json" },
       ],
       {
         table: "orders",

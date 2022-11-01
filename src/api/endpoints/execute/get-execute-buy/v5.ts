@@ -18,14 +18,15 @@ import { OrderKind } from "@/orderbook/orders";
 import { generateListingDetailsV6 } from "@/orderbook/orders";
 import { getCurrency } from "@/utils/currencies";
 
-const version = "v5";
+const version = "v6";
 
-export const getExecuteBuyV5Options: RouteOptions = {
+export const getExecuteBuyV6Options: RouteOptions = {
   description: "Buy tokens",
-  tags: ["api", "x-experimental"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 10,
+      deprecated: true,
     },
   },
   validate: {
@@ -67,6 +68,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
       currency: Joi.string()
         .pattern(regex.address)
         .default(Sdk.Common.Addresses.Eth[config.chainId]),
+      automatedRoyalties: Joi.boolean().default(true),
       preferredOrderSource: Joi.string()
         .lowercase()
         .pattern(regex.domain)
@@ -180,6 +182,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
           sourceId: number | null;
           currency: string;
           rawData: string;
+          fees?: Sdk.RouterV6.Types.Fee[];
         },
         token: {
           kind: "erc721" | "erc1155";
@@ -206,6 +209,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
               kind: order.kind,
               currency: order.currency,
               rawData: order.rawData,
+              fees: payload.automatedRoyalties ? order.fees : [],
             },
             {
               kind: token.kind,
@@ -258,6 +262,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
                 orders.raw_data,
                 orders.source_id_int,
                 orders.currency,
+                orders.missing_royalties,
                 token_sets_tokens.contract,
                 token_sets_tokens.token_id
               FROM orders
@@ -306,6 +311,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
               sourceId: orderResult.source_id_int,
               currency: fromBuffer(orderResult.currency),
               rawData: orderResult.raw_data,
+              fees: orderResult.missing_royalties,
             },
             {
               kind: orderResult.token_kind,
@@ -334,7 +340,8 @@ export const getExecuteBuyV5Options: RouteOptions = {
                   coalesce(orders.currency_price, orders.price) AS price,
                   orders.raw_data,
                   orders.source_id_int,
-                  orders.currency
+                  orders.currency,
+                  orders.missing_royalties
                 FROM orders
                 JOIN contracts
                   ON orders.contract = contracts.address
@@ -366,8 +373,16 @@ export const getExecuteBuyV5Options: RouteOptions = {
               throw Boom.badRequest("No available orders");
             }
 
-            const { id, kind, token_kind, price, source_id_int, currency, raw_data } =
-              bestOrderResult;
+            const {
+              id,
+              kind,
+              token_kind,
+              price,
+              source_id_int,
+              currency,
+              missing_royalties,
+              raw_data,
+            } = bestOrderResult;
 
             await addToPath(
               {
@@ -377,6 +392,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
                 sourceId: source_id_int,
                 currency: fromBuffer(currency),
                 rawData: raw_data,
+                fees: missing_royalties,
               },
               {
                 kind: token_kind,
@@ -396,6 +412,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
                   x.quantity_remaining,
                   x.source_id_int,
                   x.currency,
+                  x.missing_royalties,
                   x.raw_data
                 FROM (
                   SELECT
@@ -457,6 +474,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
               price,
               source_id_int,
               currency,
+              missing_royalties,
               raw_data,
             } of bestOrdersResult) {
               const quantityFilled = Math.min(Number(quantity_remaining), totalQuantityToFill);
@@ -470,6 +488,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
                   sourceId: source_id_int,
                   currency: fromBuffer(currency),
                   rawData: raw_data,
+                  fees: missing_royalties,
                 },
                 {
                   kind: token_kind,
@@ -510,7 +529,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
         payload.currency,
         {
           source: payload.source,
-          fees: feesOnTop,
+          globalFees: feesOnTop,
           partial: payload.partial,
           skipErrors: payload.skipErrors,
           forceRouter: payload.forceRouter,

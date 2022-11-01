@@ -241,6 +241,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         dynamic: null,
         raw_data: orderParams,
         expiration: validTo,
+        missing_royalties: null,
       });
 
       const unfillable =

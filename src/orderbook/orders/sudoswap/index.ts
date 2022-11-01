@@ -187,6 +187,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               dynamic: null,
               raw_data: sdkOrder.params,
               expiration: validTo,
+              missing_royalties: null,
             });
 
             return results.push({

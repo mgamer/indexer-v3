@@ -319,6 +319,7 @@ export const generateListingDetailsV6 = (
     currency: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rawData: any;
+    fees?: Sdk.RouterV6.Types.Fee[];
   },
   token: {
     kind: "erc721" | "erc1155";
@@ -333,6 +334,7 @@ export const generateListingDetailsV6 = (
     tokenId: token.tokenId,
     currency: order.currency,
     amount: token.amount ?? 1,
+    fees: order.fees ?? [],
   };
 
   switch (order.kind) {

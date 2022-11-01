@@ -18,7 +18,7 @@ const version = "v6";
 
 export const getExecuteSellV6Options: RouteOptions = {
   description: "Sell tokens (accept bids)",
-  tags: ["api", "x-experimental"],
+  tags: ["api", "Router"],
   plugins: {
     "hapi-swagger": {
       order: 10,

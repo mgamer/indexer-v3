@@ -319,6 +319,7 @@ export const save = async (
         dynamic: null,
         raw_data: order.params,
         expiration: validTo,
+        missing_royalties: null,
       });
 
       const unfillable =
