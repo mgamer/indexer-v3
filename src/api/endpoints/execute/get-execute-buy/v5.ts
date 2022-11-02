@@ -22,10 +22,11 @@ const version = "v5";
 
 export const getExecuteBuyV5Options: RouteOptions = {
   description: "Buy tokens",
-  tags: ["api", "x-experimental"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 10,
+      deprecated: true,
     },
   },
   validate: {

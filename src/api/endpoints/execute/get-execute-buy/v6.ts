@@ -22,7 +22,7 @@ const version = "v6";
 
 export const getExecuteBuyV6Options: RouteOptions = {
   description: "Buy tokens",
-  tags: ["api", "x-experimental"],
+  tags: ["api", "Router"],
   plugins: {
     "hapi-swagger": {
       order: 10,
