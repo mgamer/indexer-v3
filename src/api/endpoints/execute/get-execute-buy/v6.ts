@@ -203,6 +203,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
         listingDetails.push(
           generateListingDetailsV6(
             {
+              id: order.id,
               kind: order.kind,
               currency: order.currency,
               rawData: order.rawData,

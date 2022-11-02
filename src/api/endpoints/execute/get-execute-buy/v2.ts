@@ -210,6 +210,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
           listingDetails.push(
             generateListingDetailsV5(
               {
+                id,
                 kind,
                 currency: fromBuffer(currency),
                 rawData: raw_data,
@@ -297,6 +298,7 @@ export const getExecuteBuyV2Options: RouteOptions = {
             listingDetails.push(
               generateListingDetailsV5(
                 {
+                  id,
                   kind,
                   currency: fromBuffer(currency),
                   rawData: raw_data,
