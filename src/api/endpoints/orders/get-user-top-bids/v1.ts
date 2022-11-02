@@ -50,6 +50,9 @@ export const getUserTopBidsV1Options: RouteOptions = {
         .description(
           "If true, urls will only be returned for optimized sources that support royalties."
         ),
+      normalizeRoyalties: Joi.boolean()
+        .default(false)
+        .description("If true, prices will include missing royalties to be added on-top."),
       continuation: Joi.string().description(
         "Use continuation token to request next offset of items."
       ),
