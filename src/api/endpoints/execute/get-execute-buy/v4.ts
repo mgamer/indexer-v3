@@ -23,10 +23,11 @@ const version = "v4";
 
 export const getExecuteBuyV4Options: RouteOptions = {
   description: "Buy tokens",
-  tags: ["api", "Router"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 10,
+      deprecated: true,
     },
   },
   validate: {
@@ -204,6 +205,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
         listingDetails.push(
           generateListingDetailsV5(
             {
+              id: order.id,
               kind: order.kind,
               currency: order.currency,
               rawData: order.rawData,
