@@ -83,6 +83,9 @@ export const getOrdersBidsV4Options: RouteOptions = {
       includeRawData: Joi.boolean()
         .default(false)
         .description("If true, raw data is included in the response."),
+      normalizeRoyalties: Joi.boolean()
+        .default(false)
+        .description("If true, prices will include missing royalties to be added on-top."),
       sortBy: Joi.string()
         .when("token", {
           is: Joi.exist(),
