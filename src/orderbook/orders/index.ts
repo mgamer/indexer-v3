@@ -117,6 +117,7 @@ export const getOrderSourceByOrderKind = async (
 // Support for filling listings
 export const generateListingDetailsV5 = (
   order: {
+    id: string;
     kind: OrderKind;
     currency: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -172,11 +173,26 @@ export const generateListingDetailsV5 = (
     }
 
     case "seaport": {
-      return {
-        kind: "seaport",
-        ...common,
-        order: new Sdk.Seaport.Order(config.chainId, order.rawData),
-      };
+      if (order.rawData) {
+        return {
+          kind: "seaport",
+          ...common,
+          order: new Sdk.Seaport.Order(config.chainId, order.rawData),
+        };
+      } else {
+        // Sorry for all the below `any` types
+        return {
+          // eslint-disable-next-line
+          kind: "seaport-partial" as any,
+          ...common,
+          order: {
+            contract: token.contract,
+            tokenId: token.tokenId,
+            id: order.id,
+            // eslint-disable-next-line
+          } as any,
+        };
+      }
     }
 
     case "zora-v3": {
@@ -315,6 +331,7 @@ export const generateBidDetailsV5 = async (
 // Support for filling listings
 export const generateListingDetailsV6 = (
   order: {
+    id: string;
     kind: OrderKind;
     currency: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -370,11 +387,26 @@ export const generateListingDetailsV6 = (
     }
 
     case "seaport": {
-      return {
-        kind: "seaport",
-        ...common,
-        order: new Sdk.Seaport.Order(config.chainId, order.rawData),
-      };
+      if (order.rawData) {
+        return {
+          kind: "seaport",
+          ...common,
+          order: new Sdk.Seaport.Order(config.chainId, order.rawData),
+        };
+      } else {
+        // Sorry for all the below `any` types
+        return {
+          // eslint-disable-next-line
+          kind: "seaport-partial" as any,
+          ...common,
+          order: {
+            contract: token.contract,
+            tokenId: token.tokenId,
+            id: order.id,
+            // eslint-disable-next-line
+          } as any,
+        };
+      }
     }
 
     case "zora-v3": {

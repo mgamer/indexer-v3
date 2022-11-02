@@ -232,6 +232,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
           listingDetails.push(
             generateListingDetailsV5(
               {
+                id,
                 kind,
                 currency: fromBuffer(currency),
                 rawData: raw_data,
@@ -323,6 +324,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
             listingDetails.push(
               generateListingDetailsV5(
                 {
+                  id,
                   kind,
                   currency: fromBuffer(currency),
                   rawData: raw_data,
