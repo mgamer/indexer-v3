@@ -161,6 +161,7 @@ export const postOrderV2Options: RouteOptions = {
           }
 
           const orderInfo: orders.seaport.OrderInfo = {
+            kind: "full",
             orderParams: order.data,
             isReservoir: orderbook === "reservoir",
             metadata: {
@@ -237,6 +238,7 @@ export const postOrderV2Options: RouteOptions = {
           });
 
           const orderInfo: orders.seaport.OrderInfo = {
+            kind: "full",
             orderParams: orderObject.params,
             metadata: {
               schema,
