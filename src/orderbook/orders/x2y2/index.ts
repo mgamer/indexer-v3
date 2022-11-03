@@ -17,7 +17,7 @@ export type OrderInfo = {
   metadata: OrderMetadata;
 };
 
-type SaveResult = {
+export type SaveResult = {
   id: string;
   status: string;
   unfillable?: boolean;
