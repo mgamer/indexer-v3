@@ -6,6 +6,7 @@ import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import { PartialOrderComponents } from "@/orderbook/orders/seaport";
 import * as orders from "@/orderbook/orders";
 import { toTime } from "@/common/utils";
+import _ from "lodash";
 
 if (config.doWebsocketWork && config.openSeaApiKey) {
   const network = config.chainId === 5 ? Network.TESTNET : Network.MAINNET;
@@ -27,6 +28,15 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
 
   client.onItemListed("*", async (event) => {
     if (getSupportedChainName() === event.payload.item.chain.name) {
+      // For now we ignore non-fixed price listings
+      if (!_.isNull(event.payload.listing_type)) {
+        logger.info(
+          "opensea-websocket",
+          `onItemListed Event. non fixed price listing event=${JSON.stringify(event)}`
+        );
+        return;
+      }
+
       const currenTime = Math.floor(Date.now() / 1000);
       if (currenTime % 10 === 0) {
         logger.info("opensea-websocket", `onItemListed Event. event=${JSON.stringify(event)}`);
