@@ -23,8 +23,21 @@ export const processTransactionData = async (
   for (const { kind, data } of transactionData) {
     try {
       switch (kind) {
+        case "seaport": {
+          orderInfos.push({
+            kind,
+            info: {
+              kind: "full",
+              orderParams: data,
+              metadata: {
+                schemaHash: data.schemaHash,
+              },
+            },
+          });
+          break;
+        }
+
         case "looks-rare":
-        case "seaport":
         case "zeroex-v4": {
           orderInfos.push({
             kind,

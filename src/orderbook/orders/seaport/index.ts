@@ -11,7 +11,7 @@ import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as flagStatusProcessQueue from "@/jobs/flag-status/process-queue";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
-import { offChainCheck } from "@/orderbook/orders/seaport/check";
+import { offChainCheck, offChainCheckPartial } from "@/orderbook/orders/seaport/check";
 import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
@@ -20,11 +20,33 @@ import { PendingFlagStatusSyncJobs } from "@/models/pending-flag-status-sync-job
 import { redis } from "@/common/redis";
 import { getNetworkSettings } from "@/config/network";
 import { Collections } from "@/models/collections";
+import { OrderKind } from "@reservoir0x/sdk/dist/seaport/types";
+import * as commonHelpers from "@/orderbook/orders/common/helpers";
 
-export type OrderInfo = {
-  orderParams: Sdk.Seaport.Types.OrderComponents;
-  metadata: OrderMetadata;
-  isReservoir?: boolean;
+export type OrderInfo =
+  | {
+      kind?: "full";
+      orderParams: Sdk.Seaport.Types.OrderComponents;
+      metadata: OrderMetadata;
+      isReservoir?: boolean;
+    }
+  | {
+      kind: "partial";
+      orderParams: PartialOrderComponents;
+    };
+
+export declare type PartialOrderComponents = {
+  kind?: OrderKind;
+  side: "buy" | "sell";
+  hash: string;
+  price: string;
+  paymentToken: string;
+  amount: number;
+  startTime: number;
+  endTime: number;
+  contract: string;
+  tokenId: string;
+  offerer: string;
 };
 
 type SaveResult = {
@@ -47,7 +69,11 @@ export const save = async (
     source?: string;
   }[] = [];
 
-  const handleOrder = async ({ orderParams, isReservoir, metadata }: OrderInfo) => {
+  const handleOrder = async (
+    orderParams: Sdk.Seaport.Types.OrderComponents,
+    metadata: OrderMetadata,
+    isReservoir?: boolean
+  ) => {
     try {
       const order = new Sdk.Seaport.Order(config.chainId, orderParams);
       const info = order.getInfo();
@@ -61,10 +87,23 @@ export const save = async (
         });
       }
 
-      // Check: order doesn't already exist
-      const orderExists = await idb.oneOrNone(`SELECT 1 FROM orders WHERE orders.id = $/id/`, {
-        id,
-      });
+      // Check: order doesn't already exist or partial order
+      const orderExists = await idb.oneOrNone(
+        `
+        WITH x AS (
+          UPDATE orders
+          SET
+            raw_data = $/rawData/,
+            updated_at = now()
+          WHERE orders.id = $/id/
+          AND raw_data IS NULL
+        )
+        SELECT 1 FROM orders WHERE orders.id = $/id/`,
+        {
+          id,
+          rawData: order.params,
+        }
+      );
       if (orderExists) {
         return results.push({
           id,
@@ -357,7 +396,7 @@ export const save = async (
       if (info.side === "buy" && order.params.kind === "single-token" && validateBidValue) {
         const typedInfo = info as typeof info & { tokenId: string };
         const tokenId = typedInfo.tokenId;
-        const seaportBidPercentageThreshold = 90;
+        const seaportBidPercentageThreshold = 80;
 
         try {
           const collectionFloorAskValue = await getCollectionFloorAskValue(
@@ -438,6 +477,301 @@ export const save = async (
       logger.warn(
         "orders-seaport-save",
         `Failed to handle order with params ${JSON.stringify(orderParams)}: ${error} (will retry)`
+      );
+
+      // Throw so that we retry with he bundle-handling code
+      throw error;
+    }
+  };
+
+  const handlePartialOrder = async (orderParams: PartialOrderComponents) => {
+    logger.info(
+      "orders-seaport-save",
+      `handlePartialOrder Start. orderParams=${JSON.stringify(orderParams)}`
+    );
+
+    try {
+      const conduitKey = "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000";
+      const id = orderParams.hash;
+
+      // Check: order doesn't already exist
+      const orderExists = await idb.oneOrNone(`SELECT 1 FROM orders WHERE orders.id = $/id/`, {
+        id,
+      });
+      if (orderExists) {
+        return results.push({
+          id,
+          status: "already-exists",
+        });
+      }
+
+      // Check: order has a non-zero price
+      if (bn(orderParams.price).lte(0)) {
+        return results.push({
+          id,
+          status: "zero-price",
+        });
+      }
+
+      const currentTime = now();
+
+      // Check: order has a valid start time
+      const startTime = orderParams.startTime;
+      if (startTime - 5 * 60 >= currentTime) {
+        // TODO: Add support for not-yet-valid orders
+        return results.push({
+          id,
+          status: "invalid-start-time",
+        });
+      }
+
+      // Check: order is not expired
+      const endTime = orderParams.endTime;
+      if (currentTime >= endTime) {
+        return results.push({
+          id,
+          status: "expired",
+        });
+      }
+
+      // Check: buy order has Weth as payment token
+      if (
+        orderParams.side === "buy" &&
+        orderParams.paymentToken !== Sdk.Common.Addresses.Weth[config.chainId]
+      ) {
+        return results.push({
+          id,
+          status: "unsupported-payment-token",
+        });
+      }
+
+      // Check: order fillability
+      let fillabilityStatus = "fillable";
+      let approvalStatus = "approved";
+      try {
+        await offChainCheckPartial(orderParams, { onChainApprovalRecheck: true });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        // Keep any orders that can potentially get valid in the future
+        if (error.message === "no-balance-no-approval") {
+          fillabilityStatus = "no-balance";
+          approvalStatus = "no-approval";
+        } else if (error.message === "no-approval") {
+          approvalStatus = "no-approval";
+        } else if (error.message === "no-balance") {
+          fillabilityStatus = "no-balance";
+        } else {
+          return results.push({
+            id,
+            status: "not-fillable",
+          });
+        }
+      }
+
+      // Check and save: associated token set
+      const schemaHash = generateSchemaHash();
+
+      let tokenSetId: string | undefined;
+      switch (orderParams.kind) {
+        case "single-token": {
+          const tokenId = orderParams.tokenId;
+
+          tokenSetId = `token:${orderParams.contract}:${tokenId}`;
+          if (tokenId) {
+            await tokenSet.singleToken.save([
+              {
+                id: tokenSetId,
+                schemaHash,
+                contract: orderParams.contract,
+                tokenId,
+              },
+            ]);
+          }
+
+          break;
+        }
+
+        case "contract-wide": {
+          break;
+        }
+
+        case "token-list": {
+          break;
+        }
+      }
+
+      if (!tokenSetId) {
+        return results.push({
+          id,
+          status: "invalid-token-set",
+        });
+      }
+
+      // Handle: price and value
+      let price = bn(orderParams.price);
+      let value = price;
+
+      // Handle: fees
+      let feeBps = 250;
+      const feeBreakdown = [
+        {
+          bps: 250,
+          kind: "marketplace",
+          recipient: "0x0000a26b00c1f0df003000390027140000faa719",
+        },
+      ];
+
+      const collection = await redb.oneOrNone(
+        `SELECT 
+                    royalties
+                 FROM collections
+                 JOIN tokens ON collections.id = tokens.collection_id
+                 WHERE tokens.contract = $/contract/ AND tokens.token_id = $/tokenId/`,
+        {
+          contract: orderParams.contract,
+          tokenId: orderParams.tokenId,
+        }
+      );
+
+      if (collection) {
+        for (const royalty of collection.royalties) {
+          feeBps += royalty.bps;
+
+          feeBreakdown.push({
+            bps: royalty.bps,
+            kind: "royalty",
+            recipient: royalty.recipient,
+          });
+        }
+      }
+
+      // Handle: source
+      const sources = await Sources.getInstance();
+      const source: SourcesEntity | undefined = await sources.getOrInsert("opensea.io");
+
+      // Handle: price conversion
+      const currency = orderParams.paymentToken;
+
+      const currencyPrice = price.toString();
+      const currencyValue = value.toString();
+
+      let needsConversion = false;
+      if (
+        ![
+          Sdk.Common.Addresses.Eth[config.chainId],
+          Sdk.Common.Addresses.Weth[config.chainId],
+        ].includes(currency)
+      ) {
+        needsConversion = true;
+
+        // If the currency is anything other than ETH/WETH, we convert
+        // `price` and `value` from that currency denominations to the
+        // ETH denomination
+        {
+          const prices = await getUSDAndNativePrices(currency, price.toString(), currentTime);
+          if (!prices.nativePrice) {
+            // Getting the native price is a must
+            return results.push({
+              id,
+              status: "failed-to-convert-price",
+            });
+          }
+          price = bn(prices.nativePrice);
+        }
+        {
+          const prices = await getUSDAndNativePrices(currency, value.toString(), currentTime);
+          if (!prices.nativePrice) {
+            // Getting the native price is a must
+            return results.push({
+              id,
+              status: "failed-to-convert-price",
+            });
+          }
+          value = bn(prices.nativePrice);
+        }
+      }
+
+      if (orderParams.side === "buy" && orderParams.kind === "single-token" && validateBidValue) {
+        const tokenId = orderParams.tokenId;
+        const seaportBidPercentageThreshold = 90;
+
+        try {
+          const collectionFloorAskValue = await getCollectionFloorAskValue(
+            orderParams.contract,
+            Number(tokenId)
+          );
+
+          if (collectionFloorAskValue) {
+            const percentage = (Number(value.toString()) / collectionFloorAskValue) * 100;
+
+            if (percentage < seaportBidPercentageThreshold) {
+              return results.push({
+                id,
+                status: "bid-too-low",
+              });
+            }
+          }
+        } catch (error) {
+          logger.error(
+            "orders-seaport-save",
+            `Bid value validation - error. orderId=${id}, contract=${orderParams.contract}, tokenId=${tokenId}, error=${error}`
+          );
+        }
+      }
+
+      const nonce = await commonHelpers.getMinNonce("seaport", orderParams.offerer);
+
+      const validFrom = `date_trunc('seconds', to_timestamp(${startTime}))`;
+      const validTo = endTime
+        ? `date_trunc('seconds', to_timestamp(${orderParams.endTime}))`
+        : "'infinity'";
+      orderValues.push({
+        id,
+        kind: "seaport",
+        side: orderParams.side,
+        fillability_status: fillabilityStatus,
+        approval_status: approvalStatus,
+        token_set_id: tokenSetId,
+        token_set_schema_hash: toBuffer(schemaHash),
+        offer_bundle_id: null,
+        consideration_bundle_id: null,
+        bundle_kind: null,
+        maker: toBuffer(orderParams.offerer),
+        taker: toBuffer(AddressZero),
+        price: price.toString(),
+        value: value.toString(),
+        currency: toBuffer(orderParams.paymentToken),
+        currency_price: currencyPrice.toString(),
+        currency_value: currencyValue.toString(),
+        needs_conversion: needsConversion,
+        quantity_remaining: orderParams.amount.toString(),
+        valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
+        nonce: nonce.toString(),
+        source_id_int: source.id,
+        is_reservoir: null,
+        contract: toBuffer(orderParams.contract),
+        conduit: toBuffer(new Sdk.Seaport.Exchange(config.chainId).deriveConduit(conduitKey)),
+        fee_bps: feeBps,
+        fee_breakdown: feeBreakdown || null,
+        dynamic: null,
+        raw_data: null,
+        expiration: validTo,
+      });
+
+      const unfillable =
+        fillabilityStatus !== "fillable" || approvalStatus !== "approved" ? true : undefined;
+
+      results.push({
+        id,
+        status: "success",
+        unfillable,
+      });
+    } catch (error) {
+      logger.warn(
+        "orders-seaport-save",
+        `Failed to handle partial order with params ${JSON.stringify(
+          orderParams
+        )}: ${error} (will retry)`
       );
 
       // Throw so that we retry with he bundle-handling code
@@ -714,7 +1048,19 @@ export const save = async (
 
   // Process all orders concurrently
   const limit = pLimit(20);
-  await Promise.all(orderInfos.map((orderInfo) => limit(async () => handleOrder(orderInfo))));
+  await Promise.all(
+    orderInfos.map((orderInfo) =>
+      limit(async () =>
+        orderInfo.kind == "partial"
+          ? handlePartialOrder(orderInfo.orderParams as PartialOrderComponents)
+          : handleOrder(
+              orderInfo.orderParams as Sdk.Seaport.Types.OrderComponents,
+              orderInfo.metadata,
+              orderInfo.isReservoir
+            )
+      )
+    )
+  );
 
   if (orderValues.length) {
     const columns = new pgp.helpers.ColumnSet(

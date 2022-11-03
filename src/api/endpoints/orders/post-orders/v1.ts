@@ -58,6 +58,7 @@ export const postOrdersV1Options: RouteOptions = {
         orderInfos.push({
           kind,
           info: {
+            kind: "full",
             orderParams: data,
             metadata: {},
           },

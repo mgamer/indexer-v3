@@ -47,6 +47,7 @@ export const postSeaportOffersV1Options: RouteOptions = {
         orderInfos.push({
           kind: "seaport",
           info: {
+            kind: "full",
             orderParams: {
               ...protocol_data.parameters,
               signature: protocol_data.signature,
