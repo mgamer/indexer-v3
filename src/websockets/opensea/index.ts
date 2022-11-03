@@ -27,6 +27,11 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
 
   client.onItemListed("*", async (event) => {
     if (getSupportedChainName() === event.payload.item.chain.name) {
+      const currenTime = Math.floor(Date.now() / 1000);
+      if (currenTime % 10 === 0) {
+        logger.info("opensea-websocket", `onItemListed Event. event=${JSON.stringify(event)}`);
+      }
+
       const [, contract, tokenId] = event.payload.item.nft_id.split("/");
 
       const orderInfo: orderbookOrders.GenericOrderInfo = {
