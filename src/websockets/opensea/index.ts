@@ -28,11 +28,11 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
 
   client.onItemListed("*", async (event) => {
     if (getSupportedChainName() === event.payload.item.chain.name) {
-      // For now we ignore non-fixed price listings
-      if (!_.isNull(event.payload.listing_type)) {
+      // For now we ingest only fixed price and dutch auctions
+      if (_.indexOf([null, "dutch"], event.payload.listing_type) === -1) {
         logger.info(
           "opensea-websocket",
-          `onItemListed Event. non fixed price listing event=${JSON.stringify(event)}`
+          `onItemListed Event. non supported price listing event=${JSON.stringify(event)}`
         );
         return;
       }
