@@ -3,8 +3,9 @@ import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import * as es from "@/events-sync/storage";
 import * as utils from "@/events-sync/utils";
 import { getUSDAndNativePrices } from "@/utils/prices";
-
+import * as Sdk from "@reservoir0x/sdk";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
+import { config } from "@/config/index";
 
 export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData> => {
   const fillEvents: es.fills.Event[] = [];
@@ -17,11 +18,20 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
     switch (kind) {
       case "blur-orders-matched": {
         const { args } = eventData.abi.parseLog(log);
-        const maker = args.maker.toLowerCase();
+        let maker = args.maker.toLowerCase();
         let taker = args.taker.toLowerCase();
         const sell = args.sell;
         const sellHash = args.sellHash.toLowerCase();
         const buyHash = args.buyHash.toLowerCase();
+
+        const orderSide = maker === sell.trader.toLowerCase() ? "sell" : "buy";
+
+        // Fill in BlurSwap contract
+
+        const routers = Sdk.Common.Addresses.Routers[config.chainId];
+        if (maker in routers) {
+          maker = sell.trader.toLowerCase();
+        }
 
         // Handle: attribution
 
@@ -30,6 +40,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           baseEventParams.txHash,
           orderKind
         );
+
         if (attributionData.taker) {
           taker = attributionData.taker;
         }
@@ -48,7 +59,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           break;
         }
 
-        const orderSide = maker === sell.trader.toLowerCase() ? "sell" : "buy";
         const orderId = orderSide === "sell" ? sellHash : buyHash;
         fillEvents.push({
           orderKind,

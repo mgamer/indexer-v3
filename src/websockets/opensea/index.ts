@@ -60,6 +60,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
             contract,
             tokenId,
             offerer: event.payload.maker.address,
+            listingType: event.payload.listing_type,
           } as PartialOrderComponents,
         } as orders.seaport.OrderInfo,
         relayToArweave: false,
