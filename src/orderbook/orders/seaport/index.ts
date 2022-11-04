@@ -397,7 +397,7 @@ export const save = async (
       if (info.side === "buy" && order.params.kind === "single-token" && validateBidValue) {
         const typedInfo = info as typeof info & { tokenId: string };
         const tokenId = typedInfo.tokenId;
-        const seaportBidPercentageThreshold = 75;
+        const seaportBidPercentageThreshold = 90;
 
         try {
           const collectionFloorAskValue = await getCollectionFloorAskValue(
