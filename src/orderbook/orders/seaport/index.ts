@@ -47,6 +47,7 @@ export declare type PartialOrderComponents = {
   contract: string;
   tokenId: string;
   offerer: string;
+  listingType: string | null;
 };
 
 type SaveResult = {
@@ -748,7 +749,7 @@ export const save = async (
         conduit: toBuffer(new Sdk.Seaport.Exchange(config.chainId).deriveConduit(conduitKey)),
         fee_bps: feeBps,
         fee_breakdown: feeBreakdown || null,
-        dynamic: null,
+        dynamic: _.isNull(orderParams.listingType) ? null : true,
         raw_data: null,
         expiration: validTo,
       });
