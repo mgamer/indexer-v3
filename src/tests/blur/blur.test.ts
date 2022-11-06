@@ -44,7 +44,9 @@ describe("Blur", () => {
     const orderSide = "sell";
     const maker = "0xf16688ea2488c0d41a13572a7399e03069d49a1a";
     const taker = "0x28cd0dfc42756f68b3e1f8883e517e64e474078a";
-    const fillEvent = result?.fillEvents?.find((c) => c.orderSide === orderSide && c.maker === maker && c.taker === taker);
+    const fillEvent = result?.fillEvents?.find(
+      (c) => c.orderSide === orderSide && c.maker === maker && c.taker === taker
+    );
     expect(fillEvent).not.toBe(null);
   });
 
@@ -58,14 +60,16 @@ describe("Blur", () => {
     const taker = "0xda37896e56f12d640230a9e5115756a5cda9a581";
     const maker1 = "0xdeffc73e9e677e8b42d805e6460b4ef28c53adc3";
     const maker2 = "0x730aba725664974efb753ee72ca789541c733db4";
-    
+
     const orderSide = "sell";
-    const fillEvent1 = result?.fillEvents?.find((c) => c.orderSide === orderSide && c.maker === maker1 && c.taker === taker);
-    const fillEvent2 = result?.fillEvents?.find((c) => c.orderSide === orderSide && c.maker === maker2 && c.taker === taker);
+    const fillEvent1 = result?.fillEvents?.find(
+      (c) => c.orderSide === orderSide && c.maker === maker1 && c.taker === taker
+    );
+    const fillEvent2 = result?.fillEvents?.find(
+      (c) => c.orderSide === orderSide && c.maker === maker2 && c.taker === taker
+    );
 
     expect(fillEvent1).not.toBe(null);
     expect(fillEvent2).not.toBe(null);
   });
-
-
 });
