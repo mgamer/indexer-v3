@@ -194,7 +194,12 @@ export const getExecuteBuyV6Options: RouteOptions = {
           quantity?: number;
         }
       ) => {
-        const totalPrice = bn(order.price).mul(token.quantity ?? 1);
+        const fees = payload.normalizeRoyalties ? order.fees ?? [] : [];
+        const totalFee = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
+
+        const totalPrice = bn(order.price)
+          .add(totalFee)
+          .mul(token.quantity ?? 1);
         path.push({
           orderId: order.id,
           contract: token.contract,
@@ -213,7 +218,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
               kind: order.kind,
               currency: order.currency,
               rawData: order.rawData,
-              fees: payload.normalizeRoyalties ? order.fees : [],
+              fees,
             },
             {
               kind: token.kind,
