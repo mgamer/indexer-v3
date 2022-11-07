@@ -343,6 +343,7 @@ export const save = async (
         "raw_data",
         { name: "expiration", mod: ":raw" },
         { name: "missing_royalties", mod: ":json" },
+        "normalized_value",
       ],
       {
         table: "orders",
