@@ -24,8 +24,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const sellHash = args.sellHash.toLowerCase();
         const buyHash = args.buyHash.toLowerCase();
 
-        const orderSide = maker === sell.trader.toLowerCase() ? "sell" : "buy";
-
         // Fill in BlurSwap contract
 
         const routers = Sdk.Common.Addresses.Routers[config.chainId];
@@ -58,6 +56,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           // We must always have the native price
           break;
         }
+
+        const orderSide = maker === sell.trader.toLowerCase() ? "sell" : "buy";
 
         const orderId = orderSide === "sell" ? sellHash : buyHash;
         fillEvents.push({
