@@ -1,7 +1,8 @@
 import * as Sdk from "@reservoir0x/sdk";
 
 import { redb } from "@/common/db";
-import { OrderSide } from "@reservoir0x/sdk/dist/rarible/types";
+import { IPart, OrderSide } from "@reservoir0x/sdk/dist/rarible/types";
+import { ORDER_DATA_TYPES, ORDER_TYPES } from "@reservoir0x/sdk/dist/rarible/constants";
 
 export interface BaseOrderBuildOptions {
   maker: string;
@@ -15,7 +16,18 @@ export interface BaseOrderBuildOptions {
   listingTime: number;
   expirationTime: number;
   signature: string;
+  //TODO: Have to refactor the fields below when we come to the create order functionality
+  orderType: ORDER_TYPES;
+  dataType: ORDER_DATA_TYPES;
   fees: string[];
+  originFees?: IPart[];
+  payouts?: IPart[];
+  originFeeFirst?: IPart;
+  originFeeSecond?: IPart;
+  isMakeFill?: boolean;
+  marketplaceMarker?: string;
+  fee?: number;
+  maxFeesBasePoint?: number;
 }
 
 type OrderBuildInfo = {
@@ -54,13 +66,21 @@ export const getBuildInfo = async (
     side: side === OrderSide.BUY ? "buy" : "sell",
     tokenKind: collectionResult.kind,
     contract: options.contract,
-    tokenId: options.tokenId,
     tokenAmount: options.quantity,
     price: options.weiPrice,
     paymentToken: options.currency,
-    fees: options.fees,
     startTime: options.listingTime,
     endTime: options.expirationTime,
+    orderType: options.orderType,
+    dataType: options.dataType,
+    originFees: options.originFees,
+    payouts: options.payouts,
+    originFeeFirst: options.originFeeFirst,
+    originFeeSecond: options.originFeeSecond,
+    isMakeFill: options.isMakeFill,
+    marketplaceMarker: options.marketplaceMarker,
+    fee: options.fee,
+    maxFeesBasePoint: options.maxFeesBasePoint,
   };
   return {
     params,

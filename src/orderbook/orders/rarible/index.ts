@@ -84,7 +84,7 @@ export const save = async (
         side === "buy"
           ? order.params.take.assetType.tokenId!
           : order.params.make.assetType.tokenId!;
-
+      const quantity = side === "buy" ? order.params.take.value : order.params.make.value;
       // Handle: currency
       let currency = "";
       if (side === "sell") {
@@ -316,6 +316,7 @@ export const save = async (
         taker: toBuffer(AddressZero),
         price,
         value,
+        quantity_remaining: quantity ?? "1",
         currency: toBuffer(currency),
         currency_price: price,
         currency_value: value,
