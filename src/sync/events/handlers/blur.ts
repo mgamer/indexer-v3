@@ -1,7 +1,5 @@
 import * as Sdk from "@reservoir0x/sdk";
 
-import { idb, pgp } from "@/common/db";
-import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
@@ -10,16 +8,10 @@ import * as utils from "@/events-sync/utils";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 import { getUSDAndNativePrices } from "@/utils/prices";
 
-export const handleEvents = async (
-  events: EnhancedEvent[],
-  backfill?: boolean
-): Promise<OnChainData> => {
+export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData> => {
   const fillEvents: es.fills.Event[] = [];
 
   const fillInfos: fillUpdates.FillInfo[] = [];
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const values: any[] = [];
 
   // Handle the events
   for (const { kind, baseEventParams, log } of events) {
@@ -82,14 +74,6 @@ export const handleEvents = async (
           fillSourceId: attributionData.fillSource?.id,
           baseEventParams,
         });
-        values.push({
-          tx_hash: toBuffer(baseEventParams.txHash),
-          log_index: baseEventParams.logIndex,
-          batch_index: baseEventParams.batchIndex,
-          order_side: orderSide,
-          maker: toBuffer(maker),
-          taker: toBuffer(taker),
-        });
 
         fillInfos.push({
           context: `${orderId}-${baseEventParams.txHash}`,
@@ -107,37 +91,9 @@ export const handleEvents = async (
     }
   }
 
-  if (backfill) {
-    const columns = new pgp.helpers.ColumnSet(
-      ["tx_hash", "log_index", "batch_index", "order_side", "maker", "taker"],
-      {
-        table: "fill_events_2",
-      }
-    );
-    if (values.length) {
-      await idb.none(
-        `
-          UPDATE fill_events_2 SET
-            order_side = x.order_side::order_side_t,
-            maker = x.maker::BYTEA,
-            taker = x.taker::BYTEA,
-            updated_at = now()
-          FROM (
-            VALUES ${pgp.helpers.values(values, columns)}
-          ) AS x(tx_hash, log_index, batch_index, order_side, maker, taker)
-          WHERE fill_events_2.tx_hash = x.tx_hash::BYTEA
-            AND fill_events_2.log_index = x.log_index::INT
-            AND fill_events_2.batch_index = x.batch_index::INT
-        `
-      );
-    }
+  return {
+    fillEvents,
 
-    return {};
-  } else {
-    return {
-      fillEvents,
-
-      fillInfos,
-    };
-  }
+    fillInfos,
+  };
 };
