@@ -14,6 +14,7 @@ import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
 import { IV2OrderData, IV3OrderBuyData } from "@reservoir0x/sdk/dist/rarible/types";
+import { BigNumber } from "ethers";
 
 export type OrderInfo = {
   orderParams: Sdk.Rarible.Types.Order;
@@ -68,7 +69,7 @@ export const save = async (
 
       // Check: order is not expired
       const expirationTime = order.params.end;
-      if (currentTime >= expirationTime) {
+      if (currentTime >= expirationTime && expirationTime !== 0) {
         return results.push({
           id,
           status: "expired",
@@ -302,8 +303,9 @@ export const save = async (
       const conduit = Sdk.Rarible.Addresses.Exchange[config.chainId];
 
       const validFrom = `date_trunc('seconds', to_timestamp(${order.params.start}))`;
-      const validTo = `date_trunc('seconds', to_timestamp(${order.params.end}))`;
-
+      const validTo = order.params.end
+        ? `date_trunc('seconds', to_timestamp(${order.params.end}))`
+        : "'infinity'";
       orderValues.push({
         id,
         kind: "rarible",
@@ -322,7 +324,8 @@ export const save = async (
         currency_value: value,
         needs_conversion: null,
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
-        nonce: order.params.salt,
+        // Rarible salt is hexed when coming from the api
+        nonce: BigNumber.from(order.params.salt).toString(),
         source_id_int: source?.id,
         is_reservoir: isReservoir ? isReservoir : null,
         contract: toBuffer(collection),
@@ -373,6 +376,7 @@ export const save = async (
         "taker",
         "price",
         "value",
+        "quantity_remaining",
         "currency",
         "currency_price",
         "currency_value",

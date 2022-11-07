@@ -91,7 +91,7 @@ if (config.doBackgroundWork) {
           }
 
           case "rarible": {
-            const result = await orders.rarible.save([info as orders.rarible.OrderInfo]);
+            const result = await orders.rarible.save([info], relayToArweave);
             logger.info(QUEUE_NAME, `[rarible] Order save result: ${JSON.stringify(result)}`);
 
             break;
