@@ -24,10 +24,16 @@ export interface BaseOrderBuildOptions {
   payouts?: IPart[];
   originFeeFirst?: IPart;
   originFeeSecond?: IPart;
-  isMakeFill?: boolean;
   marketplaceMarker?: string;
   fee?: number;
   maxFeesBasePoint?: number;
+
+  //Lazy options
+  uri?: string;
+  supply?: string;
+  creators?: IPart[];
+  royalties?: IPart[];
+  signatures?: string[];
 }
 
 type OrderBuildInfo = {
@@ -77,10 +83,14 @@ export const getBuildInfo = async (
     payouts: options.payouts,
     originFeeFirst: options.originFeeFirst,
     originFeeSecond: options.originFeeSecond,
-    isMakeFill: options.isMakeFill,
     marketplaceMarker: options.marketplaceMarker,
     fee: options.fee,
     maxFeesBasePoint: options.maxFeesBasePoint,
+    uri: options.uri,
+    supply: options.supply,
+    creators: options.creators,
+    royalties: options.royalties,
+    signatures: options.signatures,
   };
   return {
     params,
