@@ -460,6 +460,8 @@ export const save = async (
         dynamic: info.isDynamic ?? null,
         raw_data: order.params,
         expiration: validTo,
+        missing_royalties: null,
+        normalized_value: null,
       });
 
       const unfillable =
@@ -752,6 +754,8 @@ export const save = async (
         dynamic: _.isNull(orderParams.listingType) ? null : true,
         raw_data: null,
         expiration: validTo,
+        missing_royalties: null,
+        normalized_value: null,
       });
 
       const unfillable =
