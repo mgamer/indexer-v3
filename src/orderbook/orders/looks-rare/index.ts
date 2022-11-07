@@ -287,7 +287,6 @@ export const save = async (
         expiration: validTo,
         missing_royalties: missingRoyalties,
         normalized_value: normalizedValue || null,
-        currency_normalized_value: normalizedValue || null,
       });
 
       const unfillable =
@@ -345,7 +344,6 @@ export const save = async (
         { name: "expiration", mod: ":raw" },
         { name: "missing_royalties", mod: ":json" },
         "normalized_value",
-        "currency_normalized_value",
       ],
       {
         table: "orders",
