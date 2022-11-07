@@ -72,7 +72,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
       currency: Joi.string()
         .pattern(regex.address)
         .default(Sdk.Common.Addresses.Eth[config.chainId]),
-      normalizedRoyalties: Joi.boolean().default(true),
+      normalizeRoyalties: Joi.boolean().default(true),
       preferredOrderSource: Joi.string()
         .lowercase()
         .pattern(regex.domain)
@@ -214,7 +214,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
               kind: order.kind,
               currency: order.currency,
               rawData: order.rawData,
-              fees: payload.normalizedRoyalties ? order.fees : [],
+              fees: payload.normalizeRoyalties ? order.fees : [],
             },
             {
               kind: token.kind,
