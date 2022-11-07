@@ -168,6 +168,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
           listingDetails.push(
             generateListingDetailsV5(
               {
+                id,
                 kind,
                 currency: fromBuffer(currency),
                 rawData: raw_data,
@@ -255,6 +256,7 @@ export const getExecuteBuyV1Options: RouteOptions = {
             listingDetails.push(
               generateListingDetailsV5(
                 {
+                  id,
                   kind,
                   currency: fromBuffer(currency),
                   rawData: raw_data,

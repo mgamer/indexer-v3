@@ -83,6 +83,9 @@ export const getOrdersBidsV4Options: RouteOptions = {
       includeRawData: Joi.boolean()
         .default(false)
         .description("If true, raw data is included in the response."),
+      normalizeRoyalties: Joi.boolean()
+        .default(false)
+        .description("If true, prices will include missing royalties to be added on-top."),
       sortBy: Joi.string()
         .when("token", {
           is: Joi.exist(),
@@ -172,7 +175,7 @@ export const getOrdersBidsV4Options: RouteOptions = {
           isReservoir: Joi.boolean().allow(null),
           createdAt: Joi.string().required(),
           updatedAt: Joi.string().required(),
-          rawData: Joi.object().optional(),
+          rawData: Joi.object().optional().allow(null),
         })
       ),
       continuation: Joi.string().pattern(regex.base64).allow(null),
@@ -510,7 +513,7 @@ export const getOrdersBidsV4Options: RouteOptions = {
           source: {
             id: source?.address,
             name: source?.metadata.title || source?.name,
-            icon: source?.metadata.icon,
+            icon: source?.getIcon(),
             url: source?.metadata.url,
             domain: source?.domain,
           },

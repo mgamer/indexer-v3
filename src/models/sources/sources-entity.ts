@@ -36,4 +36,8 @@ export class SourcesEntity {
     this.metadata = params.metadata;
     this.optimized = params.optimized;
   }
+
+  getIcon() {
+    return this.metadata.adminIcon || this.metadata.icon;
+  }
 }

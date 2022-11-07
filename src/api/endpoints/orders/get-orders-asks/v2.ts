@@ -140,7 +140,7 @@ export const getOrdersAsksV2Options: RouteOptions = {
           expiration: Joi.number().required(),
           createdAt: Joi.string().required(),
           updatedAt: Joi.string().required(),
-          rawData: Joi.object(),
+          rawData: Joi.object().allow(null),
         })
       ),
       continuation: Joi.string().pattern(regex.base64).allow(null),
@@ -393,7 +393,7 @@ export const getOrdersAsksV2Options: RouteOptions = {
             id: source?.address,
             domain: source?.domain,
             name: source?.metadata.title || source?.name,
-            icon: source?.metadata.icon,
+            icon: source?.getIcon(),
             url: source?.metadata.url,
           },
           feeBps: Number(r.fee_bps),

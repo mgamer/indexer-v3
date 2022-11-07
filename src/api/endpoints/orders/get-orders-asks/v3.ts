@@ -167,7 +167,7 @@ export const getOrdersAsksV3Options: RouteOptions = {
           isDynamic: Joi.boolean(),
           createdAt: Joi.string().required(),
           updatedAt: Joi.string().required(),
-          rawData: Joi.object().optional(),
+          rawData: Joi.object().optional().allow(null),
         })
       ),
       continuation: Joi.string().pattern(regex.base64).allow(null),
@@ -471,7 +471,7 @@ export const getOrdersAsksV3Options: RouteOptions = {
             id: source?.address,
             domain: source?.domain,
             name: source?.metadata.title || source?.name,
-            icon: source?.metadata.icon,
+            icon: source?.getIcon(),
             url: source?.metadata.url,
           },
           feeBps: Number(r.fee_bps),

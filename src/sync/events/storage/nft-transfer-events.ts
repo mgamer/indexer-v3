@@ -103,7 +103,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
       { table: "nft_transfer_events" }
     );
 
-    for (const chunk of _.chunk(transferValues, 50)) {
+    for (const chunk of _.chunk(transferValues, 30)) {
       // Atomically insert the transfer events and update balances
       queries.push(`
         WITH "x" AS (

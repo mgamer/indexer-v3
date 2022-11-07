@@ -206,6 +206,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
         listingDetails.push(
           generateListingDetailsV6(
             {
+              id: order.id,
               kind: order.kind,
               currency: order.currency,
               rawData: order.rawData,
@@ -292,7 +293,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
             }
           }
 
-          if (payload.quantity) {
+          if (payload.quantity > 1) {
             if (orderResult.token_kind !== "erc1155") {
               throw Boom.badRequest("Only ERC1155 orders support a quantity");
             }

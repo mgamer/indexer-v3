@@ -57,3 +57,5 @@ export const addToQueue = async (infos: EventsInfo[]) => {
     await queue.addBulk(jobs);
   }
 };
+
+queue.retryJobs({ count: 1 });

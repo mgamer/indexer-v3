@@ -205,6 +205,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
         listingDetails.push(
           generateListingDetailsV5(
             {
+              id: order.id,
               kind: order.kind,
               currency: order.currency,
               rawData: order.rawData,

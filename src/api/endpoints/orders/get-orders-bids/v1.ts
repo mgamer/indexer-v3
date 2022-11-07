@@ -118,7 +118,7 @@ export const getOrdersBidsV1Options: RouteOptions = {
           expiration: Joi.number().required(),
           createdAt: Joi.string().required(),
           updatedAt: Joi.string().required(),
-          rawData: Joi.object(),
+          rawData: Joi.object().allow(null),
         })
       ),
       continuation: Joi.string().pattern(regex.base64).allow(null),
@@ -367,7 +367,7 @@ export const getOrdersBidsV1Options: RouteOptions = {
           source: {
             id: source?.address,
             name: source?.metadata.title || source?.name,
-            icon: source?.metadata.icon,
+            icon: source?.getIcon(),
             url: source?.metadata.url,
           },
           feeBps: Number(r.fee_bps),

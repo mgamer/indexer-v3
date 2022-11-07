@@ -37,8 +37,7 @@ export async function getBidInfoByOrderId(orderId: string) {
 
     [, contract, tokenId] = tokenSetByOrderIdResult.id.split(":");
 
-    const token = await Tokens.getByContractAndTokenId(contract, tokenId, true);
-    collectionId = token?.collectionId;
+    collectionId = await Tokens.getCollectionId(contract, tokenId);
   } else if (tokenSetByOrderIdResult.id.startsWith("list:")) {
     if (tokenSetByOrderIdResult.attribute_id) {
       const attribute = await Attributes.getById(tokenSetByOrderIdResult.attribute_id);

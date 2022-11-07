@@ -9,11 +9,11 @@ import { logger } from "@/common/logger";
 
 export class AskActivity {
   public static async handleEvent(data: NewSellOrderEventData) {
-    const token = await Tokens.getByContractAndTokenId(data.contract, data.tokenId, true);
+    const collectionId = await Tokens.getCollectionId(data.contract, data.tokenId);
 
-    // If no token found
-    if (_.isNull(token)) {
-      logger.warn("ask-activity", `No token found for ${JSON.stringify(data)}`);
+    // If no collection found
+    if (_.isNull(collectionId)) {
+      logger.warn("ask-activity", `No collection found for ${JSON.stringify(data)}`);
       return;
     }
 
@@ -23,7 +23,7 @@ export class AskActivity {
       hash: activityHash,
       type: ActivityType.ask,
       contract: data.contract,
-      collectionId: token.collectionId,
+      collectionId,
       tokenId: data.tokenId,
       orderId: data.orderId,
       fromAddress: data.maker,
