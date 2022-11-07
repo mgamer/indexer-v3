@@ -58,6 +58,10 @@ export const getExecuteBuyV6Options: RouteOptions = {
         .description(
           "Address of wallet filling the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
+      relayer: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Address of wallet relaying the filling transaction"),
       onlyPath: Joi.boolean()
         .default(false)
         .description("If true, only the path will be returned."),
@@ -602,6 +606,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
             status: "incomplete",
             data: {
               ...tx,
+              from: payload.relayer ? payload.relayer : tx.from,
               maxFeePerGas: payload.maxFeePerGas
                 ? bn(payload.maxFeePerGas).toHexString()
                 : undefined,
@@ -617,6 +622,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
         status: "incomplete",
         data: {
           ...txData,
+          from: payload.relayer ? payload.relayer : txData.from,
           maxFeePerGas: payload.maxFeePerGas ? bn(payload.maxFeePerGas).toHexString() : undefined,
           maxPriorityFeePerGas: payload.maxPriorityFeePerGas
             ? bn(payload.maxPriorityFeePerGas).toHexString()
