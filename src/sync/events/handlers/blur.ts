@@ -1,7 +1,6 @@
 import * as Sdk from "@reservoir0x/sdk";
 
 import { idb, pgp } from "@/common/db";
-import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getEventData } from "@/events-sync/data";
@@ -116,23 +115,6 @@ export const handleEvents = async (
       }
     );
     if (values.length) {
-      logger.info(
-        "debug",
-        `
-          UPDATE fill_events_2 SET
-            order_side = x.order_side::order_side_t,
-            maker = x.maker::BYTEA,
-            taker = x.taker::BYTEA,
-            updated_at = now()
-          FROM (
-            VALUES ${pgp.helpers.values(values, columns)}
-          ) AS x(tx_hash, log_index, batch_index, order_side, maker, taker)
-          WHERE fill_events_2.tx_hash = x.tx_hash::BYTEA
-            AND fill_events_2.log_index = x.log_index::INT
-            AND fill_events_2.batch_index = x.batch_index::INT
-        `
-      );
-
       await idb.none(
         `
           UPDATE fill_events_2 SET
