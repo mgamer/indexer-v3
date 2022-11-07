@@ -221,7 +221,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         expiration: validTo,
         missing_royalties: null,
         normalized_value: null,
-        currency_normalized_value: null,
       });
 
       results.push({
