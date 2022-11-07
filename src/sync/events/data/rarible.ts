@@ -24,7 +24,5 @@ export const cancel: EventData = {
   addresses: { [Rarible.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
   topic: "0xe8d9861dbc9c663ed3accd261bbe2fe01e0d3d9e5f51fa38523b265c7757a93a",
   numTopics: 1,
-  abi: new Interface([
-    `event Cancel(bytes32 hash)`,
-  ]),
+  abi: new Interface([`event Cancel(bytes32 hash)`]),
 };
