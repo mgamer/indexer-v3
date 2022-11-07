@@ -433,7 +433,7 @@ if (config.doBackgroundWork) {
                 contract: fromBuffer(order.contract),
                 tokenId: order.tokenId,
                 maker: fromBuffer(order.maker),
-                price: order.value,
+                price: order.price,
                 amount: order.quantityRemaining,
                 transactionHash: trigger.txHash,
                 logIndex: trigger.logIndex,
@@ -464,7 +464,7 @@ if (config.doBackgroundWork) {
                 contract: fromBuffer(order.contract),
                 tokenId: order.tokenId,
                 maker: fromBuffer(order.maker),
-                price: order.value,
+                price: order.price,
                 amount: order.quantityRemaining,
                 timestamp: Date.now() / 1000,
               };
