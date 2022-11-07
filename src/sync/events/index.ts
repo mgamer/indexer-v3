@@ -276,30 +276,37 @@ export const syncEvents = async (
         events: enhancedEvents.filter(
           ({ kind }) => kind.startsWith("erc20") || kind.startsWith("weth")
         ),
+        backfill,
       },
       {
         kind: "erc721",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("erc721")),
+        backfill,
       },
       {
         kind: "erc1155",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("erc1155")),
+        backfill,
       },
       {
         kind: "blur",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("blur")),
+        backfill,
       },
       {
         kind: "cryptopunks",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("cryptopunks")),
+        backfill,
       },
       {
         kind: "element",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("element")),
+        backfill,
       },
       {
         kind: "foundation",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("foundation")),
+        backfill,
       },
       {
         kind: "looks-rare",
@@ -309,18 +316,22 @@ export const syncEvents = async (
             // To properly validate bids, we need some additional events
             kind === "erc20-transfer"
         ),
+        backfill,
       },
       {
         kind: "nftx",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("nftx")),
+        backfill,
       },
       {
         kind: "nouns",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("nouns")),
+        backfill,
       },
       {
         kind: "quixotic",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("quixotic")),
+        backfill,
       },
       {
         kind: "seaport",
@@ -330,10 +341,12 @@ export const syncEvents = async (
             // To properly validate bids, we need some additional events
             kind === "erc20-transfer"
         ),
+        backfill,
       },
       {
         kind: "sudoswap",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("sudoswap")),
+        backfill,
       },
       {
         kind: "wyvern",
@@ -345,6 +358,7 @@ export const syncEvents = async (
             kind === "erc1155-transfer-single" ||
             kind === "erc20-transfer"
         ),
+        backfill,
       },
       {
         kind: "x2y2",
@@ -354,6 +368,7 @@ export const syncEvents = async (
             // To properly validate bids, we need some additional events
             kind === "erc20-transfer"
         ),
+        backfill,
       },
       {
         kind: "zeroex-v4",
@@ -363,14 +378,17 @@ export const syncEvents = async (
             // To properly validate bids, we need some additional events
             kind === "erc20-transfer"
         ),
+        backfill,
       },
       {
         kind: "zora",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("zora")),
+        backfill,
       },
       {
         kind: "universe",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("universe")),
+        backfill,
       },
     ]);
 
