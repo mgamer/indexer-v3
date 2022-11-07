@@ -39,28 +39,28 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
     const eventData = getEventData([kind])[0];
     switch (kind) {
-      // case "rarible-cancel": {
-      //   const { args } = eventData.abi.parseLog(log);
-      //   const orderId = args["hash"].toLowerCase();
-      //   cancelEvents.push({
-      //     orderKind: "rarible",
-      //     orderId,
-      //     baseEventParams,
-      //   });
-      //   orderInfos.push({
-      //     context: `cancelled-${orderId}`,
-      //     id: orderId,
-      //     trigger: {
-      //       kind: "cancel",
-      //       txHash: baseEventParams.txHash,
-      //       txTimestamp: baseEventParams.timestamp,
-      //       logIndex: baseEventParams.logIndex,
-      //       batchIndex: baseEventParams.batchIndex,
-      //       blockHash: baseEventParams.blockHash,
-      //     },
-      //   });
-      //   break;
-      // }
+      case "rarible-cancel": {
+        const { args } = eventData.abi.parseLog(log);
+        const orderId = args["hash"].toLowerCase();
+        cancelEvents.push({
+          orderKind: "rarible",
+          orderId,
+          baseEventParams,
+        });
+        orderInfos.push({
+          context: `cancelled-${orderId}`,
+          id: orderId,
+          trigger: {
+            kind: "cancel",
+            txHash: baseEventParams.txHash,
+            txTimestamp: baseEventParams.timestamp,
+            logIndex: baseEventParams.logIndex,
+            batchIndex: baseEventParams.batchIndex,
+            blockHash: baseEventParams.blockHash,
+          },
+        });
+        break;
+      }
 
       case "rarible-match": {
         const { args } = eventData.abi.parseLog(log);
