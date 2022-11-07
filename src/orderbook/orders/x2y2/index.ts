@@ -220,6 +220,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         raw_data: order.params,
         expiration: validTo,
         missing_royalties: null,
+        normalized_value: null,
       });
 
       results.push({

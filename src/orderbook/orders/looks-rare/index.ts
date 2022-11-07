@@ -197,33 +197,23 @@ export const save = async (
         ];
       }
 
-      let price = order.params.price;
+      const price = order.params.price;
 
       // Handle: royalties on top
       const missingRoyalties = [];
+      let missingRoyaltyAmount = bn(0);
       if (side === "sell") {
         const openSeaRoyalties = await commonHelpers.getOpenSeaRoyalties(order.params.collection);
         for (const { bps, recipient } of openSeaRoyalties) {
           // Deduce the 0.5% royalty LooksRare will pay if needed
           const actualBps = recipient === onChainRoyaltyRecipient ? bps - 50 : bps;
           const amount = bn(price).mul(actualBps).div(10000).toString();
-
-          // The royalties are included in the price
-          price = bn(price).add(amount).toString();
+          missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
 
           missingRoyalties.push({
             amount,
             recipient,
           });
-
-          feeBreakdown = [
-            ...feeBreakdown,
-            {
-              kind: "royalty",
-              recipient,
-              bps: actualBps,
-            },
-          ];
         }
       }
 
@@ -231,6 +221,7 @@ export const save = async (
 
       // Handle: price and value
       let value: string;
+      let normalizedValue: string | undefined;
       if (side === "buy") {
         // For buy orders, we set the value as `price - fee` since it
         // is best for UX to show the user exactly what they're going
@@ -241,6 +232,8 @@ export const save = async (
       } else {
         // For sell orders, the value is the same as the price
         value = price;
+        // The normalized value includes the royalties on top of the price
+        normalizedValue = bn(value).add(missingRoyaltyAmount).toString();
       }
 
       // Handle: source
@@ -293,6 +286,7 @@ export const save = async (
         raw_data: order.params,
         expiration: validTo,
         missing_royalties: missingRoyalties,
+        normalized_value: normalizedValue || null,
       });
 
       const unfillable =
