@@ -261,7 +261,8 @@ export const save = async (
       const feeBps = feeBreakdown.map(({ bps }) => bps).reduce((a, b) => Number(a) + Number(b), 0);
 
       // Handle: price and value
-      const price = side === "buy" ? order.params.make.value : order.params.take.value;
+      let price = side === "buy" ? order.params.make.value : order.params.take.value;
+      price = BigNumber.from(price).div(quantity).toString();
 
       // For sell orders, the value is the same as the price
       let value = price;
