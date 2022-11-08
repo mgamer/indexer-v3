@@ -81,6 +81,8 @@ if (config.doBackgroundWork) {
                     } else if (error.message === "no-balance-no-approval") {
                       fillabilityStatus = "no-balance";
                       approvalStatus = "no-approval";
+                    } else {
+                      return;
                     }
                   }
                   break;
@@ -106,6 +108,8 @@ if (config.doBackgroundWork) {
                     } else if (error.message === "no-balance-no-approval") {
                       fillabilityStatus = "no-balance";
                       approvalStatus = "no-approval";
+                    } else {
+                      return;
                     }
                   }
                   break;
@@ -132,6 +136,8 @@ if (config.doBackgroundWork) {
                     } else if (error.message === "no-balance-no-approval") {
                       fillabilityStatus = "no-balance";
                       approvalStatus = "no-approval";
+                    } else {
+                      return;
                     }
                   }
                   break;
@@ -157,6 +163,8 @@ if (config.doBackgroundWork) {
                     } else if (error.message === "no-balance-no-approval") {
                       fillabilityStatus = "no-balance";
                       approvalStatus = "no-approval";
+                    } else {
+                      return;
                     }
                   }
                   break;
