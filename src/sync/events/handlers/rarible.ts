@@ -70,14 +70,14 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const ERC20 = "0x8ae85d84";
         const ETH = "0xaaaebeba";
         const ERC721 = "0x73ad2146";
-        const ERC721_LAZY = "0xd8f960c1";
+        // const ERC721_LAZY = "0xd8f960c1";
         const ERC1155 = "0x973bb640";
-        const ERC1155_LAZY = "1cdfaa40";
+        // const ERC1155_LAZY = "1cdfaa40";
         const matchOrdersSigHash = "0xe99a3f80";
         const directPurchaseSigHash = "0x0d5f7d35";
         const directAcceptBidSigHash = "0x67d49a3b";
 
-        const assetTypes = [ERC721, ERC721_LAZY, ERC1155, ERC1155_LAZY, ERC20, ETH];
+        const assetTypes = [ERC721, ERC1155, ERC20, ETH];
 
         const orderKind = "rarible";
         let side: "sell" | "buy" = "sell";
@@ -176,9 +176,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             const leftAsset = orderLeft.makeAsset;
             const rightAsset = orderLeft.takeAsset;
 
-            side = [ERC721, ERC721_LAZY, ERC1155, ERC1155_LAZY].includes(leftAsset.assetClass)
-              ? "sell"
-              : "buy";
+            side = [ERC721, ERC1155].includes(leftAsset.assetClass) ? "sell" : "buy";
 
             const nftAsset = side === "buy" ? rightAsset : leftAsset;
             const currencyAsset = side === "buy" ? leftAsset : rightAsset;
