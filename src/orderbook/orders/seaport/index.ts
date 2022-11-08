@@ -25,7 +25,7 @@ import * as commonHelpers from "@/orderbook/orders/common/helpers";
 
 export type OrderInfo =
   | {
-      kind?: "full";
+      kind: "full";
       orderParams: Sdk.Seaport.Types.OrderComponents;
       metadata: OrderMetadata;
       isReservoir?: boolean;
@@ -36,7 +36,7 @@ export type OrderInfo =
     };
 
 export declare type PartialOrderComponents = {
-  kind?: OrderKind;
+  kind: OrderKind;
   side: "buy" | "sell";
   hash: string;
   price: string;
@@ -45,9 +45,12 @@ export declare type PartialOrderComponents = {
   startTime: number;
   endTime: number;
   contract: string;
-  tokenId: string;
+  tokenId?: string;
   offerer: string;
-  listingType: string | null;
+  isDynamic?: boolean;
+  collectionSlug: string;
+  attributeKey?: string;
+  attributeValue?: string;
 };
 
 type SaveResult = {
@@ -591,6 +594,58 @@ export const save = async (
         }
 
         case "contract-wide": {
+          if (getNetworkSettings().multiCollectionContracts.includes(orderParams.contract)) {
+            const collectionResult = await redb.oneOrNone(
+              `
+                  SELECT
+                    collections.id,
+                    collections.token_set_id
+                  FROM collections
+                  WHERE collections.slug = $/collectionSlug/
+                `,
+              {
+                collectionSlug: orderParams.collectionSlug,
+              }
+            );
+
+            if (collectionResult?.token_set_id) {
+              tokenSetId = collectionResult.token_set_id;
+            } else {
+              logger.warn(
+                "orders-seaport-save",
+                `No collection found for slug. collectionSlug=${
+                  orderParams.collectionSlug
+                }, orderParams=${JSON.stringify(orderParams)}`
+              );
+            }
+          } else {
+            tokenSetId = `contract:${orderParams.contract}`;
+          }
+
+          if (tokenSetId) {
+            if (tokenSetId.startsWith("contract:")) {
+              await tokenSet.contractWide.save([
+                {
+                  id: tokenSetId,
+                  schemaHash,
+                  contract: orderParams.contract,
+                },
+              ]);
+            } else if (tokenSetId.startsWith("range:")) {
+              const [, , startTokenId, endTokenId] = tokenSetId.split(":");
+
+              await tokenSet.tokenRange.save([
+                {
+                  id: tokenSetId,
+                  schemaHash,
+                  contract: orderParams.contract,
+                  startTokenId,
+                  endTokenId,
+                },
+              ]);
+            }
+          }
+
           break;
         }
 
@@ -642,6 +697,11 @@ export const save = async (
             recipient: royalty.recipient,
           });
         }
+      }
+
+      if (orderParams.side === "buy") {
+        const feeAmount = bn(price).mul(feeBps).div(10000);
+        value = bn(price).sub(feeAmount);
       }
 
       // Handle: source
@@ -752,7 +812,7 @@ export const save = async (
         conduit: toBuffer(new Sdk.Seaport.Exchange(config.chainId).deriveConduit(conduitKey)),
         fee_bps: feeBps,
         fee_breakdown: feeBreakdown || null,
-        dynamic: _.isNull(orderParams.listingType) ? null : true,
+        dynamic: orderParams.isDynamic ?? null,
         raw_data: null,
         expiration: validTo,
         missing_royalties: null,
