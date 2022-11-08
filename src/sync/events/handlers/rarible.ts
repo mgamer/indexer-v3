@@ -66,8 +66,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
       case "rarible-match": {
         const { args } = eventData.abi.parseLog(log);
         const leftHash = args["leftHash"].toLowerCase();
-        const newLeftFill = args["newLeftFill"].toString();
-        const newRightFill = args["newRightFill"].toString();
 
         const ERC20 = "0x8ae85d84";
         const ETH = "0xaaaebeba";
@@ -222,6 +220,11 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         } else {
           break;
         }
+        // side === "buy" ? rightAsset : leftAsset;
+        const newLeftFill =
+          side === "buy" ? args["newLeftFill"].toString() : args["newRightFill"].toString();
+        const newRightFill =
+          side === "buy" ? args["newRightFill"].toString() : args["newLeftFill"].toString();
 
         const decodedNftAsset = defaultAbiCoder.decode(["(address token, uint tokenId)"], nftData);
         const contract = decodedNftAsset[0][0].toLowerCase();
