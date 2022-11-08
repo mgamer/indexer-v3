@@ -46,10 +46,14 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       // EventType.TRAIT_OFFER
     ],
     async (event) => {
-      logger.info(
-        "opensea-websocket",
-        `onEvents. event_type=${event.event_type}, event=${JSON.stringify(event)}`
-      );
+      const currentTime = event.event_type === "item_listed" ? 0 : Math.floor(Date.now() / 1000);
+
+      if (currentTime % 10 === 0) {
+        logger.info(
+          "opensea-websocket",
+          `onEvents. event_type=${event.event_type}, event=${JSON.stringify(event)}`
+        );
+      }
 
       const orderParams = handleEvent(event.event_type as EventType, event.payload);
 
