@@ -16,7 +16,7 @@ export const queue = new Queue(QUEUE_NAME, {
       type: "exponential",
       delay: 10000,
     },
-    removeOnComplete: 100,
+    removeOnComplete: true,
     removeOnFail: 10000,
     timeout: 60000,
   },
@@ -33,6 +33,8 @@ if (config.doBackgroundWork) {
       try {
         if (await acquireLock(getLockName(), 60)) {
           await idb.none(query);
+        } else {
+          await addToQueue(query);
         }
       } catch (error) {
         logger.error(QUEUE_NAME, `Failed flushing nft transfer events to the database: ${error}`);

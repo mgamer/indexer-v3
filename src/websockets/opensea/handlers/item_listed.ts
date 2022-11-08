@@ -9,6 +9,10 @@ export const handleEvent = (payload: ItemListedEventPayload): PartialOrderCompon
     return null;
   }
 
+  if (_.indexOf([null, "dutch"], payload.listing_type) === -1) {
+    return null;
+  }
+
   const [, contract, tokenId] = payload.item.nft_id.split("/");
 
   return {
