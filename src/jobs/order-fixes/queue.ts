@@ -55,7 +55,8 @@ if (config.doBackgroundWork) {
               { id: data.id }
             );
 
-            if (result) {
+            // TODO: Support validating orders for which `raw_data` is null
+            if (result && result.raw_data) {
               let fillabilityStatus = "fillable";
               let approvalStatus = "approved";
 
