@@ -584,7 +584,7 @@ export const save = async (
             tokenId: orderParams.tokenId,
           }
         );
-      } else {
+      } else if (getNetworkSettings().multiCollectionContracts.includes(orderParams.contract)) {
         collectionResult = await redb.oneOrNone(
           `
                   SELECT
@@ -598,15 +598,28 @@ export const save = async (
             collectionSlug: orderParams.collectionSlug,
           }
         );
+      } else {
+        collectionResult = await redb.oneOrNone(
+          `
+                  SELECT
+                    royalties,
+                    token_set_id
+                  FROM collections
+                  WHERE id = $/id/
+                `,
+          {
+            id: orderParams.contract,
+          }
+        );
+      }
 
-        if (!collectionResult) {
-          logger.warn(
-            "orders-seaport-save",
-            `handlePartialOrder - No collection found for slug. collectionSlug=${
-              orderParams.collectionSlug
-            }, orderParams=${JSON.stringify(orderParams)}`
-          );
-        }
+      if (!collectionResult) {
+        logger.warn(
+          "orders-seaport-save",
+          `handlePartialOrder - No collection found. collectionSlug=${
+            orderParams.collectionSlug
+          }, orderParams=${JSON.stringify(orderParams)}`
+        );
       }
 
       // Check and save: associated token set
