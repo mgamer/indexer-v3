@@ -43,6 +43,7 @@ export const save = async (
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
       const order = new Sdk.Rarible.Order(config.chainId, orderParams);
+      const id = order.hashOrderKey();
 
       const LAZY_ASSET_CLASSES = [
         Sdk.Rarible.Types.AssetClass.ERC721_LAZY.toString(),
@@ -54,10 +55,12 @@ export const save = async (
         LAZY_ASSET_CLASSES.includes(order.params.make.assetType.assetClass) ||
         LAZY_ASSET_CLASSES.includes(order.params.take.assetType.assetClass)
       ) {
-        throw new Error("unsupported-asset-class");
+        return results.push({
+          id,
+          status: "unsupported-asset-class",
+        });
       }
 
-      const id = order.hashOrderKey();
       const { side } = order.getInfo()!;
       // Check: order doesn't already exist
       const orderExists = await idb.oneOrNone(`SELECT 1 FROM "orders" "o" WHERE "o"."id" = $/id/`, {
