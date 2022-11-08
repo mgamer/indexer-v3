@@ -570,6 +570,45 @@ export const save = async (
         }
       }
 
+      let collectionResult;
+
+      if (orderParams.tokenId) {
+        collectionResult = await redb.oneOrNone(
+          `SELECT 
+                    royalties
+                 FROM collections
+                 JOIN tokens ON collections.id = tokens.collection_id
+                 WHERE tokens.contract = $/contract/ AND tokens.token_id = $/tokenId/`,
+          {
+            contract: toBuffer(orderParams.contract),
+            tokenId: orderParams.tokenId,
+          }
+        );
+      } else {
+        collectionResult = await redb.oneOrNone(
+          `
+                  SELECT
+                    royalties,
+                    token_set_id
+                  FROM collections
+                  WHERE contract = $/contract/ AND slug = $/collectionSlug/
+                `,
+          {
+            contract: toBuffer(orderParams.contract),
+            collectionSlug: orderParams.collectionSlug,
+          }
+        );
+
+        if (!collectionResult) {
+          logger.warn(
+            "orders-seaport-save",
+            `handlePartialOrder - No collection found for slug. collectionSlug=${
+              orderParams.collectionSlug
+            }, orderParams=${JSON.stringify(orderParams)}`
+          );
+        }
+      }
+
       // Check and save: associated token set
       const schemaHash = generateSchemaHash();
 
@@ -594,32 +633,8 @@ export const save = async (
         }
 
         case "contract-wide": {
-          if (getNetworkSettings().multiCollectionContracts.includes(orderParams.contract)) {
-            const collectionResult = await redb.oneOrNone(
-              `
-                  SELECT
-                    collections.id,
-                    collections.token_set_id
-                  FROM collections
-                  WHERE collections.slug = $/collectionSlug/
-                `,
-              {
-                collectionSlug: orderParams.collectionSlug,
-              }
-            );
-
-            if (collectionResult?.token_set_id) {
-              tokenSetId = collectionResult.token_set_id;
-            } else {
-              logger.warn(
-                "orders-seaport-save",
-                `No collection found for slug. collectionSlug=${
-                  orderParams.collectionSlug
-                }, orderParams=${JSON.stringify(orderParams)}`
-              );
-            }
-          } else {
-            tokenSetId = `contract:${orderParams.contract}`;
+          if (collectionResult?.token_set_id) {
+            tokenSetId = collectionResult.token_set_id;
           }
 
           if (tokenSetId) {
@@ -675,20 +690,8 @@ export const save = async (
         },
       ];
 
-      const collection = await redb.oneOrNone(
-        `SELECT 
-                    royalties
-                 FROM collections
-                 JOIN tokens ON collections.id = tokens.collection_id
-                 WHERE tokens.contract = $/contract/ AND tokens.token_id = $/tokenId/`,
-        {
-          contract: orderParams.contract,
-          tokenId: orderParams.tokenId,
-        }
-      );
-
-      if (collection) {
-        for (const royalty of collection.royalties) {
+      if (collectionResult) {
+        for (const royalty of collectionResult.royalties) {
           feeBps += royalty.bps;
 
           feeBreakdown.push({
@@ -697,6 +700,13 @@ export const save = async (
             recipient: royalty.recipient,
           });
         }
+      } else {
+        logger.warn(
+          "orders-seaport-save",
+          `handlePartialOrder - Unable to calculate royalties., orderParams=${JSON.stringify(
+            orderParams
+          )}`
+        );
       }
 
       if (orderParams.side === "buy") {
