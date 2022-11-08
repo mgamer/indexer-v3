@@ -220,17 +220,15 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         } else {
           break;
         }
-        // side === "buy" ? rightAsset : leftAsset;
-        const newLeftFill =
-          side === "buy" ? args["newLeftFill"].toString() : args["newRightFill"].toString();
-        const newRightFill =
-          side === "buy" ? args["newRightFill"].toString() : args["newLeftFill"].toString();
 
         const decodedNftAsset = defaultAbiCoder.decode(["(address token, uint tokenId)"], nftData);
         const contract = decodedNftAsset[0][0].toLowerCase();
         const tokenId = decodedNftAsset[0][1].toString();
-        const amount = newRightFill;
-        let currencyPrice = newLeftFill;
+        const amount =
+          side === "buy" ? args["newRightFill"].toString() : args["newLeftFill"].toString();
+        let currencyPrice =
+          side === "buy" ? args["newLeftFill"].toString() : args["newRightFill"].toString();
+
         currencyPrice = bn(currencyPrice).div(amount).toString();
 
         const prices = await getUSDAndNativePrices(
