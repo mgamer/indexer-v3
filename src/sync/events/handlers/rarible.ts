@@ -16,6 +16,7 @@ import { bn } from "@/common/utils";
 import { Interface } from "ethers/lib/utils";
 import { constants } from "ethers";
 import { getERC20Transfer } from "./utils/erc20";
+import { searchForCall } from "@georgeroman/evm-tx-simulator";
 
 export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData> => {
   const cancelEvents: es.cancels.Event[] = [];
@@ -74,6 +75,9 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const ERC721_LAZY = "0xd8f960c1";
         const ERC1155 = "0x973bb640";
         const ERC1155_LAZY = "1cdfaa40";
+        const matchOrders = "0xe99a3f80";
+        const directPurchase = "0x0d5f7d35";
+        const directAcceptBid = "0x67d49a3b";
 
         const assetTypes = [ERC721, ERC721_LAZY, ERC1155, ERC1155_LAZY, ERC20, ETH];
 
@@ -86,27 +90,42 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         let maker = "";
         let paymentCurrency = "";
 
+        const txHash = baseEventParams.txHash;
+        const address = baseEventParams.address;
+
         // Event data doesn't include full order information so we have to parse the calldata
-        const tx = await utils.fetchTransaction(baseEventParams.txHash);
+        const txTrace = await utils.fetchTransactionTrace(txHash);
+        if (!txTrace) {
+          // Skip any failed attempts to get the trace
+          break;
+        }
 
         // Rarible has 3 fill functions: directPurchase, directAcceptBid and matchOrders.
         // Try to parse calldata as directPurchase
         try {
-          const iface = new Interface([
-            "function directPurchase(tuple(address sellOrderMaker, uint256 sellOrderNftAmount, bytes4 nftAssetClass, bytes nftData, uint256 sellOrderPaymentAmount, address paymentToken, uint256 sellOrderSalt, uint sellOrderStart, uint sellOrderEnd, bytes4 sellOrderDataType, bytes sellOrderData, bytes sellOrderSignature, uint256 buyOrderPaymentAmount, uint256 buyOrderNftAmount, bytes buyOrderData))",
-          ]);
-          const result = iface.decodeFunctionData("directPurchase", tx.data);
+          const poolCallTrace = searchForCall(txTrace.calls, {
+            to: address,
+            type: "CALL",
+            sigHashes: [directPurchase],
+          });
 
-          side = "sell";
-          maker = result[0][0];
-          nftAssetType = result[0][2];
-          nftData = result[0][3];
+          if (poolCallTrace) {
+            const iface = new Interface([
+              "function directPurchase(tuple(address sellOrderMaker, uint256 sellOrderNftAmount, bytes4 nftAssetClass, bytes nftData, uint256 sellOrderPaymentAmount, address paymentToken, uint256 sellOrderSalt, uint sellOrderStart, uint sellOrderEnd, bytes4 sellOrderDataType, bytes sellOrderData, bytes sellOrderSignature, uint256 buyOrderPaymentAmount, uint256 buyOrderNftAmount, bytes buyOrderData))",
+            ]);
+            const result = iface.decodeFunctionData("directPurchase", poolCallTrace.input);
 
-          paymentCurrency = result[0][5];
-          if (paymentCurrency === constants.AddressZero) {
-            currencyAssetType = ETH;
-          } else {
-            currencyAssetType = ERC20;
+            side = "sell";
+            maker = result[0][0];
+            nftAssetType = result[0][2];
+            nftData = result[0][3];
+
+            paymentCurrency = result[0][5];
+            if (paymentCurrency === constants.AddressZero) {
+              currencyAssetType = ETH;
+            } else {
+              currencyAssetType = ERC20;
+            }
           }
         } catch {
           // tx data doesn't match directPurchase
@@ -114,21 +133,29 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         // Try to parse calldata as directAcceptBid
         try {
-          const iface = new Interface([
-            "function directAcceptBid(tuple(address bidMaker, uint256 bidNftAmount, bytes4 nftAssetClass, bytes nftData, uint256 bidPaymentAmount, address paymentToken, uint256 bidSalt, uint bidStart, uint bidEnd, bytes4 bidDataType, bytes bidData, bytes bidSignature, uint256 sellOrderPaymentAmount, uint256 sellOrderNftAmount, bytes sellOrderData) )",
-          ]);
-          const result = iface.decodeFunctionData("directAcceptBid", tx.data);
+          const poolCallTrace = searchForCall(txTrace.calls, {
+            to: address,
+            type: "CALL",
+            sigHashes: [directAcceptBid],
+          });
 
-          side = "buy";
-          maker = result[0][0];
-          nftAssetType = result[0][2];
-          nftData = result[0][3];
+          if (poolCallTrace) {
+            const iface = new Interface([
+              "function directAcceptBid(tuple(address bidMaker, uint256 bidNftAmount, bytes4 nftAssetClass, bytes nftData, uint256 bidPaymentAmount, address paymentToken, uint256 bidSalt, uint bidStart, uint bidEnd, bytes4 bidDataType, bytes bidData, bytes bidSignature, uint256 sellOrderPaymentAmount, uint256 sellOrderNftAmount, bytes sellOrderData) )",
+            ]);
+            const result = iface.decodeFunctionData("directAcceptBid", poolCallTrace.input);
 
-          paymentCurrency = result[0][5];
-          if (paymentCurrency === constants.AddressZero) {
-            currencyAssetType = ETH;
-          } else {
-            currencyAssetType = ERC20;
+            side = "buy";
+            maker = result[0][0];
+            nftAssetType = result[0][2];
+            nftData = result[0][3];
+
+            paymentCurrency = result[0][5];
+            if (paymentCurrency === constants.AddressZero) {
+              currencyAssetType = ETH;
+            } else {
+              currencyAssetType = ERC20;
+            }
           }
         } catch {
           // tx data doesn't match directAcceptBid
@@ -136,33 +163,41 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         // Try to parse calldata as matchOrders
         try {
-          const iface = new Interface([
-            "function matchOrders(tuple(address maker, tuple(tuple(bytes4 assetClass, bytes data) assetType, uint256 value) makeAsset, address taker, tuple(tuple(bytes4 assetClass, bytes data) assetType, uint256 value) takeAsset, uint256 salt, uint256 start, uint256 end, bytes4 dataType, bytes data) orderLeft, bytes signatureLeft, tuple(address maker, tuple(tuple(bytes4 assetClass, bytes data) assetType, uint256 value) makeAsset, address taker, tuple(tuple(bytes4 assetClass, bytes data) assetType, uint256 value) takeAsset, uint256 salt, uint256 start, uint256 end, bytes4 dataType, bytes data) orderRight, bytes signatureRight)",
-          ]);
-          const result = iface.decodeFunctionData("matchOrders", tx.data);
-          const orderLeft = result.orderLeft;
-          const leftAsset = orderLeft.makeAsset;
-          const rightAsset = orderLeft.takeAsset;
+          const poolCallTrace = searchForCall(txTrace.calls, {
+            to: address,
+            type: "CALL",
+            sigHashes: [matchOrders],
+          });
 
-          side = [ERC721, ERC721_LAZY, ERC1155, ERC1155_LAZY].includes(leftAsset.assetClass)
-            ? "sell"
-            : "buy";
+          if (poolCallTrace) {
+            const iface = new Interface([
+              "function matchOrders(tuple(address maker, tuple(tuple(bytes4 assetClass, bytes data) assetType, uint256 value) makeAsset, address taker, tuple(tuple(bytes4 assetClass, bytes data) assetType, uint256 value) takeAsset, uint256 salt, uint256 start, uint256 end, bytes4 dataType, bytes data) orderLeft, bytes signatureLeft, tuple(address maker, tuple(tuple(bytes4 assetClass, bytes data) assetType, uint256 value) makeAsset, address taker, tuple(tuple(bytes4 assetClass, bytes data) assetType, uint256 value) takeAsset, uint256 salt, uint256 start, uint256 end, bytes4 dataType, bytes data) orderRight, bytes signatureRight)",
+            ]);
+            const result = iface.decodeFunctionData("matchOrders", poolCallTrace.input);
+            const orderLeft = result.orderLeft;
+            const leftAsset = orderLeft.makeAsset;
+            const rightAsset = orderLeft.takeAsset;
 
-          const nftAsset = side === "buy" ? rightAsset : leftAsset;
-          const currencyAsset = side === "buy" ? leftAsset : rightAsset;
+            side = [ERC721, ERC721_LAZY, ERC1155, ERC1155_LAZY].includes(leftAsset.assetClass)
+              ? "sell"
+              : "buy";
 
-          nftData = nftAsset.assetType.data;
-          nftAssetType = nftAsset.assetType.assetClass;
-          currencyAssetType = currencyAsset.assetType.assetClass;
+            const nftAsset = side === "buy" ? rightAsset : leftAsset;
+            const currencyAsset = side === "buy" ? leftAsset : rightAsset;
 
-          if (currencyAssetType === ETH) {
-            paymentCurrency = Sdk.Common.Addresses.Eth[config.chainId];
-          } else if (currencyAssetType === ERC20) {
-            const decodedCurrencyAsset = defaultAbiCoder.decode(
-              ["(address token)"],
-              currencyAsset.assetType.data
-            );
-            paymentCurrency = decodedCurrencyAsset[0][0];
+            nftData = nftAsset.assetType.data;
+            nftAssetType = nftAsset.assetType.assetClass;
+            currencyAssetType = currencyAsset.assetType.assetClass;
+
+            if (currencyAssetType === ETH) {
+              paymentCurrency = Sdk.Common.Addresses.Eth[config.chainId];
+            } else if (currencyAssetType === ERC20) {
+              const decodedCurrencyAsset = defaultAbiCoder.decode(
+                ["(address token)"],
+                currencyAsset.assetType.data
+              );
+              paymentCurrency = decodedCurrencyAsset[0][0];
+            }
           }
         } catch {
           // tx data doesn't match matchOrders
