@@ -225,9 +225,9 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const contract = decodedNftAsset[0][0].toLowerCase();
         const tokenId = decodedNftAsset[0][1].toString();
         const amount =
-          side === "buy" ? args["newRightFill"].toString() : args["newLeftFill"].toString();
-        let currencyPrice =
           side === "buy" ? args["newLeftFill"].toString() : args["newRightFill"].toString();
+        let currencyPrice =
+          side === "buy" ? args["newRightFill"].toString() : args["newLeftFill"].toString();
 
         currencyPrice = bn(currencyPrice).div(amount).toString();
 
