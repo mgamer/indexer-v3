@@ -73,9 +73,9 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const ERC721_LAZY = "0xd8f960c1";
         const ERC1155 = "0x973bb640";
         const ERC1155_LAZY = "1cdfaa40";
-        const matchOrders = "0xe99a3f80";
-        const directPurchase = "0x0d5f7d35";
-        const directAcceptBid = "0x67d49a3b";
+        const matchOrdersSigHash = "0xe99a3f80";
+        const directPurchaseSigHash = "0x0d5f7d35";
+        const directAcceptBidSigHash = "0x67d49a3b";
 
         const assetTypes = [ERC721, ERC721_LAZY, ERC1155, ERC1155_LAZY, ERC20, ETH];
 
@@ -101,17 +101,17 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         // Rarible has 3 fill functions: directPurchase, directAcceptBid and matchOrders.
         // Try to parse calldata as directPurchase
         try {
-          const poolCallTrace = searchForCall(txTrace.calls, {
+          const callTrace = searchForCall(txTrace.calls, {
             to: address,
             type: "CALL",
-            sigHashes: [directPurchase],
+            sigHashes: [directPurchaseSigHash],
           });
 
-          if (poolCallTrace) {
+          if (callTrace) {
             const iface = new Interface([
               "function directPurchase(tuple(address sellOrderMaker, uint256 sellOrderNftAmount, bytes4 nftAssetClass, bytes nftData, uint256 sellOrderPaymentAmount, address paymentToken, uint256 sellOrderSalt, uint sellOrderStart, uint sellOrderEnd, bytes4 sellOrderDataType, bytes sellOrderData, bytes sellOrderSignature, uint256 buyOrderPaymentAmount, uint256 buyOrderNftAmount, bytes buyOrderData))",
             ]);
-            const result = iface.decodeFunctionData("directPurchase", poolCallTrace.input);
+            const result = iface.decodeFunctionData("directPurchase", callTrace.input);
 
             side = "sell";
             maker = result[0][0];
@@ -131,17 +131,17 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         // Try to parse calldata as directAcceptBid
         try {
-          const poolCallTrace = searchForCall(txTrace.calls, {
+          const callTrace = searchForCall(txTrace.calls, {
             to: address,
             type: "CALL",
-            sigHashes: [directAcceptBid],
+            sigHashes: [directAcceptBidSigHash],
           });
 
-          if (poolCallTrace) {
+          if (callTrace) {
             const iface = new Interface([
               "function directAcceptBid(tuple(address bidMaker, uint256 bidNftAmount, bytes4 nftAssetClass, bytes nftData, uint256 bidPaymentAmount, address paymentToken, uint256 bidSalt, uint bidStart, uint bidEnd, bytes4 bidDataType, bytes bidData, bytes bidSignature, uint256 sellOrderPaymentAmount, uint256 sellOrderNftAmount, bytes sellOrderData) )",
             ]);
-            const result = iface.decodeFunctionData("directAcceptBid", poolCallTrace.input);
+            const result = iface.decodeFunctionData("directAcceptBid", callTrace.input);
 
             side = "buy";
             maker = result[0][0];
@@ -161,17 +161,17 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         // Try to parse calldata as matchOrders
         try {
-          const poolCallTrace = searchForCall(txTrace.calls, {
+          const callTrace = searchForCall(txTrace.calls, {
             to: address,
             type: "CALL",
-            sigHashes: [matchOrders],
+            sigHashes: [matchOrdersSigHash],
           });
 
-          if (poolCallTrace) {
+          if (callTrace) {
             const iface = new Interface([
               "function matchOrders(tuple(address maker, tuple(tuple(bytes4 assetClass, bytes data) assetType, uint256 value) makeAsset, address taker, tuple(tuple(bytes4 assetClass, bytes data) assetType, uint256 value) takeAsset, uint256 salt, uint256 start, uint256 end, bytes4 dataType, bytes data) orderLeft, bytes signatureLeft, tuple(address maker, tuple(tuple(bytes4 assetClass, bytes data) assetType, uint256 value) makeAsset, address taker, tuple(tuple(bytes4 assetClass, bytes data) assetType, uint256 value) takeAsset, uint256 salt, uint256 start, uint256 end, bytes4 dataType, bytes data) orderRight, bytes signatureRight)",
             ]);
-            const result = iface.decodeFunctionData("matchOrders", poolCallTrace.input);
+            const result = iface.decodeFunctionData("matchOrders", callTrace.input);
             const orderLeft = result.orderLeft;
             const leftAsset = orderLeft.makeAsset;
             const rightAsset = orderLeft.takeAsset;
