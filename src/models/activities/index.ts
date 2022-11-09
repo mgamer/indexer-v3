@@ -69,7 +69,7 @@ export class Activities {
   ) {
     let eventTimestamp;
     let id;
-    let metadataQuery;
+    let metadataQuery = "";
 
     if (includeMetadata) {
       const orderMetadataBuildQuery = `
