@@ -300,7 +300,7 @@ export const getOrdersBidsV4Options: RouteOptions = {
           orders.currency,
           orders.currency_price,
           orders.currency_value,
-          ordes.normalized_value,
+          orders.normalized_value,
           orders.currency_normalized_value,
           DATE_PART('epoch', LOWER(orders.valid_between)) AS valid_from,
           COALESCE(
