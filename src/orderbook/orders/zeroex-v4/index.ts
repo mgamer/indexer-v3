@@ -335,7 +335,12 @@ export const save = async (
 
       // Handle: source
       const sources = await Sources.getInstance();
-      const source = metadata.source ? await sources.getOrInsert(metadata.source) : undefined;
+      let source = metadata.source ? await sources.getOrInsert(metadata.source) : undefined;
+
+      // If we have cbOrderId this is a coinbase order
+      if (order.params.cbOrderId) {
+        source = await sources.getOrInsert("nft.coinbase.com");
+      }
 
       // Handle: native Reservoir orders
       const isReservoir = true;
