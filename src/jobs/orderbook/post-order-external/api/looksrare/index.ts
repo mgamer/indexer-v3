@@ -45,7 +45,7 @@ export const postOrder = async (order: Sdk.LooksRare.Order, apiKey: string) => {
     .catch((error) => {
       if (error.response) {
         logger.error(
-          "LOOKSRARE_ORDERBOOK_API",
+          "looksrare_orderbook_api",
           `Failed to post order to LooksRare. order=${JSON.stringify(order)}, status: ${
             error.response.status
           }, data:${JSON.stringify(error.response.data)}`
