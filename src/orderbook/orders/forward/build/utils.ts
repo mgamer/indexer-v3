@@ -46,7 +46,6 @@ export const getBuildInfo = async (
 
   const buildParams: BaseBuildParams = {
     maker: options.maker,
-    side: "buy",
     tokenKind: collectionResult.kind,
     contract: options.contract,
     unitPrice: options.weiPrice,

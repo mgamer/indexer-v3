@@ -7,19 +7,17 @@ import { EventData } from "@/events-sync/data";
 export const orderFilled: EventData = {
   kind: "forward-order-filled",
   addresses: { [Forward.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
-  topic: "0xf69762fa159688f7cf5a8c379cf161c98ad673556144e57a0a5412824f9bcfae",
+  topic: "0x93a10e2a77b61344921f8b6c0860010fc8f365f97a0f7bc5d077a0941522b562",
   numTopics: 1,
   abi: new Interface([
     `event OrderFilled(
       bytes32 orderHash,
-      uint8 side,
-      uint8 itemKind,
       address maker,
       address taker,
       address token,
       uint256 identifier,
-      uint256 unitPrice,
-      uint128 amount
+      uint128 filledAmount,
+      uint256 unitPrice
     )`,
   ]),
 };

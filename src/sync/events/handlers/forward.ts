@@ -39,7 +39,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
       case "forward-order-filled": {
         const { args } = eventData.abi.parseLog(log);
         const orderHash = args.orderHash.toLowerCase();
-        const side = args.side;
         const maker = args.maker.toLowerCase();
         let taker = args.taker.toLowerCase();
         const token = args.token.toLowerCase();
@@ -63,10 +62,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         // Handle: prices
 
-        const currency =
-          side === Sdk.Forward.Types.Side.BID
-            ? Sdk.Common.Addresses.Weth[config.chainId]
-            : Sdk.Common.Addresses.Eth[config.chainId];
+        const currency = Sdk.Common.Addresses.Weth[config.chainId];
         const currencyPrice = unitPrice;
         const priceData = await getUSDAndNativePrices(
           currency,
@@ -78,12 +74,11 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           break;
         }
 
-        const orderSide = side === Sdk.Forward.Types.Side.BID ? "buy" : "sell";
         const orderId = orderHash;
         fillEventsPartial.push({
           orderKind,
           orderId,
-          orderSide,
+          orderSide: "buy",
           maker,
           taker,
           price: priceData.nativePrice,
@@ -102,7 +97,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         fillInfos.push({
           context: `${orderId}-${baseEventParams.txHash}`,
           orderId: orderId,
-          orderSide,
+          orderSide: "buy",
           contract: token,
           tokenId: identifier,
           amount: amount,
@@ -138,11 +133,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const orderId = parsedLog.args["orderHash"].toLowerCase();
 
         cancelEvents.push({
-          // TODO: Review comment
-          // The order kind might be wrong (eg. no way to differentiate between
-          // 'forward' and 'forward-internal') but it doesn't matter because we
-          // have the orders uniquely identified by the id (regardless of their
-          // kind) - so we just use "forward" here by default
           orderKind: "forward",
           orderId,
           baseEventParams,
@@ -170,10 +160,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const newCounter = parsedLog.args["newCounter"].toString();
 
         bulkCancelEvents.push({
-          // TODO: Review comment
-          // When validating the counter for any 'forward' order, we should
-          // always make sure to check against the 'forward' order kind and
-          // not against 'forward-internal'
           orderKind: "forward",
           maker,
           minNonce: newCounter,

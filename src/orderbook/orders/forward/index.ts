@@ -65,14 +65,6 @@ export const save = async (
         });
       }
 
-      // Check: order is a bid
-      if (order.params.side !== Sdk.Forward.Types.Side.BID) {
-        return results.push({
-          id,
-          status: "unsupported-side",
-        });
-      }
-
       // Check: order is valid
       try {
         order.checkValidity();
@@ -217,6 +209,9 @@ export const save = async (
         dynamic: null,
         raw_data: order.params,
         expiration: validTo,
+        missing_royalties: null,
+        normalized_value: null,
+        currency_normalized_value: null,
       });
 
       const unfillable =
