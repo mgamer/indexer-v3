@@ -101,11 +101,15 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         // Rarible has 3 fill functions: directPurchase, directAcceptBid and matchOrders.
         // Try to parse calldata as directPurchase
         try {
-          const callTrace = searchForCall(txTrace.calls, {
-            to: address,
-            type: "CALL",
-            sigHashes: [directPurchaseSigHash],
-          });
+          const callTrace = searchForCall(
+            txTrace.calls,
+            {
+              to: address,
+              type: "CALL",
+              sigHashes: [directPurchaseSigHash],
+            },
+            baseEventParams.logIndex
+          );
 
           if (callTrace) {
             const iface = new Interface([
@@ -131,11 +135,15 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         // Try to parse calldata as directAcceptBid
         try {
-          const callTrace = searchForCall(txTrace.calls, {
-            to: address,
-            type: "CALL",
-            sigHashes: [directAcceptBidSigHash],
-          });
+          const callTrace = searchForCall(
+            txTrace.calls,
+            {
+              to: address,
+              type: "CALL",
+              sigHashes: [directAcceptBidSigHash],
+            },
+            baseEventParams.logIndex
+          );
 
           if (callTrace) {
             const iface = new Interface([
@@ -161,11 +169,15 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         // Try to parse calldata as matchOrders
         try {
-          const callTrace = searchForCall(txTrace.calls, {
-            to: address,
-            type: "CALL",
-            sigHashes: [matchOrdersSigHash],
-          });
+          const callTrace = searchForCall(
+            txTrace.calls,
+            {
+              to: address,
+              type: "CALL",
+              sigHashes: [matchOrdersSigHash],
+            },
+            baseEventParams.logIndex
+          );
 
           if (callTrace) {
             const iface = new Interface([
