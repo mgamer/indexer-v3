@@ -48,13 +48,6 @@ if (config.doBackgroundWork) {
         try {
           const { cursor, sequenceNumber } = await getSequenceInfo(kind);
 
-          logger.info(
-            QUEUE_NAME,
-            `Export started. kind:${kind}, cursor:${JSON.stringify(
-              cursor
-            )}, sequenceNumber:${sequenceNumber}`
-          );
-
           const cursorHash = crypto.createHash("sha256").update(stringify(cursor)).digest("hex");
           const lastCursorHash = await redis.get(`${QUEUE_NAME}-${kind}-last-cursor`);
 
