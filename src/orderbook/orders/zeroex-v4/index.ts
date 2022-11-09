@@ -179,7 +179,9 @@ export const save = async (
 
       // Check: order has a valid signature
       try {
-        order.checkSignature();
+        if (!order.params.cbOrderId) {
+          order.checkSignature();
+        }
       } catch {
         return results.push({
           id,
