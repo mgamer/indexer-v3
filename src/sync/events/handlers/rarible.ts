@@ -29,6 +29,9 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
   // Keep track of all events within the currently processing transaction
   let currentTx: string | undefined;
   let currentTxLogs: Log[] = [];
+  const eventsLog = {
+    match: new Map<string, number>(),
+  };
 
   // Handle the events
   for (const { kind, baseEventParams, log } of events) {
@@ -169,6 +172,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         // Try to parse calldata as matchOrders
         try {
+          const eventRank = eventsLog.match.get(`${txHash}-${address}`) ?? 0;
           const callTrace = searchForCall(
             txTrace.calls,
             {
@@ -176,7 +180,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               type: "CALL",
               sigHashes: [matchOrdersSigHash],
             },
-            baseEventParams.logIndex
+            eventRank
           );
 
           if (callTrace) {
@@ -206,6 +210,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               );
               paymentCurrency = decodedCurrencyAsset[0][0];
             }
+
+            eventsLog.match.set(`${txHash}-${address}`, eventRank + 1);
           }
         } catch {
           // tx data doesn't match matchOrders
