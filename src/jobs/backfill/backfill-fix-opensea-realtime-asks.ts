@@ -1803,8 +1803,8 @@ if (config.doBackgroundWork) {
               `,
             {
               orderId: sellOrder.id,
-              fixedPrice,
-              fixedCurrencyPrice,
+              fixedPrice: fixedPrice.toString(),
+              fixedCurrencyPrice: fixedCurrencyPrice.toString(),
             }
           );
 
