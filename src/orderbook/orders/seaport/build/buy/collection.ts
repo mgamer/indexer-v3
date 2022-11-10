@@ -4,7 +4,7 @@ import { BaseBuilder } from "@reservoir0x/sdk/dist/seaport/builders/base";
 
 import { redb } from "@/common/db";
 import { redis } from "@/common/redis";
-import { bn, fromBuffer } from "@/common/utils";
+import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as utils from "@/orderbook/orders/seaport/build/utils";
 import { generateSchemaHash } from "@/orderbook/orders/utils";
@@ -62,9 +62,8 @@ export const build = async (options: BuildOrderOptions) => {
       );
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (buildInfo.params as any).merkleRoot = bn(
-        buildCollectionOfferParams.partialParameters.consideration[0].identifierOrCriteria
-      ).toHexString();
+      (buildInfo.params as any).merkleRoot =
+        buildCollectionOfferParams.partialParameters.consideration[0].identifierOrCriteria;
     } else {
       // For up-to-date results we need to compute the corresponding token set id
       // from the tokens table. However, that can be computationally-expensive so
