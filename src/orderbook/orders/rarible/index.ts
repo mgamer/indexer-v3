@@ -301,8 +301,8 @@ export const save = async (
         }
 
         if (originFeesBps) {
-          value = bn(value)
-            .sub(bn(price).mul(bn(originFeesBps)).div(10000))
+          price = bn(price)
+            .add(bn(price).mul(bn(originFeesBps)).div(10000))
             .toString();
         }
       }
