@@ -104,6 +104,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         // Rarible has 3 fill functions: directPurchase, directAcceptBid and matchOrders.
         // Try to parse calldata as directPurchase
         try {
+          const eventRank = eventsLog.match.get(`${txHash}-${address}`) ?? 0;
+
           const callTrace = searchForCall(
             txTrace.calls,
             {
@@ -111,7 +113,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               type: "CALL",
               sigHashes: [directPurchaseSigHash],
             },
-            baseEventParams.logIndex
+            eventRank
           );
 
           if (callTrace) {
@@ -138,6 +140,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         // Try to parse calldata as directAcceptBid
         try {
+          const eventRank = eventsLog.match.get(`${txHash}-${address}`) ?? 0;
+
           const callTrace = searchForCall(
             txTrace.calls,
             {
@@ -145,7 +149,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               type: "CALL",
               sigHashes: [directAcceptBidSigHash],
             },
-            baseEventParams.logIndex
+            eventRank
           );
 
           if (callTrace) {
