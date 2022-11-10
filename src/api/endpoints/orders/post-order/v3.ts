@@ -1,10 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { defaultAbiCoder } from "@ethersproject/abi";
 import { splitSignature } from "@ethersproject/bytes";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
+import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 
+import { inject } from "@/api/index";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import * as orders from "@/orderbook/orders";
@@ -32,7 +35,16 @@ export const postOrderV3Options: RouteOptions = {
       order: Joi.object({
         kind: Joi.string()
           .lowercase()
-          .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2", "universe", "forward")
+          .valid(
+            "opensea",
+            "looks-rare",
+            "zeroex-v4",
+            "seaport",
+            "seaport-forward",
+            "x2y2",
+            "universe",
+            "forward"
+          )
           .required(),
         data: Joi.object().required(),
       }),
@@ -165,6 +177,109 @@ export const postOrderV3Options: RouteOptions = {
           if (!["opensea", "reservoir"].includes(orderbook)) {
             throw new Error("Unknown orderbook");
           }
+
+          const orderInfo: orders.seaport.OrderInfo = {
+            kind: "full",
+            orderParams: order.data,
+            isReservoir: orderbook === "reservoir",
+            metadata: {
+              schema,
+              source: orderbook === "reservoir" ? source : undefined,
+            },
+          };
+
+          const [result] = await orders.seaport.save([orderInfo]);
+
+          if (result.status !== "success") {
+            const error = Boom.badRequest(result.status);
+            error.output.payload.orderId = result.id;
+            throw error;
+          }
+
+          if (orderbook === "opensea") {
+            await postOrderExternal.addToQueue(result.id, order.data, orderbook, orderbookApiKey);
+
+            logger.info(
+              `post-order-${version}-handler`,
+              `orderbook: ${orderbook}, orderData: ${JSON.stringify(order.data)}, orderId: ${
+                result.id
+              }`
+            );
+          }
+
+          return { message: "Success", orderId: result.id };
+        }
+
+        case "seaport-forward": {
+          if (!["opensea", "reservoir"].includes(orderbook)) {
+            throw new Error("Unknown orderbook");
+          }
+
+          const orderComponents = order.data as Sdk.Seaport.Types.OrderComponents;
+          const tokenOffer = orderComponents.offer[0];
+
+          // Forward EIP1271 signature
+          orderComponents.signature = defaultAbiCoder.encode(
+            [
+              `(
+                (
+                  uint8 itemType,
+                  address token,
+                  uint256 identifier,
+                  uint256 amount,
+                  uint256 startTime,
+                  uint256 endTime,
+                  uint256 salt,
+                  (
+                    uint256 amount,
+                    address recipient
+                  ) payments,
+                  bytes signature
+                ) seaportListingDetails,
+                bytes oracleData
+              )`,
+            ],
+            [
+              {
+                seaportListingDetails: {
+                  itemType: tokenOffer.itemType,
+                  token: tokenOffer.token,
+                  identifier: tokenOffer.identifierOrCriteria,
+                  amount: tokenOffer.endAmount,
+                  startTime: orderComponents.startTime,
+                  endTime: orderComponents.endTime,
+                  salt: orderComponents.salt,
+                  payments: orderComponents.consideration.map(({ endAmount, recipient }) => ({
+                    amount: endAmount,
+                    recipient,
+                  })),
+                  signature: orderComponents.signature!,
+                },
+                oracleData: await inject({
+                  method: "POST",
+                  url: `/oracle/collections/floor-ask/v4?token=${tokenOffer.token}:${tokenOffer.identifierOrCriteria}`,
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  payload: { order },
+                })
+                  .then((response) => JSON.parse(response.payload))
+                  .then((response) =>
+                    defaultAbiCoder.encode(
+                      [
+                        `(
+                          bytes32 id,
+                          bytes payload,
+                          uint256 timestamp,
+                          bytes signature
+                        )`,
+                      ],
+                      response.message
+                    )
+                  ),
+              },
+            ]
+          );
 
           const orderInfo: orders.seaport.OrderInfo = {
             kind: "full",

@@ -1,5 +1,6 @@
 import { RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
+
 import { config } from "@/config/index";
 
 type Marketplace = {
@@ -105,6 +106,18 @@ export const getMarketplaces: RouteOptions = {
         orderbook: null,
         orderKind: null,
         listingEnabled: false,
+      },
+      {
+        name: "Forward",
+        imageUrl: "https://api.reservoir.tools/redirect/sources/reservoir/logo/v2",
+        fee: {
+          percent: 0,
+          bps: 0,
+        },
+        feeBps: 0,
+        orderbook: "reservoir",
+        orderKind: "seaport-forward",
+        listingEnabled: true,
       },
     ];
 
