@@ -107,18 +107,6 @@ export const getMarketplaces: RouteOptions = {
         orderKind: null,
         listingEnabled: false,
       },
-      {
-        name: "Forward",
-        imageUrl: "https://api.reservoir.tools/redirect/sources/reservoir/logo/v2",
-        fee: {
-          percent: 0,
-          bps: 0,
-        },
-        feeBps: 0,
-        orderbook: "reservoir",
-        orderKind: "seaport-forward",
-        listingEnabled: true,
-      },
     ];
 
     marketplaces.forEach((marketplace) => {
