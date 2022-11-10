@@ -47,6 +47,7 @@ export declare type PartialOrderComponents = {
   contract: string;
   tokenId?: string;
   offerer: string;
+  taker?: string;
   isDynamic?: boolean;
   collectionSlug: string;
   attributeKey?: string;
@@ -773,7 +774,7 @@ export const save = async (
         consideration_bundle_id: null,
         bundle_kind: null,
         maker: toBuffer(orderParams.offerer),
-        taker: toBuffer(AddressZero),
+        taker: orderParams.taker ? toBuffer(orderParams.taker) : toBuffer(AddressZero),
         price: price.toString(),
         value: value.toString(),
         currency: toBuffer(orderParams.paymentToken),

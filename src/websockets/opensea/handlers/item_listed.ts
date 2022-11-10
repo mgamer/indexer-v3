@@ -27,6 +27,7 @@ export const handleEvent = (payload: ItemListedEventPayload): PartialOrderCompon
     contract,
     tokenId,
     offerer: payload.maker.address,
+    taker: payload.taker?.address,
     isDynamic: !_.isNull(payload.listing_type),
     collectionSlug: payload.collection.slug,
   };
