@@ -3,12 +3,14 @@
 import { splitSignature } from "@ethersproject/bytes";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
+import { EventType } from "@opensea/stream-js";
 import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import * as orders from "@/orderbook/orders";
+import { handleEvent } from "@/websockets/opensea/index";
 
 import * as postOrderExternal from "@/jobs/orderbook/post-order-external";
 
@@ -203,9 +205,14 @@ export const postOrderV2Options: RouteOptions = {
             throw new Error("Unsupported orderbook");
           }
 
+          const orderParams = handleEvent(order.data.event_type as EventType, order.data.payload);
+          if (!orderParams) {
+            throw new Error("Could not parse order");
+          }
+
           const orderInfo: orders.seaport.OrderInfo = {
             kind: "partial",
-            orderParams: order.data,
+            orderParams,
           };
 
           const [result] = await orders.seaport.save([orderInfo]);

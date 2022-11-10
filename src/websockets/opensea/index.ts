@@ -77,7 +77,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
   );
 }
 
-const handleEvent = (type: EventType, payload: unknown): PartialOrderComponents | null => {
+export const handleEvent = (type: EventType, payload: unknown): PartialOrderComponents | null => {
   switch (type) {
     case EventType.ITEM_LISTED:
       return handleItemListedEvent(payload as ItemListedEventPayload);
