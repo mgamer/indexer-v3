@@ -32,7 +32,7 @@ export const postOrderV2Options: RouteOptions = {
       order: Joi.object({
         kind: Joi.string()
           .lowercase()
-          .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2")
+          .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "seaport-partial", "x2y2")
           .required(),
         data: Joi.object().required(),
       }),
@@ -145,6 +145,12 @@ export const postOrderV2Options: RouteOptions = {
               source,
             },
           };
+
+          // Only the relayer can post Coinbase NFT orders
+          if (orderInfo.orderParams.cbOrderId) {
+            throw new Error("Unauthorized");
+          }
+
           const [result] = await orders.zeroExV4.save([orderInfo]);
           if (result.status === "success") {
             return { message: "Success", orderId: result.id };
@@ -187,6 +193,27 @@ export const postOrderV2Options: RouteOptions = {
                 result.id
               }`
             );
+          }
+
+          return { message: "Success", orderId: result.id };
+        }
+
+        case "seaport-partial": {
+          if (!["reservoir"].includes(orderbook)) {
+            throw new Error("Unsupported orderbook");
+          }
+
+          const orderInfo: orders.seaport.OrderInfo = {
+            kind: "partial",
+            orderParams: order.data,
+          };
+
+          const [result] = await orders.seaport.save([orderInfo]);
+
+          if (result.status !== "success") {
+            const error = Boom.badRequest(result.status);
+            error.output.payload.orderId = result.id;
+            throw error;
           }
 
           return { message: "Success", orderId: result.id };
