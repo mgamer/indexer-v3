@@ -59,7 +59,7 @@ if (config.doBackgroundWork) {
 export const addToQueue = async (
   contract: string,
   tokenId: string,
-  delay = 60 * 60 * 1000,
+  delay = 60 * 60 * 24 * 1000,
   forceRefresh = false
 ) => {
   const token = `${contract}:${tokenId}`;
