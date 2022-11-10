@@ -42,9 +42,9 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const maker = args.maker.toLowerCase();
         let taker = args.taker.toLowerCase();
         const token = args.token.toLowerCase();
+        const amount = args.filledAmount.toString();
         const identifier = args.identifier.toString();
         const unitPrice = args.unitPrice.toString();
-        const amount = args.amount.toString();
 
         // Handle: attribution
 
