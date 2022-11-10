@@ -88,7 +88,9 @@ export type EventDataKind =
   | "universe-cancel"
   | "nftx-redeemed"
   | "nftx-minted"
-  | "blur-orders-matched";
+  | "blur-orders-matched"
+  | "blur-order-cancelled"
+  | "blur-nonce-incremented";
 
 export type EventData = {
   kind: EventDataKind;
@@ -162,6 +164,8 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
       nftx.minted,
       nftx.redeemed,
       blur.ordersMatched,
+      blur.orderCancelled,
+      blur.nonceIncremented,
     ];
   } else {
     return (
@@ -298,6 +302,10 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return nftx.redeemed;
     case "blur-orders-matched":
       return blur.ordersMatched;
+    case "blur-order-cancelled":
+      return blur.orderCancelled;
+    case "blur-nonce-incremented":
+      return blur.nonceIncremented;
     default:
       return undefined;
   }
