@@ -283,7 +283,7 @@ export const save = async (
 
       // For sell orders, the value is the same as the price
       let value = price;
-      // For buy orders, we set the value as `price - fee` since it
+      // For orders, we set the value as `price - fee` since it
       // is best for UX to show the user exactly what they're going
       // to receive on offer acceptance.
       const collectionFeeBps = collectionRoyalties
@@ -298,25 +298,16 @@ export const save = async (
       const originFeesBps = originFees
         .map(({ bps }) => bps)
         .reduce((a, b) => Number(a) + Number(b), 0);
+
+      // Depending on the order side the originFees are either
+      // added to price the buyer pays when it's a buy order and
+      // subtracted from the value the seller receives when it's a sell order
       if (originFeesBps) {
         if (side === "buy") {
           price = bn(price)
             .add(bn(price).mul(bn(originFeesBps)).div(10000))
             .toString();
         } else if (side === "sell") {
-          value = bn(value)
-            .sub(bn(price).mul(bn(originFeesBps)).div(10000))
-            .toString();
-        }
-      }
-      if (side === "buy") {
-        if (originFeesBps) {
-          price = bn(price)
-            .add(bn(price).mul(bn(originFeesBps)).div(10000))
-            .toString();
-        }
-      } else if (side === "sell") {
-        if (originFeesBps) {
           value = bn(value)
             .sub(bn(price).mul(bn(originFeesBps)).div(10000))
             .toString();
