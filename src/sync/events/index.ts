@@ -1,13 +1,9 @@
-import { defaultAbiCoder } from "@ethersproject/abi";
 import { Filter } from "@ethersproject/abstract-provider";
-import * as Sdk from "@reservoir0x/sdk";
 import _ from "lodash";
 import pLimit from "p-limit";
 
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn } from "@/common/utils";
-import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { EventDataKind, getEventData } from "@/events-sync/data";
 import { EnhancedEvent } from "@/events-sync/handlers/utils";
@@ -19,7 +15,6 @@ import { parseEvent } from "@/events-sync/parser";
 import * as es from "@/events-sync/storage";
 import * as syncEventsUtils from "@/events-sync/utils";
 import * as blocksModel from "@/models/blocks";
-import { getUSDAndNativePrices } from "@/utils/prices";
 
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
@@ -146,122 +141,6 @@ export const syncEvents = async (
             log,
           });
         }
-
-        // TODO: Remove
-        switch (eventData?.kind) {
-          // Rarible
-          case "rarible-match": {
-            const { args } = eventData.abi.parseLog(log);
-            const leftHash = args["leftHash"].toLowerCase();
-            const leftMaker = args["leftMaker"].toLowerCase();
-            let taker = args["rightMaker"].toLowerCase();
-            const newLeftFill = args["newLeftFill"].toString();
-            const newRightFill = args["newRightFill"].toString();
-            const leftAsset = args["leftAsset"];
-            const rightAsset = args["rightAsset"];
-
-            const ERC20 = "0x8ae85d84";
-            const ETH = "0xaaaebeba";
-            const ERC721 = "0x73ad2146";
-            const ERC1155 = "0x973bb640";
-
-            const assetTypes = [ERC721, ERC1155, ERC20, ETH];
-
-            // Exclude orders with exotic asset types
-            if (
-              !assetTypes.includes(leftAsset.assetClass) ||
-              !assetTypes.includes(rightAsset.assetClass)
-            ) {
-              break;
-            }
-
-            // Assume the left order is the maker's order
-            const side = [ERC721, ERC1155].includes(leftAsset.assetClass) ? "sell" : "buy";
-
-            const currencyAsset = side === "sell" ? rightAsset : leftAsset;
-            const nftAsset = side === "sell" ? leftAsset : rightAsset;
-
-            // Handle: attribution
-
-            const orderKind = eventData.kind.startsWith("universe") ? "universe" : "rarible";
-            const data = await syncEventsUtils.extractAttributionData(
-              baseEventParams.txHash,
-              orderKind
-            );
-            if (data.taker) {
-              taker = data.taker;
-            }
-
-            // Handle: prices
-
-            let currency: string;
-            if (currencyAsset.assetClass === ETH) {
-              currency = Sdk.Common.Addresses.Eth[config.chainId];
-            } else if (currencyAsset.assetClass === ERC20) {
-              const decodedCurrencyAsset = defaultAbiCoder.decode(
-                ["(address token)"],
-                currencyAsset.data
-              );
-              currency = decodedCurrencyAsset[0][0];
-            } else {
-              break;
-            }
-
-            const decodedNftAsset = defaultAbiCoder.decode(
-              ["(address token, uint tokenId)"],
-              nftAsset.data
-            );
-
-            const contract = decodedNftAsset[0][0].toLowerCase();
-            const tokenId = decodedNftAsset[0][1].toString();
-
-            let currencyPrice = side === "sell" ? newLeftFill : newRightFill;
-            const amount = side === "sell" ? newRightFill : newLeftFill;
-            currencyPrice = bn(currencyPrice).div(amount).toString();
-
-            const prices = await getUSDAndNativePrices(
-              currency.toLowerCase(),
-              currencyPrice,
-              baseEventParams.timestamp
-            );
-            if (!prices.nativePrice) {
-              // We must always have the native price
-              break;
-            }
-            fillEventsPartial.push({
-              orderKind,
-              orderId: leftHash,
-              orderSide: side,
-              maker: leftMaker,
-              taker,
-              price: prices.nativePrice,
-              currency,
-              currencyPrice,
-              usdPrice: prices.usdPrice,
-              contract,
-              tokenId,
-              amount,
-              orderSourceId: data.orderSource?.id,
-              aggregatorSourceId: data.aggregatorSource?.id,
-              fillSourceId: data.fillSource?.id,
-              baseEventParams,
-            });
-
-            fillInfos.push({
-              context: leftHash,
-              orderId: leftHash,
-              orderSide: side,
-              contract,
-              tokenId,
-              amount,
-              price: prices.nativePrice,
-              timestamp: baseEventParams.timestamp,
-            });
-
-            break;
-          }
-        }
-        // TODO: Remove
       } catch (error) {
         logger.info("sync-events", `Failed to handle events: ${error}`);
         throw error;
@@ -389,6 +268,10 @@ export const syncEvents = async (
         kind: "universe",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("universe")),
         backfill,
+      },
+      {
+        kind: "rarible",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("rarible")),
       },
     ]);
 

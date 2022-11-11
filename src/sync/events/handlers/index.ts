@@ -18,6 +18,7 @@ import * as x2y2 from "@/events-sync/handlers/x2y2";
 import * as zeroExV4 from "@/events-sync/handlers/zeroex-v4";
 import * as zora from "@/events-sync/handlers/zora";
 import * as universe from "@/events-sync/handlers/universe";
+import * as rarible from "@/events-sync/handlers/rarible";
 
 export type EventsInfo = {
   kind:
@@ -38,7 +39,8 @@ export type EventsInfo = {
     | "x2y2"
     | "zeroex-v4"
     | "zora"
-    | "universe";
+    | "universe"
+    | "rarible";
   events: EnhancedEvent[];
   backfill?: boolean;
 };
@@ -133,6 +135,11 @@ export const processEvents = async (info: EventsInfo) => {
 
     case "universe": {
       data = await universe.handleEvents(info.events);
+      break;
+    }
+
+    case "rarible": {
+      data = await rarible.handleEvents(info.events);
       break;
     }
   }
