@@ -71,7 +71,9 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
       case "rarible-match": {
         const { args } = eventData.abi.parseLog(log);
         const leftHash = args["leftHash"].toLowerCase();
-
+        const rightHash = args["rightHash"].toLowerCase();
+        const newLeftFill = args["newLeftFill"].toString();
+        const newRightFill = args["newRightFill"].toString();
         const ERC20 = "0x8ae85d84";
         const ETH = "0xaaaebeba";
         const ERC721 = "0x73ad2146";
@@ -94,6 +96,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         let paymentCurrency = "";
         let amount = "";
         let currencyPrice = "";
+        let orderId = "";
 
         const txHash = baseEventParams.txHash;
         const address = baseEventParams.address;
@@ -125,7 +128,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               "function directPurchase(tuple(address sellOrderMaker, uint256 sellOrderNftAmount, bytes4 nftAssetClass, bytes nftData, uint256 sellOrderPaymentAmount, address paymentToken, uint256 sellOrderSalt, uint sellOrderStart, uint sellOrderEnd, bytes4 sellOrderDataType, bytes sellOrderData, bytes sellOrderSignature, uint256 buyOrderPaymentAmount, uint256 buyOrderNftAmount, bytes buyOrderData))",
             ]);
             const result = iface.decodeFunctionData("directPurchase", callTrace.input);
-
+            orderId = rightHash;
             side = "sell";
             maker = result[0][0];
             nftAssetType = result[0][2];
@@ -138,8 +141,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               currencyAssetType = ERC20;
             }
 
-            currencyPrice = args["newLeftFill"].toString();
-            amount = args["newRightFill"].toString();
+            currencyPrice = newLeftFill;
+            amount = newRightFill;
 
             eventsLog.directPurchase.set(`${txHash}-${address}`, eventRank + 1);
           }
@@ -166,6 +169,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               "function directAcceptBid(tuple(address bidMaker, uint256 bidNftAmount, bytes4 nftAssetClass, bytes nftData, uint256 bidPaymentAmount, address paymentToken, uint256 bidSalt, uint bidStart, uint bidEnd, bytes4 bidDataType, bytes bidData, bytes bidSignature, uint256 sellOrderPaymentAmount, uint256 sellOrderNftAmount, bytes sellOrderData) )",
             ]);
             const result = iface.decodeFunctionData("directAcceptBid", callTrace.input);
+            orderId = rightHash;
 
             side = "buy";
             maker = result[0][0];
@@ -179,8 +183,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               currencyAssetType = ERC20;
             }
 
-            currencyPrice = args["newLeftFill"].toString();
-            amount = args["newRightFill"].toString();
+            currencyPrice = newLeftFill;
+            amount = newRightFill;
 
             eventsLog.directAcceptBid.set(`${txHash}-${address}`, eventRank + 1);
           }
@@ -215,6 +219,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             const nftAsset = side === "buy" ? rightAsset : leftAsset;
             const currencyAsset = side === "buy" ? leftAsset : rightAsset;
 
+            orderId = leftHash;
             nftData = nftAsset.assetType.data;
             nftAssetType = nftAsset.assetType.assetClass;
             currencyAssetType = currencyAsset.assetType.assetClass;
@@ -230,10 +235,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             }
 
             // Match order has amount in newLeftFill when it's a buy order and amount in newRightFill when it's sell order
-            amount =
-              side === "buy" ? args["newLeftFill"].toString() : args["newRightFill"].toString();
-            currencyPrice =
-              side === "buy" ? args["newRightFill"].toString() : args["newLeftFill"].toString();
+            amount = side === "buy" ? newLeftFill : newRightFill;
+            currencyPrice = side === "buy" ? newRightFill : newLeftFill;
 
             eventsLog.matchOrders.set(`${txHash}-${address}`, eventRank + 1);
           }
@@ -279,7 +282,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         fillEventsPartial.push({
           orderKind,
-          orderId: leftHash,
+          orderId,
           orderSide: side,
           maker,
           taker,
@@ -297,8 +300,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         });
 
         fillInfos.push({
-          context: `${leftHash}-${baseEventParams.txHash}`,
-          orderId: leftHash,
+          context: `${orderId}-${baseEventParams.txHash}`,
+          orderId,
           orderSide: side,
           contract,
           tokenId,
@@ -308,8 +311,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         });
 
         orderInfos.push({
-          context: `filled-${leftHash}-${baseEventParams.txHash}`,
-          id: leftHash,
+          context: `filled-${orderId}-${baseEventParams.txHash}`,
+          id: orderId,
           trigger: {
             kind: "sale",
             txHash: baseEventParams.txHash,
