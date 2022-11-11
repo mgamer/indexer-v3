@@ -1,3 +1,4 @@
+import { Sdk as tmpSdk } from "tmp";
 import * as Sdk from "@reservoir0x/sdk";
 import cron from "node-cron";
 
@@ -100,6 +101,25 @@ export const addPendingOrdersElement = async (
       ...data.map(({ order, schemaHash }) =>
         JSON.stringify({
           kind: "element",
+          data: {
+            ...order.params,
+            schemaHash,
+          },
+        })
+      )
+    );
+  }
+};
+
+export const addPendingOrdersInfinity = async (
+  data: { order: tmpSdk.Infinity.Order; schemaHash?: string; source?: string }[]
+) => {
+  if (config.arweaveRelayerKey && data.length) {
+    await redis.rpush(
+      PENDING_DATA_KEY,
+      ...data.map(({ order, schemaHash }) =>
+        JSON.stringify({
+          kind: "infinity",
           data: {
             ...order.params,
             schemaHash,

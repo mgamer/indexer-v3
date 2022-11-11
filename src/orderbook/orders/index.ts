@@ -10,9 +10,10 @@ export * as zeroExV4 from "@/orderbook/orders/zeroex-v4";
 export * as zora from "@/orderbook/orders/zora";
 export * as universe from "@/orderbook/orders/universe";
 export * as element from "@/orderbook/orders/element";
+export * as infinity from "@/orderbook/orders/infinity";
 
 // Imports
-
+import { Sdk as tmpSdk } from "tmp"; // TODO @joe
 import * as Sdk from "@reservoir0x/sdk";
 import * as SdkTypesV5 from "@reservoir0x/sdk/dist/router/v5/types";
 import * as SdkTypesV6 from "@reservoir0x/sdk/dist/router/v6/types";
@@ -46,7 +47,8 @@ export type OrderKind =
   | "sudoswap"
   | "universe"
   | "nftx"
-  | "blur";
+  | "blur"
+  | "infinity";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -101,6 +103,8 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("nftx.io");
       case "blur":
         return sources.getOrInsert("blur.io");
+      case "infinity":
+        return sources.getOrInsert("infinity.xyz"); // TODO - joe what needs to be done to add infinity to source? do I update the json file?
       case "mint": {
         if (address && mintsSources.has(address)) {
           return sources.getOrInsert(mintsSources.get(address)!);
@@ -208,6 +212,14 @@ export const generateListingDetailsV5 = (
         kind: "universe",
         ...common,
         order: new Sdk.Universe.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "infinity": {
+      return {
+        kind: "infinity",
+        ...common,
+        order: new tmpSdk.Infinity.Order(config.chainId, order.rawData),
       };
     }
 
@@ -322,6 +334,15 @@ export const generateBidDetailsV5 = async (
       };
     }
 
+    case "infinity": {
+      const sdkOrder = new tmpSdk.Infinity.Order(config.chainId, order.rawData);
+      return {
+        kind: "infinity",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
     default: {
       throw new Error("Unsupported order kind");
     }
@@ -424,6 +445,15 @@ export const generateListingDetailsV6 = (
         kind: "universe",
         ...common,
         order: new Sdk.Universe.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "infinity": {
+      const sdkOrder = new tmpSdk.Infinity.Order(config.chainId, order.rawData);
+      return {
+        kind: "infinity",
+        ...common,
+        order: sdkOrder,
       };
     }
 
@@ -546,6 +576,15 @@ export const generateBidDetailsV6 = async (
       const sdkOrder = new Sdk.Universe.Order(config.chainId, order.rawData);
       return {
         kind: "universe",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
+    case "infinity": {
+      const sdkOrder = new tmpSdk.Infinity.Order(config.chainId, order.rawData);
+      return {
+        kind: "infinity",
         ...common,
         order: sdkOrder,
       };
