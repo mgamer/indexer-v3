@@ -35,7 +35,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
         Joi.object({
           kind: Joi.string()
             .lowercase()
-            .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2", "universe")
+            .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2", "universe", "rarible")
             .required(),
           data: Joi.object().required(),
         })
@@ -600,8 +600,10 @@ export const getExecuteBuyV6Options: RouteOptions = {
               : Sdk.Seaport.Addresses.Exchange[config.chainId];
         } else if (listingDetails.every((d) => d.kind === "universe")) {
           conduit = Sdk.Universe.Addresses.Exchange[config.chainId];
+        } else if (listingDetails.every((d) => d.kind === "rarible")) {
+          conduit = Sdk.Rarible.Addresses.Exchange[config.chainId];
         } else {
-          throw new Error("Only Seaport and Universe ERC20 listings are supported");
+          throw new Error("Only Seaport, Universe and Rarible ERC20 listings are supported");
         }
 
         const allowance = await erc20.getAllowance(payload.taker, conduit);
