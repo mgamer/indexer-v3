@@ -289,7 +289,7 @@ export const save = async (
       const collectionFeeBps = collectionRoyalties
         .map(({ bps }) => bps)
         .reduce((a, b) => Number(a) + Number(b), 0);
-      if (collectionFeeBps) {
+      if (collectionFeeBps && side === "buy") {
         value = bn(value)
           .sub(bn(value).mul(bn(collectionFeeBps)).div(10000))
           .toString();
@@ -299,19 +299,11 @@ export const save = async (
         .map(({ bps }) => bps)
         .reduce((a, b) => Number(a) + Number(b), 0);
 
-      // Depending on the order side the originFees are either
-      // added to price the buyer pays when it's a buy order and
-      // subtracted from the value the seller receives when it's a sell order
-      if (originFeesBps) {
-        if (side === "buy") {
-          price = bn(price)
-            .add(bn(price).mul(bn(originFeesBps)).div(10000))
-            .toString();
-        } else if (side === "sell") {
-          value = bn(value)
-            .sub(bn(price).mul(bn(originFeesBps)).div(10000))
-            .toString();
-        }
+      // Origin fees are added on top of the bid price
+      if (originFeesBps && side === "buy") {
+        price = bn(price)
+          .add(bn(price).mul(bn(originFeesBps)).div(10000))
+          .toString();
       }
 
       // Handle: source
