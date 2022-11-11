@@ -125,6 +125,8 @@ export const getTokensFloorAskV3Options: RouteOptions = {
           token_floor_sell_events.tx_timestamp,
           orders.currency,
           orders.dynamic,
+          orders.currency_normalized_value,
+          orders.normalized_value,
           TRUNC(orders.currency_price, 0) AS currency_price,
           extract(epoch from token_floor_sell_events.created_at) AS created_at
         FROM token_floor_sell_events
