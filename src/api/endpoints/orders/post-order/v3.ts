@@ -221,42 +221,39 @@ export const postOrderV3Options: RouteOptions = {
           // Forward EIP1271 signature
           orderComponents.signature = defaultAbiCoder.encode(
             [
-              `(
-                (
-                  uint8 itemType,
-                  address token,
-                  uint256 identifier,
-                  uint256 amount,
-                  uint256 startTime,
-                  uint256 endTime,
-                  uint256 salt,
-                  (
-                    uint256 amount,
-                    address recipient
-                  ) payments,
-                  bytes signature
-                ) seaportListingDetails,
-                bytes oracleData
+              `tuple(
+                tuple(
+                  uint8,
+                  address,
+                  uint256,
+                  uint256,
+                  uint256,
+                  uint256,
+                  uint256,
+                  tuple(uint256,address)[],
+                  bytes
+                ),
+                bytes
               )`,
             ],
             [
-              {
-                seaportListingDetails: {
-                  itemType: tokenOffer.itemType,
-                  token: tokenOffer.token,
-                  identifier: tokenOffer.identifierOrCriteria,
-                  amount: tokenOffer.endAmount,
-                  startTime: orderComponents.startTime,
-                  endTime: orderComponents.endTime,
-                  salt: orderComponents.salt,
-                  payments: orderComponents.consideration.map(({ endAmount, recipient }) => ({
-                    amount: endAmount,
+              [
+                [
+                  tokenOffer.itemType,
+                  tokenOffer.token,
+                  tokenOffer.identifierOrCriteria,
+                  tokenOffer.endAmount,
+                  orderComponents.startTime,
+                  orderComponents.endTime,
+                  orderComponents.salt,
+                  orderComponents.consideration.map(({ endAmount, recipient }) => [
+                    endAmount,
                     recipient,
-                  })),
-                  signature: orderComponents.signature!,
-                },
-                oracleData: await inject({
-                  method: "POST",
+                  ]),
+                  orderComponents.signature!,
+                ],
+                await inject({
+                  method: "GET",
                   url: `/oracle/collections/floor-ask/v4?token=${tokenOffer.token}:${tokenOffer.identifierOrCriteria}`,
                   headers: {
                     "Content-Type": "application/json",
@@ -267,17 +264,24 @@ export const postOrderV3Options: RouteOptions = {
                   .then((response) =>
                     defaultAbiCoder.encode(
                       [
-                        `(
-                          bytes32 id,
-                          bytes payload,
-                          uint256 timestamp,
-                          bytes signature
+                        `tuple(
+                          bytes32,
+                          bytes,
+                          uint256,
+                          bytes
                         )`,
                       ],
-                      response.message
+                      [
+                        [
+                          response.message.id,
+                          response.message.payload,
+                          response.message.timestamp,
+                          response.message.signature,
+                        ],
+                      ]
                     )
                   ),
-              },
+              ],
             ]
           );
 
