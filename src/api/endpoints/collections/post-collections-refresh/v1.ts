@@ -99,7 +99,13 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
           tokenId = _.isEmpty(collection.tokenIdRange) ? "1" : `${collection.tokenIdRange[0]}`;
         }
 
-        await collectionUpdatesMetadata.addToQueue(collection.contract, tokenId, 0, true);
+        await collectionUpdatesMetadata.addToQueue(
+          collection.contract,
+          tokenId,
+          collection.community,
+          0,
+          true
+        );
       } else {
         const isLargeCollection = collection.tokenCount > 30000;
 
@@ -154,6 +160,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
         await collectionUpdatesMetadata.addToQueue(
           collection.contract,
           tokenId,
+          collection.community,
           0,
           payload.overrideCoolDown
         );
