@@ -377,7 +377,7 @@ export const save = async (
         currency_price: price.toString(),
         currency_value: value.toString(),
         needs_conversion: null,
-        quantity_remaining: order.params.nftAmount,
+        quantity_remaining: order.params.nftAmount || "1",
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
         nonce: order.params.nonce,
         source_id_int: source?.id,
