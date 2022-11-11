@@ -118,6 +118,8 @@ export const getAsksEventsV2Options: RouteOptions = {
           order_events.price,
           orders.currency,
           orders.dynamic,
+          orders.currency_normalized_value,
+          orders.normalized_value,
           TRUNC(orders.currency_price, 0) AS currency_price,
           order_events.order_source_id_int,
           coalesce(
