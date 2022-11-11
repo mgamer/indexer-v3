@@ -140,6 +140,16 @@ export const getExecuteCancelV2Options: RouteOptions = {
           break;
         }
 
+        case "rarible": {
+          const order = new Sdk.Rarible.Order(config.chainId, orderResult.raw_data);
+          const exchange = new Sdk.Rarible.Exchange(config.chainId);
+          const { side } = order.getInfo()!;
+          cancelTx = await exchange.cancelOrderTx(order.params);
+          orderSide = side;
+
+          break;
+        }
+
         // TODO: Add support for X2Y2 (it's tricky because of the signature requirement)
 
         default: {
