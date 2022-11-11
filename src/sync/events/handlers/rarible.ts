@@ -30,7 +30,9 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
   let currentTx: string | undefined;
   let currentTxLogs: Log[] = [];
   const eventsLog = {
-    match: new Map<string, number>(),
+    matchOrders: new Map<string, number>(),
+    directPurchase: new Map<string, number>(),
+    directAcceptBid: new Map<string, number>(),
   };
 
   // Handle the events
@@ -90,6 +92,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         let nftData = "";
         let maker = "";
         let paymentCurrency = "";
+        let amount = "";
+        let currencyPrice = "";
 
         const txHash = baseEventParams.txHash;
         const address = baseEventParams.address;
@@ -104,7 +108,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         // Rarible has 3 fill functions: directPurchase, directAcceptBid and matchOrders.
         // Try to parse calldata as directPurchase
         try {
-          const eventRank = eventsLog.match.get(`${txHash}-${address}`) ?? 0;
+          const eventRank = eventsLog.directPurchase.get(`${txHash}-${address}`) ?? 0;
 
           const callTrace = searchForCall(
             txTrace.calls,
@@ -133,6 +137,11 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             } else {
               currencyAssetType = ERC20;
             }
+
+            currencyPrice = args["newLeftFill"].toString();
+            amount = args["newRightFill"].toString();
+
+            eventsLog.directPurchase.set(`${txHash}-${address}`, eventRank + 1);
           }
         } catch {
           // tx data doesn't match directPurchase
@@ -140,7 +149,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         // Try to parse calldata as directAcceptBid
         try {
-          const eventRank = eventsLog.match.get(`${txHash}-${address}`) ?? 0;
+          const eventRank = eventsLog.directAcceptBid.get(`${txHash}-${address}`) ?? 0;
 
           const callTrace = searchForCall(
             txTrace.calls,
@@ -169,6 +178,11 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             } else {
               currencyAssetType = ERC20;
             }
+
+            currencyPrice = args["newLeftFill"].toString();
+            amount = args["newRightFill"].toString();
+
+            eventsLog.directAcceptBid.set(`${txHash}-${address}`, eventRank + 1);
           }
         } catch {
           // tx data doesn't match directAcceptBid
@@ -176,7 +190,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         // Try to parse calldata as matchOrders
         try {
-          const eventRank = eventsLog.match.get(`${txHash}-${address}`) ?? 0;
+          const eventRank = eventsLog.matchOrders.get(`${txHash}-${address}`) ?? 0;
           const callTrace = searchForCall(
             txTrace.calls,
             {
@@ -215,7 +229,13 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               paymentCurrency = decodedCurrencyAsset[0][0];
             }
 
-            eventsLog.match.set(`${txHash}-${address}`, eventRank + 1);
+            // Match order has amount in newLeftFill when it's a buy order and amount in newRightFill when it's sell order
+            amount =
+              side === "buy" ? args["newLeftFill"].toString() : args["newRightFill"].toString();
+            currencyPrice =
+              side === "buy" ? args["newRightFill"].toString() : args["newLeftFill"].toString();
+
+            eventsLog.matchOrders.set(`${txHash}-${address}`, eventRank + 1);
           }
         } catch {
           // tx data doesn't match matchOrders
@@ -244,10 +264,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const decodedNftAsset = defaultAbiCoder.decode(["(address token, uint tokenId)"], nftData);
         const contract = decodedNftAsset[0][0].toLowerCase();
         const tokenId = decodedNftAsset[0][1].toString();
-        const amount =
-          side === "buy" ? args["newLeftFill"].toString() : args["newRightFill"].toString();
-        let currencyPrice =
-          side === "buy" ? args["newRightFill"].toString() : args["newLeftFill"].toString();
 
         currencyPrice = bn(currencyPrice).div(amount).toString();
 
