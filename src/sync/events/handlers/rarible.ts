@@ -128,13 +128,13 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               "function directPurchase(tuple(address sellOrderMaker, uint256 sellOrderNftAmount, bytes4 nftAssetClass, bytes nftData, uint256 sellOrderPaymentAmount, address paymentToken, uint256 sellOrderSalt, uint sellOrderStart, uint sellOrderEnd, bytes4 sellOrderDataType, bytes sellOrderData, bytes sellOrderSignature, uint256 buyOrderPaymentAmount, uint256 buyOrderNftAmount, bytes buyOrderData))",
             ]);
             const result = iface.decodeFunctionData("directPurchase", callTrace.input);
-            orderId = rightHash;
+            orderId = leftHash;
             side = "sell";
-            maker = result[0][0];
+            maker = result[0][0].toLowerCase();
             nftAssetType = result[0][2];
             nftData = result[0][3];
 
-            paymentCurrency = result[0][5];
+            paymentCurrency = result[0][5].toLowerCase();
             if (paymentCurrency === constants.AddressZero) {
               currencyAssetType = ETH;
             } else {
@@ -172,11 +172,11 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             orderId = rightHash;
 
             side = "buy";
-            maker = result[0][0];
+            maker = result[0][0].toLowerCase();
             nftAssetType = result[0][2];
             nftData = result[0][3];
 
-            paymentCurrency = result[0][5];
+            paymentCurrency = result[0][5].toLowerCase();
             if (paymentCurrency === constants.AddressZero) {
               currencyAssetType = ETH;
             } else {
@@ -231,7 +231,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
                 ["(address token)"],
                 currencyAsset.assetType.data
               );
-              paymentCurrency = decodedCurrencyAsset[0][0];
+              paymentCurrency = decodedCurrencyAsset[0][0].toLowerCase();
             }
 
             // Match order has amount in newLeftFill when it's a buy order and amount in newRightFill when it's sell order
