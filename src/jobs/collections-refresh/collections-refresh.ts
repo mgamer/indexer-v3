@@ -61,7 +61,10 @@ if (config.doBackgroundWork) {
       // Get top collections by volume
       collections = collections.concat(await Collections.getTopCollectionsByVolume());
 
-      const contracts = _.map(collections, (collection) => collection.contract);
+      const contracts = _.map(collections, (collection) => ({
+        contract: collection.contract,
+        community: collection.community,
+      }));
       await collectionUpdatesMetadata.addToQueue(contracts);
     },
     { connection: redis.duplicate(), concurrency: 1 }
