@@ -272,8 +272,24 @@ export const getTokensV5Options: RouteOptions = {
       t.floor_sell_currency_value
     `;
 
+    let normalizeRoyaltiesQuery = "";
+    let selectNormalizeRoyaltiesData = "";
+    if (query.normalizeRoyalties) {
+      selectNormalizeRoyaltiesData = ",r.*";
+      normalizeRoyaltiesQuery = `
+        LEFT JOIN LATERAL (
+          SELECT o.currency_value AS floor_sell_currency_value,
+                 o.normalized_value AS floor_sell_normalized_value
+          FROM orders o
+          WHERE o.id = t.floor_sell_id
+        ) r ON TRUE
+      `;
+    }
+
     let sourceQuery = "";
     if (query.source) {
+      normalizeRoyaltiesQuery = "";
+      selectNormalizeRoyaltiesData = "";
       const sources = await Sources.getInstance();
       let source = sources.getByName(query.source, false);
       if (!source) {
@@ -351,11 +367,13 @@ export const getTokensV5Options: RouteOptions = {
               AND nb.amount > 0
             LIMIT 1
           ) AS owner
+          ${selectNormalizeRoyaltiesData}
           ${selectAttributes}
           ${selectTopBid}
         FROM tokens t
         ${topBidQuery}
         ${sourceQuery}
+        ${normalizeRoyaltiesQuery}
         JOIN collections c ON t.collection_id = c.id
         JOIN contracts con ON t.contract = con.address
       `;
