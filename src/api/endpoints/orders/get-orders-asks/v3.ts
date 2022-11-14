@@ -266,7 +266,7 @@ export const getOrdersAsksV3Options: RouteOptions = {
           orders.value,
           orders.currency_price,
           orders.currency_value,
-          ordes.normalized_value,
+          orders.normalized_value,
           orders.currency_normalized_value,
           dynamic,
           DATE_PART('epoch', LOWER(orders.valid_between)) AS valid_from,
