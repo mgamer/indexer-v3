@@ -300,6 +300,8 @@ export const getOrdersBidsV4Options: RouteOptions = {
           orders.currency,
           orders.currency_price,
           orders.currency_value,
+          orders.normalized_value,
+          orders.currency_normalized_value,
           DATE_PART('epoch', LOWER(orders.valid_between)) AS valid_from,
           COALESCE(
             NULLIF(DATE_PART('epoch', UPPER(orders.valid_between)), 'Infinity'),
@@ -495,8 +497,10 @@ export const getOrdersBidsV4Options: RouteOptions = {
                 nativeAmount: r.price,
               },
               net: {
-                amount: r.currency_value ?? r.value,
-                nativeAmount: r.value,
+                amount: query.normalizeRoyalties
+                  ? r.currency_normalized_value ?? r.value
+                  : r.currency_value ?? r.value,
+                nativeAmount: query.normalizeRoyalties ? r.normalized_value ?? r.value : r.value,
               },
             },
             r.currency
