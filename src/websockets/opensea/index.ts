@@ -46,7 +46,10 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       // EventType.TRAIT_OFFER
     ],
     async (event) => {
-      const currentTime = event.event_type === "item_listed" ? Math.floor(Date.now() / 1000) : 0;
+      const currentTime =
+        event.event_type === "item_listed" && config.chainId === 1
+          ? Math.floor(Date.now() / 1000)
+          : 0;
 
       if (currentTime % 10 === 0) {
         logger.info(
@@ -74,7 +77,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
   );
 }
 
-const handleEvent = (type: EventType, payload: unknown): PartialOrderComponents | null => {
+export const handleEvent = (type: EventType, payload: unknown): PartialOrderComponents | null => {
   switch (type) {
     case EventType.ITEM_LISTED:
       return handleItemListedEvent(payload as ItemListedEventPayload);

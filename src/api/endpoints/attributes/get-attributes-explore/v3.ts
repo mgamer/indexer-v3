@@ -12,6 +12,10 @@ import { Assets } from "@/utils/assets";
 const version = "v3";
 
 export const getAttributesExploreV3Options: RouteOptions = {
+  cache: {
+    privacy: "public",
+    expiresIn: 10000,
+  },
   description: "Explore attributes",
   notes: "Get detailed aggregate about attributes in a collection, attribute floors",
   tags: ["api", "Attributes"],

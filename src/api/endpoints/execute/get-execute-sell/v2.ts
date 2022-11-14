@@ -130,6 +130,7 @@ export const getExecuteSellV2Options: RouteOptions = {
 
       const bidDetails = await generateBidDetailsV5(
         {
+          id: bestOrderResult.id,
           kind: bestOrderResult.kind,
           rawData: bestOrderResult.raw_data,
         },

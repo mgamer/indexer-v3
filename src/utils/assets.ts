@@ -12,7 +12,7 @@ export class Assets {
 
     if (_.isArray(assets)) {
       const assetsResult = [];
-      for (const asset of assets) {
+      for (const asset of _.filter(assets, (a) => !_.isNull(a))) {
         const queryParams = new URLSearchParams();
         queryParams.append("asset", encrypt(asset));
         assetsResult.push(`${baseUrl}${queryParams.toString()}`);

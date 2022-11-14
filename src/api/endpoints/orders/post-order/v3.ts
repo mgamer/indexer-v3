@@ -145,6 +145,12 @@ export const postOrderV3Options: RouteOptions = {
               source,
             },
           };
+
+          // Only the relayer can post Coinbase NFT orders
+          if (orderInfo.orderParams.cbOrderId) {
+            throw new Error("Unauthorized");
+          }
+
           const [result] = await orders.zeroExV4.save([orderInfo]);
           if (result.status === "success") {
             return { message: "Success", orderId: result.id };

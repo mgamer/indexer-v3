@@ -11,6 +11,10 @@ import { Sources } from "@/models/sources";
 const version = "v1";
 
 export const getSourcesListingsV1Options: RouteOptions = {
+  cache: {
+    privacy: "public",
+    expiresIn: 30000,
+  },
   description: "Collection Source Stats",
   notes: "This API returns aggregated listings info for the given collection per source",
   tags: ["api", "Collections"],

@@ -55,13 +55,32 @@ export const save = async (
         });
       }
 
-      // Handle: get order kind
+      // Handle: get contract kind
       const kind = await commonHelpers.getContractKind(order.params.nft);
       if (!kind) {
         return results.push({
           id,
           status: "unknown-order-kind",
         });
+      }
+
+      // Handle: fix order kind
+      const underlyingOrderKind = order.params.kind!;
+      if (kind !== underlyingOrderKind.split("-")[0]) {
+        // There is no way to differentiate between ERC721 and ERC1155
+        // orders so here we just use the kind of the target contract.
+        // At the SDK, level we differentiate ERC721 and ERC1155 logic
+        // by assuming that any orders that have the `nftAmount` field
+        // set are ERC1155 orders. Below we just enforce this.
+        if (kind === "erc1155") {
+          order.params.kind = ("erc1155-" +
+            underlyingOrderKind.split("-").slice(1).join("-")) as Sdk.ZeroExV4.Types.OrderKind;
+          order.params.nftAmount = order.params.nftAmount ?? "1";
+        } else {
+          order.params.kind = ("erc721-" +
+            underlyingOrderKind.split("-").slice(1).join("-")) as Sdk.ZeroExV4.Types.OrderKind;
+          order.params.nftAmount = undefined;
+        }
       }
 
       // Check: order has unique nonce
@@ -160,7 +179,9 @@ export const save = async (
 
       // Check: order has a valid signature
       try {
-        order.checkSignature();
+        if (!order.params.cbOrderId) {
+          order.checkSignature();
+        }
       } catch {
         return results.push({
           id,
@@ -314,7 +335,12 @@ export const save = async (
 
       // Handle: source
       const sources = await Sources.getInstance();
-      const source = metadata.source ? await sources.getOrInsert(metadata.source) : undefined;
+      let source = metadata.source ? await sources.getOrInsert(metadata.source) : undefined;
+
+      // If we have cbOrderId this is a coinbase order
+      if (order.params.cbOrderId) {
+        source = await sources.getOrInsert("nft.coinbase.com");
+      }
 
       // Handle: native Reservoir orders
       const isReservoir = true;
@@ -351,7 +377,7 @@ export const save = async (
         currency_price: price.toString(),
         currency_value: value.toString(),
         needs_conversion: null,
-        quantity_remaining: order.params.nftAmount,
+        quantity_remaining: order.params.nftAmount || "1",
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
         nonce: order.params.nonce,
         source_id_int: source?.id,

@@ -69,7 +69,7 @@ export class Activities {
   ) {
     let eventTimestamp;
     let id;
-    let metadataQuery;
+    let metadataQuery = "";
 
     if (includeMetadata) {
       const orderMetadataBuildQuery = `
@@ -183,7 +183,7 @@ export class Activities {
             `;
 
     if (byEventTimestamp) {
-      if (!_.isNull(continuation)) {
+      if (!_.isNull(continuation) && continuation !== "null") {
         const sign = sortDirection == "desc" ? "<" : ">";
         [eventTimestamp, id] = splitContinuation(continuation, /^(\d+)_(\d+)$/);
         baseQuery += ` WHERE (event_timestamp, id) ${sign} ($/eventTimestamp/, $/id/)`;
@@ -191,7 +191,7 @@ export class Activities {
 
       baseQuery += ` ORDER BY event_timestamp ${sortDirection}, id ${sortDirection}`;
     } else {
-      if (!_.isNull(continuation)) {
+      if (!_.isNull(continuation) && continuation !== "null") {
         id = continuation;
         const sign = sortDirection == "desc" ? "<" : ">";
         baseQuery += ` WHERE id ${sign} $/id/`;

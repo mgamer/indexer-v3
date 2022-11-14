@@ -5,6 +5,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 
+import { inject } from "@/api/index";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
@@ -27,6 +28,21 @@ export const getExecuteSellV6Options: RouteOptions = {
   validate: {
     payload: Joi.object({
       orderId: Joi.string().lowercase(),
+      rawOrder: Joi.object({
+        kind: Joi.string()
+          .lowercase()
+          .valid(
+            "opensea",
+            "looks-rare",
+            "zeroex-v4",
+            "seaport",
+            "seaport-partial",
+            "x2y2",
+            "universe"
+          )
+          .required(),
+        data: Joi.object().required(),
+      }),
       token: Joi.string()
         .lowercase()
         .pattern(regex.token)
@@ -60,7 +76,9 @@ export const getExecuteSellV6Options: RouteOptions = {
       maxPriorityFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional. Set custom gas price."),
-    }),
+    })
+      .or("token", "orderId", "rawOrder")
+      .oxor("token", "orderId", "rawOrder"),
   },
   response: {
     schema: Joi.object({
@@ -105,7 +123,29 @@ export const getExecuteSellV6Options: RouteOptions = {
 
       const [contract, tokenId] = payload.token.split(":");
 
-      // Scenario 1: explicitly passing an existing order to fill
+      // Scenario 3: pass raw orders that don't yet exist
+      if (payload.rawOrder) {
+        // Hack: As the raw order is processed, set it to the `orderId`
+        // field so that it will get handled by the next pipeline step
+        // of this same API rather than doing anything custom for it.
+        payload.orderId = [];
+
+        const response = await inject({
+          method: "POST",
+          url: `/order/v2`,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          payload: { order: payload.rawOrder },
+        }).then((response) => JSON.parse(response.payload));
+        if (response.orderId) {
+          payload.orderId = response.orderId;
+        } else {
+          throw Boom.badData("Raw order failed to get processed");
+        }
+      }
+
+      // Scenario 2: explicitly pass an order id to fill
       if (payload.orderId) {
         orderResult = await redb.oneOrNone(
           `
@@ -141,7 +181,7 @@ export const getExecuteSellV6Options: RouteOptions = {
           }
         );
       } else {
-        // Fetch the best offer on specified current token
+        // Scenario 3: fetch the best offer on specified current token
         orderResult = await redb.oneOrNone(
           `
             SELECT

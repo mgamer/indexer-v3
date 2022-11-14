@@ -33,7 +33,12 @@ if (config.doBackgroundWork) {
       }
 
       // Get the domain HTML
-      const response = await axios.get(url);
+      const response = await axios.get(url, {
+        headers: {
+          "user-agent":
+            "Mozilla/5.0 (X11; Fedora; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0",
+        },
+      });
       const html = parse(response.data);
 
       // First get the custom reservoir title tag

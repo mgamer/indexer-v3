@@ -53,21 +53,6 @@ if (config.doBackgroundWork) {
       if (!_.isNull(previousPrice) && _.isNull(price)) {
         await Attributes.incrementOnSaleCount(tokenAttributesIds, -1);
         await resyncAttributeCache.addToQueue(contract, tokenId);
-
-        // // Recalculate sell floor price for all relevant attributes
-        // for (const tokenAttribute of tokenAttributes) {
-        //   const { floorSellValue, onSaleCount } = await Tokens.getSellFloorValueAndOnSaleCount(
-        //     tokenAttribute.collectionId,
-        //     tokenAttribute.key,
-        //     tokenAttribute.value
-        //   );
-        //
-        //   await Attributes.update(tokenAttribute.attributeId, {
-        //     floorSellValue,
-        //     onSaleCount,
-        //     sellUpdatedAt: new Date().toISOString(),
-        //   });
-        // }
       }
 
       // Check for new sell floor price
