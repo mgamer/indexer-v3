@@ -1928,10 +1928,14 @@
   resolved "https://registry.yarnpkg.com/@protobufjs/utf8/-/utf8-1.1.0.tgz#a777360b5b39a1a2e5106f8e858f2fd2d060c570"
   integrity sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw==
 
-"@reservoir0x/sdk@0.0.223":
-  version "0.0.223"
-  resolved "https://registry.npmjs.org/@reservoir0x/sdk/-/sdk-0.0.223.tgz#66245f0b77534aa4debce18360a7de6ee5efe6ed"
-  integrity sha512-zCWW56W6XfQ3dEkm0bEwJH8lOPP+tadpeVedRRwAkGfylN+bgjtMMDTsqve2L6vOpdt0X/2N3i/yznvB+XrCwA==
+"@reservoir0x/sdk@/Users/fun/Documents/ios/adbug/blockchain/reservoirprotocol/core-fork/packages/sdk":
+  version "0.0.229"
+  dependencies:
+    ethers "^5.7.2"
+    merkletreejs "0.2.31"
+
+"@reservoir0x/sdk@file:../core-fork/packages/sdk":
+  version "0.0.229"
   dependencies:
     ethers "^5.7.2"
     merkletreejs "0.2.31"
@@ -3929,7 +3933,7 @@ ethers@^5.6.9:
 
 ethers@^5.7.2:
   version "5.7.2"
-  resolved "https://registry.yarnpkg.com/ethers/-/ethers-5.7.2.tgz#3a7deeabbb8c030d4126b24f84e525466145872e"
+  resolved "https://registry.npmjs.org/ethers/-/ethers-5.7.2.tgz#3a7deeabbb8c030d4126b24f84e525466145872e"
   integrity sha512-wswUsmWo1aOK8rR7DIKiWSw9DbLWe6x98Jrn8wcTflTVvaXhAMaB5zGAXy0GYQEQp9iO1iSHWVyARQm11zUtyg==
   dependencies:
     "@ethersproject/abi" "5.7.0"
