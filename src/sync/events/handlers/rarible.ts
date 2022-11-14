@@ -214,6 +214,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             const leftAsset = orderLeft.makeAsset;
             const rightAsset = orderLeft.takeAsset;
 
+            maker = orderLeft.maker.toLowerCase();
             side = [ERC721, ERC1155].includes(leftAsset.assetClass) ? "sell" : "buy";
 
             const nftAsset = side === "buy" ? rightAsset : leftAsset;
