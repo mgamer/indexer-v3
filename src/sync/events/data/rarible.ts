@@ -7,18 +7,22 @@ import { EventData } from "@/events-sync/data";
 export const match: EventData = {
   kind: "rarible-match",
   addresses: { [Rarible.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
-  topic: "0x268820db288a211986b26a8fda86b1e0046281b21206936bb0e61c67b5c79ef4",
+  topic: "0x956cd63ee4cdcd81fda5f0ec7c6c36dceda99e1b412f4a650a5d26055dc3c450",
   numTopics: 1,
   abi: new Interface([
     `event Match(
       bytes32 leftHash,
       bytes32 rightHash,
-      address leftMaker,
-      address rightMaker,
-      uint256 newLeftFill,
-      uint256 newRightFill,
-      (bytes4 assetClass, bytes data) leftAsset,
-      (bytes4 assetClass, bytes data) rightAsset
-    )`,
+      uint newLeftFill,
+      uint newRightFill)
+    `,
   ]),
+};
+
+export const cancel: EventData = {
+  kind: "rarible-cancel",
+  addresses: { [Rarible.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
+  topic: "0xe8d9861dbc9c663ed3accd261bbe2fe01e0d3d9e5f51fa38523b265c7757a93a",
+  numTopics: 1,
+  abi: new Interface([`event Cancel(bytes32 hash)`]),
 };

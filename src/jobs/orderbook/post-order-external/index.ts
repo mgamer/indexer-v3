@@ -235,29 +235,6 @@ const postOrder = async (
           throw new Error("Invalid collection offer.");
         }
 
-        const buildCollectionOfferParams = await OpenSeaApi.buildCollectionOffer(
-          order.params.offerer,
-          1,
-          collectionSlug,
-          orderbookApiKey
-        );
-
-        logger.info(
-          QUEUE_NAME,
-          `Post Order Seaport consideration. orderbook: ${orderbook}, orderId=${orderId}, orderData=${JSON.stringify(
-            orderData
-          )}, side=${order.getInfo()?.side}, kind=${
-            order.params.kind
-          }, consideration=${JSON.stringify(
-            order.params.consideration[0]
-          )}, consideration=${JSON.stringify(
-            buildCollectionOfferParams.partialParameters.consideration[0]
-          )}`
-        );
-
-        order.params.consideration[0].identifierOrCriteria =
-          buildCollectionOfferParams.partialParameters.consideration[0].identifierOrCriteria;
-
         return OpenSeaApi.postCollectionOffer(order, collectionSlug, orderbookApiKey);
       }
 

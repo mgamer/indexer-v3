@@ -207,6 +207,7 @@ export const getExecuteSellV4Options: RouteOptions = {
       ];
       const bidDetails = await generateBidDetailsV5(
         {
+          id: orderResult.id,
           kind: orderResult.kind,
           rawData: orderResult.raw_data,
         },

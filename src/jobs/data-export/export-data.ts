@@ -7,6 +7,8 @@ import { idb } from "@/common/db";
 import { randomUUID } from "crypto";
 import { EOL } from "os";
 import AWS from "aws-sdk";
+import crypto from "crypto";
+import stringify from "json-stable-stringify";
 
 import { AskEventsDataSource } from "@/jobs/data-export/data-sources/ask-events";
 import { TokenFloorAskEventsDataSource } from "@/jobs/data-export/data-sources/token-floor-ask-events";
@@ -46,12 +48,17 @@ if (config.doBackgroundWork) {
         try {
           const { cursor, sequenceNumber } = await getSequenceInfo(kind);
 
-          logger.info(
-            QUEUE_NAME,
-            `Export started. kind:${kind}, cursor:${JSON.stringify(
-              cursor
-            )}, sequenceNumber:${sequenceNumber}`
-          );
+          const cursorHash = crypto.createHash("sha256").update(stringify(cursor)).digest("hex");
+          const lastCursorHash = await redis.get(`${QUEUE_NAME}-${kind}-last-cursor`);
+
+          if (cursorHash === lastCursorHash) {
+            logger.warn(
+              QUEUE_NAME,
+              `Export invalid. kind:${kind}, cursor:${JSON.stringify(
+                cursor
+              )}, sequenceNumber:${sequenceNumber}, cursorHash=${cursorHash}, lastCursorHash=${lastCursorHash}`
+            );
+          }
 
           const { data, nextCursor } = await getDataSource(kind).getSequenceData(
             cursor,
@@ -73,6 +80,11 @@ if (config.doBackgroundWork) {
               sequence
             );
             await setNextSequenceInfo(kind, nextCursor);
+
+            await redis.set(
+              `${QUEUE_NAME}-${kind}-last-cursor`,
+              crypto.createHash("sha256").update(stringify(cursor)).digest("hex")
+            );
           }
 
           // Trigger next sequence only if there are more results
@@ -80,14 +92,25 @@ if (config.doBackgroundWork) {
 
           const timeElapsed = Math.floor((performance.now() - timeBefore) / 1000);
 
-          logger.info(
-            QUEUE_NAME,
-            `Export finished. kind:${kind}, cursor:${JSON.stringify(
-              cursor
-            )}, sequenceNumber:${sequenceNumber}, nextCursor:${JSON.stringify(
-              nextCursor
-            )}, addToQueue=${data.length >= QUERY_LIMIT}, timeElapsed=${timeElapsed}`
-          );
+          if (timeElapsed > 5) {
+            logger.warn(
+              QUEUE_NAME,
+              `Export finished. kind:${kind}, cursor:${JSON.stringify(
+                cursor
+              )}, sequenceNumber:${sequenceNumber}, nextCursor:${JSON.stringify(
+                nextCursor
+              )}, addToQueue=${data.length >= QUERY_LIMIT}, timeElapsed=${timeElapsed}`
+            );
+          } else {
+            logger.info(
+              QUEUE_NAME,
+              `Export finished. kind:${kind}, cursor:${JSON.stringify(
+                cursor
+              )}, sequenceNumber:${sequenceNumber}, nextCursor:${JSON.stringify(
+                nextCursor
+              )}, addToQueue=${data.length >= QUERY_LIMIT}, timeElapsed=${timeElapsed}`
+            );
+          }
         } catch (error) {
           logger.error(QUEUE_NAME, `Export ${kind} failed: ${error}`);
         }

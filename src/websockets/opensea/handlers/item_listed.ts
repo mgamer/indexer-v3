@@ -1,4 +1,4 @@
-import { toTime } from "@/common/utils";
+import { bn, toTime } from "@/common/utils";
 import { getSupportedChainName } from "@/websockets/opensea/utils";
 import { ItemListedEventPayload } from "@opensea/stream-js/dist/types";
 import { PartialOrderComponents } from "@/orderbook/orders/seaport";
@@ -19,7 +19,7 @@ export const handleEvent = (payload: ItemListedEventPayload): PartialOrderCompon
     kind: "single-token",
     side: "sell",
     hash: payload.order_hash,
-    price: payload.base_price,
+    price: bn(payload.base_price).div(payload.quantity).toString(),
     paymentToken: payload.payment_token.address,
     amount: payload.quantity,
     startTime: toTime(payload.listing_date),
@@ -27,6 +27,7 @@ export const handleEvent = (payload: ItemListedEventPayload): PartialOrderCompon
     contract,
     tokenId,
     offerer: payload.maker.address,
+    taker: payload.taker?.address,
     isDynamic: !_.isNull(payload.listing_type),
     collectionSlug: payload.collection.slug,
   };

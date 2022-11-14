@@ -80,7 +80,11 @@ export const postRefreshCollectionOptions: RouteOptions = {
         tokenId = _.isEmpty(collection.tokenIdRange) ? "1" : `${collection.tokenIdRange[0]}`;
       }
 
-      await collectionUpdatesMetadata.addToQueue(collection.contract, tokenId);
+      await collectionUpdatesMetadata.addToQueue(
+        collection.contract,
+        tokenId,
+        collection.community
+      );
 
       // Refresh the contract floor sell and top bid
       await collectionsRefreshCache.addToQueue(collection.contract);

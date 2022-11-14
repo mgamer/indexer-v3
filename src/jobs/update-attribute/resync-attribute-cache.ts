@@ -27,6 +27,11 @@ if (config.doBackgroundWork) {
 
       // Recalculate the number of tokens on sale for each attribute
       for (const tokenAttribute of tokenAttributes) {
+        // Skip attributes with too many tokens
+        if (tokenAttribute.tokenCount > 10000) {
+          continue;
+        }
+
         const { floorSellValue, onSaleCount } = await Tokens.getSellFloorValueAndOnSaleCount(
           tokenAttribute.collectionId,
           tokenAttribute.key,
@@ -59,7 +64,7 @@ if (config.doBackgroundWork) {
 export const addToQueue = async (
   contract: string,
   tokenId: string,
-  delay = 60 * 60 * 1000,
+  delay = 60 * 60 * 24 * 1000,
   forceRefresh = false
 ) => {
   const token = `${contract}:${tokenId}`;

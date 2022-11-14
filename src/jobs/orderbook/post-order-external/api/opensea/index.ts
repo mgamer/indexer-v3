@@ -43,7 +43,7 @@ export const postOrder = async (order: Sdk.Seaport.Order, apiKey: string) => {
     .catch((error) => {
       if (error.response) {
         logger.error(
-          "OPENSEA_ORDERBOOK_API",
+          "opensea_orderbook_api",
           `Failed to post order to OpenSea. order=${JSON.stringify(order)}, status: ${
             error.response.status
           }, data:${JSON.stringify(error.response.data)}`
@@ -60,7 +60,7 @@ export const buildCollectionOffer = async (
   offerer: string,
   quantity: number,
   collectionSlug: string,
-  apiKey: string
+  apiKey = ""
 ) => {
   const url = `https://${
     config.chainId === 5 ? "testnets-api." : "api."
@@ -96,13 +96,13 @@ export const buildCollectionOffer = async (
       .then((response) => response.data as any)
       .catch((error) => {
         logger.error(
-          "OPENSEA_ORDERBOOK_API",
+          "opensea_orderbook_api",
           `Build OpenSea collection offer error. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, error=${error}`
         );
 
         if (error.response) {
           logger.error(
-            "OPENSEA_ORDERBOOK_API",
+            "opensea_orderbook_api",
             `Failed to build OpenSea collection offer. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, status: ${
               error.response.status
             }, data:${JSON.stringify(error.response.data)}`
@@ -152,7 +152,7 @@ export const postCollectionOffer = async (
     })
     .catch((error) => {
       logger.error(
-        "OPENSEA_ORDERBOOK_API",
+        "opensea_orderbook_api",
         `Post OpenSea collection offer error. order=${JSON.stringify(
           order
         )}, collectionSlug=${collectionSlug}, url=${url}, data=${data}, error=${error}`
@@ -160,7 +160,7 @@ export const postCollectionOffer = async (
 
       if (error.response) {
         logger.error(
-          "OPENSEA_ORDERBOOK_API",
+          "opensea_orderbook_api",
           `Failed to post offer to OpenSea. order=${JSON.stringify(
             order
           )}, collectionSlug=${collectionSlug}, url=${url}, data=${data}, status: ${

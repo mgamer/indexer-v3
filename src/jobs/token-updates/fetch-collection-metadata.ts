@@ -39,7 +39,7 @@ if (config.doBackgroundWork) {
         job.data as FetchCollectionMetadataInfo;
 
       try {
-        const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, {
+        const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, "", {
           allowFallback: true,
         });
 
