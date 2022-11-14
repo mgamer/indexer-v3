@@ -278,8 +278,8 @@ export const getTokensV5Options: RouteOptions = {
       selectNormalizeRoyaltiesData = ",r.*";
       normalizeRoyaltiesQuery = `
         LEFT JOIN LATERAL (
-          SELECT o.currency_value AS floor_sell_currency_value,
-                 o.normalized_value AS floor_sell_normalized_value
+          SELECT o.normalized_value AS floor_sell_normalized_value,
+                 o.currency_normalized_value AS floor_sell_currency_normalized_value
           FROM orders o
           WHERE o.id = t.floor_sell_id
         ) r ON TRUE
