@@ -101,6 +101,11 @@ if (config.doBackgroundWork) {
             result = await orders.element.save([info as orders.element.OrderInfo], relayToArweave);
             break;
           }
+
+          case "blur": {
+            result = await orders.blur.save([info as orders.blur.OrderInfo], relayToArweave);
+            break;
+          }
         }
       } catch (error) {
         logger.error(QUEUE_NAME, `Failed to process order ${JSON.stringify(job.data)}: ${error}`);
@@ -202,6 +207,12 @@ export type GenericOrderInfo =
   | {
       kind: "rarible";
       info: orders.rarible.OrderInfo;
+      relayToArweave?: boolean;
+      validateBidValue?: boolean;
+    }
+  | {
+      kind: "blur";
+      info: orders.blur.OrderInfo;
       relayToArweave?: boolean;
       validateBidValue?: boolean;
     };
