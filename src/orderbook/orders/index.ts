@@ -37,6 +37,7 @@ export type OrderKind =
   | "foundation"
   | "x2y2"
   | "seaport"
+  | "rarible"
   | "element-erc721"
   | "element-erc1155"
   | "quixotic"
@@ -47,8 +48,7 @@ export type OrderKind =
   | "sudoswap"
   | "universe"
   | "nftx"
-  | "blur"
-  | "rarible";
+  | "blur";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
