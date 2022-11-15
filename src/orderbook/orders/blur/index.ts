@@ -133,10 +133,10 @@ export const save = async (
         } else if (error.message === "no-balance") {
           fillabilityStatus = "no-balance";
         } else {
-          //   return results.push({
-          //     id,
-          //     status: "not-fillable",
-          //   });
+          return results.push({
+            id,
+            status: "not-fillable",
+          });
         }
       }
 

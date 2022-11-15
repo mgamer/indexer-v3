@@ -12,7 +12,7 @@ import * as orders from "@/orderbook/orders";
 import { logger } from "@/common/logger";
 
 import { testNFTAddr, operatorKey, operator2Key } from "../element/__fixtures__/test-accounts";
-
+import axios from "axios";
 import { setupNFTs } from "../utils/nft";
 import { getOrder } from "../utils/order";
 
@@ -284,5 +284,64 @@ describe("BluTestnet", () => {
     const orderAfter = await getOrder(orderId);
     logger.info("BlurTestnet", `Order status ${JSON.stringify(orderAfter)}`);
     expect(orderAfter?.fillability_status).toEqual("cancelled");
+  });
+
+  test("saveToAPI", async () => {
+    await setupNFTs(nftToken, seller, buyer, tokenId, operator);
+
+    const exchange = new Blur.Exchange(chainId);
+    const builder = new Blur.Builders.SingleToken(chainId);
+    const price = parseEther("0.001");
+
+    const hashNonce = await exchange.getNonce(baseProvider, seller.address);
+
+    logger.info("BlurTestnet", `hashNonce=${hashNonce}`);
+
+    // Build Sell order
+    const sellOrder = builder.build({
+      side: "sell",
+      trader: seller.address,
+      collection: nftToken.address,
+      tokenId: tokenId,
+      amount: 1,
+      paymentToken: Common.Addresses.Eth[chainId],
+      price,
+      listingTime: Math.floor(Date.now() / 1000),
+      matchingPolicy: Blur.Addresses.StandardPolicyERC721[chainId],
+      nonce: hashNonce,
+      expirationTime: Math.floor(Date.now() / 1000) + 86400,
+      fees: [],
+      salt: hashNonce,
+      extraParams: "0x",
+    });
+
+    await sellOrder.sign(seller);
+
+    const orderId = sellOrder.hash();
+    const postData = {
+      orders: [
+        {
+          kind: "blur",
+          data: sellOrder.params,
+        },
+      ],
+    };
+
+    const headers = {
+      "X-Admin-Api-Key": config.adminApiKey,
+    };
+
+    try {
+      await axios.post("http://localhost:3000/orders/v1", postData, {
+        headers,
+      });
+      // console.log("data", data)
+    } catch (e) {
+      // console.log("error", e)
+    }
+
+    await wait(10 * 1000);
+    const ordeStatus = await getOrder(orderId);
+    expect(ordeStatus).not.toBe(null);
   });
 });
