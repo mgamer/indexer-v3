@@ -618,7 +618,7 @@ export const generateBidDetailsV6 = async (
         order: new Sdk.Rarible.Order(config.chainId, order.rawData),
       };
     }
-        
+
     case "forward": {
       const sdkOrder = new Sdk.Forward.Order(config.chainId, order.rawData);
       return {
