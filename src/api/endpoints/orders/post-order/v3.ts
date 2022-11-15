@@ -288,6 +288,7 @@ export const postOrderV3Options: RouteOptions = {
             metadata: {
               schema,
               source: orderbook === "reservoir" ? source : undefined,
+              target: orderbook,
             },
           };
 
