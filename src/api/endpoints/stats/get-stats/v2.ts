@@ -123,8 +123,8 @@ export const getStatsV2Options: RouteOptions = {
             "t"."name",
             "t"."image",
             "ob"."id" AS "top_buy_id",
-            ob.normalized_value AS top_buy_normalized_value,
-            ob.currency_normalized_value AS top_buy_currency_normalized_value
+            "ob".normalized_value AS top_buy_normalized_value,
+            "ob".currency_normalized_value AS top_buy_currency_normalized_value,
             "ob"."value" AS "top_buy_value",
             "ob"."maker" AS "top_buy_maker",
             date_part('epoch', lower("ob"."valid_between")) AS "top_buy_valid_from",
