@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { AddressZero } from "@ethersproject/constants";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
@@ -32,6 +33,11 @@ import * as zeroExV4BuyCollection from "@/orderbook/orders/zeroex-v4/build/buy/c
 
 // Universe
 import * as universeBuyToken from "@/orderbook/orders/universe/build/buy/token";
+
+// Forward
+import * as forwardBuyAttribute from "@/orderbook/orders/forward/build/buy/attribute";
+import * as forwardBuyToken from "@/orderbook/orders/forward/build/buy/token";
+import * as forwardBuyCollection from "@/orderbook/orders/forward/build/buy/collection";
 
 const version = "v4";
 
@@ -88,7 +94,7 @@ export const getExecuteBidV4Options: RouteOptions = {
             .description("Amount bidder is willing to offer in wei. Example: `1000000000000000000`")
             .required(),
           orderKind: Joi.string()
-            .valid("zeroex-v4", "seaport", "looks-rare", "x2y2", "universe")
+            .valid("zeroex-v4", "seaport", "looks-rare", "x2y2", "universe", "forward")
             .default("seaport")
             .description("Exchange protocol used to create order. Example: `seaport`"),
           orderbook: Joi.string()
@@ -172,6 +178,12 @@ export const getExecuteBidV4Options: RouteOptions = {
           orderIndex?: number;
         }[];
       }[] = [
+        {
+          action: "Initialize wallet",
+          description: "One-time initialization of wallet",
+          kind: "transaction",
+          items: [],
+        },
         {
           action: "Wrapping ETH",
           description: "We'll ask your approval for converting ETH to WETH. Gas fee required.",
@@ -283,17 +295,17 @@ export const getExecuteBidV4Options: RouteOptions = {
               approvalTx = weth.approveTransaction(maker, conduit);
             }
 
-            steps[0].items.push({
+            steps[1].items.push({
               status: !wrapEthTx ? "complete" : "incomplete",
               data: wrapEthTx,
               orderIndex: i,
             });
-            steps[1].items.push({
+            steps[2].items.push({
               status: !approvalTx ? "complete" : "incomplete",
               data: approvalTx,
               orderIndex: i,
             });
-            steps[2].items.push({
+            steps[3].items.push({
               status: "incomplete",
               data: {
                 sign: order.getSignatureData(),
@@ -382,17 +394,17 @@ export const getExecuteBidV4Options: RouteOptions = {
               );
             }
 
-            steps[0].items.push({
+            steps[1].items.push({
               status: !wrapEthTx ? "complete" : "incomplete",
               data: wrapEthTx,
               orderIndex: i,
             });
-            steps[1].items.push({
+            steps[2].items.push({
               status: !approvalTx ? "complete" : "incomplete",
               data: approvalTx,
               orderIndex: i,
             });
-            steps[2].items.push({
+            steps[3].items.push({
               status: "incomplete",
               data: {
                 sign: order.getSignatureData(),
@@ -479,17 +491,17 @@ export const getExecuteBidV4Options: RouteOptions = {
               );
             }
 
-            steps[0].items.push({
+            steps[1].items.push({
               status: !wrapEthTx ? "complete" : "incomplete",
               data: wrapEthTx,
               orderIndex: i,
             });
-            steps[1].items.push({
+            steps[2].items.push({
               status: !approvalTx ? "complete" : "incomplete",
               data: approvalTx,
               orderIndex: i,
             });
-            steps[2].items.push({
+            steps[3].items.push({
               status: "incomplete",
               data: {
                 sign: order.getSignatureData(),
@@ -567,17 +579,17 @@ export const getExecuteBidV4Options: RouteOptions = {
               );
             }
 
-            steps[0].items.push({
+            steps[1].items.push({
               status: !wrapEthTx ? "complete" : "incomplete",
               data: wrapEthTx,
               orderIndex: i,
             });
-            steps[1].items.push({
+            steps[2].items.push({
               status: !approvalTx ? "complete" : "incomplete",
               data: approvalTx,
               orderIndex: i,
             });
-            steps[2].items.push({
+            steps[3].items.push({
               status: "incomplete",
               data: {
                 sign: new Sdk.X2Y2.Exchange(
@@ -644,17 +656,17 @@ export const getExecuteBidV4Options: RouteOptions = {
               );
             }
 
-            steps[0].items.push({
+            steps[1].items.push({
               status: !wrapEthTx ? "complete" : "incomplete",
               data: wrapEthTx,
               orderIndex: i,
             });
-            steps[1].items.push({
+            steps[2].items.push({
               status: !approvalTx ? "complete" : "incomplete",
               data: approvalTx,
               orderIndex: i,
             });
-            steps[2].items.push({
+            steps[3].items.push({
               status: "incomplete",
               data: {
                 sign: order.getSignatureData(),
@@ -693,11 +705,121 @@ export const getExecuteBidV4Options: RouteOptions = {
             // Go on with the next bid
             continue;
           }
+
+          case "forward": {
+            if (!["reservoir"].includes(params.orderbook)) {
+              throw Boom.badRequest("Only `reservoir` is supported as orderbook");
+            }
+
+            let order: Sdk.Forward.Order | undefined;
+            if (token) {
+              const [contract, tokenId] = token.split(":");
+              order = await forwardBuyToken.build({
+                ...params,
+                maker,
+                contract,
+                tokenId,
+              });
+            } else if (tokenSetId || (collection && attributeKey && attributeValue)) {
+              order = await forwardBuyAttribute.build({
+                ...params,
+                maker,
+                collection,
+                attributes: [
+                  {
+                    key: attributeKey,
+                    value: attributeValue,
+                  },
+                ],
+              });
+            } else if (collection) {
+              order = await forwardBuyCollection.build({
+                ...params,
+                maker,
+                collection,
+              });
+            } else {
+              throw Boom.internal("Wrong metadata");
+            }
+
+            if (!order) {
+              throw Boom.internal("Failed to generate order");
+            }
+
+            // Check the maker's approval
+            let approvalTx: TxData | undefined;
+            const wethApproval = await weth.getAllowance(
+              maker,
+              Sdk.Forward.Addresses.Exchange[config.chainId]
+            );
+            if (bn(wethApproval).lt(bn(order.params.unitPrice).mul(order.params.amount))) {
+              approvalTx = weth.approveTransaction(
+                maker,
+                Sdk.Forward.Addresses.Exchange[config.chainId]
+              );
+            }
+
+            const exchange = new Sdk.Forward.Exchange(config.chainId);
+            const vault = await exchange.contract.connect(baseProvider).vaults(maker);
+            if (vault === AddressZero) {
+              steps[0].items.push({
+                status: "incomplete",
+                data: exchange.createVaultTx(maker),
+              });
+            }
+
+            steps[1].items.push({
+              status: !wrapEthTx ? "complete" : "incomplete",
+              data: wrapEthTx,
+              orderIndex: i,
+            });
+            steps[2].items.push({
+              status: !approvalTx ? "complete" : "incomplete",
+              data: approvalTx,
+              orderIndex: i,
+            });
+            steps[3].items.push({
+              status: "incomplete",
+              data: {
+                sign: order.getSignatureData(),
+                post: {
+                  endpoint: "/order/v3",
+                  method: "POST",
+                  body: {
+                    order: {
+                      kind: "forward",
+                      data: {
+                        ...order.params,
+                      },
+                    },
+                    tokenSetId,
+                    attribute:
+                      collection && attributeKey && attributeValue
+                        ? {
+                            collection,
+                            key: attributeKey,
+                            value: attributeValue,
+                          }
+                        : undefined,
+                    collection:
+                      collection && !attributeKey && !attributeValue ? collection : undefined,
+                    isNonFlagged: params.excludeFlaggedTokens,
+                    orderbook: params.orderbook,
+                    source,
+                  },
+                },
+              },
+              orderIndex: i,
+            });
+
+            // Go on with the next bid
+            continue;
+          }
         }
       }
 
       // We should only have a single ETH wrapping transaction
-      if (steps[0].items.length > 1) {
+      if (steps[1].items.length > 1) {
         let amount = bn(0);
         for (let i = 0; i < steps[0].items.length; i++) {
           const itemAmount = bn(steps[0].items[i].data?.value || 0);
@@ -710,14 +832,14 @@ export const getExecuteBidV4Options: RouteOptions = {
           const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
           const wethWrapTx = weth.depositTransaction(maker, amount);
 
-          steps[0].items = [
+          steps[1].items = [
             {
               status: "incomplete",
               data: wethWrapTx,
             },
           ];
         } else {
-          steps[0].items = [];
+          steps[1].items = [];
         }
       }
 

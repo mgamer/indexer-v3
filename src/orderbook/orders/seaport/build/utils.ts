@@ -12,6 +12,7 @@ export interface BaseOrderBuildOptions {
   contract: string;
   weiPrice: string;
   orderbook: "opensea" | "reservoir";
+  orderType?: Sdk.Seaport.Types.OrderType;
   currency?: string;
   quantity?: number;
   nonce?: string;
@@ -76,6 +77,7 @@ export const getBuildInfo = async (
     endTime: options.expirationTime || now() + 6 * 30 * 24 * 3600,
     salt: options.salt,
     counter: (await exchange.getCounter(baseProvider, options.maker)).toString(),
+    orderType: options.orderType,
   };
 
   // Keep track of the total amount of fees

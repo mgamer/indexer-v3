@@ -6,6 +6,7 @@ import * as erc1155 from "@/events-sync/handlers/erc1155";
 import * as blur from "@/events-sync/handlers/blur";
 import * as cryptopunks from "@/events-sync/handlers/cryptopunks";
 import * as element from "@/events-sync/handlers/element";
+import * as forward from "@/events-sync/handlers/forward";
 import * as foundation from "@/events-sync/handlers/foundation";
 import * as looksrare from "@/events-sync/handlers/looks-rare";
 import * as nftx from "@/events-sync/handlers/nftx";
@@ -28,6 +29,7 @@ export type EventsInfo = {
     | "blur"
     | "cryptopunks"
     | "element"
+    | "forward"
     | "foundation"
     | "looks-rare"
     | "nftx"
@@ -75,6 +77,11 @@ export const processEvents = async (info: EventsInfo) => {
 
     case "element": {
       data = await element.handleEvents(info.events);
+      break;
+    }
+
+    case "forward": {
+      data = await forward.handleEvents(info.events);
       break;
     }
 
