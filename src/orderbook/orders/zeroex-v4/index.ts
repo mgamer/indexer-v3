@@ -349,7 +349,7 @@ export const save = async (
       const feeBreakdown = order.params.fees.map(({ recipient, amount }) => ({
         kind: "royalty",
         recipient,
-        bps: price.eq(0) ? bn(0) : bn(amount).mul(10000).div(price).toNumber(),
+        bps: price.eq(0) ? 0 : bn(amount).mul(10000).div(price).toNumber(),
       }));
 
       // Handle: currency

@@ -1,10 +1,10 @@
 import * as Sdk from "@reservoir0x/sdk";
-import { BaseBuilder } from "@reservoir0x/sdk/dist/seaport/builders/base";
+import { BaseBuilder } from "@reservoir0x/sdk/dist/forward/builders/base";
 
 import { redb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as utils from "@/orderbook/orders/seaport/build/utils";
+import * as utils from "@/orderbook/orders/forward/build/utils";
 
 interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
   // TODO: refactor
@@ -17,7 +17,7 @@ interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
 }
 
 export const build = async (options: BuildOrderOptions) => {
-  const builder: BaseBuilder = new Sdk.Seaport.Builders.TokenList(config.chainId);
+  const builder: BaseBuilder = new Sdk.Forward.Builders.TokenList(config.chainId);
 
   if (options.collection && options.attributes) {
     if (options.attributes.length !== 1) {
@@ -57,8 +57,7 @@ export const build = async (options: BuildOrderOptions) => {
         ...options,
         contract: fromBuffer(attributeResult.contract),
       },
-      options.collection,
-      "buy"
+      options.collection
     );
 
     const excludeFlaggedTokens = options.excludeFlaggedTokens ? "AND tokens.is_flagged = 0" : "";
@@ -113,8 +112,7 @@ export const build = async (options: BuildOrderOptions) => {
         ...options,
         contract: fromBuffer(tokens[0].contract),
       },
-      fromBuffer(tokens[0].contract),
-      "buy"
+      fromBuffer(tokens[0].contract)
     );
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

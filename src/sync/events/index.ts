@@ -7,21 +7,15 @@ import { baseProvider } from "@/common/provider";
 import { getNetworkSettings } from "@/config/network";
 import { EventDataKind, getEventData } from "@/events-sync/data";
 import { EnhancedEvent } from "@/events-sync/handlers/utils";
-import {
-  assignSourceToFillEvents,
-  assignWashTradingScoreToFillEvents,
-} from "@/events-sync/handlers/utils/fills";
 import { parseEvent } from "@/events-sync/parser";
 import * as es from "@/events-sync/storage";
 import * as syncEventsUtils from "@/events-sync/utils";
 import * as blocksModel from "@/models/blocks";
 
-import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
 import * as blockCheck from "@/jobs/events-sync/block-check-queue";
 import * as eventsSyncBackfillProcess from "@/jobs/events-sync/process/backfill";
 import * as eventsSyncRealtimeProcess from "@/jobs/events-sync/process/realtime";
-import * as fillUpdates from "@/jobs/fill-updates/queue";
 
 export const syncEvents = async (
   fromBlock: number,
@@ -90,17 +84,8 @@ export const syncEvents = async (
     };
   }
 
-  // TODO: Remove
-  const fillInfos: fillUpdates.FillInfo[] = [];
-  // TODO: Remove
-
   const enhancedEvents: EnhancedEvent[] = [];
   await baseProvider.getLogs(eventFilter).then(async (logs) => {
-    // TODO: Remove
-    const fillEvents: es.fills.Event[] = [];
-    const fillEventsPartial: es.fills.Event[] = [];
-    // TODO: Remove
-
     const availableEventData = getEventData();
     for (const log of logs) {
       try {
@@ -181,6 +166,15 @@ export const syncEvents = async (
         kind: "element",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("element")),
         backfill,
+      },
+      {
+        kind: "forward",
+        events: enhancedEvents.filter(
+          ({ kind }) =>
+            kind.startsWith("forward") ||
+            // To properly validate bids, we need some additional events
+            kind === "erc20-transfer"
+        ),
       },
       {
         kind: "foundation",
@@ -271,7 +265,12 @@ export const syncEvents = async (
       },
       {
         kind: "rarible",
-        events: enhancedEvents.filter(({ kind }) => kind.startsWith("rarible")),
+        events: enhancedEvents.filter(
+          ({ kind }) =>
+            kind.startsWith("rarible") ||
+            // To properly validate bids, we need some additional events
+            kind === "erc20-transfer"
+        ),
       },
     ]);
 
@@ -304,66 +303,6 @@ export const syncEvents = async (
         })
       );
     }
-
-    // TODO: Remove
-    if (!backfill) {
-      // Assign accurate sources to the fill events
-      await Promise.all([
-        assignSourceToFillEvents(fillEvents),
-        assignSourceToFillEvents(fillEventsPartial),
-      ]);
-
-      // Assign wash trading scores to the fill events
-      await Promise.all([
-        assignWashTradingScoreToFillEvents(fillEvents),
-        assignWashTradingScoreToFillEvents(fillEventsPartial),
-      ]);
-    }
-
-    await Promise.all([
-      es.fills.addEvents(fillEvents),
-      es.fills.addEventsPartial(fillEventsPartial),
-    ]);
-
-    await fillUpdates.addToQueue(fillInfos);
-
-    // Add all the fill events to the activity queue
-    const fillActivitiesInfo: processActivityEvent.EventInfo[] = _.map(
-      _.concat(fillEvents, fillEventsPartial),
-      (event) => {
-        let fromAddress = event.maker;
-        let toAddress = event.taker;
-
-        if (event.orderSide === "buy") {
-          fromAddress = event.taker;
-          toAddress = event.maker;
-        }
-
-        return {
-          kind: processActivityEvent.EventKind.fillEvent,
-          data: {
-            contract: event.contract,
-            tokenId: event.tokenId,
-            fromAddress,
-            toAddress,
-            price: Number(event.price),
-            amount: Number(event.amount),
-            transactionHash: event.baseEventParams.txHash,
-            logIndex: event.baseEventParams.logIndex,
-            batchIndex: event.baseEventParams.batchIndex,
-            blockHash: event.baseEventParams.blockHash,
-            timestamp: event.baseEventParams.timestamp,
-            orderId: event.orderId || "",
-            orderSourceIdInt: Number(event.orderSourceId),
-          },
-        };
-      }
-    );
-
-    if (!_.isEmpty(fillActivitiesInfo)) {
-      await processActivityEvent.addToQueue(fillActivitiesInfo);
-    }
-    // TODO: Remove
   });
 };
 

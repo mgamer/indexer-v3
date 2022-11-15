@@ -48,11 +48,13 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
       case "rarible-cancel": {
         const { args } = eventData.abi.parseLog(log);
         const orderId = args["hash"].toLowerCase();
+
         cancelEvents.push({
           orderKind: "rarible",
           orderId,
           baseEventParams,
         });
+
         orderInfos.push({
           context: `cancelled-${orderId}`,
           id: orderId,
@@ -65,6 +67,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             blockHash: baseEventParams.blockHash,
           },
         });
+
         break;
       }
 
@@ -74,12 +77,12 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const rightHash = args["rightHash"].toLowerCase();
         const newLeftFill = args["newLeftFill"].toString();
         const newRightFill = args["newRightFill"].toString();
+
         const ERC20 = "0x8ae85d84";
         const ETH = "0xaaaebeba";
         const ERC721 = "0x73ad2146";
-        // const ERC721_LAZY = "0xd8f960c1";
         const ERC1155 = "0x973bb640";
-        // const ERC1155_LAZY = "1cdfaa40";
+
         const matchOrdersSigHash = "0xe99a3f80";
         const directPurchaseSigHash = "0x0d5f7d35";
         const directAcceptBidSigHash = "0x67d49a3b";
@@ -131,6 +134,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             orderId = leftHash;
             side = "sell";
             maker = result[0][0].toLowerCase();
+            // taker will be overwritten in extractAttributionData step if router is used
+            taker = callTrace.to.toLowerCase();
             nftAssetType = result[0][2];
             nftData = result[0][3];
 
@@ -173,6 +178,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
             side = "buy";
             maker = result[0][0].toLowerCase();
+            // taker will be overwritten in extractAttributionData step if router is used
+            taker = callTrace.from.toLowerCase();
             nftAssetType = result[0][2];
             nftData = result[0][3];
 
@@ -216,6 +223,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             const rightAsset = orderLeft.takeAsset;
 
             maker = orderLeft.maker.toLowerCase();
+            // taker will be overwritten in extractAttributionData step if router is used
             taker = orderRight.maker.toLowerCase();
             side = [ERC721, ERC1155].includes(leftAsset.assetClass) ? "sell" : "buy";
 
@@ -257,6 +265,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         if (data.taker) {
           taker = data.taker;
         }
+
         // Handle: prices
         let currency: string;
         if (currencyAssetType === ETH) {
