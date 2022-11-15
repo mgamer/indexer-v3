@@ -1,6 +1,7 @@
 // Exports
 
 export * as cryptopunks from "@/orderbook/orders/cryptopunks";
+export * as forward from "@/orderbook/orders/forward";
 export * as foundation from "@/orderbook/orders/foundation";
 export * as looksRare from "@/orderbook/orders/looks-rare";
 export * as seaport from "@/orderbook/orders/seaport";
@@ -48,7 +49,7 @@ export type OrderKind =
   | "universe"
   | "nftx"
   | "blur"
-  | "rarible";
+  | "forward";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -615,6 +616,15 @@ export const generateBidDetailsV6 = async (
         kind: "rarible",
         ...common,
         order: new Sdk.Rarible.Order(config.chainId, order.rawData),
+      };
+    }
+        
+    case "forward": {
+      const sdkOrder = new Sdk.Forward.Order(config.chainId, order.rawData);
+      return {
+        kind: "forward",
+        ...common,
+        order: sdkOrder,
       };
     }
 

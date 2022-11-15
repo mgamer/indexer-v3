@@ -64,7 +64,7 @@ export const offChainCheck = async (
     // Check: maker has enough balance
     const ftBalance = await commonHelpers.getFtBalance(order.params.currency, order.params.signer);
     if (ftBalance.lt(order.params.price)) {
-      hasBalance = true;
+      hasBalance = false;
     }
 
     if (options?.onChainApprovalRecheck) {
