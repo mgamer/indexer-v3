@@ -250,22 +250,33 @@ export const save = async (
         }
 
         case "token-list": {
-          const typedInfo = info as typeof info & { merkleRoot: string };
-          const merkleRoot = typedInfo.merkleRoot;
-
-          if (merkleRoot) {
-            tokenSetId = `list:${info.contract}:${bn(merkleRoot).toHexString()}`;
-
-            await tokenSet.tokenList.save([
+          if (metadata?.target === "opensea") {
+            tokenSetId = `contract:${info.contract}`;
+            await tokenSet.contractWide.save([
               {
                 id: tokenSetId,
                 schemaHash,
-                schema: metadata.schema,
+                contract: info.contract,
               },
             ]);
+          } else {
+            const typedInfo = info as typeof info & { merkleRoot: string };
+            const merkleRoot = typedInfo.merkleRoot;
 
-            if (!isReservoir) {
-              await handleTokenList(id, info.contract, tokenSetId, merkleRoot);
+            if (merkleRoot) {
+              tokenSetId = `list:${info.contract}:${bn(merkleRoot).toHexString()}`;
+
+              await tokenSet.tokenList.save([
+                {
+                  id: tokenSetId,
+                  schemaHash,
+                  schema: metadata.schema,
+                },
+              ]);
+
+              if (!isReservoir) {
+                await handleTokenList(id, info.contract, tokenSetId, merkleRoot);
+              }
             }
           }
 
