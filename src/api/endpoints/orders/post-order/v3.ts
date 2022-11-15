@@ -32,16 +32,7 @@ export const postOrderV3Options: RouteOptions = {
       order: Joi.object({
         kind: Joi.string()
           .lowercase()
-          .valid(
-            "opensea",
-            "looks-rare",
-            "zeroex-v4",
-            "seaport",
-            "x2y2",
-            "universe",
-            "element",
-            "blur"
-          )
+          .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2", "universe")
           .required(),
         data: Joi.object().required(),
       }),
@@ -308,50 +299,6 @@ export const postOrderV3Options: RouteOptions = {
                 result.id
               }`
             );
-          }
-
-          return { message: "Success", orderId: result.id };
-        }
-
-        case "element": {
-          if (!["reservoir"].includes(orderbook)) {
-            throw new Error("Unknown orderbook");
-          }
-
-          const orderInfo: orders.element.OrderInfo = {
-            orderParams: order.data,
-            metadata: {
-              schema,
-              source,
-            },
-          };
-
-          const [result] = await orders.element.save([orderInfo]);
-
-          if (result.status !== "success") {
-            throw Boom.badRequest(result.status);
-          }
-
-          return { message: "Success", orderId: result.id };
-        }
-
-        case "blur": {
-          if (!["reservoir"].includes(orderbook)) {
-            throw new Error("Unknown orderbook");
-          }
-
-          const orderInfo: orders.blur.OrderInfo = {
-            orderParams: order.data,
-            metadata: {
-              schema,
-              source,
-            },
-          };
-
-          const [result] = await orders.blur.save([orderInfo]);
-
-          if (result.status !== "success") {
-            throw Boom.badRequest(result.status);
           }
 
           return { message: "Success", orderId: result.id };
