@@ -61,6 +61,7 @@ export const getExecuteSellV5Options: RouteOptions = {
       maxPriorityFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional. Set custom gas price."),
+      x2y2ApiKey: Joi.string().description("Override the X2Y2 API key used for filling."),
     }),
   },
   response: {
@@ -222,7 +223,10 @@ export const getExecuteSellV5Options: RouteOptions = {
         return { path };
       }
 
-      const router = new Sdk.RouterV6.Router(config.chainId, baseProvider);
+      const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
+        x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
+        cbApiKey: config.cbApiKey,
+      });
       const { txData } = await router.fillBidTx(bidDetails!, payload.taker, {
         source: payload.source,
       });
