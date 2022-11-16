@@ -24,6 +24,9 @@ export const getDefaultRoyalties = async (collection: string): Promise<Royalty[]
     `,
     { collection }
   );
+  if (!royaltiesResult) {
+    return [];
+  }
 
   const getTotalRoyaltyBps = (royalties?: Royalty[]) =>
     (royalties || []).map(({ bps }) => bps).reduce((a, b) => a + b, 0);
