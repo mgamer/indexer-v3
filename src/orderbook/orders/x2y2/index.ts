@@ -287,7 +287,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         "dynamic",
         "raw_data",
         { name: "expiration", mod: ":raw" },
-        "missing_royalties",
+        { name: "missing_royalties", mod: ":json" },
         "normalized_value",
         "currency_normalized_value",
       ],
