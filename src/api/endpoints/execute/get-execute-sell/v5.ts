@@ -55,6 +55,7 @@ export const getExecuteSellV5Options: RouteOptions = {
       onlyPath: Joi.boolean()
         .default(false)
         .description("If true, only the path will be returned."),
+      normalizeRoyalties: Joi.boolean().default(false),
       maxFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional. Set custom gas price."),
