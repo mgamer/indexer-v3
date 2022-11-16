@@ -208,7 +208,7 @@ export const save = async (
         source_id_int: source?.id,
         is_reservoir: isReservoir ? isReservoir : null,
         contract: toBuffer(order.params.collection),
-        conduit: toBuffer(Sdk.Blur.Addresses.Exchange[config.chainId]),
+        conduit: toBuffer(Sdk.Blur.Addresses.ExecutionDelegate[config.chainId]),
         fee_bps: feeBps,
         fee_breakdown: feeBreakdown || null,
         dynamic: null,
