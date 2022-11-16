@@ -169,7 +169,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       let missingRoyaltyAmount = bn(0);
       if (side === "sell") {
         const defaultRoyalties = await royalties.getDefaultRoyalties(order.params.nft.token);
-        logger.info("debug", JSON.stringify({ defaultRoyalties }));
         for (const { bps, recipient } of defaultRoyalties) {
           const amount = bn(price).mul(bps).div(10000).toString();
           missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
@@ -181,10 +180,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         }
       }
 
-      logger.info(
-        "debug",
-        JSON.stringify({ missingRoyalties, missingRoyaltyAmount: missingRoyaltyAmount.toString() })
-      );
       const feeBps = feeBreakdown.map(({ bps }) => bps).reduce((a, b) => Number(a) + Number(b), 0);
 
       // Handle: price and value
@@ -292,6 +287,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         "dynamic",
         "raw_data",
         { name: "expiration", mod: ":raw" },
+        "missing_royalties",
+        "normalized_value",
+        "currency_normalized_value",
       ],
       {
         table: "orders",
