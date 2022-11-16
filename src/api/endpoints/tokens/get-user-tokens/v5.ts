@@ -408,7 +408,7 @@ export const getUserTokensV5Options: RouteOptions = {
               source: {
                 id: floorSellSource?.address,
                 domain: floorSellSource?.domain,
-                name: floorSellSource?.metadata.title || floorSellSource?.name,
+                name: floorSellSource?.getTitle(),
                 icon: floorSellSource?.getIcon(),
                 url: floorSellSource?.metadata.url,
               },

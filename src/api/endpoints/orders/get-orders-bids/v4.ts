@@ -516,7 +516,7 @@ export const getOrdersBidsV4Options: RouteOptions = {
           metadata: query.includeMetadata ? r.metadata : undefined,
           source: {
             id: source?.address,
-            name: source?.metadata.title || source?.name,
+            name: source?.getTitle(),
             icon: source?.getIcon(),
             url: source?.metadata.url,
             domain: source?.domain,

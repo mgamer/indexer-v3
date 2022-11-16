@@ -211,7 +211,7 @@ export const getSalesBulkV1Options: RouteOptions = {
             contract: fromBuffer(r.contract),
             tokenId: r.token_id,
           },
-          orderSource: (orderSource?.metadata.title || orderSource?.name) ?? null,
+          orderSource: orderSource?.getTitle() ?? null,
           orderSourceDomain: orderSource?.domain ?? null,
           orderSide: r.order_side === "sell" ? "ask" : "bid",
           orderKind: r.order_kind,

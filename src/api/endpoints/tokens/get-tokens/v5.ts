@@ -686,7 +686,7 @@ export const getTokensV5Options: RouteOptions = {
               source: {
                 id: floorSellSource?.address,
                 domain: floorSellSource?.domain,
-                name: floorSellSource?.metadata.title || floorSellSource?.name,
+                name: floorSellSource?.getTitle(),
                 icon: floorSellSource?.getIcon(),
                 url: floorSellSource?.metadata.url,
               },
@@ -719,7 +719,7 @@ export const getTokensV5Options: RouteOptions = {
                   source: {
                     id: topBuySource?.address,
                     domain: topBuySource?.domain,
-                    name: topBuySource?.metadata.title || topBuySource?.name,
+                    name: topBuySource?.getTitle(),
                     icon: topBuySource?.getIcon(),
                     url: topBuySource?.metadata.url,
                   },
