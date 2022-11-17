@@ -52,24 +52,33 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       // EventType.TRAIT_OFFER
     ],
     async (event) => {
-      if (!isRailway) {
-        await saveEvent(event);
+      try {
+        if (!isRailway) {
+          await saveEvent(event);
 
-        const orderParams = handleEvent(event.event_type as EventType, event.payload);
+          const orderParams = handleEvent(event.event_type as EventType, event.payload);
 
-        if (orderParams) {
-          const orderInfo: orderbookOrders.GenericOrderInfo = {
-            kind: "seaport",
-            info: {
-              kind: "partial",
-              orderParams,
-            } as orders.seaport.OrderInfo,
-            relayToArweave: false,
-            validateBidValue: true,
-          };
+          if (orderParams) {
+            const orderInfo: orderbookOrders.GenericOrderInfo = {
+              kind: "seaport",
+              info: {
+                kind: "partial",
+                orderParams,
+              } as orders.seaport.OrderInfo,
+              relayToArweave: false,
+              validateBidValue: true,
+            };
 
-          await orderbookOrders.addToQueue([orderInfo]);
+            await orderbookOrders.addToQueue([orderInfo]);
+          }
         }
+      } catch (error) {
+        logger.error(
+          "opensea-websocket",
+          `network=${network}, isRailway=${isRailway}, event=${JSON.stringify(
+            event
+          )}, error=${error}`
+        );
       }
     }
   );
