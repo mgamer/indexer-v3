@@ -13,7 +13,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
   const fillEvents: es.fills.Event[] = [];
   const bulkCancelEvents: es.bulkCancels.Event[] = [];
   const nonceCancelEvents: es.nonceCancels.Event[] = [];
-  const cancelEventsOnChain: es.cancels.Event[] = [];
+  const cancelEvents: es.cancels.Event[] = [];
 
   const fillInfos: fillUpdates.FillInfo[] = [];
   const orderInfos: orderUpdatesById.OrderInfo[] = [];
@@ -108,7 +108,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const { args } = eventData.abi.parseLog(log);
         const orderId = args.hash.toLowerCase();
 
-        cancelEventsOnChain.push({
+        cancelEvents.push({
           orderKind: "blur",
           orderId,
           baseEventParams,
@@ -135,7 +135,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
   }
 
   return {
-    cancelEventsOnChain,
+    cancelEvents,
     bulkCancelEvents,
     nonceCancelEvents,
 
