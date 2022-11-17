@@ -352,7 +352,7 @@ export const save = async (
       const missingRoyalties = [];
       let missingRoyaltyAmount = bn(0);
       if (info.side === "sell") {
-        const defaultRoyalties = await royalties.getDefaultRoyalties(info.contract);
+        const defaultRoyalties = await royalties.getDefaultRoyalties(info.contract, info.tokenId!);
         for (const { bps, recipient } of defaultRoyalties) {
           // Get any built-in royalty payment to the current recipient
           const existingRoyalty = feeBreakdown.find(
@@ -799,7 +799,10 @@ export const save = async (
       const missingRoyalties = [];
       let missingRoyaltyAmount = bn(0);
       if (orderParams.side === "sell") {
-        const defaultRoyalties = await royalties.getDefaultRoyalties(orderParams.contract);
+        const defaultRoyalties = await royalties.getDefaultRoyalties(
+          orderParams.contract,
+          orderParams.tokenId!
+        );
         for (const { bps, recipient } of defaultRoyalties) {
           // Get any built-in royalty payment to the current recipient
           const existingRoyalty = feeBreakdown.find(
