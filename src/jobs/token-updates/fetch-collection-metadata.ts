@@ -149,12 +149,13 @@ if (config.doBackgroundWork) {
           );
         }
 
-        // Set the collection's royalties
-        await royalties.refreshRoyalties(
+        // Refresh all royalty specs and the default royalties
+        await royalties.refreshAllRoyaltySpecs(
           collection.id,
           (collection.royalties ?? []) as royalties.Royalty[],
           (collection.openseaRoyalties ?? []) as royalties.Royalty[]
         );
+        await royalties.refreshDefaulRoyalties(collection.id);
       } catch (error) {
         logger.error(
           QUEUE_NAME,

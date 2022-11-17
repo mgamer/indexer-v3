@@ -64,37 +64,6 @@ export const getDefaultRoyalties = async (
   return currentRoyalties;
 };
 
-// default royalty = max royalty across all available royalty standards
-export const computeDefaultRoyalties = async (collection: string): Promise<Royalty[]> => {
-  const royaltiesResult = await edb.oneOrNone(
-    `
-      SELECT
-        collections.new_royalties
-      FROM collections
-      WHERE collections.id = $/collection/
-    `,
-    { collection }
-  );
-  if (!royaltiesResult) {
-    return [];
-  }
-
-  const getTotalRoyaltyBps = (royalties?: Royalty[]) =>
-    (royalties || []).map(({ bps }) => bps).reduce((a, b) => a + b, 0);
-
-  let currentRoyalties: Royalty[] = [];
-  let currentTotalBps = 0;
-  for (const kind of Object.keys(royaltiesResult.new_royalties || {})) {
-    const newRoyaltiesTotalBps = getTotalRoyaltyBps(royaltiesResult.new_royalties[kind]);
-    if (newRoyaltiesTotalBps > currentTotalBps) {
-      currentRoyalties = royaltiesResult.new_royalties[kind];
-      currentTotalBps = newRoyaltiesTotalBps;
-    }
-  }
-
-  return currentRoyalties;
-};
-
 export const updateRoyaltySpec = async (collection: string, spec: string, royalties: Royalty[]) => {
   if (!royalties.length) {
     return;
@@ -131,7 +100,7 @@ export const updateRoyaltySpec = async (collection: string, spec: string, royalt
   }
 };
 
-export const refreshRoyalties = async (
+export const refreshAllRoyaltySpecs = async (
   collection: string,
   customRoyalties: Royalty[],
   openseaRoyalties: Royalty[]
@@ -144,9 +113,36 @@ export const refreshRoyalties = async (
 
   // Refresh the on-chain royalties
   await registry.refreshRegistryRoyalties(collection);
+};
 
-  // Reset the collection's default royalties
-  const defaultRoyalties = await computeDefaultRoyalties(collection);
+export const refreshDefaulRoyalties = async (collection: string) => {
+  const royaltiesResult = await edb.oneOrNone(
+    `
+      SELECT
+        collections.new_royalties
+      FROM collections
+      WHERE collections.id = $/collection/
+    `,
+    { collection }
+  );
+  if (!royaltiesResult) {
+    return [];
+  }
+
+  const getTotalRoyaltyBps = (royalties?: Royalty[]) =>
+    (royalties || []).map(({ bps }) => bps).reduce((a, b) => a + b, 0);
+
+  // default royalties = max royalties across all available royalty specs
+  let defultRoyalties: Royalty[] = [];
+  let currentTotalBps = 0;
+  for (const kind of Object.keys(royaltiesResult.new_royalties || {})) {
+    const newRoyaltiesTotalBps = getTotalRoyaltyBps(royaltiesResult.new_royalties[kind]);
+    if (newRoyaltiesTotalBps > currentTotalBps) {
+      defultRoyalties = royaltiesResult.new_royalties[kind];
+      currentTotalBps = newRoyaltiesTotalBps;
+    }
+  }
+
   await idb.none(
     `
       UPDATE collections SET
@@ -155,7 +151,7 @@ export const refreshRoyalties = async (
     `,
     {
       id: collection,
-      royalties: defaultRoyalties,
+      royalties: defultRoyalties,
     }
   );
 };

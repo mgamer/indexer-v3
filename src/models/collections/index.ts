@@ -93,12 +93,13 @@ export class Collections {
 
     await idb.none(query, values);
 
-    // Refresh the collection's royalties
-    await royalties.refreshRoyalties(
+    // Refresh all royalty specs and the default royalties
+    await royalties.refreshAllRoyaltySpecs(
       collection.id,
       (collection.royalties ?? []) as royalties.Royalty[],
       (collection.openseaRoyalties ?? []) as royalties.Royalty[]
     );
+    await royalties.refreshDefaulRoyalties(collection.id);
   }
 
   public static async update(collectionId: string, fields: CollectionsEntityUpdateParams) {
