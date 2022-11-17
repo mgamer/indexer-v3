@@ -1,13 +1,12 @@
 import { Interface } from "@ethersproject/abi";
 import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
-import _ from "lodash";
 
 import { baseProvider } from "@/common/provider";
 import { bn, fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { idb } from "@/common/db";
-import { Royalty } from "@/utils/royalties";
+import { Royalty, updateRoyaltySpec } from "@/utils/royalties";
 
 const DEFAULT_PRICE = "1000000000000000000";
 
@@ -121,32 +120,8 @@ export const refreshRegistryRoyalties = async (collection: string): Promise<Roya
         latestRoyalties.push({ recipient, bps });
       }
 
-      const royaltiesResult = await idb.oneOrNone(
-        `
-          SELECT
-            COALESCE(collections.new_royalties, '{}') AS royalties
-          FROM collections
-          WHERE collections.id = $/collection/
-        `,
-        { collection }
-      );
-      if (royaltiesResult) {
-        if (!_.isEqual(royaltiesResult.royalties[spec], latestRoyalties)) {
-          royaltiesResult.royalties[spec] = latestRoyalties;
-
-          await idb.none(
-            `
-              UPDATE collections SET
-                new_royalties = $/royalties:json/
-              WHERE collections.id = $/collection/
-            `,
-            {
-              collection,
-              royalties: royaltiesResult.royalties,
-            }
-          );
-        }
-      }
+      // Save the retrieved royalty spec
+      await updateRoyaltySpec(collection, spec, latestRoyalties);
 
       return latestRoyalties;
     } catch {
