@@ -43,6 +43,12 @@ export const offChainCheck = async (
     }
   }
 
+  // Check: order has a valid nonce
+  const minNonce = await commonHelpers.getMinNonce("blur", order.params.trader);
+  if (!minNonce.eq(order.params.nonce)) {
+    throw new Error("cancelled");
+  }
+
   // Check: order's nonce was not individually cancelled
   const nonceCancelled = await commonHelpers.isNonceCancelled(
     `blur`,
