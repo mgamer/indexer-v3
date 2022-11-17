@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { constants } from "ethers";
 import { Addresses, Order, Types } from "../..";
 import { BaseBuilder } from "../base";

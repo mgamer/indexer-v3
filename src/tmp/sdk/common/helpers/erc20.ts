@@ -11,6 +11,7 @@ export class Erc20 {
   public contract: Contract;
 
   constructor(provider: Provider, address: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.contract = new Contract(address, Erc20Abi as any, provider);
   }
 
