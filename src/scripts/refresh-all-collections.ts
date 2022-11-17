@@ -22,7 +22,7 @@ const main = async () => {
     }
 
     const query = `
-      SELECT id, contract
+      SELECT id, contract, community
       FROM collections
       ${idFilter}
       ORDER BY id ASC
@@ -30,7 +30,10 @@ const main = async () => {
     `;
 
     const collections = await redb.manyOrNone(query);
-    const contracts = _.map(collections, (collection) => fromBuffer(collection.contract));
+    const contracts = _.map(collections, (collection) => ({
+      contract: fromBuffer(collection.contract),
+      community: collection.community,
+    }));
     await collectionUpdatesMetadata.addToQueue(contracts);
 
     if (_.size(collections) < limit) {

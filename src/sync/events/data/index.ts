@@ -7,6 +7,7 @@ import * as weth from "@/events-sync/data/weth";
 import * as blur from "@/events-sync/data/blur";
 import * as cryptoPunks from "@/events-sync/data/cryptopunks";
 import * as element from "@/events-sync/data/element";
+import * as forward from "@/events-sync/data/forward";
 import * as foundation from "@/events-sync/data/foundation";
 import * as looksRare from "@/events-sync/data/looks-rare";
 import * as nftx from "@/events-sync/data/nftx";
@@ -26,7 +27,7 @@ import * as zora from "@/events-sync/data/zora";
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
 // handled (eg. persisted to the database and relayed for further
-// processing to any job queues).
+// processing to any job queues)
 
 export type EventDataKind =
   | "erc721-transfer"
@@ -57,6 +58,7 @@ export type EventDataKind =
   | "seaport-order-filled"
   | "seaport-counter-incremented"
   | "rarible-match"
+  | "rarible-cancel"
   | "element-erc721-sell-order-filled"
   | "element-erc721-sell-order-filled-v2"
   | "element-erc721-buy-order-filled"
@@ -93,7 +95,10 @@ export type EventDataKind =
   | "infinity-match-order-fulfilled"
   | "infinity-take-order-fulfilled"
   | "infinity-cancel-all-orders"
-  | "infinity-cancel-multiple-orders";
+  | "infinity-cancel-multiple-orders"
+  | "forward-order-filled"
+  | "forward-order-cancelled"
+  | "forward-counter-incremented";
 
 export type EventData = {
   kind: EventDataKind;
@@ -106,71 +111,75 @@ export type EventData = {
 export const getEventData = (eventDataKinds?: EventDataKind[]) => {
   if (!eventDataKinds) {
     return [
-      erc721.transfer,
-      erc721.approvalForAll,
-      erc1155.transferSingle,
-      erc1155.transferBatch,
-      weth.approval,
-      weth.transfer,
-      weth.deposit,
-      weth.withdrawal,
-      foundation.buyPriceAccepted,
-      foundation.buyPriceCancelled,
-      foundation.buyPriceInvalidated,
-      foundation.buyPriceSet,
-      looksRare.cancelAllOrders,
-      looksRare.cancelMultipleOrders,
-      looksRare.takerAsk,
-      looksRare.takerBid,
-      seaport.counterIncremented,
-      seaport.orderCancelled,
-      seaport.orderFulfilled,
-      wyvernV2.ordersMatched,
-      wyvernV23.ordersMatched,
-      zeroExV4.erc721OrderCancelled,
-      zeroExV4.erc1155OrderCancelled,
-      zeroExV4.erc721OrderFilled,
-      zeroExV4.erc1155OrderFilled,
-      x2y2.orderCancelled,
-      x2y2.orderInventory,
-      rarible.match,
-      element.erc721BuyOrderFilled,
-      element.erc721BuyOrderFilledV2,
-      element.erc721SellOrderFilled,
-      element.erc721SellOrderFilledV2,
-      element.erc1155BuyOrderFilled,
-      element.erc1155BuyOrderFilledV2,
-      element.erc1155SellOrderFilled,
-      element.erc1155SellOrderFilledV2,
-      element.erc721OrderCancelled,
-      element.erc1155OrderCancelled,
-      element.hashNonceIncremented,
-      quixotic.orderFulfilled,
-      zora.askFilled,
-      zora.askCreated,
-      zora.askCancelled,
-      zora.askPriceUpdated,
-      zora.auctionEnded,
-      nouns.auctionSettled,
-      cryptoPunks.punkOffered,
-      cryptoPunks.punkNoLongerForSale,
-      cryptoPunks.punkBought,
-      cryptoPunks.punkTransfer,
-      cryptoPunks.assign,
-      cryptoPunks.transfer,
-      sudoswap.buy,
-      sudoswap.sell,
-      sudoswap.tokenDeposit,
-      sudoswap.tokenWithdrawal,
-      universe.match,
-      universe.cancel,
-      nftx.minted,
-      nftx.redeemed,
-      blur.ordersMatched,
+      // erc721.transfer,
+      // erc721.approvalForAll,
+      // erc1155.transferSingle,
+      // erc1155.transferBatch,
+      // weth.approval,
+      // weth.transfer,
+      // weth.deposit,
+      // weth.withdrawal,
+      // foundation.buyPriceAccepted,
+      // foundation.buyPriceCancelled,
+      // foundation.buyPriceInvalidated,
+      // foundation.buyPriceSet,
+      // looksRare.cancelAllOrders,
+      // looksRare.cancelMultipleOrders,
+      // looksRare.takerAsk,
+      // looksRare.takerBid,
+      // seaport.counterIncremented,
+      // seaport.orderCancelled,
+      // seaport.orderFulfilled,
+      // wyvernV2.ordersMatched,
+      // wyvernV23.ordersMatched,
+      // zeroExV4.erc721OrderCancelled,
+      // zeroExV4.erc1155OrderCancelled,
+      // zeroExV4.erc721OrderFilled,
+      // zeroExV4.erc1155OrderFilled,
+      // x2y2.orderCancelled,
+      // x2y2.orderInventory,
+      // rarible.match,
+      // rarible.cancel,
+      // element.erc721BuyOrderFilled,
+      // element.erc721BuyOrderFilledV2,
+      // element.erc721SellOrderFilled,
+      // element.erc721SellOrderFilledV2,
+      // element.erc1155BuyOrderFilled,
+      // element.erc1155BuyOrderFilledV2,
+      // element.erc1155SellOrderFilled,
+      // element.erc1155SellOrderFilledV2,
+      // element.erc721OrderCancelled,
+      // element.erc1155OrderCancelled,
+      // element.hashNonceIncremented,
+      // quixotic.orderFulfilled,
+      // zora.askFilled,
+      // zora.askCreated,
+      // zora.askCancelled,
+      // zora.askPriceUpdated,
+      // zora.auctionEnded,
+      // nouns.auctionSettled,
+      // cryptoPunks.punkOffered,
+      // cryptoPunks.punkNoLongerForSale,
+      // cryptoPunks.punkBought,
+      // cryptoPunks.punkTransfer,
+      // cryptoPunks.assign,
+      // cryptoPunks.transfer,
+      // sudoswap.buy,
+      // sudoswap.sell,
+      // sudoswap.tokenDeposit,
+      // sudoswap.tokenWithdrawal,
+      // universe.match,
+      // universe.cancel,
+      // nftx.minted,
+      // nftx.redeemed,
+      // blur.ordersMatched,
       infinity.matchOrderFulfilled,
       infinity.takeOrderFulfilled,
       infinity.cancelAllOrders,
       infinity.cancelMultipleOrders,
+      // forward.orderFilled,
+      // forward.orderCancelled,
+      // forward.counterIncremented,
     ];
   } else {
     return (
@@ -241,6 +250,8 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return seaport.orderFulfilled;
     case "rarible-match":
       return rarible.match;
+    case "rarible-cancel":
+      return rarible.cancel;
     case "element-erc721-sell-order-filled":
       return element.erc721SellOrderFilled;
     case "element-erc721-sell-order-filled-v2":
@@ -315,6 +326,12 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return infinity.cancelAllOrders;
     case "infinity-cancel-multiple-orders":
       return infinity.cancelMultipleOrders;
+    case "forward-order-filled":
+      return forward.orderFilled;
+    case "forward-order-cancelled":
+      return forward.orderCancelled;
+    case "forward-counter-incremented":
+      return forward.counterIncremented;
     default:
       return undefined;
   }

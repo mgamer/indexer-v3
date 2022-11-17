@@ -9,6 +9,7 @@ import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 
+import * as raribleCheck from "@/orderbook/orders/rarible/check";
 import * as looksRareCheck from "@/orderbook/orders/looks-rare/check";
 import * as seaportCheck from "@/orderbook/orders/seaport/check";
 import * as x2y2Check from "@/orderbook/orders/x2y2/check";
@@ -55,7 +56,8 @@ if (config.doBackgroundWork) {
               { id: data.id }
             );
 
-            if (result) {
+            // TODO: Support validating orders for which `raw_data` is null
+            if (result && result.raw_data) {
               let fillabilityStatus = "fillable";
               let approvalStatus = "approved";
 
@@ -80,6 +82,8 @@ if (config.doBackgroundWork) {
                     } else if (error.message === "no-balance-no-approval") {
                       fillabilityStatus = "no-balance";
                       approvalStatus = "no-approval";
+                    } else {
+                      return;
                     }
                   }
                   break;
@@ -105,6 +109,8 @@ if (config.doBackgroundWork) {
                     } else if (error.message === "no-balance-no-approval") {
                       fillabilityStatus = "no-balance";
                       approvalStatus = "no-approval";
+                    } else {
+                      return;
                     }
                   }
                   break;
@@ -131,6 +137,8 @@ if (config.doBackgroundWork) {
                     } else if (error.message === "no-balance-no-approval") {
                       fillabilityStatus = "no-balance";
                       approvalStatus = "no-approval";
+                    } else {
+                      return;
                     }
                   }
                   break;
@@ -156,6 +164,35 @@ if (config.doBackgroundWork) {
                     } else if (error.message === "no-balance-no-approval") {
                       fillabilityStatus = "no-balance";
                       approvalStatus = "no-approval";
+                    } else {
+                      return;
+                    }
+                  }
+                  break;
+                }
+
+                case "rarible": {
+                  const order = new Sdk.Rarible.Order(config.chainId, result.raw_data);
+                  try {
+                    await raribleCheck.offChainCheck(order, {
+                      onChainApprovalRecheck: true,
+                      checkFilledOrCancelled: true,
+                    });
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  } catch (error: any) {
+                    if (error.message === "cancelled") {
+                      fillabilityStatus = "cancelled";
+                    } else if (error.message === "filled") {
+                      fillabilityStatus = "filled";
+                    } else if (error.message === "no-balance") {
+                      fillabilityStatus = "no-balance";
+                    } else if (error.message === "no-approval") {
+                      approvalStatus = "no-approval";
+                    } else if (error.message === "no-balance-no-approval") {
+                      fillabilityStatus = "no-balance";
+                      approvalStatus = "no-approval";
+                    } else {
+                      return;
                     }
                   }
                   break;

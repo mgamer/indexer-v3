@@ -11,7 +11,7 @@ import { lc } from "@reservoir0x/sdk/dist/utils";
 import { BigNumberish } from "ethers";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
-import { Sdk } from "tmp"; // TODO @joe
+import { Sdk } from "@/tmp/index"; // TODO @joe
 import { bn } from "@/common/utils";
 import { getERC20Transfer } from "./utils/erc20";
 import { Log } from "@ethersproject/providers";
@@ -277,7 +277,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           return (
             acc +
             item.tokens.reduce(
-              (collectionNumTokens, token) => collectionNumTokens + token.numTokens,
+              (collectionNumTokens: number, token) => collectionNumTokens + token.numTokens,
               0
             )
           );

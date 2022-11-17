@@ -5,6 +5,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 
+import { inject } from "@/api/index";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
@@ -27,6 +28,21 @@ export const getExecuteSellV6Options: RouteOptions = {
   validate: {
     payload: Joi.object({
       orderId: Joi.string().lowercase(),
+      rawOrder: Joi.object({
+        kind: Joi.string()
+          .lowercase()
+          .valid(
+            "opensea",
+            "looks-rare",
+            "zeroex-v4",
+            "seaport",
+            "seaport-partial",
+            "x2y2",
+            "universe"
+          )
+          .required(),
+        data: Joi.object().required(),
+      }),
       token: Joi.string()
         .lowercase()
         .pattern(regex.token)
@@ -54,13 +70,17 @@ export const getExecuteSellV6Options: RouteOptions = {
       onlyPath: Joi.boolean()
         .default(false)
         .description("If true, only the path will be returned."),
+      normalizeRoyalties: Joi.boolean().default(false),
       maxFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional. Set custom gas price."),
       maxPriorityFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional. Set custom gas price."),
-    }),
+      x2y2ApiKey: Joi.string().description("Override the X2Y2 API key used for filling."),
+    })
+      .or("orderId", "rawOrder")
+      .oxor("orderId", "rawOrder"),
   },
   response: {
     schema: Joi.object({
@@ -105,7 +125,29 @@ export const getExecuteSellV6Options: RouteOptions = {
 
       const [contract, tokenId] = payload.token.split(":");
 
-      // Scenario 1: explicitly passing an existing order to fill
+      // Scenario 3: pass raw orders that don't yet exist
+      if (payload.rawOrder) {
+        // Hack: As the raw order is processed, set it to the `orderId`
+        // field so that it will get handled by the next pipeline step
+        // of this same API rather than doing anything custom for it.
+        payload.orderId = [];
+
+        const response = await inject({
+          method: "POST",
+          url: `/order/v2`,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          payload: { order: payload.rawOrder },
+        }).then((response) => JSON.parse(response.payload));
+        if (response.orderId) {
+          payload.orderId = response.orderId;
+        } else {
+          throw Boom.badData("Raw order failed to get processed");
+        }
+      }
+
+      // Scenario 2: explicitly pass an order id to fill
       if (payload.orderId) {
         orderResult = await redb.oneOrNone(
           `
@@ -141,7 +183,7 @@ export const getExecuteSellV6Options: RouteOptions = {
           }
         );
       } else {
-        // Fetch the best offer on specified current token
+        // Scenario 3: fetch the best offer on specified current token
         orderResult = await redb.oneOrNone(
           `
             SELECT
@@ -221,7 +263,10 @@ export const getExecuteSellV6Options: RouteOptions = {
         return { path };
       }
 
-      const router = new Sdk.RouterV6.Router(config.chainId, baseProvider);
+      const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
+        x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
+        cbApiKey: config.cbApiKey,
+      });
       const { txData } = await router.fillBidTx(bidDetails!, payload.taker, {
         source: payload.source,
       });
@@ -251,7 +296,7 @@ export const getExecuteSellV6Options: RouteOptions = {
         },
       ];
 
-      // X2Y2 / Sudoswap bids are to be filled directly (because we have no modules for them yet)
+      // X2Y2 / Sudoswap / Forward bids are to be filled directly (because we have no modules for them yet)
       if (bidDetails.kind === "x2y2") {
         const isApproved = await getNftApproval(
           bidDetails.contract,
@@ -293,6 +338,38 @@ export const getExecuteSellV6Options: RouteOptions = {
             payload.taker,
             Sdk.Sudoswap.Addresses.RouterWithRoyalties[config.chainId]
           );
+
+          steps[0].items.push({
+            status: "incomplete",
+            data: {
+              ...approveTx,
+              maxFeePerGas: payload.maxFeePerGas
+                ? bn(payload.maxFeePerGas).toHexString()
+                : undefined,
+              maxPriorityFeePerGas: payload.maxPriorityFeePerGas
+                ? bn(payload.maxPriorityFeePerGas).toHexString()
+                : undefined,
+            },
+          });
+        }
+      }
+      if (bidDetails.kind === "forward") {
+        const isApproved = await getNftApproval(
+          bidDetails.contract,
+          payload.taker,
+          Sdk.Forward.Addresses.Exchange[config.chainId]
+        );
+        if (!isApproved) {
+          const approveTx =
+            bidDetails.contractKind === "erc721"
+              ? new Sdk.Common.Helpers.Erc721(baseProvider, bidDetails.contract).approveTransaction(
+                  payload.taker,
+                  Sdk.Forward.Addresses.Exchange[config.chainId]
+                )
+              : new Sdk.Common.Helpers.Erc1155(
+                  baseProvider,
+                  bidDetails.contract
+                ).approveTransaction(payload.taker, Sdk.Forward.Addresses.Exchange[config.chainId]);
 
           steps[0].items.push({
             status: "incomplete",

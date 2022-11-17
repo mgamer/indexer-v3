@@ -6,6 +6,7 @@ import * as erc1155 from "@/events-sync/handlers/erc1155";
 import * as blur from "@/events-sync/handlers/blur";
 import * as cryptopunks from "@/events-sync/handlers/cryptopunks";
 import * as element from "@/events-sync/handlers/element";
+import * as forward from "@/events-sync/handlers/forward";
 import * as foundation from "@/events-sync/handlers/foundation";
 import * as looksrare from "@/events-sync/handlers/looks-rare";
 import * as nftx from "@/events-sync/handlers/nftx";
@@ -19,6 +20,7 @@ import * as zeroExV4 from "@/events-sync/handlers/zeroex-v4";
 import * as zora from "@/events-sync/handlers/zora";
 import * as universe from "@/events-sync/handlers/universe";
 import * as infinity from "@/events-sync/handlers/infinity";
+import * as rarible from "@/events-sync/handlers/rarible";
 
 export type EventsInfo = {
   kind:
@@ -28,6 +30,7 @@ export type EventsInfo = {
     | "blur"
     | "cryptopunks"
     | "element"
+    | "forward"
     | "foundation"
     | "looks-rare"
     | "nftx"
@@ -40,7 +43,8 @@ export type EventsInfo = {
     | "zeroex-v4"
     | "zora"
     | "universe"
-    | "infinity";
+    | "infinity"
+    | "rarible";
   events: EnhancedEvent[];
   backfill?: boolean;
 };
@@ -75,6 +79,11 @@ export const processEvents = async (info: EventsInfo) => {
 
     case "element": {
       data = await element.handleEvents(info.events);
+      break;
+    }
+
+    case "forward": {
+      data = await forward.handleEvents(info.events);
       break;
     }
 
@@ -140,6 +149,11 @@ export const processEvents = async (info: EventsInfo) => {
 
     case "infinity": {
       data = await infinity.handleEvents(info.events);
+      break;
+    }
+
+    case "rarible": {
+      data = await rarible.handleEvents(info.events);
       break;
     }
   }

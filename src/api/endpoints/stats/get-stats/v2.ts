@@ -38,6 +38,9 @@ export const getStatsV2Options: RouteOptions = {
       attributes: Joi.object()
         .unknown()
         .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
+      normalizeRoyalties: Joi.boolean()
+        .default(false)
+        .description("If true, prices will include missing royalties to be added on-top."),
     })
       .oxor("collection", "token")
       .or("collection", "token"),
@@ -120,6 +123,8 @@ export const getStatsV2Options: RouteOptions = {
             "t"."name",
             "t"."image",
             "ob"."id" AS "top_buy_id",
+            "ob".normalized_value AS top_buy_normalized_value,
+            "ob".currency_normalized_value AS top_buy_currency_normalized_value,
             "ob"."value" AS "top_buy_value",
             "ob"."maker" AS "top_buy_maker",
             date_part('epoch', lower("ob"."valid_between")) AS "top_buy_valid_from",
@@ -130,7 +135,9 @@ export const getStatsV2Options: RouteOptions = {
             ob.price AS top_buy_price,
             ob.currency AS top_buy_currency,
             ob.currency_price AS top_buy_currency_price,
-            ob.currency_value AS top_buy_currency_value
+            ob.currency_value AS top_buy_currency_value,
+            os.normalized_value AS floor_sell_normalized_value,
+            os.currency_normalized_value AS floor_sell_currency_normalized_value
           FROM "tokens" "t"
           LEFT JOIN "orders" "os"
             ON "t"."floor_sell_id" = "os"."id"
@@ -289,7 +296,9 @@ export const getStatsV2Options: RouteOptions = {
               ) AS "floor_sell_valid_until",
               os.currency AS floor_sell_currency,
               coalesce(os.currency_value, os.value) AS floor_sell_currency_value,
-              os.fee_bps AS floor_sell_fee_bps
+              os.fee_bps AS floor_sell_fee_bps,
+              os.normalized_value AS floor_sell_normalized_value,
+              os.currency_normalized_value AS floor_sell_currency_normalized_value
             FROM "tokens" "t"
             LEFT JOIN "orders" "os"
               ON "t"."floor_sell_id" = "os"."id"
@@ -353,11 +362,20 @@ export const getStatsV2Options: RouteOptions = {
                     ? await getJoiPriceObject(
                         {
                           net: {
-                            amount: getNetAmount(
-                              r.floor_sell_currency_value ?? r.floor_sell_value,
-                              r.floor_sell_fee_bps
-                            ),
-                            nativeAmount: getNetAmount(r.floor_sell_value, r.floor_sell_fee_bps),
+                            amount: query.normalizeRoyalties
+                              ? r.floor_sell_currency_normalized_value ??
+                                getNetAmount(
+                                  r.floor_sell_currency_value ?? r.floor_sell_value,
+                                  r.floor_sell_fee_bps
+                                )
+                              : getNetAmount(
+                                  r.floor_sell_currency_value ?? r.floor_sell_value,
+                                  r.floor_sell_fee_bps
+                                ),
+                            nativeAmount: query.normalizeRoyalties
+                              ? r.floor_sell_normalized_value ??
+                                getNetAmount(r.floor_sell_value, r.floor_sell_fee_bps)
+                              : getNetAmount(r.floor_sell_value, r.floor_sell_fee_bps),
                           },
                           gross: {
                             amount: r.floor_sell_currency_value ?? r.floor_sell_value,
@@ -383,8 +401,12 @@ export const getStatsV2Options: RouteOptions = {
                     ? await getJoiPriceObject(
                         {
                           net: {
-                            amount: r.top_buy_currency_value ?? r.top_buy_value,
-                            nativeAmount: r.top_buy_value,
+                            amount: query.normalizeRoyalties
+                              ? r.top_buy_currency_normalized_value ?? r.top_buy_value
+                              : r.top_buy_currency_value ?? r.top_buy_value,
+                            nativeAmount: query.normalizeRoyalties
+                              ? r.top_buy_normalized_value ?? r.top_buy_value
+                              : r.top_buy_value,
                           },
                           gross: {
                             amount: r.top_buy_currency_price ?? r.top_buy_price,

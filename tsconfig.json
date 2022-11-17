@@ -24,7 +24,8 @@
       "@/models/*": ["models/*"],
       "@/pubsub/*": ["pubsub/*"],
       "@/websockets/*": ["websockets/*"],
-      "@/events-sync/*": ["sync/events/*"]
+      "@/events-sync/*": ["sync/events/*"],
+      "@/tmp/*": ["tmp/*"]
     },
     "typeRoots": ["node_modules/@types", "./custom-typings"]
   },

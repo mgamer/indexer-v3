@@ -3,12 +3,14 @@
 import { splitSignature } from "@ethersproject/bytes";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
+import { EventType } from "@opensea/stream-js";
 import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import * as orders from "@/orderbook/orders";
+import { handleEvent } from "@/websockets/opensea/index";
 
 import * as postOrderExternal from "@/jobs/orderbook/post-order-external";
 
@@ -32,7 +34,7 @@ export const postOrderV2Options: RouteOptions = {
       order: Joi.object({
         kind: Joi.string()
           .lowercase()
-          .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2")
+          .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "seaport-partial", "x2y2")
           .required(),
         data: Joi.object().required(),
       }),
@@ -145,6 +147,12 @@ export const postOrderV2Options: RouteOptions = {
               source,
             },
           };
+
+          // Only the relayer can post Coinbase NFT orders
+          if (orderInfo.orderParams.cbOrderId) {
+            throw new Error("Unauthorized");
+          }
+
           const [result] = await orders.zeroExV4.save([orderInfo]);
           if (result.status === "success") {
             return { message: "Success", orderId: result.id };
@@ -187,6 +195,32 @@ export const postOrderV2Options: RouteOptions = {
                 result.id
               }`
             );
+          }
+
+          return { message: "Success", orderId: result.id };
+        }
+
+        case "seaport-partial": {
+          if (!["reservoir"].includes(orderbook)) {
+            throw new Error("Unsupported orderbook");
+          }
+
+          const orderParams = handleEvent(order.data.event_type as EventType, order.data.payload);
+          if (!orderParams) {
+            throw new Error("Could not parse order");
+          }
+
+          const orderInfo: orders.seaport.OrderInfo = {
+            kind: "partial",
+            orderParams,
+          };
+
+          const [result] = await orders.seaport.save([orderInfo]);
+
+          if (result.status !== "success") {
+            const error = Boom.badRequest(result.status);
+            error.output.payload.orderId = result.id;
+            throw error;
           }
 
           return { message: "Success", orderId: result.id };

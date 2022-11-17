@@ -48,6 +48,9 @@ export const getTokensFloorAskV3Options: RouteOptions = {
         "Get events before a particular unix timestamp (inclusive)"
       ),
       sortDirection: Joi.string().valid("asc", "desc").default("desc"),
+      normalizeRoyalties: Joi.boolean()
+        .default(false)
+        .description("If true, prices will include missing royalties to be added on-top."),
       continuation: Joi.string().pattern(regex.base64),
       limit: Joi.number().integer().min(1).max(1000).default(50),
     }).oxor("contract", "token"),
@@ -122,11 +125,13 @@ export const getTokensFloorAskV3Options: RouteOptions = {
           token_floor_sell_events.tx_timestamp,
           orders.currency,
           orders.dynamic,
+          orders.currency_normalized_value,
+          orders.normalized_value,
           TRUNC(orders.currency_price, 0) AS currency_price,
           extract(epoch from token_floor_sell_events.created_at) AS created_at
         FROM token_floor_sell_events
         LEFT JOIN LATERAL (
-           SELECT currency, currency_price, dynamic
+           SELECT currency, currency_price, dynamic, currency_normalized_value, normalized_value
            FROM orders
            WHERE orders.id = token_floor_sell_events.order_id
         ) orders ON TRUE
@@ -209,8 +214,12 @@ export const getTokensFloorAskV3Options: RouteOptions = {
               ? await getJoiPriceObject(
                   {
                     gross: {
-                      amount: r.currency_price ?? r.price,
-                      nativeAmount: r.price,
+                      amount: query.normalizeRoyalties
+                        ? r.currency_normalized_value ?? r.price
+                        : r.currency_price ?? r.price,
+                      nativeAmount: query.normalizeRoyalties
+                        ? r.normalized_value ?? r.price
+                        : r.price,
                       usdAmount: r.usd_price,
                     },
                   },

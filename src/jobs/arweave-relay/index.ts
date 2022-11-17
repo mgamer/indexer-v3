@@ -1,7 +1,7 @@
-import { Sdk as tmpSdk } from "tmp";
 import * as Sdk from "@reservoir0x/sdk";
 import cron from "node-cron";
 
+import { Sdk as tmpSdk } from "tmp";
 import { logger } from "@/common/logger";
 import { arweaveGateway } from "@/common/provider";
 import { redlock, redis } from "@/common/redis";
@@ -44,6 +44,25 @@ export const addPendingOrdersLooksRare = async (
       ...data.map(({ order, schemaHash }) =>
         JSON.stringify({
           kind: "looks-rare",
+          data: {
+            ...order.params,
+            schemaHash,
+          },
+        })
+      )
+    );
+  }
+};
+
+export const addPendingOrdersForward = async (
+  data: { order: Sdk.Forward.Order; schemaHash?: string; source?: string }[]
+) => {
+  if (config.arweaveRelayerKey && data.length) {
+    await redis.rpush(
+      PENDING_DATA_KEY,
+      ...data.map(({ order, schemaHash }) =>
+        JSON.stringify({
+          kind: "forward",
           data: {
             ...order.params,
             schemaHash,
@@ -120,6 +139,25 @@ export const addPendingOrdersInfinity = async (
       ...data.map(({ order, schemaHash }) =>
         JSON.stringify({
           kind: "infinity",
+          data: {
+            ...order.params,
+            schemaHash,
+          },
+        })
+      )
+    );
+  }
+};
+
+export const addPendingOrdersRarible = async (
+  data: { order: Sdk.Rarible.Order; schemaHash?: string; source?: string }[]
+) => {
+  if (config.arweaveRelayerKey && data.length) {
+    await redis.rpush(
+      PENDING_DATA_KEY,
+      ...data.map(({ order, schemaHash }) =>
+        JSON.stringify({
+          kind: "rarible",
           data: {
             ...order.params,
             schemaHash,

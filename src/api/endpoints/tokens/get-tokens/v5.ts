@@ -93,6 +93,9 @@ export const getTokensV5Options: RouteOptions = {
       includeAttributes: Joi.boolean()
         .default(false)
         .description("If true, attributes will be returned in the response."),
+      normalizeRoyalties: Joi.boolean()
+        .default(false)
+        .description("If true, prices will include missing royalties to be added on-top."),
       continuation: Joi.string()
         .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
@@ -196,6 +199,8 @@ export const getTokensV5Options: RouteOptions = {
         LEFT JOIN LATERAL (
           SELECT
             o.id AS top_buy_id,
+            o.normalized_value AS top_buy_normalized_value,
+            o.currency_normalized_value AS top_buy_currency_normalized_value,
             o.maker AS top_buy_maker,
             o.currency AS top_buy_currency,
             o.fee_breakdown AS top_buy_fee_breakdown,
@@ -267,8 +272,24 @@ export const getTokensV5Options: RouteOptions = {
       t.floor_sell_currency_value
     `;
 
+    let normalizeRoyaltiesQuery = "";
+    let selectNormalizeRoyaltiesData = "";
+    if (query.normalizeRoyalties) {
+      selectNormalizeRoyaltiesData = ",r.*";
+      normalizeRoyaltiesQuery = `
+        LEFT JOIN LATERAL (
+          SELECT o.normalized_value AS floor_sell_normalized_value,
+                 o.currency_normalized_value AS floor_sell_currency_normalized_value
+          FROM orders o
+          WHERE o.id = t.floor_sell_id
+        ) r ON TRUE
+      `;
+    }
+
     let sourceQuery = "";
     if (query.source) {
+      normalizeRoyaltiesQuery = "";
+      selectNormalizeRoyaltiesData = "";
       const sources = await Sources.getInstance();
       let source = sources.getByName(query.source, false);
       if (!source) {
@@ -297,7 +318,9 @@ export const getTokensV5Options: RouteOptions = {
                  o.source_id_int AS floor_sell_source_id_int,
                  o.value AS floor_sell_value,
                  o.currency AS floor_sell_currency,
-                 o.currency_value AS floor_sell_currency_value
+                 o.currency_value AS floor_sell_currency_value,
+                 o.normalized_value AS floor_sell_normalized_value,
+                 o.currency_normalized_value AS floor_sell_currency_normalized_value
           FROM orders o
           JOIN token_sets_tokens tst ON o.token_set_id = tst.token_set_id
           WHERE tst.contract = t.contract
@@ -344,11 +367,13 @@ export const getTokensV5Options: RouteOptions = {
               AND nb.amount > 0
             LIMIT 1
           ) AS owner
+          ${selectNormalizeRoyaltiesData}
           ${selectAttributes}
           ${selectTopBid}
         FROM tokens t
         ${topBidQuery}
         ${sourceQuery}
+        ${normalizeRoyaltiesQuery}
         JOIN collections c ON t.collection_id = c.id
         JOIN contracts con ON t.contract = con.address
       `;
@@ -644,8 +669,12 @@ export const getTokensV5Options: RouteOptions = {
                 ? await getJoiPriceObject(
                     {
                       gross: {
-                        amount: r.floor_sell_currency_value ?? r.floor_sell_value,
-                        nativeAmount: r.floor_sell_value,
+                        amount: query.normalizeRoyalties
+                          ? r.floor_sell_currency_normalized_value ?? r.floor_sell_value
+                          : r.floor_sell_currency_value ?? r.floor_sell_value,
+                        nativeAmount: query.normalizeRoyalties
+                          ? r.floor_sell_normalized_value ?? r.floor_sell_value
+                          : r.floor_sell_value,
                       },
                     },
                     floorAskCurrency
@@ -657,7 +686,7 @@ export const getTokensV5Options: RouteOptions = {
               source: {
                 id: floorSellSource?.address,
                 domain: floorSellSource?.domain,
-                name: floorSellSource?.metadata.title || floorSellSource?.name,
+                name: floorSellSource?.getTitle(),
                 icon: floorSellSource?.getIcon(),
                 url: floorSellSource?.metadata.url,
               },
@@ -669,8 +698,12 @@ export const getTokensV5Options: RouteOptions = {
                     ? await getJoiPriceObject(
                         {
                           net: {
-                            amount: r.top_buy_currency_value ?? r.top_buy_value,
-                            nativeAmount: r.top_buy_value,
+                            amount: query.normalizeRoyalties
+                              ? r.top_buy_currency_normalized_value ?? r.top_buy_value
+                              : r.top_buy_currency_value ?? r.top_buy_value,
+                            nativeAmount: query.normalizeRoyalties
+                              ? r.top_buy_normalized_value ?? r.top_buy_value
+                              : r.top_buy_value,
                           },
                           gross: {
                             amount: r.top_buy_currency_price ?? r.top_buy_price,
@@ -686,7 +719,7 @@ export const getTokensV5Options: RouteOptions = {
                   source: {
                     id: topBuySource?.address,
                     domain: topBuySource?.domain,
-                    name: topBuySource?.metadata.title || topBuySource?.name,
+                    name: topBuySource?.getTitle(),
                     icon: topBuySource?.getIcon(),
                     url: topBuySource?.metadata.url,
                   },

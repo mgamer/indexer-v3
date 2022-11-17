@@ -13,6 +13,7 @@ export class MetadataApi {
   public static async getCollectionMetadata(
     contract: string,
     tokenId: string,
+    community = "",
     options?: { allowFallback?: boolean }
   ) {
     if (config.liquidityOnly) {
@@ -35,16 +36,17 @@ export class MetadataApi {
         community: null,
         metadata: null,
         royalties: null,
+        openseaRoyalties: null,
         contract,
         tokenIdRange: null,
         tokenSetId: `contract:${contract}`,
       };
     } else {
+      const indexingMethod = MetadataApi.getCollectionIndexingMethod(community);
+
       const url = `${
         config.metadataApiBaseUrlAlt
-      }/v4/${getNetworkName()}/metadata/collection?method=${
-        config.metadataIndexingMethodCollection
-      }&token=${contract}:${tokenId}`;
+      }/v4/${getNetworkName()}/metadata/collection?method=${indexingMethod}&token=${contract}:${tokenId}`;
 
       const { data } = await axios.get(url);
 
@@ -55,6 +57,7 @@ export class MetadataApi {
         community: string | null;
         metadata: object | null;
         royalties: object | null;
+        openseaRoyalties: object | null;
         contract: string;
         tokenIdRange: [string, string] | null;
         tokenSetId: string | null;
@@ -106,6 +109,15 @@ export class MetadataApi {
     }[] = (data as any).metadata;
 
     return tokenMetadata;
+  }
+
+  public static getCollectionIndexingMethod(community: string | null) {
+    switch (community) {
+      case "sound.xyz":
+        return "soundxyz";
+    }
+
+    return config.metadataIndexingMethodCollection;
   }
 }
 

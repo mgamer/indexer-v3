@@ -207,6 +207,7 @@ export const getExecuteSellV4Options: RouteOptions = {
       ];
       const bidDetails = await generateBidDetailsV5(
         {
+          id: orderResult.id,
           kind: orderResult.kind,
           rawData: orderResult.raw_data,
         },
@@ -223,7 +224,9 @@ export const getExecuteSellV4Options: RouteOptions = {
         return { path };
       }
 
-      const router = new Sdk.RouterV5.Router(config.chainId, baseProvider);
+      const router = new Sdk.RouterV5.Router(config.chainId, baseProvider, {
+        x2y2ApiKey: config.x2y2ApiKey,
+      });
       const tx = await router.fillBidTx(bidDetails!, payload.taker, {
         source: payload.source,
       });

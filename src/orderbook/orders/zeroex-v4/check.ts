@@ -20,7 +20,7 @@ export const offChainCheck = async (
     checkFilledOrCancelled?: boolean;
   }
 ) => {
-  // TODO: We should also check the remaining quantity for partially filled orders.
+  // TODO: We should also check the remaining quantity for partially filled orders
 
   const id = order.hash();
 

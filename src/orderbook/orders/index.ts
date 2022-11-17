@@ -2,6 +2,7 @@
 // Exports
 
 export * as cryptopunks from "@/orderbook/orders/cryptopunks";
+export * as forward from "@/orderbook/orders/forward";
 export * as foundation from "@/orderbook/orders/foundation";
 export * as looksRare from "@/orderbook/orders/looks-rare";
 export * as seaport from "@/orderbook/orders/seaport";
@@ -12,9 +13,10 @@ export * as zora from "@/orderbook/orders/zora";
 export * as universe from "@/orderbook/orders/universe";
 export * as element from "@/orderbook/orders/element";
 export * as infinity from "@/orderbook/orders/infinity";
+export * as rarible from "@/orderbook/orders/rarible";
 
 // Imports
-import { Sdk as tmpSdk } from "tmp"; // TODO @joe
+import { Sdk as tmpSdk } from "@/tmp/index"; // TODO @joe
 import * as Sdk from "@reservoir0x/sdk";
 import * as SdkTypesV5 from "@reservoir0x/sdk/dist/router/v5/types";
 import * as SdkTypesV6 from "@reservoir0x/sdk/dist/router/v6/types";
@@ -49,7 +51,8 @@ export type OrderKind =
   | "universe"
   | "nftx"
   | "blur"
-  | "infinity";
+  | "infinity"
+  | "forward";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -144,6 +147,14 @@ export const generateListingDetailsV5 = (
   };
 
   switch (order.kind) {
+    case "cryptopunks": {
+      return {
+        kind: "cryptopunks",
+        ...common,
+        order: new Sdk.CryptoPunks.Order(config.chainId, order.rawData),
+      };
+    }
+
     case "foundation": {
       return {
         kind: "foundation",
@@ -225,6 +236,14 @@ export const generateListingDetailsV5 = (
       };
     }
 
+    case "rarible": {
+      return {
+        kind: "rarible",
+        ...common,
+        order: new Sdk.Rarible.Order(config.chainId, order.rawData),
+      };
+    }
+
     default: {
       throw new Error("Unsupported order kind");
     }
@@ -234,6 +253,7 @@ export const generateListingDetailsV5 = (
 // Support for filling bids
 export const generateBidDetailsV5 = async (
   order: {
+    id: string;
     kind: OrderKind;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rawData: any;
@@ -254,37 +274,52 @@ export const generateBidDetailsV5 = async (
 
   switch (order.kind) {
     case "seaport": {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const extraArgs: any = {};
+      if (order.rawData) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const extraArgs: any = {};
 
-      const sdkOrder = new Sdk.Seaport.Order(config.chainId, order.rawData);
-      if (sdkOrder.params.kind?.includes("token-list")) {
-        // When filling a "token-list" order, we also need to pass in the
-        // full list of tokens the order was made on (in order to be able
-        // to generate a valid merkle proof)
-        const tokens = await redb.manyOrNone(
-          `
-            SELECT
-              token_sets_tokens.token_id
-            FROM token_sets_tokens
-            WHERE token_sets_tokens.token_set_id = (
+        const sdkOrder = new Sdk.Seaport.Order(config.chainId, order.rawData);
+        if (sdkOrder.params.kind?.includes("token-list")) {
+          // When filling a "token-list" order, we also need to pass in the
+          // full list of tokens the order was made on (in order to be able
+          // to generate a valid merkle proof)
+          const tokens = await redb.manyOrNone(
+            `
               SELECT
-                orders.token_set_id
-              FROM orders
-              WHERE orders.id = $/id/
-            )
-          `,
-          { id: sdkOrder.hash() }
-        );
-        extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
-      }
+                token_sets_tokens.token_id
+              FROM token_sets_tokens
+              WHERE token_sets_tokens.token_set_id = (
+                SELECT
+                  orders.token_set_id
+                FROM orders
+                WHERE orders.id = $/id/
+              )
+            `,
+            { id: sdkOrder.hash() }
+          );
+          extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
+        }
 
-      return {
-        kind: "seaport",
-        ...common,
-        extraArgs,
-        order: sdkOrder,
-      };
+        return {
+          kind: "seaport",
+          ...common,
+          extraArgs,
+          order: sdkOrder,
+        };
+      } else {
+        // Sorry for all the below `any` types
+        return {
+          // eslint-disable-next-line
+          kind: "seaport-partial" as any,
+          ...common,
+          order: {
+            contract: token.contract,
+            tokenId: token.tokenId,
+            id: order.id,
+            // eslint-disable-next-line
+          } as any,
+        };
+      }
     }
 
     case "looks-rare": {
@@ -346,6 +381,15 @@ export const generateBidDetailsV5 = async (
       };
     }
 
+    case "rarible": {
+      const sdkOrder = new Sdk.Rarible.Order(config.chainId, order.rawData);
+      return {
+        kind: "rarible",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
     default: {
       throw new Error("Unsupported order kind");
     }
@@ -379,6 +423,14 @@ export const generateListingDetailsV6 = (
   };
 
   switch (order.kind) {
+    case "cryptopunks": {
+      return {
+        kind: "cryptopunks",
+        ...common,
+        order: new Sdk.CryptoPunks.Order(config.chainId, order.rawData),
+      };
+    }
+
     case "foundation": {
       return {
         kind: "foundation",
@@ -458,6 +510,14 @@ export const generateListingDetailsV6 = (
         kind: "infinity" as any,
         ...common,
         order: sdkOrder as any,
+      };
+    }
+
+    case "rarible": {
+      return {
+        kind: "rarible",
+        ...common,
+        order: new Sdk.Rarible.Order(config.chainId, order.rawData),
       };
     }
 
@@ -592,6 +652,23 @@ export const generateBidDetailsV6 = async (
         kind: "infinity" as any,
         ...common,
         order: sdkOrder as any,
+      };
+    }
+
+    case "rarible": {
+      return {
+        kind: "rarible",
+        ...common,
+        order: new Sdk.Rarible.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "forward": {
+      const sdkOrder = new Sdk.Forward.Order(config.chainId, order.rawData);
+      return {
+        kind: "forward",
+        ...common,
+        order: sdkOrder,
       };
     }
 

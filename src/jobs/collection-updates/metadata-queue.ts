@@ -25,14 +25,14 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { contract, tokenId } = job.data;
+      const { contract, tokenId, community } = job.data;
 
       if (await acquireLock(QUEUE_NAME, 1)) {
         logger.info(QUEUE_NAME, `Refresh collection metadata=${contract}`);
         await acquireLock(`${QUEUE_NAME}:${contract}`, 60 * 60); // lock this contract for the next hour
 
         try {
-          await Collections.updateCollectionCache(contract, tokenId);
+          await Collections.updateCollectionCache(contract, tokenId, community);
           await refreshRegistryRoyalties(contract);
         } catch (error) {
           logger.error(QUEUE_NAME, `Failed to update collection metadata=${error}`);
@@ -46,8 +46,8 @@ if (config.doBackgroundWork) {
 
   worker.on("completed", async (job: Job) => {
     if (job.data.addToQueue) {
-      const { contract, tokenId } = job.data;
-      await addToQueue(contract, tokenId, 1000);
+      const { contract, tokenId, community } = job.data;
+      await addToQueue(contract, tokenId, community, 1000);
     }
   });
 
@@ -57,8 +57,9 @@ if (config.doBackgroundWork) {
 }
 
 export const addToQueue = async (
-  contract: string | string[],
+  contract: string | { contract: string; community: string }[],
   tokenId = "1",
+  community = "",
   delay = 0,
   forceRefresh = false
 ) => {
@@ -66,13 +67,13 @@ export const addToQueue = async (
     await queue.addBulk(
       _.map(contract, (c) => ({
         name: randomUUID(),
-        data: { contract: c, tokenId },
+        data: { contract: c.contract, tokenId, community: c.community },
         opts: { delay },
       }))
     );
   } else {
     if (forceRefresh || _.isNull(await redis.get(`${QUEUE_NAME}:${contract}`))) {
-      await queue.add(randomUUID(), { contract, tokenId }, { delay });
+      await queue.add(randomUUID(), { contract, tokenId, community }, { delay });
     }
   }
 };

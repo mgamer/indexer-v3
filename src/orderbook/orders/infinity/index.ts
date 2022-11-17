@@ -3,7 +3,7 @@ import { idb, pgp } from "@/common/db";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { DbOrder, generateSchemaHash, OrderMetadata } from "../utils";
 import { logger } from "@/common/logger";
-import { Sdk as tmpSdk } from "tmp"; // TODO joe update this to use the new sdk
+import { Sdk as tmpSdk } from "@/tmp/index"; // TODO joe update this to use the new sdk
 import { bn, now, toBuffer } from "@/common/utils";
 import { offChainCheck } from "./check";
 import pLimit from "p-limit";

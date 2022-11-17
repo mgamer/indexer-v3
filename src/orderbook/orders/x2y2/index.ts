@@ -11,6 +11,7 @@ import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/u
 import { offChainCheck } from "@/orderbook/orders/x2y2/check";
 import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
+import * as royalties from "@/utils/royalties";
 
 export type OrderInfo = {
   orderParams: Sdk.X2Y2.Types.Order;
@@ -152,7 +153,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       }
 
       // Handle: fees
-      let feeBreakdown = [
+      const feeBreakdown = [
         {
           kind: "marketplace",
           recipient: Sdk.X2Y2.Addresses.FeeManager[config.chainId],
@@ -160,21 +161,70 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         },
       ];
 
+      const side = order.params.type === "sell" ? "sell" : "buy";
+      const price = bn(order.params.price);
+
       // Handle: royalties
-      const royalties = await commonHelpers.getOpenSeaRoyalties(order.params.nft.token);
-      feeBreakdown = [
-        ...feeBreakdown,
-        ...royalties.map(({ bps, recipient }) => ({
-          kind: "royalty",
-          recipient,
-          bps,
-        })),
-      ];
+      if (order.params.royalty_fee > 0) {
+        // Assume X2Y2 royalties match EIP2981 royalties (in reality X2Y2
+        // have their own proprietary royalty system which we don't index
+        // at the moment)
+        const onChainRoyalties = await commonHelpers.getOnChainRoyalties(order.params.nft.token);
+        const onChainRoyaltyRecipient = onChainRoyalties["eip2981"]?.[0].recipient;
+        if (onChainRoyaltyRecipient) {
+          feeBreakdown.push({
+            kind: "royalty",
+            recipient: onChainRoyaltyRecipient,
+            bps: Math.floor(order.params.royalty_fee / 10),
+          });
+        }
+      }
+
+      // Handle: royalties on top
+      const missingRoyalties = [];
+      let missingRoyaltyAmount = bn(0);
+      if (side === "sell") {
+        const defaultRoyalties = await royalties.getDefaultRoyalties(
+          order.params.nft.token,
+          order.params.nft.tokenId!
+        );
+        for (const { bps, recipient } of defaultRoyalties) {
+          // Get any built-in royalty payment to the current recipient
+          const existingRoyalty = feeBreakdown.find(
+            (r) => r.kind === "royalty" && r.recipient === recipient
+          );
+
+          if (existingRoyalty) {
+            // Charge the difference if the built-in royalty is less than the default
+            if (existingRoyalty.bps < bps) {
+              const actualBps = bps - existingRoyalty.bps;
+              const amount = bn(price).mul(actualBps).div(10000).toString();
+              missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
+
+              missingRoyalties.push({
+                amount,
+                recipient,
+              });
+            }
+          } else {
+            // Charge the full amount if the built-in royalty is missing
+            const amount = bn(price).mul(bps).div(10000).toString();
+            missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
+
+            missingRoyalties.push({
+              amount,
+              recipient,
+            });
+          }
+        }
+      }
+
       const feeBps = feeBreakdown.map(({ bps }) => bps).reduce((a, b) => Number(a) + Number(b), 0);
 
       // Handle: price and value
-      const price = bn(order.params.price);
-      const value = order.params.type === "sell" ? price : price.sub(price.mul(feeBps).div(10000));
+      const value = side === "sell" ? price : price.sub(price.mul(feeBps).div(10000));
+      const normalizedValue =
+        side === "sell" ? bn(value).add(missingRoyaltyAmount).toString() : undefined;
 
       // Handle: source
       const sources = await Sources.getInstance();
@@ -194,7 +244,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       orderValues.push({
         id,
         kind: "x2y2",
-        side: order.params.type === "sell" ? "sell" : "buy",
+        side,
         fillability_status: fillabilityStatus,
         approval_status: approvalStatus,
         token_set_id: tokenSetId,
@@ -219,9 +269,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         dynamic: null,
         raw_data: order.params,
         expiration: validTo,
-        missing_royalties: null,
-        normalized_value: null,
-        currency_normalized_value: null,
+        missing_royalties: missingRoyalties,
+        normalized_value: normalizedValue || null,
+        currency_normalized_value: normalizedValue || null,
       });
 
       results.push({
@@ -276,6 +326,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         "dynamic",
         "raw_data",
         { name: "expiration", mod: ":raw" },
+        { name: "missing_royalties", mod: ":json" },
+        "normalized_value",
+        "currency_normalized_value",
       ],
       {
         table: "orders",

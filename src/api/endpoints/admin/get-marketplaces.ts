@@ -1,5 +1,6 @@
 import { RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
+
 import { config } from "@/config/index";
 
 type Marketplace = {
