@@ -1,6 +1,6 @@
 import _ from "lodash";
 
-import { edb, idb } from "@/common/db";
+import { idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import * as registry from "@/utils/royalties/registry";
 
@@ -19,7 +19,7 @@ export const getDefaultRoyalties = async (
   // objects, while the `new_royalties` column holds an object pointing to arrays which
   // have `Royalty` values (this is for accommodating multiple royalty standards - with
   // each key of the object denoting a different standard).
-  const royaltiesResult = await edb.oneOrNone(
+  const royaltiesResult = await idb.oneOrNone(
     `
       SELECT
         collections.royalties,
@@ -116,7 +116,7 @@ export const refreshAllRoyaltySpecs = async (
 };
 
 export const refreshDefaulRoyalties = async (collection: string) => {
-  const royaltiesResult = await edb.oneOrNone(
+  const royaltiesResult = await idb.oneOrNone(
     `
       SELECT
         collections.new_royalties
