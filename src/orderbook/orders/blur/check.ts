@@ -49,16 +49,6 @@ export const offChainCheck = async (
     throw new Error("cancelled");
   }
 
-  // Check: order's nonce was not individually cancelled
-  const nonceCancelled = await commonHelpers.isNonceCancelled(
-    `blur`,
-    order.params.trader,
-    order.params.nonce
-  );
-  if (nonceCancelled) {
-    throw new Error("cancelled");
-  }
-
   let hasBalance = true;
   let hasApproval = true;
   if (order.params.side === Sdk.Blur.Types.TradeDirection.BUY) {
