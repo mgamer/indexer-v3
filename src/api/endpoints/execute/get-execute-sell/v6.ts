@@ -78,9 +78,7 @@ export const getExecuteSellV6Options: RouteOptions = {
         .pattern(regex.number)
         .description("Optional. Set custom gas price."),
       x2y2ApiKey: Joi.string().description("Override the X2Y2 API key used for filling."),
-    })
-      .or("orderId", "rawOrder")
-      .oxor("orderId", "rawOrder"),
+    }).oxor("orderId", "rawOrder"),
   },
   response: {
     schema: Joi.object({
