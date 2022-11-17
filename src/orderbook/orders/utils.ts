@@ -25,6 +25,7 @@ export type OrderMetadata = {
   };
   schemaHash?: string;
   source?: string;
+  target?: string;
 };
 
 // Underlying database model for an order

@@ -167,8 +167,7 @@ export const getOrdersBidsV4Options: RouteOptions = {
               Joi.object({
                 kind: Joi.string(),
                 recipient: Joi.string().allow("", null),
-                // FIX: bps saved as an ethers.js BigNumber
-                bps: Joi.any(),
+                bps: Joi.number(),
               })
             )
             .allow(null),
@@ -517,7 +516,7 @@ export const getOrdersBidsV4Options: RouteOptions = {
           metadata: query.includeMetadata ? r.metadata : undefined,
           source: {
             id: source?.address,
-            name: source?.metadata.title || source?.name,
+            name: source?.getTitle(),
             icon: source?.getIcon(),
             url: source?.metadata.url,
             domain: source?.domain,

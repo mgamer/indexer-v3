@@ -477,7 +477,7 @@ export const getOrdersAsksV3Options: RouteOptions = {
           source: {
             id: source?.address,
             domain: source?.domain,
-            name: source?.metadata.title || source?.name,
+            name: source?.getTitle(),
             icon: source?.getIcon(),
             url: source?.metadata.url,
           },
