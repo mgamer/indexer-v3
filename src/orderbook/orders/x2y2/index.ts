@@ -184,7 +184,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const missingRoyalties = [];
       let missingRoyaltyAmount = bn(0);
       if (side === "sell") {
-        const defaultRoyalties = await royalties.getDefaultRoyalties(order.params.nft.token);
+        const defaultRoyalties = await royalties.getDefaultRoyalties(
+          order.params.nft.token,
+          order.params.nft.tokenId!
+        );
         for (const { bps, recipient } of defaultRoyalties) {
           // Get any built-in royalty payment to the current recipient
           const existingRoyalty = feeBreakdown.find(
