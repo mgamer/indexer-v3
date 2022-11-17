@@ -166,16 +166,15 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle: royalties
       if (order.params.royalty_fee > 0) {
-        // Assume X2Y2 royalties match EIP2981 royalties (in reality X2Y2
-        // have their own proprietary royalty system which we don't index
-        // at the moment)
-        const onChainRoyalties = await commonHelpers.getOnChainRoyalties(order.params.nft.token);
-        const onChainRoyaltyRecipient = onChainRoyalties["eip2981"]?.[0].recipient;
-        if (onChainRoyaltyRecipient) {
+        // Assume X2Y2 royalties match the default royalties (in reality X2Y2
+        // have their own proprietary royalty system which we do not index at
+        // the moment)
+        const openSeaRoyalties = await commonHelpers.getOpenSeaRoyalties(order.params.nft.token);
+        if (openSeaRoyalties.length) {
           feeBreakdown.push({
             kind: "royalty",
-            recipient: onChainRoyaltyRecipient,
-            bps: Math.floor(order.params.royalty_fee / 10),
+            recipient: openSeaRoyalties[0].recipient,
+            bps: Math.floor(order.params.royalty_fee / 100),
           });
         }
       }
