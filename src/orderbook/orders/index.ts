@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Exports
 
 export * as cryptopunks from "@/orderbook/orders/cryptopunks";
@@ -216,10 +217,11 @@ export const generateListingDetailsV5 = (
     }
 
     case "infinity": {
+      // TODO @joe
       return {
-        kind: "infinity",
+        kind: "infinity" as any,
         ...common,
-        order: new tmpSdk.Infinity.Order(config.chainId, order.rawData),
+        order: new tmpSdk.Infinity.Order(config.chainId, order.rawData) as any,
       };
     }
 
@@ -335,11 +337,12 @@ export const generateBidDetailsV5 = async (
     }
 
     case "infinity": {
+      // TODO @joe
       const sdkOrder = new tmpSdk.Infinity.Order(config.chainId, order.rawData);
       return {
-        kind: "infinity",
+        kind: "infinity" as any,
         ...common,
-        order: sdkOrder,
+        order: sdkOrder as any,
       };
     }
 
@@ -449,11 +452,12 @@ export const generateListingDetailsV6 = (
     }
 
     case "infinity": {
+      // TODO @joe
       const sdkOrder = new tmpSdk.Infinity.Order(config.chainId, order.rawData);
       return {
-        kind: "infinity",
+        kind: "infinity" as any,
         ...common,
-        order: sdkOrder,
+        order: sdkOrder as any,
       };
     }
 
@@ -582,11 +586,12 @@ export const generateBidDetailsV6 = async (
     }
 
     case "infinity": {
+      // TODO @joe
       const sdkOrder = new tmpSdk.Infinity.Order(config.chainId, order.rawData);
       return {
-        kind: "infinity",
+        kind: "infinity" as any,
         ...common,
-        order: sdkOrder,
+        order: sdkOrder as any,
       };
     }
 

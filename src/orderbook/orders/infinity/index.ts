@@ -66,6 +66,7 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
       let approvalStatus = "approved";
       try {
         await offChainCheck(order, { onChainApprovalRecheck: true });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         // Keep any orders that can potentially get valid in the future
         if (error.message === "no-balance-no-approval") {

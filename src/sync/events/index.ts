@@ -390,6 +390,11 @@ export const syncEvents = async (
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("universe")),
         backfill,
       },
+      {
+        kind: "infinity",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("infinity")),
+        backfill,
+      },
     ]);
 
     // Make sure to recheck the ingested blocks with a delay in order to undo any reorgs

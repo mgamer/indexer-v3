@@ -1,7 +1,7 @@
 import { Interface } from "@ethersproject/abi";
 import { config } from "@/config/index";
 import { EventData } from "@/events-sync/data";
-import { Infinity } from "@reservoir0x/sdk";
+import { Infinity } from "tmp/sdk"; // TODO @joe
 
 export const matchOrderFulfilled: EventData = {
   kind: "infinity-match-order-fulfilled",
