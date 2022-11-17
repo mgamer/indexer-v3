@@ -3,6 +3,7 @@
 import _ from "lodash";
 
 import { idb, redb } from "@/common/db";
+import { logger } from "@/common/logger";
 import { toBuffer, now } from "@/common/utils";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import {
@@ -76,6 +77,7 @@ export class Collections {
 
   public static async updateCollectionCache(contract: string, tokenId: string, community = "") {
     const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, community);
+    logger.info("debug", `Collection result: ${JSON.stringify(collection)}`);
     const tokenCount = await Tokens.countTokensInCollection(collection.id);
 
     const query = `UPDATE collections
