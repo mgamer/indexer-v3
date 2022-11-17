@@ -72,7 +72,7 @@ export const offChainCheck = async (
             .fetchAndUpdateFtApproval(
               order.params.paymentToken,
               order.params.trader,
-              Sdk.Blur.Addresses.Exchange[config.chainId]
+              Sdk.Blur.Addresses.ExecutionDelegate[config.chainId]
             )
             .then((a) => a.value)
         ).lt(bn(order.params.price))
@@ -92,7 +92,7 @@ export const offChainCheck = async (
       hasBalance = false;
     }
 
-    const operator = Sdk.Blur.Addresses.Exchange[config.chainId];
+    const operator = Sdk.Blur.Addresses.ExecutionDelegate[config.chainId];
 
     // Check: maker has set the proper approval
     const nftApproval = await commonHelpers.getNftApproval(
