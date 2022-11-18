@@ -197,7 +197,10 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
         schemaHash: toBuffer(tokenSet.schemaHash),
       }
     );
-    if (!tokenSetExists && !(await isValid(tokenSet))) {
+    if (tokenSetExists) {
+      // If the token set already exists, we can simply skip every other checks
+      valid.push(tokenSet);
+    } else if (!tokenSetExists && !(await isValid(tokenSet))) {
       continue;
     }
 
