@@ -166,10 +166,14 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle: royalties
       if (order.params.royalty_fee > 0) {
-        // Assume X2Y2 royalties match the default royalties (in reality X2Y2
+        // Assume X2Y2 royalties match the OpenSea royalties (in reality X2Y2
         // have their own proprietary royalty system which we do not index at
         // the moment)
-        const openSeaRoyalties = await commonHelpers.getOpenSeaRoyalties(order.params.nft.token);
+        const openSeaRoyalties = await royalties.getRoyalties(
+          order.params.nft.token,
+          order.params.nft.tokenId,
+          "opensea"
+        );
         if (openSeaRoyalties.length) {
           feeBreakdown.push({
             kind: "royalty",
@@ -183,9 +187,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const missingRoyalties = [];
       let missingRoyaltyAmount = bn(0);
       if (side === "sell") {
-        const defaultRoyalties = await royalties.getDefaultRoyalties(
+        const defaultRoyalties = await royalties.getRoyalties(
           order.params.nft.token,
-          order.params.nft.tokenId!
+          order.params.nft.tokenId,
+          "default"
         );
         for (const { bps, recipient } of defaultRoyalties) {
           // Get any built-in royalty payment to the current recipient

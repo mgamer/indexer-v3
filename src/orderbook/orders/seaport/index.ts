@@ -251,8 +251,9 @@ export const save = async (
         }
 
         case "token-list": {
-          // For collection offers, If the target orderbook is opensea, the token set should always be a contract wide.
-          // This is due to a mismatch between the collection flags in our system and os. the actual merkel root is returned by build collection offer OS Api (see logic in execute bid api)
+          // For collection offers, if the target orderbook is opensea, the token set should always be a contract wide.
+          // This is due to a mismatch between the collection flags in our system and OpenSea.
+          // The actual merkle root is returned by the build collection offer API from OpenSea (see the logic in the execute bid API).
           if (metadata?.target === "opensea") {
             tokenSetId = `contract:${info.contract}`;
             await tokenSet.contractWide.save([
@@ -322,28 +323,18 @@ export const save = async (
         });
       }
 
-      // // Handle: fee breakdown
+      // Handle: royalties
       const openSeaFeeRecipients = [
         "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073",
         "0x8de9c5a032463c561423387a9648c5c7bcc5bc90",
         "0x0000a26b00c1f0df003000390027140000faa719",
       ];
-
-      const royaltyRecipients: string[] = [];
-
-      const collectionRoyalties = await redb.oneOrNone(
-        `SELECT royalties FROM collections WHERE id = $/id/`,
-        { id: info.contract }
-      );
-
-      if (collectionRoyalties) {
-        for (const royalty of collectionRoyalties.royalties) {
-          royaltyRecipients.push(royalty.recipient);
-        }
-      }
+      const openSeaRoyalties = await royalties.getRoyalties(info.contract, info.tokenId, "opensea");
 
       const feeBreakdown = info.fees.map(({ recipient, amount }) => ({
-        kind: royaltyRecipients.includes(recipient.toLowerCase()) ? "royalty" : "marketplace",
+        kind: openSeaRoyalties.map(({ recipient }) => recipient).includes(recipient.toLowerCase())
+          ? "royalty"
+          : "marketplace",
         recipient,
         bps: price.eq(0) ? 0 : bn(amount).mul(10000).div(price).toNumber(),
       }));
@@ -352,7 +343,11 @@ export const save = async (
       const missingRoyalties = [];
       let missingRoyaltyAmount = bn(0);
       if (info.side === "sell") {
-        const defaultRoyalties = await royalties.getDefaultRoyalties(info.contract, info.tokenId!);
+        const defaultRoyalties = await royalties.getRoyalties(
+          info.contract,
+          info.tokenId,
+          "default"
+        );
         for (const { bps, recipient } of defaultRoyalties) {
           // Get any built-in royalty payment to the current recipient
           const existingRoyalty = feeBreakdown.find(
@@ -644,14 +639,15 @@ export const save = async (
       }
 
       let collectionResult;
-
       if (orderParams.kind === "single-token") {
         collectionResult = await redb.oneOrNone(
-          `SELECT 
-                    royalties
-                 FROM collections
-                 WHERE contract = $/contract/
-                 AND token_id_range @> $/tokenId/::NUMERIC(78, 0)`,
+          `
+            SELECT
+              collections.new_royalties
+            FROM collections
+            WHERE collections.contract = $/contract/
+              AND collections.token_id_range @> $/tokenId/::NUMERIC(78, 0)
+          `,
           {
             contract: toBuffer(orderParams.contract),
             tokenId: orderParams.tokenId,
@@ -661,12 +657,13 @@ export const save = async (
         if (getNetworkSettings().multiCollectionContracts.includes(orderParams.contract)) {
           collectionResult = await redb.oneOrNone(
             `
-                  SELECT
-                    royalties,
-                    token_set_id
-                  FROM collections
-                  WHERE contract = $/contract/ AND slug = $/collectionSlug/
-                `,
+              SELECT
+                collections.new_royalties,
+                collections.token_set_id
+              FROM collections
+              WHERE collections.contract = $/contract/
+                AND collections.slug = $/collectionSlug/
+            `,
             {
               contract: toBuffer(orderParams.contract),
               collectionSlug: orderParams.collectionSlug,
@@ -675,12 +672,12 @@ export const save = async (
         } else {
           collectionResult = await redb.oneOrNone(
             `
-                  SELECT
-                    royalties,
-                    token_set_id
-                  FROM collections
-                  WHERE id = $/id/
-                `,
+              SELECT
+                collections.new_royalties,
+                collections.token_set_id
+              FROM collections
+              WHERE collections.id = $/id/
+            `,
             {
               id: orderParams.contract,
             }
@@ -784,12 +781,12 @@ export const save = async (
       ];
 
       if (collectionResult) {
-        for (const royalty of collectionResult.royalties) {
+        for (const royalty of collectionResult.new_royalties?.["opensea"] ?? []) {
           feeBps += royalty.bps;
 
           feeBreakdown.push({
-            bps: royalty.bps,
             kind: "royalty",
+            bps: royalty.bps,
             recipient: royalty.recipient,
           });
         }
@@ -799,9 +796,10 @@ export const save = async (
       const missingRoyalties = [];
       let missingRoyaltyAmount = bn(0);
       if (orderParams.side === "sell") {
-        const defaultRoyalties = await royalties.getDefaultRoyalties(
+        const defaultRoyalties = await royalties.getRoyalties(
           orderParams.contract,
-          orderParams.tokenId!
+          orderParams.tokenId!,
+          "default"
         );
         for (const { bps, recipient } of defaultRoyalties) {
           // Get any built-in royalty payment to the current recipient
