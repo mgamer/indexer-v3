@@ -33,6 +33,9 @@ import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsync
 import * as arweaveSyncBackfill from "@/jobs/arweave-sync/backfill-queue";
 import * as arweaveSyncRealtime from "@/jobs/arweave-sync/realtime-queue";
 
+import * as backfillCollectionsRoyalties from "@/jobs/backfill/backfill-collections-royalties";
+import * as backfillFixOpenSeaOrders from "@/jobs/backfill/backfill-fix-opensea-realtime-asks";
+
 import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
 
 import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refresh";
@@ -95,8 +98,6 @@ import * as resyncAttributeFloorSell from "@/jobs/update-attribute/resync-attrib
 import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attribute-key-counts";
 import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
 
-import * as backfillFixOpenSeaOrders from "@/jobs/backfill/backfill-fix-opensea-realtime-asks";
-
 export const allJobQueues = [
   fixActivitiesMissingCollection.queue,
   processActivityEvent.queue,
@@ -104,6 +105,9 @@ export const allJobQueues = [
 
   arweaveSyncBackfill.queue,
   arweaveSyncRealtime.queue,
+
+  backfillCollectionsRoyalties.queue,
+  backfillFixOpenSeaOrders.queue,
 
   currencies.queue,
 
@@ -166,6 +170,4 @@ export const allJobQueues = [
   resyncAttributeFloorSell.queue,
   resyncAttributeKeyCounts.queue,
   resyncAttributeValueCounts.queue,
-
-  backfillFixOpenSeaOrders.queue,
 ];
