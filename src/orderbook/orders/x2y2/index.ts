@@ -164,19 +164,57 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const side = order.params.type === "sell" ? "sell" : "buy";
       const price = bn(order.params.price);
 
+      // Handle: royalties
+      if (order.params.royalty_fee > 0) {
+        // Assume X2Y2 royalties match the default royalties (in reality X2Y2
+        // have their own proprietary royalty system which we do not index at
+        // the moment)
+        const openSeaRoyalties = await commonHelpers.getOpenSeaRoyalties(order.params.nft.token);
+        if (openSeaRoyalties.length) {
+          feeBreakdown.push({
+            kind: "royalty",
+            recipient: openSeaRoyalties[0].recipient,
+            bps: Math.floor(order.params.royalty_fee / 100),
+          });
+        }
+      }
+
       // Handle: royalties on top
       const missingRoyalties = [];
       let missingRoyaltyAmount = bn(0);
       if (side === "sell") {
-        const defaultRoyalties = await royalties.getDefaultRoyalties(order.params.nft.token);
+        const defaultRoyalties = await royalties.getDefaultRoyalties(
+          order.params.nft.token,
+          order.params.nft.tokenId!
+        );
         for (const { bps, recipient } of defaultRoyalties) {
-          const amount = bn(price).mul(bps).div(10000).toString();
-          missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
+          // Get any built-in royalty payment to the current recipient
+          const existingRoyalty = feeBreakdown.find(
+            (r) => r.kind === "royalty" && r.recipient === recipient
+          );
 
-          missingRoyalties.push({
-            amount,
-            recipient,
-          });
+          if (existingRoyalty) {
+            // Charge the difference if the built-in royalty is less than the default
+            if (existingRoyalty.bps < bps) {
+              const actualBps = bps - existingRoyalty.bps;
+              const amount = bn(price).mul(actualBps).div(10000).toString();
+              missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
+
+              missingRoyalties.push({
+                amount,
+                recipient,
+              });
+            }
+          } else {
+            // Charge the full amount if the built-in royalty is missing
+            const amount = bn(price).mul(bps).div(10000).toString();
+            missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
+
+            missingRoyalties.push({
+              amount,
+              recipient,
+            });
+          }
         }
       }
 

@@ -204,7 +204,10 @@ export const save = async (
       const missingRoyalties = [];
       let missingRoyaltyAmount = bn(0);
       if (side === "sell") {
-        const defaultRoyalties = await royalties.getDefaultRoyalties(order.params.collection);
+        const defaultRoyalties = await royalties.getDefaultRoyalties(
+          order.params.collection,
+          order.params.tokenId
+        );
         for (const { bps, recipient } of defaultRoyalties) {
           // Deduce the 0.5% royalty LooksRare will pay if needed
           const actualBps = recipient === onChainRoyaltyRecipient ? bps - 50 : bps;
