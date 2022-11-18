@@ -108,6 +108,14 @@ if (config.doBackgroundWork) {
             result = await orders.element.save([info as orders.element.OrderInfo], relayToArweave);
             break;
           }
+
+          case "infinity": {
+            result = await orders.infinity.save(
+              [info as orders.infinity.OrderInfo],
+              relayToArweave
+            );
+            break;
+          }
         }
       } catch (error) {
         logger.error(QUEUE_NAME, `Failed to process order ${JSON.stringify(job.data)}: ${error}`);
@@ -215,6 +223,12 @@ export type GenericOrderInfo =
   | {
       kind: "forward";
       info: orders.forward.OrderInfo;
+      relayToArweave?: boolean;
+      validateBidValue?: boolean;
+    }
+  | {
+      kind: "infinity";
+      info: orders.infinity.OrderInfo;
       relayToArweave?: boolean;
       validateBidValue?: boolean;
     };

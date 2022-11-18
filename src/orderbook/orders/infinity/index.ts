@@ -10,6 +10,7 @@ import pLimit from "p-limit";
 import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
 import * as arweaveRelay from "@/jobs/arweave-relay";
+import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
 
 export type OrderInfo = {
   orderParams: tmpSdk.Infinity.Types.OrderInput;
@@ -119,7 +120,28 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
         }
 
         case "complex": {
-          // TODO @joe support token sets for complex orders
+          const nfts = order.nfts;
+          if (nfts.length === 1) {
+            const collection = nfts[0].collection;
+
+            const merkleRoot = generateMerkleTree(nfts[0].tokens.map((t) => t.tokenId));
+            if (merkleRoot) {
+              [{ id: tokenSetId }] = await tokenSet.tokenList.save([
+                {
+                  id: `list:${collection}:${merkleRoot.getHexRoot()}`,
+                  schemaHash,
+                  schema: metadata.schema,
+                },
+              ]);
+            }
+          } else {
+            /**
+             * TODO add support for more complex orders
+             * once multi-collection token sets are supported
+             */
+            break;
+          }
+
           break;
         }
       }
@@ -134,7 +156,7 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
       const side = order.isSellOrder ? "sell" : "buy";
 
       // Handle: fees
-      const FEE_BPS = 250; // TODO @joe can this be set dynamically or does this value need to be manually updated?
+      const FEE_BPS = 250;
       const feeBreakdown = [
         {
           kind: "marketplace",
@@ -178,8 +200,8 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
         approval_status: approvalStatus,
         token_set_id: tokenSetId,
         token_set_schema_hash: toBuffer(schemaHash),
-        offer_bundle_id: null, // TODO @joe do I need add this?
-        consideration_bundle_id: null, // TODO @joe do I need add this?
+        offer_bundle_id: null,
+        consideration_bundle_id: null,
         bundle_kind: null,
         maker: toBuffer(order.signer),
         taker: toBuffer(order.taker),
@@ -189,13 +211,13 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
         currency_price: price.toString(),
         currency_value: value.toString(),
         needs_conversion: null,
-        quantity_remaining: order.numItems.toString(), // TODO is this correct?
+        quantity_remaining: order.numItems.toString(),
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
         nonce: order.nonce,
         source_id_int: source?.id,
         is_reservoir: isReservoir,
-        contract: null, // TODO what should I use for multi-token orders?
-        conduit: null, // TODO is our conduit the complication?
+        contract: null,
+        conduit: null,
         fee_bps: FEE_BPS,
         fee_breakdown: feeBreakdown,
         dynamic: order.startPrice !== order.endPrice,
@@ -216,7 +238,6 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
       });
 
       if (relayToArweave) {
-        // TODO @joe is this order object correct?
         arweaveData.push({ order, schemaHash, source: source?.domain });
       }
     } catch (error) {
@@ -240,9 +261,9 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
         "approval_status",
         "token_set_id",
         "token_set_schema_hash",
-        "offer_bundle_id", // TODO is this required?
-        "consideration_bundle_id", // TODO is this required?
-        "bundle_kind", // TODO is this required?
+        "offer_bundle_id",
+        "consideration_bundle_id",
+        "bundle_kind",
         "maker",
         "taker",
         "price",
@@ -251,7 +272,7 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
         "currency_price",
         "currency_value",
         "needs_conversion",
-        "quantity_remaining", // TODO is this required?
+        "quantity_remaining",
         { name: "valid_between", mod: ":raw" },
         "nonce",
         "source_id_int",
@@ -263,9 +284,9 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
         "dynamic",
         "raw_data",
         { name: "expiration", mod: ":raw" },
-        { name: "missing_royalties", mod: ":json" }, // TODO is this required?
-        "normalized_value", // TODO is this required?
-        "currency_normalized_value", // TODO is this required?
+        { name: "missing_royalties", mod: ":json" },
+        "normalized_value",
+        "currency_normalized_value",
       ],
       {
         table: "orders",

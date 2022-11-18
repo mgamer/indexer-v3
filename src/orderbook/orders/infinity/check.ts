@@ -47,7 +47,6 @@ export const offChainCheck = async (
   let hasBalance = true;
   let hasApproval = true;
   if (order.isSellOrder) {
-    let balance = 0;
     const operator = tmpSdk.Infinity.Addresses.Exchange[config.chainId];
     for (const nft of order.nfts) {
       const nftApproval = await checkApproval(
@@ -57,6 +56,7 @@ export const offChainCheck = async (
         "erc721",
         !!options?.checkFilledOrCancelled
       );
+      // require approval for all nfts
       hasApproval = hasApproval && nftApproval;
 
       for (const token of nft.tokens) {
@@ -65,13 +65,16 @@ export const offChainCheck = async (
           token.tokenId,
           order.signer
         );
-        // TODO @joe is this how we should handle this?
-        // Is there a way to indicate the nfts which are owned?
-        balance += tokenBalance.toNumber();
+
+        /**
+         * Require the maker to own all tokens
+         *
+         * TODO Handle m of n orders supporting partially fillable balances
+         */
+        if (tokenBalance.lt(token.numTokens)) {
+          hasBalance = false;
+        }
       }
-    }
-    if (balance < order.numItems) {
-      hasBalance = false;
     }
   } else {
     const ftBalance = await commonHelpers.getFtBalance(order.currency, order.signer);
