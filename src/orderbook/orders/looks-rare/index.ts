@@ -14,6 +14,7 @@ import { offChainCheck } from "@/orderbook/orders/looks-rare/check";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as tokenSet from "@/orderbook/token-sets";
 import * as royalties from "@/utils/royalties";
+import { Royalty } from "@/utils/royalties";
 
 export type OrderInfo = {
   orderParams: Sdk.LooksRare.Types.MakerOrderParams;
@@ -184,11 +185,18 @@ export const save = async (
       ];
 
       // Handle: royalties
-      const eip2981Royalties = await royalties.getRoyalties(
-        order.params.collection,
-        order.params.tokenId,
-        "eip2981"
-      );
+      let eip2981Royalties: Royalty[];
+
+      if (order.params.kind === "single-token") {
+        eip2981Royalties = await royalties.getRoyalties(
+          order.params.collection,
+          order.params.tokenId,
+          "eip2981"
+        );
+      } else {
+        eip2981Royalties = await royalties.getRoyaltiesByTokenSet(tokenSetId, "eip2981");
+      }
+
       if (eip2981Royalties.length) {
         feeBreakdown = [
           ...feeBreakdown,
