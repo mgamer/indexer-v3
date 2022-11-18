@@ -38,7 +38,7 @@ export const getRoyalties = async (
   if (spec === "default") {
     return royaltiesResult.royalties ?? [];
   } else {
-    return (royaltiesResult.new_royalties ?? {})[spec];
+    return (royaltiesResult.new_royalties ?? {})[spec] ?? [];
   }
 };
 
