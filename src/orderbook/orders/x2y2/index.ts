@@ -12,6 +12,7 @@ import { offChainCheck } from "@/orderbook/orders/x2y2/check";
 import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
 import * as royalties from "@/utils/royalties";
+import { Royalty } from "@/utils/royalties";
 
 export type OrderInfo = {
   orderParams: Sdk.X2Y2.Types.Order;
@@ -169,11 +170,18 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         // Assume X2Y2 royalties match the OpenSea royalties (in reality X2Y2
         // have their own proprietary royalty system which we do not index at
         // the moment)
-        const openSeaRoyalties = await royalties.getRoyalties(
-          order.params.nft.token,
-          order.params.nft.tokenId,
-          "opensea"
-        );
+        let openSeaRoyalties: Royalty[];
+
+        if (order.params.kind === "single-token") {
+          openSeaRoyalties = await royalties.getRoyalties(
+            order.params.nft.token,
+            order.params.nft.tokenId,
+            "opensea"
+          );
+        } else {
+          openSeaRoyalties = await royalties.getRoyaltiesByTokenSet(tokenSetId, "opensea");
+        }
+
         if (openSeaRoyalties.length) {
           feeBreakdown.push({
             kind: "royalty",
