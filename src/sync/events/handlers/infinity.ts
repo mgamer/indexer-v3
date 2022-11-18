@@ -8,11 +8,10 @@ import { idb } from "@/common/db";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import { OrderKind } from "@/orderbook/orders";
 import { lc } from "@reservoir0x/sdk/dist/utils";
-import { BigNumberish } from "ethers";
+import { BigNumber, BigNumberish } from "ethers";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
-import { Sdk } from "@/tmp/index"; // TODO @joe
-import { bn } from "@/common/utils";
+import { bn, toBuffer } from "@/common/utils";
 import { getERC20Transfer } from "./utils/erc20";
 import { Log } from "@ethersproject/providers";
 
@@ -40,7 +39,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
     switch (kind) {
       case "infinity-cancel-all-orders": {
-        const newMinNonce = parsedLog.args.newMinNonce as BigNumberish;
+        const newMinNonce: BigNumberish = parsedLog.args.newMinNonce;
         const user = lc(parsedLog.args.user);
 
         bulkCancelEvents.push({
@@ -63,7 +62,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             nonce: nonce.toString(),
             baseEventParams: {
               ...baseEventParams,
-              // TODO is this the correct way to support bulk cancels of specific nonces?
               batchIndex: baseEventParams.batchIndex + index,
             },
           };
@@ -75,14 +73,20 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
       }
 
       case "infinity-match-order-fulfilled": {
-        const sellOrderHash = parsedLog.args.sellOrderHash;
-        const buyOrderHash = parsedLog.args.buyOrderHash;
+        const sellOrderHash = lc(parsedLog.args.sellOrderHash);
+        const buyOrderHash = lc(parsedLog.args.buyOrderHash);
         const seller = lc(parsedLog.args.seller);
         const buyer = lc(parsedLog.args.buyer);
         // const complication = lc(parsedLog.args.complication);
         const currency = lc(parsedLog.args.currency);
         const currencyPrice = (parsedLog.args.amount as BigNumberish).toString();
-        const nfts = parsedLog.args.nfts as Sdk.Infinity.Types.OrderNFTs[];
+        const nfts = parsedLog.args.nfts as {
+          collection: string;
+          tokens: {
+            tokenId: BigNumberish;
+            numTokens: BigNumberish;
+          }[];
+        }[];
         const orderKind: OrderKind = "infinity";
 
         // Handle: cancel orders with the same nonce
@@ -115,14 +119,13 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         // Handle: prices
         const numTokens = nfts.reduce((acc, item) => {
-          return (
-            acc +
+          return acc.add(
             item.tokens.reduce(
-              (collectionNumTokens, token) => collectionNumTokens + token.numTokens,
-              0
+              (collectionNumTokens, token) => collectionNumTokens.add(token.numTokens),
+              bn(0)
             )
           );
-        }, 0);
+        }, bn(0));
 
         const pricePerToken = bn(currencyPrice).div(numTokens).toString();
         const priceDataPerToken = await getUSDAndNativePrices(
@@ -137,6 +140,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         for (const nft of nfts) {
           for (const token of nft.tokens) {
+            const tokenId = bn(token.tokenId).toString();
+            const numTokens = bn(token.numTokens).toString();
             fillEvents.push({
               orderKind,
               orderId: sellOrderHash,
@@ -148,15 +153,14 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               currencyPrice: pricePerToken,
               usdPrice: priceDataPerToken.usdPrice,
               contract: lc(nft.collection),
-              tokenId: token.tokenId,
-              amount: token.numTokens.toString(),
+              tokenId,
+              amount: numTokens,
               orderSourceId: attributionData.orderSource?.id,
               aggregatorSourceId: attributionData.aggregatorSource?.id,
               fillSourceId: attributionData.fillSource?.id,
               baseEventParams,
             });
 
-            // TODO do we need a separate fill event for the buy order?
             fillEvents.push({
               orderKind,
               orderId: buyOrderHash,
@@ -168,8 +172,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               currencyPrice: pricePerToken,
               usdPrice: priceDataPerToken.usdPrice,
               contract: lc(nft.collection),
-              tokenId: token.tokenId,
-              amount: token.numTokens.toString(),
+              tokenId,
+              amount: numTokens,
               orderSourceId: attributionData.orderSource?.id,
               aggregatorSourceId: attributionData.aggregatorSource?.id,
               fillSourceId: attributionData.fillSource?.id,
@@ -181,20 +185,19 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               orderId: buyOrderHash,
               orderSide: "buy",
               contract: lc(nft.collection),
-              tokenId: token.tokenId,
-              amount: token.numTokens.toString(),
+              tokenId,
+              amount: numTokens,
               price: bn(priceDataPerToken.nativePrice).mul(token.numTokens).toString(),
               timestamp: baseEventParams.timestamp,
             });
 
-            // TODO do we need a separate fillInfo item for the seller?
             fillInfos.push({
               context: `${sellOrderHash}-${baseEventParams.txHash}-${nft.collection}-${token.tokenId}`,
               orderId: sellOrderHash,
               orderSide: "sell",
               contract: lc(nft.collection),
-              tokenId: token.tokenId,
-              amount: token.numTokens.toString(),
+              tokenId,
+              amount: numTokens,
               price: bn(priceDataPerToken.nativePrice).mul(token.numTokens).toString(),
               timestamp: baseEventParams.timestamp,
             });
@@ -244,13 +247,19 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
       }
 
       case "infinity-take-order-fulfilled": {
-        const orderHash = parsedLog.args.orderHash;
+        const orderHash = lc(parsedLog.args.orderHash);
         const seller = lc(parsedLog.args.seller);
         const buyer = lc(parsedLog.args.buyer);
         // const complication = lc(parsedLog.args.complication);
         const currency = lc(parsedLog.args.currency);
         const currencyPrice = (parsedLog.args.amount as BigNumberish).toString();
-        const nfts = parsedLog.args.nfts as Sdk.Infinity.Types.OrderNFTs[];
+        const nfts = parsedLog.args.nfts as {
+          collection: string;
+          tokens: {
+            tokenId: BigNumberish;
+            numTokens: BigNumberish;
+          }[];
+        }[];
         const orderKind: OrderKind = "infinity";
 
         const sides = await getOrderSide(orderHash, seller, buyer);
@@ -274,14 +283,14 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         // Handle: prices
         const numTokens = nfts.reduce((acc, item) => {
-          return (
-            acc +
+          return acc.add(
             item.tokens.reduce(
-              (collectionNumTokens: number, token) => collectionNumTokens + token.numTokens,
-              0
+              (collectionNumTokens: BigNumber, token) =>
+                collectionNumTokens.add(bn(token.numTokens)),
+              bn(0)
             )
           );
-        }, 0);
+        }, bn(0));
 
         const pricePerToken = bn(currencyPrice).div(numTokens).toString();
         const priceDataPerToken = await getUSDAndNativePrices(
@@ -298,6 +307,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           const orderSide = sides.isSellOrder ? "sell" : "buy";
           for (const nft of nfts) {
             for (const token of nft.tokens) {
+              const tokenId = bn(token.tokenId).toString();
+              const numTokens = bn(token.numTokens).toString();
               fillEvents.push({
                 orderKind,
                 orderId: orderHash,
@@ -309,8 +320,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
                 currencyPrice: pricePerToken,
                 usdPrice: priceDataPerToken.usdPrice,
                 contract: lc(nft.collection),
-                tokenId: token.tokenId,
-                amount: token.numTokens.toString(),
+                tokenId,
+                amount: numTokens,
                 orderSourceId: attributionData.orderSource?.id,
                 aggregatorSourceId: attributionData.aggregatorSource?.id,
                 fillSourceId: attributionData.fillSource?.id,
@@ -322,8 +333,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
                 orderId: orderHash,
                 orderSide,
                 contract: lc(nft.collection),
-                tokenId: token.tokenId,
-                amount: token.numTokens.toString(),
+                tokenId,
+                amount: numTokens,
                 price: bn(priceDataPerToken.nativePrice).mul(token.numTokens).toString(),
                 timestamp: baseEventParams.timestamp,
               });
@@ -368,6 +379,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
   return {
     nonceCancelEvents,
+    bulkCancelEvents,
     fillEvents,
 
     fillInfos,
@@ -390,7 +402,7 @@ async function getOrderNonce(orderHash: string, maker: string): Promise<string |
         `,
     {
       orderHash,
-      maker: lc(maker),
+      maker: toBuffer(maker),
     }
   );
 
