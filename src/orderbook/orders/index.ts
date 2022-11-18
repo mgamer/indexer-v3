@@ -488,6 +488,14 @@ export const generateListingDetailsV6 = (
       };
     }
 
+    case "blur": {
+      return {
+        kind: "blur",
+        ...common,
+        order: new Sdk.Blur.Order(config.chainId, order.rawData),
+      };
+    }
+
     default: {
       throw new Error("Unsupported order kind");
     }
