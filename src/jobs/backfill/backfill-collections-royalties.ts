@@ -52,6 +52,7 @@ if (config.doBackgroundWork) {
 
       for (const { contract, token_id } of result) {
         await Collections.updateCollectionCache(fromBuffer(contract), token_id);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
 
       if (result.length >= limit) {
