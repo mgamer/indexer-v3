@@ -9,16 +9,11 @@ export type Royalty = {
   bps: number;
 };
 
-// TODO: Deprecate
-export const getDefaultRoyalties = async (
+export const getRoyalties = async (
   contract: string,
-  tokenId: string
+  tokenId?: string,
+  spec = "default"
 ): Promise<Royalty[]> => {
-  // Due to legacy reasons, we have the royalties of a collection split over two colums:
-  // `royalties` and `royalties_new`. The `royalties` column holds an array of `Royalty`
-  // objects, while the `new_royalties` column holds an object pointing to arrays which
-  // have `Royalty` values (this is for accommodating multiple royalty standards - with
-  // each key of the object denoting a different standard).
   const royaltiesResult = await idb.oneOrNone(
     `
       SELECT
@@ -28,7 +23,8 @@ export const getDefaultRoyalties = async (
       JOIN collections
         ON tokens.collection_id = collections.id
       WHERE tokens.contract = $/contract/
-        AND tokens.token_id = $/tokenId/
+        ${tokenId ? " AND tokens.token_id = $/tokenId/" : ""}
+      LIMIT 1
     `,
     {
       contract: toBuffer(contract),
@@ -39,29 +35,11 @@ export const getDefaultRoyalties = async (
     return [];
   }
 
-  const getTotalRoyaltyBps = (royalties?: Royalty[]) =>
-    (royalties || []).map(({ bps }) => bps).reduce((a, b) => a + b, 0);
-
-  let currentRoyalties: Royalty[] = [];
-  let currentTotalBps = 0;
-
-  // Handle `royalties`
-  const royaltiesTotalBps = getTotalRoyaltyBps(royaltiesResult.royalties);
-  if (royaltiesTotalBps > currentTotalBps) {
-    currentRoyalties = royaltiesResult.royalties;
-    currentTotalBps = royaltiesTotalBps;
+  if (spec === "default") {
+    return royaltiesResult.royalties ?? [];
+  } else {
+    return (royaltiesResult.new_royalties ?? {})[spec];
   }
-
-  // Handle `new_royalties`
-  for (const kind of Object.keys(royaltiesResult.new_royalties || {})) {
-    const newRoyaltiesTotalBps = getTotalRoyaltyBps(royaltiesResult.new_royalties[kind]);
-    if (newRoyaltiesTotalBps > currentTotalBps) {
-      currentRoyalties = royaltiesResult.new_royalties[kind];
-      currentTotalBps = newRoyaltiesTotalBps;
-    }
-  }
-
-  return currentRoyalties;
 };
 
 export const updateRoyaltySpec = async (collection: string, spec: string, royalties: Royalty[]) => {
@@ -100,6 +78,7 @@ export const updateRoyaltySpec = async (collection: string, spec: string, royalt
   }
 };
 
+// At the moment we support: custom, opensea and royalty registry specs
 export const refreshAllRoyaltySpecs = async (
   collection: string,
   customRoyalties: Royalty[],
@@ -115,6 +94,7 @@ export const refreshAllRoyaltySpecs = async (
   await registry.refreshRegistryRoyalties(collection);
 };
 
+// The default royalties are represented by the max royalties across all royalty specs
 export const refreshDefaulRoyalties = async (collection: string) => {
   const royaltiesResult = await idb.oneOrNone(
     `
@@ -132,7 +112,6 @@ export const refreshDefaulRoyalties = async (collection: string) => {
   const getTotalRoyaltyBps = (royalties?: Royalty[]) =>
     (royalties || []).map(({ bps }) => bps).reduce((a, b) => a + b, 0);
 
-  // default royalties = max royalties across all available royalty specs
   let defultRoyalties: Royalty[] = [];
   let currentTotalBps = 0;
   for (const kind of Object.keys(royaltiesResult.new_royalties || {})) {

@@ -184,14 +184,17 @@ export const save = async (
       ];
 
       // Handle: royalties
-      const onChainRoyalties = await commonHelpers.getOnChainRoyalties(order.params.collection);
-      const onChainRoyaltyRecipient = onChainRoyalties["eip2981"]?.[0].recipient;
-      if (onChainRoyaltyRecipient) {
+      const eip2981Royalties = await royalties.getRoyalties(
+        order.params.collection,
+        order.params.tokenId,
+        "eip2981"
+      );
+      if (eip2981Royalties.length) {
         feeBreakdown = [
           ...feeBreakdown,
           {
             kind: "royalty",
-            recipient: onChainRoyaltyRecipient,
+            recipient: eip2981Royalties[0].recipient,
             // LooksRare has fixed 0.5% royalties
             bps: 50,
           },
@@ -204,13 +207,19 @@ export const save = async (
       const missingRoyalties = [];
       let missingRoyaltyAmount = bn(0);
       if (side === "sell") {
-        const defaultRoyalties = await royalties.getDefaultRoyalties(
+        const defaultRoyalties = await royalties.getRoyalties(
           order.params.collection,
-          order.params.tokenId
+          order.params.tokenId,
+          "default"
         );
         for (const { bps, recipient } of defaultRoyalties) {
+          // Get any built-in royalty payment to the current recipient
+          const existingRoyalty = feeBreakdown.find(
+            (r) => r.kind === "royalty" && r.recipient === recipient
+          );
+
           // Deduce the 0.5% royalty LooksRare will pay if needed
-          const actualBps = recipient === onChainRoyaltyRecipient ? bps - 50 : bps;
+          const actualBps = existingRoyalty ? bps - 50 : bps;
           const amount = bn(price).mul(actualBps).div(10000).toString();
           missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
 
