@@ -263,8 +263,7 @@ export class Activities {
 
     if (collectionsSetId) {
       joinCollectionsSet =
-        "JOIN collections_sets_collections csc ON activities.collection_id = csc.collection_id";
-      collectionFilter = "WHERE csc.collections_set_id = $/collectionsSetId/";
+        "JOIN collections_sets_collections csc ON activities.collection_id = csc.collection_id AND csc.collections_set_id = $/collectionsSetId/";
     } else if (community) {
       collectionFilter =
         "WHERE collection_id IN (SELECT id FROM collections WHERE community = $/community/)";
