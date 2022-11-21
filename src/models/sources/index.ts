@@ -262,6 +262,12 @@ export class Sources {
       if (!sourceEntity.optimized && optimizeCheckoutURL) {
         const defaultSource = Sources.getDefaultSource();
         sourceEntity.metadata.url = this.getTokenUrl(defaultSource, contract, tokenId);
+      } else if (
+        !sourceEntity.metadata.tokenUrlMainnet?.includes("${contract}") &&
+        !sourceEntity.metadata.tokenUrlMainnet?.includes("${tokenId}")
+      ) {
+        const defaultSource = Sources.getDefaultSource();
+        sourceEntity.metadata.url = this.getTokenUrl(defaultSource, contract, tokenId);
       } else {
         sourceEntity.metadata.url = this.getTokenUrl(sourceEntity, contract, tokenId);
       }
