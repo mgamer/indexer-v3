@@ -63,6 +63,9 @@ export const getExecuteSellV6Options: RouteOptions = {
         .description(
           "Quantity of tokens user is selling. Only compatible when selling a single ERC1155 token. Example: `5`"
         ),
+      currency: Joi.string()
+        .pattern(regex.address)
+        .default(Sdk.Common.Addresses.Weth[config.chainId]),
       source: Joi.string()
         .lowercase()
         .pattern(regex.domain)
@@ -173,6 +176,7 @@ export const getExecuteSellV6Options: RouteOptions = {
               AND orders.approval_status = 'approved'
               AND orders.quantity_remaining >= $/quantity/
               AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+              AND orders.currency = $/currency/
             LIMIT 1
           `,
           {
@@ -180,6 +184,7 @@ export const getExecuteSellV6Options: RouteOptions = {
             contract: toBuffer(contract),
             tokenId,
             quantity: payload.quantity ?? 1,
+            currency: toBuffer(payload.currency),
           }
         );
       } else {
@@ -207,6 +212,7 @@ export const getExecuteSellV6Options: RouteOptions = {
               AND orders.approval_status = 'approved'
               AND orders.quantity_remaining >= $/quantity/
               AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+              AND orders.currency = $/currency/
             ORDER BY orders.value DESC
             LIMIT 1
           `,
@@ -214,6 +220,7 @@ export const getExecuteSellV6Options: RouteOptions = {
             contract: toBuffer(contract),
             tokenId,
             quantity: payload.quantity ?? 1,
+            currency: toBuffer(payload.currency),
           }
         );
       }
@@ -238,8 +245,7 @@ export const getExecuteSellV6Options: RouteOptions = {
           tokenId,
           quantity: payload.quantity ?? 1,
           source: sourceId ? sources.get(sourceId)?.domain ?? null : null,
-          // TODO: Add support for multiple currencies
-          currency: Sdk.Common.Addresses.Weth[config.chainId],
+          currency: payload.currency,
           quote: formatEth(orderResult.price),
           rawQuote: orderResult.price,
         },

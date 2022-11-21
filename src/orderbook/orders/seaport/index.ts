@@ -147,8 +147,8 @@ export const save = async (
         });
       }
 
-      // Check: buy order has Weth as payment token
-      if (info.side === "buy" && info.paymentToken !== Sdk.Common.Addresses.Weth[config.chainId]) {
+      // Check: buy order has a supported payment token
+      if (info.side === "buy" && !getNetworkSettings().supportedBidCurrencies[info.paymentToken]) {
         return results.push({
           id,
           status: "unsupported-payment-token",
