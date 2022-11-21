@@ -25,6 +25,8 @@ import * as tokenSet from "@/orderbook/token-sets";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as royalties from "@/utils/royalties";
 import { Royalty } from "@/utils/royalties";
+import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
+import { TokenSet } from "@/orderbook/token-sets/token-list";
 
 export type OrderInfo =
   | {
@@ -639,66 +641,10 @@ export const save = async (
         }
       }
 
-      let collectionResult;
-      if (orderParams.kind === "single-token") {
-        collectionResult = await redb.oneOrNone(
-          `
-            SELECT
-              collections.new_royalties
-            FROM tokens
-            JOIN collections ON tokens.collection_id = collections.id
-            WHERE tokens.contract = $/contract/
-            AND tokens.token_id = $/tokenId/
-            LIMIT 1
-          `,
-          {
-            contract: toBuffer(orderParams.contract),
-            tokenId: orderParams.tokenId,
-          }
-        );
-      } else {
-        if (getNetworkSettings().multiCollectionContracts.includes(orderParams.contract)) {
-          collectionResult = await redb.oneOrNone(
-            `
-              SELECT
-                collections.new_royalties,
-                collections.token_set_id
-              FROM collections
-              WHERE collections.contract = $/contract/
-                AND collections.slug = $/collectionSlug/
-            `,
-            {
-              contract: toBuffer(orderParams.contract),
-              collectionSlug: orderParams.collectionSlug,
-            }
-          );
-        } else {
-          collectionResult = await redb.oneOrNone(
-            `
-              SELECT
-                collections.new_royalties,
-                collections.token_set_id
-              FROM collections
-              WHERE collections.id = $/id/
-            `,
-            {
-              id: orderParams.contract,
-            }
-          );
-        }
-
-        if (!collectionResult) {
-          logger.warn(
-            "orders-seaport-save",
-            `handlePartialOrder - No collection found. collectionSlug=${
-              orderParams.collectionSlug
-            }, orderParams=${JSON.stringify(orderParams)}`
-          );
-        }
-      }
+      const collection = await getCollection(orderParams);
 
       // Check and save: associated token set
-      const schemaHash = generateSchemaHash();
+      let schemaHash = generateSchemaHash();
 
       let tokenSetId: string | undefined;
       switch (orderParams.kind) {
@@ -721,8 +667,8 @@ export const save = async (
         }
 
         case "contract-wide": {
-          if (collectionResult?.token_set_id) {
-            tokenSetId = collectionResult.token_set_id;
+          if (collection?.token_set_id) {
+            tokenSetId = collection.token_set_id;
           }
 
           if (tokenSetId) {
@@ -753,6 +699,57 @@ export const save = async (
         }
 
         case "token-list": {
+          const schema = {
+            kind: "attribute",
+            data: {
+              collection: collection.id,
+              attributes: [
+                {
+                  key: orderParams.attributeKey,
+                  value: orderParams.attributeValue,
+                },
+              ],
+            },
+          };
+
+          schemaHash = generateSchemaHash(schema);
+
+          // Fetch all tokens matching the attributes
+          const tokens = await redb.manyOrNone(
+            `
+              SELECT token_attributes.token_id
+              FROM token_attributes
+              WHERE token_attributes.collection_id = $/collection/
+              AND token_attributes.key = $/key/
+              AND token_attributes.value = $/value/
+              ORDER BY token_attributes.token_id
+            `,
+            {
+              collection: collection.id,
+              key: orderParams.attributeKey,
+              value: orderParams.attributeValue,
+            }
+          );
+
+          if (tokens.length) {
+            const tokensIds = tokens.map((r) => r.token_id);
+            const merkleTree = generateMerkleTree(tokensIds);
+
+            tokenSetId = `list:${orderParams.contract}:${merkleTree.getHexRoot()}`;
+
+            await tokenSet.tokenList.save([
+              {
+                id: tokenSetId,
+                schema,
+                schemaHash: generateSchemaHash(schema),
+                items: {
+                  contract: orderParams.contract,
+                  tokenIds: tokensIds,
+                },
+              } as TokenSet,
+            ]);
+          }
+
           break;
         }
       }
@@ -783,8 +780,8 @@ export const save = async (
         },
       ];
 
-      if (collectionResult) {
-        for (const royalty of collectionResult.new_royalties?.["opensea"] ?? []) {
+      if (collection) {
+        for (const royalty of collection.new_royalties?.["opensea"] ?? []) {
           feeBps += royalty.bps;
 
           feeBreakdown.push({
@@ -1426,7 +1423,65 @@ export const handleTokenList = async (
   }
 };
 
-export const getCollectionFloorAskValue = async (contract: string, tokenId: number) => {
+const getCollection = async (orderParams: PartialOrderComponents) => {
+  let collectionResult;
+
+  if (orderParams.kind === "single-token") {
+    collectionResult = await redb.oneOrNone(
+      `
+            SELECT
+              collections.id,
+              collections.new_royalties,
+              collections.token_set_id
+            FROM tokens
+            JOIN collections ON tokens.collection_id = collections.id
+            WHERE tokens.contract = $/contract/
+            AND tokens.token_id = $/tokenId/
+            LIMIT 1
+          `,
+      {
+        contract: toBuffer(orderParams.contract),
+        tokenId: orderParams.tokenId,
+      }
+    );
+  } else {
+    if (getNetworkSettings().multiCollectionContracts.includes(orderParams.contract)) {
+      collectionResult = await redb.oneOrNone(
+        `
+              SELECT
+                collections.id,
+                collections.new_royalties,
+                collections.token_set_id
+              FROM collections
+              WHERE collections.contract = $/contract/
+                AND collections.slug = $/collectionSlug/
+            `,
+        {
+          contract: toBuffer(orderParams.contract),
+          collectionSlug: orderParams.collectionSlug,
+        }
+      );
+    } else {
+      collectionResult = await redb.oneOrNone(
+        `
+              SELECT
+                collections.id,
+                collections.new_royalties,
+                collections.token_set_id
+              FROM collections
+              WHERE collections.id = $/id/
+            `,
+        {
+          id: orderParams.contract,
+        }
+      );
+    }
+  }
+
+  return collectionResult;
+};
+
+const getCollectionFloorAskValue = async (contract: string, tokenId: number) => {
   if (getNetworkSettings().multiCollectionContracts.includes(contract)) {
     const collection = await Collections.getByContractAndTokenId(contract, tokenId);
     return collection?.floorSellValue;
