@@ -308,19 +308,24 @@ export const getOrdersAsksV3Options: RouteOptions = {
       `;
 
       // We default in the code so that these values don't appear in the docs
-      if (!query.startTimestamp) {
-        query.startTimestamp = 0;
-      }
-      if (!query.endTimestamp) {
-        query.endTimestamp = 9999999999;
+      if (query.startTimestamp || query.endTimestamp) {
+        if (!query.startTimestamp) {
+          query.startTimestamp = 0;
+        }
+        if (!query.endTimestamp) {
+          query.endTimestamp = 9999999999;
+        }
       }
 
       // Filters
-      const conditions: string[] = [
-        `orders.created_at >= to_timestamp($/startTimestamp/)`,
-        `orders.created_at <= to_timestamp($/endTimestamp/)`,
-        `orders.side = 'sell'`,
-      ];
+      const conditions: string[] =
+        query.startTimestamp || query.endTimestamp
+          ? [
+              `orders.created_at >= to_timestamp($/startTimestamp/)`,
+              `orders.created_at <= to_timestamp($/endTimestamp/)`,
+              `orders.side = 'sell'`,
+            ]
+          : [`orders.side = 'sell'`];
       let orderStatusFilter = `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`;
       let communityFilter = "";
 
