@@ -34,7 +34,8 @@ import * as arweaveSyncBackfill from "@/jobs/arweave-sync/backfill-queue";
 import * as arweaveSyncRealtime from "@/jobs/arweave-sync/realtime-queue";
 
 import * as backfillCollectionsRoyalties from "@/jobs/backfill/backfill-collections-royalties";
-import * as backfillFixOpenSeaOrders from "@/jobs/backfill/backfill-fix-opensea-realtime-asks";
+import * as backfillTokensNormalizedFloorAsk from "@/jobs/backfill/backfill-tokens-normalized-floor-ask";
+import * as backfillCollectionsNormalizedFloorAsk from "@/jobs/backfill/backfill-collections-normalized-floor-ask";
 
 import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
 
@@ -42,6 +43,8 @@ import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refr
 import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
 
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
+import * as collectionUpdatesNormalizedFloorAsk from "@/jobs/collection-updates/normalized-floor-queue";
+
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as rarity from "@/jobs/collection-updates/rarity-queue";
 import * as collectionUpdatesTopBid from "@/jobs/collection-updates/top-bid-queue";
@@ -89,6 +92,8 @@ import * as fetchSourceInfo from "@/jobs/sources/fetch-source-info";
 import * as tokenUpdatesMint from "@/jobs/token-updates/mint-queue";
 import * as tokenRefreshCache from "@/jobs/token-updates/token-refresh-cache";
 import * as fetchCollectionMetadata from "@/jobs/token-updates/fetch-collection-metadata";
+import * as tokenUpdatesFloorAsk from "@/jobs/token-updates/floor-queue";
+import * as tokenUpdatesNormalizedFloorAsk from "@/jobs/token-updates/normalized-floor-queue";
 
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
@@ -107,7 +112,8 @@ export const allJobQueues = [
   arweaveSyncRealtime.queue,
 
   backfillCollectionsRoyalties.queue,
-  backfillFixOpenSeaOrders.queue,
+  backfillTokensNormalizedFloorAsk.queue,
+  backfillCollectionsNormalizedFloorAsk.queue,
 
   currencies.queue,
 
@@ -117,6 +123,7 @@ export const allJobQueues = [
   collectionsRefreshCache.queue,
 
   collectionUpdatesFloorAsk.queue,
+  collectionUpdatesNormalizedFloorAsk.queue,
   collectionUpdatesMetadata.queue,
   rarity.queue,
   collectionUpdatesTopBid.queue,
@@ -162,6 +169,8 @@ export const allJobQueues = [
   tokenUpdatesMint.queue,
   tokenRefreshCache.queue,
   fetchCollectionMetadata.queue,
+  tokenUpdatesFloorAsk.queue,
+  tokenUpdatesNormalizedFloorAsk.queue,
 
   handleNewSellOrder.queue,
   handleNewBuyOrder.queue,
