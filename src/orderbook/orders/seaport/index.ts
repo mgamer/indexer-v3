@@ -451,7 +451,7 @@ export const save = async (
       let normalizedValue: string | undefined;
       let currencyNormalizedValue: string | undefined;
       if (info.side === "sell") {
-        currencyNormalizedValue = bn(value).add(missingRoyaltyAmount).toString();
+        currencyNormalizedValue = bn(currencyValue).add(missingRoyaltyAmount).toString();
 
         const prices = await getUSDAndNativePrices(
           currency,
