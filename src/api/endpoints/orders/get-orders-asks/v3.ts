@@ -274,6 +274,7 @@ export const getOrdersAsksV3Options: RouteOptions = {
           orders.currency_value,
           orders.normalized_value,
           orders.currency_normalized_value,
+          orders.missing_royalties,
           dynamic,
           DATE_PART('epoch', LOWER(orders.valid_between)) AS valid_from,
           COALESCE(
@@ -455,6 +456,25 @@ export const getOrdersAsksV3Options: RouteOptions = {
 
       const sources = await Sources.getInstance();
       const result = rawResult.map(async (r) => {
+        const feeBreakdown = r.fee_breakdown;
+        let feeBps = Number(r.fee_bps);
+
+        if (query.normalizeRoyalties) {
+          for (let i = 0; i < r.missing_royalties.length; i++) {
+            const bps =
+              (r.missing_royalties[i].amount /
+                (r.normalized_value - Number(r.missing_royalties[i].amount))) *
+              10000;
+            const tempObj = {
+              bps: bps,
+              kind: "royalty",
+              recipient: r.missing_royalties[i].recipient,
+            };
+            feeBreakdown.push(tempObj);
+            feeBps += bps;
+          }
+        }
+
         let source: SourcesEntity | undefined;
         if (r.token_set_id?.startsWith("token")) {
           const [, contract, tokenId] = r.token_set_id.split(":");
@@ -504,8 +524,8 @@ export const getOrdersAsksV3Options: RouteOptions = {
             icon: source?.getIcon(),
             url: source?.metadata.url,
           },
-          feeBps: Number(r.fee_bps),
-          feeBreakdown: r.fee_breakdown,
+          feeBps: feeBps,
+          feeBreakdown: feeBreakdown,
           expiration: Number(r.expiration),
           isReservoir: r.is_reservoir,
           isDynamic: Boolean(r.dynamic),
