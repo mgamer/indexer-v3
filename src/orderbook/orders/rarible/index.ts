@@ -200,7 +200,17 @@ export const save = async (
               tokenId: tokenId,
             },
           ]);
+          break;
+        }
 
+        case "contract-wide": {
+          [{ id: tokenSetId }] = await tokenSet.contractWide.save([
+            {
+              id: `contract:${collection}`,
+              schemaHash,
+              contract: collection,
+            },
+          ]);
           break;
         }
       }
