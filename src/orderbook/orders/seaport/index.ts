@@ -889,11 +889,11 @@ export const save = async (
       let normalizedValue: string | undefined;
       let currencyNormalizedValue: string | undefined;
       if (orderParams.side === "sell") {
-        normalizedValue = bn(value).add(missingRoyaltyAmount).toString();
+        currencyNormalizedValue = bn(currencyValue).add(missingRoyaltyAmount).toString();
 
         const prices = await getUSDAndNativePrices(
           currency,
-          normalizedValue.toString(),
+          currencyNormalizedValue.toString(),
           currentTime
         );
         if (!prices.nativePrice) {
@@ -903,7 +903,7 @@ export const save = async (
             status: "failed-to-convert-price",
           });
         }
-        currencyNormalizedValue = bn(prices.nativePrice).toString();
+        normalizedValue = bn(prices.nativePrice).toString();
       }
 
       if (orderParams.side === "buy" && orderParams.kind === "single-token" && validateBidValue) {
