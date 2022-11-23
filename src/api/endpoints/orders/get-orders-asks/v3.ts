@@ -326,8 +326,9 @@ export const getOrdersAsksV3Options: RouteOptions = {
               `orders.side = 'sell'`,
             ]
           : [`orders.side = 'sell'`];
-      let orderStatusFilter = `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`;
+
       let communityFilter = "";
+      let orderStatusFilter = "";
 
       if (query.ids) {
         if (Array.isArray(query.ids)) {
@@ -335,6 +336,8 @@ export const getOrdersAsksV3Options: RouteOptions = {
         } else {
           conditions.push(`orders.id = $/ids/`);
         }
+      } else {
+        orderStatusFilter = `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`;
       }
 
       if (query.token) {
@@ -403,7 +406,9 @@ export const getOrdersAsksV3Options: RouteOptions = {
         );
       }
 
-      conditions.push(orderStatusFilter);
+      if (orderStatusFilter) {
+        conditions.push(orderStatusFilter);
+      }
 
       if (query.continuation) {
         const [priceOrCreatedAt, id] = splitContinuation(
