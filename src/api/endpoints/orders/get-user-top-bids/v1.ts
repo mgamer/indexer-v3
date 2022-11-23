@@ -14,7 +14,6 @@ import {
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
 import { Assets } from "@/utils/assets";
-import _ from "lodash";
 
 const version = "v1";
 
@@ -33,7 +32,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}$/)
         .description(
-          "Filter to a particular user. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
+          "Filter to a particular user. Example: `0x6c7e534f8c4dffb7ea52fc3d4aa7a16b4a575fe0`"
         ),
     }),
     query: Joi.object({
@@ -58,7 +57,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
         "Use continuation token to request next offset of items."
       ),
       sortBy: Joi.string()
-        .valid("topBidValue", "dateCreated", "orderExpiry", "floorDifferencePercentage")
+        .valid("topBidValue", "dateCreated", "orderExpiry")
         .default("topBidValue")
         .description("Order of the items are returned in the response."),
       sortDirection: Joi.string().lowercase().valid("asc", "desc").default("desc"),
@@ -84,7 +83,6 @@ export const getUserTopBidsV1Options: RouteOptions = {
           createdAt: Joi.string(),
           validFrom: Joi.number().unsafe(),
           validUntil: Joi.number().unsafe(),
-          floorDifferencePercentage: Joi.number().unsafe(),
           source: Joi.object().allow(null),
           feeBreakdown: Joi.array()
             .items(
@@ -163,10 +161,6 @@ export const getUserTopBidsV1Options: RouteOptions = {
 
       case "orderExpiry":
         sortField = "top_bid_valid_until";
-        break;
-
-      case "floorDifferencePercentage":
-        sortField = "floor_difference_percentage";
         break;
 
       case "topBidValue":
@@ -259,8 +253,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
                    AND token_sets.schema_hash = y.token_set_schema_hash) 
                   ELSE NULL
                 END
-              ) AS bid_context,
-              COALESCE(((top_bid_value / opensea_net_listing) - 1) * 100, 0) AS floor_difference_percentage
+              ) AS bid_context
         FROM nft_balances nb
         JOIN LATERAL (
             SELECT o.token_set_id, o.id AS "top_bid_id", o.price AS "top_bid_price", o.value AS "top_bid_value",
@@ -289,13 +282,9 @@ export const getUserTopBidsV1Options: RouteOptions = {
             AND t.token_id = nb.token_id
         ) t ON TRUE
         ${query.collection || query.community ? "" : "LEFT"} JOIN LATERAL (
-            SELECT MIN(id) AS "collection_id", MIN(name) AS "collection_name", json_agg(metadata)->0 AS "collection_metadata", MIN(floor_sell_value) AS "collection_floor_sell_value",
-                 (MIN(floor_sell_value) * (1-((COALESCE(SUM((x.opensea_royalties->>'bps')::float), 0) + 250) / 10000)))::numeric(78, 0) AS "opensea_net_listing"
-            FROM (
-              SELECT *, jsonb_array_elements(new_royalties->'opensea') AS "opensea_royalties"
-                FROM collections
-                WHERE id = t.collection_id
-            ) AS x
+            SELECT id AS "collection_id", name AS "collection_name", metadata AS "collection_metadata", floor_sell_value AS "collection_floor_sell_value"
+            FROM collections c
+            WHERE id = t.collection_id
             ${communityFilter}
             ${collectionFilter}
         ) c ON TRUE
@@ -306,7 +295,6 @@ export const getUserTopBidsV1Options: RouteOptions = {
       `;
 
       const sources = await Sources.getInstance();
-
       const bids = await redb.manyOrNone(baseQuery, query);
       let totalTokensWithBids = 0;
 
@@ -330,7 +318,6 @@ export const getUserTopBidsV1Options: RouteOptions = {
           createdAt: new Date(r.order_created_at).toISOString(),
           validFrom: r.top_bid_valid_from,
           validUntil: r.top_bid_valid_until,
-          floorDifferencePercentage: _.round(r.floor_difference_percentage || 0, 2),
           source: {
             id: source?.address,
             domain: source?.domain,
