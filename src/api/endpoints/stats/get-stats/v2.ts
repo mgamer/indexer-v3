@@ -50,6 +50,7 @@ export const getStatsV2Options: RouteOptions = {
       stats: Joi.object({
         tokenCount: Joi.number().required(),
         onSaleCount: Joi.number().required(),
+        flaggedTokenCount: Joi.number().required(),
         sampleImages: Joi.array().items(Joi.string().allow("", null)),
         market: Joi.object({
           floorAsk: Joi.object({
@@ -106,6 +107,12 @@ export const getStatsV2Options: RouteOptions = {
                 ELSE 0
               END
             ) AS "on_sale_count",
+            (
+              CASE WHEN "t"."is_flagged" = 1
+                THEN 1
+                ELSE 0
+              END
+            ) AS "flagged_token_count",
             array["t"."image"] AS "sample_images",
             "t"."floor_sell_id",
             "t"."floor_sell_value",
@@ -122,11 +129,11 @@ export const getStatsV2Options: RouteOptions = {
             "t"."token_id",
             "t"."name",
             "t"."image",
-            "ob"."id" AS "top_buy_id",
-            "ob".normalized_value AS top_buy_normalized_value,
-            "ob".currency_normalized_value AS top_buy_currency_normalized_value,
-            "ob"."value" AS "top_buy_value",
-            "ob"."maker" AS "top_buy_maker",
+            ob."id" AS "top_buy_id",
+            ob.normalized_value AS top_buy_normalized_value,
+            ob.currency_normalized_value AS top_buy_currency_normalized_value,
+            ob."value" AS "top_buy_value",
+            ob."maker" AS "top_buy_maker",
             date_part('epoch', lower("ob"."valid_between")) AS "top_buy_valid_from",
             coalesce(
               nullif(date_part('epoch', upper("ob"."valid_between")), 'Infinity'),
@@ -182,7 +189,8 @@ export const getStatsV2Options: RouteOptions = {
             "t"."image",
             "t"."floor_sell_id",
             "t"."floor_sell_value",
-            "t"."floor_sell_maker"
+            "t"."floor_sell_maker",
+            "t"."is_flagged"
           FROM "tokens" "t"
         `;
         if (conditions.length) {
@@ -266,6 +274,7 @@ export const getStatsV2Options: RouteOptions = {
               SELECT
                 COUNT(*) AS "token_count",
                 COUNT(*) FILTER (WHERE "x"."floor_sell_value" IS NOT NULL) AS "on_sale_count",
+                COUNT(*) FILTER (WHERE "x"."is_flagged" = 1) AS "flagged_token_count",
                 (array_agg("x"."image"))[1:4] AS "sample_images"
               FROM "x"
             )
@@ -314,6 +323,11 @@ export const getStatsV2Options: RouteOptions = {
               WHERE "collection_id" = $/collection/
                 AND "floor_sell_value" IS NOT NULL
             ) AS "on_sale_count",
+            (
+              SELECT COUNT(*) FROM "tokens"
+              WHERE "collection_id" = $/collection/
+                AND "is_flagged" = 1
+            ) AS "flagged_token_count",
             array(
               SELECT "t"."image" FROM "tokens" "t"
               WHERE "t"."collection_id" = $/collection/
@@ -354,6 +368,7 @@ export const getStatsV2Options: RouteOptions = {
           ? {
               tokenCount: Number(r.token_count),
               onSaleCount: Number(r.on_sale_count),
+              flaggedTokenCount: Number(r.flagged_token_count),
               sampleImages: Assets.getLocalAssetsLink(r.sample_images) || [],
               market: {
                 floorAsk: {

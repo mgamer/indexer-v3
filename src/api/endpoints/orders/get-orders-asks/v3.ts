@@ -19,6 +19,7 @@ import {
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
+import { utils } from "ethers";
 
 const version = "v3";
 
@@ -63,11 +64,11 @@ export const getOrdersAsksV3Options: RouteOptions = {
       status: Joi.string()
         .when("maker", {
           is: Joi.exist(),
-          then: Joi.valid("active", "inactive"),
+          then: Joi.valid("active", "inactive", "expired", "cancelled", "filled"),
           otherwise: Joi.valid("active"),
         })
         .description(
-          "active = currently valid, inactive = temporarily invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
+          "active = currently valid\ninactive = temporarily invalid\nexpired, cancelled, filled = permanently invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
         ),
       source: Joi.string()
         .pattern(regex.domain)
@@ -274,6 +275,7 @@ export const getOrdersAsksV3Options: RouteOptions = {
           orders.currency_value,
           orders.normalized_value,
           orders.currency_normalized_value,
+          orders.missing_royalties,
           dynamic,
           DATE_PART('epoch', LOWER(orders.valid_between)) AS valid_from,
           COALESCE(
@@ -326,8 +328,9 @@ export const getOrdersAsksV3Options: RouteOptions = {
               `orders.side = 'sell'`,
             ]
           : [`orders.side = 'sell'`];
-      let orderStatusFilter = `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`;
+
       let communityFilter = "";
+      let orderStatusFilter = "";
 
       if (query.ids) {
         if (Array.isArray(query.ids)) {
@@ -335,6 +338,8 @@ export const getOrdersAsksV3Options: RouteOptions = {
         } else {
           conditions.push(`orders.id = $/ids/`);
         }
+      } else {
+        orderStatusFilter = `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`;
       }
 
       if (query.token) {
@@ -367,6 +372,18 @@ export const getOrdersAsksV3Options: RouteOptions = {
           case "inactive": {
             // Potentially-valid orders
             orderStatusFilter = `orders.fillability_status = 'no-balance' OR (orders.fillability_status = 'fillable' AND orders.approval_status != 'approved')`;
+            break;
+          }
+          case "expired": {
+            orderStatusFilter = `orders.fillability_status = 'expired'`;
+            break;
+          }
+          case "filled": {
+            orderStatusFilter = `orders.fillability_status = 'filled'`;
+            break;
+          }
+          case "cancelled": {
+            orderStatusFilter = `orders.fillability_status = 'cancelled'`;
             break;
           }
         }
@@ -403,7 +420,9 @@ export const getOrdersAsksV3Options: RouteOptions = {
         );
       }
 
-      conditions.push(orderStatusFilter);
+      if (orderStatusFilter) {
+        conditions.push(orderStatusFilter);
+      }
 
       if (query.continuation) {
         const [priceOrCreatedAt, id] = splitContinuation(
@@ -455,6 +474,32 @@ export const getOrdersAsksV3Options: RouteOptions = {
 
       const sources = await Sources.getInstance();
       const result = rawResult.map(async (r) => {
+        const feeBreakdown = r.fee_breakdown;
+        let feeBps = utils.parseUnits(r.fee_bps.toString(), "wei");
+
+        if (query.normalizeRoyalties && r.missing_royalties) {
+          for (let i = 0; i < r.missing_royalties.length; i++) {
+            const amount = utils.parseUnits(r.missing_royalties[i].amount, "wei");
+            const totalValue = utils.parseUnits(r.normalized_value.toString(), "wei").sub(amount);
+            const bps = amount.mul(10000).div(totalValue);
+            const index: number = r.fee_breakdown.findIndex(
+              (fee: { recipient: string }) => fee.recipient === r.missing_royalties[i].recipient
+            );
+
+            if (index > -1) {
+              feeBreakdown[index].bps += Number(bps.toString());
+            } else {
+              const tempObj = {
+                bps: Number(bps.toString()),
+                kind: "royalty",
+                recipient: r.missing_royalties[i].recipient,
+              };
+              feeBreakdown.push(tempObj);
+              feeBps = feeBps.add(bps);
+            }
+          }
+        }
+
         let source: SourcesEntity | undefined;
         if (r.token_set_id?.startsWith("token")) {
           const [, contract, tokenId] = r.token_set_id.split(":");
@@ -504,8 +549,8 @@ export const getOrdersAsksV3Options: RouteOptions = {
             icon: source?.getIcon(),
             url: source?.metadata.url,
           },
-          feeBps: Number(r.fee_bps),
-          feeBreakdown: r.fee_breakdown,
+          feeBps: Number(feeBps.toString()),
+          feeBreakdown: feeBreakdown,
           expiration: Number(r.expiration),
           isReservoir: r.is_reservoir,
           isDynamic: Boolean(r.dynamic),
