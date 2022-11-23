@@ -339,7 +339,6 @@ export const getExecuteSellV6Options: RouteOptions = {
           payload.taker,
           Sdk.Rarible.Addresses.NFTTransferProxy[config.chainId]
         );
-
         if (!isApproved) {
           const approveTx =
             bidDetails.contractKind === "erc721"
