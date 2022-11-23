@@ -64,11 +64,11 @@ export const getOrdersAsksV3Options: RouteOptions = {
       status: Joi.string()
         .when("maker", {
           is: Joi.exist(),
-          then: Joi.valid("active", "inactive"),
+          then: Joi.valid("active", "inactive", "expired", "cancelled", "filled"),
           otherwise: Joi.valid("active"),
         })
         .description(
-          "active = currently valid, inactive = temporarily invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
+          "active = currently valid\ninactive = temporarily invalid\nexpired, cancelled, filled = permanently invalid\n\nAvailable when filtering by maker, otherwise only valid orders will be returned"
         ),
       source: Joi.string()
         .pattern(regex.domain)
@@ -372,6 +372,18 @@ export const getOrdersAsksV3Options: RouteOptions = {
           case "inactive": {
             // Potentially-valid orders
             orderStatusFilter = `orders.fillability_status = 'no-balance' OR (orders.fillability_status = 'fillable' AND orders.approval_status != 'approved')`;
+            break;
+          }
+          case "expired": {
+            orderStatusFilter = `orders.fillability_status = 'expired'`;
+            break;
+          }
+          case "filled": {
+            orderStatusFilter = `orders.fillability_status = 'filled'`;
+            break;
+          }
+          case "cancelled": {
+            orderStatusFilter = `orders.fillability_status = 'cancelled'`;
             break;
           }
         }
