@@ -19,6 +19,7 @@ import {
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
+import { utils } from "ethers";
 
 const version = "v3";
 
@@ -274,6 +275,7 @@ export const getOrdersAsksV3Options: RouteOptions = {
           orders.currency_value,
           orders.normalized_value,
           orders.currency_normalized_value,
+          orders.missing_royalties,
           dynamic,
           DATE_PART('epoch', LOWER(orders.valid_between)) AS valid_from,
           COALESCE(
@@ -460,6 +462,32 @@ export const getOrdersAsksV3Options: RouteOptions = {
 
       const sources = await Sources.getInstance();
       const result = rawResult.map(async (r) => {
+        const feeBreakdown = r.fee_breakdown;
+        let feeBps = utils.parseUnits(r.fee_bps.toString(), "wei");
+
+        if (query.normalizeRoyalties && r.missing_royalties) {
+          for (let i = 0; i < r.missing_royalties.length; i++) {
+            const amount = utils.parseUnits(r.missing_royalties[i].amount, "wei");
+            const totalValue = utils.parseUnits(r.normalized_value.toString(), "wei").sub(amount);
+            const bps = amount.mul(10000).div(totalValue);
+            const index: number = r.fee_breakdown.findIndex(
+              (fee: { recipient: string }) => fee.recipient === r.missing_royalties[i].recipient
+            );
+
+            if (index > -1) {
+              feeBreakdown[index].bps += Number(bps.toString());
+            } else {
+              const tempObj = {
+                bps: Number(bps.toString()),
+                kind: "royalty",
+                recipient: r.missing_royalties[i].recipient,
+              };
+              feeBreakdown.push(tempObj);
+              feeBps = feeBps.add(bps);
+            }
+          }
+        }
+
         let source: SourcesEntity | undefined;
         if (r.token_set_id?.startsWith("token")) {
           const [, contract, tokenId] = r.token_set_id.split(":");
@@ -509,8 +537,8 @@ export const getOrdersAsksV3Options: RouteOptions = {
             icon: source?.getIcon(),
             url: source?.metadata.url,
           },
-          feeBps: Number(r.fee_bps),
-          feeBreakdown: r.fee_breakdown,
+          feeBps: Number(feeBps.toString()),
+          feeBreakdown: feeBreakdown,
           expiration: Number(r.expiration),
           isReservoir: r.is_reservoir,
           isDynamic: Boolean(r.dynamic),
