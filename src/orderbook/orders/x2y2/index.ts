@@ -1,3 +1,4 @@
+import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
 
@@ -216,7 +217,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         missingRoyalties.push({
           amount,
           // TODO: We should probably split pro-rata across all royalty recipients
-          recipient: defaultRoyalties[0].recipient,
+          recipient: defaultRoyalties.filter(({ recipient }) => recipient !== AddressZero)[0]
+            .recipient,
         });
       }
 
