@@ -947,8 +947,8 @@ export const save = async (
         raw_data: null,
         expiration: validTo,
         missing_royalties: missingRoyalties,
-        normalized_value: normalizedValue || null,
-        currency_normalized_value: currencyNormalizedValue || null,
+        normalized_value: normalizedValue,
+        currency_normalized_value: currencyNormalizedValue,
       });
 
       const unfillable =
