@@ -9,11 +9,12 @@ import { inject } from "@/api/index";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn, formatEth, regex, toBuffer } from "@/common/utils";
+import { bn, formatPrice, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { generateBidDetailsV6 } from "@/orderbook/orders";
 import { getNftApproval } from "@/orderbook/orders/common/helpers";
+import { getCurrency } from "@/utils/currencies";
 
 const version = "v6";
 
@@ -159,6 +160,8 @@ export const getExecuteSellV6Options: RouteOptions = {
               orders.price,
               orders.raw_data,
               orders.source_id_int,
+              orders.currency,
+              orders.missing_royalties,
               orders.maker,
               orders.token_set_id
             FROM orders
@@ -196,6 +199,8 @@ export const getExecuteSellV6Options: RouteOptions = {
               orders.price,
               orders.raw_data,
               orders.source_id_int,
+              orders.currency,
+              orders.missing_royalties,
               orders.maker,
               orders.token_set_id
             FROM orders
@@ -244,7 +249,10 @@ export const getExecuteSellV6Options: RouteOptions = {
           quantity: payload.quantity ?? 1,
           source: sourceId ? sources.get(sourceId)?.domain ?? null : null,
           currency: payload.currency,
-          quote: formatEth(orderResult.price),
+          quote: formatPrice(
+            orderResult.price,
+            (await getCurrency(fromBuffer(orderResult.currency))).decimals
+          ),
           rawQuote: orderResult.price,
         },
       ];
@@ -253,6 +261,7 @@ export const getExecuteSellV6Options: RouteOptions = {
           id: orderResult.id,
           kind: orderResult.kind,
           rawData: orderResult.raw_data,
+          fees: payload.normalizeRoyalties ? orderResult.missing_royalties : [],
         },
         {
           kind: orderResult.token_kind,
