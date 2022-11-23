@@ -142,7 +142,9 @@ export const getStatsV2Options: RouteOptions = {
             ob.price AS top_buy_price,
             ob.currency AS top_buy_currency,
             ob.currency_price AS top_buy_currency_price,
-            ob.currency_value AS top_buy_currency_value
+            ob.currency_value AS top_buy_currency_value,
+            os.normalized_value AS floor_sell_normalized_value,
+            os.currency_normalized_value AS floor_sell_currency_normalized_value
           FROM "tokens" "t"
           LEFT JOIN "orders" "os"
             ON "t"."floor_sell_id" = "os"."id"
