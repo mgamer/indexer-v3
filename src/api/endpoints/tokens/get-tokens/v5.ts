@@ -753,7 +753,7 @@ export const getTokensV5Options: RouteOptions = {
                   source: {
                     id: topBuySource?.address,
                     domain: topBuySource?.domain,
-                    name: topBuySource?.metadata.title || topBuySource?.name,
+                    name: topBuySource?.getTitle(),
                     icon: topBuySource?.getIcon(),
                     url: topBuySource?.metadata.url,
                   },
