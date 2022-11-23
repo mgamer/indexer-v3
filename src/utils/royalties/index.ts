@@ -148,11 +148,16 @@ export const updateRoyaltySpec = async (collection: string, spec: string, royalt
     // Always keep the latest royalty per spec
     if (!_.isEqual(currentRoyalties.royalties[spec], royalties)) {
       currentRoyalties.royalties[spec] = royalties;
+      const royaltiesBpsSum = _.sumBy(royalties, (royalty) => royalty.bps);
 
       await idb.none(
         `
-          UPDATE collections SET
-            new_royalties = $/royalties:json/
+          UPDATE collections
+          SET new_royalties = $/royalties:json/, new_royalties_fee_bps->>'${spec}' = $/royaltiesBpsSum/,
+              new_royalties_fee_bps = CASE WHEN new_royalties_fee_bps IS NULL
+                THEN '{"${spec}":${royaltiesBpsSum}'
+                ELSE jsonb_set(new_royalties_fee_bps, '{${spec}}', '${royaltiesBpsSum}')
+              END
           WHERE collections.id = $/collection/
         `,
         {
