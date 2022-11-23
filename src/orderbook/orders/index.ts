@@ -16,7 +16,6 @@ export * as infinity from "@/orderbook/orders/infinity";
 export * as rarible from "@/orderbook/orders/rarible";
 
 // Imports
-import { Sdk as tmpSdk } from "@/tmp/index"; // TODO @joe
 import * as Sdk from "@reservoir0x/sdk";
 import * as SdkTypesV5 from "@reservoir0x/sdk/dist/router/v5/types";
 import * as SdkTypesV6 from "@reservoir0x/sdk/dist/router/v6/types";
@@ -108,7 +107,7 @@ export const getOrderSourceByOrderKind = async (
       case "blur":
         return sources.getOrInsert("blur.io");
       case "infinity":
-        return sources.getOrInsert("infinity.xyz"); // TODO - joe what needs to be done to add infinity to source? do I update the json file?
+        return sources.getOrInsert("infinity.xyz"); // TODO - what needs to be done to add infinity to source? do I update the json file?
       case "mint": {
         if (address && mintsSources.has(address)) {
           return sources.getOrInsert(mintsSources.get(address)!);
@@ -224,15 +223,6 @@ export const generateListingDetailsV5 = (
         kind: "universe",
         ...common,
         order: new Sdk.Universe.Order(config.chainId, order.rawData),
-      };
-    }
-
-    case "infinity": {
-      // TODO @joe
-      return {
-        kind: "infinity" as any,
-        ...common,
-        order: new tmpSdk.Infinity.Order(config.chainId, order.rawData) as any,
       };
     }
 
@@ -371,16 +361,6 @@ export const generateBidDetailsV5 = async (
       };
     }
 
-    case "infinity": {
-      // TODO @joe
-      const sdkOrder = new tmpSdk.Infinity.Order(config.chainId, order.rawData);
-      return {
-        kind: "infinity" as any,
-        ...common,
-        order: sdkOrder as any,
-      };
-    }
-
     case "rarible": {
       const sdkOrder = new Sdk.Rarible.Order(config.chainId, order.rawData);
       return {
@@ -504,12 +484,11 @@ export const generateListingDetailsV6 = (
     }
 
     case "infinity": {
-      // TODO @joe
-      const sdkOrder = new tmpSdk.Infinity.Order(config.chainId, order.rawData);
+      const sdkOrder = new Sdk.Infinity.Order(config.chainId, order.rawData);
       return {
-        kind: "infinity" as any,
+        kind: "infinity",
         ...common,
-        order: sdkOrder as any,
+        order: sdkOrder,
       };
     }
 
@@ -646,12 +625,11 @@ export const generateBidDetailsV6 = async (
     }
 
     case "infinity": {
-      // TODO @joe
-      const sdkOrder = new tmpSdk.Infinity.Order(config.chainId, order.rawData);
+      const sdkOrder = new Sdk.Infinity.Order(config.chainId, order.rawData);
       return {
-        kind: "infinity" as any,
+        kind: "infinity",
         ...common,
-        order: sdkOrder as any,
+        order: sdkOrder,
       };
     }
 

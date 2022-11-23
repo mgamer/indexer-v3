@@ -3,7 +3,6 @@ import { idb, pgp } from "@/common/db";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { DbOrder, generateSchemaHash, OrderMetadata } from "../utils";
 import { logger } from "@/common/logger";
-import { Sdk as tmpSdk } from "@/tmp/index"; // TODO joe update this to use the new sdk
 import { bn, now, toBuffer } from "@/common/utils";
 import { offChainCheck } from "./check";
 import pLimit from "p-limit";
@@ -11,9 +10,10 @@ import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
 import * as arweaveRelay from "@/jobs/arweave-relay";
 import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
+import * as Sdk from "@reservoir0x/sdk";
 
 export type OrderInfo = {
-  orderParams: tmpSdk.Infinity.Types.OrderInput;
+  orderParams: Sdk.Infinity.Types.OrderInput;
   metadata: OrderMetadata;
 };
 
@@ -28,14 +28,14 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
   const orderValues: DbOrder[] = [];
 
   const arweaveData: {
-    order: tmpSdk.Infinity.Order;
+    order: Sdk.Infinity.Order;
     schemaHash?: string;
     source?: string;
   }[] = [];
 
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
-      const order = new tmpSdk.Infinity.Order(config.chainId, orderParams);
+      const order = new Sdk.Infinity.Order(config.chainId, orderParams);
       const hash = order.hash();
       const id = hash;
       try {
@@ -160,7 +160,7 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
       const feeBreakdown = [
         {
           kind: "marketplace",
-          recipient: tmpSdk.Infinity.Addresses.Exchange[config.chainId],
+          recipient: Sdk.Infinity.Addresses.Exchange[config.chainId],
           bps: FEE_BPS,
         },
       ];

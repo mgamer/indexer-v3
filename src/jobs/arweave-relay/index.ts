@@ -1,7 +1,6 @@
 import * as Sdk from "@reservoir0x/sdk";
 import cron from "node-cron";
 
-import { Sdk as tmpSdk } from "tmp";
 import { logger } from "@/common/logger";
 import { arweaveGateway } from "@/common/provider";
 import { redlock, redis } from "@/common/redis";
@@ -131,7 +130,7 @@ export const addPendingOrdersElement = async (
 };
 
 export const addPendingOrdersInfinity = async (
-  data: { order: tmpSdk.Infinity.Order; schemaHash?: string; source?: string }[]
+  data: { order: Sdk.Infinity.Order; schemaHash?: string; source?: string }[]
 ) => {
   if (config.arweaveRelayerKey && data.length) {
     await redis.rpush(

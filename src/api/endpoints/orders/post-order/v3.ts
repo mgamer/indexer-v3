@@ -441,17 +441,6 @@ export const postOrderV3Options: RouteOptions = {
             throw Boom.badRequest(result.status);
           }
 
-          if (orderbook === "infinity") {
-            await postOrderExternal.addToQueue(result.id, order.data, orderbook, orderbookApiKey); // TODO @joe add support for sending to infinity OB
-
-            logger.info(
-              `post-order-${version}-handler`,
-              `orderbook: ${orderbook}, orderData: ${JSON.stringify(order.data)}, orderId: ${
-                result.id
-              }`
-            );
-          }
-
           return { message: "Success", orderId: result.id };
         }
 

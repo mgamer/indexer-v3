@@ -10,7 +10,7 @@ import { testNFTAddr, operatorKey, operator2Key } from "./__fixtures__/test-acco
 
 import { setupNFTs } from "../utils/nft";
 import { getOrder } from "../utils/order";
-import { Infinity } from "@/tmp/sdk"; // TODO @joe
+import { Infinity } from "@reservoir0x/sdk";
 import { lc } from "@reservoir0x/sdk/dist/utils";
 import { parseEther } from "ethers/lib/utils";
 import { bn, now } from "@/common/utils";

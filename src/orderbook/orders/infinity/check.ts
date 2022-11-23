@@ -1,5 +1,4 @@
 import * as Sdk from "@reservoir0x/sdk";
-import { Sdk as tmpSdk } from "@/tmp/index"; // TODO joe update this to use the new sdk
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { baseProvider } from "@/common/provider";
@@ -8,7 +7,7 @@ import { now } from "lodash";
 import * as onChainData from "@/utils/on-chain-data";
 
 export const offChainCheck = async (
-  order: tmpSdk.Infinity.Order,
+  order: Sdk.Infinity.Order,
   options?: {
     // Some NFTs pre-approve common exchanges so that users don't
     // spend gas approving them. In such cases we will be missing
@@ -47,7 +46,7 @@ export const offChainCheck = async (
   let hasBalance = true;
   let hasApproval = true;
   if (order.isSellOrder) {
-    const operator = tmpSdk.Infinity.Addresses.Exchange[config.chainId];
+    const operator = Sdk.Infinity.Addresses.Exchange[config.chainId];
     for (const nft of order.nfts) {
       const nftApproval = await checkApproval(
         nft.collection,
@@ -89,7 +88,7 @@ export const offChainCheck = async (
       const approval = await onChainData.fetchAndUpdateFtApproval(
         order.currency,
         order.signer,
-        tmpSdk.Infinity.Addresses.Exchange[config.chainId]
+        Sdk.Infinity.Addresses.Exchange[config.chainId]
       );
       hasApproval = bn(approval.value).gte(currentOrStartPrice);
     }
