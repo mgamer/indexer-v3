@@ -358,30 +358,28 @@ export const save = async (
       }));
 
       // Handle: royalties on top
+      const defaultRoyalties =
+        info.side === "sell"
+          ? await royalties.getRoyalties(info.contract, info.tokenId, "default")
+          : await royalties.getRoyaltiesByTokenSet(tokenSetId, "default");
+
+      const totalBuiltInBps = feeBreakdown
+        .map(({ bps, kind }) => (kind === "royalty" ? bps : 0))
+        .reduce((a, b) => a + b, 0);
+      const totalDefaultBps = defaultRoyalties.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
+
       const missingRoyalties = [];
       let missingRoyaltyAmount = bn(0);
-      if (info.side === "sell") {
-        const defaultRoyalties = await royalties.getRoyalties(
-          info.contract,
-          info.tokenId,
-          "default"
-        );
+      if (totalBuiltInBps < totalDefaultBps) {
+        const bpsDiff = totalDefaultBps - totalBuiltInBps;
+        const amount = bn(price).mul(bpsDiff).div(10000).toString();
+        missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
 
-        const totalBuiltInBps = feeBreakdown
-          .map(({ bps, kind }) => (kind === "royalty" ? bps : 0))
-          .reduce((a, b) => a + b, 0);
-        const totalDefaultBps = defaultRoyalties.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
-        if (totalBuiltInBps < totalDefaultBps) {
-          const bpsDiff = totalDefaultBps - totalBuiltInBps;
-          const amount = bn(price).mul(bpsDiff).div(10000).toString();
-          missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
-
-          missingRoyalties.push({
-            amount,
-            // TODO: We should probably split pro-rata across all royalty recipients
-            recipient: defaultRoyalties[0].recipient,
-          });
-        }
+        missingRoyalties.push({
+          amount,
+          // TODO: We should probably split pro-rata across all royalty recipients
+          recipient: defaultRoyalties[0].recipient,
+        });
       }
 
       // Handle: source
@@ -450,25 +448,20 @@ export const save = async (
       }
 
       // Handle: normalized value
-      let normalizedValue: string | undefined;
-      let currencyNormalizedValue: string | undefined;
-      if (info.side === "sell") {
-        currencyNormalizedValue = bn(currencyValue).add(missingRoyaltyAmount).toString();
+      const currencyNormalizedValue =
+        info.side === "sell"
+          ? bn(currencyValue).add(missingRoyaltyAmount).toString()
+          : bn(currencyValue).sub(missingRoyaltyAmount).toString();
 
-        const prices = await getUSDAndNativePrices(
-          currency,
-          currencyNormalizedValue.toString(),
-          currentTime
-        );
-        if (!prices.nativePrice) {
-          // Getting the native price is a must
-          return results.push({
-            id,
-            status: "failed-to-convert-price",
-          });
-        }
-        normalizedValue = bn(prices.nativePrice).toString();
+      const prices = await getUSDAndNativePrices(currency, currencyNormalizedValue, currentTime);
+      if (!prices.nativePrice) {
+        // Getting the native price is a must
+        return results.push({
+          id,
+          status: "failed-to-convert-price",
+        });
       }
+      const normalizedValue = bn(prices.nativePrice).toString();
 
       if (info.side === "buy" && order.params.kind === "single-token" && validateBidValue) {
         const typedInfo = info as typeof info & { tokenId: string };
@@ -537,8 +530,8 @@ export const save = async (
         raw_data: order.params,
         expiration: validTo,
         missing_royalties: missingRoyalties,
-        normalized_value: normalizedValue || null,
-        currency_normalized_value: currencyNormalizedValue || null,
+        normalized_value: normalizedValue,
+        currency_normalized_value: currencyNormalizedValue,
       });
 
       const unfillable =
