@@ -153,7 +153,7 @@ export const updateRoyaltySpec = async (collection: string, spec: string, royalt
       await idb.none(
         `
           UPDATE collections
-          SET new_royalties = $/royalties:json/, new_royalties_fee_bps->>'${spec}' = $/royaltiesBpsSum/,
+          SET new_royalties = $/royalties:json/,
               new_royalties_fee_bps = CASE WHEN new_royalties_fee_bps IS NULL
                 THEN '{"${spec}":${royaltiesBpsSum}'
                 ELSE jsonb_set(new_royalties_fee_bps, '{${spec}}', '${royaltiesBpsSum}')
