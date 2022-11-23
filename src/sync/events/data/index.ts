@@ -96,6 +96,8 @@ export type EventDataKind =
   | "infinity-take-order-fulfilled"
   | "infinity-cancel-all-orders"
   | "infinity-cancel-multiple-orders"
+  | "blur-order-cancelled"
+  | "blur-nonce-incremented"
   | "forward-order-filled"
   | "forward-order-cancelled"
   | "forward-counter-incremented";
@@ -177,6 +179,8 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
       infinity.takeOrderFulfilled,
       infinity.cancelAllOrders,
       infinity.cancelMultipleOrders,
+      blur.orderCancelled,
+      blur.nonceIncremented,
       forward.orderFilled,
       forward.orderCancelled,
       forward.counterIncremented,
@@ -326,6 +330,10 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return infinity.cancelAllOrders;
     case "infinity-cancel-multiple-orders":
       return infinity.cancelMultipleOrders;
+    case "blur-order-cancelled":
+      return blur.orderCancelled;
+    case "blur-nonce-incremented":
+      return blur.nonceIncremented;
     case "forward-order-filled":
       return forward.orderFilled;
     case "forward-order-cancelled":

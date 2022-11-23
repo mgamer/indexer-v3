@@ -82,6 +82,12 @@ export const getOrdersAsksV3Options: RouteOptions = {
       includeRawData: Joi.boolean()
         .default(false)
         .description("If true, raw data is included in the response."),
+      startTimestamp: Joi.number().description(
+        "Get events after a particular unix timestamp (inclusive)"
+      ),
+      endTimestamp: Joi.number().description(
+        "Get events before a particular unix timestamp (inclusive)"
+      ),
       normalizeRoyalties: Joi.boolean()
         .default(false)
         .description("If true, prices will include missing royalties to be added on-top."),
@@ -301,8 +307,25 @@ export const getOrdersAsksV3Options: RouteOptions = {
         FROM orders
       `;
 
+      // We default in the code so that these values don't appear in the docs
+      if (query.startTimestamp || query.endTimestamp) {
+        if (!query.startTimestamp) {
+          query.startTimestamp = 0;
+        }
+        if (!query.endTimestamp) {
+          query.endTimestamp = 9999999999;
+        }
+      }
+
       // Filters
-      const conditions: string[] = [`orders.side = 'sell'`];
+      const conditions: string[] =
+        query.startTimestamp || query.endTimestamp
+          ? [
+              `orders.created_at >= to_timestamp($/startTimestamp/)`,
+              `orders.created_at <= to_timestamp($/endTimestamp/)`,
+              `orders.side = 'sell'`,
+            ]
+          : [`orders.side = 'sell'`];
       let orderStatusFilter = `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`;
       let communityFilter = "";
 
