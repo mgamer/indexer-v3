@@ -157,7 +157,7 @@ export const getExecuteSellV6Options: RouteOptions = {
               orders.id,
               orders.kind,
               contracts.kind AS token_kind,
-              orders.price,
+              orders.value,
               orders.raw_data,
               orders.source_id_int,
               orders.currency,
@@ -196,7 +196,7 @@ export const getExecuteSellV6Options: RouteOptions = {
               orders.id,
               orders.kind,
               contracts.kind AS token_kind,
-              orders.price,
+              orders.value,
               orders.raw_data,
               orders.source_id_int,
               orders.currency,
@@ -241,6 +241,14 @@ export const getExecuteSellV6Options: RouteOptions = {
       const sources = await Sources.getInstance();
       const sourceId = orderResult.source_id_int;
 
+      const fees: Sdk.RouterV6.Types.Fee[] = payload.normalizeRoyalties
+        ? orderResult.missing_royalties ?? []
+        : [];
+      const totalFee = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
+
+      const totalPrice = bn(orderResult.value)
+        .sub(totalFee)
+        .mul(payload.quantity ?? 1);
       const path = [
         {
           orderId: orderResult.id,
@@ -250,10 +258,10 @@ export const getExecuteSellV6Options: RouteOptions = {
           source: sourceId ? sources.get(sourceId)?.domain ?? null : null,
           currency: payload.currency,
           quote: formatPrice(
-            orderResult.price,
+            totalPrice,
             (await getCurrency(fromBuffer(orderResult.currency))).decimals
           ),
-          rawQuote: orderResult.price,
+          rawQuote: totalPrice.toString(),
         },
       ];
       const bidDetails = await generateBidDetailsV6(
@@ -261,7 +269,7 @@ export const getExecuteSellV6Options: RouteOptions = {
           id: orderResult.id,
           kind: orderResult.kind,
           rawData: orderResult.raw_data,
-          fees: payload.normalizeRoyalties ? orderResult.missing_royalties : [],
+          fees,
         },
         {
           kind: orderResult.token_kind,
