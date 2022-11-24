@@ -137,8 +137,8 @@ export const updateRoyaltySpec = async (collection: string, spec: string, royalt
     return;
   }
 
-  // For safety, skip any zero address recipients
-  royalties = royalties.filter(({ recipient }) => recipient !== AddressZero);
+  // For safety, skip any zero bps or recipients
+  royalties = royalties.filter(({ bps, recipient }) => bps && recipient !== AddressZero);
 
   // Fetch the current royalties
   const currentRoyalties = await idb.oneOrNone(
