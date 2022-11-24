@@ -203,7 +203,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
           quantity: token.quantity ?? 1,
           source: order.sourceId !== null ? sources.get(order.sourceId)?.domain ?? null : null,
           currency: order.currency,
-          quote: formatPrice(totalPrice, (await getCurrency(order.currency)).decimals),
+          quote: formatPrice(totalPrice, (await getCurrency(order.currency)).decimals, true),
           rawQuote: totalPrice.toString(),
         });
 
