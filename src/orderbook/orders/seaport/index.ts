@@ -376,6 +376,7 @@ export const save = async (
         missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
 
         missingRoyalties.push({
+          bps: bpsDiff,
           amount,
           // TODO: We should probably split pro-rata across all royalty recipients
           recipient: defaultRoyalties.filter(({ recipient }) => recipient !== AddressZero)[0]
@@ -807,6 +808,7 @@ export const save = async (
         missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
 
         missingRoyalties.push({
+          bps: bpsDiff,
           amount,
           // TODO: We should probably split pro-rata across all royalty recipients
           recipient: defaultRoyalties.filter(({ recipient }) => recipient !== AddressZero)[0]

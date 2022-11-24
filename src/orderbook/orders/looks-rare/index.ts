@@ -231,6 +231,7 @@ export const save = async (
         missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
 
         missingRoyalties.push({
+          bps: actualBps,
           amount,
           recipient,
         });
