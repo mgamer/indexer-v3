@@ -210,17 +210,21 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const missingRoyalties = [];
       let missingRoyaltyAmount = bn(0);
       if (totalBuiltInBps < totalDefaultBps) {
-        const bpsDiff = totalDefaultBps - totalBuiltInBps;
-        const amount = bn(price).mul(bpsDiff).div(10000).toString();
-        missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
+        const validRecipients = defaultRoyalties.filter(
+          ({ bps, recipient }) => bps && recipient !== AddressZero
+        );
+        if (validRecipients.length) {
+          const bpsDiff = totalDefaultBps - totalBuiltInBps;
+          const amount = bn(price).mul(bpsDiff).div(10000).toString();
+          missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
 
-        missingRoyalties.push({
-          bps: bpsDiff,
-          amount,
-          // TODO: We should probably split pro-rata across all royalty recipients
-          recipient: defaultRoyalties.filter(({ recipient }) => recipient !== AddressZero)[0]
-            .recipient,
-        });
+          missingRoyalties.push({
+            bps: bpsDiff,
+            amount,
+            // TODO: We should probably split pro-rata across all royalty recipients
+            recipient: validRecipients[0].recipient,
+          });
+        }
       }
 
       const feeBps = feeBreakdown.map(({ bps }) => bps).reduce((a, b) => Number(a) + Number(b), 0);

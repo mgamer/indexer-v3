@@ -371,17 +371,21 @@ export const save = async (
       const missingRoyalties = [];
       let missingRoyaltyAmount = bn(0);
       if (totalBuiltInBps < totalDefaultBps) {
-        const bpsDiff = totalDefaultBps - totalBuiltInBps;
-        const amount = bn(price).mul(bpsDiff).div(10000).toString();
-        missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
+        const validRecipients = defaultRoyalties.filter(
+          ({ bps, recipient }) => bps && recipient !== AddressZero
+        );
+        if (validRecipients.length) {
+          const bpsDiff = totalDefaultBps - totalBuiltInBps;
+          const amount = bn(price).mul(bpsDiff).div(10000).toString();
+          missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
 
-        missingRoyalties.push({
-          bps: bpsDiff,
-          amount,
-          // TODO: We should probably split pro-rata across all royalty recipients
-          recipient: defaultRoyalties.filter(({ recipient }) => recipient !== AddressZero)[0]
-            .recipient,
-        });
+          missingRoyalties.push({
+            bps: bpsDiff,
+            amount,
+            // TODO: We should probably split pro-rata across all royalty recipients
+            recipient: validRecipients[0].recipient,
+          });
+        }
       }
 
       // Handle: source
@@ -639,6 +643,12 @@ export const save = async (
       }
 
       const collection = await getCollection(orderParams);
+      if (!collection) {
+        return results.push({
+          id,
+          status: "unknown-collection",
+        });
+      }
 
       // Check and save: associated token set
       let schemaHash = generateSchemaHash();
@@ -803,17 +813,21 @@ export const save = async (
       const missingRoyalties = [];
       let missingRoyaltyAmount = bn(0);
       if (totalBuiltInBps < totalDefaultBps) {
-        const bpsDiff = totalDefaultBps - totalBuiltInBps;
-        const amount = bn(price).mul(bpsDiff).div(10000).toString();
-        missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
+        const validRecipients = defaultRoyalties.filter(
+          ({ bps, recipient }) => bps && recipient !== AddressZero
+        );
+        if (validRecipients.length) {
+          const bpsDiff = totalDefaultBps - totalBuiltInBps;
+          const amount = bn(price).mul(bpsDiff).div(10000).toString();
+          missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
 
-        missingRoyalties.push({
-          bps: bpsDiff,
-          amount,
-          // TODO: We should probably split pro-rata across all royalty recipients
-          recipient: defaultRoyalties.filter(({ recipient }) => recipient !== AddressZero)[0]
-            .recipient,
-        });
+          missingRoyalties.push({
+            bps: bpsDiff,
+            amount,
+            // TODO: We should probably split pro-rata across all royalty recipients
+            recipient: validRecipients[0].recipient,
+          });
+        }
       }
 
       if (orderParams.side === "buy") {
@@ -1402,22 +1416,28 @@ export const handleTokenList = async (
   }
 };
 
-const getCollection = async (orderParams: PartialOrderComponents) => {
-  let collectionResult;
-
+const getCollection = async (
+  orderParams: PartialOrderComponents
+): Promise<{
+  id: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  new_royalties: any;
+  token_set_id: string | null;
+} | null> => {
   if (orderParams.kind === "single-token") {
-    collectionResult = await redb.oneOrNone(
+    return redb.oneOrNone(
       `
-            SELECT
-              collections.id,
-              collections.new_royalties,
-              collections.token_set_id
-            FROM tokens
-            JOIN collections ON tokens.collection_id = collections.id
-            WHERE tokens.contract = $/contract/
-            AND tokens.token_id = $/tokenId/
-            LIMIT 1
-          `,
+        SELECT
+          collections.id,
+          collections.new_royalties,
+          collections.token_set_id
+        FROM tokens
+        JOIN collections
+          ON tokens.collection_id = collections.id
+        WHERE tokens.contract = $/contract/
+          AND tokens.token_id = $/tokenId/
+        LIMIT 1
+      `,
       {
         contract: toBuffer(orderParams.contract),
         tokenId: orderParams.tokenId,
@@ -1425,39 +1445,37 @@ const getCollection = async (orderParams: PartialOrderComponents) => {
     );
   } else {
     if (getNetworkSettings().multiCollectionContracts.includes(orderParams.contract)) {
-      collectionResult = await redb.oneOrNone(
+      return redb.oneOrNone(
         `
-              SELECT
-                collections.id,
-                collections.new_royalties,
-                collections.token_set_id
-              FROM collections
-              WHERE collections.contract = $/contract/
-                AND collections.slug = $/collectionSlug/
-            `,
+          SELECT
+            collections.id,
+            collections.new_royalties,
+            collections.token_set_id
+          FROM collections
+          WHERE collections.contract = $/contract/
+            AND collections.slug = $/collectionSlug/
+        `,
         {
           contract: toBuffer(orderParams.contract),
           collectionSlug: orderParams.collectionSlug,
         }
       );
     } else {
-      collectionResult = await redb.oneOrNone(
+      return redb.oneOrNone(
         `
-              SELECT
-                collections.id,
-                collections.new_royalties,
-                collections.token_set_id
-              FROM collections
-              WHERE collections.id = $/id/
-            `,
+          SELECT
+            collections.id,
+            collections.new_royalties,
+            collections.token_set_id
+          FROM collections
+          WHERE collections.id = $/id/
+        `,
         {
           id: orderParams.contract,
         }
       );
     }
   }
-
-  return collectionResult;
 };
 
 const getCollectionFloorAskValue = async (contract: string, tokenId: number) => {
