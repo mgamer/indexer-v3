@@ -215,6 +215,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
 
         missingRoyalties.push({
+          bps: bpsDiff,
           amount,
           // TODO: We should probably split pro-rata across all royalty recipients
           recipient: defaultRoyalties.filter(({ recipient }) => recipient !== AddressZero)[0]
