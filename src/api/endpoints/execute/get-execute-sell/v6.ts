@@ -9,11 +9,12 @@ import { inject } from "@/api/index";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn, formatEth, regex, toBuffer } from "@/common/utils";
+import { bn, formatPrice, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { generateBidDetailsV6 } from "@/orderbook/orders";
 import { getNftApproval } from "@/orderbook/orders/common/helpers";
+import { getCurrency } from "@/utils/currencies";
 
 const version = "v6";
 
@@ -63,6 +64,9 @@ export const getExecuteSellV6Options: RouteOptions = {
         .description(
           "Quantity of tokens user is selling. Only compatible when selling a single ERC1155 token. Example: `5`"
         ),
+      currency: Joi.string()
+        .pattern(regex.address)
+        .default(Sdk.Common.Addresses.Weth[config.chainId]),
       source: Joi.string()
         .lowercase()
         .pattern(regex.domain)
@@ -156,6 +160,8 @@ export const getExecuteSellV6Options: RouteOptions = {
               orders.price,
               orders.raw_data,
               orders.source_id_int,
+              orders.currency,
+              orders.missing_royalties,
               orders.maker,
               orders.token_set_id
             FROM orders
@@ -171,6 +177,7 @@ export const getExecuteSellV6Options: RouteOptions = {
               AND orders.approval_status = 'approved'
               AND orders.quantity_remaining >= $/quantity/
               AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+              AND orders.currency = $/currency/
             LIMIT 1
           `,
           {
@@ -178,6 +185,7 @@ export const getExecuteSellV6Options: RouteOptions = {
             contract: toBuffer(contract),
             tokenId,
             quantity: payload.quantity ?? 1,
+            currency: toBuffer(payload.currency),
           }
         );
       } else {
@@ -191,6 +199,8 @@ export const getExecuteSellV6Options: RouteOptions = {
               orders.price,
               orders.raw_data,
               orders.source_id_int,
+              orders.currency,
+              orders.missing_royalties,
               orders.maker,
               orders.token_set_id
             FROM orders
@@ -205,6 +215,7 @@ export const getExecuteSellV6Options: RouteOptions = {
               AND orders.approval_status = 'approved'
               AND orders.quantity_remaining >= $/quantity/
               AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+              AND orders.currency = $/currency/
             ORDER BY orders.value DESC
             LIMIT 1
           `,
@@ -212,6 +223,7 @@ export const getExecuteSellV6Options: RouteOptions = {
             contract: toBuffer(contract),
             tokenId,
             quantity: payload.quantity ?? 1,
+            currency: toBuffer(payload.currency),
           }
         );
       }
@@ -236,9 +248,11 @@ export const getExecuteSellV6Options: RouteOptions = {
           tokenId,
           quantity: payload.quantity ?? 1,
           source: sourceId ? sources.get(sourceId)?.domain ?? null : null,
-          // TODO: Add support for multiple currencies
-          currency: Sdk.Common.Addresses.Weth[config.chainId],
-          quote: formatEth(orderResult.price),
+          currency: payload.currency,
+          quote: formatPrice(
+            orderResult.price,
+            (await getCurrency(fromBuffer(orderResult.currency))).decimals
+          ),
           rawQuote: orderResult.price,
         },
       ];
@@ -247,6 +261,7 @@ export const getExecuteSellV6Options: RouteOptions = {
           id: orderResult.id,
           kind: orderResult.kind,
           rawData: orderResult.raw_data,
+          fees: payload.normalizeRoyalties ? orderResult.missing_royalties : [],
         },
         {
           kind: orderResult.token_kind,
@@ -294,63 +309,7 @@ export const getExecuteSellV6Options: RouteOptions = {
         },
       ];
 
-      // X2Y2 / Sudoswap / Forward / Rarible bids are to be filled directly (because we have no modules for them yet)
-      if (bidDetails.kind === "x2y2") {
-        const isApproved = await getNftApproval(
-          bidDetails.contract,
-          payload.taker,
-          Sdk.X2Y2.Addresses.Exchange[config.chainId]
-        );
-        if (!isApproved) {
-          // TODO: Add support for X2Y2 ERC1155 orders
-          const approveTx = new Sdk.Common.Helpers.Erc721(
-            baseProvider,
-            bidDetails.contract
-          ).approveTransaction(payload.taker, Sdk.X2Y2.Addresses.Exchange[config.chainId]);
-
-          steps[0].items.push({
-            status: "incomplete",
-            data: {
-              ...approveTx,
-              maxFeePerGas: payload.maxFeePerGas
-                ? bn(payload.maxFeePerGas).toHexString()
-                : undefined,
-              maxPriorityFeePerGas: payload.maxPriorityFeePerGas
-                ? bn(payload.maxPriorityFeePerGas).toHexString()
-                : undefined,
-            },
-          });
-        }
-      }
-      if (bidDetails.kind === "sudoswap") {
-        const isApproved = await getNftApproval(
-          bidDetails.contract,
-          payload.taker,
-          Sdk.Sudoswap.Addresses.RouterWithRoyalties[config.chainId]
-        );
-        if (!isApproved) {
-          const approveTx = new Sdk.Common.Helpers.Erc721(
-            baseProvider,
-            bidDetails.contract
-          ).approveTransaction(
-            payload.taker,
-            Sdk.Sudoswap.Addresses.RouterWithRoyalties[config.chainId]
-          );
-
-          steps[0].items.push({
-            status: "incomplete",
-            data: {
-              ...approveTx,
-              maxFeePerGas: payload.maxFeePerGas
-                ? bn(payload.maxFeePerGas).toHexString()
-                : undefined,
-              maxPriorityFeePerGas: payload.maxPriorityFeePerGas
-                ? bn(payload.maxPriorityFeePerGas).toHexString()
-                : undefined,
-            },
-          });
-        }
-      }
+      // Forward / Rarible bids are to be filled directly (because we have no modules for them yet)
       if (bidDetails.kind === "forward") {
         const isApproved = await getNftApproval(
           bidDetails.contract,
@@ -383,14 +342,12 @@ export const getExecuteSellV6Options: RouteOptions = {
           });
         }
       }
-
       if (bidDetails.kind === "rarible") {
         const isApproved = await getNftApproval(
           bidDetails.contract,
           payload.taker,
           Sdk.Rarible.Addresses.NFTTransferProxy[config.chainId]
         );
-
         if (!isApproved) {
           const approveTx =
             bidDetails.contractKind === "erc721"
