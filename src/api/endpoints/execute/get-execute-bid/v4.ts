@@ -126,6 +126,9 @@ export const getExecuteBidV4Options: RouteOptions = {
             .pattern(regex.number)
             .description("Optional. Random string to make the order unique"),
           nonce: Joi.string().pattern(regex.number).description("Optional. Set a custom nonce"),
+          currency: Joi.string()
+            .pattern(regex.address)
+            .default(Sdk.Common.Addresses.Weth[config.chainId]),
         })
           .or("token", "collection", "tokenSetId")
           .oxor("token", "collection", "tokenSetId")
@@ -234,17 +237,21 @@ export const getExecuteBidV4Options: RouteOptions = {
           params.feeRecipient.push(feeRecipient);
         }
 
-        // TODO: Add support for more ERC20 tokens in the future after it's supported by the indexer
-        // Check the maker's Weth/Eth balance
+        // Check the maker's balance
         let wrapEthTx: TxData | undefined;
-        const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
-        const wethBalance = await weth.getBalance(maker);
-        if (bn(wethBalance).lt(params.weiPrice)) {
-          const ethBalance = await baseProvider.getBalance(maker);
-          if (bn(wethBalance).add(ethBalance).lt(params.weiPrice)) {
-            throw Boom.badData("Maker does not have sufficient balance");
+        const currency = new Sdk.Common.Helpers.Erc20(baseProvider, params.currency);
+        const currencyBalance = await currency.getBalance(maker);
+        if (bn(currencyBalance).lt(params.weiPrice)) {
+          if (params.currency === Sdk.Common.Addresses.Weth[config.chainId]) {
+            const ethBalance = await baseProvider.getBalance(maker);
+            if (bn(currencyBalance).add(ethBalance).lt(params.weiPrice)) {
+              throw Boom.badData("Maker does not have sufficient balance");
+            } else {
+              const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
+              wrapEthTx = weth.depositTransaction(maker, bn(params.weiPrice).sub(currencyBalance));
+            }
           } else {
-            wrapEthTx = weth.depositTransaction(maker, bn(params.weiPrice).sub(wethBalance));
+            throw Boom.badData("Maker does not have sufficient balance");
           }
         }
 
@@ -288,11 +295,11 @@ export const getExecuteBidV4Options: RouteOptions = {
             const exchange = new Sdk.Seaport.Exchange(config.chainId);
             const conduit = exchange.deriveConduit(order.params.conduitKey);
 
-            // Check the maker's WETH approval
+            // Check the maker's approval
             let approvalTx: TxData | undefined;
-            const wethApproval = await weth.getAllowance(maker, conduit);
-            if (bn(wethApproval).lt(order.getMatchingPrice())) {
-              approvalTx = weth.approveTransaction(maker, conduit);
+            const currencyApproval = await currency.getAllowance(maker, conduit);
+            if (bn(currencyApproval).lt(order.getMatchingPrice())) {
+              approvalTx = currency.approveTransaction(maker, conduit);
             }
 
             steps[1].items.push({
@@ -383,12 +390,12 @@ export const getExecuteBidV4Options: RouteOptions = {
 
             // Check the maker's approval
             let approvalTx: TxData | undefined;
-            const wethApproval = await weth.getAllowance(
+            const wethApproval = await currency.getAllowance(
               maker,
               Sdk.ZeroExV4.Addresses.Exchange[config.chainId]
             );
             if (bn(wethApproval).lt(bn(order.params.erc20TokenAmount).add(order.getFeeAmount()))) {
-              approvalTx = weth.approveTransaction(
+              approvalTx = currency.approveTransaction(
                 maker,
                 Sdk.ZeroExV4.Addresses.Exchange[config.chainId]
               );
@@ -480,12 +487,12 @@ export const getExecuteBidV4Options: RouteOptions = {
 
             // Check the maker's approval
             let approvalTx: TxData | undefined;
-            const wethApproval = await weth.getAllowance(
+            const wethApproval = await currency.getAllowance(
               maker,
               Sdk.LooksRare.Addresses.Exchange[config.chainId]
             );
             if (bn(wethApproval).lt(bn(order.params.price))) {
-              approvalTx = weth.approveTransaction(
+              approvalTx = currency.approveTransaction(
                 maker,
                 Sdk.LooksRare.Addresses.Exchange[config.chainId]
               );
@@ -568,12 +575,12 @@ export const getExecuteBidV4Options: RouteOptions = {
 
             // Check the maker's approval
             let approvalTx: TxData | undefined;
-            const wethApproval = await weth.getAllowance(
+            const wethApproval = await currency.getAllowance(
               maker,
               Sdk.X2Y2.Addresses.Exchange[config.chainId]
             );
             if (bn(wethApproval).lt(bn(upstreamOrder.params.price))) {
-              approvalTx = weth.approveTransaction(
+              approvalTx = currency.approveTransaction(
                 maker,
                 Sdk.X2Y2.Addresses.Exchange[config.chainId]
               );
@@ -634,8 +641,6 @@ export const getExecuteBidV4Options: RouteOptions = {
                 maker,
                 contract,
                 tokenId,
-                // This should change after bids support more ERC20 tokens
-                currency: Sdk.Common.Addresses.Weth[config.chainId],
               });
             }
 
@@ -645,12 +650,12 @@ export const getExecuteBidV4Options: RouteOptions = {
 
             // Check the maker's approval
             let approvalTx: TxData | undefined;
-            const wethApproval = await weth.getAllowance(
+            const wethApproval = await currency.getAllowance(
               maker,
               Sdk.Universe.Addresses.Exchange[config.chainId]
             );
             if (bn(wethApproval).lt(bn(order.params.make.value))) {
-              approvalTx = weth.approveTransaction(
+              approvalTx = currency.approveTransaction(
                 maker,
                 Sdk.Universe.Addresses.Exchange[config.chainId]
               );
@@ -748,12 +753,12 @@ export const getExecuteBidV4Options: RouteOptions = {
 
             // Check the maker's approval
             let approvalTx: TxData | undefined;
-            const wethApproval = await weth.getAllowance(
+            const wethApproval = await currency.getAllowance(
               maker,
               Sdk.Forward.Addresses.Exchange[config.chainId]
             );
             if (bn(wethApproval).lt(bn(order.params.unitPrice).mul(order.params.amount))) {
-              approvalTx = weth.approveTransaction(
+              approvalTx = currency.approveTransaction(
                 maker,
                 Sdk.Forward.Addresses.Exchange[config.chainId]
               );
