@@ -1,3 +1,4 @@
+import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
 
@@ -192,26 +193,36 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       }
 
       // Handle: royalties on top
+      const defaultRoyalties =
+        side === "sell"
+          ? await royalties.getRoyalties(
+              order.params.nft.token,
+              order.params.nft.tokenId,
+              "default"
+            )
+          : await royalties.getRoyaltiesByTokenSet(tokenSetId, "default");
+
+      const totalBuiltInBps = feeBreakdown
+        .map(({ bps, kind }) => (kind === "royalty" ? bps : 0))
+        .reduce((a, b) => a + b, 0);
+      const totalDefaultBps = defaultRoyalties.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
+
       const missingRoyalties = [];
       let missingRoyaltyAmount = bn(0);
-      if (side === "sell") {
-        const defaultRoyalties = await royalties.getRoyalties(
-          order.params.nft.token,
-          order.params.nft.tokenId,
-          "default"
+      if (totalBuiltInBps < totalDefaultBps) {
+        const validRecipients = defaultRoyalties.filter(
+          ({ bps, recipient }) => bps && recipient !== AddressZero
         );
-
-        const totalBuiltInBps = feeBreakdown.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
-        const totalDefaultBps = defaultRoyalties.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
-        if (totalBuiltInBps < totalDefaultBps) {
+        if (validRecipients.length) {
           const bpsDiff = totalDefaultBps - totalBuiltInBps;
           const amount = bn(price).mul(bpsDiff).div(10000).toString();
           missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
 
           missingRoyalties.push({
+            bps: bpsDiff,
             amount,
             // TODO: We should probably split pro-rata across all royalty recipients
-            recipient: defaultRoyalties[0].recipient,
+            recipient: validRecipients[0].recipient,
           });
         }
       }
@@ -221,7 +232,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       // Handle: price and value
       const value = side === "sell" ? price : price.sub(price.mul(feeBps).div(10000));
       const normalizedValue =
-        side === "sell" ? bn(value).add(missingRoyaltyAmount).toString() : undefined;
+        side === "sell"
+          ? bn(value).add(missingRoyaltyAmount).toString()
+          : bn(value).sub(missingRoyaltyAmount).toString();
 
       // Handle: source
       const sources = await Sources.getInstance();
@@ -267,8 +280,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         raw_data: order.params,
         expiration: validTo,
         missing_royalties: missingRoyalties,
-        normalized_value: normalizedValue || null,
-        currency_normalized_value: normalizedValue || null,
+        normalized_value: normalizedValue,
+        currency_normalized_value: normalizedValue,
       });
 
       results.push({

@@ -6,6 +6,9 @@ ALTER TABLE "collections" ADD COLUMN "normalized_floor_sell_maker" BYTEA;
 ALTER TABLE "collections" ADD COLUMN "normalized_floor_sell_valid_between" TSTZRANGE;
 ALTER TABLE "collections" ADD COLUMN "normalized_floor_sell_source_id_int" INT;
 
+CREATE INDEX "collections_normalized_floor_sell_value_index"
+ON "collections" ("normalized_floor_sell_value", "id");
+
 CREATE TABLE "collection_normalized_floor_sell_events" (
   "id" BIGSERIAL NOT NULL,
   "kind" "token_floor_sell_event_kind_t" NOT NULL,

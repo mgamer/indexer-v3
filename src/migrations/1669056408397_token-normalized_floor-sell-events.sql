@@ -10,6 +10,9 @@ ALTER TABLE "tokens" ADD COLUMN "normalized_floor_sell_is_reservoir" BOOLEAN;
 ALTER TABLE "tokens" ADD COLUMN "normalized_floor_sell_currency" BYTEA;
 ALTER TABLE "tokens" ADD COLUMN "normalized_floor_sell_currency_value" NUMERIC(78, 0);
 
+CREATE INDEX "tokens_collection_id_normalized_floor_sell_value_token_id_index"
+ON "tokens" ("collection_id", "normalized_floor_sell_value", "token_id");
+
 CREATE TABLE "token_normalized_floor_sell_events" (
   "id" BIGSERIAL NOT NULL,
   "kind" "token_floor_sell_event_kind_t" NOT NULL,

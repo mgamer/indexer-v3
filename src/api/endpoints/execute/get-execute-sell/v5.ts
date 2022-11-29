@@ -257,63 +257,7 @@ export const getExecuteSellV5Options: RouteOptions = {
         },
       ];
 
-      // X2Y2 / Sudoswap / Forward/ Rarible bids are to be filled directly (because we have no modules for them yet)
-      if (bidDetails.kind === "x2y2") {
-        const isApproved = await getNftApproval(
-          bidDetails.contract,
-          payload.taker,
-          Sdk.X2Y2.Addresses.Exchange[config.chainId]
-        );
-        if (!isApproved) {
-          // TODO: Add support for X2Y2 ERC1155 orders
-          const approveTx = new Sdk.Common.Helpers.Erc721(
-            baseProvider,
-            bidDetails.contract
-          ).approveTransaction(payload.taker, Sdk.X2Y2.Addresses.Exchange[config.chainId]);
-
-          steps[0].items.push({
-            status: "incomplete",
-            data: {
-              ...approveTx,
-              maxFeePerGas: payload.maxFeePerGas
-                ? bn(payload.maxFeePerGas).toHexString()
-                : undefined,
-              maxPriorityFeePerGas: payload.maxPriorityFeePerGas
-                ? bn(payload.maxPriorityFeePerGas).toHexString()
-                : undefined,
-            },
-          });
-        }
-      }
-      if (bidDetails.kind === "sudoswap") {
-        const isApproved = await getNftApproval(
-          bidDetails.contract,
-          payload.taker,
-          Sdk.Sudoswap.Addresses.RouterWithRoyalties[config.chainId]
-        );
-        if (!isApproved) {
-          const approveTx = new Sdk.Common.Helpers.Erc721(
-            baseProvider,
-            bidDetails.contract
-          ).approveTransaction(
-            payload.taker,
-            Sdk.Sudoswap.Addresses.RouterWithRoyalties[config.chainId]
-          );
-
-          steps[0].items.push({
-            status: "incomplete",
-            data: {
-              ...approveTx,
-              maxFeePerGas: payload.maxFeePerGas
-                ? bn(payload.maxFeePerGas).toHexString()
-                : undefined,
-              maxPriorityFeePerGas: payload.maxPriorityFeePerGas
-                ? bn(payload.maxPriorityFeePerGas).toHexString()
-                : undefined,
-            },
-          });
-        }
-      }
+      // Forward / Rarible bids are to be filled directly (because we have no modules for them yet)
       if (bidDetails.kind === "forward") {
         const isApproved = await getNftApproval(
           bidDetails.contract,

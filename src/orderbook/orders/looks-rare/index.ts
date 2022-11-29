@@ -212,30 +212,29 @@ export const save = async (
       const price = order.params.price;
 
       // Handle: royalties on top
+      const defaultRoyalties =
+        side === "sell"
+          ? await royalties.getRoyalties(order.params.collection, order.params.tokenId, "default")
+          : await royalties.getRoyaltiesByTokenSet(tokenSetId, "default");
+
       const missingRoyalties = [];
       let missingRoyaltyAmount = bn(0);
-      if (side === "sell") {
-        const defaultRoyalties = await royalties.getRoyalties(
-          order.params.collection,
-          order.params.tokenId,
-          "default"
+      for (const { bps, recipient } of defaultRoyalties) {
+        // Get any built-in royalty payment to the current recipient
+        const existingRoyalty = feeBreakdown.find(
+          (r) => r.kind === "royalty" && r.recipient === recipient
         );
-        for (const { bps, recipient } of defaultRoyalties) {
-          // Get any built-in royalty payment to the current recipient
-          const existingRoyalty = feeBreakdown.find(
-            (r) => r.kind === "royalty" && r.recipient === recipient
-          );
 
-          // Deduce the 0.5% royalty LooksRare will pay if needed
-          const actualBps = existingRoyalty ? bps - 50 : bps;
-          const amount = bn(price).mul(actualBps).div(10000).toString();
-          missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
+        // Deduce the 0.5% royalty LooksRare will pay if needed
+        const actualBps = existingRoyalty ? bps - 50 : bps;
+        const amount = bn(price).mul(actualBps).div(10000).toString();
+        missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
 
-          missingRoyalties.push({
-            amount,
-            recipient,
-          });
-        }
+        missingRoyalties.push({
+          bps: actualBps,
+          amount,
+          recipient,
+        });
       }
 
       const feeBps = feeBreakdown.map(({ bps }) => bps).reduce((a, b) => Number(a) + Number(b), 0);
@@ -250,6 +249,8 @@ export const save = async (
         value = bn(price)
           .sub(bn(price).mul(bn(feeBps)).div(10000))
           .toString();
+        // The normalized value excludes the royalties from the value
+        normalizedValue = bn(value).sub(missingRoyaltyAmount).toString();
       } else {
         // For sell orders, the value is the same as the price
         value = price;
@@ -307,8 +308,8 @@ export const save = async (
         raw_data: order.params,
         expiration: validTo,
         missing_royalties: missingRoyalties,
-        normalized_value: normalizedValue || null,
-        currency_normalized_value: normalizedValue || null,
+        normalized_value: normalizedValue,
+        currency_normalized_value: normalizedValue,
       });
 
       const unfillable =

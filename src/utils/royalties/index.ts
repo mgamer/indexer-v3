@@ -1,3 +1,4 @@
+import { AddressZero } from "@ethersproject/constants";
 import _ from "lodash";
 
 import { idb } from "@/common/db";
@@ -54,15 +55,16 @@ export const getRoyaltiesByTokenSet = async (
     case "range": {
       royaltiesResult = await idb.oneOrNone(
         `
-      SELECT
-        collections.royalties,
-        collections.new_royalties
-      FROM tokens
-      JOIN collections ON tokens.collection_id = collections.id
-      WHERE tokens.contract = $/contract/
-      AND tokens.token_id = $/tokenId/
-      LIMIT 1
-    `,
+          SELECT
+            collections.royalties,
+            collections.new_royalties
+          FROM tokens
+          JOIN collections
+            ON tokens.collection_id = collections.id
+          WHERE tokens.contract = $/contract/
+            AND tokens.token_id = $/tokenId/
+          LIMIT 1
+        `,
         {
           contract: toBuffer(tokenSetIdComponents[1]),
           tokenId: tokenSetIdComponents[2],
@@ -75,13 +77,13 @@ export const getRoyaltiesByTokenSet = async (
     case "contract": {
       royaltiesResult = await idb.oneOrNone(
         `
-      SELECT
-        collections.royalties,
-        collections.new_royalties
-      FROM collections
-      WHERE collections.id = $/id/
-      LIMIT 1
-    `,
+          SELECT
+            collections.royalties,
+            collections.new_royalties
+          FROM collections
+          WHERE collections.id = $/id/
+          LIMIT 1
+        `,
         {
           id: tokenSetIdComponents[1],
         }
@@ -93,21 +95,23 @@ export const getRoyaltiesByTokenSet = async (
     default: {
       royaltiesResult = await idb.oneOrNone(
         `
-      SELECT
-        collections.royalties,
-        collections.new_royalties
-      FROM (
-        SELECT
-            contract,
-            token_id
-        FROM token_sets_tokens
-        WHERE token_set_id = $/tokenSetId/
-        LIMIT 1
-      ) x  
-      JOIN tokens ON tokens.token_id = x.token_id AND tokens.contract = x.contract
-      JOIN collections ON tokens.collection_id = collections.id
-      LIMIT 1
-    `,
+          SELECT
+            collections.royalties,
+            collections.new_royalties
+          FROM (
+            SELECT
+              token_sets_tokens.contract,
+              token_sets_tokens.token_id
+            FROM token_sets_tokens
+            WHERE token_set_id = $/tokenSetId/
+            LIMIT 1
+          ) x
+          JOIN tokens
+            ON tokens.token_id = x.token_id AND tokens.contract = x.contract
+          JOIN collections
+            ON tokens.collection_id = collections.id
+          LIMIT 1
+        `,
         {
           tokenSetId,
         }
@@ -133,6 +137,9 @@ export const updateRoyaltySpec = async (collection: string, spec: string, royalt
     return;
   }
 
+  // For safety, skip any zero bps or recipients
+  royalties = royalties.filter(({ bps, recipient }) => bps && recipient !== AddressZero);
+
   // Fetch the current royalties
   const currentRoyalties = await idb.oneOrNone(
     `
@@ -151,8 +158,8 @@ export const updateRoyaltySpec = async (collection: string, spec: string, royalt
 
       await idb.none(
         `
-          UPDATE collections SET
-            new_royalties = $/royalties:json/
+          UPDATE collections
+          SET new_royalties = $/royalties:json/
           WHERE collections.id = $/collection/
         `,
         {
@@ -208,15 +215,18 @@ export const refreshDefaulRoyalties = async (collection: string) => {
     }
   }
 
+  const royaltiesBpsSum = _.sumBy(defultRoyalties, (royalty) => royalty.bps);
+
   await idb.none(
     `
       UPDATE collections SET
-        royalties = $/royalties:json/
+        royalties = $/royalties:json/, royalties_bps = $/royaltiesBpsSum/
       WHERE collections.id = $/id/
     `,
     {
       id: collection,
       royalties: defultRoyalties,
+      royaltiesBpsSum,
     }
   );
 };

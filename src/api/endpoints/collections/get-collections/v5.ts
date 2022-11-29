@@ -370,6 +370,7 @@ export const getCollectionsV5Options: RouteOptions = {
           collections.day7_floor_sell_value,
           collections.day30_floor_sell_value,
           collections.floor_sell_value,
+          collections.normalized_floor_sell_value,
           collections.token_count,
           collections.created_at,
           (
@@ -478,10 +479,14 @@ export const getCollectionsV5Options: RouteOptions = {
         case "floorAskPrice": {
           if (query.continuation) {
             conditions.push(
-              `(collections.floor_sell_value, collections.id) > ($/contParam/, $/contId/)`
+              query.normalizeRoyalties
+                ? `(collections.normalized_floor_sell_value, collections.id) > ($/contParam/, $/contId/)`
+                : `(collections.floor_sell_value, collections.id) > ($/contParam/, $/contId/)`
             );
           }
-          orderBy = ` ORDER BY collections.floor_sell_value, collections.id`;
+          orderBy = query.normalizeRoyalties
+            ? ` ORDER BY collections.normalized_floor_sell_value, collections.id`
+            : ` ORDER BY collections.floor_sell_value, collections.id`;
 
           break;
         }
@@ -504,6 +509,32 @@ export const getCollectionsV5Options: RouteOptions = {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
 
+      let floorAskSelectQuery;
+
+      if (query.normalizeRoyalties) {
+        floorAskSelectQuery = `
+            tokens.normalized_floor_sell_id AS floor_sell_id,
+            tokens.normalized_floor_sell_value as floor_sell_value,
+            tokens.normalized_floor_sell_maker as floor_sell_maker,
+            tokens.normalized_floor_sell_valid_from AS floor_sell_valid_from,
+            tokens.normalized_floor_sell_valid_to AS floor_sell_valid_until,
+            tokens.normalized_floor_sell_currency AS floor_sell_currency,
+            tokens.normalized_floor_sell_currency_value AS floor_sell_currency_value,
+            tokens.normalized_floor_sell_source_id_int AS floor_sell_source_id_int
+      `;
+      } else {
+        floorAskSelectQuery = `
+            tokens.floor_sell_id,
+            tokens.floor_sell_value,
+            tokens.floor_sell_maker,
+            tokens.floor_sell_valid_from,
+            tokens.floor_sell_valid_to AS floor_sell_valid_until,
+            tokens.floor_sell_currency,
+            tokens.floor_sell_currency_value,
+            tokens.floor_sell_source_id_int
+      `;
+      }
+
       baseQuery += orderBy;
       baseQuery += ` LIMIT $/limit/`;
 
@@ -519,24 +550,18 @@ export const getCollectionsV5Options: RouteOptions = {
         FROM x
         LEFT JOIN LATERAL (
           SELECT
-            tokens.floor_sell_source_id_int,
             tokens.contract AS floor_sell_token_contract,
             tokens.token_id AS floor_sell_token_id,
             tokens.name AS floor_sell_token_name,
             tokens.image AS floor_sell_token_image,
-            tokens.floor_sell_id,
-            tokens.floor_sell_value,
-            tokens.floor_sell_maker,
-            tokens.floor_sell_valid_from,
-            tokens.floor_sell_valid_to AS floor_sell_valid_until,
-            tokens.floor_sell_currency,
-            tokens.floor_sell_currency_value,
-            orders.normalized_value AS floor_sell_normalized_value,
-            orders.currency_normalized_value AS floor_sell_currency_normalized_value
+            ${floorAskSelectQuery}
           FROM tokens
-          LEFT JOIN orders ON tokens.floor_sell_id = orders.id
           WHERE tokens.collection_id = x.id
-          ORDER BY tokens.floor_sell_value
+          ORDER BY ${
+            query.normalizeRoyalties
+              ? "tokens.normalized_floor_sell_value"
+              : "tokens.floor_sell_value"
+          }
           LIMIT 1
         ) y ON TRUE
         ${ownerCountJoinQuery}
@@ -594,12 +619,8 @@ export const getCollectionsV5Options: RouteOptions = {
                 ? await getJoiPriceObject(
                     {
                       gross: {
-                        amount: query.normalizeRoyalties
-                          ? r.floor_sell_currency_normalized_value ?? r.floor_sell_value
-                          : r.floor_sell_currency_value ?? r.floor_sell_value,
-                        nativeAmount: query.normalizeRoyalties
-                          ? r.floor_sell_normalized_value ?? r.floor_sell_value
-                          : r.floor_sell_value,
+                        amount: r.floor_sell_currency_value ?? r.floor_sell_value,
+                        nativeAmount: r.floor_sell_value,
                       },
                     },
                     floorAskCurrency
