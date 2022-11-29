@@ -34,7 +34,16 @@ export const getExecuteBuyV6Options: RouteOptions = {
         Joi.object({
           kind: Joi.string()
             .lowercase()
-            .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2", "universe", "rarible")
+            .valid(
+              "opensea",
+              "looks-rare",
+              "zeroex-v4",
+              "seaport",
+              "x2y2",
+              "universe",
+              "rarible",
+              "infinity"
+            )
             .required(),
           data: Joi.object().required(),
         })
