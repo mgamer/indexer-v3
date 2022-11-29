@@ -242,9 +242,11 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   expiration = 'Infinity',
                   updated_at = now(),
                   raw_data = $/rawData:json/,
-                  missing_royaties = $/missingRoyalties:json/,
+                  missing_royalties = $/missingRoyalties:json/,
                   normalized_value = $/normalizedValue/,
-                  currency_normalized_value = $/currencyNormalizedValue/
+                  currency_normalized_value = $/currencyNormalizedValue/,
+                  fee_bps = $/feeBps/,
+                  fee_breakdown = $/feeBreakdown:json/
                 WHERE orders.id = $/id/
               `,
               {
@@ -252,10 +254,12 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 price,
                 value,
                 rawData: sdkOrder.params,
-                quantity_remaining: (prices.length - 1).toString(),
-                missing_royalties: missingRoyalties,
-                normalized_value: normalizedValue.toString(),
-                currency_normalized_value: normalizedValue.toString(),
+                quantityRemaining: (prices.length - 1).toString(),
+                missingRoyalties: missingRoyalties,
+                normalizedValue: normalizedValue.toString(),
+                currencyNormalizedValue: normalizedValue.toString(),
+                feeBps,
+                feeBreakdown,
               }
             );
 
