@@ -1,11 +1,16 @@
 import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 
+import { config } from "@/config/index";
 import { baseProvider } from "@/common/provider";
 import { getEventsFromTx } from "../utils/test";
 import { handleEvents } from "@/events-sync/handlers/infinity";
 
 describe("Infinity", () => {
+  if (config.chainId !== 1) {
+    throw new Error("Chain ID must be 1");
+  }
+
   test("takeOrderFulfilled", async () => {
     const tx = await baseProvider.getTransactionReceipt(
       "0x7928a57e9612595b4c9179298454874d94cde3b7c999c71a8cda3da2ecdd22d9"
