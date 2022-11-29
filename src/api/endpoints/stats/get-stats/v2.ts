@@ -98,6 +98,27 @@ export const getStatsV2Options: RouteOptions = {
           (query as any).topBidOrderId = topBid[0].orderId;
         }
 
+        let floorAskSelectQuery;
+
+        if (query.normalizeRoyalties) {
+          floorAskSelectQuery = `
+              "t"."normalized_floor_sell_id" AS floor_sell_id,
+              "t"."normalized_floor_sell_value" AS floor_sell_value,
+              "t"."normalized_floor_sell_maker" AS floor_sell_maker,
+              "t"."normalized_floor_sell_currency" AS floor_sell_currency,
+              coalesce("t"."normalized_floor_sell_currency", os.currency) AS floor_sell_currency,
+              "t"."normalized_floor_sell_currency_value" AS floor_sell_currency_value,
+      `;
+        } else {
+          floorAskSelectQuery = `
+              "t"."floor_sell_id",
+              "t"."floor_sell_value",
+              "t"."floor_sell_maker",
+              coalesce("t"."floor_sell_currency", os.currency) AS floor_sell_currency,
+              "t"."floor_sell_currency_value",
+      `;
+        }
+
         baseQuery = `
           SELECT
             1 AS "token_count",
@@ -114,16 +135,12 @@ export const getStatsV2Options: RouteOptions = {
               END
             ) AS "flagged_token_count",
             array["t"."image"] AS "sample_images",
-            "t"."floor_sell_id",
-            "t"."floor_sell_value",
-            "t"."floor_sell_maker",
+            ${floorAskSelectQuery}
             date_part('epoch', lower("os"."valid_between")) AS "floor_sell_valid_from",
             coalesce(
               nullif(date_part('epoch', upper("os"."valid_between")), 'Infinity'),
               0
             ) AS "floor_sell_valid_until",
-            os.currency AS floor_sell_currency,
-            coalesce(os.currency_value, os.value) AS floor_sell_currency_value,
             os.fee_bps AS floor_sell_fee_bps,
             "t"."contract",
             "t"."token_id",
@@ -142,12 +159,12 @@ export const getStatsV2Options: RouteOptions = {
             ob.price AS top_buy_price,
             ob.currency AS top_buy_currency,
             ob.currency_price AS top_buy_currency_price,
-            ob.currency_value AS top_buy_currency_value,
-            os.normalized_value AS floor_sell_normalized_value,
-            os.currency_normalized_value AS floor_sell_currency_normalized_value
+            ob.currency_value AS top_buy_currency_value
           FROM "tokens" "t"
           LEFT JOIN "orders" "os"
-            ON "t"."floor_sell_id" = "os"."id"
+            ON "t"."${
+              query.normalizeRoyalties ? "normalized_floor_sell_id" : "floor_sell_id"
+            }" = "os"."id"
           LEFT JOIN "orders" "ob"
             ON $/topBidOrderId/ = "ob"."id"
           WHERE "t"."contract" = $/contract/
@@ -190,6 +207,13 @@ export const getStatsV2Options: RouteOptions = {
             "t"."floor_sell_id",
             "t"."floor_sell_value",
             "t"."floor_sell_maker",
+            "t"."floor_sell_currency",
+            "t"."floor_sell_currency_value",
+            "t"."normalized_floor_sell_id",
+            "t"."normalized_floor_sell_value",
+            "t"."normalized_floor_sell_maker",
+            "t"."normalized_floor_sell_currency",
+            "t"."normalized_floor_sell_currency_value",
             "t"."is_flagged"
           FROM "tokens" "t"
         `;
@@ -197,7 +221,34 @@ export const getStatsV2Options: RouteOptions = {
           filterQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
         }
 
-        const sellQuery = `
+        let sellQuery;
+
+        if (query.normalizeRoyalties) {
+          sellQuery = `
+          SELECT
+            "x"."contract",
+            "x"."token_id",
+            "x"."name",
+            "x"."image",
+            "x"."normalized_floor_sell_id" AS floor_sell_id,
+            "x"."normalized_floor_sell_value" AS floor_sell_value,
+            "x"."normalized_floor_sell_maker" AS floor_sell_maker,
+            coalesce("x"."normalized_floor_sell_currency", os.currency) AS floor_sell_currency,
+            "x"."normalized_floor_sell_currency_value" AS floor_sell_currency_value,
+            date_part('epoch', lower("os"."valid_between")) AS "floor_sell_valid_from",
+            coalesce(
+              nullif(date_part('epoch', upper("os"."valid_between")), 'Infinity'),
+              0
+            ) AS "floor_sell_valid_until",
+            os.fee_bps AS floor_sell_fee_bps
+          FROM "x"
+          LEFT JOIN "orders" "os"
+            ON "x"."normalized_floor_sell_id" = "os"."id"
+          ORDER BY "x"."normalized_floor_sell_value"
+          LIMIT 1
+        `;
+        } else {
+          sellQuery = `
           SELECT
             "x"."contract",
             "x"."token_id",
@@ -206,13 +257,13 @@ export const getStatsV2Options: RouteOptions = {
             "x"."floor_sell_id",
             "x"."floor_sell_value",
             "x"."floor_sell_maker",
+            coalesce("x"."floor_sell_currency", os.currency) AS floor_sell_currency,
+            "x"."floor_sell_currency_value",
             date_part('epoch', lower("os"."valid_between")) AS "floor_sell_valid_from",
             coalesce(
               nullif(date_part('epoch', upper("os"."valid_between")), 'Infinity'),
               0
             ) AS "floor_sell_valid_until",
-            os.currency AS floor_sell_currency,
-            coalesce(os.currency_value, os.value) AS floor_sell_currency_value,
             os.fee_bps AS floor_sell_fee_bps
           FROM "x"
           LEFT JOIN "orders" "os"
@@ -220,6 +271,7 @@ export const getStatsV2Options: RouteOptions = {
           ORDER BY "x"."floor_sell_value"
           LIMIT 1
         `;
+        }
 
         let buyQuery: string;
         if (attributes.length === 1) {
@@ -287,6 +339,26 @@ export const getStatsV2Options: RouteOptions = {
           LEFT JOIN LATERAL (${buyQuery}) "w" ON TRUE
         `;
       } else if (query.collection) {
+        let floorAskSelectQuery;
+
+        if (query.normalizeRoyalties) {
+          floorAskSelectQuery = `
+              "t"."normalized_floor_sell_id" AS floor_sell_id,
+              "t"."normalized_floor_sell_value" AS floor_sell_value,
+              "t"."normalized_floor_sell_maker" AS floor_sell_maker,
+              coalesce("t"."normalized_floor_sell_currency", os.currency) AS floor_sell_currency,
+              "t"."normalized_floor_sell_currency_value" AS floor_sell_currency_value,
+      `;
+        } else {
+          floorAskSelectQuery = `
+              "t"."floor_sell_id",
+              "t"."floor_sell_value",
+              "t"."floor_sell_maker",
+              coalesce("t"."floor_sell_currency", os.currency) AS floor_sell_currency,
+              "t"."floor_sell_currency_value",
+      `;
+        }
+
         baseQuery = `
           WITH "x" AS (
             SELECT DISTINCT ON ("t"."collection_id")
@@ -295,24 +367,22 @@ export const getStatsV2Options: RouteOptions = {
               "t"."token_id",
               "t"."name",
               "t"."image",
-              "t"."floor_sell_id",
-              "t"."floor_sell_value",
-              "t"."floor_sell_maker",
+              ${floorAskSelectQuery}
               date_part('epoch', lower("os"."valid_between")) AS "floor_sell_valid_from",
               coalesce(
                 nullif(date_part('epoch', upper("os"."valid_between")), 'Infinity'),
                 0
               ) AS "floor_sell_valid_until",
-              os.currency AS floor_sell_currency,
-              coalesce(os.currency_value, os.value) AS floor_sell_currency_value,
-              os.fee_bps AS floor_sell_fee_bps,
-              os.normalized_value AS floor_sell_normalized_value,
-              os.currency_normalized_value AS floor_sell_currency_normalized_value
+              os.fee_bps AS floor_sell_fee_bps
             FROM "tokens" "t"
             LEFT JOIN "orders" "os"
-              ON "t"."floor_sell_id" = "os"."id"
+              ON "t"."${
+                query.normalizeRoyalties ? "normalized_floor_sell_id" : "floor_sell_id"
+              }" = "os"."id"
             WHERE "t"."collection_id" = $/collection/
-            ORDER BY "t"."collection_id", "t"."floor_sell_value"
+            ORDER BY "t"."collection_id", "t"."${
+              query.normalizeRoyalties ? "normalized_floor_sell_value" : "floor_sell_value"
+            }"
             LIMIT 1
           )
           SELECT
@@ -377,20 +447,11 @@ export const getStatsV2Options: RouteOptions = {
                     ? await getJoiPriceObject(
                         {
                           net: {
-                            amount: query.normalizeRoyalties
-                              ? r.floor_sell_currency_normalized_value ??
-                                getNetAmount(
-                                  r.floor_sell_currency_value ?? r.floor_sell_value,
-                                  r.floor_sell_fee_bps
-                                )
-                              : getNetAmount(
-                                  r.floor_sell_currency_value ?? r.floor_sell_value,
-                                  r.floor_sell_fee_bps
-                                ),
-                            nativeAmount: query.normalizeRoyalties
-                              ? r.floor_sell_normalized_value ??
-                                getNetAmount(r.floor_sell_value, r.floor_sell_fee_bps)
-                              : getNetAmount(r.floor_sell_value, r.floor_sell_fee_bps),
+                            amount: getNetAmount(
+                              r.floor_sell_currency_value ?? r.floor_sell_value,
+                              r.floor_sell_fee_bps
+                            ),
+                            nativeAmount: getNetAmount(r.floor_sell_value, r.floor_sell_fee_bps),
                           },
                           gross: {
                             amount: r.floor_sell_currency_value ?? r.floor_sell_value,
