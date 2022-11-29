@@ -649,9 +649,7 @@ export const save = async (
         if (orderParams.kind === "contract-wide") {
           logger.warn(
             "orders-seaport-save-partial",
-            `Unknown Collection. orderId=${id}, contract=${orderParams.contract}, collectionSlug=${
-              orderParams.collectionSlug
-            }, orderParams=${JSON.stringify(orderParams)}`
+            `Unknown Collection. orderId=${id}, contract=${orderParams.contract}, collectionSlug=${orderParams.collectionSlug}`
           );
 
           try {
@@ -679,8 +677,8 @@ export const save = async (
 
                 if (_.isNull(contractCollection.token_id_range)) {
                   tokenId = await Tokens.getSingleToken(contractCollection.id);
-                } else if (!_.isEmpty(contractCollection.token_id_range)) {
-                  tokenId = `${contractCollection.token_id_range[0]}`;
+                } else if (contractCollection.token_id_range != "(,)") {
+                  tokenId = `${JSON.parse(contractCollection.token_id_range)[0]}`;
                 }
 
                 // await collectionUpdatesMetadata.addToQueue(
