@@ -12,7 +12,6 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
 import { OrderKind } from "@/orderbook/orders";
 import { generateListingDetailsV6 } from "@/orderbook/orders";
@@ -75,7 +74,10 @@ export const getExecuteBuyV6Options: RouteOptions = {
       preferredOrderSource: Joi.string()
         .lowercase()
         .pattern(regex.domain)
-        .when("tokens", { is: Joi.exist(), then: Joi.allow(), otherwise: Joi.forbidden() }),
+        .when("tokens", { is: Joi.exist(), then: Joi.allow(), otherwise: Joi.forbidden() })
+        .description(
+          "If there are multiple listings with equal best price, prefer this source over others.\nNOTE: if you want to fill a listing that is not the best priced, you need to pass a specific order ID."
+        ),
       source: Joi.string()
         .lowercase()
         .pattern(regex.domain)
@@ -100,6 +102,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
       skipBalanceCheck: Joi.boolean()
         .default(false)
         .description("If true, balance check will be skipped."),
+      x2y2ApiKey: Joi.string().description("Override the X2Y2 API key used for filling."),
     })
       .or("tokens", "orderIds", "rawOrders")
       .oxor("tokens", "orderIds", "rawOrders"),
@@ -108,6 +111,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
     schema: Joi.object({
       steps: Joi.array().items(
         Joi.object({
+          id: Joi.string().required(),
           action: Joi.string().required(),
           description: Joi.string().required(),
           kind: Joi.string().valid("transaction").required(),
@@ -143,13 +147,6 @@ export const getExecuteBuyV6Options: RouteOptions = {
     const payload = request.payload as any;
 
     try {
-      // Terms of service not met
-      const key = request.headers["x-api-key"];
-      const apiKey = await ApiKeyManager.getApiKey(key);
-      if (apiKey?.appName === "NFTCLICK") {
-        throw Boom.badRequest("Terms of service not met");
-      }
-
       // Handle fees on top
       const feesOnTop: {
         recipient: string;
@@ -207,7 +204,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
           quantity: token.quantity ?? 1,
           source: order.sourceId !== null ? sources.get(order.sourceId)?.domain ?? null : null,
           currency: order.currency,
-          quote: formatPrice(totalPrice, (await getCurrency(order.currency)).decimals),
+          quote: formatPrice(totalPrice, (await getCurrency(order.currency)).decimals, true),
           rawQuote: totalPrice.toString(),
         });
 
@@ -218,7 +215,8 @@ export const getExecuteBuyV6Options: RouteOptions = {
               kind: order.kind,
               currency: order.currency,
               rawData: order.rawData,
-              fees,
+              // TODO: Add support ERC20 fees
+              fees: payload.currency === Sdk.Common.Addresses.Eth[config.chainId] ? fees : [],
             },
             {
               kind: token.kind,
@@ -531,14 +529,19 @@ export const getExecuteBuyV6Options: RouteOptions = {
         return { path };
       }
 
-      const router = new Sdk.RouterV6.Router(config.chainId, baseProvider);
+      const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
+        x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
+        cbApiKey: config.cbApiKey,
+      });
       const { txData, success } = await router.fillListingsTx(
         listingDetails,
         payload.taker,
         payload.currency,
         {
           source: payload.source,
-          globalFees: feesOnTop,
+          // TODO: Add support ERC20 fees
+          globalFees:
+            payload.currency === Sdk.Common.Addresses.Eth[config.chainId] ? feesOnTop : [],
           partial: payload.partial,
           skipErrors: payload.skipErrors,
           forceRouter: payload.forceRouter,
@@ -553,6 +556,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
 
       // Set up generic filling steps
       const steps: {
+        id: string;
         action: string;
         description: string;
         kind: string;
@@ -562,13 +566,15 @@ export const getExecuteBuyV6Options: RouteOptions = {
         }[];
       }[] = [
         {
+          id: "currency-approval",
           action: "Approve exchange contract",
           description: "A one-time setup transaction to enable trading",
           kind: "transaction",
           items: [],
         },
         {
-          action: "Confirm purchase",
+          id: "sale",
+          action: "Confirm transaction in your wallet",
           description: "To purchase this item you must confirm the transaction and pay the gas fee",
           kind: "transaction",
           items: [],

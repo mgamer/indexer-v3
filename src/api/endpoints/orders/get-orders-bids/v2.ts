@@ -398,7 +398,7 @@ export const getOrdersBidsV2Options: RouteOptions = {
           metadata: r.metadata,
           source: {
             id: source?.address,
-            name: source?.metadata.title || source?.name,
+            name: source?.getTitle(),
             icon: source?.getIcon(),
             url: source?.metadata.url,
           },

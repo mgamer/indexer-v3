@@ -1,10 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { defaultAbiCoder } from "@ethersproject/abi";
 import { splitSignature } from "@ethersproject/bytes";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
+import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 
+import { inject } from "@/api/index";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import * as orders from "@/orderbook/orders";
@@ -32,7 +35,16 @@ export const postOrderV3Options: RouteOptions = {
       order: Joi.object({
         kind: Joi.string()
           .lowercase()
-          .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "x2y2", "universe")
+          .valid(
+            "opensea",
+            "looks-rare",
+            "zeroex-v4",
+            "seaport",
+            "seaport-forward",
+            "x2y2",
+            "universe",
+            "forward"
+          )
           .required(),
         data: Joi.object().required(),
       }),
@@ -40,7 +52,7 @@ export const postOrderV3Options: RouteOptions = {
         .lowercase()
         .valid("reservoir", "opensea", "looks-rare", "x2y2", "universe")
         .default("reservoir"),
-      orderbookApiKey: Joi.string(),
+      orderbookApiKey: Joi.string().description("Optional API key for the target orderbook"),
       source: Joi.string().pattern(regex.domain).description("The source domain"),
       attribute: Joi.object({
         collection: Joi.string().required(),
@@ -173,6 +185,111 @@ export const postOrderV3Options: RouteOptions = {
             metadata: {
               schema,
               source: orderbook === "reservoir" ? source : undefined,
+              target: orderbook,
+            },
+          };
+
+          const [result] = await orders.seaport.save([orderInfo]);
+
+          if (result.status !== "success") {
+            const error = Boom.badRequest(result.status);
+            error.output.payload.orderId = result.id;
+            throw error;
+          }
+
+          if (orderbook === "opensea") {
+            await postOrderExternal.addToQueue(result.id, order.data, orderbook, orderbookApiKey);
+
+            logger.info(
+              `post-order-${version}-handler`,
+              `orderbook: ${orderbook}, orderData: ${JSON.stringify(order.data)}, orderId: ${
+                result.id
+              }`
+            );
+          }
+
+          return { message: "Success", orderId: result.id };
+        }
+
+        case "seaport-forward": {
+          if (!["opensea", "reservoir"].includes(orderbook)) {
+            throw new Error("Unknown orderbook");
+          }
+
+          const orderComponents = order.data as Sdk.Seaport.Types.OrderComponents;
+          const tokenOffer = orderComponents.offer[0];
+
+          // Forward EIP1271 signature
+          orderComponents.signature = defaultAbiCoder.encode(
+            [
+              `tuple(
+                uint8,
+                address,
+                uint256,
+                uint256,
+                uint256,
+                uint256,
+                uint256,
+                tuple(uint256,address)[],
+                bytes
+              )`,
+              "bytes",
+            ],
+            [
+              [
+                tokenOffer.itemType,
+                tokenOffer.token,
+                tokenOffer.identifierOrCriteria,
+                tokenOffer.endAmount,
+                orderComponents.startTime,
+                orderComponents.endTime,
+                orderComponents.salt,
+                orderComponents.consideration.map(({ endAmount, recipient }) => [
+                  endAmount,
+                  recipient,
+                ]),
+                orderComponents.signature!,
+              ],
+              await inject({
+                method: "GET",
+                url: `/oracle/collections/floor-ask/v4?token=${tokenOffer.token}:${tokenOffer.identifierOrCriteria}`,
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                payload: { order },
+              })
+                .then((response) => JSON.parse(response.payload))
+                .then((response) =>
+                  defaultAbiCoder.encode(
+                    [
+                      `tuple(
+                        bytes32,
+                        bytes,
+                        uint256,
+                        bytes
+                      )`,
+                    ],
+                    [
+                      [
+                        response.message.id,
+                        response.message.payload,
+                        response.message.timestamp,
+                        response.message.signature,
+                      ],
+                    ]
+                  )
+                ),
+            ]
+          );
+
+          const orderInfo: orders.seaport.OrderInfo = {
+            kind: "full",
+            orderParams: orderComponents,
+            isReservoir: orderbook === "reservoir",
+            metadata: {
+              schema,
+              source: orderbook === "reservoir" ? source : undefined,
+              target: orderbook,
             },
           };
 
@@ -299,6 +416,28 @@ export const postOrderV3Options: RouteOptions = {
                 result.id
               }`
             );
+          }
+
+          return { message: "Success", orderId: result.id };
+        }
+
+        case "forward": {
+          if (!["reservoir"].includes(orderbook)) {
+            throw new Error("Unknown orderbook");
+          }
+
+          const orderInfo: orders.forward.OrderInfo = {
+            orderParams: order.data,
+            metadata: {
+              schema,
+              source,
+            },
+          };
+
+          const [result] = await orders.forward.save([orderInfo]);
+
+          if (result.status !== "success") {
+            throw Boom.badRequest(result.status);
           }
 
           return { message: "Success", orderId: result.id };

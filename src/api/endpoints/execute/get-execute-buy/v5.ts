@@ -12,7 +12,6 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
 import { OrderKind } from "@/orderbook/orders";
 import { generateListingDetailsV6 } from "@/orderbook/orders";
@@ -76,7 +75,10 @@ export const getExecuteBuyV5Options: RouteOptions = {
       preferredOrderSource: Joi.string()
         .lowercase()
         .pattern(regex.domain)
-        .when("tokens", { is: Joi.exist(), then: Joi.allow(), otherwise: Joi.forbidden() }),
+        .when("tokens", { is: Joi.exist(), then: Joi.allow(), otherwise: Joi.forbidden() })
+        .description(
+          "If there are multiple listings with equal best price, prefer this source over others.\nNOTE: if you want to fill a listing that is not the best priced, you need to pass a specific order ID."
+        ),
       source: Joi.string()
         .lowercase()
         .pattern(regex.domain)
@@ -101,6 +103,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
       skipBalanceCheck: Joi.boolean()
         .default(false)
         .description("If true, balance check will be skipped."),
+      x2y2ApiKey: Joi.string().description("Override the X2Y2 API key used for filling."),
     })
       .or("tokens", "orderIds", "rawOrders")
       .oxor("tokens", "orderIds", "rawOrders"),
@@ -144,13 +147,6 @@ export const getExecuteBuyV5Options: RouteOptions = {
     const payload = request.payload as any;
 
     try {
-      // Terms of service not met
-      const key = request.headers["x-api-key"];
-      const apiKey = await ApiKeyManager.getApiKey(key);
-      if (apiKey?.appName === "NFTCLICK") {
-        throw Boom.badRequest("Terms of service not met");
-      }
-
       // Handle fees on top
       const feesOnTop: {
         recipient: string;
@@ -527,7 +523,10 @@ export const getExecuteBuyV5Options: RouteOptions = {
         return { path };
       }
 
-      const router = new Sdk.RouterV6.Router(config.chainId, baseProvider);
+      const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
+        x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
+        cbApiKey: config.cbApiKey,
+      });
       const { txData, success } = await router.fillListingsTx(
         listingDetails,
         payload.taker,

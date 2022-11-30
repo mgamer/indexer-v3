@@ -1,12 +1,13 @@
 import { Interface } from "@ethersproject/abi";
 
+import * as erc20 from "@/events-sync/data/erc20";
 import * as erc721 from "@/events-sync/data/erc721";
 import * as erc1155 from "@/events-sync/data/erc1155";
-import * as weth from "@/events-sync/data/weth";
 
 import * as blur from "@/events-sync/data/blur";
 import * as cryptoPunks from "@/events-sync/data/cryptopunks";
 import * as element from "@/events-sync/data/element";
+import * as forward from "@/events-sync/data/forward";
 import * as foundation from "@/events-sync/data/foundation";
 import * as looksRare from "@/events-sync/data/looks-rare";
 import * as nftx from "@/events-sync/data/nftx";
@@ -25,7 +26,7 @@ import * as zora from "@/events-sync/data/zora";
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
 // handled (eg. persisted to the database and relayed for further
-// processing to any job queues).
+// processing to any job queues)
 
 export type EventDataKind =
   | "erc721-transfer"
@@ -89,7 +90,12 @@ export type EventDataKind =
   | "universe-cancel"
   | "nftx-redeemed"
   | "nftx-minted"
-  | "blur-orders-matched";
+  | "blur-orders-matched"
+  | "blur-order-cancelled"
+  | "blur-nonce-incremented"
+  | "forward-order-filled"
+  | "forward-order-cancelled"
+  | "forward-counter-incremented";
 
 export type EventData = {
   kind: EventDataKind;
@@ -102,14 +108,14 @@ export type EventData = {
 export const getEventData = (eventDataKinds?: EventDataKind[]) => {
   if (!eventDataKinds) {
     return [
+      erc20.approval,
+      erc20.transfer,
+      erc20.deposit,
+      erc20.withdrawal,
       erc721.transfer,
       erc721.approvalForAll,
       erc1155.transferSingle,
       erc1155.transferBatch,
-      weth.approval,
-      weth.transfer,
-      weth.deposit,
-      weth.withdrawal,
       foundation.buyPriceAccepted,
       foundation.buyPriceCancelled,
       foundation.buyPriceInvalidated,
@@ -164,6 +170,11 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
       nftx.minted,
       nftx.redeemed,
       blur.ordersMatched,
+      blur.orderCancelled,
+      blur.nonceIncremented,
+      forward.orderFilled,
+      forward.orderCancelled,
+      forward.counterIncremented,
     ];
   } else {
     return (
@@ -178,6 +189,14 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
 
 const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
   switch (kind) {
+    case "erc20-approval":
+      return erc20.approval;
+    case "erc20-transfer":
+      return erc20.transfer;
+    case "weth-deposit":
+      return erc20.deposit;
+    case "weth-withdrawal":
+      return erc20.withdrawal;
     case "erc721-transfer":
       return erc721.transfer;
     case "erc721/1155-approval-for-all":
@@ -186,14 +205,6 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return erc1155.transferBatch;
     case "erc1155-transfer-single":
       return erc1155.transferSingle;
-    case "erc20-approval":
-      return weth.approval;
-    case "erc20-transfer":
-      return weth.transfer;
-    case "weth-deposit":
-      return weth.deposit;
-    case "weth-withdrawal":
-      return weth.withdrawal;
     case "foundation-buy-price-accepted":
       return foundation.buyPriceAccepted;
     case "foundation-buy-price-cancelled":
@@ -302,6 +313,16 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return nftx.redeemed;
     case "blur-orders-matched":
       return blur.ordersMatched;
+    case "blur-order-cancelled":
+      return blur.orderCancelled;
+    case "blur-nonce-incremented":
+      return blur.nonceIncremented;
+    case "forward-order-filled":
+      return forward.orderFilled;
+    case "forward-order-cancelled":
+      return forward.orderCancelled;
+    case "forward-counter-incremented":
+      return forward.counterIncremented;
     default:
       return undefined;
   }

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { AddressZero } from "@ethersproject/constants";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
@@ -78,13 +79,14 @@ export const getExecuteListV4Options: RouteOptions = {
               "Amount seller is willing to sell for in wei. Example: `1000000000000000000`"
             ),
           orderKind: Joi.string()
-            .valid("looks-rare", "zeroex-v4", "seaport", "x2y2", "universe")
+            .valid("looks-rare", "zeroex-v4", "seaport", "seaport-forward", "x2y2", "universe")
             .default("seaport")
             .description("Exchange protocol used to create order. Example: `seaport`"),
           orderbook: Joi.string()
             .valid("opensea", "looks-rare", "reservoir", "x2y2", "universe")
             .default("reservoir")
             .description("Orderbook where order is placed. Example: `Reservoir`"),
+          orderbookApiKey: Joi.string().description("Optional API key for the target orderbook"),
           automatedRoyalties: Joi.boolean()
             .default(true)
             .description("If true, royalties will be automatically included."),
@@ -118,6 +120,7 @@ export const getExecuteListV4Options: RouteOptions = {
     schema: Joi.object({
       steps: Joi.array().items(
         Joi.object({
+          id: Joi.string().required(),
           kind: Joi.string().valid("request", "signature", "transaction").required(),
           action: Joi.string().required(),
           description: Joi.string().required(),
@@ -142,11 +145,12 @@ export const getExecuteListV4Options: RouteOptions = {
     const payload = request.payload as any;
 
     try {
-      const maker = payload.maker;
+      let maker = payload.maker;
       const source = payload.source;
 
       // Set up generic listing steps
       const steps: {
+        id: string;
         action: string;
         description: string;
         kind: string;
@@ -157,6 +161,7 @@ export const getExecuteListV4Options: RouteOptions = {
         }[];
       }[] = [
         {
+          id: "nft-approval",
           action: "Approve NFT contract",
           description:
             "Each NFT collection you want to trade requires a one-time approval transaction",
@@ -164,6 +169,7 @@ export const getExecuteListV4Options: RouteOptions = {
           items: [],
         },
         {
+          id: "order-signature",
           action: "Authorize listing",
           description: "A free off-chain signature to create the listing",
           kind: "signature",
@@ -259,6 +265,7 @@ export const getExecuteListV4Options: RouteOptions = {
                       },
                     },
                     orderbook: params.orderbook,
+                    orderbookApiKey: params.orderbookApiKey,
                     source,
                   },
                 },
@@ -270,9 +277,20 @@ export const getExecuteListV4Options: RouteOptions = {
             continue;
           }
 
-          case "seaport": {
+          case "seaport":
+          case "seaport-forward": {
             if (!["reservoir", "opensea"].includes(params.orderbook)) {
               throw Boom.badRequest("Only `reservoir` and `opensea` are supported as orderbooks");
+            }
+
+            const isForward = params.orderKind === "seaport-forward";
+            if (isForward) {
+              maker = await new Sdk.Forward.Exchange(config.chainId).contract
+                .connect(baseProvider)
+                .vaults(maker);
+              if (maker === AddressZero) {
+                throw Boom.badRequest("Maker has no Forward vault");
+              }
             }
 
             const order = await seaportSellToken.build({
@@ -280,6 +298,7 @@ export const getExecuteListV4Options: RouteOptions = {
               maker,
               contract,
               tokenId,
+              orderType: isForward ? Sdk.Seaport.Types.OrderType.PARTIAL_OPEN : undefined,
             });
             if (!order) {
               throw Boom.internal("Failed to generate order");
@@ -301,6 +320,10 @@ export const getExecuteListV4Options: RouteOptions = {
 
                 case "no-approval": {
                   // Generate an approval transaction
+
+                  if (isForward) {
+                    throw Boom.badRequest("Token is not approved");
+                  }
 
                   const exchange = new Sdk.Seaport.Exchange(config.chainId);
                   const info = order.getInfo()!;
@@ -331,12 +354,13 @@ export const getExecuteListV4Options: RouteOptions = {
                   method: "POST",
                   body: {
                     order: {
-                      kind: "seaport",
+                      kind: params.orderKind,
                       data: {
                         ...order.params,
                       },
                     },
                     orderbook: params.orderbook,
+                    orderbookApiKey: params.orderbookApiKey,
                     source,
                   },
                 },
@@ -425,6 +449,7 @@ export const getExecuteListV4Options: RouteOptions = {
                       },
                     },
                     orderbook: params.orderbook,
+                    orderbookApiKey: params.orderbookApiKey,
                     source,
                   },
                 },
@@ -511,6 +536,7 @@ export const getExecuteListV4Options: RouteOptions = {
                       },
                     },
                     orderbook: params.orderbook,
+                    orderbookApiKey: params.orderbookApiKey,
                     source,
                   },
                 },
@@ -591,6 +617,7 @@ export const getExecuteListV4Options: RouteOptions = {
                       },
                     },
                     orderbook: params.orderbook,
+                    orderbookApiKey: params.orderbookApiKey,
                     source,
                   },
                 },

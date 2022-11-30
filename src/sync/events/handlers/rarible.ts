@@ -48,11 +48,13 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
       case "rarible-cancel": {
         const { args } = eventData.abi.parseLog(log);
         const orderId = args["hash"].toLowerCase();
+
         cancelEvents.push({
           orderKind: "rarible",
           orderId,
           baseEventParams,
         });
+
         orderInfos.push({
           context: `cancelled-${orderId}`,
           id: orderId,
@@ -65,6 +67,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             blockHash: baseEventParams.blockHash,
           },
         });
+
         break;
       }
 
@@ -74,17 +77,18 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const rightHash = args["rightHash"].toLowerCase();
         const newLeftFill = args["newLeftFill"].toString();
         const newRightFill = args["newRightFill"].toString();
+
         const ERC20 = "0x8ae85d84";
         const ETH = "0xaaaebeba";
         const ERC721 = "0x73ad2146";
-        // const ERC721_LAZY = "0xd8f960c1";
         const ERC1155 = "0x973bb640";
-        // const ERC1155_LAZY = "1cdfaa40";
+        const COLLECTION = "0xf63c2825";
+
         const matchOrdersSigHash = "0xe99a3f80";
         const directPurchaseSigHash = "0x0d5f7d35";
         const directAcceptBidSigHash = "0x67d49a3b";
 
-        const assetTypes = [ERC721, ERC1155, ERC20, ETH];
+        const assetTypes = [ERC721, ERC1155, ERC20, ETH, COLLECTION];
 
         const orderKind = "rarible";
         let side: "sell" | "buy" = "sell";
@@ -131,6 +135,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             orderId = leftHash;
             side = "sell";
             maker = result[0][0].toLowerCase();
+            // taker will be overwritten in extractAttributionData step if router is used
+            taker = callTrace.to.toLowerCase();
             nftAssetType = result[0][2];
             nftData = result[0][3];
 
@@ -173,6 +179,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
             side = "buy";
             maker = result[0][0].toLowerCase();
+            // taker will be overwritten in extractAttributionData step if router is used
+            taker = callTrace.from.toLowerCase();
             nftAssetType = result[0][2];
             nftData = result[0][3];
 
@@ -211,18 +219,33 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             ]);
             const result = iface.decodeFunctionData("matchOrders", callTrace.input);
             const orderLeft = result.orderLeft;
-            const leftAsset = orderLeft.makeAsset;
-            const rightAsset = orderLeft.takeAsset;
+            const orderRight = result.orderRight;
+            const leftMakeAsset = orderLeft.makeAsset;
+            const rightMakeAsset = orderLeft.takeAsset;
 
-            side = [ERC721, ERC1155].includes(leftAsset.assetClass) ? "sell" : "buy";
+            maker = orderLeft.maker.toLowerCase();
+            // taker will be overwritten in extractAttributionData step if router is used
+            taker = orderRight.maker.toLowerCase();
+            side = [ERC721, ERC1155].includes(leftMakeAsset.assetType.assetClass) ? "sell" : "buy";
 
-            const nftAsset = side === "buy" ? rightAsset : leftAsset;
-            const currencyAsset = side === "buy" ? leftAsset : rightAsset;
+            const nftAsset = side === "buy" ? rightMakeAsset : leftMakeAsset;
+            const currencyAsset = side === "buy" ? leftMakeAsset : rightMakeAsset;
 
             orderId = leftHash;
-            nftData = nftAsset.assetType.data;
             nftAssetType = nftAsset.assetType.assetClass;
             currencyAssetType = currencyAsset.assetType.assetClass;
+            switch (nftAssetType) {
+              case COLLECTION:
+                // Left order doesn't contain token id. We need to use the right order
+                nftData = orderRight.makeAsset.assetType.data;
+                break;
+              case ERC721:
+              case ERC1155:
+                nftData = nftAsset.assetType.data;
+                break;
+              default:
+                throw Error("Unsupported asset type");
+            }
 
             if (currencyAssetType === ETH) {
               paymentCurrency = Sdk.Common.Addresses.Eth[config.chainId];
@@ -254,6 +277,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         if (data.taker) {
           taker = data.taker;
         }
+
         // Handle: prices
         let currency: string;
         if (currencyAssetType === ETH) {

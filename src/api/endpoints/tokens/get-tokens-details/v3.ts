@@ -437,7 +437,7 @@ export const getTokensDetailsV3Options: RouteOptions = {
               validUntil: r.floor_sell_value ? r.floor_sell_valid_until : null,
               source: {
                 id: source?.address,
-                name: source?.metadata.title || source?.name,
+                name: source?.getTitle(),
                 icon: source?.getIcon(),
                 url: source?.metadata.url,
               },

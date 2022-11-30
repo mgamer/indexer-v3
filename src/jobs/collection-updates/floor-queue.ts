@@ -49,7 +49,7 @@ if (config.doBackgroundWork) {
           return;
         }
 
-        await idb.none(
+        const collectionFloorAskChanged = await idb.oneOrNone(
           `
             WITH y AS (
               UPDATE collections SET
@@ -131,7 +131,7 @@ if (config.doBackgroundWork) {
               $/txHash/,
               $/txTimestamp/
             FROM y
-            JOIN LATERAL (
+            LEFT JOIN LATERAL (
               SELECT
                 token_sets_tokens.contract,
                 token_sets_tokens.token_id
@@ -141,6 +141,7 @@ if (config.doBackgroundWork) {
               WHERE orders.id = y.floor_sell_id
               LIMIT 1
             ) z ON TRUE
+            RETURNING 1
           `,
           {
             kind,
@@ -151,6 +152,10 @@ if (config.doBackgroundWork) {
             txTimestamp,
           }
         );
+
+        if (collectionFloorAskChanged) {
+          await redis.del(`collection-floor-ask:${collectionResult.collection_id}`);
+        }
       } catch (error) {
         logger.error(
           QUEUE_NAME,

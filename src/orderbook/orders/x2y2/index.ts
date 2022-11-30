@@ -1,3 +1,4 @@
+import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
 
@@ -11,6 +12,8 @@ import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/u
 import { offChainCheck } from "@/orderbook/orders/x2y2/check";
 import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
+import * as royalties from "@/utils/royalties";
+import { Royalty } from "@/utils/royalties";
 
 export type OrderInfo = {
   orderParams: Sdk.X2Y2.Types.Order;
@@ -152,7 +155,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       }
 
       // Handle: fees
-      let feeBreakdown = [
+      const feeBreakdown = [
         {
           kind: "marketplace",
           recipient: Sdk.X2Y2.Addresses.FeeManager[config.chainId],
@@ -160,21 +163,78 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         },
       ];
 
+      const side = order.params.type === "sell" ? "sell" : "buy";
+      const price = bn(order.params.price);
+
       // Handle: royalties
-      const royalties = await commonHelpers.getOpenSeaRoyalties(order.params.nft.token);
-      feeBreakdown = [
-        ...feeBreakdown,
-        ...royalties.map(({ bps, recipient }) => ({
-          kind: "royalty",
-          recipient,
-          bps,
-        })),
-      ];
+      if (order.params.royalty_fee > 0) {
+        // Assume X2Y2 royalties match the OpenSea royalties (in reality X2Y2
+        // have their own proprietary royalty system which we do not index at
+        // the moment)
+        let openSeaRoyalties: Royalty[];
+
+        if (order.params.kind === "single-token") {
+          openSeaRoyalties = await royalties.getRoyalties(
+            order.params.nft.token,
+            order.params.nft.tokenId,
+            "opensea"
+          );
+        } else {
+          openSeaRoyalties = await royalties.getRoyaltiesByTokenSet(tokenSetId, "opensea");
+        }
+
+        if (openSeaRoyalties.length) {
+          feeBreakdown.push({
+            kind: "royalty",
+            recipient: openSeaRoyalties[0].recipient,
+            bps: Math.floor(order.params.royalty_fee / 100),
+          });
+        }
+      }
+
+      // Handle: royalties on top
+      const defaultRoyalties =
+        side === "sell"
+          ? await royalties.getRoyalties(
+              order.params.nft.token,
+              order.params.nft.tokenId,
+              "default"
+            )
+          : await royalties.getRoyaltiesByTokenSet(tokenSetId, "default");
+
+      const totalBuiltInBps = feeBreakdown
+        .map(({ bps, kind }) => (kind === "royalty" ? bps : 0))
+        .reduce((a, b) => a + b, 0);
+      const totalDefaultBps = defaultRoyalties.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
+
+      const missingRoyalties = [];
+      let missingRoyaltyAmount = bn(0);
+      if (totalBuiltInBps < totalDefaultBps) {
+        const validRecipients = defaultRoyalties.filter(
+          ({ bps, recipient }) => bps && recipient !== AddressZero
+        );
+        if (validRecipients.length) {
+          const bpsDiff = totalDefaultBps - totalBuiltInBps;
+          const amount = bn(price).mul(bpsDiff).div(10000).toString();
+          missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
+
+          missingRoyalties.push({
+            bps: bpsDiff,
+            amount,
+            // TODO: We should probably split pro-rata across all royalty recipients
+            recipient: validRecipients[0].recipient,
+          });
+        }
+      }
+
       const feeBps = feeBreakdown.map(({ bps }) => bps).reduce((a, b) => Number(a) + Number(b), 0);
 
       // Handle: price and value
-      const price = bn(order.params.price);
-      const value = order.params.type === "sell" ? price : price.sub(price.mul(feeBps).div(10000));
+      const value = side === "sell" ? price : price.sub(price.mul(feeBps).div(10000));
+      const normalizedValue =
+        side === "sell"
+          ? bn(value).add(missingRoyaltyAmount).toString()
+          : bn(value).sub(missingRoyaltyAmount).toString();
 
       // Handle: source
       const sources = await Sources.getInstance();
@@ -194,7 +254,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       orderValues.push({
         id,
         kind: "x2y2",
-        side: order.params.type === "sell" ? "sell" : "buy",
+        side,
         fillability_status: fillabilityStatus,
         approval_status: approvalStatus,
         token_set_id: tokenSetId,
@@ -219,9 +279,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         dynamic: null,
         raw_data: order.params,
         expiration: validTo,
-        missing_royalties: null,
-        normalized_value: null,
-        currency_normalized_value: null,
+        missing_royalties: missingRoyalties,
+        normalized_value: normalizedValue,
+        currency_normalized_value: normalizedValue,
       });
 
       results.push({
@@ -276,6 +336,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         "dynamic",
         "raw_data",
         { name: "expiration", mod: ":raw" },
+        { name: "missing_royalties", mod: ":json" },
+        "normalized_value",
+        "currency_normalized_value",
       ],
       {
         table: "orders",

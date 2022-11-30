@@ -158,7 +158,7 @@ export const getUserActivityV3Options: RouteOptions = {
           source: source
             ? {
                 domain: source?.domain,
-                name: source?.metadata.title || source?.name,
+                name: source?.getTitle(),
                 icon: source?.getIcon(),
               }
             : undefined,

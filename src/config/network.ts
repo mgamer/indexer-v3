@@ -3,6 +3,8 @@
 // Any new network that is supported should have a corresponding
 // entry in the configuration methods below
 
+import * as Sdk from "@reservoir0x/sdk";
+
 import { idb } from "@/common/db";
 import { config } from "@/config/index";
 import { Currency } from "@/utils/currencies";
@@ -11,8 +13,6 @@ export const getNetworkName = () => {
   switch (config.chainId) {
     case 1:
       return "mainnet";
-    case 4:
-      return "rinkeby";
     case 5:
       return "goerli";
     case 10:
@@ -44,6 +44,7 @@ type NetworkSettings = {
   mintsAsSalesBlacklist: string[];
   multiCollectionContracts: string[];
   whitelistedCurrencies: Map<string, Currency>;
+  supportedBidCurrencies: { [currency: string]: boolean };
   coingecko?: {
     networkId: string;
   };
@@ -64,8 +65,9 @@ export const getNetworkSettings = (): NetworkSettings => {
     washTradingBlacklistedAddresses: [],
     multiCollectionContracts: [],
     mintsAsSalesBlacklist: [],
-    reorgCheckFrequency: [1, 5, 10, 30, 60], // In Minutes,
+    reorgCheckFrequency: [1, 5, 10, 30, 60], // In minutes
     whitelistedCurrencies: new Map<string, Currency>(),
+    supportedBidCurrencies: { [Sdk.Common.Addresses.Weth[config.chainId]?.toLowerCase()]: true },
   };
 
   switch (config.chainId) {
@@ -88,6 +90,7 @@ export const getNetworkSettings = (): NetworkSettings => {
           "0xa319c382a702682129fcbf55d514e61a16f97f9c",
           "0xd10e3dee203579fcee90ed7d0bdd8086f7e53beb",
           "0x62e37f664b5945629b6549a87f8e10ed0b6d923b",
+          "0x99a9b7c1116f9ceeb1652de04d5969cce509b069",
         ],
         washTradingBlacklistedAddresses: ["0xac335e6855df862410f96f345f93af4f96351a87"],
         multiCollectionContracts: [
@@ -103,6 +106,7 @@ export const getNetworkSettings = (): NetworkSettings => {
           "0xa319c382a702682129fcbf55d514e61a16f97f9c",
           "0xd10e3dee203579fcee90ed7d0bdd8086f7e53beb",
           "0x62e37f664b5945629b6549a87f8e10ed0b6d923b",
+          "0x99a9b7c1116f9ceeb1652de04d5969cce509b069",
         ],
         mintsAsSalesBlacklist: [
           // Uniswap V3: Positions NFT
@@ -145,34 +149,6 @@ export const getNetworkSettings = (): NetworkSettings => {
           ]);
         },
       };
-    // Rinkeby
-    case 4:
-      return {
-        ...defaultNetworkSettings,
-        backfillBlockBatchSize: 128,
-        onStartup: async () => {
-          // Insert the native currency
-          await Promise.all([
-            idb.none(
-              `
-                INSERT INTO currencies (
-                  contract,
-                  name,
-                  symbol,
-                  decimals,
-                  metadata
-                ) VALUES (
-                  '\\x0000000000000000000000000000000000000000',
-                  'Ether',
-                  'ETH',
-                  18,
-                  '{}'
-                ) ON CONFLICT DO NOTHING
-              `
-            ),
-          ]);
-        },
-      };
     // Goerli
     case 5: {
       return {
@@ -190,6 +166,11 @@ export const getNetworkSettings = (): NetworkSettings => {
           // Sound.xyz Contracts
           "0xbe8f3dfce2fcbb6dd08a7e8109958355785c968b",
         ],
+        supportedBidCurrencies: {
+          ...defaultNetworkSettings.supportedBidCurrencies,
+          // Backed USDC
+          "0x68b7e050e6e2c7efe11439045c9d49813c1724b8": true,
+        },
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([

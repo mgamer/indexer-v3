@@ -1,6 +1,7 @@
 // Exports
 
 export * as cryptopunks from "@/orderbook/orders/cryptopunks";
+export * as forward from "@/orderbook/orders/forward";
 export * as foundation from "@/orderbook/orders/foundation";
 export * as looksRare from "@/orderbook/orders/looks-rare";
 export * as seaport from "@/orderbook/orders/seaport";
@@ -10,6 +11,7 @@ export * as zeroExV4 from "@/orderbook/orders/zeroex-v4";
 export * as zora from "@/orderbook/orders/zora";
 export * as universe from "@/orderbook/orders/universe";
 export * as element from "@/orderbook/orders/element";
+export * as blur from "@/orderbook/orders/blur";
 export * as rarible from "@/orderbook/orders/rarible";
 
 // Imports
@@ -48,7 +50,7 @@ export type OrderKind =
   | "universe"
   | "nftx"
   | "blur"
-  | "rarible";
+  | "forward";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -141,6 +143,14 @@ export const generateListingDetailsV5 = (
   };
 
   switch (order.kind) {
+    case "cryptopunks": {
+      return {
+        kind: "cryptopunks",
+        ...common,
+        order: new Sdk.CryptoPunks.Order(config.chainId, order.rawData),
+      };
+    }
+
     case "foundation": {
       return {
         kind: "foundation",
@@ -390,6 +400,14 @@ export const generateListingDetailsV6 = (
   };
 
   switch (order.kind) {
+    case "cryptopunks": {
+      return {
+        kind: "cryptopunks",
+        ...common,
+        order: new Sdk.CryptoPunks.Order(config.chainId, order.rawData),
+      };
+    }
+
     case "foundation": {
       return {
         kind: "foundation",
@@ -483,6 +501,7 @@ export const generateBidDetailsV6 = async (
     kind: OrderKind;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rawData: any;
+    fees?: Sdk.RouterV6.Types.Fee[];
   },
   token: {
     kind: "erc721" | "erc1155";
@@ -496,6 +515,7 @@ export const generateBidDetailsV6 = async (
     contract: token.contract,
     tokenId: token.tokenId,
     amount: token.amount ?? 1,
+    fees: order.fees ?? [],
   };
 
   switch (order.kind) {
@@ -599,6 +619,15 @@ export const generateBidDetailsV6 = async (
         kind: "rarible",
         ...common,
         order: new Sdk.Rarible.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "forward": {
+      const sdkOrder = new Sdk.Forward.Order(config.chainId, order.rawData);
+      return {
+        kind: "forward",
+        ...common,
+        order: sdkOrder,
       };
     }
 

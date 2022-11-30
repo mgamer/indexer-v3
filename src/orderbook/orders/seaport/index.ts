@@ -1,27 +1,33 @@
 import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
-import pLimit from "p-limit";
+import { OrderKind } from "@reservoir0x/sdk/dist/seaport/types";
 import _ from "lodash";
+import pLimit from "p-limit";
 
 import { idb, pgp, redb } from "@/common/db";
 import { logger } from "@/common/logger";
+import { baseProvider } from "@/common/provider";
+import { redis } from "@/common/redis";
 import { bn, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { getNetworkSettings } from "@/config/network";
 import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as flagStatusProcessQueue from "@/jobs/flag-status/process-queue";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
+import { Collections } from "@/models/collections";
+import { PendingFlagStatusSyncJobs } from "@/models/pending-flag-status-sync-jobs";
+import { Sources } from "@/models/sources";
+import { SourcesEntity } from "@/models/sources/sources-entity";
+import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import { offChainCheck, offChainCheckPartial } from "@/orderbook/orders/seaport/check";
 import * as tokenSet from "@/orderbook/token-sets";
-import { Sources } from "@/models/sources";
-import { SourcesEntity } from "@/models/sources/sources-entity";
 import { getUSDAndNativePrices } from "@/utils/prices";
-import { PendingFlagStatusSyncJobs } from "@/models/pending-flag-status-sync-jobs";
-import { redis } from "@/common/redis";
-import { getNetworkSettings } from "@/config/network";
-import { Collections } from "@/models/collections";
-import { OrderKind } from "@reservoir0x/sdk/dist/seaport/types";
-import * as commonHelpers from "@/orderbook/orders/common/helpers";
+import * as royalties from "@/utils/royalties";
+import { Royalty } from "@/utils/royalties";
+import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
+import { TokenSet } from "@/orderbook/token-sets/token-list";
+import * as refreshContractCollectionsMetadata from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue";
 
 export type OrderInfo =
   | {
@@ -145,8 +151,8 @@ export const save = async (
         });
       }
 
-      // Check: buy order has Weth as payment token
-      if (info.side === "buy" && info.paymentToken !== Sdk.Common.Addresses.Weth[config.chainId]) {
+      // Check: buy order has a supported payment token
+      if (info.side === "buy" && !getNetworkSettings().supportedBidCurrencies[info.paymentToken]) {
         return results.push({
           id,
           status: "unsupported-payment-token",
@@ -180,7 +186,7 @@ export const save = async (
 
       // Check: order has a valid signature
       try {
-        order.checkSignature();
+        await order.checkSignature(baseProvider);
       } catch {
         return results.push({
           id,
@@ -249,22 +255,36 @@ export const save = async (
         }
 
         case "token-list": {
-          const typedInfo = info as typeof info & { merkleRoot: string };
-          const merkleRoot = typedInfo.merkleRoot;
-
-          if (merkleRoot) {
-            tokenSetId = `list:${info.contract}:${bn(merkleRoot).toHexString()}`;
-
-            await tokenSet.tokenList.save([
+          // For collection offers, if the target orderbook is opensea, the token set should always be a contract wide.
+          // This is due to a mismatch between the collection flags in our system and OpenSea.
+          // The actual merkle root is returned by the build collection offer API from OpenSea (see the logic in the execute bid API).
+          if (metadata?.target === "opensea") {
+            tokenSetId = `contract:${info.contract}`;
+            await tokenSet.contractWide.save([
               {
                 id: tokenSetId,
                 schemaHash,
-                schema: metadata.schema,
+                contract: info.contract,
               },
             ]);
+          } else {
+            const typedInfo = info as typeof info & { merkleRoot: string };
+            const merkleRoot = typedInfo.merkleRoot;
 
-            if (!isReservoir) {
-              await handleTokenList(id, info.contract, tokenSetId, merkleRoot);
+            if (merkleRoot) {
+              tokenSetId = `list:${info.contract}:${bn(merkleRoot).toHexString()}`;
+
+              await tokenSet.tokenList.save([
+                {
+                  id: tokenSetId,
+                  schemaHash,
+                  schema: metadata.schema,
+                },
+              ]);
+
+              if (!isReservoir) {
+                await handleTokenList(id, info.contract, tokenSetId, merkleRoot);
+              }
             }
           }
 
@@ -307,31 +327,67 @@ export const save = async (
         });
       }
 
-      // // Handle: fee breakdown
+      // Handle: royalties
       const openSeaFeeRecipients = [
         "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073",
         "0x8de9c5a032463c561423387a9648c5c7bcc5bc90",
         "0x0000a26b00c1f0df003000390027140000faa719",
       ];
 
-      const royaltyRecipients: string[] = [];
+      let openSeaRoyalties: Royalty[];
+      const openSeaRoyaltiesSchema = metadata?.target === "opensea" ? "opensea" : "default";
 
-      const collectionRoyalties = await redb.oneOrNone(
-        `SELECT royalties FROM collections WHERE id = $/id/`,
-        { id: info.contract }
-      );
-
-      if (collectionRoyalties) {
-        for (const royalty of collectionRoyalties.royalties) {
-          royaltyRecipients.push(royalty.recipient);
-        }
+      if (order.params.kind === "single-token") {
+        openSeaRoyalties = await royalties.getRoyalties(
+          info.contract,
+          info.tokenId,
+          openSeaRoyaltiesSchema
+        );
+      } else {
+        openSeaRoyalties = await royalties.getRoyaltiesByTokenSet(
+          tokenSetId,
+          openSeaRoyaltiesSchema
+        );
       }
 
       const feeBreakdown = info.fees.map(({ recipient, amount }) => ({
-        kind: royaltyRecipients.includes(recipient.toLowerCase()) ? "royalty" : "marketplace",
+        kind: openSeaRoyalties.map(({ recipient }) => recipient).includes(recipient.toLowerCase())
+          ? "royalty"
+          : "marketplace",
         recipient,
         bps: price.eq(0) ? 0 : bn(amount).mul(10000).div(price).toNumber(),
       }));
+
+      // Handle: royalties on top
+      const defaultRoyalties =
+        info.side === "sell"
+          ? await royalties.getRoyalties(info.contract, info.tokenId, "default")
+          : await royalties.getRoyaltiesByTokenSet(tokenSetId, "default");
+
+      const totalBuiltInBps = feeBreakdown
+        .map(({ bps, kind }) => (kind === "royalty" ? bps : 0))
+        .reduce((a, b) => a + b, 0);
+      const totalDefaultBps = defaultRoyalties.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
+
+      const missingRoyalties = [];
+      let missingRoyaltyAmount = bn(0);
+      if (totalBuiltInBps < totalDefaultBps) {
+        const validRecipients = defaultRoyalties.filter(
+          ({ bps, recipient }) => bps && recipient !== AddressZero
+        );
+        if (validRecipients.length) {
+          const bpsDiff = totalDefaultBps - totalBuiltInBps;
+          const amount = bn(price).mul(bpsDiff).div(10000).toString();
+          missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
+
+          missingRoyalties.push({
+            bps: bpsDiff,
+            amount,
+            // TODO: We should probably split pro-rata across all royalty recipients
+            recipient: validRecipients[0].recipient,
+          });
+        }
+      }
 
       // Handle: source
       const sources = await Sources.getInstance();
@@ -397,6 +453,22 @@ export const save = async (
           value = bn(prices.nativePrice);
         }
       }
+
+      // Handle: normalized value
+      const currencyNormalizedValue =
+        info.side === "sell"
+          ? bn(currencyValue).add(missingRoyaltyAmount).toString()
+          : bn(currencyValue).sub(missingRoyaltyAmount).toString();
+
+      const prices = await getUSDAndNativePrices(currency, currencyNormalizedValue, currentTime);
+      if (!prices.nativePrice) {
+        // Getting the native price is a must
+        return results.push({
+          id,
+          status: "failed-to-convert-price",
+        });
+      }
+      const normalizedValue = bn(prices.nativePrice).toString();
 
       if (info.side === "buy" && order.params.kind === "single-token" && validateBidValue) {
         const typedInfo = info as typeof info & { tokenId: string };
@@ -464,9 +536,9 @@ export const save = async (
         dynamic: info.isDynamic ?? null,
         raw_data: order.params,
         expiration: validTo,
-        missing_royalties: null,
-        normalized_value: null,
-        currency_normalized_value: null,
+        missing_royalties: missingRoyalties,
+        normalized_value: normalizedValue,
+        currency_normalized_value: currencyNormalizedValue,
       });
 
       const unfillable =
@@ -571,62 +643,26 @@ export const save = async (
         }
       }
 
-      let collectionResult;
+      const collection = await getCollection(orderParams);
 
-      if (orderParams.kind === "single-token") {
-        collectionResult = await redb.oneOrNone(
-          `SELECT 
-                    royalties
-                 FROM collections
-                 WHERE contract = $/contract/
-                 AND token_id_range @> $/tokenId/::NUMERIC(78, 0)`,
-          {
-            contract: toBuffer(orderParams.contract),
-            tokenId: orderParams.tokenId,
-          }
-        );
-      } else {
-        if (getNetworkSettings().multiCollectionContracts.includes(orderParams.contract)) {
-          collectionResult = await redb.oneOrNone(
-            `
-                  SELECT
-                    royalties,
-                    token_set_id
-                  FROM collections
-                  WHERE contract = $/contract/ AND slug = $/collectionSlug/
-                `,
-            {
-              contract: toBuffer(orderParams.contract),
-              collectionSlug: orderParams.collectionSlug,
-            }
-          );
-        } else {
-          collectionResult = await redb.oneOrNone(
-            `
-                  SELECT
-                    royalties,
-                    token_set_id
-                  FROM collections
-                  WHERE id = $/id/
-                `,
-            {
-              id: orderParams.contract,
-            }
-          );
-        }
-
-        if (!collectionResult) {
+      if (!collection) {
+        if (orderParams.kind === "contract-wide") {
           logger.warn(
-            "orders-seaport-save",
-            `handlePartialOrder - No collection found. collectionSlug=${
-              orderParams.collectionSlug
-            }, orderParams=${JSON.stringify(orderParams)}`
+            "orders-seaport-save-partial",
+            `Unknown Collection. orderId=${id}, contract=${orderParams.contract}, collectionSlug=${orderParams.collectionSlug}`
           );
+
+          await refreshContractCollectionsMetadata.addToQueue(orderParams.contract);
         }
+
+        return results.push({
+          id,
+          status: "unknown-collection",
+        });
       }
 
       // Check and save: associated token set
-      const schemaHash = generateSchemaHash();
+      let schemaHash = generateSchemaHash();
 
       let tokenSetId: string | undefined;
       switch (orderParams.kind) {
@@ -649,8 +685,8 @@ export const save = async (
         }
 
         case "contract-wide": {
-          if (collectionResult?.token_set_id) {
-            tokenSetId = collectionResult.token_set_id;
+          if (collection?.token_set_id) {
+            tokenSetId = collection.token_set_id;
           }
 
           if (tokenSetId) {
@@ -681,6 +717,57 @@ export const save = async (
         }
 
         case "token-list": {
+          const schema = {
+            kind: "attribute",
+            data: {
+              collection: collection.id,
+              attributes: [
+                {
+                  key: orderParams.attributeKey,
+                  value: orderParams.attributeValue,
+                },
+              ],
+            },
+          };
+
+          schemaHash = generateSchemaHash(schema);
+
+          // Fetch all tokens matching the attributes
+          const tokens = await redb.manyOrNone(
+            `
+              SELECT token_attributes.token_id
+              FROM token_attributes
+              WHERE token_attributes.collection_id = $/collection/
+                AND token_attributes.key = $/key/
+                AND token_attributes.value = $/value/
+              ORDER BY token_attributes.token_id
+            `,
+            {
+              collection: collection.id,
+              key: orderParams.attributeKey,
+              value: orderParams.attributeValue,
+            }
+          );
+
+          if (tokens.length) {
+            const tokensIds = tokens.map((r) => r.token_id);
+            const merkleTree = generateMerkleTree(tokensIds);
+
+            tokenSetId = `list:${orderParams.contract}:${merkleTree.getHexRoot()}`;
+
+            await tokenSet.tokenList.save([
+              {
+                id: tokenSetId,
+                schema,
+                schemaHash: generateSchemaHash(schema),
+                items: {
+                  contract: orderParams.contract,
+                  tokenIds: tokensIds,
+                },
+              } as TokenSet,
+            ]);
+          }
+
           break;
         }
       }
@@ -696,6 +783,11 @@ export const save = async (
       let price = bn(orderParams.price);
       let value = price;
 
+      if (bn(orderParams.amount).gt(1)) {
+        price = price.div(orderParams.amount);
+        value = value.div(orderParams.amount);
+      }
+
       // Handle: fees
       let feeBps = 250;
       const feeBreakdown = [
@@ -706,21 +798,52 @@ export const save = async (
         },
       ];
 
-      if (collectionResult) {
-        for (const royalty of collectionResult.royalties) {
+      if (collection) {
+        for (const royalty of collection.new_royalties?.["opensea"] ?? []) {
           feeBps += royalty.bps;
 
           feeBreakdown.push({
-            bps: royalty.bps,
             kind: "royalty",
+            bps: royalty.bps,
             recipient: royalty.recipient,
           });
         }
       }
 
+      // Handle: royalties on top
+      const defaultRoyalties =
+        orderParams.side === "sell"
+          ? await royalties.getRoyalties(orderParams.contract, orderParams.tokenId!, "default")
+          : await royalties.getRoyaltiesByTokenSet(tokenSetId, "default");
+
+      const totalBuiltInBps = feeBreakdown
+        .map(({ bps, kind }) => (kind === "royalty" ? bps : 0))
+        .reduce((a, b) => a + b, 0);
+      const totalDefaultBps = defaultRoyalties.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
+
+      const missingRoyalties = [];
+      let missingRoyaltyAmount = bn(0);
+      if (totalBuiltInBps < totalDefaultBps) {
+        const validRecipients = defaultRoyalties.filter(
+          ({ bps, recipient }) => bps && recipient !== AddressZero
+        );
+        if (validRecipients.length) {
+          const bpsDiff = totalDefaultBps - totalBuiltInBps;
+          const amount = bn(price).mul(bpsDiff).div(10000).toString();
+          missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
+
+          missingRoyalties.push({
+            bps: bpsDiff,
+            amount,
+            // TODO: We should probably split pro-rata across all royalty recipients
+            recipient: validRecipients[0].recipient,
+          });
+        }
+      }
+
       if (orderParams.side === "buy") {
-        const feeAmount = bn(price).mul(feeBps).div(10000);
-        value = bn(price).sub(feeAmount);
+        const feeAmount = price.mul(feeBps).div(10000);
+        value = price.sub(feeAmount);
       }
 
       // Handle: source
@@ -769,6 +892,22 @@ export const save = async (
         }
       }
 
+      // Handle: normalized value
+      const currencyNormalizedValue =
+        orderParams.side === "sell"
+          ? bn(currencyValue).add(missingRoyaltyAmount).toString()
+          : bn(currencyValue).sub(missingRoyaltyAmount).toString();
+
+      const prices = await getUSDAndNativePrices(currency, currencyNormalizedValue, currentTime);
+      if (!prices.nativePrice) {
+        // Getting the native price is a must
+        return results.push({
+          id,
+          status: "failed-to-convert-price",
+        });
+      }
+      const normalizedValue = bn(prices.nativePrice).toString();
+
       if (orderParams.side === "buy" && orderParams.kind === "single-token" && validateBidValue) {
         const tokenId = orderParams.tokenId;
         const seaportBidPercentageThreshold = 90;
@@ -791,7 +930,7 @@ export const save = async (
           }
         } catch (error) {
           logger.warn(
-            "orders-seaport-save",
+            "orders-seaport-save-partial",
             `Bid value validation - error. orderId=${id}, contract=${orderParams.contract}, tokenId=${tokenId}, error=${error}`
           );
         }
@@ -834,9 +973,9 @@ export const save = async (
         dynamic: orderParams.isDynamic ?? null,
         raw_data: null,
         expiration: validTo,
-        missing_royalties: null,
-        normalized_value: null,
-        currency_normalized_value: null,
+        missing_royalties: missingRoyalties,
+        normalized_value: normalizedValue,
+        currency_normalized_value: currencyNormalizedValue,
       });
 
       const unfillable =
@@ -1176,6 +1315,9 @@ export const save = async (
         "dynamic",
         "raw_data",
         { name: "expiration", mod: ":raw" },
+        { name: "missing_royalties", mod: ":json" },
+        "normalized_value",
+        "currency_normalized_value",
       ],
       {
         table: "orders",
@@ -1285,7 +1427,72 @@ export const handleTokenList = async (
   }
 };
 
-export const getCollectionFloorAskValue = async (contract: string, tokenId: number) => {
+const getCollection = async (
+  orderParams: PartialOrderComponents
+): Promise<{
+  id: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  new_royalties: any;
+  token_set_id: string | null;
+} | null> => {
+  if (orderParams.kind === "single-token") {
+    return redb.oneOrNone(
+      `
+        SELECT
+          collections.id,
+          collections.new_royalties,
+          collections.token_set_id
+        FROM tokens
+        JOIN collections
+          ON tokens.collection_id = collections.id
+        WHERE tokens.contract = $/contract/
+          AND tokens.token_id = $/tokenId/
+        LIMIT 1
+      `,
+      {
+        contract: toBuffer(orderParams.contract),
+        tokenId: orderParams.tokenId,
+      }
+    );
+  } else {
+    if (getNetworkSettings().multiCollectionContracts.includes(orderParams.contract)) {
+      return redb.oneOrNone(
+        `
+          SELECT
+            collections.id,
+            collections.new_royalties,
+            collections.token_set_id
+          FROM collections
+          WHERE collections.contract = $/contract/
+            AND collections.slug = $/collectionSlug/
+        `,
+        {
+          contract: toBuffer(orderParams.contract),
+          collectionSlug: orderParams.collectionSlug,
+        }
+      );
+    } else {
+      return redb.oneOrNone(
+        `
+          SELECT
+            collections.id,
+            collections.new_royalties,
+            collections.token_set_id
+          FROM collections
+          WHERE collections.id = $/id/
+        `,
+        {
+          id: orderParams.contract,
+        }
+      );
+    }
+  }
+};
+
+const getCollectionFloorAskValue = async (
+  contract: string,
+  tokenId: number
+): Promise<number | undefined> => {
   if (getNetworkSettings().multiCollectionContracts.includes(contract)) {
     const collection = await Collections.getByContractAndTokenId(contract, tokenId);
     return collection?.floorSellValue;

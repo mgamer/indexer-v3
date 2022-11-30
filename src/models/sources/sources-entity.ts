@@ -40,4 +40,8 @@ export class SourcesEntity {
   getIcon() {
     return this.metadata.adminIcon || this.metadata.icon;
   }
+
+  getTitle() {
+    return this.metadata.adminTitle || this.metadata.title || this.name;
+  }
 }
