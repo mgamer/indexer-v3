@@ -308,7 +308,7 @@ export const getExecuteSellV6Options: RouteOptions = {
         }[];
       }[] = [
         {
-          id: "approval",
+          id: "nft-approval",
           action: "Approve NFT contract",
           description:
             "Each NFT collection you want to trade requires a one-time approval transaction",

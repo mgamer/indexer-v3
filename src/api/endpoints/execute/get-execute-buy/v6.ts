@@ -566,7 +566,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
         }[];
       }[] = [
         {
-          id: "approval",
+          id: "currency-approval",
           action: "Approve exchange contract",
           description: "A one-time setup transaction to enable trading",
           kind: "transaction",

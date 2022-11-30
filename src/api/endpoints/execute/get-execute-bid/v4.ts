@@ -199,7 +199,7 @@ export const getExecuteBidV4Options: RouteOptions = {
           items: [],
         },
         {
-          id: "approval",
+          id: "currency-approval",
           action: "Approve WETH contract",
           description:
             "We'll ask your approval for the exchange to access your token. This is a one-time only operation per exchange.",
