@@ -8,6 +8,9 @@ import { config } from "@/config/index";
 import { redb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { Tokens } from "@/models/tokens";
+import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
+import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
+import { CollectionMetadataInfo } from "@/jobs/collection-updates/metadata-queue";
 
 const QUEUE_NAME = "refresh-contract-collections-metadata-queue";
 
@@ -33,6 +36,7 @@ if (config.doBackgroundWork) {
           `
           SELECT
             collections.id,
+            collections.community,
             collections.token_id_range
           FROM collections
           WHERE collections.contract = $/contract/
@@ -48,6 +52,8 @@ if (config.doBackgroundWork) {
         );
 
         if (contractCollections.length) {
+          const infos: CollectionMetadataInfo[] = [];
+
           for (const contractCollection of contractCollections) {
             let tokenId = "1";
 
@@ -57,12 +63,18 @@ if (config.doBackgroundWork) {
               tokenId = `${JSON.parse(contractCollection.token_id_range)[0]}`;
             }
 
+            infos.push({
+              contract,
+              tokenId,
+              community: contractCollection.community,
+            });
+
             // await collectionUpdatesMetadata.addToQueue(
-            //     contract,
-            //     tokenId,
-            //     "",
-            //     0,
-            //     true
+            //   contract,
+            //   tokenId,
+            //   contractCollection.community,
+            //   0,
+            //   true
             // );
 
             logger.info(
@@ -70,6 +82,8 @@ if (config.doBackgroundWork) {
               `Collection Refresh. contract=${contract}, collectionId=${contractCollection.id}, tokenId=${tokenId}`
             );
           }
+
+          await collectionUpdatesMetadata.addToQueueBulk(infos);
         } else {
           const contractToken = await redb.oneOrNone(
             `
@@ -89,23 +103,19 @@ if (config.doBackgroundWork) {
             `Token Refresh. contract=${contract}, tokenId=${contractToken?.token_id}`
           );
 
-          // if (contractToken) {
-          //   await metadataIndexFetch.addToQueue(
-          //     [
-          //       {
-          //         kind: "single-token",
-          //         data: {
-          //           method: config.metadataIndexingMethod,
-          //           contract: orderParams.contract,
-          //           tokenId: contractToken.token_id,
-          //           collection: orderParams.contract,
-          //         },
-          //       },
-          //     ],
-          //     true,
-          //     getNetworkSettings().metadataMintDelay
-          //   );
-          // }
+          if (contractToken) {
+            await metadataIndexFetch.addToQueue([
+              {
+                kind: "single-token",
+                data: {
+                  method: config.metadataIndexingMethod,
+                  contract: contract,
+                  tokenId: contractToken.token_id,
+                  collection: contract,
+                },
+              },
+            ]);
+          }
         }
 
         await releaseLock(getLockName(contract));
