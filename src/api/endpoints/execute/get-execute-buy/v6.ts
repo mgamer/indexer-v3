@@ -421,7 +421,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
                 SELECT
                   orders.id,
                   orders.kind,
-                  orders.token_kind,
+                  contracts.kind AS token_kind,
                   coalesce(orders.currency_price, orders.price) AS price,
                   orders.quantity_remaining,
                   orders.source_id_int,
