@@ -89,7 +89,7 @@ export const isRedeem = (log: Log, address: string) => {
   }
 };
 
-export const isUserStake = (log: Log, address: string) => {
+export const isUserStake = (log: Log) => {
   // console.log({
   //   index: log.logIndex,
   //   topic: log.topics[0],

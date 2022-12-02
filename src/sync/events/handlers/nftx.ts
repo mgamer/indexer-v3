@@ -54,9 +54,9 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const swapEventsCount = logs.filter((log) => nftxUtils.isSwap(log)).length;
         const hasSwap = swapEventsCount > 1;
 
-        const userStakeCount = logs.filter((log) =>
-          nftxUtils.isUserStake(log, baseEventParams.address)
-        ).length;
+        // const userStakeCount = logs.filter((log) =>
+        //   nftxUtils.isUserStake(log, baseEventParams.address)
+        // ).length;
 
         if (hasSwap) {
           for (const log of logs) {
