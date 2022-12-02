@@ -123,6 +123,7 @@ export const getTokensV5Options: RouteOptions = {
             kind: Joi.string().allow(null, ""),
             isFlagged: Joi.boolean().default(false),
             lastFlagUpdate: Joi.string().allow(null, ""),
+            lastFlagChange: Joi.string().allow(null, ""),
             rarity: Joi.number().unsafe().allow(null),
             rarityRank: Joi.number().unsafe().allow(null),
             collection: Joi.object({
@@ -404,6 +405,7 @@ export const getTokensV5Options: RouteOptions = {
           t.rarity_rank,
           t.is_flagged,
           t.last_flag_update,
+          t.last_flag_change,
           c.slug,
           t.last_buy_value,
           t.last_buy_timestamp,
@@ -715,6 +717,7 @@ export const getTokensV5Options: RouteOptions = {
             kind: r.kind,
             isFlagged: Boolean(Number(r.is_flagged)),
             lastFlagUpdate: r.last_flag_update ? new Date(r.last_flag_update).toISOString() : null,
+            lastFlagChange: r.last_flag_change ? new Date(r.last_flag_change).toISOString() : null,
             rarity: r.rarity_score,
             rarityRank: r.rarity_rank,
             collection: {
