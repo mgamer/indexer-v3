@@ -230,7 +230,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 currency_normalized_value: normalizedValue.toString(),
               });
 
-              return results.push({
+              results.push({
                 id,
                 txHash: orderParams.txHash,
                 status: "success",
@@ -280,7 +280,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 },
               ]);
 
-              return results.push({
+              results.push({
                 id,
                 txHash: orderParams.txHash,
                 status: "success",
@@ -308,7 +308,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               },
             ]);
 
-            return results.push({
+            results.push({
               id,
               txHash: orderParams.txHash,
               status: "success",
