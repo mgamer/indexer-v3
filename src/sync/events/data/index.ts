@@ -90,6 +90,7 @@ export type EventDataKind =
   | "universe-cancel"
   | "nftx-redeemed"
   | "nftx-minted"
+  | "nftx-user-staked"
   | "blur-orders-matched"
   | "blur-order-cancelled"
   | "blur-nonce-incremented"
@@ -169,6 +170,7 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
       universe.cancel,
       nftx.minted,
       nftx.redeemed,
+      nftx.staked,
       blur.ordersMatched,
       blur.orderCancelled,
       blur.nonceIncremented,
@@ -311,6 +313,8 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return nftx.minted;
     case "nftx-redeemed":
       return nftx.redeemed;
+    case "nftx-user-staked":
+      return nftx.staked;
     case "blur-orders-matched":
       return blur.ordersMatched;
     case "blur-order-cancelled":

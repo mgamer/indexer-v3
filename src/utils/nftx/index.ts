@@ -89,6 +89,22 @@ export const isRedeem = (log: Log, address: string) => {
   }
 };
 
+export const isUserStake = (log: Log, address: string) => {
+  // console.log({
+  //   index: log.logIndex,
+  //   topic: log.topics[0],
+  //   address: log.address.toLowerCase(),
+  //   contract: address,
+  //   eventTopic: nftx.staked.abi.getEventTopic("UserStaked"),
+  // });
+  if (
+    log.topics[0] === nftx.staked.abi.getEventTopic("UserStaked")
+    // && log.address.toLowerCase() === address
+  ) {
+    return true;
+  }
+};
+
 const ifaceUniV2 = new Interface([
   `event Swap(
     address indexed sender,

@@ -27,3 +27,18 @@ export const minted: EventData = {
     )`,
   ]),
 };
+
+export const staked: EventData = {
+  kind: "nftx-user-staked",
+  topic: "0x9f69538b20901013ea360bae2dce4079d45308fcfed02b3f0768c9f70f4ba9c0",
+  numTopics: 1,
+  abi: new Interface([
+    `event UserStaked(
+      uint256 vaultId,
+      uint256 count,
+      uint256 lpBalance,
+      uint256 timelockUntil,
+      address sender
+    )`,
+  ]),
+};
