@@ -76,6 +76,9 @@ export const getTokensV5Options: RouteOptions = {
       source: Joi.string().description(
         "Domain of the order source. Example `opensea.io` (Only listed tokens are returned when filtering by source)"
       ),
+      flagStatus: Joi.number()
+        .allow(-1, 0, 1)
+        .description("-1 = All tokens (default)\n0 = Non flagged tokens\n1 = Flagged tokens"),
       sortBy: Joi.string()
         .valid("floorAskPrice", "tokenId", "rarity")
         .default("floorAskPrice")
@@ -107,7 +110,8 @@ export const getTokensV5Options: RouteOptions = {
     })
       .or("collection", "contract", "tokens", "tokenSetId", "community", "collectionsSetId")
       .oxor("collection", "contract", "tokens", "tokenSetId", "community", "collectionsSetId")
-      .with("attributes", "collection"),
+      .with("attributes", "collection")
+      .with("flagStatus", "collection"),
   },
   response: {
     schema: Joi.object({
@@ -472,6 +476,10 @@ export const getTokensV5Options: RouteOptions = {
       const conditions: string[] = [];
       if (query.collection) {
         conditions.push(`t.collection_id = $/collection/`);
+      }
+
+      if (_.indexOf([0, 1], query.flagStatus) !== -1) {
+        conditions.push(`t.is_flagged = $/flagStatus/`);
       }
 
       if (query.community) {
