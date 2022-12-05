@@ -75,6 +75,21 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           },
         });
 
+        makerInfos.push({
+          context: `${contextPrefix}-${to}-sell-balance`,
+          maker: to,
+          trigger: {
+            kind: "balance-change",
+            txHash: baseEventParams.txHash,
+            txTimestamp: baseEventParams.timestamp,
+          },
+          data: {
+            kind: "sell-balance",
+            contract: baseEventParams.address,
+            tokenId,
+          },
+        });
+
         if (from === AddressZero) {
           mintInfos.push({
             contract: baseEventParams.address,
@@ -106,7 +121,9 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const fromTokenId = parsedLog.args["fromTokenId"].toString();
         const toTokenId = parsedLog.args["toTokenId"].toString();
 
-        for (let i = fromTokenId; i <= toTokenId; i++) {
+        const fromNumber = Number(fromTokenId);
+        const toNumber = Number(toTokenId);
+        for (let i = fromNumber; i <= toNumber; i++) {
           const tokenId = i.toString();
 
           nftTransferEvents.push({
@@ -145,6 +162,21 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           makerInfos.push({
             context: `${contextPrefix}-${from}-sell-balance`,
             maker: from,
+            trigger: {
+              kind: "balance-change",
+              txHash: baseEventParams.txHash,
+              txTimestamp: baseEventParams.timestamp,
+            },
+            data: {
+              kind: "sell-balance",
+              contract: baseEventParams.address,
+              tokenId,
+            },
+          });
+
+          makerInfos.push({
+            context: `${contextPrefix}-${to}-sell-balance`,
+            maker: to,
             trigger: {
               kind: "balance-change",
               txHash: baseEventParams.txHash,
