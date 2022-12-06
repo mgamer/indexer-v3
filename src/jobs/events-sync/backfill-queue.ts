@@ -40,7 +40,7 @@ if (config.doBackgroundWork && config.doEventsSyncBackfill) {
           `Max memory reached ${currentMemUsage}, delay job ${job.id} for ${delay}`
         );
 
-        job.opts.attempts = _.toInteger(job.opts.attempts) + 1;
+        job.opts.attempts = _.toInteger(job.opts.attempts) + 2;
         await addToQueue(fromBlock, toBlock, _.merge(job.opts, { delay }));
         return;
       }
@@ -107,6 +107,7 @@ export const addToQueue = async (
         priority: prioritized ? 1 : undefined,
         jobId,
         delay: options?.delay,
+        attempts: options?.attempts,
       },
     });
   }
