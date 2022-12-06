@@ -13,7 +13,6 @@ const QUEUE_NAME = "events-sync-backfill";
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
-    attempts: 10,
     backoff: {
       type: "exponential",
       delay: 10000,
@@ -40,6 +39,8 @@ if (config.doBackgroundWork && config.doEventsSyncBackfill) {
           QUEUE_NAME,
           `Max memory reached ${currentMemUsage}, delay job ${job.id} for ${delay}`
         );
+
+        job.opts.attempts = _.toInteger(job.opts.attempts) + 1;
         await addToQueue(fromBlock, toBlock, _.merge(job.opts, { delay }));
         return;
       }
@@ -64,6 +65,7 @@ export const addToQueue = async (
   fromBlock: number,
   toBlock: number,
   options?: {
+    attempts?: number;
     delay?: number;
     blocksPerBatch?: number;
     prioritized?: boolean;
@@ -91,6 +93,8 @@ export const addToQueue = async (
   const jobs: BullMQBulkJob[] = [];
   for (let to = toBlock; to >= fromBlock; to -= blocksPerBatch) {
     const from = Math.max(fromBlock, to - blocksPerBatch + 1);
+    const jobId = options?.attempts ? `${from}-${to}-${options.attempts}` : `${from}-${to}`;
+
     jobs.push({
       name: `${from}-${to}`,
       data: {
@@ -101,7 +105,7 @@ export const addToQueue = async (
       },
       opts: {
         priority: prioritized ? 1 : undefined,
-        jobId: `${from}-${to}`,
+        jobId,
         delay: options?.delay,
       },
     });
