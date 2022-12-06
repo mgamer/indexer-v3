@@ -35,7 +35,7 @@ if (config.doBackgroundWork && config.doEventsSyncBackfill) {
       const maxMemUsage = 1073741824 * 20; // Max size in GB
       const memoryInfo = await redis.info("memory");
       const usedMemory = memoryInfo.match(/used_memory:\d+/);
-      if (usedMemory && _.toInteger(usedMemory[0]) > maxMemUsage) {
+      if (usedMemory && _.toInteger(_.split(usedMemory[0], ":")[1]) > maxMemUsage) {
         logger.info(QUEUE_NAME, `Max memory reached ${usedMemory[0]}, requeue job ${job.id}`);
         await addToQueue(fromBlock, toBlock, _.merge(job.opts, { delay: 1000 * 60 }));
         return;
