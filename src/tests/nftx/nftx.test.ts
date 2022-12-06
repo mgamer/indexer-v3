@@ -1,121 +1,113 @@
-// import { config as dotEnvConfig } from "dotenv";
-// dotEnvConfig();
-// import { baseProvider } from "@/common/provider";
-// import { getEventsFromTx, wait } from "../utils/test";
-// import { handleEvents } from "@/events-sync/handlers/nftx";
+import { config as dotEnvConfig } from "dotenv";
+dotEnvConfig();
+import { baseProvider } from "@/common/provider";
+import { getEventsFromTx, wait } from "../utils/test";
+import { handleEvents } from "@/events-sync/handlers/nftx";
 
-// import { Interface } from "@ethersproject/abi";
-// import { Contract } from "@ethersproject/contracts";
-// import { formatEther, parseEther } from "@ethersproject/units";
+import { Interface } from "@ethersproject/abi";
+import { Contract } from "@ethersproject/contracts";
+import { formatEther, parseEther } from "@ethersproject/units";
+import { logger } from "@/common/logger";
+import { OrderInfo } from "@/orderbook/orders/nftx";
+import { processOnChainData } from "@/events-sync/handlers/utils";
 
-// jest.setTimeout(1000 * 1000);
+async function getNFTxPoolPrice(id: string, type: string) {
+  let buyPrice = null;
+  let sellPrice = null;
+  let assetAddress = null;
+  let vaultAddress = null;
 
-// describe("NFTX", () => {
-//   // test("MintAndSell", async () => {
-//   //   const tx = await baseProvider.getTransactionReceipt(
-//   //     "0x91efac3292db811e6f0e0bfaff178546f903afed3e965ed3c4af0faccd9e4dc5"
-//   //   );
-//   //   const events = await getEventsFromTx(tx);
-//   //   const result = await handleEvents(events);
-//   //   console.log(result)
-//   //   // const orderSide = "sell";
-//   //   // const maker = "0xf16688ea2488c0d41a13572a7399e03069d49a1a";
-//   //   // const taker = "0x28cd0dfc42756f68b3e1f8883e517e64e474078a";
-//   //   // const fillEvent = result?.fillEvents?.find(
-//   //   //   (c) => c.orderSide === orderSide && c.maker === maker && c.taker === taker
-//   //   // );
-//   //   // expect(fillEvent).not.toBe(null);
-//   // });
+  const iface = new Interface([
+    "function getAmountsOut(uint amountIn, address[] memory path) view returns (uint[] memory amounts)",
+    "function getAmountsIn(uint amountOut, address[] memory path) view returns (uint[] memory amounts)",
+  ]);
+  const vaultFactoryAddress = "0xBE86f647b167567525cCAAfcd6f881F1Ee558216";
+  const factory = new Contract(
+    vaultFactoryAddress,
+    ["function vault(uint256 vaultId) external view returns (address)"],
+    baseProvider
+  );
 
-//   test("addLiquidity721ETH", async () => {
-//     // const tx = await baseProvider.getTransactionReceipt(
-//     //   "0x815b1644b63a42b5e103cffdd69d7414d52b64b66f53847ebd9cb048bf629ea6"
-//     // );
-//     // const events = await getEventsFromTx(tx);
-//     // const result = await handleEvents(events);
-//     // console.log(result)
-//     // const taker = "0xda37896e56f12d640230a9e5115756a5cda9a581";
-//     // const maker1 = "0xdeffc73e9e677e8b42d805e6460b4ef28c53adc3";
-//     // const maker2 = "0x730aba725664974efb753ee72ca789541c733db4";
-//     // const orderSide = "sell";
-//     // const fillEvent1 = result?.fillEvents?.find(
-//     //   (c) => c.orderSide === orderSide && c.maker === maker1 && c.taker === taker
-//     // );
-//     // const fillEvent2 = result?.fillEvents?.find(
-//     //   (c) => c.orderSide === orderSide && c.maker === maker2 && c.taker === taker
-//     // );
-//     // expect(fillEvent1).not.toBe(null);
-//     // expect(fillEvent2).not.toBe(null);
-//   });
+  vaultAddress = type === "id" ? await factory.vault(id) : id;
+  const vault = new Contract(
+    vaultAddress,
+    ["function assetAddress() view returns (address)"],
+    baseProvider
+  );
 
-//   test("computePrice", async () => {
-//     // const tx = await baseProvider.getTransactionReceipt(
-//     //   "0x815b1644b63a42b5e103cffdd69d7414d52b64b66f53847ebd9cb048bf629ea6"
-//     // );
-//     // // 741
-//     // const events = await getEventsFromTx(tx);
-//     // const result = await handleEvents(events);
-//     // console.log(result)
-//     const iface = new Interface([
-//       "function getAmountsOut(uint amountIn, address[] memory path) view returns (uint[] memory amounts)",
-//       "function getAmountsIn(uint amountOut, address[] memory path) view returns (uint[] memory amounts)",
-//     ]);
+  assetAddress = await vault.assetAddress();
+  const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 
-//     const vaultFactoryAddress = "0xBE86f647b167567525cCAAfcd6f881F1Ee558216";
-//     const vaultId = "392"; //738,746
-//     const factory = new Contract(
-//       vaultFactoryAddress,
-//       ["function vault(uint256 vaultId) external view returns (address)"],
-//       baseProvider
-//     );
+  const sushiRouter = new Contract(
+    "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F",
+    iface,
+    baseProvider
+  );
 
-//     const vaultAddress = await factory.vault(vaultId);
+  try {
+    const amounts = await sushiRouter.getAmountsIn(parseEther("1"), [WETH, vaultAddress]);
+    buyPrice = formatEther(amounts[0]);
+  } catch (error) {
+    logger.error("get-nftx-pool-price", `Failed to getAmountsIn: ${error}`);
+  }
 
-//     // const vaultAddress = "0x655503aaa60757d3b7afe8be02e20427cb690d6b";
-//     const vault = new Contract(
-//       vaultAddress,
-//       ["function assetAddress() view returns (address)"],
-//       baseProvider
-//     );
+  try {
+    const amounts = await sushiRouter.getAmountsOut(parseEther("1"), [vaultAddress, WETH]);
+    sellPrice = formatEther(amounts[1]);
+  } catch (error) {
+    logger.error("get-nftx-pool-price", `Failed to getAmountsOut: ${error}`);
+  }
 
-//     const assetAddress = await vault.assetAddress();
-//     const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
-//     // console.log("assetAddress", { assetAddress, vaultAddress });
+  return {
+    asset: assetAddress,
+    vault: vaultAddress,
+    price: {
+      sell: sellPrice,
+      buy: buyPrice,
+    },
+  };
+}
 
-//     const sushiRouter = new Contract(
-//       "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F",
-//       iface,
-//       baseProvider
-//     );
-//     // const nftToken = "0x227c7DF69D3ed1ae7574A1a7685fDEd90292EB48";
-//     try {
-//       const amounts = await sushiRouter.getAmountsIn(parseEther("1"), [WETH, vaultAddress]);
-//       // console.log("amounts", {
-//       //   buyPrice: formatEther(amounts[0]),
-//       // });
-//     } catch (e) {}
+jest.setTimeout(1000 * 1000);
 
-//     try {
-//       const amounts = await sushiRouter.getAmountsOut(parseEther("1"), [vaultAddress, WETH]);
-//       // console.log("amounts", {
-//       //   sellPrice: formatEther(amounts[0]),
-//       //   sellPrice2: formatEther(amounts[1]),
-//       // });
-//     } catch (e) {}
-//     // const price = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F
-//     // const taker = "0xda37896e56f12d640230a9e5115756a5cda9a581";
-//     // const maker1 = "0xdeffc73e9e677e8b42d805e6460b4ef28c53adc3";
-//     // const maker2 = "0x730aba725664974efb753ee72ca789541c733db4";
+describe("NFTX", () => {
+  test("has-orders", async () => {
+    const tx = await baseProvider.getTransactionReceipt(
+      "0xab53ee4ea3653b0956fd8a6dd4a01b20775f65fcc7badc3b6e20481316f6b1f0"
+    );
+    const events = await getEventsFromTx(tx);
+    const result = await handleEvents(events);
+    const order = result?.orders?.find((c) => c.kind === "nftx");
+    expect(order).not.toBe(null);
+  });
 
-//     // const orderSide = "sell";
-//     // const fillEvent1 = result?.fillEvents?.find(
-//     //   (c) => c.orderSide === orderSide && c.maker === maker1 && c.taker === taker
-//     // );
-//     // const fillEvent2 = result?.fillEvents?.find(
-//     //   (c) => c.orderSide === orderSide && c.maker === maker2 && c.taker === taker
-//     // );
+  test("get-pooprice", async () => {
+    const info = await getNFTxPoolPrice("392", "id");
+    expect(info.asset).toBe("0x5Af0D9827E0c53E4799BB226655A1de152A425a5");
+    if (info?.price?.buy) {
+      expect(parseFloat(info.price.buy)).toBeGreaterThan(parseFloat("0.4"));
+    }
+  });
 
-//     // expect(fillEvent1).not.toBe(null);
-//     // expect(fillEvent2).not.toBe(null);
-//   });
-// });
+  test("order-saving", async () => {
+    const tx = await baseProvider.getTransactionReceipt(
+      "0xab53ee4ea3653b0956fd8a6dd4a01b20775f65fcc7badc3b6e20481316f6b1f0"
+    );
+    const events = await getEventsFromTx(tx);
+    const result = await handleEvents(events);
+    const order = result?.orders?.find((c) => c.kind === "nftx");
+    expect(order).not.toBe(null);
+
+    await processOnChainData({
+      orders: result?.orders,
+    });
+
+    // const orderInDb = await getOrder(
+    //   "0x71ba349119ef6685a84da0ccd810ec3070345608fe981619f071ad268b499eba"
+    // );
+
+    // await wait(20 * 1000);
+    // console.log("orderInDb", orderInDb);
+    // expect(orderInDb).not.toBe(null);
+  });
+});

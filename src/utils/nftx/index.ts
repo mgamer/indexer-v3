@@ -2,7 +2,7 @@ import { Interface } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
-
+import { bn } from "@/common/utils";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import * as nftx from "@/events-sync/data/nftx";
@@ -12,6 +12,8 @@ import {
   saveNftxFtPool,
   saveNftxNftPool,
 } from "@/models/nftx-pools";
+import { formatEther, parseEther } from "@ethersproject/units";
+import { logger } from "@/common/logger";
 
 export const getNftPoolDetails = async (address: string) =>
   getNftxNftPool(address).catch(async () => {
@@ -156,3 +158,39 @@ export const tryParseSwap = async (log: Log) => {
     }
   }
 };
+
+export async function getPoolPrice(vault: string, amount = 1) {
+  let buyPrice = null;
+  let sellPrice = null;
+
+  const iface = new Interface([
+    "function getAmountsOut(uint amountIn, address[] memory path) view returns (uint[] memory amounts)",
+    "function getAmountsIn(uint amountOut, address[] memory path) view returns (uint[] memory amounts)",
+  ]);
+
+  const WETH = Sdk.Common.Addresses.Weth[config.chainId];
+  const sushiRouterAddr = "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F";
+
+  const sushiRouter = new Contract(sushiRouterAddr, iface, baseProvider);
+
+  try {
+    const amounts = await sushiRouter.getAmountsIn(parseEther(`${amount}`), [WETH, vault]);
+    buyPrice = formatEther(amounts[0]);
+  } catch (error) {
+    logger.error("get-nftx-pool-price", `Failed to getAmountsIn: ${error}`);
+  }
+
+  try {
+    const amounts = await sushiRouter.getAmountsOut(parseEther(`${amount}`), [vault, WETH]);
+    sellPrice = formatEther(amounts[1]);
+  } catch (error) {
+    logger.error("get-nftx-pool-price", `Failed to getAmountsOut: ${error}`);
+  }
+
+  return {
+    amount,
+    currency: WETH,
+    sell: sellPrice ? formatEther(parseEther(sellPrice).div(bn(amount))) : "0",
+    buy: buyPrice ? formatEther(parseEther(buyPrice).div(bn(amount))) : "0",
+  };
+}

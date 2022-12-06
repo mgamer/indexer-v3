@@ -155,6 +155,15 @@ if (config.doBackgroundWork) {
 
         if (collectionFloorAskChanged) {
           await redis.del(`collection-floor-ask:${collectionResult.collection_id}`);
+
+          // await collectionUpdatesNonFlaggedFloorAsk.addToQueue([
+          //   {
+          //     kind,
+          //     collectionId: collectionResult.collection_id,
+          //     txHash,
+          //     txTimestamp,
+          //   },
+          // ]);
         }
       } catch (error) {
         logger.error(

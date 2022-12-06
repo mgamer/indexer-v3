@@ -13,6 +13,7 @@ export * as universe from "@/orderbook/orders/universe";
 export * as element from "@/orderbook/orders/element";
 export * as blur from "@/orderbook/orders/blur";
 export * as rarible from "@/orderbook/orders/rarible";
+export * as nftx from "@/orderbook/orders/nftx";
 
 // Imports
 
@@ -488,11 +489,11 @@ export const generateListingDetailsV6 = (
       };
     }
 
-    case "blur": {
+    case "sudoswap": {
       return {
-        kind: "blur",
+        kind: "sudoswap",
         ...common,
-        order: new Sdk.Blur.Order(config.chainId, order.rawData),
+        order: new Sdk.Sudoswap.Order(config.chainId, order.rawData),
       };
     }
 

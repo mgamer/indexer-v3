@@ -113,6 +113,11 @@ if (config.doBackgroundWork) {
             result = await orders.blur.save([info as orders.blur.OrderInfo], relayToArweave);
             break;
           }
+
+          case "nftx": {
+            result = await orders.nftx.save([info as orders.nftx.OrderInfo]);
+            break;
+          }
         }
       } catch (error) {
         logger.error(QUEUE_NAME, `Failed to process order ${JSON.stringify(job.data)}: ${error}`);
@@ -226,6 +231,12 @@ export type GenericOrderInfo =
   | {
       kind: "blur";
       info: orders.blur.OrderInfo;
+      relayToArweave?: boolean;
+      validateBidValue?: boolean;
+    }
+  | {
+      kind: "nftx";
+      info: orders.nftx.OrderInfo;
       relayToArweave?: boolean;
       validateBidValue?: boolean;
     };

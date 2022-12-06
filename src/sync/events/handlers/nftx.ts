@@ -6,12 +6,15 @@ import * as utils from "@/events-sync/utils";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as nftxUtils from "@/utils/nftx";
 
+import * as nftx from "@/orderbook/orders/nftx";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 
 export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData> => {
   const fillEvents: es.fills.Event[] = [];
 
   const fillInfos: fillUpdates.FillInfo[] = [];
+
+  const orders: nftx.OrderInfo[] = [];
 
   // Handle the events
   for (const { kind, baseEventParams, log } of events) {
@@ -34,6 +37,15 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           break;
         }
 
+        orders.push({
+          orderParams: {
+            pool: baseEventParams.address,
+            txHash: baseEventParams.txHash,
+            txTimestamp: baseEventParams.timestamp,
+          },
+          metadata: {},
+        });
+
         // Fetch all logs from the current transaction
         const { logs } = await utils.fetchTransactionLogs(baseEventParams.txHash);
 
@@ -42,10 +54,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           nftxUtils.isMint(log, baseEventParams.address)
         ).length;
 
-        // console.log({
-        //   mintEventsCount
-        // })
-
         if (mintEventsCount > 1) {
           break;
         }
@@ -53,10 +61,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         // Ensure there is a single `Swap` event for the same pool
         const swapEventsCount = logs.filter((log) => nftxUtils.isSwap(log)).length;
         const hasSwap = swapEventsCount > 1;
-
-        // const userStakeCount = logs.filter((log) =>
-        //   nftxUtils.isUserStake(log, baseEventParams.address)
-        // ).length;
 
         if (hasSwap) {
           for (const log of logs) {
@@ -140,13 +144,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           }
         }
 
-        // console.log({
-        //   tokenIds,
-        //   amounts,
-        //   userStakeCount,
-        //   baseEventParams,
-        // });
-
         break;
       }
 
@@ -159,6 +156,15 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           // Skip any failed attempts to get the pool details
           break;
         }
+
+        orders.push({
+          orderParams: {
+            pool: baseEventParams.address,
+            txHash: baseEventParams.txHash,
+            txTimestamp: baseEventParams.timestamp,
+          },
+          metadata: {},
+        });
 
         // Fetch all logs from the current transaction
         const { logs } = await utils.fetchTransactionLogs(baseEventParams.txHash);
@@ -264,7 +270,11 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
   return {
     fillEvents,
-
     fillInfos,
+
+    orders: orders.map((info) => ({
+      kind: "nftx",
+      info,
+    })),
   };
 };
