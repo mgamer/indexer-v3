@@ -175,11 +175,11 @@ if (config.doBackgroundWork) {
                 }
 
                 case "sudoswap": {
-                  const order = new Sdk.Sudoswap.Order(config.chainId, result.raw_data);
-
                   try {
                     // TODO: Add support for bid validation
                     if (result.side === "sell") {
+                      const order = new Sdk.Sudoswap.Order(config.chainId, result.raw_data);
+
                       const [, contract, tokenId] = result.token_set_id.split(":");
                       const balance = await commonHelpers.getNftBalance(
                         contract,
