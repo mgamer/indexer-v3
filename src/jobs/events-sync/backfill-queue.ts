@@ -1,7 +1,7 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { logger } from "@/common/logger";
-import { BullMQBulkJob, redis } from "@/common/redis";
+import { BullMQBulkJob, getMemUsage, redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { EventDataKind } from "@/events-sync/data";
@@ -33,11 +33,14 @@ if (config.doBackgroundWork && config.doEventsSyncBackfill) {
       const { fromBlock, toBlock, backfill, syncDetails } = job.data;
 
       const maxMemUsage = 1073741824 * 20; // Max size in GB
-      const memoryInfo = await redis.info("memory");
-      const usedMemory = memoryInfo.match(/used_memory:\d+/);
-      if (usedMemory && _.toInteger(_.split(usedMemory[0], ":")[1]) > maxMemUsage) {
-        logger.info(QUEUE_NAME, `Max memory reached ${usedMemory[0]}, requeue job ${job.id}`);
-        await addToQueue(fromBlock, toBlock, _.merge(job.opts, { delay: 1000 * 60 }));
+      const currentMemUsage = await getMemUsage();
+      if (currentMemUsage > maxMemUsage) {
+        const delay = _.random(1000 * 60, 1000 * 60 * 5);
+        logger.info(
+          QUEUE_NAME,
+          `Max memory reached ${currentMemUsage}, delay job ${job.id} for ${delay}`
+        );
+        await addToQueue(fromBlock, toBlock, _.merge(job.opts, { delay }));
         return;
       }
 
