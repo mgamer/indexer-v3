@@ -1,13 +1,13 @@
 import { AddressZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
-import * as Sdk from "@reservoir0x/sdk";
+// import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
 
 import { idb, pgp, redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { baseProvider } from "@/common/provider";
+// import { baseProvider } from "@/common/provider";
 import { bn, toBuffer } from "@/common/utils";
-import { config } from "@/config/index";
+// import { config } from "@/config/index";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { Sources } from "@/models/sources";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
@@ -51,7 +51,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         throw new Error("Could not fetch pool details");
       }
 
-      // const poolPrice = await nftx.getPoolPrice(orderParams.pool, 1);
+      const poolPrice = await nftx.getPoolPrice(orderParams.pool, 1);
       // const poolPrice1 = await nftx.getPoolPrice(orderParams.pool, 3);
       // const poolPrice2 = await nftx.getPoolPrice(orderParams.pool, 10);
       // console.log("orderParams", orderParams, pool, poolPrice, poolPrice1, poolPrice2);
@@ -100,7 +100,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle buy orders
       try {
-        const { sell, buy, currency } = poolPrice;
+        const { buy, currency } = poolPrice;
         const id = getOrderId(orderParams.pool, "buy");
         if (buy) {
           // Handle: prices

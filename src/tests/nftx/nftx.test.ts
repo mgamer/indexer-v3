@@ -1,14 +1,14 @@
 import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 import { baseProvider } from "@/common/provider";
-import { getEventsFromTx, wait } from "../utils/test";
+import { getEventsFromTx } from "../utils/test";
 import { handleEvents } from "@/events-sync/handlers/nftx";
 
 import { Interface } from "@ethersproject/abi";
 import { Contract } from "@ethersproject/contracts";
 import { formatEther, parseEther } from "@ethersproject/units";
 import { logger } from "@/common/logger";
-import { OrderInfo } from "@/orderbook/orders/nftx";
+// import { OrderInfo } from "@/orderbook/orders/nftx";
 import { processOnChainData } from "@/events-sync/handlers/utils";
 
 async function getNFTxPoolPrice(id: string, type: string) {
