@@ -80,7 +80,7 @@ if (config.doBackgroundWork) {
               txIndex: result.tx_index,
               logIndex: result.log_index,
               timestamp: result.timestamp,
-              batchIndex: result.batchIndex,
+              batchIndex: result.batch_index,
             };
             const from = fromBuffer(result.from);
             const tokenId = result.token_id;
