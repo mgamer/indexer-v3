@@ -32,7 +32,7 @@ if (config.doBackgroundWork && config.doEventsSyncBackfill) {
     async (job: Job) => {
       const { fromBlock, toBlock, backfill, syncDetails } = job.data;
 
-      const maxMemUsage = 1073741824 * 25;
+      const maxMemUsage = 1073741824 * 20;
       const memoryInfo = await redis.info("memory");
       const usedMemory = memoryInfo.match(/used_memory:\d+/);
       if (usedMemory && _.toInteger(usedMemory[0]) > maxMemUsage) {
