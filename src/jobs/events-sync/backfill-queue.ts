@@ -6,6 +6,7 @@ import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { EventDataKind } from "@/events-sync/data";
 import { syncEvents } from "@/events-sync/index";
+import _ from "lodash";
 
 const QUEUE_NAME = "events-sync-backfill";
 
@@ -31,6 +32,15 @@ if (config.doBackgroundWork && config.doEventsSyncBackfill) {
     async (job: Job) => {
       const { fromBlock, toBlock, backfill, syncDetails } = job.data;
 
+      const maxMemUsage = 1073741824 * 25;
+      const memoryInfo = await redis.info("memory");
+      const usedMemory = memoryInfo.match(/used_memory:\d+/);
+      if (usedMemory && _.toInteger(usedMemory[0]) > maxMemUsage) {
+        logger.info(QUEUE_NAME, `Max memory reached ${usedMemory[0]}`);
+        await addToQueue(fromBlock, toBlock, _.merge(job.opts, { delay: 1000 * 60 }));
+        return;
+      }
+
       try {
         logger.info(QUEUE_NAME, `Events backfill syncing block range [${fromBlock}, ${toBlock}]`);
 
@@ -51,6 +61,7 @@ export const addToQueue = async (
   fromBlock: number,
   toBlock: number,
   options?: {
+    delay?: number;
     blocksPerBatch?: number;
     prioritized?: boolean;
     backfill?: boolean;
@@ -88,6 +99,7 @@ export const addToQueue = async (
       opts: {
         priority: prioritized ? 1 : undefined,
         jobId: `${from}-${to}`,
+        delay: options?.delay,
       },
     });
   }
