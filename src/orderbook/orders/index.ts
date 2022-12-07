@@ -488,11 +488,11 @@ export const generateListingDetailsV6 = (
       };
     }
 
-    case "blur": {
+    case "sudoswap": {
       return {
-        kind: "blur",
+        kind: "sudoswap",
         ...common,
-        order: new Sdk.Blur.Order(config.chainId, order.rawData),
+        order: new Sdk.Sudoswap.Order(config.chainId, order.rawData),
       };
     }
 
