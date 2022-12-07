@@ -1,7 +1,6 @@
 import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 
-import { logger } from "@/common/logger";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
@@ -243,7 +242,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
       const totalAmount = mints
         .map(({ amount }) => amount)
         .reduce((a, b) => bn(a).add(b).toString());
-      logger.info("debug", `tx hash = ${tx.hash}, tx value = ${tx.value}`);
       const price = bn(tx.value).div(totalAmount).toString();
       const currency = Sdk.Common.Addresses.Eth[config.chainId];
 
