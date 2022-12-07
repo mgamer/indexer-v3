@@ -120,6 +120,10 @@ if (config.doBackgroundWork) {
               return;
             }
 
+            logger.info(
+              "debug",
+              `tx hash = ${tx.hash}, tx value = ${tx.value}, total amount = ${totalAmount}`
+            );
             const price = bn(tx.value).div(totalAmount).toString();
             const currency = Sdk.Common.Addresses.Eth[config.chainId];
 
