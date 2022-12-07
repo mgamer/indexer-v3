@@ -4,6 +4,7 @@ import { config } from "@/config/index";
 import { BaseEventParams } from "@/events-sync/parser";
 import * as nftTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/nft-transfers";
 import _ from "lodash";
+import { logger } from "@/common/logger";
 
 export type Event = {
   kind: "erc721" | "erc1155" | "cryptopunks" | "cryptokitties";
@@ -257,7 +258,12 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
       // on the events to have been written to the database at the time
       // they get to run and we have no way to easily enforce this when
       // using the write buffer.
-      await idb.none(pgp.helpers.concat(queries));
+      try {
+        await idb.none(pgp.helpers.concat(queries));
+      } catch (error) {
+        logger.error("nft-transfer-event", pgp.helpers.concat(queries));
+        throw error;
+      }
     }
   }
 };
