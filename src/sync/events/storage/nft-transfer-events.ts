@@ -234,36 +234,38 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   if (tokenValues.length) {
     const queries: string[] = [];
 
-    if (!config.liquidityOnly) {
-      const columns = new pgp.helpers.ColumnSet(["contract", "token_id", "minted_timestamp"], {
-        table: "tokens",
-      });
-
-      queries.push(`
-        INSERT INTO "tokens" (
-          "contract",
-          "token_id",
-          "minted_timestamp"
-        ) VALUES ${pgp.helpers.values(tokenValues, columns)}
-        ON CONFLICT (contract, token_id) DO UPDATE SET minted_timestamp = EXCLUDED.minted_timestamp WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
-      `);
-    } else {
-      const columns = new pgp.helpers.ColumnSet(
-        ["collection_id", "contract", "token_id", "minted_timestamp"],
-        {
+    for (const tokenValuesChunk of _.chunk(tokenValues, 25)) {
+      if (!config.liquidityOnly) {
+        const columns = new pgp.helpers.ColumnSet(["contract", "token_id", "minted_timestamp"], {
           table: "tokens",
-        }
-      );
+        });
 
-      queries.push(`
-        INSERT INTO "tokens" (
-          "collection_id",
-          "contract",
-          "token_id",
-          "minted_timestamp"
-        ) VALUES ${pgp.helpers.values(tokenValues, columns)}
-        ON CONFLICT (contract, token_id) DO UPDATE SET minted_timestamp = EXCLUDED.minted_timestamp WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
-      `);
+        queries.push(`
+          INSERT INTO "tokens" (
+            "contract",
+            "token_id",
+            "minted_timestamp"
+          ) VALUES ${pgp.helpers.values(tokenValuesChunk, columns)}
+          ON CONFLICT (contract, token_id) DO UPDATE SET minted_timestamp = EXCLUDED.minted_timestamp WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
+        `);
+      } else {
+        const columns = new pgp.helpers.ColumnSet(
+          ["collection_id", "contract", "token_id", "minted_timestamp"],
+          {
+            table: "tokens",
+          }
+        );
+
+        queries.push(`
+          INSERT INTO "tokens" (
+            "collection_id",
+            "contract",
+            "token_id",
+            "minted_timestamp"
+          ) VALUES ${pgp.helpers.values(tokenValuesChunk, columns)}
+          ON CONFLICT (contract, token_id) DO UPDATE SET minted_timestamp = EXCLUDED.minted_timestamp WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
+        `);
+      }
     }
 
     if (backfill) {
