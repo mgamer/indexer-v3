@@ -51,8 +51,10 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }[] = [];
 
   for (const event of events) {
-    const ownerFrom = `${event.from}:${event.baseEventParams.address}:${event.tokenId}`;
-    const ownerTo = `${event.to}:${event.baseEventParams.address}:${event.tokenId}`;
+    const contractId = event.baseEventParams.address.toString();
+
+    const ownerFrom = `${event.from}:${contractId}:${event.tokenId}`;
+    const ownerTo = `${event.to}:${contractId}:${event.tokenId}`;
 
     // Once we already update an owner create new array in order to split the update queries later
     if (_.size(transferValues) >= 50 || uniqueOwners.has(ownerFrom) || uniqueOwners.has(ownerTo)) {
@@ -79,8 +81,9 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
       amount: event.amount,
     });
 
-    const contractId = event.baseEventParams.address.toString();
     if (!uniqueContracts.has(contractId)) {
+      uniqueContracts.add(contractId);
+
       contractValues.push({
         address: toBuffer(event.baseEventParams.address),
         kind: event.kind,
