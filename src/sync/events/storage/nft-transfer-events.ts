@@ -104,7 +104,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
     uniqueOwnersTransferValues.push(transferValues); // Add the last batch of transfer values
   }
 
-  const nftTransferQueries: string[] = [];
+  let nftTransferQueries: string[] = [];
   const queries: string[] = [];
 
   if (uniqueOwnersTransferValues.length) {
@@ -181,19 +181,21 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           "amount" = "nft_balances"."amount" + "excluded"."amount", 
           "acquired_at" = COALESCE(GREATEST("excluded"."acquired_at", "nft_balances"."acquired_at"), "nft_balances"."acquired_at")
       `);
-    }
 
-    if (backfill) {
-      // When backfilling, use the write buffer to avoid deadlocks
-      for (const query of _.chunk(nftTransferQueries, 1000)) {
-        await nftTransfersWriteBuffer.addToQueue(pgp.helpers.concat(query));
+      if (backfill) {
+        // When backfilling, use the write buffer to avoid deadlocks
+        for (const query of _.chunk(nftTransferQueries, 1000)) {
+          await nftTransfersWriteBuffer.addToQueue(pgp.helpers.concat(query));
+        }
+      } else {
+        // Otherwise write directly since there might be jobs that depend
+        // on the events to have been written to the database at the time
+        // they get to run and we have no way to easily enforce this when
+        // using the write buffer.
+        await idb.none(pgp.helpers.concat(nftTransferQueries));
       }
-    } else {
-      // Otherwise write directly since there might be jobs that depend
-      // on the events to have been written to the database at the time
-      // they get to run and we have no way to easily enforce this when
-      // using the write buffer.
-      await idb.none(pgp.helpers.concat(nftTransferQueries));
+
+      nftTransferQueries = [];
     }
   }
 
