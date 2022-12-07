@@ -120,10 +120,20 @@ if (config.doBackgroundWork) {
               return;
             }
 
-            logger.info(
-              "debug",
-              `tx hash = ${tx.hash}, tx value = ${tx.value}, total amount = ${totalAmount}`
-            );
+            // Fix transaction values which contain decimals
+            if (tx.value.includes(".")) {
+              tx.value = tx.value.split(".")[0];
+              await idb.oneOrNone(
+                `
+                  UPDATE transactions SET value = $/value/ WHERE hash = $/hash/
+                `,
+                {
+                  hash: tx.hash,
+                  value: tx.value,
+                }
+              );
+            }
+
             const price = bn(tx.value).div(totalAmount).toString();
             const currency = Sdk.Common.Addresses.Eth[config.chainId];
 
