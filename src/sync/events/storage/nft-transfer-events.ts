@@ -4,7 +4,6 @@ import { config } from "@/config/index";
 import { BaseEventParams } from "@/events-sync/parser";
 import * as nftTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/nft-transfers";
 import _ from "lodash";
-import { logger } from "@/common/logger";
 
 export type Event = {
   kind: "erc721" | "erc1155" | "cryptopunks" | "cryptokitties";
@@ -57,7 +56,6 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
 
     // Once we already update an owner create new array in order to split the update queries later
     if (uniqueOwners.has(ownerFrom) || uniqueOwners.has(ownerTo)) {
-      logger.info("unique-owner", `ownerFrom=${ownerFrom}, ownerTo=${ownerTo}`);
       uniqueOwnersTransferValues.push(transferValues);
       transferValues = [];
       uniqueOwners.clear();
