@@ -1,10 +1,11 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
-import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
 import { acquireLock, redis, releaseLock } from "@/common/redis";
 import { config } from "@/config/index";
 import { idb } from "@/common/db";
+import { MqJobsDataManager } from "@/models/mq-jobs-data";
+import _ from "lodash";
 
 const QUEUE_NAME = "events-sync-nft-transfers-write";
 
@@ -28,7 +29,12 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { query } = job.data;
+      const { id } = job.data;
+      const { query } = await MqJobsDataManager.getJobData(id);
+
+      if (!query) {
+        return;
+      }
 
       try {
         if (await acquireLock(getLockName(), 60)) {
@@ -50,7 +56,10 @@ if (config.doBackgroundWork) {
     }
   );
 
-  worker.on("completed", async () => {
+  worker.on("completed", async (job) => {
+    const { id } = job.data;
+    await MqJobsDataManager.deleteJobData(id);
+
     await releaseLock(getLockName());
   });
 
@@ -64,5 +73,6 @@ export const getLockName = () => {
 };
 
 export const addToQueue = async (query: string) => {
-  await queue.add(randomUUID(), { query });
+  const ids = await MqJobsDataManager.addJobData(QUEUE_NAME, { query });
+  await Promise.all(_.map(ids, async (id) => await queue.add(id, { id })));
 };
