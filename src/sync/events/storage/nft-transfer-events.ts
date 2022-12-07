@@ -108,8 +108,6 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
     uniqueOwnersTransferValues.push(transferValues); // Add the last batch of transfer values
   }
 
-  const queries: string[] = [];
-
   if (uniqueOwnersTransferValues.length) {
     for (const transferEvents of uniqueOwnersTransferValues) {
       const nftTransferQueries: string[] = [];
@@ -200,6 +198,8 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }
 
   if (contractValues.length) {
+    const queries: string[] = [];
+
     const columns = new pgp.helpers.ColumnSet(["address", "kind"], {
       table: "contracts",
     });
@@ -211,9 +211,29 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
       ) VALUES ${pgp.helpers.values(contractValues, columns)}
       ON CONFLICT DO NOTHING
     `);
+
+    if (backfill) {
+      // When backfilling, use the write buffer to avoid deadlocks
+      for (const query of _.chunk(queries, 1000)) {
+        await nftTransfersWriteBuffer.addToQueue(pgp.helpers.concat(query));
+      }
+    } else {
+      // Otherwise write directly since there might be jobs that depend
+      // on the events to have been written to the database at the time
+      // they get to run and we have no way to easily enforce this when
+      // using the write buffer.
+      try {
+        await idb.none(pgp.helpers.concat(queries));
+      } catch (error) {
+        logger.error("nft-transfer-event", pgp.helpers.concat(queries));
+        throw error;
+      }
+    }
   }
 
   if (tokenValues.length) {
+    const queries: string[] = [];
+
     if (!config.liquidityOnly) {
       const columns = new pgp.helpers.ColumnSet(["contract", "token_id", "minted_timestamp"], {
         table: "tokens",
@@ -245,9 +265,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
         ON CONFLICT (contract, token_id) DO UPDATE SET minted_timestamp = EXCLUDED.minted_timestamp WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
       `);
     }
-  }
 
-  if (queries.length) {
     if (backfill) {
       // When backfilling, use the write buffer to avoid deadlocks
       for (const query of _.chunk(queries, 1000)) {
