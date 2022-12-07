@@ -68,9 +68,6 @@ export const getExecuteSellV6Options: RouteOptions = {
         .description(
           "Quantity of tokens user is selling. Only compatible when selling a single ERC1155 token. Example: `5`"
         ),
-      currency: Joi.string()
-        .pattern(regex.address)
-        .default(Sdk.Common.Addresses.Weth[config.chainId]),
       source: Joi.string()
         .lowercase()
         .pattern(regex.domain)
@@ -92,6 +89,7 @@ export const getExecuteSellV6Options: RouteOptions = {
     schema: Joi.object({
       steps: Joi.array().items(
         Joi.object({
+          id: Joi.string().required(),
           action: Joi.string().required(),
           description: Joi.string().required(),
           kind: Joi.string().valid("transaction").required(),
@@ -181,7 +179,6 @@ export const getExecuteSellV6Options: RouteOptions = {
               AND orders.approval_status = 'approved'
               AND orders.quantity_remaining >= $/quantity/
               AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
-              AND orders.currency = $/currency/
             LIMIT 1
           `,
           {
@@ -189,7 +186,6 @@ export const getExecuteSellV6Options: RouteOptions = {
             contract: toBuffer(contract),
             tokenId,
             quantity: payload.quantity ?? 1,
-            currency: toBuffer(payload.currency),
           }
         );
       } else {
@@ -219,7 +215,6 @@ export const getExecuteSellV6Options: RouteOptions = {
               AND orders.approval_status = 'approved'
               AND orders.quantity_remaining >= $/quantity/
               AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
-              AND orders.currency = $/currency/
             ORDER BY orders.value DESC
             LIMIT 1
           `,
@@ -227,7 +222,6 @@ export const getExecuteSellV6Options: RouteOptions = {
             contract: toBuffer(contract),
             tokenId,
             quantity: payload.quantity ?? 1,
-            currency: toBuffer(payload.currency),
           }
         );
       }
@@ -260,7 +254,7 @@ export const getExecuteSellV6Options: RouteOptions = {
           tokenId,
           quantity: payload.quantity ?? 1,
           source: sourceId ? sources.get(sourceId)?.domain ?? null : null,
-          currency: payload.currency,
+          currency: fromBuffer(orderResult.currency),
           quote: formatPrice(
             totalPrice,
             (await getCurrency(fromBuffer(orderResult.currency))).decimals
@@ -298,6 +292,7 @@ export const getExecuteSellV6Options: RouteOptions = {
 
       // Set up generic filling steps
       const steps: {
+        id: string;
         action: string;
         description: string;
         kind: string;
@@ -307,6 +302,7 @@ export const getExecuteSellV6Options: RouteOptions = {
         }[];
       }[] = [
         {
+          id: "nft-approval",
           action: "Approve NFT contract",
           description:
             "Each NFT collection you want to trade requires a one-time approval transaction",
@@ -314,6 +310,7 @@ export const getExecuteSellV6Options: RouteOptions = {
           items: [],
         },
         {
+          id: "sale",
           action: "Accept offer",
           description: "To sell this item you must confirm the transaction and pay the gas fee",
           kind: "transaction",

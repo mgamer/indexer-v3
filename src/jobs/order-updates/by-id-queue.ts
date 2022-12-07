@@ -1,7 +1,6 @@
-import _ from "lodash";
-
 import { HashZero } from "@ethersproject/constants";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
+import _ from "lodash";
 
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";

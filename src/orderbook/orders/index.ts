@@ -15,6 +15,7 @@ export * as element from "@/orderbook/orders/element";
 export * as infinity from "@/orderbook/orders/infinity";
 export * as blur from "@/orderbook/orders/blur";
 export * as rarible from "@/orderbook/orders/rarible";
+export * as manifold from "@/orderbook/orders/manifold";
 
 // Imports
 import * as Sdk from "@reservoir0x/sdk";
@@ -52,7 +53,8 @@ export type OrderKind =
   | "nftx"
   | "blur"
   | "infinity"
-  | "forward";
+  | "forward"
+  | "manifold";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -109,6 +111,9 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("blur.io");
       case "infinity":
         return sources.getOrInsert("infinity.xyz"); // TODO - what needs to be done to add infinity to source? do I update the json file?
+      case "manifold":
+        return sources.getOrInsert("manifold.xyz");
+
       case "mint": {
         if (address && mintsSources.has(address)) {
           return sources.getOrInsert(mintsSources.get(address)!);
@@ -501,6 +506,22 @@ export const generateListingDetailsV6 = (
       };
     }
 
+    case "sudoswap": {
+      return {
+        kind: "sudoswap",
+        ...common,
+        order: new Sdk.Sudoswap.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "manifold": {
+      return {
+        kind: "manifold",
+        ...common,
+        order: new Sdk.Manifold.Order(config.chainId, order.rawData),
+      };
+    }
+
     default: {
       throw new Error("Unsupported order kind");
     }
@@ -648,6 +669,15 @@ export const generateBidDetailsV6 = async (
       const sdkOrder = new Sdk.Forward.Order(config.chainId, order.rawData);
       return {
         kind: "forward",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
+    case "blur": {
+      const sdkOrder = new Sdk.Blur.Order(config.chainId, order.rawData);
+      return {
+        kind: "blur",
         ...common,
         order: sdkOrder,
       };

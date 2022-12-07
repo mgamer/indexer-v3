@@ -272,6 +272,15 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         // Keep track of the "buy" trade
         trades.buy.set(`${txHash}-${address}`, tradeRank + 1);
 
+        orders.push({
+          orderParams: {
+            pool: baseEventParams.address,
+            txHash: baseEventParams.txHash,
+            txTimestamp: baseEventParams.timestamp,
+          },
+          metadata: {},
+        });
+
         break;
       }
 
@@ -419,20 +428,10 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         break;
       }
 
-      case "sudoswap-token-deposit": {
-        orders.push({
-          orderParams: {
-            pool: baseEventParams.address,
-            txHash: baseEventParams.txHash,
-            txTimestamp: baseEventParams.timestamp,
-          },
-          metadata: {},
-        });
-
-        break;
-      }
-
-      case "sudoswap-token-withdrawal": {
+      case "sudoswap-token-deposit":
+      case "sudoswap-token-withdrawal":
+      case "sudoswap-spot-price-update":
+      case "sudoswap-delta-update": {
         orders.push({
           orderParams: {
             pool: baseEventParams.address,

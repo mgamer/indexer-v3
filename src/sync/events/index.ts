@@ -163,6 +163,11 @@ export const syncEvents = async (
         backfill,
       },
       {
+        kind: "cryptokitties",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("cryptokitties")),
+        backfill,
+      },
+      {
         kind: "element",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("element")),
         backfill,
@@ -276,6 +281,11 @@ export const syncEvents = async (
             // To properly validate bids, we need some additional events
             kind === "erc20-transfer"
         ),
+      },
+      {
+        kind: "manifold",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("manifold")),
+        backfill,
       },
     ]);
 
