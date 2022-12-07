@@ -114,7 +114,6 @@ describe("Blur", () => {
     );
 
     await wait(20 * 1000);
-    // console.log("orderInDb", orderInDb);
     expect(orderInDb).not.toBe(null);
   });
 
@@ -137,7 +136,6 @@ describe("Blur", () => {
     );
     const events = await getEventsFromTx(tx);
     const result = await handleEvents(events);
-    // console.log("result", result)
     expect(result.cancelEventsOnChain?.length).toEqual(1);
   });
 
@@ -248,9 +246,18 @@ describe("Blur", () => {
       ],
     },
     {
-      name: "double-count",
-      tx: "0x0eb446f36df311eee7c3ecb28db68321aec6b23dd70fd03e2e40031387d2f724",
-      fills: [],
+      name: "missing-sales",
+      tx: "0x135291243e196123e4526788c871e66fc6325c729b3bbe7eaf7c8488f8dd94d7",
+      fills: [
+        {
+          contract: "0x40cf6a63c35b6886421988871f6b74cc86309940",
+          tokenId: "1749",
+          orderSide: "buy",
+          taker: "0xb2e7f7cf519020c8b6ff32a088fec95b03ccc715",
+          maker: "0x0ef4db30f76bcbd1ee7ddbb056e699b69dfb8eae",
+          currency: "0x0000000000a39bb272e79075ade125fd351887ac",
+        },
+      ],
     },
   ];
 

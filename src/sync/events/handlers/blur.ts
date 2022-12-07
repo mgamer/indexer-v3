@@ -38,8 +38,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const buyHash = args.buyHash.toLowerCase();
 
         const txHash = baseEventParams.txHash;
-        const txTrace = await utils.fetchTransactionTrace(txHash);
 
+        const txTrace = await utils.fetchTransactionTrace(txHash);
         if (!txTrace) {
           // Skip any failed attempts to get the trace
           break;
@@ -97,8 +97,13 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         const currency = sell.paymentToken.toLowerCase();
         const currencyPrice = sell.price.div(sell.amount).toString();
+        const isBlurETH = currency ==  "0x0000000000a39bb272e79075ade125fd351887ac";
+
+        // Hardcode as WETH
+        const currencyToPrice = isBlurETH ? Sdk.Common.Addresses.Weth[config.chainId] : currency;
+
         const priceData = await getUSDAndNativePrices(
-          currency,
+          currencyToPrice,
           currencyPrice,
           baseEventParams.timestamp
         );
