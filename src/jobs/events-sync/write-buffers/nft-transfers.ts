@@ -31,8 +31,9 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { id } = job.data;
 
-      if (await acquireLock(getLockName(), 60)) {
-        job.data.acquireLock = true;
+      const lockName = getLockName();
+      if (await acquireLock(lockName, 60)) {
+        job.data.acquireLock = lockName;
         const { query } = await MqJobsDataManager.getJobData(id);
 
         if (!query) {
@@ -66,7 +67,7 @@ if (config.doBackgroundWork) {
       const { id } = job.data;
       await MqJobsDataManager.deleteJobData(id);
 
-      await releaseLock(getLockName());
+      await releaseLock(job.data.acquireLock);
     }
   });
 
