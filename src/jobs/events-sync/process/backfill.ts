@@ -30,7 +30,7 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job) => {
       const { id } = job.data;
-      const info = (await MqJobsDataManager.getJobData(id)) as EventsInfo;
+      const info = ((await MqJobsDataManager.getJobData(id)) as EventsInfo) || {};
 
       if (!info) {
         return;
