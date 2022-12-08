@@ -54,7 +54,6 @@ if (config.doBackgroundWork) {
           ORDER BY
             fill_events_2.block DESC,
             fill_events_2.log_index DESC
-          LIMIT $/limit/
         `,
         {
           startBlock: block,
@@ -179,9 +178,9 @@ if (config.doBackgroundWork) {
 
   if (config.chainId === 1) {
     redlock
-      .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
+      .acquire([`${QUEUE_NAME}-lock-2`], 60 * 60 * 24 * 30 * 1000)
       .then(async () => {
-        await addToQueue(14860000);
+        await addToQueue(16140000);
       })
       .catch(() => {
         // Skip on any errors
