@@ -33,6 +33,7 @@ import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsync
 import * as arweaveSyncBackfill from "@/jobs/arweave-sync/backfill-queue";
 import * as arweaveSyncRealtime from "@/jobs/arweave-sync/realtime-queue";
 
+import * as backfillBlurSales from "@/jobs/backfill/backfill-blur-sales";
 import * as backfillMints from "@/jobs/backfill/backfill-mints";
 
 import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
@@ -111,6 +112,7 @@ export const allJobQueues = [
   arweaveSyncBackfill.queue,
   arweaveSyncRealtime.queue,
 
+  backfillBlurSales.queue,
   backfillMints.queue,
 
   currencies.queue,
