@@ -37,7 +37,10 @@ if (config.doBackgroundWork) {
           await addToQueue(query);
         }
       } catch (error) {
-        logger.error(QUEUE_NAME, `Failed flushing nft transfer events to the database: ${error}`);
+        logger.error(
+          QUEUE_NAME,
+          `Failed flushing nft transfer events to the database: ${query} error=${error}`
+        );
         throw error;
       }
     },
