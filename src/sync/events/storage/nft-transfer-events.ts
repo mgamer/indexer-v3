@@ -184,20 +184,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           "acquired_at" = COALESCE(GREATEST("excluded"."acquired_at", "nft_balances"."acquired_at"), "nft_balances"."acquired_at")
       `);
 
-      if (backfill) {
-        // When backfilling, use the write buffer to avoid deadlocks
-        await nftTransfersWriteBuffer.addToQueue(pgp.helpers.concat(nftTransferQueries));
-      } else {
-        // Otherwise write directly since there might be jobs that depend
-        // on the events to have been written to the database at the time
-        // they get to run and we have no way to easily enforce this when
-        // using the write buffer.
-        try {
-          await idb.none(pgp.helpers.concat(nftTransferQueries));
-        } catch (error) {
-          await nftTransfersWriteBuffer.addToQueue(pgp.helpers.concat(nftTransferQueries));
-        }
-      }
+      await insertQueries(nftTransferQueries, backfill);
     }
   }
 
@@ -216,23 +203,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
       ON CONFLICT DO NOTHING
     `);
 
-    if (backfill) {
-      // When backfilling, use the write buffer to avoid deadlocks
-      for (const query of _.chunk(queries, 1000)) {
-        await nftTransfersWriteBuffer.addToQueue(pgp.helpers.concat(query));
-      }
-    } else {
-      // Otherwise write directly since there might be jobs that depend
-      // on the events to have been written to the database at the time
-      // they get to run and we have no way to easily enforce this when
-      // using the write buffer.
-      try {
-        await idb.none(pgp.helpers.concat(queries));
-      } catch (error) {
-        await nftTransfersWriteBuffer.addToQueue(pgp.helpers.concat(queries));
-        logger.error("nft-transfer-event", pgp.helpers.concat(queries));
-      }
-    }
+    await insertQueries(queries, backfill);
   }
 
   if (tokenValues.length) {
@@ -271,26 +242,30 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
         `);
       }
 
-      if (backfill) {
-        // When backfilling, use the write buffer to avoid deadlocks
-        for (const query of _.chunk(queries, 1000)) {
-          await nftTransfersWriteBuffer.addToQueue(pgp.helpers.concat(query));
-        }
-      } else {
-        // Otherwise write directly since there might be jobs that depend
-        // on the events to have been written to the database at the time
-        // they get to run and we have no way to easily enforce this when
-        // using the write buffer.
-        try {
-          await idb.none(pgp.helpers.concat(queries));
-        } catch (error) {
-          await nftTransfersWriteBuffer.addToQueue(pgp.helpers.concat(queries));
-          logger.error("nft-transfer-event", pgp.helpers.concat(queries));
-        }
-      }
+      await insertQueries(queries, backfill);
     }
   }
 };
+
+async function insertQueries(queries: string[], backfill: boolean) {
+  if (backfill) {
+    // When backfilling, use the write buffer to avoid deadlocks
+    for (const query of _.chunk(queries, 1000)) {
+      await nftTransfersWriteBuffer.addToQueue(pgp.helpers.concat(query));
+    }
+  } else {
+    // Otherwise write directly since there might be jobs that depend
+    // on the events to have been written to the database at the time
+    // they get to run and we have no way to easily enforce this when
+    // using the write buffer.
+    try {
+      await idb.none(pgp.helpers.concat(queries));
+    } catch (error) {
+      await nftTransfersWriteBuffer.addToQueue(pgp.helpers.concat(queries));
+      logger.error("nft-transfer-event", pgp.helpers.concat(queries));
+    }
+  }
+}
 
 export const removeEvents = async (block: number, blockHash: string) => {
   // Atomically delete the transfer events and revert balance updates
