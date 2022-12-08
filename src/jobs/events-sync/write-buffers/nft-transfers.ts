@@ -77,7 +77,7 @@ if (config.doBackgroundWork) {
 }
 
 export const getLockName = () => {
-  return `${QUEUE_NAME}-lock-${_.random(1, 2)}`;
+  return `${QUEUE_NAME}-lock-${_.random(1, 4)}`;
 };
 
 export const addToQueue = async (query: string) => {
