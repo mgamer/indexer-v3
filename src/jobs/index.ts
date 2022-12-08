@@ -56,6 +56,7 @@ import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
 
 import * as exportData from "@/jobs/data-export/export-data";
 
+import * as eventsSyncProcessResyncRequest from "@/jobs/events-sync/process-resync-request-queue";
 import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
 import * as eventsSyncBlockCheck from "@/jobs/events-sync/block-check-queue";
 import * as eventsSyncBackfillProcess from "@/jobs/events-sync/process/backfill";
@@ -134,6 +135,7 @@ export const allJobQueues = [
 
   exportData.queue,
 
+  eventsSyncProcessResyncRequest.queue,
   eventsSyncBackfill.queue,
   eventsSyncBlockCheck.queue,
   eventsSyncBackfillProcess.queue,
