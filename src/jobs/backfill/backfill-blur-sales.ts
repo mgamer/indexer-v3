@@ -46,7 +46,8 @@ if (config.doBackgroundWork) {
             fill_events_2.batch_index,
             fill_events_2.order_side,
             fill_events_2.maker,
-            fill_events_2.taker
+            fill_events_2.taker,
+            fill_events_2.token_id
           FROM fill_events_2
           WHERE fill_events_2.block < $/startBlock/
             AND fill_events_2.block > $/endBlock/
@@ -129,7 +130,7 @@ if (config.doBackgroundWork) {
         if (realOrderSide !== currOrderSide || realMaker !== currMaker || realTaker !== currTaker) {
           logger.info(
             "debug",
-            `Updating blur sale: txHash=${txHash} orderSide=${realOrderSide}(${currOrderSide}), maker=${realMaker}(${currMaker}), taker=${realTaker}(${currTaker})`
+            `Updating blur sale: txHash=${txHash} tokenId=${result.token_id} orderSide=${realOrderSide}(${currOrderSide}), maker=${realMaker}(${currMaker}), taker=${realTaker}(${currTaker})`
           );
           values.push({
             tx_hash: result.tx_hash,
