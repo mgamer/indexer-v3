@@ -30,21 +30,26 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { id } = job.data;
-      const { query } = await MqJobsDataManager.getJobData(id);
 
-      if (!query) {
-        return;
-      }
+      if (await acquireLock(getLockName(), 60)) {
+        job.data.acquireLock = true;
+        const { query } = await MqJobsDataManager.getJobData(id);
 
-      try {
-        if (await acquireLock(getLockName(), 60)) {
-          await idb.none(query);
-        } else {
-          await addToQueue(query);
+        if (!query) {
+          return;
         }
-      } catch (error) {
-        logger.error(QUEUE_NAME, `Failed flushing nft transfer events to the database: ${error}`);
-        throw error;
+
+        try {
+          await idb.none(query);
+        } catch (error) {
+          logger.error(
+            QUEUE_NAME,
+            `Failed flushing nft transfer events to the database: ${query} error=${error}`
+          );
+          throw error;
+        }
+      } else {
+        await addToQueueByJobDataId(id);
       }
     },
     {
@@ -57,10 +62,12 @@ if (config.doBackgroundWork) {
   );
 
   worker.on("completed", async (job) => {
-    const { id } = job.data;
-    await MqJobsDataManager.deleteJobData(id);
+    if (job.data.acquireLock) {
+      const { id } = job.data;
+      await MqJobsDataManager.deleteJobData(id);
 
-    await releaseLock(getLockName());
+      await releaseLock(getLockName());
+    }
   });
 
   worker.on("error", (error) => {
@@ -75,4 +82,8 @@ export const getLockName = () => {
 export const addToQueue = async (query: string) => {
   const ids = await MqJobsDataManager.addJobData(QUEUE_NAME, { query });
   await Promise.all(_.map(ids, async (id) => await queue.add(id, { id })));
+};
+
+export const addToQueueByJobDataId = async (id: string) => {
+  await queue.add(id, { id });
 };
