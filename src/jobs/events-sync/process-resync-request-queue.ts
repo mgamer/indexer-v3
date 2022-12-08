@@ -15,7 +15,7 @@ export const queue = new Queue(QUEUE_NAME, {
       type: "exponential",
       delay: 10000,
     },
-    removeOnComplete: true,
+    removeOnComplete: 5,
     removeOnFail: 10000,
     timeout: 120000,
   },
