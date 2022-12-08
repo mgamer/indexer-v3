@@ -70,3 +70,7 @@ export const addToQueue = async (infos: EventsInfo[]) => {
     await queue.addBulk(jobs);
   }
 };
+
+export const addToQueueByJobDataId = async (id: string) => {
+  await queue.add(id, { id });
+};
