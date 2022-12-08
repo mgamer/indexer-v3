@@ -129,7 +129,7 @@ if (config.doBackgroundWork) {
         if (realOrderSide !== currOrderSide || realMaker !== currMaker || realTaker !== currTaker) {
           logger.info(
             "debug",
-            `Updating blur sale: txHash=${txHash} orderSide=${realOrderSide}, maker=${realMaker}, taker=${realTaker}`
+            `Updating blur sale: txHash=${txHash} orderSide=${realOrderSide}(${currOrderSide}), maker=${realMaker}(${currMaker}), taker=${realTaker}(${currTaker})`
           );
           values.push({
             tx_hash: result.tx_hash,
@@ -178,7 +178,7 @@ if (config.doBackgroundWork) {
 
   if (config.chainId === 1) {
     redlock
-      .acquire([`${QUEUE_NAME}-lock-2`], 60 * 60 * 24 * 30 * 1000)
+      .acquire([`${QUEUE_NAME}-lock-3`], 60 * 60 * 24 * 30 * 1000)
       .then(async () => {
         await addToQueue(16140000);
       })
