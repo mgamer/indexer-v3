@@ -32,6 +32,7 @@ if (config.doBackgroundWork) {
 
       try {
         if (await acquireLock(getLockName(), 60)) {
+          job.data.acquireLock = true;
           await idb.none(query);
         } else {
           await addToQueue(query);
@@ -53,8 +54,10 @@ if (config.doBackgroundWork) {
     }
   );
 
-  worker.on("completed", async () => {
-    await releaseLock(getLockName());
+  worker.on("completed", async (job) => {
+    if (job.data.acquireLock) {
+      await releaseLock(getLockName());
+    }
   });
 
   worker.on("error", (error) => {
