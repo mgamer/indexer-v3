@@ -129,7 +129,7 @@ if (config.doBackgroundWork) {
         if (realOrderSide !== currOrderSide || realMaker !== currMaker || realTaker !== currTaker) {
           logger.info(
             "debug",
-            `Updating blur sale: orderSide=${realOrderSide}, maker=${realMaker}, taker=${realTaker}`
+            `Updating blur sale: txHash=${txHash} orderSide=${realOrderSide}, maker=${realMaker}, taker=${realTaker}`
           );
           values.push({
             tx_hash: result.tx_hash,
