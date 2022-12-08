@@ -6,7 +6,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import { Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
-import { idb } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis, redlock } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
@@ -143,32 +143,31 @@ if (config.doBackgroundWork) {
         }
       }
 
-      // const columns = new pgp.helpers.ColumnSet(
-      //   ["tx_hash", "log_index", "batch_index", "order_side", "maker", "taker"],
-      //   {
-      //     table: "fill_events_2",
-      //   }
-      // );
+      const columns = new pgp.helpers.ColumnSet(
+        ["tx_hash", "log_index", "batch_index", "order_side", "maker", "taker"],
+        {
+          table: "fill_events_2",
+        }
+      );
       if (values.length) {
-        // await idb.none(
-        //   `
-        //     UPDATE fill_events_2 SET
-        //       order_side = x.order_side::order_side_t,
-        //       maker = x.maker::bytea,
-        //       taker = x.taker::bytea
-        //     FROM (
-        //       VALUES ${pgp.helpers.values(values, columns)}
-        //     ) AS x(tx_hash, log_index, batch_index, order_side, maker, taker)
-        //     WHERE fill_events_2.tx_hash = x.tx_hash::BYTEA
-        //       AND fill_events_2.log_index = x.log_index::INT
-        //       AND fill_events_2.batch_index = x.batch_index::INT
-        //   `
-        // );
+        await idb.none(
+          `
+            UPDATE fill_events_2 SET
+              order_side = x.order_side::order_side_t,
+              maker = x.maker::bytea,
+              taker = x.taker::bytea,
+              updated_at = now()
+            FROM (
+              VALUES ${pgp.helpers.values(values, columns)}
+            ) AS x(tx_hash, log_index, batch_index, order_side, maker, taker)
+            WHERE fill_events_2.tx_hash = x.tx_hash::BYTEA
+              AND fill_events_2.log_index = x.log_index::INT
+              AND fill_events_2.batch_index = x.batch_index::INT
+          `
+        );
       }
 
-      if (results.length) {
-        await addToQueue(block - batchSize);
-      }
+      await addToQueue(block - batchSize);
     },
     { connection: redis.duplicate(), concurrency: 1 }
   );
@@ -179,7 +178,7 @@ if (config.doBackgroundWork) {
 
   if (config.chainId === 1) {
     redlock
-      .acquire([`${QUEUE_NAME}-lock-3`], 60 * 60 * 24 * 30 * 1000)
+      .acquire([`${QUEUE_NAME}-lock-4`], 60 * 60 * 24 * 30 * 1000)
       .then(async () => {
         await addToQueue(16140000);
       })
