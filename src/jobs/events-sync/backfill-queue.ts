@@ -112,5 +112,7 @@ export const addToQueue = async (
     });
   }
 
-  await queue.addBulk(jobs);
+  for (const chunkedJobs of _.chunk(jobs, 1000)) {
+    await queue.addBulk(chunkedJobs);
+  }
 };
