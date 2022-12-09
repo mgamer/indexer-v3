@@ -12,6 +12,8 @@ import { ApiKeyManager } from "@/models/api-keys";
 import { PendingFlagStatusSyncJobs } from "@/models/pending-flag-status-sync-jobs";
 import * as flagStatusProcessQueue from "@/jobs/flag-status/process-queue";
 import { TokensEntityUpdateParams } from "@/models/tokens/tokens-entity";
+import { Collections } from "@/models/collections";
+import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 
 const version = "v1";
 
@@ -68,24 +70,22 @@ export const postFlagTokenV1Options: RouteOptions = {
       if (token.isFlagged != payload.flag) {
         fields.lastFlagChange = currentUtcTime;
 
-        const pendingFlagStatusSyncJobs = new PendingFlagStatusSyncJobs();
-        await pendingFlagStatusSyncJobs.add([
-          {
-            kind: "tokens",
-            data: {
-              collectionId: token.collectionId,
-              contract: contract,
-              tokens: [
-                {
-                  tokenId: tokenId,
-                  tokenIsFlagged: payload.flag,
-                },
-              ],
-            },
-          },
-        ]);
+        const collection = await Collections.getByContractAndTokenId(contract, tokenId);
 
-        await flagStatusProcessQueue.addToQueue();
+        await metadataIndexFetch.addToQueue(
+          [
+            {
+              kind: "single-token",
+              data: {
+                method: metadataIndexFetch.getIndexingMethod(collection?.community || null),
+                contract,
+                tokenId,
+                collection: token.collectionId,
+              },
+            },
+          ],
+          true
+        );
       }
 
       // Update the token status
