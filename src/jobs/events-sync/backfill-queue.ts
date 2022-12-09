@@ -13,6 +13,7 @@ const QUEUE_NAME = "events-sync-backfill";
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
+    attempts: 10,
     backoff: {
       type: "exponential",
       delay: 10000,
