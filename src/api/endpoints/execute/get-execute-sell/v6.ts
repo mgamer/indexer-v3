@@ -123,6 +123,7 @@ export const getExecuteSellV6Options: RouteOptions = {
   handler: async (request: Request) => {
     const payload = request.payload as any;
 
+    let path: any;
     try {
       let orderResult: any;
 
@@ -254,7 +255,7 @@ export const getExecuteSellV6Options: RouteOptions = {
       const totalPrice = bn(orderResult.value)
         .sub(totalFee)
         .mul(payload.quantity ?? 1);
-      const path = [
+      path = [
         {
           orderId: orderResult.id,
           contract,
@@ -410,7 +411,12 @@ export const getExecuteSellV6Options: RouteOptions = {
         path,
       };
     } catch (error) {
-      logger.error(`get-execute-sell-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(
+        `get-execute-sell-${version}-handler`,
+        `Handler failure: ${error} (path = ${JSON.stringify(path)}, request = ${JSON.stringify(
+          payload
+        )})`
+      );
       throw error;
     }
   },
