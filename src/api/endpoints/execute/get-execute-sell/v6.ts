@@ -129,6 +129,26 @@ export const getExecuteSellV6Options: RouteOptions = {
 
       const [contract, tokenId] = payload.token.split(":");
 
+      const tokenResult = await redb.oneOrNone(
+        `
+          SELECT
+            tokens.is_flagged
+          FROM tokens
+          WHERE tokens.contract = $/contract/
+            AND tokens.token_id = $/tokenId/
+        `,
+        {
+          contract: toBuffer(contract),
+          tokenId,
+        }
+      );
+      if (!tokenResult) {
+        throw Boom.badData("Unknown token");
+      }
+      if (tokenResult.is_flagged) {
+        throw Boom.badData("Token is flagged");
+      }
+
       // Scenario 3: pass raw orders that don't yet exist
       if (payload.rawOrder) {
         // Hack: As the raw order is processed, set it to the `orderId`
@@ -161,6 +181,7 @@ export const getExecuteSellV6Options: RouteOptions = {
                 orders.kind,
                 contracts.kind AS token_kind,
                 orders.value,
+                orders.price,
                 orders.raw_data,
                 orders.source_id_int,
                 orders.currency,
@@ -202,6 +223,7 @@ export const getExecuteSellV6Options: RouteOptions = {
                 orders.kind,
                 contracts.kind AS token_kind,
                 orders.value,
+                orders.price,
                 orders.raw_data,
                 orders.source_id_int,
                 orders.currency,
@@ -274,6 +296,7 @@ export const getExecuteSellV6Options: RouteOptions = {
         {
           id: orderResult.id,
           kind: orderResult.kind,
+          unitPrice: orderResult.price,
           rawData: orderResult.raw_data,
           fees,
         },
