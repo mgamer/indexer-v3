@@ -240,7 +240,7 @@ if (config.doBackgroundWork) {
                         WHEN $/fillabilityStatus/ = 'fillable' AND $/approvalStatus/ = 'approved' THEN nullif(upper(orders.valid_between), 'infinity')
                         ELSE now()
                       END
-                    )
+                    ),
                     updated_at = now()
                   WHERE orders.id = $/id/
                     AND (orders.fillability_status != $/fillabilityStatus/ OR orders.approval_status != $/approvalStatus/)
