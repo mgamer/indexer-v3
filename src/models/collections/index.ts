@@ -248,7 +248,6 @@ export class Collections {
           tokens.token_id
         FROM tokens
         WHERE tokens.contract = $/contract/
-          AND tokens.floor_sell_id IS NOT NULL
         LIMIT 10000
       `,
       { contract: toBuffer(contract) }
