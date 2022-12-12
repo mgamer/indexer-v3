@@ -286,6 +286,11 @@ export const syncEvents = async (
       },
       {
         kind: "cryptoarte",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("cryptoarte")),
+        backfill,
+      },
+      {
+        kind: "beeple",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("beeple")),
         backfill,
       },

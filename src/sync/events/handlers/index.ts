@@ -23,6 +23,7 @@ import * as universe from "@/events-sync/handlers/universe";
 import * as rarible from "@/events-sync/handlers/rarible";
 import * as manifold from "@/events-sync/handlers/manifold";
 import * as cryptoarte from "@/events-sync/handlers/cryptoarte";
+import * as beeple from "@/events-sync/handlers/beeple";
 
 export type EventsInfo = {
   kind:
@@ -48,7 +49,8 @@ export type EventsInfo = {
     | "universe"
     | "rarible"
     | "manifold"
-    | "cryptoarte";
+    | "cryptoarte"
+    | "beeple";
   events: EnhancedEvent[];
   backfill?: boolean;
 };
@@ -167,6 +169,11 @@ export const processEvents = async (info: EventsInfo) => {
 
     case "cryptoarte": {
       data = await cryptoarte.handleEvents(info.events);
+      break;
+    }
+
+    case "beeple": {
+      data = await beeple.handleEvents(info.events);
       break;
     }
   }
