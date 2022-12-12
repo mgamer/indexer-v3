@@ -294,6 +294,11 @@ export const syncEvents = async (
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("beeple")),
         backfill,
       },
+      {
+        kind: "cryptovoxels",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("cryptovoxels")),
+        backfill,
+      },
     ]);
 
     // Make sure to recheck the ingested blocks with a delay in order to undo any reorgs
