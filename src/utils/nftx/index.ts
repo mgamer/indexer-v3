@@ -16,6 +16,8 @@ import { formatEther, parseEther } from "@ethersproject/units";
 import { logger } from "@/common/logger";
 import { BigNumber } from "ethers";
 
+const SUSHI_ROUTER = "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F";
+
 export const getNftPoolDetails = async (address: string) =>
   getNftxNftPool(address).catch(async () => {
     if (Sdk.Nftx.Addresses.VaultFactory[config.chainId]) {
@@ -164,9 +166,8 @@ export async function getPoolPrice(vault: string, amount = 1) {
   ]);
 
   const WETH = Sdk.Common.Addresses.Weth[config.chainId];
-  const sushiRouterAddr = "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F";
 
-  const sushiRouter = new Contract(sushiRouterAddr, iface, baseProvider);
+  const sushiRouter = new Contract(SUSHI_ROUTER, iface, baseProvider);
 
   try {
     const path = [WETH, vault];

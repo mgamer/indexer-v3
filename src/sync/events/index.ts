@@ -64,6 +64,7 @@ export const syncEvents = async (
 
   // By default, we want to get all events
   let eventFilter: Filter = {
+    // Remove any duplicate topics
     topics: [[...new Set(getEventData().map(({ topic }) => topic))]],
     fromBlock,
     toBlock,
@@ -71,6 +72,7 @@ export const syncEvents = async (
   if (options?.syncDetails?.method === "events") {
     // Filter to a subset of events
     eventFilter = {
+      // Remove any duplicate topics
       topics: [[...new Set(getEventData(options.syncDetails.events).map(({ topic }) => topic))]],
       fromBlock,
       toBlock,
@@ -160,6 +162,11 @@ export const syncEvents = async (
       {
         kind: "cryptopunks",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("cryptopunks")),
+        backfill,
+      },
+      {
+        kind: "cryptokitties",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("cryptokitties")),
         backfill,
       },
       {
@@ -271,6 +278,11 @@ export const syncEvents = async (
             // To properly validate bids, we need some additional events
             kind === "erc20-transfer"
         ),
+      },
+      {
+        kind: "manifold",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("manifold")),
+        backfill,
       },
     ]);
 

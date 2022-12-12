@@ -132,7 +132,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
             // Handle: royalties on top
             const defaultRoyalties = await royalties.getRoyaltiesByTokenSet(
-              `contract:${pool.nft}`,
+              `contract:${pool.nft}`.toLowerCase(),
               "default"
             );
 
@@ -183,7 +183,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               const schemaHash = generateSchemaHash();
               const [{ id: tokenSetId }] = await tokenSet.contractWide.save([
                 {
-                  id: `contract:${pool.nft}`,
+                  id: `contract:${pool.nft}`.toLowerCase(),
                   schemaHash,
                   contract: pool.nft,
                 },
@@ -333,7 +333,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
           // Handle: royalties on top
           const defaultRoyalties = await royalties.getRoyaltiesByTokenSet(
-            `contract:${pool.nft}`,
+            `contract:${pool.nft}`.toLowerCase(),
             "default"
           );
 
@@ -389,7 +389,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 const schemaHash = generateSchemaHash();
                 const [{ id: tokenSetId }] = await tokenSet.singleToken.save([
                   {
-                    id: `token:${pool.nft}:${tokenId}`,
+                    id: `token:${pool.nft}:${tokenId}`.toLowerCase(),
                     schemaHash,
                     contract: pool.nft,
                     tokenId,
@@ -400,50 +400,50 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 }
 
                 // Handle: source
-                // const sources = await Sources.getInstance();
-                // const source = await sources.getOrInsert("sudoswap.xyz");
+                const sources = await Sources.getInstance();
+                const source = await sources.getOrInsert("sudoswap.xyz");
 
-                // const validFrom = `date_trunc('seconds', to_timestamp(${orderParams.txTimestamp}))`;
-                // const validTo = `'Infinity'`;
-                // orderValues.push({
-                //   id,
-                //   kind: "sudoswap",
-                //   side: "sell",
-                //   fillability_status: "fillable",
-                //   approval_status: "approved",
-                //   token_set_id: tokenSetId,
-                //   token_set_schema_hash: toBuffer(schemaHash),
-                //   maker: toBuffer(pool.address),
-                //   taker: toBuffer(AddressZero),
-                //   price,
-                //   value,
-                //   currency: toBuffer(pool.token),
-                //   currency_price: price,
-                //   currency_value: value,
-                //   needs_conversion: null,
-                //   quantity_remaining: "1",
-                //   valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
-                //   nonce: null,
-                //   source_id_int: source?.id,
-                //   is_reservoir: null,
-                //   contract: toBuffer(pool.nft),
-                //   conduit: null,
-                //   fee_bps: feeBps,
-                //   fee_breakdown: feeBreakdown,
-                //   dynamic: null,
-                //   raw_data: sdkOrder.params,
-                //   expiration: validTo,
-                //   missing_royalties: missingRoyalties,
-                //   normalized_value: normalizedValue.toString(),
-                //   currency_normalized_value: normalizedValue.toString(),
-                // });
+                const validFrom = `date_trunc('seconds', to_timestamp(${orderParams.txTimestamp}))`;
+                const validTo = `'Infinity'`;
+                orderValues.push({
+                  id,
+                  kind: "sudoswap",
+                  side: "sell",
+                  fillability_status: "fillable",
+                  approval_status: "approved",
+                  token_set_id: tokenSetId,
+                  token_set_schema_hash: toBuffer(schemaHash),
+                  maker: toBuffer(pool.address),
+                  taker: toBuffer(AddressZero),
+                  price,
+                  value,
+                  currency: toBuffer(pool.token),
+                  currency_price: price,
+                  currency_value: value,
+                  needs_conversion: null,
+                  quantity_remaining: "1",
+                  valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
+                  nonce: null,
+                  source_id_int: source?.id,
+                  is_reservoir: null,
+                  contract: toBuffer(pool.nft),
+                  conduit: null,
+                  fee_bps: feeBps,
+                  fee_breakdown: feeBreakdown,
+                  dynamic: null,
+                  raw_data: sdkOrder.params,
+                  expiration: validTo,
+                  missing_royalties: missingRoyalties,
+                  normalized_value: normalizedValue.toString(),
+                  currency_normalized_value: normalizedValue.toString(),
+                });
 
-                // results.push({
-                //   id,
-                //   txHash: orderParams.txHash,
-                //   status: "success",
-                //   triggerKind: "new-order",
-                // });
+                results.push({
+                  id,
+                  txHash: orderParams.txHash,
+                  status: "success",
+                  triggerKind: "new-order",
+                });
               } else {
                 await idb.none(
                   `

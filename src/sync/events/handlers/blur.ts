@@ -1,3 +1,5 @@
+import { HashZero } from "@ethersproject/constants";
+import { searchForCall } from "@georgeroman/evm-tx-simulator";
 import * as Sdk from "@reservoir0x/sdk";
 
 import { config } from "@/config/index";
@@ -6,8 +8,8 @@ import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import * as es from "@/events-sync/storage";
 import * as utils from "@/events-sync/utils";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
-import { getUSDAndNativePrices } from "@/utils/prices";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
+import { getUSDAndNativePrices } from "@/utils/prices";
 
 export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData> => {
   const fillEvents: es.fills.Event[] = [];
@@ -17,6 +19,11 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
   const fillInfos: fillUpdates.FillInfo[] = [];
   const orderInfos: orderUpdatesById.OrderInfo[] = [];
+
+  // For keeping track of all individual trades per transaction
+  const trades = {
+    order: new Map<string, number>(),
+  };
 
   // Handle the events
   for (const { kind, baseEventParams, log } of events) {
@@ -30,7 +37,47 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const sellHash = args.sellHash.toLowerCase();
         const buyHash = args.buyHash.toLowerCase();
 
+        const txHash = baseEventParams.txHash;
+
+        const txTrace = await utils.fetchTransactionTrace(txHash);
+        if (!txTrace) {
+          // Skip any failed attempts to get the trace
+          break;
+        }
+
+        const exchange = new Sdk.Blur.Exchange(config.chainId);
+        const exchangeAddress = exchange.contract.address;
+        const executeSigHash = "0x9a1fc3a7";
+
+        const tradeRank = trades.order.get(`${txHash}-${exchangeAddress}`) ?? 0;
+        const executeCallTrace = searchForCall(
+          txTrace.calls,
+          { to: exchangeAddress, type: "CALL", sigHashes: [executeSigHash] },
+          tradeRank
+        );
+
+        let orderSide: "sell" | "buy" = "sell";
         const routers = Sdk.Common.Addresses.Routers[config.chainId];
+
+        if (executeCallTrace) {
+          const inputData = exchange.contract.interface.decodeFunctionData(
+            "execute",
+            executeCallTrace.input
+          );
+
+          const sellInput = inputData.sell;
+          const buyInput = inputData.buy;
+
+          // Determine if the input has the signature
+          const isSellOrder = sellInput.order.side === 1 && sellInput.s != HashZero;
+          const traderOfSell = sellInput.order.trader.toLowerCase();
+          const traderOfBuy = buyInput.order.trader.toLowerCase();
+
+          orderSide = isSellOrder ? "sell" : "buy";
+          maker = isSellOrder ? traderOfSell : traderOfBuy;
+          taker = isSellOrder ? traderOfBuy : traderOfSell;
+        }
+
         if (maker in routers) {
           maker = sell.trader.toLowerCase();
         }
@@ -41,24 +88,29 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           baseEventParams.txHash,
           orderKind
         );
+
         if (attributionData.taker) {
           taker = attributionData.taker;
         }
-        // Handle: prices
 
-        const currency = sell.paymentToken.toLowerCase();
+        // Handle: prices
+        const currency =
+          sell.paymentToken.toLowerCase() === "0x0000000000a39bb272e79075ade125fd351887ac"
+            ? Sdk.Common.Addresses.Eth[config.chainId]
+            : sell.paymentToken.toLowerCase();
         const currencyPrice = sell.price.div(sell.amount).toString();
+
         const priceData = await getUSDAndNativePrices(
           currency,
           currencyPrice,
           baseEventParams.timestamp
         );
+
         if (!priceData.nativePrice) {
           // We must always have the native price
           break;
         }
 
-        const orderSide = maker === sell.trader.toLowerCase() ? "sell" : "buy";
         const orderId = orderSide === "sell" ? sellHash : buyHash;
 
         orderInfos.push({
@@ -100,6 +152,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           price: priceData.nativePrice,
           timestamp: baseEventParams.timestamp,
         });
+
+        trades.order.set(`${txHash}-${exchangeAddress}`, tradeRank + 1);
 
         break;
       }

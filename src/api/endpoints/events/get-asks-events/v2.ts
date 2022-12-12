@@ -18,7 +18,7 @@ export const getAsksEventsV2Options: RouteOptions = {
   },
   description: "Asks status changes",
   notes: "Get updates any time an asks status changes",
-  tags: ["api", "Events"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 4,
