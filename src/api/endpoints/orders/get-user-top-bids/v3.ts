@@ -189,7 +189,7 @@ export const getUserTopBidsV3Options: RouteOptions = {
         FROM nft_balances nb
         JOIN LATERAL (
             SELECT o.token_set_id, o.id AS "top_bid_id", o.price AS "top_bid_price", o.value AS "top_bid_value",
-                   o.currency AS "top_bid_currency", o.currency_value AS "top_bid_currency_value",
+                   o.currency AS "top_bid_currency", o.currency_value AS "top_bid_currency_value", o.missing_royalties,
                    o.normalized_value AS "top_bid_normalized_value", o.currency_normalized_value AS "top_bid_currency_normalized_value",
                    o.maker AS "top_bid_maker", source_id_int, o.created_at "order_created_at", o.token_set_schema_hash,
                    extract(epoch from o.created_at) * 1000000 AS "order_created_at_micro",
@@ -251,6 +251,26 @@ export const getUserTopBidsV3Options: RouteOptions = {
             query.optimizeCheckoutURL
           );
 
+          const feeBreakdown = r.fee_breakdown;
+
+          if (query.normalizeRoyalties && r.missing_royalties) {
+            for (let i = 0; i < r.missing_royalties.length; i++) {
+              const index: number = r.fee_breakdown.findIndex(
+                (fee: { recipient: string }) => fee.recipient === r.missing_royalties[i].recipient
+              );
+
+              if (index !== -1) {
+                feeBreakdown[index].bps += r.missing_royalties[i].bps;
+              } else {
+                feeBreakdown.push({
+                  bps: r.missing_royalties[i].bps,
+                  kind: "royalty",
+                  recipient: r.missing_royalties[i].recipient,
+                });
+              }
+            }
+          }
+
           return {
             id: r.top_bid_id,
             price: await getJoiPriceObject(
@@ -282,7 +302,7 @@ export const getUserTopBidsV3Options: RouteOptions = {
               icon: source?.getIcon(),
               url: source?.metadata.url,
             },
-            feeBreakdown: r.fee_breakdown,
+            feeBreakdown,
             criteria: r.bid_criteria,
             token: {
               contract: contract,
