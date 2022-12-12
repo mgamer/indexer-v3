@@ -6,7 +6,6 @@ import { logger } from "@/common/logger";
 import { redis, redlock } from "@/common/redis";
 import { config } from "@/config/index";
 import * as orders from "@/orderbook/orders";
-import { SaveResult } from "@/orderbook/orders/x2y2";
 
 const QUEUE_NAME = "orderbook-orders-queue";
 
@@ -31,8 +30,8 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { kind, info, relayToArweave, validateBidValue } = job.data as GenericOrderInfo;
-      let result: SaveResult[] = [];
 
+      let result: { status: string }[] = [];
       try {
         switch (kind) {
           case "x2y2": {
@@ -46,9 +45,7 @@ if (config.doBackgroundWork) {
           }
 
           case "forward": {
-            const result = await orders.forward.save([info as orders.forward.OrderInfo]);
-            logger.info(QUEUE_NAME, `[forward] Order save result: ${JSON.stringify(result)}`);
-
+            result = await orders.forward.save([info as orders.forward.OrderInfo]);
             break;
           }
 
@@ -98,13 +95,7 @@ if (config.doBackgroundWork) {
           }
 
           case "rarible": {
-            const result = await orders.rarible.save([info], relayToArweave);
-            logger.info(QUEUE_NAME, `[rarible] Order save result: ${JSON.stringify(result)}`);
-            break;
-          }
-
-          case "element": {
-            result = await orders.element.save([info as orders.element.OrderInfo], relayToArweave);
+            result = await orders.rarible.save([info], relayToArweave);
             break;
           }
 
@@ -122,8 +113,7 @@ if (config.doBackgroundWork) {
           }
 
           case "manifold": {
-            const result = await orders.manifold.save([info]);
-            logger.info(QUEUE_NAME, `[manifold] Order save result: ${JSON.stringify(result)}`);
+            result = await orders.manifold.save([info]);
             break;
           }
         }
@@ -215,12 +205,6 @@ export type GenericOrderInfo =
   | {
       kind: "universe";
       info: orders.universe.OrderInfo;
-      relayToArweave?: boolean;
-      validateBidValue?: boolean;
-    }
-  | {
-      kind: "element";
-      info: orders.element.OrderInfo;
       relayToArweave?: boolean;
       validateBidValue?: boolean;
     }

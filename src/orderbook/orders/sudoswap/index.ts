@@ -132,7 +132,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
             // Handle: royalties on top
             const defaultRoyalties = await royalties.getRoyaltiesByTokenSet(
-              `contract:${pool.nft}`,
+              `contract:${pool.nft}`.toLowerCase(),
               "default"
             );
 
@@ -183,7 +183,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               const schemaHash = generateSchemaHash();
               const [{ id: tokenSetId }] = await tokenSet.contractWide.save([
                 {
-                  id: `contract:${pool.nft}`,
+                  id: `contract:${pool.nft}`.toLowerCase(),
                   schemaHash,
                   contract: pool.nft,
                 },
@@ -333,7 +333,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
           // Handle: royalties on top
           const defaultRoyalties = await royalties.getRoyaltiesByTokenSet(
-            `contract:${pool.nft}`,
+            `contract:${pool.nft}`.toLowerCase(),
             "default"
           );
 
@@ -389,7 +389,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 const schemaHash = generateSchemaHash();
                 const [{ id: tokenSetId }] = await tokenSet.singleToken.save([
                   {
-                    id: `token:${pool.nft}:${tokenId}`,
+                    id: `token:${pool.nft}:${tokenId}`.toLowerCase(),
                     schemaHash,
                     contract: pool.nft,
                     tokenId,
