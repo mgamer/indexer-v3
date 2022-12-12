@@ -237,7 +237,7 @@ if (config.doBackgroundWork) {
                     approval_status = $/approvalStatus/,
                     expiration = (
                       CASE
-                        WHEN $/fillabilityStatus/ = 'fillable' AND $/approvalStatus/ = 'approved' THEN upper(orders.valid_between)
+                        WHEN $/fillabilityStatus/ = 'fillable' AND $/approvalStatus/ = 'approved' THEN nullif(upper(orders.valid_between), 'infinity')
                         ELSE now()
                       END
                     )
