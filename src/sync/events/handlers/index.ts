@@ -22,6 +22,7 @@ import * as zora from "@/events-sync/handlers/zora";
 import * as universe from "@/events-sync/handlers/universe";
 import * as rarible from "@/events-sync/handlers/rarible";
 import * as manifold from "@/events-sync/handlers/manifold";
+import * as tofu from "@/events-sync/handlers/tofu";
 
 export type EventsInfo = {
   kind:
@@ -46,7 +47,8 @@ export type EventsInfo = {
     | "zora"
     | "universe"
     | "rarible"
-    | "manifold";
+    | "manifold"
+    | "tofu";
   events: EnhancedEvent[];
   backfill?: boolean;
 };
@@ -160,6 +162,10 @@ export const processEvents = async (info: EventsInfo) => {
     }
     case "manifold": {
       data = await manifold.handleEvents(info.events);
+      break;
+    }
+    case "tofu": {
+      data = await tofu.handleEvents(info.events);
       break;
     }
   }
