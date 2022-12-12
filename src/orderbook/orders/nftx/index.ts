@@ -50,7 +50,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       const amount = 10;
       const poolPrice = await nftx.getPoolPrice(orderParams.pool, amount);
-  
+
       // Handle: fees
       const feeBps = 0;
       const feeBreakdown: {
@@ -63,7 +63,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       try {
         const { buy, currency } = poolPrice;
         const id = getOrderId(orderParams.pool, "buy");
-  
+
         if (buy) {
           // Handle: prices
           const price = parseEther(buy).toString();
@@ -243,8 +243,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         );
       }
 
- 
-
       // Handle sell orders
       try {
         const { sell, currency } = poolPrice;
@@ -282,7 +280,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           // Fetch all token ids owned by the pool
           const poolOwnedTokenIdsInDB = await commonHelpers.getNfts(pool.nft, pool.address);
           const poolOwnedTokenIdsOnChain = await nftx.getPoolNFTs(pool.address);
-          const poolOwnedTokenIds = (poolOwnedTokenIdsOnChain.length ? poolOwnedTokenIdsOnChain : poolOwnedTokenIdsInDB).slice(0, 3);
+          const poolOwnedTokenIds = poolOwnedTokenIdsOnChain.length ? poolOwnedTokenIdsOnChain : poolOwnedTokenIdsInDB;
 
           for (const tokenId of poolOwnedTokenIds) {
             try {
@@ -421,15 +419,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
     }
   };
 
-
-
-
   // Process all orders concurrently
   const limit = pLimit(20);
   await Promise.all(orderInfos.map((orderInfo) => limit(() => handleOrder(orderInfo))));
-
-  // console.log("orderValues", orderValues);
-  // console.log("results", results);
 
   if (orderValues.length) {
     const columns = new pgp.helpers.ColumnSet(

@@ -88,29 +88,18 @@ describe("NFTX", () => {
   });
 
   test("order-saving", async () => {
-
     const tx = await baseProvider.getTransactionReceipt(
       "0xab53ee4ea3653b0956fd8a6dd4a01b20775f65fcc7badc3b6e20481316f6b1f0"
     );
     const events = await getEventsFromTx(tx);
     const result = await handleEvents(events);
     const order = result?.orders?.find((c) => c.kind === "nftx");
-    
-    // collectionsRefreshCache.addToQueue("0x6be69b2a9b153737887cfcdca7781ed1511c7e36")
-    
+
     expect(order).not.toBe(null);
 
     const orderInfo: orders.nftx.OrderInfo = order?.info as orders.nftx.OrderInfo;
 
     // Store order to database
     await orders.nftx.save([orderInfo]);
-
-    // const orderInDb = await getOrder(
-    //   "0x71ba349119ef6685a84da0ccd810ec3070345608fe981619f071ad268b499eba"
-    // );
-
-    // await wait(20 * 1000);
-    // console.log("orderInDb", orderInDb);
-    // expect(orderInDb).not.toBe(null);
   });
 });

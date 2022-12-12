@@ -15,7 +15,6 @@ import {
 import { formatEther, parseEther } from "@ethersproject/units";
 import { logger } from "@/common/logger";
 import { BigNumber } from "ethers";
-import _ from "lodash";
 
 export const getNftPoolDetails = async (address: string) =>
   getNftxNftPool(address).catch(async () => {
@@ -170,7 +169,7 @@ export async function getPoolPrice(vault: string, amount = 1) {
   const sushiRouter = new Contract(sushiRouterAddr, iface, baseProvider);
 
   try {
-    const path = [WETH, vault]
+    const path = [WETH, vault];
     const amounts = await sushiRouter.getAmountsIn(parseEther(`${amount}`), path);
     buyPrice = formatEther(amounts[0]);
   } catch (error) {
@@ -178,7 +177,7 @@ export async function getPoolPrice(vault: string, amount = 1) {
   }
 
   try {
-    const path = [vault, WETH]
+    const path = [vault, WETH];
     const amounts = await sushiRouter.getAmountsOut(parseEther(`${amount}`), path);
     sellPrice = formatEther(amounts[1]);
   } catch (error) {
@@ -186,39 +185,43 @@ export async function getPoolPrice(vault: string, amount = 1) {
   }
 
   const fees = await getPoolFees(vault);
+  const base = parseEther(`1`);
+  let feeBpsSell = null;
+  let feeBpsBuy = null;
+  let feeBpsRandomBuy = null;
 
   if (sellPrice) {
-    const base = parseEther(`1`);
     const price = parseEther(sellPrice).div(bn(amount));
     const mintFeeInETH = bn(fees.mintFee).mul(price).div(base);
 
-    sellPrice = formatEther(
-      price.sub(mintFeeInETH)
-    )
+    sellPrice = formatEther(price.sub(mintFeeInETH));
+    feeBpsSell = mintFeeInETH.mul(bn(10000)).div(parseEther(sellPrice)).toString();
   }
 
   if (buyPrice) {
     // 1 ETH = x Vault Token
-    const base = parseEther(`1`);
     const price = parseEther(buyPrice).div(bn(amount));
     const targetBuyFeeInETH = bn(fees.targetRedeemFee).mul(price).div(base);
     const randomBuyFeeInETH = bn(fees.randomRedeemFee).mul(price).div(base);
 
-    buyPrice = formatEther(
-      price.add(targetBuyFeeInETH)
-    )
-    randomBuyPrice = formatEther(
-      price.add(randomBuyFeeInETH)
-    )
+    buyPrice = formatEther(price.add(targetBuyFeeInETH));
+    randomBuyPrice = formatEther(price.add(randomBuyFeeInETH));
+    feeBpsBuy = targetBuyFeeInETH.mul(bn(10000)).div(parseEther(buyPrice)).toString();
+    feeBpsRandomBuy = randomBuyFeeInETH.mul(bn(10000)).div(parseEther(randomBuyPrice)).toString();
   }
 
   return {
     fees,
     amount,
+    bps: {
+      sell: feeBpsSell,
+      buy: feeBpsBuy,
+      randomBuy: feeBpsRandomBuy,
+    },
     currency: WETH,
     sell: sellPrice,
     buy: buyPrice,
-    buyRandom: randomBuyPrice
+    buyRandom: randomBuyPrice,
   };
 }
 
@@ -238,6 +241,7 @@ export async function getPoolNFTs(vault: string) {
   return tokenIds;
 }
 
+// TODO store fees to database
 export async function getPoolFees(address: string) {
   const iface = new Interface([
     "function mintFee() public view returns (uint256)",
@@ -245,25 +249,17 @@ export async function getPoolFees(address: string) {
     "function randomRedeemFee() public view returns (uint256)",
   ]);
 
-  const vault = new Contract(
-    address,
-    iface,
-    baseProvider
-  );
+  const vault = new Contract(address, iface, baseProvider);
 
-  const [
-    mintFee,
-    targetRedeemFee,
-    randomRedeemFee,
-  ] = await Promise.all([
+  const [mintFee, targetRedeemFee, randomRedeemFee] = await Promise.all([
     vault.mintFee(),
     vault.targetRedeemFee(),
     vault.randomRedeemFee(),
-  ])
+  ]);
 
   return {
     mintFee: mintFee.toString(),
     randomRedeemFee: randomRedeemFee.toString(),
     targetRedeemFee: targetRedeemFee.toString(),
-  }
+  };
 }
