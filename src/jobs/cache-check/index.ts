@@ -17,9 +17,9 @@ import { config } from "@/config/index";
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
   cron.schedule(
-    "*/1 * * * *",
+    "*/30 * * * * *",
     async () =>
-      await redlock.acquire(["cache-check-lock"], (1 * 60 - 5) * 1000).then(async () => {
+      await redlock.acquire(["cache-check-lock"], (30 - 5) * 1000).then(async () => {
         logger.info("cache-check", "Checking cache consistency");
 
         try {
