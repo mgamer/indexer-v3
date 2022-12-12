@@ -1,37 +1,14 @@
 import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 import { baseProvider } from "@/common/provider";
-import { getEventsFromTx, wait } from "../utils/test";
+import { getEventsFromTx, wait, saveContract } from "../utils/test";
 import { handleEvents } from "@/events-sync/handlers/blur";
 import { Blur } from "@reservoir0x/sdk";
 import { config } from "@/config/index";
 import { OrderInfo } from "@/orderbook/orders/blur";
 import { processOnChainData } from "@/events-sync/handlers/utils";
-import { idb, pgp } from "@/common/db";
-import { toBuffer } from "@/common/utils";
-import { getOrder } from "tests/utils/order";
 
-async function saveContract(address: string, kind: string) {
-  const columns = new pgp.helpers.ColumnSet(["address", "kind"], {
-    table: "contracts",
-  });
-  const queries = [
-    `
-  INSERT INTO "contracts" (
-    "address",
-    "kind"
-  ) VALUES ${pgp.helpers.values(
-    {
-      address: toBuffer(address),
-      kind,
-    },
-    columns
-  )}
-  ON CONFLICT DO NOTHING
-`,
-  ];
-  await idb.none(pgp.helpers.concat(queries));
-}
+import { getOrder } from "tests/utils/order";
 
 jest.setTimeout(1000 * 1000);
 
