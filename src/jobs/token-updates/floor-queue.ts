@@ -182,7 +182,7 @@ if (config.doBackgroundWork) {
           await collectionUpdatesFloorAsk.addToQueue([sellOrderResult]);
           await collectionUpdatesNonFlaggedFloorAsk.addToQueue([sellOrderResult]);
 
-          if (kind === "revalidation") {
+          if (kind === "revalidation" && config.chainId === 1) {
             logger.info(QUEUE_NAME, `StaleCache: ${JSON.stringify(sellOrderResult)}`);
           }
         }
