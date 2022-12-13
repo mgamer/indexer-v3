@@ -13,7 +13,7 @@ import * as sudoswapUtils from "@/utils/sudoswap";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 
 export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData> => {
-  const fillEvents: es.fills.Event[] = [];
+  const fillEventsPartial: es.fills.Event[] = [];
 
   const fillInfos: fillUpdates.FillInfo[] = [];
 
@@ -39,6 +39,15 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         const txHash = baseEventParams.txHash;
         const address = baseEventParams.address;
+
+        orders.push({
+          orderParams: {
+            pool: baseEventParams.address,
+            txHash: baseEventParams.txHash,
+            txTimestamp: baseEventParams.timestamp,
+          },
+          metadata: {},
+        });
 
         const txTrace = await utils.fetchTransactionTrace(txHash);
         if (!txTrace) {
@@ -137,7 +146,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             for (const token of Object.keys(state[address].tokenBalanceState)) {
               if (token.startsWith("erc721")) {
                 const tokenId = token.split(":")[2];
-                fillEvents.push({
+                fillEventsPartial.push({
                   orderKind,
                   orderSide: "sell",
                   maker: baseEventParams.address,
@@ -235,9 +244,10 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             for (let i = 0; i < decodedInput.nftIds.length; i++) {
               const tokenId = decodedInput.nftIds[i].toString();
 
-              fillEvents.push({
+              fillEventsPartial.push({
                 orderKind,
                 orderSide: "sell",
+                orderId: sudoswap.getOrderId(baseEventParams.address, "sell", tokenId),
                 maker: baseEventParams.address,
                 taker,
                 price: priceData.nativePrice,
@@ -272,15 +282,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         // Keep track of the "buy" trade
         trades.buy.set(`${txHash}-${address}`, tradeRank + 1);
 
-        orders.push({
-          orderParams: {
-            pool: baseEventParams.address,
-            txHash: baseEventParams.txHash,
-            txTimestamp: baseEventParams.timestamp,
-          },
-          metadata: {},
-        });
-
         break;
       }
 
@@ -289,6 +290,15 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         const txHash = baseEventParams.txHash;
         const address = baseEventParams.address;
+
+        orders.push({
+          orderParams: {
+            pool: baseEventParams.address,
+            txHash: baseEventParams.txHash,
+            txTimestamp: baseEventParams.timestamp,
+          },
+          metadata: {},
+        });
 
         const txTrace = await utils.fetchTransactionTrace(txHash);
         if (!txTrace) {
@@ -379,9 +389,10 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             for (let i = 0; i < decodedInput.nftIds.length; i++) {
               const tokenId = decodedInput.nftIds[i].toString();
 
-              fillEvents.push({
+              fillEventsPartial.push({
                 orderKind,
                 orderSide: "buy",
+                orderId: sudoswap.getOrderId(baseEventParams.address, "buy"),
                 maker: baseEventParams.address,
                 taker,
                 price: priceData.nativePrice,
@@ -416,15 +427,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         // Keep track of the "sell" trade
         trades.sell.set(`${txHash}-${address}`, tradeRank + 1);
 
-        orders.push({
-          orderParams: {
-            pool: baseEventParams.address,
-            txHash: baseEventParams.txHash,
-            txTimestamp: baseEventParams.timestamp,
-          },
-          metadata: {},
-        });
-
         break;
       }
 
@@ -447,7 +449,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
   }
 
   return {
-    fillEvents,
+    fillEventsPartial,
 
     fillInfos,
 

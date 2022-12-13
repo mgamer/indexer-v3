@@ -67,7 +67,7 @@ if (config.doBackgroundWork) {
       >();
 
       const ns = getNetworkSettings();
-      const limit = pLimit(50);
+      const limit = pLimit(5);
 
       await Promise.all(
         results.map((result) =>
@@ -118,6 +118,11 @@ if (config.doBackgroundWork) {
               .reduce((a, b) => bn(a).add(b).toString());
             if (totalAmount === "0") {
               return;
+            }
+
+            // Fix transaction values which contain decimals
+            if (tx.value.includes(".")) {
+              tx.value = tx.value.split(".")[0];
             }
 
             const price = bn(tx.value).div(totalAmount).toString();

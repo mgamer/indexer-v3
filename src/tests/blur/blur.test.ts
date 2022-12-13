@@ -91,7 +91,6 @@ describe("Blur", () => {
     );
 
     await wait(20 * 1000);
-    // console.log("orderInDb", orderInDb);
     expect(orderInDb).not.toBe(null);
   });
 
@@ -101,7 +100,7 @@ describe("Blur", () => {
     );
     const events = await getEventsFromTx(tx);
     const result = await handleEvents(events);
-    expect(result.cancelEventsOnChain?.length).toEqual(1);
+    expect(result.cancelEvents?.length).toEqual(1);
   });
 
   test("testSell", async () => {
@@ -114,7 +113,6 @@ describe("Blur", () => {
     );
     const events = await getEventsFromTx(tx);
     const result = await handleEvents(events);
-    // console.log("result", result)
     expect(result.cancelEventsOnChain?.length).toEqual(1);
   });
 
@@ -225,9 +223,62 @@ describe("Blur", () => {
       ],
     },
     {
-      name: "double-count",
-      tx: "0x0eb446f36df311eee7c3ecb28db68321aec6b23dd70fd03e2e40031387d2f724",
-      fills: [],
+      name: "missing-sales",
+      tx: "0x135291243e196123e4526788c871e66fc6325c729b3bbe7eaf7c8488f8dd94d7",
+      fills: [
+        {
+          contract: "0x40cf6a63c35b6886421988871f6b74cc86309940",
+          tokenId: "1749",
+          orderSide: "buy",
+          taker: "0xb2e7f7cf519020c8b6ff32a088fec95b03ccc715",
+          maker: "0x0ef4db30f76bcbd1ee7ddbb056e699b69dfb8eae",
+          currency: "0x0000000000a39bb272e79075ade125fd351887ac",
+        },
+      ],
+    },
+    {
+      name: "bulk-execute-sales",
+      tx: "0xe238dde0655f68c774b35c01f961e15973b8da48714a71fb8662e0da5bbf1562",
+      fills: [
+        {
+          contract: "0x47a00fc8590c11be4c419d9ae50dec267b6e24ee",
+          tokenId: "2016",
+          orderSide: "buy",
+          taker: "0xfa2ffca9d32a9baf9945af36bd3c5c2b0b57f5b0",
+          maker: "0x277b5e3166671b810118e17c7d97269815e1101b",
+          currency: "0x0000000000a39bb272e79075ade125fd351887ac",
+        },
+        {
+          contract: "0x47a00fc8590c11be4c419d9ae50dec267b6e24ee",
+          tokenId: "806",
+          orderSide: "buy",
+          taker: "0xfa2ffca9d32a9baf9945af36bd3c5c2b0b57f5b0",
+          maker: "0x3e720f62db92cfc9f486c9d739e7753feac83faa",
+          currency: "0x0000000000a39bb272e79075ade125fd351887ac",
+        },
+      ],
+    },
+    {
+      name: "bulk-execute-sales-case2",
+      tx: "0x8ca901b89b444b773e89322c5c3cafe5c89a920ae8829e45bebcc811dffde856",
+      fills: [
+        {
+          contract: "0x4e1f41613c9084fdb9e34e11fae9412427480e56",
+          tokenId: "4638",
+          orderSide: "buy",
+          taker: "0x9181924c81c3de98af04d476e343e2da355daedd",
+          maker: "0x2984794cbc5ac89dca755f481d9566a30b0325f9",
+          currency: "0x0000000000a39bb272e79075ade125fd351887ac",
+        },
+        {
+          contract: "0x4e1f41613c9084fdb9e34e11fae9412427480e56",
+          tokenId: "1464",
+          orderSide: "buy",
+          taker: "0x9181924c81c3de98af04d476e343e2da355daedd",
+          maker: "0x36356e0284dc9adccc72649833d453fcf229b630",
+          currency: "0x0000000000a39bb272e79075ade125fd351887ac",
+        },
+      ],
     },
   ];
 

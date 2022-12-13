@@ -1,9 +1,10 @@
-import _ from "lodash";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { HashZero } from "@ethersproject/constants";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
+import _ from "lodash";
 
-import { idb } from "@/common/db";
+import { idb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
@@ -27,7 +28,7 @@ export const queue = new Queue(QUEUE_NAME, {
       type: "exponential",
       delay: 10000,
     },
-    removeOnComplete: 1000,
+    removeOnComplete: 10000,
     removeOnFail: 10000,
     timeout: 60000,
   },
@@ -41,6 +42,8 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { id, trigger } = job.data as OrderInfo;
       let { side, tokenSetId } = job.data as OrderInfo;
+
+      logger.info(QUEUE_NAME, `OrderUpdatesById: ${JSON.stringify(job.data)}`);
 
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -81,7 +84,7 @@ if (config.doBackgroundWork) {
         if (side && tokenSetId) {
           // If the order is a complex 'buy' order, then recompute the top bid cache on the token set
           if (side === "buy" && !tokenSetId.startsWith("token")) {
-            const buyOrderResult = await idb.manyOrNone(
+            let buyOrderResult = await idb.manyOrNone(
               `
                 WITH x AS (
                   SELECT
@@ -120,6 +123,34 @@ if (config.doBackgroundWork) {
               `,
               { tokenSetId }
             );
+
+            if (!buyOrderResult.length && trigger.kind === "revalidation") {
+              // When revalidating, force revalidation of the attribute / collection
+              const tokenSetsResult = await redb.manyOrNone(
+                `
+                  SELECT
+                    token_sets.collection_id,
+                    token_sets.attribute_id
+                  FROM token_sets
+                  WHERE token_sets.id = $/tokenSetId/
+                `,
+                {
+                  tokenSetId,
+                }
+              );
+
+              if (tokenSetsResult.length) {
+                buyOrderResult = tokenSetsResult.map(
+                  (result: { collection_id: any; attribute_id: any }) => ({
+                    kind: trigger.kind,
+                    collectionId: result.collection_id,
+                    attributeId: result.attribute_id,
+                    txHash: trigger.txHash || null,
+                    txTimestamp: trigger.txTimestamp || null,
+                  })
+                );
+              }
+            }
 
             for (const result of buyOrderResult) {
               if (!_.isNull(result.attributeId)) {
