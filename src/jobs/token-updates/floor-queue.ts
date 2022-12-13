@@ -129,7 +129,7 @@ if (config.doBackgroundWork) {
                     AND tokens.token_id = z.token_id
                 ) AS old_floor_sell_value
             )
-            INSERT INTO token_floor_sell_events(
+            INSERT INTO token_floor_sell_events (
               kind,
               contract,
               token_id,
@@ -186,8 +186,17 @@ if (config.doBackgroundWork) {
           await collectionUpdatesFloorAsk.addToQueue([sellOrderResult]);
           await collectionUpdatesNonFlaggedFloorAsk.addToQueue([sellOrderResult]);
 
-          if (kind === "revalidation" && config.chainId === 1) {
-            logger.info(QUEUE_NAME, `StaleCache: ${JSON.stringify(sellOrderResult)}`);
+          if (config.chainId === 1) {
+            if (kind === "revalidation") {
+              logger.info(QUEUE_NAME, `StaleCache: ${JSON.stringify(sellOrderResult)}`);
+            } else {
+              logger.info(
+                QUEUE_NAME,
+                `TokenUpdatesFloorAsk: ${JSON.stringify(job.data)} ${JSON.stringify(
+                  sellOrderResult
+                )}`
+              );
+            }
           }
         }
       } catch (error) {
@@ -219,7 +228,7 @@ export const addToQueue = async (floorAskInfos: FloorAskInfo[]) => {
       data: floorAskInfo,
       opts: {
         // Deterministic job id so that we don't perform duplicated work
-        jobId: floorAskInfo.txHash ? floorAskInfo.txHash : `${floorAskInfo.tokenSetId}-${now()}`,
+        jobId: `${floorAskInfo.tokenSetId}-${floorAskInfo.txHash ? floorAskInfo.txHash : now()}`,
       },
     }))
   );
