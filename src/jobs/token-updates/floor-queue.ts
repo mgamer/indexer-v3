@@ -25,11 +25,13 @@ export const queue = new Queue(QUEUE_NAME, {
     timeout: 60000,
   },
 });
+export let worker: Worker | undefined;
+
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
-  const worker = new Worker(
+  worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
       const { kind, tokenSetId, txHash, txTimestamp } = job.data as FloorAskInfo;
