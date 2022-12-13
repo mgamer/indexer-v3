@@ -52,7 +52,7 @@ export type OrderKind =
   | "blur"
   | "forward"
   | "manifold"
-  | "tofu";
+  | "tofu-nft";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -109,7 +109,7 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("blur.io");
       case "manifold":
         return sources.getOrInsert("manifold.xyz");
-      case "tofu":
+      case "tofu-nft":
         return sources.getOrInsert("tofunft.com");
 
       case "mint": {

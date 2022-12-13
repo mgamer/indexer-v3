@@ -83,7 +83,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         );
 
         // Handle: attribution
-        const orderKind = "tofu";
+        const orderKind = "tofu-nft";
         const data = await utils.extractAttributionData(baseEventParams.txHash, orderKind);
 
         if (data.taker) {
