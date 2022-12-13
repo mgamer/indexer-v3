@@ -3,7 +3,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { fromBuffer, now, toBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
 import * as collectionUpdatesNormalizedFloorAsk from "@/jobs/collection-updates/normalized-floor-queue";
@@ -204,10 +204,6 @@ export const addToQueue = async (floorAskInfos: FloorAskInfo[]) => {
     floorAskInfos.map((floorAskInfo) => ({
       name: `${floorAskInfo.tokenSetId}`,
       data: floorAskInfo,
-      opts: {
-        // Deterministic job id so that we don't perform duplicated work
-        jobId: `${floorAskInfo.tokenSetId}-${floorAskInfo.txHash ? floorAskInfo.txHash : now()}`,
-      },
     }))
   );
 };
