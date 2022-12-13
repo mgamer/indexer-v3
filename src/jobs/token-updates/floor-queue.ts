@@ -34,6 +34,10 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { kind, tokenSetId, txHash, txTimestamp } = job.data as FloorAskInfo;
 
+      if (config.chainId === 1) {
+        logger.info(QUEUE_NAME, `TokenUpdatesFloorAsk: ${JSON.stringify(job.data)}`);
+      }
+
       try {
         // Atomically update the cache and trigger an api event if needed
         const sellOrderResult = await idb.oneOrNone(
