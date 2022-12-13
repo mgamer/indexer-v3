@@ -6,6 +6,7 @@ import { redis } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
+import { gracefulShutdownJobWorkers } from "@/jobs/index";
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 import * as collectionUpdatesNonFlaggedFloorAsk from "@/jobs/collection-updates/non-flagged-floor-queue";
 import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
@@ -212,6 +213,8 @@ if (config.doBackgroundWork) {
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
+
+  gracefulShutdownJobWorkers.push(worker);
 }
 
 export type FloorAskInfo = {
