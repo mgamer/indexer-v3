@@ -206,7 +206,7 @@ export const addToQueue = async (floorAskInfos: FloorAskInfo[]) => {
       data: floorAskInfo,
       opts: {
         // Deterministic job id so that we don't perform duplicated work
-        jobId: floorAskInfo.txHash ? floorAskInfo.txHash : `${floorAskInfo.tokenSetId}-${now()}`,
+        jobId: `${floorAskInfo.tokenSetId}-${floorAskInfo.txHash ? floorAskInfo.txHash : now()}`,
       },
     }))
   );
