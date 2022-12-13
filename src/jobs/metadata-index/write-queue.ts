@@ -170,19 +170,11 @@ if (config.doBackgroundWork) {
 
           let attributeKeyResult = await idb.oneOrNone(
             `
-              BEGIN;
-              SELECT id
-              FROM attribute_keys
-              WHERE collection_id = $/collection/
-              AND key = $/key/
-              FOR UPDATE;
-              
               UPDATE attribute_keys
               SET info = ${infoUpdate}
               WHERE collection_id = $/collection/
               AND key = $/key/
               RETURNING id
-              COMMIT;
             `,
             {
               collection,
