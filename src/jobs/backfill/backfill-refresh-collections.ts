@@ -62,8 +62,6 @@ if (config.doBackgroundWork) {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
 
-  // !!! DISABLED
-
   redlock
     .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
