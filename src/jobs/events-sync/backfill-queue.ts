@@ -50,7 +50,10 @@ if (config.doBackgroundWork && config.doEventsSyncBackfill) {
       }
 
       try {
+        const start = new Date().getTime();
         await syncEvents(fromBlock, toBlock, { backfill: true, syncDetails });
+        const end = new Date().getTime();
+        logger.info(QUEUE_NAME, `Time to syncEvents ${end - start} ms`);
         logger.info(QUEUE_NAME, `Events backfill syncing block range [${fromBlock}, ${toBlock}]`);
       } catch (error) {
         logger.error(

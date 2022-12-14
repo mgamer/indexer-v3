@@ -64,7 +64,7 @@ export const addToQueue = async (infos: EventsInfo[]) => {
     const start = new Date().getTime();
     const ids = await MqJobsDataManager.addJobData(QUEUE_NAME, infos);
     const end = new Date().getTime();
-    logger.info(QUEUE_NAME, `Time to execute ${end - start} ms`);
+    logger.info(QUEUE_NAME, `Time to addJobData ${end - start} ms`);
 
     _.map(ids, (id) => jobs.push({ name: id, data: { id } }));
 
