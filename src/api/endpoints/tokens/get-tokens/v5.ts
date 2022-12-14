@@ -691,24 +691,21 @@ export const getTokensV5Options: RouteOptions = {
 
         if (query.normalizeRoyalties && r.top_buy_missing_royalties) {
           for (let i = 0; i < r.top_buy_missing_royalties.length; i++) {
-            if (!Object.keys(r.top_buy_missing_royalties[i]).includes("bps")) {
-              return;
-            }
-
             const index: number = r.top_buy_fee_breakdown.findIndex(
               (fee: { recipient: string }) =>
                 fee.recipient === r.top_buy_missing_royalties[i].recipient
             );
 
-            if (index > -1) {
-              feeBreakdown[index].bps += Number(r.top_buy_missing_royalties[i].bps);
+            const missingFeeBps = Number(r.top_buy_missing_royalties[i].bps);
+
+            if (index !== -1) {
+              feeBreakdown[index].bps += missingFeeBps;
             } else {
-              const missingRoyalty = {
-                bps: Number(r.top_buy_missing_royalties[i].bps),
+              feeBreakdown.push({
+                bps: missingFeeBps,
                 kind: "royalty",
                 recipient: r.top_buy_missing_royalties[i].recipient,
-              };
-              feeBreakdown.push(missingRoyalty);
+              });
             }
           }
         }
