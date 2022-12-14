@@ -54,7 +54,10 @@ if (config.doBackgroundWork && config.doEventsSyncBackfill) {
 
         await syncEvents(fromBlock, toBlock, { backfill: true, syncDetails });
       } catch (error) {
-        logger.error(QUEUE_NAME, `Events backfill syncing failed: ${error}`);
+        logger.error(
+          QUEUE_NAME,
+          `Events for [${fromBlock}, ${toBlock}] backfill syncing failed: ${error}`
+        );
         throw error;
       }
     },
