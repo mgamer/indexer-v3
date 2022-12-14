@@ -50,9 +50,8 @@ if (config.doBackgroundWork && config.doEventsSyncBackfill) {
       }
 
       try {
-        logger.info(QUEUE_NAME, `Events backfill syncing block range [${fromBlock}, ${toBlock}]`);
-
         await syncEvents(fromBlock, toBlock, { backfill: true, syncDetails });
+        logger.info(QUEUE_NAME, `Events backfill syncing block range [${fromBlock}, ${toBlock}]`);
       } catch (error) {
         logger.error(
           QUEUE_NAME,
