@@ -553,7 +553,7 @@ export const getTokensV5Options: RouteOptions = {
 
           switch (query.sortBy) {
             case "rarity": {
-              query.sortDirection = query.sortDirection || "desc"; // Default sorting for rarity is DESC
+              query.sortDirection = query.sortDirection || "asc"; // Default sorting for rarity is ASC
               const sign = query.sortDirection == "desc" ? "<" : ">";
               conditions.push(
                 `(t.rarity_rank, t.token_id) ${sign} ($/contRarity/, $/contTokenId/)`
@@ -614,8 +614,8 @@ export const getTokensV5Options: RouteOptions = {
         switch (query.sortBy) {
           case "rarity": {
             baseQuery += ` ORDER BY t.rarity_rank ${
-              query.sortDirection || "DESC"
-            } NULLS LAST, t.token_id ${query.sortDirection || "DESC"}`;
+              query.sortDirection || "ASC"
+            } NULLS LAST, t.token_id ${query.sortDirection || "ASC"}`;
             break;
           }
 
