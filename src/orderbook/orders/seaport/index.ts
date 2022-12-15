@@ -800,7 +800,7 @@ export const save = async (
       ];
 
       if (collection) {
-        const royalties = collection.new_royalties?.["opensea"] ?? collection.royalties ?? [];
+        const royalties = collection.new_royalties?.["opensea"] ?? [];
         for (const royalty of royalties) {
           feeBps += royalty.bps;
 
