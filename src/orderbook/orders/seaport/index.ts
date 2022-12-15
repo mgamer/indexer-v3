@@ -351,15 +351,22 @@ export const save = async (
         );
       }
 
-      const feeBreakdown = info.fees.map(({ recipient, amount }) => ({
-        kind: openSeaFeeRecipients.includes(recipient)
-          ? "marketplace"
-          : openSeaRoyalties.map(({ recipient }) => recipient).includes(recipient.toLowerCase())
-          ? "royalty"
-          : "marketplace",
-        recipient,
-        bps: price.eq(0) ? 0 : bn(amount).mul(10000).div(price).toNumber(),
-      }));
+      const feeBreakdown = info.fees.map(({ recipient, amount }) => {
+        const bps = price.eq(0) ? 0 : bn(amount).mul(10000).div(price).toNumber();
+
+        return {
+          // First check for opensea hardcoded recipients
+          kind: openSeaFeeRecipients.includes(recipient)
+            ? "marketplace"
+            : openSeaRoyalties.map(({ recipient }) => recipient).includes(recipient.toLowerCase()) // Check for locally stored royalties
+            ? "royalty"
+            : bps > 250
+            ? "royalty"
+            : "marketplace", // If bps is higher than 250 assume it is royalty otherwise marketplace fee
+          recipient,
+          bps,
+        };
+      });
 
       // Handle: royalties on top
       const defaultRoyalties =
