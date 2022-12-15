@@ -109,9 +109,17 @@ export const syncEvents = async (
       try {
         const baseEventParams = await parseEvent(log, blocksCache);
 
+        if (!backfill) {
+          logger.info("events-sync", `Got event: ${JSON.stringify(baseEventParams)}`);
+        }
+
         // Skip transactions we already processed
         if (!backfill && (await redis.get(getTxLockKey(baseEventParams.txHash)))) {
           return;
+        }
+
+        if (!backfill) {
+          logger.info("events-sync", `Procesing event: ${JSON.stringify(baseEventParams)}`);
         }
 
         // Cache the block data
