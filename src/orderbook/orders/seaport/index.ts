@@ -360,9 +360,9 @@ export const save = async (
             ? "marketplace"
             : openSeaRoyalties.map(({ recipient }) => recipient).includes(recipient.toLowerCase()) // Check for locally stored royalties
             ? "royalty"
-            : bps > 250
+            : bps > 250 // If bps is higher than 250 assume it is royalty otherwise marketplace fee
             ? "royalty"
-            : "marketplace", // If bps is higher than 250 assume it is royalty otherwise marketplace fee
+            : "marketplace",
           recipient,
           bps,
         };
