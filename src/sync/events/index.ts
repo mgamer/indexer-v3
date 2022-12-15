@@ -68,6 +68,7 @@ export const syncEvents = async (
   let start = new Date().getTime();
   // By default, we want to get all events
   let eventFilter: Filter = {
+    topics: [[...new Set(getEventData().map(({ topic }) => topic))]],
     fromBlock,
     toBlock,
   };
@@ -323,6 +324,10 @@ export const syncEvents = async (
 
     // Lock each processed transaction to ensure we don't double-process anything
     if (!backfill) {
+      logger.info(
+        "events-sync",
+        `Locking ${JSON.stringify(enhancedEvents.map((e) => e.baseEventParams))}`
+      );
       await Promise.all(
         [...new Set(enhancedEvents.map((event) => event.baseEventParams)).keys()].map((params) =>
           redis.set(getTxLockKey(params.blockHash, params.txHash), "locked", "EX", 5 * 60)
