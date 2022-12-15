@@ -124,7 +124,7 @@ if (config.doBackgroundWork) {
                 {
                   kind: "single-token",
                   data: {
-                    method: "simplehash",
+                    method: metadataIndexFetch.getIndexingMethod(collection.community),
                     contract,
                     tokenId,
                     collection: collection.id,
