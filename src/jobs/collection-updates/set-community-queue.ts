@@ -36,7 +36,7 @@ if (config.doBackgroundWork) {
   );
 
   worker.on("completed", async (job) => {
-    const maxAttempts = 100;
+    const maxAttempts = 1500;
     const { collection, community, attempts } = job.data;
 
     if (attempts >= maxAttempts) {
