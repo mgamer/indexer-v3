@@ -469,11 +469,7 @@ export type ArrayifiedInfinityOrder = [
   string,
   string
 ];
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const decodeArrayifiedOrder = (
-  item: ArrayifiedInfinityOrder,
-  chainId: number
-): Sdk.Infinity.Order => {
+export const decodeArrayifiedOrder = (item: ArrayifiedInfinityOrder): Sdk.Infinity.Order => {
   const [
     isSellOrder,
     signer,
