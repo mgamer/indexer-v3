@@ -27,6 +27,7 @@ import * as manifold from "@/events-sync/data/manifold";
 import * as tofu from "@/events-sync/data/tofu";
 import * as nftTrader from "@/events-sync/data/nft-trader";
 import * as okex from "@/events-sync/data/okex";
+import * as bendDao from "@/events-sync/data/bend-dao";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -113,7 +114,9 @@ export type EventDataKind =
   | "tofu-inventory-update"
   | "decentraland-sale"
   | "nft-trader-swap"
-  | "okex-order-filled";
+  | "okex-order-filled"
+  | "bend-dao-taker-ask"
+  | "bend-dao-taker-bid";
 
 export type EventData = {
   kind: EventDataKind;
@@ -206,6 +209,8 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
       decentraland.sale,
       nftTrader.swap,
       okex.orderFulfilled,
+      bendDao.takerAsk,
+      bendDao.takerBid,
     ];
   } else {
     return (
@@ -380,6 +385,10 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return nftTrader.swap;
     case "okex-order-filled":
       return okex.orderFulfilled;
+    case "bend-dao-taker-ask":
+      return bendDao.takerAsk;
+    case "bend-dao-taker-bid":
+      return bendDao.takerBid;
 
     default:
       return undefined;
