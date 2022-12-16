@@ -9,16 +9,16 @@ describe("Infinity get order nonce from trace", () => {
     throw new Error("Chain ID must be 1");
   }
 
-  //   test("matchOneToMany", async () => {
   /**
-   * this txn is on goerli so we just load the trace from a fixture
+   * this test is for a transaction on goerli - there are currently no matchOneToMany transaction on mainnet
    */
-  // const txHash = "0x129bdc7068357d4a5f5b8f9d583c2ecf60e6fe6ff0ae629c24ef0502d46db1f5";
-  // const block = 7186305;
-  // const orderHash = "0x052c45042c9faa8935b8a29b228b99950da7f9add6b032e01d5194b980dd07fb";
-  // const orderNonce = "311";
-  // const result = await getOrderNonceFromTrace(orderHash, matchOneToManyTrace);
-  // expect(result?.nonce).toBe(orderNonce);
+  //   test("matchOneToMany", async () => {
+  //     const txHash = "0x129bdc7068357d4a5f5b8f9d583c2ecf60e6fe6ff0ae629c24ef0502d46db1f5";
+  //     const block = 7186305;
+  //     const orderHash = "0x052c45042c9faa8935b8a29b228b99950da7f9add6b032e01d5194b980dd07fb";
+  //     const orderNonce = "311";
+  //     const result = await getOrderNonceFromTrace(orderHash, matchOneToManyTrace);
+  //     expect(result?.nonce).toBe(orderNonce);
   //   });
 
   test("matchOneToOne", async () => {
