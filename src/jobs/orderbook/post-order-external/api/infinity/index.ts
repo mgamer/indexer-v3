@@ -4,7 +4,10 @@ import axios from "axios";
 
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import { InvalidRequestError, RequestWasThrottledError } from "../errors";
+import {
+  InvalidRequestError,
+  RequestWasThrottledError,
+} from "@/jobs/orderbook/post-order-external/api/errors";
 
 // Infinity default rate limit - 60 requests per minute
 export const RATE_LIMIT_REQUEST_COUNT = 60;

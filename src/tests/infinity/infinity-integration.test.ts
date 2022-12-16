@@ -7,9 +7,6 @@ import { Wallet } from "@ethersproject/wallet";
 
 import { config } from "@/config/index";
 import { testNFTAddr, operatorKey, operator2Key } from "./__fixtures__/test-accounts";
-
-import { setupNFTs } from "../utils/nft";
-import { getOrder } from "../utils/order";
 import { Infinity } from "@reservoir0x/sdk";
 import { lc } from "@reservoir0x/sdk/dist/utils";
 import { parseEther } from "ethers/lib/utils";
@@ -17,7 +14,10 @@ import { bn, now } from "@/common/utils";
 import { Common } from "@reservoir0x/sdk";
 import { BigNumberish, logger } from "ethers";
 import * as orders from "@/orderbook/orders";
+
 import { wait } from "tests/utils/test";
+import { getOrder } from "tests/utils/order";
+import { setupNFTs } from "tests/utils/nft";
 
 const operatorProvider = new Wallet(operatorKey, baseProvider);
 const operator2Provider = new Wallet(operator2Key, baseProvider);

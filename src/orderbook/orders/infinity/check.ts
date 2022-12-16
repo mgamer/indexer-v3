@@ -25,9 +25,7 @@ export const offChainCheck = async (
 
   for (const contract of contracts) {
     const kind = await commonHelpers.getContractKind(contract);
-    if (!kind) {
-      throw new Error("invalid-target");
-    } else if (kind === "erc1155") {
+    if (kind !== "erc721") {
       throw new Error("invalid-target");
     }
   }

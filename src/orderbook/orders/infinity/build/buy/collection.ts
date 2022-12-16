@@ -2,7 +2,7 @@ import * as Sdk from "@reservoir0x/sdk";
 
 import { redb } from "@/common/db";
 import { config } from "@/config/index";
-import * as utils from "../utils";
+import * as utils from "@/orderbook/orders/infinity/build/utils";
 
 interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
   contract: string;

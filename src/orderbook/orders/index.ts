@@ -109,7 +109,7 @@ export const getOrderSourceByOrderKind = async (
       case "blur":
         return sources.getOrInsert("blur.io");
       case "infinity":
-        return sources.getOrInsert("infinity.xyz"); // TODO - what needs to be done to add infinity to source? do I update the json file?
+        return sources.getOrInsert("infinity.xyz");
       case "manifold":
         return sources.getOrInsert("manifold.xyz");
 

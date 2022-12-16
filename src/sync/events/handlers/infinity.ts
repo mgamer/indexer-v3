@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import * as Sdk from "@reservoir0x/sdk";
 import { EnhancedEvent, OnChainData } from "./utils";
 import * as es from "@/events-sync/storage";
 import * as utils from "@/events-sync/utils";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
-import { getEventData } from "../data";
 import { idb } from "@/common/db";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import { OrderKind } from "@/orderbook/orders";
@@ -12,8 +12,14 @@ import { BigNumber, BigNumberish } from "ethers";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import { bn, toBuffer } from "@/common/utils";
-import { getERC20Transfer } from "./utils/erc20";
+import { getERC20Transfer } from "@/events-sync/handlers/utils/erc20";
 import { Log } from "@ethersproject/providers";
+import { getEventData } from "@/events-sync/data";
+import { config } from "@/config/index";
+import { searchForCall } from "@georgeroman/evm-tx-simulator";
+import { BaseEventParams } from "@/events-sync/parser";
+import { Interface } from "ethers/lib/utils";
+import { TransactionTrace } from "@/models/transaction-traces";
 
 export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData> => {
   const bulkCancelEvents: es.bulkCancels.Event[] = [];
@@ -27,6 +33,11 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
   // Keep track of all events within the currently processing transaction
   let currentTx: string | undefined;
   let currentTxLogs: Log[] = [];
+
+  /**
+   * Store the txTrace for the current txn so it doesn't have to be re-fetched
+   */
+  let txTrace: TransactionTrace | undefined;
 
   for (const { kind, baseEventParams, log } of events) {
     if (currentTx !== baseEventParams.txHash) {
@@ -90,8 +101,25 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         const orderKind: OrderKind = "infinity";
 
         // Handle: cancel orders with the same nonce
-        const sellOrderNonce = await getOrderNonce(sellOrderHash, seller);
-        const buyOrderNonce = await getOrderNonce(buyOrderHash, buyer);
+        const sellOrderNonceResult = await getOrderNonce(
+          sellOrderHash,
+          seller,
+          txTrace ?? baseEventParams
+        );
+        const sellOrderNonce = sellOrderNonceResult.nonce;
+        if (sellOrderNonceResult.txTrace) {
+          txTrace = sellOrderNonceResult.txTrace;
+        }
+
+        const buyOrderNonceResult = await getOrderNonce(
+          buyOrderHash,
+          buyer,
+          txTrace ?? baseEventParams
+        );
+        const buyOrderNonce = buyOrderNonceResult.nonce;
+        if (buyOrderNonceResult.txTrace) {
+          txTrace = buyOrderNonceResult.txTrace;
+        }
 
         if (sellOrderNonce) {
           nonceCancelEvents.push({
@@ -138,8 +166,13 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           break;
         }
 
-        for (const nft of nfts) {
-          for (const token of nft.tokens) {
+        /**
+         * Don't handle fills events and fill infos for bundles
+         */
+        if (nfts.length === 1) {
+          const nft = nfts[0];
+          if (nft.tokens.length === 1) {
+            const token = nft.tokens[0];
             const tokenId = bn(token.tokenId).toString();
             const numTokens = bn(token.numTokens).toString();
             fillEvents.push({
@@ -262,14 +295,17 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         }[];
         const orderKind: OrderKind = "infinity";
 
-        const sides = await getOrderSide(orderHash, seller, buyer);
+        const orderSideResult = await getOrderSide(orderHash, seller, buyer, baseEventParams);
+        if (orderSideResult.txTrace) {
+          txTrace = orderSideResult.txTrace;
+        }
 
         // Handle: cancel orders
-        if (sides) {
+        if (orderSideResult.nonce) {
           nonceCancelEvents.push({
             orderKind,
-            maker: sides.maker,
-            nonce: sides.nonce,
+            maker: orderSideResult.maker,
+            nonce: orderSideResult.nonce,
             baseEventParams,
           });
         }
@@ -303,18 +339,23 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           break;
         }
 
-        if (sides) {
-          const orderSide = sides.isSellOrder ? "sell" : "buy";
-          for (const nft of nfts) {
-            for (const token of nft.tokens) {
+        if (orderSideResult.nonce) {
+          const orderSide = orderSideResult.isSellOrder ? "sell" : "buy";
+          /**
+           * Don't handle fills events and fill infos for bundles
+           */
+          if (nfts.length === 1) {
+            const nft = nfts[0];
+            if (nft.tokens.length === 1) {
+              const token = nft.tokens[0];
               const tokenId = bn(token.tokenId).toString();
               const numTokens = bn(token.numTokens).toString();
               fillEvents.push({
                 orderKind,
                 orderId: orderHash,
                 orderSide,
-                maker: sides.maker,
-                taker: sides.taker,
+                maker: orderSideResult.maker,
+                taker: orderSideResult.taker,
                 price: priceDataPerToken.nativePrice,
                 currency,
                 currencyPrice: pricePerToken,
@@ -388,7 +429,11 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
   };
 };
 
-async function getOrderNonce(orderHash: string, maker: string): Promise<string | null> {
+async function getOrderNonce(
+  orderHash: string,
+  maker: string,
+  params: Pick<BaseEventParams, "block" | "txHash"> | TransactionTrace
+): Promise<{ nonce: string | null; txTrace?: TransactionTrace }> {
   const result = await idb.oneOrNone(
     `
           SELECT
@@ -407,32 +452,190 @@ async function getOrderNonce(orderHash: string, maker: string): Promise<string |
   );
 
   if (result?.nonce) {
-    return (result.nonce as BigNumberish).toString();
+    return { nonce: (result.nonce as BigNumberish).toString() };
   }
 
-  return null;
+  const traceResult = await getOrderNonceFromTrace(orderHash, params);
+
+  return traceResult ?? { nonce: null };
 }
 
-async function getOrderSide(orderHash: string, seller: string, buyer: string) {
-  const sellerOrderNonce = await getOrderNonce(orderHash, seller);
+export type ArrayifiedInfinityOrder = [
+  boolean,
+  string,
+  BigNumberish[],
+  [string, [BigNumberish, BigNumberish][]][],
+  [string, string],
+  string,
+  string
+];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const decodeArrayifiedOrder = (
+  item: ArrayifiedInfinityOrder,
+  chainId: number
+): Sdk.Infinity.Order => {
+  const [
+    isSellOrder,
+    signer,
+    constraints,
+    arrayifiedNfts,
+    [complication, currency],
+    extraParams,
+    sig,
+  ] = item;
 
-  if (sellerOrderNonce) {
+  const nfts: Sdk.Infinity.Types.OrderNFTs[] = arrayifiedNfts.map(
+    ([collection, arrayifiedTokens]: [string, [BigNumberish, BigNumberish][]]) => {
+      return {
+        collection: lc(collection),
+        tokens: arrayifiedTokens.map(([tokenId, numTokens]: [BigNumberish, BigNumberish]) => {
+          return {
+            tokenId: bn(tokenId).toString(),
+            numTokens: bn(numTokens).toNumber(),
+          };
+        }),
+      };
+    }
+  );
+
+  const params: Sdk.Infinity.Types.SignedOrder = {
+    isSellOrder,
+    signer: lc(signer),
+    constraints: constraints.map((item) => bn(item).toString()),
+    nfts,
+    execParams: [complication, currency].map(lc),
+    extraParams,
+    sig,
+  };
+
+  return new Sdk.Infinity.Order(config.chainId, params);
+};
+
+export const InfinityFulfillOrderMethods = {
+  matchOneToManyOrders: {
+    methodId: "0x63f3c034",
+    decodeInput: (input: string, iface: Interface): Sdk.Infinity.Order[] => {
+      const [makerOrder, manyMakerOrders] = iface.decodeFunctionData("matchOneToManyOrders", input);
+
+      return [makerOrder, ...manyMakerOrders].map(decodeArrayifiedOrder);
+    },
+  },
+  matchOneToOneOrders: {
+    methodId: "0x9d9a0cef",
+    decodeInput: (input: string, iface: Interface): Sdk.Infinity.Order[] => {
+      const [makerOrders1, makerOrders2] = iface.decodeFunctionData("matchOneToOneOrders", input);
+      return [...makerOrders1, ...makerOrders2].map(decodeArrayifiedOrder);
+    },
+  },
+  matchOrders: {
+    methodId: "0x0df4239c",
+    decodeInput: (input: string, iface: Interface): Sdk.Infinity.Order[] => {
+      const [sells, buys, _constructs] = iface.decodeFunctionData("matchOrders", input);
+      return [...sells, ...buys].map(decodeArrayifiedOrder);
+    },
+  },
+  takeMultipleOneOrders: {
+    methodId: "0x78759e13",
+    decodeInput: (input: string, iface: Interface): Sdk.Infinity.Order[] => {
+      const [makerOrders] = iface.decodeFunctionData("takeMultipleOneOrders", input);
+
+      return makerOrders.map(decodeArrayifiedOrder);
+    },
+  },
+  takeOrders: {
+    methodId: "0x723d9836",
+    decodeInput: (input: string, iface: Interface): Sdk.Infinity.Order[] => {
+      const [makerOrders, _takerNfts] = iface.decodeFunctionData("takeOrders", input);
+
+      return makerOrders.map(decodeArrayifiedOrder);
+    },
+  },
+};
+
+export async function getOrderNonceFromTrace(
+  orderHash: string,
+  params: Pick<BaseEventParams, "block" | "txHash"> | TransactionTrace
+): Promise<{ nonce: string | null; txTrace: TransactionTrace } | null> {
+  let txTrace;
+  if ("calls" in params) {
+    txTrace = params;
+  } else {
+    txTrace = await utils.fetchTransactionTrace(params.txHash);
+    if (!txTrace) {
+      // Skip any failed attempts to get the trace
+      return null;
+    }
+  }
+
+  const exchange = new Sdk.Infinity.Exchange(config.chainId);
+  const trace = searchForCall(txTrace.calls, {
+    to: Sdk.Infinity.Addresses.Exchange[config.chainId],
+    type: "CALL",
+    sigHashes: Object.values(InfinityFulfillOrderMethods).map((item) => item.methodId),
+  });
+
+  if (trace) {
+    const input = trace?.input;
+
+    const method = Object.values(InfinityFulfillOrderMethods).find((method) => {
+      return input.startsWith(method.methodId);
+    });
+
+    if (method) {
+      try {
+        const result = method.decodeInput(input, exchange.contract.interface);
+        const order = result.find((item) => item.hash() === orderHash);
+        if (order) {
+          return { nonce: order.nonce, txTrace };
+        }
+      } catch (err) {
+        /**
+         * decode input throws an error if the input is not the correct format
+         * i.e. attempted to decode with the incorrect method
+         */
+      }
+    }
+  }
+
+  return { nonce: null, txTrace };
+}
+
+async function getOrderSide(
+  orderHash: string,
+  seller: string,
+  buyer: string,
+  params: Pick<BaseEventParams, "block" | "txHash"> | TransactionTrace
+) {
+  let txTrace = "calls" in params ? params : null;
+  const sellerOrderNonceResponse = await getOrderNonce(orderHash, seller, txTrace ?? params);
+  if (sellerOrderNonceResponse.txTrace) {
+    txTrace = sellerOrderNonceResponse.txTrace;
+  }
+
+  if (sellerOrderNonceResponse.nonce) {
     return {
       maker: seller,
       taker: buyer,
       isSellOrder: true,
-      nonce: sellerOrderNonce,
+      nonce: sellerOrderNonceResponse.nonce,
+      txTrace,
     };
   }
-  const buyerOrderNonce = await getOrderNonce(orderHash, buyer);
-  if (buyerOrderNonce) {
+
+  const buyerOrderNonceResponse = await getOrderNonce(orderHash, buyer, txTrace ?? params);
+
+  if (buyerOrderNonceResponse.txTrace) {
+    txTrace = buyerOrderNonceResponse.txTrace;
+  }
+  if (buyerOrderNonceResponse.nonce) {
     return {
       maker: buyer,
       taker: seller,
       isSellOrder: false,
-      nonce: buyerOrderNonce,
+      nonce: buyerOrderNonceResponse.nonce,
+      txTrace,
     };
   }
 
-  return null;
+  return { nonce: null, txTrace };
 }

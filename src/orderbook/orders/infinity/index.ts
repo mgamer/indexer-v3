@@ -1,7 +1,6 @@
 import { config } from "@/config/index";
 import { idb, pgp } from "@/common/db";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
-import { DbOrder, generateSchemaHash, OrderMetadata } from "../utils";
 import { logger } from "@/common/logger";
 import { bn, now, toBuffer } from "@/common/utils";
 import { offChainCheck } from "./check";
@@ -11,6 +10,7 @@ import { Sources } from "@/models/sources";
 import * as arweaveRelay from "@/jobs/arweave-relay";
 import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
 import * as Sdk from "@reservoir0x/sdk";
+import { DbOrder, generateSchemaHash, OrderMetadata } from "@/orderbook/orders/utils";
 
 export type OrderInfo = {
   orderParams: Sdk.Infinity.Types.OrderInput;
@@ -59,6 +59,29 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
         return results.push({
           id,
           status: "expired",
+        });
+      }
+
+      // Check: listings are in eth and offers are in weth
+      if (order.isSellOrder && order.params.currency !== Sdk.Common.Addresses.Eth[config.chainId]) {
+        return results.push({
+          id,
+          status: "unsupported-payment-token",
+        });
+      } else if (
+        !order.isSellOrder &&
+        order.params.currency !== Sdk.Common.Addresses.Weth[config.chainId]
+      ) {
+        return results.push({
+          id,
+          status: "unsupported-payment-token",
+        });
+      }
+
+      if (order.nfts.length > 1) {
+        return results.push({
+          id,
+          status: "unsupported-order-type",
         });
       }
 
@@ -138,6 +161,8 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
             /**
              * TODO add support for more complex orders
              * once multi-collection token sets are supported
+             *
+             * make sure to remove the `unsupported-order-type` check above
              */
             break;
           }

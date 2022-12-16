@@ -3,8 +3,9 @@ dotEnvConfig();
 
 import { config } from "@/config/index";
 import { baseProvider } from "@/common/provider";
-import { getEventsFromTx } from "../utils/test";
+
 import { handleEvents } from "@/events-sync/handlers/infinity";
+import { getEventsFromTx } from "tests/utils/test";
 
 describe("Infinity", () => {
   if (config.chainId !== 1) {
