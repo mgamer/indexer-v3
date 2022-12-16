@@ -169,6 +169,11 @@ export const syncEvents = async (
         backfill,
       },
       {
+        kind: "decentraland",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("decentraland")),
+        backfill,
+      },
+      {
         kind: "element",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("element")),
         backfill,

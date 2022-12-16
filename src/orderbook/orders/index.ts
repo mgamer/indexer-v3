@@ -52,7 +52,8 @@ export type OrderKind =
   | "blur"
   | "forward"
   | "manifold"
-  | "tofu-nft";
+  | "tofu-nft"
+  | "decentraland";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -111,6 +112,8 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("manifold.xyz");
       case "tofu-nft":
         return sources.getOrInsert("tofunft.com");
+      case "decentraland":
+        return sources.getOrInsert("market.decentraland.org");
 
       case "mint": {
         if (address && mintsSources.has(address)) {
