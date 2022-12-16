@@ -24,6 +24,7 @@ import * as rarible from "@/events-sync/handlers/rarible";
 import * as manifold from "@/events-sync/handlers/manifold";
 import * as tofu from "@/events-sync/handlers/tofu";
 import * as nftTrader from "@/events-sync/handlers/nft-trader";
+import * as okex from "@/events-sync/handlers/okex";
 
 export type EventsInfo = {
   kind:
@@ -50,7 +51,8 @@ export type EventsInfo = {
     | "manifold"
     | "tofu"
     | "decentraland"
-    | "nft-trader";
+    | "nft-trader"
+    | "okex";
   events: EnhancedEvent[];
   backfill?: boolean;
 };
@@ -162,16 +164,24 @@ export const processEvents = async (info: EventsInfo) => {
       data = await rarible.handleEvents(info.events);
       break;
     }
+
     case "manifold": {
       data = await manifold.handleEvents(info.events);
       break;
     }
+
     case "tofu": {
       data = await tofu.handleEvents(info.events);
       break;
     }
+
     case "nft-trader": {
       data = await nftTrader.handleEvents(info.events);
+      break;
+    }
+
+    case "okex": {
+      data = await okex.handleEvents(info.events);
       break;
     }
   }

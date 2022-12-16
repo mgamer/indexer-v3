@@ -296,6 +296,10 @@ export const syncEvents = async (
       {
         kind: "nft-trader",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("nft-trader")),
+      },
+      {
+        kind: "okex",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("okex")),
         backfill,
       },
     ]);
