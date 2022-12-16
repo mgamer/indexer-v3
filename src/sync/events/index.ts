@@ -169,11 +169,6 @@ export const syncEvents = async (
         backfill,
       },
       {
-        kind: "cryptokitties",
-        events: enhancedEvents.filter(({ kind }) => kind.startsWith("cryptokitties")),
-        backfill,
-      },
-      {
         kind: "element",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("element")),
         backfill,
@@ -286,6 +281,11 @@ export const syncEvents = async (
       {
         kind: "manifold",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("manifold")),
+        backfill,
+      },
+      {
+        kind: "tofu",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("tofu")),
         backfill,
       },
     ]);
