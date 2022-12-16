@@ -25,6 +25,7 @@ import * as manifold from "@/events-sync/handlers/manifold";
 import * as tofu from "@/events-sync/handlers/tofu";
 import * as nftTrader from "@/events-sync/handlers/nft-trader";
 import * as okex from "@/events-sync/handlers/okex";
+import * as bendDao from "@/events-sync/handlers/bend-dao";
 
 export type EventsInfo = {
   kind:
@@ -52,7 +53,8 @@ export type EventsInfo = {
     | "tofu"
     | "decentraland"
     | "nft-trader"
-    | "okex";
+    | "okex"
+    | "bend-dao";
   events: EnhancedEvent[];
   backfill?: boolean;
 };
@@ -182,6 +184,11 @@ export const processEvents = async (info: EventsInfo) => {
 
     case "okex": {
       data = await okex.handleEvents(info.events);
+      break;
+    }
+
+    case "bend-dao": {
+      data = await bendDao.handleEvents(info.events);
       break;
     }
   }

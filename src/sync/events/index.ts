@@ -291,7 +291,10 @@ export const syncEvents = async (
       {
         kind: "tofu",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("tofu")),
-        backfill,
+      },
+      {
+        kind: "bend-dao",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("bend-dao")),
       },
       {
         kind: "nft-trader",
