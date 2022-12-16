@@ -283,6 +283,11 @@ export const syncEvents = async (
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("manifold")),
         backfill,
       },
+      {
+        kind: "tofu",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("tofu")),
+        backfill,
+      },
     ]);
 
     // Make sure to recheck the ingested blocks with a delay in order to undo any reorgs
