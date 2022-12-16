@@ -51,8 +51,10 @@ export const config = {
 
   maxTokenSetSize: 100000,
 
-  awsAccessKeyId: String(process.env.AWS_ACCESS_KEY_ID),
-  awsSecretAccessKey: String(process.env.AWS_SECRET_ACCESS_KEY),
+  awsAccessKeyId: String(process.env.AWS_ACCESS_KEY_ID || process.env.FC_AWS_ACCESS_KEY_ID),
+  awsSecretAccessKey: String(
+    process.env.AWS_SECRET_ACCESS_KEY || process.env.FC_AWS_SECRET_ACCESS_KEY
+  ),
 
   dataExportS3BucketName: String(process.env.DATA_EXPORT_S3_BUCKET_NAME),
   dataExportAwsAccessRole: String(process.env.DATA_EXPORT_AWS_ACCESS_ROLE),
@@ -61,6 +63,13 @@ export const config = {
   dataExportS3ArchiveBucketName: process.env.DATA_EXPORT_S3_ARCHIVE_BUCKET_NAME
     ? String(process.env.DATA_EXPORT_S3_ARCHIVE_BUCKET_NAME)
     : undefined,
+
+  openseaWebsocketEventsAwsFirehoseDeliveryStreamName: String(
+    process.env.OPENSEA_WEBSOCKET_EVENTS_AWS_FIREHOSE_DELIVERY_STREAM_NAME
+  ),
+  openseaWebsocketEventsAwsFirehoseDeliveryStreamRegion: String(
+    process.env.OPENSEA_WEBSOCKET_EVENTS_AWS_FIREHOSE_DELIVERY_STREAM_REGION
+  ),
 
   looksRareApiKey: String(process.env.LOOKSRARE_API_KEY),
   openSeaApiKey: String(process.env.OPENSEA_API_KEY),

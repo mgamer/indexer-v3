@@ -5,7 +5,7 @@ import * as erc721 from "@/events-sync/handlers/erc721";
 import * as erc1155 from "@/events-sync/handlers/erc1155";
 import * as blur from "@/events-sync/handlers/blur";
 import * as cryptopunks from "@/events-sync/handlers/cryptopunks";
-import * as cryptokitties from "@/events-sync/handlers/cryptokitties";
+import * as decentraland from "@/events-sync/handlers/decentraland";
 import * as element from "@/events-sync/handlers/element";
 import * as forward from "@/events-sync/handlers/forward";
 import * as foundation from "@/events-sync/handlers/foundation";
@@ -23,6 +23,10 @@ import * as universe from "@/events-sync/handlers/universe";
 import * as infinity from "@/events-sync/handlers/infinity";
 import * as rarible from "@/events-sync/handlers/rarible";
 import * as manifold from "@/events-sync/handlers/manifold";
+import * as tofu from "@/events-sync/handlers/tofu";
+import * as nftTrader from "@/events-sync/handlers/nft-trader";
+import * as okex from "@/events-sync/handlers/okex";
+import * as bendDao from "@/events-sync/handlers/bend-dao";
 
 export type EventsInfo = {
   kind:
@@ -31,7 +35,6 @@ export type EventsInfo = {
     | "erc1155"
     | "blur"
     | "cryptopunks"
-    | "cryptokitties"
     | "element"
     | "forward"
     | "foundation"
@@ -48,7 +51,12 @@ export type EventsInfo = {
     | "universe"
     | "infinity"
     | "rarible"
-    | "manifold";
+    | "manifold"
+    | "tofu"
+    | "decentraland"
+    | "nft-trader"
+    | "okex"
+    | "bend-dao";
   events: EnhancedEvent[];
   backfill?: boolean;
 };
@@ -81,8 +89,8 @@ export const processEvents = async (info: EventsInfo) => {
       break;
     }
 
-    case "cryptokitties": {
-      data = await cryptokitties.handleEvents(info.events);
+    case "decentraland": {
+      data = await decentraland.handleEvents(info.events);
       break;
     }
 
@@ -165,8 +173,29 @@ export const processEvents = async (info: EventsInfo) => {
       data = await rarible.handleEvents(info.events);
       break;
     }
+
     case "manifold": {
       data = await manifold.handleEvents(info.events);
+      break;
+    }
+
+    case "tofu": {
+      data = await tofu.handleEvents(info.events);
+      break;
+    }
+
+    case "nft-trader": {
+      data = await nftTrader.handleEvents(info.events);
+      break;
+    }
+
+    case "okex": {
+      data = await okex.handleEvents(info.events);
+      break;
+    }
+
+    case "bend-dao": {
+      data = await bendDao.handleEvents(info.events);
       break;
     }
   }

@@ -49,7 +49,7 @@ if (config.doBackgroundWork) {
           return;
         }
 
-        const collectionFloorAskChanged = await idb.oneOrNone(
+        const collectionFloorAsk = await idb.oneOrNone(
           `
             WITH y AS (
               UPDATE collections SET
@@ -141,7 +141,7 @@ if (config.doBackgroundWork) {
               WHERE orders.id = y.floor_sell_id
               LIMIT 1
             ) z ON TRUE
-            RETURNING 1
+            RETURNING order_id
           `,
           {
             kind,
@@ -153,8 +153,19 @@ if (config.doBackgroundWork) {
           }
         );
 
-        if (collectionFloorAskChanged) {
+        if (collectionFloorAsk) {
           await redis.del(`collection-floor-ask:${collectionResult.collection_id}`);
+
+          // if (collectionFloorAsk.order_id) {
+          //   await collectionUpdatesSimulateFloorAsk.addToQueue(
+          //     [
+          //       {
+          //         collection: collectionResult.collection_id,
+          //       },
+          //     ],
+          //     30000
+          //   );
+          // }
         }
       } catch (error) {
         logger.error(

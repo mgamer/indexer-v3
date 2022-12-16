@@ -1,11 +1,11 @@
 import cron from "node-cron";
 
-import { inject } from "@/api/index";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redlock } from "@/common/redis";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { Collections } from "@/models/collections";
 
 // Periodically check cache values against the underlying
 // data backing those caches in order to ensure there are
@@ -65,7 +65,8 @@ if (config.doBackgroundWork) {
                         AND orders.side = 'sell'
                         AND orders.fillability_status = 'fillable'
                         AND orders.approval_status = 'approved'
-                      ORDER BY orders.value
+                        AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                      ORDER BY orders.value, orders.fee_bps, orders.id
                       LIMIT 1
                     ) y ON TRUE
                     WHERE tokens.collection_id = x.id
@@ -85,19 +86,8 @@ if (config.doBackgroundWork) {
                 `Detected wrong tokens "floor_sell" cache for collection ${id}`
               );
 
-              // Automatically trigger a fix for the wrong cache
-              await inject({
-                method: "POST",
-                url: "/admin/fix-cache",
-                headers: {
-                  "Content-Type": "application/json",
-                  "X-Admin-Api-Key": config.adminApiKey,
-                },
-                payload: {
-                  kind: "tokens-floor-sell",
-                  contracts: [fromBuffer(contract)],
-                },
-              });
+              // Trigger a fix for the wrong cache
+              await Collections.recalculateContractFloorSell(fromBuffer(contract));
             }
           }
         } catch (error) {

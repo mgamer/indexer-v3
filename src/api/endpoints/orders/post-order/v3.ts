@@ -165,6 +165,11 @@ export const postOrderV3Options: RouteOptions = {
           }
 
           const [result] = await orders.zeroExV4.save([orderInfo]);
+
+          if (result.status === "already-exists") {
+            return { message: "Success", orderId: result.id };
+          }
+
           if (result.status === "success") {
             return { message: "Success", orderId: result.id };
           } else {
@@ -191,6 +196,10 @@ export const postOrderV3Options: RouteOptions = {
           };
 
           const [result] = await orders.seaport.save([orderInfo]);
+
+          if (result.status === "already-exists") {
+            return { message: "Success", orderId: result.id };
+          }
 
           if (result.status !== "success") {
             const error = Boom.badRequest(result.status);
@@ -296,6 +305,10 @@ export const postOrderV3Options: RouteOptions = {
 
           const [result] = await orders.seaport.save([orderInfo]);
 
+          if (result.status === "already-exists") {
+            return { message: "Success", orderId: result.id };
+          }
+
           if (result.status !== "success") {
             const error = Boom.badRequest(result.status);
             error.output.payload.orderId = result.id;
@@ -330,6 +343,10 @@ export const postOrderV3Options: RouteOptions = {
           };
 
           const [result] = await orders.looksRare.save([orderInfo]);
+
+          if (result.status === "already-exists") {
+            return { message: "Success", orderId: result.id };
+          }
 
           if (result.status !== "success") {
             const error = Boom.badRequest(result.status);
@@ -372,6 +389,10 @@ export const postOrderV3Options: RouteOptions = {
 
             const [result] = await orders.x2y2.save([orderInfo]);
 
+            if (result.status === "already-exists") {
+              return { message: "Success", orderId: result.id };
+            }
+
             if (result.status !== "success") {
               const error = Boom.badRequest(result.status);
               error.output.payload.orderId = result.id;
@@ -403,6 +424,10 @@ export const postOrderV3Options: RouteOptions = {
           };
 
           const [result] = await orders.universe.save([orderInfo]);
+
+          if (result.status === "already-exists") {
+            return { message: "Success", orderId: result.id };
+          }
 
           if (result.status !== "success") {
             throw Boom.badRequest(result.status);
@@ -469,6 +494,10 @@ export const postOrderV3Options: RouteOptions = {
           };
 
           const [result] = await orders.forward.save([orderInfo]);
+
+          if (result.status === "already-exists") {
+            return { message: "Success", orderId: result.id };
+          }
 
           if (result.status !== "success") {
             throw Boom.badRequest(result.status);
