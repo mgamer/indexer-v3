@@ -30,7 +30,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
       case "bend-dao-taker-ask": {
         const parsedLog = eventData.abi.parseLog(log);
         const orderId = parsedLog.args["orderHash"].toLowerCase();
-        // const orderNonce = parsedLog.args["orderNonce"].toString();
         const maker = parsedLog.args["maker"].toLowerCase();
         let taker = parsedLog.args["taker"].toLowerCase();
         const currency = parsedLog.args["currency"].toLowerCase();
@@ -97,7 +96,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
       case "bend-dao-taker-bid": {
         const parsedLog = eventData.abi.parseLog(log);
         const orderId = parsedLog.args["orderHash"].toLowerCase();
-        // const orderNonce = parsedLog.args["orderNonce"].toString();
         const maker = parsedLog.args["maker"].toLowerCase();
         let taker = parsedLog.args["taker"].toLowerCase();
         const currency = parsedLog.args["currency"].toLowerCase();
