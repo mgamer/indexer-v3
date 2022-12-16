@@ -23,6 +23,7 @@ import * as universe from "@/events-sync/handlers/universe";
 import * as rarible from "@/events-sync/handlers/rarible";
 import * as manifold from "@/events-sync/handlers/manifold";
 import * as tofu from "@/events-sync/handlers/tofu";
+import * as nftTrader from "@/events-sync/handlers/nft-trader";
 
 export type EventsInfo = {
   kind:
@@ -48,7 +49,8 @@ export type EventsInfo = {
     | "rarible"
     | "manifold"
     | "tofu"
-    | "decentraland";
+    | "decentraland"
+    | "nft-trader";
   events: EnhancedEvent[];
   backfill?: boolean;
 };
@@ -166,6 +168,10 @@ export const processEvents = async (info: EventsInfo) => {
     }
     case "tofu": {
       data = await tofu.handleEvents(info.events);
+      break;
+    }
+    case "nft-trader": {
+      data = await nftTrader.handleEvents(info.events);
       break;
     }
   }

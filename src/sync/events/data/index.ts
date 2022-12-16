@@ -25,6 +25,7 @@ import * as zeroExV4 from "@/events-sync/data/zeroex-v4";
 import * as zora from "@/events-sync/data/zora";
 import * as manifold from "@/events-sync/data/manifold";
 import * as tofu from "@/events-sync/data/tofu";
+import * as nftTrader from "@/events-sync/data/nft-trader";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -109,7 +110,8 @@ export type EventDataKind =
   | "manifold-cancel"
   | "manifold-finalize"
   | "tofu-inventory-update"
-  | "decentraland-sale";
+  | "decentraland-sale"
+  | "nft-trader-swap";
 
 export type EventData = {
   kind: EventDataKind;
@@ -200,6 +202,7 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
       manifold.cancel,
       tofu.inventoryUpdate,
       decentraland.sale,
+      nftTrader.swap,
     ];
   } else {
     return (
@@ -370,6 +373,8 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return tofu.inventoryUpdate;
     case "decentraland-sale":
       return decentraland.sale;
+    case "nft-trader-swap":
+      return nftTrader.swap;
 
     default:
       return undefined;
