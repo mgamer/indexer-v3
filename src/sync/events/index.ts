@@ -169,6 +169,11 @@ export const syncEvents = async (
         backfill,
       },
       {
+        kind: "decentraland",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("decentraland")),
+        backfill,
+      },
+      {
         kind: "element",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("element")),
         backfill,
@@ -286,6 +291,19 @@ export const syncEvents = async (
       {
         kind: "tofu",
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("tofu")),
+      },
+      {
+        kind: "bend-dao",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("bend-dao")),
+      },
+      {
+        kind: "nft-trader",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("nft-trader")),
+        backfill,
+      },
+      {
+        kind: "okex",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("okex")),
         backfill,
       },
     ]);

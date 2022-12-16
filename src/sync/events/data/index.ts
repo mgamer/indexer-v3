@@ -6,6 +6,7 @@ import * as erc1155 from "@/events-sync/data/erc1155";
 
 import * as blur from "@/events-sync/data/blur";
 import * as cryptoPunks from "@/events-sync/data/cryptopunks";
+import * as decentraland from "@/events-sync/data/decentraland";
 import * as element from "@/events-sync/data/element";
 import * as forward from "@/events-sync/data/forward";
 import * as foundation from "@/events-sync/data/foundation";
@@ -24,6 +25,9 @@ import * as zeroExV4 from "@/events-sync/data/zeroex-v4";
 import * as zora from "@/events-sync/data/zora";
 import * as manifold from "@/events-sync/data/manifold";
 import * as tofu from "@/events-sync/data/tofu";
+import * as nftTrader from "@/events-sync/data/nft-trader";
+import * as okex from "@/events-sync/data/okex";
+import * as bendDao from "@/events-sync/data/bend-dao";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -107,7 +111,12 @@ export type EventDataKind =
   | "manifold-modify"
   | "manifold-cancel"
   | "manifold-finalize"
-  | "tofu-inventory-update";
+  | "tofu-inventory-update"
+  | "decentraland-sale"
+  | "nft-trader-swap"
+  | "okex-order-filled"
+  | "bend-dao-taker-ask"
+  | "bend-dao-taker-bid";
 
 export type EventData = {
   kind: EventDataKind;
@@ -197,6 +206,11 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
       manifold.purchase,
       manifold.cancel,
       tofu.inventoryUpdate,
+      decentraland.sale,
+      nftTrader.swap,
+      okex.orderFulfilled,
+      bendDao.takerAsk,
+      bendDao.takerBid,
     ];
   } else {
     return (
@@ -365,6 +379,17 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return manifold.modify;
     case "tofu-inventory-update":
       return tofu.inventoryUpdate;
+    case "decentraland-sale":
+      return decentraland.sale;
+    case "nft-trader-swap":
+      return nftTrader.swap;
+    case "okex-order-filled":
+      return okex.orderFulfilled;
+    case "bend-dao-taker-ask":
+      return bendDao.takerAsk;
+    case "bend-dao-taker-bid":
+      return bendDao.takerBid;
+
     default:
       return undefined;
   }
