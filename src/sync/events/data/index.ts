@@ -6,7 +6,6 @@ import * as erc1155 from "@/events-sync/data/erc1155";
 
 import * as blur from "@/events-sync/data/blur";
 import * as cryptoPunks from "@/events-sync/data/cryptopunks";
-import * as cryptoKitties from "@/events-sync/data/cryptokitties";
 import * as element from "@/events-sync/data/element";
 import * as forward from "@/events-sync/data/forward";
 import * as foundation from "@/events-sync/data/foundation";
@@ -33,6 +32,8 @@ import * as tofu from "@/events-sync/data/tofu";
 
 export type EventDataKind =
   | "erc721-transfer"
+  | "erc721-like-transfer"
+  | "erc721-erc20-like-transfer"
   | "erc721-consecutive-transfer"
   | "erc1155-transfer-single"
   | "erc1155-transfer-batch"
@@ -86,7 +87,6 @@ export type EventDataKind =
   | "cryptopunks-punk-transfer"
   | "cryptopunks-assign"
   | "cryptopunks-transfer"
-  | "cryptokitties-transfer"
   | "sudoswap-buy"
   | "sudoswap-sell"
   | "sudoswap-token-deposit"
@@ -125,6 +125,8 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
       erc20.deposit,
       erc20.withdrawal,
       erc721.transfer,
+      erc721.likeTransfer,
+      erc721.erc20LikeTransfer,
       erc721.approvalForAll,
       erc721.consecutiveTransfer,
       erc1155.transferSingle,
@@ -174,7 +176,6 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
       cryptoPunks.punkTransfer,
       cryptoPunks.assign,
       cryptoPunks.transfer,
-      cryptoKitties.transfer,
       sudoswap.buy,
       sudoswap.sell,
       sudoswap.tokenDeposit,
@@ -220,6 +221,10 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return erc20.withdrawal;
     case "erc721-transfer":
       return erc721.transfer;
+    case "erc721-like-transfer":
+      return erc721.likeTransfer;
+    case "erc721-erc20-like-transfer":
+      return erc721.erc20LikeTransfer;
     case "erc721/1155-approval-for-all":
       return erc721.approvalForAll;
     case "erc721-consecutive-transfer":
@@ -318,8 +323,6 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return cryptoPunks.assign;
     case "cryptopunks-transfer":
       return cryptoPunks.transfer;
-    case "cryptokitties-transfer":
-      return cryptoKitties.transfer;
     case "sudoswap-buy":
       return sudoswap.buy;
     case "sudoswap-sell":
@@ -362,7 +365,6 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return manifold.modify;
     case "tofu-inventory-update":
       return tofu.inventoryUpdate;
-
     default:
       return undefined;
   }

@@ -351,13 +351,28 @@ export const save = async (
         );
       }
 
-      const feeBreakdown = info.fees.map(({ recipient, amount }) => ({
-        kind: openSeaRoyalties.map(({ recipient }) => recipient).includes(recipient.toLowerCase())
-          ? "royalty"
-          : "marketplace",
-        recipient,
-        bps: price.eq(0) ? 0 : bn(amount).mul(10000).div(price).toNumber(),
-      }));
+      const feeBreakdown = info.fees.map(({ recipient, amount }) => {
+        const bps = price.eq(0)
+          ? 0
+          : bn(amount)
+              .div(info.amount ?? 1)
+              .mul(10000)
+              .div(price)
+              .toNumber();
+
+        return {
+          // First check for opensea hardcoded recipients
+          kind: openSeaFeeRecipients.includes(recipient)
+            ? "marketplace"
+            : openSeaRoyalties.map(({ recipient }) => recipient).includes(recipient.toLowerCase()) // Check for locally stored royalties
+            ? "royalty"
+            : bps > 250 // If bps is higher than 250 assume it is royalty otherwise marketplace fee
+            ? "royalty"
+            : "marketplace",
+          recipient,
+          bps,
+        };
+      });
 
       // Handle: royalties on top
       const defaultRoyalties =
@@ -474,7 +489,7 @@ export const save = async (
       if (info.side === "buy" && order.params.kind === "single-token" && validateBidValue) {
         const typedInfo = info as typeof info & { tokenId: string };
         const tokenId = typedInfo.tokenId;
-        const seaportBidPercentageThreshold = 90;
+        const seaportBidPercentageThreshold = 85;
 
         try {
           const collectionFloorAskValue = await getCollectionFloorAskValue(
@@ -791,7 +806,8 @@ export const save = async (
       ];
 
       if (collection) {
-        for (const royalty of collection.new_royalties?.["opensea"] ?? []) {
+        const royalties = collection.new_royalties?.["opensea"] ?? [];
+        for (const royalty of royalties) {
           feeBps += royalty.bps;
 
           feeBreakdown.push({
@@ -902,7 +918,7 @@ export const save = async (
 
       if (orderParams.side === "buy" && orderParams.kind === "single-token" && validateBidValue) {
         const tokenId = orderParams.tokenId;
-        const seaportBidPercentageThreshold = 90;
+        const seaportBidPercentageThreshold = 85;
 
         try {
           const collectionFloorAskValue = await getCollectionFloorAskValue(
@@ -912,7 +928,6 @@ export const save = async (
 
           if (collectionFloorAskValue) {
             const percentage = (Number(value.toString()) / collectionFloorAskValue) * 100;
-
             if (percentage < seaportBidPercentageThreshold) {
               return results.push({
                 id,
@@ -1357,14 +1372,13 @@ export const handleTokenList = async (
 
     if (handleTokenSetId) {
       const collectionDay30Rank = await redis.zscore("collections_day30_rank", contract);
-
       if (!collectionDay30Rank || Number(collectionDay30Rank) <= 1000) {
         const tokenSetTokensExist = await redb.oneOrNone(
           `
-                  SELECT 1 FROM "token_sets" "ts"
-                  WHERE "ts"."id" = $/tokenSetId/
-                  LIMIT 1
-                `,
+            SELECT 1 FROM "token_sets" "ts"
+            WHERE "ts"."id" = $/tokenSetId/
+            LIMIT 1
+          `,
           { tokenSetId }
         );
 
@@ -1375,14 +1389,13 @@ export const handleTokenList = async (
           );
 
           const pendingFlagStatusSyncJobs = new PendingFlagStatusSyncJobs();
-
           if (getNetworkSettings().multiCollectionContracts.includes(contract)) {
             const collectionIds = await redb.manyOrNone(
               `
-                      SELECT id FROM "collections" "c"
-                      WHERE "c"."contract" = $/contract/
-                      AND day30_rank <= 1000
-                    `,
+                SELECT id FROM "collections" "c"
+                WHERE "c"."contract" = $/contract/
+                AND day30_rank <= 1000
+              `,
               { contract: toBuffer(contract) }
             );
 
@@ -1424,6 +1437,8 @@ const getCollection = async (
 ): Promise<{
   id: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  royalties: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   new_royalties: any;
   token_set_id: string | null;
 } | null> => {
@@ -1432,6 +1447,7 @@ const getCollection = async (
       `
         SELECT
           collections.id,
+          collections.royalties,
           collections.new_royalties,
           collections.token_set_id
         FROM tokens
@@ -1449,14 +1465,17 @@ const getCollection = async (
   } else {
     const collection = await redb.oneOrNone(
       `
-          SELECT
-            collections.id,
-            collections.new_royalties,
-            collections.token_set_id
-          FROM collections
-          WHERE collections.contract = $/contract/
-            AND collections.slug = $/collectionSlug/
-        `,
+        SELECT
+          collections.id,
+          collections.royalties,
+          collections.new_royalties,
+          collections.token_set_id
+        FROM collections
+        WHERE collections.contract = $/contract/
+          AND collections.slug = $/collectionSlug/
+        ORDER BY created_at DESC  
+        LIMIT 1  
+      `,
       {
         contract: toBuffer(orderParams.contract),
         collectionSlug: orderParams.collectionSlug,

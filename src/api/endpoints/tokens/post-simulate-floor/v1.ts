@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Request, RouteOptions } from "@hapi/hapi";
+import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
-import { redb } from "@/common/db";
+import { idb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -26,7 +27,7 @@ export const postSimulateFloorV1Options: RouteOptions = {
   validate: {
     payload: Joi.object({
       token: Joi.string().lowercase().pattern(regex.token),
-      router: Joi.string().valid("v5", "v6").default("v5"),
+      router: Joi.string().valid("v5", "v6").default("v6"),
     }),
   },
   response: {
@@ -74,11 +75,12 @@ export const postSimulateFloorV1Options: RouteOptions = {
           tokens: [token],
           taker: genericTaker,
           skipBalanceCheck: true,
+          currency: Sdk.Common.Addresses.Eth[config.chainId],
         },
       });
 
       if (JSON.parse(response.payload).statusCode === 500) {
-        const floorAsk = await redb.oneOrNone(
+        const floorAsk = await idb.oneOrNone(
           `
             SELECT
               tokens.floor_sell_id
