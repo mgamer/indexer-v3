@@ -293,6 +293,11 @@ export const syncEvents = async (
         events: enhancedEvents.filter(({ kind }) => kind.startsWith("tofu")),
         backfill,
       },
+      {
+        kind: "nft-trader",
+        events: enhancedEvents.filter(({ kind }) => kind.startsWith("nft-trader")),
+        backfill,
+      },
     ]);
 
     // Make sure to recheck the ingested blocks with a delay in order to undo any reorgs
