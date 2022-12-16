@@ -1,5 +1,3 @@
-import { Log } from "@ethersproject/abstract-provider";
-
 import { bn } from "@/common/utils";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
@@ -13,18 +11,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
   const fillEvents: es.fills.Event[] = [];
   const fillInfos: fillUpdates.FillInfo[] = [];
 
-  // Keep track of all events within the currently processing transaction
-  let currentTx: string | undefined;
-  let currentTxLogs: Log[] = [];
-
   // Handle the events
   for (const { kind, baseEventParams, log } of events) {
-    if (currentTx !== baseEventParams.txHash) {
-      currentTx = baseEventParams.txHash;
-      currentTxLogs = [];
-    }
-    currentTxLogs.push(log);
-
     const eventData = getEventData([kind])[0];
     switch (kind) {
       case "bend-dao-taker-ask": {
