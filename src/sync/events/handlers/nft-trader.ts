@@ -1,12 +1,13 @@
+import { parseCallTrace } from "@georgeroman/evm-tx-simulator";
+
+import { bn } from "@/common/utils";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
-import { parseCallTrace } from "@georgeroman/evm-tx-simulator";
+import * as es from "@/events-sync/storage";
 import * as utils from "@/events-sync/utils";
 import { getUSDAndNativePrices } from "@/utils/prices";
 
 import * as fillUpdates from "@/jobs/fill-updates/queue";
-import * as es from "@/events-sync/storage";
-import { bn } from "@/common/utils";
 
 export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData> => {
   const fillEvents: es.fills.Event[] = [];

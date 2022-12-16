@@ -1,7 +1,8 @@
 import { Interface } from "@ethersproject/abi";
-import { EventData } from "@/events-sync/data";
 import { NftTrader } from "@reservoir0x/sdk";
+
 import { config } from "@/config/index";
+import { EventData } from "@/events-sync/data";
 
 export const swap: EventData = {
   kind: "nft-trader-swap",

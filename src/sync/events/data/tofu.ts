@@ -1,8 +1,8 @@
 import { Interface } from "@ethersproject/abi";
+import { TofuNft } from "@reservoir0x/sdk";
 
 import { config } from "@/config/index";
 import { EventData } from "@/events-sync/data";
-import { TofuNft } from "@reservoir0x/sdk";
 
 export const inventoryUpdate: EventData = {
   kind: "tofu-inventory-update",

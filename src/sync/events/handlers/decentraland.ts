@@ -1,12 +1,13 @@
+import { Decentraland } from "@reservoir0x/sdk";
+
+import { config } from "@/config/index";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
-import { getUSDAndNativePrices } from "@/utils/prices";
-
 import * as utils from "@/events-sync/utils";
 import * as es from "@/events-sync/storage";
+import { getUSDAndNativePrices } from "@/utils/prices";
+
 import * as fillUpdates from "@/jobs/fill-updates/queue";
-import { Decentraland } from "@reservoir0x/sdk";
-import { config } from "@/config/index";
 
 export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData> => {
   const fillInfos: fillUpdates.FillInfo[] = [];
