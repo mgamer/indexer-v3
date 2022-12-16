@@ -1,5 +1,3 @@
-import { Log } from "@ethersproject/abstract-provider";
-
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import { getUSDAndNativePrices } from "@/utils/prices";
@@ -14,20 +12,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
   const fillInfos: fillUpdates.FillInfo[] = [];
   const fillEvents: es.fills.Event[] = [];
 
-  // Keep track of any on-chain orders
-
-  // Keep track of all events within the currently processing transaction
-  let currentTx: string | undefined;
-  let currentTxLogs: Log[] = [];
-
   // Handle the events
   for (const { kind, baseEventParams, log } of events) {
-    if (currentTx !== baseEventParams.txHash) {
-      currentTx = baseEventParams.txHash;
-      currentTxLogs = [];
-    }
-    currentTxLogs.push(log);
-
     const eventData = getEventData([kind])[0];
     switch (kind) {
       case "decentraland-sale": {
