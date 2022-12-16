@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { PgPromiseQuery, idb, pgp } from "@/common/db";
