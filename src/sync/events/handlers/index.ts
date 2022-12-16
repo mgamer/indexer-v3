@@ -5,6 +5,7 @@ import * as erc721 from "@/events-sync/handlers/erc721";
 import * as erc1155 from "@/events-sync/handlers/erc1155";
 import * as blur from "@/events-sync/handlers/blur";
 import * as cryptopunks from "@/events-sync/handlers/cryptopunks";
+import * as decentraland from "@/events-sync/handlers/decentraland";
 import * as element from "@/events-sync/handlers/element";
 import * as forward from "@/events-sync/handlers/forward";
 import * as foundation from "@/events-sync/handlers/foundation";
@@ -46,7 +47,8 @@ export type EventsInfo = {
     | "universe"
     | "rarible"
     | "manifold"
-    | "tofu";
+    | "tofu"
+    | "decentraland";
   events: EnhancedEvent[];
   backfill?: boolean;
 };
@@ -76,6 +78,11 @@ export const processEvents = async (info: EventsInfo) => {
 
     case "cryptopunks": {
       data = await cryptopunks.handleEvents(info.events);
+      break;
+    }
+
+    case "decentraland": {
+      data = await decentraland.handleEvents(info.events);
       break;
     }
 

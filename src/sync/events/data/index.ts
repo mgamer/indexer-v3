@@ -6,6 +6,7 @@ import * as erc1155 from "@/events-sync/data/erc1155";
 
 import * as blur from "@/events-sync/data/blur";
 import * as cryptoPunks from "@/events-sync/data/cryptopunks";
+import * as decentraland from "@/events-sync/data/decentraland";
 import * as element from "@/events-sync/data/element";
 import * as forward from "@/events-sync/data/forward";
 import * as foundation from "@/events-sync/data/foundation";
@@ -107,7 +108,8 @@ export type EventDataKind =
   | "manifold-modify"
   | "manifold-cancel"
   | "manifold-finalize"
-  | "tofu-inventory-update";
+  | "tofu-inventory-update"
+  | "decentraland-sale";
 
 export type EventData = {
   kind: EventDataKind;
@@ -197,6 +199,7 @@ export const getEventData = (eventDataKinds?: EventDataKind[]) => {
       manifold.purchase,
       manifold.cancel,
       tofu.inventoryUpdate,
+      decentraland.sale,
     ];
   } else {
     return (
@@ -365,6 +368,9 @@ const internalGetEventData = (kind: EventDataKind): EventData | undefined => {
       return manifold.modify;
     case "tofu-inventory-update":
       return tofu.inventoryUpdate;
+    case "decentraland-sale":
+      return decentraland.sale;
+
     default:
       return undefined;
   }
