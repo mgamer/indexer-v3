@@ -387,6 +387,8 @@ if (config.doBackgroundWork) {
           }
         }
 
+        trades.order.set(`${txHash}-${exchangeAddress}`, tradeRank + 1);
+
         // Handle: attribution
         const orderKind = "blur";
         const attributionData = await utils.extractAttributionData(txHash, orderKind);
@@ -448,9 +450,9 @@ if (config.doBackgroundWork) {
 
   if (config.chainId === 1) {
     redlock
-      .acquire([`${QUEUE_NAME}-lock-5`], 60 * 60 * 24 * 30 * 1000)
+      .acquire([`${QUEUE_NAME}-lock-6`], 60 * 60 * 24 * 30 * 1000)
       .then(async () => {
-        await addToQueue(16190000);
+        await addToQueue(16195800);
       })
       .catch(() => {
         // Skip on any errors
