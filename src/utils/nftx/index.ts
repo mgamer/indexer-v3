@@ -2,7 +2,6 @@ import { Interface } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
-import { bn } from "@/common/utils";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import * as nftx from "@/events-sync/data/nftx";
@@ -12,11 +11,6 @@ import {
   saveNftxFtPool,
   saveNftxNftPool,
 } from "@/models/nftx-pools";
-import { formatEther, parseEther } from "@ethersproject/units";
-import { logger } from "@/common/logger";
-import { BigNumber } from "ethers";
-
-const SUSHI_ROUTER = "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F";
 
 export const getNftPoolDetails = async (address: string) =>
   getNftxNftPool(address).catch(async () => {
@@ -154,113 +148,3 @@ export const tryParseSwap = async (log: Log) => {
     }
   }
 };
-
-export async function getPoolPrice(vault: string, amount = 1) {
-  let buyPrice = null;
-  let sellPrice = null;
-  let randomBuyPrice = null;
-
-  const iface = new Interface([
-    "function getAmountsOut(uint amountIn, address[] memory path) view returns (uint[] memory amounts)",
-    "function getAmountsIn(uint amountOut, address[] memory path) view returns (uint[] memory amounts)",
-  ]);
-
-  const WETH = Sdk.Common.Addresses.Weth[config.chainId];
-
-  const sushiRouter = new Contract(SUSHI_ROUTER, iface, baseProvider);
-
-  try {
-    const path = [WETH, vault];
-    const amounts = await sushiRouter.getAmountsIn(parseEther(`${amount}`), path);
-    buyPrice = formatEther(amounts[0]);
-  } catch (error) {
-    logger.error("get-nftx-pool-price", `Failed to getAmountsIn: ${error}`);
-  }
-
-  try {
-    const path = [vault, WETH];
-    const amounts = await sushiRouter.getAmountsOut(parseEther(`${amount}`), path);
-    sellPrice = formatEther(amounts[1]);
-  } catch (error) {
-    logger.error("get-nftx-pool-price", `Failed to getAmountsOut: ${error}`);
-  }
-
-  const fees = await getPoolFees(vault);
-  const base = parseEther(`1`);
-  let feeBpsSell = null;
-  let feeBpsBuy = null;
-  let feeBpsRandomBuy = null;
-
-  if (sellPrice) {
-    const price = parseEther(sellPrice).div(bn(amount));
-    const mintFeeInETH = bn(fees.mintFee).mul(price).div(base);
-
-    sellPrice = formatEther(price.sub(mintFeeInETH));
-    feeBpsSell = mintFeeInETH.mul(bn(10000)).div(parseEther(sellPrice)).toString();
-  }
-
-  if (buyPrice) {
-    // 1 ETH = x Vault Token
-    const price = parseEther(buyPrice).div(bn(amount));
-    const targetBuyFeeInETH = bn(fees.targetRedeemFee).mul(price).div(base);
-    const randomBuyFeeInETH = bn(fees.randomRedeemFee).mul(price).div(base);
-
-    buyPrice = formatEther(price.add(targetBuyFeeInETH));
-    randomBuyPrice = formatEther(price.add(randomBuyFeeInETH));
-    feeBpsBuy = targetBuyFeeInETH.mul(bn(10000)).div(parseEther(buyPrice)).toString();
-    feeBpsRandomBuy = randomBuyFeeInETH.mul(bn(10000)).div(parseEther(randomBuyPrice)).toString();
-  }
-
-  return {
-    fees,
-    amount,
-    bps: {
-      sell: feeBpsSell,
-      buy: feeBpsBuy,
-      randomBuy: feeBpsRandomBuy,
-    },
-    currency: WETH,
-    sell: sellPrice,
-    buy: buyPrice,
-    buyRandom: randomBuyPrice,
-  };
-}
-
-export async function getPoolNFTs(vault: string) {
-  const tokenIds: string[] = [];
-  const iface = new Interface(["function allHoldings() external view returns (uint256[] memory)"]);
-
-  const factory = new Contract(vault, iface, baseProvider);
-  try {
-    const holdingNFTs = await factory.allHoldings();
-    holdingNFTs.forEach((c: BigNumber) => {
-      tokenIds.push(c.toString());
-    });
-  } catch {
-    // Skip errors
-  }
-  return tokenIds;
-}
-
-// TODO store fees to database
-export async function getPoolFees(address: string) {
-  const iface = new Interface([
-    "function mintFee() public view returns (uint256)",
-    "function targetRedeemFee() public view returns (uint256)",
-    "function randomRedeemFee() public view returns (uint256)",
-  ]);
-
-  const vault = new Contract(address, iface, baseProvider);
-
-  const [mintFee, targetRedeemFee, randomRedeemFee] = await Promise.all([
-    vault.mintFee(),
-    vault.targetRedeemFee(),
-    vault.randomRedeemFee(),
-  ]);
-
-  return {
-    mintFee: mintFee.toString(),
-    randomRedeemFee: randomRedeemFee.toString(),
-    targetRedeemFee: targetRedeemFee.toString(),
-  };
-}

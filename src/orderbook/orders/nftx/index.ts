@@ -1,6 +1,7 @@
 import { AddressZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
 import pLimit from "p-limit";
+import * as Sdk from "@reservoir0x/sdk";
 
 import { idb, pgp, redb } from "@/common/db";
 import { logger } from "@/common/logger";
@@ -13,6 +14,8 @@ import * as royalties from "@/utils/royalties";
 import * as nftx from "@/utils/nftx";
 import { parseEther } from "ethers/lib/utils";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
+import { config } from "@/config/index";
+import { baseProvider } from "@/common/provider";
 
 export type OrderInfo = {
   orderParams: {
@@ -49,10 +52,15 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       }
 
       const amount = 10;
-      const poolPrice = await nftx.getPoolPrice(orderParams.pool, amount);
+      const poolPrice = await Sdk.Nftx.helpers.getPoolPrice(
+        orderParams.pool,
+        amount,
+        config.chainId,
+        baseProvider
+      );
 
       // Handle: fees
-      const feeBps = 0;
+      let feeBps = 0;
       const feeBreakdown: {
         kind: string;
         recipient: string;
@@ -68,6 +76,13 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           // Handle: prices
           const price = parseEther(buy).toString();
           const value = parseEther(buy).toString();
+
+          feeBps = Number(poolPrice.bps.buy);
+          feeBreakdown.push({
+            kind: "marketplace",
+            recipient: pool.address,
+            bps: feeBps,
+          });
 
           // Handle: royalties on top
           const defaultRoyalties = await royalties.getRoyaltiesByTokenSet(
@@ -101,12 +116,14 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           const normalizedValue = bn(value).sub(missingRoyaltyAmount);
 
           // Handle: core sdk order
-          const sdkParams = {
-            pair: orderParams.pool,
-            extra: {
-              price: price.toString(),
-            },
-          };
+          const sdkOrder = new Sdk.Nftx.Order(config.chainId, {
+            vaultId: pool.vaultId.toString(),
+            collection: pool.nft,
+            specificIds: [],
+            currency: Sdk.Common.Addresses.Weth[config.chainId],
+            path: [pool.address, Sdk.Common.Addresses.Weth[config.chainId]],
+            price: price.toString(),
+          });
 
           const orderResult = await redb.oneOrNone(
             `
@@ -164,7 +181,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               fee_bps: feeBps,
               fee_breakdown: feeBreakdown,
               dynamic: null,
-              raw_data: sdkParams,
+              raw_data: sdkOrder.params,
               expiration: validTo,
               missing_royalties: missingRoyalties,
               normalized_value: normalizedValue.toString(),
@@ -202,7 +219,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 id,
                 price,
                 value,
-                rawData: sdkParams,
+                rawData: sdkOrder.params,
                 quantityRemaining: amount.toString(),
                 missingRoyalties: missingRoyalties,
                 normalizedValue: normalizedValue.toString(),
@@ -251,6 +268,15 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           // Handle: prices
           const price = parseEther(sell).toString();
           const value = parseEther(sell).toString();
+
+          // Sell Fee
+          feeBps = Number(poolPrice.bps.sell);
+          feeBreakdown.push({
+            kind: "marketplace",
+            recipient: pool.address,
+            bps: feeBps,
+          });
+
           // Handle: royalties on top
           const defaultRoyalties = await royalties.getRoyaltiesByTokenSet(
             `contract:${pool.nft}`,
@@ -278,23 +304,23 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           }
           const normalizedValue = bn(value).add(missingRoyaltyAmount);
           // Fetch all token ids owned by the pool
-          const poolOwnedTokenIdsInDB = await commonHelpers.getNfts(pool.nft, pool.address);
-          const poolOwnedTokenIdsOnChain = await nftx.getPoolNFTs(pool.address);
-          const poolOwnedTokenIds = poolOwnedTokenIdsOnChain.length
-            ? poolOwnedTokenIdsOnChain
-            : poolOwnedTokenIdsInDB;
+          const poolOwnedTokenIds = await commonHelpers.getNfts(pool.nft, pool.address);
+          // const poolOwnedTokenIdsOnChain = await Sdk.Nftx.helpers.getPoolNFTs(pool.address, baseProvider);
 
           for (const tokenId of poolOwnedTokenIds) {
             try {
               const id = getOrderId(orderParams.pool, "sell", tokenId);
+
               // Handle: core sdk order
-              const sdkParams = {
-                pair: orderParams.pool,
-                tokenId,
-                extra: {
-                  price: price.toString(),
-                },
-              };
+              const sdkOrder = new Sdk.Nftx.Order(config.chainId, {
+                vaultId: pool.vaultId.toString(),
+                collection: pool.nft,
+                specificIds: [tokenId],
+                currency: Sdk.Common.Addresses.Weth[config.chainId],
+                amount: "1",
+                path: [Sdk.Common.Addresses.Weth[config.chainId], pool.address],
+                price: price.toString(),
+              });
 
               const orderResult = await redb.oneOrNone(
                 `
@@ -348,7 +374,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   fee_bps: feeBps,
                   fee_breakdown: feeBreakdown,
                   dynamic: null,
-                  raw_data: sdkParams,
+                  raw_data: sdkOrder.params,
                   expiration: validTo,
                   missing_royalties: missingRoyalties,
                   normalized_value: normalizedValue.toString(),
@@ -386,7 +412,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     id,
                     price,
                     value,
-                    rawData: sdkParams,
+                    rawData: sdkOrder.params,
                     missingRoyalties: missingRoyalties,
                     normalizedValue: normalizedValue.toString(),
                     currencyNormalizedValue: normalizedValue.toString(),
