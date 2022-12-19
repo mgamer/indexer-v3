@@ -345,16 +345,16 @@ export const getUserTokensV6Options: RouteOptions = {
       if (query.continuation) {
         const [acquiredAt, collectionId, tokenId] = splitContinuation(
           query.continuation,
-          /^[0-9]+_[A-Za-z0-9]+_[0-9]+$/
+          /^[0-9]+_[A-Za-z0-9:-]+_[0-9]+$/
         );
 
         (query as any).acquiredAt = acquiredAt;
         (query as any).collectionId = collectionId;
         (query as any).tokenId = tokenId;
         query.sortDirection = query.sortDirection || "desc";
-        const sign = query.sortDirection == "desc" ? "<=" : ">=";
+        const sign = query.sortDirection == "desc" ? "<" : ">";
         conditions.push(
-          `acquired_at ${sign} to_timestamp($/acquiredAt/) AND ((collection_id = $/collectionId/ AND b.token_id > $/tokenId/) OR (collection_id != $/collectionId/))`
+          `(acquired_at, b.token_id) ${sign} (to_timestamp($/acquiredAt/), $/tokenId/)`
         );
       }
 
@@ -364,7 +364,7 @@ export const getUserTokensV6Options: RouteOptions = {
 
       baseQuery += `
       ORDER BY
-        acquired_at ${query.sortDirection}, t.token_id ASC
+        acquired_at ${query.sortDirection}, b.token_id ${query.sortDirection}
       LIMIT $/limit/
       `;
 
