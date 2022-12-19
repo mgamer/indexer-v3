@@ -8,6 +8,7 @@ import { idb } from "@/common/db";
 
 const main = async () => {
   const limit = 2000;
+  let iterations = 0;
   let result;
   const collections = [
     "0x0a1bbd57033f57e7b6743621b79fcb9eb2ce3676",
@@ -18,7 +19,7 @@ const main = async () => {
     // Update the activities
     const updateActivitiesQuery = `
       WITH x AS (
-        SELECT id
+        SELECT id, contract, token_id
         FROM activities
         WHERE collection_id = $/collection/
         LIMIT ${limit}
@@ -28,42 +29,47 @@ const main = async () => {
       SET collection_id = (
         SELECT collection_id
         FROM tokens
-        WHERE contract = activities.contract
-        AND token_id = activities.token_id
+        WHERE contract = x.contract
+        AND token_id = x.token_id
       )
       FROM x
-      WHERE id = x.id
+      WHERE activities.id = x.id
       RETURNING 1
     `;
 
     do {
       result = await idb.manyOrNone(updateActivitiesQuery, { collection });
+      ++iterations;
+      console.log(`activities updated ${iterations * limit}`);
     } while (result.length == limit);
     console.log(`activities updated for ${collection}`);
 
     // Update the user activities
     const updateUserActivitiesQuery = `
       WITH x AS (
-        SELECT id
+        SELECT id, contract, token_id
         FROM user_activities
         WHERE collection_id = $/collection/
         LIMIT ${limit}
       )
       
-      UPDATE activities
+      UPDATE user_activities
       SET collection_id = (
         SELECT collection_id
         FROM tokens
-        WHERE contract = user_activities.contract
-        AND token_id = user_activities.token_id
+        WHERE contract = x.contract
+        AND token_id = x.token_id
       )
       FROM x
-      WHERE id = x.id
+      WHERE user_activities.id = x.id
       RETURNING 1
     `;
 
+    iterations = 0;
     do {
       result = await idb.manyOrNone(updateUserActivitiesQuery, { collection });
+      ++iterations;
+      console.log(`user_activities updated ${iterations * limit}`);
     } while (result.length == limit);
     console.log(`user_activities updated for ${collection}`);
 
@@ -77,13 +83,15 @@ const main = async () => {
       )
       
       DELETE FROM attributes
-      FROM x
-      WHERE id = x.id
+      WHERE attributes.id IN (SELECT id FROM x)
       RETURNING 1
     `;
 
+    iterations = 0;
     do {
       result = await idb.manyOrNone(cleanAttributesQuery, { collection });
+      ++iterations;
+      console.log(`attributes updated ${iterations * limit}`);
     } while (result.length == limit);
     console.log(`attributes updated for ${collection}`);
 
@@ -97,36 +105,40 @@ const main = async () => {
       )
       
       DELETE FROM attribute_keys
-      FROM x
-      WHERE id = x.id
+      WHERE attribute_keys.id IN (SELECT id FROM x)
       RETURNING 1
     `;
 
-    do {
-      result = await idb.manyOrNone(cleanAttributeKeysQuery, { collection });
-    } while (result.length == limit);
-    console.log(`attribute_keys updated for ${collection}`);
-
-    // Clean the attribute keys
-    const cleanTokenSetsQuery = `
-      WITH x AS (
-        SELECT id
-        FROM token_sets
-        WHERE collection_id = $/collection/
-        LIMIT ${limit}
-      )
-      
-      DELETE FROM token_sets
-      FROM x
-      WHERE id = x.id
-      RETURNING 1
-    `;
-
-    do {
-      result = await idb.manyOrNone(cleanTokenSetsQuery, { collection });
-    } while (result.length == limit);
-    console.log(`token_sets updated for ${collection}`);
-
+    // iterations = 0;
+    // do {
+    //   result = await idb.manyOrNone(cleanAttributeKeysQuery, { collection });
+    //   ++iterations;
+    //   console.log(`attribute_keys updated ${iterations * limit}`);
+    // } while (result.length == limit);
+    // console.log(`attribute_keys updated for ${collection}`);
+    //
+    // // Clean the token sets
+    // const cleanTokenSetsQuery = `
+    //   WITH x AS (
+    //     SELECT id
+    //     FROM token_sets
+    //     WHERE collection_id = $/collection/
+    //     LIMIT ${limit}
+    //   )
+    //
+    //   DELETE FROM token_sets
+    //   WHERE token_sets.id IN (SELECT id FROM x)
+    //   RETURNING 1
+    // `;
+    //
+    // iterations = 0;
+    // do {
+    //   result = await idb.manyOrNone(cleanTokenSetsQuery, { collection });
+    //   ++iterations;
+    //   console.log(`token_sets updated ${iterations * limit}`);
+    // } while (result.length == limit);
+    // console.log(`token_sets updated for ${collection}`);
+    //
     // // Clean the collection
     // const cleanCollectionsQuery = `
     //   DELETE FROM collections
