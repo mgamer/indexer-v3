@@ -345,7 +345,7 @@ export const getUserTokensV6Options: RouteOptions = {
       if (query.continuation) {
         const [acquiredAt, collectionId, tokenId] = splitContinuation(
           query.continuation,
-          /^[0-9]+_[A-Za-z0-9]+_[0-9]+$/
+          /^[0-9]+_[A-Za-z0-9:-]+_[0-9]+$/
         );
 
         (query as any).acquiredAt = acquiredAt;
