@@ -152,24 +152,36 @@ export const getUserTokensV6Options: RouteOptions = {
     // Filters
     (params as any).user = toBuffer(params.user);
 
-    const collectionFilters: string[] = [];
+    const tokensCollectionFilters: string[] = [];
+    const nftBalanceCollectionFilters: string[] = [];
 
     const addCollectionToFilter = (id: string) => {
-      const i = collectionFilters.length;
+      const i = nftBalanceCollectionFilters.length;
+
       if (id.match(/^0x[a-f0-9]{40}:\d+:\d+$/g)) {
+        // Range based collection
         const [contract, startTokenId, endTokenId] = id.split(":");
 
         (query as any)[`contract${i}`] = toBuffer(contract);
         (query as any)[`startTokenId${i}`] = startTokenId;
         (query as any)[`endTokenId${i}`] = endTokenId;
-        collectionFilters.push(`
+
+        nftBalanceCollectionFilters.push(`
           (nft_balances.contract = $/contract${i}/
           AND nft_balances.token_id >= $/startTokenId${i}/
           AND nft_balances.token_id <= $/endTokenId${i}/)
         `);
+      } else if (id.match(/^0x[a-f0-9]{40}:[a-zA-Z]+-.+$/g)) {
+        (query as any)[`collection${i}`] = id;
+
+        // List based collections
+        tokensCollectionFilters.push(`
+          collection_id = $/collection${i}/
+        `);
       } else {
+        // Contract side collection
         (query as any)[`contract${i}`] = toBuffer(id);
-        collectionFilters.push(`(nft_balances.contract = $/contract${i}/)`);
+        nftBalanceCollectionFilters.push(`(nft_balances.contract = $/contract${i}/)`);
       }
     };
 
@@ -184,7 +196,7 @@ export const getUserTokensV6Options: RouteOptions = {
         )
         .then((result) => result.forEach(({ id }) => addCollectionToFilter(id)));
 
-      if (!collectionFilters.length) {
+      if (!nftBalanceCollectionFilters.length) {
         return { tokens: [] };
       }
     }
@@ -194,7 +206,7 @@ export const getUserTokensV6Options: RouteOptions = {
         result.forEach(addCollectionToFilter)
       );
 
-      if (!collectionFilters.length) {
+      if (!nftBalanceCollectionFilters.length) {
         return { tokens: [] };
       }
     }
@@ -263,6 +275,9 @@ export const getUserTokensV6Options: RouteOptions = {
         FROM tokens t
         WHERE b.token_id = t.token_id
         AND b.contract = t.contract
+        AND ${
+          tokensCollectionFilters.length ? "(" + tokensCollectionFilters.join(" OR ") + ")" : "TRUE"
+        }
       ) t ON TRUE
     `;
 
@@ -278,6 +293,11 @@ export const getUserTokensV6Options: RouteOptions = {
           FROM tokens t
           WHERE b.token_id = t.token_id
           AND b.contract = t.contract
+          AND ${
+            tokensCollectionFilters.length
+              ? "(" + tokensCollectionFilters.join(" OR ") + ")"
+              : "TRUE"
+          }
         ) t ON TRUE
         LEFT JOIN LATERAL (
           SELECT 
@@ -328,7 +348,11 @@ export const getUserTokensV6Options: RouteOptions = {
             SELECT amount AS token_count, token_id, contract, acquired_at
             FROM nft_balances
             WHERE owner = $/user/
-              AND ${collectionFilters.length ? "(" + collectionFilters.join(" OR ") + ")" : "TRUE"}
+              AND ${
+                nftBalanceCollectionFilters.length
+                  ? "(" + nftBalanceCollectionFilters.join(" OR ") + ")"
+                  : "TRUE"
+              }
               AND ${
                 tokensFilter.length
                   ? "(nft_balances.contract, nft_balances.token_id) IN ($/tokensFilter:raw/)"
