@@ -198,5 +198,5 @@ if (config.doBackgroundWork) {
 }
 
 export const addToQueue = async (block: number) => {
-  await queue.add(randomUUID(), { block });
+  await queue.add(randomUUID(), { block }, { jobId: `${block}-2` });
 };
