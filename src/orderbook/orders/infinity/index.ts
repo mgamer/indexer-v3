@@ -112,10 +112,11 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
       let tokenSetId: string | undefined;
       const schemaHash = metadata.schemaHash ?? generateSchemaHash(metadata.schema);
 
+      let collection: string;
       switch (order.kind) {
         case "single-token": {
           const nft = order.nfts[0];
-          const collection = nft.collection;
+          collection = nft.collection;
           const tokenId = nft.tokens[0].tokenId;
           [{ id: tokenSetId }] = await tokenSet.singleToken.save([
             {
@@ -130,7 +131,7 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
         }
         case "contract-wide": {
           const nft = order.nfts[0];
-          const collection = nft.collection;
+          collection = nft.collection;
           [{ id: tokenSetId }] = await tokenSet.contractWide.save([
             {
               id: `contract:${collection}`,
@@ -145,7 +146,7 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
         case "complex": {
           const nfts = order.nfts;
           if (nfts.length === 1) {
-            const collection = nfts[0].collection;
+            collection = nfts[0].collection;
 
             const merkleRoot = generateMerkleTree(nfts[0].tokens.map((t) => t.tokenId));
             if (merkleRoot) {
@@ -163,8 +164,12 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
              * once multi-collection token sets are supported
              *
              * make sure to remove the `unsupported-order-type` check above
+             * as well as here
              */
-            break;
+            return results.push({
+              id,
+              status: "unsupported-order-type",
+            });
           }
 
           break;
@@ -241,7 +246,7 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
         nonce: order.nonce,
         source_id_int: source?.id,
         is_reservoir: isReservoir,
-        contract: toBuffer(Sdk.Infinity.Addresses.Exchange[config.chainId]),
+        contract: toBuffer(collection),
         conduit: toBuffer(Sdk.Infinity.Addresses.Exchange[config.chainId]),
         fee_bps: FEE_BPS,
         fee_breakdown: feeBreakdown,
