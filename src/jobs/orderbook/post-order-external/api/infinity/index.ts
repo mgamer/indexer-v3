@@ -19,7 +19,7 @@ export async function postOrders(
   order: Sdk.Infinity.Order | Sdk.Infinity.Order[],
   apiKey: string
 ): Promise<void> {
-  const url = `https://sv.infinity.xyz/orders/v2`;
+  const url = `https://sv.infinity.xyz/v2/orders`;
 
   const orders = Array.isArray(order) ? order : [order];
   try {
@@ -39,7 +39,7 @@ export async function postOrders(
     if (err?.response) {
       logger.error(
         "infinity_orderbook_api",
-        `Failed to post order to INfinity. order=${JSON.stringify(order)}, status: ${
+        `Failed to post order to Infinity. order=${JSON.stringify(order)}, status: ${
           err?.response?.status
         }, data:${JSON.stringify(err?.response?.data)}`
       );
@@ -61,6 +61,6 @@ const handleErrorResponse = (response: any) => {
       throw new RequestWasThrottledError("Request was throttled by Infinity", delay);
     }
     case 400:
-      throw new InvalidRequestError("Request was rejected by OpenSea");
+      throw new InvalidRequestError("Request was rejected by Infinity");
   }
 };
