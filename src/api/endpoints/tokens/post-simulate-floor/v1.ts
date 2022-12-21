@@ -40,6 +40,10 @@ export const postSimulateFloorV1Options: RouteOptions = {
     },
   },
   handler: async (request: Request) => {
+    if (config.chainId !== 1) {
+      return { message: "Simulation not supported" };
+    }
+
     const payload = request.payload as any;
 
     const invalidateOrder = async (orderId: string) => {
