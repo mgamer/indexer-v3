@@ -265,14 +265,20 @@ export const getNetworkSettings = (): NetworkSettings => {
     case 137: {
       return {
         ...defaultNetworkSettings,
+        metadataMintDelay: 180,
         enableWebSocket: false,
         enableReorgCheck: true,
         realtimeSyncFrequencySeconds: 10,
         realtimeSyncMaxBlockLag: 128,
-        backfillBlockBatchSize: 20,
+        backfillBlockBatchSize: 25,
         reorgCheckFrequency: [30],
         coingecko: {
           networkId: "polygon-pos",
+        },
+        supportedBidCurrencies: {
+          ...defaultNetworkSettings.supportedBidCurrencies,
+          // WETH
+          "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619": true,
         },
         onStartup: async () => {
           // Insert the native currency

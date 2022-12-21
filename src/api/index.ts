@@ -149,6 +149,11 @@ export const start = async (): Promise<void> => {
   ]);
 
   server.ext("onPreAuth", async (request, reply) => {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    if ((request as any).isInjected) {
+      return reply.continue;
+    }
+
     const key = request.headers["x-api-key"];
     const apiKey = await ApiKeyManager.getApiKey(key);
     const tier = apiKey?.tier || 0;
