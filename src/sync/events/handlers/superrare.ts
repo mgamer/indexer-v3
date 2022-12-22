@@ -7,7 +7,6 @@ import { config } from "@/config/index";
 import * as es from "@/events-sync/storage";
 import * as utils from "@/events-sync/utils";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
-import { bn } from "@/common/utils";
 import { parseCallTrace } from "@georgeroman/evm-tx-simulator";
 
 export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData> => {
@@ -91,6 +90,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         break;
       }
+
       case "superrare-bid-filled": {
         const { args } = eventData.abi.parseLog(log);
         const contract = args["_originContract"].toLowerCase();
@@ -102,22 +102,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         // Superrare works only with ERC721
         const amount = "1";
-        let orderSide: "sell" | "buy" = "sell";
-
-        const txTrace = await utils.fetchTransactionTrace(baseEventParams.txHash);
-        if (!txTrace) {
-          // Skip any failed attempts to get the trace
-          break;
-        }
-
-        const parsedTrace = parseCallTrace(txTrace.calls);
-
-        for (const token of Object.keys(parsedTrace[taker].tokenBalanceState)) {
-          if (token.startsWith("erc721")) {
-            const takerAmount = parsedTrace[taker].tokenBalanceState[token];
-            orderSide = bn(takerAmount).gt(0) ? "sell" : "buy";
-          }
-        }
+        const orderSide = "buy";
 
         const priceData = await getUSDAndNativePrices(
           currency,
