@@ -7,6 +7,8 @@ import { config } from "@/config/index";
 import * as es from "@/events-sync/storage";
 import * as utils from "@/events-sync/utils";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
+import { bn } from "@/common/utils";
+import { parseCallTrace } from "@georgeroman/evm-tx-simulator";
 
 export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData> => {
   const fillEvents: es.fills.Event[] = [];
@@ -27,7 +29,21 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         // Superrare works only with ERC721
         const amount = "1";
         const orderSide = "sell";
-        const currency = Common.Addresses.Eth[config.chainId];
+        let currency = Common.Addresses.Eth[config.chainId];
+
+        const txTrace = await utils.fetchTransactionTrace(baseEventParams.txHash);
+        if (!txTrace) {
+          // Skip any failed attempts to get the trace
+          break;
+        }
+
+        const parsedTrace = parseCallTrace(txTrace.calls);
+
+        for (const token of Object.keys(parsedTrace[taker].tokenBalanceState)) {
+          if (token.startsWith("erc20") || token.startsWith("native")) {
+            currency = token.split(":")[1];
+          }
+        }
 
         const priceData = await getUSDAndNativePrices(
           currency,
@@ -86,13 +102,29 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         // Superrare works only with ERC721
         const amount = "1";
-        const orderSide = "buy";
+        let orderSide: "sell" | "buy" = "sell";
+
+        const txTrace = await utils.fetchTransactionTrace(baseEventParams.txHash);
+        if (!txTrace) {
+          // Skip any failed attempts to get the trace
+          break;
+        }
+
+        const parsedTrace = parseCallTrace(txTrace.calls);
+
+        for (const token of Object.keys(parsedTrace[taker].tokenBalanceState)) {
+          if (token.startsWith("erc721")) {
+            const takerAmount = parsedTrace[taker].tokenBalanceState[token];
+            orderSide = bn(takerAmount).gt(0) ? "sell" : "buy";
+          }
+        }
 
         const priceData = await getUSDAndNativePrices(
           currency,
           currencyPrice.toString(),
           baseEventParams.timestamp
         );
+
         if (!priceData.nativePrice) {
           // We must always have the native price
           break;
