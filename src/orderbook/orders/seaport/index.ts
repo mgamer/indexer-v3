@@ -1116,7 +1116,8 @@ export const save = async (
 
       const unfillable =
         fillabilityStatus !== "fillable" ||
-        approvalStatus !== "approved" || // Skip private orders
+        approvalStatus !== "approved" ||
+        // Skip private orders
         (orderParams.taker ?? AddressZero) !== AddressZero
           ? true
           : undefined;
