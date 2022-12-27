@@ -11,11 +11,11 @@ interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
 export const build = async (options: BuildOrderOptions) => {
   const collectionResult = await redb.oneOrNone(
     `
-          SELECT
-            collections.id
-          FROM collections
-          WHERE collections.id = $/collection/
-        `,
+      SELECT
+        collections.id
+      FROM collections
+      WHERE collections.id = $/collection/
+    `,
     {
       collection: options.contract,
     }

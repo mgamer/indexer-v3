@@ -1,16 +1,18 @@
-import { config } from "@/config/index";
+import * as Sdk from "@reservoir0x/sdk";
+import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
+import pLimit from "p-limit";
+
 import { idb, pgp } from "@/common/db";
-import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { logger } from "@/common/logger";
 import { bn, now, toBuffer } from "@/common/utils";
-import { offChainCheck } from "./check";
-import pLimit from "p-limit";
-import * as tokenSet from "@/orderbook/token-sets";
+import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
-import * as arweaveRelay from "@/jobs/arweave-relay";
-import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
-import * as Sdk from "@reservoir0x/sdk";
+import { offChainCheck } from "@/orderbook/orders/infinity/check";
 import { DbOrder, generateSchemaHash, OrderMetadata } from "@/orderbook/orders/utils";
+import * as tokenSet from "@/orderbook/token-sets";
+
+import * as arweaveRelay from "@/jobs/arweave-relay";
+import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 
 export type OrderInfo = {
   orderParams: Sdk.Infinity.Types.OrderInput;
@@ -36,12 +38,12 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
       const order = new Sdk.Infinity.Order(config.chainId, orderParams);
-      const hash = order.hash();
-      const id = hash;
+      const id = order.hash();
+
       try {
         order.checkValidity();
       } catch (err) {
-        return results.push({ id: hash, status: "invalid-format" });
+        return results.push({ id, status: "invalid-format" });
       }
 
       const orderExists = await checkOrderExistence(id);
@@ -62,7 +64,7 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
         });
       }
 
-      // Check: listings are in eth and offers are in weth
+      // Check: listings are in ETH and offers are in WETH
       if (order.isSellOrder && order.params.currency !== Sdk.Common.Addresses.Eth[config.chainId]) {
         return results.push({
           id,
@@ -116,8 +118,9 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
       switch (order.kind) {
         case "single-token": {
           const nft = order.nfts[0];
-          collection = nft.collection;
           const tokenId = nft.tokens[0].tokenId;
+          collection = nft.collection;
+
           [{ id: tokenSetId }] = await tokenSet.singleToken.save([
             {
               id: `token:${collection}:${tokenId}`,
@@ -129,9 +132,11 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
 
           break;
         }
+
         case "contract-wide": {
           const nft = order.nfts[0];
           collection = nft.collection;
+
           [{ id: tokenSetId }] = await tokenSet.contractWide.save([
             {
               id: `contract:${collection}`,
@@ -159,13 +164,7 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
               ]);
             }
           } else {
-            /**
-             * TODO add support for more complex orders
-             * once multi-collection token sets are supported
-             *
-             * make sure to remove the `unsupported-order-type` check above
-             * as well as here
-             */
+            // TODO: Add support for more complex orders once multi-collection token sets are supported
             return results.push({
               id,
               status: "unsupported-order-type",
@@ -347,12 +346,9 @@ export const save = async (orderInfos: OrderInfo[], relayToArweave?: boolean) =>
   return results;
 };
 
-const checkOrderExistence = async (hash: string) => {
+const checkOrderExistence = async (id: string) => {
   const orderExists = await idb.oneOrNone(`SELECT 1 FROM orders WHERE orders.id = $/id/`, {
-    id: hash,
+    id,
   });
-  if (orderExists) {
-    return true;
-  }
-  return false;
+  return orderExists ? true : false;
 };
