@@ -1,9 +1,9 @@
 import * as Sdk from "@reservoir0x/sdk";
+
+import { baseProvider } from "@/common/provider";
+import { bn, now } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
-import { baseProvider } from "@/common/provider";
-import { bn } from "@/common/utils";
-import { now } from "lodash";
 import * as onChainData from "@/utils/on-chain-data";
 
 export const offChainCheck = async (
@@ -53,7 +53,8 @@ export const offChainCheck = async (
         "erc721",
         !!options?.checkFilledOrCancelled
       );
-      // require approval for all nfts
+
+      // Require approval for all NFTs
       hasApproval = hasApproval && nftApproval;
 
       for (const token of nft.tokens) {
@@ -63,11 +64,8 @@ export const offChainCheck = async (
           order.signer
         );
 
-        /**
-         * Require the maker to own all tokens
-         *
-         * TODO Handle m of n orders supporting partially fillable balances
-         */
+        // Require the maker to own all tokens
+        // TODO: Handle m of n orders supporting partially fillable balances
         if (tokenBalance.lt(token.numTokens)) {
           hasBalance = false;
         }

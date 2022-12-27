@@ -1,9 +1,9 @@
+import { parseUnits } from "@ethersproject/units";
 import { Common, Infinity } from "@reservoir0x/sdk";
 import axios from "axios";
 
 import { config } from "@/config/index";
 import { now } from "@/common/utils";
-import { parseUnits } from "ethers/lib/utils";
 
 export const orderbooks = {
   infinity: {

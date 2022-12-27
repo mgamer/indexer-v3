@@ -1,25 +1,25 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+import { Interface } from "@ethersproject/abi";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
+import { Log } from "@ethersproject/providers";
+import { searchForCall } from "@georgeroman/evm-tx-simulator";
 import * as Sdk from "@reservoir0x/sdk";
-import { EnhancedEvent, OnChainData } from "./utils";
+
+import { idb } from "@/common/db";
+import { bn, toBuffer } from "@/common/utils";
+import { config } from "@/config/index";
+import { getEventData } from "@/events-sync/data";
+import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
+import { getERC20Transfer } from "@/events-sync/handlers/utils/erc20";
+import { BaseEventParams } from "@/events-sync/parser";
 import * as es from "@/events-sync/storage";
 import * as utils from "@/events-sync/utils";
-import * as fillUpdates from "@/jobs/fill-updates/queue";
-import { idb } from "@/common/db";
-import { getUSDAndNativePrices } from "@/utils/prices";
+import { TransactionTrace } from "@/models/transaction-traces";
 import { OrderKind } from "@/orderbook/orders";
-import { lc } from "@reservoir0x/sdk/dist/utils";
-import { BigNumber, BigNumberish } from "ethers";
+import { getUSDAndNativePrices } from "@/utils/prices";
+
+import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
-import { bn, toBuffer } from "@/common/utils";
-import { getERC20Transfer } from "@/events-sync/handlers/utils/erc20";
-import { Log } from "@ethersproject/providers";
-import { getEventData } from "@/events-sync/data";
-import { config } from "@/config/index";
-import { searchForCall } from "@georgeroman/evm-tx-simulator";
-import { BaseEventParams } from "@/events-sync/parser";
-import { Interface } from "ethers/lib/utils";
-import { TransactionTrace } from "@/models/transaction-traces";
 
 export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData> => {
   const bulkCancelEvents: es.bulkCancels.Event[] = [];
@@ -34,9 +34,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
   let currentTx: string | undefined;
   let currentTxLogs: Log[] = [];
 
-  /**
-   * Store the txTrace for the current txn so it doesn't have to be re-fetched
-   */
+  // Store the txTrace for the current txn so it doesn't have to be re-fetched
   let txTrace: TransactionTrace | undefined;
 
   for (const { kind, baseEventParams, log } of events) {
@@ -50,8 +48,8 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
     switch (kind) {
       case "infinity-cancel-all-orders": {
-        const newMinNonce: BigNumberish = parsedLog.args.newMinNonce;
-        const user = lc(parsedLog.args.user);
+        const newMinNonce = parsedLog.args.newMinNonce as BigNumberish;
+        const user = parsedLog.args.user.toLowerCase();
 
         bulkCancelEvents.push({
           orderKind: "infinity",
@@ -60,11 +58,13 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           baseEventParams,
           acrossAll: false,
         });
+
         break;
       }
+
       case "infinity-cancel-multiple-orders": {
         const nonces = parsedLog.args.orderNonces as BigNumberish[];
-        const user = lc(parsedLog.args.user);
+        const user = parsedLog.args.user.toLowerCase();
 
         const cancelEvents: es.nonceCancels.Event[] = nonces.map((nonce, index) => {
           return {
@@ -84,13 +84,12 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
       }
 
       case "infinity-match-order-fulfilled": {
-        const sellOrderHash = lc(parsedLog.args.sellOrderHash);
-        const buyOrderHash = lc(parsedLog.args.buyOrderHash);
-        const seller = lc(parsedLog.args.seller);
-        const buyer = lc(parsedLog.args.buyer);
-        // const complication = lc(parsedLog.args.complication);
-        const currency = lc(parsedLog.args.currency);
-        const currencyPrice = (parsedLog.args.amount as BigNumberish).toString();
+        const sellOrderHash = parsedLog.args.sellOrderHash.toLowerCase();
+        const buyOrderHash = parsedLog.args.buyOrderHash.toLowerCase();
+        const seller = parsedLog.args.seller.toLowerCase();
+        const buyer = parsedLog.args.buyer.toLowerCase();
+        const currency = parsedLog.args.currency.toLowerCase();
+        const currencyPrice = parsedLog.args.amount.toString();
         const nfts = parsedLog.args.nfts as {
           collection: string;
           tokens: {
@@ -139,7 +138,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         }
 
         // Handle: attribution
-
         const attributionData = await utils.extractAttributionData(
           baseEventParams.txHash,
           orderKind
@@ -166,9 +164,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           break;
         }
 
-        /**
-         * Don't handle fills events and fill infos for bundles
-         */
+        // Don't handle fill events for bundles
         if (nfts.length === 1) {
           const nft = nfts[0];
           if (nft.tokens.length === 1) {
@@ -185,7 +181,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               currency,
               currencyPrice: pricePerToken,
               usdPrice: priceDataPerToken.usdPrice,
-              contract: lc(nft.collection),
+              contract: nft.collection.toLowerCase(),
               tokenId,
               amount: numTokens,
               orderSourceId: attributionData.orderSource?.id,
@@ -204,7 +200,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               currency,
               currencyPrice: pricePerToken,
               usdPrice: priceDataPerToken.usdPrice,
-              contract: lc(nft.collection),
+              contract: nft.collection.toLowerCase(),
               tokenId,
               amount: numTokens,
               orderSourceId: attributionData.orderSource?.id,
@@ -217,7 +213,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               context: `${buyOrderHash}-${baseEventParams.txHash}-${nft.collection}-${token.tokenId}`,
               orderId: buyOrderHash,
               orderSide: "buy",
-              contract: lc(nft.collection),
+              contract: nft.collection.toLowerCase(),
               tokenId,
               amount: numTokens,
               price: bn(priceDataPerToken.nativePrice).mul(token.numTokens).toString(),
@@ -228,7 +224,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               context: `${sellOrderHash}-${baseEventParams.txHash}-${nft.collection}-${token.tokenId}`,
               orderId: sellOrderHash,
               orderSide: "sell",
-              contract: lc(nft.collection),
+              contract: nft.collection.toLowerCase(),
               tokenId,
               amount: numTokens,
               price: bn(priceDataPerToken.nativePrice).mul(token.numTokens).toString(),
@@ -246,6 +242,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             txTimestamp: baseEventParams.timestamp,
           },
         });
+
         orderInfos.push({
           context: `filled-${buyOrderHash}`,
           id: buyOrderHash,
@@ -280,12 +277,11 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
       }
 
       case "infinity-take-order-fulfilled": {
-        const orderHash = lc(parsedLog.args.orderHash);
-        const seller = lc(parsedLog.args.seller);
-        const buyer = lc(parsedLog.args.buyer);
-        // const complication = lc(parsedLog.args.complication);
-        const currency = lc(parsedLog.args.currency);
-        const currencyPrice = (parsedLog.args.amount as BigNumberish).toString();
+        const orderHash = parsedLog.args.orderHash.toLowerCase();
+        const seller = parsedLog.args.seller.toLowerCase();
+        const buyer = parsedLog.args.buyer.toLowerCase();
+        const currency = parsedLog.args.currency.toLowerCase();
+        const currencyPrice = parsedLog.args.amount.toString();
         const nfts = parsedLog.args.nfts as {
           collection: string;
           tokens: {
@@ -311,7 +307,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         }
 
         // Handle: attribution
-
         const attributionData = await utils.extractAttributionData(
           baseEventParams.txHash,
           orderKind
@@ -341,9 +336,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         if (orderSideResult.nonce) {
           const orderSide = orderSideResult.isSellOrder ? "sell" : "buy";
-          /**
-           * Don't handle fills events and fill infos for bundles
-           */
+          // Don't handle fills events for bundles
           if (nfts.length === 1) {
             const nft = nfts[0];
             if (nft.tokens.length === 1) {
@@ -360,7 +353,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
                 currency,
                 currencyPrice: pricePerToken,
                 usdPrice: priceDataPerToken.usdPrice,
-                contract: lc(nft.collection),
+                contract: nft.collection.toLowerCase(),
                 tokenId,
                 amount: numTokens,
                 orderSourceId: attributionData.orderSource?.id,
@@ -373,7 +366,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
                 context: `${orderHash}-${baseEventParams.txHash}-${nft.collection}-${token.tokenId}`,
                 orderId: orderHash,
                 orderSide,
-                contract: lc(nft.collection),
+                contract: nft.collection.toLowerCase(),
                 tokenId,
                 amount: numTokens,
                 price: bn(priceDataPerToken.nativePrice).mul(token.numTokens).toString(),
@@ -436,15 +429,15 @@ async function getOrderNonce(
 ): Promise<{ nonce: string | null; txTrace?: TransactionTrace }> {
   const result = await idb.oneOrNone(
     `
-          SELECT
-            orders.id,
-            orders.nonce
-          FROM orders
-          WHERE orders.kind = 'infinity'
-            AND orders.id = $/orderHash/
-            AND orders.maker = $/maker/
-          LIMIT 1
-        `,
+      SELECT
+        orders.id,
+        orders.nonce
+      FROM orders
+      WHERE orders.kind = 'infinity'
+        AND orders.id = $/orderHash/
+        AND orders.maker = $/maker/
+      LIMIT 1
+    `,
     {
       orderHash,
       maker: toBuffer(maker),
@@ -452,11 +445,10 @@ async function getOrderNonce(
   );
 
   if (result?.nonce) {
-    return { nonce: (result.nonce as BigNumberish).toString() };
+    return { nonce: result.nonce.toString() };
   }
 
   const traceResult = await getOrderNonceFromTrace(orderHash, params);
-
   return traceResult ?? { nonce: null };
 }
 
@@ -483,7 +475,7 @@ export const decodeArrayifiedOrder = (item: ArrayifiedInfinityOrder): Sdk.Infini
   const nfts: Sdk.Infinity.Types.OrderNFTs[] = arrayifiedNfts.map(
     ([collection, arrayifiedTokens]: [string, [BigNumberish, BigNumberish][]]) => {
       return {
-        collection: lc(collection),
+        collection: collection.toLowerCase(),
         tokens: arrayifiedTokens.map(([tokenId, numTokens]: [BigNumberish, BigNumberish]) => {
           return {
             tokenId: bn(tokenId).toString(),
@@ -496,10 +488,10 @@ export const decodeArrayifiedOrder = (item: ArrayifiedInfinityOrder): Sdk.Infini
 
   const params: Sdk.Infinity.Types.SignedOrder = {
     isSellOrder,
-    signer: lc(signer),
+    signer: signer.toLowerCase(),
     constraints: constraints.map((item) => bn(item).toString()),
     nfts,
-    execParams: [complication, currency].map(lc),
+    execParams: [complication, currency].map((x) => x.toLowerCase()),
     extraParams,
     sig,
   };
@@ -512,7 +504,6 @@ export const InfinityFulfillOrderMethods = {
     methodId: "0x63f3c034",
     decodeInput: (input: string, iface: Interface): Sdk.Infinity.Order[] => {
       const [makerOrder, manyMakerOrders] = iface.decodeFunctionData("matchOneToManyOrders", input);
-
       return [makerOrder, ...manyMakerOrders].map(decodeArrayifiedOrder);
     },
   },
@@ -526,7 +517,7 @@ export const InfinityFulfillOrderMethods = {
   matchOrders: {
     methodId: "0x0df4239c",
     decodeInput: (input: string, iface: Interface): Sdk.Infinity.Order[] => {
-      const [sells, buys, _constructs] = iface.decodeFunctionData("matchOrders", input);
+      const [sells, buys] = iface.decodeFunctionData("matchOrders", input);
       return [...sells, ...buys].map(decodeArrayifiedOrder);
     },
   },
@@ -534,15 +525,13 @@ export const InfinityFulfillOrderMethods = {
     methodId: "0x78759e13",
     decodeInput: (input: string, iface: Interface): Sdk.Infinity.Order[] => {
       const [makerOrders] = iface.decodeFunctionData("takeMultipleOneOrders", input);
-
       return makerOrders.map(decodeArrayifiedOrder);
     },
   },
   takeOrders: {
     methodId: "0x723d9836",
     decodeInput: (input: string, iface: Interface): Sdk.Infinity.Order[] => {
-      const [makerOrders, _takerNfts] = iface.decodeFunctionData("takeOrders", input);
-
+      const [makerOrders] = iface.decodeFunctionData("takeOrders", input);
       return makerOrders.map(decodeArrayifiedOrder);
     },
   },
@@ -572,7 +561,6 @@ export async function getOrderNonceFromTrace(
 
   if (trace) {
     const input = trace?.input;
-
     const method = Object.values(InfinityFulfillOrderMethods).find((method) => {
       return input.startsWith(method.methodId);
     });
@@ -584,11 +572,9 @@ export async function getOrderNonceFromTrace(
         if (order) {
           return { nonce: order.nonce, txTrace };
         }
-      } catch (err) {
-        /**
-         * decode input throws an error if the input is not the correct format
-         * i.e. attempted to decode with the incorrect method
-         */
+      } catch {
+        // This can only happen if the input is not in the correct format
+        // i.e. attempted to decode with the incorrect method
       }
     }
   }
