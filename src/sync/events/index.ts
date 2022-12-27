@@ -22,6 +22,7 @@ export const parseEnhancedEventsToEventsInfo = (
   enhancedEvents: EnhancedEvent[],
   backfill: boolean
 ): EventsInfo[] => {
+  // TODO: More efficient filtering with a single iteration
   return [
     {
       kind: "erc20",
