@@ -7,7 +7,6 @@ import { parseEnhancedEventsToEventsInfo } from "@/events-sync/index";
 import { parseEventsInfo } from "@/events-sync/handlers";
 
 import * as seaport from "@/events-sync/handlers/royalties/seaport";
-import * as blur from "@/events-sync/handlers/royalties/blur";
 
 const registry = new Map<string, RoyaltyAdapter>();
 
@@ -59,4 +58,3 @@ export const assignRoyaltiesToFillEvents = async (fillEvents: es.fills.Event[]) 
 };
 
 registry.set("seaport", seaport as RoyaltyAdapter);
-registry.set("blur", blur as RoyaltyAdapter);
