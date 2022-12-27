@@ -70,12 +70,7 @@ export class Orders {
                       json_build_object(
                         'kind', 'custom'
                       )
-                    )
-                  WHEN token_sets.attribute_id IS NULL THEN
-                    (SELECT
-                      json_build_object(
                         'kind', 'collection',
-                        'data', json_build_object(
                           'collection', json_build_object(
                             'id', collections.id,
                             'name', collections.name,
