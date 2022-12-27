@@ -22,6 +22,7 @@ export const parseEnhancedEventsToEventsInfo = (
   enhancedEvents: EnhancedEvent[],
   backfill: boolean
 ): EventsInfo[] => {
+  // TODO: More efficient filtering with a single iteration
   return [
     {
       kind: "erc20",
@@ -281,10 +282,6 @@ export const syncEvents = async (
     for (const log of logs) {
       try {
         const baseEventParams = await parseEvent(log, blocksCache);
-
-        if (!backfill) {
-          logger.info("events-sync", `Processing event: ${JSON.stringify(baseEventParams)}`);
-        }
 
         // Cache the block data
         if (!blocksCache.has(baseEventParams.block)) {
