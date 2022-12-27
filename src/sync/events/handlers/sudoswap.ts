@@ -16,6 +16,7 @@ import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 
 export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData> => {
   const fillEventsPartial: es.fills.Event[] = [];
+  const fillEventsOnChain: es.fills.Event[] = [];
 
   const fillInfos: fillUpdates.FillInfo[] = [];
   const orderInfos: orderUpdatesById.OrderInfo[] = [];
@@ -152,7 +153,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
                 const tokenId = token.split(":")[2];
                 const orderId = sudoswap.getOrderId(baseEventParams.address, "sell", tokenId);
 
-                fillEventsPartial.push({
+                fillEventsOnChain.push({
                   orderKind,
                   orderSide: "sell",
                   orderId,
@@ -262,7 +263,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
               const tokenId = decodedInput.nftIds[i].toString();
               const orderId = sudoswap.getOrderId(baseEventParams.address, "sell", tokenId);
 
-              fillEventsPartial.push({
+              fillEventsOnChain.push({
                 orderKind,
                 orderSide: "sell",
                 orderId,
@@ -505,6 +506,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
   return {
     fillEventsPartial,
+    fillEventsOnChain,
 
     fillInfos,
 
