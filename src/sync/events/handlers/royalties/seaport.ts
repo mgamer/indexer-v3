@@ -1,4 +1,3 @@
-import { getEnhancedEventFromTransaction } from "../";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
 
@@ -7,23 +6,8 @@ import * as utils from "@/events-sync/utils";
 import { parseCallTrace } from "@georgeroman/evm-tx-simulator";
 import { Royalty, getRoyalties } from "@/utils/royalties";
 import { formatEther } from "@ethersproject/units";
-
-import { parseEnhancedEventsToEventsInfo } from "@/events-sync/index";
-import { parseEventsInfo } from "@/events-sync/handlers";
-import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
-import { concat } from "@/common/utils";
 import * as es from "@/events-sync/storage";
-
-export async function parseEnhancedEventToOnChainData(enhancedEvents: EnhancedEvent[]) {
-  const eventsInfos = await parseEnhancedEventsToEventsInfo(enhancedEvents, false);
-  const allOnChainData: OnChainData[] = [];
-  for (let index = 0; index < eventsInfos.length; index++) {
-    const eventsInfo = eventsInfos[index];
-    const onchainData = await parseEventsInfo(eventsInfo);
-    allOnChainData.push(onchainData);
-  }
-  return allOnChainData;
-}
+import { getFillEventsFromTx } from "./index";
 
 export async function extractRoyalties(fillEvent: es.fills.Event) {
   const royaltyFeeBreakdown: Royalty[] = [];
@@ -38,16 +22,7 @@ export async function extractRoyalties(fillEvent: es.fills.Event) {
     return null;
   }
 
-  const events = await getEnhancedEventFromTransaction(txHash);
-  const allOnChainData = await parseEnhancedEventToOnChainData(events);
-
-  let fillEvents: es.fills.Event[] = [];
-
-  for (let index = 0; index < allOnChainData.length; index++) {
-    const data = allOnChainData[index];
-    const allEvents = concat(data.fillEvents, data.fillEventsPartial, data.fillEventsOnChain);
-    fillEvents = [...fillEvents, ...allEvents];
-  }
+  const fillEvents: es.fills.Event[] = await getFillEventsFromTx(txHash);
 
   const collectionFills = fillEvents?.filter((_) => _.contract === contract) || [];
   const protocolFillEvents = fillEvents?.filter((_) => _.orderKind === "seaport") || [];

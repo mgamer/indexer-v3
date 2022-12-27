@@ -1,4 +1,3 @@
-import { getEnhancedEventFromTransaction } from "../";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
 
@@ -7,8 +6,7 @@ import * as utils from "@/events-sync/utils";
 import { parseCallTrace } from "@georgeroman/evm-tx-simulator";
 import { Royalty, getRoyalties } from "@/utils/royalties";
 import { formatEther } from "@ethersproject/units";
-import { parseEnhancedEventToOnChainData } from "./index";
-import { concat } from "@/common/utils";
+import { getFillEventsFromTx } from "./index";
 import * as es from "@/events-sync/storage";
 
 export async function extractRoyalties(fillEvent: es.fills.Event) {
@@ -24,19 +22,10 @@ export async function extractRoyalties(fillEvent: es.fills.Event) {
     return null;
   }
 
-  const events = await getEnhancedEventFromTransaction(txHash);
-  const allOnChainData = await parseEnhancedEventToOnChainData(events);
-
-  let fillEvents: es.fills.Event[] = [];
-
-  for (let index = 0; index < allOnChainData.length; index++) {
-    const data = allOnChainData[index];
-    const allEvents = concat(data.fillEvents, data.fillEventsPartial, data.fillEventsOnChain);
-    fillEvents = [...fillEvents, ...allEvents];
-  }
+  const fillEvents: es.fills.Event[] = await getFillEventsFromTx(txHash);
 
   const collectionFills = fillEvents?.filter((_) => _.contract === contract) || [];
-  const protocolFillEvents = fillEvents?.filter((_) => _.orderKind === "seaport") || [];
+  const protocolFillEvents = fillEvents?.filter((_) => _.orderKind === "blur") || [];
 
   const protocolRelatedAmount = protocolFillEvents
     ? protocolFillEvents.reduce((total, item) => {
@@ -51,11 +40,7 @@ export async function extractRoyalties(fillEvent: es.fills.Event) {
   const state = parseCallTrace(txTrace.calls);
   const royalties = await getRoyalties(contract, tokenId);
 
-  const openSeaFeeRecipients = [
-    "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073",
-    "0x8de9c5a032463c561423387a9648c5c7bcc5bc90",
-    "0x0000a26b00c1f0df003000390027140000faa719",
-  ];
+  const platformFeeRecipients: string[] = [];
 
   const balanceChangeWithBps = [];
   const royaltyRecipients: string[] = royalties.map((_) => _.recipient);
@@ -84,11 +69,11 @@ export async function extractRoyalties(fillEvent: es.fills.Event) {
   for (const address in state) {
     const { tokenBalanceState } = state[address];
 
-    const weth = Sdk.Common.Addresses.Weth[config.chainId];
+    const BETH = "0x0000000000a39bb272e79075ade125fd351887ac";
     const native = Sdk.Common.Addresses.Eth[config.chainId];
     const isETH = currency === native;
     const balanceChange = isETH
-      ? tokenBalanceState[`native:${native}`] || tokenBalanceState[`erc20:${weth}`]
+      ? tokenBalanceState[`native:${native}`] || tokenBalanceState[`erc20:${BETH}`]
       : tokenBalanceState[`erc20:${currency}`];
 
     // Receive ETH
@@ -99,7 +84,7 @@ export async function extractRoyalties(fillEvent: es.fills.Event) {
         bps: bpsInPrice.toNumber(),
       };
 
-      if (openSeaFeeRecipients.includes(address)) {
+      if (platformFeeRecipients.includes(address)) {
         // Need to know how many seaport sales in the same tx
         curRoyalties.bps = bn(balanceChange).mul(10000).div(protocolRelatedAmount).toNumber();
         marketplaceFeeBreakdown.push(curRoyalties);
