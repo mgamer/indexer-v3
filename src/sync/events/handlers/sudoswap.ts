@@ -12,11 +12,13 @@ import { getUSDAndNativePrices } from "@/utils/prices";
 import * as sudoswapUtils from "@/utils/sudoswap";
 
 import * as fillUpdates from "@/jobs/fill-updates/queue";
+import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 
 export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData> => {
   const fillEventsPartial: es.fills.Event[] = [];
 
   const fillInfos: fillUpdates.FillInfo[] = [];
+  const orderInfos: orderUpdatesById.OrderInfo[] = [];
 
   // Keep track of any orders
   const orders: sudoswap.OrderInfo[] = [];
@@ -148,9 +150,12 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             for (const token of Object.keys(state[address].tokenBalanceState)) {
               if (token.startsWith("erc721")) {
                 const tokenId = token.split(":")[2];
+                const orderId = sudoswap.getOrderId(baseEventParams.address, "sell", tokenId);
+
                 fillEventsPartial.push({
                   orderKind,
                   orderSide: "sell",
+                  orderId,
                   maker: baseEventParams.address,
                   taker,
                   price: priceData.nativePrice,
@@ -177,6 +182,16 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
                   amount: "1",
                   price: priceData.nativePrice,
                   timestamp: baseEventParams.timestamp,
+                });
+
+                orderInfos.push({
+                  context: `filled-${orderId}-${baseEventParams.txHash}`,
+                  id: orderId,
+                  trigger: {
+                    kind: "sale",
+                    txHash: baseEventParams.txHash,
+                    txTimestamp: baseEventParams.timestamp,
+                  },
                 });
 
                 // Make sure to increment the batch counter
@@ -245,11 +260,12 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
             for (let i = 0; i < decodedInput.nftIds.length; i++) {
               const tokenId = decodedInput.nftIds[i].toString();
+              const orderId = sudoswap.getOrderId(baseEventParams.address, "sell", tokenId);
 
               fillEventsPartial.push({
                 orderKind,
                 orderSide: "sell",
-                orderId: sudoswap.getOrderId(baseEventParams.address, "sell", tokenId),
+                orderId,
                 maker: baseEventParams.address,
                 taker,
                 price: priceData.nativePrice,
@@ -276,6 +292,16 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
                 amount: "1",
                 price: priceData.nativePrice,
                 timestamp: baseEventParams.timestamp,
+              });
+
+              orderInfos.push({
+                context: `filled-${orderId}-${baseEventParams.txHash}`,
+                id: orderId,
+                trigger: {
+                  kind: "sale",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
               });
             }
           }
@@ -390,11 +416,12 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
             for (let i = 0; i < decodedInput.nftIds.length; i++) {
               const tokenId = decodedInput.nftIds[i].toString();
+              const orderId = sudoswap.getOrderId(baseEventParams.address, "buy");
 
               fillEventsPartial.push({
                 orderKind,
                 orderSide: "buy",
-                orderId: sudoswap.getOrderId(baseEventParams.address, "buy"),
+                orderId,
                 maker: baseEventParams.address,
                 taker,
                 price: priceData.nativePrice,
@@ -421,6 +448,16 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
                 amount: "1",
                 price: priceData.nativePrice,
                 timestamp: baseEventParams.timestamp,
+              });
+
+              orderInfos.push({
+                context: `filled-${orderId}-${baseEventParams.txHash}`,
+                id: orderId,
+                trigger: {
+                  kind: "sale",
+                  txHash: baseEventParams.txHash,
+                  txTimestamp: baseEventParams.timestamp,
+                },
               });
             }
           }
