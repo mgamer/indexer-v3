@@ -51,13 +51,18 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         throw new Error("Could not fetch pool details");
       }
 
-      const amount = 10;
-      const poolPrice = await Sdk.Nftx.helpers.getPoolPrice(
-        orderParams.pool,
-        amount,
-        config.chainId,
-        baseProvider
-      );
+      const priceList = [];
+
+      for (let index = 0; index < 10; index++) {
+        const poolPrice = await Sdk.Nftx.Helpers.getPoolPrice(
+          orderParams.pool,
+          index + 1,
+          5,
+          config.chainId,
+          baseProvider
+        );
+        priceList.push(poolPrice);
+      }
 
       // Handle: fees
       let feeBps = 0;
@@ -69,15 +74,21 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle buy orders
       try {
-        const { buy, currency } = poolPrice;
+        const { buy, currency } = priceList[0];
         const id = getOrderId(orderParams.pool, "buy");
+        const prices: string[] = [];
+        priceList.forEach((_) => {
+          if (_.buy) {
+            prices.push(_.buy);
+          }
+        });
 
         if (buy) {
           // Handle: prices
           const price = parseEther(buy).toString();
           const value = parseEther(buy).toString();
 
-          feeBps = Number(poolPrice.bps.buy);
+          feeBps = Number(priceList[0].bps.buy);
           feeBreakdown.push({
             kind: "marketplace",
             recipient: pool.address,
@@ -123,6 +134,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             currency: Sdk.Common.Addresses.Weth[config.chainId],
             path: [pool.address, Sdk.Common.Addresses.Weth[config.chainId]],
             price: price.toString(),
+            extra: {
+              prices,
+            },
           });
 
           const orderResult = await redb.oneOrNone(
@@ -171,7 +185,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               currency_price: price,
               currency_value: value,
               needs_conversion: null,
-              quantity_remaining: amount.toString(),
+              quantity_remaining: prices.length.toString(),
               valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
               nonce: null,
               source_id_int: source?.id,
@@ -220,7 +234,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 price,
                 value,
                 rawData: sdkOrder.params,
-                quantityRemaining: amount.toString(),
+                quantityRemaining: prices.length.toString(),
                 missingRoyalties: missingRoyalties,
                 normalizedValue: normalizedValue.toString(),
                 currencyNormalizedValue: normalizedValue.toString(),
@@ -262,7 +276,13 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle sell orders
       try {
-        const { sell, currency } = poolPrice;
+        const { sell, currency } = priceList[0];
+        const prices: string[] = [];
+        priceList.forEach((_) => {
+          if (_.sell) {
+            prices.push(_.sell);
+          }
+        });
 
         if (sell) {
           // Handle: prices
@@ -270,7 +290,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           const value = parseEther(sell).toString();
 
           // Sell Fee
-          feeBps = Number(poolPrice.bps.sell);
+          feeBps = Number(priceList[0].bps.sell);
           feeBreakdown.push({
             kind: "marketplace",
             recipient: pool.address,
@@ -320,6 +340,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 amount: "1",
                 path: [Sdk.Common.Addresses.Weth[config.chainId], pool.address],
                 price: price.toString(),
+                extra: {
+                  prices,
+                },
               });
 
               const orderResult = await redb.oneOrNone(
