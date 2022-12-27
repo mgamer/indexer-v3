@@ -39,7 +39,7 @@ if (config.doBackgroundWork) {
         collection,
       });
     },
-    { connection: redis.duplicate(), concurrency: 10 }
+    { connection: redis.duplicate(), concurrency: 1 }
   );
 
   worker.on("error", (error) => {
