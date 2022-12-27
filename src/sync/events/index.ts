@@ -282,10 +282,6 @@ export const syncEvents = async (
       try {
         const baseEventParams = await parseEvent(log, blocksCache);
 
-        if (!backfill) {
-          logger.info("events-sync", `Processing event: ${JSON.stringify(baseEventParams)}`);
-        }
-
         // Cache the block data
         if (!blocksCache.has(baseEventParams.block)) {
           // It's very important from a performance perspective to have
