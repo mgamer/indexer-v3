@@ -509,6 +509,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
     fillEventsOnChain,
 
     fillInfos,
+    orderInfos,
 
     orders: orders.map((info) => ({
       kind: "sudoswap",
