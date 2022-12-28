@@ -48,10 +48,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const orderValues: DbOrder[] = [];
 
   const handleOrder = async ({ orderParams }: OrderInfo) => {
-    if (orderParams.txTimestamp < 1669627512) {
-      return;
-    }
-
     try {
       const pool = await sudoswap.getPoolDetails(orderParams.pool);
       if (!pool) {
