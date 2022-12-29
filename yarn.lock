@@ -1962,7 +1962,7 @@
 
 "@reservoir0x/sdk@0.0.280":
   version "0.0.280"
-  resolved "https://registry.npmjs.org/@reservoir0x/sdk/-/sdk-0.0.280.tgz#ed02ae0f690e3ec9af636428877f5457fb351170"
+  resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.0.280.tgz#ed02ae0f690e3ec9af636428877f5457fb351170"
   integrity sha512-vcPHffuBcYK2dg7MXq9JkBYcIxR88wqDrqI1Xqae9UbBcDYY7IFwTEM7lWWXf3ds41z5xxn3DHUbZWL0I3xQvw==
   dependencies:
     "@uniswap/smart-order-router" "^3.0.4"
