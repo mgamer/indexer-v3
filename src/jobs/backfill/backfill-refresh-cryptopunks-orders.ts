@@ -6,11 +6,13 @@ import { Contract } from "@ethersproject/contracts";
 import { Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
-import { idb } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { redis, redlock } from "@/common/redis";
 import { config } from "@/config/index";
+
+import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 
 const QUEUE_NAME = "backfill-refresh-cryptopunks-orders";
 
@@ -40,7 +42,8 @@ if (config.doBackgroundWork) {
         `
           SELECT
             orders.id,
-            orders.token_set_id
+            orders.token_set_id,
+            orders.approval_status
           FROM orders
           WHERE orders.kind = 'cryptopunks'
             AND orders.contract IS NOT NULL
@@ -66,23 +69,25 @@ if (config.doBackgroundWork) {
       );
 
       const values: any[] = [];
-      // const columns = new pgp.helpers.ColumnSet(["id", "fillability_status", "approval_status"], {
-      //   table: "orders",
-      // });
-      for (const { id, token_set_id } of result) {
-        const offer = await contract.punksOfferedForSale(token_set_id.split(":")[2]);
-        if (offer.isForSale) {
-          values.push({
-            id,
-            fillability_status: "fillable",
-            approval_status: "approved",
-          });
-        } else {
-          values.push({
-            id,
-            fillability_status: "filled",
-            approval_status: "approved",
-          });
+      const columns = new pgp.helpers.ColumnSet(["id", "fillability_status", "approval_status"], {
+        table: "orders",
+      });
+      for (const { id, approval_status, token_set_id } of result) {
+        if (approval_status === "disabled") {
+          const offer = await contract.punksOfferedForSale(token_set_id.split(":")[2]);
+          if (offer.isForSale) {
+            values.push({
+              id,
+              fillability_status: "fillable",
+              approval_status: "approved",
+            });
+          } else {
+            values.push({
+              id,
+              fillability_status: "no-balance",
+              approval_status: "approved",
+            });
+          }
         }
       }
 
@@ -90,17 +95,31 @@ if (config.doBackgroundWork) {
         for (const value of values) {
           logger.info(QUEUE_NAME, JSON.stringify({ value }));
         }
-        // await idb.none(
-        //   `
-        //     UPDATE orders SET
-        //       fillability_status = x.fillability_status::order_fillability_status_t,
-        //       approval_status = x.approval_status::order_approval_status_t
-        //     FROM (
-        //       VALUES ${pgp.helpers.values(values, columns)}
-        //     ) AS x(id, fillability_status, approval_status)
-        //     WHERE orders.id = x.id::TEXT
-        //   `
-        // );
+        await idb.none(
+          `
+            UPDATE orders SET
+              fillability_status = x.fillability_status::order_fillability_status_t,
+              approval_status = x.approval_status::order_approval_status_t,
+              updated_at = now()
+            FROM (
+              VALUES ${pgp.helpers.values(values, columns)}
+            ) AS x(id, fillability_status, approval_status)
+            WHERE orders.id = x.id::TEXT
+          `
+        );
+
+        await orderUpdatesById.addToQueue(
+          values.map(
+            (value) =>
+              ({
+                context: `revalidation-${Date.now()}-${value.id}`,
+                id: value.id,
+                trigger: {
+                  kind: "revalidation",
+                },
+              } as orderUpdatesById.OrderInfo)
+          )
+        );
       }
 
       if (result.length >= limit) {
@@ -117,7 +136,7 @@ if (config.doBackgroundWork) {
 
   if (config.chainId === 1) {
     redlock
-      .acquire([`${QUEUE_NAME}-lock-1`], 60 * 60 * 24 * 30 * 1000)
+      .acquire([`${QUEUE_NAME}-lock-2`], 60 * 60 * 24 * 30 * 1000)
       .then(async () => {
         await addToQueue(HashZero);
       })
