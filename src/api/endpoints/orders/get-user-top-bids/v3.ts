@@ -83,7 +83,7 @@ export const getUserTopBidsV3Options: RouteOptions = {
         .max(100)
         .default(20)
         .description("Amount of items returned in response."),
-    }),
+    }).oxor("collection", "collectionsSetId"),
   },
   response: {
     schema: Joi.object({
@@ -139,7 +139,6 @@ export const getUserTopBidsV3Options: RouteOptions = {
     let contractFilter = "";
     let collectionFilter = "";
     let communityFilter = "";
-    let collectionSetFilter = "";
     let sortField = "top_bid_value";
     let offset = 0;
 
@@ -168,8 +167,15 @@ export const getUserTopBidsV3Options: RouteOptions = {
       offset = Number(splitContinuation(query.continuation));
     }
 
-    if (query.collection) {
-      if (Array.isArray(query.collection)) {
+    if (query.collection || query.collectionsSetId) {
+      if (query.collectionsSetId) {
+        query.collectionsIds = await CollectionSets.getCollectionsIds(query.collectionsSetId);
+        if (_.isEmpty(query.collectionsIds)) {
+          throw Boom.badRequest(`No collections for collection set ${query.collectionsSetId}`);
+        }
+
+        collectionFilter = `AND id IN ($/collectionsIds:csv/)`;
+      } else if (Array.isArray(query.collection)) {
         collectionFilter = `AND id IN ($/collection:csv/)`;
       } else {
         collectionFilter = `AND id = $/collection/`;
@@ -178,15 +184,6 @@ export const getUserTopBidsV3Options: RouteOptions = {
 
     if (query.community) {
       communityFilter = `AND community = $/community/`;
-    }
-
-    if (query.collectionsSetId) {
-      query.collectionsIds = await CollectionSets.getCollectionsIds(query.collectionsSetId);
-      if (_.isEmpty(query.collectionsIds)) {
-        throw Boom.badRequest(`No collections for collection set ${query.collectionsSetId}`);
-      }
-
-      collectionSetFilter = `AND id IN ($/collectionsIds:csv/)`;
     }
 
     if (query.contractsSetId) {
@@ -256,7 +253,6 @@ export const getUserTopBidsV3Options: RouteOptions = {
             WHERE id = t.collection_id
             ${communityFilter}
             ${collectionFilter}
-            ${collectionSetFilter}
         ) c ON TRUE
         WHERE owner = $/user/
         AND amount > 0
