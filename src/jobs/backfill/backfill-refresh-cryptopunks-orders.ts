@@ -47,6 +47,7 @@ if (config.doBackgroundWork) {
           FROM orders
           WHERE orders.kind = 'cryptopunks'
             AND orders.contract IS NOT NULL
+            AND orders.approval_status = 'disabled'
             AND orders.id > $/orderId/
           ORDER BY orders.id
           LIMIT $/limit/;
@@ -95,6 +96,7 @@ if (config.doBackgroundWork) {
         for (const value of values) {
           logger.info(QUEUE_NAME, JSON.stringify({ value }));
         }
+
         await idb.none(
           `
             UPDATE orders SET
@@ -136,7 +138,7 @@ if (config.doBackgroundWork) {
 
   if (config.chainId === 1) {
     redlock
-      .acquire([`${QUEUE_NAME}-lock-2`], 60 * 60 * 24 * 30 * 1000)
+      .acquire([`${QUEUE_NAME}-lock-3`], 60 * 60 * 24 * 30 * 1000)
       .then(async () => {
         await addToQueue(HashZero);
       })
