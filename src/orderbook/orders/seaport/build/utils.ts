@@ -2,7 +2,6 @@ import { AddressZero, HashZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuildParams } from "@reservoir0x/sdk/dist/seaport/builders/base";
 import { generateSourceBytes } from "@reservoir0x/sdk/dist/utils";
-import { BigNumber } from "ethers";
 
 import { redb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
@@ -33,11 +32,11 @@ type OrderBuildInfo = {
   kind: "erc721" | "erc1155";
 };
 
-export function padSourceToSalt(source: string, salt?: string) {
+export function padSourceToSalt(source: string, salt: string) {
   const sourceHash = generateSourceBytes(source);
-  const saltHex = BigNumber.from(salt)._hex.slice(2);
+  const saltHex = bn(salt)._hex.slice(6);
   const padSourceHex = `0x${sourceHash}${saltHex}`;
-  const saltWithSource = BigNumber.from(padSourceHex).toString();
+  const saltWithSource = bn(padSourceHex).toString();
   return saltWithSource;
 }
 
