@@ -20,7 +20,7 @@ import { Orders } from "@/utils/orders";
 import { ContractSets } from "@/models/contract-sets";
 import * as Boom from "@hapi/boom";
 import { CollectionSets } from "@/models/collection-sets";
-import {BigNumber} from "@ethersproject/bignumber";
+import { BigNumber } from "@ethersproject/bignumber";
 
 const version = "v3";
 
