@@ -186,24 +186,24 @@ export const save = async (
       ];
 
       // Handle: royalties
-      let eip2981Royalties: Royalty[];
+      let onChainRoyalties: Royalty[];
 
       if (order.params.kind === "single-token") {
-        eip2981Royalties = await royalties.getRoyalties(
+        onChainRoyalties = await royalties.getRoyalties(
           order.params.collection,
           order.params.tokenId,
-          "eip2981"
+          "onchain"
         );
       } else {
-        eip2981Royalties = await royalties.getRoyaltiesByTokenSet(tokenSetId, "eip2981");
+        onChainRoyalties = await royalties.getRoyaltiesByTokenSet(tokenSetId, "onchain");
       }
 
-      if (eip2981Royalties.length) {
+      if (onChainRoyalties.length) {
         feeBreakdown = [
           ...feeBreakdown,
           {
             kind: "royalty",
-            recipient: eip2981Royalties[0].recipient,
+            recipient: onChainRoyalties[0].recipient,
             // LooksRare has fixed 0.5% royalties
             bps: 50,
           },
