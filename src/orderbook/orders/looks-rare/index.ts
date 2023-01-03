@@ -198,6 +198,19 @@ export const save = async (
         onChainRoyalties = await royalties.getRoyaltiesByTokenSet(tokenSetId, "onchain");
       }
 
+      // TODO: Remove (for backwards-compatibility only)
+      if (!onChainRoyalties.length) {
+        if (order.params.kind === "single-token") {
+          onChainRoyalties = await royalties.getRoyalties(
+            order.params.collection,
+            order.params.tokenId,
+            "eip2981"
+          );
+        } else {
+          onChainRoyalties = await royalties.getRoyaltiesByTokenSet(tokenSetId, "eip2981");
+        }
+      }
+
       if (onChainRoyalties.length) {
         feeBreakdown = [
           ...feeBreakdown,

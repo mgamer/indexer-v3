@@ -205,6 +205,14 @@ export const refreshDefaultRoyalties = async (collection: string) => {
   }
   if (royaltiesResult.new_royalties["onchain"]) {
     defultRoyalties = royaltiesResult.new_royalties["onchain"];
+  } else {
+    // TODO: Remove (for backwards-compatibility only)
+    const oldSpec = Object.keys(royaltiesResult.new_royalties).find(
+      (kind) => !["custom", "opensea"].includes(kind)
+    );
+    if (oldSpec) {
+      defultRoyalties = royaltiesResult.new_royalties[oldSpec];
+    }
   }
   if (royaltiesResult.new_royalties["opensea"]) {
     defultRoyalties = royaltiesResult.new_royalties["opensea"];
