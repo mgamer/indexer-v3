@@ -75,6 +75,8 @@ describe("NFTX", () => {
     );
     const events = await getEventsFromTx(tx);
     const result = await handleEvents(events);
+    console.log("result", result);
+    process.exit(0);
     const order = result?.orders?.find((c) => c.kind === "nftx");
     expect(order).not.toBe(null);
   });
