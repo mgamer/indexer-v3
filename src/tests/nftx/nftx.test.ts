@@ -89,7 +89,7 @@ describe("NFTX", () => {
 
   test("order-saving", async () => {
     const tx = await baseProvider.getTransactionReceipt(
-      "0xab53ee4ea3653b0956fd8a6dd4a01b20775f65fcc7badc3b6e20481316f6b1f0"
+      "0x92322cb1a279df41e3efe9a3dd605cfe8f1f056519a1f1315d5b4e442ba16880"
     );
     const events = await getEventsFromTx(tx);
     const result = await handleEvents(events);
@@ -105,6 +105,10 @@ describe("NFTX", () => {
 
   test("event-parsing", async () => {
     const testCases = [
+      {
+        name: "gem-router",
+        tx: "0x92322cb1a279df41e3efe9a3dd605cfe8f1f056519a1f1315d5b4e442ba16880",
+      },
       {
         name: "buyAndRedeem-multiple",
         tx: "0x49b39c167d61b1161cdf64c9e91eef14ecf538b383094089a547a2b71aa1720a",
@@ -127,7 +131,7 @@ describe("NFTX", () => {
         const result = await handleEvents(events);
         const order = result?.orders?.find((c) => c.kind === "nftx");
         expect(order).not.toBe(null);
-      } catch {
+      } catch (err) {
         // Errors
       }
     }

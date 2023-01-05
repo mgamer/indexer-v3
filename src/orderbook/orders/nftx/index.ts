@@ -326,7 +326,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           const normalizedValue = bn(value).add(missingRoyaltyAmount);
           // Fetch all token ids owned by the pool
           const poolOwnedTokenIds = await commonHelpers.getNfts(pool.nft, pool.address);
-          // const poolOwnedTokenIdsOnChain = await Sdk.Nftx.helpers.getPoolNFTs(pool.address, baseProvider);
+          // const poolOwnedTokenIdsOnChain = await Sdk.Nftx.Helpers.getPoolNFTs(pool.address, baseProvider);
 
           for (const tokenId of poolOwnedTokenIds) {
             try {
