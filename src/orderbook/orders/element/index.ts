@@ -13,6 +13,7 @@ import { offChainCheck } from "@/orderbook/orders/element/check";
 import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
 import { AddressZero } from "@ethersproject/constants";
+import { defaultAbiCoder, keccak256 } from "ethers/lib/utils";
 
 export type OrderInfo = {
   orderParams: Sdk.Element.Types.BaseOrder | Sdk.Element.Types.BatchSignedOrder;
@@ -41,7 +42,9 @@ export const save = async (
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
       const order = new Sdk.Element.Order(config.chainId, orderParams);
-      const id = order.id();
+      const id = keccak256(
+        defaultAbiCoder.encode(["bytes32", "uint256"], [order.hash(), order.params.nonce])
+      );
 
       // Check: order doesn't already exist
       const orderExists = await idb.oneOrNone(`SELECT 1 FROM orders WHERE orders.id = $/id/`, {
@@ -64,7 +67,7 @@ export const save = async (
       }
 
       const currentTime = now();
-  
+
       // Check: order has a valid listing time
       const listingTime = order.listingTime();
       if (listingTime >= currentTime + 5 * 60) {
@@ -84,10 +87,8 @@ export const save = async (
       }
 
       // Check: buy order has Weth as payment token
-      if (
-        order.side() === "buy" &&
-        order.erc20Token() !== Sdk.Common.Addresses.Weth[config.chainId]
-      ) {
+      const side = order.side() === "buy" ? "buy" : "sell";
+      if (side === "buy" && order.erc20Token() !== Sdk.Common.Addresses.Weth[config.chainId]) {
         return results.push({
           id,
           status: "unsupported-payment-token",
@@ -95,10 +96,7 @@ export const save = async (
       }
 
       // Check: sell order has Eth as payment token
-      if (
-        order.side() === "sell" &&
-        order.erc20Token() !== Sdk.Common.Addresses.Eth[config.chainId]
-      ) {
+      if (side === "sell" && order.erc20Token() !== Sdk.Common.Addresses.Eth[config.chainId]) {
         return results.push({
           id,
           status: "unsupported-payment-token",
@@ -200,7 +198,7 @@ export const save = async (
       // Handle: price and value
       let price = order.getTotalPrice();
       let value = price;
-      if (order.side() === "buy") {
+      if (side === "buy") {
         // For buy orders, we set the value as `price - fee` since it
         // is best for UX to show the user exactly what they're going
         // to receive on offer acceptance.
@@ -237,16 +235,24 @@ export const save = async (
         taker = AddressZero;
         const params = order.params as Sdk.Element.Types.BatchSignedOrder;
         feeBreakdown = [
-          ...(params.platformFee ? [{
-            kind: "marketplace",
-            recipient: params.platformFeeRecipient,
-            bps: params.platformFee,
-          }] : []),
-          ...(params.royaltyFee ? [ {
-            kind: "royalty",
-            recipient: params.royaltyFeeRecipient,
-            bps: params.royaltyFee,
-          }] : []),
+          ...(params.platformFee
+            ? [
+                {
+                  kind: "marketplace",
+                  recipient: params.platformFeeRecipient,
+                  bps: params.platformFee,
+                },
+              ]
+            : []),
+          ...(params.royaltyFee
+            ? [
+                {
+                  kind: "royalty",
+                  recipient: params.royaltyFeeRecipient,
+                  bps: params.royaltyFee,
+                },
+              ]
+            : []),
         ];
       } else {
         const params = order.params as Sdk.Element.Types.BaseOrder;
@@ -263,7 +269,7 @@ export const save = async (
       orderValues.push({
         id,
         kind: `element-${kind}`,
-        side: order.side() as any,
+        side,
         fillability_status: fillabilityStatus,
         approval_status: approvalStatus,
         token_set_id: tokenSetId,

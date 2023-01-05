@@ -5,6 +5,7 @@ import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as onChainData from "@/utils/on-chain-data";
+import { defaultAbiCoder, keccak256 } from "ethers/lib/utils";
 
 export const offChainCheck = async (
   order: Sdk.Element.Order,
@@ -22,7 +23,9 @@ export const offChainCheck = async (
 ) => {
   // TODO: We should also check the remaining quantity for partially filled orders.
 
-  const id = order.id();
+  const id = keccak256(
+    defaultAbiCoder.encode(["bytes32", "uint256"], [order.hash(), order.params.nonce])
+  );
 
   // Check: order has a valid target
   const kind = await commonHelpers.getContractKind(order.params.nft!);
@@ -30,7 +33,8 @@ export const offChainCheck = async (
     throw new Error("invalid-target");
   }
 
-  const nftAmount = (kind === "erc721") ? "1" : (order.params as Sdk.Element.Types.BaseOrder).nftAmount!;
+  const nftAmount =
+    kind === "erc721" ? "1" : (order.params as Sdk.Element.Types.BaseOrder).nftAmount!;
   if (options?.checkFilledOrCancelled) {
     // Check: order is not cancelled
     const cancelled = await commonHelpers.isOrderCancelled(id);
