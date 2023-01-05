@@ -42,7 +42,7 @@ export const postSeaportOffersV1Options: RouteOptions = {
       const orders = payload.seaport_offers;
 
       if (orders) {
-        logger.info(`post-seaport-offers-${version}-handler`, `Got ${orders?.length} offers`);
+        logger.info(`post-seaport-offers-${version}-handler`, `Got ${orders.length} offers`);
       }
 
       // Disabled logic in order to support filling partial collection offers from OS Realtime API
