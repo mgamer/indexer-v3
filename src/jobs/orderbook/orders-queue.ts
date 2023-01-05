@@ -6,7 +6,6 @@ import { logger } from "@/common/logger";
 import { redis, redlock } from "@/common/redis";
 import { config } from "@/config/index";
 import * as orders from "@/orderbook/orders";
-import { SaveResult } from "@/orderbook/orders/x2y2";
 
 const QUEUE_NAME = "orderbook-orders-queue";
 
@@ -31,8 +30,8 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { kind, info, relayToArweave, validateBidValue } = job.data as GenericOrderInfo;
-      let result: SaveResult[] = [];
 
+      let result: { status: string }[] = [];
       try {
         switch (kind) {
           case "x2y2": {
@@ -46,9 +45,7 @@ if (config.doBackgroundWork) {
           }
 
           case "forward": {
-            const result = await orders.forward.save([info as orders.forward.OrderInfo]);
-            logger.info(QUEUE_NAME, `[forward] Order save result: ${JSON.stringify(result)}`);
-
+            result = await orders.forward.save([info as orders.forward.OrderInfo]);
             break;
           }
 
@@ -98,8 +95,15 @@ if (config.doBackgroundWork) {
           }
 
           case "rarible": {
-            const result = await orders.rarible.save([info], relayToArweave);
-            logger.info(QUEUE_NAME, `[rarible] Order save result: ${JSON.stringify(result)}`);
+            result = await orders.rarible.save([info], relayToArweave);
+            break;
+          }
+
+          case "infinity": {
+            result = await orders.infinity.save(
+              [info as orders.infinity.OrderInfo],
+              relayToArweave
+            );
             break;
           }
 
@@ -109,8 +113,7 @@ if (config.doBackgroundWork) {
           }
 
           case "manifold": {
-            const result = await orders.manifold.save([info]);
-            logger.info(QUEUE_NAME, `[manifold] Order save result: ${JSON.stringify(result)}`);
+            result = await orders.manifold.save([info]);
             break;
           }
         }
@@ -120,11 +123,11 @@ if (config.doBackgroundWork) {
       }
 
       // Don't log already-exists
-      if (!(result[0]?.status === "already-exists")) {
+      if (!["already-exists", "success"].includes(result[0]?.status)) {
         logger.info(QUEUE_NAME, `[${kind}] Order save result: ${JSON.stringify(result)}`);
       }
     },
-    { connection: redis.duplicate(), concurrency: 30 }
+    { connection: redis.duplicate(), concurrency: 50 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
@@ -140,7 +143,7 @@ if (config.doBackgroundWork) {
         .acquire(["orders-queue-size-check-lock"], (60 - 5) * 1000)
         .then(async () => {
           const size = await queue.count();
-          if (size >= 10000) {
+          if (size >= 20000) {
             logger.error("orders-queue-size-check", `Orders queue buffering up: size=${size}`);
           }
         })
@@ -214,6 +217,12 @@ export type GenericOrderInfo =
   | {
       kind: "forward";
       info: orders.forward.OrderInfo;
+      relayToArweave?: boolean;
+      validateBidValue?: boolean;
+    }
+  | {
+      kind: "infinity";
+      info: orders.infinity.OrderInfo;
       relayToArweave?: boolean;
       validateBidValue?: boolean;
     }

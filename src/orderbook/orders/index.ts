@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Exports
 
 export * as cryptopunks from "@/orderbook/orders/cryptopunks";
@@ -10,12 +11,12 @@ export * as x2y2 from "@/orderbook/orders/x2y2";
 export * as zeroExV4 from "@/orderbook/orders/zeroex-v4";
 export * as zora from "@/orderbook/orders/zora";
 export * as universe from "@/orderbook/orders/universe";
+export * as infinity from "@/orderbook/orders/infinity";
 export * as blur from "@/orderbook/orders/blur";
 export * as rarible from "@/orderbook/orders/rarible";
 export * as manifold from "@/orderbook/orders/manifold";
 
 // Imports
-
 import * as Sdk from "@reservoir0x/sdk";
 import * as SdkTypesV5 from "@reservoir0x/sdk/dist/router/v5/types";
 import * as SdkTypesV6 from "@reservoir0x/sdk/dist/router/v6/types";
@@ -50,8 +51,15 @@ export type OrderKind =
   | "universe"
   | "nftx"
   | "blur"
+  | "infinity"
   | "forward"
-  | "manifold";
+  | "manifold"
+  | "tofu-nft"
+  | "decentraland"
+  | "nft-trader"
+  | "okex"
+  | "bend-dao"
+  | "superrare";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -67,6 +75,31 @@ mintsSources.set("0xc9154424b823b10579895ccbe442d41b9abd96ed", "rarible.com");
 mintsSources.set("0xb66a603f4cfe17e3d27b87a8bfcad319856518b8", "rarible.com");
 mintsSources.set("0xc143bbfcdbdbed6d454803804752a064a622c1f3", "async.art");
 mintsSources.set("0xfbeef911dc5821886e1dda71586d90ed28174b7d", "knownorigin.io");
+
+export const getOrderSourceByOrderId = async (
+  orderId: string
+): Promise<SourcesEntity | undefined> => {
+  try {
+    const result = await redb.oneOrNone(
+      `
+        SELECT
+          orders.source_id_int
+        FROM orders
+        WHERE orders.id = $/orderId/
+        LIMIT 1
+      `,
+      { orderId }
+    );
+    if (result) {
+      const sources = await Sources.getInstance();
+      return sources.get(result.order_source_id_int);
+    }
+  } catch {
+    // Skip any errors
+  }
+
+  // In case nothing matched, return `undefined` by default
+};
 
 export const getOrderSourceByOrderKind = async (
   orderKind: OrderKind,
@@ -106,8 +139,22 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("nftx.io");
       case "blur":
         return sources.getOrInsert("blur.io");
+      case "infinity":
+        return sources.getOrInsert("infinity.xyz");
       case "manifold":
         return sources.getOrInsert("manifold.xyz");
+      case "tofu-nft":
+        return sources.getOrInsert("tofunft.com");
+      case "decentraland":
+        return sources.getOrInsert("market.decentraland.org");
+      case "nft-trader":
+        return sources.getOrInsert("nfttrader.io");
+      case "okex":
+        return sources.getOrInsert("okx.com");
+      case "bend-dao":
+        return sources.getOrInsert("benddao.xyz");
+      case "superrare":
+        return sources.getOrInsert("superrare.com");
 
       case "mint": {
         if (address && mintsSources.has(address)) {
@@ -116,7 +163,7 @@ export const getOrderSourceByOrderKind = async (
       }
     }
   } catch {
-    // Skip on any errors
+    // Skip any errors
   }
 
   // In case nothing matched, return `undefined` by default
@@ -484,6 +531,15 @@ export const generateListingDetailsV6 = (
       };
     }
 
+    case "infinity": {
+      const sdkOrder = new Sdk.Infinity.Order(config.chainId, order.rawData);
+      return {
+        kind: "infinity",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
     case "rarible": {
       return {
         kind: "rarible",
@@ -631,6 +687,15 @@ export const generateBidDetailsV6 = async (
       const sdkOrder = new Sdk.Universe.Order(config.chainId, order.rawData);
       return {
         kind: "universe",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
+    case "infinity": {
+      const sdkOrder = new Sdk.Infinity.Order(config.chainId, order.rawData);
+      return {
+        kind: "infinity",
         ...common,
         order: sdkOrder,
       };
