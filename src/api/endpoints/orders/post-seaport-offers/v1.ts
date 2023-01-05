@@ -41,7 +41,9 @@ export const postSeaportOffersV1Options: RouteOptions = {
     try {
       const orders = payload.seaport_offers;
 
-      logger.info(`post-seaport-offers-${version}-handler`, `Got ${orders.length} offers`);
+      if (orders) {
+        logger.info(`post-seaport-offers-${version}-handler`, `Got ${orders.length} offers`);
+      }
 
       // Disabled logic in order to support filling partial collection offers from OS Realtime API
       // const orderInfos: orderbookOrders.GenericOrderInfo[] = [];
