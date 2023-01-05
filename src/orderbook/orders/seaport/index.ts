@@ -469,7 +469,7 @@ export const save = async (
         feeBps += bps;
 
         // First check for opensea hardcoded recipients
-        const kind = openSeaFeeRecipients.includes(recipient)
+        const kind: "marketplace" | "royalty" = openSeaFeeRecipients.includes(recipient)
           ? "marketplace"
           : openSeaRoyalties.map(({ recipient }) => recipient).includes(recipient.toLowerCase()) // Check for locally stored royalties
           ? "royalty"
@@ -512,15 +512,19 @@ export const save = async (
         );
         if (validRecipients.length) {
           const bpsDiff = totalDefaultBps - totalBuiltInBps;
-          const amount = bn(price).mul(bpsDiff).div(10000).toString();
+          const amount = bn(price).mul(bpsDiff).div(10000);
           missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
 
-          missingRoyalties.push({
-            bps: bpsDiff,
-            amount,
-            // TODO: We should probably split pro-rata across all royalty recipients
-            recipient: validRecipients[0].recipient,
-          });
+          // Split the missing royalties pro-rata across all royalty recipients
+          const totalBps = _.sumBy(validRecipients, ({ bps }) => bps);
+          for (const { bps, recipient } of validRecipients) {
+            // TODO: Handle lost precision (by paying it to the last or first recipient)
+            missingRoyalties.push({
+              bps: Math.floor((bpsDiff * bps) / totalBps),
+              amount: amount.mul(bps).div(totalBps).toString(),
+              recipient,
+            });
+          }
         }
       }
 
@@ -528,10 +532,13 @@ export const save = async (
       const sources = await Sources.getInstance();
       let source: SourcesEntity | undefined = await sources.getOrInsert("opensea.io");
 
-      const sourceHash = bn(order.params.salt)._hex.slice(0, 10);
-      const matchedSource = sources.getByDomainHash(sourceHash);
-      if (matchedSource) {
-        source = matchedSource;
+      // If cross posting, source should always be opensea.
+      if (metadata?.target !== "opensea") {
+        const sourceHash = bn(order.params.salt)._hex.slice(0, 10);
+        const matchedSource = sources.getByDomainHash(sourceHash);
+        if (matchedSource) {
+          source = matchedSource;
+        }
       }
 
       // If the order is native, override any default source
@@ -973,15 +980,19 @@ export const save = async (
         );
         if (validRecipients.length) {
           const bpsDiff = totalDefaultBps - totalBuiltInBps;
-          const amount = bn(price).mul(bpsDiff).div(10000).toString();
+          const amount = bn(price).mul(bpsDiff).div(10000);
           missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
 
-          missingRoyalties.push({
-            bps: bpsDiff,
-            amount,
-            // TODO: We should probably split pro-rata across all royalty recipients
-            recipient: validRecipients[0].recipient,
-          });
+          // Split the missing royalties pro-rata across all royalty recipients
+          const totalBps = _.sumBy(validRecipients, ({ bps }) => bps);
+          for (const { bps, recipient } of validRecipients) {
+            // TODO: Handle lost precision (by paying it to the last or first recipient)
+            missingRoyalties.push({
+              bps: Math.floor((bpsDiff * bps) / totalBps),
+              amount: amount.mul(bps).div(totalBps).toString(),
+              recipient,
+            });
+          }
         }
       }
 
