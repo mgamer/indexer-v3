@@ -167,6 +167,7 @@ export const getTokensV5Options: RouteOptions = {
                   onSaleCount: Joi.number(),
                   floorAskPrice: Joi.number().unsafe().allow(null),
                   topBidValue: Joi.number().unsafe().allow(null),
+                  createdAt: Joi.string(),
                 })
               )
               .optional(),
@@ -273,6 +274,7 @@ export const getTokensV5Options: RouteOptions = {
                 'key', ta.key,
                 'kind', attributes.kind,
                 'value', ta.value,
+                'createdAt', ta.created_at,
                 'tokenCount', attributes.token_count,
                 'onSaleCount', attributes.on_sale_count,
                 'floorAskPrice', attributes.floor_sell_value::TEXT,
@@ -865,6 +867,7 @@ export const getTokensV5Options: RouteOptions = {
                     topBidValue: attribute.topBidValue
                       ? formatEth(attribute.topBidValue)
                       : attribute.topBidValue,
+                    createdAt: attribute.createdAt.toISOString(),
                   }))
                 : []
               : undefined,
