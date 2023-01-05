@@ -5,6 +5,7 @@ import * as es from "@/events-sync/storage";
 import * as utils from "@/events-sync/utils";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as nftxUtils from "@/utils/nftx";
+import { redb } from "@/common/db";
 
 import * as nftx from "@/orderbook/orders/nftx";
 import * as fillUpdates from "@/jobs/fill-updates/queue";
@@ -59,18 +60,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
         ).length;
 
         if (mintEventsCount > 1) {
-          for (let i = 0; i < tokenIds.length; i++) {
-            const orderId = nftx.getOrderId(baseEventParams.address, "buy");
-            orderInfos.push({
-              context: `filled-${orderId}-${baseEventParams.txHash}`,
-              id: orderId,
-              trigger: {
-                kind: "sale",
-                txHash: baseEventParams.txHash,
-                txTimestamp: baseEventParams.timestamp,
-              },
-            });
-          }
           break;
         }
 
@@ -204,22 +193,104 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           nftxUtils.isRedeem(log, baseEventParams.address)
         ).length;
 
-        if (redeemEventsCount > 1) {
-          // Cancel all related sell orders
+        const swapEventsCount = logs.filter((log) => nftxUtils.isSwap(log)).length;
+
+        // Handle: attribution
+        const orderKind = "nftx";
+        const attributionData = await utils.extractAttributionData(
+          baseEventParams.txHash,
+          orderKind
+        );
+
+        // Always set the taker as the transaction's sender in order to cover
+        // trades made through the default NFTX marketplace zap contract that
+        // acts as a router
+        const taker = (await utils.fetchTransaction(baseEventParams.txHash)).from;
+
+        if (swapEventsCount > 1 || redeemEventsCount > 1) {
+          // Fill all related sell orders
+          const orderIds = tokenIds.map((tokenId: string) =>
+            nftx.getOrderId(baseEventParams.address, "sell", tokenId)
+          );
+          const dbOrders = await redb.manyOrNone(
+            `SELECT * FROM orders where id IN ($/orderIds:list/)`,
+            {
+              orderIds,
+            }
+          );
+
           for (let index = 0; index < tokenIds.length; index++) {
+            const orderId = orderIds[index];
             const tokenId = tokenIds[index];
-            const orderId = nftx.getOrderId(baseEventParams.address, "sell", tokenId);
-            cancelEvents.push({
-              orderKind: "nftx",
+            const orderInfo = dbOrders.find((c) => c.id === orderId);
+            if (!orderInfo) {
+              // Not found order info in database
+              continue;
+            }
+
+            const currency = orderInfo.currency;
+            const currencyPrice = orderInfo.price;
+
+            const priceData = await getUSDAndNativePrices(
+              currency,
+              currencyPrice,
+              baseEventParams.timestamp
+            );
+
+            if (!priceData.nativePrice) {
+              // We must always have the native price
+              break;
+            }
+
+            fillEventsOnChain.push({
+              orderKind,
+              orderSide: "sell",
               orderId,
-              baseEventParams,
+              maker: baseEventParams.address,
+              taker,
+              price: orderInfo.price,
+              currencyPrice,
+              usdPrice: priceData.usdPrice,
+              currency,
+              contract: nftPool.nft,
+              tokenId,
+              amount: "1",
+              orderSourceId: attributionData.orderSource?.id,
+              aggregatorSourceId: attributionData.aggregatorSource?.id,
+              fillSourceId: attributionData.fillSource?.id,
+              baseEventParams: {
+                ...baseEventParams,
+                batchIndex: index + 1,
+              },
+            });
+
+            fillInfos.push({
+              context: `nftx-${nftPool.nft}-${tokenIds[index]}-${baseEventParams.txHash}`,
+              orderSide: "sell",
+              contract: nftPool.nft,
+              tokenId,
+              amount: "1",
+              price: priceData.nativePrice,
+              timestamp: baseEventParams.timestamp,
+            });
+
+            orderInfos.push({
+              context: `filled-${orderId}-${baseEventParams.txHash}`,
+              id: orderId,
+              trigger: {
+                kind: "sale",
+                txHash: baseEventParams.txHash,
+                txTimestamp: baseEventParams.timestamp,
+              },
             });
           }
+        }
+
+        if (redeemEventsCount > 1) {
           break;
         }
 
         // Ensure there is a single `Swap` event for the same pool
-        const swapEventsCount = logs.filter((log) => nftxUtils.isSwap(log)).length;
         if (swapEventsCount > 1) {
           break;
         }
@@ -244,14 +315,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
             }
 
             if (currency && currencyPrice) {
-              // Handle: attribution
-
-              const orderKind = "nftx";
-              const attributionData = await utils.extractAttributionData(
-                baseEventParams.txHash,
-                orderKind
-              );
-
               // Handle: prices
 
               const priceData = await getUSDAndNativePrices(
@@ -264,10 +327,6 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
                 break;
               }
 
-              // Always set the taker as the transaction's sender in order to cover
-              // trades made through the default NFTX marketplace zap contract that
-              // acts as a router
-              const taker = (await utils.fetchTransaction(baseEventParams.txHash)).from;
               for (let i = 0; i < tokenIds.length; i++) {
                 const tokenId = tokenIds[i];
                 const orderId = nftx.getOrderId(baseEventParams.address, "sell", tokenId);
@@ -323,7 +382,7 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
       case "nftx-swapped": {
         const { args } = eventData.abi.parseLog(log);
-        const redeemedIds = args.redeemedIds.map(String);
+        const tokenIds = args.redeemedIds.map(String);
 
         const nftPool = await nftxUtils.getNftPoolDetails(baseEventParams.address);
         if (!nftPool) {
@@ -341,14 +400,92 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
           metadata: {},
         });
 
-        // Cancel all related redeemedIds sell orders
-        for (let index = 0; index < redeemedIds.length; index++) {
-          const redeemedId = redeemedIds[index];
-          const orderId = nftx.getOrderId(baseEventParams.address, "sell", redeemedId);
-          cancelEvents.push({
-            orderKind: "nftx",
+        // Handle: attribution
+        const orderKind = "nftx";
+        const attributionData = await utils.extractAttributionData(
+          baseEventParams.txHash,
+          orderKind
+        );
+
+        // Always set the taker as the transaction's sender in order to cover
+        // trades made through the default NFTX marketplace zap contract that
+        // acts as a router
+        const taker = (await utils.fetchTransaction(baseEventParams.txHash)).from;
+
+        // Fill all related sell orders
+        const orderIds = tokenIds.map((tokenId: string) =>
+          nftx.getOrderId(baseEventParams.address, "sell", tokenId)
+        );
+        const dbOrders = await redb.manyOrNone(
+          `SELECT * FROM orders where id IN ($/orderIds:list/)`,
+          {
+            orderIds,
+          }
+        );
+
+        for (let index = 0; index < tokenIds.length; index++) {
+          const orderId = orderIds[index];
+          const tokenId = tokenIds[index];
+          const orderInfo = dbOrders.find((c) => c.id === orderId);
+          if (!orderInfo) {
+            // Not found order info in database
+            continue;
+          }
+
+          const currency = orderInfo.currency;
+          const currencyPrice = orderInfo.price;
+
+          const priceData = await getUSDAndNativePrices(
+            currency,
+            currencyPrice,
+            baseEventParams.timestamp
+          );
+
+          if (!priceData.nativePrice) {
+            // We must always have the native price
+            break;
+          }
+
+          fillEventsOnChain.push({
+            orderKind,
+            orderSide: "sell",
             orderId,
-            baseEventParams,
+            maker: baseEventParams.address,
+            taker,
+            price: orderInfo.price,
+            currencyPrice,
+            usdPrice: priceData.usdPrice,
+            currency,
+            contract: nftPool.nft,
+            tokenId,
+            amount: "1",
+            orderSourceId: attributionData.orderSource?.id,
+            aggregatorSourceId: attributionData.aggregatorSource?.id,
+            fillSourceId: attributionData.fillSource?.id,
+            baseEventParams: {
+              ...baseEventParams,
+              batchIndex: index + 1,
+            },
+          });
+
+          fillInfos.push({
+            context: `nftx-${nftPool.nft}-${tokenIds[index]}-${baseEventParams.txHash}`,
+            orderSide: "sell",
+            contract: nftPool.nft,
+            tokenId,
+            amount: "1",
+            price: priceData.nativePrice,
+            timestamp: baseEventParams.timestamp,
+          });
+
+          orderInfos.push({
+            context: `filled-${orderId}-${baseEventParams.txHash}`,
+            id: orderId,
+            trigger: {
+              kind: "sale",
+              txHash: baseEventParams.txHash,
+              txTimestamp: baseEventParams.timestamp,
+            },
           });
         }
 
