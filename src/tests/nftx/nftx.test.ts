@@ -75,8 +75,6 @@ describe("NFTX", () => {
     );
     const events = await getEventsFromTx(tx);
     const result = await handleEvents(events);
-    // console.log("result", result);
-    // process.exit(0);
     const order = result?.orders?.find((c) => c.kind === "nftx");
     expect(order).not.toBe(null);
   });
@@ -103,5 +101,33 @@ describe("NFTX", () => {
 
     // Store order to database
     await orders.nftx.save([orderInfo]);
+  });
+
+  test("event-parsing", async () => {
+    const testCases = [
+      {
+        name: "buyAndRedeem-multiple",
+        tx: "0x49b39c167d61b1161cdf64c9e91eef14ecf538b383094089a547a2b71aa1720a",
+      },
+      {
+        name: "buyAndSwap721-multiple",
+        tx: "0x7139a5df97188bd4b1d039deb4c0e04d0bd74df9cc062e27993f28188f7d2367",
+      },
+      {
+        name: "mintAndSell721WETH-multiple",
+        tx: "0x191eec69b891bf6f7a84d256b5fccfbc2aef44fc51fabba3456f45802f905ad2",
+      },
+    ];
+
+    for (let index = 0; index < testCases.length; index++) {
+      const testCase = testCases[index];
+      const tx = await baseProvider.getTransactionReceipt(testCase.tx);
+      const events = await getEventsFromTx(tx);
+      const result = await handleEvents(events);
+      // console.log("result", result);
+      // process.exit(0);
+      const order = result?.orders?.find((c) => c.kind === "nftx");
+      expect(order).not.toBe(null);
+    }
   });
 });
