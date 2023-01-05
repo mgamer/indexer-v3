@@ -867,7 +867,7 @@ export const getTokensV5Options: RouteOptions = {
                     topBidValue: attribute.topBidValue
                       ? formatEth(attribute.topBidValue)
                       : attribute.topBidValue,
-                    createdAt: attribute.createdAt.toISOString(),
+                    createdAt: new Date(attribute.createdAt).toISOString(),
                   }))
                 : []
               : undefined,
