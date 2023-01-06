@@ -1,3 +1,6 @@
+import { defaultAbiCoder } from "@ethersproject/abi";
+import { AddressZero } from "@ethersproject/constants";
+import { keccak256 } from "@ethersproject/keccak256";
 import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
 
@@ -7,13 +10,11 @@ import { bn, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
+import { Sources } from "@/models/sources";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import { offChainCheck } from "@/orderbook/orders/element/check";
 import * as tokenSet from "@/orderbook/token-sets";
-import { Sources } from "@/models/sources";
-import { AddressZero } from "@ethersproject/constants";
-import { defaultAbiCoder, keccak256 } from "ethers/lib/utils";
 
 export type OrderInfo = {
   orderParams: Sdk.Element.Types.BaseOrder | Sdk.Element.Types.BatchSignedOrder;
