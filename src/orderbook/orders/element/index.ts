@@ -31,6 +31,8 @@ export const save = async (
   orderInfos: OrderInfo[],
   relayToArweave?: boolean
 ): Promise<SaveResult[]> => {
+  logger.info("debug", JSON.stringify({ method: "save", orderInfos }));
+
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
 
