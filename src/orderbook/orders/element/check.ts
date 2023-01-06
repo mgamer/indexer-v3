@@ -76,7 +76,8 @@ export const offChainCheck = async (
             .fetchAndUpdateFtApproval(
               order.params.erc20Token,
               order.params.maker,
-              Sdk.Element.Addresses.Exchange[config.chainId]
+              Sdk.Element.Addresses.Exchange[config.chainId],
+              true
             )
             .then((a) => a.value)
         ).lt(price)
