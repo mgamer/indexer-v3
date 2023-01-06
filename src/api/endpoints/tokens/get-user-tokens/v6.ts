@@ -113,6 +113,8 @@ export const getUserTokensV6Options: RouteOptions = {
             kind: Joi.string(),
             name: Joi.string().allow(null, ""),
             image: Joi.string().allow(null, ""),
+            media: Joi.string().allow(null, ""),
+            rarityRank: Joi.number().unsafe().allow(null),
             collection: Joi.object({
               id: Joi.string().allow(null),
               name: Joi.string().allow(null, ""),
@@ -273,6 +275,8 @@ export const getUserTokensV6Options: RouteOptions = {
           t.token_id,
           t.name,
           t.image,
+          t.media,
+          t.rarity_rank,
           t.collection_id,
           null AS top_bid_id,
           null AS top_bid_price,
@@ -297,6 +301,8 @@ export const getUserTokensV6Options: RouteOptions = {
             t.token_id,
             t.name,
             t.image,
+            t.media,
+            t.rarity_rank,
             t.collection_id,
             ${selectFloorData}
           FROM tokens t
@@ -339,7 +345,7 @@ export const getUserTokensV6Options: RouteOptions = {
     try {
       let baseQuery = `
         SELECT b.contract, b.token_id, b.token_count, extract(epoch from b.acquired_at) AS acquired_at,
-               t.name, t.image, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.floor_sell_currency, t.floor_sell_currency_value,
+               t.name, t.image, t.media, t.rarity_rank, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.floor_sell_currency, t.floor_sell_currency_value,
                t.floor_sell_maker, t.floor_sell_valid_from, t.floor_sell_valid_to, t.floor_sell_source_id_int,
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value,
                c.name as collection_name, con.kind, c.metadata, ${
@@ -439,6 +445,8 @@ export const getUserTokensV6Options: RouteOptions = {
             kind: r.kind,
             name: r.name,
             image: r.image,
+            media: r.media,
+            rarityRank: r.rarity_rank,
             collection: {
               id: r.collection_id,
               name: r.collection_name,
