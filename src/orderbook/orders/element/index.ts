@@ -31,8 +31,6 @@ export const save = async (
   orderInfos: OrderInfo[],
   relayToArweave?: boolean
 ): Promise<SaveResult[]> => {
-  logger.info("debug", JSON.stringify({ method: "save", orderInfos }));
-
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
 
@@ -226,7 +224,10 @@ export const save = async (
 
       // Handle: source
       const sources = await Sources.getInstance();
-      const source = metadata.source ? await sources.getOrInsert(metadata.source) : undefined;
+      let source = await sources.getOrInsert("element.market");
+      if (metadata.source) {
+        source = await sources.getOrInsert(metadata.source);
+      }
 
       // Handle: native Reservoir orders
       const isReservoir = false;

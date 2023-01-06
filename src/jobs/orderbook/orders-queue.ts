@@ -31,8 +31,6 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { kind, info, relayToArweave, validateBidValue } = job.data as GenericOrderInfo;
 
-      logger.info("debug", JSON.stringify({ kind, info }));
-
       let result: { status: string }[] = [];
       try {
         switch (kind) {
