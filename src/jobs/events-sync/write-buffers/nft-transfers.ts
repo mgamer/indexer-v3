@@ -58,7 +58,7 @@ if (config.doBackgroundWork) {
       // It's very important to have this queue be single-threaded
       // in order to avoid database write deadlocks (and it can be
       // even better to have it be single-process).
-      concurrency: config.chainId === 137 ? 3 : 1,
+      concurrency: 1,
     }
   );
 
