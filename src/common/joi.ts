@@ -3,7 +3,8 @@ import Joi from "joi";
 import { formatEth, formatPrice, formatUsd, now, regex } from "@/common/utils";
 import { Currency, getCurrency } from "@/utils/currencies";
 import { getUSDAndNativePrices } from "@/utils/prices";
-import { bn } from "@reservoir0x/sdk/dist/utils";
+import { bn } from "@/common/utils";
+import { BigNumberish } from "ethers";
 
 // --- Prices ---
 
@@ -27,7 +28,7 @@ export const JoiPrice = Joi.object({
   netAmount: JoiPriceAmount.optional(),
 });
 
-export const subFeeWithBps = (amount: string | number, totalFeeBps: number) => {
+const subFeeWithBps = (amount: BigNumberish, totalFeeBps: number) => {
   return bn(amount).sub(bn(amount).mul(totalFeeBps).div(10000)).toString();
 };
 
@@ -80,6 +81,7 @@ export const getJoiPriceObject = async (
   totalFeeBps?: number
 ) => {
   const currency = await getCurrency(currencyAddress);
+  const netAmountPrice = prices.net ?? prices.gross;
   return {
     currency: {
       contract: currency.contract,
@@ -94,12 +96,13 @@ export const getJoiPriceObject = async (
       prices.gross.usdAmount
     ),
     netAmount:
-      prices.net &&
+      netAmountPrice &&
+      totalFeeBps &&
       (await getJoiAmountObject(
         currency,
-        prices.net.amount,
-        prices.net.nativeAmount,
-        prices.net.usdAmount,
+        netAmountPrice.amount,
+        netAmountPrice.nativeAmount,
+        netAmountPrice.usdAmount,
         totalFeeBps
       )),
   };
