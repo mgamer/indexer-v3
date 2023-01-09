@@ -3,6 +3,7 @@ import Joi from "joi";
 import { formatEth, formatPrice, formatUsd, now, regex } from "@/common/utils";
 import { Currency, getCurrency } from "@/utils/currencies";
 import { getUSDAndNativePrices } from "@/utils/prices";
+import { bn } from "@reservoir0x/sdk/dist/utils";
 
 // --- Prices ---
 
@@ -26,11 +27,16 @@ export const JoiPrice = Joi.object({
   netAmount: JoiPriceAmount.optional(),
 });
 
+export const subFeeWithBps = (amount: string | number, totalFeeBps: number) => {
+  return bn(amount).sub(bn(amount).mul(totalFeeBps).div(10000)).toString();
+};
+
 export const getJoiAmountObject = async (
   currency: Currency,
   amount: string,
   nativeAmount?: string,
-  usdAmount?: string
+  usdAmount?: string,
+  totalFeeBps?: number
 ) => {
   let usdPrice = usdAmount;
   if (amount && !usdPrice) {
@@ -39,6 +45,14 @@ export const getJoiAmountObject = async (
         onlyUSD: true,
       })
     ).usdPrice;
+  }
+
+  if (totalFeeBps) {
+    amount = subFeeWithBps(amount, totalFeeBps);
+    if (usdPrice) {
+      usdPrice = subFeeWithBps(usdPrice, totalFeeBps);
+    }
+    if (nativeAmount) nativeAmount = subFeeWithBps(nativeAmount, totalFeeBps);
   }
 
   return {
@@ -62,7 +76,8 @@ export const getJoiPriceObject = async (
       usdAmount?: string;
     };
   },
-  currencyAddress: string
+  currencyAddress: string,
+  totalFeeBps?: number
 ) => {
   const currency = await getCurrency(currencyAddress);
   return {
@@ -84,7 +99,8 @@ export const getJoiPriceObject = async (
         currency,
         prices.net.amount,
         prices.net.nativeAmount,
-        prices.net.usdAmount
+        prices.net.usdAmount,
+        totalFeeBps
       )),
   };
 };
