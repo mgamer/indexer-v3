@@ -123,11 +123,7 @@ export class UserActivities {
                   'data', json_build_object(
                     'collectionName', collections.name,
                     'tokenName', tokens.name,
-                    'image', tokens.image,
-                    'tokenLastBuyValue', tokens.last_buy_value,
-                    'tokenLastSellValue', tokens.last_sell_value,
-                    'tokenRarityScore', tokens.rarity_score,
-                    'tokenRarityRank', tokens.rarity_rank
+                    'image', tokens.image
                   )
                 )
               FROM tokens
@@ -200,9 +196,7 @@ export class UserActivities {
 
       metadataQuery = `
              LEFT JOIN LATERAL (
-                SELECT name AS "token_name", image AS "token_image", 
-                last_buy_value as "token_last_buy_value", last_sell_value as "token_last_sell_value",
-                rarity_score as "token_rarity_score", rarity_rank as "token_rarity_rank"
+                SELECT name AS "token_name", image AS "token_image"
                 FROM tokens
                 WHERE user_activities.contract = tokens.contract
                 AND user_activities.token_id = tokens.token_id

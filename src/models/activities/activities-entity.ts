@@ -47,10 +47,6 @@ export type ActivitiesEntityParams = {
   metadata: ActivityMetadata;
   token_name: string;
   token_image: string;
-  token_last_buy_value: number;
-  token_last_sell_value: number;
-  token_rarity_score: number;
-  token_rarity_rank: number;
   collection_name: string;
   collection_metadata: CollectionsMetadata;
   order_side: string;
@@ -77,10 +73,6 @@ export type ActivityToken = {
   tokenId: string | null;
   tokenName?: string;
   tokenImage?: string;
-  tokenLastBuyValue?: number;
-  tokenLastSellValue?: number;
-  tokenRarityScore?: number;
-  tokenRarityRank?: number;
 };
 
 export type ActivityCollection = {
@@ -138,10 +130,6 @@ export class ActivitiesEntity {
       tokenId: params.token_id,
       tokenImage: params.token_image,
       tokenName: params.token_name,
-      tokenLastBuyValue: params.token_last_buy_value,
-      tokenLastSellValue: params.token_last_sell_value,
-      tokenRarityRank: params.token_rarity_rank,
-      tokenRarityScore: params.token_rarity_score,
     };
     this.collection = {
       collectionId: params.collection_id,
