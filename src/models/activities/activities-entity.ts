@@ -53,7 +53,6 @@ export type ActivitiesEntityParams = {
   token_last_sell_timestamp: number;
   token_rarity_score: number;
   token_rarity_rank: number;
-  token_media: string;
   collection_name: string;
   collection_metadata: CollectionsMetadata;
   order_side: string;
@@ -84,7 +83,6 @@ export type ActivityToken = {
   lastSell: { value?: number; timestamp?: number };
   tokenRarityScore?: number;
   tokenRarityRank?: number;
-  tokenMedia?: string;
 };
 
 export type ActivityCollection = {
@@ -152,7 +150,6 @@ export class ActivitiesEntity {
       },
       tokenRarityRank: params.token_rarity_rank,
       tokenRarityScore: params.token_rarity_score,
-      tokenMedia: params.token_media,
     };
     this.collection = {
       collectionId: params.collection_id,
