@@ -19,7 +19,6 @@ export const postUpdateApiKeyOptions: RouteOptions = {
       apiKey: Joi.string().description("The api key to update"),
       tier: Joi.number().valid(0, 1, 2, 3, 4).optional(),
       active: Joi.boolean().optional(),
-      email: Joi.string().description("The api key associated email").optional(),
     }),
   },
   handler: async (request: Request) => {
@@ -33,7 +32,6 @@ export const postUpdateApiKeyOptions: RouteOptions = {
       await ApiKeyManager.update(payload.apiKey, {
         tier: payload.tier,
         active: payload.active,
-        email: payload.email,
       });
 
       return {
