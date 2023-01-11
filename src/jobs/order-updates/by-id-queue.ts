@@ -18,6 +18,8 @@ import * as collectionUpdatesTopBid from "@/jobs/collection-updates/top-bid-queu
 import * as tokenUpdatesFloorAsk from "@/jobs/token-updates/floor-queue";
 import * as tokenUpdatesNormalizedFloorAsk from "@/jobs/token-updates/normalized-floor-queue";
 
+import * as websocketEventsTriggerQueue from "@/jobs/websocket-events/trigger-queue";
+
 const QUEUE_NAME = "order-updates-by-id";
 
 export const queue = new Queue(QUEUE_NAME, {
@@ -126,7 +128,8 @@ if (config.doBackgroundWork) {
                 RETURNING
                   collection_id AS "collectionId",
                   attribute_id AS "attributeId",
-                  top_buy_value AS "topBuyValue"
+                  top_buy_value AS "topBuyValue",
+                  top_buy_id AS "topBuyId"
               `,
               { tokenSetId }
             );
@@ -159,20 +162,31 @@ if (config.doBackgroundWork) {
               }
             }
 
-            for (const result of buyOrderResult) {
-              if (!_.isNull(result.attributeId)) {
-                await handleNewBuyOrder.addToQueue(result);
+            if (buyOrderResult.length) {
+              if (trigger.kind === "new-order") {
+                await websocketEventsTriggerQueue.addToQueue([
+                  {
+                    kind: websocketEventsTriggerQueue.EventKind.NewTopBid,
+                    data: { orderId: buyOrderResult[0].topBuyId },
+                  },
+                ]);
               }
 
-              if (!_.isNull(result.collectionId)) {
-                await collectionUpdatesTopBid.addToQueue([
-                  {
-                    collectionId: result.collectionId,
-                    kind: trigger.kind,
-                    txHash: trigger.txHash || null,
-                    txTimestamp: trigger.txTimestamp || null,
-                  } as collectionUpdatesTopBid.TopBidInfo,
-                ]);
+              for (const result of buyOrderResult) {
+                if (!_.isNull(result.attributeId)) {
+                  await handleNewBuyOrder.addToQueue(result);
+                }
+
+                if (!_.isNull(result.collectionId)) {
+                  await collectionUpdatesTopBid.addToQueue([
+                    {
+                      collectionId: result.collectionId,
+                      kind: trigger.kind,
+                      txHash: trigger.txHash || null,
+                      txTimestamp: trigger.txTimestamp || null,
+                    } as collectionUpdatesTopBid.TopBidInfo,
+                  ]);
+                }
               }
             }
           }
