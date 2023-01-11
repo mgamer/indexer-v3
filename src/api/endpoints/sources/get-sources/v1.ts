@@ -79,16 +79,10 @@ export const getSourcesV1Options: RouteOptions = {
         ${sourcesFilter ? "WHERE" : ""}
         ${sourcesFilter}
       `;
-      if (query.sortBy === "name") {
+      if (query.sortBy) {
         baseQuery += `
         ORDER BY
-          sources_v2.name ${query.sortDirection}
-      `;
-      }
-      if (query.sortBy === "domain") {
-        baseQuery += `
-        ORDER BY
-          sources_v2.domain ${query.sortDirection}
+          sources_v2.${query.sortBy} ${query.sortDirection}
       `;
       }
       baseQuery += `OFFSET ${offset} LIMIT ${query.limit}`;
