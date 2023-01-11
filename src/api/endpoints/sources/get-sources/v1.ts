@@ -7,14 +7,11 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { Sources } from "@/models/sources";
 import { buildContinuation, regex, splitContinuation } from "@/common/utils";
+import { SourcesEntity } from "@/models/sources/sources-entity";
 
 const version = "v1";
 
 export const getSourcesV1Options: RouteOptions = {
-  cache: {
-    privacy: "public",
-    expiresIn: 30000,
-  },
   description: "Sources List",
   notes: "This API returns a list of sources",
   tags: ["api", "Sources"],
@@ -26,8 +23,8 @@ export const getSourcesV1Options: RouteOptions = {
   validate: {
     query: Joi.object({
       sortBy: Joi.string()
-        .valid("name", "domain")
-        .default("name")
+        .valid("name", "domain", "createdAt")
+        .default("createdAt")
         .description("Order of the items are returned in the response."),
       sortDirection: Joi.string()
         .valid("asc", "desc")
@@ -49,10 +46,11 @@ export const getSourcesV1Options: RouteOptions = {
     schema: Joi.object({
       sources: Joi.array().items(
         Joi.object({
+          id: Joi.string(),
           name: Joi.string().allow(null, ""),
-          address: Joi.string().allow(null, ""),
+          icon: Joi.string().allow(null, ""),
+          tokenUrl: Joi.string().allow(null, ""),
           domain: Joi.string().allow(null, ""),
-          metadata: Joi.object().allow(null),
         })
       ),
       continuation: Joi.string().allow(null),
@@ -79,23 +77,30 @@ export const getSourcesV1Options: RouteOptions = {
         ${sourcesFilter ? "WHERE" : ""}
         ${sourcesFilter}
       `;
-      if (query.sortBy) {
-        baseQuery += `
+
+      baseQuery += `
         ORDER BY
-          sources_v2.${query.sortBy} ${query.sortDirection}
-      `;
+          sources_v2.${query.sortBy === "createdAt" ? "created_at" : query.sortBy} ${
+        query.sortDirection
       }
+      `;
+
       baseQuery += `OFFSET ${offset} LIMIT ${query.limit}`;
 
       const rawResult = await redb.manyOrNone(baseQuery, query);
+      const sources = await Sources.getInstance();
 
       const result = await Promise.all(
-        rawResult.map(async (r) => ({
-          name: r.name,
-          address: r.address,
-          domain: r.domain,
-          metadata: r.metadata,
-        }))
+        rawResult.map(async (r) => {
+          const source = new SourcesEntity(r);
+          return {
+            id: source.address ?? undefined,
+            name: source?.getTitle(),
+            icon: source?.getIcon(),
+            domain: source.domain ?? undefined,
+            tokenUrl: sources.getTokenUrl(source),
+          };
+        })
       );
       let continuation: string | null = null;
       if (rawResult.length >= query.limit) {
