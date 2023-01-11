@@ -1,7 +1,6 @@
 -- Up Migration
 
-ALTER TABLE "sources_v2" ADD COLUMN "created_at" TIMESTAMPTZ;
-ALTER TABLE "sources_v2" ALTER "created_at" SET DEFAULT now();
+ALTER TABLE "sources_v2" ADD COLUMN "created_at" TIMESTAMPTZ NOT NULL DEFAULT now();
 
 -- Down Migration
 
