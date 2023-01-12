@@ -2,6 +2,7 @@
 // Exports
 
 export * as cryptopunks from "@/orderbook/orders/cryptopunks";
+export * as element from "@/orderbook/orders/element";
 export * as forward from "@/orderbook/orders/forward";
 export * as foundation from "@/orderbook/orders/foundation";
 export * as looksRare from "@/orderbook/orders/looks-rare";
@@ -468,6 +469,15 @@ export const generateListingDetailsV6 = (
       };
     }
 
+    case "element-erc721":
+    case "element-erc1155": {
+      return {
+        kind: "element",
+        ...common,
+        order: new Sdk.Element.Order(config.chainId, order.rawData),
+      };
+    }
+
     case "looks-rare": {
       return {
         kind: "looks-rare",
@@ -656,6 +666,15 @@ export const generateBidDetailsV6 = async (
       };
     }
 
+    case "element-erc721":
+    case "element-erc1155": {
+      return {
+        kind: "element",
+        ...common,
+        order: new Sdk.Element.Order(config.chainId, order.rawData),
+      };
+    }
+
     case "zeroex-v4-erc721":
     case "zeroex-v4-erc1155": {
       const sdkOrder = new Sdk.ZeroExV4.Order(config.chainId, order.rawData);
@@ -711,10 +730,35 @@ export const generateBidDetailsV6 = async (
     }
 
     case "forward": {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const extraArgs: any = {};
+
       const sdkOrder = new Sdk.Forward.Order(config.chainId, order.rawData);
+      if (sdkOrder.params.kind?.includes("token-list")) {
+        // When filling a "token-list" order, we also need to pass in the
+        // full list of tokens the order was made on (in order to be able
+        // to generate a valid merkle proof)
+        const tokens = await redb.manyOrNone(
+          `
+            SELECT
+              token_sets_tokens.token_id
+            FROM token_sets_tokens
+            WHERE token_sets_tokens.token_set_id = (
+              SELECT
+                orders.token_set_id
+              FROM orders
+              WHERE orders.id = $/id/
+            )
+          `,
+          { id: sdkOrder.hash() }
+        );
+        extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
+      }
+
       return {
         kind: "forward",
         ...common,
+        extraArgs,
         order: sdkOrder,
       };
     }
