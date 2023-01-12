@@ -79,7 +79,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         const prices: string[] = [];
         priceList.forEach((_) => {
           if (_.buy) {
-            prices.push(_.buy);
+            prices.push(parseEther(_.buy).toString());
           }
         });
 
@@ -281,7 +281,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         const prices: string[] = [];
         priceList.forEach((_) => {
           if (_.sell) {
-            prices.push(_.sell);
+            prices.push(parseEther(_.sell).toString());
           }
         });
 
