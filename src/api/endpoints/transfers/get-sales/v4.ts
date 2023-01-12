@@ -385,7 +385,7 @@ export const getSalesV4Options: RouteOptions = {
                   }),
                   (r.marketplace_fee_breakdown ?? []).map((detail: any) => {
                     return {
-                      type: "marketplace",
+                      kind: "marketplace",
                       ...detail,
                     };
                   })
