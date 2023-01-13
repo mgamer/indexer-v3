@@ -1,20 +1,21 @@
 import { AddressZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
-import pLimit from "p-limit";
 import * as Sdk from "@reservoir0x/sdk";
+import _ from "lodash";
+import pLimit from "p-limit";
 
 import { idb, pgp, redb } from "@/common/db";
 import { logger } from "@/common/logger";
+import { baseProvider } from "@/common/provider";
 import { bn, toBuffer } from "@/common/utils";
+import { config } from "@/config/index";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { Sources } from "@/models/sources";
+import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import * as tokenSet from "@/orderbook/token-sets";
-import * as royalties from "@/utils/royalties";
 import * as nftx from "@/utils/nftx";
-import * as commonHelpers from "@/orderbook/orders/common/helpers";
-import { config } from "@/config/index";
-import { baseProvider } from "@/common/provider";
+import * as royalties from "@/utils/royalties";
 
 export type OrderInfo = {
   orderParams: {
@@ -42,8 +43,8 @@ export const getOrderId = (pool: string, side: "sell" | "buy", tokenId?: string)
 export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
-  const slippage = 2;
 
+  const slippage = 2;
   const handleOrder = async ({ orderParams }: OrderInfo) => {
     try {
       const pool = await nftx.getNftPoolDetails(orderParams.pool);
@@ -79,12 +80,13 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle buy orders
       try {
-        const { sell, currency } = priceList[0];
         const id = getOrderId(orderParams.pool, "buy");
+
+        const { sell, currency } = priceList[0];
         const prices: string[] = [];
         priceList.forEach((_) => {
-          if (_.raw.sell) {
-            prices.push(_.raw.sell);
+          if (_.sell) {
+            prices.push(_.sell);
           }
         });
 
@@ -117,15 +119,19 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             );
             if (validRecipients.length) {
               const bpsDiff = totalDefaultBps - totalBuiltInBps;
-              const amount = bn(price).mul(bpsDiff).div(10000).toString();
+              const amount = bn(price).mul(bpsDiff).div(10000);
               missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
 
-              missingRoyalties.push({
-                bps: bpsDiff,
-                amount,
-                // TODO: We should probably split pro-rata across all royalty recipients
-                recipient: validRecipients[0].recipient,
-              });
+              // Split the missing royalties pro-rata across all royalty recipients
+              const totalBps = _.sumBy(validRecipients, ({ bps }) => bps);
+              for (const { bps, recipient } of validRecipients) {
+                // TODO: Handle lost precision (by paying it to the last or first recipient)
+                missingRoyalties.push({
+                  bps: Math.floor((bpsDiff * bps) / totalBps),
+                  amount: amount.mul(bps).div(totalBps).toString(),
+                  recipient,
+                });
+              }
             }
           }
 
@@ -219,6 +225,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               `
                 UPDATE orders SET
                   fillability_status = 'fillable',
+                  approval_status = 'approved',
                   price = $/price/,
                   currency_price = $/price/,
                   value = $/value/,
@@ -285,15 +292,15 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         const { buy, currency } = priceList[0];
         const prices: string[] = [];
         priceList.forEach((_) => {
-          if (_.raw.buy) {
-            prices.push(_.raw.buy);
+          if (_.buy) {
+            prices.push(_.buy);
           }
         });
 
         if (buy) {
           // Handle: prices
           const price = prices[0];
-          const value = buy;
+          const value = prices[0];
 
           // Sell Fee
           feeBps = Number(priceList[0].bps.buy);
@@ -310,6 +317,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           );
           const totalBuiltInBps = 0;
           const totalDefaultBps = defaultRoyalties.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
+
           const missingRoyalties = [];
           let missingRoyaltyAmount = bn(0);
           if (totalBuiltInBps < totalDefaultBps) {
@@ -318,20 +326,26 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             );
             if (validRecipients.length) {
               const bpsDiff = totalDefaultBps - totalBuiltInBps;
-              const amount = bn(price).mul(bpsDiff).div(10000).toString();
+              const amount = bn(price).mul(bpsDiff).div(10000);
               missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
-              missingRoyalties.push({
-                bps: bpsDiff,
-                amount,
-                // TODO: We should probably split pro-rata across all royalty recipients
-                recipient: validRecipients[0].recipient,
-              });
+
+              // Split the missing royalties pro-rata across all royalty recipients
+              const totalBps = _.sumBy(validRecipients, ({ bps }) => bps);
+              for (const { bps, recipient } of validRecipients) {
+                // TODO: Handle lost precision (by paying it to the last or first recipient)
+                missingRoyalties.push({
+                  bps: Math.floor((bpsDiff * bps) / totalBps),
+                  amount: amount.mul(bps).div(totalBps).toString(),
+                  recipient,
+                });
+              }
             }
           }
+
           const normalizedValue = bn(value).add(missingRoyaltyAmount);
+
           // Fetch all token ids owned by the pool
           const poolOwnedTokenIds = await commonHelpers.getNfts(pool.nft, pool.address);
-          // const poolOwnedTokenIdsOnChain = await Sdk.Nftx.Helpers.getPoolNFTs(pool.address, baseProvider);
 
           for (const tokenId of poolOwnedTokenIds) {
             try {
@@ -422,6 +436,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   `
                     UPDATE orders SET
                       fillability_status = 'fillable',
+                      approval_status = 'approved',
                       price = $/price/,
                       currency_price = $/price/,
                       value = $/value/,
