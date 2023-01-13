@@ -64,11 +64,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
   // Post-process fill events
   const allFillEvents = concat(data.fillEvents, data.fillEventsPartial, data.fillEventsOnChain);
   if (!backfill) {
-    await Promise.all([
-      assignSourceToFillEvents(allFillEvents),
-      // assignWashTradingScoreToFillEvents(allFillEvents),
-      // assignRoyaltiesToFillEvents(allFillEvents),
-    ]);
+    await Promise.all([assignSourceToFillEvents(allFillEvents)]);
   }
 
   // Persist events
