@@ -12,7 +12,6 @@ import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/u
 import * as tokenSet from "@/orderbook/token-sets";
 import * as royalties from "@/utils/royalties";
 import * as nftx from "@/utils/nftx";
-import { parseEther } from "ethers/lib/utils";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { config } from "@/config/index";
 import { baseProvider } from "@/common/provider";
@@ -43,6 +42,7 @@ export const getOrderId = (pool: string, side: "sell" | "buy", tokenId?: string)
 export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
+  const slippage = 2;
 
   const handleOrder = async ({ orderParams }: OrderInfo) => {
     try {
@@ -57,12 +57,14 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         const poolPrice = await Sdk.Nftx.Helpers.getPoolPrice(
           orderParams.pool,
           index + 1,
-          5,
+          slippage,
           config.chainId,
           baseProvider
         );
         priceList.push(poolPrice);
       }
+
+      // console.log("priceList", priceList)
 
       // Handle: fees
       let feeBps = 0;
@@ -74,21 +76,21 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle buy orders
       try {
-        const { buy, currency } = priceList[0];
+        const { sell, currency } = priceList[0];
         const id = getOrderId(orderParams.pool, "buy");
         const prices: string[] = [];
         priceList.forEach((_) => {
-          if (_.buy) {
-            prices.push(parseEther(_.buy).toString());
+          if (_.raw.sell) {
+            prices.push(_.raw.sell);
           }
         });
 
-        if (buy) {
+        if (sell) {
           // Handle: prices
-          const price = parseEther(buy).toString();
-          const value = parseEther(buy).toString();
+          const price = prices[0];
+          const value = sell; // With slippage
 
-          feeBps = Number(priceList[0].bps.buy);
+          feeBps = Number(priceList[0].bps.sell);
           feeBreakdown.push({
             kind: "marketplace",
             recipient: pool.address,
@@ -277,21 +279,21 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle sell orders
       try {
-        const { sell, currency } = priceList[0];
+        const { buy, currency } = priceList[0];
         const prices: string[] = [];
         priceList.forEach((_) => {
-          if (_.sell) {
-            prices.push(parseEther(_.sell).toString());
+          if (_.raw.buy) {
+            prices.push(_.raw.buy);
           }
         });
 
-        if (sell) {
+        if (buy) {
           // Handle: prices
-          const price = parseEther(sell).toString();
-          const value = parseEther(sell).toString();
+          const price = prices[0];
+          const value = buy;
 
           // Sell Fee
-          feeBps = Number(priceList[0].bps.sell);
+          feeBps = Number(priceList[0].bps.buy);
           feeBreakdown.push({
             kind: "marketplace",
             recipient: pool.address,
