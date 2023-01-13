@@ -10,6 +10,7 @@ import * as contractsSetsEndpoints from "@/api/endpoints/contracts-sets";
 import * as eventsEndpoints from "@/api/endpoints/events";
 import * as executeEndpoints from "@/api/endpoints/execute";
 import * as healthEndpoints from "@/api/endpoints/health";
+import * as managementEndpoints from "@/api/endpoints/management";
 import * as oracleEndpoints from "@/api/endpoints/oracle";
 import * as ordersEndpoints from "@/api/endpoints/orders";
 import * as ownersEndpoints from "@/api/endpoints/owners";
@@ -20,6 +21,7 @@ import * as tokensEndpoints from "@/api/endpoints/tokens";
 import * as transactionsEndpoints from "@/api/endpoints/transactions";
 import * as transfersEndpoints from "@/api/endpoints/transfers";
 import * as assetsEndpoints from "@/api/endpoints/assets";
+import * as sourcesEndpoints from "@/api/endpoints/sources";
 
 export const setupRoutes = (server: Server) => {
   // Activity
@@ -232,8 +234,8 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/admin/invalidate-order",
-    options: adminEndpoints.postInvalidateOrderOptions,
+    path: "/admin/revalidate-order",
+    options: adminEndpoints.postRevalidateOrderOptions,
   });
 
   server.route({
@@ -282,6 +284,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/admin/flag-address",
     options: adminEndpoints.postFlagAddressOptions,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/admin/routers",
+    options: adminEndpoints.postRoutersOptions,
   });
 
   // API keys
@@ -683,6 +691,14 @@ export const setupRoutes = (server: Server) => {
     options: healthEndpoints.getLiveOptions,
   });
 
+  // Management
+
+  server.route({
+    method: "POST",
+    path: "/management/orders/simulate/v1",
+    options: managementEndpoints.postSimulateOrderV1Options,
+  });
+
   // Oracle
 
   server.route({
@@ -707,6 +723,18 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/oracle/collections/floor-ask/v4",
     options: oracleEndpoints.getCollectionFloorAskOracleV4Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/oracle/collections/top-bid/v1",
+    options: oracleEndpoints.getCollectionTopBidOracleV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/oracle/tokens/status/v1",
+    options: oracleEndpoints.getTokenStatusOracleV1Options,
   });
 
   // Orders
@@ -829,12 +857,6 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/orders/users/{user}/top-bids/v3",
     options: ordersEndpoints.getUserTopBidsV3Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/orders/users/{user}/top-bids/v4",
-    options: ordersEndpoints.getUserTopBidsV4Options,
   });
 
   server.route({
@@ -1147,5 +1169,13 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/transfers/bulk/v1",
     options: transfersEndpoints.getTransfersBulkV1Options,
+  });
+
+  // sources
+
+  server.route({
+    method: "GET",
+    path: "/sources/v1",
+    options: sourcesEndpoints.getSourcesV1Options,
   });
 };
