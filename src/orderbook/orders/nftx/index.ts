@@ -64,8 +64,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         priceList.push(poolPrice);
       }
 
-      // console.log("priceList", priceList)
-
       // Handle: fees
       let feeBps = 0;
       const feeBreakdown: {
