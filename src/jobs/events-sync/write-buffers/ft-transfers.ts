@@ -35,12 +35,17 @@ if (config.doBackgroundWork) {
           `FROM "x"`,
           `FROM "x" ORDER BY ORDER BY "address" ASC, "owner" ASC`
         );
+      } else {
+        query = _.replace(query, `ORDER BY "owner" ASC`, `ORDER BY "address" ASC, "owner" ASC`);
       }
 
       try {
         await idb.none(query);
       } catch (error) {
-        logger.error(QUEUE_NAME, `Failed flushing ft transfer events to the database: ${error}`);
+        logger.error(
+          QUEUE_NAME,
+          `Failed flushing ft transfer events to the database: ${error} ${query}`
+        );
         throw error;
       }
     },
