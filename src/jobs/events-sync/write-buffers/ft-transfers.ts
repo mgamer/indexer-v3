@@ -30,11 +30,7 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       let { query } = job.data;
       if (!_.includes(query, "ORDER BY")) {
-        query = _.replace(
-          query,
-          `FROM "x"`,
-          `FROM "x" ORDER BY ORDER BY "address" ASC, "owner" ASC`
-        );
+        query = _.replace(query, `FROM "x"`, `FROM "x" ORDER BY "address" ASC, "owner" ASC`);
       } else {
         query = _.replace(query, `ORDER BY "owner" ASC`, `ORDER BY "address" ASC, "owner" ASC`);
       }

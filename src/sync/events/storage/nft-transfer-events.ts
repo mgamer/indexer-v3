@@ -300,6 +300,7 @@ export const removeEvents = async (block: number, blockHash: string) => {
             unnest("owners") AS "owner",
             unnest("amount_deltas") AS "amount_delta"
           FROM "x"
+          ORDER BY "address" ASC, "token_id" ASC, "owner" ASC
         ) "y"
         GROUP BY "y"."address", "y"."token_id", "y"."owner"
       )
