@@ -1,12 +1,16 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
-import { idb } from "@/common/db";
+import { idb, PgPromiseQuery, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { bn, toBuffer } from "@/common/utils";
+import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as es from "@/events-sync/storage";
 import { randomUUID } from "crypto";
+
+import { assignWashTradingScoreToFillEvents } from "@/events-sync/handlers/utils/fills";
+
+import { assignRoyaltiesToFillEvents } from "@/events-sync/handlers/royalties";
 
 const QUEUE_NAME = "fill-post-process";
 
@@ -30,85 +34,43 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { orderId, orderSide, contract, tokenId, amount, price, timestamp, maker, taker } =
-        job.data as FillInfo;
-
+      const allFillEvents = job.data as es.fills.Event[];
       try {
-        logger.info(QUEUE_NAME, `Updating last sale info: ${JSON.stringify(job.data)}`);
-
-        if (orderId) {
-          const result = await idb.oneOrNone(
-            `
-              SELECT
-                orders.token_set_id
-              FROM orders
-              WHERE orders.id = $/orderId/
-            `,
-            { orderId }
-          );
-
-          // If we can detect that the order was on a complex token set
-          // (eg. not single token), then update the last buy caches of
-          // that particular token set.
-          if (result && result.token_set_id) {
-            const components = result.token_set_id.split(":");
-            if (components[0] !== "token") {
-              await idb.none(
-                `
-                  UPDATE token_sets SET
-                    last_buy_timestamp = $/timestamp/,
-                    last_buy_value = $/price/
-                  WHERE id = $/tokenSetId/
-                    AND last_buy_timestamp < $/timestamp/
-                `,
-                {
-                  tokenSetId: result.token_set_id,
-                  timestamp,
-                  price,
-                }
-              );
-            }
-          }
-        }
-
-        // TODO: Remove condition after deployment.
-        if (maker && taker) {
-          logger.info(QUEUE_NAME, `Updating nft balance last sale. ${JSON.stringify(job.data)}`);
-
-          await idb.none(
-            `
-                UPDATE nft_balances SET
-                  last_token_appraisal_value = $/price/
-                WHERE contract = $/contract/
-                AND token_id = $/tokenId/
-                AND owner = $/owner/
+        await Promise.all([
+          assignWashTradingScoreToFillEvents(allFillEvents),
+          assignRoyaltiesToFillEvents(allFillEvents),
+        ]);
+        const queries: PgPromiseQuery[] = allFillEvents.map((event) => {
+          return {
+            query: `
+                UPDATE "fill_events_2" SET 
+                  wash_trading_score = $/wash_trading_score/,
+                  royalty_fee_bps = $/royalty_fee_bps/,
+                  marketplace_fee_bps = $/marketplace_fee_bps/,
+                  royalty_fee_breakdown = $/royalty_fee_breakdown:json/,
+                  marketplace_fee_breakdown = $/marketplace_fee_breakdown:json/,
+                  paid_full_royalty = $/paid_full_royalty/
+                WHERE 
+                      tx_hash = $/tx_hash/
+                  AND log_index = $/log_index/
+                  AND batch_index = $/batch_index/
               `,
-            {
-              contract: toBuffer(contract),
-              tokenId,
-              owner: orderSide === "sell" ? toBuffer(taker) : toBuffer(maker),
-              price: bn(price).div(amount).toString(),
-            }
-          );
-        }
+            values: {
+              wash_trading_score: event.washTradingScore || 0,
+              royalty_fee_bps: event.royaltyFeeBps || undefined,
+              marketplace_fee_bps: event.marketplaceFeeBps || undefined,
+              royalty_fee_breakdown: event.royaltyFeeBreakdown || undefined,
+              marketplace_fee_breakdown: event.marketplaceFeeBreakdown || undefined,
+              paid_full_royalty: event.paidFullRoyalty || undefined,
 
-        await idb.none(
-          `
-            UPDATE tokens SET
-              last_${orderSide}_timestamp = $/timestamp/,
-              last_${orderSide}_value = $/price/,
-              updated_at = now()
-            WHERE contract = $/contract/
-              AND token_id = $/tokenId/
-              AND coalesce(last_${orderSide}_timestamp, 0) < $/timestamp/
-          `,
-          {
-            contract: toBuffer(contract),
-            tokenId,
-            price: bn(price).div(amount).toString(),
-            timestamp,
-          }
-        );
+              tx_hash: toBuffer(event.baseEventParams.txHash),
+              log_index: event.baseEventParams.logIndex,
+              batch_index: event.baseEventParams.batchIndex,
+            },
+          };
+        });
+
+        await idb.none(pgp.helpers.concat(queries));
       } catch (error) {
         logger.error(
           QUEUE_NAME,
@@ -124,7 +86,7 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (fillEvents: es.fills.Event[]) => {
+export const addToQueue = async (fillEvents: es.fills.Event[][]) => {
   await queue.addBulk(
     fillEvents.map((event) => ({
       name: randomUUID(),

@@ -2,12 +2,8 @@ import { Log } from "@ethersproject/abstract-provider";
 
 import { concat } from "@/common/utils";
 import { EventDataKind } from "@/events-sync/data";
-import {
-  assignSourceToFillEvents,
-  assignWashTradingScoreToFillEvents,
-} from "@/events-sync/handlers/utils/fills";
+import { assignSourceToFillEvents } from "@/events-sync/handlers/utils/fills";
 
-import { assignRoyaltiesToFillEvents } from "@/events-sync/handlers/royalties";
 import { BaseEventParams } from "@/events-sync/parser";
 
 import * as es from "@/events-sync/storage";
@@ -70,8 +66,8 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
   if (!backfill) {
     await Promise.all([
       assignSourceToFillEvents(allFillEvents),
-      assignWashTradingScoreToFillEvents(allFillEvents),
-      assignRoyaltiesToFillEvents(allFillEvents),
+      // assignWashTradingScoreToFillEvents(allFillEvents),
+      // assignRoyaltiesToFillEvents(allFillEvents),
     ]);
   }
 
@@ -114,7 +110,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
   await fillUpdates.addToQueue(data.fillInfos ?? []);
 
   if (allFillEvents.length) {
-    await fillPostProcess.addToQueue(allFillEvents);
+    await fillPostProcess.addToQueue([allFillEvents]);
   }
 
   // TODO: Is this the best place to handle activities?
