@@ -17,7 +17,7 @@ export const queue = new Queue(QUEUE_NAME, {
       type: "exponential",
       delay: 10000,
     },
-    removeOnComplete: true,
+    removeOnComplete: 5,
     removeOnFail: 20000,
     timeout: 60000,
   },
@@ -34,10 +34,18 @@ if (config.doBackgroundWork) {
       const lockName = getLockName();
       if (await acquireLock(lockName, 45)) {
         job.data.lockName = lockName;
-        const { query } = (await MqJobsDataManager.getJobData(id)) || {};
+        let { query } = (await MqJobsDataManager.getJobData(id)) || {};
 
         if (!query) {
           return;
+        }
+
+        if (!_.includes(query, "ORDER BY")) {
+          query = _.replace(
+            query,
+            `FROM "x"`,
+            `FROM "x" ORDER BY "address" ASC, "token_id" ASC, "owner" ASC`
+          );
         }
 
         try {
