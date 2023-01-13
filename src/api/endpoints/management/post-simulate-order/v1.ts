@@ -56,7 +56,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
         revalidate?: boolean;
       }
     ) => {
-      logger.info(
+      logger.warn(
         `post-revalidate-order-${version}-handler`,
         JSON.stringify({
           error: "stale-order",
