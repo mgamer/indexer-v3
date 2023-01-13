@@ -42,7 +42,7 @@ export const getOrderId = (pool: string, side: "sell" | "buy", tokenId?: string)
 export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
-  const slippage = 2;
+  const slippage = 5;
 
   const handleOrder = async ({ orderParams }: OrderInfo) => {
     try {
@@ -83,8 +83,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         const id = getOrderId(orderParams.pool, "buy");
         const prices: string[] = [];
         priceList.forEach((_) => {
-          if (_.raw.sell) {
-            prices.push(_.raw.sell);
+          if (_.sell) {
+            prices.push(_.sell);
           }
         });
 
@@ -285,8 +285,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         const { buy, currency } = priceList[0];
         const prices: string[] = [];
         priceList.forEach((_) => {
-          if (_.raw.buy) {
-            prices.push(_.raw.buy);
+          if (_.buy) {
+            prices.push(_.buy);
           }
         });
 
