@@ -23,6 +23,7 @@ import "@/jobs/orderbook";
 import "@/jobs/sources";
 import "@/jobs/token-updates";
 import "@/jobs/update-attribute";
+import "@/jobs/websocket-events";
 
 // Export all job queues for monitoring through the BullMQ UI
 
@@ -37,8 +38,6 @@ import * as backfillBlurSales from "@/jobs/backfill/backfill-blur-sales";
 import * as backfillMints from "@/jobs/backfill/backfill-mints";
 import * as backfillRefreshCryptopunksOrders from "@/jobs/backfill/backfill-refresh-cryptopunks-orders";
 import * as backfillTokensWithMissingCollection from "@/jobs/backfill/backfill-tokens-with-missing-collection";
-import * as backfillOpenseaWebsocketEvents from "@/jobs/backfill/backfill-opensea-websocket-events";
-import * as backfillONftBalancesLastTokenAppraisalValue from "@/jobs/backfill/backfill-nft-balances-last-token-appraisal-value";
 
 import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
 
@@ -116,6 +115,9 @@ import * as resyncAttributeFloorSell from "@/jobs/update-attribute/resync-attrib
 import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attribute-key-counts";
 import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
 
+import * as websocketEventsqueue from "@/jobs/websocket-events/process-queue";
+import * as websocketEventsTriggerQueue from "@/jobs/websocket-events/trigger-queue";
+
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
   orderUpdatesByMaker.worker,
@@ -139,8 +141,6 @@ export const allJobQueues = [
   backfillMints.queue,
   backfillRefreshCryptopunksOrders.queue,
   backfillTokensWithMissingCollection.queue,
-  backfillOpenseaWebsocketEvents.queue,
-  backfillONftBalancesLastTokenAppraisalValue.queue,
 
   currencies.queue,
 
@@ -218,4 +218,7 @@ export const allJobQueues = [
   resyncAttributeFloorSell.queue,
   resyncAttributeKeyCounts.queue,
   resyncAttributeValueCounts.queue,
+
+  websocketEventsqueue.queue,
+  websocketEventsTriggerQueue.queue,
 ];
