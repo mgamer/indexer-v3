@@ -51,8 +51,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         throw new Error("Could not fetch pool details");
       }
 
-      // For now, skip all orders
-      if (pool.vaultId != 99999999) {
+      // For now, only support a single collection for testing
+      if (orderParams.pool !== "0x569a0ff212efe6b2fac806765ef59ce6685f2dd2") {
         return;
       }
 
