@@ -62,6 +62,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
             error: "stale-order",
             callTrace: options?.callTrace,
             payload: options?.payload,
+            orderId: id,
           })
         );
 
