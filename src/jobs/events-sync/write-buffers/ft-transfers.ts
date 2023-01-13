@@ -40,10 +40,7 @@ if (config.doBackgroundWork) {
       try {
         await idb.none(query);
       } catch (error) {
-        logger.error(
-          QUEUE_NAME,
-          `Failed flushing ft transfer events to the database: ${error} ${query}`
-        );
+        logger.error(QUEUE_NAME, `Failed flushing ft transfer events to the database: ${error}`);
         throw error;
       }
     },
