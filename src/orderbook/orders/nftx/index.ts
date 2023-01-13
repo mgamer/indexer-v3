@@ -51,6 +51,11 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         throw new Error("Could not fetch pool details");
       }
 
+      // For now, only support a single collection for testing
+      if (orderParams.pool !== "0x569a0ff212efe6b2fac806765ef59ce6685f2dd2") {
+        return;
+      }
+
       const priceList = [];
 
       for (let index = 0; index < 10; index++) {
@@ -142,9 +147,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
           const orderResult = await redb.oneOrNone(
             `
-                SELECT 1 FROM orders
-                WHERE orders.id = $/id/
-              `,
+              SELECT 1 FROM orders
+              WHERE orders.id = $/id/
+            `,
             { id }
           );
 
