@@ -53,7 +53,13 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       }
 
       // For now, only support a single collection for testing
-      if (orderParams.pool !== "0x569a0ff212efe6b2fac806765ef59ce6685f2dd2") {
+      if (
+        ![
+          "0x569a0ff212efe6b2fac806765ef59ce6685f2dd2",
+          "0xca7ffb829835f3946998cb8d02a0c0b02012c3c5",
+          "0x227c7df69d3ed1ae7574a1a7685fded90292eb48",
+        ].includes(orderParams.pool)
+      ) {
         return;
       }
 
