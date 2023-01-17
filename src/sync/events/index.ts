@@ -275,8 +275,19 @@ export const syncEvents = async (
     };
   }
 
+  function parseHrtimeToSeconds(hrtime: [number, number]) {
+    return (hrtime[0] + hrtime[1] / 1e9).toFixed(3);
+  }
+
+  const startTime = process.hrtime();
+
   const enhancedEvents: EnhancedEvent[] = [];
   await baseProvider.getLogs(eventFilter).then(async (logs) => {
+    logger.info(
+      "debug",
+      `Time to fetch events: ${parseHrtimeToSeconds(process.hrtime(startTime))}`
+    );
+
     const availableEventData = getEventData();
 
     for (const log of logs) {
