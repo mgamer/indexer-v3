@@ -527,6 +527,39 @@ export const handleEvents = async (events: EnhancedEvent[]): Promise<OnChainData
 
         break;
       }
+
+      case "nftx-swap": {
+        const ftPool = await nftxUtils.getFtPoolDetails(baseEventParams.address);
+        if (ftPool) {
+          const token0NftPool = await nftxUtils.getNftPoolDetails(ftPool.token0);
+          if (token0NftPool) {
+            // Update pool
+            orders.push({
+              orderParams: {
+                pool: ftPool.token0,
+                txHash: baseEventParams.txHash,
+                txTimestamp: baseEventParams.timestamp,
+              },
+              metadata: {},
+            });
+          }
+
+          const token1NftPool = await nftxUtils.getNftPoolDetails(ftPool.token1);
+          if (token1NftPool) {
+            // Update pool
+            orders.push({
+              orderParams: {
+                pool: ftPool.token1,
+                txHash: baseEventParams.txHash,
+                txTimestamp: baseEventParams.timestamp,
+              },
+              metadata: {},
+            });
+          }
+        }
+
+        break;
+      }
     }
   }
 
