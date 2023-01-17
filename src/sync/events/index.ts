@@ -340,7 +340,7 @@ export const syncEvents = async (
     const eventsInfo = parseEnhancedEventsToEventsInfo(enhancedEvents, backfill);
     logger.info(
       "debug",
-      JSON.stringify(
+      `${fromBlock} - ${toBlock} (${JSON.stringify(
         eventsInfo
           .filter((e) => e.kind === "erc1155" || e.kind === "seaport")
           .map((e) =>
@@ -350,7 +350,7 @@ export const syncEvents = async (
               batchIndex: e.baseEventParams.batchIndex,
             }))
           )
-      )
+      )})`
     );
     await eventsSyncProcess.addToQueue(eventsInfo);
 
