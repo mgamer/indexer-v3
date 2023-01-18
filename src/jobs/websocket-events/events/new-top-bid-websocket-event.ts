@@ -1,6 +1,6 @@
 import { idb } from "@/common/db";
 import * as Pusher from "pusher";
-import { formatEth, fromBuffer } from "@/common/utils";
+import { formatEth, fromBuffer, now } from "@/common/utils";
 import { Orders } from "@/utils/orders";
 import _ from "lodash";
 import { BatchEvent } from "pusher";
@@ -12,6 +12,8 @@ import { Sources } from "@/models/sources";
 export class NewTopBidWebsocketEvent {
   public static async triggerEvent(data: NewTopBidWebsocketEventInfo) {
     const criteriaBuildQuery = Orders.buildCriteriaQuery("orders", "token_set_id", false);
+
+    const timeStart = performance.now();
 
     const order = await idb.oneOrNone(
       `
@@ -32,14 +34,33 @@ export class NewTopBidWebsocketEvent {
       { orderId: data.orderId }
     );
 
+    let timeElapsed = Math.floor((performance.now() - timeStart) / 1000);
+
     logger.info(
       "new-top-bid-websocket-event",
-      `Start. orderId=${data.orderId}, tokenSetId=${order.token_set_id}`
+      `Debug 1. orderId=${data.orderId}, tokenSetId=${order.token_set_id}, timeElapsed=${timeElapsed}`
     );
+
+    if (await NewTopBidWebsocketEvent.isRateLimited(order.token_set_id)) {
+      logger.info(
+        "new-top-bid-websocket-event",
+        `Rate limited. orderId=${data.orderId}, tokenSetId=${order.token_set_id}`
+      );
+
+      return;
+    }
 
     const payloads = [];
 
     const owners = await NewTopBidWebsocketEvent.getOwners(order.token_set_id);
+
+    timeElapsed = Math.floor((performance.now() - timeStart) / 1000);
+
+    logger.info(
+      "new-top-bid-websocket-event",
+      `Debug 2. orderId=${data.orderId}, tokenSetId=${order.token_set_id}, timeElapsed=${timeElapsed}`
+    );
+
     const ownersChunks = _.chunk(owners, Number(config.websocketServerEventMaxSizeInKb) * 20);
 
     const source = (await Sources.getInstance()).get(Number(order.source_id_int));
@@ -65,6 +86,13 @@ export class NewTopBidWebsocketEvent {
       });
     }
 
+    timeElapsed = Math.floor((performance.now() - timeStart) / 1000);
+
+    logger.info(
+      "new-top-bid-websocket-event",
+      `Debug 3. orderId=${data.orderId}, tokenSetId=${order.token_set_id}, timeElapsed=${timeElapsed}`
+    );
+
     const server = new Pusher.default({
       appId: config.websocketServerAppId,
       key: config.websocketServerAppKey,
@@ -85,6 +113,13 @@ export class NewTopBidWebsocketEvent {
 
       await server.triggerBatch(events);
     }
+
+    timeElapsed = Math.floor((performance.now() - timeStart) / 1000);
+
+    logger.info(
+      "new-top-bid-websocket-event",
+      `Debug 4. orderId=${data.orderId}, tokenSetId=${order.token_set_id}, timeElapsed=${timeElapsed}`
+    );
   }
 
   static async getOwners(tokenSetId: string): Promise<string[]> {
@@ -93,8 +128,6 @@ export class NewTopBidWebsocketEvent {
     const ownersString = await redis.get(`token-set-owners:${tokenSetId}`);
 
     if (ownersString) {
-      logger.info("new-top-bid-websocket-event", `Got owners from cache. tokenSetId=${tokenSetId}`);
-
       owners = JSON.parse(ownersString);
     }
 
@@ -119,6 +152,17 @@ export class NewTopBidWebsocketEvent {
     }
 
     return owners;
+  }
+
+  static async isRateLimited(tokenSetId: string): Promise<boolean> {
+    const setResult = await redis.set(
+      `new-top-bid-rate-limiter:${tokenSetId}`,
+      now(),
+      "EX",
+      60,
+      "NX"
+    );
+    return setResult === null;
   }
 }
 
