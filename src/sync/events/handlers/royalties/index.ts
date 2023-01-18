@@ -1,11 +1,12 @@
 import { logger } from "@/common/logger";
-import { concat } from "@/common/utils";
+import { concat, bn } from "@/common/utils";
 import { getEnhancedEventFromTransaction, parseEventsInfo } from "@/events-sync/handlers";
 import * as fallback from "@/events-sync/handlers/royalties/core";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import { parseEnhancedEventsToEventsInfo } from "@/events-sync/index";
 import * as es from "@/events-sync/storage";
 import { Royalty } from "@/utils/royalties";
+import { BigNumberish } from "@ethersproject/bignumber";
 
 const registry = new Map<string, RoyaltyAdapter>();
 
@@ -31,6 +32,10 @@ export async function parseEnhancedEventToOnChainData(enhancedEvents: EnhancedEv
   }
   return allOnChainData;
 }
+
+const subFeeWithBps = (amount: BigNumberish, totalFeeBps: number) => {
+  return bn(amount).sub(bn(amount).mul(totalFeeBps).div(10000)).toString();
+};
 
 export async function getFillEventsFromTx(txHash: string) {
   const events = await getEnhancedEventFromTransaction(txHash);
@@ -77,6 +82,11 @@ export const assignRoyaltiesToFillEvents = async (fillEvents: es.fills.Event[]) 
           fillEvents[index].royaltyFeeBreakdown = result.royaltyFeeBreakdown;
           fillEvents[index].marketplaceFeeBreakdown = result.marketplaceFeeBreakdown;
           fillEvents[index].paidFullRoyalty = result.paidFullRoyalty;
+
+          fillEvents[index].netAmount = subFeeWithBps(
+            fillEvents[index].price,
+            result.royaltyFeeBps + result.marketplaceFeeBps
+          );
         }
       }
     } catch (error) {

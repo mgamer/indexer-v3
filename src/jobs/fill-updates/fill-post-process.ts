@@ -49,7 +49,8 @@ if (config.doBackgroundWork) {
                   marketplace_fee_bps = $/marketplace_fee_bps/,
                   royalty_fee_breakdown = $/royalty_fee_breakdown:json/,
                   marketplace_fee_breakdown = $/marketplace_fee_breakdown:json/,
-                  paid_full_royalty = $/paid_full_royalty/
+                  paid_full_royalty = $/paid_full_royalty/,
+                  net_amount = $/net_amount/
                 WHERE 
                       tx_hash = $/tx_hash/
                   AND log_index = $/log_index/
@@ -62,6 +63,7 @@ if (config.doBackgroundWork) {
               royalty_fee_breakdown: event.royaltyFeeBreakdown || undefined,
               marketplace_fee_breakdown: event.marketplaceFeeBreakdown || undefined,
               paid_full_royalty: event.paidFullRoyalty || undefined,
+              net_amount: event.netAmount || undefined,
 
               tx_hash: toBuffer(event.baseEventParams.txHash),
               log_index: event.baseEventParams.logIndex,
