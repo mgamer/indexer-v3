@@ -34,13 +34,6 @@ export class NewTopBidWebsocketEvent {
       { orderId: data.orderId }
     );
 
-    let timeElapsed = Math.floor((performance.now() - timeStart) / 1000);
-
-    logger.info(
-      "new-top-bid-websocket-event",
-      `Debug 1. orderId=${data.orderId}, tokenSetId=${order.token_set_id}, timeElapsed=${timeElapsed}`
-    );
-
     if (await NewTopBidWebsocketEvent.isRateLimited(order.token_set_id)) {
       logger.info(
         "new-top-bid-websocket-event",
@@ -102,6 +95,8 @@ export class NewTopBidWebsocketEvent {
 
     const payloadsBatches = _.chunk(payloads, Number(config.websocketServerEventMaxBatchSize));
 
+    const timeStart = performance.now();
+
     for (const payloadsBatch of payloadsBatches) {
       const events: BatchEvent[] = payloadsBatch.map((payload) => {
         return {
@@ -114,11 +109,11 @@ export class NewTopBidWebsocketEvent {
       await server.triggerBatch(events);
     }
 
-    timeElapsed = Math.floor((performance.now() - timeStart) / 1000);
+    const timeElapsed = Math.floor((performance.now() - timeStart) / 1000);
 
     logger.info(
       "new-top-bid-websocket-event",
-      `Debug 4. orderId=${data.orderId}, tokenSetId=${order.token_set_id}, timeElapsed=${timeElapsed}`
+      `Debug triggerBatch. orderId=${data.orderId}, tokenSetId=${order.token_set_id}, payloads=${payloads.length}, payloadsBatches=${payloadsBatches.length},timeElapsed=${timeElapsed}`
     );
   }
 
