@@ -29,6 +29,15 @@ describe("Royalties - Router normalize", () => {
         },
       ],
     },
+    {
+      collection: "0xe1d7a7c25d6bacd2af454a7e863e7b611248c3e5",
+      data: [
+        {
+          recipient: "0x5fc32481222d0444d4cc2196a79e544ce42a0ec5",
+          bps: 500,
+        },
+      ],
+    },
   ];
   const platformFees = [
     {
@@ -53,10 +62,13 @@ describe("Royalties - Router normalize", () => {
       const feeForPlatform = platformFees.find((_) => _.kind === fillEvent.orderKind);
       const fees = await extractRoyalties(fillEvent);
 
+      // console.log("fees", fees);
       const matched = testCollectionRoyalties.find((c) => c.collection === fillEvent.contract);
+
       if (matched) {
         expect(fees?.royaltyFeeBps).toEqual(matched.data[0].bps);
       }
+
       if (feeForPlatform) {
         // check
         expect(fees?.marketplaceFeeBps).toEqual(feeForPlatform.feeBps);
@@ -65,9 +77,13 @@ describe("Royalties - Router normalize", () => {
   };
 
   const txIds: TestCase[] = [
+    // {
+    //   name: "reservoir-router-with-normalize",
+    //   tx: "0xc422678f7e2c0efc8e140debed5a5f6a3f8061bb0ff02b701046876ff81dbe35",
+    // },
     {
-      name: "reservoir-router-with-normalize",
-      tx: "0xc422678f7e2c0efc8e140debed5a5f6a3f8061bb0ff02b701046876ff81dbe35",
+      name: "reservoir-router-with-normalize-missing-royalties",
+      tx: "0x8b18a4ae5893905f3d877594e662190d34b8cc36b3626335e686ef6281f35c08",
     },
   ];
 

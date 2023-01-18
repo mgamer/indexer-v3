@@ -132,6 +132,7 @@ export async function extractRoyalties(fillEvent: es.fills.Event) {
     royaltyFeeBreakdown,
     marketplaceFeeBreakdown,
     sameCollectionSales,
+    protocolFillEvents: protocolFillEvents.length,
     paidFullRoyalty,
   };
 
