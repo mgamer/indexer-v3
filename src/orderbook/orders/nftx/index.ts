@@ -77,6 +77,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           "0xca7ffb829835f3946998cb8d02a0c0b02012c3c5",
           "0x227c7df69d3ed1ae7574a1a7685fded90292eb48",
           "0x87931e7ad81914e7898d07c68f145fc0a553d8fb",
+          "0x0e050b2b7adb2cae5e8593e280ed5582953f9ad2",
         ].includes(orderParams.pool)
       ) {
         return;
