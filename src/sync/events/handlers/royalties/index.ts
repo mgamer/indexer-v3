@@ -43,7 +43,10 @@ export async function getFillEventsFromTx(txHash: string) {
     fillEvents = [...fillEvents, ...allEvents];
   }
 
-  return fillEvents;
+  return {
+    events,
+    fillEvents,
+  };
 }
 
 function checkFeeIsValid(result: RoyaltyResult) {

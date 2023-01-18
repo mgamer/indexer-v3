@@ -23,19 +23,35 @@ export async function extractRoyalties(fillEvent: es.fills.Event) {
     return null;
   }
 
-  const fillEvents: es.fills.Event[] = await getFillEventsFromTx(txHash);
+  const { fillEvents } = await getFillEventsFromTx(txHash);
 
   const collectionFills = fillEvents?.filter((_) => _.contract === contract) || [];
   const protocolFillEvents = fillEvents?.filter((_) => _.orderKind === fillEvent.orderKind) || [];
 
+  // For same token only count once
+  const idTrackers = new Set();
   const protocolRelatedAmount = protocolFillEvents
     ? protocolFillEvents.reduce((total, item) => {
-        return total.add(bn(item.price));
+        const id = `${item.contract}:${item.tokenId}`;
+        if (idTrackers.has(id)) {
+          return total;
+        } else {
+          idTrackers.add(id);
+          return total.add(bn(item.price));
+        }
       }, bn(0))
     : bn(0);
 
+  // For same token only count once
+  const collectionIdTrackers = new Set();
   const collectionRelatedAmount = collectionFills.reduce((total, item) => {
-    return total.add(bn(item.price));
+    const id = `${item.contract}:${item.tokenId}`;
+    if (collectionIdTrackers.has(id)) {
+      return total;
+    } else {
+      collectionIdTrackers.add(id);
+      return total.add(bn(item.price));
+    }
   }, bn(0));
 
   const state = parseCallTrace(txTrace.calls);

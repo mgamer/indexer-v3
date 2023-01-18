@@ -4,7 +4,6 @@ dotEnvConfig();
 import { extractRoyalties } from "@/events-sync/handlers/royalties/core";
 import { getRoyalties } from "@/utils/royalties";
 import { getFillEventsFromTx } from "@/events-sync/handlers/royalties";
-import * as es from "@/events-sync/storage";
 
 jest.setTimeout(1000 * 1000);
 
@@ -14,8 +13,6 @@ const mockGetRoyalties = getRoyalties as jest.MockedFunction<typeof getRoyalties
 type TestCase = {
   name: string;
   tx: string;
-  //   royaltyFeeBps: number;
-  //   marketplaceFeeBps: number;
 };
 
 describe("Royalties - Router normalize", () => {
@@ -34,7 +31,7 @@ describe("Royalties - Router normalize", () => {
       data: [
         {
           recipient: "0x5fc32481222d0444d4cc2196a79e544ce42a0ec5",
-          bps: 500,
+          bps: 250,
         },
       ],
     },
@@ -56,13 +53,12 @@ describe("Royalties - Router normalize", () => {
       return matched?.data ?? [];
     });
 
-    const fillEvents: es.fills.Event[] = await getFillEventsFromTx(txHash);
+    const { fillEvents } = await getFillEventsFromTx(txHash);
     for (let index = 0; index < fillEvents.length; index++) {
       const fillEvent = fillEvents[index];
       const feeForPlatform = platformFees.find((_) => _.kind === fillEvent.orderKind);
       const fees = await extractRoyalties(fillEvent);
 
-      // console.log("fees", fees);
       const matched = testCollectionRoyalties.find((c) => c.collection === fillEvent.contract);
 
       if (matched) {
