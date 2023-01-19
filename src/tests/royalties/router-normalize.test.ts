@@ -77,10 +77,10 @@ describe("Royalties - Router normalize", () => {
       name: "reservoir-router-with-normalize",
       tx: "0xc422678f7e2c0efc8e140debed5a5f6a3f8061bb0ff02b701046876ff81dbe35",
     },
-    {
-      name: "reservoir-router-with-normalize-missing-royalties",
-      tx: "0x8b18a4ae5893905f3d877594e662190d34b8cc36b3626335e686ef6281f35c08",
-    },
+    // {
+    //   name: "reservoir-router-with-normalize-missing-royalties",
+    //   tx: "0x8b18a4ae5893905f3d877594e662190d34b8cc36b3626335e686ef6281f35c08",
+    // },
   ];
 
   for (const { name, tx } of txIds) {

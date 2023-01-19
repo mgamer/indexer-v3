@@ -1,6 +1,6 @@
 import { idb } from "@/common/db";
 import * as Pusher from "pusher";
-import { formatEth, fromBuffer } from "@/common/utils";
+import { fromBuffer, now } from "@/common/utils";
 import { Orders } from "@/utils/orders";
 import _ from "lodash";
 import { BatchEvent } from "pusher";
@@ -8,6 +8,7 @@ import { config } from "@/config/index";
 import { redis } from "@/common/redis";
 import { logger } from "@/common/logger";
 import { Sources } from "@/models/sources";
+import { getJoiPriceObject } from "@/common/joi";
 
 export class NewTopBidWebsocketEvent {
   public static async triggerEvent(data: NewTopBidWebsocketEventInfo) {
@@ -23,7 +24,15 @@ export class NewTopBidWebsocketEvent {
                 orders.maker,
                 orders.price,
                 orders.value,
+                orders.currency_value,
+                orders.currency_price,
+                orders.currency,
                 orders.created_at,
+                DATE_PART('epoch', LOWER(orders.valid_between)) AS "valid_from",
+                COALESCE(
+                     NULLIF(DATE_PART('epoch', UPPER(orders.valid_between)), 'Infinity'),
+                     0
+                   ) AS "valid_until",
                 (${criteriaBuildQuery}) AS criteria
               FROM orders
               WHERE orders.id = $/orderId/
@@ -32,14 +41,19 @@ export class NewTopBidWebsocketEvent {
       { orderId: data.orderId }
     );
 
-    logger.info(
-      "new-top-bid-websocket-event",
-      `Start. orderId=${data.orderId}, tokenSetId=${order.token_set_id}`
-    );
+    if (await NewTopBidWebsocketEvent.isRateLimited(order.token_set_id)) {
+      logger.info(
+        "new-top-bid-websocket-event",
+        `Rate limited. orderId=${data.orderId}, tokenSetId=${order.token_set_id}`
+      );
+
+      return;
+    }
 
     const payloads = [];
 
     const owners = await NewTopBidWebsocketEvent.getOwners(order.token_set_id);
+
     const ownersChunks = _.chunk(owners, Number(config.websocketServerEventMaxSizeInKb) * 20);
 
     const source = (await Sources.getInstance()).get(Number(order.source_id_int));
@@ -50,6 +64,8 @@ export class NewTopBidWebsocketEvent {
           id: order.id,
           maker: fromBuffer(order.maker),
           createdAt: new Date(order.created_at).toISOString(),
+          validFrom: order.valid_from,
+          validUntil: order.valid_until,
           source: {
             id: source?.address,
             domain: source?.domain,
@@ -57,8 +73,19 @@ export class NewTopBidWebsocketEvent {
             icon: source?.getIcon(),
             url: source?.metadata.url,
           },
-          price: formatEth(order.price),
-          value: formatEth(order.value),
+          price: await getJoiPriceObject(
+            {
+              net: {
+                amount: order.currency_value ?? order.value,
+                nativeAmount: order.value,
+              },
+              gross: {
+                amount: order.currency_price ?? order.price,
+                nativeAmount: order.price,
+              },
+            },
+            fromBuffer(order.currency)
+          ),
           criteria: order.criteria,
         },
         owners: ownersChunk,
@@ -75,6 +102,8 @@ export class NewTopBidWebsocketEvent {
     const payloadsBatches = _.chunk(payloads, Number(config.websocketServerEventMaxBatchSize));
 
     for (const payloadsBatch of payloadsBatches) {
+      const timeStart = performance.now();
+
       const events: BatchEvent[] = payloadsBatch.map((payload) => {
         return {
           channel: "top-bids",
@@ -84,6 +113,13 @@ export class NewTopBidWebsocketEvent {
       });
 
       await server.triggerBatch(events);
+
+      const timeElapsed = Math.floor((performance.now() - timeStart) / 1000);
+
+      logger.info(
+        "new-top-bid-websocket-event",
+        `Debug triggerBatch. orderId=${data.orderId}, tokenSetId=${order.token_set_id}, owners=${owners.length}, payloads=${payloads.length}, payloadsBatches=${payloadsBatches.length},timeElapsed=${timeElapsed}`
+      );
     }
   }
 
@@ -93,8 +129,6 @@ export class NewTopBidWebsocketEvent {
     const ownersString = await redis.get(`token-set-owners:${tokenSetId}`);
 
     if (ownersString) {
-      logger.info("new-top-bid-websocket-event", `Got owners from cache. tokenSetId=${tokenSetId}`);
-
       owners = JSON.parse(ownersString);
     }
 
@@ -119,6 +153,17 @@ export class NewTopBidWebsocketEvent {
     }
 
     return owners;
+  }
+
+  static async isRateLimited(tokenSetId: string): Promise<boolean> {
+    const setResult = await redis.set(
+      `new-top-bid-rate-limiter:${tokenSetId}`,
+      now(),
+      "EX",
+      60,
+      "NX"
+    );
+    return setResult === null;
   }
 }
 

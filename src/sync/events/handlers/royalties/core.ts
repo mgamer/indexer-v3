@@ -1,32 +1,82 @@
 import { formatEther } from "@ethersproject/units";
 import { parseCallTrace } from "@georgeroman/evm-tx-simulator";
 import * as Sdk from "@reservoir0x/sdk";
-import { config } from "@/config/index";
 
 import { bn } from "@/common/utils";
+import { config } from "@/config/index";
 import { getFillEventsFromTx } from "@/events-sync/handlers/royalties";
+import { platformFeeRecipientsRegistry } from "@/events-sync/handlers/royalties/config";
 import * as es from "@/events-sync/storage";
 import * as utils from "@/events-sync/utils";
 import { Royalty, getRoyalties } from "@/utils/royalties";
-import { platformFeeRecipientsRegistry } from "./config";
+import { StateCache } from "./index";
+// import { EnhancedEvent } from "@/events-sync/handlers/utils";
+// import * as erc20 from "@/events-sync/data/erc20";
 
-export async function extractRoyalties(fillEvent: es.fills.Event) {
+// function extractTransfers(events: EnhancedEvent[]) {
+//   const erc20Transfers = [];
+//   for (let index = 0; index < events.length; index++) {
+//     const event = events[index];
+//     if (event.kind === "erc20-transfer") {
+//       const parsed = erc20.transfer.abi.parseLog(event.log);
+//       if (parsed) {
+//         erc20Transfers.push({
+//           from: parsed.args.from.toLowerCase(),
+//           to: parsed.args.to.toLowerCase(),
+//           amount: parsed.args.amount.toString(),
+//         });
+//       }
+//     }
+//   }
+
+//   return erc20Transfers;
+// }
+
+export async function extractRoyalties(fillEvent: es.fills.Event, cache?: StateCache) {
   const royaltyFeeBreakdown: Royalty[] = [];
   const marketplaceFeeBreakdown: Royalty[] = [];
   const possibleMissingRoyalties: Royalty[] = [];
 
   const { txHash } = fillEvent.baseEventParams;
-
   const { tokenId, contract, price, currency } = fillEvent;
-  const txTrace = await utils.fetchTransactionTrace(txHash);
+
+  let txTrace = null;
+  if (cache) {
+    txTrace = cache.traces.get(txHash);
+  }
+
+  if (!txTrace) {
+    txTrace = await utils.fetchTransactionTrace(txHash);
+    if (cache) cache.traces.set(txHash, txTrace);
+  }
+
   if (!txTrace) {
     return null;
   }
 
-  const { fillEvents } = await getFillEventsFromTx(txHash);
+  let fillEvents = null;
+  // let rawEvents = null;
 
-  const collectionFills = fillEvents?.filter((_) => _.contract === contract) || [];
-  const protocolFillEvents = fillEvents?.filter((_) => _.orderKind === fillEvent.orderKind) || [];
+  if (cache) {
+    fillEvents = cache.events.get(txHash)?.fillEvents;
+    // rawEvents = cache.events.get(txHash)?.events;
+  }
+
+  if (!fillEvents) {
+    const data = await getFillEventsFromTx(txHash);
+    fillEvents = data.fillEvents;
+    // rawEvents = data.events;
+    if (cache) cache.events.set(txHash, data);
+  }
+
+  const collectionFills =
+    fillEvents?.filter((_) => _.contract === contract && _.currency === fillEvent.currency) || [];
+  const protocolFillEvents =
+    fillEvents?.filter(
+      (_) => _.orderKind === fillEvent.orderKind && _.currency === fillEvent.currency
+    ) || [];
+  // const allEvents = rawEvents ?? [];
+  // const allErc20Transfers = extractTransfers(allEvents);
 
   // For same token only count once
   const idTrackers = new Set();
@@ -36,8 +86,8 @@ export async function extractRoyalties(fillEvent: es.fills.Event) {
         if (idTrackers.has(id)) {
           return total;
         } else {
-          idTrackers.add(id);
-          return total.add(bn(item.price));
+          // idTrackers.add(id);
+          return total.add(bn(item.price).mul(bn(item.amount)));
         }
       }, bn(0))
     : bn(0);
@@ -49,8 +99,8 @@ export async function extractRoyalties(fillEvent: es.fills.Event) {
     if (collectionIdTrackers.has(id)) {
       return total;
     } else {
-      collectionIdTrackers.add(id);
-      return total.add(bn(item.price));
+      // collectionIdTrackers.add(id);
+      return total.add(bn(item.price).mul(bn(item.amount)));
     }
   }, bn(0));
 
@@ -89,14 +139,13 @@ export async function extractRoyalties(fillEvent: es.fills.Event) {
 
     // TODO Move to the SDK
     const BETH = "0x0000000000a39bb272e79075ade125fd351887ac";
-    const Weth = Sdk.Common.Addresses.Weth[config.chainId];
     const native = Sdk.Common.Addresses.Eth[config.chainId];
     const isETH = currency === native;
 
+    const nativeChange = tokenBalanceState[`native:${native}`];
+
     const balanceChange = isETH
-      ? tokenBalanceState[`native:${native}`] ||
-        tokenBalanceState[`erc20:${BETH}`] ||
-        tokenBalanceState[`erc20:${Weth}`]
+      ? nativeChange || tokenBalanceState[`erc20:${BETH}`]
       : tokenBalanceState[`erc20:${currency}`];
 
     // Receive ETH
@@ -140,6 +189,8 @@ export async function extractRoyalties(fillEvent: es.fills.Event) {
       tokenId,
       contract,
       currency,
+      amount: fillEvent.amount,
+      orderKind: fillEvent.orderKind,
       price: formatEther(price),
     },
     totalTransfers,
@@ -149,6 +200,7 @@ export async function extractRoyalties(fillEvent: es.fills.Event) {
     marketplaceFeeBreakdown,
     sameCollectionSales,
     protocolFillEvents: protocolFillEvents.length,
+    totalFills: fillEvents.length,
     paidFullRoyalty,
   };
 

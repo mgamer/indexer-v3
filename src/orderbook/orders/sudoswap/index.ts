@@ -23,8 +23,8 @@ import * as sudoswap from "@/utils/sudoswap";
 export type OrderInfo = {
   orderParams: {
     pool: string;
-    txTimestamp: number;
     txHash: string;
+    txTimestamp: number;
   };
   metadata: OrderMetadata;
 };
@@ -177,13 +177,23 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               },
             });
 
-            const orderResult = await redb.oneOrNone(
+            let orderResult = await idb.oneOrNone(
               `
-                SELECT 1 FROM orders
+                SELECT
+                  orders.token_set_id
+                FROM orders
                 WHERE orders.id = $/id/
               `,
               { id }
             );
+            if (orderResult && !orderResult.token_set_id) {
+              // Delete the order since it is an incomplete one resulted from 'partial' insertion of
+              // fill events. The issue only occurs for buy orders since sell orders are handled via
+              // 'on-chain' fill events which don't insert such incomplete orders.
+              await idb.none(`DELETE FROM orders WHERE orders.id = $/id/`, { id });
+              orderResult = false;
+            }
+
             if (!orderResult) {
               // Handle: token set
               const schemaHash = generateSchemaHash();
@@ -265,6 +275,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     fee_bps = $/feeBps/,
                     fee_breakdown = $/feeBreakdown:json/
                   WHERE orders.id = $/id/
+                    AND lower(orders.valid_between) < to_timestamp(${orderParams.txTimestamp})
                 `,
                 {
                   id,
@@ -296,6 +307,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   expiration = to_timestamp(${orderParams.txTimestamp}),
                   updated_at = now()
                 WHERE orders.id = $/id/
+                  AND lower(orders.valid_between) < to_timestamp(${orderParams.txTimestamp})
               `,
               { id }
             );
@@ -350,7 +362,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           const totalBuiltInBps = 0;
           const totalDefaultBps = defaultRoyalties.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
 
-          const missingRoyalties = [];
+          const missingRoyalties: { bps: number; amount: string; recipient: string }[] = [];
           let missingRoyaltyAmount = bn(0);
           if (totalBuiltInBps < totalDefaultBps) {
             const validRecipients = defaultRoyalties.filter(
@@ -378,134 +390,141 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
           // Fetch all token ids owned by the pool
           const poolOwnedTokenIds = await commonHelpers.getNfts(pool.nft, pool.address);
-          for (const tokenId of poolOwnedTokenIds) {
-            try {
-              const id = getOrderId(orderParams.pool, "sell", tokenId);
 
-              // Handle: core sdk order
-              const sdkOrder: Sdk.Sudoswap.Order = new Sdk.Sudoswap.Order(config.chainId, {
-                pair: orderParams.pool,
-                tokenId,
-                extra: {
-                  prices: prices.slice(1).map(String),
-                },
-              });
+          const limit = pLimit(50);
+          await Promise.all(
+            poolOwnedTokenIds.map((tokenId) =>
+              limit(async () => {
+                try {
+                  const id = getOrderId(orderParams.pool, "sell", tokenId);
 
-              const orderResult = await redb.oneOrNone(
-                `
-                  SELECT 1 FROM orders
-                  WHERE orders.id = $/id/
-                `,
-                { id }
-              );
-              if (!orderResult) {
-                // Handle: token set
-                const schemaHash = generateSchemaHash();
-                const [{ id: tokenSetId }] = await tokenSet.singleToken.save([
-                  {
-                    id: `token:${pool.nft}:${tokenId}`.toLowerCase(),
-                    schemaHash,
-                    contract: pool.nft,
+                  // Handle: core sdk order
+                  const sdkOrder: Sdk.Sudoswap.Order = new Sdk.Sudoswap.Order(config.chainId, {
+                    pair: orderParams.pool,
                     tokenId,
-                  },
-                ]);
-                if (!tokenSetId) {
-                  throw new Error("No token set available");
-                }
+                    extra: {
+                      prices: prices.slice(1).map(String),
+                    },
+                  });
 
-                // Handle: source
-                const sources = await Sources.getInstance();
-                const source = await sources.getOrInsert("sudoswap.xyz");
+                  const orderResult = await redb.oneOrNone(
+                    `
+                      SELECT 1 FROM orders
+                      WHERE orders.id = $/id/
+                    `,
+                    { id }
+                  );
+                  if (!orderResult) {
+                    // Handle: token set
+                    const schemaHash = generateSchemaHash();
+                    const [{ id: tokenSetId }] = await tokenSet.singleToken.save([
+                      {
+                        id: `token:${pool.nft}:${tokenId}`.toLowerCase(),
+                        schemaHash,
+                        contract: pool.nft,
+                        tokenId,
+                      },
+                    ]);
+                    if (!tokenSetId) {
+                      throw new Error("No token set available");
+                    }
 
-                const validFrom = `date_trunc('seconds', to_timestamp(${orderParams.txTimestamp}))`;
-                const validTo = `'Infinity'`;
-                orderValues.push({
-                  id,
-                  kind: "sudoswap",
-                  side: "sell",
-                  fillability_status: "fillable",
-                  approval_status: "approved",
-                  token_set_id: tokenSetId,
-                  token_set_schema_hash: toBuffer(schemaHash),
-                  maker: toBuffer(pool.address),
-                  taker: toBuffer(AddressZero),
-                  price,
-                  value,
-                  currency: toBuffer(pool.token),
-                  currency_price: price,
-                  currency_value: value,
-                  needs_conversion: null,
-                  quantity_remaining: "1",
-                  valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
-                  nonce: null,
-                  source_id_int: source?.id,
-                  is_reservoir: null,
-                  contract: toBuffer(pool.nft),
-                  conduit: null,
-                  fee_bps: feeBps,
-                  fee_breakdown: feeBreakdown,
-                  dynamic: null,
-                  raw_data: sdkOrder.params,
-                  expiration: validTo,
-                  missing_royalties: missingRoyalties,
-                  normalized_value: normalizedValue.toString(),
-                  currency_normalized_value: normalizedValue.toString(),
-                });
+                    // Handle: source
+                    const sources = await Sources.getInstance();
+                    const source = await sources.getOrInsert("sudoswap.xyz");
 
-                results.push({
-                  id,
-                  txHash: orderParams.txHash,
-                  txTimestamp: orderParams.txTimestamp,
-                  status: "success",
-                  triggerKind: "new-order",
-                });
-              } else {
-                await idb.none(
-                  `
-                    UPDATE orders SET
-                      fillability_status = 'fillable',
-                      approval_status = 'approved',
-                      price = $/price/,
-                      currency_price = $/price/,
-                      value = $/value/,
-                      currency_value = $/value/,
-                      quantity_remaining = 1,
-                      valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
-                      expiration = 'Infinity',
-                      updated_at = now(),
-                      raw_data = $/rawData:json/,
-                      missing_royalties = $/missingRoyalties:json/,
-                      normalized_value = $/normalizedValue/,
-                      currency_normalized_value = $/currencyNormalizedValue/,
-                      fee_bps = $/feeBps/,
-                      fee_breakdown = $/feeBreakdown:json/
-                    WHERE orders.id = $/id/
-                  `,
-                  {
-                    id,
-                    price,
-                    value,
-                    rawData: sdkOrder.params,
-                    missingRoyalties: missingRoyalties,
-                    normalizedValue: normalizedValue.toString(),
-                    currencyNormalizedValue: normalizedValue.toString(),
-                    feeBps,
-                    feeBreakdown,
+                    const validFrom = `date_trunc('seconds', to_timestamp(${orderParams.txTimestamp}))`;
+                    const validTo = `'Infinity'`;
+                    orderValues.push({
+                      id,
+                      kind: "sudoswap",
+                      side: "sell",
+                      fillability_status: "fillable",
+                      approval_status: "approved",
+                      token_set_id: tokenSetId,
+                      token_set_schema_hash: toBuffer(schemaHash),
+                      maker: toBuffer(pool.address),
+                      taker: toBuffer(AddressZero),
+                      price,
+                      value,
+                      currency: toBuffer(pool.token),
+                      currency_price: price,
+                      currency_value: value,
+                      needs_conversion: null,
+                      quantity_remaining: "1",
+                      valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
+                      nonce: null,
+                      source_id_int: source?.id,
+                      is_reservoir: null,
+                      contract: toBuffer(pool.nft),
+                      conduit: null,
+                      fee_bps: feeBps,
+                      fee_breakdown: feeBreakdown,
+                      dynamic: null,
+                      raw_data: sdkOrder.params,
+                      expiration: validTo,
+                      missing_royalties: missingRoyalties,
+                      normalized_value: normalizedValue.toString(),
+                      currency_normalized_value: normalizedValue.toString(),
+                    });
+
+                    results.push({
+                      id,
+                      txHash: orderParams.txHash,
+                      txTimestamp: orderParams.txTimestamp,
+                      status: "success",
+                      triggerKind: "new-order",
+                    });
+                  } else {
+                    await idb.none(
+                      `
+                        UPDATE orders SET
+                          fillability_status = 'fillable',
+                          approval_status = 'approved',
+                          price = $/price/,
+                          currency_price = $/price/,
+                          value = $/value/,
+                          currency_value = $/value/,
+                          quantity_remaining = 1,
+                          valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
+                          expiration = 'Infinity',
+                          updated_at = now(),
+                          raw_data = $/rawData:json/,
+                          missing_royalties = $/missingRoyalties:json/,
+                          normalized_value = $/normalizedValue/,
+                          currency_normalized_value = $/currencyNormalizedValue/,
+                          fee_bps = $/feeBps/,
+                          fee_breakdown = $/feeBreakdown:json/
+                        WHERE orders.id = $/id/
+                          AND lower(orders.valid_between) < to_timestamp(${orderParams.txTimestamp})
+                      `,
+                      {
+                        id,
+                        price,
+                        value,
+                        rawData: sdkOrder.params,
+                        missingRoyalties: missingRoyalties,
+                        normalizedValue: normalizedValue.toString(),
+                        currencyNormalizedValue: normalizedValue.toString(),
+                        feeBps,
+                        feeBreakdown,
+                      }
+                    );
+
+                    results.push({
+                      id,
+                      txHash: orderParams.txHash,
+                      txTimestamp: orderParams.txTimestamp,
+                      status: "success",
+                      triggerKind: "reprice",
+                    });
                   }
-                );
-
-                results.push({
-                  id,
-                  txHash: orderParams.txHash,
-                  txTimestamp: orderParams.txTimestamp,
-                  status: "success",
-                  triggerKind: "reprice",
-                });
-              }
-            } catch {
-              // Ignore any errors
-            }
-          }
+                } catch {
+                  // Ignore any errors
+                }
+              })
+            )
+          );
         }
       } catch (error) {
         logger.error(
