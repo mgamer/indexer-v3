@@ -1,4 +1,5 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
+import { randomUUID } from "crypto";
 
 import { idb, PgPromiseQuery, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
@@ -6,9 +7,8 @@ import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as es from "@/events-sync/storage";
-import { randomUUID } from "crypto";
 
-// import { assignRoyaltiesToFillEvents } from "@/events-sync/handlers/royalties";
+import { assignRoyaltiesToFillEvents } from "@/events-sync/handlers/royalties";
 import { assignWashTradingScoreToFillEvents } from "@/events-sync/handlers/utils/fills";
 
 const QUEUE_NAME = "fill-post-process";
@@ -37,13 +37,14 @@ if (config.doBackgroundWork) {
 
       try {
         await Promise.all([
+          assignRoyaltiesToFillEvents(allFillEvents),
           assignWashTradingScoreToFillEvents(allFillEvents),
-          // assignRoyaltiesToFillEvents(allFillEvents),
         ]);
+
         const queries: PgPromiseQuery[] = allFillEvents.map((event) => {
           return {
             query: `
-                UPDATE "fill_events_2" SET 
+                UPDATE fill_events_2 SET 
                   wash_trading_score = $/wash_trading_score/,
                   royalty_fee_bps = $/royalty_fee_bps/,
                   marketplace_fee_bps = $/marketplace_fee_bps/,
@@ -51,8 +52,7 @@ if (config.doBackgroundWork) {
                   marketplace_fee_breakdown = $/marketplace_fee_breakdown:json/,
                   paid_full_royalty = $/paid_full_royalty/,
                   net_amount = $/net_amount/
-                WHERE 
-                      tx_hash = $/tx_hash/
+                WHERE tx_hash = $/tx_hash/
                   AND log_index = $/log_index/
                   AND batch_index = $/batch_index/
               `,
@@ -88,11 +88,10 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (fillEvents: es.fills.Event[][]) => {
-  await queue.addBulk(
+export const addToQueue = async (fillEvents: es.fills.Event[][]) =>
+  queue.addBulk(
     fillEvents.map((event) => ({
       name: randomUUID(),
       data: event,
     }))
   );
-};
