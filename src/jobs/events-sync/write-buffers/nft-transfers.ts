@@ -25,7 +25,7 @@ export const queue = new Queue(QUEUE_NAME, {
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
 // BACKGROUND WORKER ONLY
-if (config.doBackgroundWork && config.chainId !== 137) {
+if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
@@ -59,7 +59,7 @@ if (config.doBackgroundWork && config.chainId !== 137) {
       // It's very important to have this queue be single-threaded
       // in order to avoid database write deadlocks (and it can be
       // even better to have it be single-process).
-      concurrency: 5,
+      concurrency: config.chainId === 137 ? 1 : 5,
     }
   );
 
