@@ -8,16 +8,16 @@ import Joi from "joi";
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { getOracleRawSigner } from "@/common/signers";
+import { getOracleKmsSigner } from "@/common/signers";
 import { regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
-const version = "v1";
+const version = "v2";
 
-export const getTokenStatusOracleV1Options: RouteOptions = {
+export const getTokenStatusOracleV2Options: RouteOptions = {
   description: "Token status oracle",
   notes:
-    "Get a signed message of a token's details (flagged status and last transfer time). The oracle's address is 0x32dA57E736E05f75aa4FaE2E9Be60FD904492726.",
+    "Get a signed message of a token's details (flagged status and last transfer time). The oracle's address is 0xAeB1D03929bF87F69888f381e73FBf75753d75AF.",
   tags: ["api", "Oracle"],
   plugins: {
     "hapi-swagger": {
@@ -144,7 +144,7 @@ export const getTokenStatusOracleV1Options: RouteOptions = {
           timestamp: await baseProvider.getBlock("latest").then((b) => b.timestamp),
         };
 
-        message.signature = await getOracleRawSigner().signMessage(
+        message.signature = await getOracleKmsSigner().signMessage(
           arrayify(_TypedDataEncoder.hashStruct("Message", EIP712_TYPES.Message, message))
         );
 
