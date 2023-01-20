@@ -3,9 +3,10 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-import { idb } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { MqJobsDataManager } from "@/models/mq-jobs-data";
 import _ from "lodash";
+import { toBuffer } from "@/common/utils";
 
 const QUEUE_NAME = "events-sync-nft-transfers-write";
 
@@ -31,6 +32,7 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { id } = job.data;
       let { query } = (await MqJobsDataManager.getJobData(id)) || {};
+      const tokenValues = [];
 
       if (!query) {
         return;
@@ -42,6 +44,39 @@ if (config.doBackgroundWork) {
           `FROM "x"`,
           `FROM "x" ORDER BY "address" ASC, "token_id" ASC, "owner" ASC`
         );
+      }
+
+      if (_.includes(query, `INSERT INTO "tokens"`) && !_.includes(query, "collection_id")) {
+        const matches = query.replace("\\x", "0x").match(/VALUES (.+)/g);
+        if (matches) {
+          const values = _.split(_.replace(matches[0], "VALUES ", ""), "),(");
+
+          for (const val of values) {
+            const params = _.split(_.trim(val, "'()"), ",");
+            if (params) {
+              tokenValues.push({
+                contract: toBuffer(params[0]),
+                token_id: _.trim(params[1], "'"),
+                minted_timestamp: Number(params[2]),
+              });
+            }
+          }
+
+          const columns = new pgp.helpers.ColumnSet(["contract", "token_id", "minted_timestamp"], {
+            table: "tokens",
+          });
+
+          query = `
+            INSERT INTO "tokens" (
+              "contract",
+              "token_id",
+              "minted_timestamp"
+            ) VALUES ${pgp.helpers.values(_.sortBy(tokenValues, ["contract", "token_id"]), columns)}
+            ON CONFLICT (contract, token_id) DO UPDATE 
+            SET minted_timestamp = EXCLUDED.minted_timestamp
+            WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
+          `;
+        }
       }
 
       try {
