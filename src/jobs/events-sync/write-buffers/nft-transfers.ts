@@ -37,47 +37,6 @@ if (config.doBackgroundWork) {
         return;
       }
 
-      // if (!_.includes(query, "ORDER BY")) {
-      //   query = _.replace(
-      //     query,
-      //     `FROM "x"`,
-      //     `FROM "x" ORDER BY "address" ASC, "token_id" ASC, "owner" ASC`
-      //   );
-      // }
-      //
-      // if (_.includes(query, `INSERT INTO "tokens"`) && !_.includes(query, "collection_id")) {
-      //   const matches = query.replace("\\x", "0x").match(/VALUES (.+)/g);
-      //   if (matches) {
-      //     const values = _.split(_.replace(matches[0], "VALUES ", ""), "),(");
-      //
-      //     for (const val of values) {
-      //       const params = _.split(_.trim(val, "'()"), ",");
-      //       if (params) {
-      //         tokenValues.push({
-      //           contract: toBuffer(params[0]),
-      //           token_id: _.trim(params[1], "'"),
-      //           minted_timestamp: Number(params[2]),
-      //         });
-      //       }
-      //     }
-      //
-      //     const columns = new pgp.helpers.ColumnSet(["contract", "token_id", "minted_timestamp"], {
-      //       table: "tokens",
-      //     });
-      //
-      //     query = `
-      //       INSERT INTO "tokens" (
-      //         "contract",
-      //         "token_id",
-      //         "minted_timestamp"
-      //       ) VALUES ${pgp.helpers.values(_.sortBy(tokenValues, ["contract", "token_id"]), columns)}
-      //       ON CONFLICT (contract, token_id) DO UPDATE
-      //       SET minted_timestamp = EXCLUDED.minted_timestamp
-      //       WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
-      //     `;
-      //   }
-      // }
-
       try {
         await idb.none(query);
       } catch (error) {
