@@ -25,6 +25,7 @@ export const extractEventsBatches = async (
   const limit = pLimit(50);
 
   // First, associate each event to its corresponding tx
+  const txHashToEventsStartTime = performance.now();
   const txHashToEvents = new Map<string, EnhancedEvent[]>();
   await Promise.all(
     enhancedEvents.map((event) =>
@@ -37,8 +38,16 @@ export const extractEventsBatches = async (
       })
     )
   );
+  logger.info(
+    "perf-debug",
+    JSON.stringify({
+      system: "tx-hash-to-events",
+      time: (performance.now() - txHashToEventsStartTime) / 1000,
+    })
+  );
 
   // Then, for each tx split the events by their kind
+  const txHashToEventsBatchStartTime = performance.now();
   const txHashToEventsBatch = new Map<string, EventsBatch>();
   await Promise.all(
     [...txHashToEvents.entries()].map(([txHash, events]) =>
@@ -222,6 +231,13 @@ export const extractEventsBatches = async (
       })
     )
   );
+  logger.info(
+    "perf-debug",
+    JSON.stringify({
+      system: "tx-hash-to-events-batch",
+      time: (performance.now() - txHashToEventsBatchStartTime) / 1000,
+    })
+  );
 
   return [...txHashToEventsBatch.values()];
 };
@@ -295,7 +311,13 @@ export const syncEvents = async (
   }
 
   const enhancedEvents: EnhancedEvent[] = [];
+  const getLogsStartTime = performance.now();
   await baseProvider.getLogs(eventFilter).then(async (logs) => {
+    logger.info(
+      "perf-debug",
+      JSON.stringify({ system: "get-logs", time: (performance.now() - getLogsStartTime) / 1000 })
+    );
+
     const availableEventData = getEventData();
 
     for (const log of logs) {
@@ -345,7 +367,16 @@ export const syncEvents = async (
     }
 
     // Process the retrieved events asynchronously
+
+    const extractEventsBatchesStartTime = performance.now();
     const eventsBatches = await extractEventsBatches(enhancedEvents, backfill);
+    logger.info(
+      "perf-debug",
+      JSON.stringify({
+        system: "extract-events-batches",
+        time: (performance.now() - extractEventsBatchesStartTime) / 1000,
+      })
+    );
     const eventsSyncProcess = backfill ? eventsSyncBackfillProcess : eventsSyncRealtimeProcess;
     await eventsSyncProcess.addToQueue(eventsBatches);
 
