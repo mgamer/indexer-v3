@@ -345,16 +345,7 @@ export const syncEvents = async (
     }
 
     // Process the retrieved events asynchronously
-
-    const extractEventsBatchesStartTime = performance.now();
     const eventsBatches = await extractEventsBatches(enhancedEvents, backfill);
-    logger.info(
-      "perf-debug",
-      JSON.stringify({
-        system: "extract-events-batches",
-        time: (performance.now() - extractEventsBatchesStartTime) / 1000,
-      })
-    );
     const eventsSyncProcess = backfill ? eventsSyncBackfillProcess : eventsSyncRealtimeProcess;
     await eventsSyncProcess.addToQueue(eventsBatches);
 
