@@ -38,13 +38,7 @@ export const extractEventsBatches = async (
       })
     )
   );
-  logger.info(
-    "perf-debug",
-    JSON.stringify({
-      system: "tx-hash-to-events",
-      time: (performance.now() - txHashToEventsStartTime) / 1000,
-    })
-  );
+  logger.info("debug", `txHashToEvents: ${(performance.now() - txHashToEventsStartTime) / 1000}`);
 
   // Then, for each tx split the events by their kind
   const txHashToEventsBatchStartTime = performance.now();
@@ -232,11 +226,8 @@ export const extractEventsBatches = async (
     )
   );
   logger.info(
-    "perf-debug",
-    JSON.stringify({
-      system: "tx-hash-to-events-batch",
-      time: (performance.now() - txHashToEventsBatchStartTime) / 1000,
-    })
+    "debug",
+    `txHashToEventsBatch: ${(performance.now() - txHashToEventsBatchStartTime) / 1000}`
   );
 
   return [...txHashToEventsBatch.values()];
@@ -313,10 +304,7 @@ export const syncEvents = async (
   const enhancedEvents: EnhancedEvent[] = [];
   const getLogsStartTime = performance.now();
   await baseProvider.getLogs(eventFilter).then(async (logs) => {
-    logger.info(
-      "perf-debug",
-      JSON.stringify({ system: "get-logs", time: (performance.now() - getLogsStartTime) / 1000 })
-    );
+    logger.info("debug", `getLogs: ${(performance.now() - getLogsStartTime) / 1000}`);
 
     const availableEventData = getEventData();
 
