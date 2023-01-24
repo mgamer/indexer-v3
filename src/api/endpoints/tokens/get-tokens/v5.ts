@@ -716,7 +716,9 @@ export const getTokensV5Options: RouteOptions = {
                   (query as any).contContract = toBuffer(contArr[1]);
                   (query as any).contTokenId = contArr[2];
                 } else {
-                  conditions.push(`(${sortColumn} is null AND (t.contract, t.token_id) ${sign} ($/contContract/, $/contTokenId/))`);
+                  conditions.push(
+                    `(${sortColumn} is null AND (t.contract, t.token_id) ${sign} ($/contContract/, $/contTokenId/))`
+                  );
                   (query as any).contContract = toBuffer(contArr[1]);
                   (query as any).contTokenId = contArr[2];
                 }
@@ -741,17 +743,27 @@ export const getTokensV5Options: RouteOptions = {
       // Sorting
 
       // Only allow sorting on floorSell when we filter by collection / attributes / tokenSetId / rarity
-      if (query.collection || query.attributes || query.tokenSetId || query.rarity || query.collectionsSetId) {
+      if (
+        query.collection ||
+        query.attributes ||
+        query.tokenSetId ||
+        query.rarity ||
+        query.collectionsSetId
+      ) {
         switch (query.sortBy) {
           case "rarity": {
             baseQuery += ` ORDER BY t.rarity_rank ${
               query.sortDirection || "ASC"
-            } NULLS LAST, t.contract ${query.sortDirection || "ASC"}, t.token_id ${query.sortDirection || "ASC"}`;
+            } NULLS LAST, t.contract ${query.sortDirection || "ASC"}, t.token_id ${
+              query.sortDirection || "ASC"
+            }`;
             break;
           }
 
           case "tokenId": {
-            baseQuery += ` ORDER BY t.contract ${query.sortDirection || "ASC"}, t.token_id ${query.sortDirection || "ASC"}`;
+            baseQuery += ` ORDER BY t.contract ${query.sortDirection || "ASC"}, t.token_id ${
+              query.sortDirection || "ASC"
+            }`;
             break;
           }
 
@@ -765,12 +777,16 @@ export const getTokensV5Options: RouteOptions = {
 
             baseQuery += ` ORDER BY ${sortColumn} ${
               query.sortDirection || "ASC"
-            } NULLS LAST, t.contract ${query.sortDirection || "ASC"}, t.token_id ${query.sortDirection || "ASC"}`;
+            } NULLS LAST, t.contract ${query.sortDirection || "ASC"}, t.token_id ${
+              query.sortDirection || "ASC"
+            }`;
             break;
           }
         }
       } else if (query.contract || query.tokens) {
-        baseQuery += ` ORDER BY t.contract ${query.sortDirection || "ASC"}, t.token_id ${query.sortDirection || "ASC"}`;
+        baseQuery += ` ORDER BY t.contract ${query.sortDirection || "ASC"}, t.token_id ${
+          query.sortDirection || "ASC"
+        }`;
       }
 
       baseQuery += ` LIMIT $/limit/`;
@@ -805,7 +821,8 @@ export const getTokensV5Options: RouteOptions = {
           }
         }
 
-        continuation += (continuation ? "_" : "") + fromBuffer(rawResult[rawResult.length - 1].contract);
+        continuation +=
+          (continuation ? "_" : "") + fromBuffer(rawResult[rawResult.length - 1].contract);
         continuation += "_" + rawResult[rawResult.length - 1].token_id;
 
         continuation = buildContinuation(continuation);
