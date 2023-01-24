@@ -737,7 +737,7 @@ export const getTokensV5Options: RouteOptions = {
       }
 
       if (conditions.length) {
-        baseQuery += " WHERE " + conditions.map((c) => `${c}`).join(" AND ");
+        baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
 
       // Sorting
