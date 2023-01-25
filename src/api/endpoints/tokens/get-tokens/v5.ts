@@ -661,10 +661,13 @@ export const getTokensV5Options: RouteOptions = {
 
       // Continue with the next page, this depends on the sorting used
       if (query.continuation && !query.token) {
-        const contArr = splitContinuation(
+        let contArr = splitContinuation(
           query.continuation,
           /^((([0-9]+\.?[0-9]*|\.[0-9]+)|null|0x[a-fA-F0-9]+)_\d+|\d+)$/
         );
+        if (contArr.length === 1 && contArr[0].includes("_")) {
+          contArr = splitContinuation(contArr[0]);
+        }
         if (query.collection || query.attributes || query.tokenSetId || query.collectionsSetId) {
           switch (query.sortBy) {
             case "rarity": {
