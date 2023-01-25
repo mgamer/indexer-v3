@@ -19,6 +19,8 @@ import { getJoiPriceObject, JoiOrderCriteria, JoiPrice } from "@/common/joi";
 import { Orders } from "@/utils/orders";
 import { ContractSets } from "@/models/contract-sets";
 import * as Boom from "@hapi/boom";
+import { CollectionSets } from "@/models/collection-sets";
+import { BigNumber } from "@ethersproject/bignumber";
 
 const version = "v3";
 
@@ -51,6 +53,9 @@ export const getUserTopBidsV3Options: RouteOptions = {
       community: Joi.string()
         .lowercase()
         .description("Filter to a particular community. Example: `artblocks`"),
+      collectionsSetId: Joi.string()
+        .lowercase()
+        .description("Filter to a particular collection set."),
       optimizeCheckoutURL: Joi.boolean()
         .default(false)
         .description(
@@ -79,11 +84,12 @@ export const getUserTopBidsV3Options: RouteOptions = {
         .max(100)
         .default(20)
         .description("Amount of items returned in response."),
-    }),
+    }).oxor("collection", "collectionsSetId"),
   },
   response: {
     schema: Joi.object({
       totalTokensWithBids: Joi.number(),
+      totalAmount: Joi.number(),
       topBids: Joi.array().items(
         Joi.object({
           id: Joi.string(),
@@ -163,8 +169,15 @@ export const getUserTopBidsV3Options: RouteOptions = {
       offset = Number(splitContinuation(query.continuation));
     }
 
-    if (query.collection) {
-      if (Array.isArray(query.collection)) {
+    if (query.collection || query.collectionsSetId) {
+      if (query.collectionsSetId) {
+        query.collectionsIds = await CollectionSets.getCollectionsIds(query.collectionsSetId);
+        if (_.isEmpty(query.collectionsIds)) {
+          throw Boom.badRequest(`No collections for collection set ${query.collectionsSetId}`);
+        }
+
+        collectionFilter = `AND id IN ($/collectionsIds:csv/)`;
+      } else if (Array.isArray(query.collection)) {
         collectionFilter = `AND id IN ($/collection:csv/)`;
       } else {
         collectionFilter = `AND id = $/collection/`;
@@ -197,7 +210,7 @@ export const getUserTopBidsV3Options: RouteOptions = {
         : "floor_sell_value";
 
       const baseQuery = `
-        SELECT nb.contract, y.*, t.*, c.*, count(*) OVER() AS "total_tokens_with_bids",
+        SELECT nb.contract, y.*, t.*, c.*, count(*) OVER() AS "total_tokens_with_bids", SUM(y.top_bid_price) OVER() as total_amount,
                (${criteriaBuildQuery}) AS bid_criteria,
               COALESCE(((top_bid_value / net_listing) - 1) * 100, 0) AS floor_difference_percentage
         FROM nft_balances nb
@@ -229,7 +242,9 @@ export const getUserTopBidsV3Options: RouteOptions = {
             WHERE t.contract = nb.contract
             AND t.token_id = nb.token_id
         ) t ON TRUE
-        ${query.collection || query.community ? "" : "LEFT"} JOIN LATERAL (
+        ${
+          query.collection || query.community || query.collectionsSetId ? "" : "LEFT"
+        } JOIN LATERAL (
             SELECT
                 id AS "collection_id",
                 name AS "collection_name",
@@ -252,12 +267,14 @@ export const getUserTopBidsV3Options: RouteOptions = {
 
       const bids = await redbAlt.manyOrNone(baseQuery, query);
       let totalTokensWithBids = 0;
+      let totalAmount = BigNumber.from(0);
 
       const results = await Promise.all(
         bids.map(async (r) => {
           const contract = fromBuffer(r.contract);
           const tokenId = r.token_id;
           totalTokensWithBids = Number(r.total_tokens_with_bids);
+          totalAmount = BigNumber.from(r.total_amount);
 
           const source = sources.get(
             Number(r.source_id_int),
@@ -345,6 +362,7 @@ export const getUserTopBidsV3Options: RouteOptions = {
       }
 
       return {
+        totalAmount: formatEth(totalAmount),
         totalTokensWithBids,
         topBids: results,
         continuation: continuation ? buildContinuation(continuation.toString()) : undefined,
