@@ -25,6 +25,7 @@ import * as zeroExV4 from "@/events-sync/handlers/zeroex-v4";
 import * as zora from "@/events-sync/handlers/zora";
 import * as universe from "@/events-sync/handlers/universe";
 import * as infinity from "@/events-sync/handlers/infinity";
+import * as flow from "@/events-sync/handlers/flow";
 import * as rarible from "@/events-sync/handlers/rarible";
 import * as manifold from "@/events-sync/handlers/manifold";
 import * as tofu from "@/events-sync/handlers/tofu";
@@ -55,6 +56,7 @@ export type EventsInfo = {
     | "zora"
     | "universe"
     | "infinity"
+    | "flow"
     | "rarible"
     | "manifold"
     | "tofu"
@@ -179,6 +181,11 @@ export const parseEventsInfo = async (info: EventsInfo) => {
 
     case "infinity": {
       data = await infinity.handleEvents(info.events);
+      break;
+    }
+
+    case "flow": {
+      data = await flow.handleEvents(info.events);
       break;
     }
 

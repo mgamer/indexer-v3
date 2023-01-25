@@ -48,7 +48,8 @@ export const getExecuteBuyV6Options: RouteOptions = {
               "universe",
               "rarible",
               "infinity",
-              "sudoswap"
+              "sudoswap",
+              "flow"
             )
             .required(),
           data: Joi.object().required(),

@@ -107,6 +107,11 @@ if (config.doBackgroundWork) {
             break;
           }
 
+          case "flow": {
+            result = await orders.flow.save([info as orders.flow.OrderInfo], relayToArweave);
+            break;
+          }
+
           case "blur": {
             result = await orders.blur.save([info as orders.blur.OrderInfo], relayToArweave);
             break;
@@ -223,6 +228,12 @@ export type GenericOrderInfo =
   | {
       kind: "infinity";
       info: orders.infinity.OrderInfo;
+      relayToArweave?: boolean;
+      validateBidValue?: boolean;
+    }
+  | {
+      kind: "flow";
+      info: orders.flow.OrderInfo;
       relayToArweave?: boolean;
       validateBidValue?: boolean;
     }

@@ -12,6 +12,7 @@ export * as zeroExV4 from "@/orderbook/orders/zeroex-v4";
 export * as zora from "@/orderbook/orders/zora";
 export * as universe from "@/orderbook/orders/universe";
 export * as infinity from "@/orderbook/orders/infinity";
+export * as flow from "@/orderbook/orders/flow";
 export * as blur from "@/orderbook/orders/blur";
 export * as rarible from "@/orderbook/orders/rarible";
 export * as manifold from "@/orderbook/orders/manifold";
@@ -52,6 +53,7 @@ export type OrderKind =
   | "nftx"
   | "blur"
   | "infinity"
+  | "flow"
   | "forward"
   | "manifold"
   | "tofu-nft"
@@ -141,6 +143,8 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("blur.io");
       case "infinity":
         return sources.getOrInsert("infinity.xyz");
+      case "flow":
+        return sources.getOrInsert("flow.so");
       case "manifold":
         return sources.getOrInsert("manifold.xyz");
       case "tofu-nft":
@@ -540,6 +544,15 @@ export const generateListingDetailsV6 = (
       };
     }
 
+    case "flow": {
+      const sdkOrder = new Sdk.Flow.Order(config.chainId, order.rawData);
+      return {
+        kind: "flow",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
     case "rarible": {
       return {
         kind: "rarible",
@@ -696,6 +709,15 @@ export const generateBidDetailsV6 = async (
       const sdkOrder = new Sdk.Infinity.Order(config.chainId, order.rawData);
       return {
         kind: "infinity",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
+    case "flow": {
+      const sdkOrder = new Sdk.Flow.Order(config.chainId, order.rawData);
+      return {
+        kind: "flow",
         ...common,
         order: sdkOrder,
       };

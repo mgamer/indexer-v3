@@ -11,6 +11,7 @@ import * as LooksrareApi from "@/jobs/orderbook/post-order-external/api/looksrar
 import * as X2Y2Api from "@/jobs/orderbook/post-order-external/api/x2y2";
 import * as UniverseApi from "@/jobs/orderbook/post-order-external/api/universe";
 import * as InfinityApi from "@/jobs/orderbook/post-order-external/api/infinity";
+import * as FlowApi from "@/jobs/orderbook/post-order-external/api/flow";
 
 import { OrderbookApiRateLimiter } from "@/jobs/orderbook/post-order-external/api-rate-limiter";
 import {
@@ -44,7 +45,7 @@ if (config.doBackgroundWork) {
         throw new Error("Unsupported network");
       }
 
-      if (!["opensea", "looks-rare", "x2y2", "universe", "infinity"].includes(orderbook)) {
+      if (!["opensea", "looks-rare", "x2y2", "universe", "infinity", "flow"].includes(orderbook)) {
         throw new Error("Unsupported orderbook");
       }
 
@@ -152,6 +153,8 @@ const getOrderbookDefaultApiKey = (orderbook: string) => {
       return "";
     case "infinity":
       return config.infinityApiKey;
+    case "flow":
+      return config.flowApiKey;
   }
 
   throw new Error(`Unsupported orderbook ${orderbook}`);
@@ -193,6 +196,13 @@ const getRateLimiter = (orderbook: string, orderbookApiKey: string) => {
         orderbookApiKey,
         InfinityApi.RATE_LIMIT_REQUEST_COUNT,
         InfinityApi.RATE_LIMIT_INTERVAL
+      );
+    case "flow":
+      return new OrderbookApiRateLimiter(
+        orderbook,
+        orderbookApiKey,
+        FlowApi.RATE_LIMIT_REQUEST_COUNT,
+        FlowApi.RATE_LIMIT_INTERVAL
       );
   }
 
@@ -275,6 +285,11 @@ const postOrder = async (
       );
       return InfinityApi.postOrders(order, orderbookApiKey);
     }
+
+    case "flow": {
+      const order = new Sdk.Flow.Order(config.chainId, orderData as Sdk.Flow.Types.OrderInput);
+      return FlowApi.postOrders(order, orderbookApiKey);
+    }
   }
 
   throw new Error(`Unsupported orderbook ${orderbook}`);
@@ -312,6 +327,12 @@ export type PostOrderExternalParams =
       orderId: string;
       orderData: Sdk.Infinity.Types.OrderInput;
       orderbook: "infinity";
+      retry: number;
+    }
+  | {
+      orderId: string;
+      orderData: Sdk.Flow.Types.OrderInput;
+      orderbook: "flow";
       retry: number;
     };
 

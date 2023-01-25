@@ -168,6 +168,16 @@ export const parseEnhancedEventsToEventsInfo = (
       backfill,
     },
     {
+      kind: "flow",
+      events: enhancedEvents.filter(
+        ({ kind }) =>
+          kind.startsWith("flow") ||
+          // To properly validate bids, we need some additional events
+          kind === "erc20-transfer"
+      ),
+      backfill,
+    },
+    {
       kind: "rarible",
       events: enhancedEvents.filter(
         ({ kind }) =>
