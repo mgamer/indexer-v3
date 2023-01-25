@@ -91,6 +91,7 @@ if (config.doBackgroundWork) {
           `
             UPDATE fill_events_2 SET
               price = x.price::NUMERIC(78, 0),
+              currency_price = x.price::NUMERIC(78, 0),
               usd_price = x.usd_price::NUMERIC(78, 0),
               updated_at = now()
             FROM (
@@ -121,7 +122,7 @@ if (config.doBackgroundWork) {
 
   if (config.chainId === 1) {
     redlock
-      .acquire([`${QUEUE_NAME}-lock-1`], 60 * 60 * 24 * 30 * 1000)
+      .acquire([`${QUEUE_NAME}-lock-2`], 60 * 60 * 24 * 30 * 1000)
       .then(async () => {
         await addToQueue(
           "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
