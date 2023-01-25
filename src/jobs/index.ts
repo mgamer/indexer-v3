@@ -23,6 +23,7 @@ import "@/jobs/orderbook";
 import "@/jobs/sources";
 import "@/jobs/token-updates";
 import "@/jobs/update-attribute";
+import "@/jobs/websocket-events";
 
 // Export all job queues for monitoring through the BullMQ UI
 
@@ -34,11 +35,10 @@ import * as arweaveSyncBackfill from "@/jobs/arweave-sync/backfill-queue";
 import * as arweaveSyncRealtime from "@/jobs/arweave-sync/realtime-queue";
 
 import * as backfillBlurSales from "@/jobs/backfill/backfill-blur-sales";
+import * as backfillFoundationSales from "@/jobs/backfill/backfill-foundation-sales";
 import * as backfillMints from "@/jobs/backfill/backfill-mints";
 import * as backfillRefreshCryptopunksOrders from "@/jobs/backfill/backfill-refresh-cryptopunks-orders";
 import * as backfillTokensWithMissingCollection from "@/jobs/backfill/backfill-tokens-with-missing-collection";
-import * as backfillOpenseaWebsocketEvents from "@/jobs/backfill/backfill-opensea-websocket-events";
-import * as backfillONftBalancesLastSale from "@/jobs/backfill/backfill-nft-balances-last-sale";
 
 import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
 
@@ -73,6 +73,7 @@ import * as eventsSyncFtTransfersWriteBuffer from "@/jobs/events-sync/write-buff
 import * as eventsSyncNftTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/nft-transfers";
 
 import * as fillUpdates from "@/jobs/fill-updates/queue";
+import * as fillPostProcess from "@/jobs/fill-updates/fill-post-process";
 
 import * as flagStatusProcessJob from "@/jobs/flag-status/process-queue";
 import * as flagStatusSyncJob from "@/jobs/flag-status/sync-queue";
@@ -114,6 +115,8 @@ import * as resyncAttributeFloorSell from "@/jobs/update-attribute/resync-attrib
 import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attribute-key-counts";
 import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
 
+import * as websocketEventsTriggerQueue from "@/jobs/websocket-events/trigger-queue";
+
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
   orderUpdatesByMaker.worker,
@@ -134,11 +137,10 @@ export const allJobQueues = [
   arweaveSyncRealtime.queue,
 
   backfillBlurSales.queue,
+  backfillFoundationSales.queue,
   backfillMints.queue,
   backfillRefreshCryptopunksOrders.queue,
   backfillTokensWithMissingCollection.queue,
-  backfillOpenseaWebsocketEvents.queue,
-  backfillONftBalancesLastSale.queue,
 
   currencies.queue,
 
@@ -173,6 +175,7 @@ export const allJobQueues = [
   eventsSyncNftTransfersWriteBuffer.queue,
 
   fillUpdates.queue,
+  fillPostProcess.queue,
 
   flagStatusProcessJob.queue,
   flagStatusSyncJob.queue,
@@ -213,4 +216,6 @@ export const allJobQueues = [
   resyncAttributeFloorSell.queue,
   resyncAttributeKeyCounts.queue,
   resyncAttributeValueCounts.queue,
+
+  websocketEventsTriggerQueue.queue,
 ];

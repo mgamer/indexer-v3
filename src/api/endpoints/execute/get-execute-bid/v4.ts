@@ -189,6 +189,16 @@ export const getExecuteBidV4Options: RouteOptions = {
       const maker = payload.maker;
       const source = payload.source;
 
+      let currency = "ETH";
+      let wrappedCurrency = "WETH";
+
+      switch (config.chainId) {
+        case 137:
+          currency = "MATIC";
+          wrappedCurrency = "WMATIC";
+          break;
+      }
+
       // Set up generic bid steps
       const steps: {
         id: string;
@@ -209,15 +219,15 @@ export const getExecuteBidV4Options: RouteOptions = {
           items: [],
         },
         {
-          id: "weth-wrapping",
-          action: "Wrapping ETH",
-          description: "We'll ask your approval for converting ETH to WETH. Gas fee required.",
+          id: "weth-wrapping", // todo in v5 change this to currency-wrapping
+          action: `Wrapping ${currency}`,
+          description: `We'll ask your approval for converting ${currency} to ${wrappedCurrency}. Gas fee required.`,
           kind: "transaction",
           items: [],
         },
         {
           id: "currency-approval",
-          action: "Approve WETH contract",
+          action: `Approve ${wrappedCurrency} contract`,
           description:
             "We'll ask your approval for the exchange to access your token. This is a one-time only operation per exchange.",
           kind: "transaction",
@@ -240,6 +250,10 @@ export const getExecuteBidV4Options: RouteOptions = {
         const tokenSetId = params.tokenSetId;
         const attributeKey = params.attributeKey;
         const attributeValue = params.attributeValue;
+
+        if (tokenSetId && tokenSetId.startsWith("list") && tokenSetId.split(":").length !== 3) {
+          throw Boom.badRequest(`Token set ${tokenSetId} is not biddable`);
+        }
 
         if (!token) {
           // TODO: Re-enable collection/attribute bids on external orderbooks

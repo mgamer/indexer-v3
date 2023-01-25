@@ -35,62 +35,57 @@ if (config.doBackgroundWork) {
       try {
         switch (kind) {
           case "x2y2": {
-            result = await orders.x2y2.save([info as orders.x2y2.OrderInfo]);
+            result = await orders.x2y2.save([info]);
+            break;
+          }
+
+          case "element": {
+            result = await orders.element.save([info]);
             break;
           }
 
           case "foundation": {
-            result = await orders.foundation.save([info as orders.foundation.OrderInfo]);
+            result = await orders.foundation.save([info]);
             break;
           }
 
           case "forward": {
-            result = await orders.forward.save([info as orders.forward.OrderInfo]);
+            result = await orders.forward.save([info]);
             break;
           }
 
           case "cryptopunks": {
-            result = await orders.cryptopunks.save([info as orders.cryptopunks.OrderInfo]);
+            result = await orders.cryptopunks.save([info]);
             break;
           }
 
           case "zora-v3": {
-            result = await orders.zora.save([info as orders.zora.OrderInfo]);
+            result = await orders.zora.save([info]);
             break;
           }
 
           case "looks-rare": {
-            result = await orders.looksRare.save(
-              [info as orders.looksRare.OrderInfo],
-              relayToArweave
-            );
+            result = await orders.looksRare.save([info], relayToArweave);
             break;
           }
 
           case "seaport": {
-            result = await orders.seaport.save(
-              [info as orders.seaport.OrderInfo],
-              relayToArweave,
-              validateBidValue
-            );
+            result = await orders.seaport.save([info], relayToArweave, validateBidValue);
             break;
           }
 
           case "sudoswap": {
-            result = await orders.sudoswap.save([info as orders.sudoswap.OrderInfo]);
+            result = await orders.sudoswap.save([info]);
             break;
           }
 
           case "zeroex-v4": {
-            result = await orders.zeroExV4.save(
-              [info as orders.zeroExV4.OrderInfo],
-              relayToArweave
-            );
+            result = await orders.zeroExV4.save([info], relayToArweave);
             break;
           }
 
           case "universe": {
-            result = await orders.universe.save([info as orders.universe.OrderInfo]);
+            result = await orders.universe.save([info]);
             break;
           }
 
@@ -100,10 +95,7 @@ if (config.doBackgroundWork) {
           }
 
           case "infinity": {
-            result = await orders.infinity.save(
-              [info as orders.infinity.OrderInfo],
-              relayToArweave
-            );
+            result = await orders.infinity.save([info], relayToArweave);
             break;
           }
 
@@ -113,12 +105,17 @@ if (config.doBackgroundWork) {
           }
 
           case "blur": {
-            result = await orders.blur.save([info as orders.blur.OrderInfo], relayToArweave);
+            result = await orders.blur.save([info], relayToArweave);
             break;
           }
 
           case "manifold": {
             result = await orders.manifold.save([info]);
+            break;
+          }
+
+          case "nftx": {
+            result = await orders.nftx.save([info]);
             break;
           }
         }
@@ -127,10 +124,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
 
-      // Don't log already-exists
-      if (!(result[0]?.status === "already-exists")) {
-        logger.info(QUEUE_NAME, `[${kind}] Order save result: ${JSON.stringify(result)}`);
-      }
+      logger.debug(QUEUE_NAME, `[${kind}] Order save result: ${JSON.stringify(result)}`);
     },
     { connection: redis.duplicate(), concurrency: 50 }
   );
@@ -148,7 +142,7 @@ if (config.doBackgroundWork) {
         .acquire(["orders-queue-size-check-lock"], (60 - 5) * 1000)
         .then(async () => {
           const size = await queue.count();
-          if (size >= 20000) {
+          if (size >= 40000) {
             logger.error("orders-queue-size-check", `Orders queue buffering up: size=${size}`);
           }
         })
@@ -246,6 +240,18 @@ export type GenericOrderInfo =
   | {
       kind: "manifold";
       info: orders.manifold.OrderInfo;
+      relayToArweave?: boolean;
+      validateBidValue?: boolean;
+    }
+  | {
+      kind: "element";
+      info: orders.element.OrderInfo;
+      relayToArweave?: boolean;
+      validateBidValue?: boolean;
+    }
+  | {
+      kind: "nftx";
+      info: orders.nftx.OrderInfo;
       relayToArweave?: boolean;
       validateBidValue?: boolean;
     };

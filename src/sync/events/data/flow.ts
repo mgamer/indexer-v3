@@ -4,7 +4,8 @@ import { EventData } from "@/events-sync/data";
 import { Flow } from "@reservoir0x/sdk";
 
 export const matchOrderFulfilled: EventData = {
-  kind: "flow-match-order-fulfilled",
+  kind: "flow",
+  subKind: "flow-match-order-fulfilled",
   addresses: { [Flow.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
   topic: "0x9f0ef199f3d5fa3ecdee559103421e5ce53b68b3187e374801d79307d145d1eb",
   numTopics: 4,
@@ -23,7 +24,8 @@ export const matchOrderFulfilled: EventData = {
 };
 
 export const takeOrderFulfilled: EventData = {
-  kind: "flow-take-order-fulfilled",
+  kind: "flow",
+  subKind: "flow-take-order-fulfilled",
   addresses: { [Flow.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
   topic: "0xd1b78f78360698bdfc69fb877fd0dd84d4817dfe3095a8456e6f7ff0f4d51170",
   numTopics: 4,
@@ -41,7 +43,8 @@ export const takeOrderFulfilled: EventData = {
 };
 
 export const cancelAllOrders: EventData = {
-  kind: "flow-cancel-all-orders",
+  kind: "flow",
+  subKind: "flow-cancel-all-orders",
   addresses: { [Flow.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
   topic: "0x1e7178d84f0b0825c65795cd62e7972809ad3aac6917843aaec596161b2c0a97",
   numTopics: 2,
@@ -49,7 +52,8 @@ export const cancelAllOrders: EventData = {
 };
 
 export const cancelMultipleOrders: EventData = {
-  kind: "flow-cancel-multiple-orders",
+  kind: "flow",
+  subKind: "flow-cancel-multiple-orders",
   addresses: { [Flow.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
   topic: "0xfa0ae5d80fe3763c880a3839fab0294171a6f730d1f82c4cd5392c6f67b41732",
   numTopics: 2,

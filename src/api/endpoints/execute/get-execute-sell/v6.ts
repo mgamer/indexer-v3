@@ -82,6 +82,11 @@ export const getExecuteSellV6Options: RouteOptions = {
         .default(false)
         .description("If true, only the path will be returned."),
       normalizeRoyalties: Joi.boolean().default(false),
+      allowInactiveOrderIds: Joi.boolean()
+        .default(false)
+        .description(
+          "If true, do not filter out inactive orders (only relevant for order id filtering)."
+        ),
       maxFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional. Set custom gas price."),
@@ -152,9 +157,6 @@ export const getExecuteSellV6Options: RouteOptions = {
       if (!tokenResult) {
         throw Boom.badData("Unknown token");
       }
-      if (tokenResult.is_flagged) {
-        throw Boom.badData("Token is flagged");
-      }
 
       // Scenario 3: pass raw orders that don't yet exist
       if (payload.rawOrder) {
@@ -204,10 +206,13 @@ export const getExecuteSellV6Options: RouteOptions = {
                 AND token_sets_tokens.contract = $/contract/
                 AND token_sets_tokens.token_id = $/tokenId/
                 AND orders.side = 'buy'
-                AND orders.fillability_status = 'fillable'
-                AND orders.approval_status = 'approved'
                 AND orders.quantity_remaining >= $/quantity/
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                ${
+                  payload.allowInactiveOrderIds
+                    ? ""
+                    : " AND orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'"
+                }
             `,
             {
               id: payload.orderId,
@@ -325,6 +330,12 @@ export const getExecuteSellV6Options: RouteOptions = {
         }
       );
 
+      if (["x2y2", "seaport-partial"].includes(bidDetails!.kind)) {
+        if (tokenResult.is_flagged) {
+          throw Boom.badData("Token is flagged");
+        }
+      }
+
       if (payload.onlyPath) {
         // Skip generating any transactions if only the path was requested
         return { path };
@@ -334,7 +345,7 @@ export const getExecuteSellV6Options: RouteOptions = {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
       });
-      const { txData } = await router.fillBidTx(bidDetails!, payload.taker, {
+      const { txData } = await router.fillBidsTx([bidDetails!], payload.taker, {
         source: payload.source,
       });
 
