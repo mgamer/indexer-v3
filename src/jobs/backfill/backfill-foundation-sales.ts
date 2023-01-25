@@ -53,7 +53,7 @@ if (config.doBackgroundWork) {
             fill_events_2.batch_index DESC
           LIMIT $/limit/
         `,
-        { txHash: toBuffer(txHash), logIndex, batchIndex }
+        { txHash: toBuffer(txHash), logIndex, batchIndex, limit }
       );
 
       const values: any[] = [];
