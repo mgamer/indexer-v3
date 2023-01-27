@@ -21,7 +21,7 @@ export const getAsksEventsV2Options: RouteOptions = {
   tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 4,
+      deprecated: true,
     },
   },
   validate: {
