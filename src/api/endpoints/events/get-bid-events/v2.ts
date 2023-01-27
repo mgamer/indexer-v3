@@ -82,7 +82,7 @@ export const getBidEventsV2Options: RouteOptions = {
             validFrom: Joi.number().unsafe().allow(null),
             validUntil: Joi.number().unsafe().allow(null),
             kind: Joi.string(),
-            source: Joi.string().allow(null, ""),
+            source: Joi.string().allow("", null),
             criteria: JoiOrderCriteria.allow(null),
           }),
           event: Joi.object({
