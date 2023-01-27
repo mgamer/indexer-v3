@@ -113,9 +113,13 @@ export const getJoiPriceObject = async (
   };
 };
 
-// --- Order ---
+// --- Orders ---
+
 export const JoiAttributeValue = Joi.string().required().allow("");
-export const JoiAttributeKeyValueObject = Joi.object({ key: Joi.string(), value: JoiAttributeValue });
+export const JoiAttributeKeyValueObject = Joi.object({
+  key: Joi.string(),
+  value: JoiAttributeValue,
+});
 
 export const JoiOrderMetadata = Joi.alternatives(
   Joi.object({
