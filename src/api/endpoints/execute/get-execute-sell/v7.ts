@@ -3,6 +3,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import { BidDetails } from "@reservoir0x/sdk/dist/router/v6/types";
+import * as SeaportPermit from "@reservoir0x/sdk/dist/router/v6/permits/seaport";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
@@ -17,6 +18,7 @@ import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
 import * as nftx from "@/orderbook/orders/nftx";
 import { getCurrency } from "@/utils/currencies";
+import { getNFTPermitId, getNFTPermit, saveNFTPermit } from "@/utils/permits";
 import { tryGetTokensSuspiciousStatus } from "@/utils/opensea";
 
 const version = "v7";
@@ -536,10 +538,14 @@ export const getExecuteSellV7Options: RouteOptions = {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
       });
-      const { txData, approvals, success } = await router.fillBidsTx(bidDetails, payload.taker, {
-        source: payload.source,
-        partial: payload.partial,
-      });
+      const { txData, success, approvals, permits } = await router.fillBidsTx(
+        bidDetails,
+        payload.taker,
+        {
+          source: payload.source,
+          partial: payload.partial,
+        }
+      );
 
       // Filter out any non-fillable orders from the path
       path = path.filter((_, i) => success[i]);
@@ -569,6 +575,13 @@ export const getExecuteSellV7Options: RouteOptions = {
           description:
             "Each NFT collection you want to trade requires a one-time approval transaction",
           kind: "transaction",
+          items: [],
+        },
+        {
+          id: "permit",
+          action: "Sign permits",
+          description: "Sign permits for accessing the NFTs in your wallet",
+          kind: "signature",
           items: [],
         },
         {
@@ -606,13 +619,57 @@ export const getExecuteSellV7Options: RouteOptions = {
         }
       }
 
-      steps[1].items.push({
+      const permitHandler = new SeaportPermit.Handler(config.chainId, baseProvider);
+      if (permits.length) {
+        for (const permit of permits) {
+          const id = getNFTPermitId(request.payload as object, permit.tokens);
+
+          let cachedPermit = await getNFTPermit(id);
+          if (cachedPermit) {
+            // If the cached permit has a signature attached to it, we can skip it
+            const hasSignature = (cachedPermit.details.data as SeaportPermit.Data).order.signature;
+            if (hasSignature) {
+              continue;
+            }
+
+            // Otherwise, let's make sure to use the cached permit details
+            permit.details = cachedPermit.details;
+          } else {
+            // Cache the permit if it's the first time we encounter it
+            await saveNFTPermit(id, permit);
+            cachedPermit = permit;
+          }
+
+          steps[1].items.push({
+            status: "incomplete",
+            data: {
+              sign: permitHandler.getSignatureData(cachedPermit.details.data),
+              post: {
+                endpoint: "/permits/v1",
+                method: "POST",
+                body: {
+                  id,
+                },
+              },
+            },
+          });
+        }
+      }
+
+      steps[2].items.push({
         status: "incomplete",
-        data: {
-          ...txData,
-          maxFeePerGas,
-          maxPriorityFeePerGas,
-        },
+        data:
+          // Do not return the final step unless all permits have a signature attached
+          steps[1].items.length === 0
+            ? {
+                ...permitHandler.attachToRouterExecution(
+                  txData,
+                  permits.map((p) => p.details.data)
+                ),
+                maxFeePerGas,
+                maxPriorityFeePerGas,
+              }
+            : undefined,
       });
 
       return {
