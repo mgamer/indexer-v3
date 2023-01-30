@@ -10,7 +10,7 @@ import { inject } from "@/api/index";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn, formatPrice, fromBuffer, regex, toBuffer } from "@/common/utils";
+import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { OrderKind, generateBidDetailsV6 } from "@/orderbook/orders";
@@ -18,7 +18,7 @@ import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
 import * as nftx from "@/orderbook/orders/nftx";
 import { getCurrency } from "@/utils/currencies";
-import { getNFTPermitId, getNFTPermit, saveNFTPermit } from "@/utils/permits";
+import { getPermitId, getPermit, savePermit } from "@/utils/permits/nft";
 import { tryGetTokensSuspiciousStatus } from "@/utils/opensea";
 
 const version = "v7";
@@ -622,21 +622,26 @@ export const getExecuteSellV7Options: RouteOptions = {
       const permitHandler = new SeaportPermit.Handler(config.chainId, baseProvider);
       if (permits.length) {
         for (const permit of permits) {
-          const id = getNFTPermitId(request.payload as object, permit.tokens);
+          const id = getPermitId(request.payload as object, permit.tokens);
 
-          let cachedPermit = await getNFTPermit(id);
+          let cachedPermit = await getPermit(id);
           if (cachedPermit) {
+            // Always use the cached permit details
+            permit.details = cachedPermit.details;
+
             // If the cached permit has a signature attached to it, we can skip it
-            const hasSignature = (cachedPermit.details.data as SeaportPermit.Data).order.signature;
+            const hasSignature = (permit.details.data as SeaportPermit.Data).order.signature;
             if (hasSignature) {
               continue;
             }
-
-            // Otherwise, let's make sure to use the cached permit details
-            permit.details = cachedPermit.details;
           } else {
             // Cache the permit if it's the first time we encounter it
-            await saveNFTPermit(id, permit);
+            await savePermit(
+              id,
+              permit,
+              // Give a 1 minute buffer for the permit to expire
+              (permit.details.data as SeaportPermit.Data).order.endTime - now() - 60
+            );
             cachedPermit = permit;
           }
 
@@ -645,9 +650,10 @@ export const getExecuteSellV7Options: RouteOptions = {
             data: {
               sign: permitHandler.getSignatureData(cachedPermit.details.data),
               post: {
-                endpoint: "/permits/v1",
+                endpoint: "/execute/permit-signature/v1",
                 method: "POST",
                 body: {
+                  kind: "nft-permit",
                   id,
                 },
               },
