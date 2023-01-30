@@ -4,7 +4,7 @@ import { Queue, QueueScheduler, Worker } from "bullmq";
 
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
-import {redis, redlock} from "@/common/redis";
+import { redis, redlock } from "@/common/redis";
 import { config } from "@/config/index";
 import { randomUUID } from "crypto";
 
