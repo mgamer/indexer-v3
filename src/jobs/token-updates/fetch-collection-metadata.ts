@@ -95,7 +95,7 @@ if (config.doBackgroundWork) {
         });
 
         let tokenFilter = `AND "token_id" <@ ${tokenIdRangeParam}`;
-        if (_.isNull(tokenIdRange)) {
+        if (newCollection || _.isNull(tokenIdRange)) {
           tokenFilter = `AND "token_id" = $/tokenId/`;
         }
 
