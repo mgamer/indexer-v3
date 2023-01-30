@@ -81,8 +81,7 @@ if (config.doBackgroundWork) {
           await idb.none(
             `
               UPDATE tokens SET
-                last_flag_update = now(),
-                last_flag_change = now()
+                last_flag_update = now()
               WHERE tokens.contract = $/contract/
                 AND tokens.token_id = $/tokenId/
             `,
