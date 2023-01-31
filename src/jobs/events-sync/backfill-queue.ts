@@ -50,10 +50,6 @@ if (config.doBackgroundWork && config.doEventsSyncBackfill) {
         return;
       }
 
-      if (config.chainId === 137 && fromBlock > 38433363 && fromBlock < 38714804) {
-        return;
-      }
-
       backfill = config.chainId === 137 ? true : backfill;
 
       try {
