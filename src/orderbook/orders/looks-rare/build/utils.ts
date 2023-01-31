@@ -4,7 +4,6 @@ import { BaseBuildParams } from "@reservoir0x/sdk/dist/looks-rare/builders/base"
 import { redb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import { getMinNonce, isNonceCancelled } from "@/orderbook/orders/common/helpers";
 
 export interface BaseOrderBuildOptions {
   maker: string;
@@ -49,19 +48,6 @@ export const getBuildInfo = async (
     price: options.weiPrice,
     // LooksRare uses WETH instead of ETH for sell orders too
     currency: Sdk.Common.Addresses.Weth[config.chainId],
-    nonce: await getMinNonce("looks-rare", options.maker).then(async (nonce) => {
-      nonce = nonce.add(1);
-
-      for (let i = 0; i < 100; i++) {
-        if (!(await isNonceCancelled("looks-rare", options.maker, nonce.toString()))) {
-          break;
-        } else {
-          nonce = nonce.add(1);
-        }
-      }
-
-      return nonce.toString();
-    }),
     startTime: options.listingTime,
     endTime: options.expirationTime,
   };
