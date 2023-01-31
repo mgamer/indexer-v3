@@ -1,5 +1,6 @@
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuildParams } from "@reservoir0x/sdk/dist/looks-rare/builders/base";
+import axios from "axios";
 
 import { redb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
@@ -48,6 +49,25 @@ export const getBuildInfo = async (
     price: options.weiPrice,
     // LooksRare uses WETH instead of ETH for sell orders too
     currency: Sdk.Common.Addresses.Weth[config.chainId],
+    // TODO: We should only use LooksRare's nonce when cross-posting to their orderbook
+    nonce: await axios
+      .get(
+        `https://${
+          config.chainId === 5 ? "api-goerli." : "api."
+        }looksrare.org/api/v1/orders/nonce?address=${options.maker}`,
+        {
+          headers:
+            config.chainId === 1
+              ? {
+                  "Content-Type": "application/json",
+                  "X-Looks-Api-Key": config.looksRareApiKey,
+                }
+              : {
+                  "Content-Type": "application/json",
+                },
+        }
+      )
+      .then(({ data }: { data: { data: string } }) => data.data),
     startTime: options.listingTime,
     endTime: options.expirationTime,
   };
