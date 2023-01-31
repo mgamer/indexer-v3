@@ -28,10 +28,10 @@ if (config.doBackgroundWork) {
       const limit = 100;
       try {
         const query = `
-          UPDATE tokens t
-          SET t.last_flag_change = t.last_flag_update
-          WHERE (t.contract, t.token_id) IN (SELECT t.contract, t.token_id FROM tokens t where t.last_flag_change IS NULL LIMIT ${limit});
-          `;
+          UPDATE tokens
+          SET last_flag_change = last_flag_update
+          WHERE (contract, token_id) IN (SELECT t.contract, t.token_id FROM tokens t WHERE t.last_flag_change IS NULL AND t.last_flag_update IS NOT NULL ${limit});
+        `;
         const { rowCount } = await idb.result(query);
         if (rowCount >= limit) {
           logger.info(QUEUE_NAME, `Triggering next job.`);
