@@ -541,6 +541,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/events/bids/v3",
+    options: eventsEndpoints.getBidEventsV3Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/events/collections/top-bid/v1",
     options: eventsEndpoints.getCollectionsTopBidV1Options,
   });
@@ -671,6 +677,18 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/execute/sell/v6",
     options: executeEndpoints.getExecuteSellV6Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/execute/sell/v7",
+    options: executeEndpoints.getExecuteSellV7Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/execute/permit-signature/v1",
+    options: executeEndpoints.postPermitSignatureV1Options,
   });
 
   // Health

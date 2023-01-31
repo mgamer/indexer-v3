@@ -1,9 +1,8 @@
-import { idb } from "@/common/db";
+import { redb } from "@/common/db";
 import * as Pusher from "pusher";
 import { fromBuffer, now } from "@/common/utils";
 import { Orders } from "@/utils/orders";
 import _ from "lodash";
-import { BatchEvent } from "pusher";
 import { config } from "@/config/index";
 import { redis } from "@/common/redis";
 import { logger } from "@/common/logger";
@@ -14,7 +13,7 @@ export class NewTopBidWebsocketEvent {
   public static async triggerEvent(data: NewTopBidWebsocketEventInfo) {
     const criteriaBuildQuery = Orders.buildCriteriaQuery("orders", "token_set_id", false);
 
-    const order = await idb.oneOrNone(
+    const order = await redb.oneOrNone(
       `
               SELECT
                 orders.id,
@@ -53,11 +52,8 @@ export class NewTopBidWebsocketEvent {
     }
 
     const payloads = [];
-
     const owners = await NewTopBidWebsocketEvent.getOwners(order.token_set_id);
-
     const ownersChunks = _.chunk(owners, Number(config.websocketServerEventMaxSizeInKb) * 20);
-
     const source = (await Sources.getInstance()).get(Number(order.source_id_int));
 
     for (const ownersChunk of ownersChunks) {
@@ -112,29 +108,27 @@ export class NewTopBidWebsocketEvent {
       key: config.websocketServerAppKey,
       secret: config.websocketServerAppSecret,
       host: config.websocketServerHost,
+      useTLS: true,
     });
 
-    const payloadsBatches = _.chunk(payloads, Number(config.websocketServerEventMaxBatchSize));
+    if (payloads.length > 1) {
+      const payloadsBatches = _.chunk(payloads, Number(config.websocketServerEventMaxBatchSize));
 
-    for (const payloadsBatch of payloadsBatches) {
-      const timeStart = performance.now();
-
-      const events: BatchEvent[] = payloadsBatch.map((payload) => {
-        return {
-          channel: "top-bids",
-          name: "new-top-bid",
-          data: JSON.stringify(payload),
-        };
-      });
-
-      await server.triggerBatch(events);
-
-      const timeElapsed = Math.floor((performance.now() - timeStart) / 1000);
-
-      logger.info(
-        "new-top-bid-websocket-event",
-        `Debug triggerBatch. orderId=${data.orderId}, tokenSetId=${order.token_set_id}, owners=${owners.length}, payloads=${payloads.length}, payloadsBatches=${payloadsBatches.length},timeElapsed=${timeElapsed}`
+      await Promise.all(
+        payloadsBatches.map((payloadsBatch) =>
+          server.triggerBatch(
+            payloadsBatch.map((payload) => {
+              return {
+                channel: "top-bids",
+                name: "new-top-bid",
+                data: JSON.stringify(payload),
+              };
+            })
+          )
+        )
       );
+    } else {
+      await server.trigger("top-bids", "new-top-bid", JSON.stringify(payloads[0]));
     }
   }
 
@@ -149,7 +143,7 @@ export class NewTopBidWebsocketEvent {
 
     if (!owners) {
       owners = (
-        await idb.manyOrNone(
+        await redb.manyOrNone(
           `
                 SELECT
                   DISTINCT nb.owner

@@ -7,8 +7,14 @@ import {
   NewTopBidWebsocketEventInfo,
   NewTopBidWebsocketEvent,
 } from "@/jobs/websocket-events/events/new-top-bid-websocket-event";
+import {
+  NewActivityWebsocketEvent,
+  NewActivityWebsocketEventInfo,
+} from "@/jobs/websocket-events/events/new-activity-websocket-event";
+
 import { randomUUID } from "crypto";
 import _ from "lodash";
+import tracer from "@/common/tracer";
 
 const QUEUE_NAME = "websocket-events-trigger-queue";
 
@@ -32,11 +38,22 @@ if (config.doBackgroundWork) {
 
       switch (kind) {
         case EventKind.NewTopBid:
-          await NewTopBidWebsocketEvent.triggerEvent(data);
+          await tracer.trace(
+            "triggerEvent",
+            { resource: "NewTopBidWebsocketEvent", tags: { event: data } },
+            () => NewTopBidWebsocketEvent.triggerEvent(data)
+          );
+          break;
+        case EventKind.NewActivity:
+          await tracer.trace(
+            "triggerEvent",
+            { resource: "NewActivityWebsocketEvent", tags: { event: data } },
+            () => NewActivityWebsocketEvent.triggerEvent(data)
+          );
           break;
       }
     },
-    { connection: redis.duplicate(), concurrency: 5 }
+    { connection: redis.duplicate(), concurrency: 20 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
@@ -45,12 +62,18 @@ if (config.doBackgroundWork) {
 
 export enum EventKind {
   NewTopBid = "new-top-bid",
+  NewActivity = "new-activity",
 }
 
-export type EventInfo = {
-  kind: EventKind.NewTopBid;
-  data: NewTopBidWebsocketEventInfo;
-};
+export type EventInfo =
+  | {
+      kind: EventKind.NewTopBid;
+      data: NewTopBidWebsocketEventInfo;
+    }
+  | {
+      kind: EventKind.NewActivity;
+      data: NewActivityWebsocketEventInfo;
+    };
 
 export const addToQueue = async (events: EventInfo[]) => {
   await queue.addBulk(

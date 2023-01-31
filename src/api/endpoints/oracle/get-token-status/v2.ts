@@ -3,15 +3,15 @@ import { arrayify } from "@ethersproject/bytes";
 import { _TypedDataEncoder } from "@ethersproject/hash";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
-import axios from "axios";
 import Joi from "joi";
 
-import { edb, pgp } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { Signers, addressToSigner } from "@/common/signers";
-import { fromBuffer, regex, toBuffer } from "@/common/utils";
+import { fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { tryGetTokensSuspiciousStatus } from "@/utils/opensea";
 
 const version = "v2";
 
@@ -72,91 +72,61 @@ export const getTokenStatusOracleV2Options: RouteOptions = {
       // Make sure each token is unique
       tokens = [...new Set(tokens).keys()];
 
-      // Try making a synchronous request to OpenSea to get the most up-to-date flagged status
-      const tokenToSuspicious = new Map<string, boolean>();
-      const callOpensea = (async () => {
-        if (tokens.length <= 30) {
-          const searchParams = new URLSearchParams();
-          tokens.forEach((t) => {
-            const [contract, tokenId] = t.split(":");
-            searchParams.append("asset_contract_addresses", contract);
-            searchParams.append("token_ids", tokenId);
-          });
-
-          await axios
-            .get(
-              `https://${
-                config.chainId === 5 ? "testnets-api" : "api"
-              }.opensea.io/api/v1/assets?${searchParams.toString()}`,
-              {
-                headers: {
-                  "Content-Type": "application/json",
-                  "X-Api-Key": config.openSeaApiKey,
-                },
-              }
-            )
-            .then((response) => {
-              for (const asset of response.data.assets) {
-                const contract = asset.asset_contract.address;
-                const tokenId = asset.token_id;
-
-                tokenToSuspicious.set(
-                  `${contract.toLowerCase()}:${tokenId}`,
-                  !asset.supports_wyvern
-                );
-              }
-            })
-            .catch(() => {
-              // Skip errors
-            });
-        }
-      })();
-
       // Fetch details for all tokens
-      const results = await edb.manyOrNone(
+      const results = await idb.manyOrNone(
         `
           SELECT
-            t.contract::BYTEA,
-            t.token_id::NUMERIC(78, 0),
-            COALESCE(
-              (
-                SELECT
-                  CASE
-                    WHEN tokens.is_flagged = 1 THEN true
-                    ELSE false
-                  END
-                FROM tokens
-                WHERE tokens.contract = t.contract::BYTEA
-                  AND tokens.token_id = t.token_id::NUMERIC(78, 0)
-              ),
-              false
-            ) AS is_flagged,
-            COALESCE(
+            tokens.contract,
+            tokens.token_id,
+            (CASE
+              WHEN tokens.is_flagged = 1 THEN true
+              ELSE false
+            END) AS is_flagged,
+            coalesce(extract('epoch' from tokens.last_flag_update), 0) AS last_flag_update,
+            coalesce(
               (
                 SELECT
                   nft_transfer_events.timestamp
                 FROM nft_transfer_events
-                WHERE nft_transfer_events.address = t.contract::BYTEA
-                  AND nft_transfer_events.token_id = t.token_id::NUMERIC(78, 0)
+                WHERE nft_transfer_events.address = tokens.contract
+                  AND nft_transfer_events.token_id = tokens.token_id
                 ORDER BY nft_transfer_events.timestamp DESC
                 LIMIT 1
               ),
               0
             ) AS last_transfer_time
-          FROM (
-            VALUES ${pgp.helpers.values(
-              tokens.map((t) => ({
-                contract: toBuffer(t.split(":")[0]),
-                token_id: t.split(":")[1],
-              })),
-              ["contract", "token_id"]
-            )}
-          ) t(contract, token_id)
+          FROM tokens
+          WHERE (tokens.contract, tokens.token_id) IN (${pgp.helpers.values(
+            tokens.map((t) => ({
+              contract: toBuffer(t.split(":")[0]),
+              token_id: t.split(":")[1],
+            })),
+            ["contract", "token_id"]
+          )})
         `
       );
 
-      // Give at most 5 seconds to the OpenSea call to complete
-      await Promise.race([callOpensea, new Promise((resolve) => setTimeout(resolve, 5000))]);
+      const tokenToSuspicious = await tryGetTokensSuspiciousStatus(
+        results
+          .filter(({ last_flag_update }) => last_flag_update < now() - 3600)
+          .map(({ contract, token_id }) => `${fromBuffer(contract)}:${token_id}`)
+      );
+
+      // Set default values for any tokens which don't exist
+      const availableTokens = new Set<string>();
+      results.forEach(({ contract, token_id }) =>
+        availableTokens.add(`${fromBuffer(contract)}:${token_id}`)
+      );
+      for (const token of tokens) {
+        if (!availableTokens.has(token)) {
+          results.push({
+            contract: toBuffer(token.split(":")[0]),
+            token_id: token.split(":")[1],
+            is_flagged: false,
+            last_transfer_time: 0,
+          });
+        }
+      }
 
       // Use the timestamp of the latest available block as the message timestamp
       const timestamp = await baseProvider.getBlock("latest").then((b) => b.timestamp);
