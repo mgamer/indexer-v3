@@ -1,5 +1,0 @@
--- Up Migration
-
-DROP index tokens_collection_id_source_id_floor_sell_value_index, token_normalized_floor_sell_events_contract_token_id_created_at, collections_normalized_floor_sell_value_index, collections_non_flagged_floor_sell_value_index, user_activities_bid_no_collection_index, activities_bid_no_collection_index, orders_offer_bundle_id_index, orders_consideration_bundle_id_index, bundle_items_token_set_id_bundle_id_index;
-
--- Down Migration
