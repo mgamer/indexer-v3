@@ -150,6 +150,69 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         break;
       }
+
+      case "superrare-accept-offer": {
+        const { args } = eventData.abi.parseLog(log);
+        const contract = args["_originContract"].toLowerCase();
+        const maker = args["_bidder"].toLowerCase();
+        const taker = args["_seller"].toLowerCase();
+        const currency = args["_currencyAddress"].toLowerCase();
+        const currencyPrice = args["_amount"].toString();
+        const tokenId = args["_tokenId"].toString();
+
+        // Superrare works only with ERC721
+        const amount = "1";
+        const orderSide = "buy";
+
+        const priceData = await getUSDAndNativePrices(
+          currency,
+          currencyPrice.toString(),
+          baseEventParams.timestamp
+        );
+
+        if (!priceData.nativePrice) {
+          // We must always have the native price
+          break;
+        }
+
+        const orderKind = "superrare";
+        const attributionData = await utils.extractAttributionData(
+          baseEventParams.txHash,
+          orderKind
+        );
+
+        onChainData.fillEvents.push({
+          orderKind,
+          currency,
+          orderSide,
+          maker,
+          taker,
+          price: priceData.nativePrice,
+          currencyPrice,
+          usdPrice: priceData.usdPrice,
+          contract,
+          tokenId,
+          amount,
+          orderSourceId: attributionData.orderSource?.id,
+          aggregatorSourceId: attributionData.aggregatorSource?.id,
+          fillSourceId: attributionData.fillSource?.id,
+          baseEventParams,
+        });
+
+        onChainData.fillInfos.push({
+          context: `superrare-${contract}-${tokenId}-${baseEventParams.txHash}`,
+          orderSide,
+          contract,
+          tokenId,
+          amount,
+          price: priceData.nativePrice,
+          timestamp: baseEventParams.timestamp,
+          maker,
+          taker,
+        });
+
+        break;
+      }
     }
   }
 };

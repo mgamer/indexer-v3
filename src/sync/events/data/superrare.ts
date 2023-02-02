@@ -38,3 +38,23 @@ export const listingSold: EventData = {
     )`,
   ]),
 };
+
+export const offerAccept: EventData = {
+  kind: "superrare",
+  subKind: "superrare-accept-offer",
+  addresses: { [SuperRare.Addresses.Bazaar[config.chainId]?.toLowerCase()]: true },
+  topic: "0x97c3d2068ce177bc33d84acecc45eededcf298c4a9d4340ae03d4afbb3993f7b",
+  numTopics: 4,
+  abi: new Interface([
+    `event AcceptOffer(
+      address indexed _originContract,
+      address indexed _bidder,
+      address indexed _seller,
+      address _currencyAddress,
+      uint256 _amount,
+      uint256 _tokenId,
+      address[] _splitAddresses,
+      uint8[] _splitRatios
+    )`,
+  ]),
+};

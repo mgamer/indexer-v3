@@ -171,7 +171,8 @@ export type EventSubKind =
   | "bend-dao-taker-ask"
   | "bend-dao-taker-bid"
   | "superrare-listing-filled"
-  | "superrare-sold";
+  | "superrare-sold"
+  | "superrare-accept-offer";
 
 export type EventData = {
   kind: EventKind;
@@ -283,6 +284,7 @@ const allEventData = [
   bendDao.takerBid,
   superrare.listingFilled,
   superrare.listingSold,
+  superrare.offerAccept,
 ];
 
 export const getEventData = (events?: string[]) => {
