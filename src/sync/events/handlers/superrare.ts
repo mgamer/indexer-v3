@@ -88,7 +88,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         break;
       }
 
-      case "superrare-bid-filled": {
+      case "superrare-sold": {
         const { args } = eventData.abi.parseLog(log);
         const contract = args["_originContract"].toLowerCase();
         const maker = args["_buyer"].toLowerCase();
@@ -99,7 +99,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         // Superrare works only with ERC721
         const amount = "1";
-        const orderSide = "buy";
+        const orderSide = "sell";
 
         const priceData = await getUSDAndNativePrices(
           currency,

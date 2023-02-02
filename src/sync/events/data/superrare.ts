@@ -21,9 +21,9 @@ export const listingFilled: EventData = {
   ]),
 };
 
-export const bidFilled: EventData = {
+export const listingSold: EventData = {
   kind: "superrare",
-  subKind: "superrare-bid-filled",
+  subKind: "superrare-sold",
   addresses: { [SuperRare.Addresses.Bazaar[config.chainId]?.toLowerCase()]: true },
   topic: "0x6f9e7bc841408072f4a49e469f90e1a634b85251803662bc8e5c220b28782472",
   numTopics: 4,
