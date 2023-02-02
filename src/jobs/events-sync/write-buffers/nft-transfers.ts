@@ -48,7 +48,7 @@ if (config.doBackgroundWork && config.railwayStaticUrl) {
     },
     {
       connection: redis.duplicate(),
-      concurrency: 10,
+      concurrency: 20,
     }
   );
 
