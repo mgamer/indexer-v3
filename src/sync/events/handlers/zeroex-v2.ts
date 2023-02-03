@@ -15,8 +15,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
     switch (subKind) {
       case "zeroex-v2-fill": {
         const { args } = eventData.abi.parseLog(log);
-        const maker = args["makerAddress"];
-        const taker = args["takerAddress"];
+        const maker = args["makerAddress"].toLowerCase();
+        const taker = args["takerAddress"].toLowerCase();
         let transferredTokensCounter = 0;
         let amount = "";
         let tokenContract = "";
