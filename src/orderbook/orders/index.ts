@@ -64,7 +64,8 @@ export type OrderKind =
   | "nft-trader"
   | "okex"
   | "bend-dao"
-  | "superrare";
+  | "superrare"
+  | "zeroex-v2";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -163,6 +164,8 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("benddao.xyz");
       case "superrare":
         return sources.getOrInsert("superrare.com");
+      case "zeroex-v2":
+        return sources.getOrInsert("0x.org");
 
       case "mint": {
         if (address && mintsSources.has(address)) {
