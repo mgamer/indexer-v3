@@ -58,3 +58,21 @@ export const offerAccept: EventData = {
     )`,
   ]),
 };
+
+export const auctionSettled: EventData = {
+  kind: "superrare",
+  subKind: "superrare-auction-settled",
+  addresses: { [SuperRare.Addresses.Bazaar[config.chainId]?.toLowerCase()]: true },
+  topic: "0xef4e2262a841641690bb931801dc0d1923e6b417cd217f91f8049d8aa9f5f086",
+  numTopics: 4,
+  abi: new Interface([
+    `event AuctionSettled(
+      address indexed _contractAddress,
+      address indexed _bidder,
+      address _seller,
+      uint256 indexed _tokenId,
+      address _currencyAddress,
+      uint256 _amount
+    )`,
+  ]),
+};
