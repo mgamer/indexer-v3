@@ -83,5 +83,6 @@ if (config.doBackgroundWork) {
 }
 
 export const addToQueue = async () => {
+  await queue.clean(0, 100, "failed");
   await queue.add(randomUUID(), {}, { jobId: QUEUE_NAME });
 };
