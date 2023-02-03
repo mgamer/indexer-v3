@@ -164,8 +164,6 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("benddao.xyz");
       case "superrare":
         return sources.getOrInsert("superrare.com");
-      case "zeroex-v2":
-        return sources.getOrInsert("0x.org");
 
       case "mint": {
         if (address && mintsSources.has(address)) {
