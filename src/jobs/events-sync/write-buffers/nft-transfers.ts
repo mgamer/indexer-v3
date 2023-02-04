@@ -48,7 +48,7 @@ if (config.doBackgroundWork && (config.chainId === 137 ? config.doEventsSyncBack
     },
     {
       connection: redis.duplicate(),
-      concurrency: 10,
+      concurrency: 15,
     }
   );
 
