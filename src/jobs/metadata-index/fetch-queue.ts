@@ -10,8 +10,9 @@ import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { PendingRefreshTokens, RefreshTokens } from "@/models/pending-refresh-tokens";
 import * as metadataIndexProcess from "@/jobs/metadata-index/process-queue";
+import * as metadataIndexProcessBySlug from "@/jobs/metadata-index/process-queue-by-slug";
 
-const QUEUE_NAME = "metadata-index-fetch-queue";
+export const QUEUE_NAME = "metadata-index-fetch-queue";
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
@@ -82,6 +83,13 @@ if (config.doBackgroundWork) {
           contract: data.contract,
           tokenId: data.tokenId,
         });
+      } else if (kind === "full-collection-by-slug") {
+        await metadataIndexProcessBySlug.addToQueue({
+          collection: data.collection,
+          slug: data.slug,
+          continuation: data.collection,
+          method: data.method,
+        });
       }
 
       // Add the tokens to the list
@@ -146,6 +154,15 @@ export type MetadataIndexInfo =
         method: string;
         collection: string;
         continuation?: string;
+      };
+    }
+  | {
+      kind: "full-collection-by-slug";
+      data: {
+        method: string;
+        collection: string;
+        continuation?: string;
+        slug?: string;
       };
     }
   | {

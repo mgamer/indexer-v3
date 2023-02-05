@@ -9,6 +9,23 @@ import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import { getNetworkName } from "@/config/network";
 
+interface TokenMetadata {
+  contract: string;
+  tokenId: string;
+  collection: string;
+  flagged: boolean;
+  name?: string;
+  description?: string;
+  imageUrl?: string;
+  mediaUrl?: string;
+  attributes: {
+    key: string;
+    value: string;
+    kind: "string" | "number" | "date" | "range";
+    rank?: number;
+  }[];
+}
+
 export class MetadataApi {
   public static async getCollectionMetadata(
     contract: string,
@@ -90,24 +107,37 @@ export class MetadataApi {
 
     const { data } = await axios.get(url);
 
-    const tokenMetadata: {
-      contract: string;
-      tokenId: string;
-      collection: string;
-      flagged: boolean;
-      name?: string;
-      description?: string;
-      imageUrl?: string;
-      mediaUrl?: string;
-      attributes: {
-        key: string;
-        value: string;
-        kind: "string" | "number" | "date" | "range";
-        rank?: number;
-      }[];
-    }[] = (data as any).metadata;
+    const tokenMetadata: TokenMetadata[] = (data as any).metadata;
 
     return tokenMetadata;
+  }
+
+  public static async getTokensMetadataBySlug(
+    collectionId: string,
+    slug: string,
+    method = "",
+    continuation?: string
+  ): Promise<{
+    metadata: TokenMetadata[];
+    continuation?: string;
+    previous: string;
+  }> {
+    const queryParams = new URLSearchParams();
+    queryParams.append("collectionSlug", `${collectionId}:${slug}`);
+    if (continuation) {
+      queryParams.append("continuation", continuation);
+    }
+    method = method === "" ? config.metadataIndexingMethod : method;
+
+    const url = `${
+      config.metadataApiBaseUrl
+    }/v4/${getNetworkName()}/metadata/token?method=${method}&${queryParams.toString()}`;
+
+    const { data } = await axios.get(url);
+
+    const metadata: TokenMetadata[] = (data as any).metadata;
+
+    return { metadata, continuation: data.continuation, previous: data.previous };
   }
 
   public static getCollectionIndexingMethod(community: string | null) {

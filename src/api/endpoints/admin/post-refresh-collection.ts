@@ -105,15 +105,25 @@ export const postRefreshCollectionOptions: RouteOptions = {
         }
 
         // Refresh the collection tokens metadata
+        const method = metadataIndexFetch.getIndexingMethod(collection.community);
         await metadataIndexFetch.addToQueue(
           [
-            {
-              kind: "full-collection",
-              data: {
-                method: metadataIndexFetch.getIndexingMethod(collection.community),
-                collection: collection.id,
-              },
-            },
+            method === "opensea"
+              ? {
+                  kind: "full-collection-by-slug",
+                  data: {
+                    method,
+                    collection: collection.id,
+                    slug: collection.slug,
+                  },
+                }
+              : {
+                  kind: "full-collection",
+                  data: {
+                    method,
+                    collection: collection.id,
+                  },
+                },
           ],
           true
         );
