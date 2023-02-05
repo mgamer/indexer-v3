@@ -37,33 +37,9 @@ if (config.doBackgroundWork) {
       if (method !== "opensea") {
         return;
       }
-      if (!slug) {
-        logger.warn(
-          QUEUE_NAME,
-          `Method=${method}. Slug is empty, pushing message to the following queues: ${metadataIndexFetch.QUEUE_NAME}, ${collectionUpdatesMetadata.QUEUE_NAME}`
-        );
-        await Promise.all([
-          metadataIndexFetch.addToQueue(
-            [
-              {
-                kind: "full-collection",
-                data: {
-                  method,
-                  collection,
-                },
-              },
-            ],
-            true
-          ),
-          collectionUpdatesMetadata.addToQueue(collection, "1", method, 0),
-        ]);
-        return;
-      }
-
-      const metadata = [];
 
       let rateLimitExpiredIn = 0;
-
+      const metadata = [];
       try {
         const results = await MetadataApi.getTokensMetadataBySlug(
           collection,
@@ -72,28 +48,28 @@ if (config.doBackgroundWork) {
           continuation
         );
         metadata.push(...results.metadata);
-        // if (metadata.length === 0) {
-        // logger.warn(
-        //     QUEUE_NAME,
-        //     `Method=${method}. Metadata list is empty, pushing message to the following queues: ${metadataIndexFetch.QUEUE_NAME}, ${collectionUpdatesMetadata.QUEUE_NAME}`
-        // );
-        //   await Promise.all([
-        //     metadataIndexFetch.addToQueue(
-        //       [
-        //         {
-        //           kind: "full-collection",
-        //           data: {
-        //             method,
-        //             collection,
-        //           },
-        //         },
-        //       ],
-        //       true
-        //     ),
-        //     collectionUpdatesMetadata.addToQueue(collection, "1", method, 0),
-        //   ]);
-        //   return;
-        // }
+        if (metadata.length === 0) {
+          logger.warn(
+            QUEUE_NAME,
+            `Method=${method}. Metadata list is empty, pushing message to the following queues: ${metadataIndexFetch.QUEUE_NAME}, ${collectionUpdatesMetadata.QUEUE_NAME}`
+          );
+          await Promise.all([
+            metadataIndexFetch.addToQueue(
+              [
+                {
+                  kind: "full-collection",
+                  data: {
+                    method,
+                    collection,
+                  },
+                },
+              ],
+              true
+            ),
+            collectionUpdatesMetadata.addToQueue(collection, "1", method, 0),
+          ]);
+          return;
+        }
         if (results.continuation) {
           await addToQueue({
             collection,
