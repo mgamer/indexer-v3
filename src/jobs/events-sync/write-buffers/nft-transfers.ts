@@ -25,7 +25,7 @@ export const queue = new Queue(QUEUE_NAME, {
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
 // BACKGROUND WORKER ONLY
-if (config.doBackgroundWork && (config.chainId === 137 ? config.doEventsSyncBackfill : true)) {
+if (config.doBackgroundWork && (config.chainId === 137 ? config.doNftTransfersWrite : true)) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
@@ -48,7 +48,7 @@ if (config.doBackgroundWork && (config.chainId === 137 ? config.doEventsSyncBack
     },
     {
       connection: redis.duplicate(),
-      concurrency: 15,
+      concurrency: 20,
     }
   );
 
