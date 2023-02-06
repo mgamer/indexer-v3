@@ -116,13 +116,10 @@ export const postRefreshCollectionOptions: RouteOptions = {
               kind: "full-collection-by-slug",
               data: {
                 method,
-                collection: collection.id,
+                collection: collection.contract,
                 slug: collection.slug,
               },
             };
-          } else {
-            // refresh collection metadata if slug is empty
-            await collectionUpdatesMetadata.addToQueue(collection.id, "1", method, 0);
           }
         }
 

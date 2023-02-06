@@ -10,6 +10,8 @@ import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
 import MetadataApi from "@/utils/metadata-api";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
+import _ from "lodash";
+import { PendingRefreshTokensBySlug } from "@/models/pending-refresh-tokens-by-slug";
 
 const QUEUE_NAME = "metadata-index-process-queue-by-slug";
 
@@ -33,87 +35,112 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { method, slug, collection, continuation } = job.data;
-      if (method !== "opensea") {
+      const { method } = job.data;
+      const count = 20; // Default number of tokens to fetch
+      let retry = false;
+
+      const countTotal =
+        method === "opensea" ? config.maxParallelTokenCollectionSlugRefreshJobs * count : count;
+
+      // Get the collection slugs from the list
+      const pendingRefreshTokensBySlug = new PendingRefreshTokensBySlug(method);
+      const refreshTokensBySlug = await pendingRefreshTokensBySlug.get(countTotal);
+
+      // If no more collection slugs, release lock
+      if (_.isEmpty(refreshTokensBySlug)) {
+        await releaseLock(getLockName(method));
+
         return;
       }
-
       let rateLimitExpiredIn = 0;
-      const metadata = [];
-      try {
-        const results = await MetadataApi.getTokensMetadataBySlug(
-          collection,
-          slug,
-          method,
-          continuation
-        );
-        metadata.push(...results.metadata);
-        if (metadata.length === 0) {
-          logger.warn(
-            QUEUE_NAME,
-            `Method=${method}. Metadata list is empty, pushing message to the following queues: ${metadataIndexFetch.QUEUE_NAME}, ${collectionUpdatesMetadata.QUEUE_NAME}`
-          );
-          await Promise.all([
-            metadataIndexFetch.addToQueue(
-              [
+      const metadata: any[] = [];
+      await Promise.all(
+        refreshTokensBySlug.map(async (refreshTokenBySlug) => {
+          try {
+            const results = await MetadataApi.getTokensMetadataBySlug(
+              refreshTokenBySlug.contract,
+              refreshTokenBySlug.slug,
+              method,
+              refreshTokenBySlug.continuation
+            );
+            if (results.continuation) {
+              retry = true;
+              await pendingRefreshTokensBySlug.add(
                 {
-                  kind: "full-collection",
-                  data: {
-                    method,
-                    collection,
-                  },
+                  slug: refreshTokenBySlug.slug,
+                  contract: refreshTokenBySlug.contract,
+                  continuation: results.continuation,
                 },
-              ],
-              true
-            ),
-            collectionUpdatesMetadata.addToQueue(collection, "1", method, 0),
-          ]);
-          return;
-        }
-        if (results.continuation) {
-          await addToQueue({
-            collection,
-            slug,
-            method,
-            continuation: results.continuation,
-          });
-        }
-      } catch (error: any) {
-        if (error.response?.status === 429) {
-          logger.warn(
-            QUEUE_NAME,
-            `Too Many Requests. method=${method}, error=${JSON.stringify(error.response.data)}`
-          );
+                true
+              );
+            }
+            if (results.metadata.length === 0) {
+              logger.warn(
+                QUEUE_NAME,
+                `Method=${method}. Metadata list is empty, pushing message to the following queues: ${metadataIndexFetch.QUEUE_NAME}, ${collectionUpdatesMetadata.QUEUE_NAME}`
+              );
+              await Promise.all([
+                metadataIndexFetch.addToQueue(
+                  [
+                    {
+                      kind: "full-collection",
+                      data: {
+                        method,
+                        collection: refreshTokenBySlug.contract,
+                      },
+                    },
+                  ],
+                  true
+                ),
+                collectionUpdatesMetadata.addToQueue(refreshTokenBySlug.contract, "1", method, 0),
+              ]);
+              return;
+            } else {
+              metadata.push(...results.metadata);
+            }
+          } catch (error: any) {
+            if (error.response?.status === 429) {
+              logger.warn(
+                QUEUE_NAME,
+                `Too Many Requests. method=${method}, error=${JSON.stringify(error.response.data)}`
+              );
 
-          rateLimitExpiredIn = Math.max(rateLimitExpiredIn, error.response.data.expires_in, 5);
-        } else if (error.response?.status === 400) {
-          logger.warn(
-            QUEUE_NAME,
-            `Validation error using slug, pushing message to queue ${
-              metadataIndexFetch.QUEUE_NAME
-            }. method=${method}, error=${JSON.stringify(error.response.data)}`
-          );
-          await metadataIndexFetch.addToQueue(
-            [
-              {
-                kind: "full-collection",
-                data: {
-                  method,
-                  collection,
-                },
-              },
-            ],
-            true
-          );
-        } else {
-          logger.error(
-            QUEUE_NAME,
-            `Error. method=${method}, status=${error.response?.status}, error=${JSON.stringify(
-              error.response.data
-            )}`
-          );
-        }
-      }
+              rateLimitExpiredIn = Math.max(rateLimitExpiredIn, error.response.data.expires_in, 5);
+
+              await pendingRefreshTokensBySlug.add(
+                refreshTokenBySlug,
+                !!refreshTokenBySlug.continuation
+              );
+            } else if (error.response.status === 400) {
+              await metadataIndexFetch.addToQueue(
+                [
+                  {
+                    kind: "full-collection",
+                    data: {
+                      method,
+                      collection: refreshTokenBySlug.contract,
+                    },
+                  },
+                ],
+                true
+              );
+            } else {
+              logger.error(
+                QUEUE_NAME,
+                `Error. method=${method}, error=${JSON.stringify(error.response.data)}`
+              );
+
+              if (error.response?.data.error === "Request failed with status code 403") {
+                await pendingRefreshTokensBySlug.add(
+                  refreshTokenBySlug,
+                  !!refreshTokenBySlug.continuation
+                );
+                retry = true;
+              }
+            }
+          }
+        })
+      );
 
       logger.info(
         QUEUE_NAME,
@@ -127,15 +154,11 @@ if (config.doBackgroundWork) {
       );
 
       // If there are potentially more tokens to process trigger another job
-      if (rateLimitExpiredIn) {
+      if (rateLimitExpiredIn || _.size(refreshTokensBySlug) == countTotal || retry) {
         if (await extendLock(getLockName(method), 60 * 5 + rateLimitExpiredIn)) {
           await addToQueue(
-            {
-              collection,
-              slug,
-              method,
-              continuation,
-            },
+            method,
+
             rateLimitExpiredIn * 1000
           );
         }
@@ -155,17 +178,11 @@ export const getLockName = (method: string) => {
   return `${QUEUE_NAME}:${method}`;
 };
 
-export const addToQueue = async (
-  data: { method: string; collection: string; continuation?: string; slug?: string },
-  delay = 0
-) => {
+export const addToQueue = async (method: string, delay = 0) => {
   await queue.add(
     randomUUID(),
     {
-      method: data.method,
-      collection: data.collection,
-      continuation: data.continuation,
-      slug: data.slug,
+      method,
     },
     { delay }
   );

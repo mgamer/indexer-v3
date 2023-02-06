@@ -11,6 +11,7 @@ import { config } from "@/config/index";
 import { PendingRefreshTokens, RefreshTokens } from "@/models/pending-refresh-tokens";
 import * as metadataIndexProcess from "@/jobs/metadata-index/process-queue";
 import * as metadataIndexProcessBySlug from "@/jobs/metadata-index/process-queue-by-slug";
+import { PendingRefreshTokensBySlug } from "@/models/pending-refresh-tokens-by-slug";
 
 export const QUEUE_NAME = "metadata-index-fetch-queue";
 
@@ -83,27 +84,40 @@ if (config.doBackgroundWork) {
           contract: data.contract,
           tokenId: data.tokenId,
         });
-      } else if (kind === "full-collection-by-slug") {
-        await metadataIndexProcessBySlug.addToQueue({
-          collection: data.collection,
-          slug: data.slug,
-          continuation: data.collection,
-          method: data.method,
-        });
       }
 
-      // Add the tokens to the list
-      const pendingRefreshTokens = new PendingRefreshTokens(data.method);
-      const pendingCount = await pendingRefreshTokens.add(refreshTokens, prioritized);
+      if (kind === "full-collection-by-slug") {
+        // Add the collections slugs to the list
+        const pendingRefreshTokensBySlug = new PendingRefreshTokensBySlug(data.method);
+        const pendingCount = await pendingRefreshTokensBySlug.add(
+          {
+            slug: data.slug,
+            contract: data.collection,
+          },
+          prioritized
+        );
 
-      logger.debug(
-        QUEUE_NAME,
-        `There are ${pendingCount} tokens pending to refresh for ${data.method}`
-      );
+        logger.debug(
+          QUEUE_NAME,
+          `There are ${pendingCount} collections slugs pending to refresh for ${data.method}`
+        );
+        if (await acquireLock(metadataIndexProcessBySlug.getLockName(data.method), 60 * 5)) {
+          await metadataIndexProcessBySlug.addToQueue(data.method);
+        }
+      } else {
+        // Add the tokens to the list
+        const pendingRefreshTokens = new PendingRefreshTokens(data.method);
+        const pendingCount = await pendingRefreshTokens.add(refreshTokens, prioritized);
 
-      if (await acquireLock(metadataIndexProcess.getLockName(data.method), 60 * 5)) {
-        // Trigger a job to process the queue
-        await metadataIndexProcess.addToQueue(data.method);
+        logger.debug(
+          QUEUE_NAME,
+          `There are ${pendingCount} tokens pending to refresh for ${data.method}`
+        );
+
+        if (await acquireLock(metadataIndexProcess.getLockName(data.method), 60 * 5)) {
+          // Trigger a job to process the queue
+          await metadataIndexProcess.addToQueue(data.method);
+        }
       }
     },
     { connection: redis.duplicate(), concurrency: 5 }
@@ -162,7 +176,7 @@ export type MetadataIndexInfo =
         method: string;
         collection: string;
         continuation?: string;
-        slug?: string;
+        slug: string;
       };
     }
   | {

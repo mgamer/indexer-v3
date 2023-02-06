@@ -26,6 +26,12 @@ interface TokenMetadata {
   }[];
 }
 
+export interface TokenMetadataBySlugResult {
+  metadata: TokenMetadata[];
+  continuation?: string;
+  previous: string;
+}
+
 export class MetadataApi {
   public static async getCollectionMetadata(
     contract: string,
@@ -113,17 +119,13 @@ export class MetadataApi {
   }
 
   public static async getTokensMetadataBySlug(
-    collectionId: string,
+    contract: string,
     slug: string,
     method = "",
     continuation?: string
-  ): Promise<{
-    metadata: TokenMetadata[];
-    continuation?: string;
-    previous: string;
-  }> {
+  ): Promise<TokenMetadataBySlugResult> {
     const queryParams = new URLSearchParams();
-    queryParams.append("collectionSlug", `${collectionId}:${slug}`);
+    queryParams.append("collectionSlug", `${contract}:${slug}`);
     if (continuation) {
       queryParams.append("continuation", continuation);
     }
