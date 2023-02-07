@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import { TxData } from "@reservoir0x/sdk/dist/utils";
@@ -882,36 +883,44 @@ export const getExecuteListV5Options: RouteOptions = {
         const exchange = new Sdk.SeaportV12.Exchange(config.chainId);
 
         const orders = bulkOrders["seaport-v1.2"];
-        const { signatureData, proofs } = exchange.getBulkSignatureDataWithProofs(
-          orders.map((o) => new Sdk.SeaportV12.Order(config.chainId, o.order.data))
-        );
+        if (orders.length) {
+          const { signatureData, proofs } = exchange.getBulkSignatureDataWithProofs(
+            orders.map((o) => new Sdk.SeaportV12.Order(config.chainId, o.order.data))
+          );
 
-        steps[1].items.push({
-          status: "incomplete",
-          data: {
-            sign: signatureData,
-            post: {
-              endpoint: "/order/v4",
-              method: "POST",
-              body: {
-                items: orders.map((o, i) => ({
-                  order: o.order,
-                  orderbook: o.orderbook,
-                  orderbookApiKey: o.orderbookApiKey,
-                  bulkData: {
-                    kind: "seaport-v1.2",
-                    data: {
-                      orderIndex: i,
-                      merkleProof: proofs[i],
+          steps[1].items.push({
+            status: "incomplete",
+            data: {
+              sign: signatureData,
+              post: {
+                endpoint: "/order/v4",
+                method: "POST",
+                body: {
+                  items: orders.map((o, i) => ({
+                    order: o.order,
+                    orderbook: o.orderbook,
+                    orderbookApiKey: o.orderbookApiKey,
+                    bulkData: {
+                      kind: "seaport-v1.2",
+                      data: {
+                        orderIndex: i,
+                        merkleProof: proofs[i],
+                      },
                     },
-                  },
-                })),
-                source,
+                  })),
+                  source,
+                },
               },
             },
-          },
-          orderIndexes: orders.map(({ orderIndex }) => orderIndex),
-        });
+            orderIndexes: orders.map(({ orderIndex }) => orderIndex),
+          });
+        }
+      }
+
+      if (!steps[1].items.length) {
+        const error = Boom.badRequest("No tokens can be listed");
+        error.output.payload.errors = errors;
+        throw error;
       }
 
       // De-duplicate step items
