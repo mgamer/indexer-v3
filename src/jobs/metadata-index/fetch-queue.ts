@@ -76,6 +76,13 @@ if (config.doBackgroundWork) {
           );
         }
       } else if (kind === "single-token") {
+        if (
+          config.chainId === 137 &&
+          data.collection === "0xaa1ec1efef105599f849b8f5df9b937e25a16e6b"
+        ) {
+          return;
+        }
+
         // Create the single token from the params
         refreshTokens.push({
           collection: data.collection,
