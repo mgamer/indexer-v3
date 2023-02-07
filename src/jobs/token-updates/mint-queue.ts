@@ -35,6 +35,9 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { contract, tokenId, mintedTimestamp } = job.data as MintInfo;
+      if (config.chainId === 137 && contract === "0xaa1ec1efef105599f849b8f5df9b937e25a16e6b") {
+        return;
+      }
 
       try {
         // First, check the database for any matching collection
