@@ -27,7 +27,7 @@ export const getApiKeyDetails: RouteOptions = {
       active: Joi.bool(),
       tier: Joi.number().unsafe(),
       permissions: Joi.string().allow(null),
-      createdAt: Joi.string(),
+      createdAt: Joi.string().allow(null),
     }).label("getApiKeyRateLimitsResponse"),
     failAction: (_request, _h, error) => {
       logger.error("get-api-key-details-handler", `Wrong response schema: ${error}`);
@@ -44,7 +44,16 @@ export const getApiKeyDetails: RouteOptions = {
     try {
       const apiKey = await ApiKeyManager.getApiKey(params.key);
 
-      return apiKey;
+      return {
+        key: apiKey?.key,
+        appName: apiKey?.appName,
+        website: apiKey?.website,
+        email: apiKey?.email,
+        active: apiKey?.active,
+        tier: apiKey?.tier,
+        permissions: apiKey?.permissions,
+        createdAt: apiKey?.createdAt.toString(),
+      };
     } catch (error) {
       logger.error("get-api-key-details-handler", `Handler failure: ${error}`);
       throw error;
