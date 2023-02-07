@@ -63,10 +63,6 @@ if (config.doBackgroundWork) {
       // If no more tokens
       if (_.isEmpty(refreshTokens)) {
         await releaseLock(getLockName(method));
-        if (config.chainId === 137) {
-          await addToQueue(method);
-        }
-
         return;
       }
 
