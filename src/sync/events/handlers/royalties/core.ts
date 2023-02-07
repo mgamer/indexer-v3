@@ -13,9 +13,9 @@ import { TransactionTrace } from "@/models/transaction-traces";
 import { Royalty, getRoyalties } from "@/utils/royalties";
 
 export async function extractRoyalties(fillEvent: es.fills.Event, useCache?: boolean) {
-  const royaltyFeeBreakdown: Royalty[] = [];
+  const creatorRoyaltyFeeBreakdown: Royalty[] = [];
   const marketplaceFeeBreakdown: Royalty[] = [];
-  const possibleMissingRoyalties: Royalty[] = [];
+  const royaltyFeeBreakdown: Royalty[] = [];
 
   const { txHash } = fillEvent.baseEventParams;
   const { tokenId, contract, price, currency } = fillEvent;
@@ -92,7 +92,7 @@ export async function extractRoyalties(fillEvent: es.fills.Event, useCache?: boo
 
   const balanceChangeWithBps = [];
   const royaltyRecipients: string[] = royalties.map((_) => _.recipient);
-  const threshold = 1000;
+  const threshold = 1500;
   let sameCollectionSales = 0;
   let totalTransfers = 0;
 
@@ -142,14 +142,18 @@ export async function extractRoyalties(fillEvent: es.fills.Event, useCache?: boo
       if (platformFeeRecipients.includes(address)) {
         curRoyalties.bps = bn(balanceChange).mul(10000).div(protocolRelatedAmount).toNumber();
         marketplaceFeeBreakdown.push(curRoyalties);
-      } else if (royaltyRecipients.includes(address)) {
-        // For multiple same collection sales in one tx
-        curRoyalties.bps = bn(balanceChange).mul(10000).div(collectionRelatedAmount).toNumber();
-        royaltyFeeBreakdown.push(curRoyalties);
-      } else if (bpsInPrice.lt(threshold)) {
-        possibleMissingRoyalties.push(curRoyalties);
+      } else {
+        const bps = bn(balanceChange).mul(10000).div(collectionRelatedAmount).toNumber();
+        if (royaltyRecipients.includes(address)) {
+          // For multiple same collection sales in one tx
+          curRoyalties.bps = bps;
+          creatorRoyaltyFeeBreakdown.push(curRoyalties);
+        }
+        if (bps < threshold) {
+          curRoyalties.bps = bps;
+          royaltyFeeBreakdown.push(curRoyalties);
+        }
       }
-
       balanceChangeWithBps.push({
         recipient: address,
         balanceChange,
@@ -161,10 +165,11 @@ export async function extractRoyalties(fillEvent: es.fills.Event, useCache?: boo
   const getTotalRoyaltyBps = (royalties?: Royalty[]) =>
     (royalties || []).map(({ bps }) => bps).reduce((a, b) => a + b, 0);
 
+  const creatorRoyaltyFeeBps = getTotalRoyaltyBps(creatorRoyaltyFeeBreakdown);
   const royaltyFeeBps = getTotalRoyaltyBps(royaltyFeeBreakdown);
   const creatorBps = getTotalRoyaltyBps(royalties);
 
-  const paidFullRoyalty = royaltyFeeBps >= creatorBps;
+  const paidFullRoyalty = creatorRoyaltyFeeBps >= creatorBps;
 
   const result = {
     txHash,
@@ -186,6 +191,12 @@ export async function extractRoyalties(fillEvent: es.fills.Event, useCache?: boo
     totalFills: fillEvents.length,
     paidFullRoyalty,
   };
+
+  // console.log("result", {
+  //   creatorRoyaltyFeeBreakdown,
+  //   royaltyFeeBreakdown,
+  //   marketplaceFeeBreakdown,
+  // });
 
   return result;
 }
