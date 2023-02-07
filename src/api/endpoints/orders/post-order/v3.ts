@@ -228,7 +228,7 @@ export const postOrderV3Options: RouteOptions = {
               `,
               { id: result.id }
             );
-            if (orderResult?.token_set_id?.starts_with("token")) {
+            if (orderResult?.token_set_id?.startsWith("token")) {
               await postOrderExternal.addToQueue(
                 result.id,
                 order.data,
