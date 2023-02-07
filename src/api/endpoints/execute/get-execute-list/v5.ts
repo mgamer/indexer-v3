@@ -243,7 +243,7 @@ export const getExecuteListV5Options: RouteOptions = {
             params.orderKind !== "seaport-v1.2" &&
             params.currency !== Sdk.Common.Addresses.Eth[config.chainId]
           ) {
-            return errors.push({ message: "unsupported-currency", orderIndex: i });
+            return errors.push({ message: "Unsupported currency", orderIndex: i });
           }
 
           // Handle fees
@@ -257,623 +257,630 @@ export const getExecuteListV5Options: RouteOptions = {
             (params as any).feeRecipient.push(feeRecipient);
           }
 
-          switch (params.orderKind) {
-            case "zeroex-v4": {
-              if (!["reservoir"].includes(params.orderbook)) {
-                return errors.push({ message: "unsupported-orderbook", orderIndex: i });
-              }
-
-              const order = await zeroExV4SellToken.build({
-                ...params,
-                orderbook: "reservoir",
-                maker,
-                contract,
-                tokenId,
-              });
-              if (!order) {
-                return errors.push({ message: "internal-error", orderIndex: i });
-              }
-
-              // Will be set if an approval is needed before listing
-              let approvalTx: TxData | undefined;
-
-              // Check the order's fillability
-              try {
-                await zeroExV4Check.offChainCheck(order, { onChainApprovalRecheck: true });
-              } catch (error: any) {
-                switch (error.message) {
-                  case "no-balance-no-approval":
-                  case "no-balance": {
-                    return errors.push({ message: "token-not-owned", orderIndex: i });
-                  }
-
-                  case "no-approval": {
-                    // Generate an approval transaction
-                    const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
-                    approvalTx = (
-                      kind === "erc721"
-                        ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.nft)
-                        : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.nft)
-                    ).approveTransaction(maker, Sdk.ZeroExV4.Addresses.Exchange[config.chainId]);
-
-                    break;
-                  }
+          try {
+            switch (params.orderKind) {
+              case "zeroex-v4": {
+                if (!["reservoir"].includes(params.orderbook)) {
+                  return errors.push({ message: "Unsupported orderbook", orderIndex: i });
                 }
-              }
 
-              steps[0].items.push({
-                status: approvalTx ? "incomplete" : "complete",
-                data: approvalTx,
-                orderIndexes: [i],
-              });
-              steps[1].items.push({
-                status: "incomplete",
-                data: {
-                  sign: order.getSignatureData(),
-                  post: {
-                    endpoint: "/order/v3",
-                    method: "POST",
-                    body: {
-                      order: {
-                        kind: "zeroex-v4",
-                        data: {
-                          ...order.params,
-                        },
-                      },
-                      orderbook: params.orderbook,
-                      orderbookApiKey: params.orderbookApiKey,
-                      source,
-                    },
-                  },
-                },
-                orderIndexes: [i],
-              });
-
-              break;
-            }
-
-            case "infinity": {
-              if (!["infinity"].includes(params.orderbook)) {
-                return errors.push({ message: "unsupported-orderbook", orderIndex: i });
-              }
-
-              const order = await infinitySellToken.build({
-                ...params,
-                orderbook: "infinity",
-                maker,
-                contract,
-                tokenId,
-              });
-
-              if (!order) {
-                return errors.push({ message: "internal-error", orderIndex: i });
-              }
-
-              // Will be set if an approval is needed before listing
-              let approvalTx: TxData | undefined;
-
-              // Check the order's fillability
-              try {
-                await infinityCheck.offChainCheck(order, { onChainApprovalRecheck: true });
-              } catch (error: any) {
-                switch (error.message) {
-                  case "no-balance-no-approval":
-                  case "no-balance": {
-                    return errors.push({ message: "token-not-owned", orderIndex: i });
-                  }
-
-                  case "no-approval": {
-                    // Generate an approval transaction
-                    approvalTx = new Sdk.Common.Helpers.Erc721(
-                      baseProvider,
-                      contract
-                    ).approveTransaction(maker, Sdk.Infinity.Addresses.Exchange[config.chainId]);
-
-                    break;
-                  }
-                }
-              }
-
-              steps[0].items.push({
-                status: approvalTx ? "incomplete" : "complete",
-                data: approvalTx,
-                orderIndexes: [i],
-              });
-              steps[1].items.push({
-                status: "incomplete",
-                data: {
-                  sign: order.getSignatureData(),
-                  post: {
-                    endpoint: "/order/v3",
-                    method: "POST",
-                    body: {
-                      order: {
-                        kind: params.orderKind,
-                        data: {
-                          ...order.params,
-                        },
-                      },
-                      orderbook: params.orderbook,
-                      source,
-                    },
-                  },
-                },
-                orderIndexes: [i],
-              });
-
-              break;
-            }
-
-            case "flow": {
-              if (!["flow"].includes(params.orderbook)) {
-                return errors.push({ message: "unsupported-orderbook", orderIndex: i });
-              }
-
-              const order = await flowSellToken.build({
-                ...params,
-                orderbook: "flow",
-                maker,
-                contract,
-                tokenId,
-              });
-
-              if (!order) {
-                return errors.push({ message: "internal-error", orderIndex: i });
-              }
-
-              // Will be set if an approval is needed before listing
-              let approvalTx: TxData | undefined;
-
-              // Check the order's fillability
-              try {
-                await flowCheck.offChainCheck(order, { onChainApprovalRecheck: true });
-              } catch (error: any) {
-                switch (error.message) {
-                  case "no-balance-no-approval":
-                  case "no-balance": {
-                    return errors.push({ message: "token-not-owned", orderIndex: i });
-                  }
-
-                  case "no-approval": {
-                    // Generate an approval transaction
-                    approvalTx = new Sdk.Common.Helpers.Erc721(
-                      baseProvider,
-                      contract
-                    ).approveTransaction(maker, Sdk.Flow.Addresses.Exchange[config.chainId]);
-
-                    break;
-                  }
-                }
-              }
-
-              steps[0].items.push({
-                status: approvalTx ? "incomplete" : "complete",
-                data: approvalTx,
-                orderIndexes: [i],
-              });
-              steps[1].items.push({
-                status: "incomplete",
-                data: {
-                  sign: order.getSignatureData(),
-                  post: {
-                    endpoint: "/order/v3",
-                    method: "POST",
-                    body: {
-                      order: {
-                        kind: params.orderKind,
-                        data: {
-                          ...order.params,
-                        },
-                      },
-                      orderbook: params.orderbook,
-                      source,
-                    },
-                  },
-                },
-                orderIndexes: [i],
-              });
-
-              break;
-            }
-
-            case "seaport": {
-              if (!["reservoir", "opensea"].includes(params.orderbook)) {
-                return errors.push({ message: "unsupported-orderbook", orderIndex: i });
-              }
-
-              const order = await seaportSellToken.build({
-                ...params,
-                orderbook: params.orderbook as "opensea" | "reservoir",
-                maker,
-                contract,
-                tokenId,
-                source,
-              });
-              if (!order) {
-                return errors.push({ message: "internal-error", orderIndex: i });
-              }
-
-              // Will be set if an approval is needed before listing
-              let approvalTx: TxData | undefined;
-
-              // Check the order's fillability
-              try {
-                await seaportCheck.offChainCheck(order, { onChainApprovalRecheck: true });
-              } catch (error: any) {
-                switch (error.message) {
-                  case "no-balance-no-approval":
-                  case "no-balance": {
-                    return errors.push({ message: "token-not-owned", orderIndex: i });
-                  }
-
-                  case "no-approval": {
-                    // Generate an approval transaction
-
-                    const exchange = new Sdk.Seaport.Exchange(config.chainId);
-                    const info = order.getInfo()!;
-
-                    const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
-                    approvalTx = (
-                      kind === "erc721"
-                        ? new Sdk.Common.Helpers.Erc721(baseProvider, info.contract)
-                        : new Sdk.Common.Helpers.Erc1155(baseProvider, info.contract)
-                    ).approveTransaction(maker, exchange.deriveConduit(order.params.conduitKey));
-
-                    break;
-                  }
-                }
-              }
-
-              steps[0].items.push({
-                status: approvalTx ? "incomplete" : "complete",
-                data: approvalTx,
-                orderIndexes: [i],
-              });
-              steps[1].items.push({
-                status: "incomplete",
-                data: {
-                  sign: order.getSignatureData(),
-                  post: {
-                    endpoint: "/order/v3",
-                    method: "POST",
-                    body: {
-                      order: {
-                        kind: params.orderKind,
-                        data: {
-                          ...order.params,
-                        },
-                      },
-                      orderbook: params.orderbook,
-                      orderbookApiKey: params.orderbookApiKey,
-                      source,
-                    },
-                  },
-                },
-                orderIndexes: [i],
-              });
-
-              break;
-            }
-
-            case "seaport-v1.2": {
-              if (!["reservoir", "opensea"].includes(params.orderbook)) {
-                return errors.push({ message: "unsupported-orderbook", orderIndex: i });
-              }
-
-              const order = await seaportV12SellToken.build({
-                ...params,
-                orderbook: params.orderbook as "reservoir" | "opensea",
-                maker,
-                contract,
-                tokenId,
-                source,
-              });
-              if (!order) {
-                return errors.push({ message: "internal-error", orderIndex: i });
-              }
-
-              // Will be set if an approval is needed before listing
-              let approvalTx: TxData | undefined;
-
-              // Check the order's fillability
-              try {
-                await seaportV12Check.offChainCheck(order, { onChainApprovalRecheck: true });
-              } catch (error: any) {
-                switch (error.message) {
-                  case "no-balance-no-approval":
-                  case "no-balance": {
-                    return errors.push({ message: "token-not-owned", orderIndex: i });
-                  }
-
-                  case "no-approval": {
-                    // Generate an approval transaction
-
-                    const exchange = new Sdk.SeaportV12.Exchange(config.chainId);
-                    const info = order.getInfo()!;
-
-                    const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
-                    approvalTx = (
-                      kind === "erc721"
-                        ? new Sdk.Common.Helpers.Erc721(baseProvider, info.contract)
-                        : new Sdk.Common.Helpers.Erc1155(baseProvider, info.contract)
-                    ).approveTransaction(maker, exchange.deriveConduit(order.params.conduitKey));
-
-                    break;
-                  }
-                }
-              }
-
-              steps[0].items.push({
-                status: approvalTx ? "incomplete" : "complete",
-                data: approvalTx,
-                orderIndexes: [i],
-              });
-
-              bulkOrders["seaport-v1.2"].push({
-                order: {
-                  kind: params.orderKind,
-                  data: {
-                    ...order.params,
-                  },
-                },
-                orderbook: params.orderbook,
-                orderbookApiKey: params.orderbookApiKey,
-                source,
-                orderIndex: i,
-              });
-
-              break;
-            }
-
-            case "looks-rare": {
-              if (!["reservoir", "looks-rare"].includes(params.orderbook)) {
-                return errors.push({ message: "unsupported-orderbook", orderIndex: i });
-              }
-              if (params.fees?.length) {
-                return errors.push({ message: "custom-fees-not-supported", orderIndex: i });
-              }
-
-              const order = await looksRareSellToken.build({
-                ...params,
-                maker,
-                contract,
-                tokenId,
-              });
-              if (!order) {
-                return errors.push({ message: "internal-error", orderIndex: i });
-              }
-
-              // Will be set if an approval is needed before listing
-              let approvalTx: TxData | undefined;
-
-              // Check the order's fillability
-              try {
-                await looksRareCheck.offChainCheck(order, { onChainApprovalRecheck: true });
-              } catch (error: any) {
-                switch (error.message) {
-                  case "no-balance-no-approval":
-                  case "no-balance": {
-                    return errors.push({ message: "token-not-owned", orderIndex: i });
-                  }
-
-                  case "no-approval": {
-                    const contractKind = await commonHelpers.getContractKind(contract);
-                    if (!contractKind) {
-                      return errors.push({ message: "unsupported-contract", orderIndex: i });
-                    }
-
-                    // Generate an approval transaction
-                    approvalTx = (
-                      contractKind === "erc721"
-                        ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.collection)
-                        : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.collection)
-                    ).approveTransaction(
-                      maker,
-                      contractKind === "erc721"
-                        ? Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]
-                        : Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId]
-                    );
-
-                    break;
-                  }
-                }
-              }
-
-              steps[0].items.push({
-                status: approvalTx ? "incomplete" : "complete",
-                data: approvalTx,
-                orderIndexes: [i],
-              });
-              steps[1].items.push({
-                status: "incomplete",
-                data: {
-                  sign: order.getSignatureData(),
-                  post: {
-                    endpoint: "/order/v3",
-                    method: "POST",
-                    body: {
-                      order: {
-                        kind: "looks-rare",
-                        data: {
-                          ...order.params,
-                        },
-                      },
-                      orderbook: params.orderbook,
-                      orderbookApiKey: params.orderbookApiKey,
-                      source,
-                    },
-                  },
-                },
-                orderIndexes: [i],
-              });
-
-              break;
-            }
-
-            case "x2y2": {
-              if (!["x2y2"].includes(params.orderbook)) {
-                return errors.push({ message: "unsupported-orderbook", orderIndex: i });
-              }
-              if (params.fees?.length) {
-                return errors.push({ message: "custom-fees-not-supported", orderIndex: i });
-              }
-
-              const order = await x2y2SellToken.build({
-                ...params,
-                orderbook: "x2y2",
-                maker,
-                contract,
-                tokenId,
-              });
-              if (!order) {
-                return errors.push({ message: "internal-error", orderIndex: i });
-              }
-
-              // Will be set if an approval is needed before listing
-              let approvalTx: TxData | undefined;
-
-              // Check the order's fillability
-              const upstreamOrder = Sdk.X2Y2.Order.fromLocalOrder(config.chainId, order);
-              try {
-                await x2y2Check.offChainCheck(upstreamOrder, {
-                  onChainApprovalRecheck: true,
+                const order = await zeroExV4SellToken.build({
+                  ...params,
+                  orderbook: "reservoir",
+                  maker,
+                  contract,
+                  tokenId,
                 });
-              } catch (error: any) {
-                switch (error.message) {
-                  case "no-balance-no-approval":
-                  case "no-balance": {
-                    return errors.push({ message: "token-not-owned", orderIndex: i });
-                  }
+                if (!order) {
+                  return errors.push({ message: "Internal error", orderIndex: i });
+                }
 
-                  case "no-approval": {
-                    const contractKind = await commonHelpers.getContractKind(contract);
-                    if (!contractKind) {
-                      return errors.push({ message: "unsupported-contract", orderIndex: i });
+                // Will be set if an approval is needed before listing
+                let approvalTx: TxData | undefined;
+
+                // Check the order's fillability
+                try {
+                  await zeroExV4Check.offChainCheck(order, { onChainApprovalRecheck: true });
+                } catch (error: any) {
+                  switch (error.message) {
+                    case "no-balance-no-approval":
+                    case "no-balance": {
+                      return errors.push({ message: "Maker does not own token", orderIndex: i });
                     }
 
-                    // Generate an approval transaction
-                    approvalTx = new Sdk.Common.Helpers.Erc721(
-                      baseProvider,
-                      upstreamOrder.params.nft.token
-                    ).approveTransaction(maker, Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId]);
+                    case "no-approval": {
+                      // Generate an approval transaction
+                      const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
+                      approvalTx = (
+                        kind === "erc721"
+                          ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.nft)
+                          : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.nft)
+                      ).approveTransaction(maker, Sdk.ZeroExV4.Addresses.Exchange[config.chainId]);
 
-                    break;
+                      break;
+                    }
                   }
                 }
-              }
 
-              steps[0].items.push({
-                status: approvalTx ? "incomplete" : "complete",
-                data: approvalTx,
-                orderIndexes: [i],
-              });
-              steps[1].items.push({
-                status: "incomplete",
-                data: {
-                  sign: new Sdk.X2Y2.Exchange(
-                    config.chainId,
-                    config.x2y2ApiKey
-                  ).getOrderSignatureData(order),
-                  post: {
-                    endpoint: "/order/v3",
-                    method: "POST",
-                    body: {
-                      order: {
-                        kind: "x2y2",
-                        data: {
-                          ...order,
+                steps[0].items.push({
+                  status: approvalTx ? "incomplete" : "complete",
+                  data: approvalTx,
+                  orderIndexes: [i],
+                });
+                steps[1].items.push({
+                  status: "incomplete",
+                  data: {
+                    sign: order.getSignatureData(),
+                    post: {
+                      endpoint: "/order/v3",
+                      method: "POST",
+                      body: {
+                        order: {
+                          kind: "zeroex-v4",
+                          data: {
+                            ...order.params,
+                          },
                         },
+                        orderbook: params.orderbook,
+                        orderbookApiKey: params.orderbookApiKey,
+                        source,
                       },
-                      orderbook: params.orderbook,
-                      orderbookApiKey: params.orderbookApiKey,
-                      source,
                     },
                   },
-                },
-                orderIndexes: [i],
-              });
+                  orderIndexes: [i],
+                });
 
-              break;
-            }
-
-            case "universe": {
-              if (!["universe"].includes(params.orderbook)) {
-                return errors.push({ message: "unsupported-orderbook", orderIndex: i });
+                break;
               }
 
-              const order = await universeSellToken.build({
-                ...params,
-                maker,
-                contract,
-                tokenId,
-              });
-              if (!order) {
-                return errors.push({ message: "internal-error", orderIndex: i });
-              }
+              case "infinity": {
+                if (!["infinity"].includes(params.orderbook)) {
+                  return errors.push({ message: "Unsupported orderbook", orderIndex: i });
+                }
 
-              // Will be set if an approval is needed before listing
-              let approvalTx: TxData | undefined;
+                const order = await infinitySellToken.build({
+                  ...params,
+                  orderbook: "infinity",
+                  maker,
+                  contract,
+                  tokenId,
+                });
 
-              // Check the order's fillability
-              try {
-                await universeCheck.offChainCheck(order, { onChainApprovalRecheck: true });
-              } catch (error: any) {
-                switch (error.message) {
-                  case "no-balance-no-approval":
-                  case "no-balance": {
-                    return errors.push({ message: "token-not-owned", orderIndex: i });
-                  }
+                if (!order) {
+                  return errors.push({ message: "Internal error", orderIndex: i });
+                }
 
-                  case "no-approval": {
-                    // Generate an approval transaction
-                    const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
-                    approvalTx = (
-                      kind === "erc721"
-                        ? new Sdk.Common.Helpers.Erc721(
-                            baseProvider,
-                            order.params.make.assetType.contract!
-                          )
-                        : new Sdk.Common.Helpers.Erc1155(
-                            baseProvider,
-                            order.params.make.assetType.contract!
-                          )
-                    ).approveTransaction(maker, Sdk.Universe.Addresses.Exchange[config.chainId]);
+                // Will be set if an approval is needed before listing
+                let approvalTx: TxData | undefined;
 
-                    break;
+                // Check the order's fillability
+                try {
+                  await infinityCheck.offChainCheck(order, { onChainApprovalRecheck: true });
+                } catch (error: any) {
+                  switch (error.message) {
+                    case "no-balance-no-approval":
+                    case "no-balance": {
+                      return errors.push({ message: "Maker does not own token", orderIndex: i });
+                    }
+
+                    case "no-approval": {
+                      // Generate an approval transaction
+                      approvalTx = new Sdk.Common.Helpers.Erc721(
+                        baseProvider,
+                        contract
+                      ).approveTransaction(maker, Sdk.Infinity.Addresses.Exchange[config.chainId]);
+
+                      break;
+                    }
                   }
                 }
-              }
 
-              steps[0].items.push({
-                status: approvalTx ? "incomplete" : "complete",
-                data: approvalTx,
-                orderIndexes: [i],
-              });
-              steps[1].items.push({
-                status: "incomplete",
-                data: {
-                  sign: order.getSignatureData(),
-                  post: {
-                    endpoint: "/order/v3",
-                    method: "POST",
-                    body: {
-                      order: {
-                        kind: "universe",
-                        data: {
-                          ...order.params,
+                steps[0].items.push({
+                  status: approvalTx ? "incomplete" : "complete",
+                  data: approvalTx,
+                  orderIndexes: [i],
+                });
+                steps[1].items.push({
+                  status: "incomplete",
+                  data: {
+                    sign: order.getSignatureData(),
+                    post: {
+                      endpoint: "/order/v3",
+                      method: "POST",
+                      body: {
+                        order: {
+                          kind: params.orderKind,
+                          data: {
+                            ...order.params,
+                          },
                         },
+                        orderbook: params.orderbook,
+                        source,
                       },
-                      orderbook: params.orderbook,
-                      orderbookApiKey: params.orderbookApiKey,
-                      source,
                     },
                   },
-                },
-                orderIndexes: [i],
-              });
+                  orderIndexes: [i],
+                });
 
-              break;
+                break;
+              }
+
+              case "flow": {
+                if (!["flow"].includes(params.orderbook)) {
+                  return errors.push({ message: "Unsupported orderbook", orderIndex: i });
+                }
+
+                const order = await flowSellToken.build({
+                  ...params,
+                  orderbook: "flow",
+                  maker,
+                  contract,
+                  tokenId,
+                });
+
+                if (!order) {
+                  return errors.push({ message: "Internal error", orderIndex: i });
+                }
+
+                // Will be set if an approval is needed before listing
+                let approvalTx: TxData | undefined;
+
+                // Check the order's fillability
+                try {
+                  await flowCheck.offChainCheck(order, { onChainApprovalRecheck: true });
+                } catch (error: any) {
+                  switch (error.message) {
+                    case "no-balance-no-approval":
+                    case "no-balance": {
+                      return errors.push({ message: "Maker does not own token", orderIndex: i });
+                    }
+
+                    case "no-approval": {
+                      // Generate an approval transaction
+                      approvalTx = new Sdk.Common.Helpers.Erc721(
+                        baseProvider,
+                        contract
+                      ).approveTransaction(maker, Sdk.Flow.Addresses.Exchange[config.chainId]);
+
+                      break;
+                    }
+                  }
+                }
+
+                steps[0].items.push({
+                  status: approvalTx ? "incomplete" : "complete",
+                  data: approvalTx,
+                  orderIndexes: [i],
+                });
+                steps[1].items.push({
+                  status: "incomplete",
+                  data: {
+                    sign: order.getSignatureData(),
+                    post: {
+                      endpoint: "/order/v3",
+                      method: "POST",
+                      body: {
+                        order: {
+                          kind: params.orderKind,
+                          data: {
+                            ...order.params,
+                          },
+                        },
+                        orderbook: params.orderbook,
+                        source,
+                      },
+                    },
+                  },
+                  orderIndexes: [i],
+                });
+
+                break;
+              }
+
+              case "seaport": {
+                if (!["reservoir", "opensea"].includes(params.orderbook)) {
+                  return errors.push({ message: "Unsupported orderbook", orderIndex: i });
+                }
+
+                const order = await seaportSellToken.build({
+                  ...params,
+                  orderbook: params.orderbook as "opensea" | "reservoir",
+                  maker,
+                  contract,
+                  tokenId,
+                  source,
+                });
+                if (!order) {
+                  return errors.push({ message: "Internal error", orderIndex: i });
+                }
+
+                // Will be set if an approval is needed before listing
+                let approvalTx: TxData | undefined;
+
+                // Check the order's fillability
+                try {
+                  await seaportCheck.offChainCheck(order, { onChainApprovalRecheck: true });
+                } catch (error: any) {
+                  switch (error.message) {
+                    case "no-balance-no-approval":
+                    case "no-balance": {
+                      return errors.push({ message: "Maker does not own token", orderIndex: i });
+                    }
+
+                    case "no-approval": {
+                      // Generate an approval transaction
+
+                      const exchange = new Sdk.Seaport.Exchange(config.chainId);
+                      const info = order.getInfo()!;
+
+                      const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
+                      approvalTx = (
+                        kind === "erc721"
+                          ? new Sdk.Common.Helpers.Erc721(baseProvider, info.contract)
+                          : new Sdk.Common.Helpers.Erc1155(baseProvider, info.contract)
+                      ).approveTransaction(maker, exchange.deriveConduit(order.params.conduitKey));
+
+                      break;
+                    }
+                  }
+                }
+
+                steps[0].items.push({
+                  status: approvalTx ? "incomplete" : "complete",
+                  data: approvalTx,
+                  orderIndexes: [i],
+                });
+                steps[1].items.push({
+                  status: "incomplete",
+                  data: {
+                    sign: order.getSignatureData(),
+                    post: {
+                      endpoint: "/order/v3",
+                      method: "POST",
+                      body: {
+                        order: {
+                          kind: params.orderKind,
+                          data: {
+                            ...order.params,
+                          },
+                        },
+                        orderbook: params.orderbook,
+                        orderbookApiKey: params.orderbookApiKey,
+                        source,
+                      },
+                    },
+                  },
+                  orderIndexes: [i],
+                });
+
+                break;
+              }
+
+              case "seaport-v1.2": {
+                if (!["reservoir", "opensea"].includes(params.orderbook)) {
+                  return errors.push({ message: "Unsupported orderbook", orderIndex: i });
+                }
+
+                const order = await seaportV12SellToken.build({
+                  ...params,
+                  orderbook: params.orderbook as "reservoir" | "opensea",
+                  maker,
+                  contract,
+                  tokenId,
+                  source,
+                });
+                if (!order) {
+                  return errors.push({ message: "Internal error", orderIndex: i });
+                }
+
+                // Will be set if an approval is needed before listing
+                let approvalTx: TxData | undefined;
+
+                // Check the order's fillability
+                try {
+                  await seaportV12Check.offChainCheck(order, { onChainApprovalRecheck: true });
+                } catch (error: any) {
+                  switch (error.message) {
+                    case "no-balance-no-approval":
+                    case "no-balance": {
+                      return errors.push({ message: "Maker does not own token", orderIndex: i });
+                    }
+
+                    case "no-approval": {
+                      // Generate an approval transaction
+
+                      const exchange = new Sdk.SeaportV12.Exchange(config.chainId);
+                      const info = order.getInfo()!;
+
+                      const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
+                      approvalTx = (
+                        kind === "erc721"
+                          ? new Sdk.Common.Helpers.Erc721(baseProvider, info.contract)
+                          : new Sdk.Common.Helpers.Erc1155(baseProvider, info.contract)
+                      ).approveTransaction(maker, exchange.deriveConduit(order.params.conduitKey));
+
+                      break;
+                    }
+                  }
+                }
+
+                steps[0].items.push({
+                  status: approvalTx ? "incomplete" : "complete",
+                  data: approvalTx,
+                  orderIndexes: [i],
+                });
+
+                bulkOrders["seaport-v1.2"].push({
+                  order: {
+                    kind: params.orderKind,
+                    data: {
+                      ...order.params,
+                    },
+                  },
+                  orderbook: params.orderbook,
+                  orderbookApiKey: params.orderbookApiKey,
+                  source,
+                  orderIndex: i,
+                });
+
+                break;
+              }
+
+              case "looks-rare": {
+                if (!["reservoir", "looks-rare"].includes(params.orderbook)) {
+                  return errors.push({ message: "Unsupported orderbook", orderIndex: i });
+                }
+                if (params.fees?.length) {
+                  return errors.push({ message: "custom-fees-not-supported", orderIndex: i });
+                }
+
+                const order = await looksRareSellToken.build({
+                  ...params,
+                  maker,
+                  contract,
+                  tokenId,
+                });
+                if (!order) {
+                  return errors.push({ message: "Internal error", orderIndex: i });
+                }
+
+                // Will be set if an approval is needed before listing
+                let approvalTx: TxData | undefined;
+
+                // Check the order's fillability
+                try {
+                  await looksRareCheck.offChainCheck(order, { onChainApprovalRecheck: true });
+                } catch (error: any) {
+                  switch (error.message) {
+                    case "no-balance-no-approval":
+                    case "no-balance": {
+                      return errors.push({ message: "Maker does not own token", orderIndex: i });
+                    }
+
+                    case "no-approval": {
+                      const contractKind = await commonHelpers.getContractKind(contract);
+                      if (!contractKind) {
+                        return errors.push({ message: "Unsupported contract", orderIndex: i });
+                      }
+
+                      // Generate an approval transaction
+                      approvalTx = (
+                        contractKind === "erc721"
+                          ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.collection)
+                          : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.collection)
+                      ).approveTransaction(
+                        maker,
+                        contractKind === "erc721"
+                          ? Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]
+                          : Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId]
+                      );
+
+                      break;
+                    }
+                  }
+                }
+
+                steps[0].items.push({
+                  status: approvalTx ? "incomplete" : "complete",
+                  data: approvalTx,
+                  orderIndexes: [i],
+                });
+                steps[1].items.push({
+                  status: "incomplete",
+                  data: {
+                    sign: order.getSignatureData(),
+                    post: {
+                      endpoint: "/order/v3",
+                      method: "POST",
+                      body: {
+                        order: {
+                          kind: "looks-rare",
+                          data: {
+                            ...order.params,
+                          },
+                        },
+                        orderbook: params.orderbook,
+                        orderbookApiKey: params.orderbookApiKey,
+                        source,
+                      },
+                    },
+                  },
+                  orderIndexes: [i],
+                });
+
+                break;
+              }
+
+              case "x2y2": {
+                if (!["x2y2"].includes(params.orderbook)) {
+                  return errors.push({ message: "Unsupported orderbook", orderIndex: i });
+                }
+                if (params.fees?.length) {
+                  return errors.push({ message: "custom-fees-not-supported", orderIndex: i });
+                }
+
+                const order = await x2y2SellToken.build({
+                  ...params,
+                  orderbook: "x2y2",
+                  maker,
+                  contract,
+                  tokenId,
+                });
+                if (!order) {
+                  return errors.push({ message: "Internal error", orderIndex: i });
+                }
+
+                // Will be set if an approval is needed before listing
+                let approvalTx: TxData | undefined;
+
+                // Check the order's fillability
+                const upstreamOrder = Sdk.X2Y2.Order.fromLocalOrder(config.chainId, order);
+                try {
+                  await x2y2Check.offChainCheck(upstreamOrder, {
+                    onChainApprovalRecheck: true,
+                  });
+                } catch (error: any) {
+                  switch (error.message) {
+                    case "no-balance-no-approval":
+                    case "no-balance": {
+                      return errors.push({ message: "Maker does not own token", orderIndex: i });
+                    }
+
+                    case "no-approval": {
+                      const contractKind = await commonHelpers.getContractKind(contract);
+                      if (!contractKind) {
+                        return errors.push({ message: "Unsupported contract", orderIndex: i });
+                      }
+
+                      // Generate an approval transaction
+                      approvalTx = new Sdk.Common.Helpers.Erc721(
+                        baseProvider,
+                        upstreamOrder.params.nft.token
+                      ).approveTransaction(
+                        maker,
+                        Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId]
+                      );
+
+                      break;
+                    }
+                  }
+                }
+
+                steps[0].items.push({
+                  status: approvalTx ? "incomplete" : "complete",
+                  data: approvalTx,
+                  orderIndexes: [i],
+                });
+                steps[1].items.push({
+                  status: "incomplete",
+                  data: {
+                    sign: new Sdk.X2Y2.Exchange(
+                      config.chainId,
+                      config.x2y2ApiKey
+                    ).getOrderSignatureData(order),
+                    post: {
+                      endpoint: "/order/v3",
+                      method: "POST",
+                      body: {
+                        order: {
+                          kind: "x2y2",
+                          data: {
+                            ...order,
+                          },
+                        },
+                        orderbook: params.orderbook,
+                        orderbookApiKey: params.orderbookApiKey,
+                        source,
+                      },
+                    },
+                  },
+                  orderIndexes: [i],
+                });
+
+                break;
+              }
+
+              case "universe": {
+                if (!["universe"].includes(params.orderbook)) {
+                  return errors.push({ message: "Unsupported orderbook", orderIndex: i });
+                }
+
+                const order = await universeSellToken.build({
+                  ...params,
+                  maker,
+                  contract,
+                  tokenId,
+                });
+                if (!order) {
+                  return errors.push({ message: "Internal error", orderIndex: i });
+                }
+
+                // Will be set if an approval is needed before listing
+                let approvalTx: TxData | undefined;
+
+                // Check the order's fillability
+                try {
+                  await universeCheck.offChainCheck(order, { onChainApprovalRecheck: true });
+                } catch (error: any) {
+                  switch (error.message) {
+                    case "no-balance-no-approval":
+                    case "no-balance": {
+                      return errors.push({ message: "Maker does not own token", orderIndex: i });
+                    }
+
+                    case "no-approval": {
+                      // Generate an approval transaction
+                      const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
+                      approvalTx = (
+                        kind === "erc721"
+                          ? new Sdk.Common.Helpers.Erc721(
+                              baseProvider,
+                              order.params.make.assetType.contract!
+                            )
+                          : new Sdk.Common.Helpers.Erc1155(
+                              baseProvider,
+                              order.params.make.assetType.contract!
+                            )
+                      ).approveTransaction(maker, Sdk.Universe.Addresses.Exchange[config.chainId]);
+
+                      break;
+                    }
+                  }
+                }
+
+                steps[0].items.push({
+                  status: approvalTx ? "incomplete" : "complete",
+                  data: approvalTx,
+                  orderIndexes: [i],
+                });
+                steps[1].items.push({
+                  status: "incomplete",
+                  data: {
+                    sign: order.getSignatureData(),
+                    post: {
+                      endpoint: "/order/v3",
+                      method: "POST",
+                      body: {
+                        order: {
+                          kind: "universe",
+                          data: {
+                            ...order.params,
+                          },
+                        },
+                        orderbook: params.orderbook,
+                        orderbookApiKey: params.orderbookApiKey,
+                        source,
+                      },
+                    },
+                  },
+                  orderIndexes: [i],
+                });
+
+                break;
+              }
             }
+          } catch (error: any) {
+            return errors.push({ message: error.message ?? "Internal error", orderIndex: i });
           }
         })
       );
