@@ -760,7 +760,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
 
       if (permits.length) {
         for (const permit of permits) {
-          const id = getPermitId(request.payload as object, permit.tokens);
+          const id = getPermitId(request.payload as object, permit.currencies);
 
           let cachedPermit = await getPermit(id);
           if (cachedPermit) {
@@ -853,7 +853,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
       steps[2].items.push({
         status: "incomplete",
         data:
-          permits.length && steps[1].items.length === 0
+          steps[1].items.length === 0
             ? {
                 ...permitHandler.attachToRouterExecution(
                   txData,
@@ -862,11 +862,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
                 maxFeePerGas,
                 maxPriorityFeePerGas,
               }
-            : {
-                ...txData,
-                maxFeePerGas,
-                maxPriorityFeePerGas,
-              },
+            : undefined,
       });
 
       return {
