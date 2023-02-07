@@ -175,7 +175,6 @@ export type MetadataIndexInfo =
       data: {
         method: string;
         collection: string;
-        continuation?: string;
         slug: string;
       };
     }
