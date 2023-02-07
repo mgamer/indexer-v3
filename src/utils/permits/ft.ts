@@ -5,7 +5,7 @@ import stringify from "json-stable-stringify";
 import { redis } from "@/common/redis";
 
 export const getPermitId = (requestPayload: object, tokens: string[]) =>
-  `erc20-permit:${keccak256(["string"], [stringify({ requestPayload, tokens })])}`;
+  `ft-permit:${keccak256(["string"], [stringify({ requestPayload, tokens })])}`;
 
 export const savePermit = async (id: string, permit: FTPermit, expiresIn: number) =>
   expiresIn === 0

@@ -5,13 +5,17 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import { ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
+import * as Permit2 from "@reservoir0x/sdk/dist/router/v6/permits/permit2";
+import { getPermitId, getPermit, savePermit } from "@/utils/permits/ft";
+
 import Joi from "joi";
+import * as onChainData from "@/utils/on-chain-data";
 
 import { inject } from "@/api/index";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn, formatPrice, fromBuffer, regex, toBuffer } from "@/common/utils";
+import { bn, formatPrice, fromBuffer, regex, toBuffer, now } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { OrderKind, generateListingDetailsV6 } from "@/orderbook/orders";
@@ -20,9 +24,9 @@ import * as sudoswap from "@/orderbook/orders/sudoswap";
 import * as nftx from "@/orderbook/orders/nftx";
 import { getCurrency } from "@/utils/currencies";
 
-const version = "v6";
+const version = "v7";
 
-export const getExecuteBuyV6Options: RouteOptions = {
+export const getExecuteBuyV7Options: RouteOptions = {
   description: "Buy tokens",
   tags: ["api", "Router"],
   timeout: {
@@ -657,7 +661,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
       });
-      const { txData, success } = await router.fillListingsTx(
+      const { txData, success, approvals, permits } = await router.fillListingsTx(
         listingDetails,
         payload.taker,
         buyInCurrency,
@@ -696,6 +700,13 @@ export const getExecuteBuyV6Options: RouteOptions = {
           items: [],
         },
         {
+          id: "permit",
+          action: "Sign permits",
+          description: "Sign permits for accessing the tokens in your wallet",
+          kind: "signature",
+          items: [],
+        },
+        {
           id: "sale",
           action: "Confirm transaction in your wallet",
           description: "To purchase this item you must confirm the transaction and pay the gas fee",
@@ -707,6 +718,87 @@ export const getExecuteBuyV6Options: RouteOptions = {
       const taker = payload.taker;
       const relayer = payload.relayer;
       const txSender = relayer ?? taker;
+
+      // Custom gas settings
+      const maxFeePerGas = payload.maxFeePerGas
+        ? bn(payload.maxFeePerGas).toHexString()
+        : undefined;
+      const maxPriorityFeePerGas = payload.maxPriorityFeePerGas
+        ? bn(payload.maxPriorityFeePerGas).toHexString()
+        : undefined;
+
+      // const inputCurrencyAmount = payload.amount ? bn(payload.amount) : undefined;
+
+      for (const approval of approvals) {
+        const approvedValue = await onChainData
+          .fetchAndUpdateFtApproval(approval.currency, approval.owner, approval.operator, true)
+          .then((a) => a.value);
+
+        // Make sure been approved to Permit2
+        const amountToApprove = permits
+          .map((p) => {
+            return p.details.data.transferDetails.filter((_) => _.token === approval.currency);
+          })
+          .flat()
+          .reduce((total, item) => total.add(item.amount), bn(0));
+
+        const isApproved = bn(approvedValue).gte(amountToApprove);
+
+        if (!isApproved) {
+          steps[0].items.push({
+            status: "incomplete",
+            data: {
+              ...approval.txData,
+              maxFeePerGas,
+              maxPriorityFeePerGas,
+            },
+          });
+        }
+      }
+
+      const permitHandler = new Permit2.Handler(config.chainId, baseProvider);
+
+      if (permits.length) {
+        for (const permit of permits) {
+          const id = getPermitId(request.payload as object, permit.currencies);
+
+          let cachedPermit = await getPermit(id);
+          if (cachedPermit) {
+            // Always use the cached permit details
+            permit.details = cachedPermit.details;
+
+            // If the cached permit has a signature attached to it, we can skip it
+            const hasSignature = (permit.details.data as Permit2.Data).signature;
+            if (hasSignature) {
+              continue;
+            }
+          } else {
+            // Cache the permit if it's the first time we encounter it
+            await savePermit(
+              id,
+              permit,
+              // Give a 1 minute buffer for the permit to expire
+              parseInt(permit.details.data.permitBatch.sigDeadline.toString()) - now() - 60
+            );
+            cachedPermit = permit;
+          }
+
+          steps[1].items.push({
+            status: "incomplete",
+            data: {
+              sign: permitHandler.getSignatureData(cachedPermit.details.data),
+              post: {
+                endpoint: "/execute/permit-signature/v1",
+                method: "POST",
+                body: {
+                  kind: "erc20-permit",
+                  id,
+                },
+              },
+            },
+          });
+        }
+      }
 
       // Check that the taker has enough funds to fill all requested tokens
       const totalPrice = path.map(({ rawQuote }) => bn(rawQuote)).reduce((a, b) => a.add(b));
@@ -758,15 +850,19 @@ export const getExecuteBuyV6Options: RouteOptions = {
         }
       }
 
-      steps[1].items.push({
+      steps[2].items.push({
         status: "incomplete",
-        data: {
-          ...txData,
-          maxFeePerGas: payload.maxFeePerGas ? bn(payload.maxFeePerGas).toHexString() : undefined,
-          maxPriorityFeePerGas: payload.maxPriorityFeePerGas
-            ? bn(payload.maxPriorityFeePerGas).toHexString()
+        data:
+          steps[1].items.length === 0
+            ? {
+                ...permitHandler.attachToRouterExecution(
+                  txData,
+                  permits.map((p) => p.details.data)
+                ),
+                maxFeePerGas,
+                maxPriorityFeePerGas,
+              }
             : undefined,
-        },
       });
 
       return {

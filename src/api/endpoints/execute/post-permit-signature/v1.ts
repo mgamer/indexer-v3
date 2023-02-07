@@ -9,7 +9,7 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import * as nft from "@/utils/permits/nft";
-import * as erc20 from "@/utils/permits/erc20";
+import * as erc20 from "@/utils/permits/ft";
 
 const version = "v1";
 
