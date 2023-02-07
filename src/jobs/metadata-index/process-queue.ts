@@ -51,14 +51,7 @@ if (config.doBackgroundWork) {
 
       // Get the tokens from the list
       const pendingRefreshTokens = new PendingRefreshTokens(method);
-      let refreshTokens = await pendingRefreshTokens.get(countTotal);
-
-      if (config.chainId === 137) {
-        refreshTokens = _.filter(
-          refreshTokens,
-          (token) => token.contract !== "0xaa1ec1efef105599f849b8f5df9b937e25a16e6b"
-        );
-      }
+      const refreshTokens = await pendingRefreshTokens.get(countTotal);
 
       // If no more tokens
       if (_.isEmpty(refreshTokens)) {
