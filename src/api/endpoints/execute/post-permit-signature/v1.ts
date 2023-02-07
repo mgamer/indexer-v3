@@ -9,7 +9,7 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import * as nft from "@/utils/permits/nft";
-import * as erc20 from "@/utils/permits/ft";
+import * as ft from "@/utils/permits/ft";
 
 const version = "v1";
 
@@ -26,10 +26,7 @@ export const postPermitSignatureV1Options: RouteOptions = {
       signature: Joi.string().required().description("Signature to attach to the permit"),
     }),
     payload: Joi.object({
-      kind: Joi.string()
-        .valid("nft-permit", "erc20-permit")
-        .required()
-        .description("Type of permit"),
+      kind: Joi.string().valid("nft-permit", "ft-permit").required().description("Type of permit"),
       id: Joi.string().required().description("Id of the permit"),
     }),
   },
@@ -48,9 +45,9 @@ export const postPermitSignatureV1Options: RouteOptions = {
     const payload = request.payload as any;
     try {
       switch (payload.kind) {
-        case "erc20-permit":
+        case "ft-permit":
           try {
-            const permit = await erc20.getPermit(payload.id);
+            const permit = await ft.getPermit(payload.id);
             if (!permit) {
               throw Boom.badRequest("Permit does not exist");
             }
@@ -66,7 +63,7 @@ export const postPermitSignatureV1Options: RouteOptions = {
             );
 
             // Update the cached permit to include the signature
-            await erc20.savePermit(payload.id, permit, 0);
+            await ft.savePermit(payload.id, permit, 0);
           } catch {
             throw Boom.badRequest("Invalid permit signature");
           }

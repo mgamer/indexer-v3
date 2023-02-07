@@ -791,7 +791,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 endpoint: "/execute/permit-signature/v1",
                 method: "POST",
                 body: {
-                  kind: "erc20-permit",
+                  kind: "ft-permit",
                   id,
                 },
               },
