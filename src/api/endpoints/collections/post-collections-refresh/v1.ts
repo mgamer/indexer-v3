@@ -192,6 +192,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
                   method,
                   contract: collection.contract,
                   slug: collection.slug,
+                  collection: collection.id,
                 },
               };
             }

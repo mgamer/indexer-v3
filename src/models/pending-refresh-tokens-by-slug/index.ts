@@ -4,6 +4,7 @@ import { redis } from "@/common/redis";
 export type RefreshTokenBySlug = {
   slug: string;
   contract: string;
+  collection: string;
   continuation?: string;
 };
 

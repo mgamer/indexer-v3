@@ -93,6 +93,7 @@ if (config.doBackgroundWork) {
           {
             slug: data.slug,
             contract: data.contract,
+            collection: data.collection,
           },
           prioritized
         );
@@ -175,6 +176,7 @@ export type MetadataIndexInfo =
       data: {
         method: string;
         contract: string;
+        collection: string;
         slug: string;
       };
     }
