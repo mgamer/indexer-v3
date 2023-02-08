@@ -11,14 +11,20 @@ import { fromBuffer } from "@/common/utils";
 import { PendingRefreshTokens, RefreshTokens } from "@/models/pending-refresh-tokens";
 import { PendingRefreshTokensBySlug } from "@/models/pending-refresh-tokens-by-slug";
 import { getIndexingMethod } from "@/jobs/metadata-index/fetch-queue";
+import * as metadataIndexProcessBySlug from "@/jobs/metadata-index/process-queue-by-slug";
+import * as metadataIndexProcess from "@/jobs/metadata-index/process-queue";
 
-const limit = 100;
+const methodsSet = new Set<string>();
+
 async function processCollection(collection: {
-  contract: Buffer;
+  contract: string;
   id: string;
   community: string;
   slug: string;
 }) {
+  const indexingMethod = getIndexingMethod(collection.community);
+  methodsSet.add(indexingMethod);
+  const limit = 10;
   let lastTokenId = "";
   const unindexedTokens: RefreshTokens[] = [];
   let indexedTokensCount = 0;
@@ -27,7 +33,7 @@ async function processCollection(collection: {
     let idAndContractFilter = "";
     if (lastTokenId != "") {
       console.log(`Collection contract ${collection.contract}, lastTokenId = ${lastTokenId}`);
-      idAndContractFilter = `WHERE collection_id = '${collection.id}' AND (t.contract, t.token_id) > ('${collection.contract}','${lastTokenId}')`;
+      idAndContractFilter = `WHERE collection_id = '${collection.id}' AND (t.collection_id, t.token_id) > ('${collection.id}','${lastTokenId}')`;
     }
 
     const query = `
@@ -44,7 +50,7 @@ async function processCollection(collection: {
       } else {
         unindexedTokens.push({
           collection: collection.id,
-          contract: fromBuffer(collection.contract),
+          contract: collection.contract,
           tokenId: token.token_id,
         } as RefreshTokens);
       }
@@ -57,13 +63,12 @@ async function processCollection(collection: {
     }
   }
 
-  const indexingMethod = getIndexingMethod(collection.community);
   if (unindexedTokens.length / indexedTokensCount > 0.15) {
     // push to collection refresh queue
     const pendingRefreshTokensBySlug = new PendingRefreshTokensBySlug(indexingMethod);
     await pendingRefreshTokensBySlug.add({
       slug: collection.slug,
-      contract: fromBuffer(collection.contract),
+      contract: collection.contract,
     });
   } else {
     // push to tokens refresh queue
@@ -73,6 +78,7 @@ async function processCollection(collection: {
 }
 
 const main = async () => {
+  const limit = 10;
   let lastId = "";
 
   while (true) {
@@ -94,7 +100,7 @@ const main = async () => {
     await Promise.all(
       _.map(collections, (collection) =>
         processCollection({
-          contract: collection.contract,
+          contract: fromBuffer(collection.contract),
           id: collection.id,
           community: collection.community,
           slug: collection.slug,
@@ -107,6 +113,14 @@ const main = async () => {
     } else {
       lastId = _.last(collections).id;
     }
+  }
+
+  // push queue messages
+  for (const method of methodsSet) {
+    await Promise.all([
+      metadataIndexProcessBySlug.addToQueue(method),
+      metadataIndexProcess.addToQueue(method),
+    ]);
   }
 };
 
