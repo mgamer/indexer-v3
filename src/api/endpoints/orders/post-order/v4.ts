@@ -7,6 +7,7 @@ import * as Sdk from "@reservoir0x/sdk";
 
 import Joi from "joi";
 
+import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { regex } from "@/common/utils";
 import { config } from "@/config/index";
@@ -262,6 +263,105 @@ export const postOrderV4Options: RouteOptions = {
                     result.id
                   }`
                 );
+              } else if (config.forwardReservoirApiKeys.includes(request.headers["x-api-key"])) {
+                const orderResult = await idb.oneOrNone(
+                  `
+                    SELECT
+                      orders.token_set_id
+                    FROM orders
+                    WHERE orders.id = $/id/
+                  `,
+                  { id: result.id }
+                );
+                if (orderResult?.token_set_id?.startsWith("token")) {
+                  await postOrderExternal.addToQueue(
+                    result.id,
+                    order.data,
+                    "opensea",
+                    config.forwardOpenseaApiKey
+                  );
+
+                  logger.info(
+                    `post-order-${version}-handler`,
+                    JSON.stringify({
+                      forward: true,
+                      orderbook: "opensea",
+                      data: order.data,
+                      orderId: result.id,
+                    })
+                  );
+                }
+              }
+
+              return results.push({ message: "success", orderIndex: i, orderId: result.id });
+            }
+
+            case "seaport-v1.2": {
+              if (!["opensea", "reservoir"].includes(orderbook)) {
+                return results.push({ message: "unsupported-orderbook", orderIndex: i });
+              }
+
+              const orderInfo: orders.seaportV12.OrderInfo = {
+                kind: "full",
+                orderParams: order.data,
+                isReservoir: orderbook === "reservoir",
+                metadata: {
+                  schema,
+                  source: orderbook === "reservoir" ? source : undefined,
+                  target: orderbook,
+                },
+              };
+
+              const [result] = await orders.seaportV12.save([orderInfo]);
+
+              if (result.status === "already-exists") {
+                return results.push({ message: "success", orderIndex: i, orderId: result.id });
+              } else if (result.status !== "success") {
+                return results.push({ message: result.status, orderIndex: i, orderId: result.id });
+              }
+
+              if (orderbook === "opensea") {
+                await postOrderExternal.addToQueue(
+                  result.id,
+                  order.data,
+                  orderbook,
+                  orderbookApiKey
+                );
+
+                logger.info(
+                  `post-order-${version}-handler`,
+                  `orderbook: ${orderbook}, orderData: ${JSON.stringify(order.data)}, orderId: ${
+                    result.id
+                  }`
+                );
+              } else if (config.forwardReservoirApiKeys.includes(request.headers["x-api-key"])) {
+                const orderResult = await idb.oneOrNone(
+                  `
+                    SELECT
+                      orders.token_set_id
+                    FROM orders
+                    WHERE orders.id = $/id/
+                  `,
+                  { id: result.id }
+                );
+                if (orderResult?.token_set_id?.startsWith("token")) {
+                  await postOrderExternal.addToQueue(
+                    result.id,
+                    order.data,
+                    "opensea",
+                    config.forwardOpenseaApiKey
+                  );
+
+                  logger.info(
+                    `post-order-${version}-handler`,
+                    JSON.stringify({
+                      forward: true,
+                      orderbook: "opensea",
+                      data: order.data,
+                      orderId: result.id,
+                    })
+                  );
+                }
               }
 
               return results.push({ message: "success", orderIndex: i, orderId: result.id });
