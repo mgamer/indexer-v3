@@ -36,14 +36,13 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { method } = job.data;
-      const count = 20; // Default number of tokens to fetch
+      const count = 1; // Default number of tokens to fetch
       let retry = false;
 
-      const countTotal =
-        method === "opensea" ? config.maxParallelTokenCollectionSlugRefreshJobs * count : count;
+      const countTotal = config.maxParallelTokenCollectionSlugRefreshJobs * count;
 
       // Get the collection slugs from the list
-      const pendingRefreshTokensBySlug = new PendingRefreshTokensBySlug(method);
+      const pendingRefreshTokensBySlug = new PendingRefreshTokensBySlug();
       const refreshTokensBySlug = await pendingRefreshTokensBySlug.get(countTotal);
 
       // If no more collection slugs, release lock
@@ -77,7 +76,7 @@ if (config.doBackgroundWork) {
             if (results.metadata.length === 0) {
               logger.warn(
                 QUEUE_NAME,
-                `Method=${method}. Metadata list is empty, pushing message to the following queues: ${metadataIndexFetch.QUEUE_NAME}, ${collectionUpdatesMetadata.QUEUE_NAME}`
+                `Method=${method}. Metadata list is empty on collection slug ${refreshTokenBySlug.slug}. Slug might be missing so pushing message to the following queues to update collection metadata and token metadata: ${metadataIndexFetch.QUEUE_NAME}, ${collectionUpdatesMetadata.QUEUE_NAME}`
               );
               await Promise.all([
                 metadataIndexFetch.addToQueue(

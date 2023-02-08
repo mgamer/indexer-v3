@@ -88,11 +88,11 @@ if (config.doBackgroundWork) {
 
       if (kind === "full-collection-by-slug") {
         // Add the collections slugs to the list
-        const pendingRefreshTokensBySlug = new PendingRefreshTokensBySlug(data.method);
+        const pendingRefreshTokensBySlug = new PendingRefreshTokensBySlug();
         const pendingCount = await pendingRefreshTokensBySlug.add(
           {
             slug: data.slug,
-            contract: data.collection,
+            contract: data.contract,
           },
           prioritized
         );
@@ -111,7 +111,7 @@ if (config.doBackgroundWork) {
 
         logger.debug(
           QUEUE_NAME,
-          `There are ${pendingCount} tokens pending to refresh for ${data.method}`
+          `There are ${pendingCount} collection slugs pending to refresh for ${data.method}`
         );
 
         if (await acquireLock(metadataIndexProcess.getLockName(data.method), 60 * 5)) {
@@ -174,7 +174,7 @@ export type MetadataIndexInfo =
       kind: "full-collection-by-slug";
       data: {
         method: string;
-        collection: string;
+        contract: string;
         slug: string;
       };
     }
