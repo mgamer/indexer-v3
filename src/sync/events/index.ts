@@ -17,6 +17,7 @@ import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsync
 import * as blockCheck from "@/jobs/events-sync/block-check-queue";
 import * as eventsSyncBackfillProcess from "@/jobs/events-sync/process/backfill";
 import * as eventsSyncRealtimeProcess from "@/jobs/events-sync/process/realtime";
+import { BlocksToCheck } from "@/jobs/events-sync/block-check-queue";
 
 export const extractEventsBatches = async (
   enhancedEvents: EnhancedEvent[],
@@ -377,19 +378,23 @@ export const syncEvents = async (
         }
       }
 
-      // Put all fetched blocks on a delayed queue
-      await Promise.all(
-        [...blocksSet.values()].map(async (blockData) => {
-          const block = Number(blockData.split("-")[0]);
-          const blockHash = blockData.split("-")[1];
+      const blocksToCheck: BlocksToCheck[] = [];
 
-          return Promise.all(
-            ns.reorgCheckFrequency.map((frequency) =>
-              blockCheck.addToQueue(block, blockHash, frequency * 60)
-            )
-          );
-        })
-      );
+      // Put all fetched blocks on a delayed queue
+      [...blocksSet.values()].map(async (blockData) => {
+        const block = Number(blockData.split("-")[0]);
+        const blockHash = blockData.split("-")[1];
+
+        ns.reorgCheckFrequency.map((frequency) =>
+          blocksToCheck.push({
+            block,
+            blockHash,
+            delay: frequency * 60,
+          })
+        );
+      });
+
+      await blockCheck.addBulk(blocksToCheck);
     }
   });
 };
