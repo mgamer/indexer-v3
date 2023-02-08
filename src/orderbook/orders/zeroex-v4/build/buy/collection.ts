@@ -54,6 +54,8 @@ export const build = async (options: BuildOrderOptions) => {
       builder = collectionResult.token_set_id.startsWith("contract:")
         ? new Sdk.ZeroExV4.Builders.ContractWide(config.chainId)
         : new Sdk.ZeroExV4.Builders.TokenRange(config.chainId);
+    } else {
+      throw new Error("Could not build order");
     }
 
     if (!collectionResult.token_set_id.startsWith("contract:")) {
@@ -65,7 +67,7 @@ export const build = async (options: BuildOrderOptions) => {
       (buildInfo.params as any).endTokenId = endTokenId;
     }
 
-    return builder?.build(buildInfo.params);
+    return builder.build(buildInfo.params);
   } else {
     const excludeFlaggedTokens = options.excludeFlaggedTokens
       ? "AND (tokens.is_flagged = 0 OR tokens.is_flagged IS NULL)"
@@ -112,6 +114,8 @@ export const build = async (options: BuildOrderOptions) => {
         builder = new Sdk.ZeroExV4.Builders.TokenList.PackedList(config.chainId);
       } else if (buildInfo.kind === "erc1155") {
         builder = new Sdk.ZeroExV4.Builders.TokenList.PackedList(config.chainId);
+      } else {
+        throw new Error("Could not build order");
       }
     } else {
       if (bitVectorCost > costThreshold) {
@@ -122,9 +126,11 @@ export const build = async (options: BuildOrderOptions) => {
         builder = new Sdk.ZeroExV4.Builders.TokenList.BitVector(config.chainId);
       } else if (buildInfo.kind === "erc1155") {
         builder = new Sdk.ZeroExV4.Builders.TokenList.BitVector(config.chainId);
+      } else {
+        throw new Error("Could not build order");
       }
     }
 
-    return builder?.build(buildInfo.params);
+    return builder.build(buildInfo.params);
   }
 };

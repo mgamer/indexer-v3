@@ -25,7 +25,7 @@ export const build = async (options: BuildOrderOptions) => {
       ${excludeFlaggedTokens}
     `,
     {
-      contract: toBuffer(options.contract),
+      contract: toBuffer(options.contract!),
       tokenId: options.tokenId,
     }
   );

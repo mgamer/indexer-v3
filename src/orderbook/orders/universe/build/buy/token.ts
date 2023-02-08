@@ -34,6 +34,5 @@ export const build = async (options: utils.BaseOrderBuildOptions) => {
   }
 
   const builder: BaseBuilder = new Sdk.Universe.Builders.SingleToken(config.chainId);
-
-  return builder?.build(buildInfo.params);
+  return builder.build(buildInfo.params);
 };

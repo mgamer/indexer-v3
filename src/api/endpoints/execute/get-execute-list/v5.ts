@@ -48,8 +48,8 @@ import * as flowCheck from "@/orderbook/orders/flow/check";
 const version = "v5";
 
 export const getExecuteListV5Options: RouteOptions = {
-  description: "Create ask (listing)",
-  notes: "Generate a listing and submit it to multiple marketplaces",
+  description: "Create asks (listings)",
+  notes: "Generate listings and submit them to multiple marketplaces",
   tags: ["api", "Orderbook"],
   plugins: {
     "hapi-swagger": {
@@ -271,9 +271,6 @@ export const getExecuteListV5Options: RouteOptions = {
                   contract,
                   tokenId,
                 });
-                if (!order) {
-                  return errors.push({ message: "Internal error", orderIndex: i });
-                }
 
                 // Will be set if an approval is needed before listing
                 let approvalTx: TxData | undefined;
@@ -346,10 +343,6 @@ export const getExecuteListV5Options: RouteOptions = {
                   tokenId,
                 });
 
-                if (!order) {
-                  return errors.push({ message: "Internal error", orderIndex: i });
-                }
-
                 // Will be set if an approval is needed before listing
                 let approvalTx: TxData | undefined;
 
@@ -417,10 +410,6 @@ export const getExecuteListV5Options: RouteOptions = {
                   contract,
                   tokenId,
                 });
-
-                if (!order) {
-                  return errors.push({ message: "Internal error", orderIndex: i });
-                }
 
                 // Will be set if an approval is needed before listing
                 let approvalTx: TxData | undefined;
@@ -490,9 +479,6 @@ export const getExecuteListV5Options: RouteOptions = {
                   tokenId,
                   source,
                 });
-                if (!order) {
-                  return errors.push({ message: "Internal error", orderIndex: i });
-                }
 
                 // Will be set if an approval is needed before listing
                 let approvalTx: TxData | undefined;
@@ -569,9 +555,6 @@ export const getExecuteListV5Options: RouteOptions = {
                   tokenId,
                   source,
                 });
-                if (!order) {
-                  return errors.push({ message: "Internal error", orderIndex: i });
-                }
 
                 // Will be set if an approval is needed before listing
                 let approvalTx: TxData | undefined;
@@ -640,9 +623,6 @@ export const getExecuteListV5Options: RouteOptions = {
                   contract,
                   tokenId,
                 });
-                if (!order) {
-                  return errors.push({ message: "Internal error", orderIndex: i });
-                }
 
                 // Will be set if an approval is needed before listing
                 let approvalTx: TxData | undefined;
@@ -726,9 +706,6 @@ export const getExecuteListV5Options: RouteOptions = {
                   contract,
                   tokenId,
                 });
-                if (!order) {
-                  return errors.push({ message: "Internal error", orderIndex: i });
-                }
 
                 // Will be set if an approval is needed before listing
                 let approvalTx: TxData | undefined;
@@ -811,9 +788,6 @@ export const getExecuteListV5Options: RouteOptions = {
                   contract,
                   tokenId,
                 });
-                if (!order) {
-                  return errors.push({ message: "Internal error", orderIndex: i });
-                }
 
                 // Will be set if an approval is needed before listing
                 let approvalTx: TxData | undefined;
@@ -954,7 +928,9 @@ export const getExecuteListV5Options: RouteOptions = {
 
       return { steps, errors };
     } catch (error) {
-      logger.error(`get-execute-list-${version}-handler`, `Handler failure: ${error}`);
+      if (!(error instanceof Boom.Boom)) {
+        logger.error(`get-execute-list-${version}-handler`, `Handler failure: ${error}`);
+      }
       throw error;
     }
   },
