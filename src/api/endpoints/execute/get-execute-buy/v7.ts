@@ -28,7 +28,7 @@ const version = "v7";
 
 export const getExecuteBuyV7Options: RouteOptions = {
   description: "Buy tokens",
-  tags: ["api", "Router"],
+  tags: ["api", "Router", "x-experimental"],
   timeout: {
     server: 20 * 1000,
   },
@@ -727,20 +727,23 @@ export const getExecuteBuyV7Options: RouteOptions = {
         ? bn(payload.maxPriorityFeePerGas).toHexString()
         : undefined;
 
-      // const inputCurrencyAmount = payload.amount ? bn(payload.amount) : undefined;
-
       for (const approval of approvals) {
         const approvedValue = await onChainData
           .fetchAndUpdateFtApproval(approval.currency, approval.owner, approval.operator, true)
           .then((a) => a.value);
 
-        // Make sure been approved to Permit2
-        const amountToApprove = permits
-          .map((p) => {
-            return p.details.data.transferDetails.filter((_) => _.token === approval.currency);
-          })
-          .flat()
-          .reduce((total, item) => total.add(item.amount), bn(0));
+        // Make sure have been approved
+        const amountToApprove = permits.length
+          ? permits
+              .map((p) => {
+                return p.details.data.transferDetails.filter((_) => _.token === approval.currency);
+              })
+              .flat()
+              .reduce((total, item) => total.add(item.amount), bn(0))
+          : path
+              .filter((_) => _.currency === approval.currency)
+              .map(({ rawQuote }) => bn(rawQuote))
+              .reduce((a, b) => a.add(b));
 
         const isApproved = bn(approvedValue).gte(amountToApprove);
 
@@ -802,6 +805,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
       // Check that the taker has enough funds to fill all requested tokens
       const totalPrice = path.map(({ rawQuote }) => bn(rawQuote)).reduce((a, b) => a.add(b));
+
       if (buyInCurrency === Sdk.Common.Addresses.Eth[config.chainId]) {
         const balance = await baseProvider.getBalance(txSender);
         if (!payload.skipBalanceCheck && bn(balance).lt(totalPrice)) {
@@ -815,38 +819,12 @@ export const getExecuteBuyV7Options: RouteOptions = {
           throw Boom.badData("Balance too low to proceed with transaction");
         }
 
-        let conduit: string;
-        if (listingDetails.every((d) => d.kind === "seaport")) {
-          // TODO: Have a default conduit for each exchange per chain
-          conduit =
-            config.chainId === 1
-              ? // Use OpenSea's conduit for sharing approvals
-                "0x1e0049783f008a0085193e00003d00cd54003c71"
-              : Sdk.Seaport.Addresses.Exchange[config.chainId];
-        } else if (listingDetails.every((d) => d.kind === "universe")) {
-          conduit = Sdk.Universe.Addresses.Exchange[config.chainId];
-        } else if (listingDetails.every((d) => d.kind === "rarible")) {
-          conduit = Sdk.Rarible.Addresses.Exchange[config.chainId];
-        } else {
+        const supportedKinds = ["seaport", "universe", "rarible"];
+        const matchKind = supportedKinds.find((kind) => {
+          return listingDetails.every((d) => d.kind === kind);
+        });
+        if (!matchKind) {
           throw new Error("Only Seaport, Universe and Rarible ERC20 listings are supported");
-        }
-
-        const allowance = await erc20.getAllowance(txSender, conduit);
-        if (bn(allowance).lt(totalPrice)) {
-          const tx = erc20.approveTransaction(txSender, conduit);
-          steps[0].items.push({
-            status: "incomplete",
-            data: {
-              ...tx,
-              from: txSender,
-              maxFeePerGas: payload.maxFeePerGas
-                ? bn(payload.maxFeePerGas).toHexString()
-                : undefined,
-              maxPriorityFeePerGas: payload.maxPriorityFeePerGas
-                ? bn(payload.maxPriorityFeePerGas).toHexString()
-                : undefined,
-            },
-          });
         }
       }
 
