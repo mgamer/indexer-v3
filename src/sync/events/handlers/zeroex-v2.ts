@@ -84,7 +84,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         tokenContract = orderSide === "sell" ? decodedMakerAssetData[0] : decodedTakerAssetData[0];
         tokenId = orderSide === "sell" ? decodedMakerAssetData[1] : decodedTakerAssetData[1];
 
-        if (currency === Sdk.ZeroExV2.Addresses.Eth[config.chainId]) {
+        if (currency === Sdk.ZeroExV4.Addresses.Eth[config.chainId]) {
           // Map the weird ZeroEx ETH address to the default ETH address
           currency = Sdk.Common.Addresses.Eth[config.chainId];
         }
