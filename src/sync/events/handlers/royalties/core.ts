@@ -201,9 +201,9 @@ export async function extractRoyalties(
           !shouldExcludeAddressList.has(address) &&
           !allPlatformFeeRecipients.has(address);
 
-        const notInOtherDef =
-          royaltyRecipients.includes(address) &&
-          !otherRoyaltiesDefinition.find((_) => _.royalties.find((c) => c.recipient === address));
+        const notInOtherDef = !otherRoyaltiesDefinition.find((_) =>
+          _.royalties.find((c) => c.recipient === address)
+        );
 
         if (isEligible && notInOtherDef) {
           curRoyalties.bps = bps;
