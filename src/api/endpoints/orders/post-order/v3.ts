@@ -199,6 +199,17 @@ export const postOrderV3Options: RouteOptions = {
 
           const [result] = await orders.seaport.save([orderInfo]);
 
+          logger.info(
+            `post-order-${version}-handler`,
+            JSON.stringify({
+              forward: false,
+              orderbook,
+              data: order.data,
+              orderId: result.id,
+              status: result.status,
+            })
+          );
+
           if (result.status === "already-exists") {
             return { message: "Success", orderId: result.id };
           }
