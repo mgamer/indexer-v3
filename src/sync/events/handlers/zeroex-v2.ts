@@ -25,6 +25,13 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const ERC20Proxy = "0xf47261b0";
         const ERC721Proxy = "0x02571792";
 
+        if (
+          args["takerAssetData"].slice(0, 10) !== MultiAssetProxy ||
+          args["makerAssetData"].slice(0, 10) !== MultiAssetProxy
+        ) {
+          break;
+        }
+
         const takerAssetData = defaultAbiCoder.decode(
           ["uint256[]", "bytes[]"],
           args["takerAssetData"].replace(MultiAssetProxy, "0x")
