@@ -6,13 +6,21 @@ import { redis } from "@/common/redis";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 import { getFillEventsFromTx } from "@/events-sync/handlers/royalties";
-import { platformFeeRecipientsRegistry } from "@/events-sync/handlers/royalties/config";
+import {
+  platformFeeRecipientsRegistry,
+  allPlatformFeeRecipients,
+} from "@/events-sync/handlers/royalties/config";
 import * as es from "@/events-sync/storage";
 import * as utils from "@/events-sync/utils";
 import { TransactionTrace } from "@/models/transaction-traces";
 import { Royalty, getRoyalties } from "@/utils/royalties";
+import { StateCache } from "@/events-sync/handlers/royalties";
 
-export async function extractRoyalties(fillEvent: es.fills.Event, useCache?: boolean) {
+export async function extractRoyalties(
+  fillEvent: es.fills.Event,
+  cache: StateCache,
+  useCache?: boolean
+) {
   const creatorRoyaltyFeeBreakdown: Royalty[] = [];
   const marketplaceFeeBreakdown: Royalty[] = [];
   const royaltyFeeBreakdown: Royalty[] = [];
@@ -56,6 +64,37 @@ export async function extractRoyalties(fillEvent: es.fills.Event, useCache?: boo
     if (useCache) await redis.set(cacheKeyEvents, JSON.stringify(fillEvents), "EX", 10 * 60);
   }
 
+  // Get all related royaltly settings from the same transcation
+  const allRoyaltiesDefinition = await Promise.all(
+    fillEvents.map(async (_) => {
+      const cacheKey = `${_.contract}:${_.tokenId}`;
+      let royalties = cache.royalties.get(cacheKey);
+      if (!royalties) {
+        royalties = await getRoyalties(_.contract, _.tokenId);
+        cache.royalties.set(cacheKey, royalties);
+      }
+      return {
+        ..._,
+        royalties,
+      };
+    })
+  );
+
+  const otherRoyaltiesDefinition = allRoyaltiesDefinition.filter((c) => {
+    return c.contract != contract && c.tokenId != tokenId;
+  });
+
+  // Exclude same traders from same tx and WETH
+  const shouldExcludeAddressList = new Set();
+
+  fillEvents.forEach((fillEvent) => {
+    shouldExcludeAddressList.add(fillEvent.maker);
+    shouldExcludeAddressList.add(fillEvent.taker);
+  });
+
+  shouldExcludeAddressList.add(Sdk.Common.Addresses.Weth[config.chainId]);
+  shouldExcludeAddressList.add(Sdk.Common.Addresses.Eth[config.chainId]);
+
   const collectionFills =
     fillEvents?.filter((_) => _.contract === contract && _.currency === fillEvent.currency) || [];
   const protocolFillEvents =
@@ -88,11 +127,17 @@ export async function extractRoyalties(fillEvent: es.fills.Event, useCache?: boo
   }, bn(0));
 
   const state = parseCallTrace(txTrace.calls);
-  const royalties = await getRoyalties(contract, tokenId);
+
+  const matchDefinition = allRoyaltiesDefinition.find(
+    (_) => _.contract === contract && _.tokenId === tokenId
+  );
+  const royalties = matchDefinition ? matchDefinition.royalties : [];
 
   const balanceChangeWithBps = [];
   const royaltyRecipients: string[] = royalties.map((_) => _.recipient);
-  const threshold = 1500;
+
+  // BPS < 30%
+  const threshold = 3000;
   let sameCollectionSales = 0;
   let totalTransfers = 0;
 
@@ -149,7 +194,18 @@ export async function extractRoyalties(fillEvent: es.fills.Event, useCache?: boo
           curRoyalties.bps = bps;
           creatorRoyaltyFeeBreakdown.push(curRoyalties);
         }
-        if (bps < threshold) {
+
+        const isEligible =
+          bps < threshold &&
+          bps > 0 &&
+          !shouldExcludeAddressList.has(address) &&
+          !allPlatformFeeRecipients.has(address);
+
+        const notInOtherDef =
+          royaltyRecipients.includes(address) &&
+          !otherRoyaltiesDefinition.find((_) => _.royalties.find((c) => c.recipient === address));
+
+        if (isEligible && notInOtherDef) {
           curRoyalties.bps = bps;
           royaltyFeeBreakdown.push(curRoyalties);
         }
@@ -191,12 +247,6 @@ export async function extractRoyalties(fillEvent: es.fills.Event, useCache?: boo
     totalFills: fillEvents.length,
     paidFullRoyalty,
   };
-
-  // console.log("result", {
-  //   creatorRoyaltyFeeBreakdown,
-  //   royaltyFeeBreakdown,
-  //   marketplaceFeeBreakdown,
-  // });
 
   return result;
 }
