@@ -19,6 +19,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const MultiAssetProxy = "0x94cfcdd7";
         const ERC20Proxy = "0xf47261b0";
         const ERC721Proxy = "0x02571792";
+        const ERC1155Proxy = "0xa7cb5fb7";
 
         if (
           args["takerAssetData"].slice(0, 10) !== MultiAssetProxy ||
@@ -59,6 +60,11 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             ["address", "uint256"],
             takerAssetData[1][0].replace(ERC721Proxy, "0x")
           );
+        } else if (takerAssetType === ERC1155Proxy) {
+          decodedTakerAssetData = defaultAbiCoder.decode(
+            ["address", "uint256"],
+            takerAssetData[1][0].replace(ERC1155Proxy, "0x")
+          );
         } else {
           decodedTakerAssetData = defaultAbiCoder.decode(
             ["address"],
@@ -73,6 +79,11 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             ["address", "uint256"],
             makerAssetData[1][0].replace(ERC721Proxy, "0x")
           );
+        } else if (makerAssetType === ERC1155Proxy) {
+          decodedMakerAssetData = defaultAbiCoder.decode(
+            ["address", "uint256"],
+            makerAssetData[1][0].replace(ERC1155Proxy, "0x")
+          );
         } else {
           decodedMakerAssetData = defaultAbiCoder.decode(
             ["address"],
@@ -84,7 +95,10 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const amount = orderSide === "sell" ? makerAssetData[0][0] : takerAssetData[0][0];
         const tokenContract =
           orderSide === "sell" ? decodedMakerAssetData[0] : decodedTakerAssetData[0];
-        const tokenId = orderSide === "sell" ? decodedMakerAssetData[1] : decodedTakerAssetData[1];
+        const tokenId =
+          orderSide === "sell"
+            ? decodedMakerAssetData[1].toString()
+            : decodedTakerAssetData[1].toString();
 
         let currency = orderSide === "sell" ? decodedTakerAssetData[0] : decodedMakerAssetData[0];
         if (currency === Sdk.ZeroExV4.Addresses.Eth[config.chainId]) {
