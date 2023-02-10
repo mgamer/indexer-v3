@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Job, Queue, QueueScheduler, Worker } from "bullmq";
+import { Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
@@ -157,9 +157,7 @@ if (config.doBackgroundWork) {
       // If there are potentially more tokens to process trigger another job
       if (rateLimitExpiredIn || _.size(refreshTokensBySlug) == countTotal || retry) {
         if (await extendLock(getLockName(method), 60 * 5 + rateLimitExpiredIn)) {
-          await addToQueue(
-            rateLimitExpiredIn * 1000
-          );
+          await addToQueue(rateLimitExpiredIn * 1000);
         }
       } else {
         await releaseLock(getLockName(method));
@@ -178,9 +176,5 @@ export const getLockName = (method: string) => {
 };
 
 export const addToQueue = async (delay = 0) => {
-  await queue.add(
-    randomUUID(),
-    {},
-    { delay }
-  );
+  await queue.add(randomUUID(), {}, { delay });
 };
