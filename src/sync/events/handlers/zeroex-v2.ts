@@ -6,6 +6,7 @@ import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import * as utils from "@/events-sync/utils";
 import { getUSDAndNativePrices } from "@/utils/prices";
+import { bn } from "@/common/utils";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   for (const { subKind, baseEventParams, log } of events) {
@@ -93,7 +94,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           );
         }
 
-        const currencyPrice = orderSide === "sell" ? takerAssetData[0][0] : makerAssetData[0][0];
+        let currencyPrice = orderSide === "sell" ? takerAssetData[0][0] : makerAssetData[0][0];
         const tokenContract =
           orderSide === "sell" ? decodedMakerAssetData[0] : decodedTakerAssetData[0];
         const amount =
@@ -117,6 +118,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           // Map the weird ZeroEx ETH address to the default ETH address
           currency = Sdk.Common.Addresses.Eth[config.chainId];
         }
+        currencyPrice = bn(currencyPrice).div(amount).toString();
 
         const priceData = await getUSDAndNativePrices(
           currency,
