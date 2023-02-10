@@ -12,6 +12,7 @@ import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import _ from "lodash";
 import { PendingRefreshTokensBySlug } from "@/models/pending-refresh-tokens-by-slug";
+import { Tokens } from "@/models/tokens";
 
 const QUEUE_NAME = "metadata-index-process-queue-by-slug";
 
@@ -34,16 +35,15 @@ new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
-    async (job: Job) => {
-      const { method } = job.data;
-      const count = 20; // Default number of tokens to fetch
+    async () => {
+      const method = "opensea";
+      const count = 1; // Default number of tokens to fetch
       let retry = false;
 
-      const countTotal =
-        method === "opensea" ? config.maxParallelTokenCollectionSlugRefreshJobs * count : count;
+      const countTotal = config.maxParallelTokenCollectionSlugRefreshJobs * count;
 
       // Get the collection slugs from the list
-      const pendingRefreshTokensBySlug = new PendingRefreshTokensBySlug(method);
+      const pendingRefreshTokensBySlug = new PendingRefreshTokensBySlug();
       const refreshTokensBySlug = await pendingRefreshTokensBySlug.get(countTotal);
 
       // If no more collection slugs, release lock
@@ -69,6 +69,7 @@ if (config.doBackgroundWork) {
                 {
                   slug: refreshTokenBySlug.slug,
                   contract: refreshTokenBySlug.contract,
+                  collection: refreshTokenBySlug.collection,
                   continuation: results.continuation,
                 },
                 true
@@ -77,8 +78,9 @@ if (config.doBackgroundWork) {
             if (results.metadata.length === 0) {
               logger.warn(
                 QUEUE_NAME,
-                `Method=${method}. Metadata list is empty, pushing message to the following queues: ${metadataIndexFetch.QUEUE_NAME}, ${collectionUpdatesMetadata.QUEUE_NAME}`
+                `Method=${method}. Metadata list is empty on collection slug ${refreshTokenBySlug.slug}. Slug might be missing so pushing message to the following queues to update collection metadata and token metadata: ${metadataIndexFetch.QUEUE_NAME}, ${collectionUpdatesMetadata.QUEUE_NAME}`
               );
+              const tokenId = await Tokens.getSingleToken(refreshTokenBySlug.collection);
               await Promise.all([
                 metadataIndexFetch.addToQueue(
                   [
@@ -86,13 +88,18 @@ if (config.doBackgroundWork) {
                       kind: "full-collection",
                       data: {
                         method,
-                        collection: refreshTokenBySlug.contract,
+                        collection: refreshTokenBySlug.collection,
                       },
                     },
                   ],
                   true
                 ),
-                collectionUpdatesMetadata.addToQueue(refreshTokenBySlug.contract, "1", method, 0),
+                collectionUpdatesMetadata.addToQueue(
+                  refreshTokenBySlug.contract,
+                  tokenId,
+                  method,
+                  0
+                ),
               ]);
               return;
             } else {
@@ -107,10 +114,7 @@ if (config.doBackgroundWork) {
 
               rateLimitExpiredIn = Math.max(rateLimitExpiredIn, error.response.data.expires_in, 5);
 
-              await pendingRefreshTokensBySlug.add(
-                refreshTokenBySlug,
-                !!refreshTokenBySlug.continuation
-              );
+              await pendingRefreshTokensBySlug.add(refreshTokenBySlug, true);
             } else if (error.response.status === 400) {
               await metadataIndexFetch.addToQueue(
                 [
@@ -131,10 +135,7 @@ if (config.doBackgroundWork) {
               );
 
               if (error.response?.data.error === "Request failed with status code 403") {
-                await pendingRefreshTokensBySlug.add(
-                  refreshTokenBySlug,
-                  !!refreshTokenBySlug.continuation
-                );
+                await pendingRefreshTokensBySlug.add(refreshTokenBySlug, true);
                 retry = true;
               }
             }
@@ -157,8 +158,6 @@ if (config.doBackgroundWork) {
       if (rateLimitExpiredIn || _.size(refreshTokensBySlug) == countTotal || retry) {
         if (await extendLock(getLockName(method), 60 * 5 + rateLimitExpiredIn)) {
           await addToQueue(
-            method,
-
             rateLimitExpiredIn * 1000
           );
         }
@@ -178,12 +177,10 @@ export const getLockName = (method: string) => {
   return `${QUEUE_NAME}:${method}`;
 };
 
-export const addToQueue = async (method: string, delay = 0) => {
+export const addToQueue = async (delay = 0) => {
   await queue.add(
     randomUUID(),
-    {
-      method,
-    },
+    {},
     { delay }
   );
 };

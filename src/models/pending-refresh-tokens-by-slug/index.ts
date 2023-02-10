@@ -4,6 +4,7 @@ import { redis } from "@/common/redis";
 export type RefreshTokenBySlug = {
   slug: string;
   contract: string;
+  collection: string;
   continuation?: string;
 };
 
@@ -13,8 +14,8 @@ export type RefreshTokenBySlug = {
 export class PendingRefreshTokensBySlug {
   public key = "pending-refresh-tokens-by-slug";
 
-  public constructor(method: string) {
-    this.key += `:${method}`;
+  public constructor() {
+    this.key += `:opensea`;
   }
 
   public async add(refreshTokenBySlug: RefreshTokenBySlug, prioritized = false) {

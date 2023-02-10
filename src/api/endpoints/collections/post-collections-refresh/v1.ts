@@ -8,7 +8,6 @@ import _ from "lodash";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { config } from "@/config/index";
 import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
@@ -190,8 +189,9 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
                 kind: "full-collection-by-slug",
                 data: {
                   method,
-                  collection: collection.contract,
+                  contract: collection.contract,
                   slug: collection.slug,
+                  collection: collection.id,
                 },
               };
             }

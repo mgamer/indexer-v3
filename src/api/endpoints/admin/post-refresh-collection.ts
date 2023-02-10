@@ -116,8 +116,9 @@ export const postRefreshCollectionOptions: RouteOptions = {
               kind: "full-collection-by-slug",
               data: {
                 method,
-                collection: collection.contract,
+                contract: collection.contract,
                 slug: collection.slug,
+                collection: collection.id,
               },
             };
           }
