@@ -2,6 +2,7 @@ import {
   BaseStreamMessage,
   CollectionOfferEventPayload,
   EventType,
+  ItemMetadataUpdatePayload,
   ItemReceivedBidEventPayload,
   Network,
   OpenSeaStreamClient,
@@ -18,6 +19,7 @@ import { handleEvent as handleItemListedEvent } from "@/websockets/opensea/handl
 import { handleEvent as handleItemReceivedBidEvent } from "@/websockets/opensea/handlers/item_received_bid";
 import { handleEvent as handleCollectionOfferEvent } from "@/websockets/opensea/handlers/collection_offer";
 import { handleEvent as handleTraitOfferEvent } from "@/websockets/opensea/handlers/trait_offer";
+import { handleEvent as handleItemMetadataUpdatedEvent } from "@/websockets/opensea/handlers/item_metadata_updated";
 
 import { PartialOrderComponents } from "@/orderbook/orders/seaport";
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
@@ -48,6 +50,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       EventType.ITEM_RECEIVED_BID,
       EventType.COLLECTION_OFFER,
       EventType.TRAIT_OFFER,
+      EventType.ITEM_METADATA_UPDATED,
     ],
     async (event) => {
       try {
@@ -113,6 +116,10 @@ const saveEvent = async (event: BaseStreamMessage<unknown>) => {
     // TODO: Filter out the properties when ingesting from S3 to Redshift instead of here.
     delete (event.payload as any).item.metadata;
     delete (event.payload as any).item.permalink;
+    if (event.event_type === EventType.ITEM_METADATA_UPDATED) {
+      console.log(`ITEM_METADATA_UPDATED: ${JSON.stringify(event)}`);
+      // console.log(`ITEM_METADATA_UPDATED payload: ${JSON.stringify(event.payload)}`);
+    }
 
     const params = {
       Record: {
@@ -153,6 +160,8 @@ export const handleEvent = (type: EventType, payload: unknown): PartialOrderComp
       return handleCollectionOfferEvent(payload as CollectionOfferEventPayload);
     case EventType.TRAIT_OFFER:
       return handleTraitOfferEvent(payload as TraitOfferEventPayload);
+    case EventType.ITEM_METADATA_UPDATED:
+      return handleItemMetadataUpdatedEvent(payload as ItemMetadataUpdatePayload);
     default:
       return null;
   }
