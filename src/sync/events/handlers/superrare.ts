@@ -1,4 +1,4 @@
-import { parseCallTrace } from "@georgeroman/evm-tx-simulator";
+import { getStateChange } from "@georgeroman/evm-tx-simulator";
 import { Common } from "@reservoir0x/sdk";
 
 import { config } from "@/config/index";
@@ -31,7 +31,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           break;
         }
 
-        const parsedTrace = parseCallTrace(txTrace.calls);
+        const parsedTrace = getStateChange(txTrace.calls);
 
         for (const token of Object.keys(parsedTrace[taker].tokenBalanceState)) {
           if (token.startsWith("erc20") || token.startsWith("native")) {

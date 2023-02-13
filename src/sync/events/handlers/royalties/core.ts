@@ -1,5 +1,5 @@
 import { formatEther } from "@ethersproject/units";
-import { parseCallTrace } from "@georgeroman/evm-tx-simulator";
+import { getStateChange, getPayments, searchForCall } from "@georgeroman/evm-tx-simulator";
 import * as Sdk from "@reservoir0x/sdk";
 
 import { redis } from "@/common/redis";
@@ -9,6 +9,7 @@ import { getFillEventsFromTx } from "@/events-sync/handlers/royalties";
 import {
   platformFeeRecipientsRegistry,
   allPlatformFeeRecipients,
+  allExchangeList,
 } from "@/events-sync/handlers/royalties/config";
 import * as es from "@/events-sync/storage";
 import * as utils from "@/events-sync/utils";
@@ -84,6 +85,46 @@ export async function extractRoyalties(
     return c.contract != contract && c.tokenId != tokenId;
   });
 
+  let traceToAnalyze = txTrace.calls;
+  let usingExhcnageCall = false;
+
+  const exchangeAddress = allExchangeList.get(fillEvent.orderKind);
+  if (exchangeAddress) {
+    // get all realated calls
+    const allCalls = [];
+    for (let index = 0; index < 100; index++) {
+      const exchangeCall = searchForCall(
+        txTrace.calls,
+        {
+          to: exchangeAddress,
+        },
+        index
+      );
+      if (exchangeCall) {
+        allCalls.push(exchangeCall);
+      } else {
+        break;
+      }
+    }
+
+    // TODO multiple
+    for (let index = 0; index < allCalls.length; index++) {
+      const exchangeCall = allCalls[index];
+      const payments = getPayments(exchangeCall);
+      const matchPayment = payments.find((c) =>
+        c.token.includes(`${fillEvent.contract}:${fillEvent.tokenId}`)
+      );
+      if (matchPayment) {
+        //
+      }
+    }
+
+    if (allCalls.length === 1) {
+      traceToAnalyze = allCalls[0];
+      usingExhcnageCall = true;
+    }
+  }
+
   // Exclude same traders from same tx and WETH
   const shouldExcludeAddressList = new Set();
 
@@ -96,7 +137,14 @@ export async function extractRoyalties(
   shouldExcludeAddressList.add(Sdk.Common.Addresses.Eth[config.chainId]);
 
   const collectionFills =
-    fillEvents?.filter((_) => _.contract === contract && _.currency === fillEvent.currency) || [];
+    fillEvents?.filter((_) => {
+      const macthSameCollection = _.contract === contract && _.currency === fillEvent.currency;
+      if (usingExhcnageCall) {
+        return macthSameCollection && _.orderKind === fillEvent.orderKind;
+      }
+      return macthSameCollection;
+    }) || [];
+
   const protocolFillEvents =
     fillEvents?.filter(
       (_) => _.orderKind === fillEvent.orderKind && _.currency === fillEvent.currency
@@ -126,7 +174,7 @@ export async function extractRoyalties(
     }
   }, bn(0));
 
-  const state = parseCallTrace(txTrace.calls);
+  const state = getStateChange(traceToAnalyze);
 
   const matchDefinition = allRoyaltiesDefinition.find(
     (_) => _.contract === contract && _.tokenId === tokenId

@@ -1,4 +1,4 @@
-import { parseCallTrace } from "@georgeroman/evm-tx-simulator";
+import { getStateChange } from "@georgeroman/evm-tx-simulator";
 
 import { bn } from "@/common/utils";
 import { getEventData } from "@/events-sync/data";
@@ -29,7 +29,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           break;
         }
 
-        const parsedTrace = parseCallTrace(txTrace.calls);
+        const parsedTrace = getStateChange(txTrace.calls);
 
         for (const token of Object.keys(parsedTrace[taker].tokenBalanceState)) {
           if (token.startsWith("erc721") || token.startsWith("erc1155")) {

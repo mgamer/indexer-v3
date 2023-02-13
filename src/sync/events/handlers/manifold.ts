@@ -1,5 +1,5 @@
 import { Log } from "@ethersproject/abstract-provider";
-import { parseCallTrace } from "@georgeroman/evm-tx-simulator";
+import { getStateChange } from "@georgeroman/evm-tx-simulator";
 import * as Sdk from "@reservoir0x/sdk";
 
 import { idb } from "@/common/db";
@@ -70,7 +70,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           break;
         }
 
-        const parsedTrace = parseCallTrace(txTrace.calls);
+        const parsedTrace = getStateChange(txTrace.calls);
 
         const tokenKey = Object.keys(parsedTrace[baseEventParams.address].tokenBalanceState)[0];
         const [, tokenContract, tokenId] = tokenKey.split(":");
@@ -266,7 +266,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           break;
         }
 
-        const parsedTrace = parseCallTrace(txTrace.calls);
+        const parsedTrace = getStateChange(txTrace.calls);
 
         let purchasedAmount = "0";
         let tokenKey = "";
