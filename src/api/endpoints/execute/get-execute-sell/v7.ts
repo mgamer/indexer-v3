@@ -547,8 +547,7 @@ export const getExecuteSellV7Options: RouteOptions = {
         cbApiKey: config.cbApiKey,
       });
 
-      const forcePermit =
-        bidDetails.length === 1 && customTokenAddresses.includes(bidDetails[0].contract);
+      const forcePermit = customTokenAddresses.includes(bidDetails[0].contract);
       const { txData, success, approvals, permits } = await router.fillBidsTx(
         bidDetails,
         payload.taker,

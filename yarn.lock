@@ -2675,18 +2675,10 @@
   resolved "https://registry.npmjs.org/@protobufjs/utf8/-/utf8-1.1.0.tgz"
   integrity sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw==
 
-"@reservoir0x/sdk@/Users/fun/projects/reservoir/core/packages/sdk":
-  version "0.0.312"
-  dependencies:
-    "@uniswap/permit2-sdk" "^1.2.0"
-    "@uniswap/smart-order-router" "^3.0.4"
-    ethers "^5.7.2"
-    merkletreejs "^0.3.9"
-
-"@reservoir0x/sdk@0.0.312":
-  version "0.0.312"
-  resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.0.312.tgz#5e77a070988c9a5022df35537239649a56f47320"
-  integrity sha512-vcfWD2pKqNRP1KEjyZ90iQ+qXis7dcICVEyLsOO0Zm3gGz49ubfpwtr4gBudgKoQfoiAP1/ZKoSBEfZhHqYkDg==
+"@reservoir0x/sdk@0.0.315":
+  version "0.0.315"
+  resolved "https://registry.yarnpkg.com/@reservoir0x/sdk/-/sdk-0.0.315.tgz#083612eb38aa90d679c7c99bc44b8168370cb131"
+  integrity sha512-9rMwBFqWLaD3+IU8TdrGn7qaotFJ74m5vc8SCIuCkcueYig++twrSaT8WdCsVJwNmm4oXUBd8quJyCdyLWVcRQ==
   dependencies:
     "@uniswap/permit2-sdk" "^1.2.0"
     "@uniswap/smart-order-router" "^3.0.4"
