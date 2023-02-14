@@ -1,5 +1,5 @@
 import { BigNumber } from "@ethersproject/bignumber";
-import { getStateChange, getPayments } from "@georgeroman/evm-tx-simulator";
+import { getStateChange } from "@georgeroman/evm-tx-simulator";
 import * as Sdk from "@reservoir0x/sdk";
 
 import { idb } from "@/common/db";
