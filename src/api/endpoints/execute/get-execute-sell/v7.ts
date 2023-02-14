@@ -2,8 +2,8 @@ import { BigNumber } from "@ethersproject/bignumber";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
-import { BidDetails } from "@reservoir0x/sdk/dist/router/v6/types";
 import * as SeaportPermit from "@reservoir0x/sdk/dist/router/v6/permits/seaport";
+import { BidDetails } from "@reservoir0x/sdk/dist/router/v6/types";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
@@ -12,6 +12,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { getNetworkSettings } from "@/config/network";
 import { Sources } from "@/models/sources";
 import { OrderKind, generateBidDetailsV6 } from "@/orderbook/orders";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
@@ -183,6 +184,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           contract: string;
           tokenId: string;
           quantity?: number;
+          owner?: string;
         }
       ) => {
         const feesOnTop = payload.normalizeRoyalties ? order.feesOnTop ?? [] : [];
@@ -237,7 +239,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           orderId: order.id,
           contract: token.contract,
           tokenId: token.tokenId,
-          quantity: quantity,
+          quantity,
           source: order.sourceId !== null ? sources.get(order.sourceId)?.domain ?? null : null,
           currency: order.currency,
           quote: formatPrice(netPrice, (await getCurrency(order.currency)).decimals, true),
@@ -258,6 +260,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               contract: token.contract,
               tokenId: token.tokenId,
               amount: token.quantity,
+              owner: token.owner,
             }
           )
         );
@@ -277,7 +280,6 @@ export const getExecuteSellV7Options: RouteOptions = {
       const tokenToSuspicious = await tryGetTokensSuspiciousStatus(items.map((i) => i.token));
       for (const item of items) {
         const [contract, tokenId] = item.token.split(":");
-        const quantity = Number(item.quantity ?? 1);
 
         const tokenResult = await idb.oneOrNone(
           `
@@ -311,9 +313,9 @@ export const getExecuteSellV7Options: RouteOptions = {
 
           // TODO: Handle any other on-chain orderbooks that cannot be "posted"
           if (order.kind === "sudoswap") {
-            payload.orderId = sudoswap.getOrderId(order.data.pair, "sell", order.data.tokenId);
+            item.orderId = sudoswap.getOrderId(order.data.pair, "buy");
           } else if (order.kind === "nftx") {
-            payload.orderId = nftx.getOrderId(order.data.pool, "sell", order.data.specificIds[0]);
+            item.orderId = nftx.getOrderId(order.data.pool, "buy");
           } else {
             const response = await inject({
               method: "POST",
@@ -325,7 +327,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               payload: { order },
             }).then((response) => JSON.parse(response.payload));
             if (response.orderId) {
-              payload.orderId = response.orderId;
+              item.orderId = response.orderId;
             } else {
               if (payload.partial) {
                 continue;
@@ -344,7 +346,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                 orders.id,
                 orders.kind,
                 contracts.kind AS token_kind,
-                orders.price,
+                coalesce(orders.currency_price, orders.price) AS price,
                 orders.raw_data,
                 orders.source_id_int,
                 orders.currency,
@@ -373,7 +375,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               id: item.orderId,
               contract: toBuffer(contract),
               tokenId,
-              quantity,
+              quantity: item.quantity,
             }
           );
           if (!result) {
@@ -386,8 +388,35 @@ export const getExecuteSellV7Options: RouteOptions = {
             }
           }
 
+          // Partial Seaport orders require knowing the owner
+          let owner: string | undefined;
+          if (["seaport-partial", "seaport-v1.2-partial"].includes(result.kind)) {
+            const ownerResult = await idb.oneOrNone(
+              `
+                SELECT
+                  nft_balances.owner
+                FROM nft_balances
+                WHERE nft_balances.contract = $/contract/
+                  AND nft_balances.token_id = $/tokenId/
+                  AND nft_balances.amount >= $/quantity/
+              `,
+              {
+                contract: toBuffer(contract),
+                tokenId,
+                quantity: item.quantity,
+              }
+            );
+            if (ownerResult) {
+              owner = fromBuffer(ownerResult.owner);
+            }
+          }
+
           // Do not fill X2Y2 and Seaport orders with flagged tokens
-          if (["x2y2", "seaport"].includes(result.kind)) {
+          if (
+            ["x2y2", "seaport", "seaport-v1.2", "seaport-partial", "seaport-v1.2-partial"].includes(
+              result.kind
+            )
+          ) {
             if (
               (tokenToSuspicious.has(item.token) && tokenToSuspicious.get(item.token)) ||
               tokenResult.is_flagged
@@ -416,7 +445,8 @@ export const getExecuteSellV7Options: RouteOptions = {
               kind: result.token_kind,
               contract,
               tokenId,
-              quantity,
+              quantity: item.quantity,
+              owner,
             }
           );
         }
@@ -430,7 +460,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                 orders.id,
                 orders.kind,
                 contracts.kind AS token_kind,
-                orders.price,
+                coalesce(orders.currency_price, orders.price) AS price,
                 orders.raw_data,
                 orders.source_id_int,
                 orders.currency,
@@ -456,14 +486,45 @@ export const getExecuteSellV7Options: RouteOptions = {
               id: item.orderId,
               contract: toBuffer(contract),
               tokenId,
-              quantity,
+              quantity: item.quantity,
             }
           );
 
-          let quantityToFill = quantity;
+          let quantityToFill = item.quantity;
           for (const result of orderResults) {
+            // Partial Seaport orders require knowing the owner
+            let owner: string | undefined;
+            if (["seaport-partial", "seaport-v1.2-partial"].includes(result.kind)) {
+              const ownerResult = await idb.oneOrNone(
+                `
+                  SELECT
+                    nft_balances.owner
+                  FROM nft_balances
+                  WHERE nft_balances.contract = $/contract/
+                    AND nft_balances.token_id = $/tokenId/
+                    AND nft_balances.amount >= $/quantity/
+                `,
+                {
+                  contract: toBuffer(contract),
+                  tokenId,
+                  quantity: item.quantity,
+                }
+              );
+              if (ownerResult) {
+                owner = fromBuffer(ownerResult.owner);
+              }
+            }
+
             // Do not fill X2Y2 and Seaport orders with flagged tokens
-            if (["x2y2", "seaport"].includes(result.kind)) {
+            if (
+              [
+                "x2y2",
+                "seaport",
+                "seaport-v1.2",
+                "seaport-partial",
+                "seaport-v1.2-partial",
+              ].includes(result.kind)
+            ) {
               if (
                 (tokenToSuspicious.has(item.token) && tokenToSuspicious.get(item.token)) ||
                 tokenResult.is_flagged
@@ -521,6 +582,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                 contract,
                 tokenId,
                 quantity: availableQuantity,
+                owner,
               }
             );
           }
@@ -530,7 +592,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               continue;
             } else {
               throw Boom.badData(
-                `No available orders for token ${item.token} with quantity ${quantity}`
+                `No available orders for token ${item.token} with quantity ${item.quantity}`
               );
             }
           }
@@ -545,12 +607,16 @@ export const getExecuteSellV7Options: RouteOptions = {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
       });
+
+      const { customTokenAddresses } = getNetworkSettings();
+      const forcePermit = customTokenAddresses.includes(bidDetails[0].contract);
       const { txData, success, approvals, permits } = await router.fillBidsTx(
         bidDetails,
         payload.taker,
         {
           source: payload.source,
           partial: payload.partial,
+          forcePermit,
         }
       );
 
@@ -690,12 +756,14 @@ export const getExecuteSellV7Options: RouteOptions = {
         path,
       };
     } catch (error) {
-      logger.error(
-        `get-execute-sell-${version}-handler`,
-        `Handler failure: ${error} (path = ${JSON.stringify({})}, request = ${JSON.stringify(
-          payload
-        )})`
-      );
+      if (!(error instanceof Boom.Boom)) {
+        logger.error(
+          `get-execute-sell-${version}-handler`,
+          `Handler failure: ${error} (path = ${JSON.stringify({})}, request = ${JSON.stringify(
+            payload
+          )})`
+        );
+      }
       throw error;
     }
   },
