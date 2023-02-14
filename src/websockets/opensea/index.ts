@@ -57,7 +57,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
         await saveEvent(event);
 
         const eventType = event.event_type as EventType;
-        const openSeaOrderParams = handleEvent(eventType, event.payload);
+        const openSeaOrderParams = await handleEvent(eventType, event.payload);
 
         if (openSeaOrderParams) {
           const seaportOrder = parseProtocolData(event.payload);
@@ -114,12 +114,10 @@ const saveEvent = async (event: BaseStreamMessage<unknown>) => {
     /* eslint-disable @typescript-eslint/no-explicit-any */
 
     // TODO: Filter out the properties when ingesting from S3 to Redshift instead of here.
-    delete (event.payload as any).item.metadata;
-    delete (event.payload as any).item.permalink;
-    if (event.event_type === EventType.ITEM_METADATA_UPDATED) {
-      console.log(`ITEM_METADATA_UPDATED: ${JSON.stringify(event)}`);
-      // console.log(`ITEM_METADATA_UPDATED payload: ${JSON.stringify(event.payload)}`);
+    if (event.event_type !== EventType.ITEM_METADATA_UPDATED) {
+      delete (event.payload as any).item.metadata;
     }
+    delete (event.payload as any).item.permalink;
 
     const params = {
       Record: {
@@ -150,7 +148,10 @@ const saveEvent = async (event: BaseStreamMessage<unknown>) => {
   }
 };
 
-export const handleEvent = (type: EventType, payload: unknown): PartialOrderComponents | null => {
+export const handleEvent = async (
+  type: EventType,
+  payload: unknown
+): Promise<PartialOrderComponents | null> => {
   switch (type) {
     case EventType.ITEM_LISTED:
       return handleItemListedEvent(payload as ItemListedEventPayload);

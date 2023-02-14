@@ -67,7 +67,7 @@ if (config.doBackgroundWork) {
           const eventType = result.event_type as EventType;
           const eventData = JSON.parse(result.event_data);
 
-          const openSeaOrderParams = handleEvent(eventType, eventData.payload);
+          const openSeaOrderParams = await handleEvent(eventType, eventData.payload);
 
           if (openSeaOrderParams) {
             const seaportOrder = parseProtocolData(eventData.payload);
