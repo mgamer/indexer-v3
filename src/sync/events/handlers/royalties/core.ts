@@ -123,6 +123,7 @@ export async function extractRoyalties(
     } else {
       // If there has multiple exchange calls, we need based on payments
       // to find the related with current `fillEvent` one.
+      // What If the same token sale multiple times in different calls?
       for (let index = 0; index < allExchangeCalls.length; index++) {
         const exchangeCall = allExchangeCalls[index];
         const payments = getPayments(exchangeCall);
@@ -131,6 +132,7 @@ export async function extractRoyalties(
           // Found token transfers inside this exchange call
           traceToAnalyze = exchangeCall;
           usingExhcnageCall = true;
+          break;
         }
       }
     }
