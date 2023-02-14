@@ -119,7 +119,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Check and save: associated token set
       let tokenSetId: string | undefined;
-      const schemaHash = metadata.schemaHash ?? generateSchemaHash(metadata.schema);
+      let schemaHash = metadata.schemaHash ?? generateSchemaHash(metadata.schema);
 
       switch (order.params.kind) {
         case "single-token": {
@@ -137,11 +137,13 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
         case "collection-wide": {
           // X2Y2 collection offers are always on non-flagged tokens
-          tokenSetId = await tokenSet.dynamicCollectionNonFlagged
-            .save({
-              collection: order.params.nft.token,
-            })
-            .then((ts) => ts?.id);
+          const ts = await tokenSet.dynamicCollectionNonFlagged.save({
+            collection: order.params.nft.token,
+          });
+          if (ts) {
+            tokenSetId = ts.id;
+            schemaHash = ts.schemaHash;
+          }
 
           break;
         }
