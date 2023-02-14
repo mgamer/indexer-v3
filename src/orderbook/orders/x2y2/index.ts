@@ -136,13 +136,12 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         }
 
         case "collection-wide": {
-          [{ id: tokenSetId }] = await tokenSet.contractWide.save([
-            {
-              id: `contract:${order.params.nft.token}`,
-              schemaHash,
-              contract: order.params.nft.token,
-            },
-          ]);
+          // X2Y2 collection offers are always on non-flagged tokens
+          tokenSetId = await tokenSet.dynamicCollectionNonFlagged
+            .save({
+              collection: order.params.nft.token,
+            })
+            .then((ts) => ts?.id);
 
           break;
         }

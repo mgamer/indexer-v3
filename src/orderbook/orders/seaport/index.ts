@@ -242,7 +242,8 @@ export const save = async (
       let schemaHash;
 
       if (openSeaOrderParams && openSeaOrderParams.kind != "single-token") {
-        // Currently, we don't save the raw data on the order to make sure we utilize the OS graphql to fill the order (due to inconsistency with flagged tokens).
+        // Currently, we do not save the raw data on the order to make sure
+        // we utilize the order-fetcher service for generating the calldata
         saveRawData = false;
 
         const collection = await getCollection(openSeaOrderParams);

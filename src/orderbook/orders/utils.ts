@@ -69,6 +69,7 @@ export type DbOrder = {
   log_index?: number | null;
 };
 
+// TODO: Move under `token-sets`
 const defaultSchemaHash = HashZero;
 export const generateSchemaHash = (schema?: object) =>
   schema
