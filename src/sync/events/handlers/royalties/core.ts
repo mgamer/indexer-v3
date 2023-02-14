@@ -1,5 +1,6 @@
 import { formatEther } from "@ethersproject/units";
 import { getStateChange, getPayments, searchForCall } from "@georgeroman/evm-tx-simulator";
+import { Payment } from "@georgeroman/evm-tx-simulator/dist/types";
 import * as Sdk from "@reservoir0x/sdk";
 
 import { redis } from "@/common/redis";
@@ -16,6 +17,15 @@ import * as utils from "@/events-sync/utils";
 import { TransactionTrace } from "@/models/transaction-traces";
 import { Royalty, getRoyalties } from "@/utils/royalties";
 import { StateCache } from "@/events-sync/handlers/royalties";
+
+function findPayment(payments: Payment[], fillEvent: es.fills.Event) {
+  return payments.find((payment) => {
+    const matchTokenId = payment.token.includes(`${fillEvent.contract}:${fillEvent.tokenId}`);
+    const macthERC20 =
+      payment.token.includes(fillEvent.contract) && payment.amount.includes(fillEvent.tokenId);
+    return matchTokenId || macthERC20;
+  });
+}
 
 export async function extractRoyalties(
   fillEvent: es.fills.Event,
@@ -90,8 +100,8 @@ export async function extractRoyalties(
 
   const exchangeAddress = allExchangeList.get(fillEvent.orderKind);
   if (exchangeAddress) {
-    // get all realated calls
-    const allCalls = [];
+    // Get all `orderKind` related exchange's calls
+    const allExchangeCalls = [];
     for (let index = 0; index < 100; index++) {
       const exchangeCall = searchForCall(
         txTrace.calls,
@@ -101,27 +111,28 @@ export async function extractRoyalties(
         index
       );
       if (exchangeCall) {
-        allCalls.push(exchangeCall);
+        allExchangeCalls.push(exchangeCall);
       } else {
         break;
       }
     }
 
-    // TODO multiple
-    for (let index = 0; index < allCalls.length; index++) {
-      const exchangeCall = allCalls[index];
-      const payments = getPayments(exchangeCall);
-      const matchPayment = payments.find((c) =>
-        c.token.includes(`${fillEvent.contract}:${fillEvent.tokenId}`)
-      );
-      if (matchPayment) {
-        //
-      }
-    }
-
-    if (allCalls.length === 1) {
-      traceToAnalyze = allCalls[0];
+    if (allExchangeCalls.length === 1) {
+      traceToAnalyze = allExchangeCalls[0];
       usingExhcnageCall = true;
+    } else {
+      // If there has multiple exchange calls, we need based on payments
+      // to find the related with current `fillEvent` one.
+      for (let index = 0; index < allExchangeCalls.length; index++) {
+        const exchangeCall = allExchangeCalls[index];
+        const payments = getPayments(exchangeCall);
+        const matchPayment = findPayment(payments, fillEvent);
+        if (matchPayment) {
+          // Found token transfers inside this exchange call
+          traceToAnalyze = exchangeCall;
+          usingExhcnageCall = true;
+        }
+      }
     }
   }
 
@@ -136,19 +147,34 @@ export async function extractRoyalties(
   shouldExcludeAddressList.add(Sdk.Common.Addresses.Weth[config.chainId]);
   shouldExcludeAddressList.add(Sdk.Common.Addresses.Eth[config.chainId]);
 
+  const tracePayments = getPayments(traceToAnalyze);
+
+  // When the bound is limited, need filter all related collection and protocol fillEvents
+  // 1. We could using the NFT's transfer logs to get realeted fillEvents
   const collectionFills =
-    fillEvents?.filter((_) => {
-      const macthSameCollection = _.contract === contract && _.currency === fillEvent.currency;
+    fillEvents?.filter((currentEvent) => {
+      const macthSameCollection =
+        currentEvent.contract === contract && currentEvent.currency === fillEvent.currency;
       if (usingExhcnageCall) {
-        return macthSameCollection && _.orderKind === fillEvent.orderKind;
+        const matchData = findPayment(tracePayments, currentEvent);
+        return macthSameCollection && matchData;
+      } else {
+        return macthSameCollection;
       }
-      return macthSameCollection;
     }) || [];
 
   const protocolFillEvents =
-    fillEvents?.filter(
-      (_) => _.orderKind === fillEvent.orderKind && _.currency === fillEvent.currency
-    ) || [];
+    fillEvents?.filter((currentEvent) => {
+      const matchOrderKind =
+        currentEvent.orderKind === fillEvent.orderKind &&
+        currentEvent.currency === fillEvent.currency;
+      if (usingExhcnageCall) {
+        const matchPayment = findPayment(tracePayments, currentEvent);
+        return matchOrderKind && matchPayment;
+      } else {
+        return matchOrderKind;
+      }
+    }) || [];
 
   // For same token only count once
   const idTrackers = new Set();
