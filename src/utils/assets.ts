@@ -3,9 +3,12 @@ import { config } from "@/config/index";
 import { encrypt } from "@/common/utils";
 
 export class Assets {
-  public static getLocalAssetsLink(assets: string | string[]) {
+  public static getLocalAssetsLink(assets: string | string[], encryptResults = false) {
     if (_.isEmpty(assets) || assets == "") {
       return undefined;
+    }
+    if (!encryptResults) {
+      return assets;
     }
 
     const baseUrl = `https://api${config.chainId == 1 ? "" : "-goerli"}.reservoir.tools/assets/v1?`;
