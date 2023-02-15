@@ -235,17 +235,11 @@ export const save = async (
         }
       }
 
-      let saveRawData = true;
-
       // Check and save: associated token set
       let tokenSetId: string | undefined;
       let schemaHash: string | undefined;
 
       if (openSeaOrderParams && openSeaOrderParams.kind !== "single-token") {
-        // Currently, we do not save the raw data on the order to make sure
-        // we utilize the order-fetcher service for generating the calldata
-        saveRawData = false;
-
         const collection = await getCollection(openSeaOrderParams);
         if (!collection) {
           return results.push({
@@ -265,6 +259,10 @@ export const save = async (
               tokenSetId = ts.id;
               schemaHash = ts.schemaHash;
             }
+
+            // Mark the order as being partial in order to force filling through the order-fetcher service
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (order.params as any).partial = true;
 
             break;
           }
@@ -361,25 +359,23 @@ export const save = async (
           }
 
           case "token-list": {
-            const typedInfo = info as typeof info & { merkleRoot: string };
-            const merkleRoot = typedInfo.merkleRoot;
-
-            if (metadata.schema?.kind === "collection-non-flagged") {
-              const ts = await tokenSet.dynamicCollectionNonFlagged.save(
+            if (metadata.target === "opensea") {
+              tokenSetId = `contract:${info.contract}`;
+              await tokenSet.contractWide.save([
                 {
-                  collection: metadata.schema.data.collection,
+                  id: tokenSetId,
+                  schemaHash,
+                  contract: info.contract,
                 },
-                // For native orders we should always check the merkle root since
-                // we don't want anyone to mess around with orders (post an order
-                // with the "collection-non-flagged" schema but which actually is
-                // not on a non-flagged token set)
-                merkleRoot
-              );
-              if (ts) {
-                tokenSetId = ts.id;
-                schemaHash = ts.schemaHash;
-              }
+              ]);
+
+              // Mark the order as being partial in order to force filling through the order-fetcher service
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (order.params as any).partial = true;
             } else {
+              const typedInfo = info as typeof info & { merkleRoot: string };
+              const merkleRoot = typedInfo.merkleRoot;
+
               if (merkleRoot) {
                 tokenSetId = `list:${info.contract}:${bn(merkleRoot).toHexString()}`;
 
@@ -656,9 +652,6 @@ export const save = async (
         approval_status: approvalStatus,
         token_set_id: tokenSetId,
         token_set_schema_hash: toBuffer(schemaHash),
-        offer_bundle_id: null,
-        consideration_bundle_id: null,
-        bundle_kind: null,
         maker: toBuffer(order.params.offerer),
         taker: toBuffer(info.taker),
         price: price.toString(),
@@ -679,7 +672,7 @@ export const save = async (
         fee_bps: feeBps,
         fee_breakdown: feeBreakdown || null,
         dynamic: info.isDynamic ?? null,
-        raw_data: saveRawData ? order.params : null,
+        raw_data: order.params,
         expiration: validTo,
         missing_royalties: missingRoyalties,
         normalized_value: normalizedValue,
@@ -724,9 +717,6 @@ export const save = async (
           openSeaOrderParams
         )}, error=${error}`
       );
-
-      // Throw so that we retry with he bundle-handling code
-      throw error;
     }
   };
 
@@ -1123,9 +1113,6 @@ export const save = async (
         approval_status: approvalStatus,
         token_set_id: tokenSetId,
         token_set_schema_hash: toBuffer(schemaHash),
-        offer_bundle_id: null,
-        consideration_bundle_id: null,
-        bundle_kind: null,
         maker: toBuffer(orderParams.offerer),
         taker: orderParams.taker ? toBuffer(orderParams.taker) : toBuffer(AddressZero),
         price: price.toString(),
@@ -1172,9 +1159,6 @@ export const save = async (
           orderParams
         )}: ${error} (will retry)`
       );
-
-      // Throw so that we retry with he bundle-handling code
-      throw error;
     }
   };
 
@@ -1207,9 +1191,6 @@ export const save = async (
         "approval_status",
         "token_set_id",
         "token_set_schema_hash",
-        "offer_bundle_id",
-        "consideration_bundle_id",
-        "bundle_kind",
         "maker",
         "taker",
         "price",
