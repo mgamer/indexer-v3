@@ -385,9 +385,10 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         const state = getStateChange(txTrace.calls);
 
-        let tokenId = "";
-        let amount = "";
-        let tokenContract = "";
+        let tokenContract: string | undefined;
+        let tokenId: string | undefined;
+        let amount: string | undefined;
+
         // This logic will only work when the transfer tokens are being minted
         // TODO Revisit this logic once manifold have began using the accept event without mints
         for (const transferEvent of onChainData.nftTransferEvents) {
