@@ -28,3 +28,25 @@ export const cancel: EventData = {
   numTopics: 1,
   abi: new Interface([`event Cancel(bytes32 hash)`]),
 };
+
+export const buyV1: EventData = {
+  kind: "rarible",
+  subKind: "rarible-buy-v1",
+  addresses: { [Rarible.Addresses.ExchangeV1[config.chainId]?.toLowerCase()]: true },
+  topic: "0xdddcdb07e460849cf04a4445b7af9faf01b7f5c7ba75deaf969ac5ed830312c3",
+  numTopics: 3,
+  abi: new Interface([
+    `event Buy(
+      address indexed sellToken,
+      uint256 indexed sellTokenId,
+      uint256 sellValue,
+      address owner,
+      address buyToken,
+      uint256 buyTokenId,
+      uint256 buyValue,
+      address buyer,
+      uint256 amount,
+      uint256 salt
+    )`,
+  ]),
+};

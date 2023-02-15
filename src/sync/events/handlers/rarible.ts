@@ -357,6 +357,67 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         break;
       }
+
+      case "rarible-buy-v1": {
+        const { args } = eventData.abi.parseLog(log);
+        const tokenContract = args["sellToken"];
+        const tokenId = args["sellTokenId"];
+        const maker = args["owner"];
+        const currency = args["buyToken"];
+        let currencyPrice = args["buyValue"];
+        let taker = args["buyer"];
+        const amount = args["amount"]; // amount bought
+
+        const orderKind = "rarible";
+        const side = "sell";
+
+        currencyPrice = bn(currencyPrice).div(amount).toString();
+
+        const prices = await getUSDAndNativePrices(
+          currency.toLowerCase(),
+          currencyPrice,
+          baseEventParams.timestamp
+        );
+        if (!prices.nativePrice) {
+          // We must always have the native price
+          break;
+        }
+
+        const data = await utils.extractAttributionData(baseEventParams.txHash, orderKind);
+        if (data.taker) {
+          taker = data.taker;
+        }
+
+        onChainData.fillEventsPartial.push({
+          orderKind,
+          orderSide: side,
+          maker,
+          taker,
+          price: prices.nativePrice,
+          currency,
+          currencyPrice,
+          usdPrice: prices.usdPrice,
+          contract: tokenContract,
+          tokenId: tokenId.toString(),
+          amount: amount.toString(),
+          orderSourceId: data.orderSource?.id,
+          aggregatorSourceId: data.aggregatorSource?.id,
+          fillSourceId: data.fillSource?.id,
+          baseEventParams,
+        });
+
+        onChainData.fillInfos.push({
+          context: `rarible-v1-${tokenContract}-${tokenId}-${baseEventParams.txHash}`,
+          orderSide: side,
+          contract: tokenContract,
+          tokenId: tokenId.toString(),
+          amount: amount.toString(),
+          price: prices.nativePrice,
+          timestamp: baseEventParams.timestamp,
+          maker,
+          taker,
+        });
+      }
     }
   }
 };
