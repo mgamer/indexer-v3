@@ -68,6 +68,13 @@ if (config.doBackgroundWork) {
                 orders.value,
                 orders.fillability_status AS "fillabilityStatus",
                 orders.approval_status AS "approvalStatus",
+                orders.kind,
+                orders.dynamic,
+                orders.currency,
+                orders.currency_price,
+                orders.normalized_value,
+                orders.currency_normalized_value,
+                orders.raw_data,
                 token_sets_tokens.contract,
                 token_sets_tokens.token_id AS "tokenId"
               FROM orders
@@ -224,7 +231,15 @@ if (config.doBackgroundWork) {
                     maker,
                     price,
                     tx_hash,
-                    tx_timestamp
+                    tx_timestamp,
+                    order_kind,
+                    order_token_set_id,
+                    order_dynamic,
+                    order_currency,
+                    order_currency_price,
+                    order_normalized_value,
+                    order_currency_normalized_value,
+                    order_raw_data
                   )
                   VALUES (
                     $/kind/,
@@ -248,7 +263,15 @@ if (config.doBackgroundWork) {
                     $/maker/,
                     $/value/,
                     $/txHash/,
-                    $/txTimestamp/
+                    $/txTimestamp/,
+                    $/orderKind/,
+                    $/orderTokenSetId/,
+                    $/orderDynamic/,
+                    $/orderCurrency/,
+                    $/orderCurrencyPrice/,
+                    $/orderNormalizedValue/,
+                    $/orderCurrencyNormalizedValue/,
+                    $/orderRawData/
                   )
                 `,
                 {
@@ -266,6 +289,14 @@ if (config.doBackgroundWork) {
                   kind: trigger.kind,
                   txHash: trigger.txHash ? toBuffer(trigger.txHash) : null,
                   txTimestamp: trigger.txTimestamp || null,
+                  orderKind: order.kind,
+                  orderTokenSetId: order.tokenSetId,
+                  orderDynamic: order.dynamic,
+                  orderCurrency: order.currency,
+                  orderCurrencyPrice: order.currency_price,
+                  orderNormalizedValue: order.normalized_value,
+                  orderCurrencyNormalizedValue: order.currency_normalized_value,
+                  orderRawData: order.raw_data,
                 }
               );
 
