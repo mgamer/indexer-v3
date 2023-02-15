@@ -430,8 +430,16 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           }
         }
 
-        if (!taker) {
-          // Skip if taker couldn't be retrieved
+        if (
+          !taker ||
+          !currencyPrice ||
+          currencyPrice === "0" ||
+          !maker ||
+          !tokenContract ||
+          !tokenId ||
+          !amount
+        ) {
+          // Skip if we couldn't retrieve any of the params
           break;
         }
 
