@@ -386,6 +386,10 @@ export const save = async (
                   contract: info.contract,
                 },
               ]);
+
+              // Mark the order as being partial in order to force filling through the order-fetcher service
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (order.params as any).partial = true;
             } else {
               if (merkleRoot) {
                 tokenSetId = `list:${info.contract}:${bn(merkleRoot).toHexString()}`;
