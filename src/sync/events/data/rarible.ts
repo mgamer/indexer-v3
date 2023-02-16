@@ -29,6 +29,26 @@ export const cancel: EventData = {
   abi: new Interface([`event Cancel(bytes32 hash)`]),
 };
 
+export const matchV2: EventData = {
+  kind: "rarible",
+  subKind: "rarible-match-v2",
+  addresses: { [Rarible.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
+  topic: "0x268820db288a211986b26a8fda86b1e0046281b21206936bb0e61c67b5c79ef4",
+  numTopics: 1,
+  abi: new Interface([
+    `event Match(
+      bytes32 leftHash,
+      bytes32 rightHash,
+      address leftMaker,
+      address rightMaker,
+      uint256 newLeftFill,
+      uint256 newRightFill,
+      (bytes4 assetClass, bytes data) leftAsset,
+      (bytes4 assetClass, bytes data) rightAsset
+    )`,
+  ]),
+};
+
 export const buyV1: EventData = {
   kind: "rarible",
   subKind: "rarible-buy-v1",
