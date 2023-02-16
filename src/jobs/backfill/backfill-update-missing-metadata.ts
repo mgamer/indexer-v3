@@ -5,7 +5,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
-import { redis, redlock } from "@/common/redis";
+import {acquireLock, redis, redlock, releaseLock} from "@/common/redis";
 import { config } from "@/config/index";
 import { PendingRefreshTokens, RefreshTokens } from "@/models/pending-refresh-tokens";
 import { pgp } from "@/common/db";
@@ -47,7 +47,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const limit = config.updateMissingMetadataCollectionsLimit;
+      const limit = (await redis.get(`${QUEUE_NAME}-collections-limit`)) || 1;
       const { lastCollectionId } = job.data;
 
       // eslint-disable-next-line no-constant-condition
@@ -58,7 +58,7 @@ if (config.doBackgroundWork) {
       }
 
       const query = `
-          SELECT id, contract, community, slug
+          SELECT id, contract, community, slug, token_count
           FROM collections
           ${idFilter}
           ORDER BY id ASC
@@ -69,23 +69,27 @@ if (config.doBackgroundWork) {
       await Promise.all(
         _.map(collections, (collection) => {
           logger.info(QUEUE_NAME, `Processing collection with ID: ${collection.id}`);
-
           return processCollection({
             contract: fromBuffer(collection.contract),
             id: collection.id,
             community: collection.community,
             slug: collection.slug,
+            tokenCount: collection.token_count,
           });
         })
       );
 
-      if (_.size(collections) < limit) {
-        // push queue messages
-        await Promise.all([
-          metadataIndexProcessBySlug.addToQueue(),
-          metadataIndexProcess.addToQueue("opensea"),
-        ]);
-      } else {
+      // push queue messages
+      if (await acquireLock(metadataIndexProcessBySlug.getLockName("opensea"), 60 * 5)) {
+        await metadataIndexProcessBySlug.addToQueue();
+        await releaseLock(metadataIndexProcessBySlug.getLockName("opensea"));
+      }
+      if (await acquireLock(metadataIndexProcess.getLockName("opensea"), 60 * 5)) {
+        await metadataIndexProcess.addToQueue("opensea");
+        await releaseLock(metadataIndexProcess.getLockName("opensea"));
+      }
+
+      if (_.size(collections) === limit) {
         const lastId = _.last(collections).id;
         await addToQueue(lastId);
       }
@@ -112,29 +116,23 @@ async function processCollection(collection: {
   id: string;
   community: string;
   slug: string;
+  tokenCount: number;
 }) {
   const indexingMethod = getIndexingMethod(collection.community);
-  const limit = config.updateMissingMetadataTokensLimit;
+  const limit = (await redis.get(`${QUEUE_NAME}-tokens-limit`)) || 100;
   let lastTokenId = "";
   const missingMetadataPercentageThreshold = 0.15;
 
   const unindexedCountQuery = `
       SELECT count(*) as unindexed_token_count
       FROM tokens t
-      WHERE t.image is null or t.image = ''
-    `;
-  const totalCountQuery = `
-      SELECT count(*) as token_count
-      FROM tokens
+      WHERE (t.image is null or t.image = '') AND t.collection_id = '${collection.id}'
     `;
 
-  const [unindexedResult, totalResult] = await Promise.all([
-    redb.one(unindexedCountQuery),
-    redb.one(totalCountQuery),
-  ]);
+  const unindexedResult = await redb.one(unindexedCountQuery);
 
   if (
-    unindexedResult.unindexed_token_count / totalResult.token_count >
+    unindexedResult.unindexed_token_count / collection.tokenCount >
     missingMetadataPercentageThreshold
   ) {
     // push to collection refresh queue
@@ -151,13 +149,13 @@ async function processCollection(collection: {
       let collectionAndTokenIdFilter = "WHERE t.image is null or t.image = ''";
       if (lastTokenId != "") {
         logger.info(QUEUE_NAME, `Collection ID ${collection.id}, lastTokenId = ${lastTokenId}`);
-        collectionAndTokenIdFilter = `WHERE (t.image is null or t.image = '') AND collection_id = '${collection.id}' AND (t.collection_id, t.token_id) > ('${collection.id}','${lastTokenId}')`;
+        collectionAndTokenIdFilter = `WHERE (t.image is null or t.image = '') AND collection_id = '${collection.id}' AND t.token_id > '${lastTokenId}'`;
       }
 
       const query = `
-      SELECT token_id, metadata_indexed, image, collection_id
+      SELECT token_id
       FROM tokens t ${collectionAndTokenIdFilter}
-      ORDER BY t.collection_id ASC, t.token_id ASC
+      ORDER BY t.token_id ASC
       LIMIT ${limit}
     `;
 
