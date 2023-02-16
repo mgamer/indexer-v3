@@ -298,7 +298,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         enableWebSocket: true,
         enableReorgCheck: true,
         realtimeSyncFrequencySeconds: 10,
-        realtimeSyncMaxBlockLag: 30,
+        realtimeSyncMaxBlockLag: 45,
         lastBlockLatency: 20,
         backfillBlockBatchSize: 60,
         reorgCheckFrequency: [30],
