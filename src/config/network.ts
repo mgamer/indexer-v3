@@ -35,6 +35,7 @@ type NetworkSettings = {
   reorgCheckFrequency: number[];
   realtimeSyncFrequencySeconds: number;
   realtimeSyncMaxBlockLag: number;
+  lastBlockLatency: number;
   backfillBlockBatchSize: number;
   metadataMintDelay: number;
   enableMetadataAutoRefresh: boolean;
@@ -59,6 +60,7 @@ export const getNetworkSettings = (): NetworkSettings => {
     enableReorgCheck: true,
     realtimeSyncFrequencySeconds: 15,
     realtimeSyncMaxBlockLag: 16,
+    lastBlockLatency: 5,
     backfillBlockBatchSize: 16,
     metadataMintDelay: 120,
     enableMetadataAutoRefresh: false,
@@ -297,6 +299,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         enableReorgCheck: true,
         realtimeSyncFrequencySeconds: 10,
         realtimeSyncMaxBlockLag: 30,
+        lastBlockLatency: 20,
         backfillBlockBatchSize: 60,
         reorgCheckFrequency: [30],
         coingecko: {
