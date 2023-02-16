@@ -119,7 +119,7 @@ export const getAsksEventsV3Options: RouteOptions = {
 
     try {
       // TODO: Backfill order fields in the ask events
-      const joinWithOrders = config.chainId === 5 && now() < 1676476270;
+      const joinWithOrders = config.chainId === 5 ? now() < 1676532638 : true;
       const t = joinWithOrders ? "orders" : "order_events";
 
       const criteriaBuildQuery = Orders.buildCriteriaQuery(
