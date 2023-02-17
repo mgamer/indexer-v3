@@ -147,6 +147,9 @@ export const postSimulateFloorV1Options: RouteOptions = {
       }
 
       const pathItem = parsedPayload.path[0];
+      if (parsedPayload.steps[0].items.length) {
+        return { message: "Simulation not supported" };
+      }
 
       const { result: success, callTrace } = await ensureBuyTxSucceeds(
         genericTaker,
