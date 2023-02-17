@@ -41,9 +41,11 @@ test*.ts
 # OpenZeppelin
 unknown-*
 
-
 # IDE
 *.iml
 .idea
 .yarnclean
 coverage/
+
+# Caches
+.eslintcache
