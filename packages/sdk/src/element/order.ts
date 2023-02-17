@@ -573,7 +573,8 @@ const BATCH_SIGNED_ORDER_EIP712_TYPES = {
   ],
 };
 
-const toRawErc721Order = (params: Types.BaseOrder) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const toRawErc721Order = (params: Types.BaseOrder): any => {
   return {
     ...params,
     erc721Token: params.nft,
@@ -583,7 +584,8 @@ const toRawErc721Order = (params: Types.BaseOrder) => {
   };
 };
 
-const toRawErc1155Order = (params: Types.BaseOrder) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const toRawErc1155Order = (params: Types.BaseOrder): any => {
   return {
     ...params,
     erc1155Token: params.nft,
@@ -594,7 +596,8 @@ const toRawErc1155Order = (params: Types.BaseOrder) => {
   };
 };
 
-const toRawBatchSignedOrder = (params: Types.BatchSignedOrder) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const toRawBatchSignedOrder = (params: Types.BatchSignedOrder): any => {
   return {
     maker: params.maker,
     listingTime: params.listingTime,
