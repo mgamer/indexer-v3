@@ -2,12 +2,7 @@ import * as Types from "./types";
 import { Provider } from "@ethersproject/abstract-provider";
 import { bn, getCurrentTimestamp, lc } from "../utils";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
-import {
-  keccak256,
-  solidityKeccak256,
-  defaultAbiCoder,
-  splitSignature,
-} from "ethers/lib/utils";
+import { keccak256, solidityKeccak256, defaultAbiCoder, splitSignature } from "ethers/lib/utils";
 import { BigNumber, BigNumberish, Contract } from "ethers";
 import { OrderParams } from "./order-params";
 import * as CommonAddresses from "../common/addresses";
@@ -19,19 +14,14 @@ import { Builders } from ".";
 import { Common } from "..";
 
 export class Order extends OrderParams {
-  constructor(
-    chainId: number,
-    params: Types.OrderInput | Types.InternalOrder | Types.SignedOrder
-  ) {
+  constructor(chainId: number, params: Types.OrderInput | Types.InternalOrder | Types.SignedOrder) {
     super(chainId, params);
     this.checkBaseValid();
   }
 
   public async sign(signer: TypedDataSigner, force = false) {
     const [types, value] = this._getEip712TypesAndValue();
-    const sig = splitSignature(
-      await signer._signTypedData(this._domain, types, value)
-    );
+    const sig = splitSignature(await signer._signTypedData(this._domain, types, value));
     if (force) {
       this.forceSetSig(sig);
     } else {
@@ -60,10 +50,7 @@ export class Order extends OrderParams {
   }
 
   public checkBaseValid() {
-    if (
-      !this.isSellOrder &&
-      this.currency === CommonAddresses.Eth[this.chainId]
-    ) {
+    if (!this.isSellOrder && this.currency === CommonAddresses.Eth[this.chainId]) {
       throw new Error("Offers cannot be made in ETH");
     }
 
@@ -75,8 +62,7 @@ export class Order extends OrderParams {
       }
     }
 
-    const complicationValid =
-      this.complication === Addresses.Complication[this.chainId];
+    const complicationValid = this.complication === Addresses.Complication[this.chainId];
 
     if (!complicationValid) {
       throw new Error("Invalid complication address");
@@ -86,17 +72,9 @@ export class Order extends OrderParams {
   public async checkFillability(provider: Provider) {
     const chainId = (await provider.getNetwork()).chainId;
 
-    const exchange = new Contract(
-      Addresses.Exchange[chainId],
-      ExchangeAbi,
-      provider
-    );
+    const exchange = new Contract(Addresses.Exchange[chainId], ExchangeAbi, provider);
 
-    const complication = new Contract(
-      Addresses.Complication[chainId],
-      ComplicationAbi,
-      provider
-    );
+    const complication = new Contract(Addresses.Complication[chainId], ComplicationAbi, provider);
 
     const isNonceValid = await exchange.isNonceValid(this.signer, this.nonce);
     if (!isNonceValid) {
@@ -128,10 +106,7 @@ export class Order extends OrderParams {
         throw new Error("no-balance");
       }
 
-      const allowance = await erc20.getAllowance(
-        this.signer,
-        Addresses.Exchange[chainId]
-      );
+      const allowance = await erc20.getAllowance(this.signer, Addresses.Exchange[chainId]);
       if (bn(allowance).lt(currentPrice)) {
         throw new Error("no-approval");
       }
@@ -149,10 +124,7 @@ export class Order extends OrderParams {
 
     for (const { collection, tokens } of this.nfts) {
       const erc721 = new Common.Helpers.Erc721(provider, collection);
-      const isApproved = await erc721.isApproved(
-        this.signer,
-        Addresses.Exchange[this.chainId]
-      );
+      const isApproved = await erc721.isApproved(this.signer, Addresses.Exchange[this.chainId]);
       const collectionNfts: NftsWithOwnershipData = {
         collection,
         isApproved,
@@ -172,9 +144,7 @@ export class Order extends OrderParams {
       nfts.push(collectionNfts);
 
       if (isApproved) {
-        const ownedTokens = collectionNfts.tokens.filter(
-          (item) => item.isOwner
-        );
+        const ownedTokens = collectionNfts.tokens.filter((item) => item.isOwner);
         if (ownedTokens.length > 0) {
           ownedAndApprovedNfts.push({
             collection,
@@ -249,9 +219,7 @@ export class Order extends OrderParams {
     priceDiff = priceDiff.mul(portion).div(precisionMultiplier);
     const isPriceDecreasing = startPrice.gt(endPrice);
 
-    const priceAtTime = isPriceDecreasing
-      ? startPrice.sub(priceDiff)
-      : startPrice.add(priceDiff);
+    const priceAtTime = isPriceDecreasing ? startPrice.sub(priceDiff) : startPrice.add(priceDiff);
     return priceAtTime;
   }
 }
@@ -273,9 +241,7 @@ export function orderHash(order: Types.InternalOrder): string {
   );
 
   const orderItemsHash = nftsHash(order.nfts);
-  const execParamsHash = keccak256(
-    defaultAbiCoder.encode(["address", "address"], execParams)
-  );
+  const execParamsHash = keccak256(defaultAbiCoder.encode(["address", "address"], execParams));
 
   const calcEncode = defaultAbiCoder.encode(
     ["bytes32", "bool", "address", "bytes32", "bytes32", "bytes32", "bytes32"],

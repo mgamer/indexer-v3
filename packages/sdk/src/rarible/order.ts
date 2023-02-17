@@ -225,11 +225,7 @@ export class Order {
         throw new Error("invalid-amount");
       }
 
-      const erc20Contract = new Contract(
-        this.params.make.assetType.contract!,
-        Erc20Abi,
-        provider
-      );
+      const erc20Contract = new Contract(this.params.make.assetType.contract!, Erc20Abi, provider);
 
       const allowance = await erc20Contract.allowance(
         this.params.maker,
@@ -273,29 +269,19 @@ export class Order {
         throw new Error(`invalid-tokenId`);
       }
 
-      const nftContract = new Contract(
-        this.params.make.assetType.contract!,
-        Erc721Abi,
-        provider
-      );
+      const nftContract = new Contract(this.params.make.assetType.contract!, Erc721Abi, provider);
 
-      const isApprovedForAll = await nftContract.isApprovedForAll(
-        this.params.maker
-      );
+      const isApprovedForAll = await nftContract.isApprovedForAll(this.params.maker);
 
       if (!isApprovedForAll) {
-        const approvedAddress = await nftContract.getApproved(
-          this.params.make.assetType.tokenId
-        );
+        const approvedAddress = await nftContract.getApproved(this.params.make.assetType.tokenId);
 
         if (lc(approvedAddress) !== lc(Addresses.Exchange[this.chainId])) {
           throw new Error("no-approval");
         }
       }
 
-      const owner = await nftContract.ownerOf(
-        this.params.make.assetType.tokenId
-      );
+      const owner = await nftContract.ownerOf(this.params.make.assetType.tokenId);
       if (lc(owner) !== lc(this.params.maker)) {
         throw new Error(`not-owner`);
       }
@@ -340,9 +326,7 @@ export class Order {
       return "contract-wide";
     }
 
-    throw new Error(
-      "Could not detect order kind (order might have unsupported params/calldata)"
-    );
+    throw new Error("Could not detect order kind (order might have unsupported params/calldata)");
   }
 }
 
@@ -367,8 +351,7 @@ const normalize = (order: Types.Order): Types.Order => {
     | Types.IV3OrderBuyData
     | null = null;
 
-  order.data.dataType =
-    order.data.dataType || (order.data["@type"] as ORDER_DATA_TYPES) || "";
+  order.data.dataType = order.data.dataType || (order.data["@type"] as ORDER_DATA_TYPES) || "";
 
   switch (order.data.dataType) {
     case ORDER_DATA_TYPES.LEGACY:
@@ -384,14 +367,10 @@ const normalize = (order: Types.Order): Types.Order => {
 
       dataInfo = order.data as Types.IV2OrderData;
       if (dataInfo.originFees) {
-        dataInfo.originFees = dataInfo.originFees.map((fee) =>
-          normalizePartData(fee)
-        );
+        dataInfo.originFees = dataInfo.originFees.map((fee) => normalizePartData(fee));
       }
       if (dataInfo.payouts) {
-        dataInfo.payouts = dataInfo.payouts.map((fee) =>
-          normalizePartData(fee)
-        );
+        dataInfo.payouts = dataInfo.payouts.map((fee) => normalizePartData(fee));
       }
 
       break;
@@ -462,10 +441,7 @@ const normalize = (order: Types.Order): Types.Order => {
   const side = tokenKind === "contract-wide" || takeTokenId ? "buy" : "sell";
   const salt = order.salt;
   const start = n(order.start) || 0;
-  const end =
-    Math.floor(new Date(order.endedAt || "").getTime() / 1000) ||
-    n(order.end) ||
-    0;
+  const end = Math.floor(new Date(order.endedAt || "").getTime() / 1000) || n(order.end) || 0;
 
   return {
     kind: tokenKind,
@@ -547,8 +523,8 @@ function parseAssetData(assetInfo: Types.LocalAsset) {
     }),
     ...((assetInfo.assetType?.creators || assetInfo.type?.creators) && {
       // eslint-disable-next-line no-unsafe-optional-chaining
-      creators: (assetInfo.assetType?.creators || assetInfo.type?.creators).map(
-        (l: Types.IPart) => normalizePartData(l)
+      creators: (assetInfo.assetType?.creators || assetInfo.type?.creators).map((l: Types.IPart) =>
+        normalizePartData(l)
       ),
     }),
     ...((assetInfo.assetType?.royalties || assetInfo.type?.royalties) && {

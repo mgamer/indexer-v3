@@ -1,13 +1,18 @@
 {
   "name": "@reservoir0x/contracts",
-  "private": true,
   "version": "0.0.1",
   "description": "Reservoir Protocol smart contracts",
   "license": "MIT",
+  "private": true,
   "scripts": {
     "compile": "hardhat compile",
     "clean": "hardhat clean",
     "test": "hardhat test"
+  },
+  "dependencies": {
+    "@tenderly/hardhat-tenderly": "^1.5.2",
+    "@uniswap/permit2-sdk": "^1.2.0",
+    "hardhat-tracer": "^1.2.1"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.2.1",
@@ -26,10 +31,5 @@
     "hardhat-gas-reporter": "^1.0.8",
     "ts-node": "^10.4.0",
     "typescript": "^4.5.2"
-  },
-  "dependencies": {
-    "@tenderly/hardhat-tenderly": "^1.5.2",
-    "@uniswap/permit2-sdk": "^1.2.0",
-    "hardhat-tracer": "^1.2.1"
   }
 }

@@ -16,10 +16,7 @@ export const encodeAsset = (token?: string, tokenId?: string) => {
   }
 };
 
-export const encodeBundle = (
-  tokenAddresses: string[],
-  tokenIds: BigNumberish[]
-) => {
+export const encodeBundle = (tokenAddresses: string[], tokenIds: BigNumberish[]) => {
   const toEncode = tokenAddresses.map((token, index) => {
     return [token, tokenIds[index]];
   });

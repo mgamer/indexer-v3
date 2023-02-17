@@ -178,9 +178,7 @@ export class OrderParams implements Types.OrderInput {
     this._sig = encodedSignature;
   }
 
-  forceSetSig(
-    signature: string | Signature | { v: number; r: string; s: string }
-  ) {
+  forceSetSig(signature: string | Signature | { v: number; r: string; s: string }) {
     let encodedSignature: string;
     if (typeof signature === "string") {
       encodedSignature = signature;
@@ -229,11 +227,7 @@ export class OrderParams implements Types.OrderInput {
   }
 
   protected get _isSingleToken() {
-    return (
-      this.numItems === 1 &&
-      this.nfts.length === 1 &&
-      this.nfts[0]?.tokens?.length === 1
-    );
+    return this.numItems === 1 && this.nfts.length === 1 && this.nfts[0]?.tokens?.length === 1;
   }
 
   protected get _isContractWide() {
@@ -289,9 +283,7 @@ export class OrderParams implements Types.OrderInput {
     return d;
   }
 
-  protected _getEncodedSig(
-    signature: Signature | { v: number; r: string; s: string }
-  ): string {
+  protected _getEncodedSig(signature: Signature | { v: number; r: string; s: string }): string {
     const encodedSig = defaultAbiCoder.encode(
       ["bytes32", "bytes32", "uint8"],
       [signature.r, signature.s, signature.v]
@@ -301,10 +293,7 @@ export class OrderParams implements Types.OrderInput {
   }
 
   protected _getDecodedSig(encodedSig: string): SignatureLike {
-    const [r, s, v] = defaultAbiCoder.decode(
-      ["bytes32", "bytes32", "uint8"],
-      encodedSig
-    );
+    const [r, s, v] = defaultAbiCoder.decode(["bytes32", "bytes32", "uint8"], encodedSig);
 
     return { r, s, v };
   }
@@ -316,25 +305,19 @@ export const normalizeNfts = (nfts: Types.OrderInput["nfts"]) => {
   };
   const nftsByCollection = nfts.reduce((acc: OrderNFTQuantities, nft) => {
     const collection = lc(nft.collection);
-    const hasCollectionOrder =
-      acc[collection] && Object.keys(acc[collection]).length === 0;
+    const hasCollectionOrder = acc[collection] && Object.keys(acc[collection]).length === 0;
     const existingQuantities = acc[collection] || {};
     const hasTokenIdOrder = Object.keys(existingQuantities).length > 0;
     const isCollectionOrder = nft.tokens.length === 0;
 
-    if (
-      (hasCollectionOrder && !isCollectionOrder) ||
-      (hasTokenIdOrder && isCollectionOrder)
-    ) {
+    if ((hasCollectionOrder && !isCollectionOrder) || (hasTokenIdOrder && isCollectionOrder)) {
       throw new Errors.InvalidOrderError(Errors.InvalidOrderReason.MixingTypes);
     }
 
     for (const token of nft.tokens) {
       const tokenId = token.tokenId;
       if (existingQuantities[tokenId] != null) {
-        throw new Errors.InvalidOrderError(
-          Errors.InvalidOrderReason.DuplicateTokenId
-        );
+        throw new Errors.InvalidOrderError(Errors.InvalidOrderReason.DuplicateTokenId);
       }
       existingQuantities[tokenId] = token.numTokens;
     }
@@ -343,22 +326,18 @@ export const normalizeNfts = (nfts: Types.OrderInput["nfts"]) => {
     return acc;
   }, {} as OrderNFTQuantities);
 
-  const deduplicatedNfts: Types.OrderNFTs[] = Object.keys(nftsByCollection).map(
-    (collection) => {
-      const tokens = Object.keys(nftsByCollection[collection]).map(
-        (tokenId) => {
-          return {
-            tokenId,
-            numTokens: nftsByCollection[collection][tokenId],
-          };
-        }
-      );
+  const deduplicatedNfts: Types.OrderNFTs[] = Object.keys(nftsByCollection).map((collection) => {
+    const tokens = Object.keys(nftsByCollection[collection]).map((tokenId) => {
       return {
-        collection,
-        tokens,
+        tokenId,
+        numTokens: nftsByCollection[collection][tokenId],
       };
-    }
-  );
+    });
+    return {
+      collection,
+      tokens,
+    };
+  });
 
   return deduplicatedNfts;
 };

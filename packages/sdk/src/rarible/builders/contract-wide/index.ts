@@ -14,10 +14,8 @@ export class ContractWideBuilder extends BaseBuilder {
     const makeAssetClass = order.params.make.assetType.assetClass;
     const takeAssetClass = order.params.take.assetType.assetClass;
     if (
-      (makeAssetClass === Types.AssetClass.ERC721 ||
-        makeAssetClass === Types.AssetClass.ERC1155) &&
-      (takeAssetClass === Types.AssetClass.ERC20 ||
-        takeAssetClass === Types.AssetClass.ETH)
+      (makeAssetClass === Types.AssetClass.ERC721 || makeAssetClass === Types.AssetClass.ERC1155) &&
+      (takeAssetClass === Types.AssetClass.ERC20 || takeAssetClass === Types.AssetClass.ETH)
     ) {
       side = "sell";
     } else if (
@@ -40,8 +38,7 @@ export class ContractWideBuilder extends BaseBuilder {
     const { side } = this.getInfo(order);
     try {
       const nftInfo = side === "buy" ? order.params.take : order.params.make;
-      const paymentInfo =
-        side === "buy" ? order.params.make : order.params.take;
+      const paymentInfo = side === "buy" ? order.params.make : order.params.take;
 
       const dataType = order.params.data.dataType;
       const data = JSON.parse(JSON.stringify(order.params.data));

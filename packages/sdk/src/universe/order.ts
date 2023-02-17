@@ -29,10 +29,7 @@ export class Order {
     if (
       this.params.data.revenueSplits &&
       this.params.data.revenueSplits.length &&
-      this.params.data.revenueSplits.reduce(
-        (acc, curr) => (acc += Number(curr.value)),
-        0
-      ) > 10000
+      this.params.data.revenueSplits.reduce((acc, curr) => (acc += Number(curr.value)), 0) > 10000
     ) {
       throw new Error("Invalid royalties");
     }
@@ -255,23 +252,17 @@ export class Order {
         provider
       );
 
-      const isApprovedForAll = await nftContract.isApprovedForAll(
-        this.params.maker
-      );
+      const isApprovedForAll = await nftContract.isApprovedForAll(this.params.maker);
 
       if (!isApprovedForAll) {
-        const approvedAddress = await nftContract.getApproved(
-          this.params.make.assetType.tokenId
-        );
+        const approvedAddress = await nftContract.getApproved(this.params.make.assetType.tokenId);
 
         if (lc(approvedAddress) !== lc(Addresses.Exchange[this.chainId])) {
           throw new Error("no-approval");
         }
       }
 
-      const owner = await nftContract.ownerOf(
-        this.params.make.assetType.tokenId
-      );
+      const owner = await nftContract.ownerOf(this.params.make.assetType.tokenId);
       if (lc(owner) !== lc(this.params.maker)) {
         throw new Error(`not-owner`);
       }
@@ -309,9 +300,7 @@ export class Order {
       }
     }
 
-    throw new Error(
-      "Could not detect order kind (order might have unsupported params/calldata)"
-    );
+    throw new Error("Could not detect order kind (order might have unsupported params/calldata)");
   }
 }
 

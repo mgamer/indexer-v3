@@ -42,11 +42,7 @@ export class Order {
   }
 
   public hash() {
-    return _TypedDataEncoder.hashStruct(
-      "OrderComponents",
-      ORDER_EIP712_TYPES,
-      this.params
-    );
+    return _TypedDataEncoder.hashStruct("OrderComponents", ORDER_EIP712_TYPES, this.params);
   }
 
   public async sign(signer: TypedDataSigner) {
@@ -91,37 +87,23 @@ export class Order {
         const signature = proofAndSignature.slice(0, signatureLength + 2);
 
         const key = bn(
-          "0x" +
-            proofAndSignature.slice(
-              2 + signatureLength,
-              2 + signatureLength + 6
-            )
+          "0x" + proofAndSignature.slice(2 + signatureLength, 2 + signatureLength + 6)
         ).toNumber();
 
-        const height = Math.floor(
-          (proofAndSignature.length - 2 - signatureLength) / 64
-        );
+        const height = Math.floor((proofAndSignature.length - 2 - signatureLength) / 64);
 
         const proofElements: string[] = [];
         for (let i = 0; i < height; i++) {
           const start = 2 + signatureLength + 6 + i * 64;
-          proofElements.push(
-            "0x" + proofAndSignature.slice(start, start + 64).padEnd(64, "0")
-          );
+          proofElements.push("0x" + proofAndSignature.slice(start, start + 64).padEnd(64, "0"));
         }
 
         let root = this.hash();
         for (let i = 0; i < proofElements.length; i++) {
           if ((key >> i) % 2 === 0) {
-            root = solidityKeccak256(
-              ["bytes"],
-              [root + proofElements[i].slice(2)]
-            );
+            root = solidityKeccak256(["bytes"], [root + proofElements[i].slice(2)]);
           } else {
-            root = solidityKeccak256(
-              ["bytes"],
-              [proofElements[i] + root.slice(2)]
-            );
+            root = solidityKeccak256(["bytes"], [proofElements[i] + root.slice(2)]);
           }
         }
 
@@ -132,22 +114,14 @@ export class Order {
         ];
         const encoder = _TypedDataEncoder.from(types);
 
-        const bulkOrderTypeHash = solidityKeccak256(
-          ["string"],
-          [encoder.encodeType("BulkOrder")]
-        );
-        const bulkOrderHash = solidityKeccak256(
-          ["bytes"],
-          [bulkOrderTypeHash + root.slice(2)]
-        );
+        const bulkOrderTypeHash = solidityKeccak256(["string"], [encoder.encodeType("BulkOrder")]);
+        const bulkOrderHash = solidityKeccak256(["bytes"], [bulkOrderTypeHash + root.slice(2)]);
 
         const value = solidityKeccak256(
           ["bytes"],
           [
             "0x1901" +
-              _TypedDataEncoder
-                .hashDomain(EIP712_DOMAIN(this.chainId))
-                .slice(2) +
+              _TypedDataEncoder.hashDomain(EIP712_DOMAIN(this.chainId)).slice(2) +
               bulkOrderHash.slice(2),
           ]
         );
@@ -183,11 +157,10 @@ export class Order {
         "function isValidSignature(bytes32 digest, bytes signature) view returns (bytes4)",
       ]);
 
-      const result = await new Contract(
-        this.params.offerer,
-        iface,
-        provider
-      ).isValidSignature(eip712Hash, signature);
+      const result = await new Contract(this.params.offerer, iface, provider).isValidSignature(
+        eip712Hash,
+        signature
+      );
       if (result !== iface.getSighash("isValidSignature")) {
         throw new Error("Invalid signature");
       }
@@ -272,11 +245,7 @@ export class Order {
       ConduitControllerAbi,
       provider
     );
-    const exchange = new Contract(
-      Addresses.Exchange[this.chainId],
-      ExchangeAbi,
-      provider
-    );
+    const exchange = new Contract(Addresses.Exchange[this.chainId], ExchangeAbi, provider);
 
     const status = await exchange.getOrderStatus(this.hash());
     if (status.isCancelled) {
@@ -310,10 +279,7 @@ export class Order {
       }
 
       // Check allowance
-      const allowance = await erc20.getAllowance(
-        this.params.offerer,
-        makerConduit
-      );
+      const allowance = await erc20.getAllowance(this.params.offerer, makerConduit);
       if (bn(allowance).lt(info.price)) {
         throw new Error("no-approval");
       }
@@ -328,10 +294,7 @@ export class Order {
         }
 
         // Check approval
-        const isApproved = await erc721.isApproved(
-          this.params.offerer,
-          makerConduit
-        );
+        const isApproved = await erc721.isApproved(this.params.offerer, makerConduit);
         if (!isApproved) {
           throw new Error("no-approval");
         }
@@ -339,19 +302,13 @@ export class Order {
         const erc1155 = new Common.Helpers.Erc1155(provider, info.contract);
 
         // Check balance
-        const balance = await erc1155.getBalance(
-          this.params.offerer,
-          info.tokenId!
-        );
+        const balance = await erc1155.getBalance(this.params.offerer, info.tokenId!);
         if (bn(balance).lt(info.amount)) {
           throw new Error("no-balance");
         }
 
         // Check approval
-        const isApproved = await erc1155.isApproved(
-          this.params.offerer,
-          makerConduit
-        );
+        const isApproved = await erc1155.isApproved(this.params.offerer, makerConduit);
         if (!isApproved) {
           throw new Error("no-approval");
         }
@@ -404,9 +361,7 @@ export class Order {
       }
     }
 
-    throw new Error(
-      "Could not detect order kind (order might have unsupported params/calldata)"
-    );
+    throw new Error("Could not detect order kind (order might have unsupported params/calldata)");
   }
 
   private fixSignature() {
@@ -420,8 +375,7 @@ export class Order {
           throw new Error("Invalid `v` byte");
         }
 
-        this.params.signature =
-          this.params.signature.slice(0, -2) + lastByte.toString(16);
+        this.params.signature = this.params.signature.slice(0, -2) + lastByte.toString(16);
       }
     }
   }

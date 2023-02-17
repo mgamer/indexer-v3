@@ -92,9 +92,7 @@ export const encodeV3OrderData = (part: IPart) => {
   return encodedData;
 };
 
-export const encodeOrderData = (
-  order: Types.Order | Types.TakerOrderParams
-) => {
+export const encodeOrderData = (order: Types.Order | Types.TakerOrderParams) => {
   let encodedOrderData = "";
 
   switch (order.data.dataType) {
@@ -119,10 +117,7 @@ export const encodeOrderData = (
     case Constants.ORDER_DATA_TYPES.V2:
     case Constants.ORDER_DATA_TYPES.API_V2: {
       const v2Data = order.data as Types.IV2OrderData;
-      const side = getOrderSide(
-        order.make.assetType.assetClass,
-        order.take.assetType.assetClass
-      );
+      const side = getOrderSide(order.make.assetType.assetClass, order.take.assetType.assetClass);
 
       const isMakeFill = side === "buy" ? 0 : 1;
 
@@ -211,10 +206,7 @@ export const hashAssetType = (assetType: LocalAssetType) => {
  * @param order
  * @returns encoded order which is ready to be signed
  */
-export const encodeForContract = (
-  order: Types.Order,
-  matchingOrder: Types.TakerOrderParams
-) => {
+export const encodeForContract = (order: Types.Order, matchingOrder: Types.TakerOrderParams) => {
   switch (order.side) {
     case "buy": {
       const bid: Types.AcceptBid = {
@@ -268,9 +260,7 @@ export const encodeForContract = (
  * @param order
  * @returns encoded order which is ready to be signed
  */
-export const encodeForMatchOrders = (
-  order: Types.Order | Types.TakerOrderParams
-) => {
+export const encodeForMatchOrders = (order: Types.Order | Types.TakerOrderParams) => {
   return {
     maker: order.maker,
     makeAsset: {

@@ -22,10 +22,7 @@ export class Exchange {
 
   // --- Create listing ---
 
-  public async createListing(
-    maker: Signer,
-    order: Order
-  ): Promise<ContractTransaction> {
+  public async createListing(maker: Signer, order: Order): Promise<ContractTransaction> {
     const tx = this.createListingTx(order);
     return maker.sendTransaction(tx);
   }
@@ -39,10 +36,11 @@ export class Exchange {
       from: order.params.maker,
       to: this.contract.address,
       data: order.params.taker
-        ? this.contract.interface.encodeFunctionData(
-            "offerPunkForSaleToAddress",
-            [order.params.tokenId, order.params.price, order.params.taker]
-          )
+        ? this.contract.interface.encodeFunctionData("offerPunkForSaleToAddress", [
+            order.params.tokenId,
+            order.params.price,
+            order.params.taker,
+          ])
         : this.contract.interface.encodeFunctionData("offerPunkForSale", [
             order.params.tokenId,
             order.params.price,
@@ -52,10 +50,7 @@ export class Exchange {
 
   // --- Cancel listing ---
 
-  public async cancelListing(
-    maker: Signer,
-    order: Order
-  ): Promise<ContractTransaction> {
+  public async cancelListing(maker: Signer, order: Order): Promise<ContractTransaction> {
     const tx = this.cancelListingTx(order);
     return maker.sendTransaction(tx);
   }
@@ -98,19 +93,15 @@ export class Exchange {
       from: taker,
       to: this.contract.address,
       data:
-        this.contract.interface.encodeFunctionData("buyPunk", [
-          order.params.tokenId,
-        ]) + generateSourceBytes(options?.source),
+        this.contract.interface.encodeFunctionData("buyPunk", [order.params.tokenId]) +
+        generateSourceBytes(options?.source),
       value: bn(order.params.price).toHexString(),
     };
   }
 
   // --- Create bid ---
 
-  public async createBid(
-    maker: Signer,
-    order: Order
-  ): Promise<ContractTransaction> {
+  public async createBid(maker: Signer, order: Order): Promise<ContractTransaction> {
     const tx = this.createBidTx(order);
     return maker.sendTransaction(tx);
   }
@@ -123,19 +114,14 @@ export class Exchange {
     return {
       from: order.params.maker,
       to: this.contract.address,
-      data: this.contract.interface.encodeFunctionData("enterBidForPunk", [
-        order.params.tokenId,
-      ]),
+      data: this.contract.interface.encodeFunctionData("enterBidForPunk", [order.params.tokenId]),
       value: bn(order.params.price).toHexString(),
     };
   }
 
   // --- Cancel bid ---
 
-  public async cancelBid(
-    maker: Signer,
-    order: Order
-  ): Promise<ContractTransaction> {
+  public async cancelBid(maker: Signer, order: Order): Promise<ContractTransaction> {
     const tx = this.cancelBidTx(order);
     return maker.sendTransaction(tx);
   }

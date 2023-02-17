@@ -1,6 +1,8 @@
 {
   "name": "@reservoir0x/monorepo",
   "version": "0.0.1",
+  "description": "Reservoir Protocol Monorepo",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "build": "turbo run build",
@@ -12,9 +14,6 @@
     "prepare": "husky install",
     "release": "standard-version"
   },
-  "workspaces": [
-    "packages/*"
-  ],
   "dependencies": {
     "@commitlint/cli": "^16.2.1",
     "@commitlint/config-conventional": "^16.2.1",
@@ -25,6 +24,9 @@
     "standard-version": "^9.3.2",
     "turbo": "latest"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "_moduleAliases": {
     "@/api": "./packages/indexer/dist/api",
     "@/arweave-sync": "./packages/indexer/dist/sync/arweave",

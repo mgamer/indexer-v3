@@ -22,10 +22,7 @@ export class Exchange {
 
   // --- Create order ---
 
-  public async createOrder(
-    maker: Signer,
-    order: Order
-  ): Promise<ContractTransaction> {
+  public async createOrder(maker: Signer, order: Order): Promise<ContractTransaction> {
     const tx = this.createOrderTx(await maker.getAddress(), order);
     return maker.sendTransaction(tx);
   }
@@ -82,10 +79,7 @@ export class Exchange {
 
   // --- Cancel order ---
 
-  public async cancelOrder(
-    maker: Signer,
-    order: Order
-  ): Promise<ContractTransaction> {
+  public async cancelOrder(maker: Signer, order: Order): Promise<ContractTransaction> {
     const tx = this.cancelOrderTx(await maker.getAddress(), order);
     return maker.sendTransaction(tx);
   }

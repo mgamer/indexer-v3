@@ -72,9 +72,7 @@ export class Order {
 
   static async doOracleSign(order: Order, oracle: TypedDataSigner) {
     const { types, value } = Order.getEip712TypesAndValueForOracle(order);
-    return splitSignature(
-      await oracle._signTypedData(EIP712_DOMAIN(order.chainId), types, value)
-    );
+    return splitSignature(await oracle._signTypedData(EIP712_DOMAIN(order.chainId), types, value));
   }
 
   static getEip712TypesAndValueForOracle(order: Order) {
@@ -100,23 +98,16 @@ export class Order {
     const { tree, root } = await getOrderTreeRoot(orders);
     const firstOrder = orders[0];
     const { v, r, s } = splitSignature(
-      await signer._signTypedData(
-        EIP712_DOMAIN(firstOrder.chainId),
-        ORDER_ROOT_EIP712_TYPES,
-        {
-          root: root,
-        }
-      )
+      await signer._signTypedData(EIP712_DOMAIN(firstOrder.chainId), ORDER_ROOT_EIP712_TYPES, {
+        root: root,
+      })
     );
 
     // sign each order
     for (let index = 0; index < orders.length; index++) {
       const order = orders[index];
       const orderHash = order.hash();
-      const extraSignature = defaultAbiCoder.encode(
-        ["bytes32[]"],
-        [tree.getHexProof(orderHash)]
-      );
+      const extraSignature = defaultAbiCoder.encode(["bytes32[]"], [tree.getHexProof(orderHash)]);
       order.params.extraSignature = extraSignature;
       // bulk
       order.params.signatureVersion = 1;
@@ -169,10 +160,7 @@ export class Order {
 
     // bulk sign
     if (this.params.signatureVersion === 1) {
-      const proof = defaultAbiCoder.decode(
-        ["bytes32[]"],
-        this.params.extraSignature
-      )[0];
+      const proof = defaultAbiCoder.decode(["bytes32[]"], this.params.extraSignature)[0];
       const tree = new MerkleTree([], keccak256, {
         sort: true,
       });
@@ -186,12 +174,7 @@ export class Order {
         signature
       );
     } else {
-      signer = verifyTypedData(
-        EIP712_DOMAIN(this.chainId),
-        types,
-        value,
-        signature
-      );
+      signer = verifyTypedData(EIP712_DOMAIN(this.chainId), types, value, signature);
     }
 
     if (lc(this.params.trader) !== lc(signer)) {
@@ -239,11 +222,7 @@ export class Order {
   public async checkFillability(provider: Provider) {
     const chainId = await provider.getNetwork().then((n) => n.chainId);
 
-    const exchange = new Contract(
-      Addresses.Exchange[this.chainId],
-      ExchangeAbi,
-      provider
-    );
+    const exchange = new Contract(Addresses.Exchange[this.chainId], ExchangeAbi, provider);
 
     const status = await exchange.cancelledOrFilled(this.hash());
     if (status) {
@@ -256,10 +235,7 @@ export class Order {
     if (this.params.side === Types.TradeDirection.BUY) {
       // Check that maker has enough balance to cover the payment
       // and the approval to the token transfer proxy is set
-      const erc20 = new Common.Helpers.Erc20(
-        provider,
-        this.params.paymentToken
-      );
+      const erc20 = new Common.Helpers.Erc20(provider, this.params.paymentToken);
       const balance = await erc20.getBalance(this.params.trader);
       if (bn(balance).lt(bn(this.params.price))) {
         throw new Error("no-balance");
@@ -275,10 +251,7 @@ export class Order {
       }
     } else {
       if (this.params.kind?.startsWith("erc721")) {
-        const erc721 = new Common.Helpers.Erc721(
-          provider,
-          this.params.collection
-        );
+        const erc721 = new Common.Helpers.Erc721(provider, this.params.collection);
 
         // Check ownership
         const owner = await erc721.getOwner(this.params.tokenId);
@@ -295,16 +268,10 @@ export class Order {
           throw new Error("no-approval");
         }
       } else {
-        const erc1155 = new Common.Helpers.Erc1155(
-          provider,
-          this.params.collection
-        );
+        const erc1155 = new Common.Helpers.Erc1155(provider, this.params.collection);
 
         // Check balance
-        const balance = await erc1155.getBalance(
-          this.params.trader,
-          this.params.tokenId
-        );
+        const balance = await erc1155.getBalance(this.params.trader, this.params.tokenId);
 
         if (bn(balance).lt(this.params.amount!)) {
           throw new Error("no-balance");
@@ -338,23 +305,15 @@ export class Order {
   }
 
   private detectKind(): Types.OrderKind {
-    if (
-      this.params.matchingPolicy ===
-      Addresses.StandardPolicyERC721[this.chainId]
-    ) {
+    if (this.params.matchingPolicy === Addresses.StandardPolicyERC721[this.chainId]) {
       return "erc721-single-token";
     }
 
-    if (
-      this.params.matchingPolicy ===
-      Addresses.StandardPolicyERC721_V2[this.chainId]
-    ) {
+    if (this.params.matchingPolicy === Addresses.StandardPolicyERC721_V2[this.chainId]) {
       return "erc721-single-token";
     }
 
-    throw new Error(
-      "Could not detect order kind (order might have unsupported params/calldata)"
-    );
+    throw new Error("Could not detect order kind (order might have unsupported params/calldata)");
   }
 }
 

@@ -32,10 +32,7 @@ export class SingleTokenBuilder extends BaseBuilder {
     this.defaultInitialize(params);
 
     return new Order(this.chainId, {
-      side:
-        params.side === "sell"
-          ? Types.TradeDirection.SELL
-          : Types.TradeDirection.BUY,
+      side: params.side === "sell" ? Types.TradeDirection.SELL : Types.TradeDirection.BUY,
       trader: params.trader,
       collection: params.collection,
       matchingPolicy: params.matchingPolicy,
@@ -72,18 +69,14 @@ export class SingleTokenBuilder extends BaseBuilder {
     }
   ) {
     const isSell = order.params.side === Types.TradeDirection.SELL;
-    const matchSide = isSell
-      ? Types.TradeDirection.BUY
-      : Types.TradeDirection.SELL;
+    const matchSide = isSell ? Types.TradeDirection.BUY : Types.TradeDirection.SELL;
     return {
       order: {
         ...order.params,
         trader: data?.trader ?? order.params.trader,
         side: matchSide,
         amount: data?.amount ? s(data.amount) : "1",
-        listingTime: data?.listingTime
-          ? s(data?.listingTime)
-          : order.params.listingTime,
+        listingTime: data?.listingTime ? s(data?.listingTime) : order.params.listingTime,
         expirationTime: data?.expirationTime
           ? s(data?.expirationTime)
           : order.params.expirationTime,

@@ -123,10 +123,7 @@ export class ContractWideBuilder extends BaseBuilder {
         consideration: [
           {
             itemType:
-              2 +
-              (params.tokenKind === "erc721"
-                ? Types.ItemType.ERC721
-                : Types.ItemType.ERC1155),
+              2 + (params.tokenKind === "erc721" ? Types.ItemType.ERC721 : Types.ItemType.ERC1155),
             token: params.contract,
             // No-op criteria
             identifierOrCriteria: "0",

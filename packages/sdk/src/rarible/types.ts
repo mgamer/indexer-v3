@@ -81,12 +81,7 @@ export type Order = {
   salt: string;
   start: number;
   end: number;
-  data:
-    | ILegacyOrderData
-    | IV1OrderData
-    | IV2OrderData
-    | IV3OrderSellData
-    | IV3OrderBuyData;
+  data: ILegacyOrderData | IV1OrderData | IV2OrderData | IV3OrderSellData | IV3OrderBuyData;
   signature?: string;
   side?: string;
   createdAt?: string;
@@ -180,12 +175,7 @@ export type TakerOrderParams = {
   salt: number;
   start: number;
   end: number;
-  data:
-    | ILegacyOrderData
-    | IV1OrderData
-    | IV2OrderData
-    | IV3OrderSellData
-    | IV3OrderBuyData;
+  data: ILegacyOrderData | IV1OrderData | IV2OrderData | IV3OrderSellData | IV3OrderBuyData;
 };
 
 export interface BaseBuildParams {

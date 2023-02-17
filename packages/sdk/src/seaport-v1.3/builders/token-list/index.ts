@@ -1,10 +1,7 @@
 import { BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 
-import {
-  generateMerkleProof,
-  generateMerkleTree,
-} from "../../../common/helpers";
+import { generateMerkleProof, generateMerkleTree } from "../../../common/helpers";
 import { BaseBuilder, BaseBuildParams, BaseOrderInfo } from "../base";
 import { Order } from "../../order";
 import * as Types from "../../types";
@@ -121,8 +118,7 @@ export class TokenListBuilder extends BaseBuilder {
     this.defaultInitialize(params);
 
     if (params.side === "buy") {
-      const merkleRoot =
-        params.merkleRoot ?? generateMerkleTree(params.tokenIds).getHexRoot();
+      const merkleRoot = params.merkleRoot ?? generateMerkleTree(params.tokenIds).getHexRoot();
 
       return new Order(this.chainId, {
         kind: "token-list",
@@ -140,10 +136,7 @@ export class TokenListBuilder extends BaseBuilder {
         consideration: [
           {
             itemType:
-              2 +
-              (params.tokenKind === "erc721"
-                ? Types.ItemType.ERC721
-                : Types.ItemType.ERC1155),
+              2 + (params.tokenKind === "erc721" ? Types.ItemType.ERC721 : Types.ItemType.ERC1155),
             token: params.contract,
             identifierOrCriteria: lc(merkleRoot.toString()),
             startAmount: s(params.amount ?? 1),

@@ -104,10 +104,7 @@ export abstract class BaseBuilder {
 
   protected baseIsValid(order: Order): boolean {
     for (let i = 0; i < order.params.offer.length; i++) {
-      if (
-        order.params.offer[i].startAmount == "0" ||
-        order.params.offer[i].endAmount == "0"
-      ) {
+      if (order.params.offer[i].startAmount == "0" || order.params.offer[i].endAmount == "0") {
         return false;
       }
     }

@@ -18,8 +18,7 @@ export const bn = (value: BigNumberish) => BigNumber.from(value);
 
 // Time
 
-export const getCurrentTimestamp = (delay = 0) =>
-  Math.floor(Date.now() / 1000 + delay);
+export const getCurrentTimestamp = (delay = 0) => Math.floor(Date.now() / 1000 + delay);
 
 // Ease of use
 

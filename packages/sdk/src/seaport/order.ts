@@ -40,11 +40,7 @@ export class Order {
   }
 
   public hash() {
-    return _TypedDataEncoder.hashStruct(
-      "OrderComponents",
-      ORDER_EIP712_TYPES,
-      this.params
-    );
+    return _TypedDataEncoder.hashStruct("OrderComponents", ORDER_EIP712_TYPES, this.params);
   }
 
   public async sign(signer: TypedDataSigner) {
@@ -96,11 +92,10 @@ export class Order {
         "function isValidSignature(bytes32 digest, bytes signature) view returns (bytes4)",
       ]);
 
-      const result = await new Contract(
-        this.params.offerer,
-        iface,
-        provider
-      ).isValidSignature(eip712Hash, this.params.signature!);
+      const result = await new Contract(this.params.offerer, iface, provider).isValidSignature(
+        eip712Hash,
+        this.params.signature!
+      );
       if (result !== iface.getSighash("isValidSignature")) {
         throw new Error("Invalid signature");
       }
@@ -185,11 +180,7 @@ export class Order {
       ConduitControllerAbi,
       provider
     );
-    const exchange = new Contract(
-      Addresses.Exchange[this.chainId],
-      ExchangeAbi,
-      provider
-    );
+    const exchange = new Contract(Addresses.Exchange[this.chainId], ExchangeAbi, provider);
 
     const status = await exchange.getOrderStatus(this.hash());
     if (status.isCancelled) {
@@ -223,10 +214,7 @@ export class Order {
       }
 
       // Check allowance
-      const allowance = await erc20.getAllowance(
-        this.params.offerer,
-        makerConduit
-      );
+      const allowance = await erc20.getAllowance(this.params.offerer, makerConduit);
       if (bn(allowance).lt(info.price)) {
         throw new Error("no-approval");
       }
@@ -241,10 +229,7 @@ export class Order {
         }
 
         // Check approval
-        const isApproved = await erc721.isApproved(
-          this.params.offerer,
-          makerConduit
-        );
+        const isApproved = await erc721.isApproved(this.params.offerer, makerConduit);
         if (!isApproved) {
           throw new Error("no-approval");
         }
@@ -252,19 +237,13 @@ export class Order {
         const erc1155 = new Common.Helpers.Erc1155(provider, info.contract);
 
         // Check balance
-        const balance = await erc1155.getBalance(
-          this.params.offerer,
-          info.tokenId!
-        );
+        const balance = await erc1155.getBalance(this.params.offerer, info.tokenId!);
         if (bn(balance).lt(info.amount)) {
           throw new Error("no-balance");
         }
 
         // Check approval
-        const isApproved = await erc1155.isApproved(
-          this.params.offerer,
-          makerConduit
-        );
+        const isApproved = await erc1155.isApproved(this.params.offerer, makerConduit);
         if (!isApproved) {
           throw new Error("no-approval");
         }
@@ -317,9 +296,7 @@ export class Order {
       }
     }
 
-    throw new Error(
-      "Could not detect order kind (order might have unsupported params/calldata)"
-    );
+    throw new Error("Could not detect order kind (order might have unsupported params/calldata)");
   }
 
   private fixSignature() {
@@ -333,8 +310,7 @@ export class Order {
           throw new Error("Invalid `v` byte");
         }
 
-        this.params.signature =
-          this.params.signature.slice(0, -2) + lastByte.toString(16);
+        this.params.signature = this.params.signature.slice(0, -2) + lastByte.toString(16);
       }
     }
   }

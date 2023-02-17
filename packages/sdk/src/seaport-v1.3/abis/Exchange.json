@@ -80,9 +80,7 @@
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "conduit", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "conduit", "type": "address" }],
     "name": "InvalidCallToConduit",
     "type": "error"
   },
@@ -95,33 +93,25 @@
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "bytes32", "name": "orderHash", "type": "bytes32" }
-    ],
+    "inputs": [{ "internalType": "bytes32", "name": "orderHash", "type": "bytes32" }],
     "name": "InvalidContractOrder",
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "uint256", "name": "amount", "type": "uint256" }
-    ],
+    "inputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
     "name": "InvalidERC721TransferAmount",
     "type": "error"
   },
   { "inputs": [], "name": "InvalidFulfillmentComponentData", "type": "error" },
   {
-    "inputs": [
-      { "internalType": "uint256", "name": "value", "type": "uint256" }
-    ],
+    "inputs": [{ "internalType": "uint256", "name": "value", "type": "uint256" }],
     "name": "InvalidMsgValue",
     "type": "error"
   },
   { "inputs": [], "name": "InvalidNativeOfferItem", "type": "error" },
   { "inputs": [], "name": "InvalidProof", "type": "error" },
   {
-    "inputs": [
-      { "internalType": "bytes32", "name": "orderHash", "type": "bytes32" }
-    ],
+    "inputs": [{ "internalType": "bytes32", "name": "orderHash", "type": "bytes32" }],
     "name": "InvalidRestrictedOrder",
     "type": "error"
   },
@@ -147,9 +137,7 @@
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "enum Side", "name": "side", "type": "uint8" }
-    ],
+    "inputs": [{ "internalType": "enum Side", "name": "side", "type": "uint8" }],
     "name": "MissingFulfillmentComponentOnAggregation",
     "type": "error"
   },
@@ -168,9 +156,7 @@
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "account", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "account", "type": "address" }],
     "name": "NoContract",
     "type": "error"
   },
@@ -183,30 +169,22 @@
   },
   { "inputs": [], "name": "OfferCriteriaResolverOutOfRange", "type": "error" },
   {
-    "inputs": [
-      { "internalType": "bytes32", "name": "orderHash", "type": "bytes32" }
-    ],
+    "inputs": [{ "internalType": "bytes32", "name": "orderHash", "type": "bytes32" }],
     "name": "OrderAlreadyFilled",
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "enum Side", "name": "side", "type": "uint8" }
-    ],
+    "inputs": [{ "internalType": "enum Side", "name": "side", "type": "uint8" }],
     "name": "OrderCriteriaResolverOutOfRange",
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "bytes32", "name": "orderHash", "type": "bytes32" }
-    ],
+    "inputs": [{ "internalType": "bytes32", "name": "orderHash", "type": "bytes32" }],
     "name": "OrderIsCancelled",
     "type": "error"
   },
   {
-    "inputs": [
-      { "internalType": "bytes32", "name": "orderHash", "type": "bytes32" }
-    ],
+    "inputs": [{ "internalType": "bytes32", "name": "orderHash", "type": "bytes32" }],
     "name": "OrderPartiallyFilled",
     "type": "error"
   },
@@ -568,9 +546,7 @@
       }
     ],
     "name": "cancel",
-    "outputs": [
-      { "internalType": "bool", "name": "cancelled", "type": "bool" }
-    ],
+    "outputs": [{ "internalType": "bool", "name": "cancelled", "type": "bool" }],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -736,9 +712,7 @@
       { "internalType": "address", "name": "recipient", "type": "address" }
     ],
     "name": "fulfillAdvancedOrder",
-    "outputs": [
-      { "internalType": "bool", "name": "fulfilled", "type": "bool" }
-    ],
+    "outputs": [{ "internalType": "bool", "name": "fulfilled", "type": "bool" }],
     "stateMutability": "payable",
     "type": "function"
   },
@@ -1271,9 +1245,7 @@
       }
     ],
     "name": "fulfillBasicOrder",
-    "outputs": [
-      { "internalType": "bool", "name": "fulfilled", "type": "bool" }
-    ],
+    "outputs": [{ "internalType": "bool", "name": "fulfilled", "type": "bool" }],
     "stateMutability": "payable",
     "type": "function"
   },
@@ -1366,9 +1338,7 @@
       }
     ],
     "name": "fulfillBasicOrder_efficient_6GL6yc",
-    "outputs": [
-      { "internalType": "bool", "name": "fulfilled", "type": "bool" }
-    ],
+    "outputs": [{ "internalType": "bool", "name": "fulfilled", "type": "bool" }],
     "stateMutability": "payable",
     "type": "function"
   },
@@ -1502,9 +1472,7 @@
       }
     ],
     "name": "fulfillOrder",
-    "outputs": [
-      { "internalType": "bool", "name": "fulfilled", "type": "bool" }
-    ],
+    "outputs": [{ "internalType": "bool", "name": "fulfilled", "type": "bool" }],
     "stateMutability": "payable",
     "type": "function"
   },
@@ -1517,20 +1485,14 @@
       }
     ],
     "name": "getContractOffererNonce",
-    "outputs": [
-      { "internalType": "uint256", "name": "nonce", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "nonce", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "address", "name": "offerer", "type": "address" }
-    ],
+    "inputs": [{ "internalType": "address", "name": "offerer", "type": "address" }],
     "name": "getCounter",
-    "outputs": [
-      { "internalType": "uint256", "name": "counter", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "counter", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
@@ -1623,16 +1585,12 @@
       }
     ],
     "name": "getOrderHash",
-    "outputs": [
-      { "internalType": "bytes32", "name": "orderHash", "type": "bytes32" }
-    ],
+    "outputs": [{ "internalType": "bytes32", "name": "orderHash", "type": "bytes32" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [
-      { "internalType": "bytes32", "name": "orderHash", "type": "bytes32" }
-    ],
+    "inputs": [{ "internalType": "bytes32", "name": "orderHash", "type": "bytes32" }],
     "name": "getOrderStatus",
     "outputs": [
       { "internalType": "bool", "name": "isValidated", "type": "bool" },
@@ -1646,9 +1604,7 @@
   {
     "inputs": [],
     "name": "incrementCounter",
-    "outputs": [
-      { "internalType": "uint256", "name": "newCounter", "type": "uint256" }
-    ],
+    "outputs": [{ "internalType": "uint256", "name": "newCounter", "type": "uint256" }],
     "stateMutability": "nonpayable",
     "type": "function"
   },

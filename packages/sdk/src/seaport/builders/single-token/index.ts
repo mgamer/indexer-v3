@@ -20,8 +20,7 @@ export class SingleTokenBuilder extends BaseBuilder {
       const offerItem = order.params.offer[0];
       if (side === "sell") {
         // The offer item is the sold token
-        const tokenKind =
-          offerItem.itemType === Types.ItemType.ERC721 ? "erc721" : "erc1155";
+        const tokenKind = offerItem.itemType === Types.ItemType.ERC721 ? "erc721" : "erc1155";
         const contract = offerItem.token;
         const tokenId = offerItem.identifierOrCriteria;
         const amount = offerItem.startAmount;
@@ -99,8 +98,7 @@ export class SingleTokenBuilder extends BaseBuilder {
           });
         }
 
-        const tokenKind =
-          item.itemType === Types.ItemType.ERC721 ? "erc721" : "erc1155";
+        const tokenKind = item.itemType === Types.ItemType.ERC721 ? "erc721" : "erc1155";
         const contract = item.token;
         const tokenId = item.identifierOrCriteria;
         const amount = item.startAmount;
@@ -164,25 +162,17 @@ export class SingleTokenBuilder extends BaseBuilder {
         offer: [
           {
             itemType:
-              params.tokenKind === "erc721"
-                ? Types.ItemType.ERC721
-                : Types.ItemType.ERC1155,
+              params.tokenKind === "erc721" ? Types.ItemType.ERC721 : Types.ItemType.ERC1155,
             token: params.contract,
             identifierOrCriteria: s(params.tokenId),
-            startAmount: s(
-              params.tokenKind === "erc1155" ? params.amount ?? 1 : 1
-            ),
-            endAmount: s(
-              params.tokenKind === "erc1155" ? params.amount ?? 1 : 1
-            ),
+            startAmount: s(params.tokenKind === "erc1155" ? params.amount ?? 1 : 1),
+            endAmount: s(params.tokenKind === "erc1155" ? params.amount ?? 1 : 1),
           },
         ],
         consideration: [
           {
             itemType:
-              params.paymentToken === AddressZero
-                ? Types.ItemType.NATIVE
-                : Types.ItemType.ERC20,
+              params.paymentToken === AddressZero ? Types.ItemType.NATIVE : Types.ItemType.ERC20,
             token: params.paymentToken,
             identifierOrCriteria: "0",
             startAmount: s(params.price),
@@ -191,9 +181,7 @@ export class SingleTokenBuilder extends BaseBuilder {
           },
           ...(params.fees || []).map(({ amount, endAmount, recipient }) => ({
             itemType:
-              params.paymentToken === AddressZero
-                ? Types.ItemType.NATIVE
-                : Types.ItemType.ERC20,
+              params.paymentToken === AddressZero ? Types.ItemType.NATIVE : Types.ItemType.ERC20,
             token: params.paymentToken,
             identifierOrCriteria: "0",
             startAmount: s(amount),
@@ -204,17 +192,11 @@ export class SingleTokenBuilder extends BaseBuilder {
             ? [
                 {
                   itemType:
-                    params.tokenKind === "erc721"
-                      ? Types.ItemType.ERC721
-                      : Types.ItemType.ERC1155,
+                    params.tokenKind === "erc721" ? Types.ItemType.ERC721 : Types.ItemType.ERC1155,
                   token: params.contract,
                   identifierOrCriteria: s(params.tokenId),
-                  startAmount: s(
-                    params.tokenKind === "erc1155" ? params.amount ?? 1 : 1
-                  ),
-                  endAmount: s(
-                    params.tokenKind === "erc1155" ? params.amount ?? 1 : 1
-                  ),
+                  startAmount: s(params.tokenKind === "erc1155" ? params.amount ?? 1 : 1),
+                  endAmount: s(params.tokenKind === "erc1155" ? params.amount ?? 1 : 1),
                   recipient: params.taker,
                 },
               ]
@@ -256,9 +238,7 @@ export class SingleTokenBuilder extends BaseBuilder {
         consideration: [
           {
             itemType:
-              params.tokenKind === "erc721"
-                ? Types.ItemType.ERC721
-                : Types.ItemType.ERC1155,
+              params.tokenKind === "erc721" ? Types.ItemType.ERC721 : Types.ItemType.ERC1155,
             token: params.contract,
             identifierOrCriteria: s(params.tokenId),
             startAmount: s(params.amount ?? 1),

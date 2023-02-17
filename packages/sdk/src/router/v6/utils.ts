@@ -30,7 +30,8 @@ export const generateFTApprovalTxData = (
 ): TxData => ({
   from: owner,
   to: contract,
-  data: new Interface([
-    "function approve(address spender, uint256 amount)",
-  ]).encodeFunctionData("approve", [spender, amount ?? MaxUint256]),
+  data: new Interface(["function approve(address spender, uint256 amount)"]).encodeFunctionData(
+    "approve",
+    [spender, amount ?? MaxUint256]
+  ),
 });

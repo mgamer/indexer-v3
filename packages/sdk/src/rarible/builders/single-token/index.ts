@@ -28,8 +28,7 @@ export class SingleTokenBuilder extends BaseBuilder {
     const { side } = this.getInfo(order);
     try {
       const nftInfo = side === "buy" ? order.params.take : order.params.make;
-      const paymentInfo =
-        side === "buy" ? order.params.make : order.params.take;
+      const paymentInfo = side === "buy" ? order.params.make : order.params.take;
 
       const dataType = order.params.data.dataType;
       const data = JSON.parse(JSON.stringify(order.params.data));
@@ -119,11 +118,7 @@ export class SingleTokenBuilder extends BaseBuilder {
     });
   }
 
-  public buildMatching(
-    order: Types.Order,
-    taker: string,
-    data: { amount?: string }
-  ) {
+  public buildMatching(order: Types.Order, taker: string, data: { amount?: string }) {
     const rightOrder = {
       type: order.type,
       maker: lc(taker),

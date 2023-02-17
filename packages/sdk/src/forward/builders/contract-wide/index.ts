@@ -11,9 +11,7 @@ export class ContractWideBuilder extends BaseBuilder {
       const copyOrder = this.build({
         ...order.params,
         tokenKind:
-          order.params.itemKind === Types.ItemKind.ERC721_WITH_CRITERIA
-            ? "erc721"
-            : "erc1155",
+          order.params.itemKind === Types.ItemKind.ERC721_WITH_CRITERIA ? "erc721" : "erc1155",
         contract: order.params.token,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
