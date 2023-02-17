@@ -14,7 +14,7 @@ export class ModuleManager {
     this.chainId = chainId;
     this.contract = new Contract(
       Addresses.ModuleManager[this.chainId],
-      ModuleManagerAbi as any
+      ModuleManagerAbi
     );
   }
 

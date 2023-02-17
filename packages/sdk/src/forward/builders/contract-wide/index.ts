@@ -15,6 +15,7 @@ export class ContractWideBuilder extends BaseBuilder {
             ? "erc721"
             : "erc1155",
         contract: order.params.token,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       if (!copyOrder) {

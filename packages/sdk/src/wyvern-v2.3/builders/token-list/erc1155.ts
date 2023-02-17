@@ -164,7 +164,7 @@ export class TokenListErc1155Builder extends BaseBuilder {
         "0".repeat(64).repeat(numMerkleTreeLevels);
 
       const staticExtradata =
-        new Interface(TokenListVerifierAbi as any).getSighash("verifyErc1155") +
+        new Interface(TokenListVerifierAbi).getSighash("verifyErc1155") +
         defaultAbiCoder.encode(["uint256"], [32]).slice(2) +
         defaultAbiCoder
           .encode(["uint256"], [calldata.slice(2).length / 2])
@@ -230,10 +230,13 @@ export class TokenListErc1155Builder extends BaseBuilder {
 
     if (order.params.side === Types.OrderSide.BUY) {
       const calldata =
-        new Interface(Erc1155Abi as any).encodeFunctionData(
-          "safeTransferFrom",
-          [taker, AddressZero, data.tokenId, 1, "0x"]
-        ) +
+        new Interface(Erc1155Abi).encodeFunctionData("safeTransferFrom", [
+          taker,
+          AddressZero,
+          data.tokenId,
+          1,
+          "0x",
+        ]) +
         // merkle root
         "0".repeat(64) +
         // merkle proof

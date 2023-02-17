@@ -81,14 +81,14 @@ export class Order {
     }
   }
 
-  public buildMatching(data?: any) {
+  public buildMatching(data?: object) {
     return this.getBuilder().buildMatching(this, data);
   }
 
   public async checkFillability(provider: Provider) {
     const exchange = new Contract(
       Addresses.Exchange[this.chainId],
-      ExchangeAbi as any,
+      ExchangeAbi,
       provider
     );
 

@@ -61,6 +61,7 @@ export type LocalAssetType = {
 
 export type LocalAsset = {
   // Comes from API
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type?: any;
   assetType: LocalAssetType;
   value: string;

@@ -48,8 +48,7 @@ export class Exchange {
       referrer?: string;
     }
   ): TxData {
-    let to = this.contract.address;
-    let data: string;
+    const to = this.contract.address;
     let value: BigNumber | undefined;
 
     const isBuy = order.params.side === Types.TradeDirection.BUY;
@@ -57,7 +56,10 @@ export class Exchange {
       ? [matchOrder, order.getRaw()]
       : [order.getRaw(), matchOrder];
 
-    data = this.contract.interface.encodeFunctionData("execute", executeArgs);
+    const data = this.contract.interface.encodeFunctionData(
+      "execute",
+      executeArgs
+    );
 
     if (!isBuy) value = bn(order.params.price);
 

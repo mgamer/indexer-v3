@@ -27,7 +27,7 @@ export class ProxyRegistry {
   constructor(provider: Provider, chainId: number) {
     this.contract = new Contract(
       Addresses.ProxyRegistry[chainId],
-      ProxyRegistryAbi as any,
+      ProxyRegistryAbi,
       provider
     );
   }

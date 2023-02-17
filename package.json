@@ -6,9 +6,9 @@
     "build": "turbo run build",
     "start": "turbo run start",
     "commitlint": "commitlint --edit",
-    "lint-check": "eslint --max-warnings 0 --ext .js,.ts,.json packages/indexer/src",
-    "format-check": "prettier --check \"packages/indexer/src/**/*.+(js|ts|json)\"",
-    "format": "prettier --write \"packages/indexer/src/**/*.+(js|ts|json)\"",
+    "lint-check": "eslint --max-warnings 0 \"packages/**/src/**/*.+(js|ts|json)\"",
+    "format-check": "prettier --check \"packages/**/src/**/*.+(js|ts|json)\"",
+    "format": "prettier --write \"packages/**/src/**/*.+(js|ts|json)\"",
     "prepare": "husky install",
     "release": "standard-version"
   },

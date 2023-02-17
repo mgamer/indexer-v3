@@ -1,6 +1,5 @@
 import { Provider } from "@ethersproject/abstract-provider";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
-import { _TypedDataEncoder } from "@ethersproject/hash";
 
 import * as Addresses from "./addresses";
 import { Builders } from "./builders";
@@ -105,17 +104,24 @@ export class Order {
   public async checkFillability(provider: Provider) {
     let value = false;
     switch (this.params.make.assetType.assetClass) {
-      case "ERC721":
+      case "ERC721": {
         value = await this.verifyAllowanceERC721(provider);
         break;
-      case "ERC20":
+      }
+      case "ERC20": {
         value = await this.verifyAllowanceERC20(provider);
         break;
-      case "ERC1155":
+      }
+      case "ERC1155": {
         value = await this.verifyAllowanceERC1155(provider);
         break;
+      }
       default:
         break;
+    }
+
+    if (!value) {
+      throw new Error("Order not fillable");
     }
   }
 
@@ -278,7 +284,7 @@ export class Order {
     return value;
   }
 
-  public buildMatching(taker: string, data?: any) {
+  public buildMatching(taker: string, data?: object) {
     return this.getBuilder().buildMatching(this.params, taker, data);
   }
 
@@ -338,6 +344,7 @@ const EIP712_TYPES = {
   ],
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toRawOrder = (order: Order): any =>
   encode({
     ...order.params,

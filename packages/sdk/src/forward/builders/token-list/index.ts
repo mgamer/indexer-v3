@@ -25,6 +25,7 @@ export class TokenListBuilder extends BaseBuilder {
             : "erc1155",
         contract: order.params.token,
         merkleRoot: order.params.identifierOrCriteria,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       if (!copyOrder) {

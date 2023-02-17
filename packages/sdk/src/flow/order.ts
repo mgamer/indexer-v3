@@ -7,7 +7,6 @@ import {
   solidityKeccak256,
   defaultAbiCoder,
   splitSignature,
-  _TypedDataEncoder,
 } from "ethers/lib/utils";
 import { BigNumber, BigNumberish, Contract } from "ethers";
 import { OrderParams } from "./order-params";

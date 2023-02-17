@@ -44,6 +44,7 @@ export const generatePackedList = (tokenIds: BigNumberish[]) => {
 };
 
 export const decomposePackedList = (packedList: string) => {
+  // eslint-disable-next-line prefer-const
   let [numBytes, list] = defaultAbiCoder.decode(
     ["uint256", "bytes"],
     packedList

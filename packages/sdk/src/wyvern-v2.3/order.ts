@@ -131,7 +131,7 @@ export class Order {
    * @param data Any aditional arguments
    * @returns The matching Wyvern v2 order
    */
-  public buildMatching(taker: string, data?: any) {
+  public buildMatching(taker: string, data?: object) {
     return this.getBuilder().buildMatching(this, taker, data);
   }
 
@@ -198,11 +198,7 @@ export class Order {
 
     // Make sure the order is not cancelled or filled
     const hash = this.prefixHash();
-    const exchange = new Contract(
-      this.params.exchange,
-      ExchangeAbi as any,
-      provider
-    );
+    const exchange = new Contract(this.params.exchange, ExchangeAbi, provider);
     const filledOrCancelled = await exchange.cancelledOrFinalized(hash);
     if (filledOrCancelled) {
       throw new Error("filled-or-cancelled");
@@ -256,6 +252,7 @@ export class Order {
         throw new Error("invalid");
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { contract, tokenId } = this.getInfo() as any;
       if (!contract || !tokenId) {
         throw new Error("invalid");
@@ -464,6 +461,7 @@ const EIP712_TYPES = {
   ],
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toRawOrder = (order: Order): any => ({
   ...order.params,
   makerProtocolFee: 0,

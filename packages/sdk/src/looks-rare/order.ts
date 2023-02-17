@@ -103,7 +103,7 @@ export class Order {
 
     const exchange = new Contract(
       Addresses.Exchange[this.chainId],
-      ExchangeAbi as any,
+      ExchangeAbi,
       provider
     );
 
@@ -194,7 +194,7 @@ export class Order {
     }
   }
 
-  public buildMatching(taker: string, data?: any) {
+  public buildMatching(taker: string, data?: object) {
     return this.getBuilder().buildMatching(this, taker, data);
   }
 
@@ -262,7 +262,7 @@ const EIP712_TYPES = {
   ],
 };
 
-const toRawOrder = (order: Order): any => ({
+const toRawOrder = (order: Order): object => ({
   ...order.params,
 });
 

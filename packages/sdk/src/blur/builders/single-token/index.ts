@@ -49,8 +49,8 @@ export class SingleTokenBuilder extends BaseBuilder {
       fees: params.fees!.map(({ recipient, rate }) => ({
         recipient: lc(recipient),
         rate: n(rate),
-      })), 
-      salt: params.salt ? s(params.salt) : '0',
+      })),
+      salt: params.salt ? s(params.salt) : "0",
       extraParams: params.extraParams ? s(params.extraParams) : BytesEmpty,
       signatureVersion: params.signatureVersion,
       extraSignature: params.extraSignature ?? BytesEmpty,
@@ -63,25 +63,37 @@ export class SingleTokenBuilder extends BaseBuilder {
 
   public buildMatching(
     order: Order,
-    data?: { amount?: BigNumberish, trader: string, blockNumber?: number, listingTime?: number, expirationTime?: number }
+    data?: {
+      amount?: BigNumberish;
+      trader: string;
+      blockNumber?: number;
+      listingTime?: number;
+      expirationTime?: number;
+    }
   ) {
-    const isSell = order.params.side === Types.TradeDirection.SELL
-    const matchSide = isSell ? Types.TradeDirection.BUY : Types.TradeDirection.SELL
+    const isSell = order.params.side === Types.TradeDirection.SELL;
+    const matchSide = isSell
+      ? Types.TradeDirection.BUY
+      : Types.TradeDirection.SELL;
     return {
       order: {
         ...order.params,
         trader: data?.trader ?? order.params.trader,
         side: matchSide,
         amount: data?.amount ? s(data.amount) : "1",
-        listingTime: data?.listingTime ? s(data?.listingTime ) : order.params.listingTime,
-        expirationTime: data?.expirationTime ? s(data?.expirationTime) : order.params.expirationTime
+        listingTime: data?.listingTime
+          ? s(data?.listingTime)
+          : order.params.listingTime,
+        expirationTime: data?.expirationTime
+          ? s(data?.expirationTime)
+          : order.params.expirationTime,
       },
       v: 0,
       r: HashZero,
       s: HashZero,
       extraSignature: BytesEmpty,
       signatureVersion: 0,
-      blockNumber: data?.blockNumber ?? 0
+      blockNumber: data?.blockNumber ?? 0,
     };
   }
 }

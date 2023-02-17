@@ -136,6 +136,7 @@ export class SingleTokenBuilder extends BaseBuilder {
       const copyOrder = this.build({
         ...order.params,
         ...info,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       if (!copyOrder) {

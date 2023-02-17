@@ -6,7 +6,6 @@ import { BaseBuildParams, BaseBuilder, BaseOrderInfo } from "../base";
 import * as Addresses from "../../addresses";
 import { Order } from "../../order";
 import * as Types from "../../types";
-import * as CommonAddresses from "../../../common/addresses";
 import { BytesEmpty, lc, s } from "../../../utils";
 
 interface BuildParams extends BaseBuildParams {

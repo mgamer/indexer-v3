@@ -1,3 +1,4 @@
+import { defaultAbiCoder } from "@ethersproject/abi";
 import { Provider } from "@ethersproject/abstract-provider";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
 import { splitSignature, Signature } from "@ethersproject/bytes";
@@ -5,16 +6,17 @@ import { HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { _TypedDataEncoder } from "@ethersproject/hash";
 import { verifyTypedData } from "@ethersproject/wallet";
+import { keccak256 } from "@ethersproject/keccak256";
+import { MerkleTree } from "merkletreejs";
 
 import * as Addresses from "./addresses";
 import { Builders } from "./builders";
-import { BaseBuilder, BaseOrderInfo } from "./builders/base";
+import { BaseBuilder } from "./builders/base";
 import * as Types from "./types";
 import * as Common from "../common";
 import { bn, lc, n, s, BytesEmpty } from "../utils";
+
 import ExchangeAbi from "./abis/Exchange.json";
-import { MerkleTree } from "merkletreejs";
-import { keccak256, defaultAbiCoder } from "ethers/lib/utils";
 
 export class Order {
   public chainId: number;
@@ -200,7 +202,7 @@ export class Order {
       // bulk sign
       const { types, value } = Order.getEip712TypesAndValueForOracle(this);
       if (this.params.signatureVersion === 1) {
-        const [merklePath, _v, _r, _s] = defaultAbiCoder.decode(
+        const [, _v, _r, _s] = defaultAbiCoder.decode(
           ["bytes32[]", "uint8", "bytes32", "bytes32"],
           this.params.extraSignature
         );
@@ -239,11 +241,11 @@ export class Order {
 
     const exchange = new Contract(
       Addresses.Exchange[this.chainId],
-      ExchangeAbi as any,
+      ExchangeAbi,
       provider
     );
 
-    let status: boolean = await exchange.cancelledOrFilled(this.hash());
+    const status = await exchange.cancelledOrFilled(this.hash());
     if (status) {
       throw new Error("not-fillable");
     }
@@ -320,11 +322,13 @@ export class Order {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public buildMatching(data?: any) {
     return this.getBuilder().buildMatching(this, data);
   }
 
-  private getEip712TypesAndValue() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private getEip712TypesAndValue(): any {
     // bulk-sign
     return [ORDER_EIP712_TYPES, toRawOrder(this), "Order"];
   }
@@ -415,7 +419,7 @@ const ORDER_ROOT_EIP712_TYPES = {
   Root: [{ name: "root", type: "bytes32" }],
 };
 
-const toRawOrder = (order: Order): any => ({
+const toRawOrder = (order: Order): object => ({
   ...order.params,
 });
 
@@ -447,10 +451,8 @@ function computedRoot(tree: MerkleTree, proof: string[], targetNode: string) {
   for (let i = 0; i < proof.length; i++) {
     const node = proof[i];
     let data = null;
-    let isLeftNode = null;
     if (typeof node === "string") {
       data = tree.bufferify(node);
-      isLeftNode = true;
     } else {
       throw new Error("Expected node to be of type string or object");
     }

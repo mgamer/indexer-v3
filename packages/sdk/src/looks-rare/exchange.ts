@@ -16,10 +16,7 @@ export class Exchange {
 
   constructor(chainId: number) {
     this.chainId = chainId;
-    this.contract = new Contract(
-      Addresses.Exchange[this.chainId],
-      ExchangeAbi as any
-    );
+    this.contract = new Contract(Addresses.Exchange[this.chainId], ExchangeAbi);
   }
 
   // --- Fill order ---
@@ -99,7 +96,7 @@ export class Exchange {
     provider: Provider,
     user: string
   ): Promise<BigNumberish> {
-    return new Contract(Addresses.Exchange[this.chainId], ExchangeAbi as any)
+    return new Contract(Addresses.Exchange[this.chainId], ExchangeAbi)
       .connect(provider)
       .userMinOrderNonce(user);
   }

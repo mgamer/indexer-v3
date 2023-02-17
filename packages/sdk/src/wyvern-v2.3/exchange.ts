@@ -96,7 +96,7 @@ export class Exchange {
 
     const data = new Contract(
       buyOrder.params.exchange,
-      ExchangeAbi as any
+      ExchangeAbi
     ).interface.encodeFunctionData("atomicMatch_", [
       addrs,
       uints,
@@ -155,7 +155,7 @@ export class Exchange {
 
     const data = new Contract(
       order.params.exchange,
-      ExchangeAbi as any
+      ExchangeAbi
     ).interface.encodeFunctionData("cancelOrder_", [
       addrs,
       uints,
@@ -200,7 +200,7 @@ export class Exchange {
       order.params.salt,
     ];
 
-    return new Contract(order.params.exchange, ExchangeAbi as any)
+    return new Contract(order.params.exchange, ExchangeAbi)
       .connect(maker)
       .cancelOrder_(
         addrs,
@@ -219,7 +219,7 @@ export class Exchange {
   }
 
   public async incrementNonce(user: Signer): Promise<ContractTransaction> {
-    return new Contract(Addresses.Exchange[this.chainId], ExchangeAbi as any)
+    return new Contract(Addresses.Exchange[this.chainId], ExchangeAbi)
       .connect(user)
       .incrementNonce();
   }
@@ -228,7 +228,7 @@ export class Exchange {
     provider: Provider,
     user: string
   ): Promise<BigNumberish> {
-    return new Contract(Addresses.Exchange[this.chainId], ExchangeAbi as any)
+    return new Contract(Addresses.Exchange[this.chainId], ExchangeAbi)
       .connect(provider)
       .nonces(user);
   }

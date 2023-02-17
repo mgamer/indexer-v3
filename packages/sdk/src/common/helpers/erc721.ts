@@ -14,7 +14,7 @@ export class Erc721 {
   public contract: Contract;
 
   constructor(provider: Provider, address: string) {
-    this.contract = new Contract(address, Erc721Abi as any, provider);
+    this.contract = new Contract(address, Erc721Abi, provider);
   }
 
   public async isValid(): Promise<boolean> {

@@ -4,7 +4,7 @@ export const getOrderSide = (
   makeAssetClass: string,
   takeAssetClass: string
 ) => {
-  //TODO: Can be rewriten to be more readable
+  // TODO: Can be rewriten to be more readable
   if (
     (makeAssetClass === Types.AssetClass.ERC721 ||
       makeAssetClass === Types.AssetClass.COLLECTION ||

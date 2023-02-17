@@ -24,7 +24,9 @@ export const getCurrentTimestamp = (delay = 0) =>
 // Ease of use
 
 export const lc = (x: string) => x?.toLowerCase();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const n = (x: any) => (x ? Number(x) : x);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const s = (x: any) => (x ? String(x) : x);
 
 export const uniqBy = <T>(items: T[], uniqId: (item: T) => string): T[] => {

@@ -184,8 +184,8 @@ export class Exchange {
       source?: string;
     }
   ): Promise<TxData> {
-    const sellOrders: any[] = [];
-    const signatures: any[] = [];
+    const sellOrders = [];
+    const signatures = [];
     const fillAmounts: string[] = [];
     const callbackData: string[] = [];
 

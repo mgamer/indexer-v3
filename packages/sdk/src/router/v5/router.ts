@@ -48,6 +48,7 @@ export class Router {
       skipErrors?: boolean;
       skippedIndexes?: number[];
       partial?: boolean;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       directFillingData?: any;
     }
   ): Promise<TxData> {

@@ -101,7 +101,7 @@ export class Order {
 
     const exchange = new Contract(
       Addresses.Exchange[this.chainId],
-      ExchangeAbi as any,
+      ExchangeAbi,
       provider
     );
 
@@ -119,7 +119,7 @@ export class Order {
     }
 
     // Determine the order's fees (which are to be payed by the buyer)
-    let feeAmount = this.getFeeAmount();
+    const feeAmount = this.getFeeAmount();
 
     if (this.params.direction === Types.TradeDirection.BUY) {
       // Check that maker has enough balance to cover the payment
@@ -180,7 +180,7 @@ export class Order {
     }
   }
 
-  public buildMatching(data?: any) {
+  public buildMatching(data?: object) {
     return this.getBuilder().buildMatching(this, data);
   }
 
@@ -344,6 +344,7 @@ const ERC1155_ORDER_EIP712_TYPES = {
   ],
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toRawErc721Order = (order: Order): any => ({
   ...order.params,
   erc721Token: order.params.nft,
@@ -351,6 +352,7 @@ const toRawErc721Order = (order: Order): any => ({
   erc721TokenProperties: order.params.nftProperties,
 });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toRawErc1155Order = (order: Order): any => ({
   ...order.params,
   erc1155Token: order.params.nft,

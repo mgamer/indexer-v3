@@ -140,7 +140,7 @@ export class Order {
   }
 
   public getInfo(): BaseOrderInfo | undefined {
-    return this.isBatchSignedOrder() ? {} : this.getBuilder().getInfo(this);
+    return this.isBatchSignedOrder() ? {} : this.getBuilder().getInfo();
   }
 
   public async checkFillability(provider: Provider) {
@@ -148,7 +148,7 @@ export class Order {
 
     const exchange = new Contract(
       Addresses.Exchange[this.chainId],
-      ExchangeAbi as any,
+      ExchangeAbi,
       provider
     );
 
@@ -243,7 +243,7 @@ export class Order {
     }
   }
 
-  public buildMatching(data?: any) {
+  public buildMatching(data?: object) {
     if (this.isBatchSignedOrder()) {
       return {
         nftId: this.params.nftId,
@@ -257,8 +257,8 @@ export class Order {
   public isBatchSignedOrder(
     params?: Types.BaseOrder | Types.BatchSignedOrder
   ): boolean {
-    // @ts-ignore
-    return (params ?? this.params).startNonce != null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return ((params ?? this.params) as any).startNonce != null;
   }
 
   public getTotalPrice(quantity?: BigNumberish): BigNumber {
@@ -351,7 +351,8 @@ export class Order {
     }
   }
 
-  private getEip712TypesAndValue() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private getEip712TypesAndValue(): any {
     if (this.isBatchSignedOrder()) {
       return [
         BATCH_SIGNED_ORDER_EIP712_TYPES,
@@ -572,7 +573,7 @@ const BATCH_SIGNED_ORDER_EIP712_TYPES = {
   ],
 };
 
-const toRawErc721Order = (params: Types.BaseOrder): any => {
+const toRawErc721Order = (params: Types.BaseOrder) => {
   return {
     ...params,
     erc721Token: params.nft,
@@ -582,7 +583,7 @@ const toRawErc721Order = (params: Types.BaseOrder): any => {
   };
 };
 
-const toRawErc1155Order = (params: Types.BaseOrder): any => {
+const toRawErc1155Order = (params: Types.BaseOrder) => {
   return {
     ...params,
     erc1155Token: params.nft,
@@ -593,7 +594,7 @@ const toRawErc1155Order = (params: Types.BaseOrder): any => {
   };
 };
 
-const toRawBatchSignedOrder = (params: Types.BatchSignedOrder): any => {
+const toRawBatchSignedOrder = (params: Types.BatchSignedOrder) => {
   return {
     maker: params.maker,
     listingTime: params.listingTime,
@@ -611,9 +612,9 @@ const toRawCollections = (
   collections: Types.Collection[],
   isBasic: boolean
 ) => {
-  const list: any[] = [];
+  const list = [];
   for (const collection of collections) {
-    const items: any[] = [];
+    const items = [];
     for (const item of collection.items) {
       if (isBasic) {
         // item [96 bits(erc20TokenAmount) + 160 bits(nftId)].
@@ -701,17 +702,17 @@ const normalizeBatchSignedOrder = (
   return Object.assign(normalizeOrder, getCurrentOrderInfo(normalizeOrder));
 };
 
-const getCurrentOrderInfo = (order: Types.BatchSignedOrder): any => {
+const getCurrentOrderInfo = (order: Types.BatchSignedOrder) => {
   let nonce = order.startNonce;
   for (const collection of order.basicCollections) {
-    let endNonce = nonce + collection.items.length;
+    const endNonce = nonce + collection.items.length;
     if (order.nonce >= nonce && order.nonce < endNonce) {
       return toOrderInfo(collection, order.nonce - nonce);
     }
     nonce = endNonce;
   }
   for (const collection of order.collections) {
-    let endNonce = nonce + collection.items.length;
+    const endNonce = nonce + collection.items.length;
     if (order.nonce >= nonce && order.nonce < endNonce) {
       return toOrderInfo(collection, order.nonce - nonce);
     }
@@ -720,7 +721,7 @@ const getCurrentOrderInfo = (order: Types.BatchSignedOrder): any => {
   throw new Error("Invalid params");
 };
 
-const toOrderInfo = (collection: Types.Collection, i: number): any => {
+const toOrderInfo = (collection: Types.Collection, i: number) => {
   if (collection.platformFee + collection.royaltyFee > 10000) {
     throw new Error("Invalid params");
   }
@@ -824,6 +825,7 @@ const toHexZeroPad = (value: BigNumber, withPrefix?: boolean): string => {
   return withPrefix ? hex : hex.substring(2);
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toNumber = (number: any, limit: number) => {
   const val = Number(number);
   if (isNaN(val) && val >= limit) {
