@@ -168,7 +168,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
         }
 
         const pathItem = parsedPayload.path[0];
-        if (parsedPayload.steps[0].items.length) {
+        if (pathItem.source === "universe.xyz") {
           return { message: "Simulation not supported" };
         }
 
