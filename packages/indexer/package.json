@@ -9,7 +9,7 @@
   "private": true,
   "scripts": {
     "clean": "rm -rf ./dist tsconfig.tsbuildinfo",
-    "compile": "tsc",
+    "compile": "tsc -b",
     "build": "yarn clean; yarn compile",
     "start": "yarn migrate up; node -r module-alias/register ./dist/index.js",
     "migrate": "node ../../node_modules/node-pg-migrate/bin/node-pg-migrate -m ./src/migrations --no-check-order",
