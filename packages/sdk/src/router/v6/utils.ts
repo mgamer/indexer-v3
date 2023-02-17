@@ -1,5 +1,5 @@
 import { Interface } from "@ethersproject/abi";
-import { BigNumberish } from "ethers";
+import { BigNumberish } from "@ethersproject/bignumber";
 
 import * as Sdk from "../../index";
 import { MaxUint256, TxData } from "../../utils";

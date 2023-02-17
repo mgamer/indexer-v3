@@ -41,7 +41,7 @@ export const postOrderV4Options: RouteOptions = {
                   "looks-rare",
                   "zeroex-v4",
                   "seaport",
-                  "seaport-v1.2",
+                  "seaport-v1.3",
                   "x2y2",
                   "universe",
                   "forward",
@@ -65,7 +65,7 @@ export const postOrderV4Options: RouteOptions = {
             tokenSetId: Joi.string(),
             isNonFlagged: Joi.boolean(),
             bulkData: Joi.object({
-              kind: "seaport-v1.2",
+              kind: "seaport-v1.3",
               data: Joi.object({
                 orderIndex: Joi.number().required(),
                 merkleProof: Joi.array().items(Joi.string()).required(),
@@ -96,7 +96,7 @@ export const postOrderV4Options: RouteOptions = {
         isNonFlagged?: boolean;
         source?: string;
         bulkData?: {
-          kind: "seaport-v1.2";
+          kind: "seaport-v1.3";
           data: {
             orderIndex: number;
             merkleProof: string[];
@@ -104,10 +104,10 @@ export const postOrderV4Options: RouteOptions = {
         };
       }[];
 
-      // Only Seaport v1.2 supports bulk orders
+      // Only Seaport v1.3 supports bulk orders
       if (items.length > 1) {
-        if (!items.every((item) => item.order.kind === "seaport-v1.2")) {
-          throw Boom.badRequest("Bulk orders are only supported on Seaport v1.2");
+        if (!items.every((item) => item.order.kind === "seaport-v1.3")) {
+          throw Boom.badRequest("Bulk orders are only supported on Seaport v1.3");
         }
       }
 
@@ -135,9 +135,9 @@ export const postOrderV4Options: RouteOptions = {
           if (signature) {
             const { v, r, s } = splitSignature(signature);
 
-            if (bulkData?.kind === "seaport-v1.2") {
+            if (bulkData?.kind === "seaport-v1.3") {
               // Encode the merkle proof of inclusion together with the signature
-              order.data.signature = new Sdk.SeaportV12.Exchange(
+              order.data.signature = new Sdk.SeaportV13.Exchange(
                 config.chainId
               ).encodeBulkOrderProofAndSignature(
                 bulkData.data.orderIndex,
@@ -296,12 +296,12 @@ export const postOrderV4Options: RouteOptions = {
               return results.push({ message: "success", orderIndex: i, orderId: result.id });
             }
 
-            case "seaport-v1.2": {
+            case "seaport-v1.3": {
               if (!["opensea", "reservoir"].includes(orderbook)) {
                 return results.push({ message: "unsupported-orderbook", orderIndex: i });
               }
 
-              const orderInfo: orders.seaportV12.OrderInfo = {
+              const orderInfo: orders.seaportV13.OrderInfo = {
                 kind: "full",
                 orderParams: order.data,
                 isReservoir: orderbook === "reservoir",
@@ -312,7 +312,7 @@ export const postOrderV4Options: RouteOptions = {
                 },
               };
 
-              const [result] = await orders.seaportV12.save([orderInfo]);
+              const [result] = await orders.seaportV13.save([orderInfo]);
 
               if (result.status === "already-exists") {
                 return results.push({ message: "success", orderIndex: i, orderId: result.id });

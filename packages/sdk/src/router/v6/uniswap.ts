@@ -1,4 +1,4 @@
-import { Interface } from "@ethersproject/abi";
+import { Interface, Result } from "@ethersproject/abi";
 import { Provider } from "@ethersproject/abstract-provider";
 import { BigNumberish } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
@@ -52,6 +52,7 @@ export const generateSwapExecutions = async (
 ): Promise<SwapInfo> => {
   const router = new AlphaRouter({
     chainId: chainId,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     provider: provider as any,
   });
 
@@ -132,7 +133,7 @@ export const generateSwapExecutions = async (
       `,
     ]);
 
-    let params: any;
+    let params: Result;
     try {
       // Properly handle multicall-wrapping
       let calldata = route.methodParameters!.calldata;

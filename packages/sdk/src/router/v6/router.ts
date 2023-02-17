@@ -46,7 +46,7 @@ import NFTXModuleAbi from "./abis/NFTXModule.json";
 import Permit2ModuleAbi from "./abis/Permit2Module.json";
 import RaribleModuleAbi from "./abis/RaribleModule.json";
 import SeaportModuleAbi from "./abis/SeaportModule.json";
-import SeaportV12ModuleAbi from "./abis/SeaportV12Module.json";
+import SeaportV13ModuleAbi from "./abis/SeaportV13Module.json";
 import SudoswapModuleAbi from "./abis/SudoswapModule.json";
 import UniswapV3ModuleAbi from "./abis/UniswapV3Module.json";
 import WETHModuleAbi from "./abis/WETHModule.json";
@@ -100,9 +100,9 @@ export class Router {
         SeaportModuleAbi,
         provider
       ),
-      seaportV12Module: new Contract(
-        Addresses.SeaportV12Module[chainId] ?? AddressZero,
-        SeaportV12ModuleAbi,
+      seaportV13Module: new Contract(
+        Addresses.SeaportV13Module[chainId] ?? AddressZero,
+        SeaportV13ModuleAbi,
         provider
       ),
       sudoswapModule: new Contract(
@@ -168,6 +168,7 @@ export class Router {
       // Skip any errors (either off-chain or on-chain)
       partial?: boolean;
       // Any extra data relevant when filling natively
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       directFillingData?: any;
       // Wallet used for relaying the fill transaction
       relayer?: string;
@@ -436,21 +437,21 @@ export class Router {
 
     await Promise.all(
       details
-        .filter(({ kind }) => kind === "seaport-v1.2-partial")
+        .filter(({ kind }) => kind === "seaport-v1.3-partial")
         .map(async (detail) => {
           try {
-            const order = detail.order as Sdk.SeaportV12.Types.PartialOrder;
+            const order = detail.order as Sdk.SeaportV13.Types.PartialOrder;
             const result = await axios.get(
               `https://order-fetcher.vercel.app/api/listing?orderHash=${order.id}&contract=${order.contract}&tokenId=${order.tokenId}&taker=${taker}&chainId=${this.chainId}`
             );
 
-            const fullOrder = new Sdk.SeaportV12.Order(
+            const fullOrder = new Sdk.SeaportV13.Order(
               this.chainId,
               result.data.order
             );
             details.push({
               ...detail,
-              kind: "seaport-v1.2",
+              kind: "seaport-v1.3",
               order: fullOrder,
             });
           } catch {
@@ -462,7 +463,7 @@ export class Router {
           }
         })
     );
-    details = details.filter(({ kind }) => kind !== "seaport-v1.2-partial");
+    details = details.filter(({ kind }) => kind !== "seaport-v1.3-partial");
 
     const relayer = options?.relayer ?? taker;
 
@@ -530,7 +531,7 @@ export class Router {
               ...options?.directFillingData,
             }
           ),
-          success: orders.map((_) => true),
+          success: orders.map(() => true),
           approvals: approval ? [approval] : [],
           permits: [],
         };
@@ -540,19 +541,19 @@ export class Router {
     if (
       details.every(
         ({ kind, fees, currency, order }) =>
-          kind === "seaport-v1.2" &&
+          kind === "seaport-v1.3" &&
           buyInCurrency === currency &&
           // All orders must have the same currency and conduit
           currency === details[0].currency &&
-          (order as Sdk.SeaportV12.Order).params.conduitKey ===
-            (details[0].order as Sdk.SeaportV12.Order).params.conduitKey &&
+          (order as Sdk.SeaportV13.Order).params.conduitKey ===
+            (details[0].order as Sdk.SeaportV13.Order).params.conduitKey &&
           !fees?.length
       ) &&
       !options?.globalFees?.length &&
       !options?.forceRouter &&
       !options?.relayer
     ) {
-      const exchange = new Sdk.SeaportV12.Exchange(this.chainId);
+      const exchange = new Sdk.SeaportV13.Exchange(this.chainId);
 
       const conduit = exchange.deriveConduit(
         (details[0].order as Sdk.Seaport.Order).params.conduitKey
@@ -569,7 +570,7 @@ export class Router {
       }
 
       if (details.length === 1) {
-        const order = details[0].order as Sdk.SeaportV12.Order;
+        const order = details[0].order as Sdk.SeaportV13.Order;
         return {
           txData: await exchange.fillOrderTx(
             taker,
@@ -585,7 +586,7 @@ export class Router {
           permits: [],
         };
       } else {
-        const orders = details.map((d) => d.order as Sdk.SeaportV12.Order);
+        const orders = details.map((d) => d.order as Sdk.SeaportV13.Order);
         return {
           txData: await exchange.fillOrdersTx(
             taker,
@@ -598,7 +599,7 @@ export class Router {
               ...options?.directFillingData,
             }
           ),
-          success: orders.map((_) => true),
+          success: orders.map(() => true),
           approvals: approval ? [approval] : [],
           permits: [],
         };
@@ -608,7 +609,7 @@ export class Router {
     const buyInETH = isETH(this.chainId, buyInCurrency);
     if (!buyInETH) {
       const allSeaport = details.every((c) =>
-        ["seaport", "seaport-v1.2"].includes(c.kind)
+        ["seaport", "seaport-v1.3"].includes(c.kind)
       );
       if (!allSeaport) {
         throw new Error("Unsupported buy-in currency");
@@ -654,7 +655,7 @@ export class Router {
     const foundationDetails: ListingDetailsExtracted[] = [];
     const looksRareDetails: ListingDetailsExtracted[] = [];
     const seaportDetails: PerCurrencyDetails = {};
-    const seaportV12Details: PerCurrencyDetails = {};
+    const seaportV13Details: PerCurrencyDetails = {};
     const sudoswapDetails: ListingDetailsExtracted[] = [];
     const x2y2Details: ListingDetailsExtracted[] = [];
     const zeroexV4Erc721Details: ListingDetailsExtracted[] = [];
@@ -696,11 +697,11 @@ export class Router {
           detailsRef = seaportDetails[currency];
           break;
 
-        case "seaport-v1.2":
-          if (!seaportV12Details[currency]) {
-            seaportV12Details[currency] = [];
+        case "seaport-v1.3":
+          if (!seaportV13Details[currency]) {
+            seaportV13Details[currency] = [];
           }
-          detailsRef = seaportV12Details[currency];
+          detailsRef = seaportV13Details[currency];
           break;
 
         case "sudoswap":
@@ -1234,14 +1235,14 @@ export class Router {
       }
     }
 
-    // Handle Seaport V1.2 listings
-    if (Object.keys(seaportV12Details).length) {
-      const exchange = new Sdk.SeaportV12.Exchange(this.chainId);
-      for (const currency of Object.keys(seaportV12Details)) {
-        const currencyDetails = seaportV12Details[currency];
+    // Handle Seaport V1.3 listings
+    if (Object.keys(seaportV13Details).length) {
+      const exchange = new Sdk.SeaportV13.Exchange(this.chainId);
+      for (const currency of Object.keys(seaportV13Details)) {
+        const currencyDetails = seaportV13Details[currency];
 
         const orders = currencyDetails.map(
-          (d) => d.order as Sdk.SeaportV12.Order
+          (d) => d.order as Sdk.SeaportV13.Order
         );
         const fees = getFees(currencyDetails);
 
@@ -1274,8 +1275,8 @@ export class Router {
                 {
                   uniswapV3Module: this.contracts.uniswapV3Module,
                   wethModule: this.contracts.wethModule,
-                  // Forward any swapped tokens to the SeaportV12 module
-                  recipient: this.contracts.seaportV12Module.address,
+                  // Forward any swapped tokens to the SeaportV13 module
+                  recipient: this.contracts.seaportV13Module.address,
                   refundTo: relayer,
                 }
               ));
@@ -1294,7 +1295,7 @@ export class Router {
             });
             permitItems.push({
               from: relayer,
-              to: this.contracts.seaportV12Module.address,
+              to: this.contracts.seaportV13Module.address,
               token: buyInCurrency,
               amount: (amountIn ?? totalPayment).toString(),
             });
@@ -1316,10 +1317,10 @@ export class Router {
         const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
         if (!skipFillExecution) {
           executions.push({
-            module: this.contracts.seaportV12Module.address,
+            module: this.contracts.seaportV13Module.address,
             data:
               orders.length === 1
-                ? this.contracts.seaportV12Module.interface.encodeFunctionData(
+                ? this.contracts.seaportV13Module.interface.encodeFunctionData(
                     `accept${currencyIsETH ? "ETH" : "ERC20"}Listing`,
                     [
                       {
@@ -1344,7 +1345,7 @@ export class Router {
                       fees,
                     ]
                   )
-                : this.contracts.seaportV12Module.interface.encodeFunctionData(
+                : this.contracts.seaportV13Module.interface.encodeFunctionData(
                     `accept${currencyIsETH ? "ETH" : "ERC20"}Listings`,
                     [
                       await Promise.all(
@@ -1643,7 +1644,7 @@ export class Router {
           // Release the order's signature
           await new Sdk.ZeroExV4.Exchange(
             this.chainId,
-            String(this.options?.cbApiKey!)
+            String(this.options?.cbApiKey)
           )
             .releaseOrder(taker, order)
             .catch(() => {
@@ -1733,7 +1734,7 @@ export class Router {
           // Release the order's signature
           await new Sdk.ZeroExV4.Exchange(
             this.chainId,
-            String(this.options?.cbApiKey!)
+            String(this.options?.cbApiKey)
           )
             .releaseOrder(taker, order)
             .catch(() => {
@@ -2146,9 +2147,9 @@ export class Router {
           break;
         }
 
-        case "seaport-v1.2":
-        case "seaport-v1.2-partial": {
-          module = this.contracts.seaportV12Module;
+        case "seaport-v1.3":
+        case "seaport-v1.3-partial": {
+          module = this.contracts.seaportV13Module;
           break;
         }
 
@@ -2355,9 +2356,9 @@ export class Router {
           break;
         }
 
-        case "seaport-v1.2": {
-          const order = detail.order as Sdk.SeaportV12.Order;
-          const module = this.contracts.seaportV12Module;
+        case "seaport-v1.3": {
+          const order = detail.order as Sdk.SeaportV13.Order;
+          const module = this.contracts.seaportV13Module;
 
           const matchParams = order.buildMatching({
             tokenId: detail.tokenId,
@@ -2365,7 +2366,7 @@ export class Router {
             ...(detail.extraArgs ?? {}),
           });
 
-          const exchange = new Sdk.SeaportV12.Exchange(this.chainId);
+          const exchange = new Sdk.SeaportV13.Exchange(this.chainId);
           executions.push({
             module: module.address,
             data: module.interface.encodeFunctionData(
@@ -2401,9 +2402,9 @@ export class Router {
           break;
         }
 
-        case "seaport-v1.2-partial": {
-          const order = detail.order as Sdk.SeaportV12.Types.PartialOrder;
-          const module = this.contracts.seaportV12Module;
+        case "seaport-v1.3-partial": {
+          const order = detail.order as Sdk.SeaportV13.Types.PartialOrder;
+          const module = this.contracts.seaportV13Module;
 
           try {
             const result = await axios.get(
@@ -2415,12 +2416,12 @@ export class Router {
                 (order.unitPrice ? `&unitPrice=${order.unitPrice}` : "")
             );
 
-            const fullOrder = new Sdk.SeaportV12.Order(
+            const fullOrder = new Sdk.SeaportV13.Order(
               this.chainId,
               result.data.order
             );
 
-            const exchange = new Sdk.SeaportV12.Exchange(this.chainId);
+            const exchange = new Sdk.SeaportV13.Exchange(this.chainId);
             executions.push({
               module: module.address,
               data: module.interface.encodeFunctionData(
@@ -2552,7 +2553,7 @@ export class Router {
             if (order.params.cbOrderId) {
               await new Sdk.ZeroExV4.Exchange(
                 this.chainId,
-                String(this.options?.cbApiKey!)
+                String(this.options?.cbApiKey)
               ).releaseOrder(taker, order);
             }
 
