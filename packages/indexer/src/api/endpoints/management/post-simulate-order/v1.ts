@@ -105,7 +105,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
       if (!orderResult?.side || !orderResult?.contract) {
         throw Boom.badRequest("Could not find order");
       }
-      if (["nftx", "sudoswap"].includes(orderResult.kind)) {
+      if (["nftx", "sudoswap", "universe"].includes(orderResult.kind)) {
         return { message: "Order not simulatable" };
       }
       if (getNetworkSettings().whitelistedCurrencies.has(fromBuffer(orderResult.currency))) {
@@ -168,9 +168,6 @@ export const postSimulateOrderV1Options: RouteOptions = {
         }
 
         const pathItem = parsedPayload.path[0];
-        if (pathItem.source === "universe.xyz") {
-          return { message: "Simulation not supported" };
-        }
 
         const { result: success, callTrace } = await ensureBuyTxSucceeds(
           genericTaker,
