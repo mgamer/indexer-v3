@@ -251,7 +251,8 @@ export const postOrderV3Options: RouteOptions = {
             const collectionResult = await idb.oneOrNone(
               `
                 SELECT
-                  collections.new_royalties
+                  collections.new_royalties,
+                  orders.token_set_id
                 FROM orders
                 JOIN token_sets_tokens
                   ON orders.token_set_id = token_sets_tokens.token_set_id
@@ -265,7 +266,11 @@ export const postOrderV3Options: RouteOptions = {
               `,
               { id: result.id }
             );
-            if (collectionResult.new_royalties["opensea"]) {
+
+            if (
+              collectionResult?.token_set_id?.startsWith("token") &&
+              collectionResult.new_royalties["opensea"]
+            ) {
               const osRoyaltyRecipients = collectionResult.new_royalties["opensea"].map((r: any) =>
                 r.recipient.toLowerCase()
               );
