@@ -203,6 +203,7 @@ export const postOrderV3Options: RouteOptions = {
             `post-order-${version}-handler`,
             JSON.stringify({
               forward: false,
+              originalOrderbook: orderbook,
               orderbook,
               data: order.data,
               orderId: result.id,
@@ -241,6 +242,7 @@ export const postOrderV3Options: RouteOptions = {
                 `post-order-${version}-handler`,
                 JSON.stringify({
                   forward: true,
+                  originalOrderbook: orderbook,
                   orderbook: "opensea",
                   data: order.data,
                   orderId: result.id,
@@ -297,6 +299,7 @@ export const postOrderV3Options: RouteOptions = {
                   `post-order-${version}-handler`,
                   JSON.stringify({
                     forward: false,
+                    originalOrderbook: orderbook,
                     orderbook: "opensea",
                     data: order.data,
                     orderId: result.id,
