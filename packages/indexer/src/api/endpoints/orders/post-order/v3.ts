@@ -297,6 +297,7 @@ export const postOrderV3Options: RouteOptions = {
                   `post-order-${version}-handler`,
                   JSON.stringify({
                     forward: false,
+                    crossPostAll: true,
                     orderbook: "opensea",
                     data: order.data,
                     orderId: result.id,
