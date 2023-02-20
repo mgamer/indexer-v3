@@ -8,7 +8,7 @@ import { logger } from "@/common/logger";
 import { acquireLock, redis, redlock, releaseLock } from "@/common/redis";
 import { config } from "@/config/index";
 import { PendingRefreshTokens, RefreshTokens } from "@/models/pending-refresh-tokens";
-import { pgp } from "@/common/db";
+import { ridb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
 import * as metadataIndexProcessBySlug from "@/jobs/metadata-index/process-queue-by-slug";
 import * as metadataIndexProcess from "@/jobs/metadata-index/process-queue";
@@ -34,16 +34,6 @@ export const queue = new Queue(QUEUE_NAME, {
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
-const redb = pgp({
-  connectionString: config.readReplicaDatabaseUrl,
-  keepAlive: true,
-  max: 60,
-  connectionTimeoutMillis: 10 * 1000,
-  query_timeout: 120 * 1000,
-  statement_timeout: 120 * 1000,
-  allowExitOnIdle: true,
-});
-
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
   const worker = new Worker(
@@ -67,10 +57,9 @@ if (config.doBackgroundWork) {
           LIMIT ${limit}
         `;
 
-      const collections = await redb.manyOrNone(query);
+      const collections = await ridb.manyOrNone(query);
       await Promise.all(
         _.map(collections, (collection) => {
-          logger.info(QUEUE_NAME, `Processing collection with ID: ${collection.id}`);
           return processCollection({
             contract: fromBuffer(collection.contract),
             id: collection.id,
@@ -113,6 +102,48 @@ if (config.doBackgroundWork) {
     });
 }
 
+async function processCollectionTokens(
+  collection: { contract: string; id: string; community: string; slug: string; tokenCount: number },
+  limit: number,
+  indexingMethod: string
+) {
+  const unindexedTokens: RefreshTokens[] = [];
+  let lastTokenId = "";
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    let collectionAndTokenIdFilter = "WHERE t.image is null or t.image = ''";
+    if (lastTokenId != "") {
+      logger.info(QUEUE_NAME, `Collection ID ${collection.id}, lastTokenId = ${lastTokenId}`);
+      collectionAndTokenIdFilter = `WHERE (t.image is null or t.image = '') AND collection_id = '${collection.id}' AND t.token_id > '${lastTokenId}'`;
+    }
+
+    const query = `
+      SELECT token_id
+      FROM tokens t ${collectionAndTokenIdFilter}
+      ORDER BY t.token_id ASC
+      LIMIT ${limit}
+    `;
+
+    const tokens = await ridb.manyOrNone(query);
+    _.forEach(tokens, (token) => {
+      unindexedTokens.push({
+        collection: collection.id,
+        contract: collection.contract,
+        tokenId: token.token_id,
+      } as RefreshTokens);
+    });
+
+    if (_.size(tokens) < limit) {
+      break;
+    } else {
+      lastTokenId = _.last(tokens).token_id;
+    }
+  }
+  // push to tokens refresh queue
+  const pendingRefreshTokens = new PendingRefreshTokens(indexingMethod);
+  await pendingRefreshTokens.add(unindexedTokens);
+}
+
 async function processCollection(collection: {
   contract: string;
   id: string;
@@ -121,10 +152,15 @@ async function processCollection(collection: {
   tokenCount: number;
 }) {
   const indexingMethod = getIndexingMethod(collection.community);
-  const limit = (await redis.get(`${QUEUE_NAME}-tokens-limit`)) || 100;
-  let lastTokenId = "";
+  const limit = Number(await redis.get(`${QUEUE_NAME}-tokens-limit`)) || 100;
+  if (!collection.slug) {
+    const tokenId = await Tokens.getSingleToken(collection.id);
+    await collectionUpdatesMetadata.addToQueue(collection.contract, tokenId, "opensea", 0);
+    await processCollectionTokens(collection, limit, indexingMethod);
+    return;
+  }
   const missingMetadataPercentageThreshold =
-    (await redis.get(`${QUEUE_NAME}-percentage-threshold`)) || 0.15;
+    (await redis.get(`${QUEUE_NAME}-percentage-threshold`)) || 0.5;
 
   const unindexedCountQuery = `
       SELECT count(*) as unindexed_token_count
@@ -132,12 +168,15 @@ async function processCollection(collection: {
       WHERE (t.image is null or t.image = '') AND t.collection_id = '${collection.id}'
     `;
 
-  const unindexedResult = await redb.one(unindexedCountQuery);
+  const unindexedResult = await ridb.one(unindexedCountQuery);
+  logger.info(
+    QUEUE_NAME,
+    `Processing collection with ID: ${collection.id}. Total tokens count: ${collection.tokenCount}, unindexed count: ${unindexedResult.unindexed_token_count}`
+  );
 
   if (
     unindexedResult.unindexed_token_count / collection.tokenCount >
-      missingMetadataPercentageThreshold &&
-    collection.slug
+    missingMetadataPercentageThreshold
   ) {
     // push to collection refresh queue
     const pendingRefreshTokensBySlug = new PendingRefreshTokensBySlug();
@@ -147,44 +186,7 @@ async function processCollection(collection: {
       collection: collection.id,
     });
   } else {
-    if (!collection.slug) {
-      const tokenId = await Tokens.getSingleToken(collection.id);
-      await collectionUpdatesMetadata.addToQueue(collection.contract, tokenId, "opensea", 0);
-    }
-    const unindexedTokens: RefreshTokens[] = [];
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      let collectionAndTokenIdFilter = "WHERE t.image is null or t.image = ''";
-      if (lastTokenId != "") {
-        logger.info(QUEUE_NAME, `Collection ID ${collection.id}, lastTokenId = ${lastTokenId}`);
-        collectionAndTokenIdFilter = `WHERE (t.image is null or t.image = '') AND collection_id = '${collection.id}' AND t.token_id > '${lastTokenId}'`;
-      }
-
-      const query = `
-      SELECT token_id
-      FROM tokens t ${collectionAndTokenIdFilter}
-      ORDER BY t.token_id ASC
-      LIMIT ${limit}
-    `;
-
-      const tokens = await redb.manyOrNone(query);
-      _.forEach(tokens, (token) => {
-        unindexedTokens.push({
-          collection: collection.id,
-          contract: collection.contract,
-          tokenId: token.token_id,
-        } as RefreshTokens);
-      });
-
-      if (_.size(tokens) < limit) {
-        break;
-      } else {
-        lastTokenId = _.last(tokens).token_id;
-      }
-    }
-    // push to tokens refresh queue
-    const pendingRefreshTokens = new PendingRefreshTokens(indexingMethod);
-    await pendingRefreshTokens.add(unindexedTokens);
+    await processCollectionTokens(collection, limit, indexingMethod);
   }
 }
 
