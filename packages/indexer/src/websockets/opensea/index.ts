@@ -50,14 +50,12 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       EventType.ITEM_RECEIVED_BID,
       EventType.COLLECTION_OFFER,
       EventType.TRAIT_OFFER,
-      EventType.ITEM_METADATA_UPDATED,
     ],
     async (event) => {
       try {
-        await saveEvent(event);
-
         const eventType = event.event_type as EventType;
-        const openSeaOrderParams = await handleEvent(eventType, event.payload);
+        await saveEvent(event);
+        const openSeaOrderParams = handleEvent(eventType, event.payload);
 
         if (openSeaOrderParams) {
           const seaportOrder = parseProtocolData(event.payload);
@@ -103,6 +101,19 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       }
     }
   );
+
+  client.onEvents("*", [EventType.ITEM_METADATA_UPDATED], async (event) => {
+    try {
+      await handleItemMetadataUpdatedEvent(event.payload as ItemMetadataUpdatePayload);
+    } catch (error) {
+      logger.error(
+        "opensea-websocket",
+        `network=${network}, event type: ${event.event_type}, event=${JSON.stringify(
+          event
+        )}, error=${error}`
+      );
+    }
+  });
 }
 
 const saveEvent = async (event: BaseStreamMessage<unknown>) => {
@@ -114,9 +125,8 @@ const saveEvent = async (event: BaseStreamMessage<unknown>) => {
     /* eslint-disable @typescript-eslint/no-explicit-any */
 
     // TODO: Filter out the properties when ingesting from S3 to Redshift instead of here.
-    if (event.event_type !== EventType.ITEM_METADATA_UPDATED) {
-      delete (event.payload as any).item.metadata;
-    }
+    delete (event.payload as any).item.metadata;
+
     delete (event.payload as any).item.permalink;
 
     const params = {
@@ -148,10 +158,7 @@ const saveEvent = async (event: BaseStreamMessage<unknown>) => {
   }
 };
 
-export const handleEvent = async (
-  type: EventType,
-  payload: unknown
-): Promise<PartialOrderComponents | null> => {
+export const handleEvent = (type: EventType, payload: unknown): PartialOrderComponents | null => {
   switch (type) {
     case EventType.ITEM_LISTED:
       return handleItemListedEvent(payload as ItemListedEventPayload);
@@ -161,8 +168,6 @@ export const handleEvent = async (
       return handleCollectionOfferEvent(payload as CollectionOfferEventPayload);
     case EventType.TRAIT_OFFER:
       return handleTraitOfferEvent(payload as TraitOfferEventPayload);
-    case EventType.ITEM_METADATA_UPDATED:
-      return handleItemMetadataUpdatedEvent(payload as ItemMetadataUpdatePayload);
     default:
       return null;
   }
