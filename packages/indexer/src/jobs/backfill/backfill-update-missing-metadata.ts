@@ -92,14 +92,16 @@ if (config.doBackgroundWork) {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
 
-  redlock
-    .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
-    .then(async () => {
-      await addToQueue("");
-    })
-    .catch(() => {
-      // Skip on any errors
-    });
+  if ([1, 5].includes(config.chainId)) {
+    redlock
+      .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
+      .then(async () => {
+        await addToQueue("");
+      })
+      .catch(() => {
+        // Skip on any errors
+      });
+  }
 }
 
 async function processCollectionTokens(
@@ -152,7 +154,7 @@ async function processCollection(collection: {
   tokenCount: number;
 }) {
   const indexingMethod = getIndexingMethod(collection.community);
-  const limit = Number(await redis.get(`${QUEUE_NAME}-tokens-limit`)) || 100;
+  const limit = Number(await redis.get(`${QUEUE_NAME}-tokens-limit`)) || 1000;
   if (!collection.slug) {
     const tokenId = await Tokens.getSingleToken(collection.id);
     await collectionUpdatesMetadata.addToQueue(collection.contract, tokenId, "opensea", 0);
