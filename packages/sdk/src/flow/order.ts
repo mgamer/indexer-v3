@@ -6,7 +6,6 @@ import {
   keccak256,
   solidityKeccak256,
   defaultAbiCoder,
-  _TypedDataEncoder,
 } from "ethers/lib/utils";
 import { BigNumber, BigNumberish, Contract } from "ethers";
 import { OrderParams } from "./order-params";
