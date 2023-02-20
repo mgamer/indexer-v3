@@ -98,14 +98,14 @@ export const getBuildInfo = async (
   let totalFees = bn(0);
 
   // Include royalties
-  let royaltyBpsToPay = 0;
+  let totalBps = 0;
   if (options.automatedRoyalties) {
     const royalties: { bps: number; recipient: string }[] =
       (options.orderbook === "opensea"
         ? collectionResult.new_royalties?.opensea
         : collectionResult.royalties) ?? [];
 
-    royaltyBpsToPay = royalties.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
+    let royaltyBpsToPay = royalties.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
     if (options.royaltyBps !== undefined) {
       // The royalty bps to pay will be min(collectionRoyaltyBps, requestedRoyaltyBps)
       royaltyBpsToPay = Math.min(options.royaltyBps, royaltyBpsToPay);
@@ -114,15 +114,18 @@ export const getBuildInfo = async (
     for (const r of royalties) {
       if (r.recipient && r.bps > 0) {
         const bps = Math.min(royaltyBpsToPay, r.bps);
-        royaltyBpsToPay -= bps;
+        if (bps > 0) {
+          royaltyBpsToPay -= bps;
+          totalBps += bps;
 
-        const fee = bn(bps).mul(options.weiPrice).div(10000).toString();
-        buildParams.fees!.push({
-          recipient: r.recipient,
-          amount: fee,
-        });
+          const fee = bn(bps).mul(options.weiPrice).div(10000).toString();
+          buildParams.fees!.push({
+            recipient: r.recipient,
+            amount: fee,
+          });
 
-        totalFees = totalFees.add(fee);
+          totalFees = totalFees.add(fee);
+        }
       }
     }
   }
@@ -133,10 +136,11 @@ export const getBuildInfo = async (
       options.feeRecipient = [];
     }
 
-    options.fee.push(royaltyBpsToPay < 50 ? 50 - royaltyBpsToPay : 0);
-
     // OpenSea's Seaport fee recipient
-    options.feeRecipient.push("0x0000a26b00c1f0df003000390027140000faa719");
+    if (totalBps < 50) {
+      options.fee.push(50 - totalBps);
+      options.feeRecipient.push("0x0000a26b00c1f0df003000390027140000faa719");
+    }
   }
 
   if (options.fee && options.feeRecipient) {
