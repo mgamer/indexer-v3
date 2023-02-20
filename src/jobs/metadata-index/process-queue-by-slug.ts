@@ -86,10 +86,6 @@ if (config.doBackgroundWork) {
 
       async function processSlug(refreshTokenBySlug: RefreshTokenBySlug) {
         try {
-          if (!refreshTokenBySlug.slug) {
-            await addToTokenRefreshQueueAndUpdateCollectionMetadata(method, refreshTokenBySlug);
-            return;
-          }
           const results = await MetadataApi.getTokensMetadataBySlug(
             refreshTokenBySlug.contract,
             refreshTokenBySlug.slug,
