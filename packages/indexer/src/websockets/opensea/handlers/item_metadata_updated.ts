@@ -14,7 +14,7 @@ export const handleEvent = async (payload: ItemMetadataUpdatePayload | any): Pro
 
   const token = await Tokens.getByContractAndTokenId(contract, tokenId);
 
-  if (token?.image) {
+  if (token?.image && token?.metadataIndexed) {
     await metadataIndexFetch.addToQueue(
       [
         {
