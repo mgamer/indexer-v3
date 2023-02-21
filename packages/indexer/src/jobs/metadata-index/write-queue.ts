@@ -370,7 +370,9 @@ if (config.doBackgroundWork) {
           await rarityQueue.addToQueue(collection); // Recalculate the collection rarity
         }
 
-        await updateAttributeCounts.addToQueue(tokenAttributeCounter);
+        if (!_.isEmpty(tokenAttributeCounter)) {
+          await updateAttributeCounts.addToQueue(tokenAttributeCounter);
+        }
 
         // Mark the token as having metadata indexed.
         await idb.none(
@@ -393,7 +395,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 15 }
+    { connection: redis.duplicate(), concurrency: 30 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
