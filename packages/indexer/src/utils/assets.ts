@@ -29,10 +29,18 @@ export class Assets {
   }
 
   public static addImageParams(image: string, query: MergeRefs<ReqRefDefaults>["Query"]): string {
+    const splitImage = image.split(`?`);
+    const baseUrl = splitImage[0];
+    const url = new URL(image);
+    const queryParams = new URLSearchParams();
     for (const [key, value] of Object.entries(query)) {
-      image.includes("?") ? (image += "&") : (image += "?");
-      image += `${key}=${value}`;
+      queryParams.append(key, value);
+      url.searchParams.delete(key);
     }
-    return image;
+    url.searchParams.forEach((value, key) => {
+      queryParams.append(key, value);
+    });
+
+    return `${baseUrl}?${queryParams.toString()}`;
   }
 }
