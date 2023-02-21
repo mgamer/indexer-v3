@@ -113,7 +113,7 @@ async function processCollectionTokens(
   let lastTokenId = "";
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    let collectionAndTokenIdFilter = "WHERE t.image is null or t.image = ''";
+    let collectionAndTokenIdFilter = `WHERE (t.image is null or t.image = '') AND collection_id = '${collection.id}'`;
     if (lastTokenId != "") {
       logger.info(QUEUE_NAME, `Collection ID ${collection.id}, lastTokenId = ${lastTokenId}`);
       collectionAndTokenIdFilter = `WHERE (t.image is null or t.image = '') AND collection_id = '${collection.id}' AND t.token_id > '${lastTokenId}'`;
