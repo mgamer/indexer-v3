@@ -145,40 +145,41 @@ if (config.doBackgroundWork) {
         // Token attributes
         for (const { key, value, kind, rank } of attributes) {
           // Try to update the attribute keys, if number type update range as well and return the ID
-          let infoUpdate = "info"; // By default no update to the info
-          if (kind == "number") {
-            infoUpdate = `
-            CASE WHEN info IS NULL THEN 
-                  jsonb_object(array['min_range', 'max_range'], array[$/value/, $/value/]::text[])
-                ELSE
-                  info || jsonb_object(array['min_range', 'max_range'], array[
-                        CASE
-                            WHEN (info->>'min_range')::numeric > $/value/::numeric THEN $/value/::numeric
-                            ELSE (info->>'min_range')::numeric
-                        END,
-                        CASE
-                            WHEN (info->>'max_range')::numeric < $/value/::numeric THEN $/value/::numeric
-                            ELSE (info->>'max_range')::numeric
-                        END
-                  ]::text[])
-            END
-            `;
-          }
+          let attributeKeyResult;
 
-          let attributeKeyResult = await idb.oneOrNone(
-            `
+          if (kind == "number") {
+            const infoUpdate = `
+              CASE WHEN info IS NULL THEN 
+                    jsonb_object(array['min_range', 'max_range'], array[$/value/, $/value/]::text[])
+                  ELSE
+                    info || jsonb_object(array['min_range', 'max_range'], array[
+                          CASE
+                              WHEN (info->>'min_range')::numeric > $/value/::numeric THEN $/value/::numeric
+                              ELSE (info->>'min_range')::numeric
+                          END,
+                          CASE
+                              WHEN (info->>'max_range')::numeric < $/value/::numeric THEN $/value/::numeric
+                              ELSE (info->>'max_range')::numeric
+                          END
+                    ]::text[])
+              END
+            `;
+
+            attributeKeyResult = await idb.oneOrNone(
+              `
               UPDATE attribute_keys
               SET info = ${infoUpdate}
               WHERE collection_id = $/collection/
               AND key = $/key/
               RETURNING id
             `,
-            {
-              collection,
-              key: String(key),
-              value,
-            }
-          );
+              {
+                collection,
+                key: String(key),
+                value,
+              }
+            );
+          }
 
           if (!attributeKeyResult?.id) {
             let info = null;
