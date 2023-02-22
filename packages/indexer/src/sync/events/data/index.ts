@@ -104,9 +104,11 @@ export type EventSubKind =
   | "seaport-order-cancelled"
   | "seaport-order-filled"
   | "seaport-counter-incremented"
+  | "seaport-order-validated"
   | "seaport-v1.2-order-cancelled"
   | "seaport-v1.2-order-filled"
   | "seaport-v1.2-counter-incremented"
+  | "seaport-v1.2-order-validated"
   | "rarible-match"
   | "rarible-cancel"
   | "rarible-buy-v1"
@@ -217,9 +219,11 @@ const allEventData = [
   seaport.counterIncremented,
   seaport.orderCancelled,
   seaport.orderFulfilled,
+  seaport.orderValidated,
   seaportV12.counterIncremented,
   seaportV12.orderCancelled,
   seaportV12.orderFulfilled,
+  seaportV12.orderValidated,
   wyvernV2.ordersMatched,
   wyvernV23.ordersMatched,
   zeroExV4.erc721OrderCancelled,

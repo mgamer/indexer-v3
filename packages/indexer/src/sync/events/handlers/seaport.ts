@@ -4,6 +4,7 @@ import * as Sdk from "@reservoir0x/sdk";
 
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
+import { baseProvider } from "@/common/provider";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import * as utils from "@/events-sync/utils";
@@ -205,6 +206,50 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               orderKind,
             },
           });
+        }
+
+        break;
+      }
+
+      case "seaport-v1.2-order-validated":
+      case "seaport-order-validated": {
+        const parsedLog = eventData.abi.parseLog(log);
+        const orderId = parsedLog.args["orderHash"].toLowerCase();
+
+        const tx = await utils.fetchTransaction(baseEventParams.txHash);
+        const orderKind = subKind.startsWith("seaport-v1.2") ? "seaport-v1.2" : "seaport";
+
+        const isV12 = orderKind === "seaport-v1.2";
+        const exchange = isV12
+          ? new Sdk.SeaportV12.Exchange(config.chainId)
+          : new Sdk.Seaport.Exchange(config.chainId);
+        const inoutData = exchange.contract.interface.decodeFunctionData("validate", tx.data);
+        const inputOrders = inoutData.orders;
+        for (let index = 0; index < inputOrders.length; index++) {
+          const orderData = inputOrders[index];
+          try {
+            const { parameters } = orderData;
+            const counter = await exchange.getCounter(baseProvider, parameters.offerer);
+            const order = new Sdk.Seaport.Order(config.chainId, {
+              kind: "single-token",
+              ...orderData.parameters,
+              onChain: true,
+              counter,
+            });
+            order.params.signature = orderData.signature;
+            if (orderId === order.hash()) {
+              onChainData.orders.push({
+                kind: "seaport",
+                info: {
+                  kind: "full",
+                  orderParams: order.params,
+                  metadata: {},
+                },
+              });
+            }
+          } catch (error) {
+            // parse error
+          }
         }
 
         break;
