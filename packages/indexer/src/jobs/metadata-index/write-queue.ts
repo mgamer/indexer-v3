@@ -19,6 +19,7 @@ import * as updateCollectionActivity from "@/jobs/collection-updates/update-coll
 import * as updateCollectionUserActivity from "@/jobs/collection-updates/update-collection-user-activity";
 import * as updateCollectionDailyVolume from "@/jobs/collection-updates/update-collection-daily-volume";
 import * as updateAttributeCounts from "@/jobs/update-attribute/update-attribute-counts";
+import PgPromise from "pg-promise";
 
 const QUEUE_NAME = "metadata-index-write-queue";
 
@@ -144,14 +145,14 @@ if (config.doBackgroundWork) {
         const attributeIds = [];
         const attributeKeysIds = await redb.manyOrNone(
           `
-          SELECT key, id
-          FROM attribute_keys
-          WHERE collection_id = $/collection/
-          AND key IN ('${_.join(
-            _.map(attributes, (a) => a.key),
-            "','"
-          )}')
-        `,
+            SELECT key, id
+            FROM attribute_keys
+            WHERE collection_id = $/collection/
+            AND key IN ('${_.join(
+              _.map(attributes, (a) => PgPromise.as.value(a.key)),
+              "','"
+            )}')
+          `,
           { collection }
         );
 
