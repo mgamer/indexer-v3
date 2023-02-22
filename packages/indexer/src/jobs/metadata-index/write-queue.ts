@@ -144,10 +144,10 @@ if (config.doBackgroundWork) {
 
         // Token attributes
         for (const { key, value, kind, rank } of attributes) {
-          // Try to update the attribute keys, if number type update range as well and return the ID
           let attributeKeyResult;
 
           if (kind == "number") {
+            // If number type try to update range as well and return the ID
             const infoUpdate = `
               CASE WHEN info IS NULL THEN 
                     jsonb_object(array['min_range', 'max_range'], array[$/value/, $/value/]::text[])
