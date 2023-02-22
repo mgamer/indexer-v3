@@ -139,14 +139,27 @@ if (config.doBackgroundWork) {
           },
         ]);
 
+        // Fetch all existing keys
         const addedTokenAttributes = [];
         const attributeIds = [];
+        const attributeKeysIds = await redb.manyOrNone(
+          `
+          SELECT key, id
+          FROM attribute_keys
+          WHERE collection_id = $/collection/
+          AND key IN ('${_.join(
+            _.map(attributes, (a) => a.key),
+            "','"
+          )}')
+        `,
+          { collection }
+        );
+
+        const attributeKeysIdsMap = new Map(_.map(attributeKeysIds, (a) => [a.key, a.id]));
 
         // Token attributes
         for (const { key, value, kind, rank } of attributes) {
-          let attributeKeyResult;
-
-          if (kind == "number") {
+          if (attributeKeysIdsMap.has(key) && kind == "number") {
             // If number type try to update range as well and return the ID
             const infoUpdate = `
               CASE WHEN info IS NULL THEN 
@@ -165,14 +178,14 @@ if (config.doBackgroundWork) {
               END
             `;
 
-            attributeKeyResult = await idb.oneOrNone(
+            await idb.oneOrNone(
               `
-              UPDATE attribute_keys
-              SET info = ${infoUpdate}
-              WHERE collection_id = $/collection/
-              AND key = $/key/
-              RETURNING id
-            `,
+                UPDATE attribute_keys
+                SET info = ${infoUpdate}
+                WHERE collection_id = $/collection/
+                AND key = $/key/
+                RETURNING id
+              `,
               {
                 collection,
                 key: String(key),
@@ -181,14 +194,15 @@ if (config.doBackgroundWork) {
             );
           }
 
-          if (!attributeKeyResult?.id) {
+          // This is a new key, insert it and return the ID
+          if (!attributeKeysIdsMap.has(key)) {
             let info = null;
             if (kind == "number") {
               info = { min_range: Number(value), max_range: Number(value) };
             }
 
             // If no attribute key is available, then save it and refetch
-            attributeKeyResult = await idb.oneOrNone(
+            const attributeKeyResult = await idb.oneOrNone(
               `
                 INSERT INTO "attribute_keys" (
                   "collection_id",
@@ -214,11 +228,14 @@ if (config.doBackgroundWork) {
                 info,
               }
             );
-          }
 
-          if (!attributeKeyResult?.id) {
-            // Otherwise, fail (and retry)
-            throw new Error(`Could not fetch/save attribute key "${key}"`);
+            if (!attributeKeyResult?.id) {
+              // Otherwise, fail (and retry)
+              throw new Error(`Could not fetch/save attribute key "${key}"`);
+            }
+
+            // Add the new key and id to the map
+            attributeKeysIdsMap.set(key, attributeKeyResult.id);
           }
 
           // Fetch the attribute from the database (will succeed in the common case)
@@ -230,7 +247,7 @@ if (config.doBackgroundWork) {
               AND value = $/value/
             `,
             {
-              attributeKeyId: attributeKeyResult.id,
+              attributeKeyId: attributeKeysIdsMap.get(key),
               value: String(value),
             }
           );
@@ -267,7 +284,7 @@ if (config.doBackgroundWork) {
                 RETURNING (SELECT x.id FROM "x"), "attribute_count"
               `,
               {
-                attributeKeyId: attributeKeyResult.id,
+                attributeKeyId: attributeKeysIdsMap.get(key),
                 value: String(value),
                 collection,
                 kind,
