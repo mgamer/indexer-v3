@@ -51,7 +51,12 @@ if (config.doBackgroundWork) {
 
       // Get the tokens from the list
       const pendingRefreshTokens = new PendingRefreshTokens(method);
-      const refreshTokens = await pendingRefreshTokens.get(countTotal);
+      let refreshTokens = await pendingRefreshTokens.get(countTotal);
+
+      refreshTokens = _.filter(
+        refreshTokens,
+        (token) => token.contract !== "0x0e3a2a1f2146d86a604adc220b4967a898d7fe07"
+      );
 
       // If no more tokens
       if (_.isEmpty(refreshTokens)) {
