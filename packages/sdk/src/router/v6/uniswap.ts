@@ -1,16 +1,9 @@
-import { Interface } from "@ethersproject/abi";
+import { Interface, Result } from "@ethersproject/abi";
 import { Provider } from "@ethersproject/abstract-provider";
 import { BigNumberish } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 import { Protocol } from "@uniswap/router-sdk";
-import {
-  Currency,
-  CurrencyAmount,
-  Ether,
-  Percent,
-  Token,
-  TradeType,
-} from "@uniswap/sdk-core";
+import { Currency, CurrencyAmount, Ether, Percent, Token, TradeType } from "@uniswap/sdk-core";
 import { AlphaRouter, SwapType } from "@uniswap/smart-order-router";
 
 import { ExecutionInfo } from "./types";
@@ -52,6 +45,7 @@ export const generateSwapExecutions = async (
 ): Promise<SwapInfo> => {
   const router = new AlphaRouter({
     chainId: chainId,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     provider: provider as any,
   });
 
@@ -62,26 +56,19 @@ export const generateSwapExecutions = async (
       executions: [
         {
           module: options.wethModule.address,
-          data: options.wethModule.interface.encodeFunctionData("wrap", [
-            options.recipient,
-          ]),
+          data: options.wethModule.interface.encodeFunctionData("wrap", [options.recipient]),
           value: toTokenAmount,
         },
       ],
     };
-  } else if (
-    isWETH(chainId, fromTokenAddress) &&
-    isETH(chainId, toTokenAddress)
-  ) {
+  } else if (isWETH(chainId, fromTokenAddress) && isETH(chainId, toTokenAddress)) {
     // We need to unwrap WETH
     return {
       amountIn: toTokenAmount,
       executions: [
         {
           module: options.wethModule.address,
-          data: options.wethModule.interface.encodeFunctionData("unwrap", [
-            options.recipient,
-          ]),
+          data: options.wethModule.interface.encodeFunctionData("unwrap", [options.recipient]),
           value: 0,
         },
       ],
@@ -132,15 +119,12 @@ export const generateSwapExecutions = async (
       `,
     ]);
 
-    let params: any;
+    let params: Result;
     try {
       // Properly handle multicall-wrapping
       let calldata = route.methodParameters!.calldata;
       if (calldata.startsWith(iface.getSighash("multicall"))) {
-        const decodedMulticall = iface.decodeFunctionData(
-          "multicall",
-          calldata
-        );
+        const decodedMulticall = iface.decodeFunctionData("multicall", calldata);
         for (const data of decodedMulticall.data) {
           if (data.startsWith(iface.getSighash("exactOutputSingle"))) {
             calldata = data;
@@ -182,9 +166,7 @@ export const generateSwapExecutions = async (
       // An additional unwrap step is needed if the target token is ETH (since Uniswap will get us WETH)
       executions.push({
         module: options.wethModule.address,
-        data: options.wethModule.interface.encodeFunctionData("unwrap", [
-          options.recipient,
-        ]),
+        data: options.wethModule.interface.encodeFunctionData("unwrap", [options.recipient]),
         value: 0,
       });
     }
