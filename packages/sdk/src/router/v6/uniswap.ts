@@ -8,6 +8,8 @@ import { AlphaRouter, SwapType } from "@uniswap/smart-order-router";
 
 import { ExecutionInfo } from "./types";
 import { isETH, isWETH } from "./utils";
+import { Weth } from "../../common/addresses";
+import { Network } from "../../utils";
 
 export type SwapInfo = {
   amountIn: BigNumberish;
@@ -76,7 +78,13 @@ export const generateSwapExecutions = async (
   } else {
     // We need to swap
 
-    const fromToken = await getToken(chainId, provider, fromTokenAddress);
+    // Uniswap's core SDK doesn't support MATIC -> WMATIC conversion
+    // https://github.com/Uniswap/sdk-core/issues/39
+    let fromToken = await getToken(chainId, provider, fromTokenAddress);
+    if (chainId === Network.Polygon && isETH(chainId, fromTokenAddress)) {
+      fromToken = await getToken(chainId, provider, Weth[chainId]);
+    }
+
     const toToken = await getToken(chainId, provider, toTokenAddress);
 
     // TODO: Add support for dependent swaps (eg. multiple swaps

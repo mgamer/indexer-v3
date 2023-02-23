@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 import {BaseModule} from "./BaseModule.sol";
 import {IWETH} from "../../interfaces/IWETH.sol";
 
-// Utility module for wrapping/unwrpping ETH/WETH.
+// Utility module for wrapping/unwrapping ETH/WETH.
 contract WETHModule is BaseModule {
   // --- Fields ---
 
