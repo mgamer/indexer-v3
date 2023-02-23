@@ -46,7 +46,7 @@ export class DeploymentHelper {
 const main = async () => {
   const deploymentHelper = await DeploymentHelper.getInstance();
 
-  await deploymentHelper.deploy("UniswapV3Module", [deploymentHelper.deployer.address], {
+  await deploymentHelper.deploy("Permit2Module", [deploymentHelper.deployer.address], {
     verifyOnEtherscan: true,
   });
 };

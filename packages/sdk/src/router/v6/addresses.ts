@@ -15,20 +15,20 @@ export const Router: ChainIdToAddress = {
 export const WETHModule: ChainIdToAddress = {
   [Network.Ethereum]: "0xe2537569b2f5c320db0c5b2510728d8de0da28e0",
   [Network.EthereumGoerli]: "0x5282b9af3f38d4a5d1bb707f5d3acbd951950074",
-  [Network.Polygon]: "0x7e7e3e62f622218cb0abcde0c07503bd62f59a9b",
+  [Network.Polygon]: "0x9a98786764e579aa0fe00947f56d29d5cc601eaa",
   [Network.Optimism]: "0x708a1e6fd3bb995788c26fbcb418f85b1e952df0",
 };
 
 export const Permit2Module: ChainIdToAddress = {
   [Network.Ethereum]: "0x482e4d362c8a2ea19e07b7234a14084a7d740b42",
-  [Network.Polygon]: "0xcb80e94f8e18d21c8ed31d2151fa6af3e738c48f",
+  [Network.Polygon]: "0x5db9abb17333f6eb12386eda955d6fc779bd78f4",
   [Network.Optimism]: "0xc10d7937a42865d9355384b884f7d694c15e7781",
 };
 
 export const UniswapV3Module: ChainIdToAddress = {
   [Network.Ethereum]: "0xe5ee6a6e8d57d1d315d1898c68ea1bc487b6ea92",
   [Network.EthereumGoerli]: "0x6748fce2eabad140b36dc7300ad2eb31631410be",
-  [Network.Polygon]: "0xa76ff380988df6df60eeb47930f4d27f93797198",
+  [Network.Polygon]: "0x5f78d53122f88f3abbed88090e1648b5f9f824bd",
   [Network.Optimism]: "0x9ebf2302ab53a2357dd4d802698aac361b956954",
 };
 
