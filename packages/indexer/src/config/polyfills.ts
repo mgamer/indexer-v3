@@ -1,8 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// Reference: https://github.com/mswjs/msw/issues/686#issuecomment-816241875
-import "node-fetch";
-
-// Reference: https://github.com/apollographql/apollo-link-rest/issues/41#issuecomment-354923559
-import * as f from "node-fetch";
-(global as any).Headers = f.Headers;
+// References:
+// https://github.com/apollographql/apollo-link-rest/issues/41#issuecomment-354923559
+// https://github.com/node-fetch/node-fetch#providing-global-access
+import fetch, { Headers, Request, Response } from "node-fetch";
+if (!global.fetch) {
+  (global as any).fetch = fetch;
+  (global as any).Headers = Headers;
+  (global as any).Request = Request;
+  (global as any).Response = Response;
+}
