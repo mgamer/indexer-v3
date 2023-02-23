@@ -42,7 +42,7 @@ import NFTXModuleAbi from "./abis/NFTXModule.json";
 import Permit2ModuleAbi from "./abis/Permit2Module.json";
 import RaribleModuleAbi from "./abis/RaribleModule.json";
 import SeaportModuleAbi from "./abis/SeaportModule.json";
-import SeaportV13ModuleAbi from "./abis/SeaportV13Module.json";
+import SeaportV14ModuleAbi from "./abis/SeaportV14Module.json";
 import SudoswapModuleAbi from "./abis/SudoswapModule.json";
 import UniswapV3ModuleAbi from "./abis/UniswapV3Module.json";
 import WETHModuleAbi from "./abis/WETHModule.json";
@@ -96,9 +96,9 @@ export class Router {
         SeaportModuleAbi,
         provider
       ),
-      seaportV13Module: new Contract(
-        Addresses.SeaportV13Module[chainId] ?? AddressZero,
-        SeaportV13ModuleAbi,
+      seaportV14Module: new Contract(
+        Addresses.SeaportV14Module[chainId] ?? AddressZero,
+        SeaportV14ModuleAbi,
         provider
       ),
       sudoswapModule: new Contract(
@@ -428,18 +428,18 @@ export class Router {
 
     await Promise.all(
       details
-        .filter(({ kind }) => kind === "seaport-v1.3-partial")
+        .filter(({ kind }) => kind === "seaport-v1.4-partial")
         .map(async (detail) => {
           try {
-            const order = detail.order as Sdk.SeaportV13.Types.PartialOrder;
+            const order = detail.order as Sdk.SeaportV14.Types.PartialOrder;
             const result = await axios.get(
               `https://order-fetcher.vercel.app/api/listing?orderHash=${order.id}&contract=${order.contract}&tokenId=${order.tokenId}&taker=${taker}&chainId=${this.chainId}`
             );
 
-            const fullOrder = new Sdk.SeaportV13.Order(this.chainId, result.data.order);
+            const fullOrder = new Sdk.SeaportV14.Order(this.chainId, result.data.order);
             details.push({
               ...detail,
-              kind: "seaport-v1.3",
+              kind: "seaport-v1.4",
               order: fullOrder,
             });
           } catch {
@@ -451,7 +451,7 @@ export class Router {
           }
         })
     );
-    details = details.filter(({ kind }) => kind !== "seaport-v1.3-partial");
+    details = details.filter(({ kind }) => kind !== "seaport-v1.4-partial");
 
     const relayer = options?.relayer ?? taker;
 
@@ -527,19 +527,19 @@ export class Router {
     if (
       details.every(
         ({ kind, fees, currency, order }) =>
-          kind === "seaport-v1.3" &&
+          kind === "seaport-v1.4" &&
           buyInCurrency === currency &&
           // All orders must have the same currency and conduit
           currency === details[0].currency &&
-          (order as Sdk.SeaportV13.Order).params.conduitKey ===
-            (details[0].order as Sdk.SeaportV13.Order).params.conduitKey &&
+          (order as Sdk.SeaportV14.Order).params.conduitKey ===
+            (details[0].order as Sdk.SeaportV14.Order).params.conduitKey &&
           !fees?.length
       ) &&
       !options?.globalFees?.length &&
       !options?.forceRouter &&
       !options?.relayer
     ) {
-      const exchange = new Sdk.SeaportV13.Exchange(this.chainId);
+      const exchange = new Sdk.SeaportV14.Exchange(this.chainId);
 
       const conduit = exchange.deriveConduit(
         (details[0].order as Sdk.Seaport.Order).params.conduitKey
@@ -556,7 +556,7 @@ export class Router {
       }
 
       if (details.length === 1) {
-        const order = details[0].order as Sdk.SeaportV13.Order;
+        const order = details[0].order as Sdk.SeaportV14.Order;
         return {
           txData: await exchange.fillOrderTx(
             taker,
@@ -572,7 +572,7 @@ export class Router {
           permits: [],
         };
       } else {
-        const orders = details.map((d) => d.order as Sdk.SeaportV13.Order);
+        const orders = details.map((d) => d.order as Sdk.SeaportV14.Order);
         return {
           txData: await exchange.fillOrdersTx(
             taker,
@@ -592,7 +592,7 @@ export class Router {
 
     const buyInETH = isETH(this.chainId, buyInCurrency);
     if (!buyInETH) {
-      const allSeaport = details.every((c) => ["seaport", "seaport-v1.3"].includes(c.kind));
+      const allSeaport = details.every((c) => ["seaport", "seaport-v1.4"].includes(c.kind));
       if (!allSeaport) {
         throw new Error("Unsupported buy-in currency");
       }
@@ -637,7 +637,7 @@ export class Router {
     const foundationDetails: ListingDetailsExtracted[] = [];
     const looksRareDetails: ListingDetailsExtracted[] = [];
     const seaportDetails: PerCurrencyDetails = {};
-    const seaportV13Details: PerCurrencyDetails = {};
+    const seaportV14Details: PerCurrencyDetails = {};
     const sudoswapDetails: ListingDetailsExtracted[] = [];
     const x2y2Details: ListingDetailsExtracted[] = [];
     const zeroexV4Erc721Details: ListingDetailsExtracted[] = [];
@@ -679,11 +679,11 @@ export class Router {
           detailsRef = seaportDetails[currency];
           break;
 
-        case "seaport-v1.3":
-          if (!seaportV13Details[currency]) {
-            seaportV13Details[currency] = [];
+        case "seaport-v1.4":
+          if (!seaportV14Details[currency]) {
+            seaportV14Details[currency] = [];
           }
-          detailsRef = seaportV13Details[currency];
+          detailsRef = seaportV14Details[currency];
           break;
 
         case "sudoswap":
@@ -1168,12 +1168,12 @@ export class Router {
     }
 
     // Handle Seaport V1.3 listings
-    if (Object.keys(seaportV13Details).length) {
-      const exchange = new Sdk.SeaportV13.Exchange(this.chainId);
-      for (const currency of Object.keys(seaportV13Details)) {
-        const currencyDetails = seaportV13Details[currency];
+    if (Object.keys(seaportV14Details).length) {
+      const exchange = new Sdk.SeaportV14.Exchange(this.chainId);
+      for (const currency of Object.keys(seaportV14Details)) {
+        const currencyDetails = seaportV14Details[currency];
 
-        const orders = currencyDetails.map((d) => d.order as Sdk.SeaportV13.Order);
+        const orders = currencyDetails.map((d) => d.order as Sdk.SeaportV14.Order);
         const fees = getFees(currencyDetails);
 
         const totalPrice = orders
@@ -1202,8 +1202,8 @@ export class Router {
               {
                 uniswapV3Module: this.contracts.uniswapV3Module,
                 wethModule: this.contracts.wethModule,
-                // Forward any swapped tokens to the SeaportV13 module
-                recipient: this.contracts.seaportV13Module.address,
+                // Forward any swapped tokens to the SeaportV14 module
+                recipient: this.contracts.seaportV14Module.address,
                 refundTo: relayer,
               }
             ));
@@ -1222,7 +1222,7 @@ export class Router {
             });
             permitItems.push({
               from: relayer,
-              to: this.contracts.seaportV13Module.address,
+              to: this.contracts.seaportV14Module.address,
               token: buyInCurrency,
               amount: (amountIn ?? totalPayment).toString(),
             });
@@ -1244,10 +1244,10 @@ export class Router {
         const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
         if (!skipFillExecution) {
           executions.push({
-            module: this.contracts.seaportV13Module.address,
+            module: this.contracts.seaportV14Module.address,
             data:
               orders.length === 1
-                ? this.contracts.seaportV13Module.interface.encodeFunctionData(
+                ? this.contracts.seaportV14Module.interface.encodeFunctionData(
                     `accept${currencyIsETH ? "ETH" : "ERC20"}Listing`,
                     [
                       {
@@ -1271,7 +1271,7 @@ export class Router {
                       fees,
                     ]
                   )
-                : this.contracts.seaportV13Module.interface.encodeFunctionData(
+                : this.contracts.seaportV14Module.interface.encodeFunctionData(
                     `accept${currencyIsETH ? "ETH" : "ERC20"}Listings`,
                     [
                       await Promise.all(
@@ -2002,9 +2002,9 @@ export class Router {
           break;
         }
 
-        case "seaport-v1.3":
-        case "seaport-v1.3-partial": {
-          module = this.contracts.seaportV13Module;
+        case "seaport-v1.4":
+        case "seaport-v1.4-partial": {
+          module = this.contracts.seaportV14Module;
           break;
         }
 
@@ -2198,9 +2198,9 @@ export class Router {
           break;
         }
 
-        case "seaport-v1.3": {
-          const order = detail.order as Sdk.SeaportV13.Order;
-          const module = this.contracts.seaportV13Module;
+        case "seaport-v1.4": {
+          const order = detail.order as Sdk.SeaportV14.Order;
+          const module = this.contracts.seaportV14Module;
 
           const matchParams = order.buildMatching({
             tokenId: detail.tokenId,
@@ -2208,7 +2208,7 @@ export class Router {
             ...(detail.extraArgs ?? {}),
           });
 
-          const exchange = new Sdk.SeaportV13.Exchange(this.chainId);
+          const exchange = new Sdk.SeaportV14.Exchange(this.chainId);
           executions.push({
             module: module.address,
             data: module.interface.encodeFunctionData(
@@ -2241,9 +2241,9 @@ export class Router {
           break;
         }
 
-        case "seaport-v1.3-partial": {
-          const order = detail.order as Sdk.SeaportV13.Types.PartialOrder;
-          const module = this.contracts.seaportV13Module;
+        case "seaport-v1.4-partial": {
+          const order = detail.order as Sdk.SeaportV14.Types.PartialOrder;
+          const module = this.contracts.seaportV14Module;
 
           try {
             const result = await axios.get(
@@ -2253,9 +2253,9 @@ export class Router {
                 (order.unitPrice ? `&unitPrice=${order.unitPrice}` : "")
             );
 
-            const fullOrder = new Sdk.SeaportV13.Order(this.chainId, result.data.order);
+            const fullOrder = new Sdk.SeaportV14.Order(this.chainId, result.data.order);
 
-            const exchange = new Sdk.SeaportV13.Exchange(this.chainId);
+            const exchange = new Sdk.SeaportV14.Exchange(this.chainId);
             executions.push({
               module: module.address,
               data: module.interface.encodeFunctionData(

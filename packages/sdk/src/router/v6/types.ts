@@ -90,12 +90,12 @@ export type GenericOrder =
       order: Sdk.Seaport.Types.PartialOrder;
     }
   | {
-      kind: "seaport-v1.3";
-      order: Sdk.SeaportV13.Order;
+      kind: "seaport-v1.4";
+      order: Sdk.SeaportV14.Order;
     }
   | {
-      kind: "seaport-v1.3-partial";
-      order: Sdk.SeaportV13.Types.PartialOrder;
+      kind: "seaport-v1.4-partial";
+      order: Sdk.SeaportV14.Types.PartialOrder;
     }
   | {
       kind: "cryptopunks";

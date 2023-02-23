@@ -14,7 +14,6 @@ tsconfig.tsbuildinfo
 yarn-debug.log*
 yarn-error.log*
 postgres/
-scripts/
 test*.ts
 
 # Yarn
