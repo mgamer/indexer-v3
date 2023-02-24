@@ -16,23 +16,6 @@ export const handleEvent = async (payload: ItemMetadataUpdatePayload | any): Pro
 
   const token = await Tokens.getByContractAndTokenId(contract, tokenId);
 
-  if (token?.metadataIndexed) {
-    const collection = await Collections.getByContractAndTokenId(contract, tokenId);
-    await metadataIndexFetch.addToQueue(
-      [
-        {
-          kind: "single-token",
-          data: {
-            method: metadataIndexFetch.getIndexingMethod(collection?.community || "opensea"),
-            contract,
-            tokenId,
-            collection: token?.collectionId ?? contract,
-          },
-        },
-      ],
-      true
-    );
-  }
   if (token != null) {
     const request = {
       asset_contract: {
