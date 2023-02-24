@@ -199,7 +199,7 @@ export const update = async (
             $/id/,
             $/contract/,
             $/tokenId/
-          )
+          ) ON CONFLICT DO NOTHING
         `,
         {
           id: tokenSet.id,
