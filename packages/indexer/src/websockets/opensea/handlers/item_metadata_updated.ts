@@ -32,7 +32,8 @@ export const handleEvent = async (payload: ItemMetadataUpdatePayload | any): Pro
       ],
       true
     );
-  } else if (token != null) {
+  }
+  if (token != null) {
     const request = {
       asset_contract: {
         address: "0x059edd72cd353df5106d2b9cc5ab83a52287ac3a",
