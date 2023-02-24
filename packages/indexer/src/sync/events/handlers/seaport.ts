@@ -1,6 +1,7 @@
 import { Log } from "@ethersproject/abstract-provider";
 import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
+import { searchForCall } from "@georgeroman/evm-tx-simulator";
 
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
@@ -30,11 +31,11 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
     const eventData = getEventData([subKind])[0];
     switch (subKind) {
       case "seaport-order-cancelled":
-      case "seaport-v1.2-order-cancelled": {
+      case "seaport-v1.4-order-cancelled": {
         const parsedLog = eventData.abi.parseLog(log);
         const orderId = parsedLog.args["orderHash"].toLowerCase();
 
-        const orderKind = subKind.startsWith("seaport-v1.2") ? "seaport-v1.2" : "seaport";
+        const orderKind = subKind.startsWith("seaport-v1.4") ? "seaport-v1.4" : "seaport";
         onChainData.cancelEvents.push({
           orderKind,
           orderId,
@@ -58,12 +59,12 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       }
 
       case "seaport-counter-incremented":
-      case "seaport-v1.2-counter-incremented": {
+      case "seaport-v1.4-counter-incremented": {
         const parsedLog = eventData.abi.parseLog(log);
         const maker = parsedLog.args["offerer"].toLowerCase();
         const newCounter = parsedLog.args["newCounter"].toString();
 
-        const orderKind = subKind.startsWith("seaport-v1.2") ? "seaport-v1.2" : "seaport";
+        const orderKind = subKind.startsWith("seaport-v1.4") ? "seaport-v1.4" : "seaport";
         onChainData.bulkCancelEvents.push({
           orderKind,
           maker,
@@ -75,7 +76,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       }
 
       case "seaport-order-filled":
-      case "seaport-v1.2-order-filled": {
+      case "seaport-v1.4-order-filled": {
         const parsedLog = eventData.abi.parseLog(log);
         const orderId = parsedLog.args["orderHash"].toLowerCase();
         const maker = parsedLog.args["offerer"].toLowerCase();
@@ -87,10 +88,10 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           break;
         }
 
-        const orderKind = subKind.startsWith("seaport-v1.2") ? "seaport-v1.2" : "seaport";
+        const orderKind = subKind.startsWith("seaport-v1.4") ? "seaport-v1.4" : "seaport";
         const exchange =
-          orderKind === "seaport-v1.2"
-            ? new Sdk.SeaportV12.Exchange(config.chainId)
+          orderKind === "seaport-v1.4"
+            ? new Sdk.SeaportV14.Exchange(config.chainId)
             : new Sdk.Seaport.Exchange(config.chainId);
 
         const saleInfo = exchange.deriveBasicSale(offer, consideration);
@@ -211,32 +212,65 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         break;
       }
 
-      case "seaport-v1.2-order-validated":
+      case "seaport-v1.4-order-validated":
       case "seaport-order-validated": {
         const parsedLog = eventData.abi.parseLog(log);
         const orderId = parsedLog.args["orderHash"].toLowerCase();
+        const orderKind = subKind.startsWith("seaport-v1.4") ? "seaport-v1.4" : "seaport";
 
-        const tx = await utils.fetchTransaction(baseEventParams.txHash);
-        const orderKind = subKind.startsWith("seaport-v1.2") ? "seaport-v1.2" : "seaport";
-
-        const isV12 = orderKind === "seaport-v1.2";
-        const exchange = isV12
-          ? new Sdk.SeaportV12.Exchange(config.chainId)
+        const isV14 = orderKind === "seaport-v1.4";
+        const exchange = isV14
+          ? new Sdk.SeaportV14.Exchange(config.chainId)
           : new Sdk.Seaport.Exchange(config.chainId);
-        const inoutData = exchange.contract.interface.decodeFunctionData("validate", tx.data);
-        const inputOrders = inoutData.orders;
-        for (let index = 0; index < inputOrders.length; index++) {
-          const orderData = inputOrders[index];
+
+        const allOrderParameters = [];
+        if (isV14) {
+          const orderParameters = parsedLog.args["orderParameters"];
+          allOrderParameters.push(orderParameters);
+        } else {
+          const txTrace = await utils.fetchTransactionTrace(baseEventParams.txHash);
+          if (!txTrace) {
+            // Skip any failed attempts to get the trace
+            break;
+          }
+          const validateCalls = [];
+          for (let index = 0; index < 100; index++) {
+            const matchCall = searchForCall(
+              txTrace.calls,
+              {
+                sigHashes: ["0x88147732"],
+              },
+              index
+            );
+            if (matchCall) {
+              validateCalls.push(matchCall);
+            } else {
+              break;
+            }
+          }
+
+          for (let index = 0; index < validateCalls.length; index++) {
+            const inputData = exchange.contract.interface.decodeFunctionData(
+              "validate",
+              validateCalls[index].data
+            );
+            for (let index = 0; index < inputData.orders.length; index++) {
+              allOrderParameters.push(inputData.orders[index].parameters);
+            }
+          }
+        }
+
+        for (let index = 0; index < allOrderParameters.length; index++) {
+          const parameters = allOrderParameters[index];
           try {
-            const { parameters } = orderData;
             const counter = await exchange.getCounter(baseProvider, parameters.offerer);
             const order = new Sdk.Seaport.Order(config.chainId, {
-              kind: "single-token",
-              ...orderData.parameters,
+              ...parameters,
               onChain: true,
               counter,
             });
-            order.params.signature = orderData.signature;
+            order.params.signature = "0x";
+            // Order hash match
             if (orderId === order.hash()) {
               onChainData.orders.push({
                 kind: "seaport",
@@ -246,6 +280,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
                   metadata: {},
                 },
               });
+              // Skip
+              break;
             }
           } catch (error) {
             // parse error

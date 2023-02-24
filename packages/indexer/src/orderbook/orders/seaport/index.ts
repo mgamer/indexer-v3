@@ -202,7 +202,7 @@ export const save = async (
         });
       }
 
-      // Check: order has a valid signature aand skip on-chain orders
+      // Check: order has a valid signature (or was validated on-chain)
       if (!order.params.onChain) {
         try {
           await order.checkSignature(baseProvider);

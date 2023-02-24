@@ -22,7 +22,7 @@ import * as okex from "@/events-sync/data/okex";
 import * as quixotic from "@/events-sync/data/quixotic";
 import * as rarible from "@/events-sync/data/rarible";
 import * as seaport from "@/events-sync/data/seaport";
-import * as seaportV12 from "@/events-sync/data/seaport-v1.2";
+import * as seaportV14 from "@/events-sync/data/seaport-v1.4";
 import * as sudoswap from "@/events-sync/data/sudoswap";
 import * as superrare from "@/events-sync/data/superrare";
 import * as tofu from "@/events-sync/data/tofu";
@@ -105,10 +105,10 @@ export type EventSubKind =
   | "seaport-order-filled"
   | "seaport-counter-incremented"
   | "seaport-order-validated"
-  | "seaport-v1.2-order-cancelled"
-  | "seaport-v1.2-order-filled"
-  | "seaport-v1.2-counter-incremented"
-  | "seaport-v1.2-order-validated"
+  | "seaport-v1.4-order-cancelled"
+  | "seaport-v1.4-order-filled"
+  | "seaport-v1.4-counter-incremented"
+  | "seaport-v1.4-order-validated"
   | "rarible-match"
   | "rarible-cancel"
   | "rarible-buy-v1"
@@ -220,10 +220,10 @@ const allEventData = [
   seaport.orderCancelled,
   seaport.orderFulfilled,
   seaport.orderValidated,
-  seaportV12.counterIncremented,
-  seaportV12.orderCancelled,
-  seaportV12.orderFulfilled,
-  seaportV12.orderValidated,
+  seaportV14.counterIncremented,
+  seaportV14.orderCancelled,
+  seaportV14.orderFulfilled,
+  seaportV14.orderValidated,
   wyvernV2.ordersMatched,
   wyvernV23.ordersMatched,
   zeroExV4.erc721OrderCancelled,
