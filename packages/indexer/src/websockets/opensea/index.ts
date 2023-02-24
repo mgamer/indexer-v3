@@ -60,7 +60,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
           event.event_type === EventType.COLLECTION_OFFER ||
           event.event_type === EventType.TRAIT_OFFER
         ) {
-          logger.info("opensea-websocket", `${event.event_type} event`);
+          logger.info("opensea-websocket", `${JSON.stringify(event)}`);
         }
 
         if (await isDuplicateEvent(event)) {
