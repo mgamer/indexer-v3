@@ -146,7 +146,7 @@ export class MetadataApi {
     try {
       response = await axios.post(url, request);
     } catch (error: any) {
-      logger.debug("metadata-api", `parseTokenMetadata error: ${error.message}`);
+      logger.error("metadata-api", `parseTokenMetadata error: ${error.message}`);
       return null;
     }
     const tokenMetadata: TokenMetadata = response.data;
