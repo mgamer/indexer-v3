@@ -37,7 +37,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       transport: WebSocket,
     },
     onError: async (error) => {
-      logger.warn("opensea-websocket", `network=${network}, error=${error}`);
+      logger.warn("opensea-websocket", `network=${network}, error=${JSON.stringify(error)}`);
     },
   });
 
@@ -55,11 +55,6 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
     ],
     async (event) => {
       try {
-        logger.debug(
-          "opensea-websocket",
-          `Processing event. network=${network}, event=${JSON.stringify(event)}`
-        );
-
         if (await isDuplicateEvent(event)) {
           logger.debug(
             "opensea-websocket",
@@ -68,6 +63,11 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
 
           return;
         }
+
+        logger.debug(
+          "opensea-websocket",
+          `Processing event. network=${network}, event=${JSON.stringify(event)}`
+        );
 
         await saveEvent(event);
 
