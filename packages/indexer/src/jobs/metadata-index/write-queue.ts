@@ -167,6 +167,13 @@ if (config.doBackgroundWork) {
             (attributeKeysIdsMap.get(key)?.info.min_range > value ||
               attributeKeysIdsMap.get(key)?.info.max_range < value)
           ) {
+            logger.info(
+              QUEUE_NAME,
+              `Update range for ${collection} key ${key} current info ${JSON.stringify(
+                attributeKeysIdsMap.get(key)?.info
+              )} value ${value}`
+            );
+
             // If number type try to update range as well and return the ID
             const infoUpdate = `
               CASE WHEN info IS NULL THEN 
