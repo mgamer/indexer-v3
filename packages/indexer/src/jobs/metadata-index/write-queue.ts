@@ -184,7 +184,6 @@ if (config.doBackgroundWork) {
                 SET info = ${infoUpdate}
                 WHERE collection_id = $/collection/
                 AND key = $/key/
-                RETURNING id
               `,
               {
                 collection,
