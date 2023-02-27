@@ -4,7 +4,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { getUnixTime } from "date-fns";
 import _ from "lodash";
 
-import { idb, redb } from "@/common/db";
+import { idb, ridb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
@@ -142,7 +142,7 @@ if (config.doBackgroundWork) {
         // Fetch all existing keys
         const addedTokenAttributes = [];
         const attributeIds = [];
-        const attributeKeysIds = await redb.manyOrNone(
+        const attributeKeysIds = await ridb.manyOrNone(
           `
             SELECT key, id
             FROM attribute_keys
@@ -239,7 +239,7 @@ if (config.doBackgroundWork) {
           }
 
           // Fetch the attribute from the database (will succeed in the common case)
-          let attributeResult = await redb.oneOrNone(
+          let attributeResult = await ridb.oneOrNone(
             `
               SELECT id, COALESCE(array_length(sample_images, 1), 0) AS "sample_images_length"
               FROM attributes
