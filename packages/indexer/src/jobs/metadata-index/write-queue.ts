@@ -144,7 +144,7 @@ if (config.doBackgroundWork) {
         const attributeIds = [];
         const attributeKeysIds = await ridb.manyOrNone(
           `
-            SELECT key, id
+            SELECT key, id, info
             FROM attribute_keys
             WHERE collection_id = $/collection/
             AND key IN ('${_.join(
@@ -155,11 +155,25 @@ if (config.doBackgroundWork) {
           { collection }
         );
 
-        const attributeKeysIdsMap = new Map(_.map(attributeKeysIds, (a) => [a.key, a.id]));
+        const attributeKeysIdsMap = new Map(
+          _.map(attributeKeysIds, (a) => [a.key, { id: a.id, info: a.info }])
+        );
 
         // Token attributes
         for (const { key, value, kind, rank } of attributes) {
-          if (attributeKeysIdsMap.has(key) && kind == "number") {
+          if (
+            attributeKeysIdsMap.has(key) &&
+            kind == "number" &&
+            (attributeKeysIdsMap.get(key)?.info.min_range > value ||
+              attributeKeysIdsMap.get(key)?.info.max_range < value)
+          ) {
+            logger.info(
+              QUEUE_NAME,
+              `Update range for ${collection} key ${key} current info ${JSON.stringify(
+                attributeKeysIdsMap.get(key)?.info
+              )} value ${value}`
+            );
+
             // If number type try to update range as well and return the ID
             const infoUpdate = `
               CASE WHEN info IS NULL THEN 
@@ -234,7 +248,7 @@ if (config.doBackgroundWork) {
             }
 
             // Add the new key and id to the map
-            attributeKeysIdsMap.set(key, attributeKeyResult.id);
+            attributeKeysIdsMap.set(key, { id: attributeKeyResult.id, info });
           }
 
           // Fetch the attribute from the database (will succeed in the common case)
@@ -246,7 +260,7 @@ if (config.doBackgroundWork) {
               AND value = $/value/
             `,
             {
-              attributeKeyId: attributeKeysIdsMap.get(key),
+              attributeKeyId: attributeKeysIdsMap.get(key)?.id,
               value: String(value),
             }
           );
@@ -283,7 +297,7 @@ if (config.doBackgroundWork) {
                 RETURNING (SELECT x.id FROM "x"), "attribute_count"
               `,
               {
-                attributeKeyId: attributeKeysIdsMap.get(key),
+                attributeKeyId: attributeKeysIdsMap.get(key)?.id,
                 value: String(value),
                 collection,
                 kind,
