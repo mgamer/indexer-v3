@@ -203,7 +203,7 @@ export const save = async (
       }
 
       // Check: order has a valid signature
-      if (!order.params.onChain) {
+      if (!metadata.fromOnChain) {
         try {
           await order.checkSignature(baseProvider);
         } catch {

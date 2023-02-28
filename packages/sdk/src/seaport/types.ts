@@ -79,7 +79,6 @@ export type OrderComponents = {
   conduitKey: string;
   counter: string;
   signature?: string;
-  onChain?: boolean;
 };
 
 export type MatchParams = {

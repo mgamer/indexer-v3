@@ -1,5 +1,5 @@
 import { Log } from "@ethersproject/abstract-provider";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, HashZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { searchForCall } from "@georgeroman/evm-tx-simulator";
 
@@ -223,10 +223,12 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           ? new Sdk.SeaportV14.Exchange(config.chainId)
           : new Sdk.Seaport.Exchange(config.chainId);
 
+        const allOrderParametersV14 = [];
         const allOrderParameters = [];
+
         if (isV14) {
           const orderParameters = parsedLog.args["orderParameters"];
-          allOrderParameters.push(orderParameters);
+          allOrderParametersV14.push(orderParameters);
         } else {
           const txTrace = await utils.fetchTransactionTrace(baseEventParams.txHash);
           if (!txTrace) {
@@ -252,7 +254,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           for (let index = 0; index < validateCalls.length; index++) {
             const inputData = exchange.contract.interface.decodeFunctionData(
               "validate",
-              validateCalls[index].data
+              validateCalls[index].input
             );
             for (let index = 0; index < inputData.orders.length; index++) {
               allOrderParameters.push(inputData.orders[index].parameters);
@@ -260,6 +262,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           }
         }
 
+        // Hanlde seaport
         for (let index = 0; index < allOrderParameters.length; index++) {
           const parameters = allOrderParameters[index];
           try {
@@ -269,7 +272,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               onChain: true,
               counter,
             });
-            order.params.signature = "0x";
+            order.params.signature = HashZero;
             // Order hash match
             if (orderId === order.hash()) {
               onChainData.orders.push({
@@ -277,9 +280,42 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
                 info: {
                   kind: "full",
                   orderParams: order.params,
-                  metadata: {},
+                  metadata: {
+                    fromOnChain: true
+                  },
                 },
               });
+              // Skip
+              break;
+            }
+          } catch (error) {
+            // parse error
+          }
+        }
+
+        // Hanlde seaport-v1.4
+        for (let index = 0; index < allOrderParametersV14.length; index++) {
+          const parameters = allOrderParametersV14[index];
+          try {
+            const counter = await exchange.getCounter(baseProvider, parameters.offerer);
+            const order = new Sdk.SeaportV14.Order(config.chainId, {
+              ...parameters,
+              onChain: true,
+              counter,
+            });
+            order.params.signature = HashZero;
+            // Order hash match
+            if (orderId === order.hash()) {
+              // onChainData.orders.push({
+              //   kind: "seaport-v1.4",
+              //   info: {
+              //     kind: "full",
+              //     orderParams: order.params,
+              //     metadata: {
+              //       fromOnChain: true
+              //     },
+              //   },
+              // });
               // Skip
               break;
             }

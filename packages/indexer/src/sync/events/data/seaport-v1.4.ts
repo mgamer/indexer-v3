@@ -64,8 +64,8 @@ export const counterIncremented: EventData = {
 
 export const orderValidated: EventData = {
   kind: "seaport",
-  subKind: "seaport-v1.2-order-validated",
-  addresses: { [SeaportV12.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
+  subKind: "seaport-v1.4-order-validated",
+  addresses: { [SeaportV14.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
   topic: "0xf280791efe782edcf06ce15c8f4dff17601db3b88eb3805a0db7d77faf757f04",
   numTopics: 1,
   abi: new Interface([
