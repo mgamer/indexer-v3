@@ -3,10 +3,13 @@ import { Provider } from "@ethersproject/abstract-provider";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
+import axios from "axios";
 
 import * as Common from "../common";
 import { bn } from "../utils";
 import * as Addresses from "./addresses";
+
+const zeroExEndpoint = `https://api.0x.org`;
 
 export const getPoolFeatures = async (address: string, provider: Provider) => {
   const iface = new Interface([
@@ -90,6 +93,68 @@ export const getPoolPrice = async (
     }
 
     return {
+      feeBps: bn(fees.mintFee).div("100000000000000").toString(),
+      price: price.toString(),
+    };
+  }
+};
+
+export const getPoolPriceFor0x = async (
+  vault: string,
+  amount: number,
+  side: "sell" | "buy",
+  slippage: number,
+  provider: Provider
+): Promise<{
+  feeBps: BigNumberish;
+  price: BigNumberish;
+  swapCallData: string;
+}> => {
+  const chainId = await provider.getNetwork().then((n) => n.chainId);
+  const weth = Common.Addresses.Weth[chainId];
+  const localAmount = parseEther(amount.toString());
+  const fees = await getPoolFees(vault, provider);
+  const unit = parseEther("1");
+
+  if (side === "buy") {
+    const params = {
+      buyToken: vault,
+      sellToken: weth,
+      slippagePercentage: (slippage / 100000).toString(),
+      buyAmount: localAmount.add(localAmount.mul(fees.redeemFee).div(unit)).toString(),
+    };
+    const { data } = await axios.get(`${zeroExEndpoint}/swap/v1/quote`, {
+      params,
+    });
+
+    let price = data.sellAmount;
+    if (slippage) {
+      price = bn(price).add(bn(price).mul(slippage).div(10000));
+    }
+
+    return {
+      swapCallData: data.data,
+      feeBps: bn(fees.redeemFee).div("100000000000000").toString(),
+      price: price.toString(),
+    };
+  } else {
+    const params = {
+      buyToken: weth,
+      sellToken: vault,
+      slippagePercentage: (slippage / 100000).toString(),
+      sellAmount: localAmount.sub(localAmount.mul(fees.mintFee).div(unit)).toString(),
+    };
+    const { data } = await axios.get(`${zeroExEndpoint}/swap/v1/quote`, {
+      params,
+    });
+
+    let price = data.buyAmount;
+    if (slippage) {
+      price = bn(price!).sub(bn(price).mul(slippage).div(10000));
+    }
+
+    return {
+      swapCallData: data.data,
       feeBps: bn(fees.mintFee).div("100000000000000").toString(),
       price: price.toString(),
     };

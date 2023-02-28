@@ -14,6 +14,10 @@ export class Order {
       throw new Error("Invalid params");
     }
   }
+
+  isZeroEx() {
+    return this.params.path.length === 0 && this.params.swapCallData != undefined;
+  }
 }
 
 const normalize = (order: Types.OrderParams): Types.OrderParams => {
@@ -31,6 +35,7 @@ const normalize = (order: Types.OrderParams): Types.OrderParams => {
     currency: s(order.currency),
     amount: s(order.amount),
     path: order.path ? order.path.map(s) : [],
+    swapCallData: order.swapCallData ?? undefined,
     price: s(order.price),
     extra: {
       prices: order.extra.prices.map(s),
