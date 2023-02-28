@@ -99,7 +99,7 @@ export const getPoolPrice = async (
   }
 };
 
-export const getPoolPriceFor0x = async (
+export const getPoolPriceFrom0x = async (
   vault: string,
   amount: number,
   side: "sell" | "buy",

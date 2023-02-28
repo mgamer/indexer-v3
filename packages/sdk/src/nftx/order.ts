@@ -39,6 +39,7 @@ const normalize = (order: Types.OrderParams): Types.OrderParams => {
     price: s(order.price),
     extra: {
       prices: order.extra.prices.map(s),
+      swapCallDatas: order.extra.swapCallDatas ?? undefined,
     },
   };
 };

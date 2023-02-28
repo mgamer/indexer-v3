@@ -11,5 +11,6 @@ export type OrderParams = {
   price: string;
   extra: {
     prices: string[];
+    swapCallDatas: string[];
   };
 };

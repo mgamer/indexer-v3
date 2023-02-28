@@ -251,6 +251,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
           poolPrices[poolId].push(price);
           // Override the order's price
           order.price = price;
+
+          // Override the NFTx order's swapCallData
+          if (order.kind === "nftx") {
+            const rawData = order.rawData as Sdk.Nftx.Types.OrderParams;
+            const swapCallData = rawData.extra.swapCallDatas[poolPrices[poolId].length];
+            rawData.swapCallData = swapCallData;
+          }
         }
 
         // Increment the order's quantity filled

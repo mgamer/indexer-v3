@@ -146,7 +146,7 @@ describe("[ReservoirV6_0_0] NFTX-ZeroEx offers", () => {
         isCancelled: partial && getRandomBoolean(),
       }
 
-      const poolPrice = await Sdk.Nftx.Helpers.getPoolPriceFor0x(
+      const poolPrice = await Sdk.Nftx.Helpers.getPoolPriceFrom0x(
         vaultAddress,
         1,
         "sell",
