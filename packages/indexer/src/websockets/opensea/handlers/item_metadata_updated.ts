@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { ItemMetadataUpdatePayload } from "@opensea/stream-js";
 import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
 import { logger } from "@/common/logger";
@@ -14,8 +16,8 @@ export const handleEvent = async (payload: ItemMetadataUpdatePayload | any): Pro
   const token = await Tokens.getByContractAndTokenId(contract, tokenId);
   if (!token) {
     logger.warn(
-        "opensea-websocket-ITEM_METADATA_UPDATED",
-        `Token was not found for metadata event: ${JSON.stringify(payload)}`
+      "opensea-websocket-ITEM_METADATA_UPDATED",
+      `Token was not found for metadata event: ${JSON.stringify(payload)}`
     );
     return;
   }
@@ -34,7 +36,9 @@ export const handleEvent = async (payload: ItemMetadataUpdatePayload | any): Pro
 
   logger.info(
     "opensea-websocket-ITEM_METADATA_UPDATED",
-    `Metadata event received: ${JSON.stringify(payload)}.\nResponse from metadata API: ${JSON.stringify(metadata)}`
+    `Metadata event received: ${JSON.stringify(
+      payload
+    )}.\nResponse from metadata API: ${JSON.stringify(metadata)}`
   );
 
   if (metadata) {
