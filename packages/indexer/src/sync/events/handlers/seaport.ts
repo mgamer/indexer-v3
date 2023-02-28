@@ -117,7 +117,9 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           // that the order was just auxiliary most of the time)
           const matched = matchedOrderIds[baseEventParams.txHash];
           if (matched && matched.has(orderId)) {
-            const txSender = await utils.fetchTransaction(baseEventParams.txHash);
+            const txSender = await utils
+              .fetchTransaction(baseEventParams.txHash)
+              .then(({ from }) => from);
             if (maker === txSender) {
               break;
             }
