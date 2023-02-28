@@ -12,7 +12,7 @@ export type OrderMetadata = {
   source?: string;
   target?: string;
   originatedAt?: string;
-  fromOnChain?: boolean
+  fromOnChain?: boolean;
 };
 
 // Underlying database model for an order

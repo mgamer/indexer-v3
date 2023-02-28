@@ -281,7 +281,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
                   kind: "full",
                   orderParams: order.params,
                   metadata: {
-                    fromOnChain: true
+                    fromOnChain: true,
                   },
                 },
               });

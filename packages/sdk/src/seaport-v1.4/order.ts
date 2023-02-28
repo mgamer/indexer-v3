@@ -451,6 +451,6 @@ const normalize = (order: Types.OrderComponents): Types.OrderComponents => {
     salt: s(order.salt),
     conduitKey: lc(order.conduitKey),
     counter: s(order.counter),
-    signature: order.signature ? lc(order.signature) : undefined
+    signature: order.signature ? lc(order.signature) : undefined,
   };
 };
