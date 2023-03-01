@@ -297,7 +297,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           }
         }
 
-        // Hanlde seaport
+        // Handle seaport
         for (let index = 0; index < allOrderParameters.length; index++) {
           const parameters = allOrderParameters[index];
           try {
@@ -328,7 +328,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           }
         }
 
-        // Hanlde seaport-v1.4
+        // Handle seaport-v1.4
         for (let index = 0; index < allOrderParametersV14.length; index++) {
           const parameters = allOrderParametersV14[index];
           try {
