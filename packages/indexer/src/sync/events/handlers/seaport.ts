@@ -19,6 +19,23 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
   const orderIdsToSkip = new Set<string>();
 
+  // For each transaction keep track of the orders that were explicitly matched
+  const matchedOrderIds: { [txHash: string]: Set<string> } = {};
+  for (const { baseEventParams, log } of events.filter(
+    ({ subKind }) => subKind === "seaport-v1.4-orders-matched"
+  )) {
+    const txHash = baseEventParams.txHash;
+    if (!matchedOrderIds[txHash]) {
+      matchedOrderIds[txHash] = new Set<string>();
+    }
+
+    const eventData = getEventData(["seaport-v1.4-orders-matched"])[0];
+    const parsedLog = eventData.abi.parseLog(log);
+    for (const orderId of parsedLog.args["orderHashes"]) {
+      matchedOrderIds[txHash].add(orderId);
+    }
+  }
+
   // Handle the events
   let i = 0;
   for (const { subKind, baseEventParams, log } of events) {
@@ -84,6 +101,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const offer = parsedLog.args["offer"];
         const consideration = parsedLog.args["consideration"];
 
+        // Skip the order if needed
         if (orderIdsToSkip.has(orderId)) {
           break;
         }
@@ -96,6 +114,19 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         const saleInfo = exchange.deriveBasicSale(offer, consideration);
         if (saleInfo) {
+          // If the order was explicitly matched, make sure to exclude it if
+          // the transaction sender is the order's offerer (since this means
+          // that the order was just auxiliary most of the time)
+          const matched = matchedOrderIds[baseEventParams.txHash];
+          if (matched && matched.has(orderId)) {
+            const txSender = await utils
+              .fetchTransaction(baseEventParams.txHash)
+              .then(({ from }) => from);
+            if (maker === txSender) {
+              break;
+            }
+          }
+
           // Handle: filling via `matchOrders`
           if (
             taker === AddressZero &&
