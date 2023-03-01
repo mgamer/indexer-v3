@@ -283,12 +283,16 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           }
 
           for (let index = 0; index < validateCalls.length; index++) {
-            const inputData = exchange.contract.interface.decodeFunctionData(
-              "validate",
-              validateCalls[index].input
-            );
-            for (let index = 0; index < inputData.orders.length; index++) {
-              allOrderParameters.push(inputData.orders[index].parameters);
+            try {
+              const inputData = exchange.contract.interface.decodeFunctionData(
+                "validate",
+                validateCalls[index].input
+              );
+              for (let index = 0; index < inputData.orders.length; index++) {
+                allOrderParameters.push(inputData.orders[index].parameters);
+              }
+            } catch {
+              // Parse error
             }
           }
         }
@@ -337,16 +341,16 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             order.params.signature = HashZero;
             // Order hash match
             if (orderId === order.hash()) {
-              // onChainData.orders.push({
-              //   kind: "seaport-v1.4",
-              //   info: {
-              //     kind: "full",
-              //     orderParams: order.params,
-              //     metadata: {
-              //       fromOnChain: true
-              //     },
-              //   },
-              // });
+              onChainData.orders.push({
+                kind: "seaport-v1.4",
+                info: {
+                  kind: "full",
+                  orderParams: order.params,
+                  metadata: {
+                    fromOnChain: true,
+                  },
+                },
+              });
               // Skip
               break;
             }

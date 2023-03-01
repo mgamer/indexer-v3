@@ -225,6 +225,7 @@ const allEventData = [
   seaportV14.orderCancelled,
   seaportV14.orderFulfilled,
   seaportV14.ordersMatched,
+  seaportV14.orderValidated,
   wyvernV2.ordersMatched,
   wyvernV23.ordersMatched,
   zeroExV4.erc721OrderCancelled,
