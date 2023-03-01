@@ -255,8 +255,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
           // Override the NFTx order's swapCallData
           if (order.kind === "nftx") {
             const rawData = order.rawData as Sdk.Nftx.Types.OrderParams;
-            const swapCallData = rawData.extra.swapCallDatas[poolPrices[poolId].length];
-            rawData.swapCallData = swapCallData;
+            // Make sure it's new version
+            if (rawData.swapCallData) {
+              const swapCallData = rawData.extra.swapCallDatas[poolPrices[poolId].length];
+              rawData.swapCallData = swapCallData;
+            }
           }
         }
 
