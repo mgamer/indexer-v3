@@ -252,13 +252,22 @@ export const getExecuteBuyV7Options: RouteOptions = {
           // Override the order's price
           order.price = price;
 
-          // Override the NFTx order's swapCallData
+          // Attach the ZeroEx calldata
           if (order.kind === "nftx") {
             const rawData = order.rawData as Sdk.Nftx.Types.OrderParams;
-            // Make sure it's new version
-            if (rawData.swapCallData) {
-              const swapCallData = rawData.extra.swapCallDatas[poolPrices[poolId].length];
+            const sdkOrder = new Sdk.Nftx.Order(config.chainId, rawData);
+            if (sdkOrder.isZeroEx()) {
+              const orderCount = poolPrices[poolId].length;
+              const slippage = 0;
+              const { swapCallData, price } = await sdkOrder.getQuote(
+                orderCount,
+                slippage,
+                baseProvider
+              );
               rawData.swapCallData = swapCallData;
+              // Override
+              order.price = price.toString();
+              poolPrices[poolId][poolPrices[poolId].length] = price.toString();
             }
           }
         }

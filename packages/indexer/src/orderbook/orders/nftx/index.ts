@@ -117,7 +117,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           });
         } else {
           const priceList = [];
-          const swapCallDataList = [];
           for (let index = 0; index < 10; index++) {
             try {
               const poolPrice = await Sdk.Nftx.Helpers.getPoolPriceFrom0x(
@@ -135,7 +134,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
           if (priceList.length) {
             // Handle: prices
-            const { price, feeBps: bps, swapCallData } = priceList[0];
+            const { price, feeBps: bps } = priceList[0];
             const value = bn(price).sub(bn(price).mul(bps).div(10000)).toString();
 
             const prices: string[] = [];
@@ -145,7 +144,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   .sub(prices.length ? priceList[prices.length - 1].price : 0)
                   .toString()
               );
-              swapCallDataList.push(p.swapCallData);
             }
 
             // Handle: fees
@@ -202,10 +200,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               currency: Sdk.Common.Addresses.Weth[config.chainId],
               path: [],
               price: price.toString(),
-              swapCallData,
               extra: {
                 prices,
-                swapCallDatas: swapCallDataList,
               },
             });
 
@@ -371,7 +367,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       // Handle sell orders
       try {
         const priceList = [];
-        const swapCallDataList: string[] = [];
         for (let index = 0; index < 10; index++) {
           try {
             const poolPrice = await Sdk.Nftx.Helpers.getPoolPriceFrom0x(
@@ -394,11 +389,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               .sub(prices.length ? priceList[prices.length - 1].price : 0)
               .toString()
           );
-          swapCallDataList.push(p.swapCallData);
         }
 
         // Handle: prices
-        const { price, feeBps: bps, swapCallData } = priceList[0];
+        const { price, feeBps: bps } = priceList[0];
         const value = price;
 
         // Handle: fees
@@ -492,10 +486,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     amount: "1",
                     path: [],
                     price: price.toString(),
-                    swapCallData,
                     extra: {
                       prices,
-                      swapCallDatas: swapCallDataList,
                     },
                   });
 

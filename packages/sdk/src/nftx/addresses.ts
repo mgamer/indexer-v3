@@ -12,6 +12,10 @@ export const NFTXStakingZap: ChainIdToAddress = {
   [Network.Ethereum]: "0xdc774d5260ec66e5dd4627e1dd800eff3911345c",
 };
 
+export const ZeroExMarketplaceZap = {
+  [Network.Ethereum]: "0x941a6d105802cccaa06de58a13a6f49ebdcd481c",
+};
+
 export const SushiRouter: ChainIdToAddress = {
   [Network.Ethereum]: "0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f",
 };
