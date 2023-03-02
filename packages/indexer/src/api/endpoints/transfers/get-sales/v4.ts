@@ -377,28 +377,37 @@ export const getSalesV4Options: RouteOptions = {
           ),
           washTradingScore: r.wash_trading_score,
           royaltyFeeBps:
-            r.royalty_fee_bps !== null && feeInfoIsValid ? r.royalty_fee_bps : undefined,
+            r.royalty_fee_bps !== null ? (feeInfoIsValid ? r.royalty_fee_bps : 0) : undefined,
           marketplaceFeeBps:
-            r.marketplace_fee_bps !== null && feeInfoIsValid ? r.marketplace_fee_bps : undefined,
+            r.marketplace_fee_bps !== null
+              ? feeInfoIsValid
+                ? r.marketplace_fee_bps
+                : 0
+              : undefined,
           paidFullRoyalty:
-            r.paid_full_royalty !== null && feeInfoIsValid ? r.paid_full_royalty : undefined,
+            r.paid_full_royalty !== null
+              ? feeInfoIsValid
+                ? r.paid_full_royalty
+                : false
+              : undefined,
           feeBreakdown:
-            (r.royalty_fee_breakdown !== null || r.marketplace_fee_breakdown !== null) &&
-            feeInfoIsValid
-              ? [].concat(
-                  (r.royalty_fee_breakdown ?? []).map((detail: any) => {
-                    return {
-                      kind: "royalty",
-                      ...detail,
-                    };
-                  }),
-                  (r.marketplace_fee_breakdown ?? []).map((detail: any) => {
-                    return {
-                      kind: "marketplace",
-                      ...detail,
-                    };
-                  })
-                )
+            r.royalty_fee_breakdown !== null || r.marketplace_fee_breakdown !== null
+              ? feeInfoIsValid
+                ? [].concat(
+                    (r.royalty_fee_breakdown ?? []).map((detail: any) => {
+                      return {
+                        kind: "royalty",
+                        ...detail,
+                      };
+                    }),
+                    (r.marketplace_fee_breakdown ?? []).map((detail: any) => {
+                      return {
+                        kind: "marketplace",
+                        ...detail,
+                      };
+                    })
+                  )
+                : []
               : undefined,
         };
       });
