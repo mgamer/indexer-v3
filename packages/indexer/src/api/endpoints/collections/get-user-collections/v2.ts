@@ -204,7 +204,7 @@ export const getUserCollectionsV2Options: RouteOptions = {
                 SUM(COALESCE(nbsample.amount, 0)) AS owner_token_count,
                 ${selectLiquidCount}
                 SUM(CASE WHEN tokens.floor_sell_value IS NULL THEN 0 ELSE 1 END) AS owner_on_sale_count
-        FROM nft_balances 
+        FROM nbsample 
         JOIN tokens ON nbsample.contract = tokens.contract AND nbsample.token_id = tokens.token_id
         ${liquidCount}
         JOIN collections ON tokens.collection_id = collections.id
