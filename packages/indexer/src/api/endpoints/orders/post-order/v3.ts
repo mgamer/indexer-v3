@@ -783,7 +783,7 @@ export const postOrderV3Options: RouteOptions = {
         }
       }
 
-      return { message: "Request accepted" };
+      throw Boom.badImplementation("Unreachable");
     } catch (error) {
       logger.error(`post-order-${version}-handler`, `Handler failure: ${error}`);
       throw error;
