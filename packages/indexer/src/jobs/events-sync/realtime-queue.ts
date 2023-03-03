@@ -32,7 +32,7 @@ if (config.doBackgroundWork) {
       await tracer.trace("processEvent", { resource: "eventsSyncRealtime" }, async () => {
         try {
           // On polygon prevent multiple syncs at the same time
-          if (config.chainId === 137 && !(await acquireLock(QUEUE_NAME, 60))) {
+          if (config.chainId === 137 && !(await acquireLock(QUEUE_NAME, 300))) {
             return;
           }
 
