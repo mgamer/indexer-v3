@@ -271,7 +271,6 @@ export const jobProcessor = async (job: Job) => {
     await addToQueue([job.data], false, result[0].delay);
   } else {
     logger.debug(job.queueName, `[${kind}] Order save result: ${JSON.stringify(result)}`);
-    logger.info(job.queueName, `[${kind}] Order save result: ${JSON.stringify(result)}`);
   }
 };
 
