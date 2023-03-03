@@ -108,5 +108,3 @@ if (config.doBackgroundWork) {
 export const addToQueue = async () => {
   await queue.add(randomUUID(), {});
 };
-
-queue.clean(0, 1000, "paused");
