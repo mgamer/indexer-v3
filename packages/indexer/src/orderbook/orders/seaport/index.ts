@@ -227,7 +227,10 @@ export const save = async (
       let fillabilityStatus = "fillable";
       let approvalStatus = "approved";
       try {
-        await offChainCheck(order, { onChainApprovalRecheck: true });
+        await offChainCheck(order, {
+          onChainApprovalRecheck: true,
+          singleTokenERC721ApprovalCheck: metadata.fromOnChain,
+        });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         // Keep any orders that can potentially get valid in the future
