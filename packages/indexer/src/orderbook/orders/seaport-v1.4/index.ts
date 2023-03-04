@@ -178,6 +178,15 @@ export const save = async (
         });
       }
 
+      // Check: order is partially-fillable
+      const quantityRemaining = info.amount ?? "1";
+      if ([0, 2].includes(order.params.orderType) && bn(quantityRemaining).gt(1)) {
+        return results.push({
+          id,
+          status: "not-partially-fillable",
+        });
+      }
+
       // Check: order has a known zone
       if (order.params.orderType > 1) {
         if (
@@ -693,7 +702,7 @@ export const save = async (
         currency_price: currencyPrice.toString(),
         currency_value: currencyValue.toString(),
         needs_conversion: needsConversion,
-        quantity_remaining: info.amount ?? "1",
+        quantity_remaining: quantityRemaining,
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
         nonce: bn(order.params.counter).toString(),
         source_id_int: source?.id,
