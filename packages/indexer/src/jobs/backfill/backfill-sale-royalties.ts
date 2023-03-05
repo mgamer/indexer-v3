@@ -165,7 +165,7 @@ if (config.doBackgroundWork) {
         })
       );
 
-      if (results.length >= 0) {
+      if (results.length > 0) {
         const lastResult = results[results.length - 1];
         await addToQueue(lastResult.block);
       } else if (block > 7000000) {
