@@ -149,7 +149,9 @@ if (config.doBackgroundWork) {
         };
       });
 
-      await idb.none(pgp.helpers.concat(queries));
+      if (queries.length) {
+        await idb.none(pgp.helpers.concat(queries));
+      }
 
       const time5 = performance.now();
 
