@@ -164,7 +164,7 @@ if (config.doBackgroundWork) {
         await addToQueue(fromBlock, toBlock, nextBlock);
       }
     },
-    { connection: redis.duplicate(), concurrency: 10 }
+    { connection: redis.duplicate(), concurrency: 1 }
   );
 
   worker.on("error", (error) => {
