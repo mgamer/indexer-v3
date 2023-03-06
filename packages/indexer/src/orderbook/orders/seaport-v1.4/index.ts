@@ -178,21 +178,32 @@ export const save = async (
         });
       }
 
-      // Check: order has a known zone
-      if (
-        ![
-          // No zone
-          AddressZero,
-          // Pausable zone
-          Sdk.SeaportV14.Addresses.PausableZone[config.chainId],
-          // Cancellation zone
-          Sdk.SeaportV14.Addresses.CancellationZone[config.chainId],
-        ].includes(order.params.zone)
-      ) {
+      // Check: order is partially-fillable
+      const quantityRemaining = info.amount ?? "1";
+      if ([0, 2].includes(order.params.orderType) && bn(quantityRemaining).gt(1)) {
         return results.push({
           id,
-          status: "unsupported-zone",
+          status: "not-partially-fillable",
         });
+      }
+
+      // Check: order has a known zone
+      if (order.params.orderType > 1) {
+        if (
+          ![
+            // No zone
+            AddressZero,
+            // Pausable zone
+            Sdk.SeaportV14.Addresses.PausableZone[config.chainId],
+            // Cancellation zone
+            Sdk.SeaportV14.Addresses.CancellationZone[config.chainId],
+          ].includes(order.params.zone)
+        ) {
+          return results.push({
+            id,
+            status: "unsupported-zone",
+          });
+        }
       }
 
       // Check: order is valid
@@ -221,7 +232,10 @@ export const save = async (
       let fillabilityStatus = "fillable";
       let approvalStatus = "approved";
       try {
-        await offChainCheck(order, { onChainApprovalRecheck: true });
+        await offChainCheck(order, {
+          onChainApprovalRecheck: true,
+          singleTokenERC721ApprovalCheck: metadata.fromOnChain,
+        });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         // Keep any orders that can potentially get valid in the future
@@ -691,9 +705,9 @@ export const save = async (
         currency_price: currencyPrice.toString(),
         currency_value: currencyValue.toString(),
         needs_conversion: needsConversion,
-        quantity_remaining: info.amount ?? "1",
+        quantity_remaining: quantityRemaining,
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
-        nonce: order.params.counter,
+        nonce: bn(order.params.counter).toString(),
         source_id_int: source?.id,
         is_reservoir: isReservoir ? isReservoir : null,
         contract: toBuffer(info.contract),
