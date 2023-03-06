@@ -33,7 +33,7 @@ if (config.doBackgroundWork) {
 
       const time1 = performance.now();
 
-      const blockRange = 20;
+      const blockRange = 10;
       const results = await redb.manyOrNone(
         `
           SELECT
