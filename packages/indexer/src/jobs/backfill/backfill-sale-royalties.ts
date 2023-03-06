@@ -31,6 +31,10 @@ if (config.doBackgroundWork) {
     async (job) => {
       const { fromBlock, toBlock, currentBlock } = job.data;
 
+      if (fromBlock < 15500000) {
+        return;
+      }
+
       const time1 = performance.now();
 
       const blockRange = 10;
@@ -164,7 +168,7 @@ if (config.doBackgroundWork) {
         await addToQueue(fromBlock, toBlock, nextBlock);
       }
     },
-    { connection: redis.duplicate(), concurrency: 1 }
+    { connection: redis.duplicate(), concurrency: 10 }
   );
 
   worker.on("error", (error) => {
@@ -186,24 +190,6 @@ if (config.doBackgroundWork) {
         await addToQueue(15700000, 15800000, 15800001);
         await addToQueue(15600000, 15700000, 15700001);
         await addToQueue(15500000, 15600000, 15600001);
-      })
-      .catch(() => {
-        // Skip on any errors
-      });
-
-    redlock
-      .acquire([`${QUEUE_NAME}-lock-2`], 60 * 60 * 24 * 30 * 1000)
-      .then(async () => {
-        await addToQueue(15400000, 15500000, 15500001);
-        await addToQueue(15300000, 15400000, 15400001);
-        await addToQueue(15200000, 15300000, 15300001);
-        await addToQueue(15100000, 15200000, 15200001);
-        await addToQueue(15000000, 15100000, 15100001);
-        await addToQueue(14900000, 15000000, 15000001);
-        await addToQueue(14800000, 14900000, 14900001);
-        await addToQueue(14700000, 14800000, 14800001);
-        await addToQueue(14600000, 14700000, 14700001);
-        await addToQueue(14500000, 14600000, 14600001);
       })
       .catch(() => {
         // Skip on any errors
