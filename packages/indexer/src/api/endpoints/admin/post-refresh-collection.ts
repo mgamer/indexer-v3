@@ -32,7 +32,7 @@ export const postRefreshCollectionOptions: RouteOptions = {
         )
         .required(),
       refreshKind: Joi.string()
-        .allow(["full-collection", "full-collection-by-slug"])
+        .valid("full-collection", "full-collection-by-slug")
         .default("full-collection"),
       cacheOnly: Joi.boolean()
         .default(false)
