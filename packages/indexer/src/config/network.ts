@@ -391,7 +391,7 @@ export const getNetworkSettings = (): NetworkSettings => {
       return {
         ...defaultNetworkSettings,
         enableWebSocket: false,
-        realtimeSyncMaxBlockLag: 50,
+        realtimeSyncMaxBlockLag: 75,
         subDomain: "api-arbitrum",
         coingecko: {
           networkId: "arbitrum-one",
