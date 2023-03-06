@@ -95,24 +95,18 @@ if (config.doBackgroundWork) {
 
       // Prepare the caches for efficiency
 
-      for (const [txHash, fillEvents] of Object.entries(fillEventsPerTxHash)) {
-        await redis.set(
-          `get-fill-events-from-tx:${txHash}`,
-          JSON.stringify(fillEvents),
-          "EX",
-          10 * 60
-        );
-      }
+      await Promise.all(
+        Object.entries(fillEventsPerTxHash).map(async ([txHash, fillEvents]) =>
+          redis.set(`get-fill-events-from-tx:${txHash}`, JSON.stringify(fillEvents), "EX", 10 * 60)
+        )
+      );
 
       const traces = await fetchTransactionTraces(Object.keys(fillEventsPerTxHash));
-      for (const trace of traces) {
-        await redis.set(
-          `fetch-transaction-trace:${trace.hash}`,
-          JSON.stringify(trace),
-          "EX",
-          10 * 60
-        );
-      }
+      await Promise.all(
+        Object.values(traces).map(async (trace) =>
+          redis.set(`fetch-transaction-trace:${trace.hash}`, JSON.stringify(trace), "EX", 10 * 60)
+        )
+      );
 
       const time3 = performance.now();
 
