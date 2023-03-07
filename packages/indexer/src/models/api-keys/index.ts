@@ -63,8 +63,7 @@ export class ApiKeyManager {
     }
 
     if (created) {
-      let sanitizedValues = values;
-
+      const sanitizedValues = values;
       sanitizedValues.app_name.replace("@", "@ ");
       sanitizedValues.website.replace("@", "@ ");
 
