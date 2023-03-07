@@ -371,7 +371,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 ON orders.token_set_id = token_sets_tokens.token_set_id
               WHERE orders.id = $/id/
                 AND orders.side = 'sell'
-                AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
                 AND orders.quantity_remaining >= $/quantity/
                 ${
                   payload.allowInactiveOrderIds
