@@ -278,8 +278,6 @@ export const getUserCollectionsV2Options: RouteOptions = {
         ${topBidQuery}
       `;
 
-      // eslint-disable-next-line
-      console.log(baseQuery, { ...params, ...query });
       const result = await redb.manyOrNone(baseQuery, { ...params, ...query });
 
       const sources = await Sources.getInstance();
