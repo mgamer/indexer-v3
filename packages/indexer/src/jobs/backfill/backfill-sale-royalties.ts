@@ -35,10 +35,6 @@ if (config.doBackgroundWork) {
     async (job) => {
       const { fromBlock, toBlock, currentBlock } = job.data;
 
-      if (fromBlock < 15500000) {
-        return;
-      }
-
       const time1 = performance.now();
 
       const blockRange = 10;
