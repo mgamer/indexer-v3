@@ -35,34 +35,34 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # - name: Set up Docker Buildx
-      #   if: steps.semantic.outputs.new_release_version != ''
-      #   id: buildx
-      #   uses: docker/setup-buildx-action@v1
+      - name: Set up Docker Buildx
+        if: steps.semantic.outputs.new_release_version != ''
+        id: buildx
+        uses: docker/setup-buildx-action@v1
 
-      # - name: Login to GitHub Container Registry
-      #   if: steps.semantic.outputs.new_release_version != ''
-      #   uses: docker/login-action@v2
-      #   with:
-      #     registry: ghcr.io
-      #     username: ${{ github.repository_owner }}
-      #     password: ${{ env.GITHUB_TOKEN }}
+      - name: Login to GitHub Container Registry
+        if: steps.semantic.outputs.new_release_version != ''
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      # - name: Build and push
-      #   if: steps.semantic.outputs.new_release_version != ''
-      #   uses: docker/build-push-action@v3
-      #   with:
-      #     push: true
-      #     tags: |
-      #       ghcr.io/unevenlabs/indexer:latest
-      #       ghcr.io/unevenlabs/indexer:${{ steps.semantic.outputs.new_release_version }}
-      #       ghcr.io/unevenlabs/indexer:${{ github.sha }}
-      #     build-args: |
-      #       VERSION=${{ steps.semantic.outputs.new_release_version }}
+      - name: Build and push
+        if: steps.semantic.outputs.new_release_version != ''
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          tags: |
+            ghcr.io/unevenlabs/indexer:latest
+            ghcr.io/unevenlabs/indexer:${{ steps.semantic.outputs.new_release_version }}
+            ghcr.io/unevenlabs/indexer:${{ github.sha }}
+          build-args: |
+            VERSION=${{ steps.semantic.outputs.new_release_version }}
 
-      # - name: Publish github release
-      #   if: steps.semantic.outputs.new_release_version != ''
-      #   uses: cycjimmy/semantic-release-action@v3
+      - name: Publish github release
+        if: steps.semantic.outputs.new_release_version != ''
+        uses: cycjimmy/semantic-release-action@v3
 
   # deploy-dev:
   #   name: Deploy Dev Env
