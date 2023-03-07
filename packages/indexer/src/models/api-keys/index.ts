@@ -289,7 +289,7 @@ export class ApiKeyManager {
               type: "section",
               text: {
                 type: "mrkdwn",
-                text: `*Email:* ${values.email}`,
+                text: `Email: ${values.email}`,
               },
             },
           ],
