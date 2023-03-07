@@ -67,7 +67,7 @@ export class ApiKeyManager {
       sanitizedValues.app_name.replace("@", "@ ");
       sanitizedValues.website.replace("@", "@ ");
 
-      await ApiKeyManager.notifyApiKeyCreated(values);
+      await ApiKeyManager.notifyApiKeyCreated(sanitizedValues);
     }
 
     return {
