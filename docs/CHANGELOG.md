@@ -1,3 +1,10 @@
+## [5.261.1](https://github.com/reservoirprotocol/indexer/compare/v5.261.0...v5.261.1) (2023-03-07)
+
+
+### Bug Fixes
+
+* ghcr ([74afb30](https://github.com/reservoirprotocol/indexer/commit/74afb30dd08872b5b948254509da5229d166693f))
+
 # [5.261.0](https://github.com/reservoirprotocol/indexer/compare/v5.260.0...v5.261.0) (2023-03-07)
 
 
