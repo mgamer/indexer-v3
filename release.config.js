@@ -20,7 +20,7 @@ module.exports = {
           "package.json",
           "package-lock.json"
         ],
-        "message": "chore(release): CHANGELOGS ${nextRelease.version} [skip ci]"
+        "message": "chore(release): update changelogs for ${nextRelease.version} [skip ci]"
       }
     ]
   ]
