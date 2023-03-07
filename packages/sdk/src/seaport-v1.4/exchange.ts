@@ -73,6 +73,43 @@ export class Exchange {
     }
 
     if (info.side === "sell") {
+      const isEligible =
+        // Order is single quantity
+        info.amount === "1" &&
+        // Order has no criteria
+        !matchParams.criteriaResolvers &&
+        // Order requires no extra data
+        !this.requiresExtraData(order);
+
+      if (order.isPrivateOrder() && isEligible) {
+        info = info as BaseOrderInfo;
+        const counterOrder = order.constructPrivateListingCounterOrder(taker);
+        const fulfillments = order.getPrivateListingFulfillments();
+        const orderWith = {
+          parameters: {
+            ...order.params,
+            totalOriginalConsiderationItems: order.params.consideration.length,
+          },
+          signature: order.params.signature,
+        };
+        return {
+          from: taker,
+          to: this.contract.address,
+          data:
+            this.contract.interface.encodeFunctionData("matchOrders", [
+              [orderWith, counterOrder],
+              fulfillments,
+            ]) + generateSourceBytes(options?.source),
+          value:
+            info.paymentToken === CommonAddresses.Eth[this.chainId]
+              ? bn(order.getMatchingPrice())
+                  .mul(matchParams.amount || "1")
+                  .div(info.amount)
+                  .toHexString()
+              : undefined,
+        };
+      }
+
       if (
         // Order is not private
         recipient === AddressZero &&
