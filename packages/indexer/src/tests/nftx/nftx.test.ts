@@ -9,6 +9,17 @@ import { Provider } from "@ethersproject/abstract-provider";
 import { BigNumber, BigNumberish } from "ethers";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
+import { getEnhancedEventsFromTx } from "@/events-sync/handlers";
+import { extractOnChainData } from "@/events-sync/handlers/royalties";
+
+export async function parseTranscation(txHash: string) {
+  const events = await getEnhancedEventsFromTx(txHash);
+  const allOnChainData = await extractOnChainData(events);
+  return {
+    events,
+    allOnChainData,
+  };
+}
 
 export const DEFAULT_SLIPPAGE = 1;
 
@@ -213,8 +224,9 @@ describe("NFTX", () => {
 
     for (let index = 0; index < testCases.length; index++) {
       // const testCase = testCases[index];
-      // const tx = await baseProvider.getTransactionReceipt(testCase.tx);
-      // const events = await getEventsFromTx(tx);
+      // const {
+      //   events
+      // } = await parseTranscation(testCase.tx);
       // try {
       //   const result = await handleEvents(events);
       //   const order = result?.orders?.find((c) => c.kind === "nftx");

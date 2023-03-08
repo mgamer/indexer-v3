@@ -145,7 +145,6 @@ export const getEnhancedEventsFromTx = async (txHash: string) => {
   const availableEventData = getEventData();
   const tx = await utils.fetchTransaction(txHash);
   const { logs } = await utils.fetchTransactionLogs(txHash);
-
   for (let i = 0; i < logs.length; i++) {
     const log = logs[i];
     const eventData = availableEventData.find(
