@@ -1,3 +1,10 @@
+## [5.261.3](https://github.com/reservoirprotocol/indexer/compare/v5.261.2...v5.261.3) (2023-03-08)
+
+
+### Bug Fixes
+
+* pipeline ([9d7e9ad](https://github.com/reservoirprotocol/indexer/commit/9d7e9ad84819d7f2163dcf0d96ce9f48a50e83a7))
+
 ## [5.261.2](https://github.com/reservoirprotocol/indexer/compare/v5.261.1...v5.261.2) (2023-03-08)
 
 
