@@ -6,3 +6,4 @@ import "@/jobs/backfill/backfill-sale-royalties";
 import "@/jobs/backfill/backfill-tokens-with-missing-collection";
 import "@/jobs/backfill/backfill-update-missing-metadata";
 import "@/jobs/backfill/backfill-tokens-last-flag-update";
+import "@/jobs/backfill/backfill-activities-collection-id";
