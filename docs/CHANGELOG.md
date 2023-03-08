@@ -1,3 +1,10 @@
+## [5.261.2](https://github.com/reservoirprotocol/indexer/compare/v5.261.1...v5.261.2) (2023-03-08)
+
+
+### Bug Fixes
+
+* dockerfile ([edb57a3](https://github.com/reservoirprotocol/indexer/commit/edb57a31ae121ec5d0dec8f43fa13e2f92fd913b))
+
 ## [5.261.1](https://github.com/reservoirprotocol/indexer/compare/v5.261.0...v5.261.1) (2023-03-07)
 
 
