@@ -8,6 +8,8 @@ import { redis } from "@/common/redis";
 import { logger } from "@/common/logger";
 import { Sources } from "@/models/sources";
 import { getJoiPriceObject } from "@/common/joi";
+import { Assets } from "@/utils/assets";
+import * as Sdk from "@reservoir0x/sdk";
 
 export class NewTopBidWebsocketEvent {
   public static async triggerEvent(data: NewTopBidWebsocketEventInfo) {
@@ -34,8 +36,25 @@ export class NewTopBidWebsocketEvent {
                      NULLIF(DATE_PART('epoch', UPPER(orders.valid_between)), 'Infinity'),
                      0
                    ) AS "valid_until",
-                (${criteriaBuildQuery}) AS criteria
+                (${criteriaBuildQuery}) AS criteria,
+                c.normalized_floor_sell_id AS floor_sell_id,
+                c.normalized_floor_sell_value AS floor_sell_value,
+                c.normalized_floor_sell_maker AS floor_sell_maker,
+                least(2147483647::NUMERIC, date_part('epoch', lower(c.normalized_floor_sell_valid_between)))::INT AS floor_sell_valid_from,
+                least(2147483647::NUMERIC, coalesce(nullif(date_part('epoch', upper(c.normalized_floor_sell_valid_between)), 'Infinity'),0))::INT AS floor_sell_valid_until,
+                c.normalized_floor_sell_source_id_int AS floor_sell_source_id_int,
+                floor_token.contract AS floor_sell_token_contract,
+                floor_token.token_id AS floor_sell_token_id,
+                floor_token.name AS floor_sell_token_name,
+                floor_token.image AS floor_sell_token_image,
+                orders.currency AS floor_sell_currency,
+                orders.currency_value AS floor_sell_currency_value
               FROM orders
+                JOIN collections c on orders.contract = c.contract
+                JOIN orders floor_order on orders.id = floor_sell_id
+                JOIN token_sets_tokens floor_token_sets ON floor_token_sets.token_set_id = floor_order.token_set_id
+                JOIN tokens floor_token ON floor_token.contract = floor_token_sets.contract AND floor_token.token_id = floor_token_sets.token_id
+
               WHERE orders.id = $/orderId/
               LIMIT 1
             `,
@@ -57,6 +76,10 @@ export class NewTopBidWebsocketEvent {
     const source = (await Sources.getInstance()).get(Number(order.source_id_int));
 
     for (const ownersChunk of ownersChunks) {
+      const floor_ask_currency = order.floor_sell_currency
+        ? fromBuffer(order.floor_sell_currency)
+        : Sdk.Common.Addresses.Eth[config.chainId];
+
       payloads.push({
         order: {
           id: order.id,
@@ -98,6 +121,32 @@ export class NewTopBidWebsocketEvent {
             fromBuffer(order.currency)
           ),
           criteria: order.criteria,
+          floorAsk: {
+            id: order.floor_sell_id,
+            sourceDomain: order.get(order.floor_sell_source_id_int)?.domain,
+            price: order.floor_sell_id
+              ? await getJoiPriceObject(
+                  {
+                    gross: {
+                      amount: order.floor_sell_value,
+                      nativeAmount: order.floor_sell_value,
+                    },
+                  },
+                  floor_ask_currency
+                )
+              : null,
+            maker: order.floor_sell_maker ? fromBuffer(order.floor_sell_maker) : null,
+            validFrom: order.floor_sell_valid_from,
+            validUntil: order.floor_sell_value ? order.floor_sell_valid_until : null,
+            token: order.floor_sell_value && {
+              contract: order.floor_sell_token_contract
+                ? fromBuffer(order.floor_sell_token_contract)
+                : null,
+              tokenId: order.floor_sell_token_id,
+              name: order.floor_sell_token_name,
+              image: Assets.getLocalAssetsLink(order.floor_sell_token_image),
+            },
+          },
         },
         owners: ownersChunk,
       });
