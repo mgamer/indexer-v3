@@ -1,3 +1,10 @@
+## [5.261.4](https://github.com/reservoirprotocol/indexer/compare/v5.261.3...v5.261.4) (2023-03-08)
+
+
+### Bug Fixes
+
+* update actions versions in pipeline ([fec815a](https://github.com/reservoirprotocol/indexer/commit/fec815a4055f7b362166b7b02a64b160a344d63d))
+
 ## [5.261.3](https://github.com/reservoirprotocol/indexer/compare/v5.261.2...v5.261.3) (2023-03-08)
 
 
