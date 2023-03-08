@@ -271,9 +271,7 @@ async function insertQueries(queries: string[], backfill: boolean) {
     // on the events to have been written to the database at the time
     // they get to run and we have no way to easily enforce this when
     // using the write buffer.
-    for (const query of _.chunk(queries, 300)) {
-      await idb.none(pgp.helpers.concat(query));
-    }
+    await idb.none(pgp.helpers.concat(queries));
   }
 }
 
