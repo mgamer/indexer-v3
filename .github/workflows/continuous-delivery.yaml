@@ -54,9 +54,9 @@ jobs:
         with:
           push: true
           tags: |
-            ghcr.io/unevenlabs/indexer:latest
-            ghcr.io/unevenlabs/indexer:${{ steps.semantic.outputs.new_release_version }}
-            ghcr.io/unevenlabs/indexer:${{ github.sha }}
+            ghcr.io/reservoirprotocol/indexer:latest
+            ghcr.io/reservoirprotocol/indexer:${{ steps.semantic.outputs.new_release_version }}
+            ghcr.io/reservoirprotocol/indexer:${{ github.sha }}
           build-args: |
             VERSION=${{ steps.semantic.outputs.new_release_version }}
 
