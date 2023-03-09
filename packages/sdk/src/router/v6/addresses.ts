@@ -1,23 +1,27 @@
 import { ChainIdToAddress, Network } from "../../utils";
 
+// Router
+
+// V6_0_0
 export const Router: ChainIdToAddress = {
-  [Network.Ethereum]: "0x178a86d36d89c7fdebea90b739605da7b131ff6a", // V6_0_0
-  [Network.EthereumGoerli]: "0xb35d22a4553ab9d2b85e2a606cbae55f844df50c", // V6_0_0
-  [Network.Polygon]: "0x819327e005a3ed85f7b634e195b8f25d4a2a45f8", // V6_0_0
-  [Network.Optimism]: "0xc0f489a34672d5b960a19279d99d77e94221d0c9", // V6_0_0
+  [Network.Ethereum]: "0x178a86d36d89c7fdebea90b739605da7b131ff6a",
+  [Network.EthereumGoerli]: "0xb35d22a4553ab9d2b85e2a606cbae55f844df50c",
+  [Network.Polygon]: "0x819327e005a3ed85f7b634e195b8f25d4a2a45f8",
+  [Network.Optimism]: "0xc0f489a34672d5b960a19279d99d77e94221d0c9",
 };
 
 // Utility modules
 
-export const BalanceAssertModule: ChainIdToAddress = {};
-
-export const WETHModule: ChainIdToAddress = {
-  [Network.Ethereum]: "0xe2537569b2f5c320db0c5b2510728d8de0da28e0",
-  [Network.EthereumGoerli]: "0x5282b9af3f38d4a5d1bb707f5d3acbd951950074",
-};
-
 export const Permit2Module: ChainIdToAddress = {
   [Network.Ethereum]: "0x482e4d362c8a2ea19e07b7234a14084a7d740b42",
+  [Network.Polygon]: "0x5db9abb17333f6eb12386eda955d6fc779bd78f4",
+  [Network.Optimism]: "0xc10d7937a42865d9355384b884f7d694c15e7781",
+};
+
+export const SwapModule: ChainIdToAddress = {
+  [Network.Ethereum]: "0x96fefdb0a543b3e30d8aaae865b7a48378d85382",
+  [Network.Polygon]: "0xd56789e9d7513fcafbf45a0e6333f381766092d2",
+  [Network.Optimism]: "0x3d2f5a97b70ee178bc0a7ad2068406e6d62c8b52",
 };
 
 // Exchange modules
@@ -42,18 +46,15 @@ export const SeaportModule: ChainIdToAddress = {
   [Network.Optimism]: "0x51e59caf8980d4284707daa2267ec4cc05f48374",
 };
 
-export const SeaportV12Module: ChainIdToAddress = {
-  [Network.Ethereum]: "0xc63cca6e3cf565921d3c8241f74ef7b1e404bb78",
-  [Network.EthereumGoerli]: "0x649f6fba84cbccdb86e6a0bd1af70687eaba1bb7",
+export const SeaportV14Module: ChainIdToAddress = {
+  [Network.Ethereum]: "0xfb3f14829f15b1303d6ca677e3fae5a558e064d1",
+  [Network.EthereumGoerli]: "0x9ec973b9471fd632aee6d67e0c74855d115bdbad",
+  [Network.Polygon]: "0xe37fc9756307dc29767f7952664d9f81b00c07b6",
+  [Network.Optimism]: "0x955a3019b4662dcb68d6cc71f198faf1f64c1bf9",
 };
 
 export const SudoswapModule: ChainIdToAddress = {
   [Network.Ethereum]: "0x79abbfdf20fc6dd0c51693bf9a481f7351a70fd2",
-};
-
-export const UniswapV3Module: ChainIdToAddress = {
-  [Network.Ethereum]: "0xe5ee6a6e8d57d1d315d1898c68ea1bc487b6ea92",
-  [Network.EthereumGoerli]: "0x6748fce2eabad140b36dc7300ad2eb31631410be",
 };
 
 export const X2Y2Module: ChainIdToAddress = {

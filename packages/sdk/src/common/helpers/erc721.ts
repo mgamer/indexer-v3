@@ -1,7 +1,4 @@
-import {
-  Provider,
-  TransactionResponse,
-} from "@ethersproject/abstract-provider";
+import { Provider, TransactionResponse } from "@ethersproject/abstract-provider";
 import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumberish } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
@@ -14,25 +11,19 @@ export class Erc721 {
   public contract: Contract;
 
   constructor(provider: Provider, address: string) {
-    this.contract = new Contract(address, Erc721Abi as any, provider);
+    this.contract = new Contract(address, Erc721Abi, provider);
   }
 
   public async isValid(): Promise<boolean> {
     return this.contract.supportsInterface("0x80ac58cd");
   }
 
-  public async approve(
-    approver: Signer,
-    operator: string
-  ): Promise<TransactionResponse> {
+  public async approve(approver: Signer, operator: string): Promise<TransactionResponse> {
     return this.contract.connect(approver).setApprovalForAll(operator, true);
   }
 
   public approveTransaction(approver: string, operator: string): TxData {
-    const data = this.contract.interface.encodeFunctionData(
-      "setApprovalForAll",
-      [operator, true]
-    );
+    const data = this.contract.interface.encodeFunctionData("setApprovalForAll", [operator, true]);
     return {
       from: approver,
       to: this.contract.address,
@@ -46,5 +37,9 @@ export class Erc721 {
 
   public async isApproved(owner: string, operator: string): Promise<boolean> {
     return this.contract.isApprovedForAll(owner, operator);
+  }
+
+  public async isApprovedSingleToken(tokenId: string, operator: string): Promise<boolean> {
+    return this.contract.getApproved(tokenId).then((a: string) => a.toLowerCase() === operator);
   }
 }

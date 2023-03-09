@@ -87,7 +87,7 @@ export const getTokensV5Options: RouteOptions = {
       tokenSetId: Joi.string()
         .lowercase()
         .description(
-          "Filter to a particular token set. `Example: token:0xa7d8d9ef8d8ce8992df33d8b8cf4aebabd5bd270:129000685`"
+          "Filter to a particular token set. Example: `token:CONTRACT:TOKEN_ID` representing a single token within contract, `contract:CONTRACT` representing a whole contract, `range:CONTRACT:START_TOKEN_ID:END_TOKEN_ID` representing a continuous token id range within a contract and `list:CONTRACT:TOKEN_IDS_HASH` representing a list of token ids within a contract."
         )
         .when("flagStatus", {
           is: Joi.exist(),
@@ -99,6 +99,9 @@ export const getTokensV5Options: RouteOptions = {
         .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
       source: Joi.string().description(
         "Domain of the order source. Example `opensea.io` (Only listed tokens are returned when filtering by source)"
+      ),
+      nativeSource: Joi.string().description(
+        "Domain of the order source. Example `www.apecoinmarketplace.com`. For a native marketplace, return all tokens listed on this marketplace, even if better prices are available on other marketplaces."
       ),
       minRarityRank: Joi.number()
         .integer()
@@ -158,6 +161,11 @@ export const getTokensV5Options: RouteOptions = {
       includeDynamicPricing: Joi.boolean()
         .default(false)
         .description("If true, dynamic pricing data will be returned in the response."),
+      includeRoyaltiesPaid: Joi.boolean()
+        .default(false)
+        .description(
+          "If true, a boolean indicating whether royalties were paid on a token's last sale will be returned in the response."
+        ),
       normalizeRoyalties: Joi.boolean()
         .default(false)
         .description("If true, prices will include missing royalties to be added on-top."),
@@ -167,6 +175,7 @@ export const getTokensV5Options: RouteOptions = {
     })
       .or("collection", "contract", "tokens", "tokenSetId", "community", "collectionsSetId")
       .oxor("collection", "contract", "tokens", "tokenSetId", "community", "collectionsSetId")
+      .oxor("source", "nativeSource")
       .with("attributes", "collection")
       .with("tokenName", "collection"),
   },
@@ -249,6 +258,7 @@ export const getTokensV5Options: RouteOptions = {
                 )
                 .allow(null),
             }).optional(),
+            royaltiesPaid: Joi.boolean().default(false).optional(),
           }),
         })
       ),
@@ -397,29 +407,48 @@ export const getTokensV5Options: RouteOptions = {
       `;
     }
 
+    let includeRoyaltiesPaidQuery = "";
+    let selectIncludeRoyaltiesPaid = "";
+    if (query.includeRoyaltiesPaid) {
+      selectIncludeRoyaltiesPaid = ", r.*";
+      includeRoyaltiesPaidQuery = `
+      LEFT JOIN LATERAL (
+        SELECT
+          CASE WHEN f.royalty_fee_breakdown IS NOT NULL THEN true
+          WHEN o.fee_breakdown IS NULL THEN false 
+          WHEN 'royalty' IN (SELECT jsonb_array_elements(o.fee_breakdown)->>'kind') THEN true
+          ELSE false END AS royalties_paid
+        FROM fill_events_2 f
+        LEFT JOIN orders o ON f.order_id = o.id
+        WHERE f.contract = t.contract AND f.token_id = t.token_id
+        ORDER BY timestamp DESC LIMIT 1
+      ) r ON TRUE
+      `;
+    }
+
     let sourceQuery = "";
-    if (query.source) {
+    if (query.nativeSource) {
       const sources = await Sources.getInstance();
-      let source = sources.getByName(query.source, false);
-      if (!source) {
-        source = sources.getByDomain(query.source, false);
+      let nativeSource = sources.getByName(query.nativeSource, false);
+      if (!nativeSource) {
+        nativeSource = sources.getByDomain(query.nativeSource, false);
       }
 
-      if (!source) {
+      if (!nativeSource) {
         return {
           tokens: [],
           continuation: null,
         };
       }
 
-      (query as any).source = source?.id;
+      (query as any).nativeSource = nativeSource?.id;
       selectFloorData = "s.*";
 
       const sourceConditions: string[] = [];
       sourceConditions.push(`o.side = 'sell'`);
       sourceConditions.push(`o.fillability_status = 'fillable'`);
       sourceConditions.push(`o.approval_status = 'approved'`);
-      sourceConditions.push(`o.source_id_int = $/source/`);
+      sourceConditions.push(`o.source_id_int = $/nativeSource/`);
       sourceConditions.push(
         `o.taker = '\\x0000000000000000000000000000000000000000' OR o.taker IS NULL`
       );
@@ -513,11 +542,13 @@ export const getTokensV5Options: RouteOptions = {
           ${selectTopBid}
           ${selectIncludeQuantity}
           ${selectIncludeDynamicPricing}
+          ${selectIncludeRoyaltiesPaid}
         FROM tokens t
         ${topBidQuery}
         ${sourceQuery}
         ${includeQuantityQuery}
         ${includeDynamicPricingQuery}
+        ${includeRoyaltiesPaidQuery}
         JOIN collections c ON t.collection_id = c.id
         JOIN contracts con ON t.contract = con.address
       `;
@@ -588,7 +619,7 @@ export const getTokensV5Options: RouteOptions = {
       if (query.minFloorAskPrice !== undefined) {
         (query as any).minFloorSellValue = query.minFloorAskPrice * 10 ** 18;
         conditions.push(
-          `${query.source ? "s." : "t."}${
+          `${query.nativeSource ? "s." : "t."}${
             query.normalizeRoyalties ? "normalized_" : ""
           }floor_sell_value >= $/minFloorSellValue/`
         );
@@ -597,10 +628,21 @@ export const getTokensV5Options: RouteOptions = {
       if (query.maxFloorAskPrice !== undefined) {
         (query as any).maxFloorSellValue = query.maxFloorAskPrice * 10 ** 18;
         conditions.push(
-          `${query.source ? "s." : "t."}${
+          `${query.nativeSource ? "s." : "t."}${
             query.normalizeRoyalties ? "normalized_" : ""
           }floor_sell_value <= $/maxFloorSellValue/`
         );
+      }
+
+      if (query.source) {
+        const sources = await Sources.getInstance();
+        let source = sources.getByName(query.source, false);
+        if (!source) {
+          source = sources.getByDomain(query.source);
+        }
+
+        (query as any).source = source?.id;
+        conditions.push(`t.floor_sell_source_id_int = $/source/`);
       }
 
       if (query.tokens) {
@@ -653,8 +695,8 @@ export const getTokensV5Options: RouteOptions = {
 
         (query as any).currenciesFilter = _.join((query as any).currenciesFilter, ",");
 
-        if (query.source) {
-          // if source is passed in, then we have two floor_sell_currency columns
+        if (query.nativeSource) {
+          // if nativeSource is passed in, then we have two floor_sell_currency columns
           conditions.push(`s.floor_sell_currency IN ($/currenciesFilter:raw/)`);
         } else {
           conditions.push(`floor_sell_currency IN ($/currenciesFilter:raw/)`);
@@ -712,7 +754,7 @@ export const getTokensV5Options: RouteOptions = {
                   throw new Error("Invalid continuation string used");
                 }
                 const sign = query.sortDirection == "desc" ? "<" : ">";
-                const sortColumn = query.source
+                const sortColumn = query.nativeSource
                   ? "s.floor_sell_value"
                   : query.normalizeRoyalties
                   ? "t.normalized_floor_sell_value"
@@ -782,7 +824,7 @@ export const getTokensV5Options: RouteOptions = {
 
           case "floorAskPrice":
           default: {
-            const sortColumn = query.source
+            const sortColumn = query.nativeSource
               ? "s.floor_sell_value"
               : query.normalizeRoyalties
               ? "t.normalized_floor_sell_value"
@@ -1098,6 +1140,7 @@ export const getTokensV5Options: RouteOptions = {
                   feeBreakdown: feeBreakdown,
                 }
               : undefined,
+            royaltiesPaid: query.includeRoyaltiesPaid ? r.royalties_paid : undefined,
           },
         };
       });

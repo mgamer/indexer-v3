@@ -7,26 +7,28 @@ import {
   OpenSeaStreamClient,
   TraitOfferEventPayload,
 } from "@opensea/stream-js";
-import { WebSocket } from "ws";
+import { ItemListedEventPayload, ItemMetadataUpdatePayload } from "@opensea/stream-js/dist/types";
 import * as Sdk from "@reservoir0x/sdk";
+import { WebSocket } from "ws";
 
-import { config } from "@/config/index";
 import { logger } from "@/common/logger";
-import { ItemListedEventPayload } from "@opensea/stream-js/dist/types";
+import { redis } from "@/common/redis";
+import { now } from "@/common/utils";
+import { config } from "@/config/index";
+import { OpenseaWebsocketEvents } from "@/models/opensea-websocket-events";
+import { PartialOrderComponents } from "@/orderbook/orders/seaport";
+import { generateHash, getSupportedChainName } from "@/websockets/opensea/utils";
+
+import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
+import * as orderbookOpenseaListings from "@/jobs/orderbook/opensea-listings-queue";
+
 import { handleEvent as handleItemListedEvent } from "@/websockets/opensea/handlers/item_listed";
 import { handleEvent as handleItemReceivedBidEvent } from "@/websockets/opensea/handlers/item_received_bid";
 import { handleEvent as handleCollectionOfferEvent } from "@/websockets/opensea/handlers/collection_offer";
 import { handleEvent as handleTraitOfferEvent } from "@/websockets/opensea/handlers/trait_offer";
-
-import { PartialOrderComponents } from "@/orderbook/orders/seaport";
-import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
-import * as orderbookOpenseaListings from "@/jobs/orderbook/opensea-listings-queue";
-
-import * as orders from "@/orderbook/orders";
-import { redis } from "@/common/redis";
-import { now } from "@/common/utils";
-import { generateHash } from "@/websockets/opensea/utils";
-import { OpenseaWebsocketEvents } from "@/models/opensea-websocket-events";
+import { Tokens } from "@/models/tokens";
+import MetadataApi from "@/utils/metadata-api";
+import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
 
 if (config.doWebsocketWork && config.openSeaApiKey) {
   const network = config.chainId === 5 ? Network.TESTNET : Network.MAINNET;
@@ -38,7 +40,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       transport: WebSocket,
     },
     onError: async (error) => {
-      logger.warn("opensea-websocket", `network=${network}, error=${JSON.stringify(error)}`);
+      logger.warn("opensea-websocket", `network=${network}, error=${error}`);
     },
   });
 
@@ -65,49 +67,42 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
           return;
         }
 
+        logger.debug(
+          "opensea-websocket",
+          `Processing event. network=${network}, event=${JSON.stringify(event)}`
+        );
+
         await saveEvent(event);
 
         const eventType = event.event_type as EventType;
         const openSeaOrderParams = handleEvent(eventType, event.payload);
 
         if (openSeaOrderParams) {
-          const seaportOrder = parseProtocolData(event.payload);
+          const protocolData = parseProtocolData(event.payload);
 
           let orderInfo: orderbookOrders.GenericOrderInfo;
-
-          if (seaportOrder) {
+          if (protocolData) {
             orderInfo = {
-              kind: "seaport",
+              kind: protocolData.kind,
               info: {
                 kind: "full",
-                orderParams: seaportOrder.params,
+                orderParams: protocolData.order.params,
                 metadata: {
                   originatedAt: event.sent_at,
                 },
+                isOpenSea: true,
                 openSeaOrderParams,
-              } as orders.seaport.OrderInfo,
+              },
               relayToArweave: eventType === EventType.ITEM_LISTED,
               validateBidValue: true,
-            };
-          } else {
-            orderInfo = {
-              kind: "seaport",
-              info: {
-                kind: "partial",
-                orderParams: openSeaOrderParams,
-                metadata: {
-                  originatedAt: event.sent_at,
-                },
-              } as orders.seaport.OrderInfo,
-              relayToArweave: false,
-              validateBidValue: true,
-            };
-          }
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } as any;
 
-          if (eventType === EventType.ITEM_LISTED) {
-            await orderbookOpenseaListings.addToQueue([orderInfo]);
-          } else {
-            await orderbookOrders.addToQueue([orderInfo]);
+            if (eventType === EventType.ITEM_LISTED) {
+              await orderbookOpenseaListings.addToQueue([orderInfo]);
+            } else {
+              await orderbookOrders.addToQueue([orderInfo]);
+            }
           }
         }
       } catch (error) {
@@ -118,6 +113,68 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       }
     }
   );
+
+  client.onItemMetadataUpdated("*", async (event) => {
+    try {
+      if (getSupportedChainName() != event.payload.item.chain.name) {
+        return;
+      }
+
+      if (await isDuplicateEvent(event)) {
+        logger.debug(
+          "opensea-websocket-item-metadata-update-event",
+          `Duplicate event. network=${network}, event=${JSON.stringify(event)}`
+        );
+
+        return;
+      }
+
+      const [, contract, tokenId] = event.payload.item.nft_id.split("/");
+      const token = await Tokens.getByContractAndTokenId(contract, tokenId);
+
+      if (!token) {
+        logger.warn(
+          "opensea-websocket-item-metadata-update-event",
+          `Token was not found. contract=${contract}, tokenId=${tokenId}, event=${JSON.stringify(
+            event
+          )}`
+        );
+
+        return;
+      }
+
+      const metadata = {
+        asset_contract: {
+          address: contract,
+        },
+        token_id: tokenId,
+        name: event.payload.item.metadata.name ?? undefined,
+        description:
+          (event.payload.item.metadata as ItemMetadataUpdatePayload).description ?? undefined,
+        image_url: event.payload.item.metadata.image_url ?? undefined,
+        animation_url: event.payload.item.metadata.animation_url ?? undefined,
+        traits: (event.payload.item.metadata as ItemMetadataUpdatePayload).traits,
+      };
+
+      const parsedMetadata = await MetadataApi.parseTokenMetadata(metadata, "opensea");
+
+      logger.info(
+        "opensea-websocket-item-metadata-update-event",
+        `Metadata parsed. contract=${contract}, tokenId=${tokenId}, event=${JSON.stringify(
+          event
+        )}, metadata=${JSON.stringify(metadata)}, parsedMetadata=${JSON.stringify(parsedMetadata)}`
+      );
+
+      if (parsedMetadata) {
+        await metadataIndexWrite.addToQueue([parsedMetadata]);
+      }
+    } catch (error) {
+      logger.error(
+        "opensea-websocket-item-metadata-update-event",
+        `Error. network=${network}, event=${JSON.stringify(event)}, error=${error}`
+      );
+    }
+  });
 }
 
 const saveEvent = async (event: BaseStreamMessage<unknown>) => {
@@ -126,12 +183,26 @@ const saveEvent = async (event: BaseStreamMessage<unknown>) => {
   }
 
   const openseaWebsocketEvents = new OpenseaWebsocketEvents();
-  await openseaWebsocketEvents.add([event]);
+  await openseaWebsocketEvents.add([
+    {
+      event,
+      createdAt: new Date().toISOString(),
+    },
+  ]);
 };
 
 export const getEventHash = (event: BaseStreamMessage<unknown>): string => {
   /* eslint-disable @typescript-eslint/no-explicit-any */
-  return generateHash(event.event_type, (event.payload as any).order_hash);
+  switch (event.event_type) {
+    case EventType.ITEM_METADATA_UPDATED:
+      return generateHash(
+        event.event_type,
+        (event.payload as any).item.nft_id,
+        (event.payload as any).sent_at
+      );
+    default:
+      return generateHash(event.event_type, (event.payload as any).order_hash);
+  }
 };
 
 export const isDuplicateEvent = async (event: BaseStreamMessage<unknown>): Promise<boolean> => {
@@ -148,7 +219,11 @@ export const isDuplicateEvent = async (event: BaseStreamMessage<unknown>): Promi
   return setResult === null;
 };
 
-export const handleEvent = (type: EventType, payload: unknown): PartialOrderComponents | null => {
+export const handleEvent = (
+  type: EventType,
+  payload: unknown
+  // `PartialOrderComponents` has the same types for both `seaport` and `seaport-v1.4`
+): PartialOrderComponents | null => {
   switch (type) {
     case EventType.ITEM_LISTED:
       return handleItemListedEvent(payload as ItemListedEventPayload);
@@ -163,37 +238,75 @@ export const handleEvent = (type: EventType, payload: unknown): PartialOrderComp
   }
 };
 
-export const parseProtocolData = (payload: unknown): Sdk.Seaport.Order | undefined => {
+type ProtocolData =
+  | {
+      kind: "seaport";
+      order: Sdk.Seaport.Order;
+    }
+  | {
+      kind: "seaport-v1.4";
+      order: Sdk.SeaportV14.Order;
+    };
+
+export const parseProtocolData = (payload: unknown): ProtocolData | undefined => {
   try {
     const protocolData = (payload as any).protocol_data;
-
     if (!protocolData) {
       logger.warn(
         "opensea-websocket",
         `parseProtocolData missing. payload=${JSON.stringify(payload)}`
       );
-
-      return;
+      return undefined;
     }
 
-    return new Sdk.Seaport.Order(config.chainId, {
-      endTime: protocolData.parameters.endTime,
-      startTime: protocolData.parameters.startTime,
-      consideration: protocolData.parameters.consideration,
-      offer: protocolData.parameters.offer,
-      conduitKey: protocolData.parameters.conduitKey,
-      salt: protocolData.parameters.salt,
-      zone: protocolData.parameters.zone,
-      zoneHash: protocolData.parameters.zoneHash,
-      offerer: protocolData.parameters.offerer,
-      counter: `${protocolData.parameters.counter}`,
-      orderType: protocolData.parameters.orderType,
-      signature: protocolData.signature,
-    });
+    const protocol = (payload as any).protocol_address;
+    if (protocol === Sdk.Seaport.Addresses.Exchange[config.chainId]) {
+      const order = new Sdk.Seaport.Order(config.chainId, {
+        endTime: protocolData.parameters.endTime,
+        startTime: protocolData.parameters.startTime,
+        consideration: protocolData.parameters.consideration,
+        offer: protocolData.parameters.offer,
+        conduitKey: protocolData.parameters.conduitKey,
+        salt: protocolData.parameters.salt,
+        zone: protocolData.parameters.zone,
+        zoneHash: protocolData.parameters.zoneHash,
+        offerer: protocolData.parameters.offerer,
+        counter: `${protocolData.parameters.counter}`,
+        orderType: protocolData.parameters.orderType,
+        signature: protocolData.signature || undefined,
+      });
+
+      return {
+        kind: "seaport",
+        order,
+      };
+    } else if (protocol === Sdk.SeaportV14.Addresses.Exchange[config.chainId]) {
+      const order = new Sdk.SeaportV14.Order(config.chainId, {
+        endTime: protocolData.parameters.endTime,
+        startTime: protocolData.parameters.startTime,
+        consideration: protocolData.parameters.consideration,
+        offer: protocolData.parameters.offer,
+        conduitKey: protocolData.parameters.conduitKey,
+        salt: protocolData.parameters.salt,
+        zone: protocolData.parameters.zone,
+        zoneHash: protocolData.parameters.zoneHash,
+        offerer: protocolData.parameters.offerer,
+        counter: `${protocolData.parameters.counter}`,
+        orderType: protocolData.parameters.orderType,
+        signature: protocolData.signature,
+      });
+
+      return {
+        kind: "seaport-v1.4",
+        order,
+      };
+    }
   } catch (error) {
     logger.error(
       "opensea-websocket",
       `parseProtocolData error. payload=${JSON.stringify(payload)}, error=${error}`
     );
   }
+
+  return undefined;
 };

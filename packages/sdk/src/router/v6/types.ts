@@ -90,12 +90,12 @@ export type GenericOrder =
       order: Sdk.Seaport.Types.PartialOrder;
     }
   | {
-      kind: "seaport-v1.2";
-      order: Sdk.SeaportV12.Order;
+      kind: "seaport-v1.4";
+      order: Sdk.SeaportV14.Order;
     }
   | {
-      kind: "seaport-v1.2-partial";
-      order: Sdk.SeaportV12.Types.PartialOrder;
+      kind: "seaport-v1.4-partial";
+      order: Sdk.SeaportV14.Types.PartialOrder;
     }
   | {
       kind: "cryptopunks";
@@ -146,30 +146,21 @@ export type GenericOrder =
       order: Sdk.Flow.Order;
     };
 
+// Listings
+
+// Basic details for filling listings
 export type ListingFillDetails = {
   contractKind: "erc721" | "erc1155";
   contract: string;
   tokenId: string;
   currency: string;
+  price: string;
+  source?: string;
   // Relevant for partially-fillable orders
   amount?: number | string;
   fees?: Fee[];
 };
 export type ListingDetails = GenericOrder & ListingFillDetails;
-
-export type BidFillDetails = {
-  contractKind: "erc721" | "erc1155";
-  contract: string;
-  tokenId: string;
-  // Relevant for partially-fillable orders
-  amount?: number | string;
-  // Relevant for merkle orders
-  extraArgs?: any;
-  // Relevant for partial Seaport orders
-  owner?: string;
-  fees?: Fee[];
-};
-export type BidDetails = GenericOrder & BidFillDetails;
 
 // For keeping track of each listing's position in the original array
 export type ListingDetailsExtracted = {
@@ -177,6 +168,40 @@ export type ListingDetailsExtracted = {
 } & ListingDetails;
 
 // For supporting filling listings having different underlying currencies
-export type PerCurrencyDetails = {
+export type PerCurrencyListingDetailsExtracted = {
   [currency: string]: ListingDetailsExtracted[];
+};
+
+// Bids
+
+// Basic details for filling bids
+export type BidFillDetails = {
+  contractKind: "erc721" | "erc1155";
+  contract: string;
+  tokenId: string;
+  // Relevant for partially-fillable orders
+  amount?: number | string;
+  // Relevant for merkle orders
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  extraArgs?: any;
+  // Relevant for partial Seaport orders
+  owner?: string;
+  fees?: Fee[];
+};
+export type BidDetails = GenericOrder & BidFillDetails;
+
+// Swaps
+
+export type PerPoolSwapDetails = {
+  [pool: string]: SwapDetail[];
+};
+
+export type SwapDetail = {
+  tokenIn: string;
+  tokenOut: string;
+  tokenOutAmount: BigNumberish;
+  recipient: string;
+  refundTo: string;
+  details: ListingDetailsExtracted[];
+  executionIndex: number;
 };

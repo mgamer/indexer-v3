@@ -1,20 +1,15 @@
-import { Interface } from "@ethersproject/abi";
+import { Interface, Result } from "@ethersproject/abi";
 import { Provider } from "@ethersproject/abstract-provider";
 import { BigNumberish } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 import { Protocol } from "@uniswap/router-sdk";
-import {
-  Currency,
-  CurrencyAmount,
-  Ether,
-  Percent,
-  Token,
-  TradeType,
-} from "@uniswap/sdk-core";
+import { Currency, CurrencyAmount, Ether, Percent, Token, TradeType } from "@uniswap/sdk-core";
 import { AlphaRouter, SwapType } from "@uniswap/smart-order-router";
 
 import { ExecutionInfo } from "./types";
 import { isETH, isWETH } from "./utils";
+import { Weth } from "../../common/addresses";
+import { Network } from "../../utils";
 
 export type SwapInfo = {
   amountIn: BigNumberish;
@@ -37,6 +32,12 @@ const getToken = async (
     : new Token(chainId, address, await contract.decimals());
 };
 
+export type TransferDetail = {
+  recipient: string;
+  amount: BigNumberish;
+  toETH: boolean;
+};
+
 export const generateSwapExecutions = async (
   chainId: number,
   provider: Provider,
@@ -44,14 +45,14 @@ export const generateSwapExecutions = async (
   toTokenAddress: string,
   toTokenAmount: BigNumberish,
   options: {
-    uniswapV3Module: Contract;
-    wethModule: Contract;
-    recipient: string;
+    swapModule: Contract;
+    transfers: TransferDetail[];
     refundTo: string;
   }
 ): Promise<SwapInfo> => {
   const router = new AlphaRouter({
     chainId: chainId,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     provider: provider as any,
   });
 
@@ -61,27 +62,20 @@ export const generateSwapExecutions = async (
       amountIn: toTokenAmount,
       executions: [
         {
-          module: options.wethModule.address,
-          data: options.wethModule.interface.encodeFunctionData("wrap", [
-            options.recipient,
-          ]),
+          module: options.swapModule.address,
+          data: options.swapModule.interface.encodeFunctionData("wrap", [options.transfers]),
           value: toTokenAmount,
         },
       ],
     };
-  } else if (
-    isWETH(chainId, fromTokenAddress) &&
-    isETH(chainId, toTokenAddress)
-  ) {
+  } else if (isWETH(chainId, fromTokenAddress) && isETH(chainId, toTokenAddress)) {
     // We need to unwrap WETH
     return {
       amountIn: toTokenAmount,
       executions: [
         {
-          module: options.wethModule.address,
-          data: options.wethModule.interface.encodeFunctionData("unwrap", [
-            options.recipient,
-          ]),
+          module: options.swapModule.address,
+          data: options.swapModule.interface.encodeFunctionData("unwrap", [options.transfers]),
           value: 0,
         },
       ],
@@ -89,18 +83,22 @@ export const generateSwapExecutions = async (
   } else {
     // We need to swap
 
-    const fromToken = await getToken(chainId, provider, fromTokenAddress);
+    // Uniswap's core SDK doesn't support MATIC -> WMATIC conversion
+    // https://github.com/Uniswap/sdk-core/issues/39
+    let fromToken = await getToken(chainId, provider, fromTokenAddress);
+    if (chainId === Network.Polygon && isETH(chainId, fromTokenAddress)) {
+      fromToken = await getToken(chainId, provider, Weth[chainId]);
+    }
+
     const toToken = await getToken(chainId, provider, toTokenAddress);
 
-    // TODO: Add support for dependent swaps (eg. multiple swaps
-    // on the same pool which influence the price of each other)
     const route = await router.route(
       CurrencyAmount.fromRawAmount(toToken, toTokenAmount.toString()),
       fromToken,
       TradeType.EXACT_OUTPUT,
       {
         type: SwapType.SWAP_ROUTER_02,
-        recipient: options.recipient,
+        recipient: options.swapModule.address,
         slippageTolerance: new Percent(5, 100),
         deadline: Math.floor(Date.now() / 1000 + 1800),
       },
@@ -132,15 +130,12 @@ export const generateSwapExecutions = async (
       `,
     ]);
 
-    let params: any;
+    let params: Result;
     try {
       // Properly handle multicall-wrapping
       let calldata = route.methodParameters!.calldata;
       if (calldata.startsWith(iface.getSighash("multicall"))) {
-        const decodedMulticall = iface.decodeFunctionData(
-          "multicall",
-          calldata
-        );
+        const decodedMulticall = iface.decodeFunctionData("multicall", calldata);
         for (const data of decodedMulticall.data) {
           if (data.startsWith(iface.getSighash("exactOutputSingle"))) {
             calldata = data;
@@ -155,39 +150,30 @@ export const generateSwapExecutions = async (
     }
 
     const fromETH = isETH(chainId, fromTokenAddress);
-    const toETH = isETH(chainId, toTokenAddress);
 
     const executions: ExecutionInfo[] = [];
     executions.push({
-      module: options.uniswapV3Module.address,
-      data: options.uniswapV3Module.interface.encodeFunctionData(
+      module: options.swapModule.address,
+      data: options.swapModule.interface.encodeFunctionData(
         fromETH ? "ethToExactOutput" : "erc20ToExactOutput",
         [
           {
-            tokenIn: params.params.tokenIn,
-            tokenOut: params.params.tokenOut,
-            fee: params.params.fee,
-            recipient: toETH ? options.wethModule.address : options.recipient,
-            amountOut: params.params.amountOut,
-            amountInMaximum: params.params.amountInMaximum,
-            sqrtPriceLimitX96: params.params.sqrtPriceLimitX96,
+            params: {
+              tokenIn: params.params.tokenIn,
+              tokenOut: params.params.tokenOut,
+              fee: params.params.fee,
+              recipient: options.swapModule.address,
+              amountOut: params.params.amountOut,
+              amountInMaximum: params.params.amountInMaximum,
+              sqrtPriceLimitX96: params.params.sqrtPriceLimitX96,
+            },
+            transfers: options.transfers,
           },
           options.refundTo,
         ]
       ),
       value: fromETH ? params.params.amountInMaximum : 0,
     });
-
-    if (toETH) {
-      // An additional unwrap step is needed if the target token is ETH (since Uniswap will get us WETH)
-      executions.push({
-        module: options.wethModule.address,
-        data: options.wethModule.interface.encodeFunctionData("unwrap", [
-          options.recipient,
-        ]),
-        value: 0,
-      });
-    }
 
     return {
       amountIn: params.params.amountInMaximum.toString(),

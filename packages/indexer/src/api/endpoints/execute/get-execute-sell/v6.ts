@@ -42,6 +42,8 @@ export const getExecuteSellV6Options: RouteOptions = {
             "zeroex-v4",
             "seaport",
             "seaport-partial",
+            "seaport-v1.4",
+            "seaport-v1.4-partial",
             "x2y2",
             "universe",
             "infinity",
@@ -322,7 +324,7 @@ export const getExecuteSellV6Options: RouteOptions = {
 
       // Partial Seaport orders require knowing the owner
       let owner: string | undefined;
-      if (["seaport-partial", "seaport-v1.2-partial"].includes(orderResult.kind)) {
+      if (["seaport", "seaport-v1.4"].includes(orderResult.kind)) {
         const ownerResult = await idb.oneOrNone(
           `
             SELECT
@@ -331,6 +333,7 @@ export const getExecuteSellV6Options: RouteOptions = {
             WHERE nft_balances.contract = $/contract/
               AND nft_balances.token_id = $/tokenId/
               AND nft_balances.amount >= $/quantity/
+            LIMIT 1
           `,
           {
             contract: toBuffer(contract),
@@ -361,7 +364,7 @@ export const getExecuteSellV6Options: RouteOptions = {
       );
 
       if (
-        ["x2y2", "seaport", "seaport-v1.2", "seaport-partial", "seaport-v1.2-partial"].includes(
+        ["x2y2", "seaport", "seaport-v1.4", "seaport-partial", "seaport-v1.4-partial"].includes(
           bidDetails!.kind
         )
       ) {
@@ -384,6 +387,7 @@ export const getExecuteSellV6Options: RouteOptions = {
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
+        orderFetcherApiKey: config.orderFetcherApiKey,
       });
       const { txData } = await router.fillBidsTx([bidDetails!], payload.taker, {
         source: payload.source,

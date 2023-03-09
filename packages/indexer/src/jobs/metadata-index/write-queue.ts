@@ -4,7 +4,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { getUnixTime } from "date-fns";
 import _ from "lodash";
 
-import { idb, redb } from "@/common/db";
+import { idb, ridb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
@@ -19,6 +19,8 @@ import * as updateCollectionActivity from "@/jobs/collection-updates/update-coll
 import * as updateCollectionUserActivity from "@/jobs/collection-updates/update-collection-user-activity";
 import * as updateCollectionDailyVolume from "@/jobs/collection-updates/update-collection-daily-volume";
 import * as updateAttributeCounts from "@/jobs/update-attribute/update-attribute-counts";
+import PgPromise from "pg-promise";
+import { updateActivities } from "@/jobs/activities/utils";
 
 const QUEUE_NAME = "metadata-index-write-queue";
 
@@ -54,10 +56,6 @@ if (config.doBackgroundWork) {
         flagged,
         attributes,
       } = job.data as TokenMetadataInfo;
-
-      if (contract == "0x0e3a2a1f2146d86a604adc220b4967a898d7fe07") {
-        return;
-      }
 
       try {
         // Update the token's metadata
@@ -97,23 +95,25 @@ if (config.doBackgroundWork) {
             `New collection ${collection} for contract=${contract}, tokenId=${tokenId}, old collection=${result.collection_id}`
           );
 
-          // Update the activities to the new collection
-          await updateCollectionActivity.addToQueue(
-            collection,
-            result.collection_id,
-            contract,
-            tokenId
-          );
+          if (updateActivities(contract)) {
+            // Update the activities to the new collection
+            await updateCollectionActivity.addToQueue(
+              collection,
+              result.collection_id,
+              contract,
+              tokenId
+            );
 
-          await updateCollectionUserActivity.addToQueue(
-            collection,
-            result.collection_id,
-            contract,
-            tokenId
-          );
+            await updateCollectionUserActivity.addToQueue(
+              collection,
+              result.collection_id,
+              contract,
+              tokenId
+            );
 
-          // Trigger a delayed job to recalc the daily volumes
-          await updateCollectionDailyVolume.addToQueue(collection, contract);
+            // Trigger a delayed job to recalc the daily volumes
+            await updateCollectionDailyVolume.addToQueue(collection, contract);
+          }
 
           // Set the new collection and update the token association
           await fetchCollectionMetadata.addToQueue(
@@ -131,63 +131,87 @@ if (config.doBackgroundWork) {
           return;
         }
 
-        await flagStatusUpdate.addToQueue([
-          {
-            contract,
-            tokenId,
-            isFlagged: Boolean(flagged),
-          },
-        ]);
+        if (flagged != null) {
+          await flagStatusUpdate.addToQueue([
+            {
+              contract,
+              tokenId,
+              isFlagged: Boolean(flagged),
+            },
+          ]);
+        }
 
+        // Fetch all existing keys
         const addedTokenAttributes = [];
         const attributeIds = [];
+        const attributeKeysIds = await ridb.manyOrNone(
+          `
+            SELECT key, id, info
+            FROM attribute_keys
+            WHERE collection_id = $/collection/
+            AND key IN ('${_.join(
+              _.map(attributes, (a) => PgPromise.as.value(a.key)),
+              "','"
+            )}')
+          `,
+          { collection }
+        );
+
+        const attributeKeysIdsMap = new Map(
+          _.map(attributeKeysIds, (a) => [a.key, { id: a.id, info: a.info }])
+        );
 
         // Token attributes
         for (const { key, value, kind, rank } of attributes) {
-          // Try to update the attribute keys, if number type update range as well and return the ID
-          let infoUpdate = "info"; // By default no update to the info
-          if (kind == "number") {
-            infoUpdate = `
-            CASE WHEN info IS NULL THEN 
-                  jsonb_object(array['min_range', 'max_range'], array[$/value/, $/value/]::text[])
-                ELSE
-                  info || jsonb_object(array['min_range', 'max_range'], array[
-                        CASE
-                            WHEN (info->>'min_range')::numeric > $/value/::numeric THEN $/value/::numeric
-                            ELSE (info->>'min_range')::numeric
-                        END,
-                        CASE
-                            WHEN (info->>'max_range')::numeric < $/value/::numeric THEN $/value/::numeric
-                            ELSE (info->>'max_range')::numeric
-                        END
-                  ]::text[])
-            END
+          if (
+            attributeKeysIdsMap.has(key) &&
+            kind == "number" &&
+            (_.isNull(attributeKeysIdsMap.get(key)?.info) ||
+              attributeKeysIdsMap.get(key)?.info.min_range > value ||
+              attributeKeysIdsMap.get(key)?.info.max_range < value)
+          ) {
+            // If number type try to update range as well and return the ID
+            const infoUpdate = `
+              CASE WHEN info IS NULL THEN 
+                    jsonb_object(array['min_range', 'max_range'], array[$/value/, $/value/]::text[])
+                  ELSE
+                    info || jsonb_object(array['min_range', 'max_range'], array[
+                          CASE
+                              WHEN (info->>'min_range')::numeric > $/value/::numeric THEN $/value/::numeric
+                              ELSE (info->>'min_range')::numeric
+                          END,
+                          CASE
+                              WHEN (info->>'max_range')::numeric < $/value/::numeric THEN $/value/::numeric
+                              ELSE (info->>'max_range')::numeric
+                          END
+                    ]::text[])
+              END
             `;
+
+            await idb.oneOrNone(
+              `
+                UPDATE attribute_keys
+                SET info = ${infoUpdate}
+                WHERE collection_id = $/collection/
+                AND key = $/key/
+              `,
+              {
+                collection,
+                key: String(key),
+                value,
+              }
+            );
           }
 
-          let attributeKeyResult = await idb.oneOrNone(
-            `
-              UPDATE attribute_keys
-              SET info = ${infoUpdate}
-              WHERE collection_id = $/collection/
-              AND key = $/key/
-              RETURNING id
-            `,
-            {
-              collection,
-              key: String(key),
-              value,
-            }
-          );
-
-          if (!attributeKeyResult?.id) {
+          // This is a new key, insert it and return the ID
+          if (!attributeKeysIdsMap.has(key)) {
             let info = null;
             if (kind == "number") {
               info = { min_range: Number(value), max_range: Number(value) };
             }
 
             // If no attribute key is available, then save it and refetch
-            attributeKeyResult = await idb.oneOrNone(
+            const attributeKeyResult = await idb.oneOrNone(
               `
                 INSERT INTO "attribute_keys" (
                   "collection_id",
@@ -213,15 +237,18 @@ if (config.doBackgroundWork) {
                 info,
               }
             );
-          }
 
-          if (!attributeKeyResult?.id) {
-            // Otherwise, fail (and retry)
-            throw new Error(`Could not fetch/save attribute key "${key}"`);
+            if (!attributeKeyResult?.id) {
+              // Otherwise, fail (and retry)
+              throw new Error(`Could not fetch/save attribute key "${key}"`);
+            }
+
+            // Add the new key and id to the map
+            attributeKeysIdsMap.set(key, { id: attributeKeyResult.id, info });
           }
 
           // Fetch the attribute from the database (will succeed in the common case)
-          let attributeResult = await redb.oneOrNone(
+          let attributeResult = await ridb.oneOrNone(
             `
               SELECT id, COALESCE(array_length(sample_images, 1), 0) AS "sample_images_length"
               FROM attributes
@@ -229,7 +256,7 @@ if (config.doBackgroundWork) {
               AND value = $/value/
             `,
             {
-              attributeKeyId: attributeKeyResult.id,
+              attributeKeyId: attributeKeysIdsMap.get(key)?.id,
               value: String(value),
             }
           );
@@ -266,7 +293,7 @@ if (config.doBackgroundWork) {
                 RETURNING (SELECT x.id FROM "x"), "attribute_count"
               `,
               {
-                attributeKeyId: attributeKeyResult.id,
+                attributeKeyId: attributeKeysIdsMap.get(key)?.id,
                 value: String(value),
                 collection,
                 kind,

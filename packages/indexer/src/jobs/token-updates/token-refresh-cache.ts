@@ -27,15 +27,30 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { contract, tokenId, skipTopBidSimulation } = job.data;
 
+      if (contract === "0x4923917e9e288b95405e2c893d0ac46b895dda22") {
+        return;
+      }
+
       // Refresh the token floor sell and top bid
       await Tokens.recalculateTokenFloorSell(contract, tokenId);
       await Tokens.recalculateTokenTopBid(contract, tokenId);
 
       // Simulate the floor ask and the top bid on the token
-      if (config.chainId === 1) {
+      await inject({
+        method: "POST",
+        url: `/tokens/simulate-floor/v1`,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        payload: {
+          token: `${contract}:${tokenId}`,
+        },
+      });
+
+      if (!skipTopBidSimulation && config.chainId === 1) {
         await inject({
           method: "POST",
-          url: `/tokens/simulate-floor/v1`,
+          url: `/tokens/simulate-top-bid/v1`,
           headers: {
             "Content-Type": "application/json",
           },
@@ -43,19 +58,6 @@ if (config.doBackgroundWork) {
             token: `${contract}:${tokenId}`,
           },
         });
-
-        if (!skipTopBidSimulation) {
-          await inject({
-            method: "POST",
-            url: `/tokens/simulate-top-bid/v1`,
-            headers: {
-              "Content-Type": "application/json",
-            },
-            payload: {
-              token: `${contract}:${tokenId}`,
-            },
-          });
-        }
       }
     },
     { connection: redis.duplicate(), concurrency: 10 }

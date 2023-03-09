@@ -28,15 +28,18 @@ export const postOrdersV1Options: RouteOptions = {
           kind: Joi.string()
             .lowercase()
             .valid(
+              "blur",
               "looks-rare",
               "zeroex-v4",
               "x2y2",
               "seaport",
+              "seaport-v1.4",
               "element",
               "blur",
               "rarible",
               "manifold",
-              "infinity"
+              "infinity",
+              "flow"
             )
             .required(),
           data: Joi.object().required(),
@@ -71,6 +74,7 @@ export const postOrdersV1Options: RouteOptions = {
             kind: "full",
             orderParams: data,
             metadata: {},
+            isOpenSea: true,
           },
           relayToArweave: true,
           validateBidValue: true,

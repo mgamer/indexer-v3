@@ -14,14 +14,50 @@ export const getNetworkName = () => {
   switch (config.chainId) {
     case 1:
       return "mainnet";
+
     case 5:
       return "goerli";
+
     case 10:
       return "optimism";
+
     case 137:
       return "polygon";
+
+    case 42161:
+      return "arbitrum";
+
     default:
       return "unknown";
+  }
+};
+
+export const getOpenseaNetworkName = () => {
+  switch (config.chainId) {
+    case 5:
+      return "goerli";
+
+    case 10:
+      return "optimism";
+
+    case 137:
+      return "matic";
+
+    case 42161:
+      return "arbitrum";
+
+    default:
+      return "ethereum";
+  }
+};
+
+export const getOpenseaSubDomain = () => {
+  switch (config.chainId) {
+    case 5:
+      return "testnets-api";
+
+    default:
+      return "api";
   }
 };
 
@@ -43,6 +79,7 @@ type NetworkSettings = {
   washTradingWhitelistedAddresses: string[];
   washTradingBlacklistedAddresses: string[];
   customTokenAddresses: string[];
+  nonSimulatableContracts: string[];
   mintsAsSalesBlacklist: string[];
   mintAddresses: string[];
   multiCollectionContracts: string[];
@@ -52,6 +89,7 @@ type NetworkSettings = {
     networkId: string;
   };
   onStartup?: () => Promise<void>;
+  subDomain: string;
 };
 
 export const getNetworkSettings = (): NetworkSettings => {
@@ -68,12 +106,14 @@ export const getNetworkSettings = (): NetworkSettings => {
     washTradingWhitelistedAddresses: [],
     washTradingBlacklistedAddresses: [],
     customTokenAddresses: [],
+    nonSimulatableContracts: [],
     multiCollectionContracts: [],
     mintsAsSalesBlacklist: [],
     mintAddresses: [AddressZero],
     reorgCheckFrequency: [1, 5, 10, 30, 60], // In minutes
     whitelistedCurrencies: new Map<string, Currency>(),
     supportedBidCurrencies: { [Sdk.Common.Addresses.Weth[config.chainId]?.toLowerCase()]: true },
+    subDomain: "api",
   };
 
   switch (config.chainId) {
@@ -99,6 +139,7 @@ export const getNetworkSettings = (): NetworkSettings => {
           "0x62e37f664b5945629b6549a87f8e10ed0b6d923b",
           "0x0a1bbd57033f57e7b6743621b79fcb9eb2ce3676",
           "0x942bc2d3e7a589fe5bd4a5c6ef9727dfd82f5c8a",
+          "0x32d4be5ee74376e08038d652d4dc26e62c67f436",
         ],
         washTradingBlacklistedAddresses: ["0xac335e6855df862410f96f345f93af4f96351a87"],
         multiCollectionContracts: [
@@ -117,10 +158,13 @@ export const getNetworkSettings = (): NetworkSettings => {
           "0x62e37f664b5945629b6549a87f8e10ed0b6d923b",
           "0x0a1bbd57033f57e7b6743621b79fcb9eb2ce3676",
           "0x942bc2d3e7a589fe5bd4a5c6ef9727dfd82f5c8a",
+          "0x32d4be5ee74376e08038d652d4dc26e62c67f436",
         ],
+        nonSimulatableContracts: ["0x4d04bba7f5ea45ac59769a1095762467b1157cc4"],
         customTokenAddresses: [
           "0x95784f7b5c8849b0104eaf5d13d6341d8cc40750",
           "0xc9cb0fee73f060db66d2693d92d75c825b1afdbf",
+          "0x87d598064c736dd0c712d329afcfaa0ccc1921a1",
         ],
         mintsAsSalesBlacklist: [
           // Uniswap V3: Positions NFT
@@ -147,6 +191,15 @@ export const getNetworkSettings = (): NetworkSettings => {
               contract: "0xefe804a604fd3175220d5a4f2fc1a048c479c592",
               name: "PIXAPE",
               symbol: "$pixape",
+              decimals: 18,
+            },
+          ],
+          [
+            "0xb73758fe1dc58ac2a255a2950a3fdd84da656b84",
+            {
+              contract: "0xb73758fe1dc58ac2a255a2950a3fdd84da656b84",
+              name: "GANG",
+              symbol: "GANG",
               decimals: 18,
             },
           ],
@@ -213,6 +266,7 @@ export const getNetworkSettings = (): NetworkSettings => {
       return {
         ...defaultNetworkSettings,
         backfillBlockBatchSize: 128,
+        subDomain: "api-goerli",
         washTradingExcludedContracts: [
           // ArtBlocks Contracts
           "0xda62f67be7194775a75be91cbf9feedcc5776d4b",
@@ -263,6 +317,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 10,
         realtimeSyncMaxBlockLag: 128,
         backfillBlockBatchSize: 512,
+        subDomain: "api-optimism",
         coingecko: {
           networkId: "optimistic-ethereum",
         },
@@ -296,12 +351,12 @@ export const getNetworkSettings = (): NetworkSettings => {
         ...defaultNetworkSettings,
         metadataMintDelay: 180,
         enableWebSocket: true,
-        enableReorgCheck: true,
-        realtimeSyncFrequencySeconds: 10,
+        realtimeSyncFrequencySeconds: 15,
         realtimeSyncMaxBlockLag: 45,
         lastBlockLatency: 20,
         backfillBlockBatchSize: 60,
         reorgCheckFrequency: [30],
+        subDomain: "api-polygon",
         coingecko: {
           networkId: "polygon-pos",
         },
@@ -327,6 +382,42 @@ export const getNetworkSettings = (): NetworkSettings => {
                   'MATIC',
                   18,
                   '{"coingeckoCurrencyId": "matic-network"}'
+                ) ON CONFLICT DO NOTHING
+              `
+            ),
+          ]);
+        },
+      };
+    }
+    // Arbitrum
+    case 42161: {
+      return {
+        ...defaultNetworkSettings,
+        enableWebSocket: false,
+        realtimeSyncMaxBlockLag: 125,
+        realtimeSyncFrequencySeconds: 10,
+        lastBlockLatency: 10,
+        subDomain: "api-arbitrum",
+        coingecko: {
+          networkId: "arbitrum-one",
+        },
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\x0000000000000000000000000000000000000000',
+                  'Ether',
+                  'ETH',
+                  18,
+                  '{"coingeckoCurrencyId": "ethereum", "image": "https://assets.coingecko.com/coins/images/279/large/ethereum.png"}'
                 ) ON CONFLICT DO NOTHING
               `
             ),
