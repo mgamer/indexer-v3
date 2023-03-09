@@ -458,17 +458,19 @@ export const save = async (
         openSeaRoyalties = await royalties.getRoyalties(
           info.contract,
           info.tokenId,
-          openSeaRoyaltiesSchema
+          openSeaRoyaltiesSchema,
+          true
         );
       } else {
         openSeaRoyalties = await royalties.getRoyaltiesByTokenSet(
           tokenSetId,
-          openSeaRoyaltiesSchema
+          openSeaRoyaltiesSchema,
+          true
         );
       }
 
       let feeBps = 0;
-      let marketplaceFeeFound = false;
+      let knownFee = false;
       const feeBreakdown = info.fees.map(({ recipient, amount }) => {
         const bps = price.eq(0)
           ? 0
@@ -483,13 +485,12 @@ export const save = async (
         // First check for opensea hardcoded recipients
         const kind: "marketplace" | "royalty" = openSeaFeeRecipients.includes(recipient)
           ? "marketplace"
-          : openSeaRoyalties.map(({ recipient }) => recipient).includes(recipient.toLowerCase()) // Check for locally stored royalties
-          ? "royalty"
-          : marketplaceFeeFound || bps > 250 // If bps is higher than 250 or we already found marketplace fee assume it is royalty otherwise marketplace fee
-          ? "royalty"
-          : "marketplace";
+          : "royalty";
 
-        marketplaceFeeFound = kind === "marketplace" || marketplaceFeeFound;
+        // Check for unknown fees
+        knownFee =
+          knownFee ||
+          !openSeaRoyalties.map(({ recipient }) => recipient).includes(recipient.toLowerCase()); // Check for locally stored royalties
 
         return {
           kind,
@@ -497,6 +498,11 @@ export const save = async (
           bps,
         };
       });
+
+      // If unknown address was found
+      if (!_.isEmpty(openSeaRoyalties) && !knownFee) {
+        logger.info("orders-seaport-save", `Unknown Fee for order ${id}`);
+      }
 
       if (feeBps > 10000) {
         return results.push({
