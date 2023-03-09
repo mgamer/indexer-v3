@@ -29,6 +29,7 @@ import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as refreshContractCollectionsMetadata from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue";
 import * as flagStatusProcessQueue from "@/jobs/flag-status/process-queue";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
+import { allPlatformFeeRecipients } from "@/events-sync/handlers/royalties/config";
 
 export type OrderInfo =
   | {
@@ -483,7 +484,9 @@ export const save = async (
         feeBps += bps;
 
         // First check for opensea hardcoded recipients
-        const kind: "marketplace" | "royalty" = openSeaFeeRecipients.includes(recipient)
+        const kind: "marketplace" | "royalty" = allPlatformFeeRecipients.has(
+          recipient.toLowerCase()
+        )
           ? "marketplace"
           : "royalty";
 
