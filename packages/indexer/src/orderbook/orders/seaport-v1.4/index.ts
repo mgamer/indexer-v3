@@ -458,21 +458,11 @@ export const save = async (
       ];
 
       let openSeaRoyalties: royalties.Royalty[];
-      const openSeaRoyaltiesSchema = metadata?.target === "opensea" ? "opensea" : "default";
 
       if (order.params.kind === "single-token") {
-        openSeaRoyalties = await royalties.getRoyalties(
-          info.contract,
-          info.tokenId,
-          openSeaRoyaltiesSchema,
-          true
-        );
+        openSeaRoyalties = await royalties.getRoyalties(info.contract, info.tokenId, "", true);
       } else {
-        openSeaRoyalties = await royalties.getRoyaltiesByTokenSet(
-          tokenSetId,
-          openSeaRoyaltiesSchema,
-          true
-        );
+        openSeaRoyalties = await royalties.getRoyaltiesByTokenSet(tokenSetId, "", true);
       }
 
       let feeBps = 0;
