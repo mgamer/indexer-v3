@@ -39,11 +39,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       items: Joi.array()
         .items(
           Joi.object({
-            token: Joi.string()
-              .lowercase()
-              .pattern(regex.token)
-              .required()
-              .description("Token to buy."),
+            token: Joi.string().lowercase().pattern(regex.token).description("Token to buy."),
             quantity: Joi.number()
               .integer()
               .positive()
@@ -58,6 +54,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   "looks-rare",
                   "zeroex-v4",
                   "seaport",
+                  "seaport-v1.4",
                   "x2y2",
                   "universe",
                   "rarible",
@@ -76,7 +73,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
               .description(
                 "If there are multiple listings with equal best price, prefer this source over others.\nNOTE: if you want to fill a listing that is not the best priced, you need to pass a specific order id."
               ),
-          }).oxor("token", "orderId", "rawOrder")
+          })
+            .oxor("token", "orderId", "rawOrder")
+            .or("token", "orderId", "rawOrder")
         )
         .min(1)
         .required()
@@ -350,7 +349,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           } else {
             const response = await inject({
               method: "POST",
-              url: `/order/v2`,
+              url: `/order/v3`,
               headers: {
                 "Content-Type": "application/json",
                 "X-Api-Key": request.headers["x-api-key"],
@@ -527,7 +526,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 kind: result.token_kind,
                 contract,
                 tokenId,
-                quantity: availableQuantity,
+                quantity: Math.min(item.quantity, availableQuantity),
               }
             );
           }

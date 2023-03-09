@@ -50,6 +50,8 @@ export async function getBidInfoByOrderId(orderId: string) {
   } else if (tokenSetByOrderIdResult.id.startsWith("range:")) {
     const collection = await Collections.getByTokenSetId(tokenSetByOrderIdResult.id);
     collectionId = collection?.id;
+  } else if (tokenSetByOrderIdResult.id.startsWith("dynamic:")) {
+    [, , collectionId] = tokenSetByOrderIdResult.id.split(":");
   } else {
     [, collectionId] = tokenSetByOrderIdResult.id.split(":");
   }
@@ -57,6 +59,10 @@ export async function getBidInfoByOrderId(orderId: string) {
   return [collectionId, tokenId, tokenSetByOrderIdResult.attribute_id];
 }
 
+/**
+ * Return boolean result whether to update the contract activities once tokens are migrated
+ * @param contract
+ */
 export function updateActivities(contract: string) {
   if (config.chainId === 1) {
     return _.indexOf(["0x82c7a8f707110f5fbb16184a5933e9f78a34c6ab"], contract) === -1;

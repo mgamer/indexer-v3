@@ -95,8 +95,6 @@ export const save = async (
       const info = order.getInfo();
       const id = order.hash();
 
-      const timeStart = performance.now();
-
       // Check: order has a valid format
       if (!info) {
         return results.push({
@@ -177,19 +175,30 @@ export const save = async (
         });
       }
 
-      // Check: order has a known zone
-      if (
-        ![
-          // No zone
-          AddressZero,
-          // Pausable zone
-          Sdk.Seaport.Addresses.PausableZone[config.chainId],
-        ].includes(order.params.zone)
-      ) {
+      // Check: order is partially-fillable
+      const quantityRemaining = info.amount ?? "1";
+      if ([0, 2].includes(order.params.orderType) && bn(quantityRemaining).gt(1)) {
         return results.push({
           id,
-          status: "unsupported-zone",
+          status: "not-partially-fillable",
         });
+      }
+
+      // Check: order has a known zone
+      if (order.params.orderType > 1) {
+        if (
+          ![
+            // No zone
+            AddressZero,
+            // Pausable zone
+            Sdk.Seaport.Addresses.PausableZone[config.chainId],
+          ].includes(order.params.zone)
+        ) {
+          return results.push({
+            id,
+            status: "unsupported-zone",
+          });
+        }
       }
 
       // Check: order is valid
@@ -202,21 +211,26 @@ export const save = async (
         });
       }
 
-      // Check: order has a valid signature
-      try {
-        await order.checkSignature(baseProvider);
-      } catch {
-        return results.push({
-          id,
-          status: "invalid-signature",
-        });
+      // Check: order has a valid signature (or was validated on-chain)
+      if (!metadata.fromOnChain) {
+        try {
+          await order.checkSignature(baseProvider);
+        } catch {
+          return results.push({
+            id,
+            status: "invalid-signature",
+          });
+        }
       }
 
       // Check: order fillability
       let fillabilityStatus = "fillable";
       let approvalStatus = "approved";
       try {
-        await offChainCheck(order, { onChainApprovalRecheck: true });
+        await offChainCheck(order, {
+          onChainApprovalRecheck: true,
+          singleTokenERC721ApprovalCheck: metadata.fromOnChain,
+        });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         // Keep any orders that can potentially get valid in the future
@@ -660,7 +674,7 @@ export const save = async (
         currency_price: currencyPrice.toString(),
         currency_value: currencyValue.toString(),
         needs_conversion: needsConversion,
-        quantity_remaining: info.amount ?? "1",
+        quantity_remaining: quantityRemaining,
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
         nonce: order.params.counter,
         source_id_int: source?.id,
@@ -696,15 +710,6 @@ export const save = async (
 
       if (relayToArweave) {
         arweaveData.push({ order, schemaHash, source: source?.domain });
-      }
-
-      const totalTimeElapsed = Math.floor((performance.now() - timeStart) / 1000);
-
-      if (totalTimeElapsed > 1) {
-        logger.info(
-          "orders-seaport-save-debug-latency",
-          `orderId=${id}, orderSide=${info.side}, totalTimeElapsed=${totalTimeElapsed}`
-        );
       }
     } catch (error) {
       logger.warn(

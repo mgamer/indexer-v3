@@ -10,6 +10,7 @@ import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { assignRoyaltiesToFillEvents } from "@/events-sync/handlers/royalties";
 import * as es from "@/events-sync/storage";
+import { fetchTransactionTraces } from "@/events-sync/utils";
 
 const QUEUE_NAME = "backfill-sale-royalties";
 
@@ -17,6 +18,10 @@ export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     attempts: 10,
+    backoff: {
+      type: "fixed",
+      delay: 30000,
+    },
     removeOnComplete: 1000,
     removeOnFail: 10000,
   },
@@ -28,9 +33,15 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job) => {
-      const { block } = job.data;
+      const { fromBlock, toBlock, currentBlock } = job.data;
 
-      const blockRange = 20;
+      if (fromBlock < 15500000) {
+        return;
+      }
+
+      const time1 = performance.now();
+
+      const blockRange = 10;
       const results = await redb.manyOrNone(
         `
           SELECT
@@ -52,10 +63,11 @@ if (config.doBackgroundWork) {
           FROM fill_events_2
           WHERE fill_events_2.block < $/block/
             AND fill_events_2.block >= $/block/ - $/blockRange/
+            AND fill_events_2.order_kind != 'mint'
           ORDER BY fill_events_2.block DESC
         `,
         {
-          block,
+          block: currentBlock,
           blockRange,
         }
       );
@@ -79,7 +91,36 @@ if (config.doBackgroundWork) {
         } as any,
       }));
 
+      const time2 = performance.now();
+
+      const fillEventsPerTxHash: { [txHash: string]: es.fills.Event[] } = {};
+      for (const fe of fillEvents) {
+        if (!fillEventsPerTxHash[fe.baseEventParams.txHash]) {
+          fillEventsPerTxHash[fe.baseEventParams.txHash] = [];
+        }
+        fillEventsPerTxHash[fe.baseEventParams.txHash].push(fe);
+      }
+
+      // Prepare the caches for efficiency
+
+      await Promise.all(
+        Object.entries(fillEventsPerTxHash).map(async ([txHash, fillEvents]) =>
+          redis.set(`get-fill-events-from-tx:${txHash}`, JSON.stringify(fillEvents), "EX", 10 * 60)
+        )
+      );
+
+      const traces = await fetchTransactionTraces(Object.keys(fillEventsPerTxHash));
+      await Promise.all(
+        Object.values(traces).map(async (trace) =>
+          redis.set(`fetch-transaction-trace:${trace.hash}`, JSON.stringify(trace), "EX", 10 * 60)
+        )
+      );
+
+      const time3 = performance.now();
+
       await assignRoyaltiesToFillEvents(fillEvents);
+
+      const time4 = performance.now();
 
       const queries: PgPromiseQuery[] = fillEvents.map((event) => {
         return {
@@ -110,16 +151,28 @@ if (config.doBackgroundWork) {
         };
       });
 
-      await idb.none(pgp.helpers.concat(queries));
+      if (queries.length) {
+        await idb.none(pgp.helpers.concat(queries));
+      }
 
-      if (results.length >= 0) {
-        const lastResult = results[results.length - 1];
-        await addToQueue(lastResult.block);
-      } else if (block > 7000000) {
-        await addToQueue(block - blockRange);
+      const time5 = performance.now();
+
+      logger.info(
+        "debug-performance",
+        JSON.stringify({
+          databaseFetch: (time2 - time1) / 1000,
+          traceFetch: (time3 - time2) / 1000,
+          royaltyDetection: (time4 - time3) / 1000,
+          update: (time5 - time4) / 1000,
+        })
+      );
+
+      const nextBlock = currentBlock - blockRange;
+      if (nextBlock > fromBlock) {
+        await addToQueue(fromBlock, toBlock, nextBlock);
       }
     },
-    { connection: redis.duplicate(), concurrency: 1 }
+    { connection: redis.duplicate(), concurrency: 10 }
   );
 
   worker.on("error", (error) => {
@@ -128,9 +181,19 @@ if (config.doBackgroundWork) {
 
   if (config.chainId === 1) {
     redlock
-      .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
+      .acquire([`${QUEUE_NAME}-lock-1`], 60 * 60 * 24 * 30 * 1000)
       .then(async () => {
-        await addToQueue(16698570);
+        await addToQueue(16500000, 16600000, 16552722);
+        await addToQueue(16400000, 16500000, 16500001);
+        await addToQueue(16300000, 16400000, 16400001);
+        await addToQueue(16200000, 16300000, 16300001);
+        await addToQueue(16100000, 16200000, 16200001);
+        await addToQueue(16000000, 16100000, 16100001);
+        await addToQueue(15900000, 16000000, 16000001);
+        await addToQueue(15800000, 15900000, 15900001);
+        await addToQueue(15700000, 15800000, 15800001);
+        await addToQueue(15600000, 15700000, 15700001);
+        await addToQueue(15500000, 15600000, 15600001);
       })
       .catch(() => {
         // Skip on any errors
@@ -138,6 +201,10 @@ if (config.doBackgroundWork) {
   }
 }
 
-export const addToQueue = async (block: number) => {
-  await queue.add(randomUUID(), { block });
+export const addToQueue = async (fromBlock: number, toBlock: number, currentBlock: number) => {
+  await queue.add(
+    randomUUID(),
+    { fromBlock, toBlock, currentBlock },
+    { jobId: `${fromBlock}-${toBlock}-${currentBlock}` }
+  );
 };

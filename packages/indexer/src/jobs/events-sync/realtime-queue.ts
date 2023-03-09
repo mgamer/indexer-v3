@@ -3,12 +3,13 @@ import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { redis } from "@/common/redis";
+import { acquireLock, redis, releaseLock } from "@/common/redis";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { syncEvents } from "@/events-sync/index";
 import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
 import tracer from "@/common/tracer";
+import _ from "lodash";
 
 const QUEUE_NAME = "events-sync-realtime";
 
@@ -31,6 +32,11 @@ if (config.doBackgroundWork) {
     async () => {
       await tracer.trace("processEvent", { resource: "eventsSyncRealtime" }, async () => {
         try {
+          // On some chains prevent multiple syncs at the same time
+          if (_.includes([137, 42161], config.chainId) && !(await acquireLock(QUEUE_NAME, 300))) {
+            return;
+          }
+
           // We allow syncing of up to `maxBlocks` blocks behind the head
           // of the blockchain. If we lag behind more than that, then all
           // previous blocks that we cannot cover here will be relayed to
@@ -88,6 +94,13 @@ if (config.doBackgroundWork) {
     },
     { connection: redis.duplicate(), concurrency: 5 }
   );
+
+  worker.on("completed", async () => {
+    if (_.includes([137, 42161], config.chainId)) {
+      await releaseLock(QUEUE_NAME);
+    }
+  });
+
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });

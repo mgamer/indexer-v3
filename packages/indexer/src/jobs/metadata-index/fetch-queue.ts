@@ -198,7 +198,7 @@ export const addToQueue = async (
   if (config.chainId === 137) {
     metadataIndexInfos = _.filter(
       metadataIndexInfos,
-      (data) => data.data.collection !== "0xaa1ec1efef105599f849b8f5df9b937e25a16e6b"
+      (data) => data.data.collection !== "0x4923917e9e288b95405e2c893d0ac46b895dda22"
     );
   }
 

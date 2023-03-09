@@ -22,7 +22,7 @@
     "husky": "^7.0.4",
     "prettier": "^2.5.1",
     "standard-version": "^9.3.2",
-    "turbo": "latest"
+    "turbo": "^1.8.2"
   },
   "workspaces": [
     "packages/*"
@@ -49,7 +49,7 @@
     "**/async": "^2.6.4",
     "**/lodash": "^4.17.21",
     "**/node-fetch": "^2.6.7",
-    "**/yargs-parser": "^5.0.1",
+    "**/yargs-parser": "^21.1.1",
     "**/@sideway/formula": "^3.0.1",
     "**/got": "^11.8.5",
     "**/validator": "^13.7.0",

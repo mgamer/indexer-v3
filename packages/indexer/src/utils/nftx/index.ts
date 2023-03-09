@@ -123,10 +123,26 @@ export const isSwap = (log: Log) => {
 };
 
 export const tryParseSwap = async (log: Log) => {
-  // We only support parsing UniswapV2-like swaps for now
-
-  // TODO: Add support for UniswapV3-like swaps and multi-swaps
-  // (eg. https://etherscan.io/tx/0x04cc2def87437c608f743ab0bfe90d4a80997cd7e6c0503e6472bb3dd084a167)
+  if (log.topics[0] === ifaceUniV3.getEventTopic("Swap")) {
+    const ftPool = await getFtPoolDetails(log.address.toLowerCase());
+    if (ftPool) {
+      const parsedLog = ifaceUniV3.parseLog(log);
+      const rawAmount0 = parsedLog.args["amount0"].toString();
+      const rawAmount1 = parsedLog.args["amount1"].toString();
+      // Generate v2-style output
+      const amount0Out = rawAmount0.includes("-");
+      const amount1Out = rawAmount1.includes("-");
+      const amount0 = amount0Out ? rawAmount0.split("-")[1] : rawAmount0;
+      const amount1 = amount1Out ? rawAmount1.split("-")[1] : rawAmount1;
+      return {
+        ftPool,
+        amount0Out: amount0Out ? amount0 : "0",
+        amount1Out: amount1Out ? amount1 : "0",
+        amount0In: !amount0Out ? amount0 : "0",
+        amount1In: !amount1Out ? amount1 : "0",
+      };
+    }
+  }
 
   if (log.topics[0] === ifaceUniV2.getEventTopic("Swap")) {
     const ftPool = await getFtPoolDetails(log.address.toLowerCase());
