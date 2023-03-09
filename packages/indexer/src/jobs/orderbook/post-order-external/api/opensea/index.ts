@@ -51,10 +51,12 @@ export const postOrder = async (order: Sdk.SeaportV14.Order, apiKey: string) => 
     .catch((error) => {
       if (error.response) {
         logger.error(
-          "opensea_orderbook_api",
-          `Failed to post order to OpenSea. order=${JSON.stringify(order)}, status: ${
-            error.response.status
-          }, data:${JSON.stringify(error.response.data)}`
+          "opensea-orderbook-api",
+          `Failed to post order to OpenSea. order=${JSON.stringify(
+            order
+          )}, apiKey=${apiKey}, status=${error.response.status}, data=${JSON.stringify(
+            error.response.data
+          )}`
         );
 
         handleErrorResponse(error.response);
@@ -102,13 +104,13 @@ export const buildCollectionOffer = async (
       .then((response) => response.data as any)
       .catch((error) => {
         logger.error(
-          "opensea_orderbook_api",
+          "opensea-orderbook-api",
           `Build OpenSea collection offer error. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, error=${error}`
         );
 
         if (error.response) {
           logger.error(
-            "opensea_orderbook_api",
+            "opensea-orderbook-api",
             `Failed to build OpenSea collection offer. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, status: ${
               error.response.status
             }, data:${JSON.stringify(error.response.data)}`
@@ -159,7 +161,7 @@ export const postCollectionOffer = async (
     })
     .catch((error) => {
       logger.error(
-        "opensea_orderbook_api",
+        "opensea-orderbook-api",
         `Post OpenSea collection offer error. order=${JSON.stringify(
           order
         )}, collectionSlug=${collectionSlug}, url=${url}, data=${data}, error=${error}`
@@ -167,12 +169,12 @@ export const postCollectionOffer = async (
 
       if (error.response) {
         logger.error(
-          "opensea_orderbook_api",
+          "opensea-orderbook-api",
           `Failed to post offer to OpenSea. order=${JSON.stringify(
             order
-          )}, collectionSlug=${collectionSlug}, url=${url}, data=${data}, status: ${
+          )}, collectionSlug=${collectionSlug}, url=${url}, data=${data}, status=${
             error.response.status
-          }, data:${JSON.stringify(error.response.data)}`
+          }, data=${JSON.stringify(error.response.data)}`
         );
 
         handleErrorResponse(error.response);
@@ -200,7 +202,7 @@ const handleErrorResponse = (response: any) => {
     }
     case 400:
       throw new InvalidRequestError(
-        `Request was rejected by OpenSea. errors=${JSON.stringify(response.data.errors)}`
+        `Request was rejected by OpenSea. error=${response.data.errors?.toString()}`
       );
   }
 };
