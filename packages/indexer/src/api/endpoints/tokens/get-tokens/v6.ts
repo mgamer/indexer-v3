@@ -406,8 +406,8 @@ export const getTokensV6Options: RouteOptions = {
       `;
     }
 
-    let includeLastSaleQuery = "";
-    let selectIncludeLastSale = "";
+    let includeRoyaltyBreakdownQuery = "";
+    let selectRoyaltyBreakdown = "";
     let selectLastSale = "";
     if (query.includeLastSale) {
       selectLastSale = `
@@ -416,8 +416,8 @@ export const getTokensV6Options: RouteOptions = {
             t.last_sell_value,
             t.last_sell_timestamp,
         `;
-      selectIncludeLastSale = ", r.*";
-      includeLastSaleQuery = `
+      selectRoyaltyBreakdown = ", r.*";
+      includeRoyaltyBreakdownQuery = `
         LEFT JOIN LATERAL (
         SELECT
             CASE WHEN f.royalty_fee_breakdown IS NOT NULL and jsonb_array_length(f.royalty_fee_breakdown) > 0 THEN f.royalty_fee_breakdown::json->0
@@ -545,13 +545,13 @@ export const getTokensV6Options: RouteOptions = {
           ${selectTopBid}
           ${selectIncludeQuantity}
           ${selectIncludeDynamicPricing}
-          ${selectIncludeLastSale}
+          ${selectRoyaltyBreakdown}
         FROM tokens t
         ${topBidQuery}
         ${sourceQuery}
         ${includeQuantityQuery}
         ${includeDynamicPricingQuery}
-        ${includeLastSaleQuery}
+        ${includeRoyaltyBreakdownQuery}
         JOIN collections c ON t.collection_id = c.id
         JOIN contracts con ON t.contract = con.address
       `;
@@ -1060,10 +1060,12 @@ export const getTokensV6Options: RouteOptions = {
                     r.last_buy_timestamp > r.last_sell_timestamp
                       ? r.last_buy_timestamp
                       : r.last_sell_timestamp,
-                  royaltyBreakdown: {
-                    bps: r.royalty_breakdown.bps,
-                    recipient: r.royalty_breakdown.recipient,
-                  },
+                  royaltyBreakdown: r.royalty_breakdown
+                    ? {
+                        bps: r.royalty_breakdown.bps,
+                        recipient: r.royalty_breakdown.recipient,
+                      }
+                    : {},
                 }
               : undefined,
             owner: r.owner ? fromBuffer(r.owner) : null,
