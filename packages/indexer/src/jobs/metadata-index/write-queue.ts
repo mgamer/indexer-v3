@@ -89,7 +89,11 @@ if (config.doBackgroundWork) {
         }
 
         // If the new collection ID is different from the collection ID currently stored
-        if (result.collection_id != collection) {
+        if (
+          result.collection_id !=
+            "0x495f947276749ce646f68ac8c248420045cb7b5e:opensea-os-shared-storefront-collection" &&
+          result.collection_id != collection
+        ) {
           logger.info(
             QUEUE_NAME,
             `New collection ${collection} for contract=${contract}, tokenId=${tokenId}, old collection=${result.collection_id}`
@@ -113,23 +117,6 @@ if (config.doBackgroundWork) {
 
             // Trigger a delayed job to recalc the daily volumes
             await updateCollectionDailyVolume.addToQueue(collection, contract);
-          }
-
-          if (contract === "0x495f947276749ce646f68ac8c248420045cb7b5e") {
-            await idb.none(
-              `
-              UPDATE "tokens"
-              SET "collection_id" = $/collection/,
-                  "updated_at" = now()
-              WHERE "contract" = $/contract/
-              AND token_id = $/tokenId/
-            `,
-              {
-                collection,
-                contract: toBuffer(contract),
-                tokenId,
-              }
-            );
           }
 
           // Set the new collection and update the token association
