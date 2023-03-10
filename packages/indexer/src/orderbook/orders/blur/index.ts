@@ -169,7 +169,7 @@ export const save = async (
       // Handle: currency
       const currency = order.params.paymentToken;
 
-      const validFrom = `date_trunc('seconds', to_timestamp(0))`;
+      const validFrom = `date_trunc('seconds', to_timestamp(${order.params.listingTime}))`;
       const validTo = `date_trunc('seconds', to_timestamp(${expirationTime}))`;
       orderValues.push({
         id,

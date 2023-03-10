@@ -1128,7 +1128,7 @@ export const getExecuteBidV5Options: RouteOptions = {
         const orders = bulkOrders["seaport-v1.4"];
         if (orders.length === 1) {
           const order = new Sdk.SeaportV14.Order(config.chainId, orders[0].order.data);
-          steps[1].items.push({
+          steps[2].items.push({
             status: "incomplete",
             data: {
               sign: order.getSignatureData(),
