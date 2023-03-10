@@ -258,9 +258,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         conduit = Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId];
       }
 
-      const validFrom = `date_trunc('seconds', to_timestamp(${
-        metadata.originatedAt ?? currentTime
-      }))`;
+      const validFrom = `date_trunc('seconds', to_timestamp(${currentTime}))`;
       const validTo = `date_trunc('seconds', to_timestamp(${order.params.deadline}))`;
       orderValues.push({
         id,
