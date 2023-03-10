@@ -309,6 +309,11 @@ export const getExecuteBidV5Options: RouteOptions = {
           const attributeKey = params.attributeKey;
           const attributeValue = params.attributeValue;
 
+          // Force usage of seaport-v1.4
+          if (params.orderKind === "seaport") {
+            params.orderKind = "seaport-v1.4";
+          }
+
           // Only single-contract token sets are biddable
           if (tokenSetId && tokenSetId.startsWith("list") && tokenSetId.split(":").length !== 3) {
             return errors.push({
