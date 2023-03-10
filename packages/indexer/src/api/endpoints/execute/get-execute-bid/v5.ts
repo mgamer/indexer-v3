@@ -134,9 +134,9 @@ export const getExecuteBidV5Options: RouteOptions = {
           orderbookApiKey: Joi.string().description("Optional API key for the target orderbook"),
           automatedRoyalties: Joi.boolean()
             .default(true)
-            .description("If true, royalties will be automatically included."),
+            .description("If true, royalty amounts and recipients will be set automatically."),
           royaltyBps: Joi.number().description(
-            "The royalty percentage to pay. Only relevant when using automated royalties."
+            "Set a maximum amount of royalties to pay, rather than the full amount. Only relevant when using automated royalties. Note: OpenSea does not support values below 50 bps."
           ),
           fees: Joi.array()
             .items(Joi.string().pattern(regex.fee))
