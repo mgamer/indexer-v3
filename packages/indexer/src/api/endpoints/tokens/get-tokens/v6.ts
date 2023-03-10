@@ -419,18 +419,16 @@ export const getTokensV6Options: RouteOptions = {
             CASE WHEN fe.royalty_fee_breakdown IS NOT NULL and jsonb_array_length(fe.royalty_fee_breakdown) > 0 THEN fe.royalty_fee_breakdown::json->0
             WHEN o.fee_breakdown IS NULL THEN '{}'::json 
             WHEN 'royalty' IN (SELECT jsonb_array_elements(o.fee_breakdown)->>'kind') THEN o.fee_breakdown::json->1
-            ELSE '{}'::json END AS royalty_breakdown,
-            fe.order_id AS last_sale_id,
-            o.normalized_value AS last_sale_normalized_value,
-            o.currency_normalized_value AS last_sale_currency_normalized_value,
-            fe.maker AS last_sale_maker,
-            fe.currency AS last_sale_currency,
-            fe.currency_price AS last_sale_currency_price,
-            o.currency_value AS last_sale_currency_value,
-            fe.price AS last_sale_price,
+            ELSE '{}'::json END AS royalty_breakdown,  
+            fe.timestamp AS last_sale_time,          
+            o.id AS last_sale_id,
+            o.maker AS last_sale_maker,
+            o.currency AS last_sale_currency,
+            o.currency_price AS last_sale_currency_price,            
+            o.price AS last_sale_price,            
+            o.source_id_int AS last_sale_source_id_int,               
             o.value AS last_sale_value,
-            o.source_id_int AS last_sale_source_id_int,
-            fe.timestamp AS last_sale_time
+            o.currency_value AS last_sale_currency_value  
         FROM fill_events_2 fe
         LEFT JOIN orders o ON fe.order_id = o.id
         WHERE fe.contract = t.contract AND fe.token_id = t.token_id
@@ -1066,12 +1064,8 @@ export const getTokensV6Options: RouteOptions = {
                     ? await getJoiPriceObject(
                         {
                           net: {
-                            amount: query.normalizeRoyalties
-                              ? r.last_sale_currency_normalized_value ?? r.last_sale_value
-                              : r.last_sale_currency_value ?? r.last_sale_value,
-                            nativeAmount: query.normalizeRoyalties
-                              ? r.last_sale_normalized_value ?? r.last_sale_value
-                              : r.last_sale_value,
+                            amount: r.last_sale_currency_value ?? r.last_sale_value,
+                            nativeAmount: r.last_sale_value,
                           },
                           gross: {
                             amount: r.last_sale_currency_price ?? r.last_sale_price,
