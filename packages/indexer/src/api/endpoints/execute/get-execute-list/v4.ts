@@ -206,6 +206,11 @@ export const getExecuteListV4Options: RouteOptions = {
         const params = payload.params[i];
         const [contract, tokenId] = params.token.split(":");
 
+        // Force usage of seaport-v1.4
+        if (params.orderKind === "seaport") {
+          params.orderKind = "seaport-v1.4";
+        }
+
         // For now, ERC20 listings are only supported on Seaport
         if (
           params.orderKind !== "seaport" &&
