@@ -6,6 +6,7 @@ import { extractEventsBatches } from "@/events-sync/index";
 import { concat } from "@/common/utils";
 import * as es from "@/events-sync/storage";
 import { Log } from "@ethersproject/abstract-provider";
+import { PartialFillEvent } from "@/events-sync/handlers/royalties";
 
 export const getEventParams = (log: Log, timestamp: number) => {
   const address = log.address.toLowerCase() as string;
@@ -72,6 +73,27 @@ export async function getFillEventsFromTx(txHash: string) {
   const allOnChainData = await extractOnChainData(events);
 
   let fillEvents: es.fills.Event[] = [];
+  for (let i = 0; i < allOnChainData.length; i++) {
+    const data = allOnChainData[i];
+    const allEvents = concat(
+      data.fillEvents,
+      data.fillEventsPartial,
+      data.fillEventsOnChain
+    ).filter((e) => e.orderKind !== "mint");
+    fillEvents = [...fillEvents, ...allEvents];
+  }
+
+  return {
+    events,
+    fillEvents,
+  };
+}
+
+export async function getFillEventsFromTxOnChain(txHash: string) {
+  const events = await getEnhancedEventsFromTx(txHash);
+  const allOnChainData = await extractOnChainData(events);
+
+  let fillEvents: PartialFillEvent[] = [];
   for (let i = 0; i < allOnChainData.length; i++) {
     const data = allOnChainData[i];
     const allEvents = concat(
