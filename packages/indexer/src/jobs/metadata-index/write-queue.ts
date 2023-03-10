@@ -115,6 +115,23 @@ if (config.doBackgroundWork) {
             await updateCollectionDailyVolume.addToQueue(collection, contract);
           }
 
+          if (contract === "0x495f947276749ce646f68ac8c248420045cb7b5e") {
+            await idb.none(
+              `
+              UPDATE "tokens"
+              SET "collection_id" = $/collection/,
+                  "updated_at" = now()
+              WHERE "contract" = $/contract/
+              AND token_id = $/tokenId/
+            `,
+              {
+                collection,
+                contract,
+                tokenId,
+              }
+            );
+          }
+
           // Set the new collection and update the token association
           await fetchCollectionMetadata.addToQueue(
             [
