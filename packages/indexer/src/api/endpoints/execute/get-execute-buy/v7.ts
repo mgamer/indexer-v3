@@ -817,7 +817,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }
 
       return {
-        steps,
+        steps: steps.filter((s) => s.items.length),
         path,
       };
     } catch (error) {
