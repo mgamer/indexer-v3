@@ -382,7 +382,7 @@ export const getExecuteBidV5Options: RouteOptions = {
 
             switch (params.orderKind) {
               case "seaport": {
-                if (!["reservoir", "opensea"].includes(params.orderbook)) {
+                if (!["reservoir"].includes(params.orderbook)) {
                   return errors.push({
                     message: "Unsupported orderbook",
                     orderIndex: i,
@@ -483,6 +483,17 @@ export const getExecuteBidV5Options: RouteOptions = {
                     message: "Unsupported orderbook",
                     orderIndex: i,
                   });
+                }
+
+                // OpenSea expects a royalty of at least 0.5%
+                if (
+                  params.orderbook === "opensea" &&
+                  params.royaltyBps !== undefined &&
+                  Number(params.royaltyBps) < 50
+                ) {
+                  throw Boom.badRequest(
+                    "Royalties should be at least 0.5% when posting to OpenSea"
+                  );
                 }
 
                 const options = params.options?.[params.orderKind] as

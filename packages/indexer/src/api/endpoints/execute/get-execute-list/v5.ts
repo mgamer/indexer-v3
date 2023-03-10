@@ -482,7 +482,7 @@ export const getExecuteListV5Options: RouteOptions = {
               }
 
               case "seaport": {
-                if (!["reservoir", "opensea"].includes(params.orderbook)) {
+                if (!["reservoir"].includes(params.orderbook)) {
                   return errors.push({ message: "Unsupported orderbook", orderIndex: i });
                 }
 
@@ -560,6 +560,17 @@ export const getExecuteListV5Options: RouteOptions = {
               case "seaport-v1.4": {
                 if (!["reservoir", "opensea"].includes(params.orderbook)) {
                   return errors.push({ message: "Unsupported orderbook", orderIndex: i });
+                }
+
+                // OpenSea expects a royalty of at least 0.5%
+                if (
+                  params.orderbook === "opensea" &&
+                  params.royaltyBps !== undefined &&
+                  Number(params.royaltyBps) < 50
+                ) {
+                  throw Boom.badRequest(
+                    "Royalties should be at least 0.5% when posting to OpenSea"
+                  );
                 }
 
                 const options = params.options?.[params.orderKind] as
