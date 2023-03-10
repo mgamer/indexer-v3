@@ -203,8 +203,11 @@ export const getTokensV6Options: RouteOptions = {
               slug: Joi.string().allow("", null),
             }),
             lastSale: Joi.object({
-              value: Joi.number().unsafe().allow(null),
+              id: Joi.string().allow(null),
+              price: JoiPrice.allow(null),
+              maker: Joi.string().lowercase().pattern(regex.address).allow(null),
               timestamp: Joi.number().unsafe().allow(null),
+              source: Joi.object().allow(null),
               royaltyBreakdown: Joi.object({
                 bps: Joi.number().unsafe(),
                 recipient: Joi.string().allow(null),
@@ -408,25 +411,29 @@ export const getTokensV6Options: RouteOptions = {
 
     let includeRoyaltyBreakdownQuery = "";
     let selectRoyaltyBreakdown = "";
-    let selectLastSale = "";
     if (query.includeLastSale) {
-      selectLastSale = `
-            t.last_buy_value,
-            t.last_buy_timestamp,
-            t.last_sell_value,
-            t.last_sell_timestamp,
-        `;
       selectRoyaltyBreakdown = ", r.*";
       includeRoyaltyBreakdownQuery = `
         LEFT JOIN LATERAL (
         SELECT
-            CASE WHEN f.royalty_fee_breakdown IS NOT NULL and jsonb_array_length(f.royalty_fee_breakdown) > 0 THEN f.royalty_fee_breakdown::json->0
+            CASE WHEN fe.royalty_fee_breakdown IS NOT NULL and jsonb_array_length(fe.royalty_fee_breakdown) > 0 THEN fe.royalty_fee_breakdown::json->0
             WHEN o.fee_breakdown IS NULL THEN '{}'::json 
             WHEN 'royalty' IN (SELECT jsonb_array_elements(o.fee_breakdown)->>'kind') THEN o.fee_breakdown::json->1
-            ELSE '{}'::json END AS royalty_breakdown
-        FROM fill_events_2 f
-        LEFT JOIN orders o ON f.order_id = o.id
-        WHERE f.contract = t.contract AND f.token_id = t.token_id
+            ELSE '{}'::json END AS royalty_breakdown,
+            fe.order_id AS last_sale_id,
+            o.normalized_value AS last_sale_normalized_value,
+            o.currency_normalized_value AS last_sale_currency_normalized_value,
+            fe.maker AS last_sale_maker,
+            fe.currency AS last_sale_currency,
+            fe.currency_price AS last_sale_currency_price,
+            o.currency_value AS last_sale_currency_value,
+            fe.price AS last_sale_price,
+            o.value AS last_sale_value,
+            o.source_id_int AS last_sale_source_id_int,
+            fe.timestamp AS last_sale_time
+        FROM fill_events_2 fe
+        LEFT JOIN orders o ON fe.order_id = o.id
+        WHERE fe.contract = t.contract AND fe.token_id = t.token_id
         ORDER BY timestamp DESC LIMIT 1
         ) r ON TRUE
         `;
@@ -530,7 +537,6 @@ export const getTokensV6Options: RouteOptions = {
           t.last_flag_update,
           t.last_flag_change,
           c.slug,
-          ${selectLastSale}
           (c.metadata ->> 'imageUrl')::TEXT AS collection_image,
           (
             SELECT
@@ -928,6 +934,10 @@ export const getTokensV6Options: RouteOptions = {
           ? sources.get(Number(r.top_buy_source_id_int), contract, tokenId)
           : undefined;
 
+        const lastSaleSource = r.last_sale_value
+          ? sources.get(Number(r.last_sale_source_id_int), contract, tokenId)
+          : undefined;
+
         // Use default currencies for backwards compatibility with entries
         // that don't have the currencies cached in the tokens table
         const floorAskCurrency = r.floor_sell_currency
@@ -936,6 +946,9 @@ export const getTokensV6Options: RouteOptions = {
         const topBidCurrency = r.top_buy_currency
           ? fromBuffer(r.top_buy_currency)
           : Sdk.Common.Addresses.Weth[config.chainId];
+        const lastSaleCurrency = r.last_sale_currency
+          ? fromBuffer(r.last_sale_currency)
+          : Sdk.Common.Addresses.Eth[config.chainId];
 
         let dynamicPricing = undefined;
         if (query.includeDynamicPricing) {
@@ -1048,18 +1061,35 @@ export const getTokensV6Options: RouteOptions = {
             },
             lastSale: query.includeLastSale
               ? {
-                  value:
-                    r.last_buy_timestamp > r.last_sell_timestamp
-                      ? r.last_buy_value
-                        ? formatEth(r.last_buy_value)
-                        : null
-                      : r.last_sell_value
-                      ? formatEth(r.last_sell_value)
-                      : null,
-                  timestamp:
-                    r.last_buy_timestamp > r.last_sell_timestamp
-                      ? r.last_buy_timestamp
-                      : r.last_sell_timestamp,
+                  id: r.last_sale_id,
+                  price: r.last_sale_value
+                    ? await getJoiPriceObject(
+                        {
+                          net: {
+                            amount: query.normalizeRoyalties
+                              ? r.last_sale_currency_normalized_value ?? r.last_sale_value
+                              : r.last_sale_currency_value ?? r.last_sale_value,
+                            nativeAmount: query.normalizeRoyalties
+                              ? r.last_sale_normalized_value ?? r.last_sale_value
+                              : r.last_sale_value,
+                          },
+                          gross: {
+                            amount: r.last_sale_currency_price ?? r.last_sale_price,
+                            nativeAmount: r.last_sale_price,
+                          },
+                        },
+                        lastSaleCurrency
+                      )
+                    : null,
+                  maker: r.last_sale_maker ? fromBuffer(r.last_sale_maker) : null,
+                  timestamp: r.last_sale_time,
+                  source: {
+                    id: lastSaleSource?.address,
+                    domain: lastSaleSource?.domain,
+                    name: lastSaleSource?.getTitle(),
+                    icon: lastSaleSource?.getIcon(),
+                    url: lastSaleSource?.metadata.url,
+                  },
                   royaltyBreakdown: r.royalty_breakdown
                     ? {
                         bps: r.royalty_breakdown.bps,
