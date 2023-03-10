@@ -126,7 +126,7 @@ if (config.doBackgroundWork) {
             `,
               {
                 collection,
-                contract,
+                contract: toBuffer(contract),
                 tokenId,
               }
             );
