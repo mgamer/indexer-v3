@@ -98,7 +98,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       let fillabilityStatus = "fillable";
       let approvalStatus = "approved";
       try {
-        await offChainCheck(order, metadata.originatedAt, {
+        await offChainCheck(order, undefined, {
           onChainApprovalRecheck: true,
           checkFilledOrCancelled: true,
         });
@@ -293,7 +293,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         missing_royalties: missingRoyalties,
         normalized_value: normalizedValue,
         currency_normalized_value: normalizedValue,
-        originated_at: metadata.originatedAt ?? null,
+        // originated_at: metadata.originatedAt ? new Date(metadata.originatedAt) : null,
       });
 
       results.push({
@@ -351,7 +351,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         { name: "missing_royalties", mod: ":json" },
         "normalized_value",
         "currency_normalized_value",
-        "originated_at",
+        // "originated_at",
       ],
       {
         table: "orders",
