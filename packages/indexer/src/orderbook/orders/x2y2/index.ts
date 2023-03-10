@@ -98,7 +98,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       let fillabilityStatus = "fillable";
       let approvalStatus = "approved";
       try {
-        await offChainCheck(order, { onChainApprovalRecheck: true });
+        await offChainCheck(order, metadata.originatedAt, {
+          onChainApprovalRecheck: true,
+          checkFilledOrCancelled: true,
+        });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         // Keep any orders that can potentially get valid in the future
@@ -255,7 +258,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         conduit = Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId];
       }
 
-      const validFrom = `date_trunc('seconds', to_timestamp(${currentTime}))`;
+      const validFrom = `date_trunc('seconds', to_timestamp(${
+        metadata.originatedAt ?? currentTime
+      }))`;
       const validTo = `date_trunc('seconds', to_timestamp(${order.params.deadline}))`;
       orderValues.push({
         id,
@@ -288,6 +293,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         missing_royalties: missingRoyalties,
         normalized_value: normalizedValue,
         currency_normalized_value: normalizedValue,
+        originated_at: metadata.originatedAt ?? null,
       });
 
       results.push({
@@ -345,6 +351,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         { name: "missing_royalties", mod: ":json" },
         "normalized_value",
         "currency_normalized_value",
+        "originated_at",
       ],
       {
         table: "orders",
