@@ -49,12 +49,15 @@ export const ensureBuyTxSucceeds = async (
 
   const result = getStateChange(callTrace);
 
-  logger.info("simulation", `result = ${JSON.stringify(result)}, token = ${JSON.stringify(token)}`);
-
   if (
     result[taker].tokenBalanceState[`${token.kind}:${token.contract}:${token.tokenId}`] !==
     bn(token.amount).toString()
   ) {
+    logger.info(
+      "simulation",
+      `result = ${JSON.stringify(result)}, token = ${JSON.stringify(token)}`
+    );
+
     return {
       result: false,
       callTrace,
