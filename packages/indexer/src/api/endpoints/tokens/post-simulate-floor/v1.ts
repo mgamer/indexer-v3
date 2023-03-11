@@ -29,7 +29,7 @@ export const postSimulateFloorV1Options: RouteOptions = {
   validate: {
     payload: Joi.object({
       token: Joi.string().lowercase().pattern(regex.token),
-      router: Joi.string().valid("v5", "v6", "v7").default("v7"),
+      router: Joi.string().valid("v5", "v6").default("v6"),
     }),
   },
   response: {
@@ -84,7 +84,7 @@ export const postSimulateFloorV1Options: RouteOptions = {
         method: "POST",
         // Latest V5 router API is V4
         // Latest V6 router API is V6
-        url: `/execute/buy/${router === "v5" ? "v4" : "v7"}`,
+        url: `/execute/buy/${router === "v5" ? "v4" : "v6"}`,
         headers: {
           "Content-Type": "application/json",
         },
