@@ -156,8 +156,7 @@ export const postSimulateFloorV1Options: RouteOptions = {
         ) {
           return { message: "Order not simulatable" };
         } else {
-          logger.info("simulation-invalidation", `Simulation failed for order ${pathItem.orderId}`);
-          // await invalidateOrder(pathItem.orderId, callTrace, parsedPayload);
+          await invalidateOrder(pathItem.orderId, callTrace, parsedPayload);
           return { message: "Floor order is not fillable (got invalidated)" };
         }
       }
