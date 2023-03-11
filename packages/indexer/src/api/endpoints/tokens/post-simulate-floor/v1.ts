@@ -48,6 +48,7 @@ export const postSimulateFloorV1Options: RouteOptions = {
 
     const payload = request.payload as any;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const invalidateOrder = async (orderId: string, callTrace?: CallTrace, payload?: any) => {
       logger.error(
         `post-simulate-floor-${version}-handler`,
@@ -123,6 +124,7 @@ export const postSimulateFloorV1Options: RouteOptions = {
 
       const pathItem = parsedPayload.path[0];
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { result: success, callTrace } = await ensureBuyTxSucceeds(
         genericTaker,
         {
@@ -154,7 +156,8 @@ export const postSimulateFloorV1Options: RouteOptions = {
         ) {
           return { message: "Order not simulatable" };
         } else {
-          await invalidateOrder(pathItem.orderId, callTrace, parsedPayload);
+          logger.info("simulation-invalidation", `Simulation failed for order ${pathItem.orderId}`);
+          // await invalidateOrder(pathItem.orderId, callTrace, parsedPayload);
           return { message: "Floor order is not fillable (got invalidated)" };
         }
       }
