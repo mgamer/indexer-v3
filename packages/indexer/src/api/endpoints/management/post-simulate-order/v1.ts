@@ -136,7 +136,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
             "Content-Type": "application/json",
           },
           payload: {
-            items: [{ orderId: id }],
+            orderIds: [id],
             taker: genericTaker,
             skipBalanceCheck: true,
             currency: Sdk.Common.Addresses.Eth[config.chainId],
@@ -232,7 +232,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
             "Content-Type": "application/json",
           },
           payload: {
-            items: [{ orderId: id }],
+            orderId: id,
             taker: owner,
             token: `${fromBuffer(tokenResult.contract)}:${tokenResult.token_id}`,
             allowInactiveOrderIds: true,
