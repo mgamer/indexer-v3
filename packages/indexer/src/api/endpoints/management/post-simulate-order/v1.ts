@@ -131,7 +131,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
       if (orderResult.side === "sell") {
         const response = await inject({
           method: "POST",
-          url: `/execute/buy/v7`,
+          url: `/execute/buy/v6`,
           headers: {
             "Content-Type": "application/json",
           },
@@ -227,7 +227,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
 
         const response = await inject({
           method: "POST",
-          url: "/execute/sell/v7",
+          url: "/execute/sell/v6",
           headers: {
             "Content-Type": "application/json",
           },
