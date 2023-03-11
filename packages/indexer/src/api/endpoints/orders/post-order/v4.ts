@@ -268,7 +268,6 @@ export const postOrderV4Options: RouteOptions = {
                   ? new Sdk.Seaport.Order(config.chainId, order.data).hash()
                   : new Sdk.SeaportV14.Order(config.chainId, order.data).hash();
 
-              let orderForwarded = false;
               if (orderbook === "opensea") {
                 crossPostingOrder = await crossPostingOrdersModel.saveOrder({
                   orderId,
@@ -287,30 +286,7 @@ export const postOrderV4Options: RouteOptions = {
                   orderbookApiKey,
                   collectionId: collection,
                 });
-              } else if (config.forwardReservoirApiKeys.includes(request.headers["x-api-key"])) {
-                const orderResult = await idb.oneOrNone(
-                  `
-                    SELECT
-                      orders.token_set_id
-                    FROM orders
-                    WHERE orders.id = $/id/
-                  `,
-                  { id: orderId }
-                );
-
-                if (orderResult?.token_set_id?.startsWith("token")) {
-                  await postOrderExternal.addToQueue({
-                    orderId,
-                    orderData: order.data,
-                    orderbook: "opensea",
-                    orderbookApiKey: config.forwardOpenseaApiKey,
-                  });
-                }
-
-                orderForwarded = true;
-              }
-
-              if (orderbook === "reservoir") {
+              } else if (orderbook === "reservoir") {
                 const [result] =
                   order.kind === "seaport"
                     ? await orders.seaport.save([
@@ -340,7 +316,26 @@ export const postOrderV4Options: RouteOptions = {
                   return results.push({ message: result.status, orderIndex: i, orderId });
                 }
 
-                if (!orderForwarded) {
+                if (config.forwardReservoirApiKeys.includes(request.headers["x-api-key"])) {
+                  const orderResult = await idb.oneOrNone(
+                    `
+                    SELECT
+                      orders.token_set_id
+                    FROM orders
+                    WHERE orders.id = $/id/
+                  `,
+                    { id: orderId }
+                  );
+
+                  if (orderResult?.token_set_id?.startsWith("token")) {
+                    await postOrderExternal.addToQueue({
+                      orderId,
+                      orderData: order.data,
+                      orderbook: "opensea",
+                      orderbookApiKey: config.forwardOpenseaApiKey,
+                    });
+                  }
+                } else {
                   const collectionResult = await idb.oneOrNone(
                     `
                       SELECT
