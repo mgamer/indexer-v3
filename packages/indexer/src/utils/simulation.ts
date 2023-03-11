@@ -6,7 +6,7 @@ import { TxData } from "@reservoir0x/sdk/dist/utils";
 
 import { bn, now } from "@/common/utils";
 import { config } from "@/config/index";
-import { logger } from "../../dist/common/logger";
+import { logger } from "@/common/logger";
 
 export const genericTaker = "0x0000000000000000000000000000000000000001";
 
