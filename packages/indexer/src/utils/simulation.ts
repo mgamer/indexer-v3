@@ -6,6 +6,7 @@ import { TxData } from "@reservoir0x/sdk/dist/utils";
 
 import { bn, now } from "@/common/utils";
 import { config } from "@/config/index";
+import { logger } from "../../dist/common/logger";
 
 export const genericTaker = "0x0000000000000000000000000000000000000001";
 
@@ -47,6 +48,8 @@ export const ensureBuyTxSucceeds = async (
   }
 
   const result = getStateChange(callTrace);
+
+  logger.info("simulation", `result = ${JSON.stringify(result)}, token = ${JSON.stringify(token)}`);
 
   if (
     result[taker].tokenBalanceState[`${token.kind}:${token.contract}:${token.tokenId}`] !==
