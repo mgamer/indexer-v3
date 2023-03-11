@@ -59,6 +59,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/collections/activity/v6",
+    options: activitiesEndpoints.getCollectionActivityV6Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/tokens/{token}/activity/v1",
     options: activitiesEndpoints.getTokenActivityV1Options,
   });
@@ -79,6 +85,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/tokens/{token}/activity/v4",
     options: activitiesEndpoints.getTokenActivityV4Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/tokens/{token}/activity/v5",
+    options: activitiesEndpoints.getTokenActivityV5Options,
   });
 
   server.route({
@@ -109,6 +121,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/users/activity/v5",
     options: activitiesEndpoints.getUserActivityV5Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/users/activity/v6",
+    options: activitiesEndpoints.getUserActivityV6Options,
   });
 
   server.route({
@@ -1230,6 +1248,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/transfers/v2",
     options: transfersEndpoints.getTransfersV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/transfers/v3",
+    options: transfersEndpoints.getTransfersV3Options,
   });
 
   server.route({

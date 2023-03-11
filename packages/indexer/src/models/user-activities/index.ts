@@ -215,6 +215,10 @@ export class UserActivities {
                     source_id_int AS "order_source_id_int",
                     side AS "order_side",
                     kind AS "order_kind",
+                    currency AS "order_currency",
+                    currency_price AS "order_currency_price",
+                    currency_value AS "order_currency_value",
+                    currency_normalized_value AS "order_currency_normalized_value",
                     (${orderMetadataBuildQuery}) AS "order_metadata",
                     (${orderCriteriaBuildQuery}) AS "order_criteria"
                 FROM orders
