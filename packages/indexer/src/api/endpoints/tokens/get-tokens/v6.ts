@@ -203,15 +203,18 @@ export const getTokensV6Options: RouteOptions = {
               slug: Joi.string().allow("", null),
             }),
             lastSale: Joi.object({
-              id: Joi.string().allow(null),
               price: JoiPrice.allow(null),
-              maker: Joi.string().lowercase().pattern(regex.address).allow(null),
               timestamp: Joi.number().unsafe().allow(null),
-              source: Joi.object().allow(null),
-              royaltyBreakdown: Joi.object({
-                bps: Joi.number().unsafe(),
-                recipient: Joi.string().allow(null),
-              }).allow(null),
+              royaltyFeeBps: Joi.number(),
+              marketplaceFeeBps: Joi.number(),
+              paidFullRoyalty: Joi.boolean(),
+              feeBreakdown: Joi.array().items(
+                Joi.object({
+                  kind: Joi.string(),
+                  bps: Joi.number(),
+                  recipient: Joi.string(),
+                })
+              ),
             }).optional(),
             owner: Joi.string().allow(null),
             attributes: Joi.array()
@@ -416,21 +419,17 @@ export const getTokensV6Options: RouteOptions = {
       includeRoyaltyBreakdownQuery = `
         LEFT JOIN LATERAL (
         SELECT
-            CASE WHEN fe.royalty_fee_breakdown IS NOT NULL and jsonb_array_length(fe.royalty_fee_breakdown) > 0 THEN fe.royalty_fee_breakdown::json->0
-            WHEN o.fee_breakdown IS NULL THEN '{}'::json 
-            WHEN 'royalty' IN (SELECT jsonb_array_elements(o.fee_breakdown)->>'kind') THEN o.fee_breakdown::json->1
-            ELSE '{}'::json END AS royalty_breakdown,  
-            fe.timestamp AS last_sale_time,          
-            o.id AS last_sale_id,
-            o.maker AS last_sale_maker,
-            o.currency AS last_sale_currency,
-            o.currency_price AS last_sale_currency_price,            
-            o.price AS last_sale_price,            
-            o.source_id_int AS last_sale_source_id_int,               
-            o.value AS last_sale_value,
-            o.currency_value AS last_sale_currency_value  
+          fe.timestamp AS last_sale_timestamp,          
+          fe.currency AS last_sale_currency,
+          fe.currency_price AS last_sale_currency_price,            
+          fe.price AS last_sale_price,    
+          fe.usd_price AS last_sale_usd_price,
+          fe.marketplace_fee_bps AS last_sale_marketplace_fee_bps,
+          fe.royalty_fee_bps AS last_sale_royalty_fee_bps,
+          fe.paid_full_royalty AS last_sale_paid_full_royalty,
+          fe.royalty_fee_breakdown AS last_sale_royalty_fee_breakdown,
+          fe.marketplace_fee_breakdown AS last_sale_marketplace_fee_breakdown  
         FROM fill_events_2 fe
-        LEFT JOIN orders o ON fe.order_id = o.id
         WHERE fe.contract = t.contract AND fe.token_id = t.token_id
         ORDER BY timestamp DESC LIMIT 1
         ) r ON TRUE
@@ -932,10 +931,6 @@ export const getTokensV6Options: RouteOptions = {
           ? sources.get(Number(r.top_buy_source_id_int), contract, tokenId)
           : undefined;
 
-        const lastSaleSource = r.last_sale_value
-          ? sources.get(Number(r.last_sale_source_id_int), contract, tokenId)
-          : undefined;
-
         // Use default currencies for backwards compatibility with entries
         // that don't have the currencies cached in the tokens table
         const floorAskCurrency = r.floor_sell_currency
@@ -944,9 +939,6 @@ export const getTokensV6Options: RouteOptions = {
         const topBidCurrency = r.top_buy_currency
           ? fromBuffer(r.top_buy_currency)
           : Sdk.Common.Addresses.Weth[config.chainId];
-        const lastSaleCurrency = r.last_sale_currency
-          ? fromBuffer(r.last_sale_currency)
-          : Sdk.Common.Addresses.Eth[config.chainId];
 
         let dynamicPricing = undefined;
         if (query.includeDynamicPricing) {
@@ -1037,6 +1029,9 @@ export const getTokensV6Options: RouteOptions = {
           }
         }
 
+        const lastSaleFeeInfoIsValid =
+          (r.last_saleroyalty_fee_bps ?? 0) + (r.last_salemarketplace_fee_bps ?? 0) < 10000;
+
         return {
           token: {
             contract,
@@ -1059,37 +1054,49 @@ export const getTokensV6Options: RouteOptions = {
             },
             lastSale: query.includeLastSale
               ? {
-                  id: r.last_sale_id,
-                  price: r.last_sale_value
-                    ? await getJoiPriceObject(
-                        {
-                          net: {
-                            amount: r.last_sale_currency_value ?? r.last_sale_value,
-                            nativeAmount: r.last_sale_value,
-                          },
-                          gross: {
-                            amount: r.last_sale_currency_price ?? r.last_sale_price,
-                            nativeAmount: r.last_sale_price,
-                          },
-                        },
-                        lastSaleCurrency
-                      )
-                    : null,
-                  maker: r.last_sale_maker ? fromBuffer(r.last_sale_maker) : null,
-                  timestamp: r.last_sale_time,
-                  source: {
-                    id: lastSaleSource?.address,
-                    domain: lastSaleSource?.domain,
-                    name: lastSaleSource?.getTitle(),
-                    icon: lastSaleSource?.getIcon(),
-                    url: lastSaleSource?.metadata.url,
-                  },
-                  royaltyBreakdown: r.royalty_breakdown
-                    ? {
-                        bps: r.royalty_breakdown.bps,
-                        recipient: r.royalty_breakdown.recipient,
-                      }
-                    : {},
+                  price: await getJoiPriceObject(
+                    {
+                      gross: {
+                        amount: r.last_sale_currency_price ?? r.last_sale_price,
+                        nativeAmount: r.last_sale_price,
+                        usdAmount: r.last_sale_usd_price,
+                      },
+                    },
+                    fromBuffer(r.last_sale_currency),
+                    (r.last_sale_royalty_fee_bps ?? 0) + (r.last_sale_marketplace_fee_bps ?? 0)
+                  ),
+                  timestamp: r.last_sale_timestamp,
+                  royaltyFeeBps:
+                    r.last_sale_royalty_fee_bps !== null && lastSaleFeeInfoIsValid
+                      ? r.last_sale_royalty_fee_bps
+                      : undefined,
+                  marketplaceFeeBps:
+                    r.last_sale_marketplace_fee_bps !== null && lastSaleFeeInfoIsValid
+                      ? r.last_sale_marketplace_fee_bps
+                      : undefined,
+                  paidFullRoyalty:
+                    r.last_sale_paid_full_royalty !== null && lastSaleFeeInfoIsValid
+                      ? r.last_sale_paid_full_royalty
+                      : undefined,
+                  feeBreakdown:
+                    (r.last_sale_royalty_fee_breakdown !== null ||
+                      r.last_sale_marketplace_fee_breakdown !== null) &&
+                    lastSaleFeeInfoIsValid
+                      ? [].concat(
+                          (r.last_sale_royalty_fee_breakdown ?? []).map((detail: any) => {
+                            return {
+                              kind: "royalty",
+                              ...detail,
+                            };
+                          }),
+                          (r.last_sale_marketplace_fee_breakdown ?? []).map((detail: any) => {
+                            return {
+                              kind: "marketplace",
+                              ...detail,
+                            };
+                          })
+                        )
+                      : undefined,
                 }
               : undefined,
             owner: r.owner ? fromBuffer(r.owner) : null,
