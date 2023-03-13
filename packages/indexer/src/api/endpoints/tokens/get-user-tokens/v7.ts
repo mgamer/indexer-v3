@@ -311,7 +311,6 @@ export const getUserTokensV7Options: RouteOptions = {
           fe.royalty_fee_breakdown AS last_sale_royalty_fee_breakdown,
           fe.marketplace_fee_breakdown AS last_sale_marketplace_fee_breakdown 
         FROM fill_events_2 fe
-        LEFT JOIN orders o ON fe.order_id = o.id
         WHERE fe.contract = t.contract AND fe.token_id = t.token_id
         ORDER BY timestamp DESC LIMIT 1
         ) r ON TRUE
