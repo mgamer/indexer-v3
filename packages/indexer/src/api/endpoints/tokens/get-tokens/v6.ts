@@ -1052,53 +1052,54 @@ export const getTokensV6Options: RouteOptions = {
               image: Assets.getLocalAssetsLink(r.collection_image),
               slug: r.slug,
             },
-            lastSale: query.includeLastSale
-              ? {
-                  price: await getJoiPriceObject(
-                    {
-                      gross: {
-                        amount: r.last_sale_currency_price ?? r.last_sale_price,
-                        nativeAmount: r.last_sale_price,
-                        usdAmount: r.last_sale_usd_price,
+            lastSale:
+              query.includeLastSale && r.last_sale_currency
+                ? {
+                    price: await getJoiPriceObject(
+                      {
+                        gross: {
+                          amount: r.last_sale_currency_price ?? r.last_sale_price,
+                          nativeAmount: r.last_sale_price,
+                          usdAmount: r.last_sale_usd_price,
+                        },
                       },
-                    },
-                    fromBuffer(r.last_sale_currency),
-                    (r.last_sale_royalty_fee_bps ?? 0) + (r.last_sale_marketplace_fee_bps ?? 0)
-                  ),
-                  timestamp: r.last_sale_timestamp,
-                  royaltyFeeBps:
-                    r.last_sale_royalty_fee_bps !== null && lastSaleFeeInfoIsValid
-                      ? r.last_sale_royalty_fee_bps
-                      : undefined,
-                  marketplaceFeeBps:
-                    r.last_sale_marketplace_fee_bps !== null && lastSaleFeeInfoIsValid
-                      ? r.last_sale_marketplace_fee_bps
-                      : undefined,
-                  paidFullRoyalty:
-                    r.last_sale_paid_full_royalty !== null && lastSaleFeeInfoIsValid
-                      ? r.last_sale_paid_full_royalty
-                      : undefined,
-                  feeBreakdown:
-                    (r.last_sale_royalty_fee_breakdown !== null ||
-                      r.last_sale_marketplace_fee_breakdown !== null) &&
-                    lastSaleFeeInfoIsValid
-                      ? [].concat(
-                          (r.last_sale_royalty_fee_breakdown ?? []).map((detail: any) => {
-                            return {
-                              kind: "royalty",
-                              ...detail,
-                            };
-                          }),
-                          (r.last_sale_marketplace_fee_breakdown ?? []).map((detail: any) => {
-                            return {
-                              kind: "marketplace",
-                              ...detail,
-                            };
-                          })
-                        )
-                      : undefined,
-                }
-              : undefined,
+                      fromBuffer(r.last_sale_currency),
+                      (r.last_sale_royalty_fee_bps ?? 0) + (r.last_sale_marketplace_fee_bps ?? 0)
+                    ),
+                    timestamp: r.last_sale_timestamp,
+                    royaltyFeeBps:
+                      r.last_sale_royalty_fee_bps !== null && lastSaleFeeInfoIsValid
+                        ? r.last_sale_royalty_fee_bps
+                        : undefined,
+                    marketplaceFeeBps:
+                      r.last_sale_marketplace_fee_bps !== null && lastSaleFeeInfoIsValid
+                        ? r.last_sale_marketplace_fee_bps
+                        : undefined,
+                    paidFullRoyalty:
+                      r.last_sale_paid_full_royalty !== null && lastSaleFeeInfoIsValid
+                        ? r.last_sale_paid_full_royalty
+                        : undefined,
+                    feeBreakdown:
+                      (r.last_sale_royalty_fee_breakdown !== null ||
+                        r.last_sale_marketplace_fee_breakdown !== null) &&
+                      lastSaleFeeInfoIsValid
+                        ? [].concat(
+                            (r.last_sale_royalty_fee_breakdown ?? []).map((detail: any) => {
+                              return {
+                                kind: "royalty",
+                                ...detail,
+                              };
+                            }),
+                            (r.last_sale_marketplace_fee_breakdown ?? []).map((detail: any) => {
+                              return {
+                                kind: "marketplace",
+                                ...detail,
+                              };
+                            })
+                          )
+                        : undefined,
+                  }
+                : undefined,
             owner: r.owner ? fromBuffer(r.owner) : null,
             attributes: query.includeAttributes
               ? r.attributes
