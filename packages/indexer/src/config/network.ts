@@ -356,7 +356,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         enableWebSocket: true,
         realtimeSyncFrequencySeconds: 15,
         realtimeSyncMaxBlockLag: 45,
-        lastBlockLatency: 20,
+        lastBlockLatency: 15,
         backfillBlockBatchSize: 60,
         reorgCheckFrequency: [30],
         subDomain: "api-polygon",
