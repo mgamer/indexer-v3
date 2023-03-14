@@ -358,6 +358,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           const result = await idb.oneOrNone(
             `
               SELECT
+                orders.id,
                 orders.kind,
                 contracts.kind AS token_kind,
                 coalesce(orders.currency_price, orders.price) AS price,
