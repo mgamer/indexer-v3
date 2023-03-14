@@ -354,7 +354,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         ...defaultNetworkSettings,
         metadataMintDelay: 180,
         enableWebSocket: true,
-        realtimeSyncFrequencySeconds: 15,
+        realtimeSyncFrequencySeconds: 5,
         realtimeSyncMaxBlockLag: 45,
         lastBlockLatency: 15,
         backfillBlockBatchSize: 60,
@@ -398,7 +398,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         ...defaultNetworkSettings,
         enableWebSocket: false,
         realtimeSyncMaxBlockLag: 128,
-        realtimeSyncFrequencySeconds: 10,
+        realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 10,
         subDomain: "api-arbitrum",
         coingecko: {
