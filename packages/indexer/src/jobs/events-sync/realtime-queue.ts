@@ -9,7 +9,8 @@ import { getNetworkSettings } from "@/config/network";
 import { syncEvents } from "@/events-sync/index";
 import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
 import tracer from "@/common/tracer";
-import _ from "lodash";
+import _, { now } from "lodash";
+import cron from "node-cron";
 
 const QUEUE_NAME = "events-sync-realtime";
 
@@ -23,8 +24,7 @@ export const queue = new Queue(QUEUE_NAME, {
       age: 1,
       count: 1,
     },
-    timeout: 60000,
-    attempts: 1,
+    timeout: 45000,
   },
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
@@ -98,6 +98,16 @@ if (config.doBackgroundWork) {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
 }
+
+// Monitor the job as bullmq has bugs and job might be stuck and needs to be manually removed
+cron.schedule(`*/${getNetworkSettings().realtimeSyncFrequencySeconds} * * * * *`, async () => {
+  if (_.includes([137, 42161], config.chainId)) {
+    const job = await queue.getJob(`${config.chainId}`);
+    if (job && job.timestamp < now() - 60 * 1000) {
+      await job.remove();
+    }
+  }
+});
 
 export const addToQueue = async () => {
   let jobId;
