@@ -102,7 +102,7 @@ if (config.doBackgroundWork) {
   cron.schedule(`*/${getNetworkSettings().realtimeSyncFrequencySeconds} * * * * *`, async () => {
     if (_.includes([137, 42161], config.chainId)) {
       const job = await queue.getJob(`${config.chainId}`);
-      if (job && job.timestamp < now() - 60 * 1000) {
+      if (job && job.timestamp < now() - 180 * 1000) {
         logger.info(QUEUE_NAME, `removing stale job ${job.timestamp} now = ${now()}`);
         await job.remove();
       }
