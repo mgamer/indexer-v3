@@ -569,7 +569,7 @@ export class Router {
               txData: {
                 from: data.from,
                 to: data.to,
-                data: data.data,
+                data: data.data + generateSourceBytes(options?.source),
                 value: data.value,
               },
               orderIndexes: [],
