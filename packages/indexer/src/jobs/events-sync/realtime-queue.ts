@@ -104,5 +104,3 @@ export const addToQueue = async () => {
 
   await queue.add(randomUUID(), {}, { jobId });
 };
-
-queue.clean(0, 1000, "active");
