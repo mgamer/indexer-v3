@@ -97,17 +97,18 @@ if (config.doBackgroundWork) {
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
-}
 
-// Monitor the job as bullmq has bugs and job might be stuck and needs to be manually removed
-cron.schedule(`*/${getNetworkSettings().realtimeSyncFrequencySeconds} * * * * *`, async () => {
-  if (_.includes([137, 42161], config.chainId)) {
-    const job = await queue.getJob(`${config.chainId}`);
-    if (job && job.timestamp < now() - 60 * 1000) {
-      await job.remove();
+  // Monitor the job as bullmq has bugs and job might be stuck and needs to be manually removed
+  cron.schedule(`*/${getNetworkSettings().realtimeSyncFrequencySeconds} * * * * *`, async () => {
+    if (_.includes([137, 42161], config.chainId)) {
+      const job = await queue.getJob(`${config.chainId}`);
+      if (job && job.timestamp < now() - 60 * 1000) {
+        logger.info(QUEUE_NAME, `removing stale job ${job.timestamp} now = ${now()}`);
+        await job.remove();
+      }
     }
-  }
-});
+  });
+}
 
 export const addToQueue = async () => {
   let jobId;
