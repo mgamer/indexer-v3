@@ -90,6 +90,7 @@ export const getOwnersV1Options: RouteOptions = {
     const query = request.query as any;
 
     let nftBalancesFilter = "";
+    let nftBalancesJoin = "";
     let tokensFilter = "";
     let attributesJoin = "";
 
@@ -147,24 +148,19 @@ export const getOwnersV1Options: RouteOptions = {
       const addCollectionToFilter = (id: string) => {
         ++i;
         (query as any)[`contract${i}`] = toBuffer(id);
-        nftBalancesFilter = `${nftBalancesFilter}$/contract${i}/, `;
-        tokensFilter = `${tokensFilter}$/contract${i}/, `;
+        nftBalancesJoin = `${nftBalancesJoin}($/contract${i}/), `;
       };
 
       await CollectionSets.getCollectionsIds(query.collectionsSetId).then((result) =>
         result.forEach(addCollectionToFilter)
       );
-      if (!nftBalancesFilter && !tokensFilter) {
+      if (!nftBalancesJoin) {
         return { owners: [] };
       }
-      nftBalancesFilter = `nft_balances.contract IN (${nftBalancesFilter.substring(
-        0,
-        nftBalancesFilter.lastIndexOf(", ")
-      )})`;
-      tokensFilter = `tokens.contract IN (${tokensFilter.substring(
-        0,
-        tokensFilter.lastIndexOf(", ")
-      )})`;
+      nftBalancesJoin = `JOIN (
+        VALUES ${nftBalancesJoin.substring(0, nftBalancesJoin.lastIndexOf(", "))}      
+      ) AS v(contract) ON v.contract::bytea = nft_balances.contract
+      `;
     }
 
     try {
@@ -173,8 +169,8 @@ export const getOwnersV1Options: RouteOptions = {
           SELECT owner, SUM(amount) AS token_count
           FROM nft_balances
           ${attributesJoin}
-          WHERE ${nftBalancesFilter}
-          AND amount > 0
+          ${nftBalancesJoin}
+          WHERE ${nftBalancesFilter + (nftBalancesFilter && ` AND`)} amount > 0
           GROUP BY owner
           ORDER BY token_count DESC, owner
           OFFSET ${query.offset} LIMIT ${query.limit}
@@ -189,8 +185,8 @@ export const getOwnersV1Options: RouteOptions = {
         FROM nft_balances
         JOIN tokens ON nft_balances.contract = tokens.contract AND nft_balances.token_id = tokens.token_id
         ${attributesJoin}
-        WHERE ${tokensFilter}
-        AND nft_balances.owner IN (SELECT owner FROM x)
+        ${nftBalancesJoin}
+        WHERE ${tokensFilter + (tokensFilter && ` AND`)} nft_balances.owner IN (SELECT owner FROM x)
         AND nft_balances.amount > 0
         GROUP BY nft_balances.owner
         ORDER BY token_count DESC, nft_balances.owner
