@@ -9,6 +9,7 @@ import { getNetworkSettings } from "@/config/network";
 import { syncEvents } from "@/events-sync/index";
 import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
 import tracer from "@/common/tracer";
+import _ from "lodash";
 
 const QUEUE_NAME = "events-sync-realtime";
 
@@ -17,7 +18,7 @@ export const queue = new Queue(QUEUE_NAME, {
   defaultJobOptions: {
     // In order to be as lean as possible, leave retrying
     // any failed processes to be done by subsequent jobs
-    removeOnComplete: 5,
+    removeOnComplete: true,
     removeOnFail: true,
     timeout: 60000,
   },
@@ -95,5 +96,10 @@ if (config.doBackgroundWork) {
 }
 
 export const addToQueue = async () => {
-  await queue.add(randomUUID(), {});
+  let jobId;
+  if (_.includes([137, 42161], config.chainId)) {
+    jobId = `${config.chainId}`;
+  }
+
+  await queue.add(randomUUID(), {}, { jobId });
 };
