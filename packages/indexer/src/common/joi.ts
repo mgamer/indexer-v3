@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { BigNumberish } from "@ethersproject/bignumber";
 import Joi from "joi";
 
