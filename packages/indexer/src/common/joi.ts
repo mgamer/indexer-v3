@@ -185,3 +185,106 @@ export const JoiOrderCriteria = Joi.alternatives(
     kind: "custom",
   })
 );
+
+// --- Sales ---
+
+const JoiFeeBreakdown = Joi.object({
+  kind: Joi.string(),
+  detail: Joi.object().optional(),
+});
+
+export const JoiSale = Joi.object({
+  price: JoiPrice,
+  timestamp: Joi.number(),
+  royaltyFeeBps: Joi.number().optional(),
+  marketplaceFeeBps: Joi.number().optional(),
+  paidFullRoyalty: Joi.boolean().optional(),
+  feeBreakdown: Joi.array().items(JoiFeeBreakdown).optional(),
+});
+
+export const getJoiSaleObject = async (
+  prices: {
+    gross: {
+      amount: string;
+      nativeAmount?: string;
+      usdAmount?: string;
+    };
+    net?: {
+      amount: string;
+      nativeAmount?: string;
+      usdAmount?: string;
+    };
+  },
+  fees: {
+    totalFeeBps?: number;
+    royaltyFeeBps?: number;
+    marketplaceFeeBps?: number;
+    paidFullRoyalty?: boolean;
+    royaltyFeeBreakdown?: any;
+    marketplaceFeeBreakdown?: any;
+  },
+  currencyAddress: string,
+  timestamp: number
+) => {
+  const currency = await getCurrency(currencyAddress);
+  const lastSaleFeeInfoIsValid = (fees.royaltyFeeBps ?? 0) + (fees.marketplaceFeeBps ?? 0) < 10000;
+  return {
+    price: {
+      currency: {
+        contract: currency.contract,
+        name: currency.name,
+        symbol: currency.symbol,
+        decimals: currency.decimals,
+      },
+      amount: await getJoiAmountObject(
+        currency,
+        prices.gross.amount,
+        prices.gross.nativeAmount,
+        prices.gross.usdAmount
+      ),
+      netAmount: prices.net
+        ? await getJoiAmountObject(
+            currency,
+            prices.net.amount,
+            prices.net.nativeAmount,
+            prices.net.usdAmount
+          )
+        : fees.totalFeeBps && fees.totalFeeBps < 10000
+        ? await getJoiAmountObject(
+            currency,
+            prices.gross.amount,
+            prices.gross.nativeAmount,
+            prices.gross.usdAmount,
+            fees.totalFeeBps
+          )
+        : undefined,
+    },
+    timestamp: timestamp,
+    royaltyFeeBps:
+      fees.royaltyFeeBps !== null && lastSaleFeeInfoIsValid ? fees.royaltyFeeBps : undefined,
+    marketplaceFeeBps:
+      fees.marketplaceFeeBps !== null && lastSaleFeeInfoIsValid
+        ? fees.marketplaceFeeBps
+        : undefined,
+    paidFullRoyalty:
+      fees.paidFullRoyalty !== null && lastSaleFeeInfoIsValid ? fees.paidFullRoyalty : undefined,
+    feeBreakdown:
+      (fees.royaltyFeeBreakdown !== null || fees.marketplaceFeeBreakdown !== null) &&
+      lastSaleFeeInfoIsValid
+        ? [].concat(
+            (fees.royaltyFeeBreakdown ?? []).map((detail: any) => {
+              return {
+                kind: "royalty",
+                ...detail,
+              };
+            }),
+            (fees.marketplaceFeeBreakdown ?? []).map((detail: any) => {
+              return {
+                kind: "marketplace",
+                ...detail,
+              };
+            })
+          )
+        : undefined,
+  };
+};
