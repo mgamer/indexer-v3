@@ -19,7 +19,10 @@ export const queue = new Queue(QUEUE_NAME, {
     // In order to be as lean as possible, leave retrying
     // any failed processes to be done by subsequent jobs
     removeOnComplete: true,
-    removeOnFail: true,
+    removeOnFail: {
+      age: 1,
+      count: 1,
+    },
     timeout: 60000,
     attempts: 1,
   },
