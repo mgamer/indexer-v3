@@ -21,6 +21,7 @@ export const queue = new Queue(QUEUE_NAME, {
     removeOnComplete: true,
     removeOnFail: true,
     timeout: 60000,
+    attempts: 1,
   },
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
@@ -103,3 +104,5 @@ export const addToQueue = async () => {
 
   await queue.add(randomUUID(), {}, { jobId });
 };
+
+queue.clean(0, 1000, "active");
