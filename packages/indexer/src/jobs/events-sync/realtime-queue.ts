@@ -3,13 +3,12 @@ import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { acquireLock, redis, releaseLock } from "@/common/redis";
+import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { syncEvents } from "@/events-sync/index";
 import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
 import tracer from "@/common/tracer";
-import _ from "lodash";
 
 const QUEUE_NAME = "events-sync-realtime";
 
@@ -29,17 +28,9 @@ new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
-    async (job) => {
-      job.data.releaseLock = true;
-
+    async () => {
       await tracer.trace("processEvent", { resource: "eventsSyncRealtime" }, async () => {
         try {
-          // On some chains prevent multiple syncs at the same time
-          if (_.includes([137, 42161], config.chainId) && !(await acquireLock(QUEUE_NAME, 300))) {
-            job.data.releaseLock = false;
-            return;
-          }
-
           // We allow syncing of up to `maxBlocks` blocks behind the head
           // of the blockchain. If we lag behind more than that, then all
           // previous blocks that we cannot cover here will be relayed to
@@ -97,12 +88,6 @@ if (config.doBackgroundWork) {
     },
     { connection: redis.duplicate(), concurrency: 5 }
   );
-
-  worker.on("completed", async (job) => {
-    if (_.includes([137, 42161], config.chainId) && job.data.releaseLock) {
-      await releaseLock(QUEUE_NAME);
-    }
-  });
 
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
