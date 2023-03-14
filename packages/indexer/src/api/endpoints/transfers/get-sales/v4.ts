@@ -209,19 +209,26 @@ export const getSalesV4Options: RouteOptions = {
     }
 
     if (query.continuation) {
-      const contArr = splitContinuation(query.continuation, /^(\d+)_(\d+)_(\d+)$/);
+      const contArr = splitContinuation(query.continuation, /^(\d+)_(\d+)_(\d+)_(\d+)$/);
 
-      if (contArr.length !== 3) {
+      if (contArr.length !== 4) {
         throw Boom.badRequest("Invalid continuation string used");
       }
 
       (query as any).timestamp = contArr[0];
       (query as any).logIndex = contArr[1];
       (query as any).batchIndex = contArr[2];
-
-      paginationFilter = `
-        AND (fill_events_2.timestamp, fill_events_2.log_index, fill_events_2.batch_index) < ($/timestamp/, $/logIndex/, $/batchIndex/)
+      (query as any).price = contArr[3];
+      const inequalitySymbol = query.sortDirection === "asc" ? ">" : "<";
+      if (query.orderBy && query.orderBy === "price") {
+        paginationFilter = `
+        AND (fill_events_2.price) ${inequalitySymbol} ($/price/)
       `;
+      } else {
+        paginationFilter = `
+        AND (fill_events_2.timestamp, fill_events_2.log_index, fill_events_2.batch_index) ${inequalitySymbol} ($/timestamp/, $/logIndex/, $/batchIndex/)
+      `;
+      }
     }
 
     // We default in the code so that these values don't appear in the docs
@@ -330,7 +337,9 @@ export const getSalesV4Options: RouteOptions = {
             "_" +
             rawResult[rawResult.length - 1].log_index +
             "_" +
-            rawResult[rawResult.length - 1].batch_index
+            rawResult[rawResult.length - 1].batch_index +
+            "_" +
+            rawResult[rawResult.length - 1].price
         );
       }
 
