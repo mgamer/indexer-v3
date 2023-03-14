@@ -232,16 +232,11 @@ export const getSalesV4Options: RouteOptions = {
       query.endTimestamp = 9999999999;
     }
 
-    let orderDirection = "DESC";
-    if (query.sortDirection === "asc") {
-      orderDirection = "ASC";
-    }
-
     // Default to ordering by time
-    let queryOrderBy = `ORDER BY fill_events_2.timestamp ${orderDirection}, fill_events_2.log_index ${orderDirection}, fill_events_2.batch_index ${orderDirection}`;
+    let queryOrderBy = `ORDER BY fill_events_2.timestamp ${query.sortDirection}, fill_events_2.log_index ${query.sortDirection}, fill_events_2.batch_index ${query.sortDirection}`;
 
     if (query.orderBy && query.orderBy === "price") {
-      queryOrderBy = `ORDER BY fill_events_2.price ${orderDirection}`;
+      queryOrderBy = `ORDER BY fill_events_2.price ${query.sortDirection}`;
     }
 
     const timestampFilter = `
