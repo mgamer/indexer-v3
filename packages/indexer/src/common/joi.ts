@@ -1,12 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { BigNumberish } from "@ethersproject/bignumber";
 import * as Sdk from "@reservoir0x/sdk";
-import Joi, { number, string } from "joi";
+import Joi from "joi";
 
 import { bn, formatEth, formatPrice, formatUsd, now, regex } from "@/common/utils";
 import { Currency, getCurrency } from "@/utils/currencies";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import { config } from "@/config/index";
-import { OrderComponents } from "@reservoir0x/sdk/src/seaport-v1.4/types";
 
 // --- Prices ---
 

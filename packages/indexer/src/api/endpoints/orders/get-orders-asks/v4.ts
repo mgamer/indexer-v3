@@ -16,7 +16,6 @@ import {
   getJoiDynamicPricingObject,
 } from "@/common/joi";
 import {
-  bn,
   buildContinuation,
   fromBuffer,
   getNetAmount,
