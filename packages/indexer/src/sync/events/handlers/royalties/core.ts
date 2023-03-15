@@ -155,8 +155,7 @@ export async function extractRoyalties(
 
   shouldExcludeAddressList.add(Sdk.Common.Addresses.Weth[config.chainId]);
   shouldExcludeAddressList.add(Sdk.Common.Addresses.Eth[config.chainId]);
-  // bendWETH
-  shouldExcludeAddressList.add("0xed1840223484483c0cb050e6fc344d1ebf0778a9");
+  shouldExcludeAddressList.add(Sdk.BendDao.Addresses.BendWETH[config.chainId]);
 
   const tracePayments = getPayments(traceToAnalyze);
 
