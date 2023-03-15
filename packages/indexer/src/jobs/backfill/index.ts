@@ -8,4 +8,3 @@ import "@/jobs/backfill/backfill-update-missing-metadata";
 import "@/jobs/backfill/backfill-tokens-last-flag-update";
 import "@/jobs/backfill/backfill-activities-collection-id";
 import "@/jobs/backfill/backfill-user-activities-collection-id";
-import "@/jobs/backfill/backfill-nft-balances-last-token-appraisal-value";
