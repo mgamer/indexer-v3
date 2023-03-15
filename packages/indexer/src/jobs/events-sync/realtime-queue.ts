@@ -64,8 +64,8 @@ if (
           const fromBlock = Math.max(localBlock, headBlock - maxBlocks + 1);
           await syncEvents(fromBlock, headBlock);
 
-          // Send any remaining blocks to the backfill queue
-          if (localBlock < fromBlock) {
+          // Send any missing blocks to the backfill queue
+          if (localBlock + getNetworkSettings().lastBlockLatency < fromBlock) {
             logger.info(
               QUEUE_NAME,
               `Out of sync: local block ${localBlock} and upstream block ${fromBlock} total missing ${
