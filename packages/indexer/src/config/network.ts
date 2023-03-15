@@ -318,8 +318,8 @@ export const getNetworkSettings = (): NetworkSettings => {
         enableWebSocket: false,
         enableReorgCheck: false,
         realtimeSyncFrequencySeconds: 10,
-        realtimeSyncMaxBlockLag: 32,
-        lastBlockLatency: 15,
+        realtimeSyncMaxBlockLag: 64,
+        lastBlockLatency: 16,
         backfillBlockBatchSize: 512,
         subDomain: "api-optimism",
         coingecko: {
