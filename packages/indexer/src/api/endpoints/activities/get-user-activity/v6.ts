@@ -3,7 +3,6 @@
 import _ from "lodash";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
-import * as Sdk from "@reservoir0x/sdk";
 import { logger } from "@/common/logger";
 import { buildContinuation, fromBuffer, regex, splitContinuation } from "@/common/utils";
 import { ActivityType } from "@/models/activities/activities-entity";
@@ -14,7 +13,6 @@ import { CollectionSets } from "@/models/collection-sets";
 import * as Boom from "@hapi/boom";
 import { getJoiPriceObject, JoiOrderCriteria, JoiPrice } from "@/common/joi";
 import { ContractSets } from "@/models/contract-sets";
-import { config } from "@/config/index";
 
 const version = "v6";
 
@@ -205,7 +203,6 @@ export const getUserActivityV6Options: RouteOptions = {
 
       for (const activity of activities) {
         let orderSource;
-        let orderCurrency;
 
         if (activity.order) {
           const orderSourceIdInt =
@@ -213,22 +210,23 @@ export const getUserActivityV6Options: RouteOptions = {
             (await getOrderSourceByOrderKind(activity.order.kind! as OrderKind))?.id;
 
           orderSource = orderSourceIdInt ? sources.get(orderSourceIdInt) : undefined;
-          orderCurrency = activity.order.currency ? fromBuffer(activity.order.currency) : undefined;
         }
 
         result.push({
           type: activity.type,
           fromAddress: activity.fromAddress,
           toAddress: activity.toAddress,
-          price: await getJoiPriceObject(
-            {
-              gross: {
-                amount: String(activity.order?.currencyPrice ?? activity.price),
-                nativeAmount: String(activity.price),
-              },
-            },
-            orderCurrency ? orderCurrency : Sdk.Common.Addresses.Eth[config.chainId]
-          ),
+          price: activity.order?.currency
+            ? await getJoiPriceObject(
+                {
+                  gross: {
+                    amount: String(activity.order?.currencyPrice ?? activity.price),
+                    nativeAmount: String(activity.price),
+                  },
+                },
+                fromBuffer(activity.order.currency)
+              )
+            : undefined,
           amount: activity.amount,
           timestamp: activity.eventTimestamp,
           createdAt: activity.createdAt.toISOString(),
