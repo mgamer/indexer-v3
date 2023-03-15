@@ -20,6 +20,9 @@ contract Permit2Module is BaseModule {
     IAllowanceTransfer.AllowanceTransferDetails[] calldata transferDetails,
     bytes calldata signature
   ) external nonReentrant {
+    if (owner != tx.origin) {
+      revert("Forbidden");
+    }
     PERMIT2.permit(owner, permitBatch, signature);
     PERMIT2.transferFrom(transferDetails);
   }
