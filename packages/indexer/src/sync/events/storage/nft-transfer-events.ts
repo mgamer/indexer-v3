@@ -210,7 +210,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }
 
   if (tokenValues.length) {
-    for (const tokenValuesChunk of _.chunk(tokenValues, config.chainId === 137 ? 50 : 1000)) {
+    for (const tokenValuesChunk of _.chunk(tokenValues, config.chainId === 137 ? 5 : 1000)) {
       const queries: string[] = [];
 
       if (!config.liquidityOnly) {
