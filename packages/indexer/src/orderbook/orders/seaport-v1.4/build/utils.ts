@@ -160,7 +160,7 @@ export const getBuildInfo = async (
       totalBps
     );
 
-    for (const [feeRecipient, feeBps] of Object.entries(openseaFees)) {
+    for (const [feeRecipient, feeBps] of openseaFees.entries()) {
       options.fee.push(feeBps);
       options.feeRecipient.push(feeRecipient);
     }
