@@ -5,6 +5,11 @@ import {BaseModule} from "./BaseModule.sol";
 import {IAllowanceTransfer} from "../../interfaces/IAllowanceTransfer.sol";
 
 contract Permit2Module is BaseModule {
+
+  // --- Errors ---
+
+  error Unauthorized();
+
   // --- Fields ---
 
   IAllowanceTransfer public constant PERMIT2 =
@@ -21,7 +26,7 @@ contract Permit2Module is BaseModule {
     bytes calldata signature
   ) external nonReentrant {
     if (owner != tx.origin) {
-      revert("Forbidden");
+      revert Unauthorized();
     }
     PERMIT2.permit(owner, permitBatch, signature);
     PERMIT2.transferFrom(transferDetails);
