@@ -111,7 +111,10 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }
 
   if (uniqueOwnersTransferValues.length) {
-    for (const transferEvents of uniqueOwnersTransferValues) {
+    for (const transferEvents of _.chunk(
+      uniqueOwnersTransferValues,
+      config.chainId === 137 ? 100 : 1000
+    )) {
       const nftTransferQueries: string[] = [];
       const columns = new pgp.helpers.ColumnSet(
         [
@@ -210,7 +213,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }
 
   if (tokenValues.length) {
-    for (const tokenValuesChunk of _.chunk(tokenValues, config.chainId === 137 ? 5 : 1000)) {
+    for (const tokenValuesChunk of _.chunk(tokenValues, 1000)) {
       const queries: string[] = [];
 
       if (!config.liquidityOnly) {
