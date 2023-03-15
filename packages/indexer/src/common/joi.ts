@@ -190,9 +190,10 @@ export const JoiOrderCriteria = Joi.alternatives(
 
 // --- Sales ---
 
-const JoiFeeBreakdown = Joi.object({
+export const JoiFeeBreakdown = Joi.object({
   kind: Joi.string(),
-  detail: Joi.object().optional(),
+  bps: Joi.number(),
+  recipient: Joi.string(),
 });
 
 export const JoiSale = Joi.object({
@@ -204,7 +205,41 @@ export const JoiSale = Joi.object({
   feeBreakdown: Joi.array().items(JoiFeeBreakdown).optional(),
 });
 
-export const getJoiSaleObject = async (
+export const feeInfoIsValid = (
+  royaltyFeeBps: number | undefined,
+  marketplaceFeeBps: number | undefined
+) => {
+  return (royaltyFeeBps ?? 0) + (marketplaceFeeBps ?? 0) < 10000;
+};
+
+export const getFeeValue = (feeValue: any, validFees: boolean) => {
+  return feeValue !== null && validFees ? feeValue : undefined;
+};
+
+export const getFeeBreakdown = (
+  royaltyFeeBreakdown: any,
+  marketplaceFeeBreakdown: any,
+  validFees: boolean
+) => {
+  return (royaltyFeeBreakdown !== null || marketplaceFeeBreakdown !== null) && validFees
+    ? [].concat(
+        (royaltyFeeBreakdown ?? []).map((detail: any) => {
+          return {
+            kind: "royalty",
+            ...detail,
+          };
+        }),
+        (marketplaceFeeBreakdown ?? []).map((detail: any) => {
+          return {
+            kind: "marketplace",
+            ...detail,
+          };
+        })
+      )
+    : undefined;
+};
+
+export const getJoiLastSaleObject = async (
   prices: {
     gross: {
       amount: string;
@@ -229,7 +264,7 @@ export const getJoiSaleObject = async (
   timestamp: number
 ) => {
   const currency = await getCurrency(currencyAddress);
-  const lastSaleFeeInfoIsValid = (fees.royaltyFeeBps ?? 0) + (fees.marketplaceFeeBps ?? 0) < 10000;
+  const lastSaleFeeInfoIsValid = feeInfoIsValid(fees.royaltyFeeBps, fees.marketplaceFeeBps);
   return {
     price: {
       currency: {
@@ -262,31 +297,13 @@ export const getJoiSaleObject = async (
         : undefined,
     },
     timestamp: timestamp,
-    royaltyFeeBps:
-      fees.royaltyFeeBps !== null && lastSaleFeeInfoIsValid ? fees.royaltyFeeBps : undefined,
-    marketplaceFeeBps:
-      fees.marketplaceFeeBps !== null && lastSaleFeeInfoIsValid
-        ? fees.marketplaceFeeBps
-        : undefined,
-    paidFullRoyalty:
-      fees.paidFullRoyalty !== null && lastSaleFeeInfoIsValid ? fees.paidFullRoyalty : undefined,
-    feeBreakdown:
-      (fees.royaltyFeeBreakdown !== null || fees.marketplaceFeeBreakdown !== null) &&
+    royaltyFeeBps: getFeeValue(fees.royaltyFeeBps, lastSaleFeeInfoIsValid),
+    marketplaceFeeBps: getFeeValue(fees.marketplaceFeeBps, lastSaleFeeInfoIsValid),
+    paidFullRoyalty: getFeeValue(fees.paidFullRoyalty, lastSaleFeeInfoIsValid),
+    feeBreakdown: getFeeBreakdown(
+      fees.royaltyFeeBreakdown,
+      fees.marketplaceFeeBreakdown,
       lastSaleFeeInfoIsValid
-        ? [].concat(
-            (fees.royaltyFeeBreakdown ?? []).map((detail: any) => {
-              return {
-                kind: "royalty",
-                ...detail,
-              };
-            }),
-            (fees.marketplaceFeeBreakdown ?? []).map((detail: any) => {
-              return {
-                kind: "marketplace",
-                ...detail,
-              };
-            })
-          )
-        : undefined,
+    ),
   };
 };

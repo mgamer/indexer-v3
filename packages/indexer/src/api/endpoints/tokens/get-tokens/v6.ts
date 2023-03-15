@@ -7,7 +7,7 @@ import _ from "lodash";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { getJoiPriceObject, getJoiSaleObject, JoiAttributeValue, JoiPrice } from "@/common/joi";
+import { getJoiPriceObject, getJoiLastSaleObject, JoiAttributeValue, JoiPrice } from "@/common/joi";
 import {
   bn,
   buildContinuation,
@@ -1051,7 +1051,7 @@ export const getTokensV6Options: RouteOptions = {
             },
             lastSale:
               query.includeLastSale && r.last_sale_currency
-                ? await getJoiSaleObject(
+                ? await getJoiLastSaleObject(
                     {
                       gross: {
                         amount: r.last_sale_currency_price ?? r.last_sale_price,

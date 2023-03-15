@@ -16,7 +16,7 @@ import {
 import { CollectionSets } from "@/models/collection-sets";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
-import { getJoiPriceObject, getJoiSaleObject, JoiPrice } from "@/common/joi";
+import { getJoiPriceObject, getJoiLastSaleObject, JoiPrice } from "@/common/joi";
 import { Sources } from "@/models/sources";
 import _ from "lodash";
 
@@ -523,7 +523,7 @@ export const getUserTokensV7Options: RouteOptions = {
             },
             lastSale:
               query.includeLastSale && r.last_sale_currency
-                ? await getJoiSaleObject(
+                ? await getJoiLastSaleObject(
                     {
                       gross: {
                         amount: r.last_sale_currency_price ?? r.last_sale_price,
