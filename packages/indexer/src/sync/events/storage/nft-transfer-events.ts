@@ -111,10 +111,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }
 
   if (uniqueOwnersTransferValues.length) {
-    for (const transferEvents of _.chunk(
-      uniqueOwnersTransferValues,
-      config.chainId === 137 ? 100 : 1000
-    )) {
+    for (const transferEvents of uniqueOwnersTransferValues) {
       const nftTransferQueries: string[] = [];
       const columns = new pgp.helpers.ColumnSet(
         [
