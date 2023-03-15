@@ -1693,10 +1693,10 @@
   resolved "https://registry.yarnpkg.com/@exodus/schemasafe/-/schemasafe-1.0.0-rc.9.tgz#56b9c6df627190f2dcda15f81f25d68826d9be4d"
   integrity sha512-dGGHpb61hLwifAu7sotuHFDBw6GTdpG8aKC0fsK17EuTzMRvUrH7lEAr6LTJ+sx3AZYed9yZ77rltVDHyg2hRg==
 
-"@georgeroman/evm-tx-simulator@^0.0.16":
-  version "0.0.16"
-  resolved "https://registry.yarnpkg.com/@georgeroman/evm-tx-simulator/-/evm-tx-simulator-0.0.16.tgz#eddc32da1d436b70c386a88b01deebfdb045b82c"
-  integrity sha512-K+532rOkCvBvJ81rdWk5m2XrHX90EOlT128HF1VdMW1M1TLLK08CLMw1yn3WiYkf8pR5OF2yBHgNenWESd30/A==
+"@georgeroman/evm-tx-simulator@^0.0.17":
+  version "0.0.17"
+  resolved "https://registry.yarnpkg.com/@georgeroman/evm-tx-simulator/-/evm-tx-simulator-0.0.17.tgz#21547e4f974bffa0e73b977df4a767ba9688f5d3"
+  integrity sha512-8eYa9uc1oKYxb0iSy6fwRXE1eERItrfJ6N5moz6hTj8mIe+oZ8r8uRgFLZaNM8gqDmtIP4ipGE1vBr6eN3uwlA==
   dependencies:
     axios "^1.3.4"
     ethers "^5.6.9"
@@ -15047,7 +15047,7 @@ yaml@^1.10.0, yaml@^1.10.2:
   resolved "https://registry.yarnpkg.com/yaml/-/yaml-1.10.2.tgz#2301c5ffbf12b467de8da2333a459e29e7920e4b"
   integrity sha512-r3vXyErRCYJ7wg28yvBY5VSoAF8ZvlcW9/BwUzEtUsjvX/DKs24dIkuwjtuprwJJHsbyUbLApepYTR1BN4uHrg==
 
-yargs-parser@13.1.2, yargs-parser@20.2.4, yargs-parser@^13.1.2, yargs-parser@^2.4.1, yargs-parser@^20.2.2, yargs-parser@^20.2.3, yargs-parser@^21.0.0, yargs-parser@^21.0.1, yargs-parser@^21.1.1:
+yargs-parser@13.1.2, yargs-parser@20.2.4, yargs-parser@21.1.1, yargs-parser@^13.1.2, yargs-parser@^2.4.1, yargs-parser@^20.2.2, yargs-parser@^20.2.3, yargs-parser@^21.0.0, yargs-parser@^21.0.1, yargs-parser@^21.1.1:
   version "21.1.1"
   resolved "https://registry.yarnpkg.com/yargs-parser/-/yargs-parser-21.1.1.tgz#9096bceebf990d21bb31fa9516e0ede294a77d35"
   integrity sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==

@@ -21,13 +21,13 @@ const version = "v6";
 
 export const getExecuteSellV6Options: RouteOptions = {
   description: "Sell tokens (accept bids)",
-  tags: ["api", "Router"],
+  tags: ["api", "x-deprecated"],
   timeout: {
     server: 20 * 1000,
   },
   plugins: {
     "hapi-swagger": {
-      order: 10,
+      deprecated: true,
     },
   },
   validate: {
@@ -387,6 +387,7 @@ export const getExecuteSellV6Options: RouteOptions = {
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
+        orderFetcherApiKey: config.orderFetcherApiKey,
       });
       const { txData } = await router.fillBidsTx([bidDetails!], payload.taker, {
         source: payload.source,
