@@ -5,10 +5,6 @@ import {BaseModule} from "./BaseModule.sol";
 import {IAllowanceTransfer} from "../../interfaces/IAllowanceTransfer.sol";
 
 contract Permit2Module is BaseModule {
-  // --- Errors ---
-
-  error Unauthorized();
-
   // --- Fields ---
 
   IAllowanceTransfer public constant PERMIT2 =
