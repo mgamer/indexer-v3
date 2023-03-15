@@ -36,6 +36,7 @@ if (config.doBackgroundWork) {
     async () => {
       await tracer.trace("processEvent", { resource: "eventsSyncRealtime" }, async () => {
         try {
+          const startTime = now();
           // We allow syncing of up to `maxBlocks` blocks behind the head
           // of the blockchain. If we lag behind more than that, then all
           // previous blocks that we cannot cover here will be relayed to
@@ -58,11 +59,6 @@ if (config.doBackgroundWork) {
           }
 
           const fromBlock = Math.max(localBlock, headBlock - maxBlocks + 1);
-          logger.info(
-            QUEUE_NAME,
-            `Events realtime syncing block range [${fromBlock}, ${headBlock}]`
-          );
-
           await syncEvents(fromBlock, headBlock);
 
           // Send any remaining blocks to the backfill queue
@@ -84,6 +80,13 @@ if (config.doBackgroundWork) {
           await redis.set(
             `${QUEUE_NAME}-last-block`,
             headBlock - getNetworkSettings().lastBlockLatency
+          );
+
+          logger.info(
+            QUEUE_NAME,
+            `Events realtime syncing block range [${fromBlock}, ${headBlock}] time ${
+              (now() - startTime) / 1000
+            }s`
           );
         } catch (error) {
           logger.error(QUEUE_NAME, `Events realtime syncing failed: ${error}`);
