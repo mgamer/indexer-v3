@@ -5,6 +5,9 @@ import {BaseModule} from "./BaseModule.sol";
 import {IAllowanceTransfer} from "../../interfaces/IAllowanceTransfer.sol";
 
 contract Permit2Module is BaseModule {
+  // --- Errors ---
+
+  error Unauthorized();
 
   // --- Fields ---
 
@@ -24,6 +27,7 @@ contract Permit2Module is BaseModule {
     if (owner != tx.origin) {
       revert Unauthorized();
     }
+
     PERMIT2.permit(owner, permitBatch, signature);
     PERMIT2.transferFrom(transferDetails);
   }
