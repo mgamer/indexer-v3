@@ -60,7 +60,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
     const ownerTo = `${event.to}:${contractId}:${event.tokenId}`;
 
     // Once we already update an owner create new array in order to split the update queries later
-    if (_.size(transferValues) >= 25 || uniqueOwners.has(ownerFrom) || uniqueOwners.has(ownerTo)) {
+    if (_.size(transferValues) >= 200 || uniqueOwners.has(ownerFrom) || uniqueOwners.has(ownerTo)) {
       uniqueOwnersTransferValues.push(transferValues);
       transferValues = [];
       uniqueOwners.clear();
@@ -147,10 +147,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
             "to",
             "token_id",
             "amount"
-          ) VALUES ${pgp.helpers.values(
-            _.sortBy(transferEvents, ["address", "token_id", "from", "to"]),
-            columns
-          )}
+          ) VALUES ${pgp.helpers.values(transferEvents, columns)}
           ON CONFLICT DO NOTHING
           RETURNING
             "address",
