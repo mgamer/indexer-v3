@@ -160,7 +160,10 @@ export const getNetworkSettings = (): NetworkSettings => {
           "0x942bc2d3e7a589fe5bd4a5c6ef9727dfd82f5c8a",
           "0x32d4be5ee74376e08038d652d4dc26e62c67f436",
         ],
-        nonSimulatableContracts: ["0x4d04bba7f5ea45ac59769a1095762467b1157cc4"],
+        nonSimulatableContracts: [
+          "0x4d04bba7f5ea45ac59769a1095762467b1157cc4",
+          "0x36e73e5e0aaacf4f9c4e67a32b87e8a4273484a5",
+        ],
         customTokenAddresses: [
           "0x95784f7b5c8849b0104eaf5d13d6341d8cc40750",
           "0xc9cb0fee73f060db66d2693d92d75c825b1afdbf",
@@ -314,8 +317,9 @@ export const getNetworkSettings = (): NetworkSettings => {
         ...defaultNetworkSettings,
         enableWebSocket: false,
         enableReorgCheck: false,
-        realtimeSyncFrequencySeconds: 10,
-        realtimeSyncMaxBlockLag: 128,
+        realtimeSyncFrequencySeconds: 5,
+        realtimeSyncMaxBlockLag: 20,
+        lastBlockLatency: 5,
         backfillBlockBatchSize: 512,
         subDomain: "api-optimism",
         coingecko: {
@@ -351,9 +355,9 @@ export const getNetworkSettings = (): NetworkSettings => {
         ...defaultNetworkSettings,
         metadataMintDelay: 180,
         enableWebSocket: true,
-        realtimeSyncFrequencySeconds: 15,
-        realtimeSyncMaxBlockLag: 45,
-        lastBlockLatency: 20,
+        realtimeSyncFrequencySeconds: 5,
+        realtimeSyncMaxBlockLag: 32,
+        lastBlockLatency: 15,
         backfillBlockBatchSize: 60,
         reorgCheckFrequency: [30],
         subDomain: "api-polygon",
@@ -394,8 +398,8 @@ export const getNetworkSettings = (): NetworkSettings => {
       return {
         ...defaultNetworkSettings,
         enableWebSocket: false,
-        realtimeSyncMaxBlockLag: 125,
-        realtimeSyncFrequencySeconds: 10,
+        realtimeSyncMaxBlockLag: 35,
+        realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 10,
         subDomain: "api-arbitrum",
         coingecko: {

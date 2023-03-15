@@ -59,18 +59,13 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
     async (event) => {
       try {
         if (await isDuplicateEvent(event)) {
-          logger.debug(
-            "opensea-websocket",
-            `Duplicate event. network=${network}, event=${JSON.stringify(event)}`
-          );
-
           return;
         }
 
-        logger.debug(
-          "opensea-websocket",
-          `Processing event. network=${network}, event=${JSON.stringify(event)}`
-        );
+        // logger.debug(
+        //   "opensea-websocket",
+        //   `Processing event. network=${network}, event=${JSON.stringify(event)}`
+        // );
 
         await saveEvent(event);
 
@@ -116,16 +111,13 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
 
   client.onItemMetadataUpdated("*", async (event) => {
     try {
+      return;
+
       if (getSupportedChainName() != event.payload.item.chain.name) {
         return;
       }
 
       if (await isDuplicateEvent(event)) {
-        logger.debug(
-          "opensea-websocket-item-metadata-update-event",
-          `Duplicate event. network=${network}, event=${JSON.stringify(event)}`
-        );
-
         return;
       }
 
@@ -133,13 +125,6 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       const token = await Tokens.getByContractAndTokenId(contract, tokenId);
 
       if (!token) {
-        logger.debug(
-          "opensea-websocket-item-metadata-update-event",
-          `Token was not found. contract=${contract}, tokenId=${tokenId}, event=${JSON.stringify(
-            event
-          )}`
-        );
-
         return;
       }
 
@@ -161,14 +146,9 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
 
       const parsedMetadata = await MetadataApi.parseTokenMetadata(metadata, "opensea");
 
-      logger.info(
-        "opensea-websocket-item-metadata-update-event",
-        `Metadata parsed. contract=${contract}, tokenId=${tokenId}, event=${JSON.stringify(
-          event
-        )}, metadata=${JSON.stringify(metadata)}, parsedMetadata=${JSON.stringify(parsedMetadata)}`
-      );
-
       if (parsedMetadata) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         await metadataIndexWrite.addToQueue([parsedMetadata]);
       }
     } catch (error) {

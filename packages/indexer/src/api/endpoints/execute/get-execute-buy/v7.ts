@@ -22,12 +22,13 @@ import * as b from "@/utils/auth/blur";
 import { getCurrency } from "@/utils/currencies";
 import * as onChainData from "@/utils/on-chain-data";
 import { getPermitId, getPermit, savePermit } from "@/utils/permits/ft";
+import { getUSDAndCurrencyPrices } from "@/utils/prices";
 
 const version = "v7";
 
 export const getExecuteBuyV7Options: RouteOptions = {
   description: "Buy tokens (fill listings)",
-  tags: ["api", "Router", "x-experimental"],
+  tags: ["api", "Router"],
   timeout: {
     server: 20 * 1000,
   },
@@ -157,6 +158,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
           currency: Joi.string().lowercase().pattern(regex.address),
           quote: Joi.number().unsafe(),
           rawQuote: Joi.string().pattern(regex.number),
+          buyInQuote: Joi.number().unsafe(),
+          buyInRawQuote: Joi.string().pattern(regex.number),
         })
       ),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),
@@ -191,6 +194,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
         currency: string;
         quote: number;
         rawQuote: string;
+        buyInQuote?: number;
+        buyInRawQuote?: string;
       }[] = [];
 
       // Keep track of dynamically-priced orders (eg. from pools like Sudoswap and NFTX)
@@ -358,6 +363,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           const result = await idb.oneOrNone(
             `
               SELECT
+                orders.id,
                 orders.kind,
                 contracts.kind AS token_kind,
                 coalesce(orders.currency_price, orders.price) AS price,
@@ -420,6 +426,12 @@ export const getExecuteBuyV7Options: RouteOptions = {
         if (item.token) {
           const [contract, tokenId] = item.token.split(":");
 
+          // TODO: Right now we filter out Blur orders since those don't yet
+          // support royalty normalization. A better approach to handling it
+          // would be to set the normalized fields to `null` for every order
+          // which doesn't support royalty normalization and then filter out
+          // such `null` fields in various normalized events/caches.
+
           // Fetch all matching orders sorted by price
           const orderResults = await idb.manyOrNone(
             `
@@ -444,7 +456,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 AND orders.fillability_status = 'fillable'
                 AND orders.approval_status = 'approved'
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
-                ${payload.normalizeRoyalties ? " AND orders.normalized_value IS NOT NULL" : ""}
+                ${payload.normalizeRoyalties ? " AND orders.kind != 'blur'" : ""}
               ORDER BY
                 ${payload.normalizeRoyalties ? "orders.normalized_value" : "orders.value"},
                 ${
@@ -548,6 +560,30 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
       }
 
+      // Add the quotes in the "buy-in" currency to the path items
+      for (const item of path) {
+        if (item.currency !== buyInCurrency) {
+          const buyInPrices = await getUSDAndCurrencyPrices(
+            item.currency,
+            buyInCurrency,
+            item.rawQuote,
+            now(),
+            {
+              acceptStalePrice: true,
+            }
+          );
+
+          if (buyInPrices.currencyPrice) {
+            item.buyInQuote = formatPrice(
+              buyInPrices.currencyPrice,
+              (await getCurrency(item.currency)).decimals,
+              true
+            );
+            item.buyInRawQuote = buyInPrices.currencyPrice;
+          }
+        }
+      }
+
       if (payload.onlyPath) {
         return { path };
       }
@@ -565,7 +601,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }[] = [
         {
           id: "auth",
-          action: "Sign auth",
+          action: "Sign in to Blur",
           description: "Some marketplaces require signing an auth message before filling",
           kind: "signature",
           items: [],
@@ -653,6 +689,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
             steps,
             path,
           };
+        } else {
+          steps[0].items.push({
+            status: "complete",
+          });
         }
       }
 
@@ -817,7 +857,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }
 
       return {
-        steps,
+        steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
         path,
       };
     } catch (error) {
