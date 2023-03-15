@@ -210,7 +210,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }
 
   if (tokenValues.length) {
-    for (const tokenValuesChunk of _.chunk(tokenValues, 1000)) {
+    for (const tokenValuesChunk of _.chunk(tokenValues, config.chainId === 137 ? 50 : 1000)) {
       const queries: string[] = [];
 
       if (!config.liquidityOnly) {
@@ -255,13 +255,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
         `);
       }
 
-      if (config.chainId === 137) {
-        for (const query of _.chunk(queries, 100)) {
-          await insertQueries(query, backfill);
-        }
-      } else {
-        await insertQueries(queries, backfill);
-      }
+      await insertQueries(queries, backfill);
     }
   }
 };
