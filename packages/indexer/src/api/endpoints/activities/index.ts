@@ -19,3 +19,4 @@ export * from "@/api/endpoints/activities/get-activities/v1";
 export * from "@/api/endpoints/activities/get-activities/v2";
 export * from "@/api/endpoints/activities/get-activities/v3";
 export * from "@/api/endpoints/activities/get-activities/v4";
+export * from "@/api/endpoints/activities/get-activities/v5";

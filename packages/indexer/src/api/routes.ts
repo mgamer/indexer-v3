@@ -153,6 +153,12 @@ export const setupRoutes = (server: Server) => {
     options: activitiesEndpoints.getActivityV4Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/activity/v5",
+    options: activitiesEndpoints.getActivityV5Options,
+  });
+
   // Admin
 
   server.route({
@@ -474,6 +480,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   server.route({
+    method: "GET",
+    path: "/users/{user}/collections/v3",
+    options: collectionsEndpoints.getUserCollectionsV3Options,
+  });
+
+  server.route({
     method: "POST",
     path: "/collections/refresh/v1",
     options: collectionsEndpoints.postCollectionsRefreshV1Options,
@@ -525,6 +537,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/events/collections/floor-ask/v1",
     options: eventsEndpoints.getCollectionsFloorAskV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/events/collections/floor-ask/v2",
+    options: eventsEndpoints.getCollectionsFloorAskV2Options,
   });
 
   server.route({
@@ -1034,6 +1052,12 @@ export const setupRoutes = (server: Server) => {
     options: searchEndpoints.getSearchCollectionsV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/search/collections/v2",
+    options: searchEndpoints.getSearchCollectionsV2Options,
+  });
+
   // Stats
 
   server.route({
@@ -1164,6 +1188,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/users/{user}/tokens/v6",
     options: tokensEndpoints.getUserTokensV6Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/users/{user}/tokens/v7",
+    options: tokensEndpoints.getUserTokensV7Options,
   });
 
   server.route({

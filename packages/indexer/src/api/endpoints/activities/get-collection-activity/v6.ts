@@ -3,14 +3,12 @@
 import _ from "lodash";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
-import * as Sdk from "@reservoir0x/sdk";
 import { logger } from "@/common/logger";
 import { buildContinuation, fromBuffer, regex, splitContinuation } from "@/common/utils";
 import { Activities } from "@/models/activities";
 import { ActivityType } from "@/models/activities/activities-entity";
 import { Sources } from "@/models/sources";
 import { getJoiPriceObject, JoiOrderCriteria, JoiPrice } from "@/common/joi";
-import { config } from "@/config/index";
 
 const version = "v6";
 
@@ -151,23 +149,22 @@ export const getCollectionActivityV6Options: RouteOptions = {
       const result = _.map(activities, async (activity) => {
         const orderSourceId = activity.order?.sourceIdInt || activity.metadata.orderSourceIdInt;
         const orderSource = orderSourceId ? sources.get(orderSourceId) : undefined;
-        const orderCurrency = activity.order
-          ? fromBuffer(activity.order.currency)
-          : Sdk.Common.Addresses.Eth[config.chainId];
 
         return {
           type: activity.type,
           fromAddress: activity.fromAddress,
           toAddress: activity.toAddress,
-          price: await getJoiPriceObject(
-            {
-              gross: {
-                amount: String(activity.order?.currencyPrice ?? activity.price),
-                nativeAmount: String(activity.price),
-              },
-            },
-            orderCurrency
-          ),
+          price: activity.order
+            ? await getJoiPriceObject(
+                {
+                  gross: {
+                    amount: String(activity.order?.currencyPrice ?? activity.price),
+                    nativeAmount: String(activity.price),
+                  },
+                },
+                fromBuffer(activity.order.currency)
+              )
+            : undefined,
           amount: activity.amount,
           timestamp: activity.eventTimestamp,
           createdAt: activity.createdAt.toISOString(),
