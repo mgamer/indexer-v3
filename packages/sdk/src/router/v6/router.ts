@@ -2192,6 +2192,8 @@ export class Router {
       partial?: boolean;
       // Force using permit
       forcePermit?: boolean;
+      // Needed for filling some OpenSea orders
+      openseaAuth?: string;
     }
   ): Promise<{
     txData: TxData;
@@ -2467,7 +2469,8 @@ export class Router {
               `https://order-fetcher.vercel.app/api/offer?orderHash=${order.id}&contract=${
                 order.contract
               }&tokenId=${order.tokenId}&taker=${detail.owner ?? taker}&chainId=${this.chainId}` +
-                (order.unitPrice ? `&unitPrice=${order.unitPrice}` : ""),
+                (order.unitPrice ? `&unitPrice=${order.unitPrice}` : "") +
+                (options?.openseaAuth ? `&authorization=${options.openseaAuth}` : ""),
               {
                 headers: {
                   "X-Api-Key": this.options?.orderFetcherApiKey,
@@ -2567,7 +2570,8 @@ export class Router {
               `https://order-fetcher.vercel.app/api/offer?orderHash=${order.id}&contract=${
                 order.contract
               }&tokenId=${order.tokenId}&taker=${detail.owner ?? taker}&chainId=${this.chainId}` +
-                (order.unitPrice ? `&unitPrice=${order.unitPrice}` : ""),
+                (order.unitPrice ? `&unitPrice=${order.unitPrice}` : "") +
+                (options?.openseaAuth ? `&authorization=${options.openseaAuth}` : ""),
               {
                 headers: {
                   "X-Api-Key": this.options?.orderFetcherApiKey,
