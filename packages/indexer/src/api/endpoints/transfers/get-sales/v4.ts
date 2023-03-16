@@ -9,7 +9,6 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { JoiPrice, JoiFeeBreakdown, getJoiSaleObject } from "@/common/joi";
 import { buildContinuation, fromBuffer, regex, splitContinuation, toBuffer } from "@/common/utils";
-import { Sources } from "@/models/sources";
 import { Assets } from "@/utils/assets";
 import * as Boom from "@hapi/boom";
 
@@ -315,13 +314,7 @@ export const getSalesV4Options: RouteOptions = {
         );
       }
 
-      const sources = await Sources.getInstance();
       const result = rawResult.map(async (r) => {
-        const orderSource =
-          r.order_source_id_int !== null ? sources.get(Number(r.order_source_id_int)) : undefined;
-        const fillSource =
-          r.fill_source_id !== null ? sources.get(Number(r.fill_source_id)) : undefined;
-
         return {
           id: crypto
             .createHash("sha256")
@@ -343,38 +336,37 @@ export const getSalesV4Options: RouteOptions = {
               name: r.collection_name ?? null,
             },
           },
-          orderId: r.order_id,
-          orderSource: orderSource?.domain ?? null,
-          orderSide: r.order_side === "sell" ? "ask" : "bid",
-          orderKind: r.order_kind,
-          from: r.order_side === "sell" ? fromBuffer(r.maker) : fromBuffer(r.taker),
-          to: r.order_side === "sell" ? fromBuffer(r.taker) : fromBuffer(r.maker),
-          amount: String(r.amount),
-          fillSource: fillSource?.domain ?? orderSource?.domain ?? null,
-          block: r.block,
-          txHash: fromBuffer(r.tx_hash),
-          logIndex: r.log_index,
-          batchIndex: r.batch_index,
-          ...(await getJoiSaleObject(
-            {
+          ...(await getJoiSaleObject({
+            prices: {
               gross: {
                 amount: r.currency_price ?? r.price,
                 nativeAmount: r.price,
                 usdAmount: r.usd_price,
               },
             },
-            {
+            fees: {
               royaltyFeeBps: r.royalty_fee_bps,
               marketplaceFeeBps: r.marketplace_fee_bps,
-              totalFeeBps: (r.royalty_fee_bps ?? 0) + (r.marketplace_fee_bps ?? 0),
               paidFullRoyalty: r.paid_full_royalty,
               royaltyFeeBreakdown: r.royalty_fee_breakdown,
               marketplaceFeeBreakdown: r.marketplace_fee_breakdown,
             },
-            fromBuffer(r.currency),
-            r.timestamp,
-            r.wash_trading_score
-          )),
+            currencyAddress: r.currency,
+            timestamp: r.timestamp,
+            washTradingScore: r.wash_trading_score,
+            orderId: r.order_id,
+            orderSourceId: r.order_source_id_int,
+            orderSide: r.order_side,
+            orderKind: r.order_kind,
+            maker: r.maker,
+            taker: r.taker,
+            amount: r.amount,
+            fillSourceId: r.fill_source_id,
+            block: r.block,
+            txHash: r.tx_hash,
+            logIndex: r.log_index,
+            batchIndex: r.batch_index,
+          })),
         };
       });
 
