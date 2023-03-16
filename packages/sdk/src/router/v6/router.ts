@@ -2203,6 +2203,10 @@ export class Router {
   }> {
     // Assume the bid details are consistent with the underlying order object
 
+    if (options?.openseaAuth && details.length !== 1) {
+      throw new Error("Only a single bid can be fulfilled");
+    }
+
     // CASE 1
     // Handle exchanges which don't have a router module implemented by filling directly
 
@@ -2578,6 +2582,20 @@ export class Router {
                 },
               }
             );
+
+            if (result.data.calldata) {
+              // Fill directly
+              return {
+                txData: {
+                  from: taker,
+                  to: Sdk.SeaportV14.Addresses.Exchange[this.chainId],
+                  data: result.data.calldata.slice(0, -8) + generateSourceBytes(options?.source),
+                },
+                success: [true],
+                approvals,
+                permits: [],
+              };
+            }
 
             const fullOrder = new Sdk.SeaportV14.Order(this.chainId, result.data.order);
             executions.push({
