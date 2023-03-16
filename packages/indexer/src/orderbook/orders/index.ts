@@ -779,14 +779,6 @@ export const generateListingDetailsV5 = (
       };
     }
 
-    case "superrare": {
-      return {
-        kind: "superrare",
-        ...common,
-        order: new Sdk.SuperRare.Order(config.chainId, order.rawData),
-      };
-    }
-
     default: {
       throw new Error("Unsupported order kind");
     }

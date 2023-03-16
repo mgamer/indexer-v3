@@ -62,10 +62,6 @@ export type GenericOrder =
   | {
       kind: "rarible";
       order: Sdk.Rarible.Order;
-    }
-  | {
-      kind: "superrare";
-      order: Sdk.SuperRare.Order;
     };
 
 export type ListingFillDetails = {
