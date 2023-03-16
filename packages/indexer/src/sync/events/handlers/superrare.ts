@@ -59,7 +59,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           orderKind
         );
 
-        onChainData.fillEvents.push({
+        onChainData.fillEventsOnChain.push({
           orderKind,
           orderId,
           currency,
@@ -136,7 +136,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           orderKind
         );
 
-        onChainData.fillEvents.push({
+        onChainData.fillEventsOnChain.push({
           orderKind,
           orderId,
           currency,
@@ -213,7 +213,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           orderKind
         );
 
-        onChainData.fillEvents.push({
+        onChainData.fillEventsOnChain.push({
           orderKind,
           orderId,
           currency,
@@ -290,7 +290,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           orderKind
         );
 
-        onChainData.fillEvents.push({
+        onChainData.fillEventsOnChain.push({
           orderKind,
           orderId,
           currency,
@@ -362,7 +362,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
                 txTimestamp: baseEventParams.timestamp,
                 txBlock: baseEventParams.block,
                 logIndex: baseEventParams.logIndex,
-                batchIndex: baseEventParams.batchIndex,
               },
               metadata: {},
             },

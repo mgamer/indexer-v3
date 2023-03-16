@@ -21,14 +21,13 @@ export type OrderInfo = {
     tokenId: string;
     price: string;
     currency: string;
+    splitAddresses: string[];
+    splitRatios: number[];
     // Validation parameters (for ensuring only the latest event is relevant)
     txHash: string;
     txTimestamp: number;
     txBlock: number;
     logIndex: number;
-    batchIndex: number;
-    splitAddresses: string[];
-    splitRatios: number[];
   };
   metadata: OrderMetadata;
 };
@@ -36,7 +35,7 @@ export type OrderInfo = {
 type SaveResult = {
   id: string;
   status: string;
-  triggerKind?: "new-order" | "reprice";
+  triggerKind?: "new-order" | "reprice" | "cancel";
   txHash?: string;
   txTimestamp?: number;
   logIndex?: number;
@@ -109,6 +108,59 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         `,
         { id }
       );
+
+      // Check: sell order has Eth as payment token
+      if (orderParams.currency !== Sdk.Common.Addresses.Eth[config.chainId]) {
+        if (!orderResult) {
+          return results.push({
+            id,
+            status: "unsupported-payment-token",
+          });
+        } else {
+          // If the order already exists set its fillability status as cancelled
+          // See https://github.com/reservoirprotocol/indexer/pull/1903/files#r976148340
+          await idb.none(
+            `
+              UPDATE orders SET
+                fillability_status = $/fillability_status/,
+                maker = $/maker/,
+                price = $/price/,
+                currency_price = $/price/,
+                value = $/price/,
+                currency_value = $/price/,
+                valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
+                expiration = 'Infinity',
+                updated_at = now(),
+                taker = $/taker/,
+                raw_data = $/orderParams:json/,
+                block_number = $/blockNumber/,
+                log_index = $/logIndex/
+              WHERE orders.id = $/id/
+            `,
+            {
+              fillability_status: "cancelled",
+              maker: toBuffer(orderParams.maker),
+              taker: toBuffer(AddressZero),
+              price: orderParams.currency,
+              orderParams,
+              id,
+              blockNumber: orderParams.txBlock,
+              logIndex: orderParams.logIndex,
+            }
+          );
+
+          return results.push({
+            id,
+            status: "success",
+            triggerKind: "cancel",
+            txHash: orderParams.txHash,
+            txTimestamp: orderParams.txTimestamp,
+            logIndex: orderParams.logIndex,
+            batchIndex: orderParams.batchIndex,
+          });
+        }
+      }
+
       if (orderResult) {
         // Decide whether the current trigger is the latest one
         let isLatestTrigger: boolean;
@@ -174,7 +226,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       const [{ id: tokenSetId }] = await tokenSet.singleToken.save([
         {
-          id: `token:${orderParams.contract}:${orderParams.tokenId}`,
+          id: `token:${orderParams.contract.toLowerCase()}:${orderParams.tokenId.toLowerCase()}`,
           schemaHash,
           contract: orderParams.contract,
           tokenId: orderParams.tokenId,
@@ -190,11 +242,12 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle: fees
       const treasury = "0x860a80d33e85e97888f1f0c75c6e5bbd60b48da9";
-      const feeBreakdown = [
+      let feeBreakdown = [
+        // SuperRare get 15% commission on first sale, after that the creator has 10% royalties
         {
           kind: "marketplace",
           recipient: treasury,
-          bps: 0,
+          bps: 1500,
         },
       ];
 
@@ -206,8 +259,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       );
 
       if (!onChainRoyalties.length) {
-        // SuperRare get 15% commission on first sale, after that the creator has 10% royalties
-        feeBreakdown[0].bps = 1500;
+        feeBreakdown = [];
       }
 
       const feeBps = feeBreakdown.map(({ bps }) => bps).reduce((a, b) => Number(a) + Number(b), 0);
