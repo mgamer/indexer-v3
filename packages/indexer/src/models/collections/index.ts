@@ -13,6 +13,7 @@ import {
 import { Tokens } from "@/models/tokens";
 import MetadataApi from "@/utils/metadata-api";
 import * as royalties from "@/utils/royalties";
+import * as marketplaceFees from "@/utils/marketplace_fees";
 import { logger } from "@/common/logger";
 
 export class Collections {
@@ -128,6 +129,13 @@ export class Collections {
       collection.openseaRoyalties as royalties.Royalty[] | undefined
     );
     await royalties.refreshDefaultRoyalties(collection.id);
+
+    // Refresh marketplace fees
+    await marketplaceFees.updateMarketplaceFeeSpec(
+      collection.id,
+      "opensea",
+      collection.openseaFees as royalties.Royalty[] | undefined
+    );
   }
 
   public static async update(collectionId: string, fields: CollectionsEntityUpdateParams) {
