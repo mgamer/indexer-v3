@@ -2,10 +2,12 @@ import { getStateChange } from "@georgeroman/evm-tx-simulator";
 import { Common } from "@reservoir0x/sdk";
 
 import { config } from "@/config/index";
+import { bn } from "@/common/utils";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import * as utils from "@/events-sync/utils";
 import { getUSDAndNativePrices } from "@/utils/prices";
+import * as superrare from "@/orderbook/orders/superrare";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   // Handle the events
@@ -19,6 +21,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const taker = args["_seller"].toLowerCase();
         const currencyPrice = args["_amount"].toString();
         const tokenId = args["_tokenId"].toString();
+
+        const orderId = superrare.getOrderId(contract, tokenId);
 
         // Superrare works only with ERC721
         const amount = "1";
@@ -73,6 +77,16 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           baseEventParams,
         });
 
+        onChainData.orderInfos.push({
+          context: `filled-${orderId}-${baseEventParams.txHash}`,
+          id: orderId,
+          trigger: {
+            kind: "sale",
+            txHash: baseEventParams.txHash,
+            txTimestamp: baseEventParams.timestamp,
+          },
+        });
+
         onChainData.fillInfos.push({
           context: `superrare-${contract}-${tokenId}-${baseEventParams.txHash}`,
           orderSide,
@@ -96,6 +110,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const currency = args["_currencyAddress"].toLowerCase();
         const currencyPrice = args["_amount"].toString();
         const tokenId = args["_tokenId"].toString();
+
+        const orderId = superrare.getOrderId(contract, tokenId);
 
         // Superrare works only with ERC721
         const amount = "1";
@@ -136,6 +152,16 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           baseEventParams,
         });
 
+        onChainData.orderInfos.push({
+          context: `filled-${orderId}-${baseEventParams.txHash}`,
+          id: orderId,
+          trigger: {
+            kind: "sale",
+            txHash: baseEventParams.txHash,
+            txTimestamp: baseEventParams.timestamp,
+          },
+        });
+
         onChainData.fillInfos.push({
           context: `superrare-${contract}-${tokenId}-${baseEventParams.txHash}`,
           orderSide,
@@ -159,6 +185,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const currency = args["_currencyAddress"].toLowerCase();
         const currencyPrice = args["_amount"].toString();
         const tokenId = args["_tokenId"].toString();
+
+        const orderId = superrare.getOrderId(contract, tokenId);
 
         // Superrare works only with ERC721
         const amount = "1";
@@ -197,6 +225,16 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           aggregatorSourceId: attributionData.aggregatorSource?.id,
           fillSourceId: attributionData.fillSource?.id,
           baseEventParams,
+        });
+
+        onChainData.orderInfos.push({
+          context: `filled-${orderId}-${baseEventParams.txHash}`,
+          id: orderId,
+          trigger: {
+            kind: "sale",
+            txHash: baseEventParams.txHash,
+            txTimestamp: baseEventParams.timestamp,
+          },
         });
 
         onChainData.fillInfos.push({
@@ -277,7 +315,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         break;
       }
 
-      // Create order event
+      // Create/cancel order event
       case "superrare-set-sale-price": {
         const parsedLog = eventData.abi.parseLog(log);
         const contract = parsedLog.args["_originContract"].toLowerCase();
@@ -286,24 +324,47 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const maker = parsedLog.args["_splitRecipients"][0].toLowerCase();
         const currency = parsedLog.args["_currencyAddress"].toLowerCase();
 
-        onChainData.orders.push({
-          kind: "superrare",
-          info: {
-            orderParams: {
-              contract,
-              tokenId,
-              maker,
-              price,
-              currency,
+        if (bn(price).gt(0)) {
+          onChainData.orders.push({
+            kind: "superrare",
+            info: {
+              orderParams: {
+                contract,
+                tokenId,
+                maker,
+                price,
+                currency,
+                txHash: baseEventParams.txHash,
+                txTimestamp: baseEventParams.timestamp,
+                txBlock: baseEventParams.block,
+                logIndex: baseEventParams.logIndex,
+                batchIndex: baseEventParams.batchIndex,
+              },
+              metadata: {},
+            },
+          });
+        } else {
+          const orderId = superrare.getOrderId(contract, tokenId);
+
+          onChainData.cancelEventsOnChain.push({
+            orderKind: "foundation",
+            orderId,
+            baseEventParams,
+          });
+
+          onChainData.orderInfos.push({
+            context: `cancelled-${orderId}-${baseEventParams.txHash}`,
+            id: orderId,
+            trigger: {
+              kind: "cancel",
               txHash: baseEventParams.txHash,
               txTimestamp: baseEventParams.timestamp,
-              txBlock: baseEventParams.block,
               logIndex: baseEventParams.logIndex,
               batchIndex: baseEventParams.batchIndex,
+              blockHash: baseEventParams.blockHash,
             },
-            metadata: {},
-          },
-        });
+          });
+        }
 
         break;
       }
