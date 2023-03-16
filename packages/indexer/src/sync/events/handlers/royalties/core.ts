@@ -199,12 +199,17 @@ export async function extractRoyalties(
             ({ event }) => event.contract === contract && event.tokenId === tokenId
           );
           if (foundMatching) {
-            sameProtocolDetails.push({
-              recipient,
-              bps,
-              contract,
-              tokenId,
-            });
+            const isExist = sameProtocolDetails.find(
+              (c) => c.recipient === recipient && c.contract === contract && c.tokenId === tokenId
+            );
+            if (!isExist) {
+              sameProtocolDetails.push({
+                recipient,
+                bps,
+                contract,
+                tokenId,
+              });
+            }
           }
         })
       )
@@ -233,6 +238,9 @@ export async function extractRoyalties(
   // Get the know platform fee recipients for the current fill order kind
   const knownPlatformFeeRecipients = platformFeeRecipientsRegistry.get(fillEvent.orderKind) ?? [];
 
+  if (fillEvent.orderId === "0xcdfb8a952f4e3c2f5c12bff4bf190d6d52ce0d84fc980515447da791e0ab6c08") {
+    // console.log('sameProtocolFills', sameProtocolFills.length)
+  }
   // Iterate through all of the state changes of the (sub)call associated to the current fill event
   const state = getStateChange(subcallToAnalyze);
   for (const address in state) {
