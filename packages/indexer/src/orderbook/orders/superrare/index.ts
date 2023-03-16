@@ -156,7 +156,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             txHash: orderParams.txHash,
             txTimestamp: orderParams.txTimestamp,
             logIndex: orderParams.logIndex,
-            batchIndex: orderParams.batchIndex,
           });
         }
       }
@@ -210,7 +209,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             txHash: orderParams.txHash,
             txTimestamp: orderParams.txTimestamp,
             logIndex: orderParams.logIndex,
-            batchIndex: orderParams.batchIndex,
           });
         } else {
           // If a newer order already exists, then we just skip processing
@@ -311,7 +309,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         txHash: orderParams.txHash,
         txTimestamp: orderParams.txTimestamp,
         logIndex: orderParams.logIndex,
-        batchIndex: orderParams.batchIndex,
       });
     } catch (error) {
       logger.error(
