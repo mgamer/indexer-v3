@@ -261,6 +261,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const currencyPrice = args["_amount"].toString();
         const tokenId = args["_tokenId"].toString();
 
+        const orderId = superrare.getOrderId(contract, tokenId);
+
         // Superrare works only with ERC721
         const amount = "1";
         const orderSide = "sell";
@@ -300,6 +302,16 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           baseEventParams,
         });
 
+        onChainData.orderInfos.push({
+          context: `filled-${orderId}-${baseEventParams.txHash}`,
+          id: orderId,
+          trigger: {
+            kind: "sale",
+            txHash: baseEventParams.txHash,
+            txTimestamp: baseEventParams.timestamp,
+          },
+        });
+
         onChainData.fillInfos.push({
           context: `superrare-${contract}-${tokenId}-${baseEventParams.txHash}`,
           orderSide,
@@ -320,7 +332,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const parsedLog = eventData.abi.parseLog(log);
         const contract = parsedLog.args["_originContract"].toLowerCase();
         const tokenId = parsedLog.args["_tokenId"].toString();
-        const price = parsedLog.args["price"].toString();
+        const price = parsedLog.args["_amount"].toString();
         const maker = parsedLog.args["_splitRecipients"][0].toLowerCase();
         const currency = parsedLog.args["_currencyAddress"].toLowerCase();
 
@@ -343,11 +355,12 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               metadata: {},
             },
           });
+          // In case the price is 0 this treated as a cancel event
         } else {
           const orderId = superrare.getOrderId(contract, tokenId);
 
           onChainData.cancelEventsOnChain.push({
-            orderKind: "foundation",
+            orderKind: "superrare",
             orderId,
             baseEventParams,
           });
