@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
@@ -21,16 +23,27 @@ export const getExecuteCancelV3Options: RouteOptions = {
     },
   },
   validate: {
-    query: Joi.object({
-      id: Joi.alternatives()
-        .try(Joi.array().items(Joi.string()).max(20), Joi.string())
-        .description("Array of Order IDs. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`")
-        .optional(),
-
-      tokenId: Joi.string()
-        .optional()
-        .description("tokenId, Example: `0x407c5d2c02ab0e4b0a98d14778a5de180eb1357f:755`"),
-
+    payload: Joi.object({
+      cancelType: Joi.string().valid(["single", "bulk", "all", "token"]),
+      orderKind: Joi.string().optional(),
+      params: Joi.alternatives().try(
+        Joi.object({
+          maker: Joi.string().optional(),
+        }),
+        Joi.object({
+          tokenId: Joi.string()
+            .optional()
+            .description("tokenId, Example: `0x407c5d2c02ab0e4b0a98d14778a5de180eb1357f:755`"),
+        }),
+        Joi.object({
+          id: Joi.alternatives()
+            .try(Joi.array().items(Joi.string()).max(20), Joi.string())
+            .description(
+              "Array of Order IDs. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+            )
+            .optional(),
+        })
+      ),
       softCancel: Joi.boolean()
         .default(false)
         .description("If true, the order will be soft-cancelled."),
@@ -68,13 +81,81 @@ export const getExecuteCancelV3Options: RouteOptions = {
     },
   },
   handler: async (request: Request) => {
-    const query = request.query;
-    let isBulkCancel = Array.isArray(query.id);
-    const orderIds = isBulkCancel ? query.id : [query.id];
-    const tokenId = query.tokenId;
+    const payload = request.payload as any;
 
-    if (!tokenId && !orderIds.length) {
-      throw Boom.badData("No matching order");
+    const cancelType = payload.cancelType;
+    const isCancelAll = cancelType === "all";
+    const cancelToken = cancelType === "token";
+
+    const params = payload.params;
+
+    if (isCancelAll || cancelToken) {
+      throw Boom.badData("orderKind must provide");
+    }
+
+    // Cancel all
+    if (isCancelAll) {
+      if (!params.maker) {
+        throw Boom.badData("maker must provide");
+      }
+
+      let cancelTx: TxData;
+      const maker = params.maker;
+
+      switch (payload.orderKind) {
+        case "seaport": {
+          const exchange = new Sdk.Seaport.Exchange(config.chainId);
+          cancelTx = exchange.cancelAllOrdersTx(maker);
+
+          break;
+        }
+
+        case "seaport-v1.4": {
+          const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
+          cancelTx = exchange.cancelAllOrdersTx(maker);
+          break;
+        }
+
+        default: {
+          throw Boom.notImplemented("Unsupported order kind");
+        }
+      }
+
+      return {
+        steps: [
+          {
+            id: "cancellation",
+            action: "Submit cancellation",
+            description: `To cancel these orders you must confirm the transaction and pay the gas fee`,
+            kind: "transaction",
+            items: [
+              {
+                status: "incomplete",
+                data: {
+                  ...cancelTx,
+                  maxFeePerGas: payload.maxFeePerGas
+                    ? bn(payload.maxFeePerGas).toHexString()
+                    : undefined,
+                  maxPriorityFeePerGas: payload.maxPriorityFeePerGas
+                    ? bn(payload.maxPriorityFeePerGas).toHexString()
+                    : undefined,
+                },
+                orderIndex: 0,
+              },
+            ],
+          },
+        ],
+      };
+    }
+
+    const tokenId = params.tokenId;
+    let isBulkCancel = Array.isArray(params.id);
+    const orderIds = isBulkCancel ? params.id : [params.id];
+
+    if (!isCancelAll) {
+      if (!tokenId && !orderIds.length) {
+        throw Boom.badData("No matching order");
+      }
     }
 
     try {
@@ -88,10 +169,14 @@ export const getExecuteCancelV3Options: RouteOptions = {
             orders.maker,
             orders.raw_data
           FROM orders
-          WHERE orders.token_set_id = $/token_set_id/
+          WHERE orders.token_set_id = $/token_set_id/ 
+            AND kind = $/order_kind/
             AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
         `,
-            { token_set_id: `token:${tokenId}` }
+            {
+              token_set_id: `token:${tokenId}`,
+              order_kind: payload.orderKind,
+            }
           )
         : await redb.manyOrNone(
             `
@@ -133,7 +218,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
       const cancellationZone = Sdk.SeaportV14.Addresses.CancellationZone[config.chainId];
       const isOracleCancellable =
         orderResult.kind === "seaport-v1.4" && orderResult.raw_data.zone === cancellationZone;
-      if (isOracleCancellable || query.softCancel) {
+      if (isOracleCancellable || payload.softCancel) {
         return {
           steps: [
             {
@@ -302,9 +387,9 @@ export const getExecuteCancelV3Options: RouteOptions = {
         steps: [
           {
             id: "cancellation",
-            action: orderSide === "sell" ? "Submit cancellation" : "Cancel offer",
-            description: `To cancel this ${
-              orderSide === "sell" ? "listing" : "offer"
+            action: orderSide === "sell" || isBulkCancel ? "Submit cancellation" : "Cancel offer",
+            description: `To cancel ${
+              isBulkCancel ? "these orders" : "this order"
             } you must confirm the transaction and pay the gas fee`,
             kind: "transaction",
             items: [
@@ -312,11 +397,11 @@ export const getExecuteCancelV3Options: RouteOptions = {
                 status: "incomplete",
                 data: {
                   ...cancelTx,
-                  maxFeePerGas: query.maxFeePerGas
-                    ? bn(query.maxFeePerGas).toHexString()
+                  maxFeePerGas: payload.maxFeePerGas
+                    ? bn(payload.maxFeePerGas).toHexString()
                     : undefined,
-                  maxPriorityFeePerGas: query.maxPriorityFeePerGas
-                    ? bn(query.maxPriorityFeePerGas).toHexString()
+                  maxPriorityFeePerGas: payload.maxPriorityFeePerGas
+                    ? bn(payload.maxPriorityFeePerGas).toHexString()
                     : undefined,
                 },
                 orderIndex: 0,

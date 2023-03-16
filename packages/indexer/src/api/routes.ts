@@ -645,6 +645,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/execute/cancel/v3",
+    options: executeEndpoints.getExecuteCancelV3Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/execute/list/v2",
     options: executeEndpoints.getExecuteListV2Options,
   });
