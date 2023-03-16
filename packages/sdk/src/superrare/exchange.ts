@@ -34,8 +34,8 @@ export class Exchange {
   public createOrderTx(order: Order): TxData {
     return {
       from: order.params.maker,
-      to: this.exchange.address,
-      data: this.exchange.interface.encodeFunctionData("setSalePrice", [
+      to: this.baazar.address,
+      data: this.baazar.interface.encodeFunctionData("setSalePrice", [
         order.params.contract,
         order.params.tokenId,
         order.params.currency,
@@ -71,15 +71,15 @@ export class Exchange {
   ): TxData {
     return {
       from: taker,
-      to: this.exchange.address,
+      to: this.baazar.address,
       data:
-        this.exchange.interface.encodeFunctionData("buy", [
+        this.baazar.interface.encodeFunctionData("buy", [
           order.params.contract,
           order.params.tokenId,
           order.params.currency,
           order.params.price,
         ]) + generateSourceBytes(options?.source),
-      value: bn(order.params.price).toHexString(),
+      value: bn(order.params.price).add(bn(order.params.price).mul(3).div(100)).toHexString(),
     };
   }
 
