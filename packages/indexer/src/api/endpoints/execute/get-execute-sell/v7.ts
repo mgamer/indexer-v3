@@ -391,6 +391,30 @@ export const getExecuteSellV7Options: RouteOptions = {
             }
           }
 
+          // Partial Seaport orders require knowing the owner
+          let owner: string | undefined;
+          if (["seaport-partial", "seaport-v1.4-partial"].includes(result.kind)) {
+            const ownerResult = await idb.oneOrNone(
+              `
+                SELECT
+                  nft_balances.owner
+                FROM nft_balances
+                WHERE nft_balances.contract = $/contract/
+                  AND nft_balances.token_id = $/tokenId/
+                  AND nft_balances.amount >= $/quantity/
+                LIMIT 1
+              `,
+              {
+                contract: toBuffer(contract),
+                tokenId,
+                quantity: item.quantity,
+              }
+            );
+            if (ownerResult) {
+              owner = fromBuffer(ownerResult.owner);
+            }
+          }
+
           // Do not fill X2Y2 and Seaport orders with flagged tokens
           if (
             ["x2y2", "seaport", "seaport-v1.4", "seaport-partial", "seaport-v1.4-partial"].includes(
@@ -426,6 +450,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               contract,
               tokenId,
               quantity: item.quantity,
+              owner,
             }
           );
         }
@@ -471,6 +496,30 @@ export const getExecuteSellV7Options: RouteOptions = {
 
           let quantityToFill = item.quantity;
           for (const result of orderResults) {
+            // Partial Seaport orders require knowing the owner
+            let owner: string | undefined;
+            if (["seaport-partial", "seaport-v1.4-partial"].includes(result.kind)) {
+              const ownerResult = await idb.oneOrNone(
+                `
+                  SELECT
+                    nft_balances.owner
+                  FROM nft_balances
+                  WHERE nft_balances.contract = $/contract/
+                    AND nft_balances.token_id = $/tokenId/
+                    AND nft_balances.amount >= $/quantity/
+                  LIMIT 1
+                `,
+                {
+                  contract: toBuffer(contract),
+                  tokenId,
+                  quantity: item.quantity,
+                }
+              );
+              if (ownerResult) {
+                owner = fromBuffer(ownerResult.owner);
+              }
+            }
+
             // Do not fill X2Y2 and Seaport orders with flagged tokens
             if (
               [
@@ -538,6 +587,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                 contract,
                 tokenId,
                 quantity: Math.min(item.quantity, availableQuantity),
+                owner,
               }
             );
           }
@@ -604,9 +654,45 @@ export const getExecuteSellV7Options: RouteOptions = {
         },
       ];
 
+      const protectedOffersCount = bidDetails.filter(
+        (d) =>
+          d.kind === "seaport-v1.4" &&
+          d.order.params.zone ===
+            Sdk.SeaportV14.Addresses.OpenSeaProtectedOffersZone[config.chainId]
+      );
+      if (protectedOffersCount.length > 1) {
+        throw Boom.badRequest("Only a single protected offer can be accepted at once");
+      }
+      if (protectedOffersCount.length === 1 && bidDetails.length > 1) {
+        throw Boom.badRequest("Protected offers cannot be accepted with other offers");
+      }
+
       // Handle OpenSea authentication
       let openseaAuth: string | undefined;
-      if (path.some((p) => p.source === "opensea.io")) {
+      if (protectedOffersCount.length === 1) {
+        // Ensure the taker owns the NFTs to get sold
+        const takerIsOwner = await idb.oneOrNone(
+          `
+            SELECT
+              1
+            FROM nft_balances
+            WHERE nft_balances.contract = $/contract/
+              AND nft_balances.token_id = $/tokenId/
+              AND nft_balances.amount >= $/quantity/
+              AND nft_balances.owner = $/owner/
+            LIMIT 1
+          `,
+          {
+            contract: toBuffer(bidDetails[0].contract),
+            tokenId: bidDetails[0].tokenId,
+            quantity: bidDetails[0].amount ?? 1,
+            owner: toBuffer(payload.taker),
+          }
+        );
+        if (!takerIsOwner) {
+          throw Boom.badRequest("Taker is not the owner of the token to sell");
+        }
+
         const openseaAuthId = o.getAuthId(payload.taker);
 
         openseaAuth = await o

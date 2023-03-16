@@ -2573,7 +2573,9 @@ export class Router {
             const result = await axios.get(
               `https://order-fetcher.vercel.app/api/offer?orderHash=${order.id}&contract=${
                 order.contract
-              }&tokenId=${order.tokenId}&taker=${detail.owner ?? taker}&chainId=${this.chainId}` +
+              }&tokenId=${order.tokenId}&taker=${
+                options?.openseaAuth ? taker : detail.owner ?? taker
+              }&chainId=${this.chainId}` +
                 (order.unitPrice ? `&unitPrice=${order.unitPrice}` : "") +
                 (options?.openseaAuth ? `&authorization=${options.openseaAuth}` : ""),
               {
