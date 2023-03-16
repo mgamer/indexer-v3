@@ -435,11 +435,17 @@ export class Router {
 
         const order = detail.order as Sdk.SuperRare.Order;
         const exchange = new Sdk.SuperRare.Exchange(this.chainId);
+
         return {
-          txData: exchange.fillOrderTx(taker, order, options),
+          txs: [
+            {
+              approvals: [],
+              permits: [],
+              txData: exchange.fillOrderTx(taker, order, options),
+              orderIndexes: [0],
+            },
+          ],
           success: [true],
-          approvals: [],
-          permits: [],
         };
       }
     }
