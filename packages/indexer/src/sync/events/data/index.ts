@@ -186,6 +186,7 @@ export type EventSubKind =
   | "superrare-sold"
   | "superrare-accept-offer"
   | "superrare-auction-settled"
+  | "superrare-set-sale-price"
   | "zeroex-v2-fill";
 
 export type EventData = {

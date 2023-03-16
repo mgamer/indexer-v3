@@ -276,6 +276,37 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         break;
       }
+
+      // Create order event
+      case "superrare-set-sale-price": {
+        const parsedLog = eventData.abi.parseLog(log);
+        const contract = parsedLog.args["_originContract"].toLowerCase();
+        const tokenId = parsedLog.args["_tokenId"].toString();
+        const price = parsedLog.args["price"].toString();
+        const maker = parsedLog.args["_splitRecipients"][0].toLowerCase();
+        const currency = parsedLog.args["_currencyAddress"].toLowerCase();
+
+        onChainData.orders.push({
+          kind: "superrare",
+          info: {
+            orderParams: {
+              contract,
+              tokenId,
+              maker,
+              price,
+              currency,
+              txHash: baseEventParams.txHash,
+              txTimestamp: baseEventParams.timestamp,
+              txBlock: baseEventParams.block,
+              logIndex: baseEventParams.logIndex,
+              batchIndex: baseEventParams.batchIndex,
+            },
+            metadata: {},
+          },
+        });
+
+        break;
+      }
     }
   }
 };

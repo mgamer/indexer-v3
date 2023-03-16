@@ -20,6 +20,7 @@ export * as blur from "@/orderbook/orders/blur";
 export * as rarible from "@/orderbook/orders/rarible";
 export * as nftx from "@/orderbook/orders/nftx";
 export * as manifold from "@/orderbook/orders/manifold";
+export * as superrare from "@/orderbook/orders/superrare";
 
 // Imports
 import * as Sdk from "@reservoir0x/sdk";
@@ -378,6 +379,14 @@ export const generateListingDetailsV6 = (
         kind: "manifold",
         ...common,
         order: new Sdk.Manifold.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "superrare": {
+      return {
+        kind: "superrare",
+        ...common,
+        order: new Sdk.SuperRare.Order(config.chainId, order.rawData),
       };
     }
 
