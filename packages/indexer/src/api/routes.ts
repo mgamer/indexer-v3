@@ -951,6 +951,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   server.route({
+    method: "GET",
+    path: "/orders/users/{user}/top-bids/v4",
+    options: ordersEndpoints.getUserTopBidsV4Options,
+  });
+
+  server.route({
     method: "POST",
     path: "/order/v2",
     options: ordersEndpoints.postOrderV2Options,
@@ -986,6 +992,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/owners/v1",
     options: ownersEndpoints.getOwnersV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/owners/v2",
+    options: ownersEndpoints.getOwnersV2Options,
   });
 
   server.route({
