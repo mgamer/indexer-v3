@@ -2476,8 +2476,6 @@ export class Router {
             );
 
             const fullOrder = new Sdk.Seaport.Order(this.chainId, result.data.order);
-
-            const exchange = new Sdk.Seaport.Exchange(this.chainId);
             executions.push({
               module: module.address,
               data: module.interface.encodeFunctionData(
@@ -2491,7 +2489,7 @@ export class Router {
                     numerator: detail.amount ?? 1,
                     denominator: fullOrder.getInfo()!.amount,
                     signature: fullOrder.params.signature,
-                    extraData: await exchange.getExtraData(fullOrder),
+                    extraData: result.data.extraData,
                   },
                   result.data.criteriaResolvers ?? [],
                   {
@@ -2578,8 +2576,6 @@ export class Router {
             );
 
             const fullOrder = new Sdk.SeaportV14.Order(this.chainId, result.data.order);
-
-            const exchange = new Sdk.SeaportV14.Exchange(this.chainId);
             executions.push({
               module: module.address,
               data: module.interface.encodeFunctionData(
@@ -2593,10 +2589,7 @@ export class Router {
                     numerator: detail.amount ?? 1,
                     denominator: fullOrder.getInfo()!.amount,
                     signature: fullOrder.params.signature,
-                    extraData: await exchange.getExtraData(fullOrder, {
-                      amount: detail.amount ?? "1",
-                      criteriaResolvers: result.data.criteriaResolvers,
-                    }),
+                    extraData: result.data.extraData,
                   },
                   result.data.criteriaResolvers ?? [],
                   {
