@@ -186,14 +186,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       }
 
       // Handle: marketplace fees
-      const feeBreakdown = [
-        // 5% of the price goes to the Foundation treasury.
-        {
-          kind: "marketplace",
-          recipient: "0x67df244584b67e8c51b10ad610aaffa9a402fdb6",
-          bps: 500,
-        },
-      ];
+      const feeBreakdown = [];
 
       // Handle: royalties
       const royaltiesResult = await idb.oneOrNone(

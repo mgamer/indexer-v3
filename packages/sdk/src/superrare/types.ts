@@ -4,4 +4,6 @@ export type OrderParams = {
   tokenId: string;
   price: string;
   currency: string;
+  splitAddresses: string[];
+  splitRatios: number[];
 };

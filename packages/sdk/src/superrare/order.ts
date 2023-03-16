@@ -1,5 +1,5 @@
 import * as Types from "./types";
-import { lc, s } from "../utils";
+import { lc, s, n } from "../utils";
 
 export class Order {
   public chainId: number;
@@ -22,11 +22,16 @@ const normalize = (order: Types.OrderParams): Types.OrderParams => {
   // - convert strings to numbers where needed
   // - lowercase all strings
 
+  const splitAddresses = order.splitAddresses.map((a) => lc(a));
+  const splitRatios = order.splitRatios.map((r) => n(r));
+
   return {
     maker: lc(order.maker),
     contract: lc(order.contract),
     tokenId: s(order.tokenId),
     price: s(order.price),
     currency: s(order.currency),
+    splitAddresses,
+    splitRatios,
   };
 };

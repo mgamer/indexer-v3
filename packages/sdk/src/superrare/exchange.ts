@@ -7,18 +7,21 @@ import { Order } from "./order";
 import { TxData, bn, generateSourceBytes } from "../utils";
 
 import ExchangeAbi from "./abis/Exchange.json";
+import BaazarAbi from "./abis/Baazar.json";
 
-// Foundation:
+// SuperRare:
 // - escrowed orderbook
 // - fully on-chain
 
 export class Exchange {
   public chainId: number;
-  public contract: Contract;
+  public exchange: Contract;
+  public baazar: Contract;
 
   constructor(chainId: number) {
     this.chainId = chainId;
-    this.contract = new Contract(Addresses.Exchange[this.chainId], ExchangeAbi);
+    this.exchange = new Contract(Addresses.Exchange[this.chainId], ExchangeAbi);
+    this.baazar = new Contract(Addresses.Bazaar[this.chainId], BaazarAbi);
   }
 
   // --- Create order ---
@@ -34,11 +37,15 @@ export class Exchange {
   public createOrderTx(order: Order): TxData {
     return {
       from: order.params.maker,
-      to: this.contract.address,
-      data: this.contract.interface.encodeFunctionData("setSalePrice", [
+      to: this.exchange.address,
+      data: this.exchange.interface.encodeFunctionData("setSalePrice", [
         order.params.contract,
         order.params.tokenId,
+        order.params.currency,
         order.params.price,
+        AddressZero,
+        order.params.splitAddresses,
+        order.params.splitRatios,
       ]),
     };
   }
@@ -67,13 +74,13 @@ export class Exchange {
   ): TxData {
     return {
       from: taker,
-      to: this.contract.address,
+      to: this.exchange.address,
       data:
-        this.contract.interface.encodeFunctionData("buyV2", [
+        this.exchange.interface.encodeFunctionData("buy", [
           order.params.contract,
           order.params.tokenId,
+          order.params.currency,
           order.params.price,
-          options?.nativeReferrerAddress ?? AddressZero,
         ]) + generateSourceBytes(options?.source),
       value: bn(order.params.price).toHexString(),
     };
@@ -92,10 +99,11 @@ export class Exchange {
   public cancelOrderTx(order: Order): TxData {
     return {
       from: order.params.maker,
-      to: this.contract.address,
-      data: this.contract.interface.encodeFunctionData("cancelBuyPrice", [
+      to: this.exchange.address,
+      data: this.exchange.interface.encodeFunctionData("removeSalePrice", [
         order.params.contract,
         order.params.tokenId,
+        AddressZero,
       ]),
     };
   }
