@@ -5,12 +5,13 @@ import pLimit from "p-limit";
 
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
-import { compare, toBuffer } from "@/common/utils";
+import { bn, compare, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { Sources } from "@/models/sources";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import * as tokenSet from "@/orderbook/token-sets";
+import * as royalties from "@/utils/royalties";
 
 export type OrderInfo = {
   orderParams: {
@@ -26,6 +27,8 @@ export type OrderInfo = {
     txBlock: number;
     logIndex: number;
     batchIndex: number;
+    splitAddresses: string[];
+    splitRatios: number[];
   };
   metadata: OrderMetadata;
 };
@@ -51,6 +54,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
     try {
       // On Superrare, we can only have a single currently active order per NFT
       const id = getOrderId(orderParams.contract, orderParams.tokenId);
+      const order = new Sdk.SuperRare.Order(config.chainId, orderParams);
 
       // Ensure the order is not cancelled
       const cancelResult = await idb.oneOrNone(
@@ -184,25 +188,32 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         source = await sources.getOrInsert(metadata.source);
       }
 
-      // Handle: marketplace fees
-      const feeBreakdown = [];
+      // Handle: fees
+      const treasury = "0x860a80d33e85e97888f1f0c75c6e5bbd60b48da9";
+      const feeBreakdown = [
+        {
+          kind: "marketplace",
+          recipient: treasury,
+          bps: 0,
+        },
+      ];
 
       // Handle: royalties
-      const royaltiesResult = await idb.oneOrNone(
-        `
-          SELECT collections.royalties FROM collections
-          WHERE collections.contract = $/contract/
-          LIMIT 1
-        `,
-        { contract: toBuffer(orderParams.contract) }
+      const onChainRoyalties = await royalties.getRoyalties(
+        order.params.contract,
+        order.params.tokenId,
+        "onchain"
       );
-      for (const { bps, recipient } of royaltiesResult?.royalties || []) {
-        feeBreakdown.push({
-          kind: "royalty",
-          recipient,
-          bps: Number(bps),
-        });
+
+      if (!onChainRoyalties.length) {
+        // SuperRare get 15% commission on first sale, after that the creator has 10% royalties
+        feeBreakdown[0].bps = 1500;
       }
+
+      const feeBps = feeBreakdown.map(({ bps }) => bps).reduce((a, b) => Number(a) + Number(b), 0);
+
+      // Buyer pays 3% on all purchases
+      const price = bn(order.params.price).add(bn(order.params.price).mul(3).div(100)).toString();
 
       const validFrom = `date_trunc('seconds', to_timestamp(${orderParams.txTimestamp}))`;
       const validTo = `'Infinity'`;
@@ -216,7 +227,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         token_set_schema_hash: toBuffer(schemaHash),
         maker: toBuffer(orderParams.maker),
         taker: toBuffer(AddressZero),
-        price: orderParams.price.toString(),
+        price,
         value: orderParams.price.toString(),
         currency: toBuffer(Sdk.Common.Addresses.Eth[config.chainId]),
         currency_price: orderParams.price.toString(),
@@ -229,7 +240,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         is_reservoir: null,
         contract: toBuffer(orderParams.contract),
         conduit: null,
-        fee_bps: feeBreakdown.map((fb) => fb.bps).reduce((a, b) => a + b, 0),
+        fee_bps: feeBps,
         fee_breakdown: feeBreakdown,
         dynamic: null,
         raw_data: orderParams,

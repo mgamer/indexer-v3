@@ -343,6 +343,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const price = parsedLog.args["_amount"].toString();
         const maker = parsedLog.args["_splitRecipients"][0].toLowerCase();
         const currency = parsedLog.args["_currencyAddress"].toLowerCase();
+        const splitAddresses = parsedLog.args["_splitRecipients"];
+        const splitRatios = parsedLog.args["_splitRatios"];
 
         if (bn(price).gt(0)) {
           onChainData.orders.push({
@@ -354,6 +356,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
                 maker,
                 price,
                 currency,
+                splitAddresses,
+                splitRatios,
                 txHash: baseEventParams.txHash,
                 txTimestamp: baseEventParams.timestamp,
                 txBlock: baseEventParams.block,
