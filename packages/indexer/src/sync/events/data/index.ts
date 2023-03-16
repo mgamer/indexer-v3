@@ -310,6 +310,7 @@ const allEventData = [
   superrare.listingSold,
   superrare.offerAccept,
   superrare.auctionSettled,
+  superrare.setSalePrice,
   zeroExV2.fill,
 ];
 

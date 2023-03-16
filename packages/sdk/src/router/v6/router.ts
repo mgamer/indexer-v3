@@ -418,6 +418,32 @@ export class Router {
       }
     }
 
+    // TODO: Add SuperRare router module
+    if (details.some(({ kind }) => kind === "superrare")) {
+      if (options?.relayer) {
+        throw new Error("Relayer not supported");
+      }
+
+      if (details.length > 1) {
+        throw new Error("SuperRare sweeping is not supported");
+      } else {
+        if (options?.globalFees?.length) {
+          throw new Error("Fees not supported");
+        }
+
+        const detail = details[0];
+
+        const order = detail.order as Sdk.SuperRare.Order;
+        const exchange = new Sdk.SuperRare.Exchange(this.chainId);
+        return {
+          txData: exchange.fillOrderTx(taker, order, options),
+          success: [true],
+          approvals: [],
+          permits: [],
+        };
+      }
+    }
+
     // Handle partial seaport orders:
     // - fetch the full order data for each partial order (concurrently)
     // - remove any partial order from the details

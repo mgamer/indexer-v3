@@ -269,7 +269,7 @@ export const jobProcessor = async (job: Job) => {
       }
 
       case "superrare": {
-        result = await orders.foundation.save([info]);
+        result = await orders.superrare.save([info]);
         break;
       }
     }

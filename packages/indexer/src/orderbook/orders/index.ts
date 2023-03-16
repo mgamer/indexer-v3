@@ -84,6 +84,7 @@ mintsSources.set("0xc9154424b823b10579895ccbe442d41b9abd96ed", "rarible.com");
 mintsSources.set("0xb66a603f4cfe17e3d27b87a8bfcad319856518b8", "rarible.com");
 mintsSources.set("0xc143bbfcdbdbed6d454803804752a064a622c1f3", "async.art");
 mintsSources.set("0xfbeef911dc5821886e1dda71586d90ed28174b7d", "knownorigin.io");
+mintsSources.set("0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0", "superrare.com");
 
 export const getOrderSourceByOrderId = async (
   orderId: string
@@ -775,6 +776,14 @@ export const generateListingDetailsV5 = (
         kind: "rarible",
         ...common,
         order: new Sdk.Rarible.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "superrare": {
+      return {
+        kind: "superrare",
+        ...common,
+        order: new Sdk.SuperRare.Order(config.chainId, order.rawData),
       };
     }
 
