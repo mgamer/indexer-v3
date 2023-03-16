@@ -391,30 +391,6 @@ export const getExecuteSellV7Options: RouteOptions = {
             }
           }
 
-          // Partial Seaport orders require knowing the owner
-          let owner: string | undefined;
-          if (["seaport-partial", "seaport-v1.4-partial"].includes(result.kind)) {
-            const ownerResult = await idb.oneOrNone(
-              `
-                SELECT
-                  nft_balances.owner
-                FROM nft_balances
-                WHERE nft_balances.contract = $/contract/
-                  AND nft_balances.token_id = $/tokenId/
-                  AND nft_balances.amount >= $/quantity/
-                LIMIT 1
-              `,
-              {
-                contract: toBuffer(contract),
-                tokenId,
-                quantity: item.quantity,
-              }
-            );
-            if (ownerResult) {
-              owner = fromBuffer(ownerResult.owner);
-            }
-          }
-
           // Do not fill X2Y2 and Seaport orders with flagged tokens
           if (
             ["x2y2", "seaport", "seaport-v1.4", "seaport-partial", "seaport-v1.4-partial"].includes(
@@ -450,7 +426,6 @@ export const getExecuteSellV7Options: RouteOptions = {
               contract,
               tokenId,
               quantity: item.quantity,
-              owner,
             }
           );
         }
@@ -496,29 +471,6 @@ export const getExecuteSellV7Options: RouteOptions = {
 
           let quantityToFill = item.quantity;
           for (const result of orderResults) {
-            // Partial Seaport orders require knowing the owner
-            let owner: string | undefined;
-            if (["seaport-partial", "seaport-v1.4-partial"].includes(result.kind)) {
-              const ownerResult = await idb.oneOrNone(
-                `
-                  SELECT
-                    nft_balances.owner
-                  FROM nft_balances
-                  WHERE nft_balances.contract = $/contract/
-                    AND nft_balances.token_id = $/tokenId/
-                    AND nft_balances.amount >= $/quantity/
-                `,
-                {
-                  contract: toBuffer(contract),
-                  tokenId,
-                  quantity: item.quantity,
-                }
-              );
-              if (ownerResult) {
-                owner = fromBuffer(ownerResult.owner);
-              }
-            }
-
             // Do not fill X2Y2 and Seaport orders with flagged tokens
             if (
               [
@@ -586,7 +538,6 @@ export const getExecuteSellV7Options: RouteOptions = {
                 contract,
                 tokenId,
                 quantity: Math.min(item.quantity, availableQuantity),
-                owner,
               }
             );
           }
