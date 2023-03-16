@@ -61,6 +61,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         onChainData.fillEvents.push({
           orderKind,
+          orderId,
           currency,
           orderSide,
           maker,
@@ -90,6 +91,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         onChainData.fillInfos.push({
           context: `superrare-${contract}-${tokenId}-${baseEventParams.txHash}`,
           orderSide,
+          orderId,
           contract,
           tokenId,
           amount,
@@ -136,6 +138,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         onChainData.fillEvents.push({
           orderKind,
+          orderId,
           currency,
           orderSide,
           maker,
@@ -165,6 +168,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         onChainData.fillInfos.push({
           context: `superrare-${contract}-${tokenId}-${baseEventParams.txHash}`,
           orderSide,
+          orderId,
           contract,
           tokenId,
           amount,
@@ -211,6 +215,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         onChainData.fillEvents.push({
           orderKind,
+          orderId,
           currency,
           orderSide,
           maker,
@@ -240,6 +245,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         onChainData.fillInfos.push({
           context: `superrare-${contract}-${tokenId}-${baseEventParams.txHash}`,
           orderSide,
+          orderId,
           contract,
           tokenId,
           amount,
@@ -286,6 +292,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         onChainData.fillEvents.push({
           orderKind,
+          orderId,
           currency,
           orderSide,
           maker,
@@ -315,6 +322,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         onChainData.fillInfos.push({
           context: `superrare-${contract}-${tokenId}-${baseEventParams.txHash}`,
           orderSide,
+          orderId,
           contract,
           tokenId,
           amount,
