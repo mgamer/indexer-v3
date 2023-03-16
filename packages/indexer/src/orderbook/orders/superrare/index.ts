@@ -41,8 +41,7 @@ type SaveResult = {
 };
 
 export const getOrderId = (contract: string, tokenId: string) =>
-  // TODO: Add the marketplace identifier to the order id (see Cryptopunks)
-  keccak256(["address", "uint256"], [contract, tokenId]);
+  keccak256(["string", "address", "uint256"], ["superrare", contract, tokenId]);
 
 export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
