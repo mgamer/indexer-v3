@@ -324,6 +324,30 @@ export const getExecuteSellV6Options: RouteOptions = {
         },
       ];
 
+      // Partial Seaport orders require knowing the owner
+      let owner: string | undefined;
+      if (["seaport-partial", "seaport-v1.4-partial"].includes(orderResult.kind)) {
+        const ownerResult = await idb.oneOrNone(
+          `
+            SELECT
+              nft_balances.owner
+            FROM nft_balances
+            WHERE nft_balances.contract = $/contract/
+              AND nft_balances.token_id = $/tokenId/
+              AND nft_balances.amount >= $/quantity/
+            LIMIT 1
+          `,
+          {
+            contract: toBuffer(contract),
+            tokenId,
+            quantity: payload.quantity ?? 1,
+          }
+        );
+        if (ownerResult) {
+          owner = fromBuffer(ownerResult.owner);
+        }
+      }
+
       const bidDetails = await generateBidDetailsV6(
         {
           id: orderResult.id,
@@ -337,6 +361,7 @@ export const getExecuteSellV6Options: RouteOptions = {
           contract,
           tokenId,
           amount: payload.quantity,
+          owner,
         }
       );
 
@@ -398,7 +423,38 @@ export const getExecuteSellV6Options: RouteOptions = {
 
       // Handle OpenSea authentication
       let openseaAuth: string | undefined;
-      if (path.some((p) => p.source === "opensea.io")) {
+      if (
+        path.some(
+          (p) =>
+            p.source === "opensea.io" &&
+            // Authentication is only needed for protected offers
+            orderResult?.raw_data?.zone ===
+              Sdk.SeaportV14.Addresses.OpenSeaProtectedOffersZone[config.chainId]
+        )
+      ) {
+        // Ensure the taker owns the NFTs to get sold
+        const takerIsOwner = await idb.oneOrNone(
+          `
+            SELECT
+              1
+            FROM nft_balances
+            WHERE nft_balances.contract = $/contract/
+              AND nft_balances.token_id = $/tokenId/
+              AND nft_balances.amount >= $/quantity/
+              AND nft_balances.owner = $/owner/
+            LIMIT 1
+          `,
+          {
+            contract: toBuffer(contract),
+            tokenId,
+            quantity: payload.quantity ?? 1,
+            owner: toBuffer(payload.taker),
+          }
+        );
+        if (!takerIsOwner) {
+          throw Boom.badRequest("Taker is not the owner of the token to sell");
+        }
+
         const openseaAuthId = o.getAuthId(payload.taker);
 
         openseaAuth = await o
