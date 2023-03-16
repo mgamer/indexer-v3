@@ -199,12 +199,17 @@ export async function extractRoyalties(
             ({ event }) => event.contract === contract && event.tokenId === tokenId
           );
           if (foundMatching) {
-            sameProtocolDetails.push({
-              recipient,
-              bps,
-              contract,
-              tokenId,
-            });
+            const isExist = sameProtocolDetails.find(
+              (c) => c.recipient === recipient && c.contract === contract && c.tokenId === tokenId
+            );
+            if (!isExist) {
+              sameProtocolDetails.push({
+                recipient,
+                bps,
+                contract,
+                tokenId,
+              });
+            }
           }
         })
       )
