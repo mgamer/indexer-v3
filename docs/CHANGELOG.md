@@ -1,3 +1,10 @@
+## [5.262.1](https://github.com/reservoirprotocol/indexer/compare/v5.262.0...v5.262.1) (2023-03-17)
+
+
+### Bug Fixes
+
+* filling x2y2 orders via raw data ([f8b30bf](https://github.com/reservoirprotocol/indexer/commit/f8b30bf51b9ac8cd5fab686a4914ea3971926260))
+
 # [5.262.0](https://github.com/reservoirprotocol/indexer/compare/v5.261.4...v5.262.0) (2023-03-17)
 
 
