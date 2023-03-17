@@ -1,15 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Request, RouteOptions } from "@hapi/hapi";
-import crypto from "crypto";
 import Joi from "joi";
 import _ from "lodash";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { JoiPrice, JoiFeeBreakdown, getJoiSaleObject } from "@/common/joi";
-import { buildContinuation, fromBuffer, regex, splitContinuation, toBuffer } from "@/common/utils";
-import { Assets } from "@/utils/assets";
+import { getJoiSaleObject, JoiSale } from "@/common/joi";
+import { buildContinuation, regex, splitContinuation, toBuffer } from "@/common/utils";
 import * as Boom from "@hapi/boom";
 
 const version = "v4";
@@ -75,41 +73,7 @@ export const getSalesV4Options: RouteOptions = {
   },
   response: {
     schema: Joi.object({
-      sales: Joi.array().items(
-        Joi.object({
-          id: Joi.string(),
-          saleId: Joi.string(),
-          token: Joi.object({
-            contract: Joi.string().lowercase().pattern(regex.address),
-            tokenId: Joi.string().pattern(regex.number),
-            name: Joi.string().allow("", null),
-            image: Joi.string().allow("", null),
-            collection: Joi.object({
-              id: Joi.string().allow(null),
-              name: Joi.string().allow("", null),
-            }),
-          }),
-          orderSource: Joi.string().allow("", null),
-          orderSide: Joi.string().valid("ask", "bid"),
-          orderKind: Joi.string(),
-          orderId: Joi.string().allow(null),
-          from: Joi.string().lowercase().pattern(regex.address),
-          to: Joi.string().lowercase().pattern(regex.address),
-          amount: Joi.string(),
-          fillSource: Joi.string().allow(null),
-          block: Joi.number(),
-          txHash: Joi.string().lowercase().pattern(regex.bytes32),
-          logIndex: Joi.number(),
-          batchIndex: Joi.number(),
-          timestamp: Joi.number(),
-          price: JoiPrice,
-          washTradingScore: Joi.number(),
-          royaltyFeeBps: Joi.number(),
-          marketplaceFeeBps: Joi.number(),
-          paidFullRoyalty: Joi.boolean(),
-          feeBreakdown: Joi.array().items(JoiFeeBreakdown),
-        })
-      ),
+      sales: Joi.array().items(JoiSale),
       continuation: Joi.string().pattern(regex.base64).allow(null),
     }).label(`getSales${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
@@ -315,59 +279,43 @@ export const getSalesV4Options: RouteOptions = {
       }
 
       const result = rawResult.map(async (r) => {
-        return {
-          id: crypto
-            .createHash("sha256")
-            .update(`${fromBuffer(r.tx_hash)}${r.log_index}${r.batch_index}`)
-            .digest("hex"),
-          saleId: crypto
-            .createHash("sha256")
-            .update(
-              `${fromBuffer(r.tx_hash)}${r.maker}${r.taker}${r.contract}${r.token_id}${r.price}`
-            )
-            .digest("hex"),
-          token: {
-            contract: fromBuffer(r.contract),
-            tokenId: r.token_id,
-            name: r.name ?? null,
-            image: Assets.getLocalAssetsLink(r.image) ?? null,
-            collection: {
-              id: r.collection_id ?? null,
-              name: r.collection_name ?? null,
+        return await getJoiSaleObject({
+          prices: {
+            gross: {
+              amount: r.currency_price ?? r.price,
+              nativeAmount: r.price,
+              usdAmount: r.usd_price,
             },
           },
-          ...(await getJoiSaleObject({
-            prices: {
-              gross: {
-                amount: r.currency_price ?? r.price,
-                nativeAmount: r.price,
-                usdAmount: r.usd_price,
-              },
-            },
-            fees: {
-              royaltyFeeBps: r.royalty_fee_bps,
-              marketplaceFeeBps: r.marketplace_fee_bps,
-              paidFullRoyalty: r.paid_full_royalty,
-              royaltyFeeBreakdown: r.royalty_fee_breakdown,
-              marketplaceFeeBreakdown: r.marketplace_fee_breakdown,
-            },
-            currencyAddress: r.currency,
-            timestamp: r.timestamp,
-            washTradingScore: r.wash_trading_score,
-            orderId: r.order_id,
-            orderSourceId: r.order_source_id_int,
-            orderSide: r.order_side,
-            orderKind: r.order_kind,
-            maker: r.maker,
-            taker: r.taker,
-            amount: r.amount,
-            fillSourceId: r.fill_source_id,
-            block: r.block,
-            txHash: r.tx_hash,
-            logIndex: r.log_index,
-            batchIndex: r.batch_index,
-          })),
-        };
+          fees: {
+            royaltyFeeBps: r.royalty_fee_bps,
+            marketplaceFeeBps: r.marketplace_fee_bps,
+            paidFullRoyalty: r.paid_full_royalty,
+            royaltyFeeBreakdown: r.royalty_fee_breakdown,
+            marketplaceFeeBreakdown: r.marketplace_fee_breakdown,
+          },
+          currencyAddress: r.currency,
+          timestamp: r.timestamp,
+          contract: r.contract,
+          tokenId: r.token_id,
+          name: r.name,
+          image: r.image,
+          collectionId: r.collection_id,
+          collectionName: r.collection_name,
+          washTradingScore: r.wash_trading_score,
+          orderId: r.order_id,
+          orderSourceId: r.order_source_id_int,
+          orderSide: r.order_side,
+          orderKind: r.order_kind,
+          maker: r.maker,
+          taker: r.taker,
+          amount: r.amount,
+          fillSourceId: r.fill_source_id,
+          block: r.block,
+          txHash: r.tx_hash,
+          logIndex: r.log_index,
+          batchIndex: r.batch_index,
+        });
       });
 
       return {

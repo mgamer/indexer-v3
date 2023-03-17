@@ -7,6 +7,8 @@ import { bn, formatEth, formatPrice, formatUsd, fromBuffer, now, regex } from "@
 import { Currency, getCurrency } from "@/utils/currencies";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import { Sources } from "@/models/sources";
+import crypto from "crypto";
+import { Assets } from "@/utils/assets";
 
 // --- Prices ---
 
@@ -198,6 +200,18 @@ export const JoiFeeBreakdown = Joi.object({
 });
 
 export const JoiSale = Joi.object({
+  id: Joi.string(),
+  saleId: Joi.string(),
+  token: Joi.object({
+    contract: Joi.string().lowercase().pattern(regex.address),
+    tokenId: Joi.string().pattern(regex.number),
+    name: Joi.string().allow("", null),
+    image: Joi.string().allow("", null),
+    collection: Joi.object({
+      id: Joi.string().allow(null),
+      name: Joi.string().allow("", null),
+    }),
+  }).optional(),
   orderSource: Joi.string().allow("", null).optional(),
   orderSide: Joi.string().valid("ask", "bid").optional(),
   orderKind: Joi.string().optional(),
@@ -275,6 +289,12 @@ export const getJoiSaleObject = async (sale: {
   };
   currencyAddress: Buffer;
   timestamp: number;
+  contract?: Buffer;
+  tokenId?: string;
+  name?: string;
+  image?: string;
+  collectionId?: string;
+  collectionName?: string;
   washTradingScore?: number;
   orderId?: string;
   orderSourceId?: number;
@@ -302,6 +322,33 @@ export const getJoiSaleObject = async (sale: {
   const totalFeeBps = (sale.fees.royaltyFeeBps ?? 0) + (sale.fees.marketplaceFeeBps ?? 0);
 
   return {
+    id:
+      sale.txHash &&
+      crypto
+        .createHash("sha256")
+        .update(`${fromBuffer(sale.txHash)}${sale.logIndex}${sale.batchIndex}`)
+        .digest("hex"),
+    saleId:
+      sale.txHash &&
+      crypto
+        .createHash("sha256")
+        .update(
+          `${fromBuffer(sale.txHash)}${sale.maker}${sale.taker}${sale.contract}${sale.tokenId}${
+            sale.prices.gross.nativeAmount
+          }`
+        )
+        .digest("hex"),
+    token: sale.contract &&
+      sale.tokenId && {
+        contract: fromBuffer(sale.contract),
+        tokenId: sale.tokenId,
+        name: sale.name ?? null,
+        image: sale.image ? Assets.getLocalAssetsLink(sale.image) : null,
+        collection: {
+          id: sale.collectionId ?? null,
+          name: sale.collectionName ?? null,
+        },
+      },
     orderId: sale.orderId,
     orderSource: sale.orderSourceId && (orderSource?.domain ?? null),
     orderSide: sale.orderSide && (sale.orderSide === "sell" ? "ask" : "bid"),
