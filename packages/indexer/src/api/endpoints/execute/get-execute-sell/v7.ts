@@ -15,7 +15,7 @@ import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/util
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { Sources } from "@/models/sources";
-import { OrderKind, generateBidDetailsV6 } from "@/orderbook/orders";
+import { OrderKind, generateBidDetailsV6, routerOnUpstreamError } from "@/orderbook/orders";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as nftx from "@/orderbook/orders/nftx";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
@@ -773,6 +773,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           partial: payload.partial,
           forcePermit,
           openseaAuth,
+          onUpstreamError: routerOnUpstreamError,
         }
       );
 

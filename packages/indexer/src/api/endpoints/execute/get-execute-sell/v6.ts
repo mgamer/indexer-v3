@@ -13,7 +13,7 @@ import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
-import { generateBidDetailsV6 } from "@/orderbook/orders";
+import { generateBidDetailsV6, routerOnUpstreamError } from "@/orderbook/orders";
 import { getNftApproval } from "@/orderbook/orders/common/helpers";
 import * as o from "@/utils/auth/opensea";
 import { getCurrency } from "@/utils/currencies";
@@ -527,6 +527,7 @@ export const getExecuteSellV6Options: RouteOptions = {
       const { txData, approvals } = await router.fillBidsTx([bidDetails!], payload.taker, {
         source: payload.source,
         openseaAuth,
+        onUpstreamError: routerOnUpstreamError,
       });
 
       // Direct filling on OpenSea might require an approval
