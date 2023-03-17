@@ -15,7 +15,6 @@ import { bn, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { Collections } from "@/models/collections";
-import { PendingFlagStatusSyncJobs } from "@/models/pending-flag-status-sync-jobs";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
@@ -28,8 +27,8 @@ import * as royalties from "@/utils/royalties";
 
 import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as refreshContractCollectionsMetadata from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue";
-import * as flagStatusProcessQueue from "@/jobs/flag-status/process-queue";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
+import { allPlatformFeeRecipients } from "@/events-sync/handlers/royalties/config";
 
 export type OrderInfo =
   | {
@@ -37,6 +36,7 @@ export type OrderInfo =
       orderParams: Sdk.SeaportV14.Types.OrderComponents;
       metadata: OrderMetadata;
       isReservoir?: boolean;
+      isOpenSea?: boolean;
       openSeaOrderParams?: PartialOrderComponents;
     }
   | {
@@ -89,6 +89,7 @@ export const save = async (
     orderParams: Sdk.SeaportV14.Types.OrderComponents,
     metadata: OrderMetadata,
     isReservoir?: boolean,
+    isOpenSea?: boolean,
     openSeaOrderParams?: PartialOrderComponents
   ) => {
     try {
@@ -197,7 +198,14 @@ export const save = async (
             Sdk.SeaportV14.Addresses.PausableZone[config.chainId],
             // Cancellation zone
             Sdk.SeaportV14.Addresses.CancellationZone[config.chainId],
-          ].includes(order.params.zone)
+          ].includes(order.params.zone) &&
+          !(
+            // Protected offers zone
+            (
+              Sdk.SeaportV14.Addresses.OpenSeaProtectedOffersZone[config.chainId] ===
+                order.params.zone && info.side === "buy"
+            )
+          )
         ) {
           return results.push({
             id,
@@ -216,8 +224,17 @@ export const save = async (
         });
       }
 
+      // Make sure no zero signatures are allowed
+      if (order.params.signature && /^0x0+$/g.test(order.params.signature)) {
+        order.params.signature = undefined;
+      }
+
       // Check: order has a valid signature
-      if (!metadata.fromOnChain) {
+      if (metadata.fromOnChain || (isOpenSea && !order.params.signature)) {
+        // Skip if:
+        // - the order was validated on-chain
+        // - the order is coming from OpenSea and it doesn't have a signature
+      } else {
         try {
           await order.checkSignature(baseProvider);
         } catch {
@@ -378,38 +395,19 @@ export const save = async (
           }
 
           case "token-list": {
-            if (metadata.target === "opensea") {
-              tokenSetId = `contract:${info.contract}`;
-              await tokenSet.contractWide.save([
+            const typedInfo = info as typeof info & { merkleRoot: string };
+            const merkleRoot = typedInfo.merkleRoot;
+
+            if (merkleRoot) {
+              tokenSetId = `list:${info.contract}:${bn(merkleRoot).toHexString()}`;
+
+              await tokenSet.tokenList.save([
                 {
                   id: tokenSetId,
                   schemaHash,
-                  contract: info.contract,
+                  schema: metadata.schema,
                 },
               ]);
-
-              // Mark the order as being partial in order to force filling through the order-fetcher service
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (order.params as any).partial = true;
-            } else {
-              const typedInfo = info as typeof info & { merkleRoot: string };
-              const merkleRoot = typedInfo.merkleRoot;
-
-              if (merkleRoot) {
-                tokenSetId = `list:${info.contract}:${bn(merkleRoot).toHexString()}`;
-
-                await tokenSet.tokenList.save([
-                  {
-                    id: tokenSetId,
-                    schemaHash,
-                    schema: metadata.schema,
-                  },
-                ]);
-
-                if (!isReservoir) {
-                  await handleTokenList(id, info.contract, tokenSetId, merkleRoot);
-                }
-              }
             }
 
             break;
@@ -452,23 +450,15 @@ export const save = async (
       ];
 
       let openSeaRoyalties: royalties.Royalty[];
-      const openSeaRoyaltiesSchema = metadata?.target === "opensea" ? "opensea" : "default";
 
       if (order.params.kind === "single-token") {
-        openSeaRoyalties = await royalties.getRoyalties(
-          info.contract,
-          info.tokenId,
-          openSeaRoyaltiesSchema
-        );
+        openSeaRoyalties = await royalties.getRoyalties(info.contract, info.tokenId, "", true);
       } else {
-        openSeaRoyalties = await royalties.getRoyaltiesByTokenSet(
-          tokenSetId,
-          openSeaRoyaltiesSchema
-        );
+        openSeaRoyalties = await royalties.getRoyaltiesByTokenSet(tokenSetId, "", true);
       }
 
       let feeBps = 0;
-      let marketplaceFeeFound = false;
+      let knownFee = false;
       const feeBreakdown = info.fees.map(({ recipient, amount }) => {
         const bps = price.eq(0)
           ? 0
@@ -481,15 +471,16 @@ export const save = async (
         feeBps += bps;
 
         // First check for opensea hardcoded recipients
-        const kind: "marketplace" | "royalty" = openSeaFeeRecipients.includes(recipient)
+        const kind: "marketplace" | "royalty" = allPlatformFeeRecipients.has(
+          recipient.toLowerCase()
+        )
           ? "marketplace"
-          : openSeaRoyalties.map(({ recipient }) => recipient).includes(recipient.toLowerCase()) // Check for locally stored royalties
-          ? "royalty"
-          : marketplaceFeeFound || bps > 250 // If bps is higher than 250 or we already found marketplace fee assume it is royalty otherwise marketplace fee
-          ? "royalty"
-          : "marketplace";
+          : "royalty";
 
-        marketplaceFeeFound = kind === "marketplace" || marketplaceFeeFound;
+        // Check for unknown fees
+        knownFee =
+          knownFee ||
+          !openSeaRoyalties.map(({ recipient }) => recipient).includes(recipient.toLowerCase()); // Check for locally stored royalties
 
         return {
           kind,
@@ -497,6 +488,11 @@ export const save = async (
           bps,
         };
       });
+
+      // If unknown address was found
+      if (!_.isEmpty(openSeaRoyalties) && !knownFee) {
+        logger.info("orders-seaport-v1.4-save", `Unknown Fee for order ${id}`);
+      }
 
       if (feeBps > 10000) {
         return results.push({
@@ -545,12 +541,10 @@ export const save = async (
       let source: SourcesEntity | undefined = await sources.getOrInsert("opensea.io");
 
       // If cross posting, source should always be opensea.
-      if (metadata?.target !== "opensea") {
-        const sourceHash = bn(order.params.salt)._hex.slice(0, 10);
-        const matchedSource = sources.getByDomainHash(sourceHash);
-        if (matchedSource) {
-          source = matchedSource;
-        }
+      const sourceHash = bn(order.params.salt)._hex.slice(0, 10);
+      const matchedSource = sources.getByDomainHash(sourceHash);
+      if (matchedSource) {
+        source = matchedSource;
       }
 
       // If the order is native, override any default source
@@ -657,6 +651,12 @@ export const save = async (
             `Bid value validation - error. orderId=${id}, contract=${info.contract}, tokenId=${tokenId}, error=${error}`
           );
         }
+      }
+
+      if (isOpenSea && !order.params.signature) {
+        // Mark the order as being partial in order to force filling through the order-fetcher service
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (order.params as any).partial = true;
       }
 
       // Handle: off-chain cancellation via replacement
@@ -1219,6 +1219,7 @@ export const save = async (
                 orderInfo.orderParams as Sdk.SeaportV14.Types.OrderComponents,
                 orderInfo.metadata,
                 orderInfo.isReservoir,
+                orderInfo.isOpenSea,
                 orderInfo.openSeaOrderParams
               )
             )
@@ -1289,83 +1290,6 @@ export const save = async (
   }
 
   return results;
-};
-
-export const handleTokenList = async (
-  orderId: string,
-  contract: string,
-  tokenSetId: string,
-  merkleRoot: string
-) => {
-  try {
-    const handleTokenSetId = await redis.set(
-      `seaport-handle-token-list:${tokenSetId}`,
-      Date.now(),
-      "EX",
-      86400,
-      "NX"
-    );
-
-    if (handleTokenSetId) {
-      const collectionDay30Rank = await redis.zscore("collections_day30_rank", contract);
-      if (!collectionDay30Rank || Number(collectionDay30Rank) <= 1000) {
-        const tokenSetTokensExist = await redb.oneOrNone(
-          `
-            SELECT 1 FROM "token_sets" "ts"
-            WHERE "ts"."id" = $/tokenSetId/
-            LIMIT 1
-          `,
-          { tokenSetId }
-        );
-
-        if (!tokenSetTokensExist) {
-          logger.info(
-            "orders-seaport-v1.4-save",
-            `handleTokenList - Missing TokenSet Check - Missing tokenSet. orderId=${orderId}, contract=${contract}, merkleRoot=${merkleRoot}, tokenSetId=${tokenSetId}, collectionDay30Rank=${collectionDay30Rank}`
-          );
-
-          const pendingFlagStatusSyncJobs = new PendingFlagStatusSyncJobs();
-          if (getNetworkSettings().multiCollectionContracts.includes(contract)) {
-            const collectionIds = await redb.manyOrNone(
-              `
-                SELECT id FROM "collections" "c"
-                WHERE "c"."contract" = $/contract/
-                AND day30_rank <= 1000
-              `,
-              { contract: toBuffer(contract) }
-            );
-
-            await pendingFlagStatusSyncJobs.add(
-              collectionIds.map((c) => ({
-                kind: "collection",
-                data: {
-                  collectionId: c.id,
-                  backfill: false,
-                },
-              }))
-            );
-          } else {
-            await pendingFlagStatusSyncJobs.add([
-              {
-                kind: "collection",
-                data: {
-                  collectionId: contract,
-                  backfill: false,
-                },
-              },
-            ]);
-          }
-
-          await flagStatusProcessQueue.addToQueue();
-        }
-      }
-    }
-  } catch (error) {
-    logger.error(
-      "orders-seaport-v1.4-save",
-      `handleTokenList - Error. orderId=${orderId}, contract=${contract}, merkleRoot=${merkleRoot}, tokenSetId=${tokenSetId}, error=${error}`
-    );
-  }
 };
 
 const getCollection = async (

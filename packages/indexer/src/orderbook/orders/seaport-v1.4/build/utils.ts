@@ -8,6 +8,10 @@ import { baseProvider } from "@/common/provider";
 import { bn, fromBuffer, now } from "@/common/utils";
 import { config } from "@/config/index";
 import { getCollectionOpenseaFees } from "@/orderbook/orders/seaport/build/utils";
+import { logger } from "@/common/logger";
+import { redis } from "@/common/redis";
+import { Tokens } from "@/models/tokens";
+import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 
 export interface BaseOrderBuildOptions {
   maker: string;
@@ -53,7 +57,9 @@ export const getBuildInfo = async (
         contracts.kind,
         collections.royalties,
         collections.new_royalties,
-        collections.contract
+        collections.marketplace_fees,
+        collections.contract,
+        collections.community
       FROM collections
       JOIN contracts
         ON collections.contract = contracts.address
@@ -77,9 +83,11 @@ export const getBuildInfo = async (
     zone = Sdk.SeaportV14.Addresses.CancellationZone[config.chainId];
   }
 
+  const source = options.orderbook === "opensea" ? "opensea.io" : options.source;
+
   // Generate the salt
-  let salt = options.source
-    ? padSourceToSalt(options.source, options.salt ?? getRandomBytes(16).toString())
+  let salt = source
+    ? padSourceToSalt(source, options.salt ?? getRandomBytes(16).toString())
     : undefined;
   if (options.replaceOrderId) {
     salt = options.replaceOrderId;
@@ -132,13 +140,15 @@ export const getBuildInfo = async (
           royaltyBpsToPay -= bps;
           totalBps += bps;
 
-          const fee = bn(bps).mul(options.weiPrice).div(10000).toString();
-          buildParams.fees!.push({
-            recipient: r.recipient,
-            amount: fee,
-          });
+          const fee = bn(bps).mul(options.weiPrice).div(10000);
+          if (fee.gt(0)) {
+            buildParams.fees!.push({
+              recipient: r.recipient,
+              amount: fee.toString(),
+            });
 
-          totalFees = totalFees.add(fee);
+            totalFees = totalFees.add(fee);
+          }
         }
       }
     }
@@ -150,27 +160,79 @@ export const getBuildInfo = async (
       options.feeRecipient = [];
     }
 
-    const openseaFees = await getCollectionOpenseaFees(
-      collection,
-      fromBuffer(collectionResult.contract),
-      totalBps
-    );
+    // Get opensea marketplace fees
+    let openseaMarketplaceFees: { bps: number; recipient: string }[] =
+      collectionResult.marketplace_fees?.opensea;
 
-    for (const [feeRecipient, feeBps] of Object.entries(openseaFees)) {
-      options.fee.push(feeBps);
-      options.feeRecipient.push(feeRecipient);
+    if (collectionResult.marketplace_fees?.opensea == null) {
+      openseaMarketplaceFees = await getCollectionOpenseaFees(
+        collection,
+        fromBuffer(collectionResult.contract),
+        totalBps
+      );
+
+      logger.info(
+        "getCollectionOpenseaFees",
+        `From api. collection=${collection}, openseaMarketplaceFees=${JSON.stringify(
+          openseaMarketplaceFees
+        )}`
+      );
+    } else {
+      logger.info(
+        "getCollectionOpenseaFees",
+        `From db. collection=${collection}, openseaMarketplaceFees=${JSON.stringify(
+          openseaMarketplaceFees
+        )}`
+      );
+    }
+
+    for (const openseaMarketplaceFee of openseaMarketplaceFees) {
+      options.fee.push(openseaMarketplaceFee.bps);
+      options.feeRecipient.push(openseaMarketplaceFee.recipient);
+    }
+
+    // Refresh opensea fees
+    if (
+      (await redis.set(
+        `refresh-collection-opensea-fees:${collection}`,
+        now(),
+        "EX",
+        3600,
+        "NX"
+      )) === "OK"
+    ) {
+      logger.info(
+        "getCollectionOpenseaFees",
+        `refresh fees. collection=${collection}, openseaMarketplaceFees=${JSON.stringify(
+          openseaMarketplaceFees
+        )}`
+      );
+
+      try {
+        const tokenId = await Tokens.getSingleToken(collectionResult.id);
+
+        await collectionUpdatesMetadata.addToQueue(
+          fromBuffer(collectionResult.contract),
+          tokenId,
+          collectionResult.community
+        );
+      } catch {
+        // Skip errors
+      }
     }
   }
 
   if (options.fee && options.feeRecipient) {
     for (let i = 0; i < options.fee.length; i++) {
       if (Number(options.fee[i]) > 0) {
-        const fee = bn(options.fee[i]).mul(options.weiPrice).div(10000).toString();
-        buildParams.fees!.push({
-          recipient: options.feeRecipient[i],
-          amount: fee,
-        });
-        totalFees = totalFees.add(fee);
+        const fee = bn(options.fee[i]).mul(options.weiPrice).div(10000);
+        if (fee.gt(0)) {
+          buildParams.fees!.push({
+            recipient: options.feeRecipient[i],
+            amount: fee.toString(),
+          });
+          totalFees = totalFees.add(fee);
+        }
       }
     }
   }
