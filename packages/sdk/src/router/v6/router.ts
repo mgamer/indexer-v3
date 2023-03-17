@@ -2213,6 +2213,9 @@ export class Router {
       forcePermit?: boolean;
       // Needed for filling some OpenSea orders
       openseaAuth?: string;
+      // Callback for handling errors
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onUpstreamError?: (kind: string, data: AxiosError<any>) => Promise<void>;
     }
   ): Promise<{
     txData: TxData;
@@ -2488,18 +2491,25 @@ export class Router {
           const module = this.contracts.seaportModule;
 
           try {
-            const result = await axios.get(
-              `https://order-fetcher.vercel.app/api/offer?orderHash=${order.id}&contract=${
-                order.contract
-              }&tokenId=${order.tokenId}&taker=${detail.owner ?? taker}&chainId=${this.chainId}` +
-                (order.unitPrice ? `&unitPrice=${order.unitPrice}` : "") +
-                (options?.openseaAuth ? `&authorization=${options.openseaAuth}` : ""),
-              {
-                headers: {
-                  "X-Api-Key": this.options?.orderFetcherApiKey,
-                },
-              }
-            );
+            const result = await axios
+              .get(
+                `https://order-fetcher.vercel.app/api/offer?orderHash=${order.id}&contract=${
+                  order.contract
+                }&tokenId=${order.tokenId}&taker=${detail.owner ?? taker}&chainId=${this.chainId}` +
+                  (order.unitPrice ? `&unitPrice=${order.unitPrice}` : "") +
+                  (options?.openseaAuth ? `&authorization=${options.openseaAuth}` : ""),
+                {
+                  headers: {
+                    "X-Api-Key": this.options?.orderFetcherApiKey,
+                  },
+                }
+              )
+              .catch((error) => {
+                if (axios.isAxiosError(error) && options?.onUpstreamError) {
+                  options.onUpstreamError("order-fetcher-opensea-offer", error);
+                }
+                throw error;
+              });
 
             const fullOrder = new Sdk.Seaport.Order(this.chainId, result.data.order);
             executions.push({
@@ -2589,20 +2599,27 @@ export class Router {
           const module = this.contracts.seaportV14Module;
 
           try {
-            const result = await axios.get(
-              `https://order-fetcher.vercel.app/api/offer?orderHash=${order.id}&contract=${
-                order.contract
-              }&tokenId=${order.tokenId}&taker=${
-                options?.openseaAuth ? taker : detail.owner ?? taker
-              }&chainId=${this.chainId}` +
-                (order.unitPrice ? `&unitPrice=${order.unitPrice}` : "") +
-                (options?.openseaAuth ? `&authorization=${options.openseaAuth}` : ""),
-              {
-                headers: {
-                  "X-Api-Key": this.options?.orderFetcherApiKey,
-                },
-              }
-            );
+            const result = await axios
+              .get(
+                `https://order-fetcher.vercel.app/api/offer?orderHash=${order.id}&contract=${
+                  order.contract
+                }&tokenId=${order.tokenId}&taker=${
+                  options?.openseaAuth ? taker : detail.owner ?? taker
+                }&chainId=${this.chainId}` +
+                  (order.unitPrice ? `&unitPrice=${order.unitPrice}` : "") +
+                  (options?.openseaAuth ? `&authorization=${options.openseaAuth}` : ""),
+                {
+                  headers: {
+                    "X-Api-Key": this.options?.orderFetcherApiKey,
+                  },
+                }
+              )
+              .catch((error) => {
+                if (axios.isAxiosError(error) && options?.onUpstreamError) {
+                  options.onUpstreamError("order-fetcher-opensea-offer", error);
+                }
+                throw error;
+              });
 
             if (result.data.calldata) {
               // Fill directly
