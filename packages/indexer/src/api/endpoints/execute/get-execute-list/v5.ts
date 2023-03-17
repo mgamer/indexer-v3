@@ -119,9 +119,9 @@ export const getExecuteListV5Options: RouteOptions = {
           orderbookApiKey: Joi.string().description("Optional API key for the target orderbook"),
           automatedRoyalties: Joi.boolean()
             .default(true)
-            .description("If true, royalties will be automatically included."),
+            .description("If true, royalty amounts and recipients will be set automatically."),
           royaltyBps: Joi.number().description(
-            "The royalty percentage to pay. Only relevant when using automated royalties."
+            "Set a maximum amount of royalties to pay, rather than the full amount. Only relevant when using automated royalties. Note: OpenSea does not support values below 50 bps."
           ),
           fees: Joi.array()
             .items(Joi.string().pattern(regex.fee))
@@ -251,6 +251,11 @@ export const getExecuteListV5Options: RouteOptions = {
       await Promise.all(
         params.map(async (params, i) => {
           const [contract, tokenId] = params.token.split(":");
+
+          // Force usage of seaport-v1.4
+          if (params.orderKind === "seaport") {
+            params.orderKind = "seaport-v1.4";
+          }
 
           // For now, ERC20 listings are only supported on Seaport
           if (
@@ -482,7 +487,7 @@ export const getExecuteListV5Options: RouteOptions = {
               }
 
               case "seaport": {
-                if (!["reservoir", "opensea"].includes(params.orderbook)) {
+                if (!["reservoir"].includes(params.orderbook)) {
                   return errors.push({ message: "Unsupported orderbook", orderIndex: i });
                 }
 
@@ -560,6 +565,17 @@ export const getExecuteListV5Options: RouteOptions = {
               case "seaport-v1.4": {
                 if (!["reservoir", "opensea"].includes(params.orderbook)) {
                   return errors.push({ message: "Unsupported orderbook", orderIndex: i });
+                }
+
+                // OpenSea expects a royalty of at least 0.5%
+                if (
+                  params.orderbook === "opensea" &&
+                  params.royaltyBps !== undefined &&
+                  Number(params.royaltyBps) < 50
+                ) {
+                  throw Boom.badRequest(
+                    "Royalties should be at least 0.5% when posting to OpenSea"
+                  );
                 }
 
                 const options = params.options?.[params.orderKind] as
@@ -736,7 +752,7 @@ export const getExecuteListV5Options: RouteOptions = {
                 // Check the order's fillability
                 const upstreamOrder = Sdk.X2Y2.Order.fromLocalOrder(config.chainId, order);
                 try {
-                  await x2y2Check.offChainCheck(upstreamOrder, {
+                  await x2y2Check.offChainCheck(upstreamOrder, undefined, {
                     onChainApprovalRecheck: true,
                   });
                 } catch (error: any) {
@@ -887,7 +903,31 @@ export const getExecuteListV5Options: RouteOptions = {
         const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
 
         const orders = bulkOrders["seaport-v1.4"];
-        if (orders.length) {
+        if (orders.length === 1) {
+          const order = new Sdk.SeaportV14.Order(config.chainId, orders[0].order.data);
+          steps[1].items.push({
+            status: "incomplete",
+            data: {
+              sign: order.getSignatureData(),
+              post: {
+                endpoint: "/order/v3",
+                method: "POST",
+                body: {
+                  order: {
+                    kind: "seaport-v1.4",
+                    data: {
+                      ...order.params,
+                    },
+                  },
+                  orderbook: orders[0].orderbook,
+                  orderbookApiKey: orders[0].orderbookApiKey,
+                  source,
+                },
+              },
+            },
+            orderIndexes: [orders[0].orderIndex],
+          });
+        } else if (orders.length > 1) {
           const { signatureData, proofs } = exchange.getBulkSignatureDataWithProofs(
             orders.map((o) => new Sdk.SeaportV14.Order(config.chainId, o.order.data))
           );

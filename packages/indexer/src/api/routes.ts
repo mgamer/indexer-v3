@@ -253,6 +253,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/resync-sale-royalties",
+    options: adminEndpoints.postResyncSaleRoyalties,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/sync-arweave",
     options: adminEndpoints.postSyncArweaveOptions,
   });
@@ -699,6 +705,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/execute/auth-signature/v1",
+    options: executeEndpoints.postAuthSignatureV1Options,
+  });
+
+  server.route({
+    method: "POST",
     path: "/execute/cancel-signature/v1",
     options: executeEndpoints.postCancelSignatureV1Options,
   });
@@ -942,6 +954,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/seaport/offers",
     options: ordersEndpoints.postSeaportOffersV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/cross-posting-orders/v1",
+    options: ordersEndpoints.getCrossPostingOrdersV1Options,
   });
 
   // Owners

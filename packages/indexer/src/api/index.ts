@@ -19,6 +19,7 @@ import { getNetworkName } from "@/config/network";
 import { allJobQueues, gracefulShutdownJobWorkers } from "@/jobs/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { RateLimitRules } from "@/models/rate-limit-rules";
+import { BlockedRouteError } from "@/models/rate-limit-rules/errors";
 
 let server: Hapi.Server;
 
@@ -157,16 +158,35 @@ export const start = async (): Promise<void> => {
     const key = request.headers["x-api-key"];
     const apiKey = await ApiKeyManager.getApiKey(key);
     const tier = apiKey?.tier || 0;
+    let rateLimitRule;
 
     // Get the rule for the incoming request
     const rateLimitRules = await RateLimitRules.getInstance();
-    const rateLimitRule = rateLimitRules.getRateLimitObject(
-      request.route.path,
-      request.route.method,
-      tier,
-      apiKey?.key,
-      new Map(Object.entries(_.merge(request.payload, request.query)))
-    );
+
+    try {
+      rateLimitRule = rateLimitRules.getRateLimitObject(
+        request.route.path,
+        request.route.method,
+        tier,
+        apiKey?.key,
+        new Map(Object.entries(_.merge(request.payload, request.query, request.params)))
+      );
+    } catch (error) {
+      if (error instanceof BlockedRouteError) {
+        const blockedRouteResponse = {
+          statusCode: 429,
+          error: "Route is suspended",
+          message: `Request to ${request.route.path} is currently suspended`,
+        };
+
+        return reply
+          .response(blockedRouteResponse)
+          .type("application/json")
+          .code(429)
+          .header("tier", `${tier}`)
+          .takeover();
+      }
+    }
 
     // If matching rule was found
     if (rateLimitRule) {
@@ -220,13 +240,14 @@ export const start = async (): Promise<void> => {
           const tooManyRequestsResponse = {
             statusCode: 429,
             error: "Too Many Requests",
-            message: `Max ${rateLimitRule.points} requests in ${rateLimitRule.duration}s reached`,
+            message: `Max ${rateLimitRule.points} requests in ${rateLimitRule.duration}s reached. Please register for an API key by creating a free account at https://dashboard.reservoir.tools to increase your rate limit.`,
           };
 
           return reply
             .response(tooManyRequestsResponse)
             .type("application/json")
             .code(429)
+            .header("tier", `${tier}`)
             .takeover();
         } else {
           logger.warn("rate-limiter", `Rate limit error ${error}`);
