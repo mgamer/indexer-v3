@@ -1,3 +1,10 @@
+## [5.262.2](https://github.com/reservoirprotocol/indexer/compare/v5.262.1...v5.262.2) (2023-03-17)
+
+
+### Bug Fixes
+
+* increase timestamp range ([5de3cb6](https://github.com/reservoirprotocol/indexer/commit/5de3cb64dc9f7d288ffa1ce6c1026c23a7aba4d2))
+
 ## [5.262.1](https://github.com/reservoirprotocol/indexer/compare/v5.262.0...v5.262.1) (2023-03-17)
 
 
