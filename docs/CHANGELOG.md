@@ -1,3 +1,10 @@
+## [5.262.4](https://github.com/reservoirprotocol/indexer/compare/v5.262.3...v5.262.4) (2023-03-17)
+
+
+### Performance Improvements
+
+* use backfill provider for the backfill of sale royalties ([30d3215](https://github.com/reservoirprotocol/indexer/commit/30d3215c0ef6850d8b057b2a2cdf05f52af20f98))
+
 ## [5.262.3](https://github.com/reservoirprotocol/indexer/compare/v5.262.2...v5.262.3) (2023-03-17)
 
 
