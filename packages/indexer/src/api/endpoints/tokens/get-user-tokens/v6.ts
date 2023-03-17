@@ -6,7 +6,6 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
-  bn,
   buildContinuation,
   formatEth,
   fromBuffer,
