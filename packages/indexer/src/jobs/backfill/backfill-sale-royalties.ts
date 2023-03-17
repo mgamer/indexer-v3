@@ -39,7 +39,7 @@ if (config.doBackgroundWork) {
       const time1 = performance.now();
 
       const blockRange = 10;
-      const timestampRange = 300;
+      const timestampRange = 1000;
 
       let results: any[];
       if (details.kind === "all") {
