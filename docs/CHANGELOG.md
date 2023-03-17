@@ -1,3 +1,10 @@
+## [5.262.3](https://github.com/reservoirprotocol/indexer/compare/v5.262.2...v5.262.3) (2023-03-17)
+
+
+### Bug Fixes
+
+* zora and superrare ([d00b80e](https://github.com/reservoirprotocol/indexer/commit/d00b80e8fb45f5b60bf3e020e16dfdbd80dcf7f1))
+
 ## [5.262.2](https://github.com/reservoirprotocol/indexer/compare/v5.262.1...v5.262.2) (2023-03-17)
 
 
