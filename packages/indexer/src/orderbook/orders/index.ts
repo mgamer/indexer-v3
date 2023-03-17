@@ -184,10 +184,10 @@ export const getOrderSourceByOrderKind = async (
   // In case nothing matched, return `undefined` by default
 };
 
-export const routerOnUpstreamError = async (kind: string, error: AxiosError<any>) => {
+export const routerOnUpstreamError = async (kind: string, error: AxiosError<any>, data: any) => {
   logger.warn(
     "router-on-upstream-error",
-    JSON.stringify({ kind, status: error.response?.status, data: error.response?.data })
+    JSON.stringify({ kind, status: error.response?.status, error: error.response?.data, data })
   );
 };
 
