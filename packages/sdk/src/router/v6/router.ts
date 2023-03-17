@@ -160,7 +160,7 @@ export class Router {
       blurAuth?: string;
       // Callback for handling errors
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onUpstreamError?: (kind: string, data: AxiosError<any>) => Promise<void>;
+      onUpstreamError?: (kind: string, error: AxiosError<any>, data: any) => Promise<void>;
     }
   ): Promise<{
     txs: {
@@ -591,7 +591,7 @@ export class Router {
               )
               .catch((error) => {
                 if (axios.isAxiosError(error) && options?.onUpstreamError) {
-                  options.onUpstreamError("order-fetcher-opensea-listing", error);
+                  options.onUpstreamError("order-fetcher-opensea-listing", error, detail);
                 }
                 throw error;
               });
@@ -634,7 +634,7 @@ export class Router {
               )
               .catch((error) => {
                 if (axios.isAxiosError(error) && options?.onUpstreamError) {
-                  options.onUpstreamError("order-fetcher-opensea-listing", error);
+                  options.onUpstreamError("order-fetcher-opensea-listing", error, detail);
                 }
                 throw error;
               });
@@ -2215,7 +2215,7 @@ export class Router {
       openseaAuth?: string;
       // Callback for handling errors
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onUpstreamError?: (kind: string, data: AxiosError<any>) => Promise<void>;
+      onUpstreamError?: (kind: string, error: AxiosError<any>, data: any) => Promise<void>;
     }
   ): Promise<{
     txData: TxData;
@@ -2506,7 +2506,7 @@ export class Router {
               )
               .catch((error) => {
                 if (axios.isAxiosError(error) && options?.onUpstreamError) {
-                  options.onUpstreamError("order-fetcher-opensea-offer", error);
+                  options.onUpstreamError("order-fetcher-opensea-offer", error, detail);
                 }
                 throw error;
               });
@@ -2616,7 +2616,7 @@ export class Router {
               )
               .catch((error) => {
                 if (axios.isAxiosError(error) && options?.onUpstreamError) {
-                  options.onUpstreamError("order-fetcher-opensea-offer", error);
+                  options.onUpstreamError("order-fetcher-opensea-offer", error, detail);
                 }
                 throw error;
               });
