@@ -2,7 +2,7 @@ import { Interface } from "@ethersproject/abi";
 import { Provider } from "@ethersproject/abstract-provider";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
 import * as Addresses from "./addresses";
 import * as SeaportPermit from "./permits/seaport";
@@ -158,6 +158,9 @@ export class Router {
       relayer?: string;
       // Needed for filling Blur orders
       blurAuth?: string;
+      // Callback for handling errors
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onUpstreamError?: (kind: string, data: AxiosError<any>) => Promise<void>;
     }
   ): Promise<{
     txs: {
@@ -573,18 +576,25 @@ export class Router {
         if (detail.kind === "seaport-partial") {
           try {
             const order = detail.order as Sdk.Seaport.Types.PartialOrder;
-            const result = await axios.get(
-              `https://order-fetcher.vercel.app/api/listing?contract=${detail.contract}&tokenId=${
-                detail.tokenId
-              }${order.unitPrice ? `&unitPrice=${order.unitPrice}` : ""}&orderHash=${
-                order.id
-              }&taker=${taker}&chainId=${this.chainId}&protocolVersion=v1.1`,
-              {
-                headers: {
-                  "X-Api-Key": this.options?.orderFetcherApiKey,
-                },
-              }
-            );
+            const result = await axios
+              .get(
+                `https://order-fetcher.vercel.app/api/listing?contract=${detail.contract}&tokenId=${
+                  detail.tokenId
+                }${order.unitPrice ? `&unitPrice=${order.unitPrice}` : ""}&orderHash=${
+                  order.id
+                }&taker=${taker}&chainId=${this.chainId}&protocolVersion=v1.1`,
+                {
+                  headers: {
+                    "X-Api-Key": this.options?.orderFetcherApiKey,
+                  },
+                }
+              )
+              .catch((error) => {
+                if (axios.isAxiosError(error) && options?.onUpstreamError) {
+                  options.onUpstreamError("order-fetcher-opensea-listing", error);
+                }
+                throw error;
+              });
 
             // Override the details
             const fullOrder = new Sdk.Seaport.Order(this.chainId, result.data.order);
@@ -609,18 +619,25 @@ export class Router {
         if (detail.kind === "seaport-v1.4-partial") {
           try {
             const order = detail.order as Sdk.SeaportV14.Types.PartialOrder;
-            const result = await axios.get(
-              `https://order-fetcher.vercel.app/api/listing?contract=${detail.contract}&tokenId=${
-                detail.tokenId
-              }${order.unitPrice ? `&unitPrice=${order.unitPrice}` : ""}&orderHash=${
-                order.id
-              }&taker=${taker}&chainId=${this.chainId}&protocolVersion=v1.4`,
-              {
-                headers: {
-                  "X-Api-Key": this.options?.orderFetcherApiKey,
-                },
-              }
-            );
+            const result = await axios
+              .get(
+                `https://order-fetcher.vercel.app/api/listing?contract=${detail.contract}&tokenId=${
+                  detail.tokenId
+                }${order.unitPrice ? `&unitPrice=${order.unitPrice}` : ""}&orderHash=${
+                  order.id
+                }&taker=${taker}&chainId=${this.chainId}&protocolVersion=v1.4`,
+                {
+                  headers: {
+                    "X-Api-Key": this.options?.orderFetcherApiKey,
+                  },
+                }
+              )
+              .catch((error) => {
+                if (axios.isAxiosError(error) && options?.onUpstreamError) {
+                  options.onUpstreamError("order-fetcher-opensea-listing", error);
+                }
+                throw error;
+              });
 
             // Override the details
             const fullOrder = new Sdk.SeaportV14.Order(this.chainId, result.data.order);
