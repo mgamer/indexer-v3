@@ -149,7 +149,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       }
 
       // Handle: fees
-      const treasury = "0x860a80d33e85e97888f1f0c75c6e5bbd60b48da9";
+      const treasury = Sdk.SuperRare.Addresses.Treasury[config.chainId];
 
       const hasSecondarySales = await idb.oneOrNone(
         `
