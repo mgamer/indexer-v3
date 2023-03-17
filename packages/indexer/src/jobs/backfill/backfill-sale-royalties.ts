@@ -103,6 +103,7 @@ if (config.doBackgroundWork) {
             ORDER BY fill_events_2.timestamp DESC
           `,
           {
+            contract: toBuffer(details.data.contract),
             timestamp: details.data.toTimestamp,
             timestampRange,
           }
