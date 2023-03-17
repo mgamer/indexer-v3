@@ -1,3 +1,4 @@
+// comment to force version bump
 module.exports = {
   "dryRun": false,
   "branches": ["main", "development"],
