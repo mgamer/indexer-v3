@@ -91,7 +91,7 @@ const isValid = async (tokenSet: TokenSet) => {
         return false;
       }
 
-      let tokens: { token_id: string; contract: Buffer }[] | undefined;
+      let tokens: { token_id: string; contract: Buffer }[] | undefined = [];
       let tokenIds: string[] | undefined;
 
       if (tokenSet.schema.kind === "attribute") {
@@ -127,6 +127,10 @@ const isValid = async (tokenSet: TokenSet) => {
             value: tokenSet.schema!.data.attributes[0].value,
           }
         );
+
+        if (!tokens || !tokens.length) {
+          return false;
+        }
       } else if (tokenSet.schema.kind === "token-set") {
         tokens = await redb.manyOrNone(
           `
@@ -140,6 +144,10 @@ const isValid = async (tokenSet: TokenSet) => {
             tokenSetId: tokenSet.schema.data.tokenSetId,
           }
         );
+
+        if (!tokens || !tokens.length) {
+          return false;
+        }
       } else if (tokenSet.schema.kind.startsWith("collection")) {
         const nonFlaggedOnly = tokenSet.schema.kind === "collection-non-flagged";
         tokenIds = await Tokens.getTokenIdsInCollection(
@@ -147,12 +155,10 @@ const isValid = async (tokenSet: TokenSet) => {
           "",
           nonFlaggedOnly
         );
-      }
 
-      if (!tokens || !tokens.length) {
-        logger.info("seaport-token-set-save", `No tokens. tokenSet=${JSON.stringify(tokenSet)}`);
-
-        return false;
+        if (!tokenIds || !tokenIds.length) {
+          return false;
+        }
       }
 
       // All tokens will share the same underlying contract
