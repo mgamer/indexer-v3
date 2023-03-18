@@ -169,7 +169,7 @@ const isValid = async (tokenSet: TokenSet) => {
       }
 
       // All tokens will share the same underlying contract
-      const contract = tokens[0].contract
+      const contract = tokens[0]?.contract
         ? fromBuffer(tokens[0].contract)
         : // Assume the collection id always starts with the contract
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
