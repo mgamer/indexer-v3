@@ -417,6 +417,7 @@ export const generateBidDetailsV6 = async (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rawData: any;
     fees?: Sdk.RouterV6.Types.Fee[];
+    isProtected?: boolean;
   },
   token: {
     kind: "erc721" | "erc1155";
@@ -432,6 +433,7 @@ export const generateBidDetailsV6 = async (
     tokenId: token.tokenId,
     amount: token.amount ?? 1,
     owner: token.owner,
+    isProtected: order.isProtected,
     fees: order.fees ?? [],
   };
 
