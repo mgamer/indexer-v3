@@ -2211,8 +2211,6 @@ export class Router {
       partial?: boolean;
       // Force using permit
       forcePermit?: boolean;
-      // Needed for filling some OpenSea orders
-      openseaAuth?: string;
       // Callback for handling errors
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onUpstreamError?: (kind: string, error: AxiosError<any>, data: any) => Promise<void>;
@@ -2224,10 +2222,6 @@ export class Router {
     success: boolean[];
   }> {
     // Assume the bid details are consistent with the underlying order object
-
-    if (options?.openseaAuth && details.length !== 1) {
-      throw new Error("Only a single bid can be fulfilled");
-    }
 
     // CASE 1
     // Handle exchanges which don't have a router module implemented by filling directly
@@ -2495,9 +2489,11 @@ export class Router {
               .get(
                 `https://order-fetcher.vercel.app/api/offer?orderHash=${order.id}&contract=${
                   order.contract
-                }&tokenId=${order.tokenId}&taker=${detail.owner ?? taker}&chainId=${this.chainId}` +
+                }&tokenId=${order.tokenId}&taker=${detail.owner ?? taker}&chainId=${
+                  this.chainId
+                }&protocolVersion=v1.1` +
                   (order.unitPrice ? `&unitPrice=${order.unitPrice}` : "") +
-                  (options?.openseaAuth ? `&authorization=${options.openseaAuth}` : ""),
+                  (detail.isProtected ? `&isProtected=true` : ""),
                 {
                   headers: {
                     "X-Api-Key": this.options?.orderFetcherApiKey,
@@ -2604,10 +2600,10 @@ export class Router {
                 `https://order-fetcher.vercel.app/api/offer?orderHash=${order.id}&contract=${
                   order.contract
                 }&tokenId=${order.tokenId}&taker=${
-                  options?.openseaAuth ? taker : detail.owner ?? taker
-                }&chainId=${this.chainId}` +
+                  detail.isProtected ? taker : detail.owner ?? taker
+                }&chainId=${this.chainId}&protocolVersion=v1.4` +
                   (order.unitPrice ? `&unitPrice=${order.unitPrice}` : "") +
-                  (options?.openseaAuth ? `&authorization=${options.openseaAuth}` : ""),
+                  (detail.isProtected ? `&isProtected=true` : ""),
                 {
                   headers: {
                     "X-Api-Key": this.options?.orderFetcherApiKey,
