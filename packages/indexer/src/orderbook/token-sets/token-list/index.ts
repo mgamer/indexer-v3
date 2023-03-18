@@ -157,6 +157,13 @@ const isValid = async (tokenSet: TokenSet) => {
         );
 
         if (!tokenIds || !tokenIds.length) {
+          logger.info(
+            "seaport-token-set-save",
+            `no associated items or schema. tokenSet=${JSON.stringify(tokenSet)} tokenIds.length=${
+              tokenIds.length
+            } nonFlaggedOnly=${nonFlaggedOnly}`
+          );
+
           return false;
         }
       }
