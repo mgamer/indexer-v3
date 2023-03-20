@@ -4,28 +4,31 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import * as Permit2 from "@reservoir0x/sdk/dist/router/v6/permits/permit2";
 import { ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
+import axios from "axios";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn, formatPrice, fromBuffer, now, regex } from "@/common/utils";
+import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
-import { OrderKind, generateListingDetailsV6 } from "@/orderbook/orders";
+import { OrderKind, generateListingDetailsV6, routerOnUpstreamError } from "@/orderbook/orders";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as nftx from "@/orderbook/orders/nftx";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
+import * as b from "@/utils/auth/blur";
 import { getCurrency } from "@/utils/currencies";
 import * as onChainData from "@/utils/on-chain-data";
 import { getPermitId, getPermit, savePermit } from "@/utils/permits/ft";
+import { getUSDAndCurrencyPrices } from "@/utils/prices";
 
 const version = "v7";
 
 export const getExecuteBuyV7Options: RouteOptions = {
   description: "Buy tokens (fill listings)",
-  tags: ["api", "Router", "x-experimental"],
+  tags: ["api", "Router"],
   timeout: {
     server: 20 * 1000,
   },
@@ -155,6 +158,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
           currency: Joi.string().lowercase().pattern(regex.address),
           quote: Joi.number().unsafe(),
           rawQuote: Joi.string().pattern(regex.number),
+          buyInQuote: Joi.number().unsafe(),
+          buyInRawQuote: Joi.string().pattern(regex.number),
         })
       ),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),
@@ -189,6 +194,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
         currency: string;
         quote: number;
         rawQuote: string;
+        buyInQuote?: number;
+        buyInRawQuote?: string;
       }[] = [];
 
       // Keep track of dynamically-priced orders (eg. from pools like Sudoswap and NFTX)
@@ -282,6 +289,21 @@ export const getExecuteBuyV7Options: RouteOptions = {
           rawQuote: totalPrice.toString(),
         });
 
+        const flaggedResult = await idb.oneOrNone(
+          `
+            SELECT
+              tokens.is_flagged
+            FROM tokens
+            WHERE tokens.contract = $/contract/
+              AND tokens.token_id = $/tokenId/
+            LIMIT 1
+          `,
+          {
+            contract: toBuffer(token.contract),
+            tokenId: token.tokenId,
+          }
+        );
+
         listingDetails.push(
           generateListingDetailsV6(
             {
@@ -298,6 +320,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
               contract: token.contract,
               tokenId: token.tokenId,
               amount: token.quantity,
+              isFlagged: Boolean(flaggedResult.is_flagged),
             }
           )
         );
@@ -356,6 +379,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           const result = await idb.oneOrNone(
             `
               SELECT
+                orders.id,
                 orders.kind,
                 contracts.kind AS token_kind,
                 coalesce(orders.currency_price, orders.price) AS price,
@@ -418,6 +442,12 @@ export const getExecuteBuyV7Options: RouteOptions = {
         if (item.token) {
           const [contract, tokenId] = item.token.split(":");
 
+          // TODO: Right now we filter out Blur orders since those don't yet
+          // support royalty normalization. A better approach to handling it
+          // would be to set the normalized fields to `null` for every order
+          // which doesn't support royalty normalization and then filter out
+          // such `null` fields in various normalized events/caches.
+
           // Fetch all matching orders sorted by price
           const orderResults = await idb.manyOrNone(
             `
@@ -442,6 +472,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 AND orders.fillability_status = 'fillable'
                 AND orders.approval_status = 'approved'
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                ${payload.normalizeRoyalties ? " AND orders.kind != 'blur'" : ""}
               ORDER BY
                 ${payload.normalizeRoyalties ? "orders.normalized_value" : "orders.value"},
                 ${
@@ -545,32 +576,28 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
       }
 
-      const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
-        x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
-        cbApiKey: config.cbApiKey,
-      });
-      const { txs, success } = await router.fillListingsTx(
-        listingDetails,
-        payload.taker,
-        buyInCurrency,
-        {
-          source: payload.source,
-          partial: payload.partial,
-          forceRouter: payload.forceRouter,
-          relayer: payload.relayer,
-          globalFees: feesOnTop,
-          // TODO: Move this defaulting to the core SDK
-          directFillingData: {
-            conduitKey: Sdk.Seaport.Addresses.OpenseaConduitKey[config.chainId],
-          },
+      // Add the quotes in the "buy-in" currency to the path items
+      for (const item of path) {
+        if (item.currency !== buyInCurrency) {
+          const buyInPrices = await getUSDAndCurrencyPrices(
+            item.currency,
+            buyInCurrency,
+            item.rawQuote,
+            now(),
+            {
+              acceptStalePrice: true,
+            }
+          );
+
+          if (buyInPrices.currencyPrice) {
+            item.buyInQuote = formatPrice(
+              buyInPrices.currencyPrice,
+              (await getCurrency(buyInCurrency)).decimals,
+              true
+            );
+            item.buyInRawQuote = buyInPrices.currencyPrice;
+          }
         }
-      );
-
-      // Filter out any non-fillable orders from the path
-      path = path.filter((_, i) => success[i]);
-
-      if (!path.length) {
-        throw Boom.badRequest("No available orders");
       }
 
       if (payload.onlyPath) {
@@ -588,6 +615,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
           data?: object;
         }[];
       }[] = [
+        {
+          id: "auth",
+          action: "Sign in to Blur",
+          description: "Some marketplaces require signing an auth message before filling",
+          kind: "signature",
+          items: [],
+        },
         {
           id: "currency-approval",
           action: "Approve exchange contract",
@@ -610,6 +644,104 @@ export const getExecuteBuyV7Options: RouteOptions = {
           items: [],
         },
       ];
+
+      // Handle Blur authentication
+      let blurAuth: string | undefined;
+      if (path.some((p) => p.source === "blur.io")) {
+        const blurAuthId = b.getAuthId(payload.taker);
+
+        blurAuth = await b
+          .getAuth(blurAuthId)
+          .then((auth) => (auth ? auth.accessToken : undefined));
+        if (!blurAuth) {
+          const blurAuthChallengeId = b.getAuthChallengeId(payload.taker);
+
+          let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
+          if (!blurAuthChallenge) {
+            blurAuthChallenge = (await axios
+              .get(
+                `https://order-fetcher.vercel.app/api/blur-auth-challenge?taker=${payload.taker}`,
+                {
+                  headers: {
+                    "X-Api-Key": config.orderFetcherApiKey,
+                  },
+                }
+              )
+              .then((response) => response.data.authChallenge)) as b.AuthChallenge;
+
+            await b.saveAuthChallenge(
+              blurAuthChallengeId,
+              blurAuthChallenge,
+              // Give a 1 minute buffer for the auth challenge to expire
+              Math.floor(new Date(blurAuthChallenge?.expiresOn).getTime() / 1000) - now() - 60
+            );
+          }
+
+          steps[0].items.push({
+            status: "incomplete",
+            data: {
+              sign: {
+                signatureKind: "eip191",
+                message: blurAuthChallenge.message,
+              },
+              post: {
+                endpoint: "/execute/auth-signature/v1",
+                method: "POST",
+                body: {
+                  kind: "blur",
+                  id: blurAuthChallengeId,
+                },
+              },
+            },
+          });
+
+          // Force the client to poll
+          steps[1].items.push({
+            status: "incomplete",
+          });
+
+          // Return an early since any next steps are dependent on the Blur auth
+          return {
+            steps,
+            path,
+          };
+        } else {
+          steps[0].items.push({
+            status: "complete",
+          });
+        }
+      }
+
+      const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
+        x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
+        cbApiKey: config.cbApiKey,
+        orderFetcherApiKey: config.orderFetcherApiKey,
+      });
+      const { txs, success } = await router.fillListingsTx(
+        listingDetails,
+        payload.taker,
+        buyInCurrency,
+        {
+          source: payload.source,
+          partial: payload.partial,
+          forceRouter: payload.forceRouter,
+          relayer: payload.relayer,
+          globalFees: feesOnTop,
+          // TODO: Move this defaulting to the core SDK
+          directFillingData: {
+            conduitKey: Sdk.Seaport.Addresses.OpenseaConduitKey[config.chainId],
+          },
+          blurAuth,
+          onUpstreamError: routerOnUpstreamError,
+        }
+      );
+
+      // Filter out any non-fillable orders from the path
+      path = path.filter((_, i) => success[i]);
+
+      if (!path.length) {
+        throw Boom.badRequest("No available orders");
+      }
 
       // Custom gas settings
       const maxFeePerGas = payload.maxFeePerGas
@@ -641,7 +773,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
           const isApproved = bn(approvedAmount).gte(amountToApprove);
           if (!isApproved) {
-            steps[0].items.push({
+            steps[1].items.push({
               status: "incomplete",
               data: {
                 ...approval.txData,
@@ -678,7 +810,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
               cachedPermit = permit;
             }
 
-            steps[1].items.push({
+            steps[2].items.push({
               status: "incomplete",
               data: {
                 sign: permitHandler.getSignatureData(cachedPermit.details.data),
@@ -724,7 +856,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           }
         }
 
-        steps[2].items.push({
+        steps[3].items.push({
           status: "incomplete",
           data:
             // Do not return the final step unless all permits have a signature attached
@@ -742,7 +874,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }
 
       return {
-        steps,
+        steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
         path,
       };
     } catch (error) {

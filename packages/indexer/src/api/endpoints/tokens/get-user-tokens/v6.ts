@@ -16,7 +16,12 @@ import {
 import { CollectionSets } from "@/models/collection-sets";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
-import { getJoiPriceObject, JoiPrice } from "@/common/joi";
+import {
+  getJoiDynamicPricingObject,
+  getJoiPriceObject,
+  JoiDynamicPrice,
+  JoiPrice,
+} from "@/common/joi";
 import { Sources } from "@/models/sources";
 import _ from "lodash";
 
@@ -81,6 +86,10 @@ export const getUserTokensV6Options: RouteOptions = {
       normalizeRoyalties: Joi.boolean()
         .default(false)
         .description("If true, prices will include missing royalties to be added on-top."),
+      sortBy: Joi.string()
+        .valid("acquiredAt", "lastAppraisalValue")
+        .default("acquiredAt")
+        .description("Order the items are returned in the response."),
       sortDirection: Joi.string()
         .lowercase()
         .valid("asc", "desc")
@@ -98,6 +107,9 @@ export const getUserTokensV6Options: RouteOptions = {
       includeTopBid: Joi.boolean()
         .default(false)
         .description("If true, top bid will be returned in the response."),
+      includeDynamicPricing: Joi.boolean()
+        .default(false)
+        .description("If true, dynamic pricing data will be returned in the response."),
       useNonFlaggedFloorAsk: Joi.boolean()
         .default(false)
         .description("If true, will return the collection non flagged floor ask."),
@@ -134,6 +146,7 @@ export const getUserTokensV6Options: RouteOptions = {
               id: Joi.string().allow(null),
               price: JoiPrice.allow(null),
             }).optional(),
+            lastAppraisalValue: Joi.number().unsafe().allow(null),
           }),
           ownership: Joi.object({
             tokenCount: Joi.string(),
@@ -144,6 +157,7 @@ export const getUserTokensV6Options: RouteOptions = {
               maker: Joi.string().lowercase().pattern(regex.address).allow(null),
               validFrom: Joi.number().unsafe().allow(null),
               validUntil: Joi.number().unsafe().allow(null),
+              dynamicPricing: JoiDynamicPrice.allow(null),
               source: Joi.object().allow(null),
             },
             acquiredAt: Joi.string().allow(null),
@@ -252,7 +266,7 @@ export const getUserTokensV6Options: RouteOptions = {
       (query as any).tokensFilter = _.join(tokensFilter, ",");
     }
 
-    let selectFloorData;
+    let selectFloorData: string;
 
     if (query.normalizeRoyalties) {
       selectFloorData = `
@@ -276,6 +290,23 @@ export const getUserTokensV6Options: RouteOptions = {
       t.floor_sell_currency,
       t.floor_sell_currency_value
     `;
+    }
+
+    let includeDynamicPricingQuery = "";
+    let selectIncludeDynamicPricing = "";
+    if (query.includeDynamicPricing) {
+      selectIncludeDynamicPricing = ", d.*";
+      includeDynamicPricingQuery = `
+        LEFT JOIN LATERAL (
+          SELECT
+            o.kind AS floor_sell_order_kind,
+            o.dynamic AS floor_sell_dynamic,
+            o.raw_data AS floor_sell_raw_data,
+            o.missing_royalties AS floor_sell_missing_royalties
+          FROM orders o
+          WHERE o.id = t.floor_sell_id
+        ) d ON TRUE
+      `;
     }
 
     let tokensJoin = `
@@ -363,7 +394,7 @@ export const getUserTokensV6Options: RouteOptions = {
 
     try {
       let baseQuery = `
-        SELECT b.contract, b.token_id, b.token_count, extract(epoch from b.acquired_at) AS acquired_at,
+        SELECT b.contract, b.token_id, b.token_count, extract(epoch from b.acquired_at) AS acquired_at, b.last_token_appraisal_value,
                t.name, t.image, t.media, t.rarity_rank, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.floor_sell_currency, t.floor_sell_currency_value,
                t.floor_sell_maker, t.floor_sell_valid_from, t.floor_sell_valid_to, t.floor_sell_source_id_int,
                t.rarity_score, t.last_sell_value, t.last_buy_value, t.last_sell_timestamp, t.last_buy_timestamp,
@@ -379,8 +410,9 @@ export const getUserTokensV6Options: RouteOptions = {
                     ELSE 0
                     END
                ) AS on_sale_count
+               ${selectIncludeDynamicPricing}
         FROM (
-            SELECT amount AS token_count, token_id, contract, acquired_at
+            SELECT amount AS token_count, token_id, contract, acquired_at, last_token_appraisal_value
             FROM nft_balances
             WHERE owner = $/user/
               AND ${
@@ -396,6 +428,7 @@ export const getUserTokensV6Options: RouteOptions = {
               AND amount > 0
           ) AS b
           ${tokensJoin}
+          ${includeDynamicPricingQuery}
           JOIN collections c ON c.id = t.collection_id
           JOIN contracts con ON b.contract = con.address
       `;
@@ -403,42 +436,72 @@ export const getUserTokensV6Options: RouteOptions = {
       const conditions: string[] = [];
 
       if (query.continuation) {
-        const [acquiredAt, collectionId, tokenId] = splitContinuation(
+        const [acquiredAtOrLastAppraisalValue, collectionId, tokenId] = splitContinuation(
           query.continuation,
           /^[0-9]+_[A-Za-z0-9:-]+_[0-9]+$/
         );
 
-        (query as any).acquiredAt = acquiredAt;
+        (query as any).acquiredAtOrLastAppraisalValue = acquiredAtOrLastAppraisalValue;
         (query as any).collectionId = collectionId;
         (query as any).tokenId = tokenId;
+
         query.sortDirection = query.sortDirection || "desc";
-        const sign = query.sortDirection == "desc" ? "<" : ">";
-        conditions.push(
-          `(acquired_at, b.token_id) ${sign} (to_timestamp($/acquiredAt/), $/tokenId/)`
-        );
+
+        if (query.sortBy === "acquiredAt") {
+          conditions.push(
+            `(acquired_at, b.token_id) ${
+              query.sortDirection == "desc" ? "<" : ">"
+            } (to_timestamp($/acquiredAtOrLastAppraisalValue/), $/tokenId/)`
+          );
+        } else {
+          conditions.push(
+            `(last_token_appraisal_value, b.token_id) ${
+              query.sortDirection == "desc" ? "<" : ">"
+            } ($/acquiredAtOrLastAppraisalValue/, $/tokenId/)`
+          );
+        }
       }
 
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
 
-      baseQuery += `
+      // Sorting
+      if (query.sortBy === "acquiredAt") {
+        baseQuery += `
         ORDER BY
           acquired_at ${query.sortDirection}, b.token_id ${query.sortDirection}
         LIMIT $/limit/
       `;
+      } else {
+        baseQuery += `
+        ORDER BY
+          last_token_appraisal_value ${query.sortDirection} NULLS LAST, b.token_id ${query.sortDirection}
+        LIMIT $/limit/
+      `;
+      }
 
       const userTokens = await redb.manyOrNone(baseQuery, { ...query, ...params });
 
       let continuation = null;
       if (userTokens.length === query.limit) {
-        continuation = buildContinuation(
-          _.toInteger(userTokens[userTokens.length - 1].acquired_at) +
-            "_" +
-            userTokens[userTokens.length - 1].collection_id +
-            "_" +
-            userTokens[userTokens.length - 1].token_id
-        );
+        if (query.sortBy === "acquiredAt") {
+          continuation = buildContinuation(
+            _.toInteger(userTokens[userTokens.length - 1].acquired_at) +
+              "_" +
+              userTokens[userTokens.length - 1].collection_id +
+              "_" +
+              userTokens[userTokens.length - 1].token_id
+          );
+        } else {
+          continuation = buildContinuation(
+            _.toInteger(userTokens[userTokens.length - 1].last_token_appraisal_value) +
+              "_" +
+              userTokens[userTokens.length - 1].collection_id +
+              "_" +
+              userTokens[userTokens.length - 1].token_id
+          );
+        }
       }
 
       const sources = await Sources.getInstance();
@@ -458,6 +521,7 @@ export const getUserTokensV6Options: RouteOptions = {
           ? sources.get(Number(r.floor_sell_source_id_int), contract, tokenId)
           : undefined;
         const acquiredTime = new Date(r.acquired_at * 1000).toISOString();
+
         return {
           token: {
             contract: contract,
@@ -504,6 +568,9 @@ export const getUserTokensV6Options: RouteOptions = {
                     : null,
                 }
               : undefined,
+            lastAppraisalValue: r.last_token_appraisal_value
+              ? formatEth(r.last_token_appraisal_value)
+              : null,
           },
           ownership: {
             tokenCount: String(r.token_count),
@@ -524,6 +591,16 @@ export const getUserTokensV6Options: RouteOptions = {
               maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
               validFrom: r.floor_sell_value ? r.floor_sell_valid_from : null,
               validUntil: r.floor_sell_value ? r.floor_sell_valid_to : null,
+              dynamicPricing: query.includeDynamicPricing
+                ? await getJoiDynamicPricingObject(
+                    r.floor_sell_dynamic,
+                    r.floor_sell_order_kind,
+                    query.normalizeRoyalties,
+                    r.floor_sell_raw_data,
+                    r.floor_sell_currency ? fromBuffer(r.floor_sell_currency) : undefined,
+                    r.floor_sell_missing_royalties ? r.floor_sell_missing_royalties : undefined
+                  )
+                : null,
               source: {
                 id: floorSellSource?.address,
                 domain: floorSellSource?.domain,
