@@ -14,8 +14,8 @@ import { config } from "@/config/index";
 const version = "v3";
 
 export const getExecuteCancelV3Options: RouteOptions = {
-  description: "Cancel order",
-  notes: "Cancel an existing order on any marketplace",
+  description: "Cancel orders",
+  notes: "Cancel existing orders on any marketplace",
   tags: ["api", "Router"],
   plugins: {
     "hapi-swagger": {
@@ -24,29 +24,32 @@ export const getExecuteCancelV3Options: RouteOptions = {
   },
   validate: {
     payload: Joi.object({
-      cancelType: Joi.string().valid(["single", "bulk", "all", "token"]),
-      orderKind: Joi.string().optional(),
       params: Joi.alternatives().try(
+        // If all order ids have the kind seaport or seaport-v1.4 then cancel them all
+        // Otherwise throw an error (we don't support multi-order cancelling for other order kinds)
         Joi.object({
-          maker: Joi.string().optional(),
+          kind: "orderIds",
+          data: {
+            orderIds: Joi.array().items(Joi.string()).min(1).required(),
+          },
         }),
+        // If the order kind is not seaport or seaport-v1.4 throw an error
         Joi.object({
-          tokenId: Joi.string()
-            .optional()
-            .description("tokenId, Example: `0x407c5d2c02ab0e4b0a98d14778a5de180eb1357f:755`"),
+          kind: "token",
+          data: {
+            orderKind: Joi.string().required(),
+            token: Joi.string().pattern(regex.token).required(),
+          },
         }),
+        // If the order kind is not seaport or seaport-v1.4 throw an error
         Joi.object({
-          id: Joi.alternatives()
-            .try(Joi.array().items(Joi.string()).max(20), Joi.string())
-            .description(
-              "Array of Order IDs. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
-            )
-            .optional(),
+          kind: "maker",
+          data: {
+            orderKind: Joi.string().required(),
+            maker: Joi.string().pattern(regex.address).required(),
+          },
         })
       ),
-      softCancel: Joi.boolean()
-        .default(false)
-        .description("If true, the order will be soft-cancelled."),
       maxFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional. Set custom gas price"),
@@ -83,26 +86,19 @@ export const getExecuteCancelV3Options: RouteOptions = {
   handler: async (request: Request) => {
     const payload = request.payload as any;
 
-    const cancelType = payload.cancelType;
-    const isCancelAll = cancelType === "all";
-    const cancelToken = cancelType === "token";
-
     const params = payload.params;
+    const actionData = params.data;
 
-    if (isCancelAll || cancelToken) {
-      throw Boom.badData("orderKind must provide");
-    }
-
-    // Cancel all
-    if (isCancelAll) {
-      if (!params.maker) {
+    // Cancel by maker
+    if (params.kind === "maker") {
+      if (!actionData.maker) {
         throw Boom.badData("maker must provide");
       }
 
       let cancelTx: TxData;
-      const maker = params.maker;
+      const maker = actionData.maker;
 
-      switch (payload.orderKind) {
+      switch (actionData.orderKind) {
         case "seaport": {
           const exchange = new Sdk.Seaport.Exchange(config.chainId);
           cancelTx = exchange.cancelAllOrdersTx(maker);
@@ -148,21 +144,13 @@ export const getExecuteCancelV3Options: RouteOptions = {
       };
     }
 
-    const tokenId = params.tokenId;
-    let isBulkCancel = Array.isArray(params.id);
-    const orderIds = isBulkCancel ? params.id : [params.id];
-
-    if (!isCancelAll) {
-      if (!tokenId && !orderIds.length) {
-        throw Boom.badData("No matching order");
-      }
-    }
-
+    // Cancel by tokenId or multile orderIds
     try {
       // Fetch the order to get cancelled
-      const orderResults = tokenId
-        ? await redb.manyOrNone(
-            `
+      const orderResults =
+        params.kind === "token"
+          ? await redb.manyOrNone(
+              `
           SELECT
             orders.id,
             orders.kind,
@@ -173,13 +161,13 @@ export const getExecuteCancelV3Options: RouteOptions = {
             AND kind = $/order_kind/
             AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
         `,
-            {
-              token_set_id: `token:${tokenId}`,
-              order_kind: payload.orderKind,
-            }
-          )
-        : await redb.manyOrNone(
-            `
+              {
+                token_set_id: `token:${actionData.token}`,
+                order_kind: actionData.orderKind,
+              }
+            )
+          : await redb.manyOrNone(
+              `
           SELECT
             orders.id,
             orders.kind,
@@ -189,18 +177,16 @@ export const getExecuteCancelV3Options: RouteOptions = {
           WHERE orders.id IN ($/id:csv/)
             AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
         `,
-            { id: orderIds }
-          );
+              { id: actionData.orderIds }
+            );
 
       // Return early in case no order was found
       if (!orderResults.length) {
-        throw Boom.badData("No matching order");
+        throw Boom.badRequest("No matching order");
       }
 
+      const isBulkCancel = orderResults.length > 1;
       const orderResult = orderResults[0];
-      if (orderResults.length > 1) {
-        isBulkCancel = true;
-      }
 
       // Make sure all order is same kind
       const supportedKinds = ["seaport-v1.4", "seaport"];
@@ -209,60 +195,8 @@ export const getExecuteCancelV3Options: RouteOptions = {
           supportedKinds.includes(orderResult.kind) &&
           orderResults.every((c) => c.kind === orderResult.kind);
         if (!isSupportBulk) {
-          throw Boom.badData("Bulk cancel not support");
+          throw Boom.badRequest("Bulk cancel not support");
         }
-      }
-
-      // Handle off-chain cancellations
-
-      const cancellationZone = Sdk.SeaportV14.Addresses.CancellationZone[config.chainId];
-      const isOracleCancellable =
-        orderResult.kind === "seaport-v1.4" && orderResult.raw_data.zone === cancellationZone;
-      if (isOracleCancellable || payload.softCancel) {
-        return {
-          steps: [
-            {
-              id: "cancellation-signature",
-              action: "Cancel order",
-              description: "Authorize the cancellation of the order",
-              kind: "signature",
-              items: [
-                {
-                  status: "incomplete",
-                  data: {
-                    sign: isOracleCancellable
-                      ? {
-                          signatureKind: "eip712",
-                          domain: {
-                            name: "SignedZone",
-                            version: "1.0.0",
-                            chainId: config.chainId,
-                            verifyingContract: cancellationZone,
-                          },
-                          types: { OrderHashes: [{ name: "orderHashes", type: "bytes32[]" }] },
-                          value: {
-                            orderHashes: [orderResult.id],
-                          },
-                        }
-                      : {
-                          signatureKind: "eip191",
-                          message: orderResult.id,
-                        },
-                    post: {
-                      endpoint: "/execute/cancel-signature/v1",
-                      method: "POST",
-                      body: {
-                        orderId: orderResult.id,
-                        softCancel: !isOracleCancellable,
-                      },
-                    },
-                  },
-                  orderIndex: 0,
-                },
-              ],
-            },
-          ],
-        };
       }
 
       // Handle on-chain cancellations
