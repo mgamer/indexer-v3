@@ -68,11 +68,6 @@ export const getSalesV4Options: RouteOptions = {
       endTimestamp: Joi.number().description(
         "Get events before a particular unix timestamp (inclusive)"
       ),
-      sortDirection: Joi.string()
-        .lowercase()
-        .valid("asc", "desc")
-        .default("desc")
-        .description("Order the items are returned in the response."),
       limit: Joi.number()
         .integer()
         .min(1)
@@ -193,7 +188,6 @@ export const getSalesV4Options: RouteOptions = {
         AND (fill_events_2.timestamp, fill_events_2.log_index, fill_events_2.batch_index) ${inequalitySymbol} ($/timestamp/, $/logIndex/, $/batchIndex/)
         `;
       }
-      }
     }
 
     // We default in the code so that these values don't appear in the docs
@@ -215,19 +209,6 @@ export const getSalesV4Options: RouteOptions = {
       AND (fill_events_2.timestamp >= $/startTimestamp/ AND
       fill_events_2.timestamp <= $/endTimestamp/)
     `;
-
-    let orderBy;
-    if (query.sortDirection === "desc") {
-      orderBy = `ORDER BY
-      fill_events_2.timestamp DESC,
-      fill_events_2.log_index DESC,
-      fill_events_2.batch_index DESC`;
-    } else {
-      orderBy = `ORDER BY
-      fill_events_2.timestamp ASC,
-      fill_events_2.log_index ASC,
-      fill_events_2.batch_index ASC`;
-    }
 
     try {
       const baseQuery = `
