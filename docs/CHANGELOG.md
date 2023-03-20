@@ -1,3 +1,10 @@
+## [5.275.1](https://github.com/reservoirprotocol/indexer/compare/v5.275.0...v5.275.1) (2023-03-20)
+
+
+### Bug Fixes
+
+* fix getCollectionActivities call from < v4 collection eps ([8d3f6dc](https://github.com/reservoirprotocol/indexer/commit/8d3f6dc99c130d7be4846f3f74befa00886fdb39))
+
 # [5.275.0](https://github.com/reservoirprotocol/indexer/compare/v5.274.0...v5.275.0) (2023-03-20)
 
 
