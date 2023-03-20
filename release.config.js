@@ -1,4 +1,4 @@
-// comment to force version bump
+// sequential number 100
 module.exports = {
   "dryRun": false,
   "branches": ["main", "development"],
@@ -21,7 +21,7 @@ module.exports = {
           "package.json",
           "package-lock.json"
         ],
-        "message": "chore(release): update changelogs for ${nextRelease.version} [skip ci]"
+        "message": "chore(release): update changelogs for ${nextRelease.version} [skip release][skip ci]"
       }
     ]
   ]
