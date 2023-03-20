@@ -61,6 +61,7 @@ export class MetadataApi {
         metadata: null,
         royalties: undefined,
         openseaRoyalties: undefined,
+        openseaFees: undefined,
         contract,
         tokenIdRange: null,
         tokenSetId: `contract:${contract}`,
@@ -82,6 +83,7 @@ export class MetadataApi {
         metadata: object | null;
         royalties?: object;
         openseaRoyalties?: object;
+        openseaFees?: object;
         contract: string;
         tokenIdRange: [string, string] | null;
         tokenSetId: string | null;
@@ -134,7 +136,7 @@ export class MetadataApi {
         value: string | number;
       }>;
     },
-    method = "opensea"
+    method = ""
   ): Promise<TokenMetadata | null> {
     method = method === "" ? config.metadataIndexingMethod : method;
 
@@ -146,7 +148,12 @@ export class MetadataApi {
     try {
       response = await axios.post(url, request);
     } catch (error: any) {
-      logger.error("metadata-api", `parseTokenMetadata error: ${error.message}`);
+      logger.error(
+        "metadata-api",
+        `parseTokenMetadata error. url=${url}, request=${JSON.stringify(request)}, error=${
+          error.message
+        }`
+      );
       return null;
     }
     const tokenMetadata: TokenMetadata = response.data;
