@@ -1,3 +1,10 @@
+# [5.270.0](https://github.com/reservoirprotocol/indexer/compare/v5.269.1...v5.270.0) (2023-03-20)
+
+
+### Features
+
+* automatically update package.json version ([f9e4c94](https://github.com/reservoirprotocol/indexer/commit/f9e4c9409a0c162889fb6c1e37202391dc9941d5))
+
 ## [5.269.1](https://github.com/reservoirprotocol/indexer/compare/v5.269.0...v5.269.1) (2023-03-20)
 
 
