@@ -88,6 +88,10 @@ jobs:
   #           ./dev/platform/indexer-worker.yaml \
   #           ${{ needs.build.outputs.version }} \
   #           indexer-worker
+  #         ./utils/version_update.sh \
+  #           ./prod/platform/indexer-api.yaml \
+  #           ${{ needs.build.outputs.version }} \
+  #           indexer-api
 
   deploy-prod:
     name: Deploy Prod Env
@@ -111,3 +115,7 @@ jobs:
             ./prod/platform/indexer-worker.yaml \
             ${{ needs.build.outputs.version }} \
             indexer-worker
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-api.yaml \
+            ${{ needs.build.outputs.version }} \
+            indexer-api
