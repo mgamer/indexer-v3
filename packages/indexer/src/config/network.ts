@@ -317,9 +317,11 @@ export const getNetworkSettings = (): NetworkSettings => {
         ...defaultNetworkSettings,
         enableWebSocket: false,
         enableReorgCheck: false,
-        realtimeSyncFrequencySeconds: 10,
-        realtimeSyncMaxBlockLag: 128,
-        backfillBlockBatchSize: 512,
+        realtimeSyncFrequencySeconds: 5,
+        realtimeSyncMaxBlockLag: 32,
+        lastBlockLatency: 15,
+        backfillBlockBatchSize: 60,
+        reorgCheckFrequency: [30],
         subDomain: "api-optimism",
         coingecko: {
           networkId: "optimistic-ethereum",
@@ -354,12 +356,23 @@ export const getNetworkSettings = (): NetworkSettings => {
         ...defaultNetworkSettings,
         metadataMintDelay: 180,
         enableWebSocket: true,
-        realtimeSyncFrequencySeconds: 15,
-        realtimeSyncMaxBlockLag: 45,
-        lastBlockLatency: 20,
+        realtimeSyncFrequencySeconds: 5,
+        realtimeSyncMaxBlockLag: 32,
+        lastBlockLatency: 5,
         backfillBlockBatchSize: 60,
         reorgCheckFrequency: [30],
         subDomain: "api-polygon",
+        whitelistedCurrencies: new Map([
+          [
+            "0xba777ae3a3c91fcd83ef85bfe65410592bdd0f7c",
+            {
+              contract: "0xba777ae3a3c91fcd83ef85bfe65410592bdd0f7c",
+              name: "BitCone",
+              symbol: "CONE",
+              decimals: 18,
+            },
+          ],
+        ]),
         coingecko: {
           networkId: "polygon-pos",
         },
@@ -397,8 +410,8 @@ export const getNetworkSettings = (): NetworkSettings => {
       return {
         ...defaultNetworkSettings,
         enableWebSocket: false,
-        realtimeSyncMaxBlockLag: 128,
-        realtimeSyncFrequencySeconds: 10,
+        realtimeSyncMaxBlockLag: 32,
+        realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 10,
         subDomain: "api-arbitrum",
         coingecko: {

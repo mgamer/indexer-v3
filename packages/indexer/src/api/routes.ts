@@ -253,6 +253,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/resync-sale-royalties",
+    options: adminEndpoints.postResyncSaleRoyalties,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/sync-arweave",
     options: adminEndpoints.postSyncArweaveOptions,
   });
@@ -641,6 +647,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/execute/cancel/v2",
     options: executeEndpoints.getExecuteCancelV2Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/execute/cancel/v3",
+    options: executeEndpoints.getExecuteCancelV3Options,
   });
 
   server.route({

@@ -62,10 +62,10 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
           return;
         }
 
-        // logger.debug(
-        //   "opensea-websocket",
-        //   `Processing event. network=${network}, event=${JSON.stringify(event)}`
-        // );
+        logger.debug(
+          "opensea-websocket",
+          `Processing event. network=${network}, event=${JSON.stringify(event)}`
+        );
 
         await saveEvent(event);
 
@@ -122,7 +122,14 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       const [, contract, tokenId] = event.payload.item.nft_id.split("/");
       const token = await Tokens.getByContractAndTokenId(contract, tokenId);
 
-      if (!token) {
+      logger.debug(
+        "opensea-websocket-item-metadata-update-event",
+        `Metadata received. contract=${contract}, tokenId=${tokenId}, event=${JSON.stringify(
+          event
+        )}, token=${JSON.stringify(token)}`
+      );
+
+      if (!token || token.metadataIndexed) {
         return;
       }
 
@@ -143,6 +150,13 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       };
 
       const parsedMetadata = await MetadataApi.parseTokenMetadata(metadata, "opensea");
+
+      logger.info(
+        "opensea-websocket-item-metadata-update-event",
+        `Metadata parsed. contract=${contract}, tokenId=${tokenId}, event=${JSON.stringify(
+          event
+        )}, metadata=${JSON.stringify(metadata)}, parsedMetadata=${JSON.stringify(parsedMetadata)}`
+      );
 
       if (parsedMetadata) {
         await metadataIndexWrite.addToQueue([parsedMetadata]);
