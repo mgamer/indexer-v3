@@ -1,3 +1,10 @@
+## [5.272.2](https://github.com/reservoirprotocol/indexer/compare/v5.272.1...v5.272.2) (2023-03-20)
+
+
+### Bug Fixes
+
+* test trigger pipeline ([6be8453](https://github.com/reservoirprotocol/indexer/commit/6be8453806f5ad9beb26a8f85bbf659a2929de6b))
+
 ## [5.272.1](https://github.com/reservoirprotocol/indexer/compare/v5.272.0...v5.272.1) (2023-03-20)
 
 
