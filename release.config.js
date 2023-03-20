@@ -11,7 +11,10 @@ module.exports = {
         "changelogFile": "docs/CHANGELOG.md"
       }
     ],
-    // "@semantic-release/npm",
+    ["@semantic-release/npm", {
+      "npmPublish": false,
+      "pkgRoot": "packages/indexer/"
+    }],
     // "@semantic-release/github",
     [
       "@semantic-release/git",
