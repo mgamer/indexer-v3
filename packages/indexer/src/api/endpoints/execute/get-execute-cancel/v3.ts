@@ -23,47 +23,37 @@ export const getExecuteCancelV3Options: RouteOptions = {
     },
   },
   validate: {
-    payload: Joi.alternatives().try(
-      Joi.object({
-        kind: "orderIds",
-        data: {
-          orderIds: Joi.array().items(Joi.string()).min(1).required(),
-        },
-        maxFeePerGas: Joi.string()
-          .pattern(regex.number)
-          .description("Optional. Set custom gas price"),
-        maxPriorityFeePerGas: Joi.string()
-          .pattern(regex.number)
-          .description("Optional. Set custom gas price"),
-      }),
-      Joi.object({
-        kind: "token",
-        data: {
-          maker: Joi.string().pattern(regex.address).required(),
-          orderKind: Joi.string().required(),
-          token: Joi.string().pattern(regex.token).required(),
-        },
-        maxFeePerGas: Joi.string()
-          .pattern(regex.number)
-          .description("Optional. Set custom gas price"),
-        maxPriorityFeePerGas: Joi.string()
-          .pattern(regex.number)
-          .description("Optional. Set custom gas price"),
-      }),
-      Joi.object({
-        kind: "maker",
-        data: {
-          orderKind: Joi.string().required(),
-          maker: Joi.string().pattern(regex.address).required(),
-        },
-        maxFeePerGas: Joi.string()
-          .pattern(regex.number)
-          .description("Optional. Set custom gas price"),
-        maxPriorityFeePerGas: Joi.string()
-          .pattern(regex.number)
-          .description("Optional. Set custom gas price"),
-      })
-    ),
+    payload: Joi.object({
+      params: Joi.alternatives().try(
+        Joi.object({
+          kind: "orderIds",
+          data: {
+            orderIds: Joi.array().items(Joi.string()).min(1).required(),
+          },
+        }),
+        Joi.object({
+          kind: "token",
+          data: {
+            maker: Joi.string().pattern(regex.address).required(),
+            orderKind: Joi.string().required(),
+            token: Joi.string().pattern(regex.token).required(),
+          },
+        }),
+        Joi.object({
+          kind: "maker",
+          data: {
+            orderKind: Joi.string().required(),
+            maker: Joi.string().pattern(regex.address).required(),
+          },
+        })
+      ),
+      maxFeePerGas: Joi.string()
+        .pattern(regex.number)
+        .description("Optional. Set custom gas price"),
+      maxPriorityFeePerGas: Joi.string()
+        .pattern(regex.number)
+        .description("Optional. Set custom gas price"),
+    }),
   },
   response: {
     schema: Joi.object({
@@ -91,7 +81,8 @@ export const getExecuteCancelV3Options: RouteOptions = {
     },
   },
   handler: async (request: Request) => {
-    const params = request.payload as any;
+    const payload = request.payload as any;
+    const params = payload.params;
     const actionData = params.data;
 
     // Cancel by maker
@@ -130,11 +121,11 @@ export const getExecuteCancelV3Options: RouteOptions = {
                 status: "incomplete",
                 data: {
                   ...cancelTx,
-                  maxFeePerGas: params.maxFeePerGas
-                    ? bn(params.maxFeePerGas).toHexString()
+                  maxFeePerGas: payload.maxFeePerGas
+                    ? bn(payload.maxFeePerGas).toHexString()
                     : undefined,
-                  maxPriorityFeePerGas: params.maxPriorityFeePerGas
-                    ? bn(params.maxPriorityFeePerGas).toHexString()
+                  maxPriorityFeePerGas: payload.maxPriorityFeePerGas
+                    ? bn(payload.maxPriorityFeePerGas).toHexString()
                     : undefined,
                 },
                 orderIndex: 0,
@@ -305,11 +296,11 @@ export const getExecuteCancelV3Options: RouteOptions = {
                 status: "incomplete",
                 data: {
                   ...cancelTx,
-                  maxFeePerGas: params.maxFeePerGas
-                    ? bn(params.maxFeePerGas).toHexString()
+                  maxFeePerGas: payload.maxFeePerGas
+                    ? bn(payload.maxFeePerGas).toHexString()
                     : undefined,
-                  maxPriorityFeePerGas: params.maxPriorityFeePerGas
-                    ? bn(params.maxPriorityFeePerGas).toHexString()
+                  maxPriorityFeePerGas: payload.maxPriorityFeePerGas
+                    ? bn(payload.maxPriorityFeePerGas).toHexString()
                     : undefined,
                 },
                 orderIndex: 0,
