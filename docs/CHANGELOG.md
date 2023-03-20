@@ -1,3 +1,10 @@
+# [5.276.0](https://github.com/reservoirprotocol/indexer/compare/v5.275.1...v5.276.0) (2023-03-20)
+
+
+### Features
+
+* collect ip from tracer client ([dfd1f25](https://github.com/reservoirprotocol/indexer/commit/dfd1f2571542ac3cdda83fa0a828c7f66ea2012b))
+
 ## [5.275.1](https://github.com/reservoirprotocol/indexer/compare/v5.275.0...v5.275.1) (2023-03-20)
 
 
