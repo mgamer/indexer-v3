@@ -317,7 +317,6 @@ export const getJoiDynamicPricingObject = async (
   }
 };
 
-
 // --- Sales ---
 
 export const JoiFeeBreakdown = Joi.object({
@@ -535,5 +534,4 @@ export const getJoiSaleObject = async (sale: {
       lastSaleFeeInfoIsValid
     ),
   };
-
-
+};
