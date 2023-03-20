@@ -130,7 +130,7 @@ export const getSearchCollectionsV2Options: RouteOptions = {
                     allTimeVolume,
                     currentTime
                   )
-                ).nativePrice
+                ).currencyPrice
               : null;
           }
 
