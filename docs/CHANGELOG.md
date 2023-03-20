@@ -1,3 +1,10 @@
+# [5.267.0](https://github.com/reservoirprotocol/indexer/compare/v5.266.0...v5.267.0) (2023-03-20)
+
+
+### Features
+
+* better data in order fetcher callbacks ([74f86c9](https://github.com/reservoirprotocol/indexer/commit/74f86c9557a9cd3fe71ab57f2180b3e79805b7f1))
+
 # [5.266.0](https://github.com/reservoirprotocol/indexer/compare/v5.265.0...v5.266.0) (2023-03-20)
 
 
