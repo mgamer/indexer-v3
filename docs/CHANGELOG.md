@@ -1,3 +1,15 @@
+# [5.273.0](https://github.com/reservoirprotocol/indexer/compare/v5.272.2...v5.273.0) (2023-03-20)
+
+
+### Bug Fixes
+
+* test trigger pipeline ([5c8f0d9](https://github.com/reservoirprotocol/indexer/commit/5c8f0d9eb0344b2de11de86e82ee0ad61992b46c))
+
+
+### Features
+
+* added trait offers support ([#3691](https://github.com/reservoirprotocol/indexer/issues/3691)) ([e849d5d](https://github.com/reservoirprotocol/indexer/commit/e849d5dd3035ce96beb8497abb0f95d496e9537a))
+
 ## [5.272.2](https://github.com/reservoirprotocol/indexer/compare/v5.272.1...v5.272.2) (2023-03-20)
 
 
