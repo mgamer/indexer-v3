@@ -1,3 +1,18 @@
+# [5.269.0](https://github.com/reservoirprotocol/indexer/compare/v5.268.0...v5.269.0) (2023-03-20)
+
+
+### Bug Fixes
+
+* refactor params ([d7fd841](https://github.com/reservoirprotocol/indexer/commit/d7fd841524d2d797e4273db83246169616a0c94e))
+* refactor params ([cbf8089](https://github.com/reservoirprotocol/indexer/commit/cbf8089642d18e0a9f44ac36affa9f2df926e8f9))
+* refactor params ([6602087](https://github.com/reservoirprotocol/indexer/commit/6602087f6f4deea9454affc2082a09e8608b292a))
+
+
+### Features
+
+* bulk cancel ([1c8fc33](https://github.com/reservoirprotocol/indexer/commit/1c8fc336b17d4ddf36b3315bda378e9a5e8f7e32))
+* support bulk cancel ([144d52f](https://github.com/reservoirprotocol/indexer/commit/144d52f63a29c0a9ff52612d76b632258e84e4cc))
+
 # [5.268.0](https://github.com/reservoirprotocol/indexer/compare/v5.267.0...v5.268.0) (2023-03-20)
 
 
