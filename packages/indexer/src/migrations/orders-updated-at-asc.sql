@@ -1,0 +1,3 @@
+-- CREATE INDEX "orders_asks_updated_at_asc_id_index"
+--  ON "orders" ("updated_at" ASC, "id" ASC)
+--  WHERE ("side" = 'sell');
