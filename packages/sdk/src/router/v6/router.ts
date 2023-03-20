@@ -576,22 +576,29 @@ export class Router {
         if (detail.kind === "seaport-partial") {
           try {
             const order = detail.order as Sdk.Seaport.Types.PartialOrder;
+
+            let url = "https://order-fetcher.vercel.app/api/listing";
+            url += `?contract=${detail.contract}`;
+            url += `&tokenId=${detail.tokenId}`;
+            url += order.unitPrice ? `&unitPrice=${order.unitPrice}` : "";
+            url += `&orderHash=${order.id}`;
+            url += `&taker=${taker}`;
+            url += `&chainId=${this.chainId}`;
+            url += "&protocolVersion=v1.1";
+
             const result = await axios
-              .get(
-                `https://order-fetcher.vercel.app/api/listing?contract=${detail.contract}&tokenId=${
-                  detail.tokenId
-                }${order.unitPrice ? `&unitPrice=${order.unitPrice}` : ""}&orderHash=${
-                  order.id
-                }&taker=${taker}&chainId=${this.chainId}&protocolVersion=v1.1`,
-                {
-                  headers: {
-                    "X-Api-Key": this.options?.orderFetcherApiKey,
-                  },
-                }
-              )
+              .get(url, {
+                headers: {
+                  "X-Api-Key": this.options?.orderFetcherApiKey,
+                },
+              })
               .catch((error) => {
                 if (axios.isAxiosError(error) && options?.onUpstreamError) {
-                  options.onUpstreamError("order-fetcher-opensea-listing", error, detail);
+                  options.onUpstreamError("order-fetcher-opensea-listing", error, {
+                    ...detail,
+                    taker,
+                    url,
+                  });
                 }
                 throw error;
               });
@@ -619,22 +626,29 @@ export class Router {
         if (detail.kind === "seaport-v1.4-partial") {
           try {
             const order = detail.order as Sdk.SeaportV14.Types.PartialOrder;
+
+            let url = "https://order-fetcher.vercel.app/api/listing";
+            url += `?contract=${detail.contract}`;
+            url += `&tokenId=${detail.tokenId}`;
+            url += order.unitPrice ? `&unitPrice=${order.unitPrice}` : "";
+            url += `&orderHash=${order.id}`;
+            url += `&taker=${taker}`;
+            url += `&chainId=${this.chainId}`;
+            url += "&protocolVersion=v1.4";
+
             const result = await axios
-              .get(
-                `https://order-fetcher.vercel.app/api/listing?contract=${detail.contract}&tokenId=${
-                  detail.tokenId
-                }${order.unitPrice ? `&unitPrice=${order.unitPrice}` : ""}&orderHash=${
-                  order.id
-                }&taker=${taker}&chainId=${this.chainId}&protocolVersion=v1.4`,
-                {
-                  headers: {
-                    "X-Api-Key": this.options?.orderFetcherApiKey,
-                  },
-                }
-              )
+              .get(url, {
+                headers: {
+                  "X-Api-Key": this.options?.orderFetcherApiKey,
+                },
+              })
               .catch((error) => {
                 if (axios.isAxiosError(error) && options?.onUpstreamError) {
-                  options.onUpstreamError("order-fetcher-opensea-listing", error, detail);
+                  options.onUpstreamError("order-fetcher-opensea-listing", error, {
+                    ...detail,
+                    taker,
+                    url,
+                  });
                 }
                 throw error;
               });
@@ -2485,24 +2499,28 @@ export class Router {
           const module = this.contracts.seaportModule;
 
           try {
+            let url = "https://order-fetcher.vercel.app/api/offer";
+            url += `?orderHash=${order.id}`;
+            url += `&contract=${order.contract}`;
+            url += `&tokenId=${order.tokenId}`;
+            url += `&taker=${detail.owner ?? taker}`;
+            url += `&chainId=${this.chainId}`;
+            url += "&protocolVersion=v1.1";
+            url += order.unitPrice ? `&unitPrice=${order.unitPrice}` : "";
+
             const result = await axios
-              .get(
-                `https://order-fetcher.vercel.app/api/offer?orderHash=${order.id}&contract=${
-                  order.contract
-                }&tokenId=${order.tokenId}&taker=${detail.owner ?? taker}&chainId=${
-                  this.chainId
-                }&protocolVersion=v1.1` +
-                  (order.unitPrice ? `&unitPrice=${order.unitPrice}` : "") +
-                  (detail.isProtected ? `&isProtected=true` : ""),
-                {
-                  headers: {
-                    "X-Api-Key": this.options?.orderFetcherApiKey,
-                  },
-                }
-              )
+              .get(url, {
+                headers: {
+                  "X-Api-Key": this.options?.orderFetcherApiKey,
+                },
+              })
               .catch((error) => {
                 if (axios.isAxiosError(error) && options?.onUpstreamError) {
-                  options.onUpstreamError("order-fetcher-opensea-offer", error, detail);
+                  options.onUpstreamError("order-fetcher-opensea-offer", error, {
+                    ...detail,
+                    taker,
+                    url,
+                  });
                 }
                 throw error;
               });
@@ -2595,24 +2613,29 @@ export class Router {
           const module = this.contracts.seaportV14Module;
 
           try {
+            let url = "https://order-fetcher.vercel.app/api/offer";
+            url += `?orderHash=${order.id}`;
+            url += `&contract=${order.contract}`;
+            url += `&tokenId=${order.tokenId}`;
+            url += `&taker=${detail.isProtected ? taker : detail.owner ?? taker}`;
+            url += `&chainId=${this.chainId}`;
+            url += "&protocolVersion=v1.4";
+            url += order.unitPrice ? `&unitPrice=${order.unitPrice}` : "";
+            url += detail.isProtected ? "&isProtected=true" : "";
+
             const result = await axios
-              .get(
-                `https://order-fetcher.vercel.app/api/offer?orderHash=${order.id}&contract=${
-                  order.contract
-                }&tokenId=${order.tokenId}&taker=${
-                  detail.isProtected ? taker : detail.owner ?? taker
-                }&chainId=${this.chainId}&protocolVersion=v1.4` +
-                  (order.unitPrice ? `&unitPrice=${order.unitPrice}` : "") +
-                  (detail.isProtected ? `&isProtected=true` : ""),
-                {
-                  headers: {
-                    "X-Api-Key": this.options?.orderFetcherApiKey,
-                  },
-                }
-              )
+              .get(url, {
+                headers: {
+                  "X-Api-Key": this.options?.orderFetcherApiKey,
+                },
+              })
               .catch((error) => {
                 if (axios.isAxiosError(error) && options?.onUpstreamError) {
-                  options.onUpstreamError("order-fetcher-opensea-offer", error, detail);
+                  options.onUpstreamError("order-fetcher-opensea-offer", error, {
+                    ...detail,
+                    taker,
+                    url,
+                  });
                 }
                 throw error;
               });
