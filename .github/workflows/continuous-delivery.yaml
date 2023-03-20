@@ -72,7 +72,7 @@ jobs:
   #   timeout-minutes: 15
   #   needs: [build]
   #   environment: dev
-  #   if: github.ref == 'refs/heads/development' || needs.build.outputs.version != ''
+  #   if: github.ref == 'refs/heads/development' && needs.build.outputs.version != ''
   #   steps:
   #     - name: Checkout repository k8s-configs
   #       uses: actions/checkout@v3
@@ -95,7 +95,7 @@ jobs:
     timeout-minutes: 15
     needs: [build]
     environment: prod
-    if: github.ref == 'refs/heads/main' || needs.build.outputs.version != ''
+    if: github.ref == 'refs/heads/main' && needs.build.outputs.version != ''
     steps:
       - name: Checkout repository k8s-configs
         uses: actions/checkout@v3
