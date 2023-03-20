@@ -78,7 +78,7 @@ jobs:
   #       uses: actions/checkout@v3
   #       with:
   #         repository: unevenlabs/k8s-configs
-  #         token: ${{ secrets.publish_token }}
+  #         token: ${{ secrets.DEVOPSBOT_TOKEN }}
   #         path: k8s-configs
 
   #     - name: Deploy to Dev Environment
@@ -101,7 +101,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: unevenlabs/k8s-configs
-          token: ${{ secrets.publish_token }}
+          token: ${{ secrets.DEVOPSBOT_TOKEN }}
           path: k8s-configs
 
       - name: Deploy to Prod Environment
