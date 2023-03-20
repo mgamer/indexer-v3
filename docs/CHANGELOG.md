@@ -1,3 +1,10 @@
+## [5.269.1](https://github.com/reservoirprotocol/indexer/compare/v5.269.0...v5.269.1) (2023-03-20)
+
+
+### Bug Fixes
+
+* opensea direct offer acceptance ([92c1ed0](https://github.com/reservoirprotocol/indexer/commit/92c1ed0536e024d8930fc55a75ce898bf7d0dbf0))
+
 # [5.269.0](https://github.com/reservoirprotocol/indexer/compare/v5.268.0...v5.269.0) (2023-03-20)
 
 
