@@ -21,8 +21,7 @@ module.exports = {
       {
         "assets": [
           "docs/CHANGELOG.md",
-          "package.json",
-          "package-lock.json"
+          "packages/indexer/package.json",
         ],
         "message": "chore(release): update changelogs for ${nextRelease.version} [skip release][skip ci]"
       }
