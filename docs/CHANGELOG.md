@@ -1,3 +1,28 @@
+# [5.275.0](https://github.com/reservoirprotocol/indexer/compare/v5.274.0...v5.275.0) (2023-03-20)
+
+
+### Bug Fixes
+
+* add user tokens and check for currency ([a5a012e](https://github.com/reservoirprotocol/indexer/commit/a5a012e0d7875239fce7e854ea99cfa30eb27835))
+* cleanup sale object to match across APIs ([6709480](https://github.com/reservoirprotocol/indexer/commit/67094807488e9073e2e068cd028c08bbfa0d9279))
+* continue standardization of JoiSale object ([80eaa5d](https://github.com/reservoirprotocol/indexer/commit/80eaa5dabf01e2e6222ef3a3c35d01f3c6781d9c))
+* don't use normalized values for lastSale ([6d04ccf](https://github.com/reservoirprotocol/indexer/commit/6d04ccfa440aee124a8ec8a2ef3877b29eeaeb13))
+* eslint any warning ([415dfe7](https://github.com/reservoirprotocol/indexer/commit/415dfe7a929333047be2f4a42a9d57ceacfd535b))
+* fix build ([59d4876](https://github.com/reservoirprotocol/indexer/commit/59d487699d467ae86ddac2dd0947778ea9866459))
+* fully abstract sales response as JoiSale ([dc1ab26](https://github.com/reservoirprotocol/indexer/commit/dc1ab267a52d52f53cbb7f3762bbe4d5ce533356))
+* merge user-tokens change from [#3641](https://github.com/reservoirprotocol/indexer/issues/3641) to v7 ([24c1854](https://github.com/reservoirprotocol/indexer/commit/24c18540e4ad2ac975636e5489099e03b50f80f5))
+* remove unnecessary join from users tokens ([5b0c969](https://github.com/reservoirprotocol/indexer/commit/5b0c9698883a5fc3520a9dd62fe06822efb1871b))
+* simplify lastSale response to match sales API ([190d886](https://github.com/reservoirprotocol/indexer/commit/190d886e1ac2e056f60c9144f8df2a8e79740576))
+* standardize functions to get fee values ([ca7f7a9](https://github.com/reservoirprotocol/indexer/commit/ca7f7a9fb82f7e05621070ed2dbcd45fd58bf2bc))
+
+
+### Features
+
+* add JoiSaleObject ([16b893b](https://github.com/reservoirprotocol/indexer/commit/16b893bbe52c22e41120d8a36b8e13bcf65b1ade))
+* add tokens/v6 to merge lastSell and lastBuy and include full royalty data ([84349d8](https://github.com/reservoirprotocol/indexer/commit/84349d832c812c4a2828740fe2bf6cedb08c1b4c))
+* add user-tokens v7 to support includeLastSale with royalty breakdown ([456f05e](https://github.com/reservoirprotocol/indexer/commit/456f05e64a044f48ec23815007104f14efef5f39))
+* return full lastSale data ([6f2fe46](https://github.com/reservoirprotocol/indexer/commit/6f2fe461d01ac8c04a03d619038cd52f4964d0d3))
+
 # [5.274.0](https://github.com/reservoirprotocol/indexer/compare/v5.273.0...v5.274.0) (2023-03-20)
 
 
