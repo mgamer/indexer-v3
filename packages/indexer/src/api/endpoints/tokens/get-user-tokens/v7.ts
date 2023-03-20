@@ -548,7 +548,7 @@ export const getUserTokensV7Options: RouteOptions = {
                     },
                     fromBuffer(r.collection_floor_sell_currency)
                   )
-                : undefined,
+                : null,
             },
             lastSale:
               query.includeLastSale && r.last_sale_currency
