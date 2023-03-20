@@ -47,3 +47,7 @@ export const OpenseaConduit: ChainIdToAddress = {
   [Network.Polygon]: "0x1e0049783f008a0085193e00003d00cd54003c71",
   [Network.Optimism]: "0x1e0049783f008a0085193e00003d00cd54003c71",
 };
+
+export const OperatorFilterRegistry: ChainIdToAddress = {
+  [Network.Ethereum]: "0x000000000000aaeb6d7670e522a718067333cd4e",
+};

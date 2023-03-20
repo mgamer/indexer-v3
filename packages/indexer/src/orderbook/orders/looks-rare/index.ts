@@ -16,6 +16,7 @@ import * as tokenSet from "@/orderbook/token-sets";
 import * as royalties from "@/utils/royalties";
 import { Royalty } from "@/utils/royalties";
 import _ from "lodash";
+import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 
 export type OrderInfo = {
   orderParams: Sdk.LooksRare.Types.MakerOrderParams;
@@ -66,6 +67,14 @@ export const save = async (
         return results.push({
           id,
           status: "invalid-listing-time",
+        });
+      }
+
+      const isFiltered = await checkMarketplaceIsFiltered(order.params.collection, "looks-rare");
+      if (isFiltered) {
+        return results.push({
+          id,
+          status: "filtered",
         });
       }
 
