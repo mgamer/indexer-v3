@@ -10,7 +10,7 @@ import { logger } from "@/common/logger";
 import { regex } from "@/common/utils";
 import { config } from "@/config/index";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
-import * as orderFixes from "@/jobs/order-fixes/queue";
+import * as orderFixes from "@/jobs/order-fixes/fixes";
 import * as resyncAttributeCache from "@/jobs/update-attribute/resync-attribute-cache";
 import * as tokenRefreshCacheQueue from "@/jobs/token-updates/token-refresh-cache";
 import { ApiKeyManager } from "@/models/api-keys";

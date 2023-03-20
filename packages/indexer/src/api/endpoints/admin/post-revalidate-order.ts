@@ -2,10 +2,9 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
-import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
+import * as orderRevalidations from "@/jobs/order-fixes/revalidations";
 
 export const postRevalidateOrderOptions: RouteOptions = {
   description: "Revalidate an existing order",
@@ -28,27 +27,7 @@ export const postRevalidateOrderOptions: RouteOptions = {
     const payload = request.payload as any;
 
     try {
-      await idb.none(
-        `
-          UPDATE orders SET
-            fillability_status = '${payload.status === "active" ? "fillable" : "cancelled"}',
-            approval_status = '${payload.status === "active" ? "approved" : "disabled"}',
-            updated_at = now()
-          WHERE orders.id = $/id/
-        `,
-        { id: payload.id }
-      );
-
-      // Recheck the order
-      await orderUpdatesById.addToQueue([
-        {
-          context: `revalidation-${Date.now()}-${payload.id}`,
-          id: payload.id,
-          trigger: {
-            kind: "revalidation",
-          },
-        } as orderUpdatesById.OrderInfo,
-      ]);
+      await orderRevalidations.addToQueue([{ id: payload.id, status: payload.status }]);
 
       return { message: "Success" };
     } catch (error) {
