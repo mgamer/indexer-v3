@@ -1,3 +1,10 @@
+# [5.266.0](https://github.com/reservoirprotocol/indexer/compare/v5.265.0...v5.266.0) (2023-03-20)
+
+
+### Features
+
+* semantic version ([ff6f39e](https://github.com/reservoirprotocol/indexer/commit/ff6f39e4028d28503f769fdd267a1aad4c00537a))
+
 ## [5.262.4](https://github.com/reservoirprotocol/indexer/compare/v5.262.3...v5.262.4) (2023-03-17)
 
 
