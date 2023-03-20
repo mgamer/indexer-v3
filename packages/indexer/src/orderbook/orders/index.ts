@@ -20,13 +20,16 @@ export * as blur from "@/orderbook/orders/blur";
 export * as rarible from "@/orderbook/orders/rarible";
 export * as nftx from "@/orderbook/orders/nftx";
 export * as manifold from "@/orderbook/orders/manifold";
+export * as superrare from "@/orderbook/orders/superrare";
 
 // Imports
 import * as Sdk from "@reservoir0x/sdk";
 import * as SdkTypesV5 from "@reservoir0x/sdk/dist/router/v5/types";
 import * as SdkTypesV6 from "@reservoir0x/sdk/dist/router/v6/types";
+import { AxiosError } from "axios";
 
 import { idb } from "@/common/db";
+import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
@@ -83,6 +86,7 @@ mintsSources.set("0xc9154424b823b10579895ccbe442d41b9abd96ed", "rarible.com");
 mintsSources.set("0xb66a603f4cfe17e3d27b87a8bfcad319856518b8", "rarible.com");
 mintsSources.set("0xc143bbfcdbdbed6d454803804752a064a622c1f3", "async.art");
 mintsSources.set("0xfbeef911dc5821886e1dda71586d90ed28174b7d", "knownorigin.io");
+mintsSources.set("0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0", "superrare.com");
 
 export const getOrderSourceByOrderId = async (
   orderId: string
@@ -180,6 +184,13 @@ export const getOrderSourceByOrderKind = async (
   // In case nothing matched, return `undefined` by default
 };
 
+export const routerOnUpstreamError = async (kind: string, error: AxiosError<any>, data: any) => {
+  logger.warn(
+    "router-on-upstream-error",
+    JSON.stringify({ kind, status: error.response?.status, error: error.response?.data, data })
+  );
+};
+
 // Support for filling listings
 export const generateListingDetailsV6 = (
   order: {
@@ -197,6 +208,7 @@ export const generateListingDetailsV6 = (
     contract: string;
     tokenId: string;
     amount?: number;
+    isFlagged?: boolean;
   }
 ): SdkTypesV6.ListingDetails => {
   const common = {
@@ -206,6 +218,7 @@ export const generateListingDetailsV6 = (
     currency: order.currency,
     price: order.price,
     source: order.source,
+    isFlagged: token.isFlagged,
     amount: token.amount ?? 1,
     fees: order.fees ?? [],
   };
@@ -381,6 +394,14 @@ export const generateListingDetailsV6 = (
       };
     }
 
+    case "superrare": {
+      return {
+        kind: "superrare",
+        ...common,
+        order: new Sdk.SuperRare.Order(config.chainId, order.rawData),
+      };
+    }
+
     default: {
       throw new Error("Unsupported order kind");
     }
@@ -396,6 +417,7 @@ export const generateBidDetailsV6 = async (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rawData: any;
     fees?: Sdk.RouterV6.Types.Fee[];
+    isProtected?: boolean;
   },
   token: {
     kind: "erc721" | "erc1155";
@@ -411,6 +433,7 @@ export const generateBidDetailsV6 = async (
     tokenId: token.tokenId,
     amount: token.amount ?? 1,
     owner: token.owner,
+    isProtected: order.isProtected,
     fees: order.fees ?? [],
   };
 

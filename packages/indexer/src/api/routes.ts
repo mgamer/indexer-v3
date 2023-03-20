@@ -277,6 +277,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/resync-sale-royalties",
+    options: adminEndpoints.postResyncSaleRoyalties,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/sync-arweave",
     options: adminEndpoints.postSyncArweaveOptions,
   });
@@ -686,6 +692,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   server.route({
+    method: "POST",
+    path: "/execute/cancel/v3",
+    options: executeEndpoints.getExecuteCancelV3Options,
+  });
+
+  server.route({
     method: "GET",
     path: "/execute/list/v2",
     options: executeEndpoints.getExecuteListV2Options,
@@ -737,6 +749,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/execute/sell/v7",
     options: executeEndpoints.getExecuteSellV7Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/execute/auth-signature/v1",
+    options: executeEndpoints.postAuthSignatureV1Options,
   });
 
   server.route({
@@ -992,6 +1010,12 @@ export const setupRoutes = (server: Server) => {
     options: ordersEndpoints.postSeaportOffersV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/cross-posting-orders/v1",
+    options: ordersEndpoints.getCrossPostingOrdersV1Options,
+  });
+
   // Owners
 
   server.route({
@@ -1140,6 +1164,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/tokens/v5",
     options: tokensEndpoints.getTokensV5Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/tokens/v6",
+    options: tokensEndpoints.getTokensV6Options,
   });
 
   server.route({

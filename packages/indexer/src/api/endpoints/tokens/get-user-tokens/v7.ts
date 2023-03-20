@@ -16,7 +16,7 @@ import {
 import { CollectionSets } from "@/models/collection-sets";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
-import { getJoiPriceObject, JoiPrice } from "@/common/joi";
+import { getJoiPriceObject, getJoiSaleObject, JoiPrice, JoiSale } from "@/common/joi";
 import { Sources } from "@/models/sources";
 import _ from "lodash";
 
@@ -81,6 +81,10 @@ export const getUserTokensV7Options: RouteOptions = {
       normalizeRoyalties: Joi.boolean()
         .default(false)
         .description("If true, prices will include missing royalties to be added on-top."),
+      sortBy: Joi.string()
+        .valid("acquiredAt", "lastAppraisalValue")
+        .default("acquiredAt")
+        .description("Order the items are returned in the response."),
       sortDirection: Joi.string()
         .lowercase()
         .valid("asc", "desc")
@@ -98,6 +102,11 @@ export const getUserTokensV7Options: RouteOptions = {
       includeTopBid: Joi.boolean()
         .default(false)
         .description("If true, top bid will be returned in the response."),
+      includeLastSale: Joi.boolean()
+        .default(false)
+        .description(
+          "If true, last sale data including royalties paid will be returned in the response."
+        ),
       useNonFlaggedFloorAsk: Joi.boolean()
         .default(false)
         .description("If true, will return the collection non flagged floor ask."),
@@ -113,14 +122,6 @@ export const getUserTokensV7Options: RouteOptions = {
             kind: Joi.string(),
             name: Joi.string().allow("", null),
             image: Joi.string().allow("", null),
-            lastBuy: {
-              value: Joi.number().unsafe().allow(null),
-              timestamp: Joi.number().unsafe().allow(null),
-            },
-            lastSell: {
-              value: Joi.number().unsafe().allow(null),
-              timestamp: Joi.number().unsafe().allow(null),
-            },
             rarityScore: Joi.number().allow(null),
             rarityRank: Joi.number().allow(null),
             media: Joi.string().allow(null),
@@ -128,12 +129,14 @@ export const getUserTokensV7Options: RouteOptions = {
               id: Joi.string().allow(null),
               name: Joi.string().allow("", null),
               imageUrl: Joi.string().allow(null),
-              floorAskPrice: JoiPrice.allow(null),
+              floorAskPrice: Joi.number().unsafe().allow(null),
             }),
+            lastSale: JoiSale.optional(),
             topBid: Joi.object({
               id: Joi.string().allow(null),
               price: JoiPrice.allow(null),
             }).optional(),
+            lastAppraisalValue: Joi.number().unsafe().allow(null),
           }),
           ownership: Joi.object({
             tokenCount: Joi.string(),
@@ -278,6 +281,33 @@ export const getUserTokensV7Options: RouteOptions = {
     `;
     }
 
+    let selectLastSale = "";
+    let includeRoyaltyBreakdownQuery = "";
+    let selectRoyaltyBreakdown = "";
+    if (query.includeLastSale) {
+      selectLastSale = `last_sale_timestamp, last_sale_currency, last_sale_currency_price, last_sale_price, last_sale_usd_price, last_sale_marketplace_fee_bps, last_sale_royalty_fee_bps,
+      last_sale_paid_full_royalty, last_sale_royalty_fee_breakdown, last_sale_marketplace_fee_breakdown,`;
+      selectRoyaltyBreakdown = ", r.*";
+      includeRoyaltyBreakdownQuery = `
+        LEFT JOIN LATERAL (
+        SELECT
+          fe.timestamp AS last_sale_timestamp,          
+          fe.currency AS last_sale_currency,
+          fe.currency_price AS last_sale_currency_price,            
+          fe.price AS last_sale_price,    
+          fe.usd_price AS last_sale_usd_price,
+          fe.marketplace_fee_bps AS last_sale_marketplace_fee_bps,
+          fe.royalty_fee_bps AS last_sale_royalty_fee_bps,
+          fe.paid_full_royalty AS last_sale_paid_full_royalty,
+          fe.royalty_fee_breakdown AS last_sale_royalty_fee_breakdown,
+          fe.marketplace_fee_breakdown AS last_sale_marketplace_fee_breakdown
+        FROM fill_events_2 fe
+        WHERE fe.contract = t.contract AND fe.token_id = t.token_id
+        ORDER BY timestamp DESC LIMIT 1
+        ) r ON TRUE
+        `;
+    }
+
     let tokensJoin = `
       JOIN LATERAL (
         SELECT 
@@ -288,10 +318,10 @@ export const getUserTokensV7Options: RouteOptions = {
           t.rarity_rank,
           t.collection_id,
           t.rarity_score,
-          t.last_buy_value,
-          t.last_buy_timestamp,
           t.last_sell_value,
+          t.last_buy_value,
           t.last_sell_timestamp,
+          t.last_buy_timestamp,
           null AS top_bid_id,
           null AS top_bid_price,
           null AS top_bid_value,
@@ -299,7 +329,9 @@ export const getUserTokensV7Options: RouteOptions = {
           null AS top_bid_currency_price,
           null AS top_bid_currency_value,
           ${selectFloorData}
+          ${selectRoyaltyBreakdown}
         FROM tokens t
+        ${includeRoyaltyBreakdownQuery}
         WHERE b.token_id = t.token_id
         AND b.contract = t.contract
         AND ${
@@ -324,7 +356,9 @@ export const getUserTokensV7Options: RouteOptions = {
             t.last_sell_timestamp,
             t.last_buy_timestamp,
             ${selectFloorData}
+            ${selectRoyaltyBreakdown}
           FROM tokens t
+          ${includeRoyaltyBreakdownQuery}
           WHERE b.token_id = t.token_id
           AND b.contract = t.contract
           AND ${
@@ -363,10 +397,10 @@ export const getUserTokensV7Options: RouteOptions = {
 
     try {
       let baseQuery = `
-        SELECT b.contract, b.token_id, b.token_count, extract(epoch from b.acquired_at) AS acquired_at,
+        SELECT b.contract, b.token_id, b.token_count, extract(epoch from b.acquired_at) AS acquired_at, b.last_token_appraisal_value,
                t.name, t.image, t.media, t.rarity_rank, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.floor_sell_currency, t.floor_sell_currency_value,
                t.floor_sell_maker, t.floor_sell_valid_from, t.floor_sell_valid_to, t.floor_sell_source_id_int,
-               t.rarity_score, t.last_sell_value, t.last_buy_value, t.last_sell_timestamp, t.last_buy_timestamp,
+               t.rarity_score, ${selectLastSale}
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value,
                o.currency AS collection_floor_sell_currency, o.currency_price AS collection_floor_sell_currency_price,
                c.name as collection_name, con.kind, c.metadata, ${
@@ -381,7 +415,7 @@ export const getUserTokensV7Options: RouteOptions = {
                     END
                ) AS on_sale_count
         FROM (
-            SELECT amount AS token_count, token_id, contract, acquired_at
+            SELECT amount AS token_count, token_id, contract, acquired_at, last_token_appraisal_value
             FROM nft_balances
             WHERE owner = $/user/
               AND ${
@@ -405,42 +439,70 @@ export const getUserTokensV7Options: RouteOptions = {
       const conditions: string[] = [];
 
       if (query.continuation) {
-        const [acquiredAt, collectionId, tokenId] = splitContinuation(
+        const [acquiredAtOrLastAppraisalValue, collectionId, tokenId] = splitContinuation(
           query.continuation,
           /^[0-9]+_[A-Za-z0-9:-]+_[0-9]+$/
         );
 
-        (query as any).acquiredAt = acquiredAt;
+        (query as any).acquiredAtOrLastAppraisalValue = acquiredAtOrLastAppraisalValue;
         (query as any).collectionId = collectionId;
         (query as any).tokenId = tokenId;
         query.sortDirection = query.sortDirection || "desc";
-        const sign = query.sortDirection == "desc" ? "<" : ">";
-        conditions.push(
-          `(acquired_at, b.token_id) ${sign} (to_timestamp($/acquiredAt/), $/tokenId/)`
-        );
+        if (query.sortBy === "acquiredAt") {
+          conditions.push(
+            `(acquired_at, b.token_id) ${
+              query.sortDirection == "desc" ? "<" : ">"
+            } (to_timestamp($/acquiredAtOrLastAppraisalValue/), $/tokenId/)`
+          );
+        } else {
+          conditions.push(
+            `(last_token_appraisal_value, b.token_id) ${
+              query.sortDirection == "desc" ? "<" : ">"
+            } ($/acquiredAtOrLastAppraisalValue/, $/tokenId/)`
+          );
+        }
       }
 
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
 
-      baseQuery += `
+      // Sorting
+      if (query.sortBy === "acquiredAt") {
+        baseQuery += `
         ORDER BY
           acquired_at ${query.sortDirection}, b.token_id ${query.sortDirection}
         LIMIT $/limit/
       `;
+      } else {
+        baseQuery += `
+        ORDER BY
+          last_token_appraisal_value ${query.sortDirection} NULLS LAST, b.token_id ${query.sortDirection}
+        LIMIT $/limit/
+      `;
+      }
 
       const userTokens = await redb.manyOrNone(baseQuery, { ...query, ...params });
 
       let continuation = null;
       if (userTokens.length === query.limit) {
-        continuation = buildContinuation(
-          _.toInteger(userTokens[userTokens.length - 1].acquired_at) +
-            "_" +
-            userTokens[userTokens.length - 1].collection_id +
-            "_" +
-            userTokens[userTokens.length - 1].token_id
-        );
+        if (query.sortBy === "acquiredAt") {
+          continuation = buildContinuation(
+            _.toInteger(userTokens[userTokens.length - 1].acquired_at) +
+              "_" +
+              userTokens[userTokens.length - 1].collection_id +
+              "_" +
+              userTokens[userTokens.length - 1].token_id
+          );
+        } else {
+          continuation = buildContinuation(
+            _.toInteger(userTokens[userTokens.length - 1].last_token_appraisal_value) +
+              "_" +
+              userTokens[userTokens.length - 1].collection_id +
+              "_" +
+              userTokens[userTokens.length - 1].token_id
+          );
+        }
       }
 
       const sources = await Sources.getInstance();
@@ -467,14 +529,6 @@ export const getUserTokensV7Options: RouteOptions = {
             kind: r.kind,
             name: r.name,
             image: r.image,
-            lastBuy: {
-              value: r.last_buy_value ? formatEth(r.last_buy_value) : null,
-              timestamp: r.last_buy_timestamp,
-            },
-            lastSell: {
-              value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
-              timestamp: r.last_sell_timestamp,
-            },
             rarityScore: r.rarity_score,
             rarityRank: r.rarity_rank,
             media: r.media,
@@ -496,6 +550,27 @@ export const getUserTokensV7Options: RouteOptions = {
                   )
                 : undefined,
             },
+            lastSale:
+              query.includeLastSale && r.last_sale_currency
+                ? await getJoiSaleObject({
+                    prices: {
+                      gross: {
+                        amount: r.last_sale_currency_price ?? r.last_sale_price,
+                        nativeAmount: r.last_sale_price,
+                        usdAmount: r.last_sale_usd_price,
+                      },
+                    },
+                    fees: {
+                      royaltyFeeBps: r.last_sale_royalty_fee_bps,
+                      marketplaceFeeBps: r.last_sale_marketplace_fee_bps,
+                      paidFullRoyalty: r.last_sale_paid_full_royalty,
+                      royaltyFeeBreakdown: r.last_sale_royalty_fee_breakdown,
+                      marketplaceFeeBreakdown: r.last_sale_marketplace_fee_breakdown,
+                    },
+                    currencyAddress: r.last_sale_currency,
+                    timestamp: r.last_sale_timestamp,
+                  })
+                : undefined,
             topBid: query.includeTopBid
               ? {
                   id: r.top_bid_id,
@@ -516,6 +591,9 @@ export const getUserTokensV7Options: RouteOptions = {
                     : null,
                 }
               : undefined,
+            lastAppraisalValue: r.last_token_appraisal_value
+              ? formatEth(r.last_token_appraisal_value)
+              : null,
           },
           ownership: {
             tokenCount: String(r.token_count),

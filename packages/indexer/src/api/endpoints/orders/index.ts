@@ -24,3 +24,4 @@ export * from "@/api/endpoints/orders/post-order/v3";
 export * from "@/api/endpoints/orders/post-order/v4";
 export * from "@/api/endpoints/orders/post-orders/v1";
 export * from "@/api/endpoints/orders/post-seaport-offers/v1";
+export * from "@/api/endpoints/orders/get-cross-posting-orders/v1";
