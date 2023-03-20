@@ -107,7 +107,7 @@ export const getSearchCollectionsV2Options: RouteOptions = {
                    o.currency AS floor_sell_currency,
                    o.currency_price AS floor_sell_currency_price
             FROM collections c
-            JOIN orders o ON o.id = c.floor_sell_id
+            LEFT JOIN orders o ON o.id = c.floor_sell_id
             ${whereClause}
             ORDER BY all_time_volume DESC
             OFFSET $/offset/
