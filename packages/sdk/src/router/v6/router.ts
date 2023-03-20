@@ -2646,7 +2646,7 @@ export class Router {
                 txData: {
                   from: taker,
                   to: Sdk.SeaportV14.Addresses.Exchange[this.chainId],
-                  data: result.data.calldata.slice(0, -8) + generateSourceBytes(options?.source),
+                  data: result.data.calldata + generateSourceBytes(options?.source),
                 },
                 success: [true],
                 approvals,
