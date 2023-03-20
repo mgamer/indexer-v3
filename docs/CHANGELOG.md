@@ -1,3 +1,15 @@
+# [5.274.0](https://github.com/reservoirprotocol/indexer/compare/v5.273.0...v5.274.0) (2023-03-20)
+
+
+### Bug Fixes
+
+* remove v6, make changes to v5 ([6ab8e73](https://github.com/reservoirprotocol/indexer/commit/6ab8e7335aa796d7b954d977d2a09aa05a5c1259))
+
+
+### Features
+
+* add attributes filtering to collections activity (v6) ([0b91ec7](https://github.com/reservoirprotocol/indexer/commit/0b91ec7bd3f604d405f233c6fdcc296103e9e018))
+
 # [5.273.0](https://github.com/reservoirprotocol/indexer/compare/v5.272.2...v5.273.0) (2023-03-20)
 
 
