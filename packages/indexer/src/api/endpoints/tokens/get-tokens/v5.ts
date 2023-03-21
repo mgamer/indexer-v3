@@ -845,7 +845,7 @@ export const getTokensV5Options: RouteOptions = {
           collectionsSetQueries.push(
             `(
               ${baseQuery}
-              AND t.collection_id = $/collection${i}/
+              ${conditions.length ? `AND ` : `WHERE `} t.collection_id = $/collection${i}/
               ${collectionsSetSort}
               LIMIT $/limit/
             )`
