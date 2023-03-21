@@ -48,6 +48,14 @@ export const getSalesV4Options: RouteOptions = {
         .description(
           "Filter to a particular attribute. Note: Our docs do not support this parameter correctly. To test, you can use the following URL in your browser. Example: `https://api.reservoir.tools/sales/v4?collection=0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63&attributes[Type]=Original` or `https://api.reservoir.tools/sales/v4?collection=0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63&attributes[Type]=Original&attributes[Type]=Sibling`"
         ),
+      orderBy: Joi.string()
+        .valid("price", "time")
+        .description("Order the items are returned in the response."),
+      sortDirection: Joi.string()
+        .lowercase()
+        .valid("asc", "desc")
+        .default("desc")
+        .description("Order the items are returned in the response."),
       txHash: Joi.string()
         .lowercase()
         .pattern(regex.bytes32)
@@ -60,11 +68,6 @@ export const getSalesV4Options: RouteOptions = {
       endTimestamp: Joi.number().description(
         "Get events before a particular unix timestamp (inclusive)"
       ),
-      sortDirection: Joi.string()
-        .lowercase()
-        .valid("asc", "desc")
-        .default("desc")
-        .description("Order the items are returned in the response."),
       limit: Joi.number()
         .integer()
         .min(1)
@@ -165,24 +168,25 @@ export const getSalesV4Options: RouteOptions = {
     }
 
     if (query.continuation) {
-      const contArr = splitContinuation(query.continuation, /^(\d+)_(\d+)_(\d+)$/);
+      const contArr = splitContinuation(query.continuation, /^(\d+)_(\d+)_(\d+)_(\d+)$/);
 
-      if (contArr.length !== 3) {
+      if (contArr.length !== 4) {
         throw Boom.badRequest("Invalid continuation string used");
       }
 
       (query as any).timestamp = contArr[0];
       (query as any).logIndex = contArr[1];
       (query as any).batchIndex = contArr[2];
-
-      if (query.sortDirection === "desc") {
+      (query as any).price = contArr[3];
+      const inequalitySymbol = query.sortDirection === "asc" ? ">" : "<";
+      if (query.orderBy && query.orderBy === "price") {
         paginationFilter = `
-        AND (fill_events_2.timestamp, fill_events_2.log_index, fill_events_2.batch_index) < ($/timestamp/, $/logIndex/, $/batchIndex/)
+        AND (fill_events_2.price) ${inequalitySymbol} ($/price/)
       `;
       } else {
         paginationFilter = `
-        AND (fill_events_2.timestamp, fill_events_2.log_index, fill_events_2.batch_index) > ($/timestamp/, $/logIndex/, $/batchIndex/)
-      `;
+        AND (fill_events_2.timestamp, fill_events_2.log_index, fill_events_2.batch_index) ${inequalitySymbol} ($/timestamp/, $/logIndex/, $/batchIndex/)
+        `;
       }
     }
 
@@ -194,23 +198,17 @@ export const getSalesV4Options: RouteOptions = {
       query.endTimestamp = 9999999999;
     }
 
+    // Default to ordering by time
+    let queryOrderBy = `ORDER BY fill_events_2.timestamp ${query.sortDirection}, fill_events_2.log_index ${query.sortDirection}, fill_events_2.batch_index ${query.sortDirection}`;
+
+    if (query.orderBy && query.orderBy === "price") {
+      queryOrderBy = `ORDER BY fill_events_2.price ${query.sortDirection}`;
+    }
+
     const timestampFilter = `
       AND (fill_events_2.timestamp >= $/startTimestamp/ AND
       fill_events_2.timestamp <= $/endTimestamp/)
     `;
-
-    let orderBy;
-    if (query.sortDirection === "desc") {
-      orderBy = `ORDER BY
-      fill_events_2.timestamp DESC,
-      fill_events_2.log_index DESC,
-      fill_events_2.batch_index DESC`;
-    } else {
-      orderBy = `ORDER BY
-      fill_events_2.timestamp ASC,
-      fill_events_2.log_index ASC,
-      fill_events_2.batch_index ASC`;
-    }
 
     try {
       const baseQuery = `
@@ -265,7 +263,8 @@ export const getSalesV4Options: RouteOptions = {
             ${tokenFilter}
             ${paginationFilter}
             ${timestampFilter}
-          ${orderBy}
+      
+            ${queryOrderBy}
           LIMIT $/limit/
         ) AS fill_events_2_data
         ${
@@ -297,7 +296,9 @@ export const getSalesV4Options: RouteOptions = {
             "_" +
             rawResult[rawResult.length - 1].log_index +
             "_" +
-            rawResult[rawResult.length - 1].batch_index
+            rawResult[rawResult.length - 1].batch_index +
+            "_" +
+            rawResult[rawResult.length - 1].price
         );
       }
 
