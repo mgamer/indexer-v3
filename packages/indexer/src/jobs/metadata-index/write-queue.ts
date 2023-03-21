@@ -132,6 +132,30 @@ if (config.doBackgroundWork) {
             `${contract}:${tokenId}`
           );
 
+          // Update the token_count on both the new and old collection
+          for (const collectionId of [collection, result.collectionId]) {
+            const collectionCountResult = await idb.oneOrNone(
+              `
+                UPDATE collections SET
+                  token_count = live_token_count
+                FROM (
+                  SELECT COUNT(*) AS live_token_count
+                  FROM tokens WHERE tokens.collection_id = $/collectionId/
+                ) x
+                WHERE collections.id = $/collectionId/
+                RETURNING token_count
+              `,
+              {
+                collectionId: collectionId,
+              }
+            );
+
+            logger.info(
+              QUEUE_NAME,
+              `Updated token_count for collectionId=${collectionId} to ${collectionCountResult}`
+            );
+          }
+
           return;
         }
 
