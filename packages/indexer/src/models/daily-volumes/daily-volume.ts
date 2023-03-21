@@ -223,6 +223,83 @@ export class DailyVolume {
   }
 
   /**
+   * update the 1day volume for all collections as a 24h rolling average
+   *
+   **/
+  public static async update1Day(collectionId = "") {
+    const currentDate = new Date();
+    const startTime = new Date(currentDate.getTime() - 24 * 60 * 60 * 1000).getTime();
+
+    const results = await ridb.manyOrNone(
+      `SELECT t1.collection_id,
+            t1.volume,
+            t1.rank,
+            t1.floor_sell_value,
+            t1.volume_change
+          FROM
+            (SELECT
+              "collection_id",
+              sum("fe"."price") AS "volume",
+              RANK() OVER (ORDER BY SUM(price) DESC, "collection_id") "rank",
+              min(fe.price) AS "floor_sell_value",
+              (
+                  SELECT sum("fe"."price") - (SELECT volume
+                    FROM daily_volumes
+                    WHERE daily_volumes.collection_id  = t.collection_id
+                    ORDER BY daily_volumes.updated_at DESC LIMIT 1
+              ) ) as "volume_change"
+
+            FROM "fill_events_2" "fe"
+              JOIN "tokens" "t" ON "fe"."token_id" = "t"."token_id" AND "fe"."contract" = "t"."contract"
+              JOIN "collections" "c" ON "t"."collection_id" = "c"."id"
+            WHERE
+              "fe"."timestamp" >= $/lastDailyTimestamp/
+              AND fe.price > 0
+              AND fe.is_primary IS NOT TRUE
+              AND coalesce(fe.wash_trading_score, 0) = 0
+              ${collectionId ? "AND collection_id = $/collectionId/" : ""}
+            GROUP BY "collection_id") t1`,
+      {
+        lastDailyTimestamp: startTime,
+        collectionId,
+      }
+    );
+
+    // If we have results, we can now insert them into the daily_volumes table and update collections
+    if (results.length) {
+      const queries: PgPromiseQuery[] = [];
+      results.forEach((values: any) => {
+        queries.push({
+          query: `
+            UPDATE collections
+            SET
+              day1_volume = $/volume/,
+              day1_rank = $/rank/,
+              day1_floor_sell_value = $/floor_sell_value/,
+              day1_volume_change = $/volume_change/
+            WHERE id = $/collection_id/
+            `,
+          values: values,
+        });
+      });
+
+      try {
+        const concat = pgp.helpers.concat(queries);
+        await idb.none(concat);
+      } catch (error: any) {
+        logger.error(
+          "daily-volumes",
+          `Error while inserting/updating daily volumes. collectionId=${collectionId}`
+        );
+
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * Update the collections table (fields day1_volume, day1_rank, etc) with latest values we have from daily_volumes
    *
    * @return boolean Returns false when it fails to update the collection, will need to reschedule the job
