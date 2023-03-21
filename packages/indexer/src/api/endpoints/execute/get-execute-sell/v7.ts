@@ -655,20 +655,15 @@ export const getExecuteSellV7Options: RouteOptions = {
         },
       ];
 
-      const protectedOffersCount = bidDetails.filter(
-        (d) =>
-          d.kind === "seaport-v1.4" &&
-          d.order.params.zone ===
-            Sdk.SeaportV14.Addresses.OpenSeaProtectedOffersZone[config.chainId]
-      );
-      if (protectedOffersCount.length > 1) {
+      const protectedOffers = bidDetails.filter((d) => d.isProtected);
+      if (protectedOffers.length > 1) {
         throw Boom.badRequest("Only a single protected offer can be accepted at once");
       }
-      if (protectedOffersCount.length === 1 && bidDetails.length > 1) {
+      if (protectedOffers.length === 1 && bidDetails.length > 1) {
         throw Boom.badRequest("Protected offers cannot be accepted with other offers");
       }
 
-      if (protectedOffersCount.length === 1) {
+      if (protectedOffers.length === 1) {
         // Ensure the taker owns the NFTs to get sold
         const takerIsOwner = await idb.oneOrNone(
           `

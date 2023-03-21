@@ -424,13 +424,8 @@ export const getExecuteSellV6Options: RouteOptions = {
       ];
 
       if (
-        path.some(
-          (p) =>
-            p.source === "opensea.io" &&
-            // Authentication is only needed for protected offers
-            orderResult?.raw_data?.zone ===
-              Sdk.SeaportV14.Addresses.OpenSeaProtectedOffersZone[config.chainId]
-        )
+        orderResult?.raw_data?.zone ===
+        Sdk.SeaportV14.Addresses.OpenSeaProtectedOffersZone[config.chainId]
       ) {
         // Ensure the taker owns the NFTs to get sold
         const takerIsOwner = await idb.oneOrNone(
