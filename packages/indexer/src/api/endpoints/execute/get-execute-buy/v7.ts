@@ -742,7 +742,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           onRecoverableError: async (kind, error, data) => {
             errors.push({
               orderId: data.orderId,
-              message: error.response?.data ? JSON.stringify(error.response.data) : error.message,
+              message: error.response?.data ?? error.message,
             });
             await routerOnRecoverableError(kind, error, data);
           },
@@ -750,8 +750,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         const boomError = Boom.badRequest(error.message);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (boomError.data as any).errors = errors;
+        boomError.output.payload.errors = errors;
         throw boomError;
       }
 
