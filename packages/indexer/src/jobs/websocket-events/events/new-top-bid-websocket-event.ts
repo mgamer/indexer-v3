@@ -36,25 +36,8 @@ export class NewTopBidWebsocketEvent {
                      NULLIF(DATE_PART('epoch', UPPER(orders.valid_between)), 'Infinity'),
                      0
                    ) AS "valid_until",
-                (${criteriaBuildQuery}) AS criteria,
-                c.normalized_floor_sell_id AS floor_sell_id,
-                c.normalized_floor_sell_value AS floor_sell_value,
-                c.normalized_floor_sell_maker AS floor_sell_maker,
-                least(2147483647::NUMERIC, date_part('epoch', lower(c.normalized_floor_sell_valid_between)))::INT AS floor_sell_valid_from,
-                least(2147483647::NUMERIC, coalesce(nullif(date_part('epoch', upper(c.normalized_floor_sell_valid_between)), 'Infinity'),0))::INT AS floor_sell_valid_until,
-                c.normalized_floor_sell_source_id_int AS floor_sell_source_id_int,
-                floor_token.contract AS floor_sell_token_contract,
-                floor_token.token_id AS floor_sell_token_id,
-                floor_token.name AS floor_sell_token_name,
-                floor_token.image AS floor_sell_token_image,
-                orders.currency AS floor_sell_currency,
-                orders.currency_value AS floor_sell_currency_value
+                (${criteriaBuildQuery}) AS criteria
               FROM orders
-                JOIN collections c on orders.contract = c.contract
-                JOIN orders floor_order on orders.id = floor_sell_id
-                JOIN token_sets_tokens floor_token_sets ON floor_token_sets.token_set_id = floor_order.token_set_id
-                JOIN tokens floor_token ON floor_token.contract = floor_token_sets.contract AND floor_token.token_id = floor_token_sets.token_id
-
               WHERE orders.id = $/orderId/
               LIMIT 1
             `,
@@ -224,6 +207,7 @@ export class NewTopBidWebsocketEvent {
             least(2147483647::NUMERIC, coalesce(nullif(date_part('epoch', upper(collections.floor_sell_valid_between)), 'Infinity'),0))::INT AS floor_sell_valid_until,
             collections.floor_sell_source_id_int,`;
 
+      // TODO: lets see what we want to do with this
       // let floorAskSelectQueryFlagged = `
       //    collections.non_flagged_floor_sell_value AS floor_sell_value,
       //       collections.non_flagged_floor_sell_maker AS floor_sell_maker,
@@ -290,17 +274,8 @@ export class NewTopBidWebsocketEvent {
             SELECT kind FROM contracts WHERE contracts.address = collections.contract
           )  as contract_kind
         FROM collections
+        WHERE collections.contract = $/contract/
       `;
-
-      // Filtering
-
-      const conditions: string[] = [];
-
-      conditions.push(`collections.contract IN ($/contract:csv/)`);
-
-      if (conditions.length) {
-        baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
-      }
 
       baseQuery = `
         WITH x AS (${baseQuery})
@@ -328,6 +303,7 @@ export class NewTopBidWebsocketEvent {
       });
 
       const sources = await Sources.getInstance();
+
       const collections = await Promise.all(
         results.map(async (r) => {
           // Use default currencies for backwards compatibility with entries
@@ -441,8 +417,6 @@ export class NewTopBidWebsocketEvent {
           };
         })
       );
-
-      // Pagination
 
       return collections[0];
     } catch (error) {
