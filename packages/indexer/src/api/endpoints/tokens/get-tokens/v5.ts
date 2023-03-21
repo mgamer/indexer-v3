@@ -788,7 +788,7 @@ export const getTokensV5Options: RouteOptions = {
 
       // Sorting
 
-      const getSort = function (sortBy: string) {
+      const getSort = function (sortBy: string, union: boolean) {
         switch (sortBy) {
           case "rarity": {
             return ` ORDER BY rarity_rank ${
@@ -807,7 +807,7 @@ export const getTokensV5Options: RouteOptions = {
             const sortColumn = query.nativeSource
               ? `floor_sell_value`
               : query.normalizeRoyalties
-              ? `normalized_floor_sell_value`
+              ? `${union ? "" : "t."}normalized_floor_sell_value`
               : `floor_sell_value`;
 
             return ` ORDER BY ${sortColumn} ${
@@ -827,7 +827,7 @@ export const getTokensV5Options: RouteOptions = {
         query.rarity ||
         query.tokens
       ) {
-        baseQuery += getSort(query.sortBy);
+        baseQuery += getSort(query.sortBy, false);
       } else if (query.contract) {
         baseQuery += ` ORDER BY t.contract ${query.sortDirection || "ASC"}, t.token_id ${
           query.sortDirection || "ASC"
@@ -838,7 +838,7 @@ export const getTokensV5Options: RouteOptions = {
       if (query.collectionsSetId) {
         const collectionsSetQueries = [];
         const collections = await CollectionSets.getCollectionsIds(query.collectionsSetId);
-        const collectionsSetSort = getSort(query.sortBy);
+        const collectionsSetSort = getSort(query.sortBy, true);
 
         for (const i in collections) {
           (query as any)[`collection${i}`] = collections[i];
