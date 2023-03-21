@@ -838,31 +838,31 @@ export const getTokensV5Options: RouteOptions = {
 
       // Break query into UNION of each collectionId when filtering on collectionsSetId
       if (query.collectionsSetId) {
-        const unionQueries = [];
+        const collectionsSetQueries = [];
         const collections = await CollectionSets.getCollectionsIds(query.collectionsSetId);
-        const sortClause = getSort(query.sortBy, true);
+        const collectionsSetSort = getSort(query.sortBy, true);
 
-        for (const collection in collections) {
-          (query as any)[`collection_id_${collection}`] = collections[collection];
-          const conditionsClause =
+        for (const i in collections) {
+          (query as any)[`collection${i}`] = collections[i];
+          const collectionsSetConditions =
             " WHERE " +
-            [...conditions, `t.collection_id = $/collection_id_${collection}/`]
+            [...conditions, `t.collection_id = $/collection${i}/`]
               .map((c) => `(${c})`)
               .join(" AND ");
 
-          unionQueries.push(
+          collectionsSetQueries.push(
             `(
               ${baseQuery}
-              ${conditionsClause}
-              ${sortClause}
+              ${collectionsSetConditions}
+              ${collectionsSetSort}
               LIMIT $/limit/
             )`
           );
         }
 
         baseQuery = `
-          ${unionQueries.join(` UNION ALL `)}
-          ${sortClause}
+          ${collectionsSetQueries.join(` UNION ALL `)}
+          ${collectionsSetSort}
         `;
       }
 
