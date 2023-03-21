@@ -60,10 +60,6 @@ export class NewTopBidWebsocketEvent {
     const colllection = await NewTopBidWebsocketEvent.getCollection(order.contract);
 
     for (const ownersChunk of ownersChunks) {
-      const floor_ask_currency = order.floor_sell_currency
-        ? fromBuffer(order.floor_sell_currency)
-        : Sdk.Common.Addresses.Eth[config.chainId];
-
       payloads.push({
         order: {
           id: order.id,
@@ -105,32 +101,6 @@ export class NewTopBidWebsocketEvent {
             fromBuffer(order.currency)
           ),
           criteria: order.criteria,
-          floorAsk: {
-            id: order.floor_sell_id,
-            sourceDomain: order.get(order.floor_sell_source_id_int)?.domain,
-            price: order.floor_sell_id
-              ? await getJoiPriceObject(
-                  {
-                    gross: {
-                      amount: order.floor_sell_value,
-                      nativeAmount: order.floor_sell_value,
-                    },
-                  },
-                  floor_ask_currency
-                )
-              : null,
-            maker: order.floor_sell_maker ? fromBuffer(order.floor_sell_maker) : null,
-            validFrom: order.floor_sell_valid_from,
-            validUntil: order.floor_sell_value ? order.floor_sell_valid_until : null,
-            token: order.floor_sell_value && {
-              contract: order.floor_sell_token_contract
-                ? fromBuffer(order.floor_sell_token_contract)
-                : null,
-              tokenId: order.floor_sell_token_id,
-              name: order.floor_sell_token_name,
-              image: Assets.getLocalAssetsLink(order.floor_sell_token_image),
-            },
-          },
         },
         owners: ownersChunk,
         colllection: colllection,
