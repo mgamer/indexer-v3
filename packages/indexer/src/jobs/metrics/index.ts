@@ -7,10 +7,10 @@ import { ApiUsage } from "@/models/api-usage";
 if (config.doBackgroundWork) {
   // Every minute store metrics to long term DB
   cron.schedule(
-    "*/1 * * * *",
+    "*/5 * * * *",
     async () =>
       await redlock
-        .acquire(["record-metrics"], (60 - 5) * 1000)
+        .acquire(["record-metrics"], (60 * 5 - 5) * 1000)
         .then(async () => {
           const count = 200;
           let counts = [];
