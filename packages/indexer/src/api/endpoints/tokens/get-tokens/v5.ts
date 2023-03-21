@@ -782,41 +782,39 @@ export const getTokensV5Options: RouteOptions = {
         }
       }
 
-      if (conditions.length && !query.collectionsSetId) {
+      if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
 
       // Sorting
 
-      const getSort = function (sortBy: string, union: boolean) {
+      const getSort = function (sortBy: string) {
         switch (sortBy) {
           case "rarity": {
-            return ` ORDER BY ${union ? "" : "t."}rarity_rank ${
+            return ` ORDER BY rarity_rank ${
               query.sortDirection || "ASC"
-            } NULLS ${nullsPosition}, ${union ? "" : "t."}contract ${
+            } NULLS ${nullsPosition}, contract ${query.sortDirection || "ASC"}, token_id ${
               query.sortDirection || "ASC"
-            }, ${union ? "" : "t."}token_id ${query.sortDirection || "ASC"}`;
+            }`;
           }
-
           case "tokenId": {
-            return ` ORDER BY ${union ? "" : "t."}contract ${query.sortDirection || "ASC"}, ${
-              union ? "" : "t."
-            }token_id ${query.sortDirection || "ASC"}`;
+            return ` ORDER BY contract ${query.sortDirection || "ASC"}, token_id ${
+              query.sortDirection || "ASC"
+            }`;
           }
-
           case "floorAskPrice":
           default: {
             const sortColumn = query.nativeSource
-              ? `${union ? "" : "s."}floor_sell_value`
+              ? `floor_sell_value`
               : query.normalizeRoyalties
-              ? `${union ? "" : "t."}normalized_floor_sell_value`
-              : `${union ? "" : "t."}floor_sell_value`;
+              ? `normalized_floor_sell_value`
+              : `floor_sell_value`;
 
             return ` ORDER BY ${sortColumn} ${
               query.sortDirection || "ASC"
-            } NULLS ${nullsPosition}, ${union ? "" : "t."}contract ${
+            } NULLS ${nullsPosition}, contract ${query.sortDirection || "ASC"}, token_id ${
               query.sortDirection || "ASC"
-            }, ${union ? "" : "t."}token_id ${query.sortDirection || "ASC"}`;
+            }`;
           }
         }
       };
@@ -829,31 +827,25 @@ export const getTokensV5Options: RouteOptions = {
         query.rarity ||
         query.tokens
       ) {
-        baseQuery += getSort(query.sortBy, false);
+        baseQuery += getSort(query.sortBy);
       } else if (query.contract) {
         baseQuery += ` ORDER BY t.contract ${query.sortDirection || "ASC"}, t.token_id ${
           query.sortDirection || "ASC"
         }`;
       }
 
-      // Break query into UNION of each collectionId when filtering on collectionsSetId
+      // Break query into UNION of results for each collectionId when filtering on collectionsSetId
       if (query.collectionsSetId) {
         const collectionsSetQueries = [];
         const collections = await CollectionSets.getCollectionsIds(query.collectionsSetId);
-        const collectionsSetSort = getSort(query.sortBy, true);
+        const collectionsSetSort = getSort(query.sortBy);
 
         for (const i in collections) {
           (query as any)[`collection${i}`] = collections[i];
-          const collectionsSetConditions =
-            " WHERE " +
-            [...conditions, `t.collection_id = $/collection${i}/`]
-              .map((c) => `(${c})`)
-              .join(" AND ");
-
           collectionsSetQueries.push(
             `(
               ${baseQuery}
-              ${collectionsSetConditions}
+              AND t.collection_id = $/collection${i}/
               ${collectionsSetSort}
               LIMIT $/limit/
             )`
