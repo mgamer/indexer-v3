@@ -3,7 +3,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import * as SeaportPermit from "@reservoir0x/sdk/dist/router/v6/permits/seaport";
-import { BidDetails } from "@reservoir0x/sdk/dist/router/v6/types";
+import { BidDetails, FillBidsResult } from "@reservoir0x/sdk/dist/router/v6/types";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
@@ -14,7 +14,7 @@ import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/util
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { Sources } from "@/models/sources";
-import { OrderKind, generateBidDetailsV6, routerOnUpstreamError } from "@/orderbook/orders";
+import { OrderKind, generateBidDetailsV6, routerOnRecoverableError } from "@/orderbook/orders";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as nftx from "@/orderbook/orders/nftx";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
@@ -120,6 +120,12 @@ export const getExecuteSellV7Options: RouteOptions = {
               })
             )
             .required(),
+        })
+      ),
+      errors: Joi.array().items(
+        Joi.object({
+          message: Joi.string(),
+          orderId: Joi.number(),
         })
       ),
       path: Joi.array().items(
@@ -695,16 +701,31 @@ export const getExecuteSellV7Options: RouteOptions = {
 
       const { customTokenAddresses } = getNetworkSettings();
       const forcePermit = customTokenAddresses.includes(bidDetails[0].contract);
-      const { txData, success, approvals, permits } = await router.fillBidsTx(
-        bidDetails,
-        payload.taker,
-        {
+
+      const errors: { orderId: string; message: string }[] = [];
+
+      let result: FillBidsResult;
+      try {
+        result = await router.fillBidsTx(bidDetails, payload.taker, {
           source: payload.source,
           partial: payload.partial,
           forcePermit,
-          onUpstreamError: routerOnUpstreamError,
-        }
-      );
+          onRecoverableError: async (kind, error, data) => {
+            errors.push({
+              orderId: data.orderId,
+              message: error.response?.data ?? error.message,
+            });
+            await routerOnRecoverableError(kind, error, data);
+          },
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        const boomError = Boom.badRequest(error.message);
+        boomError.output.payload.errors = errors;
+        throw boomError;
+      }
+
+      const { txData, approvals, permits, success } = result;
 
       // Filter out any non-fillable orders from the path
       path = path.filter((_, i) => success[i]);
@@ -800,6 +821,7 @@ export const getExecuteSellV7Options: RouteOptions = {
 
       return {
         steps,
+        errors,
         path,
       };
     } catch (error) {

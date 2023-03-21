@@ -4,7 +4,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
-import { ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
+import { FillListingsResult, ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
 import axios from "axios";
 import Joi from "joi";
 
@@ -15,7 +15,7 @@ import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
-import { OrderKind, generateListingDetailsV6, routerOnUpstreamError } from "@/orderbook/orders";
+import { OrderKind, generateListingDetailsV6, routerOnRecoverableError } from "@/orderbook/orders";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
 import * as nftx from "@/orderbook/orders/nftx";
@@ -144,6 +144,12 @@ export const getExecuteBuyV6Options: RouteOptions = {
               })
             )
             .required(),
+        })
+      ),
+      errors: Joi.array().items(
+        Joi.object({
+          message: Joi.string(),
+          orderId: Joi.number(),
         })
       ),
       path: Joi.array().items(
@@ -787,11 +793,12 @@ export const getExecuteBuyV6Options: RouteOptions = {
         cbApiKey: config.cbApiKey,
         orderFetcherApiKey: config.orderFetcherApiKey,
       });
-      const { txs, success } = await router.fillListingsTx(
-        listingDetails,
-        payload.taker,
-        buyInCurrency,
-        {
+
+      const errors: { orderId: string; message: string }[] = [];
+
+      let result: FillListingsResult;
+      try {
+        result = await router.fillListingsTx(listingDetails, payload.taker, buyInCurrency, {
           source: payload.source,
           // TODO: Add support for buying any listing via any ERC20 token
           globalFees: buyInCurrency === Sdk.Common.Addresses.Eth[config.chainId] ? feesOnTop : [],
@@ -805,9 +812,22 @@ export const getExecuteBuyV6Options: RouteOptions = {
           },
           relayer: payload.relayer,
           blurAuth,
-          onUpstreamError: routerOnUpstreamError,
-        }
-      );
+          onRecoverableError: async (kind, error, data) => {
+            errors.push({
+              orderId: data.orderId,
+              message: error.response?.data ?? error.message,
+            });
+            await routerOnRecoverableError(kind, error, data);
+          },
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        const boomError = Boom.badRequest(error.message);
+        boomError.output.payload.errors = errors;
+        throw boomError;
+      }
+
+      const { txs, success } = result;
 
       const taker = payload.taker;
       const relayer = payload.relayer;
@@ -886,11 +906,19 @@ export const getExecuteBuyV6Options: RouteOptions = {
 
       return {
         steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
+        errors,
         // Remove any unsuccessfully handled listings from the path
         path: path.filter((_, i) => success[i]),
       };
     } catch (error) {
-      logger.error(`get-execute-buy-${version}-handler`, `Handler failure: ${error}`);
+      if (!(error instanceof Boom.Boom)) {
+        logger.error(
+          `get-execute-buy-${version}-handler`,
+          `Handler failure: ${error} (path = ${JSON.stringify({})}, request = ${JSON.stringify(
+            payload
+          )})`
+        );
+      }
       throw error;
     }
   },
