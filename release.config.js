@@ -1,7 +1,10 @@
 // sequential number 103
 module.exports = {
   "dryRun": false,
-  "branches": ["main", "development"],
+  "branches": [
+    "main",
+    { name: "development", channel: "dev", prerelease: "dev" },
+  ],
   "plugins": [
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
@@ -13,7 +16,7 @@ module.exports = {
     ],
     ["@semantic-release/npm", {
       "npmPublish": false,
-      "pkgRoot": "packages/indexer/"
+      "pkgRoot": "packages/indexer/",
     }],
     // "@semantic-release/github",
     [
