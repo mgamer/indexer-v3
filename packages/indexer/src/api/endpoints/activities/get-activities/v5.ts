@@ -100,7 +100,7 @@ export const getActivityV5Options: RouteOptions = {
           tokenId: activity.tokenId,
           fromAddress: activity.fromAddress,
           toAddress: activity.toAddress,
-          price: activity.order
+          price: activity.order?.currency
             ? await getJoiPriceObject(
                 {
                   gross: {
