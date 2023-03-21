@@ -24,36 +24,32 @@ export const getExecuteCancelV3Options: RouteOptions = {
   },
   validate: {
     payload: Joi.object({
-      params: Joi.alternatives().try(
-        Joi.object({
-          kind: "orderIds",
-          data: {
-            orderIds: Joi.array().items(Joi.string()).min(1).required(),
-          },
-        }),
-        Joi.object({
-          kind: "token",
-          data: {
-            maker: Joi.string().pattern(regex.address).required(),
-            orderKind: Joi.string().required(),
-            token: Joi.string().pattern(regex.token).required(),
-          },
-        }),
-        Joi.object({
-          kind: "maker",
-          data: {
-            orderKind: Joi.string().required(),
-            maker: Joi.string().pattern(regex.address).required(),
-          },
-        })
-      ),
+      orderIds: Joi.array().items(Joi.string()).min(1).optional(),
+      maker: Joi.string().pattern(regex.address).optional(),
+      orderKind: Joi.string()
+        .valid([
+          "seaport",
+          "seaport-v1.4",
+          "looks-rare",
+          "zeroex-v4-erc721",
+          "zeroex-v4-erc1155",
+          "universe",
+          "rarible",
+          "infinity",
+          "flow",
+        ])
+        .optional(),
+      token: Joi.string().pattern(regex.token).optional(),
       maxFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional. Set custom gas price"),
       maxPriorityFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional. Set custom gas price"),
-    }),
+    })
+      .oxor("orderIds")
+      .with("token", ["orderKind", "maker"])
+      .with("maker", ["orderKind"]),
   },
   response: {
     schema: Joi.object({
@@ -81,12 +77,10 @@ export const getExecuteCancelV3Options: RouteOptions = {
     },
   },
   handler: async (request: Request) => {
-    const payload = request.payload as any;
-    const params = payload.params;
-    const actionData = params.data;
+    const actionData = request.payload as any;
 
     // Cancel by maker
-    if (params.kind === "maker") {
+    if (actionData.maker && !actionData.token) {
       let cancelTx: TxData;
       const maker = actionData.maker;
 
@@ -121,11 +115,11 @@ export const getExecuteCancelV3Options: RouteOptions = {
                 status: "incomplete",
                 data: {
                   ...cancelTx,
-                  maxFeePerGas: payload.maxFeePerGas
-                    ? bn(payload.maxFeePerGas).toHexString()
+                  maxFeePerGas: actionData.maxFeePerGas
+                    ? bn(actionData.maxFeePerGas).toHexString()
                     : undefined,
-                  maxPriorityFeePerGas: payload.maxPriorityFeePerGas
-                    ? bn(payload.maxPriorityFeePerGas).toHexString()
+                  maxPriorityFeePerGas: actionData.maxPriorityFeePerGas
+                    ? bn(actionData.maxPriorityFeePerGas).toHexString()
                     : undefined,
                 },
                 orderIndex: 0,
@@ -139,10 +133,9 @@ export const getExecuteCancelV3Options: RouteOptions = {
     // Cancel by tokenId or multile orderIds
     try {
       // Fetch the orders to get cancelled
-      const orderResults =
-        params.kind === "token"
-          ? await redb.manyOrNone(
-              `
+      const orderResults = actionData.token
+        ? await redb.manyOrNone(
+            `
               SELECT
                 orders.id,
                 orders.kind,
@@ -155,15 +148,15 @@ export const getExecuteCancelV3Options: RouteOptions = {
               AND kind = $/order_kind/
               AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
             `,
-              {
-                side: "sell",
-                token_set_id: `token:${actionData.token}`,
-                maker: toBuffer(actionData.maker),
-                order_kind: actionData.orderKind,
-              }
-            )
-          : await redb.manyOrNone(
-              `
+            {
+              side: "sell",
+              token_set_id: `token:${actionData.token}`,
+              maker: toBuffer(actionData.maker),
+              order_kind: actionData.orderKind,
+            }
+          )
+        : await redb.manyOrNone(
+            `
               SELECT
                 orders.id,
                 orders.kind,
@@ -173,8 +166,8 @@ export const getExecuteCancelV3Options: RouteOptions = {
               WHERE orders.id IN ($/id:csv/)
                 AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
             `,
-              { id: actionData.orderIds }
-            );
+            { id: actionData.orderIds }
+          );
 
       // Return early in case no order was found
       if (!orderResults.length) {
@@ -296,11 +289,11 @@ export const getExecuteCancelV3Options: RouteOptions = {
                 status: "incomplete",
                 data: {
                   ...cancelTx,
-                  maxFeePerGas: payload.maxFeePerGas
-                    ? bn(payload.maxFeePerGas).toHexString()
+                  maxFeePerGas: actionData.maxFeePerGas
+                    ? bn(actionData.maxFeePerGas).toHexString()
                     : undefined,
-                  maxPriorityFeePerGas: payload.maxPriorityFeePerGas
-                    ? bn(payload.maxPriorityFeePerGas).toHexString()
+                  maxPriorityFeePerGas: actionData.maxPriorityFeePerGas
+                    ? bn(actionData.maxPriorityFeePerGas).toHexString()
                     : undefined,
                 },
                 orderIndex: 0,
