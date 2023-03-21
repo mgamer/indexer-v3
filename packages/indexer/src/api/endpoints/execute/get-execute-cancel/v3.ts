@@ -47,9 +47,8 @@ export const getExecuteCancelV3Options: RouteOptions = {
         .pattern(regex.number)
         .description("Optional. Set custom gas price"),
     })
-      .oxor("orderIds")
-      .with("token", ["orderKind", "maker"])
-      .with("maker", ["orderKind"]),
+      .oxor("orderIds", "token")
+      .or("orderIds", "token", "maker", "orderKind"),
   },
   response: {
     schema: Joi.object({
