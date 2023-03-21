@@ -512,6 +512,7 @@ export class Router {
             data: string;
             value: string;
             path: { contract: string; tokenId: string }[];
+            errors: { tokenId: string; reason: string }[];
           };
         } = await axios
           .get(url, {
@@ -521,14 +522,29 @@ export class Router {
           })
           .then((response) => response.data.calldata);
 
-        for (const data of Object.values(result)) {
+        for (const [contract, data] of Object.entries(result)) {
           const successfulBlurCompatibleListings: ListingDetailsExtracted[] = [];
-          for (const { contract, tokenId } of data.path) {
+          for (const { tokenId } of data.path) {
             const listing = blurCompatibleListings.find(
               (d) => d.contract === contract && d.tokenId === tokenId
             );
             if (listing) {
               successfulBlurCompatibleListings.push(listing);
+            }
+          }
+
+          // Expose errors
+          for (const { tokenId, reason } of data.errors) {
+            if (options?.onRecoverableError) {
+              const listing = blurCompatibleListings.find(
+                (d) => d.contract === contract && d.tokenId === tokenId
+              );
+              if (listing) {
+                await options.onRecoverableError("order-fetcher-blur-listings", new Error(reason), {
+                  orderId: listing.orderId,
+                  additionalInfo: { detail: listing, taker, url },
+                });
+              }
             }
           }
 
