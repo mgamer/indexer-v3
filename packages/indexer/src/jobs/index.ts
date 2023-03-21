@@ -97,7 +97,9 @@ import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
 import * as updateNftBalanceFloorAskPrice from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
 import * as updateNftBalanceTopBid from "@/jobs/nft-balance-updates/update-top-bid-queue";
 
-import * as orderFixes from "@/jobs/order-fixes/queue";
+import * as orderFixes from "@/jobs/order-fixes/fixes";
+import * as orderRevalidations from "@/jobs/order-fixes/revalidations";
+
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as bundleOrderUpdatesByMaker from "@/jobs/order-updates/by-maker-bundle-queue";
@@ -217,6 +219,8 @@ export const allJobQueues = [
   updateNftBalanceTopBid.queue,
 
   orderFixes.queue,
+  orderRevalidations.queue,
+
   orderUpdatesById.queue,
   orderUpdatesByMaker.queue,
   bundleOrderUpdatesByMaker.queue,

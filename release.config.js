@@ -1,6 +1,10 @@
+// sequential number 103
 module.exports = {
   "dryRun": false,
-  "branches": ["main", "development"],
+  "branches": [
+    "main",
+    { name: "development", channel: "dev", prerelease: "dev" },
+  ],
   "plugins": [
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
@@ -10,17 +14,19 @@ module.exports = {
         "changelogFile": "docs/CHANGELOG.md"
       }
     ],
-    // "@semantic-release/npm",
+    ["@semantic-release/npm", {
+      "npmPublish": false,
+      "pkgRoot": "packages/indexer/",
+    }],
     // "@semantic-release/github",
     [
       "@semantic-release/git",
       {
         "assets": [
           "docs/CHANGELOG.md",
-          "package.json",
-          "package-lock.json"
+          "packages/indexer/package.json",
         ],
-        "message": "chore(release): update changelogs for ${nextRelease.version} [skip ci]"
+        "message": "chore(release): update changelogs for ${nextRelease.version} [skip release][skip ci]"
       }
     ]
   ]

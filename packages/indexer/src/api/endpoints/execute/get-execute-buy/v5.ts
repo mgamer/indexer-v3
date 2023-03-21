@@ -13,8 +13,7 @@ import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
-import { OrderKind } from "@/orderbook/orders";
-import { generateListingDetailsV6 } from "@/orderbook/orders";
+import { OrderKind, generateListingDetailsV6 } from "@/orderbook/orders";
 import { getCurrency } from "@/utils/currencies";
 
 const version = "v5";

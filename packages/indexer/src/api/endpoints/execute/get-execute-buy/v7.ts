@@ -3,7 +3,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import * as Permit2 from "@reservoir0x/sdk/dist/router/v6/permits/permit2";
-import { ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
+import { FillListingsResult, ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
 import axios from "axios";
 import Joi from "joi";
 
@@ -14,7 +14,7 @@ import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
-import { OrderKind, generateListingDetailsV6 } from "@/orderbook/orders";
+import { OrderKind, generateListingDetailsV6, routerOnRecoverableError } from "@/orderbook/orders";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as nftx from "@/orderbook/orders/nftx";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
@@ -146,6 +146,12 @@ export const getExecuteBuyV7Options: RouteOptions = {
               })
             )
             .required(),
+        })
+      ),
+      errors: Joi.array().items(
+        Joi.object({
+          message: Joi.string(),
+          orderId: Joi.number(),
         })
       ),
       path: Joi.array().items(
@@ -717,11 +723,12 @@ export const getExecuteBuyV7Options: RouteOptions = {
         cbApiKey: config.cbApiKey,
         orderFetcherApiKey: config.orderFetcherApiKey,
       });
-      const { txs, success } = await router.fillListingsTx(
-        listingDetails,
-        payload.taker,
-        buyInCurrency,
-        {
+
+      const errors: { orderId: string; message: string }[] = [];
+
+      let result: FillListingsResult;
+      try {
+        result = await router.fillListingsTx(listingDetails, payload.taker, buyInCurrency, {
           source: payload.source,
           partial: payload.partial,
           forceRouter: payload.forceRouter,
@@ -732,8 +739,22 @@ export const getExecuteBuyV7Options: RouteOptions = {
             conduitKey: Sdk.Seaport.Addresses.OpenseaConduitKey[config.chainId],
           },
           blurAuth,
-        }
-      );
+          onRecoverableError: async (kind, error, data) => {
+            errors.push({
+              orderId: data.orderId,
+              message: error.response?.data ?? error.message,
+            });
+            await routerOnRecoverableError(kind, error, data);
+          },
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        const boomError = Boom.badRequest(error.message);
+        boomError.output.payload.errors = errors;
+        throw boomError;
+      }
+
+      const { txs, success } = result;
 
       // Filter out any non-fillable orders from the path
       path = path.filter((_, i) => success[i]);

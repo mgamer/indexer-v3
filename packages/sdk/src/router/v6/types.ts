@@ -154,6 +154,7 @@ export type GenericOrder =
 
 // Basic details for filling listings
 export type ListingFillDetails = {
+  orderId: string;
   contractKind: "erc721" | "erc1155";
   contract: string;
   tokenId: string;
@@ -177,10 +178,21 @@ export type PerCurrencyListingDetailsExtracted = {
   [currency: string]: ListingDetailsExtracted[];
 };
 
+export type FillListingsResult = {
+  txs: {
+    approvals: FTApproval[];
+    permits: FTPermit[];
+    txData: TxData;
+    orderIndexes: number[];
+  }[];
+  success: boolean[];
+};
+
 // Bids
 
 // Basic details for filling bids
 export type BidFillDetails = {
+  orderId: string;
   contractKind: "erc721" | "erc1155";
   contract: string;
   tokenId: string;
@@ -191,9 +203,17 @@ export type BidFillDetails = {
   extraArgs?: any;
   // Relevant for partial Seaport orders
   owner?: string;
+  isProtected?: boolean;
   fees?: Fee[];
 };
 export type BidDetails = GenericOrder & BidFillDetails;
+
+export type FillBidsResult = {
+  txData: TxData;
+  approvals: NFTApproval[];
+  permits: NFTPermit[];
+  success: boolean[];
+};
 
 // Swaps
 

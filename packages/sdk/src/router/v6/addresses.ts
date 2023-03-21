@@ -8,6 +8,7 @@ export const Router: ChainIdToAddress = {
   [Network.EthereumGoerli]: "0xb35d22a4553ab9d2b85e2a606cbae55f844df50c",
   [Network.Polygon]: "0x819327e005a3ed85f7b634e195b8f25d4a2a45f8",
   [Network.Optimism]: "0xc0f489a34672d5b960a19279d99d77e94221d0c9",
+  [Network.Arbitrum]: "0xb69d7a3c1d9aa9da38ae3e088f60eb6cf7df6a26",
 };
 
 // Utility modules
@@ -51,6 +52,7 @@ export const SeaportV14Module: ChainIdToAddress = {
   [Network.EthereumGoerli]: "0x9ec973b9471fd632aee6d67e0c74855d115bdbad",
   [Network.Polygon]: "0xe37fc9756307dc29767f7952664d9f81b00c07b6",
   [Network.Optimism]: "0x955a3019b4662dcb68d6cc71f198faf1f64c1bf9",
+  [Network.Arbitrum]: "0xc1638f6c68296a767f4f5fb4bc8b73d17a6a504b",
 };
 
 export const SudoswapModule: ChainIdToAddress = {

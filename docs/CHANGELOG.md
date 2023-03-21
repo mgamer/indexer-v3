@@ -1,3 +1,162 @@
+# [5.277.0](https://github.com/reservoirprotocol/indexer/compare/v5.276.1...v5.277.0) (2023-03-21)
+
+
+### Bug Fixes
+
+* early stop for opensea protected offers ([998cccc](https://github.com/reservoirprotocol/indexer/commit/998cccc02dadbd3cc6038418f14da31d13de1b9f))
+* expose blur errors ([36781ef](https://github.com/reservoirprotocol/indexer/commit/36781ef144f38c0d8ec2dbafe63dd6e020ff0f64))
+* fix bracket ([fe2de54](https://github.com/reservoirprotocol/indexer/commit/fe2de54c41777235db578a9ce4ba28ba234c15be))
+* fix redundant ordering logic ([f4bbc4b](https://github.com/reservoirprotocol/indexer/commit/f4bbc4b6d5cde7021c0cbe444afa99d3ec68dc42))
+* properly expose errors in the buy and sell apis ([bec2ee9](https://github.com/reservoirprotocol/indexer/commit/bec2ee9ecbdf8321c050bc92d69320beb7f74f14))
+* refactor params ([1d985ce](https://github.com/reservoirprotocol/indexer/commit/1d985ce679c4ef304f865d6478962bf0f52adbeb))
+* refactor params ([42a00f8](https://github.com/reservoirprotocol/indexer/commit/42a00f8420cb9a7d69d2021514eafe3bf90b2b99))
+* refactor params ([4fefefd](https://github.com/reservoirprotocol/indexer/commit/4fefefde703b18fd651608719c468c4d175f12a2))
+* semantic-release config ([e852b64](https://github.com/reservoirprotocol/indexer/commit/e852b645e7a32d22841634431f0914a431b1b6b6))
+
+
+### Features
+
+* add contract to fill event price index ([1a1a31f](https://github.com/reservoirprotocol/indexer/commit/1a1a31f6b17f7316ccef9c5addcc55578cc51822))
+* add fill_events_2_contract_price_index to original migration ([e2ad14b](https://github.com/reservoirprotocol/indexer/commit/e2ad14b65194be4a63871a76ed302c27e3eee4a0))
+* add price logic for continuation ([733874c](https://github.com/reservoirprotocol/indexer/commit/733874c71507b91c7c5b832056923f850714c222))
+* add sale price index migration ([af710ec](https://github.com/reservoirprotocol/indexer/commit/af710eca2f9539ed006f2a6a045d8df7781ab252))
+* add sorting by time/price to sales v4 ([f1709fb](https://github.com/reservoirprotocol/indexer/commit/f1709fbeba85d1311804c0ba872e26e87e9a0e73))
+* better exposure of filling errors ([b914422](https://github.com/reservoirprotocol/indexer/commit/b9144228d048ecf096522b8a290362ae58c2d98e))
+
+## [5.276.1](https://github.com/reservoirprotocol/indexer/compare/v5.276.0...v5.276.1) (2023-03-21)
+
+
+### Bug Fixes
+
+* fix order source ([#3699](https://github.com/reservoirprotocol/indexer/issues/3699)) ([627bb78](https://github.com/reservoirprotocol/indexer/commit/627bb785d8eb88390ae97d8f327b36801a48c701))
+
+# [5.276.0](https://github.com/reservoirprotocol/indexer/compare/v5.275.1...v5.276.0) (2023-03-20)
+
+
+### Features
+
+* collect ip from tracer client ([dfd1f25](https://github.com/reservoirprotocol/indexer/commit/dfd1f2571542ac3cdda83fa0a828c7f66ea2012b))
+
+## [5.275.1](https://github.com/reservoirprotocol/indexer/compare/v5.275.0...v5.275.1) (2023-03-20)
+
+
+### Bug Fixes
+
+* fix getCollectionActivities call from < v4 collection eps ([8d3f6dc](https://github.com/reservoirprotocol/indexer/commit/8d3f6dc99c130d7be4846f3f74befa00886fdb39))
+
+# [5.275.0](https://github.com/reservoirprotocol/indexer/compare/v5.274.0...v5.275.0) (2023-03-20)
+
+
+### Bug Fixes
+
+* add user tokens and check for currency ([a5a012e](https://github.com/reservoirprotocol/indexer/commit/a5a012e0d7875239fce7e854ea99cfa30eb27835))
+* cleanup sale object to match across APIs ([6709480](https://github.com/reservoirprotocol/indexer/commit/67094807488e9073e2e068cd028c08bbfa0d9279))
+* continue standardization of JoiSale object ([80eaa5d](https://github.com/reservoirprotocol/indexer/commit/80eaa5dabf01e2e6222ef3a3c35d01f3c6781d9c))
+* don't use normalized values for lastSale ([6d04ccf](https://github.com/reservoirprotocol/indexer/commit/6d04ccfa440aee124a8ec8a2ef3877b29eeaeb13))
+* eslint any warning ([415dfe7](https://github.com/reservoirprotocol/indexer/commit/415dfe7a929333047be2f4a42a9d57ceacfd535b))
+* fix build ([59d4876](https://github.com/reservoirprotocol/indexer/commit/59d487699d467ae86ddac2dd0947778ea9866459))
+* fully abstract sales response as JoiSale ([dc1ab26](https://github.com/reservoirprotocol/indexer/commit/dc1ab267a52d52f53cbb7f3762bbe4d5ce533356))
+* merge user-tokens change from [#3641](https://github.com/reservoirprotocol/indexer/issues/3641) to v7 ([24c1854](https://github.com/reservoirprotocol/indexer/commit/24c18540e4ad2ac975636e5489099e03b50f80f5))
+* remove unnecessary join from users tokens ([5b0c969](https://github.com/reservoirprotocol/indexer/commit/5b0c9698883a5fc3520a9dd62fe06822efb1871b))
+* simplify lastSale response to match sales API ([190d886](https://github.com/reservoirprotocol/indexer/commit/190d886e1ac2e056f60c9144f8df2a8e79740576))
+* standardize functions to get fee values ([ca7f7a9](https://github.com/reservoirprotocol/indexer/commit/ca7f7a9fb82f7e05621070ed2dbcd45fd58bf2bc))
+
+
+### Features
+
+* add JoiSaleObject ([16b893b](https://github.com/reservoirprotocol/indexer/commit/16b893bbe52c22e41120d8a36b8e13bcf65b1ade))
+* add tokens/v6 to merge lastSell and lastBuy and include full royalty data ([84349d8](https://github.com/reservoirprotocol/indexer/commit/84349d832c812c4a2828740fe2bf6cedb08c1b4c))
+* add user-tokens v7 to support includeLastSale with royalty breakdown ([456f05e](https://github.com/reservoirprotocol/indexer/commit/456f05e64a044f48ec23815007104f14efef5f39))
+* return full lastSale data ([6f2fe46](https://github.com/reservoirprotocol/indexer/commit/6f2fe461d01ac8c04a03d619038cd52f4964d0d3))
+
+# [5.274.0](https://github.com/reservoirprotocol/indexer/compare/v5.273.0...v5.274.0) (2023-03-20)
+
+
+### Bug Fixes
+
+* remove v6, make changes to v5 ([6ab8e73](https://github.com/reservoirprotocol/indexer/commit/6ab8e7335aa796d7b954d977d2a09aa05a5c1259))
+
+
+### Features
+
+* add attributes filtering to collections activity (v6) ([0b91ec7](https://github.com/reservoirprotocol/indexer/commit/0b91ec7bd3f604d405f233c6fdcc296103e9e018))
+
+# [5.273.0](https://github.com/reservoirprotocol/indexer/compare/v5.272.2...v5.273.0) (2023-03-20)
+
+
+### Bug Fixes
+
+* test trigger pipeline ([5c8f0d9](https://github.com/reservoirprotocol/indexer/commit/5c8f0d9eb0344b2de11de86e82ee0ad61992b46c))
+
+
+### Features
+
+* added trait offers support ([#3691](https://github.com/reservoirprotocol/indexer/issues/3691)) ([e849d5d](https://github.com/reservoirprotocol/indexer/commit/e849d5dd3035ce96beb8497abb0f95d496e9537a))
+
+## [5.272.2](https://github.com/reservoirprotocol/indexer/compare/v5.272.1...v5.272.2) (2023-03-20)
+
+
+### Bug Fixes
+
+* test trigger pipeline ([6be8453](https://github.com/reservoirprotocol/indexer/commit/6be8453806f5ad9beb26a8f85bbf659a2929de6b))
+
+## [5.272.1](https://github.com/reservoirprotocol/indexer/compare/v5.272.0...v5.272.1) (2023-03-20)
+
+
+### Bug Fixes
+
+* pipeline ([b19a430](https://github.com/reservoirprotocol/indexer/commit/b19a430abc8ba318622743f84b93d2c618262845))
+
+# [5.270.0](https://github.com/reservoirprotocol/indexer/compare/v5.269.1...v5.270.0) (2023-03-20)
+
+
+### Features
+
+* automatically update package.json version ([f9e4c94](https://github.com/reservoirprotocol/indexer/commit/f9e4c9409a0c162889fb6c1e37202391dc9941d5))
+
+## [5.269.1](https://github.com/reservoirprotocol/indexer/compare/v5.269.0...v5.269.1) (2023-03-20)
+
+
+### Bug Fixes
+
+* opensea direct offer acceptance ([92c1ed0](https://github.com/reservoirprotocol/indexer/commit/92c1ed0536e024d8930fc55a75ce898bf7d0dbf0))
+
+# [5.269.0](https://github.com/reservoirprotocol/indexer/compare/v5.268.0...v5.269.0) (2023-03-20)
+
+
+### Bug Fixes
+
+* refactor params ([d7fd841](https://github.com/reservoirprotocol/indexer/commit/d7fd841524d2d797e4273db83246169616a0c94e))
+* refactor params ([cbf8089](https://github.com/reservoirprotocol/indexer/commit/cbf8089642d18e0a9f44ac36affa9f2df926e8f9))
+* refactor params ([6602087](https://github.com/reservoirprotocol/indexer/commit/6602087f6f4deea9454affc2082a09e8608b292a))
+
+
+### Features
+
+* bulk cancel ([1c8fc33](https://github.com/reservoirprotocol/indexer/commit/1c8fc336b17d4ddf36b3315bda378e9a5e8f7e32))
+* support bulk cancel ([144d52f](https://github.com/reservoirprotocol/indexer/commit/144d52f63a29c0a9ff52612d76b632258e84e4cc))
+
+# [5.268.0](https://github.com/reservoirprotocol/indexer/compare/v5.267.0...v5.268.0) (2023-03-20)
+
+
+### Features
+
+* automatically update package.json version ([9def28e](https://github.com/reservoirprotocol/indexer/commit/9def28e1b9859efcfc2bfaec8b75736cc6e678c5))
+
+# [5.267.0](https://github.com/reservoirprotocol/indexer/compare/v5.266.0...v5.267.0) (2023-03-20)
+
+
+### Features
+
+* better data in order fetcher callbacks ([74f86c9](https://github.com/reservoirprotocol/indexer/commit/74f86c9557a9cd3fe71ab57f2180b3e79805b7f1))
+
+# [5.266.0](https://github.com/reservoirprotocol/indexer/compare/v5.265.0...v5.266.0) (2023-03-20)
+
+
+### Features
+
+* semantic version ([ff6f39e](https://github.com/reservoirprotocol/indexer/commit/ff6f39e4028d28503f769fdd267a1aad4c00537a))
+
 ## [5.262.4](https://github.com/reservoirprotocol/indexer/compare/v5.262.3...v5.262.4) (2023-03-17)
 
 

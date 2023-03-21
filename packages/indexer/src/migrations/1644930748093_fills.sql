@@ -54,6 +54,9 @@ CREATE INDEX "fill_events_2_created_at_tx_hash_index"
 CREATE INDEX "fill_events_2_maker_taker_contract"
   ON "fill_events_2" ("maker", "taker", "contract");
 
+CREATE INDEX "fill_events_2_contract_price_index"
+  ON "fill_events_2" ("contract", "price");
+
 -- Down Migration
 
 DROP TABLE "fill_events_2";

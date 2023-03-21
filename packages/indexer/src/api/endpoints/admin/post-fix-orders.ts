@@ -7,7 +7,7 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import { regex } from "@/common/utils";
 import { config } from "@/config/index";
-import * as orderFixes from "@/jobs/order-fixes/queue";
+import * as orderFixes from "@/jobs/order-fixes/fixes";
 
 export const postFixOrdersOptions: RouteOptions = {
   description: "Trigger fixing any order inconsistencies.",

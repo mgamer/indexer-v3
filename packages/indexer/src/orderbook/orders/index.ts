@@ -28,9 +28,12 @@ import * as SdkTypesV5 from "@reservoir0x/sdk/dist/router/v5/types";
 import * as SdkTypesV6 from "@reservoir0x/sdk/dist/router/v6/types";
 
 import { idb } from "@/common/db";
+import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
+
+import * as orderRevalidations from "@/jobs/order-fixes/revalidations";
 
 // Whenever a new order kind is added, make sure to also include an
 // entry/implementation in the below types/methods in order to have
@@ -182,6 +185,25 @@ export const getOrderSourceByOrderKind = async (
   // In case nothing matched, return `undefined` by default
 };
 
+export const routerOnRecoverableError = async (
+  kind: string,
+  error: any,
+  data: {
+    orderId: string;
+    additionalInfo: any;
+  }
+) => {
+  if (error.response?.status === 404) {
+    // Invalidate the order
+    await orderRevalidations.addToQueue([{ id: data.orderId, status: "inactive" }]);
+  }
+
+  logger.warn(
+    "router-on-recoverable-error",
+    JSON.stringify({ kind, status: error.response?.status, error: error.response?.data, data })
+  );
+};
+
 // Support for filling listings
 export const generateListingDetailsV6 = (
   order: {
@@ -203,6 +225,7 @@ export const generateListingDetailsV6 = (
   }
 ): SdkTypesV6.ListingDetails => {
   const common = {
+    orderId: order.id,
     contractKind: token.kind,
     contract: token.contract,
     tokenId: token.tokenId,
@@ -408,6 +431,7 @@ export const generateBidDetailsV6 = async (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rawData: any;
     fees?: Sdk.RouterV6.Types.Fee[];
+    isProtected?: boolean;
   },
   token: {
     kind: "erc721" | "erc1155";
@@ -418,11 +442,13 @@ export const generateBidDetailsV6 = async (
   }
 ): Promise<SdkTypesV6.BidDetails> => {
   const common = {
+    orderId: order.id,
     contractKind: token.kind,
     contract: token.contract,
     tokenId: token.tokenId,
     amount: token.amount ?? 1,
     owner: token.owner,
+    isProtected: order.isProtected,
     fees: order.fees ?? [],
   };
 
