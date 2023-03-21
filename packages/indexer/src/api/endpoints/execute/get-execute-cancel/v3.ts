@@ -27,7 +27,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
       orderIds: Joi.array().items(Joi.string()).min(1).optional(),
       maker: Joi.string().pattern(regex.address).optional(),
       orderKind: Joi.string()
-        .valid([
+        .valid(
           "seaport",
           "seaport-v1.4",
           "looks-rare",
@@ -36,8 +36,8 @@ export const getExecuteCancelV3Options: RouteOptions = {
           "universe",
           "rarible",
           "infinity",
-          "flow",
-        ])
+          "flow"
+        )
         .optional(),
       token: Joi.string().pattern(regex.token).optional(),
       maxFeePerGas: Joi.string()
@@ -80,7 +80,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
     const actionData = request.payload as any;
 
     // Cancel by maker
-    if (actionData.maker && !actionData.token) {
+    if (!actionData.token && actionData.maker) {
       let cancelTx: TxData;
       const maker = actionData.maker;
 
