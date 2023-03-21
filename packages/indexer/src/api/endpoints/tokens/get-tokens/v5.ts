@@ -791,30 +791,30 @@ export const getTokensV5Options: RouteOptions = {
       const getSort = function (sortBy: string, union: boolean) {
         switch (sortBy) {
           case "rarity": {
-            return ` ORDER BY rarity_rank ${
+            return ` ORDER BY ${union ? "" : "t."}rarity_rank ${
               query.sortDirection || "ASC"
-            } NULLS ${nullsPosition}, contract ${query.sortDirection || "ASC"}, token_id ${
+            } NULLS ${nullsPosition}, ${union ? "" : "t."}contract ${
               query.sortDirection || "ASC"
-            }`;
+            }, ${union ? "" : "t."}token_id ${query.sortDirection || "ASC"}`;
           }
           case "tokenId": {
-            return ` ORDER BY contract ${query.sortDirection || "ASC"}, token_id ${
-              query.sortDirection || "ASC"
-            }`;
+            return ` ORDER BY ${union ? "" : "t."}contract ${query.sortDirection || "ASC"}, ${
+              union ? "" : "t."
+            }token_id ${query.sortDirection || "ASC"}`;
           }
           case "floorAskPrice":
           default: {
             const sortColumn = query.nativeSource
-              ? `floor_sell_value`
+              ? `${union ? "" : "s."}floor_sell_value`
               : query.normalizeRoyalties
               ? `${union ? "" : "t."}normalized_floor_sell_value`
-              : `floor_sell_value`;
+              : `${union ? "" : "t."}floor_sell_value`;
 
             return ` ORDER BY ${sortColumn} ${
               query.sortDirection || "ASC"
-            } NULLS ${nullsPosition}, contract ${query.sortDirection || "ASC"}, token_id ${
+            } NULLS ${nullsPosition}, ${union ? "" : "t."}contract ${
               query.sortDirection || "ASC"
-            }`;
+            }, ${union ? "" : "t."}token_id ${query.sortDirection || "ASC"}`;
           }
         }
       };
