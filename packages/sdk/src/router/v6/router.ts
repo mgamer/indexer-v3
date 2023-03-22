@@ -494,9 +494,9 @@ export class Router {
 
     // Generate calldata for the above Blur-compatible listings
     if (blurCompatibleListings.length) {
-      let url = `${this.options?.orderFetcherBaseUrl}/api/blur-listing?`;
-      for (const d of blurCompatibleListings) {
-        url += `contracts=${d.contract}`;
+      let url = `${this.options?.orderFetcherBaseUrl}/api/blur-listing`;
+      for (const [i, d] of blurCompatibleListings.entries()) {
+        url += `${i === 0 ? "?" : "&"}contracts=${d.contract}`;
         url += `&tokenIds=${d.tokenId}`;
         url += `&prices=${d.price}`;
         url += `&flaggedStatuses=${d.isFlagged ? "true" : "false"}`;
