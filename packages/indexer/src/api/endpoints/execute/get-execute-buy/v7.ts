@@ -611,7 +611,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }
 
       // Set up generic filling steps
-      const steps: {
+      let steps: {
         id: string;
         action: string;
         description: string;
@@ -889,6 +889,21 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 }
               : undefined,
         });
+      }
+
+      // Warning! When filtering the steps, we should ensure that it
+      // won't affect the client, which might be polling the API and
+      // expect to get the steps returned in the same order / at the
+      // same index.
+      if (buyInCurrency === Sdk.Common.Addresses.Eth[config.chainId]) {
+        // Buying in ETH will never require an approval/permit
+        steps = [steps[0], ...steps.slice(3)];
+      }
+      if (!blurAuth) {
+        // If we reached this point and the Blur auth is missing then we
+        // can be sure that no Blur orders were requested and it is safe
+        // to remove the auth step
+        steps = steps.slice(1);
       }
 
       return {
