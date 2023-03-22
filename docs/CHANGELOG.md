@@ -3,6 +3,40 @@
 
 ### Bug Fixes
 
+* blur sweeping ([f136fc0](https://github.com/reservoirprotocol/indexer/commit/f136fc03f5d661d1eacdb449800960930d22e426))
+* cleanup ([67185a2](https://github.com/reservoirprotocol/indexer/commit/67185a288e388e7f65503c132a16471044ec374b))
+* early stop for opensea protected offers ([998cccc](https://github.com/reservoirprotocol/indexer/commit/998cccc02dadbd3cc6038418f14da31d13de1b9f))
+* ensure WHERE is added when no prior conditions ([92a3a5e](https://github.com/reservoirprotocol/indexer/commit/92a3a5eb3a86afc86df077b881d798a1f7a28891))
+* expose blur errors ([36781ef](https://github.com/reservoirprotocol/indexer/commit/36781ef144f38c0d8ec2dbafe63dd6e020ff0f64))
+* fix bracket ([fe2de54](https://github.com/reservoirprotocol/indexer/commit/fe2de54c41777235db578a9ce4ba28ba234c15be))
+* fix redundant ordering logic ([f4bbc4b](https://github.com/reservoirprotocol/indexer/commit/f4bbc4b6d5cde7021c0cbe444afa99d3ec68dc42))
+* fix tokens timeout for large collectionsSetid ([ed2ae75](https://github.com/reservoirprotocol/indexer/commit/ed2ae750ff3b43cc2a780c4f28fb261ed6208265))
+* performance improvements on owners/v1 and activity/v5 ([2183507](https://github.com/reservoirprotocol/indexer/commit/21835073f8341b8acb8bb7f07b322f3b0273fc6f))
+* properly expose errors in the buy and sell apis ([bec2ee9](https://github.com/reservoirprotocol/indexer/commit/bec2ee9ecbdf8321c050bc92d69320beb7f74f14))
+* refactor params ([1d985ce](https://github.com/reservoirprotocol/indexer/commit/1d985ce679c4ef304f865d6478962bf0f52adbeb))
+* refactor params ([42a00f8](https://github.com/reservoirprotocol/indexer/commit/42a00f8420cb9a7d69d2021514eafe3bf90b2b99))
+* refactor params ([4fefefd](https://github.com/reservoirprotocol/indexer/commit/4fefefde703b18fd651608719c468c4d175f12a2))
+* semantic-release config ([e852b64](https://github.com/reservoirprotocol/indexer/commit/e852b645e7a32d22841634431f0914a431b1b6b6))
+* specify table for normalized_floor_sell_value when not doing union ([b604ecf](https://github.com/reservoirprotocol/indexer/commit/b604ecfb774ed4fc6b8855ffdf8e933e8d2af144))
+* specify table in all cases to avoid ambiguity ([74771a0](https://github.com/reservoirprotocol/indexer/commit/74771a064ca16d84aa5fb547c71888f7bf165b9d))
+* variable names ([d156384](https://github.com/reservoirprotocol/indexer/commit/d1563844bd43261760f4675d2c5142e5ed745ea0))
+
+
+### Features
+
+* add contract to fill event price index ([1a1a31f](https://github.com/reservoirprotocol/indexer/commit/1a1a31f6b17f7316ccef9c5addcc55578cc51822))
+* add fill_events_2_contract_price_index to original migration ([e2ad14b](https://github.com/reservoirprotocol/indexer/commit/e2ad14b65194be4a63871a76ed302c27e3eee4a0))
+* add price logic for continuation ([733874c](https://github.com/reservoirprotocol/indexer/commit/733874c71507b91c7c5b832056923f850714c222))
+* add sale price index migration ([af710ec](https://github.com/reservoirprotocol/indexer/commit/af710eca2f9539ed006f2a6a045d8df7781ab252))
+* add sorting by time/price to sales v4 ([f1709fb](https://github.com/reservoirprotocol/indexer/commit/f1709fbeba85d1311804c0ba872e26e87e9a0e73))
+* better exposure of filling errors ([b914422](https://github.com/reservoirprotocol/indexer/commit/b9144228d048ecf096522b8a290362ae58c2d98e))
+* make the order fetcher service url configurable ([6d62929](https://github.com/reservoirprotocol/indexer/commit/6d62929fd72f851aabd3c2d1a6a2d9b4cd916b29))
+
+# [5.277.0](https://github.com/reservoirprotocol/indexer/compare/v5.276.1...v5.277.0) (2023-03-22)
+
+
+### Bug Fixes
+
 * cleanup ([67185a2](https://github.com/reservoirprotocol/indexer/commit/67185a288e388e7f65503c132a16471044ec374b))
 * early stop for opensea protected offers ([998cccc](https://github.com/reservoirprotocol/indexer/commit/998cccc02dadbd3cc6038418f14da31d13de1b9f))
 * ensure WHERE is added when no prior conditions ([92a3a5e](https://github.com/reservoirprotocol/indexer/commit/92a3a5eb3a86afc86df077b881d798a1f7a28891))
