@@ -294,7 +294,12 @@ export const start = async (): Promise<void> => {
     }
 
     const typedResponse = response as Hapi.ResponseObject;
-    const statusCode = typedResponse.statusCode;
+    let statusCode = typedResponse.statusCode;
+
+    // Indicate it's an error response
+    if ("output" in response) {
+      statusCode = _.toInteger(response["output"]["statusCode"]);
+    }
 
     // Count the API usage, to prevent any latency on the request no need to wait and ignore errors
     if (request.pre.metrics && statusCode >= 100 && statusCode < 500) {
