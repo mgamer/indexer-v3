@@ -227,7 +227,7 @@ export const start = async (): Promise<void> => {
                 error.consumedPoints
               } times on route ${request.route.path}${
                 request.info.referrer ? ` from referrer ${request.info.referrer} ` : ""
-              }`,
+              } x-api-key ${key}`,
               route: request.route.path,
               appName: apiKey?.appName || "",
               key: rateLimitKey,
