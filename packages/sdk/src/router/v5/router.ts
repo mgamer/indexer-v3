@@ -15,6 +15,7 @@ import RouterAbi from "./abis/ReservoirV5_0_0.json";
 
 type SetupOptions = {
   x2y2ApiKey?: string;
+  orderFetcherBaseUrl?: string;
   orderFetcherApiKey?: string;
 };
 
@@ -108,7 +109,7 @@ export class Router {
         .map(async (detail) => {
           const order = detail.order as Sdk.Seaport.Types.PartialOrder;
           const result = await axios.get(
-            `https://order-fetcher.vercel.app/api/listing?orderHash=${order.id}&contract=${order.contract}&tokenId=${order.tokenId}&taker=${taker}&chainId=${this.chainId}`,
+            `${this.options?.orderFetcherBaseUrl}/api/listing?orderHash=${order.id}&contract=${order.contract}&tokenId=${order.tokenId}&taker=${taker}&chainId=${this.chainId}`,
             {
               headers: {
                 "X-Api-Key": this.options?.orderFetcherApiKey,
@@ -668,7 +669,7 @@ export class Router {
     } else if (kind === "seaport-partial") {
       order = order as Sdk.Seaport.Types.PartialOrder;
       const result = await axios.get(
-        `https://order-fetcher.vercel.app/api/offer?orderHash=${order.id}&contract=${order.contract}&tokenId=${order.tokenId}&taker=${taker}&chainId=${this.chainId}`,
+        `${this.options?.orderFetcherBaseUrl}/api/offer?orderHash=${order.id}&contract=${order.contract}&tokenId=${order.tokenId}&taker=${taker}&chainId=${this.chainId}`,
         {
           headers: {
             "X-Api-Key": this.options?.orderFetcherApiKey,
