@@ -1,3 +1,10 @@
+# [5.281.0](https://github.com/reservoirprotocol/indexer/compare/v5.280.4...v5.281.0) (2023-03-22)
+
+
+### Features
+
+* always log x-api-key ([7114be4](https://github.com/reservoirprotocol/indexer/commit/7114be4ac7744c3c575a49fd08becd0ee0c2fae7))
+
 ## [5.280.4](https://github.com/reservoirprotocol/indexer/compare/v5.280.3...v5.280.4) (2023-03-22)
 
 
