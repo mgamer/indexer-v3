@@ -321,7 +321,7 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/api-keys/{key}/metrics",
+    path: "/api-keys/metrics",
     options: apiKeysEndpoints.getApiKeyMetrics,
   });
 

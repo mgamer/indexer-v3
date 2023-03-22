@@ -21,23 +21,29 @@ export const getApiKeyMetrics: RouteOptions = {
     },
   },
   validate: {
-    params: Joi.object({
-      key: Joi.string().uuid().description("The API key"),
-    }),
     query: Joi.object({
+      keys: Joi.alternatives()
+        .try(
+          Joi.array().items(Joi.string().uuid()).min(1).max(50).description("Array API keys"),
+          Joi.string().uuid().description("Array API keys")
+        )
+        .required(),
       period: Joi.string()
         .valid("hourly", "daily", "monthly")
         .default("monthly")
         .description(
-          "Return results grouped by either hourly/daily/monthly. hourly will return time in format YYYY-MM-DDTHH:00:00, daily will return time in format YYYY-MM-DDT00:00:00, monthly will return time in format YYYY-MM-01T00:00:00"
+          "Return results grouped by either hourly/daily/monthly.<br>Hourly will return time in format YYYY-MM-DDTHH:00:000Z<br>Daily will return time in format YYYY-MM-DDT00:00:000Z<br>Monthly will return time in format YYYY-MM-01T00:00:000Z"
         ),
-      breakByStatusCode: Joi.boolean()
-        .default(false)
-        .description("If true will return results broken by returned HTTP code"),
+      groupBy: Joi.number()
+        .default(1)
+        .valid(1, 2, 3, 4)
+        .description(
+          "1 - All calls per hour/day/month<br>2 - All calls per key per hour/day/month<br>3 - All calls per key per route per hour/day/month<br>4 - All calls per key per route per status code per hour/day/month"
+        ),
       startTime: Joi.date()
         .format("YYYY-MM-DD HH:00")
         .description(
-          "Get metrics after a particular time (allowed format YYYY-MM-DD HH:00). hourly default to last 24 hours, daily default to last 7 days, monthly default to last 12 months"
+          "Get metrics after a particular time (allowed format YYYY-MM-DD HH:00)<br>Hourly default to last 24 hours<br>Daily default to last 7 days<br>Monthly default to last 12 months"
         ),
       endTime: Joi.date()
         .format("YYYY-MM-DD HH:00")
@@ -48,10 +54,11 @@ export const getApiKeyMetrics: RouteOptions = {
     schema: Joi.object({
       metrics: Joi.array().items(
         Joi.object({
-          route: Joi.string(),
-          apiCallsCount: Joi.number(),
-          statusCode: Joi.number().optional(),
           time: Joi.string(),
+          apiCallsCount: Joi.number(),
+          key: Joi.string().uuid().optional(),
+          route: Joi.string().optional(),
+          statusCode: Joi.number().optional(),
         })
       ),
     }).label("getApiKeyMetricsResponse"),
@@ -61,7 +68,6 @@ export const getApiKeyMetrics: RouteOptions = {
     },
   },
   handler: async (request: Request) => {
-    const params = request.params as any;
     const query = request.query as any;
 
     let tableName = "monthly_api_usage";
@@ -97,31 +103,51 @@ export const getApiKeyMetrics: RouteOptions = {
         break;
     }
 
-    const baseQuery = `
-      SELECT ${timeColumnName}, route, SUM(api_calls_count) AS "api_calls_count" ${
-      query.breakByStatusCode ? ", status_code" : ""
+    let select = "";
+    let groupBy = "";
+
+    switch (query.groupBy) {
+      case 1:
+        select = `${timeColumnName}, SUM(api_calls_count) AS "api_calls_count"`;
+        groupBy = `GROUP BY ${timeColumnName}`;
+        break;
+
+      case 2:
+        select = `${timeColumnName}, api_key, SUM(api_calls_count) AS "api_calls_count"`;
+        groupBy = `GROUP BY ${timeColumnName}, api_key`;
+        break;
+
+      case 3:
+        select = `${timeColumnName}, api_key, route, SUM(api_calls_count) AS "api_calls_count"`;
+        groupBy = `GROUP BY ${timeColumnName}, api_key, route`;
+        break;
+
+      case 4:
+        select = `${timeColumnName}, api_key, route, status_code, SUM(api_calls_count) AS "api_calls_count"`;
+        groupBy = `GROUP BY ${timeColumnName}, api_key, route, status_code`;
+        break;
     }
+
+    const baseQuery = `
+      SELECT ${select}
       FROM ${tableName}
-      WHERE api_key = $/key/
+      WHERE api_key IN ($/keys:csv/)
       ${query.startTime ? `AND ${timeColumnName} >= $/startTime/` : ``}
       ${query.endTime ? `AND ${timeColumnName} <= $/endTime/` : ``}
-      ${
-        query.breakByStatusCode
-          ? `GROUP BY ${timeColumnName}, route, status_code`
-          : `GROUP BY ${timeColumnName}, route`
-      }
+      ${groupBy}
       ORDER BY ${timeColumnName} ASC
     `;
 
     try {
-      const metrics = await redb.manyOrNone(baseQuery, _.merge(params, query));
+      const metrics = await redb.manyOrNone(baseQuery, query);
 
       return {
         metrics: _.map(metrics, (metric) => ({
-          route: metric.route,
-          apiCallsCount: _.toNumber(metric.api_calls_count),
-          statusCode: query.breakByStatusCode ? metric.status_code : undefined,
           time: metric[timeColumnName].toISOString(),
+          apiCallsCount: _.toNumber(metric.api_calls_count),
+          key: metric?.api_key,
+          route: metric?.route,
+          statusCode: metric?.status_code,
         })),
       };
     } catch (error) {
