@@ -665,14 +665,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
           let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
           if (!blurAuthChallenge) {
             blurAuthChallenge = (await axios
-              .get(
-                `https://order-fetcher.vercel.app/api/blur-auth-challenge?taker=${payload.taker}`,
-                {
-                  headers: {
-                    "X-Api-Key": config.orderFetcherApiKey,
-                  },
-                }
-              )
+              .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${payload.taker}`, {
+                headers: {
+                  "X-Api-Key": config.orderFetcherApiKey,
+                },
+              })
               .then((response) => response.data.authChallenge)) as b.AuthChallenge;
 
             await b.saveAuthChallenge(
@@ -721,6 +718,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
+        orderFetcherBaseUrl: config.orderFetcherBaseUrl,
         orderFetcherApiKey: config.orderFetcherApiKey,
       });
 
