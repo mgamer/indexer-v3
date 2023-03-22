@@ -1,4 +1,4 @@
-// sequential number 103
+// sequential number 107
 module.exports = {
   "dryRun": false,
   "branches": [
@@ -26,7 +26,7 @@ module.exports = {
           "docs/CHANGELOG.md",
           "packages/indexer/package.json",
         ],
-        "message": "chore(release): update changelogs for ${nextRelease.version} [skip release][skip ci]"
+        "message": "ci(release): update changelogs for ${nextRelease.version} [skip release][skip ci]"
       }
     ]
   ]

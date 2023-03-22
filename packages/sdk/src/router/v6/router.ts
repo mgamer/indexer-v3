@@ -54,6 +54,7 @@ import ZoraModuleAbi from "./abis/ZoraModule.json";
 type SetupOptions = {
   x2y2ApiKey?: string;
   cbApiKey?: string;
+  orderFetcherBaseUrl?: string;
   orderFetcherApiKey?: string;
 };
 
@@ -493,9 +494,9 @@ export class Router {
 
     // Generate calldata for the above Blur-compatible listings
     if (blurCompatibleListings.length) {
-      let url = "https://order-fetcher.vercel.app/api/blur-listing?";
-      for (const d of blurCompatibleListings) {
-        url += `contracts=${d.contract}`;
+      let url = `${this.options?.orderFetcherBaseUrl}/api/blur-listing`;
+      for (const [i, d] of blurCompatibleListings.entries()) {
+        url += `${i === 0 ? "?" : "&"}contracts=${d.contract}`;
         url += `&tokenIds=${d.tokenId}`;
         url += `&prices=${d.price}`;
         url += `&flaggedStatuses=${d.isFlagged ? "true" : "false"}`;
@@ -612,7 +613,7 @@ export class Router {
         if (detail.kind === "seaport-partial") {
           const order = detail.order as Sdk.Seaport.Types.PartialOrder;
 
-          let url = "https://order-fetcher.vercel.app/api/listing";
+          let url = `${this.options?.orderFetcherBaseUrl}/api/listing`;
           url += `?contract=${detail.contract}`;
           url += `&tokenId=${detail.tokenId}`;
           url += order.unitPrice ? `&unitPrice=${order.unitPrice}` : "";
@@ -660,7 +661,7 @@ export class Router {
         if (detail.kind === "seaport-v1.4-partial") {
           const order = detail.order as Sdk.SeaportV14.Types.PartialOrder;
 
-          let url = "https://order-fetcher.vercel.app/api/listing";
+          let url = `${this.options?.orderFetcherBaseUrl}/api/listing`;
           url += `?contract=${detail.contract}`;
           url += `&tokenId=${detail.tokenId}`;
           url += order.unitPrice ? `&unitPrice=${order.unitPrice}` : "";
@@ -2579,7 +2580,7 @@ export class Router {
           const order = detail.order as Sdk.Seaport.Types.PartialOrder;
           const module = this.contracts.seaportModule;
 
-          let url = "https://order-fetcher.vercel.app/api/offer";
+          let url = `${this.options?.orderFetcherBaseUrl}/api/offer`;
           url += `?orderHash=${order.id}`;
           url += `&contract=${order.contract}`;
           url += `&tokenId=${order.tokenId}`;
@@ -2691,7 +2692,7 @@ export class Router {
           const order = detail.order as Sdk.SeaportV14.Types.PartialOrder;
           const module = this.contracts.seaportV14Module;
 
-          let url = "https://order-fetcher.vercel.app/api/offer";
+          let url = `${this.options?.orderFetcherBaseUrl}/api/offer`;
           url += `?orderHash=${order.id}`;
           url += `&contract=${order.contract}`;
           url += `&tokenId=${order.tokenId}`;
