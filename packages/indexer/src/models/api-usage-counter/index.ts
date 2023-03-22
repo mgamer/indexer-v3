@@ -1,8 +1,10 @@
 import { metricsRedis } from "@/common/redis";
 import { format } from "date-fns";
 import _ from "lodash";
+import { config } from "@/config/index";
 
 export type ApiUsageCount = {
+  chainId: number;
   apiKey: string;
   route: string;
   date: string;
@@ -23,7 +25,7 @@ export class ApiUsageCounter {
     incrementBy = 1
   ) {
     const date = format(new Date(timestamp), "yyyy-MM-dd HH:00:00");
-    const member = `${apiKey}*${route}*${date}*${statusCode}*${points}`;
+    const member = `${config.chainId}*${apiKey}*${route}*${date}*${statusCode}*${points}`;
     await metricsRedis.zincrby(ApiUsageCounter.key, incrementBy, member);
   }
 
@@ -32,8 +34,9 @@ export class ApiUsageCounter {
     const counts = await metricsRedis.zpopmax(ApiUsageCounter.key, count);
 
     for (let i = 0; i < counts.length; i += 2) {
-      const [apiKey, route, date, statusCode, points] = _.split(counts[i], "*");
+      const [chainId, apiKey, route, date, statusCode, points] = _.split(counts[i], "*");
       results.push({
+        chainId: _.toInteger(chainId),
         apiKey,
         route,
         date,
