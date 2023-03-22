@@ -294,10 +294,11 @@ export const start = async (): Promise<void> => {
     }
 
     const typedResponse = response as Hapi.ResponseObject;
+    const statusCode = typedResponse.statusCode;
 
     // Count the API usage, to prevent any latency on the request no need to wait and ignore errors
-    if (request.pre.metrics) {
-      request.pre.metrics.statusCode = typedResponse.statusCode;
+    if (request.pre.metrics && statusCode >= 100 && statusCode < 500) {
+      request.pre.metrics.statusCode = statusCode;
       countApiUsage.addToQueue(request.pre.metrics).catch();
     }
 
