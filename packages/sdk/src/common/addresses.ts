@@ -52,3 +52,11 @@ export const Permit2: ChainIdToAddress = {
   [Network.Arbitrum]: "0x000000000022d473030f116ddee9f6b43ac78ba3",
   [Network.Polygon]: "0x000000000022d473030f116ddee9f6b43ac78ba3",
 };
+
+export const SwapRouter: ChainIdToAddress = {
+  [Network.Ethereum]: "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45",
+  [Network.EthereumGoerli]: "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45",
+  [Network.Optimism]: "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45",
+  [Network.Arbitrum]: "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45",
+  [Network.Polygon]: "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45",
+};

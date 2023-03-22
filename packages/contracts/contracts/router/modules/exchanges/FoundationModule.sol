@@ -21,11 +21,17 @@ contract FoundationModule is BaseExchangeModule {
 
   // --- Fields ---
 
-  IFoundation public constant EXCHANGE = IFoundation(0xcDA72070E455bb31C7690a170224Ce43623d0B6f);
+  IFoundation public immutable EXCHANGE;
 
   // --- Constructor ---
 
-  constructor(address owner, address router) BaseModule(owner) BaseExchangeModule(router) {}
+  constructor(
+    address owner,
+    address router,
+    address exchange
+  ) BaseModule(owner) BaseExchangeModule(router) {
+    EXCHANGE = IFoundation(exchange);
+  }
 
   // --- Fallback ---
 
