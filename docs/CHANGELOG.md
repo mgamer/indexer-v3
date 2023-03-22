@@ -1,3 +1,10 @@
+## [5.281.1](https://github.com/reservoirprotocol/indexer/compare/v5.281.0...v5.281.1) (2023-03-22)
+
+
+### Bug Fixes
+
+* leave includeRoyaltiesPaid undefined if token has no last order ([9dcbd2b](https://github.com/reservoirprotocol/indexer/commit/9dcbd2b76515658ac1b325dfc6807f3e10438e2b))
+
 # [5.281.0](https://github.com/reservoirprotocol/indexer/compare/v5.280.4...v5.281.0) (2023-03-22)
 
 
