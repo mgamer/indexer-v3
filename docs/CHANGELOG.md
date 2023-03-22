@@ -1,3 +1,12 @@
+## [5.280.1](https://github.com/reservoirprotocol/indexer/compare/v5.280.0...v5.280.1) (2023-03-22)
+
+
+### Bug Fixes
+
+* remove package-lock.json ([e056e26](https://github.com/reservoirprotocol/indexer/commit/e056e2614b3084fd35dbccc21ab2ba716a9cd7d0))
+* semantic-release config ([b0d711b](https://github.com/reservoirprotocol/indexer/commit/b0d711b26cf4ffed2e471eae90e8e25487041dc8))
+* semantic-release config ([1aa2455](https://github.com/reservoirprotocol/indexer/commit/1aa2455140ac09e10e17b5ceb3374bc4fc9b455b))
+
 # [5.277.0](https://github.com/reservoirprotocol/indexer/compare/v5.276.1...v5.277.0) (2023-03-22)
 
 
