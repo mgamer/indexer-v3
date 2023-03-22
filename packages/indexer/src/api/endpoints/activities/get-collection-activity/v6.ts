@@ -3,6 +3,7 @@
 import _ from "lodash";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
+
 import { logger } from "@/common/logger";
 import { buildContinuation, fromBuffer, regex, splitContinuation } from "@/common/utils";
 import { Activities } from "@/models/activities";
@@ -34,6 +35,9 @@ export const getCollectionActivityV6Options: RouteOptions = {
       community: Joi.string()
         .lowercase()
         .description("Filter to a particular community. Example: `artblocks`"),
+      attributes: Joi.object()
+        .unknown()
+        .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
       limit: Joi.number()
         .integer()
         .min(1)
@@ -70,7 +74,9 @@ export const getCollectionActivityV6Options: RouteOptions = {
             .valid(..._.values(ActivityType))
         )
         .description("Types of events returned in response. Example: 'types=sale'"),
-    }).xor("collection", "collectionsSetId", "community"),
+    })
+      .xor("collection", "collectionsSetId", "community")
+      .with("attributes", "collection"),
   },
   response: {
     schema: Joi.object({
@@ -133,6 +139,7 @@ export const getCollectionActivityV6Options: RouteOptions = {
         query.collectionsSetId,
         query.continuation,
         query.types,
+        query.attributes,
         query.limit,
         query.sortBy,
         query.includeMetadata,
@@ -154,7 +161,7 @@ export const getCollectionActivityV6Options: RouteOptions = {
           type: activity.type,
           fromAddress: activity.fromAddress,
           toAddress: activity.toAddress,
-          price: activity.order
+          price: activity.order?.currency
             ? await getJoiPriceObject(
                 {
                   gross: {
