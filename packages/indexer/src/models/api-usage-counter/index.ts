@@ -14,7 +14,7 @@ export type ApiUsageCount = {
 };
 
 export class ApiUsageCounter {
-  public static key = "api-usage-counter";
+  public static key = `api-usage-counter:${config.chainId}`;
 
   public static async count(
     apiKey: string,
