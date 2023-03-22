@@ -1,3 +1,10 @@
+## [5.280.4](https://github.com/reservoirprotocol/indexer/compare/v5.280.3...v5.280.4) (2023-03-22)
+
+
+### Bug Fixes
+
+* filter out redundant steps ([821ad29](https://github.com/reservoirprotocol/indexer/commit/821ad29a20d87db7c0f695f5b05754cd120180ce))
+
 ## [5.280.3](https://github.com/reservoirprotocol/indexer/compare/v5.280.2...v5.280.3) (2023-03-22)
 
 
