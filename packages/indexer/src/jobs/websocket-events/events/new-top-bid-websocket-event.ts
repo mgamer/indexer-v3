@@ -189,6 +189,9 @@ export class NewTopBidWebsocketEvent {
       });
     }
 
+    // temporary logging
+    logger.info("new-top-bid-websocket-event", `Sending ${JSON.stringify(payloads[0])}`);
+
     const server = new Pusher.default({
       appId: config.websocketServerAppId,
       key: config.websocketServerAppKey,
