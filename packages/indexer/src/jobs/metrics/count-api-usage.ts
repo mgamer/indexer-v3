@@ -6,7 +6,7 @@ import { config } from "@/config/index";
 import { randomUUID } from "crypto";
 import { ApiUsageCounter } from "@/models/api-usage-counter";
 
-const QUEUE_NAME = "count-api-usage-queue";
+const QUEUE_NAME = `count-api-usage-queue-${config.chainId}`;
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: metricsRedis.duplicate(),
