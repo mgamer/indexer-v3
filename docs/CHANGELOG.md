@@ -1,3 +1,10 @@
+## [5.280.2](https://github.com/reservoirprotocol/indexer/compare/v5.280.1...v5.280.2) (2023-03-22)
+
+
+### Bug Fixes
+
+* configure pipeline ([d5b1e5c](https://github.com/reservoirprotocol/indexer/commit/d5b1e5c779eb1bbc6345933d812cc4b9bcd0529c))
+
 ## [5.280.1](https://github.com/reservoirprotocol/indexer/compare/v5.280.0...v5.280.1) (2023-03-22)
 
 
