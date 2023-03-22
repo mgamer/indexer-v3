@@ -1,3 +1,10 @@
+## [5.280.3](https://github.com/reservoirprotocol/indexer/compare/v5.280.2...v5.280.3) (2023-03-22)
+
+
+### Bug Fixes
+
+* trigger version bump ([51a8079](https://github.com/reservoirprotocol/indexer/commit/51a80795af726f6f71beaa9cd5559d33c633aadd))
+
 ## [5.280.2](https://github.com/reservoirprotocol/indexer/compare/v5.280.1...v5.280.2) (2023-03-22)
 
 
