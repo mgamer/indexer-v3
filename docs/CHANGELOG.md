@@ -1,3 +1,16 @@
+# [5.286.0](https://github.com/reservoirprotocol/indexer/compare/v5.285.0...v5.286.0) (2023-03-23)
+
+
+### Bug Fixes
+
+* rename redis channel new-top-bid -> top-bids ([1adfde0](https://github.com/reservoirprotocol/indexer/commit/1adfde0b53e4cd98225fda7aee4c06bf60a1c463))
+
+
+### Features
+
+* add redis pub into websocket event ([25ac16b](https://github.com/reservoirprotocol/indexer/commit/25ac16b19a96cc68ddee8f46cb2b834f516c4f30))
+* remove floor changes from this branch ([23899cc](https://github.com/reservoirprotocol/indexer/commit/23899cc370226a05ee75184dff45850c89d2d389))
+
 # [5.285.0](https://github.com/reservoirprotocol/indexer/compare/v5.284.0...v5.285.0) (2023-03-23)
 
 
