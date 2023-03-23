@@ -1,3 +1,10 @@
+## [5.289.1](https://github.com/reservoirprotocol/indexer/compare/v5.289.0...v5.289.1) (2023-03-23)
+
+
+### Bug Fixes
+
+* tweak simulations and invalidations ([a433220](https://github.com/reservoirprotocol/indexer/commit/a43322098a48dc2b52226eef5e2645315dab931b))
+
 # [5.289.0](https://github.com/reservoirprotocol/indexer/compare/v5.288.0...v5.289.0) (2023-03-23)
 
 
