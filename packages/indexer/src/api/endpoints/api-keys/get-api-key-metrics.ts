@@ -28,7 +28,7 @@ export const getApiKeyMetrics: RouteOptions = {
           Joi.string().uuid().description("Array API keys")
         )
         .required(),
-      period: Joi.string()
+      granularity: Joi.string()
         .valid("hourly", "daily", "monthly")
         .default("monthly")
         .description(
@@ -73,7 +73,7 @@ export const getApiKeyMetrics: RouteOptions = {
     let tableName = "monthly_api_usage";
     let timeColumnName = "month";
 
-    switch (query.period) {
+    switch (query.granularity) {
       case "hourly":
         tableName = "hourly_api_usage";
         timeColumnName = "hour";
