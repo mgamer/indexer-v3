@@ -1,3 +1,10 @@
+# [5.288.0](https://github.com/reservoirprotocol/indexer/compare/v5.287.0...v5.288.0) (2023-03-23)
+
+
+### Features
+
+* added collections supported marketplaces api ([#3733](https://github.com/reservoirprotocol/indexer/issues/3733)) ([87b193d](https://github.com/reservoirprotocol/indexer/commit/87b193def26935b4cb944e518c948530125cd250))
+
 # [5.287.0](https://github.com/reservoirprotocol/indexer/compare/v5.286.0...v5.287.0) (2023-03-23)
 
 
