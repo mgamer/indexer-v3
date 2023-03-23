@@ -27,7 +27,6 @@ export class NewTopBidWebsocketEvent {
           ? await getJoiPriceObject(
               {
                 gross: {
-                  // amount: r.floor_sell_currency_value ?? r.floor_sell_value,
                   amount:
                     order[`${type}floor_order_currency_value`] ?? order[`${type}floor_sell_value`],
                   nativeAmount: order[`${type}floor_sell_value`],
@@ -161,9 +160,6 @@ export class NewTopBidWebsocketEvent {
       });
     }
 
-    // eslint-disable-next-line
-    console.log(JSON.stringify(payloads[0]));
-
     const server = new Pusher.default({
       appId: config.websocketServerAppId,
       key: config.websocketServerAppKey,
@@ -240,7 +236,3 @@ export class NewTopBidWebsocketEvent {
 export type NewTopBidWebsocketEventInfo = {
   orderId: string;
 };
-
-NewTopBidWebsocketEvent.triggerEvent({
-  orderId: "0xa7ff78362ee4a23d48f5e38c4eab1e842d3d6d34b26588ca34476847927cee03",
-});
