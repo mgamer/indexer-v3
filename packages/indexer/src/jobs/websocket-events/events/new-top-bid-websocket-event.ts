@@ -8,70 +8,34 @@ import { redis } from "@/common/redis";
 import { logger } from "@/common/logger";
 import { Sources } from "@/models/sources";
 import { getJoiPriceObject } from "@/common/joi";
-import { Assets } from "@/utils/assets";
 import * as Sdk from "@reservoir0x/sdk";
 
 export class NewTopBidWebsocketEvent {
   public static async triggerEvent(data: NewTopBidWebsocketEventInfo) {
     const criteriaBuildQuery = Orders.buildCriteriaQuery("orders", "token_set_id", false);
-
-    const floorQuery = (type: "normalized" | "non_flagged" | "normal") => {
-      //  c.${type}_floor_sell_maker AS ${type}_floor_sell_maker,
-      //           least(2147483647::NUMERIC, date_part('epoch', lower(c.${type}_floor_sell_valid_between)))::INT AS ${type}_floor_sell_valid_from,
-      //           least(2147483647::NUMERIC, coalesce(nullif(date_part('epoch', upper(c.${type}_floor_sell_valid_between)), 'Infinity'),0))::INT AS ${type}_floor_sell_valid_until,
-      return `  c.${type}_floor_sell_id AS ${type}_floor_sell_id,
-                c.${type}_floor_sell_value AS ${type}_floor_sell_value,
-                c.${type}_floor_sell_source_id_int AS ${type}_floor_sell_source_id_int
-                ${type}_floor_token.contract AS ${type}_floor_sell_token_contract,
-                ${type}_floor_token.token_id AS ${type}_floor_sell_token_id,
-                ${type}_floor_token.name AS ${type}_floor_sell_token_name,
-                ${type}_floor_token.image AS ${type}_floor_sell_token_image,
-                ${type}_floor_order.currency AS ${type}_floor_sell_currency,
-                ${type}_floor_order.currency_value AS ${type}_floor_sell_currency_value`;
-    };
-
-    const floorJoinQuery = (type: "normalized" | "non_flagged" | "normal") => {
-      return `JOIN orders ${type}_floor_order ON orders.id = ${type}_floor_sell_id
-                JOIN token_sets_tokens ${type}_floor_token_sets ON ${type}_floor_token_sets.token_set_id = ${type}_floor_order.token_set_id
-                JOIN tokens ${type}_floor_token ON ${type}_floor_token_sets.token_id = ${type}_floor_token.id`;
-    };
+    const sources = await Sources.getInstance();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parseFloor = async (type: "normalized" | "non_flagged" | "normal", order: any) => {
-      const floorAskCurrency = order[`${type}_floor_sell_currency`]
-        ? fromBuffer(order[`${type}_floor_sell_currency`])
+    const parseFloorPrice = async (type: "normalized" | "non_flagged" | "", order: any) => {
+      const floorAskCurrency = order[`${type}floor_order_currency`]
+        ? fromBuffer(order[`${type}floor_order_currency`])
         : Sdk.Common.Addresses.Eth[config.chainId];
       return {
-        id: order[`${type}_floor_sell_id`],
-        sourceDomain: sources.get(order[`${type}_floor_sell_source_id_int`])?.domain,
-        price: order[`${type}_floor_sell_value`]
+        id: order[`${type}floor_sell_id`],
+        sourceDomain: sources.get(Number(order[`${type}floor_sell_source_id_int`]))?.domain,
+        price: order[`${type}floor_sell_id`]
           ? await getJoiPriceObject(
               {
                 gross: {
+                  // amount: r.floor_sell_currency_value ?? r.floor_sell_value,
                   amount:
-                    order[`${type}_floor_sell_currency_value`] ?? order[`${type}_floor_sell_value`],
-                  nativeAmount: order[`${type}_floor_sell_value`],
+                    order[`${type}floor_order_currency_value`] ?? order[`${type}floor_sell_value`],
+                  nativeAmount: order[`${type}floor_sell_value`],
                 },
               },
               floorAskCurrency
             )
           : null,
-        // maker: order[`${type}_floor_sell_maker`]
-        //   ? fromBuffer(order[`${type}_floor_sell_maker`])
-        //   : null,
-        // validFrom: order[`${type}_floor_sell_valid_from`],
-        // validUntil: order[`${type}_floor_sell_value`]
-        //   ? order[`${type}_floor_sell_valid_until`]
-        //   : null,
-
-        token: order[`${type}_floor_sell_value`] && {
-          contract: order[`${type}_floor_sell_token_contract`]
-            ? fromBuffer(order[`${type}_floor_sell_token_contract`])
-            : null,
-          tokenId: order[`${type}_floor_sell_token_id`],
-          name: order[`${type}_floor_sell_token_name`],
-          image: Assets.getLocalAssetsLink(order[`${type}_floor_sell_token_image`]),
-        },
       };
     };
 
@@ -96,21 +60,23 @@ export class NewTopBidWebsocketEvent {
                      NULLIF(DATE_PART('epoch', UPPER(orders.valid_between)), 'Infinity'),
                      0
                    ) AS "valid_until",
-                (${criteriaBuildQuery}) AS criteria
+                (${criteriaBuildQuery}) AS criteria,
                 c.id as collection_id,
                 c.slug as collection_slug,
                 c.name as collection_name,
-                ${floorQuery("normalized")},
-                ${floorQuery("normal")},
-                ${floorQuery("non_flagged")}
+                c.normalized_floor_sell_id AS normalized_floor_sell_id,
+                c.normalized_floor_sell_value AS normalized_floor_sell_value,
+                c.normalized_floor_sell_source_id_int AS normalized_floor_sell_source_id_int,
+                c.floor_sell_id AS floor_sell_id,
+                c.floor_sell_value AS floor_sell_value,
+                c.floor_sell_source_id_int AS floor_sell_source_id_int,
+                c.non_flagged_floor_sell_id AS non_flagged_floor_sell_id,
+                c.non_flagged_floor_sell_value AS non_flagged_floor_sell_value,
+                c.non_flagged_floor_sell_source_id_int AS non_flagged_floor_sell_source_id_int
 
 
               FROM orders
                 JOIN collections c on orders.contract = c.contract
-                ${floorJoinQuery("normalized")}
-                ${floorJoinQuery("normal")}
-                ${floorJoinQuery("non_flagged")}
-
               WHERE orders.id = $/orderId/
               LIMIT 1
             `,
@@ -130,7 +96,6 @@ export class NewTopBidWebsocketEvent {
     const owners = await NewTopBidWebsocketEvent.getOwners(order.token_set_id);
     const ownersChunks = _.chunk(owners, Number(config.websocketServerEventMaxSizeInKb) * 20);
     const source = (await Sources.getInstance()).get(Number(order.source_id_int));
-    const sources = await Sources.getInstance();
 
     for (const ownersChunk of ownersChunks) {
       payloads.push({
@@ -180,17 +145,14 @@ export class NewTopBidWebsocketEvent {
           id: order.collection_id,
           slug: order.collection_slug,
           name: order.collection_name,
-          floors: {
-            normalized: await parseFloor("normalized", order),
-            nonFlagged: await parseFloor("non_flagged", order),
-            normal: await parseFloor("normal", order),
+          floorAsk: {
+            priceNormalized: await parseFloorPrice("normalized", order),
+            price: await parseFloorPrice("", order),
+            priceNonflagged: await parseFloorPrice("non_flagged", order),
           },
         },
       });
     }
-
-    // temporary logging
-    logger.info("new-top-bid-websocket-event", `Sending ${JSON.stringify(payloads[0])}`);
 
     const server = new Pusher.default({
       appId: config.websocketServerAppId,
