@@ -1,3 +1,10 @@
+# [5.283.0](https://github.com/reservoirprotocol/indexer/compare/v5.282.0...v5.283.0) (2023-03-23)
+
+
+### Features
+
+* add support for filtering out EOA-only listings ([d9c38e5](https://github.com/reservoirprotocol/indexer/commit/d9c38e5fae9b07a1fc8282c9bb3b64e3abe184d1))
+
 # [5.282.0](https://github.com/reservoirprotocol/indexer/compare/v5.281.1...v5.282.0) (2023-03-23)
 
 
