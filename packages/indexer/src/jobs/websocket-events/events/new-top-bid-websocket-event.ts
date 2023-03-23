@@ -105,22 +105,22 @@ export class NewTopBidWebsocketEvent {
 
     try {
       logger.info(
-        "new-top-bid-websocket-event",
+        "top-bids-websocket-event",
         `Triggering event. orderId=${data.orderId}, tokenSetId=${order.token_set_id}`
       );
       await Promise.all(
         payloads.map((payload) =>
           redisWebsocketPublisher.publish(
-            "new-top-bid",
+            "top-bids",
             JSON.stringify({
-              channel: "new-top-bid",
+              event: "new-top-bid",
               data: payload,
             })
           )
         )
       );
     } catch (e) {
-      logger.error("new-top-bid-websocket-event", `Error triggering event. ${e}`);
+      logger.error("top-bids-websocket-event", `Error triggering event. ${e}`);
     }
 
     const server = new Pusher.default({
