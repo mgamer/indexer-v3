@@ -19,7 +19,6 @@ import * as updateCollectionActivity from "@/jobs/collection-updates/update-coll
 import * as updateCollectionUserActivity from "@/jobs/collection-updates/update-collection-user-activity";
 import * as updateCollectionDailyVolume from "@/jobs/collection-updates/update-collection-daily-volume";
 import * as updateAttributeCounts from "@/jobs/update-attribute/update-attribute-counts";
-import * as collectionRecalcTokenCount from "@/jobs/collection-updates/recalc-token-count-queue";
 import PgPromise from "pg-promise";
 import { updateActivities } from "@/jobs/activities/utils";
 
@@ -128,13 +127,11 @@ if (config.doBackgroundWork) {
                 tokenId,
                 mintedTimestamp: getUnixTime(new Date(result.created_at)),
                 newCollection: true,
+                oldCollectionId: result.collection_id,
               },
             ],
             `${contract}:${tokenId}`
           );
-
-          // Update token_count for the old collection
-          await collectionRecalcTokenCount.addToQueue(result.collection_id);
 
           return;
         }
