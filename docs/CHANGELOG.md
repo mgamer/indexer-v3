@@ -1,3 +1,10 @@
+## [5.289.3](https://github.com/reservoirprotocol/indexer/compare/v5.289.2...v5.289.3) (2023-03-23)
+
+
+### Bug Fixes
+
+* generic currency description ([f1ee9eb](https://github.com/reservoirprotocol/indexer/commit/f1ee9eb4d4ba7f29a9871f1400261e94e8d241da))
+
 ## [5.289.2](https://github.com/reservoirprotocol/indexer/compare/v5.289.1...v5.289.2) (2023-03-23)
 
 
