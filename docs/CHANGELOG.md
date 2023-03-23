@@ -1,3 +1,12 @@
+## [5.289.2](https://github.com/reservoirprotocol/indexer/compare/v5.289.1...v5.289.2) (2023-03-23)
+
+
+### Bug Fixes
+
+* dont return collections with 0 tokens ([bdd425f](https://github.com/reservoirprotocol/indexer/commit/bdd425fa30513ba09a8e9cadc0d16f721d4c205b))
+* recalc token_count only for old collection as it is already done for new collection ([c231d08](https://github.com/reservoirprotocol/indexer/commit/c231d0811ef0104e8d9fc7118b63e269960b8ba5))
+* update collections.token_count after token is assigned new collectionId ([9d664b5](https://github.com/reservoirprotocol/indexer/commit/9d664b5f5d66c65f457717cef0f04b105d22c931))
+
 ## [5.289.1](https://github.com/reservoirprotocol/indexer/compare/v5.289.0...v5.289.1) (2023-03-23)
 
 
