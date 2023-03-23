@@ -228,7 +228,7 @@ export class DailyVolume {
    **/
   public static async update1Day(collectionId = "") {
     const currentDate = new Date();
-    const startTime = new Date(currentDate.getTime() - 24 * 60 * 60 * 1000).getTime();
+    const startTime = new Date(currentDate.getTime() - 24 * 60 * 60 * 1000).getTime() / 1000;
 
     const results = await ridb.manyOrNone(
       `SELECT t1.collection_id,
