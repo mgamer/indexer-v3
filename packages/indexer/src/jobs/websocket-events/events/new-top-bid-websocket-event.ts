@@ -16,7 +16,7 @@ export class NewTopBidWebsocketEvent {
     const sources = await Sources.getInstance();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parseFloorPrice = async (type: "normalized" | "non_flagged" | "", order: any) => {
+    const parseFloorPrice = async (type: "normalized_" | "non_flagged_" | "", order: any) => {
       const floorAskCurrency = order[`${type}floor_order_currency`]
         ? fromBuffer(order[`${type}floor_order_currency`])
         : Sdk.Common.Addresses.Eth[config.chainId];
@@ -61,7 +61,7 @@ export class NewTopBidWebsocketEvent {
                      0
                    ) AS "valid_until",
                 (${criteriaBuildQuery}) AS criteria,
-                               c.id as collection_id,
+                c.id as collection_id,
                 c.slug as collection_slug,
                 c.name as collection_name,
                 c.normalized_floor_sell_id AS normalized_floor_sell_id,
@@ -154,14 +154,15 @@ export class NewTopBidWebsocketEvent {
           id: order.collection_id,
           slug: order.collection_slug,
           name: order.collection_name,
-          floorAsk: {
-            priceNormalized: await parseFloorPrice("normalized", order),
-            price: await parseFloorPrice("", order),
-            priceNonflagged: await parseFloorPrice("non_flagged", order),
-          },
+          floorAsk: await parseFloorPrice("", order),
+          floorAskNormalized: await parseFloorPrice("normalized_", order),
+          floorAskNonflagged: await parseFloorPrice("non_flagged_", order),
         },
       });
     }
+
+    // eslint-disable-next-line
+    console.log(JSON.stringify(payloads[0]));
 
     const server = new Pusher.default({
       appId: config.websocketServerAppId,
@@ -239,3 +240,7 @@ export class NewTopBidWebsocketEvent {
 export type NewTopBidWebsocketEventInfo = {
   orderId: string;
 };
+
+NewTopBidWebsocketEvent.triggerEvent({
+  orderId: "0xa7ff78362ee4a23d48f5e38c4eab1e842d3d6d34b26588ca34476847927cee03",
+});
