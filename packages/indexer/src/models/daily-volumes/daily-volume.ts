@@ -235,32 +235,40 @@ export class DailyVolume {
             t1.volume,
             t1.rank,
             t1.floor_sell_value,
-            t1.volume_change
+            t1.volume_change,
+            t1.contract
           FROM
             (SELECT
+              t.contract,
               "collection_id",
               sum("fe"."price") AS "volume",
               RANK() OVER (ORDER BY SUM(price) DESC, "collection_id") "rank",
               min(fe.price) AS "floor_sell_value",
               (
-                  SELECT sum("fe"."price") - (SELECT volume
-                    FROM daily_volumes
-                    WHERE daily_volumes.collection_id  = t.collection_id
-                    ORDER BY daily_volumes.updated_at DESC LIMIT 1
-              ) ) as "volume_change"
+                  SELECT sum("fe"."price") - (SELECT 
+                        sum("fe2"."price") 
+                        FROM fill_events_2 fe2 
+                       WHERE t.contract = fe2.contract AND
+                            fe2.price > 0
+                        AND "fe2"."timestamp" < $/yesterdayTimestamp/
+                        AND "fe2".timestamp >= $/endYesterdayTimestamp/
+                    )
+              ) as "volume_change"
 
             FROM "fill_events_2" "fe"
               JOIN "tokens" "t" ON "fe"."token_id" = "t"."token_id" AND "fe"."contract" = "t"."contract"
               JOIN "collections" "c" ON "t"."collection_id" = "c"."id"
             WHERE
-              "fe"."timestamp" >= $/lastDailyTimestamp/
+              "fe"."timestamp" >= $/yesterdayTimestamp/
               AND fe.price > 0
               AND fe.is_primary IS NOT TRUE
               AND coalesce(fe.wash_trading_score, 0) = 0
               ${collectionId ? "AND collection_id = $/collectionId/" : ""}
-            GROUP BY "collection_id") t1`,
+            GROUP BY t.contract, "collection_id") t1`,
       {
-        lastDailyTimestamp: startTime,
+        yesterdayTimestamp: startTime,
+        endYesterdayTimestamp: startTime - 24 * 60 * 60,
+
         collectionId,
       }
     );
