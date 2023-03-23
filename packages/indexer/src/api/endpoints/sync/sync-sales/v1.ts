@@ -23,9 +23,6 @@ export const getSyncSalesV1Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      backfill: Joi.boolean().description(
-        "Backfill: returns the sales sorted by created_at, by default they are sorted by most recently updated as this is optimized for syncing."
-      ),
       continuation: Joi.string()
         .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
@@ -43,33 +40,22 @@ export const getSyncSalesV1Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const query = request.query as any;
+    const LIMIT = 5000;
 
     let paginationFilter = "";
 
     if (query.continuation) {
-      const contArr = splitContinuation(query.continuation, /^(.+)_(.+)$/);
+      const contArr = splitContinuation(query.continuation, /^(.+)_(.+)_(\d+)_(\d+)$/);
 
-      if (contArr.length !== 2) {
+      if (contArr.length !== 4) {
         throw Boom.badRequest("Invalid continuation string used");
       }
 
-      (query as any).createdAt = new Date(contArr[0]).toISOString();
-      (query as any).updatedAt = new Date(contArr[1]).toISOString();
-      if (query.backfill) {
-        paginationFilter = `
-        WHERE (fill_events_2.created_at) > ($/createdAt/)`;
-      } else {
-        paginationFilter = `
-        WHERE (fill_events_2.updated_at) < ($/updatedAt/)
-      `;
-      }
-    }
-
-    // Default to ordering by created_at
-    let queryOrderBy = "ORDER BY fill_events_2.updated_at DESC";
-
-    if (query.backfill) {
-      queryOrderBy = "ORDER BY fill_events_2.created_at ASC";
+      (query as any).updatedAt = new Date(contArr[0]).toISOString();
+      (query as any).txHash = contArr[1];
+      (query as any).logIndex = contArr[2];
+      (query as any).batchIndex = contArr[3];
+      paginationFilter = ` WHERE (updated_at, tx_hash, log_index, batch_index) > (to_timestamp($/updatedAt/), $/txHash/, $/logIndex/, $/batchIndex/)`;
     }
 
     try {
@@ -108,19 +94,23 @@ export const getSyncSalesV1Options: RouteOptions = {
             LEFT JOIN currencies
             ON fill_events_2.currency = currencies.contract
             ${paginationFilter}
-      
-            ${queryOrderBy}
-          LIMIT 5000;
+            WHERE updated_at < NOW() - INTERVAL '5 minutes'
+            ORDER BY fill_events_2.updated_at ASC, fill_events_2.tx_hash ASC, fill_events_2.log_index ASC, fill_events_2.batch_index ASC
+          LIMIT ${LIMIT};
       `;
 
       const rawResult = await redb.manyOrNone(baseQuery, query);
 
       let continuation = null;
-      if (rawResult.length === 1000) {
+      if (rawResult.length === LIMIT) {
         continuation = buildContinuation(
-          rawResult[rawResult.length - 1].created_at +
+          rawResult[rawResult.length - 1].updated_at +
             "_" +
-            rawResult[rawResult.length - 1].updated_at
+            rawResult[rawResult.length - 1].tx_hash +
+            "_" +
+            rawResult[rawResult.length - 1].log_index +
+            "_" +
+            rawResult[rawResult.length - 1].batch_index
         );
       }
 
@@ -144,10 +134,7 @@ export const getSyncSalesV1Options: RouteOptions = {
           timestamp: r.timestamp,
           contract: r.contract,
           tokenId: r.token_id,
-          name: r.name,
-          image: r.image,
           collectionId: r.collection_id,
-          collectionName: r.collection_name,
           washTradingScore: r.wash_trading_score,
           orderId: r.order_id,
           orderSourceId: r.order_source_id_int,
