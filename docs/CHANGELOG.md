@@ -1,3 +1,10 @@
+# [5.290.0](https://github.com/reservoirprotocol/indexer/compare/v5.289.5...v5.290.0) (2023-03-23)
+
+
+### Features
+
+* trigger deployment ([#3764](https://github.com/reservoirprotocol/indexer/issues/3764)) ([3b31521](https://github.com/reservoirprotocol/indexer/commit/3b31521363d93f31504e1f5f457b38a5dea541c3))
+
 ## [5.289.5](https://github.com/reservoirprotocol/indexer/compare/v5.289.4...v5.289.5) (2023-03-23)
 
 
