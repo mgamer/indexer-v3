@@ -1,3 +1,10 @@
+# [5.285.0](https://github.com/reservoirprotocol/indexer/compare/v5.284.0...v5.285.0) (2023-03-23)
+
+
+### Features
+
+* decrease sample size from 10k -> 5k for performance ([0db6a9c](https://github.com/reservoirprotocol/indexer/commit/0db6a9c66d2bf05589c3e396e55d539e9ba0d71e))
+
 # [5.284.0](https://github.com/reservoirprotocol/indexer/compare/v5.283.0...v5.284.0) (2023-03-23)
 
 
