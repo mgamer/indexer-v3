@@ -8,7 +8,7 @@ import _ from "lodash";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { JoiPrice, getJoiPriceObject, JoiOrderCriteria } from "@/common/joi";
+import { getJoiPriceObject, JoiOrder } from "@/common/joi";
 import { buildContinuation, fromBuffer, regex, splitContinuation, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
@@ -135,41 +135,7 @@ export const getOrdersBidsV5Options: RouteOptions = {
   },
   response: {
     schema: Joi.object({
-      orders: Joi.array().items(
-        Joi.object({
-          id: Joi.string().required(),
-          kind: Joi.string().required(),
-          side: Joi.string().valid("buy", "sell").required(),
-          status: Joi.string(),
-          tokenSetId: Joi.string().required(),
-          tokenSetSchemaHash: Joi.string().lowercase().pattern(regex.bytes32).required(),
-          contract: Joi.string().lowercase().pattern(regex.address),
-          maker: Joi.string().lowercase().pattern(regex.address).required(),
-          taker: Joi.string().lowercase().pattern(regex.address).required(),
-          price: JoiPrice,
-          validFrom: Joi.number().required(),
-          validUntil: Joi.number().required(),
-          quantityFilled: Joi.number().unsafe(),
-          quantityRemaining: Joi.number().unsafe(),
-          criteria: JoiOrderCriteria.allow(null),
-          source: Joi.object().allow(null),
-          feeBps: Joi.number().allow(null),
-          feeBreakdown: Joi.array()
-            .items(
-              Joi.object({
-                kind: Joi.string(),
-                recipient: Joi.string().allow("", null),
-                bps: Joi.number(),
-              })
-            )
-            .allow(null),
-          expiration: Joi.number().required(),
-          isReservoir: Joi.boolean().allow(null),
-          createdAt: Joi.string().required(),
-          updatedAt: Joi.string().required(),
-          rawData: Joi.object().optional().allow(null),
-        })
-      ),
+      orders: Joi.array().items(JoiOrder),
       continuation: Joi.string().pattern(regex.base64).allow(null),
     }).label(`getOrdersBids${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
