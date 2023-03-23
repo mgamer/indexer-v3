@@ -460,6 +460,7 @@ export const getOrdersBidsV5Options: RouteOptions = {
           rawData: r.raw_data,
           normalizeRoyalties: query.normalizeRoyalties,
           missingRoyalties: r.missing_royalties,
+          token: query.token,
         });
       });
 
