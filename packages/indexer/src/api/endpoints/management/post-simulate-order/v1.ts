@@ -12,6 +12,8 @@ import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { genericTaker, ensureBuyTxSucceeds, ensureSellTxSucceeds } from "@/utils/simulation";
 
+import * as orderFixes from "@/jobs/order-fixes/fixes";
+
 const version = "v1";
 
 export const postSimulateOrderV1Options: RouteOptions = {
@@ -47,6 +49,9 @@ export const postSimulateOrderV1Options: RouteOptions = {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payload = request.payload as any;
+
+    const tryAndFixOrder = async (id: string) =>
+      orderFixes.addToQueue([{ by: "id", data: { id } }]);
 
     const logAndRevalidateOrder = async (
       id: string,
@@ -106,12 +111,15 @@ export const postSimulateOrderV1Options: RouteOptions = {
         throw Boom.badRequest("Could not find order");
       }
       if (["blur", "nftx", "sudoswap", "universe"].includes(orderResult.kind)) {
+        await tryAndFixOrder(id);
         return { message: "Order not simulatable" };
       }
       if (getNetworkSettings().whitelistedCurrencies.has(fromBuffer(orderResult.currency))) {
+        await tryAndFixOrder(id);
         return { message: "Order not simulatable" };
       }
       if (getNetworkSettings().nonSimulatableContracts.includes(fromBuffer(orderResult.contract))) {
+        await tryAndFixOrder(id);
         return { message: "Associated contract is not simulatable" };
       }
 
@@ -125,6 +133,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
         { contract: orderResult.contract }
       );
       if (!["erc721", "erc1155"].includes(contractResult.kind)) {
+        await tryAndFixOrder(id);
         return { message: "Non-standard contracts not supported" };
       }
 
@@ -145,20 +154,24 @@ export const postSimulateOrderV1Options: RouteOptions = {
         });
 
         if (JSON.parse(response.payload).statusCode === 500) {
+          await tryAndFixOrder(id);
           return { message: "Simulation failed" };
         }
 
         if (response.payload.includes("No available orders")) {
+          await tryAndFixOrder(id);
           return { message: "No orders to simulate" };
         }
 
         const parsedPayload = JSON.parse(response.payload);
         if (!parsedPayload?.path?.length) {
+          await tryAndFixOrder(id);
           return { message: "Nothing to simulate" };
         }
 
         const saleData = parsedPayload.steps[2].items[0]?.data;
         if (!saleData) {
+          await tryAndFixOrder(id);
           return { message: "Nothing to simulate" };
         }
 
@@ -224,6 +237,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
           }
         );
         if (!tokenResult) {
+          await tryAndFixOrder(id);
           throw Boom.internal("Could not simulate order");
         }
 
@@ -244,20 +258,24 @@ export const postSimulateOrderV1Options: RouteOptions = {
         });
 
         if (JSON.parse(response.payload).statusCode === 500) {
+          await tryAndFixOrder(id);
           return { message: "Simulation failed" };
         }
 
         if (response.payload.includes("No available orders")) {
+          await tryAndFixOrder(id);
           return { message: "No orders to simulate" };
         }
 
         const parsedPayload = JSON.parse(response.payload);
         if (!parsedPayload?.path?.length) {
+          await tryAndFixOrder(id);
           return { message: "Nothing to simulate" };
         }
 
         const saleData = parsedPayload.steps[2].items[0]?.data;
         if (!saleData) {
+          await tryAndFixOrder(id);
           return { message: "Nothing to simulate" };
         }
 
