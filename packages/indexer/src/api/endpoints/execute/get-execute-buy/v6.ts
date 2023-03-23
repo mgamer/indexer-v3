@@ -832,8 +832,8 @@ export const getExecuteBuyV6Options: RouteOptions = {
       const txSender = relayer ?? taker;
 
       for (const tx of txs) {
-        const subPath = path.filter((_, i) => tx.orderIndexes.includes(i));
-        const listings = listingDetails.filter((_, i) => tx.orderIndexes.includes(i));
+        const subPath = path.filter((p) => tx.orderIds.includes(p.orderId));
+        const listings = listingDetails.filter((d) => tx.orderIds.includes(d.orderId));
 
         // Check that the taker has enough funds to fill all requested tokens
         const totalPrice = subPath
@@ -921,7 +921,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
         steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
         errors,
         // Remove any unsuccessfully handled listings from the path
-        path: path.filter((_, i) => success[i]),
+        path: path.filter((p) => success[p.orderId]),
       };
     } catch (error) {
       if (!(error instanceof Boom.Boom)) {
