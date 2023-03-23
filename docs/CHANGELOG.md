@@ -1,3 +1,11 @@
+# [5.289.0](https://github.com/reservoirprotocol/indexer/compare/v5.288.0...v5.289.0) (2023-03-23)
+
+
+### Features
+
+* fix top bid on token refresh ([fa35679](https://github.com/reservoirprotocol/indexer/commit/fa356797bd41a34e955ca102b8e91662306bae84))
+* trigger an order fix whenever simulation failed ([cc231ad](https://github.com/reservoirprotocol/indexer/commit/cc231ad0a5aca1a3e4d2257af579bd386d5ab503))
+
 # [5.288.0](https://github.com/reservoirprotocol/indexer/compare/v5.287.0...v5.288.0) (2023-03-23)
 
 
