@@ -122,6 +122,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
       skipBalanceCheck: Joi.boolean()
         .default(false)
         .description("If true, balance check will be skipped."),
+      excludeEOA: Joi.boolean()
+        .default(false)
+        .description(
+          "Exclude orders that can only be filled by EOAs, to support filling with smart contracts."
+        ),
       maxFeePerGas: Joi.string().pattern(regex.number).description("Optional custom gas settings."),
       maxPriorityFeePerGas: Joi.string()
         .pattern(regex.number)
@@ -479,7 +484,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 AND orders.fillability_status = 'fillable'
                 AND orders.approval_status = 'approved'
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
-                ${payload.normalizeRoyalties ? " AND orders.kind != 'blur'" : ""}
+                ${
+                  payload.normalizeRoyalties || payload.excludeEOA
+                    ? " AND orders.kind != 'blur'"
+                    : ""
+                }
               ORDER BY
                 ${payload.normalizeRoyalties ? "orders.normalized_value" : "orders.value"},
                 ${
