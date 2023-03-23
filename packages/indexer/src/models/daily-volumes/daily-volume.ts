@@ -241,7 +241,6 @@ export class DailyVolume {
     const day7Timestamps = [
       dateTimestamp / 1000 - 7 * 24 * 3600,
       dateTimestamp / 1000 - 6 * 24 * 3600,
-      5,
     ];
 
     // the beginning of the day 30 days ago to the end of that day
@@ -297,7 +296,7 @@ export class DailyVolume {
                SUM(volume${valuesPostfix}) AS $2:name,
                MIN(floor_sell_value${valuesPostfix}) AS $3:name
         FROM daily_volumes
-        WHERE timestamp <= $4 AND timestamp >= $5
+        WHERE timestamp < $4 AND timestamp >= $5
         AND collection_id != '-1'
         ${collectionId ? `AND collection_id = $5` : ""}
         GROUP BY collection_id
