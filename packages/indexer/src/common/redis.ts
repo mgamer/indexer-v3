@@ -26,6 +26,11 @@ export const rateLimitRedis = new Redis(config.rateLimitRedisUrl, {
   commandTimeout: 600,
 });
 
+export const metricsRedis = new Redis(config.metricsRedisUrl, {
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+});
+
 // https://redis.io/topics/distlock
 export const redlock = new Redlock([redis.duplicate()], { retryCount: 0 });
 
