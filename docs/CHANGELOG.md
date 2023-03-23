@@ -1,3 +1,10 @@
+## [5.289.4](https://github.com/reservoirprotocol/indexer/compare/v5.289.3...v5.289.4) (2023-03-23)
+
+
+### Bug Fixes
+
+* diabled trait offers ([#3759](https://github.com/reservoirprotocol/indexer/issues/3759)) ([d95b747](https://github.com/reservoirprotocol/indexer/commit/d95b747ce40c8f79257657ae0ac334970fa8527d))
+
 ## [5.289.3](https://github.com/reservoirprotocol/indexer/compare/v5.289.2...v5.289.3) (2023-03-23)
 
 
