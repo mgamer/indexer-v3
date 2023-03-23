@@ -125,6 +125,11 @@ export const getExecuteBuyV6Options: RouteOptions = {
         .description(
           "If true, do not filter out inactive orders (only relevant for order id filtering)."
         ),
+      excludeEOA: Joi.boolean()
+        .default(false)
+        .description(
+          "Exclude orders that can only be filled by EOAs, to support filling with smart contracts."
+        ),
       x2y2ApiKey: Joi.string().description("Override the X2Y2 API key used for filling."),
     }),
   },
@@ -463,7 +468,11 @@ export const getExecuteBuyV6Options: RouteOptions = {
                       ? " AND orders.currency = $/currency/"
                       : ""
                   }
-                  ${payload.normalizeRoyalties ? " AND orders.kind != 'blur'" : ""}
+                  ${
+                    payload.normalizeRoyalties || payload.excludeEOA
+                      ? " AND orders.kind != 'blur'"
+                      : ""
+                  }
                 ORDER BY
                   ${payload.normalizeRoyalties ? "orders.normalized_value" : "orders.value"},
                   ${
