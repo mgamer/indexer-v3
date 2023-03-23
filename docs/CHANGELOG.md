@@ -1,3 +1,10 @@
+# [5.287.0](https://github.com/reservoirprotocol/indexer/compare/v5.286.0...v5.287.0) (2023-03-23)
+
+
+### Features
+
+* update filed name ([5f55a32](https://github.com/reservoirprotocol/indexer/commit/5f55a322105f4b8c076359cc5dc377a1bdd6d178))
+
 # [5.286.0](https://github.com/reservoirprotocol/indexer/compare/v5.285.0...v5.286.0) (2023-03-23)
 
 
