@@ -142,6 +142,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
             .items(
               Joi.object({
                 status: Joi.string().valid("complete", "incomplete").required(),
+                orderIds: Joi.array().items(Joi.string()),
                 data: Joi.object(),
               })
             )
@@ -618,6 +619,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         kind: string;
         items: {
           status: string;
+          orderIds?: string[];
           data?: object;
         }[];
       }[] = [
@@ -755,7 +757,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       const { txs, success } = result;
 
       // Filter out any non-fillable orders from the path
-      path = path.filter((_, i) => success[i]);
+      path = path.filter((p) => success[p.orderId]);
 
       if (!path.length) {
         throw Boom.badRequest("No available orders");
@@ -769,8 +771,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
         ? bn(payload.maxPriorityFeePerGas).toHexString()
         : undefined;
 
-      for (const { txData, approvals, permits, orderIndexes } of txs) {
-        const subPath = path.filter((_, i) => orderIndexes.includes(i));
+      for (const { txData, approvals, permits, orderIds } of txs) {
+        const subPath = path.filter((p) => orderIds.includes(p.orderId));
 
         for (const approval of approvals) {
           const approvedAmount = await onChainData
@@ -876,6 +878,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         steps[3].items.push({
           status: "incomplete",
+          orderIds,
           data:
             // Do not return the final step unless all permits have a signature attached
             steps[1].items.length === 0
