@@ -6,9 +6,8 @@ import { isAfter, add, formatISO9075 } from "date-fns";
 import _ from "lodash";
 import Joi from "joi";
 
-import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { regex, toBuffer } from "@/common/utils";
+import { regex } from "@/common/utils";
 import { config } from "@/config/index";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as orderFixes from "@/jobs/order-fixes/fixes";
@@ -143,38 +142,6 @@ export const postTokensRefreshV1Options: RouteOptions = {
 
       // Revalidate the token orders
       await orderFixes.addToQueue([{ by: "token", data: { token: payload.token } }]);
-
-      // Revalidate the top bid on the token
-      const topBidResult = await redb.oneOrNone(
-        `
-          SELECT
-            o.id
-          FROM orders o
-          JOIN token_sets_tokens tst
-            ON o.token_set_id = tst.token_set_id
-          WHERE tst.contract = $/contract/
-            AND tst.token_id = $/tokenId/
-            AND o.side = 'buy'
-            AND o.fillability_status = 'fillable'
-            AND o.approval_status = 'approved'
-            AND EXISTS(
-              SELECT FROM nft_balances nb
-                WHERE nb.contract = $/contract/
-                AND nb.token_id = $/tokenId/
-                AND nb.amount > 0
-                AND nb.owner != o.maker
-            )
-          ORDER BY o.value DESC
-          LIMIT 1
-        `,
-        {
-          contract: toBuffer(contract),
-          tokenId,
-        }
-      );
-      if (topBidResult) {
-        await orderFixes.addToQueue([{ by: "id", data: { id: topBidResult.id } }]);
-      }
 
       // Revalidate the token attribute cache
       await resyncAttributeCache.addToQueue(contract, tokenId, 0, overrideCoolDown);
