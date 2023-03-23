@@ -239,7 +239,3 @@ export class NewTopBidWebsocketEvent {
 export type NewTopBidWebsocketEventInfo = {
   orderId: string;
 };
-
-NewTopBidWebsocketEvent.triggerEvent({
-  orderId: "0xe315d310fc373fe4ff747c9cda237cfd09f4b870217f0fda6461c7aa4a6af10e",
-});
