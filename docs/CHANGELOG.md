@@ -1,3 +1,10 @@
+# [5.282.0](https://github.com/reservoirprotocol/indexer/compare/v5.281.1...v5.282.0) (2023-03-23)
+
+
+### Features
+
+* keep track of filled order ids by sale item ([a8257a3](https://github.com/reservoirprotocol/indexer/commit/a8257a3dfc75d371edb786a17223e4d728afa585))
+
 ## [5.281.1](https://github.com/reservoirprotocol/indexer/compare/v5.281.0...v5.281.1) (2023-03-22)
 
 
