@@ -13,7 +13,7 @@ import {
 import { Tokens } from "@/models/tokens";
 import MetadataApi from "@/utils/metadata-api";
 import * as royalties from "@/utils/royalties";
-import * as marketplaceFees from "@/utils/marketplace_fees";
+import * as marketplaceFees from "@/utils/marketplace-fees";
 import { logger } from "@/common/logger";
 
 export class Collections {
