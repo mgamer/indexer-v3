@@ -61,22 +61,31 @@ export class NewTopBidWebsocketEvent {
                      0
                    ) AS "valid_until",
                 (${criteriaBuildQuery}) AS criteria,
-                c.id as collection_id,
+                               c.id as collection_id,
                 c.slug as collection_slug,
                 c.name as collection_name,
                 c.normalized_floor_sell_id AS normalized_floor_sell_id,
                 c.normalized_floor_sell_value AS normalized_floor_sell_value,
                 c.normalized_floor_sell_source_id_int AS normalized_floor_sell_source_id_int,
+                normalized_floor_order.currency as normalized_floor_order_currency,
+                normalized_floor_order.currency_value as normalized_floor_order_currency_value,
                 c.floor_sell_id AS floor_sell_id,
                 c.floor_sell_value AS floor_sell_value,
                 c.floor_sell_source_id_int AS floor_sell_source_id_int,
+                floor_order.currency as floor_order_currency,
+                floor_order.currency_value as floor_order_currency_value,
                 c.non_flagged_floor_sell_id AS non_flagged_floor_sell_id,
                 c.non_flagged_floor_sell_value AS non_flagged_floor_sell_value,
-                c.non_flagged_floor_sell_source_id_int AS non_flagged_floor_sell_source_id_int
+                c.non_flagged_floor_sell_source_id_int AS non_flagged_floor_sell_source_id_int,
+                non_flagged_floor_order.currency as non_flagged_floor_order_currency,
+                non_flagged_floor_order.currency_value as non_flagged_floor_order_currency_value
 
 
               FROM orders
                 JOIN collections c on orders.contract = c.contract
+                JOIN orders normalized_floor_order ON c.normalized_floor_sell_id = normalized_floor_order.id
+                JOIN orders non_flagged_floor_order ON c.non_flagged_floor_sell_id = non_flagged_floor_order.id
+                JOIN orders floor_order ON c.floor_sell_id = floor_order.id
               WHERE orders.id = $/orderId/
               LIMIT 1
             `,
@@ -230,3 +239,7 @@ export class NewTopBidWebsocketEvent {
 export type NewTopBidWebsocketEventInfo = {
   orderId: string;
 };
+
+NewTopBidWebsocketEvent.triggerEvent({
+  orderId: "0xe315d310fc373fe4ff747c9cda237cfd09f4b870217f0fda6461c7aa4a6af10e",
+});
