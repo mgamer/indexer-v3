@@ -1,3 +1,10 @@
+## [5.296.1](https://github.com/reservoirprotocol/indexer/compare/v5.296.0...v5.296.1) (2023-03-24)
+
+
+### Bug Fixes
+
+* undefined access ([888e67f](https://github.com/reservoirprotocol/indexer/commit/888e67fbfc976b5f86bcdd85bbd6751a6a82f22b))
+
 # [5.296.0](https://github.com/reservoirprotocol/indexer/compare/v5.295.2...v5.296.0) (2023-03-24)
 
 
