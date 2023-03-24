@@ -284,7 +284,7 @@ export class DailyVolume {
               day1_volume = $/volume/,
               day1_rank = $/rank/,
               day1_floor_sell_value = $/floor_sell_value/,
-              day1_volume_change = $/volume_change/
+              day1_volume_change = $/volume_change/ / 1000000000000000000,
             WHERE id = $/collection_id/
             `,
           values: values,
