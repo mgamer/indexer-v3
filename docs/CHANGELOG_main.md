@@ -1,3 +1,10 @@
+# [5.296.0](https://github.com/reservoirprotocol/indexer/compare/v5.295.2...v5.296.0) (2023-03-24)
+
+
+### Features
+
+* update tag for collections/{collection}/supported-marketplaces/v1 ([7926f09](https://github.com/reservoirprotocol/indexer/commit/7926f091f1765820811339ec8989173f9eeeed3b))
+
 ## [5.295.2](https://github.com/reservoirprotocol/indexer/compare/v5.295.1...v5.295.2) (2023-03-24)
 
 
