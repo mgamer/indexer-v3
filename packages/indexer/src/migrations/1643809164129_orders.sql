@@ -131,9 +131,9 @@ ALTER TABLE "orders" SET (
   autovacuum_analyze_threshold=100000
 );
 
--- CREATE INDEX "orders_asks_updated_at_asc_id_index"
---  ON "orders" ("updated_at" ASC, "id" ASC)
---  WHERE ("side" = 'sell');
+CREATE INDEX "orders_asks_updated_at_asc_id_index"
+  ON "orders" ("updated_at" ASC, "id" ASC)
+  WHERE ("side" = 'sell');
 
 -- Down Migration
 
