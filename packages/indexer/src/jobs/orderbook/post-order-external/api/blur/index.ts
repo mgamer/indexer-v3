@@ -22,18 +22,22 @@ export type BlurData = {
 };
 
 export async function postOrder(order: BlurData, apiKey: string): Promise<void> {
-  let url = `${config.orderFetcherBaseUrl}/api/blur-submit-order`;
-  url += `?maker=${order.maker}`;
-  url += `&marketplaceData=${order.marketplaceData}`;
-  url += `&authToken=${order.authToken}`;
-  url += `&signature=${order.signature}`;
-
+  const url = `${config.orderFetcherBaseUrl}/api/blur-submit-order`;
   try {
-    await axios.get(url, {
-      headers: {
-        "X-Api-Key": apiKey || config.orderFetcherApiKey,
+    await axios.post(
+      url,
+      {
+        maker: order.maker,
+        marketplaceData: order.marketplaceData,
+        authToken: order.authToken,
+        signature: order.signature,
       },
-    });
+      {
+        headers: {
+          "X-Api-Key": apiKey || config.orderFetcherApiKey,
+        },
+      }
+    );
   } catch (err: any) {
     if (err?.response) {
       logger.error(
