@@ -288,6 +288,10 @@ export const getOrdersAsksV4Options: RouteOptions = {
       }
 
       if (query.tokenSetId) {
+        // When filtering by token set id it could be problematic on small token sets which might not have any listings
+        // we first try to fetch up to 2000 tokens, if the set has less than this we would user the orders.token_set_id IN (...)
+        // if the token set has more than 2000 it's highly likely there are listings which would not cause the query to time out
+        // in that case it would be better to use the JOINs approach
         const limit = 2000;
         (query as any).tokenSetId = `${query.tokenSetId}`;
 
