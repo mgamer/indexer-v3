@@ -263,7 +263,7 @@ export const getExecuteBidV5Options: RouteOptions = {
         },
         {
           id: "currency-approval",
-          action: `Approve ${wrappedCurrency} contract`,
+          action: "Approve currency",
           description:
             "We'll ask your approval for the exchange to access your token. This is a one-time only operation per exchange.",
           kind: "transaction",

@@ -139,6 +139,12 @@ export const setupRoutes = (server: Server) => {
   // Admin
 
   server.route({
+    method: "GET",
+    path: "/admin/api-keys/metrics",
+    options: adminEndpoints.getApiKeyMetrics,
+  });
+
+  server.route({
     method: "POST",
     path: "/admin/delete-rate-limit-rule",
     options: adminEndpoints.postDeleteRateLimitRuleOptions,
@@ -317,7 +323,7 @@ export const setupRoutes = (server: Server) => {
   server.route({
     method: "GET",
     path: "/api-keys/{key}/rate-limits",
-    options: apiKeysEndpoints.getApuKeyRateLimits,
+    options: apiKeysEndpoints.getApiKeyRateLimits,
   });
 
   // Attributes
@@ -490,6 +496,12 @@ export const setupRoutes = (server: Server) => {
     method: "PUT",
     path: "/collections/{collection}/community/v1",
     options: collectionsEndpoints.putSetCollectionCommunityV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/collections/{collection}/supported-marketplaces/v1",
+    options: collectionsEndpoints.getCollectionSupportedMarketplacesV1Options,
   });
 
   // Collections Sets

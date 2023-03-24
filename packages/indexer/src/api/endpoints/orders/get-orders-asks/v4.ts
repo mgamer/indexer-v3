@@ -107,6 +107,11 @@ export const getOrdersAsksV4Options: RouteOptions = {
       includeDynamicPricing: Joi.boolean()
         .default(false)
         .description("If true, dynamic pricing data will be returned in the response."),
+      excludeEOA: Joi.boolean()
+        .default(false)
+        .description(
+          "Exclude orders that can only be filled by EOAs, to support filling with smart contracts."
+        ),
       startTimestamp: Joi.number().description(
         "Get events after a particular unix timestamp (inclusive)"
       ),
@@ -283,16 +288,37 @@ export const getOrdersAsksV4Options: RouteOptions = {
       }
 
       if (query.tokenSetId) {
-        baseQuery += `
-          JOIN token_sets_tokens tst1
-            ON tst1.token_set_id = orders.token_set_id
-          JOIN token_sets_tokens tst2
-            ON tst2.contract = tst1.contract
-            AND tst2.token_id = tst1.token_id
+        // When filtering by token set id it could be problematic on small token sets which might not have any listings
+        // we first try to fetch up to 3000 tokens, if the set has less than this we would user the orders.token_set_id IN (...)
+        // if the token set has more than 3000 it's highly likely there are listings which would not cause the query to time out
+        // in that case it would be better to use the JOINs approach
+        const limit = 3000;
+        (query as any).tokenSetId = `${query.tokenSetId}`;
+
+        const tokenSetIds = await redb.manyOrNone(
+          `
+          SELECT CONCAT('token:', REPLACE(contract::text, '\\x', '0x'), ':', token_id) AS "token_set_id"
+          FROM token_sets_tokens
+          WHERE token_set_id = $/tokenSetId/
+          LIMIT ${limit};
+        `,
+          query
+        );
+
+        if (tokenSetIds && _.size(tokenSetIds) == limit) {
+          baseQuery += `
+            JOIN token_sets_tokens tst1
+              ON tst1.token_set_id = orders.token_set_id
+            JOIN token_sets_tokens tst2
+              ON tst2.contract = tst1.contract
+              AND tst2.token_id = tst1.token_id
         `;
 
-        (query as any).tokenSetId = `${query.tokenSetId}`;
-        conditions.push(`tst2.token_set_id = $/tokenSetId/`);
+          conditions.push(`tst2.token_set_id = $/tokenSetId/`);
+        } else if (tokenSetIds && _.size(tokenSetIds) > 0) {
+          (query as any).tokenSetIds = _.map(tokenSetIds, (t) => t.token_set_id);
+          conditions.push(`orders.token_set_id IN ($/tokenSetIds:list/)`);
+        }
       }
 
       if (query.contracts) {
@@ -350,17 +376,17 @@ export const getOrdersAsksV4Options: RouteOptions = {
           }
 
           collectionSetFilter = `
-          JOIN LATERAL (
-            SELECT
-              contract,
-              token_id
-            FROM
-              token_sets_tokens
-            WHERE
-              token_sets_tokens.token_set_id = orders.token_set_id
-            LIMIT 1) tst ON TRUE
-          JOIN tokens ON tokens.contract = tst.contract
-            AND tokens.token_id = tst.token_id
+            JOIN LATERAL (
+              SELECT
+                contract,
+                token_id
+              FROM
+                token_sets_tokens
+              WHERE
+                token_sets_tokens.token_set_id = orders.token_set_id
+              LIMIT 1) tst ON TRUE
+            JOIN tokens ON tokens.contract = tst.contract
+              AND tokens.token_id = tst.token_id
           `;
 
           conditions.push(`tokens.collection_id IN ($/collectionsIds:csv/)`);
@@ -387,6 +413,10 @@ export const getOrdersAsksV4Options: RouteOptions = {
         conditions.push(
           `orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL`
         );
+      }
+
+      if (query.excludeEOA) {
+        conditions.push(`orders.kind != 'blur'`);
       }
 
       if (orderStatusFilter) {
