@@ -277,6 +277,9 @@ export class DailyVolume {
     if (results.length) {
       const queries: PgPromiseQuery[] = [];
       results.forEach((values: any) => {
+        if (values.volume_change !== null) {
+          values.volume_change = values.volume_change / 1000000000000000000;
+        }
         queries.push({
           query: `
             UPDATE collections
@@ -284,7 +287,7 @@ export class DailyVolume {
               day1_volume = $/volume/,
               day1_rank = $/rank/,
               day1_floor_sell_value = $/floor_sell_value/,
-              day1_volume_change = $/volume_change/ / 1000000000000000000,
+              day1_volume_change = $/volume_change/
             WHERE id = $/collection_id/
             `,
           values: values,
@@ -740,3 +743,5 @@ export class DailyVolume {
     }
   }
 }
+
+DailyVolume.update1Day();
