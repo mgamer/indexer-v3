@@ -30,7 +30,7 @@ const version = "v1";
 export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
   description: "Collections",
   notes: "List of supported marketplaces for the collection.",
-  tags: ["api"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 5,
