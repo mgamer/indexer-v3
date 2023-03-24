@@ -357,8 +357,8 @@ export const JoiSale = Joi.object({
   marketplaceFeeBps: Joi.number().optional(),
   paidFullRoyalty: Joi.boolean().optional(),
   feeBreakdown: Joi.array().items(JoiFeeBreakdown).optional(),
-  createdAt: Joi.string(),
-  updatedAt: Joi.string(),
+  createdAt: Joi.string().optional(),
+  updatedAt: Joi.string().optional(),
 });
 
 export const feeInfoIsValid = (
