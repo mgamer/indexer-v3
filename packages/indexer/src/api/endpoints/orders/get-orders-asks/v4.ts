@@ -288,16 +288,33 @@ export const getOrdersAsksV4Options: RouteOptions = {
       }
 
       if (query.tokenSetId) {
-        baseQuery += `
-          JOIN token_sets_tokens tst1
-            ON tst1.token_set_id = orders.token_set_id
-          JOIN token_sets_tokens tst2
-            ON tst2.contract = tst1.contract
-            AND tst2.token_id = tst1.token_id
+        const limit = 2000;
+        (query as any).tokenSetId = `${query.tokenSetId}`;
+
+        const tokenSetIds = await redb.manyOrNone(
+          `
+          SELECT CONCAT('token:', REPLACE(contract::text, '\\x', '0x'), ':', token_id) AS "token_set_id"
+          FROM token_sets_tokens
+          WHERE token_set_id = $/tokenSetId/
+          LIMIT ${limit};
+        `,
+          query
+        );
+
+        if (tokenSetIds && _.size(tokenSetIds) == limit) {
+          baseQuery += `
+            JOIN token_sets_tokens tst1
+              ON tst1.token_set_id = orders.token_set_id
+            JOIN token_sets_tokens tst2
+              ON tst2.contract = tst1.contract
+              AND tst2.token_id = tst1.token_id
         `;
 
-        (query as any).tokenSetId = `${query.tokenSetId}`;
-        conditions.push(`tst2.token_set_id = $/tokenSetId/`);
+          conditions.push(`tst2.token_set_id = $/tokenSetId/`);
+        } else {
+          (query as any).tokenSetIds = _.map(tokenSetIds, (t) => t.token_set_id);
+          conditions.push(`orders.token_set_id IN ($/tokenSetIds:list/)`);
+        }
       }
 
       if (query.contracts) {
