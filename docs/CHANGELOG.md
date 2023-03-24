@@ -1,3 +1,10 @@
+# [5.294.0](https://github.com/reservoirprotocol/indexer/compare/v5.293.1...v5.294.0) (2023-03-24)
+
+
+### Features
+
+* change metrics api to be an admin and add clearing tables cron ([0f5bca0](https://github.com/reservoirprotocol/indexer/commit/0f5bca0242c762772ae1d606e328dfbe4bd87464))
+
 ## [5.293.1](https://github.com/reservoirprotocol/indexer/compare/v5.293.0...v5.293.1) (2023-03-24)
 
 
