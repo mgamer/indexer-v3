@@ -1,3 +1,16 @@
+# [5.293.0](https://github.com/reservoirprotocol/indexer/compare/v5.292.2...v5.293.0) (2023-03-24)
+
+
+### Bug Fixes
+
+* fix typo and inequality ([a03f026](https://github.com/reservoirprotocol/indexer/commit/a03f02693e27a5910ca66d2efbf443687bf377e2))
+* semantic release parallel runs ([1f69238](https://github.com/reservoirprotocol/indexer/commit/1f69238b9f0d4a61bb6ec4b6df88fb9ea162e397))
+
+
+### Features
+
+* fix day7,day30 daily volume calculation to happen on that day ([4357da6](https://github.com/reservoirprotocol/indexer/commit/4357da646ef165525332ccd253156cdccb60f945))
+
 ## [5.292.2](https://github.com/reservoirprotocol/indexer/compare/v5.292.1...v5.292.2) (2023-03-24)
 
 
