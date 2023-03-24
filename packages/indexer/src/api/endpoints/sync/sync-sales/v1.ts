@@ -15,7 +15,7 @@ export const getSyncSalesV1Options: RouteOptions = {
   description: "Sync Sales",
   notes:
     "This API is optimized for bulk access to sales for syncing a remote database. Thus it offers minimal filters/metadata.",
-  tags: ["api", "Data Sync"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 8,
