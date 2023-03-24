@@ -8,34 +8,37 @@ import { redis } from "@/common/redis";
 import { logger } from "@/common/logger";
 import { Sources } from "@/models/sources";
 import { getJoiPriceObject } from "@/common/joi";
-import * as Sdk from "@reservoir0x/sdk";
+// import * as Sdk from "@reservoir0x/sdk";
 
 export class NewTopBidWebsocketEvent {
   public static async triggerEvent(data: NewTopBidWebsocketEventInfo) {
     const criteriaBuildQuery = Orders.buildCriteriaQuery("orders", "token_set_id", false);
-    const sources = await Sources.getInstance();
+    // const sources = await Sources.getInstance();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parseFloorPrice = async (type: "normalized_" | "non_flagged_" | "", order: any) => {
-      const floorAskCurrency = order[`${type}floor_order_currency`]
-        ? fromBuffer(order[`${type}floor_order_currency`])
-        : Sdk.Common.Addresses.Eth[config.chainId];
-      return {
-        id: order[`${type}floor_sell_id`],
-        sourceDomain: sources.get(Number(order[`${type}floor_sell_source_id_int`]))?.domain,
-        price: order[`${type}floor_sell_id`]
-          ? await getJoiPriceObject(
-              {
-                gross: {
-                  amount:
-                    order[`${type}floor_order_currency_value`] ?? order[`${type}floor_sell_value`],
-                  nativeAmount: order[`${type}floor_sell_value`],
-                },
-              },
-              floorAskCurrency
-            )
-          : null,
-      };
+      // const floorAskCurrency = order[`${type}floor_order_currency`]
+      //   ? fromBuffer(order[`${type}floor_order_currency`])
+      //   : Sdk.Common.Addresses.Eth[config.chainId];
+      // return {
+      //   id: order[`${type}floor_sell_id`],
+      //   sourceDomain: sources.get(Number(order[`${type}floor_sell_source_id_int`]))?.domain,
+      //   price: order[`${type}floor_sell_id`]
+      //     ? await getJoiPriceObject(
+      //         {
+      //           gross: {
+      //             amount:
+      //               order[`${type}floor_order_currency_value`] ?? order[`${type}floor_sell_value`],
+      //             nativeAmount: order[`${type}floor_sell_value`],
+      //           },
+      //         },
+      //         floorAskCurrency
+      //       )
+      //     : null,
+      // };
+
+      // just return the native price for now
+      return order[`${type}floor_sell_value`];
     };
 
     const order = await idb.oneOrNone(
