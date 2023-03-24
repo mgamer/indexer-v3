@@ -1,3 +1,15 @@
+# [5.291.0](https://github.com/reservoirprotocol/indexer/compare/v5.290.0...v5.291.0) (2023-03-24)
+
+
+### Bug Fixes
+
+* order-fetcher api call ([6112118](https://github.com/reservoirprotocol/indexer/commit/6112118ddda1a80c7bdeb2d70526e3193b9fe2e3))
+
+
+### Features
+
+* add support for cross-posting listings to blur ([6e59671](https://github.com/reservoirprotocol/indexer/commit/6e59671db3ddefce68c82dffc3dbd79c368c1438))
+
 # [5.290.0](https://github.com/reservoirprotocol/indexer/compare/v5.289.5...v5.290.0) (2023-03-23)
 
 
