@@ -62,9 +62,9 @@ jobs:
           # build-args: |
           #   VERSION=${{ steps.semantic.outputs.new_release_version }}
 
-      - name: Publish github release
-        # if: steps.semantic.outputs.new_release_version != ''
-        uses: cycjimmy/semantic-release-action@v3
+      # - name: Publish github release
+      #   if: steps.semantic.outputs.new_release_version != ''
+      #   uses: cycjimmy/semantic-release-action@v3
 
   deploy-dev:
     name: Deploy to Development
