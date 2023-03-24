@@ -184,11 +184,11 @@ export const getUserTopBidsV4Options: RouteOptions = {
           throw Boom.badRequest(`No collections for collection set ${query.collectionsSetId}`);
         }
 
-        collectionFilter = `AND id IN ($/collectionsIds:csv/)`;
+        collectionFilter = `AND c.id IN ($/collectionsIds:csv/)`;
       } else if (Array.isArray(query.collection)) {
-        collectionFilter = `AND id IN ($/collection:csv/)`;
+        collectionFilter = `AND c.id IN ($/collection:csv/)`;
       } else {
-        collectionFilter = `AND id = $/collection/`;
+        collectionFilter = `AND c.id = $/collection/`;
       }
     }
 
