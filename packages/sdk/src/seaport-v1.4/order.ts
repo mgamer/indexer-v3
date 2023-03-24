@@ -365,25 +365,27 @@ export class Order {
   }
 
   private extractSignature() {
-    let signature = this.params.signature!;
+    if (this.params.signature) {
+      let signature = this.params.signature;
 
-    // Remove the `0x` prefix and count bytes not characters
-    const actualSignatureLength = (signature.length - 2) / 2;
+      // Remove the `0x` prefix and count bytes not characters
+      const actualSignatureLength = (signature.length - 2) / 2;
 
-    // https://github.com/ProjectOpenSea/seaport/blob/4f2210b59aefa119769a154a12e55d9b77ca64eb/reference/lib/ReferenceVerifiers.sol#L126-L133
-    const isBulkSignature =
-      actualSignatureLength < 837 &&
-      actualSignatureLength > 98 &&
-      (actualSignatureLength - 67) % 32 < 2;
-    if (isBulkSignature) {
-      // https://github.com/ProjectOpenSea/seaport/blob/4f2210b59aefa119769a154a12e55d9b77ca64eb/reference/lib/ReferenceVerifiers.sol#L146-L220
-      const proofAndSignature = this.params.signature!;
+      // https://github.com/ProjectOpenSea/seaport/blob/4f2210b59aefa119769a154a12e55d9b77ca64eb/reference/lib/ReferenceVerifiers.sol#L126-L133
+      const isBulkSignature =
+        actualSignatureLength < 837 &&
+        actualSignatureLength > 98 &&
+        (actualSignatureLength - 67) % 32 < 2;
+      if (isBulkSignature) {
+        // https://github.com/ProjectOpenSea/seaport/blob/4f2210b59aefa119769a154a12e55d9b77ca64eb/reference/lib/ReferenceVerifiers.sol#L146-L220
+        const proofAndSignature = this.params.signature!;
 
-      const signatureLength = actualSignatureLength % 2 === 0 ? 130 : 128;
-      signature = proofAndSignature.slice(0, signatureLength + 2);
+        const signatureLength = actualSignatureLength % 2 === 0 ? 130 : 128;
+        signature = proofAndSignature.slice(0, signatureLength + 2);
+      }
+
+      return signature;
     }
-
-    return signature;
   }
 
   private fixSignature() {
