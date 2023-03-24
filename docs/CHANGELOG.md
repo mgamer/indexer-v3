@@ -1,3 +1,15 @@
+## [5.292.1](https://github.com/reservoirprotocol/indexer/compare/v5.292.0...v5.292.1) (2023-03-24)
+
+
+### Bug Fixes
+
+* only replace off-chain cancellable orders ([b2b1d2e](https://github.com/reservoirprotocol/indexer/commit/b2b1d2ee4210e3e42187e64c09dc0ad477f9ddd3))
+
+
+### Performance Improvements
+
+* only simulate/revalidate top bid on token refresh ([5468407](https://github.com/reservoirprotocol/indexer/commit/5468407a81075240685032b56af5f3a0888bcd71))
+
 # [5.292.0](https://github.com/reservoirprotocol/indexer/compare/v5.291.0...v5.292.0) (2023-03-24)
 
 
