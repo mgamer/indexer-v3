@@ -743,5 +743,3 @@ export class DailyVolume {
     }
   }
 }
-
-DailyVolume.update1Day();
