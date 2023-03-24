@@ -133,7 +133,8 @@ export const getCollectionsFloorAskV2Options: RouteOptions = {
           events.tx_timestamp,
           extract(epoch from events.created_at) AS created_at,
           order_currency,
-          order_currency_price
+          order_currency_price,
+          order_currency_normalized_value
         FROM ${
           query.normalizeRoyalties
             ? "collection_normalized_floor_sell_events"
@@ -144,7 +145,8 @@ export const getCollectionsFloorAskV2Options: RouteOptions = {
         LEFT JOIN LATERAL (
           SELECT            
             currency AS "order_currency",
-            currency_price AS "order_currency_price"
+            currency_price AS "order_currency_price",
+            currency_normalized_value AS "order_currency_normalized_value"
             FROM orders
             WHERE events.order_id = orders.id
         ) o ON TRUE
@@ -217,8 +219,14 @@ export const getCollectionsFloorAskV2Options: RouteOptions = {
             ? await getJoiPriceObject(
                 {
                   gross: {
-                    amount: String(r.order_currency_price ?? r.price),
-                    nativeAmount: String(r.price),
+                    amount: String(
+                      query.normalizeRoyalties
+                        ? r.order_currency_normalized_value
+                        : r.order_currency_price ?? r.price
+                    ),
+                    nativeAmount: String(
+                      query.normalizeRoyalties ? r.order_currency_normalized_value : r.price
+                    ),
                   },
                 },
                 fromBuffer(r.order_currency)
