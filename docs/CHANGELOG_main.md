@@ -1,3 +1,10 @@
+## [5.295.2](https://github.com/reservoirprotocol/indexer/compare/v5.295.1...v5.295.2) (2023-03-24)
+
+
+### Bug Fixes
+
+* support signature fixing for bulk-signed orders ([13ecea7](https://github.com/reservoirprotocol/indexer/commit/13ecea7605bf72bfd1d8f78a1e7d872a3096e862))
+
 # [5.295.0](https://github.com/reservoirprotocol/indexer/compare/v5.294.1...v5.295.0) (2023-03-24)
 
 
