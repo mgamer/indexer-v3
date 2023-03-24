@@ -32,15 +32,17 @@ export const getSyncSalesV1Options: RouteOptions = {
     schema: Joi.object({
       sales: Joi.array().items(JoiSale),
       continuation: Joi.string().pattern(regex.base64).allow(null),
+      cursor: Joi.string().pattern(regex.base64).allow(null),
     }).label(`getSales${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`sync-sales-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
-  handler: async (request: Request) => {
+  handler: async (request: Request, h) => {
     const query = request.query as any;
     const LIMIT = 5000;
+    const CACHE_TTL = 1000 * 60 * 60 * 24;
 
     let paginationFilter = "";
 
@@ -101,18 +103,16 @@ export const getSyncSalesV1Options: RouteOptions = {
 
       const rawResult = await redb.manyOrNone(baseQuery, query);
 
-      let continuation = null;
-      if (rawResult.length === LIMIT) {
-        continuation = buildContinuation(
-          rawResult[rawResult.length - 1].updated_at +
-            "_" +
-            rawResult[rawResult.length - 1].tx_hash +
-            "_" +
-            rawResult[rawResult.length - 1].log_index +
-            "_" +
-            rawResult[rawResult.length - 1].batch_index
-        );
-      }
+      const continuationToken = buildContinuation(
+        rawResult[rawResult.length - 1].updated_at +
+          "_" +
+          rawResult[rawResult.length - 1].tx_hash +
+          "_" +
+          rawResult[rawResult.length - 1].log_index +
+          "_" +
+          rawResult[rawResult.length - 1].batch_index
+      );
+      const continuation = rawResult.length === LIMIT ? continuationToken : null;
 
       const result = rawResult.map(async (r) => {
         return await getJoiSaleObject({
@@ -153,10 +153,16 @@ export const getSyncSalesV1Options: RouteOptions = {
         });
       });
 
-      return {
+      const response = h.response({
         sales: await Promise.all(result),
         continuation,
-      };
+        cursor: !continuation ? continuationToken : null,
+      });
+
+      if (rawResult.length === LIMIT) {
+        response.ttl(CACHE_TTL);
+      }
+      return response;
     } catch (error) {
       logger.error(`sync-sales-${version}-handler`, `Handler failure: ${error}`);
       throw error;
