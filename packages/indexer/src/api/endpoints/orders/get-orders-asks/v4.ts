@@ -315,7 +315,7 @@ export const getOrdersAsksV4Options: RouteOptions = {
         `;
 
           conditions.push(`tst2.token_set_id = $/tokenSetId/`);
-        } else {
+        } else if (tokenSetIds && _.size(tokenSetIds) > 0) {
           (query as any).tokenSetIds = _.map(tokenSetIds, (t) => t.token_set_id);
           conditions.push(`orders.token_set_id IN ($/tokenSetIds:list/)`);
         }
