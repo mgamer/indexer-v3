@@ -1,3 +1,15 @@
+# [5.292.0](https://github.com/reservoirprotocol/indexer/compare/v5.291.0...v5.292.0) (2023-03-24)
+
+
+### Bug Fixes
+
+* typo ([f4a899d](https://github.com/reservoirprotocol/indexer/commit/f4a899d2ef5cdc585ea9359cd46a6640e355d2b4))
+
+
+### Features
+
+* royalties support more cases ([06cf5e0](https://github.com/reservoirprotocol/indexer/commit/06cf5e0313c885757cbb27a1104d9eb67408ce47))
+
 # [5.291.0](https://github.com/reservoirprotocol/indexer/compare/v5.290.0...v5.291.0) (2023-03-24)
 
 
