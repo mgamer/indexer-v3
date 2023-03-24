@@ -291,13 +291,13 @@ export async function extractRoyalties(
         marketplaceFeeBreakdown.push(royalty);
       } else {
         // For different collection with same fee recipient
-        const realtedDetails = sameProtocolDetails.filter((d) => d.recipient === address);
-        const shareSameRecepient = realtedDetails.length === sameProtocolFills.length;
+        const sameRecipientDetails = sameProtocolDetails.filter((d) => d.recipient === address);
+        const shareSameRecipient = sameRecipientDetails.length === sameProtocolFills.length;
 
         let bps: number = bn(balanceChange).mul(10000).div(sameContractTotalPrice).toNumber();
 
-        if (shareSameRecepient) {
-          const configBPS = realtedDetails[0].bps;
+        if (shareSameRecipient) {
+          const configBPS = sameRecipientDetails[0].bps;
           const newBps = bn(balanceChange).mul(10000).div(sameProtocolTotalPrice).toNumber();
           // Make sure the bps is same with the config
           const isValid = configBPS === newBps;
@@ -320,12 +320,12 @@ export async function extractRoyalties(
           _.royalties.find((c) => c.find((d) => d.recipient === address))
         );
 
-        const excludeOtherRecepients = shareSameRecepient ? true : notInOtherDef;
+        const excludeOtherRecipients = shareSameRecipient ? true : notInOtherDef;
         const recipientIsEligible =
           bps > 0 &&
           bps < 1500 &&
           !allPlatformFeeRecipients.has(address) &&
-          excludeOtherRecepients &&
+          excludeOtherRecipients &&
           !notRoyaltyRecipients.has(address);
 
         // For now we exclude AMMs which don't pay royalties
