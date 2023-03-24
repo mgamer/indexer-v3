@@ -11,7 +11,7 @@ import { baseProvider } from "@/common/provider";
 import { bn, formatEth, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
-import { generateBidDetailsV6, routerOnUpstreamError } from "@/orderbook/orders";
+import { generateBidDetailsV6 } from "@/orderbook/orders";
 import { getNftApproval } from "@/orderbook/orders/common/helpers";
 
 const version = "v5";
@@ -248,11 +248,11 @@ export const getExecuteSellV5Options: RouteOptions = {
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
+        orderFetcherBaseUrl: config.orderFetcherBaseUrl,
         orderFetcherApiKey: config.orderFetcherApiKey,
       });
       const { txData } = await router.fillBidsTx([bidDetails!], payload.taker, {
         source: payload.source,
-        onUpstreamError: routerOnUpstreamError,
       });
 
       // Set up generic filling steps

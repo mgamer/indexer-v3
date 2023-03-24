@@ -20,6 +20,7 @@ import * as statsEndpoints from "@/api/endpoints/stats";
 import * as tokensEndpoints from "@/api/endpoints/tokens";
 import * as transactionsEndpoints from "@/api/endpoints/transactions";
 import * as transfersEndpoints from "@/api/endpoints/transfers";
+import * as syncEndpoints from "@/api/endpoints/sync";
 import * as assetsEndpoints from "@/api/endpoints/assets";
 import * as sourcesEndpoints from "@/api/endpoints/sources";
 import * as websocketEndpoints from "@/api/endpoints/websocket";
@@ -136,6 +137,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   // Admin
+
+  server.route({
+    method: "GET",
+    path: "/admin/api-keys/metrics",
+    options: adminEndpoints.getApiKeyMetrics,
+  });
 
   server.route({
     method: "POST",
@@ -316,7 +323,7 @@ export const setupRoutes = (server: Server) => {
   server.route({
     method: "GET",
     path: "/api-keys/{key}/rate-limits",
-    options: apiKeysEndpoints.getApuKeyRateLimits,
+    options: apiKeysEndpoints.getApiKeyRateLimits,
   });
 
   // Attributes
@@ -489,6 +496,12 @@ export const setupRoutes = (server: Server) => {
     method: "PUT",
     path: "/collections/{collection}/community/v1",
     options: collectionsEndpoints.putSetCollectionCommunityV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/collections/{collection}/supported-marketplaces/v1",
+    options: collectionsEndpoints.getCollectionSupportedMarketplacesV1Options,
   });
 
   // Collections Sets
@@ -1272,6 +1285,14 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/transfers/bulk/v1",
     options: transfersEndpoints.getTransfersBulkV1Options,
+  });
+
+  // sync
+
+  server.route({
+    method: "GET",
+    path: "/sync/sales/v1",
+    options: syncEndpoints.getSyncSalesV1Options,
   });
 
   // sources

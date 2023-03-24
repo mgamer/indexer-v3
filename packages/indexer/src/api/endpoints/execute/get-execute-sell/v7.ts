@@ -3,7 +3,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import * as SeaportPermit from "@reservoir0x/sdk/dist/router/v6/permits/seaport";
-import { BidDetails } from "@reservoir0x/sdk/dist/router/v6/types";
+import { BidDetails, FillBidsResult } from "@reservoir0x/sdk/dist/router/v6/types";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
@@ -14,7 +14,7 @@ import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/util
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { Sources } from "@/models/sources";
-import { OrderKind, generateBidDetailsV6, routerOnUpstreamError } from "@/orderbook/orders";
+import { OrderKind, generateBidDetailsV6, routerOnRecoverableError } from "@/orderbook/orders";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as nftx from "@/orderbook/orders/nftx";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
@@ -120,6 +120,12 @@ export const getExecuteSellV7Options: RouteOptions = {
               })
             )
             .required(),
+        })
+      ),
+      errors: Joi.array().items(
+        Joi.object({
+          message: Joi.string(),
+          orderId: Joi.number(),
         })
       ),
       path: Joi.array().items(
@@ -615,7 +621,7 @@ export const getExecuteSellV7Options: RouteOptions = {
       }
 
       // Set up generic filling steps
-      const steps: {
+      let steps: {
         id: string;
         action: string;
         description: string;
@@ -649,20 +655,15 @@ export const getExecuteSellV7Options: RouteOptions = {
         },
       ];
 
-      const protectedOffersCount = bidDetails.filter(
-        (d) =>
-          d.kind === "seaport-v1.4" &&
-          d.order.params.zone ===
-            Sdk.SeaportV14.Addresses.OpenSeaProtectedOffersZone[config.chainId]
-      );
-      if (protectedOffersCount.length > 1) {
+      const protectedOffers = bidDetails.filter((d) => d.isProtected);
+      if (protectedOffers.length > 1) {
         throw Boom.badRequest("Only a single protected offer can be accepted at once");
       }
-      if (protectedOffersCount.length === 1 && bidDetails.length > 1) {
+      if (protectedOffers.length === 1 && bidDetails.length > 1) {
         throw Boom.badRequest("Protected offers cannot be accepted with other offers");
       }
 
-      if (protectedOffersCount.length === 1) {
+      if (protectedOffers.length === 1) {
         // Ensure the taker owns the NFTs to get sold
         const takerIsOwner = await idb.oneOrNone(
           `
@@ -690,21 +691,37 @@ export const getExecuteSellV7Options: RouteOptions = {
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
+        orderFetcherBaseUrl: config.orderFetcherBaseUrl,
         orderFetcherApiKey: config.orderFetcherApiKey,
       });
 
       const { customTokenAddresses } = getNetworkSettings();
       const forcePermit = customTokenAddresses.includes(bidDetails[0].contract);
-      const { txData, success, approvals, permits } = await router.fillBidsTx(
-        bidDetails,
-        payload.taker,
-        {
+
+      const errors: { orderId: string; message: string }[] = [];
+
+      let result: FillBidsResult;
+      try {
+        result = await router.fillBidsTx(bidDetails, payload.taker, {
           source: payload.source,
           partial: payload.partial,
           forcePermit,
-          onUpstreamError: routerOnUpstreamError,
-        }
-      );
+          onRecoverableError: async (kind, error, data) => {
+            errors.push({
+              orderId: data.orderId,
+              message: error.response?.data ?? error.message,
+            });
+            await routerOnRecoverableError(kind, error, data);
+          },
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        const boomError = Boom.badRequest(error.message);
+        boomError.output.payload.errors = errors;
+        throw boomError;
+      }
+
+      const { txData, approvals, permits, success } = result;
 
       // Filter out any non-fillable orders from the path
       path = path.filter((_, i) => success[i]);
@@ -798,8 +815,19 @@ export const getExecuteSellV7Options: RouteOptions = {
             : undefined,
       });
 
+      // Warning! When filtering the steps, we should ensure that it
+      // won't affect the client, which might be polling the API and
+      // expect to get the steps returned in the same order / at the
+      // same index.
+      if (!approvals.length && !permits.length) {
+        // If no approvals/permits are returned from the router then
+        // those are not actually needed and we can cut their steps
+        steps = steps.slice(2);
+      }
+
       return {
         steps,
+        errors,
         path,
       };
     } catch (error) {

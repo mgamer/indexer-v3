@@ -154,6 +154,7 @@ export type GenericOrder =
 
 // Basic details for filling listings
 export type ListingFillDetails = {
+  orderId: string;
   contractKind: "erc721" | "erc1155";
   contract: string;
   tokenId: string;
@@ -167,20 +168,26 @@ export type ListingFillDetails = {
 };
 export type ListingDetails = GenericOrder & ListingFillDetails;
 
-// For keeping track of each listing's position in the original array
-export type ListingDetailsExtracted = {
-  originalIndex: number;
-} & ListingDetails;
-
 // For supporting filling listings having different underlying currencies
-export type PerCurrencyListingDetailsExtracted = {
-  [currency: string]: ListingDetailsExtracted[];
+export type PerCurrencyListingDetails = {
+  [currency: string]: ListingDetails[];
+};
+
+export type FillListingsResult = {
+  txs: {
+    approvals: FTApproval[];
+    permits: FTPermit[];
+    txData: TxData;
+    orderIds: string[];
+  }[];
+  success: { [orderId: string]: boolean };
 };
 
 // Bids
 
 // Basic details for filling bids
 export type BidFillDetails = {
+  orderId: string;
   contractKind: "erc721" | "erc1155";
   contract: string;
   tokenId: string;
@@ -196,6 +203,13 @@ export type BidFillDetails = {
 };
 export type BidDetails = GenericOrder & BidFillDetails;
 
+export type FillBidsResult = {
+  txData: TxData;
+  approvals: NFTApproval[];
+  permits: NFTPermit[];
+  success: boolean[];
+};
+
 // Swaps
 
 export type PerPoolSwapDetails = {
@@ -208,6 +222,6 @@ export type SwapDetail = {
   tokenOutAmount: BigNumberish;
   recipient: string;
   refundTo: string;
-  details: ListingDetailsExtracted[];
+  details: ListingDetails[];
   executionIndex: number;
 };

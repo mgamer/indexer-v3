@@ -4,7 +4,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
-import { ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
+import { FillListingsResult, ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
 import axios from "axios";
 import Joi from "joi";
 
@@ -15,7 +15,7 @@ import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
-import { OrderKind, generateListingDetailsV6, routerOnUpstreamError } from "@/orderbook/orders";
+import { OrderKind, generateListingDetailsV6, routerOnRecoverableError } from "@/orderbook/orders";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
 import * as nftx from "@/orderbook/orders/nftx";
@@ -125,6 +125,11 @@ export const getExecuteBuyV6Options: RouteOptions = {
         .description(
           "If true, do not filter out inactive orders (only relevant for order id filtering)."
         ),
+      excludeEOA: Joi.boolean()
+        .default(false)
+        .description(
+          "Exclude orders that can only be filled by EOAs, to support filling with smart contracts."
+        ),
       x2y2ApiKey: Joi.string().description("Override the X2Y2 API key used for filling."),
     }),
   },
@@ -144,6 +149,12 @@ export const getExecuteBuyV6Options: RouteOptions = {
               })
             )
             .required(),
+        })
+      ),
+      errors: Joi.array().items(
+        Joi.object({
+          message: Joi.string(),
+          orderId: Joi.number(),
         })
       ),
       path: Joi.array().items(
@@ -457,7 +468,11 @@ export const getExecuteBuyV6Options: RouteOptions = {
                       ? " AND orders.currency = $/currency/"
                       : ""
                   }
-                  ${payload.normalizeRoyalties ? " AND orders.kind != 'blur'" : ""}
+                  ${
+                    payload.normalizeRoyalties || payload.excludeEOA
+                      ? " AND orders.kind != 'blur'"
+                      : ""
+                  }
                 ORDER BY
                   ${payload.normalizeRoyalties ? "orders.normalized_value" : "orders.value"},
                   ${
@@ -682,7 +697,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
       }
 
       // Set up generic filling steps
-      const steps: {
+      let steps: {
         id: string;
         action: string;
         description: string;
@@ -729,14 +744,11 @@ export const getExecuteBuyV6Options: RouteOptions = {
           let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
           if (!blurAuthChallenge) {
             blurAuthChallenge = (await axios
-              .get(
-                `https://order-fetcher.vercel.app/api/blur-auth-challenge?taker=${payload.taker}`,
-                {
-                  headers: {
-                    "X-Api-Key": config.orderFetcherApiKey,
-                  },
-                }
-              )
+              .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${payload.taker}`, {
+                headers: {
+                  "X-Api-Key": config.orderFetcherApiKey,
+                },
+              })
               .then((response) => response.data.authChallenge)) as b.AuthChallenge;
 
             await b.saveAuthChallenge(
@@ -785,13 +797,15 @@ export const getExecuteBuyV6Options: RouteOptions = {
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
+        orderFetcherBaseUrl: config.orderFetcherBaseUrl,
         orderFetcherApiKey: config.orderFetcherApiKey,
       });
-      const { txs, success } = await router.fillListingsTx(
-        listingDetails,
-        payload.taker,
-        buyInCurrency,
-        {
+
+      const errors: { orderId: string; message: string }[] = [];
+
+      let result: FillListingsResult;
+      try {
+        result = await router.fillListingsTx(listingDetails, payload.taker, buyInCurrency, {
           source: payload.source,
           // TODO: Add support for buying any listing via any ERC20 token
           globalFees: buyInCurrency === Sdk.Common.Addresses.Eth[config.chainId] ? feesOnTop : [],
@@ -805,17 +819,30 @@ export const getExecuteBuyV6Options: RouteOptions = {
           },
           relayer: payload.relayer,
           blurAuth,
-          onUpstreamError: routerOnUpstreamError,
-        }
-      );
+          onRecoverableError: async (kind, error, data) => {
+            errors.push({
+              orderId: data.orderId,
+              message: error.response?.data ?? error.message,
+            });
+            await routerOnRecoverableError(kind, error, data);
+          },
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        const boomError = Boom.badRequest(error.message);
+        boomError.output.payload.errors = errors;
+        throw boomError;
+      }
+
+      const { txs, success } = result;
 
       const taker = payload.taker;
       const relayer = payload.relayer;
       const txSender = relayer ?? taker;
 
       for (const tx of txs) {
-        const subPath = path.filter((_, i) => tx.orderIndexes.includes(i));
-        const listings = listingDetails.filter((_, i) => tx.orderIndexes.includes(i));
+        const subPath = path.filter((p) => tx.orderIds.includes(p.orderId));
+        const listings = listingDetails.filter((d) => tx.orderIds.includes(d.orderId));
 
         // Check that the taker has enough funds to fill all requested tokens
         const totalPrice = subPath
@@ -884,13 +911,36 @@ export const getExecuteBuyV6Options: RouteOptions = {
         });
       }
 
+      // Warning! When filtering the steps, we should ensure that it
+      // won't affect the client, which might be polling the API and
+      // expect to get the steps returned in the same order / at the
+      // same index.
+      if (buyInCurrency === Sdk.Common.Addresses.Eth[config.chainId]) {
+        // Buying in ETH will never require an approval
+        steps = [steps[0], ...steps.slice(2)];
+      }
+      if (!blurAuth) {
+        // If we reached this point and the Blur auth is missing then we
+        // can be sure that no Blur orders were requested and it is safe
+        // to remove the auth step
+        steps = steps.slice(1);
+      }
+
       return {
         steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
+        errors,
         // Remove any unsuccessfully handled listings from the path
-        path: path.filter((_, i) => success[i]),
+        path: path.filter((p) => success[p.orderId]),
       };
     } catch (error) {
-      logger.error(`get-execute-buy-${version}-handler`, `Handler failure: ${error}`);
+      if (!(error instanceof Boom.Boom)) {
+        logger.error(
+          `get-execute-buy-${version}-handler`,
+          `Handler failure: ${error} (path = ${JSON.stringify({})}, request = ${JSON.stringify(
+            payload
+          )})`
+        );
+      }
       throw error;
     }
   },

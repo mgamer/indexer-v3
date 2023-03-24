@@ -24,6 +24,7 @@ import "@/jobs/sources";
 import "@/jobs/token-updates";
 import "@/jobs/update-attribute";
 import "@/jobs/websocket-events";
+import "@/jobs/metrics";
 
 // Export all job queues for monitoring through the BullMQ UI
 
@@ -96,7 +97,9 @@ import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
 import * as updateNftBalanceFloorAskPrice from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
 import * as updateNftBalanceTopBid from "@/jobs/nft-balance-updates/update-top-bid-queue";
 
-import * as orderFixes from "@/jobs/order-fixes/queue";
+import * as orderFixes from "@/jobs/order-fixes/fixes";
+import * as orderRevalidations from "@/jobs/order-fixes/revalidations";
+
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as bundleOrderUpdatesByMaker from "@/jobs/order-updates/by-maker-bundle-queue";
@@ -129,6 +132,8 @@ import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attr
 import * as updateAttributeCounts from "@/jobs/update-attribute/update-attribute-counts";
 
 import * as websocketEventsTriggerQueue from "@/jobs/websocket-events/trigger-queue";
+
+import * as countApiUsage from "@/jobs/metrics/count-api-usage";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -214,6 +219,8 @@ export const allJobQueues = [
   updateNftBalanceTopBid.queue,
 
   orderFixes.queue,
+  orderRevalidations.queue,
+
   orderUpdatesById.queue,
   orderUpdatesByMaker.queue,
   bundleOrderUpdatesByMaker.queue,
@@ -246,4 +253,6 @@ export const allJobQueues = [
   updateAttributeCounts.queue,
 
   websocketEventsTriggerQueue.queue,
+
+  countApiUsage.queue,
 ];

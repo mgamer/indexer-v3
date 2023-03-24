@@ -13,7 +13,7 @@ import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
-import { OrderKind, generateListingDetailsV6, routerOnUpstreamError } from "@/orderbook/orders";
+import { OrderKind, generateListingDetailsV6 } from "@/orderbook/orders";
 import { getCurrency } from "@/utils/currencies";
 
 const version = "v5";
@@ -525,6 +525,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
+        orderFetcherBaseUrl: config.orderFetcherBaseUrl,
         orderFetcherApiKey: config.orderFetcherApiKey,
       });
       const { txs, success } = await router.fillListingsTx(
@@ -542,7 +543,6 @@ export const getExecuteBuyV5Options: RouteOptions = {
                 ? "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000"
                 : undefined,
           },
-          onUpstreamError: routerOnUpstreamError,
         }
       );
 
@@ -571,8 +571,8 @@ export const getExecuteBuyV5Options: RouteOptions = {
       ];
 
       for (const tx of txs) {
-        const subPath = path.filter((_, i) => tx.orderIndexes.includes(i));
-        const listings = listingDetails.filter((_, i) => tx.orderIndexes.includes(i));
+        const subPath = path.filter((p) => tx.orderIds.includes(p.orderId));
+        const listings = listingDetails.filter((d) => tx.orderIds.includes(d.orderId));
 
         // Check that the taker has enough funds to fill all requested tokens
         const totalPrice = subPath.map(({ rawQuote }) => bn(rawQuote)).reduce((a, b) => a.add(b));
@@ -641,7 +641,7 @@ export const getExecuteBuyV5Options: RouteOptions = {
       return {
         steps,
         // Remove any unsuccessfully handled listings from the path
-        path: path.filter((_, i) => success[i]),
+        path: path.filter((p) => success[p.orderId]),
       };
     } catch (error) {
       logger.error(`get-execute-buy-${version}-handler`, `Handler failure: ${error}`);

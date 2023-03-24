@@ -61,7 +61,7 @@ export const postAuthSignatureV1Options: RouteOptions = {
 
           const accessToken = await axios
             .get(
-              `https://order-fetcher.vercel.app/api/blur-auth?authChallenge=${JSON.stringify({
+              `${config.orderFetcherBaseUrl}/api/blur-auth?authChallenge=${JSON.stringify({
                 ...authChallenge,
                 signature: query.signature,
               })}`,
@@ -102,7 +102,7 @@ export const postAuthSignatureV1Options: RouteOptions = {
 
           const authorization = await axios
             .get(
-              `https://order-fetcher.vercel.app/api/opensea-auth?chainId=${config.chainId}&taker=${authChallenge.walletAddress}&loginMessage=${authChallenge.loginMessage}&signature=${query.signature}`,
+              `${config.orderFetcherBaseUrl}/api/opensea-auth?chainId=${config.chainId}&taker=${authChallenge.walletAddress}&loginMessage=${authChallenge.loginMessage}&signature=${query.signature}`,
               {
                 headers: {
                   "X-Api-Key": config.orderFetcherApiKey,

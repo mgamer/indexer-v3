@@ -12,7 +12,7 @@ import { getNetworkSettings } from "@/config/network";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import MetadataApi from "@/utils/metadata-api";
 import * as royalties from "@/utils/royalties";
-import * as marketplaceFees from "@/utils/marketplace_fees";
+import * as marketplaceFees from "@/utils/marketplace-fees";
 
 import * as collectionRecalcTokenCount from "@/jobs/collection-updates/recalc-token-count-queue";
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";

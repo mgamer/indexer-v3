@@ -41,6 +41,8 @@ export const config = {
   ),
   redisUrl: String(process.env.REDIS_URL),
   rateLimitRedisUrl: String(process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL),
+  redisWebsocketUrl: String(process.env.REDIS_WEBSOCKET_URL || process.env.REDIS_URL),
+  metricsRedisUrl: String(process.env.METRICS_REDIS_URL || process.env.REDIS_URL),
   redshiftUrl: String(process.env.REDSHIFT_URL),
 
   master: Boolean(Number(process.env.MASTER)),
@@ -87,6 +89,8 @@ export const config = {
   flowApiKey: String(process.env.FLOW_API_KEY),
   orderFetcherApiKey: String(process.env.ORDER_FETCHER_API_KEY),
 
+  // TODO: Should be an environment variable
+  orderFetcherBaseUrl: "https://order-fetcher.up.railway.app",
   railwayStaticUrl: String(process.env.RAILWAY_STATIC_URL || ""),
 
   cipherSecret: String(process.env.CIPHER_SECRET),

@@ -3,6 +3,7 @@
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
+import { FillBidsResult } from "@reservoir0x/sdk/src/router/v6/types";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
@@ -12,7 +13,7 @@ import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
-import { generateBidDetailsV6, routerOnUpstreamError } from "@/orderbook/orders";
+import { generateBidDetailsV6, routerOnRecoverableError } from "@/orderbook/orders";
 import { getNftApproval } from "@/orderbook/orders/common/helpers";
 import { getCurrency } from "@/utils/currencies";
 import { tryGetTokensSuspiciousStatus } from "@/utils/opensea";
@@ -115,6 +116,12 @@ export const getExecuteSellV6Options: RouteOptions = {
               })
             )
             .required(),
+        })
+      ),
+      errors: Joi.array().items(
+        Joi.object({
+          message: Joi.string(),
+          orderId: Joi.number(),
         })
       ),
       path: Joi.array().items(
@@ -417,13 +424,8 @@ export const getExecuteSellV6Options: RouteOptions = {
       ];
 
       if (
-        path.some(
-          (p) =>
-            p.source === "opensea.io" &&
-            // Authentication is only needed for protected offers
-            orderResult?.raw_data?.zone ===
-              Sdk.SeaportV14.Addresses.OpenSeaProtectedOffersZone[config.chainId]
-        )
+        orderResult?.raw_data?.zone ===
+        Sdk.SeaportV14.Addresses.OpenSeaProtectedOffersZone[config.chainId]
       ) {
         // Ensure the taker owns the NFTs to get sold
         const takerIsOwner = await idb.oneOrNone(
@@ -452,12 +454,32 @@ export const getExecuteSellV6Options: RouteOptions = {
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
+        orderFetcherBaseUrl: config.orderFetcherBaseUrl,
         orderFetcherApiKey: config.orderFetcherApiKey,
       });
-      const { txData, approvals } = await router.fillBidsTx([bidDetails!], payload.taker, {
-        source: payload.source,
-        onUpstreamError: routerOnUpstreamError,
-      });
+
+      const errors: { orderId: string; message: string }[] = [];
+
+      let result: FillBidsResult;
+      try {
+        result = await router.fillBidsTx([bidDetails!], payload.taker, {
+          source: payload.source,
+          onRecoverableError: async (kind, error, data) => {
+            errors.push({
+              orderId: data.orderId,
+              message: error.response?.data ?? error.message,
+            });
+            await routerOnRecoverableError(kind, error, data);
+          },
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        const boomError = Boom.badRequest(error.message);
+        boomError.output.payload.errors = errors;
+        throw boomError;
+      }
+
+      const { txData, approvals } = result;
 
       // Direct filling on OpenSea might require an approval
       if (txData.to === Sdk.SeaportV14.Addresses.Exchange[config.chainId]) {
@@ -637,15 +659,18 @@ export const getExecuteSellV6Options: RouteOptions = {
 
       return {
         steps,
+        errors,
         path,
       };
     } catch (error) {
-      logger.error(
-        `get-execute-sell-${version}-handler`,
-        `Handler failure: ${error} (path = ${JSON.stringify(path)}, request = ${JSON.stringify(
-          payload
-        )})`
-      );
+      if (!(error instanceof Boom.Boom)) {
+        logger.error(
+          `get-execute-sell-${version}-handler`,
+          `Handler failure: ${error} (path = ${JSON.stringify(path)}, request = ${JSON.stringify(
+            payload
+          )})`
+        );
+      }
       throw error;
     }
   },
