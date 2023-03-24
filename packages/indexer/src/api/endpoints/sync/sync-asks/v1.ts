@@ -25,7 +25,7 @@ export const getSyncOrdersAsksV1Options: RouteOptions = {
   description: "Sync Asks (listings)",
   notes:
     "This API is optimized for bulk access to asks (listings) for syncing a remote database. Thus it offers minimal filters/metadata.",
-  tags: ["api", "Data Sync"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 5,
