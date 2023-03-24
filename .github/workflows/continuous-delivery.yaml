@@ -116,6 +116,10 @@ jobs:
             ${{ needs.build.outputs.version }} \
             indexer-api
           ./utils/version_update.sh \
+            ./prod/platform/indexer-api-polygon.yaml \
+            ${{ needs.build.outputs.version }} \
+            indexer-api-polygon
+          ./utils/version_update.sh \
             ./prod/platform/indexer-worker.yaml \
             ${{ needs.build.outputs.version }} \
             indexer-worker

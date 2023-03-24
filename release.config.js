@@ -28,6 +28,9 @@ module.exports = {
         ],
         "message": "ci(release): update changelogs for ${nextRelease.version} [skip release][skip ci]"
       }
-    ]
+    ],
+    ["@semantic-release/exec", {
+      "generateNotes": "git pull origin '+refs/notes/semantic-release:refs/notes/semantic-release'"
+    }]
   ]
 };
