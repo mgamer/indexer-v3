@@ -6,7 +6,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { JoiSale, getJoiSaleObject } from "@/common/joi";
-import { buildContinuation, regex, splitContinuation } from "@/common/utils";
+import { buildContinuation, fromBuffer, regex, splitContinuation, toBuffer } from "@/common/utils";
 import * as Boom from "@hapi/boom";
 
 const version = "v1";
@@ -41,7 +41,7 @@ export const getSyncSalesV1Options: RouteOptions = {
   },
   handler: async (request: Request, h) => {
     const query = request.query as any;
-    const LIMIT = 5000;
+    const LIMIT = 1000;
     const CACHE_TTL = 1000 * 60 * 60 * 24;
 
     let paginationFilter = "";
@@ -54,10 +54,10 @@ export const getSyncSalesV1Options: RouteOptions = {
       }
 
       (query as any).updatedAt = new Date(contArr[0]).toISOString();
-      (query as any).txHash = contArr[1];
+      (query as any).txHash = toBuffer(contArr[1]);
       (query as any).logIndex = contArr[2];
       (query as any).batchIndex = contArr[3];
-      paginationFilter = ` WHERE (updated_at, tx_hash, log_index, batch_index) > (to_timestamp($/updatedAt/), $/txHash/, $/logIndex/, $/batchIndex/)`;
+      paginationFilter = ` AND (updated_at, tx_hash, log_index, batch_index) > ($/updatedAt/, $/txHash/, $/logIndex/, $/batchIndex/)`;
     }
 
     try {
@@ -95,8 +95,8 @@ export const getSyncSalesV1Options: RouteOptions = {
           FROM fill_events_2
             LEFT JOIN currencies
             ON fill_events_2.currency = currencies.contract
-            ${paginationFilter}
             WHERE updated_at < NOW() - INTERVAL '5 minutes'
+            ${paginationFilter}
             ORDER BY fill_events_2.updated_at ASC, fill_events_2.tx_hash ASC, fill_events_2.log_index ASC, fill_events_2.batch_index ASC
           LIMIT ${LIMIT};
       `;
@@ -106,14 +106,13 @@ export const getSyncSalesV1Options: RouteOptions = {
       const continuationToken = buildContinuation(
         rawResult[rawResult.length - 1].updated_at +
           "_" +
-          rawResult[rawResult.length - 1].tx_hash +
+          fromBuffer(rawResult[rawResult.length - 1].tx_hash) +
           "_" +
           rawResult[rawResult.length - 1].log_index +
           "_" +
           rawResult[rawResult.length - 1].batch_index
       );
       const continuation = rawResult.length === LIMIT ? continuationToken : null;
-
       const result = rawResult.map(async (r) => {
         return await getJoiSaleObject({
           prices: {
