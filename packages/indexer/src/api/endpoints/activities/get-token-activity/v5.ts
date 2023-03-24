@@ -145,7 +145,7 @@ export const getTokenActivityV5Options: RouteOptions = {
         const orderSource = activity.order?.sourceIdInt
           ? sources.get(activity.order.sourceIdInt)
           : undefined;
-        const orderCurrency = activity.order
+        const orderCurrency = activity.order?.currency
           ? fromBuffer(activity.order.currency)
           : Sdk.Common.Addresses.Eth[config.chainId];
 
