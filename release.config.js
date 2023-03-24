@@ -30,7 +30,8 @@ module.exports = {
       }
     ],
     ["@semantic-release/exec", {
-      "generateNotes": "git pull origin '+refs/notes/semantic-release:refs/notes/semantic-release'"
+      "generateNotes": "git pull origin '+refs/notes/semantic-release:refs/notes/semantic-release'",
+      "prepare": "git pull origin '+refs/notes/semantic-release:refs/notes/semantic-release'",
     }]
   ]
 };
