@@ -818,7 +818,7 @@ export const getExecuteListV5Options: RouteOptions = {
                   return errors.push({ message: "Unsupported orderbook", orderIndex: i });
                 }
                 if (params.fees?.length) {
-                  return errors.push({ message: "custom-fees-not-supported", orderIndex: i });
+                  return errors.push({ message: "Custom fees not supported", orderIndex: i });
                 }
 
                 const order = await looksRareSellToken.build({
@@ -900,7 +900,7 @@ export const getExecuteListV5Options: RouteOptions = {
                   return errors.push({ message: "Unsupported orderbook", orderIndex: i });
                 }
                 if (params.fees?.length) {
-                  return errors.push({ message: "custom-fees-not-supported", orderIndex: i });
+                  return errors.push({ message: "Custom fees not supported", orderIndex: i });
                 }
 
                 const order = await x2y2SellToken.build({
@@ -1058,7 +1058,10 @@ export const getExecuteListV5Options: RouteOptions = {
               }
             }
           } catch (error: any) {
-            return errors.push({ message: error.message ?? "Internal error", orderIndex: i });
+            return errors.push({
+              message: error.response?.data ? JSON.stringify(error.response.data) : error.message,
+              orderIndex: i,
+            });
           }
         })
       );
