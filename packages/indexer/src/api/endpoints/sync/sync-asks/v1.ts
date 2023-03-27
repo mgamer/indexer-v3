@@ -47,9 +47,9 @@ export const getSyncOrdersAsksV1Options: RouteOptions = {
         .description("Use continuation token to request next offset of items."),
       limit: Joi.number()
         .integer()
-        .min(1)
+        .min(5000)
         .max(5000)
-        .default(50)
+        .default(5000)
         .description("Amount of items returned in response."),
     }),
   },
@@ -107,8 +107,10 @@ export const getSyncOrdersAsksV1Options: RouteOptions = {
       throw error;
     },
   },
-  handler: async (request: Request) => {
+  handler: async (request: Request, h) => {
     const query = request.query as any;
+
+    const CACHE_TTL = 1000 * 60 * 60 * 24;
 
     try {
       let baseQuery = `
@@ -225,19 +227,18 @@ export const getSyncOrdersAsksV1Options: RouteOptions = {
 
       const rawResult = await redb.manyOrNone(baseQuery, query);
 
-      let continuation = null;
-      if (rawResult.length === query.limit) {
-        if (query.sortBy === "updatedAt") {
-          continuation = buildContinuation(
-            rawResult[rawResult.length - 1].updated_at + "_" + rawResult[rawResult.length - 1].id
-          );
-        } else {
-          continuation = buildContinuation(
-            rawResult[rawResult.length - 1].created_at + "_" + rawResult[rawResult.length - 1].id
-          );
-        }
+      let continuationToken = null;
+      if (query.sortBy === "updatedAt") {
+        continuationToken = buildContinuation(
+          rawResult[rawResult.length - 1].updated_at + "_" + rawResult[rawResult.length - 1].id
+        );
+      } else {
+        continuationToken = buildContinuation(
+          rawResult[rawResult.length - 1].created_at + "_" + rawResult[rawResult.length - 1].id
+        );
       }
 
+      const continuation = rawResult.length === 5000 ? continuationToken : null;
       const sources = await Sources.getInstance();
       const result = rawResult.map(async (r) => {
         let source: SourcesEntity | undefined;
@@ -315,10 +316,17 @@ export const getSyncOrdersAsksV1Options: RouteOptions = {
         };
       });
 
-      return {
+      const response = h.response({
         orders: await Promise.all(result),
         continuation,
-      };
+        cursor: !continuation ? continuationToken : null,
+      });
+
+      if (rawResult.length === 5000) {
+        response.ttl(CACHE_TTL);
+      }
+
+      return response;
     } catch (error) {
       logger.error(`get-orders-asks-${version}-handler`, `Handler failure: ${error}`);
       throw error;
