@@ -134,6 +134,10 @@ jobs:
             ${{ github.sha }} \
             indexer-worker
           ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-arbitrum.yaml \
+            ${{ github.sha }} \
+            indexer-worker-arbitrum
+          ./utils/version_update.sh \
             ./prod/platform/indexer-websocket-ethereum.yaml \
             ${{ github.sha }} \
             indexer-websocket-ethereum
