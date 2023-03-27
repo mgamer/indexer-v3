@@ -1275,7 +1275,10 @@ export const getExecuteBidV5Options: RouteOptions = {
               }
             }
           } catch (error: any) {
-            return errors.push({ message: error.message ?? "Internal error", orderIndex: i });
+            return errors.push({
+              message: error.response?.data ? JSON.stringify(error.response.data) : error.message,
+              orderIndex: i,
+            });
           }
         })
       );
