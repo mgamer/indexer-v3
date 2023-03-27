@@ -19,10 +19,10 @@ const QUEUE_NAME = "backfill-sale-royalties";
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
-    attempts: 10,
+    attempts: 30,
     backoff: {
-      type: "fixed",
-      delay: 30000,
+      type: "exponential",
+      delay: 10000,
     },
     removeOnComplete: 1000,
     removeOnFail: 10000,
