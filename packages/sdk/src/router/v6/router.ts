@@ -460,6 +460,12 @@ export class Router {
       }
     }
 
+    if (details.some(({ kind }) => kind === "blur")) {
+      if (options?.relayer) {
+        throw new Error("Relayer not supported for Blur orders");
+      }
+    }
+
     const txs: {
       approvals: FTApproval[];
       permits: FTPermit[];
