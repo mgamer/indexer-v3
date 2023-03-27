@@ -19,6 +19,7 @@ export type BlurData = {
   marketplaceData: string;
   authToken: string;
   signature: string;
+  isCollectionBid?: boolean;
 };
 
 export async function postOrder(order: BlurData, apiKey: string): Promise<void> {
@@ -31,6 +32,7 @@ export async function postOrder(order: BlurData, apiKey: string): Promise<void> 
         marketplaceData: order.marketplaceData,
         authToken: order.authToken,
         signature: order.signature,
+        isCollectionBid: order.isCollectionBid ? "true" : undefined,
       },
       {
         headers: {
