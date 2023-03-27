@@ -118,6 +118,10 @@ jobs:
             ${{ github.sha }} \
             indexer-api
           ./utils/version_update.sh \
+            ./prod/platform/indexer-api-arbitrum.yaml \
+            ${{ github.sha }} \
+            indexer-api-arbitrum
+          ./utils/version_update.sh \
             ./prod/platform/indexer-api-optimism.yaml \
             ${{ github.sha }} \
             indexer-api-optimism
