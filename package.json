@@ -39,7 +39,6 @@
     "@/websockets": "./packages/indexer/dist/websockets"
   },
   "resolutions": {
-    "**/flat": "^5.0.1",
     "**/underscore": "^1.12.1",
     "**/@openzeppelin/contracts": "^4.7.3",
     "**/json5": "^2.2.2",
