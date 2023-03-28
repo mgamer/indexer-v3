@@ -1,6 +1,6 @@
 import { idb, redb } from "@/common/db";
 import * as Pusher from "pusher";
-import { fromBuffer, now } from "@/common/utils";
+import { formatEth, fromBuffer, now } from "@/common/utils";
 import { Orders } from "@/utils/orders";
 import _ from "lodash";
 import { config } from "@/config/index";
@@ -129,12 +129,12 @@ export class NewTopBidWebsocketEvent {
           criteria: order.criteria,
         },
         owners: ownersChunk,
-        colllection: {
+        collection: {
           id: order.collection_id,
           slug: order.collection_slug,
           name: order.collection_name,
-          floorAskPrice: order.floor_sell_value,
-          floorAskPriceNormalized: order.normalized_floor_sell_value,
+          floorAskPrice: formatEth(order.floor_sell_value),
+          floorAskPriceNormalized: formatEth(order.normalized_floor_sell_value),
           floorDifferencePercentage: _.round(order.floor_difference_percentage || 0, 2),
         },
       });
