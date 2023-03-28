@@ -9,6 +9,7 @@ import {
   buildContinuation,
   formatEth,
   fromBuffer,
+  regex,
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
@@ -92,6 +93,10 @@ export const getUserTopBidsV4Options: RouteOptions = {
         .max(100000)
         .default(10000)
         .description("Amount of tokens considered."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     }).oxor("collection", "collectionsSetId"),
   },
   response: {
@@ -341,7 +346,8 @@ export const getUserTopBidsV4Options: RouteOptions = {
                   nativeAmount: r.top_bid_price,
                 },
               },
-              fromBuffer(r.top_bid_currency)
+              fromBuffer(r.top_bid_currency),
+              query.displayCurrency
             ),
             maker: fromBuffer(r.top_bid_maker),
             createdAt: new Date(r.order_created_at).toISOString(),
@@ -372,7 +378,8 @@ export const getUserTopBidsV4Options: RouteOptions = {
                         nativeAmount: String(r.token_floor_sell_value),
                       },
                     },
-                    fromBuffer(r.token_floor_sell_currency)
+                    fromBuffer(r.token_floor_sell_currency),
+                    query.displayCurrency
                   )
                 : null,
               lastSalePrice: r.token_last_sell_value
@@ -383,7 +390,8 @@ export const getUserTopBidsV4Options: RouteOptions = {
                         nativeAmount: String(r.token_last_sell_value),
                       },
                     },
-                    Sdk.Common.Addresses.Eth[config.chainId]
+                    Sdk.Common.Addresses.Eth[config.chainId],
+                    query.displayCurrency
                   )
                 : null,
               collection: {
@@ -400,7 +408,8 @@ export const getUserTopBidsV4Options: RouteOptions = {
                           nativeAmount: String(r.collection_floor_sell_value),
                         },
                       },
-                      fromBuffer(r.collection_floor_sell_currency)
+                      fromBuffer(r.collection_floor_sell_currency),
+                      query.displayCurrency
                     )
                   : null,
               },

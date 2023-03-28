@@ -5,7 +5,7 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { fromBuffer, toBuffer } from "@/common/utils";
+import { fromBuffer, regex, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
 import { getJoiPriceObject, JoiPrice } from "@/common/joi";
 import * as Sdk from "@reservoir0x/sdk";
@@ -66,6 +66,10 @@ export const getOwnersV2Options: RouteOptions = {
         .max(500)
         .default(20)
         .description("Amount of items returned in response."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     })
       .oxor("collectionsSetId", "collection", "contract", "token")
       .or("collectionsSetId", "collection", "contract", "token")
@@ -215,7 +219,8 @@ export const getOwnersV2Options: RouteOptions = {
                       nativeAmount: String(r.floor_sell_value),
                     },
                   },
-                  Sdk.Common.Addresses.Eth[config.chainId]
+                  Sdk.Common.Addresses.Eth[config.chainId],
+                  query.displayCurrency
                 )
               : null,
             topBidValue: r.top_buy_value
@@ -226,7 +231,8 @@ export const getOwnersV2Options: RouteOptions = {
                       nativeAmount: String(r.top_buy_value),
                     },
                   },
-                  Sdk.Common.Addresses.Eth[config.chainId]
+                  Sdk.Common.Addresses.Eth[config.chainId],
+                  query.displayCurrency
                 )
               : null,
             totalBidValue: r.total_buy_value
@@ -237,7 +243,8 @@ export const getOwnersV2Options: RouteOptions = {
                       nativeAmount: String(r.total_buy_value),
                     },
                   },
-                  Sdk.Common.Addresses.Eth[config.chainId]
+                  Sdk.Common.Addresses.Eth[config.chainId],
+                  query.displayCurrency
                 )
               : null,
           },

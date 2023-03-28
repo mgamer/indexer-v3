@@ -9,6 +9,7 @@ import {
   buildContinuation,
   formatEth,
   fromBuffer,
+  regex,
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
@@ -90,6 +91,10 @@ export const getUserTopBidsV3Options: RouteOptions = {
         .max(100000)
         .default(10000)
         .description("Amount of tokens considered."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     }).oxor("collection", "collectionsSetId"),
   },
   response: {
@@ -335,7 +340,8 @@ export const getUserTopBidsV3Options: RouteOptions = {
                   nativeAmount: r.top_bid_price,
                 },
               },
-              fromBuffer(r.top_bid_currency)
+              fromBuffer(r.top_bid_currency),
+              query.displayCurrency
             ),
             maker: fromBuffer(r.top_bid_maker),
             createdAt: new Date(r.order_created_at).toISOString(),
