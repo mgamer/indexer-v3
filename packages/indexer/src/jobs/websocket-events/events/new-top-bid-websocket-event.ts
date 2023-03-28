@@ -76,12 +76,7 @@ export class NewTopBidWebsocketEvent {
                 c.floor_sell_source_id_int AS floor_sell_source_id_int,
                 floor_order.currency as floor_order_currency,
                 floor_order.currency_value as floor_order_currency_value,
-                c.non_flagged_floor_sell_id AS non_flagged_floor_sell_id,
-                c.non_flagged_floor_sell_value AS non_flagged_floor_sell_value,
-                c.non_flagged_floor_sell_source_id_int AS non_flagged_floor_sell_source_id_int,
-                non_flagged_floor_order.currency as non_flagged_floor_order_currency,
-                non_flagged_floor_order.currency_value as non_flagged_floor_order_currency_value
-
+                COALESCE(((orders.value / (c.floor_sell_value * (1-((COALESCE(c.royalties_bps, 0)::float + 250) / 10000)))::numeric(78, 0) ) - 1) * 100, 0) AS floor_difference_percentage
 
               FROM orders
                 JOIN collections c on orders.contract = c.contract
@@ -109,6 +104,35 @@ export class NewTopBidWebsocketEvent {
     const source = (await Sources.getInstance()).get(Number(order.source_id_int));
 
     for (const ownersChunk of ownersChunks) {
+      const [price, priceNormalized] = await Promise.all([
+        getJoiPriceObject(
+          {
+            net: {
+              amount: order.currency_value ?? order.value,
+              nativeAmount: order.value,
+            },
+            gross: {
+              amount: order.currency_price ?? order.price,
+              nativeAmount: order.price,
+            },
+          },
+          fromBuffer(order.currency)
+        ),
+        getJoiPriceObject(
+          {
+            net: {
+              amount: order.currency_normalized_value ?? order.currency_value ?? order.value,
+              nativeAmount: order.normalized_value ?? order.value,
+            },
+            gross: {
+              amount: order.currency_price ?? order.price,
+              nativeAmount: order.price,
+            },
+          },
+          fromBuffer(order.currency)
+        ),
+      ]);
+
       payloads.push({
         order: {
           id: order.id,
@@ -123,32 +147,13 @@ export class NewTopBidWebsocketEvent {
             icon: source?.getIcon(),
             url: source?.metadata.url,
           },
-          price: await getJoiPriceObject(
-            {
-              net: {
-                amount: order.currency_value ?? order.value,
-                nativeAmount: order.value,
-              },
-              gross: {
-                amount: order.currency_price ?? order.price,
-                nativeAmount: order.price,
-              },
-            },
-            fromBuffer(order.currency)
-          ),
-          priceNormalized: await getJoiPriceObject(
-            {
-              net: {
-                amount: order.currency_normalized_value ?? order.currency_value ?? order.value,
-                nativeAmount: order.normalized_value ?? order.value,
-              },
-              gross: {
-                amount: order.currency_price ?? order.price,
-                nativeAmount: order.price,
-              },
-            },
-            fromBuffer(order.currency)
-          ),
+          price: {
+            currency: price.currency,
+            amount: price.amount,
+            netAmount: price.netAmount,
+            normalizedNetAmount: priceNormalized.netAmount,
+          },
+
           criteria: order.criteria,
         },
         owners: ownersChunk,
@@ -156,9 +161,9 @@ export class NewTopBidWebsocketEvent {
           id: order.collection_id,
           slug: order.collection_slug,
           name: order.collection_name,
-          floorAsk: await parseFloorPrice("", order),
-          floorAskNormalized: await parseFloorPrice("normalized_", order),
-          floorAskNonflagged: await parseFloorPrice("non_flagged_", order),
+          floorAskPrice: await parseFloorPrice("", order),
+          floorAskPriceNormalized: await parseFloorPrice("normalized_", order),
+          floorDifferencePercentage: _.round(order.floor_difference_percentage || 0, 2),
         },
       });
     }
