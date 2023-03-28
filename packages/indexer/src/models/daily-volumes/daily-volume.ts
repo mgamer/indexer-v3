@@ -277,9 +277,6 @@ export class DailyVolume {
     if (results.length) {
       const queries: PgPromiseQuery[] = [];
       results.forEach((values: any) => {
-        if (values.volume_change !== null) {
-          values.volume_change = values.volume_change / 1000000000000000000;
-        }
         queries.push({
           query: `
             UPDATE collections
