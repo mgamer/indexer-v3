@@ -199,27 +199,29 @@ export const getExecuteListV5Options: RouteOptions = {
   handler: async (request: Request) => {
     const payload = request.payload as any;
 
-    try {
-      const maker = payload.maker as string;
-      const source = payload.source as string | undefined;
-      const params = payload.params as {
-        token: string;
-        quantity?: number;
-        weiPrice: string;
-        orderKind: string;
-        orderbook: string;
-        fees: string[];
-        options?: any;
-        orderbookApiKey?: string;
-        automatedRoyalties: boolean;
-        royaltyBps?: number;
-        listingTime?: number;
-        expirationTime?: number;
-        salt?: string;
-        nonce?: string;
-        currency?: string;
-      }[];
+    const maker = payload.maker as string;
+    const source = payload.source as string | undefined;
+    const params = payload.params as {
+      token: string;
+      quantity?: number;
+      weiPrice: string;
+      orderKind: string;
+      orderbook: string;
+      fees: string[];
+      options?: any;
+      orderbookApiKey?: string;
+      automatedRoyalties: boolean;
+      royaltyBps?: number;
+      listingTime?: number;
+      expirationTime?: number;
+      salt?: string;
+      nonce?: string;
+      currency?: string;
+    }[];
 
+    const perfTime1 = performance.now();
+
+    try {
       // Set up generic listing steps
       let steps: {
         id: string;
@@ -1167,6 +1169,20 @@ export const getExecuteListV5Options: RouteOptions = {
         // to remove the auth step
         steps = steps.slice(1);
       }
+
+      const perfTime2 = performance.now();
+
+      logger.info(
+        "execute-list-v5-performance",
+        JSON.stringify({
+          kind: "total-performance",
+          totalTime: (perfTime2 - perfTime1) / 1000,
+          items: params.map((p) => ({
+            orderKind: p.orderKind,
+            orderbook: p.orderbook,
+          })),
+        })
+      );
 
       return { steps, errors };
     } catch (error) {
