@@ -76,7 +76,7 @@ export const postAuthSignatureV1Options: RouteOptions = {
           const authId = b.getAuthId(recoveredSigner);
           await b.saveAuth(
             authId,
-            { accessToken: result.accessToken, cfBm: result.cfBm },
+            { accessToken: result.accessToken },
             // Give a 1 minute buffer for the auth to expire
             Number(
               JSON.parse(Buffer.from(result.accessToken.split(".")[1], "base64").toString()).exp
