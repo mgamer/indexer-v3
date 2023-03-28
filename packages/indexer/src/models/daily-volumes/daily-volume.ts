@@ -245,7 +245,7 @@ export class DailyVolume {
               RANK() OVER (ORDER BY SUM(price) DESC, "collection_id") "rank",
               min(fe.price) AS "floor_sell_value",
               (
-                  SELECT sum("fe"."price") - (SELECT 
+                  SELECT sum("fe"."price") / (SELECT 
                         sum("fe2"."price") 
                         FROM fill_events_2 fe2 
                        WHERE t.contract = fe2.contract AND
