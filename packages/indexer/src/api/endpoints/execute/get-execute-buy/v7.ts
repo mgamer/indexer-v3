@@ -72,13 +72,19 @@ export const getExecuteBuyV7Options: RouteOptions = {
             preferredOrderSource: Joi.string()
               .lowercase()
               .pattern(regex.domain)
-              .when("tokens", { is: Joi.exist(), then: Joi.allow(), otherwise: Joi.forbidden() })
+              .when("token", { is: Joi.exist(), then: Joi.allow(), otherwise: Joi.forbidden() })
               .description(
-                "If there are multiple listings with equal best price, prefer this source over others.\nNOTE: if you want to fill a listing that is not the best priced, you need to pass a specific order id."
+                "If there are multiple listings with equal best price, prefer this source over others.\nNOTE: if you want to fill a listing that is not the best priced, you need to pass a specific order id or use `exactOrderSource`."
               ),
+            exactOrderSource: Joi.string()
+              .lowercase()
+              .pattern(regex.domain)
+              .when("token", { is: Joi.exist(), then: Joi.allow(), otherwise: Joi.forbidden() })
+              .description("Only consider orders from this source."),
           })
             .oxor("token", "orderId", "rawOrder")
             .or("token", "orderId", "rawOrder")
+            .oxor("preferredOrderSource", "exactOrderSource")
         )
         .min(1)
         .required()
@@ -348,6 +354,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           data: any;
         };
         preferredOrderSource?: string;
+        exactOrderSource?: string;
       }[] = payload.items;
 
       for (const item of items) {
@@ -460,6 +467,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
           // which doesn't support royalty normalization and then filter out
           // such `null` fields in various normalized events/caches.
 
+          // Only one of `exactOrderSource` and `preferredOrderSource` will be set
+          const sourceDomain = item.exactOrderSource || item.preferredOrderSource;
+
           // Fetch all matching orders sorted by price
           const orderResults = await idb.manyOrNone(
             `
@@ -489,6 +499,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                     ? " AND orders.kind != 'blur'"
                     : ""
                 }
+                ${item.exactOrderSource ? " AND orders.source_id_int = $/sourceId/" : ""}
               ORDER BY
                 ${payload.normalizeRoyalties ? "orders.normalized_value" : "orders.value"},
                 ${
@@ -506,7 +517,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
             {
               tokenSetId: `token:${item.token}`,
               quantity: item.quantity,
-              sourceId: item.preferredOrderSource,
+              sourceId: sourceDomain ? sources.getByDomain(sourceDomain)?.id ?? -1 : undefined,
             }
           );
 
