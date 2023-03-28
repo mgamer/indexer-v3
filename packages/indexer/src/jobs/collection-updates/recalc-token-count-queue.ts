@@ -50,6 +50,14 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (collection: string, delay = 60 * 1000) => {
-  await queue.add(collection, { collection }, { delay, jobId: collection });
+export const addToQueue = async (
+  collection: string,
+  oldCollection?: boolean,
+  delay = 60 * 1000
+) => {
+  await queue.add(
+    oldCollection ? `${collection}-${Date.now()}` : collection,
+    { collection },
+    { delay, jobId: collection }
+  );
 };
