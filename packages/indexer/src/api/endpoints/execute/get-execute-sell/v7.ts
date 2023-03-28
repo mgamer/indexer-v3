@@ -150,6 +150,8 @@ export const getExecuteSellV7Options: RouteOptions = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payload = request.payload as any;
 
+    const perfTime1 = performance.now();
+
     try {
       // Keep track of the bids and path to fill
       const bidDetails: BidDetails[] = [];
@@ -824,6 +826,17 @@ export const getExecuteSellV7Options: RouteOptions = {
         // those are not actually needed and we can cut their steps
         steps = steps.slice(2);
       }
+
+      const perfTime2 = performance.now();
+
+      logger.info(
+        "execute-sell-v7-performance",
+        JSON.stringify({
+          kind: "total-performance",
+          totalTime: (perfTime2 - perfTime1) / 1000,
+          items: bidDetails.map((b) => ({ orderKind: b.kind, isProtected: b.isProtected })),
+        })
+      );
 
       return {
         steps,
