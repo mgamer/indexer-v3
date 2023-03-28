@@ -212,7 +212,8 @@ export class Activities {
         baseQuery += ` WHERE (event_timestamp, id) ${sign} ($/eventTimestamp/, $/id/)`;
       }
 
-      baseQuery += ` ORDER BY event_timestamp ${sortDirection}, id ${sortDirection}`;
+      const nulls = sortDirection == "desc" ? "NULLS LAST" : "NULLS FIRST";
+      baseQuery += ` ORDER BY event_timestamp ${sortDirection} ${nulls}, id ${sortDirection}`;
     } else {
       if (!_.isNull(continuation) && continuation !== "null") {
         id = continuation;
