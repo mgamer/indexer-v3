@@ -21,7 +21,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const nonce = parsedLog.args["nonce"].toString();
 
         onChainData.nonceCancelEvents.push({
-          orderKind: subKind.startsWith("element-erc721") ? "element-erc721" : "element-erc1155",
+          orderKind:
+            subKind === "element-erc721-order-cancelled" ? "element-erc721" : "element-erc1155",
           maker,
           nonce,
           baseEventParams,
