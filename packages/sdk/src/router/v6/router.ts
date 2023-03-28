@@ -161,7 +161,6 @@ export class Router {
       // Needed for filling Blur orders
       blurAuth?: {
         accessToken: string;
-        cfBm?: string;
       };
       // Callback for handling recoverable errors
       onRecoverableError?: (
@@ -527,7 +526,6 @@ export class Router {
                 isFlagged: d.isFlagged,
               })),
               authToken: options?.blurAuth?.accessToken,
-              cfBm: options?.blurAuth?.cfBm,
             },
             {
               headers: {
