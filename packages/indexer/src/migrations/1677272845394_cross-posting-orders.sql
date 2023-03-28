@@ -12,7 +12,8 @@ CREATE TYPE "cross_posting_order_orderbook_t" AS ENUM (
   'x2y2',
   'universe',
   'infinity',
-  'flow'
+  'flow',
+  'blur'
 );
 
 CREATE TABLE "cross_posting_orders" (
