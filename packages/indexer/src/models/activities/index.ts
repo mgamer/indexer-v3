@@ -83,6 +83,7 @@ export class Activities {
     let eventTimestamp;
     let id;
     let metadataQuery = "";
+    let metadataOrderQuery = "";
 
     if (includeMetadata) {
       let orderCriteriaBuildQuery = "json_build_object()";
@@ -186,23 +187,29 @@ export class Activities {
                 SELECT name AS "collection_name", metadata AS "collection_metadata"
                 FROM collections
                 WHERE activities.collection_id = collections.id
-             ) c ON TRUE
-             LEFT JOIN LATERAL (
-                SELECT 
-                    source_id_int AS "order_source_id_int",
-                    side AS "order_side",
-                    kind AS "order_kind",
-                    (${orderMetadataBuildQuery}) AS "order_metadata",
-                    (${orderCriteriaBuildQuery}) AS "order_criteria"
-                FROM orders
-                WHERE activities.order_id = orders.id
-             ) o ON TRUE`;
+             ) c ON TRUE`;
+
+      metadataOrderQuery = `
+        source_id_int AS "order_source_id_int",
+        side AS "order_side",
+        kind AS "order_kind",
+        (${orderMetadataBuildQuery}) AS "order_metadata",
+        (${orderCriteriaBuildQuery}) AS "order_criteria",
+      `;
     }
 
     let baseQuery = `
             SELECT *
             FROM activities
             ${metadataQuery}
+            LEFT JOIN LATERAL (
+              SELECT            
+                  ${metadataOrderQuery}      
+                  currency AS "order_currency",
+                  currency_price AS "order_currency_price"
+              FROM orders
+              WHERE activities.order_id = orders.id
+           ) o ON TRUE
             `;
 
     if (byEventTimestamp) {
@@ -275,6 +282,7 @@ export class Activities {
     let continuation = "";
     let typesFilter = "";
     let metadataQuery = "";
+    let metadataOrderQuery = "";
     let collectionFilter = "";
     let nullsLast = "";
 
@@ -406,17 +414,15 @@ export class Activities {
                 SELECT name AS "collection_name", metadata AS "collection_metadata"
                 FROM collections
                 WHERE activities.collection_id = collections.id
-             ) c ON TRUE
-             LEFT JOIN LATERAL (
-                SELECT 
-                    source_id_int AS "order_source_id_int",
-                    side AS "order_side",
-                    kind AS "order_kind",
-                    (${orderMetadataBuildQuery}) AS "order_metadata",
-                    (${orderCriteriaBuildQuery}) AS "order_criteria"
-                FROM orders
-                WHERE activities.order_id = orders.id
-             ) o ON TRUE`;
+             ) c ON TRUE`;
+
+      metadataOrderQuery = `
+        source_id_int AS "order_source_id_int",
+        side AS "order_side",
+        kind AS "order_kind",
+        (${orderMetadataBuildQuery}) AS "order_metadata",
+        (${orderCriteriaBuildQuery}) AS "order_criteria",
+      `;
     }
 
     let attributesQuery = "";
@@ -443,6 +449,14 @@ export class Activities {
     const activities: ActivitiesEntityParams[] | null = await redb.manyOrNone(
       `SELECT *
              FROM activities
+             LEFT JOIN LATERAL (
+              SELECT                   
+                ${metadataOrderQuery}     
+                currency AS "order_currency",
+                currency_price AS "order_currency_price"                               
+              FROM orders
+              WHERE activities.order_id = orders.id
+            ) o ON TRUE
              ${metadataQuery}
              ${attributesQuery}
              ${collectionFilter}
@@ -481,6 +495,7 @@ export class Activities {
     let continuation = "";
     let typesFilter = "";
     let metadataQuery = "";
+    let metadataOrderQuery = "";
 
     if (!_.isNull(createdBefore)) {
       continuation = `AND ${sortByColumn} < $/createdBefore/`;
@@ -592,22 +607,28 @@ export class Activities {
                 SELECT name AS "collection_name", metadata AS "collection_metadata"
                 FROM collections
                 WHERE activities.collection_id = collections.id
-             ) c ON TRUE
-             LEFT JOIN LATERAL (
-                SELECT 
-                    source_id_int AS "order_source_id_int",
-                    side AS "order_side",
-                    kind AS "order_kind",
-                    (${orderMetadataBuildQuery}) AS "order_metadata",
-                    (${orderCriteriaBuildQuery}) AS "order_criteria"
-                FROM orders
-                WHERE activities.order_id = orders.id
-             ) o ON TRUE`;
+             ) c ON TRUE`;
+
+      metadataOrderQuery = `
+        source_id_int AS "order_source_id_int",
+        side AS "order_side",
+        kind AS "order_kind",
+        (${orderMetadataBuildQuery}) AS "order_metadata",
+        (${orderCriteriaBuildQuery}) AS "order_criteria",
+      `;
     }
 
     const activities: ActivitiesEntityParams[] | null = await redb.manyOrNone(
       `SELECT *
              FROM activities
+             LEFT JOIN LATERAL (
+              SELECT 
+                ${metadataOrderQuery}
+                currency AS "order_currency",
+                currency_price AS "order_currency_price"
+              FROM orders
+              WHERE activities.order_id = orders.id
+            ) o ON TRUE
              ${metadataQuery}
              WHERE contract = $/contract/
              AND token_id = $/tokenId/
