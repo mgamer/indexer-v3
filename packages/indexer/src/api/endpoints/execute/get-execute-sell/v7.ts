@@ -70,6 +70,12 @@ export const getExecuteSellV7Options: RouteOptions = {
                 .required(),
               data: Joi.object().required(),
             }).description("Optional raw order to sell into."),
+            exactOrderSource: Joi.string()
+              .lowercase()
+              .pattern(regex.domain)
+              .when("orderId", { is: Joi.exist(), then: Joi.forbidden(), otherwise: Joi.allow() })
+              .when("rawOrder", { is: Joi.exist(), then: Joi.forbidden(), otherwise: Joi.allow() })
+              .description("Only consider orders from this source."),
           }).oxor("orderId", "rawOrder")
         )
         .min(1)
@@ -288,6 +294,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           data: any;
         };
+        exactOrderSource?: string;
       }[] = payload.items;
 
       const tokenToSuspicious = await tryGetTokensSuspiciousStatus(items.map((i) => i.token));
@@ -492,6 +499,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                 AND orders.side = 'buy'
                 AND orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                ${item.exactOrderSource ? " AND orders.source_id_int = $/sourceId/" : ""}
               ORDER BY ${
                 payload.normalizeRoyalties ? "orders.normalized_value" : "orders.value"
               } DESC
@@ -501,6 +509,9 @@ export const getExecuteSellV7Options: RouteOptions = {
               contract: toBuffer(contract),
               tokenId,
               quantity: item.quantity,
+              sourceId: item.exactOrderSource
+                ? sources.getByDomain(item.exactOrderSource)?.id ?? -1
+                : undefined,
             }
           );
 
