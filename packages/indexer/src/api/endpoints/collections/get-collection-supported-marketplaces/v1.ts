@@ -28,7 +28,7 @@ type Marketplace = {
 const version = "v1";
 
 export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
-  description: "Collections",
+  description: "Supported marketplaces by collection",
   notes: "Supported marketplaces by collection",
   tags: ["api", "Collections"],
   plugins: {
