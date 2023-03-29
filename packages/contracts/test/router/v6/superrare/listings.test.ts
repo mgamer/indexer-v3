@@ -256,10 +256,10 @@ describe("[ReservoirV6_0_0] SuperRare listings", () => {
     expect(balancesAfter.superRareModule).to.eq(0);
   };
 
-  for (const multiple of [true]) {
-    for (const partial of [false]) {
-      for (const chargeFees of [true]) {
-        for (const revertIfIncomplete of [true]) {
+  for (const multiple of [false, true]) {
+    for (const partial of [false, true]) {
+      for (const chargeFees of [false, true]) {
+        for (const revertIfIncomplete of [false, true]) {
           it(
             "[eth]" +
               `${multiple ? "[multiple-orders]" : "[single-order]"}` +
