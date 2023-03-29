@@ -6,7 +6,6 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {BaseExchangeModule} from "./BaseExchangeModule.sol";
 import {BaseModule} from "../BaseModule.sol";
 import {ISuperRare} from "../../../interfaces/ISuperRare.sol";
-import "hardhat/console.sol";
 
 // Notes:
 // - only supports filling "buy now" listings (ERC721 and ETH-denominated)
@@ -46,7 +45,6 @@ contract SuperRareModule is BaseExchangeModule {
     refundETHLeftover(params.refundTo)
     chargeETHFees(fees, params.amount)
   {
-    console.log("test1");
     // Execute fill
     _buy(
       listing.token,
@@ -71,7 +69,6 @@ contract SuperRareModule is BaseExchangeModule {
     refundETHLeftover(params.refundTo)
     chargeETHFees(fees, params.amount)
   {
-    console.log("test2");
     // Foundation does not support batch filling so we fill orders one by one
     for (uint256 i = 0; i < listings.length; ) {
       _buy(
@@ -110,16 +107,12 @@ contract SuperRareModule is BaseExchangeModule {
     bool revertIfIncomplete,
     uint256 value
   ) internal {
-    console.log("test3");
     // Execute fill
     try BAZAAR.buy{value: value}(token, tokenId, currency, value) {
-      console.log("test4");
       token.safeTransferFrom(address(this), receiver, tokenId);
     } catch {
-      console.log("test5");
       // Revert if specified
       if (revertIfIncomplete) {
-        console.log("test3");
         revert UnsuccessfulFill();
       }
     }
