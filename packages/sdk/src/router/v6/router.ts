@@ -1348,13 +1348,16 @@ export class Router {
                   [
                     await Promise.all(
                       orders.map(async (order, i) => {
+                        const totalAmount = order.getInfo()!.amount;
+                        const filledAmount = currencyDetails[i].amount ?? 1;
+
                         const orderData = {
                           parameters: {
                             ...order.params,
                             totalOriginalConsiderationItems: order.params.consideration.length,
                           },
-                          numerator: currencyDetails[i].amount ?? 1,
-                          denominator: order.getInfo()!.amount,
+                          numerator: filledAmount,
+                          denominator: totalAmount,
                           signature: order.params.signature,
                           extraData: await exchange.getExtraData(order),
                         };
@@ -1362,7 +1365,9 @@ export class Router {
                         if (currencyIsETH) {
                           return {
                             order: orderData,
-                            price: orders[i].getMatchingPrice(),
+                            price: bn(orders[i].getMatchingPrice())
+                              .mul(filledAmount)
+                              .div(totalAmount),
                           };
                         } else {
                           return orderData;
@@ -1461,23 +1466,28 @@ export class Router {
                   [
                     await Promise.all(
                       orders.map(async (order, i) => {
+                        const totalAmount = order.getInfo()!.amount;
+                        const filledAmount = currencyDetails[i].amount ?? 1;
+
                         const orderData = {
                           parameters: {
                             ...order.params,
                             totalOriginalConsiderationItems: order.params.consideration.length,
                           },
-                          numerator: currencyDetails[i].amount ?? 1,
-                          denominator: order.getInfo()!.amount,
+                          numerator: filledAmount,
+                          denominator: totalAmount,
                           signature: order.params.signature,
                           extraData: await exchange.getExtraData(orders[0], {
-                            amount: currencyDetails[0].amount ?? 1,
+                            amount: filledAmount,
                           }),
                         };
 
                         if (currencyIsETH) {
                           return {
                             order: orderData,
-                            price: orders[i].getMatchingPrice(),
+                            price: bn(orders[i].getMatchingPrice())
+                              .mul(filledAmount)
+                              .div(totalAmount),
                           };
                         } else {
                           return orderData;

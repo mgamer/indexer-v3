@@ -549,9 +549,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
               continue;
             }
 
-            // Update the quantity to fill with the current order's available quantity
-            quantityToFill -= availableQuantity;
-
             await addToPath(
               {
                 id: result.id,
@@ -567,9 +564,12 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 kind: result.token_kind,
                 contract,
                 tokenId,
-                quantity: Math.min(item.quantity, availableQuantity),
+                quantity: Math.min(quantityToFill, availableQuantity),
               }
             );
+
+            // Update the quantity to fill with the current order's available quantity
+            quantityToFill -= availableQuantity;
           }
 
           if (quantityToFill > 0) {
