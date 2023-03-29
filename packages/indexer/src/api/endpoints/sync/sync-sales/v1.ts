@@ -47,7 +47,7 @@ export const getSyncSalesV1Options: RouteOptions = {
     let paginationFilter = "";
 
     if (query.continuation) {
-      const contArr = splitContinuation(query.continuation, /^(.+)_(.+)_(\d+)$/);
+      const contArr = splitContinuation(query.continuation, /^(.+)_(.+)_(\d+)_(\d+)$/);
 
       if (contArr.length !== 4) {
         throw Boom.badRequest("Invalid continuation string used");
