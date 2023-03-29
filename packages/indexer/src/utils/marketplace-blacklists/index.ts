@@ -56,7 +56,13 @@ const allOperatorList: Opreator[] = [
 
 export async function checkMarketplaceIsFiltered(collection: string, marketplace: OrderKind) {
   const operatorList = allOperatorList.filter((c) => c.marketplace === marketplace);
-  const blacklist = await getMarketplaceBlacklist(collection);
+  let blacklist: string[] = [];
+  const result = await getMarketplaceBlacklistFromDB(collection);
+  if (result && result.marketplace_blacklists) {
+    blacklist = result.marketplace_blacklists;
+  } else {
+    blacklist = await updateMarketplaceBlacklist(collection);
+  }
   const isBlocked = operatorList.some((c) => blacklist.includes(c.address));
   return isBlocked;
 }
@@ -69,32 +75,32 @@ export const getMarketplaceBlacklist = async (collection: string) => {
     ]),
     baseProvider
   );
-  const opreators = await contract.filteredOperators(collection);
-  return opreators.map((_: string) => _.toLowerCase());
+  const operators = await contract.filteredOperators(collection);
+  return operators.map((_: string) => _.toLowerCase());
 };
 
 export async function updateMarketplaceBlacklist(collection: string) {
   const blacklists = await getMarketplaceBlacklist(collection);
   await idb.none(
     `
-      UPDATE collections
+      UPDATE contracts
         SET marketplace_blacklists = $/blacklists:json/
-      WHERE collections.id = $/collection/
+      WHERE contracts.address = $/collection/
     `,
     {
       collection,
       blacklists: blacklists,
     }
   );
+  return blacklists;
 }
 
 export async function getMarketplaceBlacklistFromDB(collection: string) {
   const collectionResult = await redb.oneOrNone(
     `
-      SELECT
-      COALESCE(collections.marketplace_blacklists, '{}') AS marketplace_blacklists
-      FROM collections
-      WHERE collections.id = $/collection/
+      SELECT contracts.marketplace_blacklists
+      FROM contracts
+      WHERE contracts.address = $/collection/
     `,
     { collection }
   );
