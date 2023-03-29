@@ -539,7 +539,7 @@ export class Exchange {
   // --- Derive conduit from key ---
 
   public deriveConduit(conduitKey: string) {
-    return this.conduitController.deriveConduit(conduitKey, Addresses.Exchange[this.chainId]);
+    return this.conduitController.deriveConduit(conduitKey);
   }
 
   // --- Derive basic sale information ---

@@ -248,10 +248,7 @@ export class Order {
       throw new Error("not-fillable");
     }
 
-    const makerConduit = exchange.conduitController.deriveConduit(
-      this.params.conduitKey,
-      Addresses.Exchange[this.chainId]
-    );
+    const makerConduit = exchange.conduitController.deriveConduit(this.params.conduitKey);
 
     const info = this.getInfo()! as BaseOrderInfo;
     if (info.side === "buy") {
