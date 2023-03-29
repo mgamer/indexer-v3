@@ -37,7 +37,7 @@ CREATE UNIQUE INDEX activities_hash_unique_index
     ON activities (hash);
 
 CREATE INDEX activities_event_timestamp_index
-  ON activities (event_timestamp DESC);
+  ON activities (event_timestamp DESC NULLS LAST);
 
 -- Down Migration
 

@@ -36,9 +36,10 @@ export const handleEvents = async (
         const nonce = parsedLog.args["nonce"].toString();
 
         onChainData.nonceCancelEvents.push({
-          orderKind: eventData!.kind.startsWith("zeroex-v4-erc721")
-            ? "zeroex-v4-erc721"
-            : "zeroex-v4-erc1155",
+          orderKind:
+            subKind === "zeroex-v4-erc721-order-cancelled"
+              ? "zeroex-v4-erc721"
+              : "zeroex-v4-erc1155",
           maker,
           nonce,
           baseEventParams,

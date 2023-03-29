@@ -7,12 +7,13 @@ import {IAllowanceTransfer} from "../../interfaces/IAllowanceTransfer.sol";
 contract Permit2Module is BaseModule {
   // --- Fields ---
 
-  IAllowanceTransfer public constant PERMIT2 =
-    IAllowanceTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
+  IAllowanceTransfer public immutable PERMIT2;
 
   // --- Constructor ---
 
-  constructor(address owner) BaseModule(owner) {}
+  constructor(address owner, address permit2) BaseModule(owner) {
+    PERMIT2 = IAllowanceTransfer(permit2);
+  }
 
   function permitTransfer(
     address owner,

@@ -51,6 +51,10 @@ export const getCollectionsTopBidV2Options: RouteOptions = {
         .max(1000)
         .default(50)
         .description("Amount of items returned in response."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     }).oxor("collection"),
   },
   response: {
@@ -201,7 +205,8 @@ export const getCollectionsTopBidV2Options: RouteOptions = {
                       nativeAmount: r.value,
                     },
                   },
-                  r.currency ? fromBuffer(r.currency) : Sdk.Common.Addresses.Weth[config.chainId]
+                  r.currency ? fromBuffer(r.currency) : Sdk.Common.Addresses.Weth[config.chainId],
+                  query.displayCurrency
                 )
               : null,
             validUntil: r.price ? Number(r.valid_until) : null,

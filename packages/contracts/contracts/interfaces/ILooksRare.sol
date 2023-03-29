@@ -33,19 +33,22 @@ interface ILooksRare {
     bytes params;
   }
 
-  function transferSelectorNFT() external view returns (address);
+  function transferSelectorNFT() external view returns (ILooksRareTransferSelectorNFT);
 
   function matchAskWithTakerBidUsingETHAndWETH(
     TakerOrder calldata takerBid,
     MakerOrder calldata makerAsk
   ) external payable;
 
-  function matchAskWithTakerBid(TakerOrder calldata takerBid, MakerOrder calldata makerAsk)
-    external
-    payable;
+  function matchAskWithTakerBid(
+    TakerOrder calldata takerBid,
+    MakerOrder calldata makerAsk
+  ) external payable;
 
-  function matchBidWithTakerAsk(TakerOrder calldata takerAsk, MakerOrder calldata makerBid)
-    external;
+  function matchBidWithTakerAsk(
+    TakerOrder calldata takerAsk,
+    MakerOrder calldata makerBid
+  ) external;
 }
 
 interface ILooksRareTransferSelectorNFT {

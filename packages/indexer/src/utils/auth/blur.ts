@@ -23,7 +23,6 @@ export const getAuthChallenge = async (id: string) =>
 
 export type Auth = {
   accessToken: string;
-  cfBm?: string;
 };
 
 export const getAuthId = (taker: string) => `blur-auth:${taker}`;

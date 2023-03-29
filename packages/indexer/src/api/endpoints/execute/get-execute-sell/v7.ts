@@ -70,6 +70,12 @@ export const getExecuteSellV7Options: RouteOptions = {
                 .required(),
               data: Joi.object().required(),
             }).description("Optional raw order to sell into."),
+            exactOrderSource: Joi.string()
+              .lowercase()
+              .pattern(regex.domain)
+              .when("orderId", { is: Joi.exist(), then: Joi.forbidden(), otherwise: Joi.allow() })
+              .when("rawOrder", { is: Joi.exist(), then: Joi.forbidden(), otherwise: Joi.allow() })
+              .description("Only consider orders from this source."),
           }).oxor("orderId", "rawOrder")
         )
         .min(1)
@@ -125,7 +131,7 @@ export const getExecuteSellV7Options: RouteOptions = {
       errors: Joi.array().items(
         Joi.object({
           message: Joi.string(),
-          orderId: Joi.number(),
+          orderId: Joi.string(),
         })
       ),
       path: Joi.array().items(
@@ -149,6 +155,8 @@ export const getExecuteSellV7Options: RouteOptions = {
   handler: async (request: Request) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payload = request.payload as any;
+
+    const perfTime1 = performance.now();
 
     try {
       // Keep track of the bids and path to fill
@@ -286,6 +294,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           data: any;
         };
+        exactOrderSource?: string;
       }[] = payload.items;
 
       const tokenToSuspicious = await tryGetTokensSuspiciousStatus(items.map((i) => i.token));
@@ -490,6 +499,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                 AND orders.side = 'buy'
                 AND orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                ${item.exactOrderSource ? " AND orders.source_id_int = $/sourceId/" : ""}
               ORDER BY ${
                 payload.normalizeRoyalties ? "orders.normalized_value" : "orders.value"
               } DESC
@@ -499,6 +509,9 @@ export const getExecuteSellV7Options: RouteOptions = {
               contract: toBuffer(contract),
               tokenId,
               quantity: item.quantity,
+              sourceId: item.exactOrderSource
+                ? sources.getByDomain(item.exactOrderSource)?.id ?? -1
+                : undefined,
             }
           );
 
@@ -709,7 +722,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           onRecoverableError: async (kind, error, data) => {
             errors.push({
               orderId: data.orderId,
-              message: error.response?.data ?? error.message,
+              message: error.response?.data ? JSON.stringify(error.response.data) : error.message,
             });
             await routerOnRecoverableError(kind, error, data);
           },
@@ -824,6 +837,17 @@ export const getExecuteSellV7Options: RouteOptions = {
         // those are not actually needed and we can cut their steps
         steps = steps.slice(2);
       }
+
+      const perfTime2 = performance.now();
+
+      logger.info(
+        "execute-sell-v7-performance",
+        JSON.stringify({
+          kind: "total-performance",
+          totalTime: (perfTime2 - perfTime1) / 1000,
+          items: bidDetails.map((b) => ({ orderKind: b.kind, isProtected: b.isProtected })),
+        })
+      );
 
       return {
         steps,

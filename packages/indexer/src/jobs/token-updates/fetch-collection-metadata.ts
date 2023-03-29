@@ -129,7 +129,8 @@ if (config.doBackgroundWork) {
 
         // If token has moved collections, update the old collection's token count
         if (oldCollectionId) {
-          await collectionRecalcTokenCount.addToQueue(oldCollectionId);
+          logger.info(QUEUE_NAME, `Adding collection ${oldCollectionId} to recalc queue`);
+          await collectionRecalcTokenCount.addToQueue(oldCollectionId, true);
         }
 
         // If this is a new collection, recalculate floor price
@@ -213,6 +214,8 @@ export const addToQueue = async (infos: FetchCollectionMetadataInfo[], jobId = "
           ? `${info.contract}-${info.tokenId}`
           : info.contract;
       }
+
+      logger.info(QUEUE_NAME, `Adding to queue with info ${JSON.stringify(info)}`);
 
       return {
         name: jobId,

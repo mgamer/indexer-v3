@@ -28,6 +28,7 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { collection } = job.data;
+      logger.info(QUEUE_NAME, `Going to update token count for collection ${collection}`);
       const query = `
           UPDATE "collections"
           SET "token_count" = (SELECT COUNT(*) FROM "tokens" WHERE "collection_id" = $/collection/),
@@ -49,6 +50,6 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (collection: string, delay = 60 * 1000) => {
-  await queue.add(collection, { collection }, { delay, jobId: collection });
+export const addToQueue = async (collection: string, force = false, delay = 60 * 1000) => {
+  await queue.add(collection, { collection }, { delay, jobId: force ? undefined : collection });
 };
