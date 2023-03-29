@@ -51,6 +51,7 @@ contract SuperRareModule is BaseExchangeModule {
       listing.token,
       listing.tokenId, 
       listing.currency, 
+      listing.price,
       params.fillTo, 
       params.revertIfIncomplete, 
       listing.priceWithFees
@@ -75,6 +76,7 @@ contract SuperRareModule is BaseExchangeModule {
         listings[i].token,
         listings[i].tokenId,
         listings[i].currency,
+        listings[i].price,
         params.fillTo,
         params.revertIfIncomplete,
         listings[i].priceWithFees
@@ -103,12 +105,13 @@ contract SuperRareModule is BaseExchangeModule {
     IERC721 token,
     uint256 tokenId,
     address currency,
+    uint256 price,
     address receiver,
     bool revertIfIncomplete,
     uint256 value
   ) internal {
     // Execute fill
-    try BAZAAR.buy{value: value}(token, tokenId, currency, value) {
+    try BAZAAR.buy{value: value}(token, tokenId, currency, price) {
       token.safeTransferFrom(address(this), receiver, tokenId);
     } catch {
       // Revert if specified

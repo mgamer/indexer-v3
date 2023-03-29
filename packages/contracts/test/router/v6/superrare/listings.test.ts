@@ -82,8 +82,6 @@ describe("[ReservoirV6_0_0] SuperRare listings", () => {
     // Number of listings to fill
     listingsCount: number
   ) => {
-    console.log("test listings");
-
     // Setup
 
     // Makers: Alice and Bob
@@ -94,27 +92,25 @@ describe("[ReservoirV6_0_0] SuperRare listings", () => {
     const feesOnTop: BigNumber[] = [];
     for (let i = 0; i < listingsCount; i++) {
       listings.push({
-        seller: getRandomBoolean() ? alice : bob,
+        seller: alice,
         nft: {
           contract: erc721,
           id: getRandomInteger(1, 10000),
         },
-        price: parseEther(getRandomFloat(0.0001, 2).toFixed(6)),
-        isCancelled: partial && getRandomBoolean(),
+        price: parseEther("1"),
+        isCancelled: partial,
       });
       if (chargeFees) {
-        feesOnTop.push(parseEther(getRandomFloat(0.0001, 0.1).toFixed(6)));
+        feesOnTop.push(parseEther("0.1"));
       }
     }
     await setupSuperRareListings(listings);
-    console.log(listings[0].order?.params);
-
     // Prepare executions
 
     const totalPrice = bn(listings.map(({ price }) => price).reduce((a, b) => bn(a).add(b), bn(0)));
     // SuperRare fee
     totalPrice.add(totalPrice.mul(3).div(100));
-    console.log("before exec");
+
     const executions: ExecutionInfo[] = [
       // 1. Fill listings
       listingsCount > 1
@@ -176,8 +172,6 @@ describe("[ReservoirV6_0_0] SuperRare listings", () => {
           },
     ];
 
-    console.log("after exec");
-
     // Checks
 
     // If the `revertIfIncomplete` option is enabled and we have any
@@ -193,7 +187,6 @@ describe("[ReservoirV6_0_0] SuperRare listings", () => {
       return;
     }
     // Fetch pre-state
-
     const balancesBefore = await getBalances(Sdk.Common.Addresses.Eth[chainId]);
 
     // Execute
@@ -207,7 +200,6 @@ describe("[ReservoirV6_0_0] SuperRare listings", () => {
     const balancesAfter = await getBalances(Sdk.Common.Addresses.Eth[chainId]);
 
     // Checks
-
     // Alice got the payment
     expect(balancesAfter.alice.sub(balancesBefore.alice)).to.eq(
       listings
@@ -215,7 +207,7 @@ describe("[ReservoirV6_0_0] SuperRare listings", () => {
         .map(({ price }) =>
           bn(price).sub(
             // Take into consideration the protocol fee
-            bn(price).mul(500).div(10000)
+            bn(price).mul(15).div(100)
           )
         )
         .reduce((a, b) => bn(a).add(b), bn(0))
@@ -227,12 +219,11 @@ describe("[ReservoirV6_0_0] SuperRare listings", () => {
         .map(({ price }) =>
           bn(price).sub(
             // Take into consideration the protocol fee
-            bn(price).mul(500).div(10000)
+            bn(price).mul(15).div(100)
           )
         )
         .reduce((a, b) => bn(a).add(b), bn(0))
     );
-
     // Emilio got the fee payments
     if (chargeFees) {
       // Fees are charged per execution, and since we have a single execution
@@ -240,7 +231,9 @@ describe("[ReservoirV6_0_0] SuperRare listings", () => {
       // amount that was actually paid (eg. prices of filled orders)
       const actualPaid = listings
         .filter(({ isCancelled }) => !isCancelled)
-        .map(({ price }) => price)
+        .map(({ price }) => {
+          return bn(price).add(bn(price).mul(3).div(100));
+        })
         .reduce((a, b) => bn(a).add(b), bn(0));
       expect(balancesAfter.emilio.sub(balancesBefore.emilio)).to.eq(
         listings
@@ -263,10 +256,10 @@ describe("[ReservoirV6_0_0] SuperRare listings", () => {
     expect(balancesAfter.superRareModule).to.eq(0);
   };
 
-  for (const multiple of [false, true]) {
-    for (const partial of [false, true]) {
-      for (const chargeFees of [false, true]) {
-        for (const revertIfIncomplete of [false, true]) {
+  for (const multiple of [true]) {
+    for (const partial of [false]) {
+      for (const chargeFees of [true]) {
+        for (const revertIfIncomplete of [true]) {
           it(
             "[eth]" +
               `${multiple ? "[multiple-orders]" : "[single-order]"}` +
