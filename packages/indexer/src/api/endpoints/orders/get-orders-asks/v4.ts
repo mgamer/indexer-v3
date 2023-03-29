@@ -16,8 +16,8 @@ import {
   toBuffer,
 } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
-import { Orders } from "@/utils/orders";
 import { Sources } from "@/models/sources";
+import { Orders } from "@/utils/orders";
 import { TokenSets } from "@/models/token-sets";
 
 const version = "v4";

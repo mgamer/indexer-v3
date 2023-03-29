@@ -288,6 +288,13 @@ export const JoiOrder = Joi.object({
   rawData: Joi.object().optional().allow(null),
 });
 
+export const JoiActivityOrder = Joi.object({
+  id: Joi.string().allow(null),
+  side: Joi.string().valid("ask", "bid").allow(null),
+  source: Joi.object().allow(null),
+  criteria: JoiOrderCriteria.allow(null),
+});
+
 export const getJoiDynamicPricingObject = async (
   dynamic: boolean,
   kind: string,
@@ -530,6 +537,29 @@ export const getJoiOrderObject = async (order: {
     createdAt: new Date(order.createdAt * 1000).toISOString(),
     updatedAt: new Date(order.updatedAt).toISOString(),
     rawData: order.includeRawData ? order.rawData : undefined,
+  };
+};
+
+export const getJoiActivityOrderObject = async (order: {
+  id: string | null;
+  side: string | null;
+  sourceIdInt: number | null | undefined;
+  criteria: Record<string, unknown> | null;
+}) => {
+  const sources = await Sources.getInstance();
+  const orderSource = order.sourceIdInt ? sources.get(order.sourceIdInt) : undefined;
+
+  return {
+    id: order.id,
+    side: order.side ? (order.side === "sell" ? "ask" : "bid") : undefined,
+    source: orderSource
+      ? {
+          domain: orderSource?.domain,
+          name: orderSource?.getTitle(),
+          icon: orderSource?.getIcon(),
+        }
+      : undefined,
+    criteria: order.criteria,
   };
 };
 
