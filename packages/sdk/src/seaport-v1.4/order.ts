@@ -240,7 +240,7 @@ export class Order {
   public async checkFillability(provider: Provider) {
     const exchange = new Exchange(this.chainId);
 
-    const status = await exchange.contract.getOrderStatus(this.hash());
+    const status = await exchange.contract.connect(provider).getOrderStatus(this.hash());
     if (status.isCancelled) {
       throw new Error("not-fillable");
     }
