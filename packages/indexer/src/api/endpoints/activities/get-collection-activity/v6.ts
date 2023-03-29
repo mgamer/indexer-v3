@@ -189,7 +189,7 @@ export const getCollectionActivityV6Options: RouteOptions = {
             ? await getJoiActivityOrderObject({
                 id: activity.order.id,
                 side: activity.order.side,
-                sourceIdInt: activity.order.sourceIdInt,
+                sourceIdInt: activity.order.sourceIdInt || activity.metadata.orderSourceIdInt,
                 criteria: activity.order.criteria,
               })
             : undefined,
