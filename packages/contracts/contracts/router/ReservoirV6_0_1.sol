@@ -51,7 +51,7 @@ contract ReservoirV6_0_1 is ReentrancyGuard {
     ExecutionInfo[] calldata executionInfos
   ) external payable nonReentrant refundETH {
     uint256 length = executionInfos.length;
-    for (uint256 i; i < length; ) {
+    for (uint256 i = 0; i < length; ) {
       _executeInternal(executionInfos[i]);
 
       unchecked {
@@ -81,7 +81,7 @@ contract ReservoirV6_0_1 is ReentrancyGuard {
     uint256 threshold = amountCheckInfo.threshold;
 
     uint256 length = executionInfos.length;
-    for (uint256 i; i < length; ) {
+    for (uint256 i = 0; i < length; ) {
       // Check the amount and break if it exceeds the threshold
       uint256 amount = _getAmount(target, data);
       if (amount >= threshold) {
