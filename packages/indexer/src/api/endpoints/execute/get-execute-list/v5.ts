@@ -1181,6 +1181,7 @@ export const getExecuteListV5Options: RouteOptions = {
             orderKind: p.orderKind,
             orderbook: p.orderbook,
           })),
+          itemsCount: params.length,
         })
       );
 
