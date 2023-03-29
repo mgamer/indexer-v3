@@ -430,37 +430,6 @@ export class Router {
       }
     }
 
-    // TODO: Add SuperRare router module
-    if (details.some(({ kind }) => kind === "superrare")) {
-      if (options?.relayer) {
-        throw new Error("Relayer not supported for Superrare orders");
-      }
-
-      if (details.length > 1) {
-        throw new Error("SuperRare sweeping is not supported");
-      } else {
-        if (options?.globalFees?.length) {
-          throw new Error("Fees not supported for Superrare orders");
-        }
-
-        const detail = details[0];
-
-        const order = detail.order as Sdk.SuperRare.Order;
-        const exchange = new Sdk.SuperRare.Exchange(this.chainId);
-
-        return {
-          txs: [
-            {
-              approvals: [],
-              permits: [],
-              txData: exchange.fillOrderTx(taker, order, options),
-              orderIds: [detail.orderId],
-            },
-          ],
-          success: { [detail.orderId]: true },
-        };
-      }
-    }
 
     if (details.some(({ kind }) => kind === "blur")) {
       if (options?.relayer) {
@@ -923,6 +892,8 @@ export class Router {
     const zoraDetails: ListingDetails[] = [];
     const nftxDetails: ListingDetails[] = [];
     const raribleDetails: ListingDetails[] = [];
+    const superRareDetails: ListingDetails[] = [];
+
     for (const detail of details) {
       // Skip any listings handled in a previous step
       if (success[detail.orderId]) {
@@ -988,6 +959,11 @@ export class Router {
 
         case "rarible": {
           detailsRef = raribleDetails;
+          break;
+        }
+
+        case "superrare": {
+          detailsRef = superRareDetails;
           break;
         }
 
@@ -2118,6 +2094,67 @@ export class Router {
 
       // Mark the listings as successfully handled
       for (const { orderId } of raribleDetails) {
+        success[orderId] = true;
+        orderIds.push(orderId);
+      }
+    }
+
+    // Handle SuperRare listings
+    if (superRareDetails.length) {
+      const orders = superRareDetails.map((d) => d.order as Sdk.SuperRare.Order);
+      const module = this.contracts.superRareModule;
+
+      const fees = getFees(superRareDetails);
+      const price = orders.map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
+      const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
+      const totalPrice = price.add(feeAmount);
+
+      executions.push({
+        module: module.address,
+        data:
+          orders.length === 1
+            ? module.interface.encodeFunctionData("acceptETHListing", [
+                {
+                  ...orders[0].params,
+                  token: orders[0].params.contract,
+                },
+                {
+                  fillTo: taker,
+                  refundTo: relayer,
+                  revertIfIncomplete: Boolean(!options?.partial),
+                  amount: price,
+                },
+                fees,
+              ])
+            : module.interface.encodeFunctionData("acceptETHListings", [
+                orders.map((order) => ({
+                  ...order.params,
+                  token: order.params.contract,
+                })),
+                {
+                  fillTo: taker,
+                  refundTo: relayer,
+                  revertIfIncomplete: Boolean(!options?.partial),
+                  amount: price,
+                },
+                fees,
+              ]),
+        value: totalPrice,
+      });
+
+      // Track any possibly required swap
+      swapDetails.push({
+        tokenIn: buyInCurrency,
+        tokenOut: Sdk.Common.Addresses.Eth[this.chainId],
+        tokenOutAmount: totalPrice,
+        recipient: this.contracts.superRareModule.address,
+        refundTo: relayer,
+        details: superRareDetails,
+        executionIndex: executions.length - 1,
+      });
+
+      // Mark the listings as successfully handled
+      for (const { orderId } of superRareDetails) {
         success[orderId] = true;
         orderIds.push(orderId);
       }
