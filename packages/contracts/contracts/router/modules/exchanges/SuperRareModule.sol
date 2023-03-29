@@ -18,6 +18,7 @@ contract SuperRareModule is BaseExchangeModule {
     uint256 tokenId;
     address currency;
     uint256 price;
+    uint256 priceWithFees;
   }
 
   // --- Fields ---
@@ -52,7 +53,7 @@ contract SuperRareModule is BaseExchangeModule {
       listing.currency, 
       params.fillTo, 
       params.revertIfIncomplete, 
-      listing.price
+      listing.priceWithFees
     );
   }
 
@@ -69,7 +70,6 @@ contract SuperRareModule is BaseExchangeModule {
     refundETHLeftover(params.refundTo)
     chargeETHFees(fees, params.amount)
   {
-    // Foundation does not support batch filling so we fill orders one by one
     for (uint256 i = 0; i < listings.length; ) {
       _buy(
         listings[i].token,
@@ -77,7 +77,7 @@ contract SuperRareModule is BaseExchangeModule {
         listings[i].currency,
         params.fillTo,
         params.revertIfIncomplete,
-        listings[i].price
+        listings[i].priceWithFees
       );
 
       unchecked {

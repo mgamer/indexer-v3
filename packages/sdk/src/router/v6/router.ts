@@ -2117,12 +2117,15 @@ export class Router {
                 {
                   ...orders[0].params,
                   token: orders[0].params.contract,
+                  priceWithFees: bn(orders[0].params.price).add(
+                    bn(orders[0].params.price).mul(3).div(100)
+                  ),
                 },
                 {
                   fillTo: taker,
                   refundTo: relayer,
                   revertIfIncomplete: Boolean(!options?.partial),
-                  amount: price,
+                  amount: price.add(price.mul(3).div(100)),
                 },
                 fees,
               ])
@@ -2130,12 +2133,15 @@ export class Router {
                 orders.map((order) => ({
                   ...order.params,
                   token: order.params.contract,
+                  priceWithFees: bn(orders[0].params.price).add(
+                    bn(orders[0].params.price).mul(3).div(100)
+                  ),
                 })),
                 {
                   fillTo: taker,
                   refundTo: relayer,
                   revertIfIncomplete: Boolean(!options?.partial),
-                  amount: price,
+                  amount: price.add(price.mul(3).div(100)),
                 },
                 fees,
               ]),

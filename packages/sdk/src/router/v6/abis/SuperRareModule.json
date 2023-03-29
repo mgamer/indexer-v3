@@ -125,6 +125,11 @@
             "internalType": "uint256",
             "name": "price",
             "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "priceWithFees",
+            "type": "uint256"
           }
         ],
         "internalType": "struct SuperRareModule.Listing",
@@ -203,6 +208,11 @@
           {
             "internalType": "uint256",
             "name": "price",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "priceWithFees",
             "type": "uint256"
           }
         ],

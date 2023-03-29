@@ -21,7 +21,6 @@ export type SuperRareListing = {
 };
 
 export const setupSuperRareListings = async (listings: SuperRareListing[]) => {
-  console.log("setup");
   const chainId = getChainId();
 
   for (const listing of listings) {

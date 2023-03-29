@@ -126,6 +126,7 @@ describe("[ReservoirV6_0_0] SuperRare listings", () => {
                 tokenId: listing.nft.id,
                 currency: Sdk.Common.Addresses.Eth[chainId],
                 price: listing.price,
+                priceWithFees: bn(listing.price).add(bn(listing.price).mul(3).div(100)),
               })),
               {
                 fillTo: carol.address,
@@ -153,6 +154,7 @@ describe("[ReservoirV6_0_0] SuperRare listings", () => {
                 tokenId: listings[0].nft.id,
                 currency: Sdk.Common.Addresses.Eth[chainId],
                 price: listings[0].price,
+                priceWithFees: bn(listings[0].price).add(bn(listings[0].price).mul(3).div(100)),
               },
               {
                 fillTo: carol.address,
@@ -190,7 +192,6 @@ describe("[ReservoirV6_0_0] SuperRare listings", () => {
 
       return;
     }
-
     // Fetch pre-state
 
     const balancesBefore = await getBalances(Sdk.Common.Addresses.Eth[chainId]);
