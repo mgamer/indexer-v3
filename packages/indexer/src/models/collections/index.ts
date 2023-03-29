@@ -13,8 +13,8 @@ import {
 import { Tokens } from "@/models/tokens";
 import MetadataApi from "@/utils/metadata-api";
 import * as royalties from "@/utils/royalties";
-import * as marketplaceFees from "@/utils/marketplace_fees";
 import * as marketplaceBlacklist from "@/utils/marketplace-blacklists";
+import * as marketplaceFees from "@/utils/marketplace-fees";
 import { logger } from "@/common/logger";
 
 export class Collections {
@@ -216,7 +216,7 @@ export class Collections {
           orders.source_id_int,
           orders.valid_between
         FROM tokens
-        JOIN orders
+        LEFT JOIN orders
         ON tokens.floor_sell_id = orders.id
         WHERE tokens.collection_id = $/collection/
         ORDER BY tokens.floor_sell_value

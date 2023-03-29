@@ -7,11 +7,8 @@ import { redb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { bn, fromBuffer, now } from "@/common/utils";
 import { config } from "@/config/index";
-import { getCollectionOpenseaFees } from "@/orderbook/orders/seaport/build/utils";
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
-import { Tokens } from "@/models/tokens";
-import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
+import * as marketplaceFees from "@/utils/marketplace-fees";
 
 export interface BaseOrderBuildOptions {
   maker: string;
@@ -58,8 +55,7 @@ export const getBuildInfo = async (
         collections.royalties,
         collections.new_royalties,
         collections.marketplace_fees,
-        collections.contract,
-        collections.community
+        collections.contract
       FROM collections
       JOIN contracts
         ON collections.contract = contracts.address
@@ -165,7 +161,7 @@ export const getBuildInfo = async (
       collectionResult.marketplace_fees?.opensea;
 
     if (collectionResult.marketplace_fees?.opensea == null) {
-      openseaMarketplaceFees = await getCollectionOpenseaFees(
+      openseaMarketplaceFees = await marketplaceFees.getCollectionOpenseaFees(
         collection,
         fromBuffer(collectionResult.contract),
         totalBps
@@ -192,34 +188,7 @@ export const getBuildInfo = async (
     }
 
     // Refresh opensea fees
-    if (
-      (await redis.set(
-        `refresh-collection-opensea-fees:${collection}`,
-        now(),
-        "EX",
-        3600,
-        "NX"
-      )) === "OK"
-    ) {
-      logger.info(
-        "getCollectionOpenseaFees",
-        `refresh fees. collection=${collection}, openseaMarketplaceFees=${JSON.stringify(
-          openseaMarketplaceFees
-        )}`
-      );
-
-      try {
-        const tokenId = await Tokens.getSingleToken(collectionResult.id);
-
-        await collectionUpdatesMetadata.addToQueue(
-          fromBuffer(collectionResult.contract),
-          tokenId,
-          collectionResult.community
-        );
-      } catch {
-        // Skip errors
-      }
-    }
+    await marketplaceFees.refreshCollectionOpenseaFeesAsync(collection);
   }
 
   if (options.fee && options.feeRecipient) {

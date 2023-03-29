@@ -3,8 +3,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import * as SeaportPermit from "@reservoir0x/sdk/dist/router/v6/permits/seaport";
-import { BidDetails } from "@reservoir0x/sdk/dist/router/v6/types";
-import axios from "axios";
+import { BidDetails, FillBidsResult } from "@reservoir0x/sdk/dist/router/v6/types";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
@@ -15,11 +14,10 @@ import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/util
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { Sources } from "@/models/sources";
-import { OrderKind, generateBidDetailsV6 } from "@/orderbook/orders";
+import { OrderKind, generateBidDetailsV6, routerOnRecoverableError } from "@/orderbook/orders";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as nftx from "@/orderbook/orders/nftx";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
-import * as o from "@/utils/auth/opensea";
 import { getCurrency } from "@/utils/currencies";
 import { getPermitId, getPermit, savePermit } from "@/utils/permits/nft";
 import { tryGetTokensSuspiciousStatus } from "@/utils/opensea";
@@ -72,6 +70,12 @@ export const getExecuteSellV7Options: RouteOptions = {
                 .required(),
               data: Joi.object().required(),
             }).description("Optional raw order to sell into."),
+            exactOrderSource: Joi.string()
+              .lowercase()
+              .pattern(regex.domain)
+              .when("orderId", { is: Joi.exist(), then: Joi.forbidden(), otherwise: Joi.allow() })
+              .when("rawOrder", { is: Joi.exist(), then: Joi.forbidden(), otherwise: Joi.allow() })
+              .description("Only consider orders from this source."),
           }).oxor("orderId", "rawOrder")
         )
         .min(1)
@@ -124,6 +128,12 @@ export const getExecuteSellV7Options: RouteOptions = {
             .required(),
         })
       ),
+      errors: Joi.array().items(
+        Joi.object({
+          message: Joi.string(),
+          orderId: Joi.number(),
+        })
+      ),
       path: Joi.array().items(
         Joi.object({
           orderId: Joi.string(),
@@ -145,6 +155,8 @@ export const getExecuteSellV7Options: RouteOptions = {
   handler: async (request: Request) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payload = request.payload as any;
+
+    const perfTime1 = performance.now();
 
     try {
       // Keep track of the bids and path to fill
@@ -257,6 +269,10 @@ export const getExecuteSellV7Options: RouteOptions = {
               unitPrice: order.price,
               rawData: order.rawData,
               fees: feesOnTop,
+              isProtected:
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (order.rawData as any).zone ===
+                Sdk.SeaportV14.Addresses.OpenSeaProtectedOffersZone[config.chainId],
             },
             {
               kind: token.kind,
@@ -278,6 +294,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           data: any;
         };
+        exactOrderSource?: string;
       }[] = payload.items;
 
       const tokenToSuspicious = await tryGetTokensSuspiciousStatus(items.map((i) => i.token));
@@ -482,6 +499,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                 AND orders.side = 'buy'
                 AND orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                ${item.exactOrderSource ? " AND orders.source_id_int = $/sourceId/" : ""}
               ORDER BY ${
                 payload.normalizeRoyalties ? "orders.normalized_value" : "orders.value"
               } DESC
@@ -491,6 +509,9 @@ export const getExecuteSellV7Options: RouteOptions = {
               contract: toBuffer(contract),
               tokenId,
               quantity: item.quantity,
+              sourceId: item.exactOrderSource
+                ? sources.getByDomain(item.exactOrderSource)?.id ?? -1
+                : undefined,
             }
           );
 
@@ -613,7 +634,7 @@ export const getExecuteSellV7Options: RouteOptions = {
       }
 
       // Set up generic filling steps
-      const steps: {
+      let steps: {
         id: string;
         action: string;
         description: string;
@@ -623,13 +644,6 @@ export const getExecuteSellV7Options: RouteOptions = {
           data?: object;
         }[];
       }[] = [
-        {
-          id: "auth",
-          action: "Sign in to OpenSea",
-          description: "Some marketplaces require signing an auth message before filling",
-          kind: "signature",
-          items: [],
-        },
         {
           id: "nft-approval",
           action: "Approve NFT contract",
@@ -654,22 +668,15 @@ export const getExecuteSellV7Options: RouteOptions = {
         },
       ];
 
-      const protectedOffersCount = bidDetails.filter(
-        (d) =>
-          d.kind === "seaport-v1.4" &&
-          d.order.params.zone ===
-            Sdk.SeaportV14.Addresses.OpenSeaProtectedOffersZone[config.chainId]
-      );
-      if (protectedOffersCount.length > 1) {
+      const protectedOffers = bidDetails.filter((d) => d.isProtected);
+      if (protectedOffers.length > 1) {
         throw Boom.badRequest("Only a single protected offer can be accepted at once");
       }
-      if (protectedOffersCount.length === 1 && bidDetails.length > 1) {
+      if (protectedOffers.length === 1 && bidDetails.length > 1) {
         throw Boom.badRequest("Protected offers cannot be accepted with other offers");
       }
 
-      // Handle OpenSea authentication
-      let openseaAuth: string | undefined;
-      if (protectedOffersCount.length === 1) {
+      if (protectedOffers.length === 1) {
         // Ensure the taker owns the NFTs to get sold
         const takerIsOwner = await idb.oneOrNone(
           `
@@ -692,89 +699,42 @@ export const getExecuteSellV7Options: RouteOptions = {
         if (!takerIsOwner) {
           throw Boom.badRequest("Taker is not the owner of the token to sell");
         }
-
-        const openseaAuthId = o.getAuthId(payload.taker);
-
-        openseaAuth = await o
-          .getAuth(openseaAuthId)
-          .then((auth) => (auth ? auth.authorization : undefined));
-        if (!openseaAuth) {
-          const openseaAuthChallengeId = o.getAuthChallengeId(payload.taker);
-
-          let openseaAuthChallenge = await o.getAuthChallenge(openseaAuthChallengeId);
-          if (!openseaAuthChallenge) {
-            openseaAuthChallenge = (await axios
-              .get(
-                `https://order-fetcher.vercel.app/api/opensea-auth-challenge?taker=${payload.taker}`,
-                {
-                  headers: {
-                    "X-Api-Key": config.orderFetcherApiKey,
-                  },
-                }
-              )
-              .then((response) => response.data.authChallenge)) as o.AuthChallenge;
-
-            await o.saveAuthChallenge(
-              openseaAuthChallengeId,
-              openseaAuthChallenge,
-              // Give a 1 minute buffer for the auth challenge to expire
-              24 * 59 * 60
-            );
-          }
-
-          steps[0].items.push({
-            status: "incomplete",
-            data: {
-              sign: {
-                signatureKind: "eip191",
-                message: openseaAuthChallenge.loginMessage,
-              },
-              post: {
-                endpoint: "/execute/auth-signature/v1",
-                method: "POST",
-                body: {
-                  kind: "opensea",
-                  id: openseaAuthChallengeId,
-                },
-              },
-            },
-          });
-
-          // Force the client to poll
-          steps[1].items.push({
-            status: "incomplete",
-          });
-
-          // Return an early since any next steps are dependent on the Blur auth
-          return {
-            steps,
-            path,
-          };
-        } else {
-          steps[0].items.push({
-            status: "complete",
-          });
-        }
       }
 
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
+        orderFetcherBaseUrl: config.orderFetcherBaseUrl,
         orderFetcherApiKey: config.orderFetcherApiKey,
       });
 
       const { customTokenAddresses } = getNetworkSettings();
       const forcePermit = customTokenAddresses.includes(bidDetails[0].contract);
-      const { txData, success, approvals, permits } = await router.fillBidsTx(
-        bidDetails,
-        payload.taker,
-        {
+
+      const errors: { orderId: string; message: string }[] = [];
+
+      let result: FillBidsResult;
+      try {
+        result = await router.fillBidsTx(bidDetails, payload.taker, {
           source: payload.source,
           partial: payload.partial,
           forcePermit,
-          openseaAuth,
-        }
-      );
+          onRecoverableError: async (kind, error, data) => {
+            errors.push({
+              orderId: data.orderId,
+              message: error.response?.data ?? error.message,
+            });
+            await routerOnRecoverableError(kind, error, data);
+          },
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        const boomError = Boom.badRequest(error.message);
+        boomError.output.payload.errors = errors;
+        throw boomError;
+      }
+
+      const { txData, approvals, permits, success } = result;
 
       // Filter out any non-fillable orders from the path
       path = path.filter((_, i) => success[i]);
@@ -798,7 +758,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           approval.operator
         );
         if (!isApproved) {
-          steps[1].items.push({
+          steps[0].items.push({
             status: "incomplete",
             data: {
               ...approval.txData,
@@ -835,7 +795,7 @@ export const getExecuteSellV7Options: RouteOptions = {
             cachedPermit = permit;
           }
 
-          steps[2].items.push({
+          steps[1].items.push({
             status: "incomplete",
             data: {
               sign: permitHandler.getSignatureData(cachedPermit.details.data),
@@ -852,11 +812,11 @@ export const getExecuteSellV7Options: RouteOptions = {
         }
       }
 
-      steps[3].items.push({
+      steps[2].items.push({
         status: "incomplete",
         data:
           // Do not return the final step unless all permits have a signature attached
-          steps[2].items.length === 0
+          steps[1].items.length === 0
             ? {
                 ...permitHandler.attachToRouterExecution(
                   txData,
@@ -868,8 +828,30 @@ export const getExecuteSellV7Options: RouteOptions = {
             : undefined,
       });
 
+      // Warning! When filtering the steps, we should ensure that it
+      // won't affect the client, which might be polling the API and
+      // expect to get the steps returned in the same order / at the
+      // same index.
+      if (!approvals.length && !permits.length) {
+        // If no approvals/permits are returned from the router then
+        // those are not actually needed and we can cut their steps
+        steps = steps.slice(2);
+      }
+
+      const perfTime2 = performance.now();
+
+      logger.info(
+        "execute-sell-v7-performance",
+        JSON.stringify({
+          kind: "total-performance",
+          totalTime: (perfTime2 - perfTime1) / 1000,
+          items: bidDetails.map((b) => ({ orderKind: b.kind, isProtected: b.isProtected })),
+        })
+      );
+
       return {
-        steps: openseaAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
+        steps,
+        errors,
         path,
       };
     } catch (error) {

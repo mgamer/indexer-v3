@@ -8,6 +8,7 @@ import { logger } from "@/common/logger";
 import { rateLimitRedis, redis } from "@/common/redis";
 import { config } from "@/config/index";
 
+import * as BlurApi from "@/jobs/orderbook/post-order-external/api/blur";
 import * as OpenSeaApi from "@/jobs/orderbook/post-order-external/api/opensea";
 import * as LooksrareApi from "@/jobs/orderbook/post-order-external/api/looksrare";
 import * as X2Y2Api from "@/jobs/orderbook/post-order-external/api/x2y2";
@@ -23,6 +24,7 @@ import { redb } from "@/common/db";
 import { RateLimiterRedis, RateLimiterRes } from "rate-limiter-flexible";
 import * as crossPostingOrdersModel from "@/models/cross-posting-orders";
 import { CrossPostingOrderStatus } from "@/models/cross-posting-orders";
+import { TSTAttribute, TSTCollection, TSTCollectionNonFlagged } from "@/orderbook/token-sets/utils";
 
 const QUEUE_NAME = "orderbook-post-order-external-queue";
 const MAX_RETRIES = 5;
@@ -42,7 +44,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { crossPostingOrderId, orderId, orderData, orderbook, collectionId } =
+      const { crossPostingOrderId, orderId, orderData, orderSchema, orderbook } =
         job.data as PostOrderExternalParams;
 
       logger.info(QUEUE_NAME, `Start. jobData=${JSON.stringify(job.data)}`);
@@ -51,7 +53,11 @@ if (config.doBackgroundWork) {
         throw new Error("Unsupported network");
       }
 
-      if (!["opensea", "looks-rare", "x2y2", "universe", "infinity", "flow"].includes(orderbook)) {
+      if (
+        !["blur", "opensea", "looks-rare", "x2y2", "universe", "infinity", "flow"].includes(
+          orderbook
+        )
+      ) {
         throw new Error("Unsupported orderbook");
       }
 
@@ -90,7 +96,7 @@ if (config.doBackgroundWork) {
         await addToQueue(job.data, rateLimitExpiration, true);
       } else {
         try {
-          await postOrder(orderbook, orderId, orderData, orderbookApiKey, collectionId);
+          await postOrder(orderbook, orderId, orderData, orderbookApiKey, orderSchema);
 
           if (crossPostingOrderId) {
             await crossPostingOrdersModel.updateOrderStatus(
@@ -196,6 +202,8 @@ if (config.doBackgroundWork) {
 
 const getOrderbookDefaultApiKey = (orderbook: string) => {
   switch (orderbook) {
+    case "blur":
+      return config.orderFetcherApiKey;
     case "opensea":
       return config.openSeaApiKey;
     case "looks-rare":
@@ -215,6 +223,12 @@ const getOrderbookDefaultApiKey = (orderbook: string) => {
 
 const getRateLimiter = (orderbook: string) => {
   switch (orderbook) {
+    case "blur":
+      return new RateLimiterRedis({
+        storeClient: rateLimitRedis,
+        points: BlurApi.RATE_LIMIT_REQUEST_COUNT,
+        duration: BlurApi.RATE_LIMIT_INTERVAL,
+      });
     case "looks-rare":
       return new RateLimiterRedis({
         storeClient: rateLimitRedis,
@@ -261,7 +275,7 @@ const postOrder = async (
   orderId: string | null,
   orderData: PostOrderExternalParams["orderData"],
   orderbookApiKey: string,
-  collectionId?: string
+  orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute
 ) => {
   switch (orderbook) {
     case "opensea": {
@@ -272,14 +286,17 @@ const postOrder = async (
 
       logger.info(
         QUEUE_NAME,
-        `Post Order Seaport. orderbook=${orderbook}, orderId=${orderId}, collectionId=${collectionId}, orderData=${JSON.stringify(
-          orderData
-        )}, side=${order.getInfo()?.side}, kind=${order.params.kind}`
+        `Post Order Seaport. orderbook=${orderbook}, orderId=${orderId}, orderSchema=${JSON.stringify(
+          orderSchema
+        )}, orderData=${JSON.stringify(orderData)}, side=${order.getInfo()?.side}, kind=${
+          order.params.kind
+        }`
       );
 
       if (
         order.getInfo()?.side === "buy" &&
-        ["contract-wide", "token-list"].includes(order.params.kind!)
+        orderSchema &&
+        ["collection", "collection-non-flagged", "attribute"].includes(orderSchema.kind)
       ) {
         const { collectionSlug } = await redb.oneOrNone(
           `
@@ -289,7 +306,7 @@ const postOrder = async (
                 LIMIT 1
             `,
           {
-            collectionId,
+            collectionId: orderSchema!.data.collection,
           }
         );
 
@@ -297,7 +314,16 @@ const postOrder = async (
           throw new Error("Invalid collection offer.");
         }
 
-        return OpenSeaApi.postCollectionOffer(order, collectionSlug, orderbookApiKey);
+        if (orderSchema.kind === "attribute") {
+          return OpenSeaApi.postTraitOffer(
+            order,
+            collectionSlug,
+            orderSchema.data.attributes[0],
+            orderbookApiKey
+          );
+        } else {
+          return OpenSeaApi.postCollectionOffer(order, collectionSlug, orderbookApiKey);
+        }
       }
 
       return OpenSeaApi.postOrder(order, orderbookApiKey);
@@ -332,6 +358,10 @@ const postOrder = async (
       const order = new Sdk.Flow.Order(config.chainId, orderData as Sdk.Flow.Types.OrderInput);
       return FlowApi.postOrders(order, orderbookApiKey);
     }
+
+    case "blur": {
+      return BlurApi.postOrder(orderData as BlurApi.BlurData, orderbookApiKey);
+    }
   }
 
   throw new Error(`Unsupported orderbook ${orderbook}`);
@@ -342,55 +372,64 @@ export type PostOrderExternalParams =
       crossPostingOrderId?: number;
       orderId: string;
       orderData: Sdk.Seaport.Types.OrderComponents;
+      orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute;
       orderbook: "opensea";
       orderbookApiKey?: string | null;
       retry?: number;
-      collectionId?: string;
     }
   | {
       crossPostingOrderId: number;
       orderId: string;
       orderData: Sdk.LooksRare.Types.MakerOrderParams;
+      orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute;
       orderbook: "looks-rare";
       orderbookApiKey?: string | null;
       retry?: number;
-      collectionId?: string;
     }
   | {
       crossPostingOrderId: number;
       orderId: string | null;
       orderData: Sdk.X2Y2.Types.LocalOrder;
+      orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute;
       orderbook: "x2y2";
       orderbookApiKey?: string | null;
       retry?: number;
-      collectionId?: string;
     }
   | {
       crossPostingOrderId: number;
       orderId: string;
       orderData: Sdk.Universe.Types.Order;
+      orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute;
       orderbook: "universe";
       orderbookApiKey?: string | null;
       retry?: number;
-      collectionId?: string;
     }
   | {
       crossPostingOrderId: number;
       orderId: string;
       orderData: Sdk.Infinity.Types.OrderInput;
+      orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute;
       orderbook: "infinity";
       orderbookApiKey?: string | null;
       retry?: number;
-      collectionId?: string;
     }
   | {
       crossPostingOrderId: number;
       orderId: string;
       orderData: Sdk.Flow.Types.OrderInput;
+      orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute;
       orderbook: "flow";
       orderbookApiKey?: string | null;
       retry?: number;
-      collectionId?: string;
+    }
+  | {
+      crossPostingOrderId: number;
+      orderId: string;
+      orderData: BlurApi.BlurData;
+      orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute;
+      orderbook: "blur";
+      orderbookApiKey?: string | null;
+      retry?: number;
     };
 
 export const addToQueue = async (

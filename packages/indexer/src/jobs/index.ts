@@ -24,6 +24,7 @@ import "@/jobs/sources";
 import "@/jobs/token-updates";
 import "@/jobs/update-attribute";
 import "@/jobs/websocket-events";
+import "@/jobs/metrics";
 
 // Export all job queues for monitoring through the BullMQ UI
 
@@ -34,16 +35,10 @@ import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsync
 import * as arweaveSyncBackfill from "@/jobs/arweave-sync/backfill-queue";
 import * as arweaveSyncRealtime from "@/jobs/arweave-sync/realtime-queue";
 
-import * as backfillBlurSales from "@/jobs/backfill/backfill-blur-sales";
 import * as backfillFoundationSales from "@/jobs/backfill/backfill-foundation-sales";
 import * as backfillMints from "@/jobs/backfill/backfill-mints";
-import * as backfillRefreshCryptopunksOrders from "@/jobs/backfill/backfill-refresh-cryptopunks-orders";
 import * as backfillSaleRoyalties from "@/jobs/backfill/backfill-sale-royalties";
-import * as backfillTokensWithMissingCollection from "@/jobs/backfill/backfill-tokens-with-missing-collection";
 import * as backfillUpdateMissingMetadata from "@/jobs/backfill/backfill-update-missing-metadata";
-import * as backfillTokensLastFlagUpdate from "@/jobs/backfill/backfill-tokens-last-flag-update";
-import * as backfillActivitiesCollectionId from "@/jobs/backfill/backfill-activities-collection-id";
-import * as backfillUserActivitiesCollectionId from "@/jobs/backfill/backfill-user-activities-collection-id";
 import * as backfillNftBalancesLastTokenAppraisalValue from "@/jobs/backfill/backfill-nft-balances-last-token-appraisal-value";
 
 import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
@@ -96,7 +91,9 @@ import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
 import * as updateNftBalanceFloorAskPrice from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
 import * as updateNftBalanceTopBid from "@/jobs/nft-balance-updates/update-top-bid-queue";
 
-import * as orderFixes from "@/jobs/order-fixes/queue";
+import * as orderFixes from "@/jobs/order-fixes/fixes";
+import * as orderRevalidations from "@/jobs/order-fixes/revalidations";
+
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as bundleOrderUpdatesByMaker from "@/jobs/order-updates/by-maker-bundle-queue";
@@ -130,6 +127,8 @@ import * as updateAttributeCounts from "@/jobs/update-attribute/update-attribute
 
 import * as websocketEventsTriggerQueue from "@/jobs/websocket-events/trigger-queue";
 
+import * as countApiUsage from "@/jobs/metrics/count-api-usage";
+
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
   orderUpdatesByMaker.worker,
@@ -150,16 +149,10 @@ export const allJobQueues = [
   arweaveSyncBackfill.queue,
   arweaveSyncRealtime.queue,
 
-  backfillBlurSales.queue,
   backfillFoundationSales.queue,
   backfillMints.queue,
-  backfillRefreshCryptopunksOrders.queue,
   backfillSaleRoyalties.queue,
-  backfillTokensWithMissingCollection.queue,
   backfillUpdateMissingMetadata.queue,
-  backfillTokensLastFlagUpdate.queue,
-  backfillActivitiesCollectionId.queue,
-  backfillUserActivitiesCollectionId.queue,
   backfillNftBalancesLastTokenAppraisalValue.queue,
 
   currencies.queue,
@@ -214,6 +207,8 @@ export const allJobQueues = [
   updateNftBalanceTopBid.queue,
 
   orderFixes.queue,
+  orderRevalidations.queue,
+
   orderUpdatesById.queue,
   orderUpdatesByMaker.queue,
   bundleOrderUpdatesByMaker.queue,
@@ -246,4 +241,6 @@ export const allJobQueues = [
   updateAttributeCounts.queue,
 
   websocketEventsTriggerQueue.queue,
+
+  countApiUsage.queue,
 ];

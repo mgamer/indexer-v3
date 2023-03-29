@@ -59,9 +59,9 @@ export const postAuthSignatureV1Options: RouteOptions = {
             throw Boom.badRequest("Invalid auth challenge signature");
           }
 
-          const accessToken = await axios
+          const result = await axios
             .get(
-              `https://order-fetcher.vercel.app/api/blur-auth?authChallenge=${JSON.stringify({
+              `${config.orderFetcherBaseUrl}/api/blur-auth?authChallenge=${JSON.stringify({
                 ...authChallenge,
                 signature: query.signature,
               })}`,
@@ -71,14 +71,16 @@ export const postAuthSignatureV1Options: RouteOptions = {
                 },
               }
             )
-            .then((response) => response.data.accessToken);
+            .then((response) => response.data);
 
           const authId = b.getAuthId(recoveredSigner);
           await b.saveAuth(
             authId,
-            { accessToken },
+            { accessToken: result.accessToken },
             // Give a 1 minute buffer for the auth to expire
-            Number(JSON.parse(Buffer.from(accessToken.split(".")[1], "base64").toString()).exp) -
+            Number(
+              JSON.parse(Buffer.from(result.accessToken.split(".")[1], "base64").toString()).exp
+            ) -
               now() -
               60
           );
@@ -102,7 +104,7 @@ export const postAuthSignatureV1Options: RouteOptions = {
 
           const authorization = await axios
             .get(
-              `https://order-fetcher.vercel.app/api/opensea-auth?chainId=${config.chainId}&taker=${authChallenge.walletAddress}&loginMessage=${authChallenge.loginMessage}&signature=${query.signature}`,
+              `${config.orderFetcherBaseUrl}/api/opensea-auth?chainId=${config.chainId}&taker=${authChallenge.walletAddress}&loginMessage=${authChallenge.loginMessage}&signature=${query.signature}`,
               {
                 headers: {
                   "X-Api-Key": config.orderFetcherApiKey,

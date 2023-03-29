@@ -1,1 +1,2 @@
-import "@/jobs/order-fixes/queue";
+import "@/jobs/order-fixes/fixes";
+import "@/jobs/order-fixes/revalidations";

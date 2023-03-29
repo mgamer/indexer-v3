@@ -14,12 +14,13 @@ import {
   Fee,
   FTApproval,
   FTPermit,
+  FillBidsResult,
+  FillListingsResult,
   ListingDetails,
-  ListingDetailsExtracted,
   ListingFillDetails,
   NFTApproval,
   NFTPermit,
-  PerCurrencyListingDetailsExtracted,
+  PerCurrencyListingDetails,
   PerPoolSwapDetails,
   SwapDetail,
 } from "./types";
@@ -27,7 +28,7 @@ import { generateSwapExecutions } from "./uniswap";
 import { generateFTApprovalTxData, generateNFTApprovalTxData, isETH, isWETH } from "./utils";
 import * as Sdk from "../../index";
 import { encodeForMatchOrders } from "../../rarible/utils";
-import { TxData, bn, generateSourceBytes, uniqBy } from "../../utils";
+import { TxData, bn, generateSourceBytes, getErrorMessage, uniqBy } from "../../utils";
 
 // Tokens
 import ERC721Abi from "../../common/abis/Erc721.json";
@@ -52,6 +53,7 @@ import ZoraModuleAbi from "./abis/ZoraModule.json";
 type SetupOptions = {
   x2y2ApiKey?: string;
   cbApiKey?: string;
+  orderFetcherBaseUrl?: string;
   orderFetcherApiKey?: string;
 };
 
@@ -157,30 +159,40 @@ export class Router {
       // Wallet used for relaying the fill transaction
       relayer?: string;
       // Needed for filling Blur orders
-      blurAuth?: string;
+      blurAuth?: {
+        accessToken: string;
+      };
+      // Callback for handling recoverable errors
+      onRecoverableError?: (
+        kind: string,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        error: any,
+        data: {
+          orderId: string;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          additionalInfo: any;
+        }
+      ) => Promise<void>;
     }
-  ): Promise<{
-    txs: {
-      approvals: FTApproval[];
-      permits: FTPermit[];
-      txData: TxData;
-      orderIndexes: number[];
-    }[];
-    success: boolean[];
-  }> {
+  ): Promise<FillListingsResult> {
     // Assume the listing details are consistent with the underlying order object
+
+    // When filling a single order in partial mode, propagate any errors back directly
+    if (options?.partial && details.length === 1) {
+      options.partial = false;
+    }
 
     // TODO: Add Universe router module
     if (details.some(({ kind }) => kind === "universe")) {
       if (options?.relayer) {
-        throw new Error("Relayer not supported");
+        throw new Error("Relayer not supported for Universe orders");
       }
 
       if (details.length > 1) {
         throw new Error("Universe sweeping is not supported");
       } else {
         if (options?.globalFees?.length) {
-          throw new Error("Fees not supported");
+          throw new Error("Fees not supported for Universe orders");
         }
 
         const detail = details[0];
@@ -210,10 +222,10 @@ export class Router {
                 amount: Number(detail.amount),
                 source: options?.source,
               }),
-              orderIndexes: [0],
+              orderIds: [detail.orderId],
             },
           ],
-          success: [true],
+          success: { [detail.orderId]: true },
         };
       }
     }
@@ -221,14 +233,14 @@ export class Router {
     // TODO: Add Cryptopunks router module
     if (details.some(({ kind }) => kind === "cryptopunks")) {
       if (options?.relayer) {
-        throw new Error("Relayer not supported");
+        throw new Error("Relayer not supported for Cryptopunks orders");
       }
 
       if (details.length > 1) {
         throw new Error("Cryptopunks sweeping is not supported");
       } else {
         if (options?.globalFees?.length) {
-          throw new Error("Fees not supported");
+          throw new Error("Fees not supported for Cryptopunks orders");
         }
 
         const detail = details[0];
@@ -241,10 +253,10 @@ export class Router {
               approvals: [],
               permits: [],
               txData: exchange.fillListingTx(taker, order, options),
-              orderIndexes: [0],
+              orderIds: [detail.orderId],
             },
           ],
-          success: [true],
+          success: { [detail.orderId]: true },
         };
       }
     }
@@ -252,14 +264,14 @@ export class Router {
     // TODO: Add Infinity router module
     if (details.some(({ kind }) => kind === "infinity")) {
       if (options?.relayer) {
-        throw new Error("Relayer not supported");
+        throw new Error("Relayer not supported for Infinity orders");
       }
 
       if (details.length > 1) {
         throw new Error("Infinity sweeping is not supported");
       } else {
         if (options?.globalFees?.length) {
-          throw new Error("Fees not supported");
+          throw new Error("Fees not supported for Infinity orders");
         }
 
         const detail = details[0];
@@ -293,10 +305,10 @@ export class Router {
                     tokens: options.directFillingData,
                   },
                 ]),
-                orderIndexes: [0],
+                orderIds: [detail.orderId],
               },
             ],
-            success: [true],
+            success: { [detail.orderId]: true },
           };
         }
         return {
@@ -305,10 +317,10 @@ export class Router {
               approvals: approval ? [approval] : [],
               permits: [],
               txData: exchange.takeMultipleOneOrdersTx(taker, [order]),
-              orderIndexes: [0],
+              orderIds: [detail.orderId],
             },
           ],
-          success: [true],
+          success: { [detail.orderId]: true },
         };
       }
     }
@@ -316,14 +328,14 @@ export class Router {
     // TODO: Add Flow router module
     if (details.some(({ kind }) => kind === "flow")) {
       if (options?.relayer) {
-        throw new Error("Relayer not supported");
+        throw new Error("Relayer not supported for Flow orders");
       }
 
       if (details.length > 1) {
         throw new Error("Flow sweeping is not supported");
       } else {
         if (options?.globalFees?.length) {
-          throw new Error("Fees not supported");
+          throw new Error("Fees not supported for Flow orders");
         }
 
         const detail = details[0];
@@ -357,10 +369,10 @@ export class Router {
                     tokens: options.directFillingData,
                   },
                 ]),
-                orderIndexes: [0],
+                orderIds: [detail.orderId],
               },
             ],
-            success: [true],
+            success: { [detail.orderId]: true },
           };
         }
         return {
@@ -369,10 +381,10 @@ export class Router {
               approvals: approval ? [approval] : [],
               permits: [],
               txData: exchange.takeMultipleOneOrdersTx(taker, [order]),
-              orderIndexes: [0],
+              orderIds: [detail.orderId],
             },
           ],
-          success: [true],
+          success: { [detail.orderId]: true },
         };
       }
     }
@@ -380,14 +392,14 @@ export class Router {
     // TODO: Add Manifold router module
     if (details.some(({ kind }) => kind === "manifold")) {
       if (options?.relayer) {
-        throw new Error("Relayer not supported");
+        throw new Error("Relayer not supported for Manifold orders");
       }
 
       if (details.length > 1) {
         throw new Error("Manifold sweeping is not supported");
       } else {
         if (options?.globalFees?.length) {
-          throw new Error("Fees not supported");
+          throw new Error("Fees not supported for Manifold orders");
         }
 
         const detail = details[0];
@@ -410,10 +422,10 @@ export class Router {
                 orderPrice,
                 options
               ),
-              orderIndexes: [0],
+              orderIds: [detail.orderId],
             },
           ],
-          success: [true],
+          success: { [detail.orderId]: true },
         };
       }
     }
@@ -421,14 +433,14 @@ export class Router {
     // TODO: Add SuperRare router module
     if (details.some(({ kind }) => kind === "superrare")) {
       if (options?.relayer) {
-        throw new Error("Relayer not supported");
+        throw new Error("Relayer not supported for Superrare orders");
       }
 
       if (details.length > 1) {
         throw new Error("SuperRare sweeping is not supported");
       } else {
         if (options?.globalFees?.length) {
-          throw new Error("Fees not supported");
+          throw new Error("Fees not supported for Superrare orders");
         }
 
         const detail = details[0];
@@ -442,97 +454,27 @@ export class Router {
               approvals: [],
               permits: [],
               txData: exchange.fillOrderTx(taker, order, options),
-              orderIndexes: [0],
+              orderIds: [detail.orderId],
             },
           ],
-          success: [true],
+          success: { [detail.orderId]: true },
         };
       }
     }
 
-    // Handle partial seaport orders:
-    // - fetch the full order data for each partial order (concurrently)
-    // - remove any partial order from the details
-
-    await Promise.all(
-      details.map(async (detail, i) => {
-        if (detail.kind === "seaport-partial") {
-          try {
-            const order = detail.order as Sdk.Seaport.Types.PartialOrder;
-            const result = await axios.get(
-              `https://order-fetcher.vercel.app/api/listing?contract=${detail.contract}&tokenId=${
-                detail.tokenId
-              }${order.unitPrice ? `&unitPrice=${order.unitPrice}` : ""}&orderHash=${
-                order.id
-              }&taker=${taker}&chainId=${this.chainId}&protocolVersion=v1.1`,
-              {
-                headers: {
-                  "X-Api-Key": this.options?.orderFetcherApiKey,
-                },
-              }
-            );
-
-            // Override the details
-            const fullOrder = new Sdk.Seaport.Order(this.chainId, result.data.order);
-            details[i] = {
-              ...detail,
-              kind: "seaport",
-              order: fullOrder,
-            };
-          } catch {
-            if (!options?.partial) {
-              throw new Error("Could not generate fill data");
-            } else {
-              return;
-            }
-          }
-        }
-      })
-    );
-
-    await Promise.all(
-      details.map(async (detail, i) => {
-        if (detail.kind === "seaport-v1.4-partial") {
-          try {
-            const order = detail.order as Sdk.SeaportV14.Types.PartialOrder;
-            const result = await axios.get(
-              `https://order-fetcher.vercel.app/api/listing?contract=${detail.contract}&tokenId=${
-                detail.tokenId
-              }${order.unitPrice ? `&unitPrice=${order.unitPrice}` : ""}&orderHash=${
-                order.id
-              }&taker=${taker}&chainId=${this.chainId}&protocolVersion=v1.4`,
-              {
-                headers: {
-                  "X-Api-Key": this.options?.orderFetcherApiKey,
-                },
-              }
-            );
-
-            // Override the details
-            const fullOrder = new Sdk.SeaportV14.Order(this.chainId, result.data.order);
-            details[i] = {
-              ...detail,
-              kind: "seaport-v1.4",
-              order: fullOrder,
-            };
-          } catch {
-            if (!options?.partial) {
-              throw new Error("Could not generate fill data");
-            } else {
-              return;
-            }
-          }
-        }
-      })
-    );
+    if (details.some(({ kind }) => kind === "blur")) {
+      if (options?.relayer) {
+        throw new Error("Relayer not supported for Blur orders");
+      }
+    }
 
     const txs: {
       approvals: FTApproval[];
       permits: FTPermit[];
       txData: TxData;
-      orderIndexes: number[];
+      orderIds: string[];
     }[] = [];
-    const success: boolean[] = details.map(() => false);
+    const success: { [orderId: string]: boolean } = {};
 
     // Filling Blur listings is extremely tricky since they explicitly designed
     // their contracts so that it is not possible to fill indirectly (eg. via a
@@ -544,7 +486,7 @@ export class Router {
     // relevant if the orders to fill include a Blur order.
 
     // Extract any Blur-compatible listings
-    const blurCompatibleListings: ListingDetailsExtracted[] = [];
+    const blurCompatibleListings: ListingDetails[] = [];
     if (details.find((d) => d.source === "blur.io")) {
       for (let i = 0; i < details.length; i++) {
         const detail = details[i];
@@ -552,20 +494,16 @@ export class Router {
           detail.contractKind === "erc721" &&
           ["blur.io", "opensea.io", "looksrare.org", "x2y2.io"].includes(detail.source!)
         ) {
-          blurCompatibleListings.push({ ...detail, originalIndex: i });
+          blurCompatibleListings.push(detail);
         }
       }
     }
 
     // Generate calldata for the above Blur-compatible listings
     if (blurCompatibleListings.length) {
-      try {
-        let blurUrl = `https://order-fetcher.vercel.app/api/blur-listing?`;
-        for (const d of blurCompatibleListings) {
-          blurUrl += `contracts=${d.contract}&tokenIds=${d.tokenId}&prices=${d.price}&`;
-        }
-        blurUrl += `taker=${taker}&authToken=${options?.blurAuth}`;
+      const url = `${this.options?.orderFetcherBaseUrl}/api/blur-listing`;
 
+      try {
         // We'll have one transaction per contract
         const result: {
           [contract: string]: {
@@ -574,18 +512,32 @@ export class Router {
             data: string;
             value: string;
             path: { contract: string; tokenId: string }[];
+            errors: { tokenId: string; reason: string }[];
           };
         } = await axios
-          .get(blurUrl, {
-            headers: {
-              "X-Api-Key": this.options?.orderFetcherApiKey,
+          .post(
+            url,
+            {
+              taker,
+              tokens: blurCompatibleListings.map((d) => ({
+                contract: d.contract,
+                tokenId: d.tokenId,
+                price: d.price,
+                isFlagged: d.isFlagged,
+              })),
+              authToken: options?.blurAuth?.accessToken,
             },
-          })
+            {
+              headers: {
+                "X-Api-Key": this.options?.orderFetcherApiKey,
+              },
+            }
+          )
           .then((response) => response.data.calldata);
 
-        for (const data of Object.values(result)) {
-          const successfulBlurCompatibleListings: ListingDetailsExtracted[] = [];
-          for (const { contract, tokenId } of data.path) {
+        for (const [contract, data] of Object.entries(result)) {
+          const successfulBlurCompatibleListings: ListingDetails[] = [];
+          for (const { tokenId } of data.path) {
             const listing = blurCompatibleListings.find(
               (d) => d.contract === contract && d.tokenId === tokenId
             );
@@ -594,13 +546,28 @@ export class Router {
             }
           }
 
+          // Expose errors
+          for (const { tokenId, reason } of data.errors) {
+            if (options?.onRecoverableError) {
+              const listing = blurCompatibleListings.find(
+                (d) => d.contract === contract && d.tokenId === tokenId
+              );
+              if (listing) {
+                await options.onRecoverableError("order-fetcher-blur-listings", new Error(reason), {
+                  orderId: listing.orderId,
+                  additionalInfo: { detail: listing, taker, url },
+                });
+              }
+            }
+          }
+
           // If we have at least one Blur listing, we should go ahead with the calldata returned by Blur
           if (successfulBlurCompatibleListings.find((d) => d.source === "blur.io")) {
             // Mark the orders handled by Blur as successful
-            const orderIndexes: number[] = [];
+            const orderIds: string[] = [];
             for (const d of successfulBlurCompatibleListings) {
-              success[d.originalIndex] = true;
-              orderIndexes.push(d.originalIndex);
+              success[d.orderId] = true;
+              orderIds.push(d.orderId);
             }
 
             txs.push({
@@ -612,31 +579,142 @@ export class Router {
                 data: data.data + generateSourceBytes(options?.source),
                 value: data.value,
               },
-              orderIndexes: [],
+              orderIds,
             });
           }
         }
-      } catch {
+      } catch (error) {
+        if (options?.onRecoverableError) {
+          for (const detail of details) {
+            if (detail.source === "blur.io" && !success[detail.orderId]) {
+              await options.onRecoverableError("order-fetcher-blur-listings", error, {
+                orderId: detail.orderId,
+                additionalInfo: { detail, taker, url },
+              });
+            }
+          }
+        }
+
         if (!options?.partial) {
-          throw new Error("Could not generate fill data");
+          throw new Error(getErrorMessage(error));
         }
       }
     }
 
     // Check if we still have any Blur listings for which we didn't properly generate calldata
-    if (details.find((d, i) => d.source === "blur.io" && !success[i])) {
+    if (details.find((d) => d.source === "blur.io" && !success[d.orderId])) {
       if (!options?.partial) {
-        throw new Error("Could not generate fill data");
+        throw new Error("Could not fetch calldata for all Blur listings");
       }
     }
 
     // Return early if all listings were covered by Blur
-    if (details.every((_, i) => success[i])) {
+    if (details.every((d) => success[d.orderId])) {
       return {
         txs,
         success,
       };
     }
+
+    // Handle partial seaport orders:
+    // - fetch the full order data for each partial order (concurrently)
+    // - remove any partial order from the details
+
+    await Promise.all(
+      details.map(async (detail, i) => {
+        if (detail.kind === "seaport-partial") {
+          const order = detail.order as Sdk.Seaport.Types.PartialOrder;
+
+          let url = `${this.options?.orderFetcherBaseUrl}/api/listing`;
+          url += `?contract=${detail.contract}`;
+          url += `&tokenId=${detail.tokenId}`;
+          url += order.unitPrice ? `&unitPrice=${order.unitPrice}` : "";
+          url += `&orderHash=${order.id}`;
+          url += `&taker=${taker}`;
+          url += `&chainId=${this.chainId}`;
+          url += "&protocolVersion=v1.1";
+
+          try {
+            const result = await axios.get(url, {
+              headers: {
+                "X-Api-Key": this.options?.orderFetcherApiKey,
+              },
+            });
+
+            // Override the details
+            const fullOrder = new Sdk.Seaport.Order(this.chainId, result.data.order);
+            details[i] = {
+              ...detail,
+              kind: "seaport",
+              order: fullOrder,
+            };
+          } catch (error) {
+            if (options?.onRecoverableError) {
+              options.onRecoverableError("order-fetcher-opensea-listing", error, {
+                orderId: detail.orderId,
+                additionalInfo: {
+                  detail,
+                  taker,
+                  url,
+                },
+              });
+            }
+
+            if (!options?.partial) {
+              throw new Error(getErrorMessage(error));
+            }
+          }
+        }
+      })
+    );
+
+    await Promise.all(
+      details.map(async (detail, i) => {
+        if (detail.kind === "seaport-v1.4-partial") {
+          const order = detail.order as Sdk.SeaportV14.Types.PartialOrder;
+
+          let url = `${this.options?.orderFetcherBaseUrl}/api/listing`;
+          url += `?contract=${detail.contract}`;
+          url += `&tokenId=${detail.tokenId}`;
+          url += order.unitPrice ? `&unitPrice=${order.unitPrice}` : "";
+          url += `&orderHash=${order.id}`;
+          url += `&taker=${taker}`;
+          url += `&chainId=${this.chainId}`;
+          url += "&protocolVersion=v1.4";
+
+          try {
+            const result = await axios.get(url, {
+              headers: {
+                "X-Api-Key": this.options?.orderFetcherApiKey,
+              },
+            });
+
+            // Override the details
+            const fullOrder = new Sdk.SeaportV14.Order(this.chainId, result.data.order);
+            details[i] = {
+              ...detail,
+              kind: "seaport-v1.4",
+              order: fullOrder,
+            };
+          } catch (error) {
+            if (options?.onRecoverableError) {
+              options.onRecoverableError("order-fetcher-opensea-listing", error, {
+                orderId: detail.orderId,
+                additionalInfo: {
+                  detail,
+                  taker,
+                  url,
+                },
+              });
+            }
+
+            if (!options?.partial) {
+              throw new Error(getErrorMessage(error));
+            }
+          }
+        }
+      })
+    );
 
     const relayer = options?.relayer ?? taker;
 
@@ -690,10 +768,10 @@ export class Router {
                   ...options?.directFillingData,
                 }
               ),
-              orderIndexes: [0],
+              orderIds: [details[0].orderId],
             },
           ],
-          success: [true],
+          success: { [details[0].orderId]: true },
         };
       } else {
         const orders = details.map((d) => d.order as Sdk.Seaport.Order);
@@ -711,10 +789,10 @@ export class Router {
                   ...options?.directFillingData,
                 }
               ),
-              orderIndexes: orders.map((_, i) => i),
+              orderIds: details.map((d) => d.orderId),
             },
           ],
-          success: orders.map(() => true),
+          success: Object.fromEntries(details.map((d) => [d.orderId, true])),
         };
       }
     }
@@ -766,10 +844,10 @@ export class Router {
                   ...options?.directFillingData,
                 }
               ),
-              orderIndexes: [0],
+              orderIds: [details[0].orderId],
             },
           ],
-          success: [true],
+          success: { [details[0].orderId]: true },
         };
       } else {
         const orders = details.map((d) => d.order as Sdk.SeaportV14.Order);
@@ -787,10 +865,10 @@ export class Router {
                   ...options?.directFillingData,
                 }
               ),
-              orderIndexes: orders.map((_, i) => i),
+              orderIds: details.map((d) => d.orderId),
             },
           ],
-          success: orders.map(() => true),
+          success: Object.fromEntries(details.map((d) => [d.orderId, true])),
         };
       }
     }
@@ -826,37 +904,37 @@ export class Router {
     // Keep track of the tokens needed by each module
     const permitItems: UniswapPermit.TransferDetail[] = [];
 
-    // Keep track of which order indexes were handled
-    const orderIndexes: number[] = [];
+    // Keep track of which order ids were handled
+    const orderIds: string[] = [];
 
     // Split all listings by their kind
-    const elementErc721Details: ListingDetailsExtracted[] = [];
-    const elementErc721V2Details: ListingDetailsExtracted[] = [];
-    const elementErc1155Details: ListingDetailsExtracted[] = [];
-    const foundationDetails: ListingDetailsExtracted[] = [];
-    const looksRareDetails: ListingDetailsExtracted[] = [];
+    const elementErc721Details: ListingDetails[] = [];
+    const elementErc721V2Details: ListingDetails[] = [];
+    const elementErc1155Details: ListingDetails[] = [];
+    const foundationDetails: ListingDetails[] = [];
+    const looksRareDetails: ListingDetails[] = [];
     // Only `seaport` and `seaport-v1.4` support non-ETH listings
-    const seaportDetails: PerCurrencyListingDetailsExtracted = {};
-    const seaportV14Details: PerCurrencyListingDetailsExtracted = {};
-    const sudoswapDetails: ListingDetailsExtracted[] = [];
-    const x2y2Details: ListingDetailsExtracted[] = [];
-    const zeroexV4Erc721Details: ListingDetailsExtracted[] = [];
-    const zeroexV4Erc1155Details: ListingDetailsExtracted[] = [];
-    const zoraDetails: ListingDetailsExtracted[] = [];
-    const nftxDetails: ListingDetailsExtracted[] = [];
-    const raribleDetails: ListingDetailsExtracted[] = [];
-    for (let i = 0; i < details.length; i++) {
+    const seaportDetails: PerCurrencyListingDetails = {};
+    const seaportV14Details: PerCurrencyListingDetails = {};
+    const sudoswapDetails: ListingDetails[] = [];
+    const x2y2Details: ListingDetails[] = [];
+    const zeroexV4Erc721Details: ListingDetails[] = [];
+    const zeroexV4Erc1155Details: ListingDetails[] = [];
+    const zoraDetails: ListingDetails[] = [];
+    const nftxDetails: ListingDetails[] = [];
+    const raribleDetails: ListingDetails[] = [];
+    for (const detail of details) {
       // Skip any listings handled in a previous step
-      if (success[i]) {
+      if (success[detail.orderId]) {
         continue;
       }
 
-      const { kind, contractKind, currency } = details[i];
+      const { kind, contractKind, currency } = detail;
 
-      let detailsRef: ListingDetailsExtracted[];
+      let detailsRef: ListingDetails[];
       switch (kind) {
         case "element": {
-          const order = details[i].order as Sdk.Element.Order;
+          const order = detail.order as Sdk.Element.Order;
           detailsRef = order.isBatchSignedOrder()
             ? elementErc721V2Details
             : contractKind === "erc721"
@@ -917,7 +995,7 @@ export class Router {
           continue;
       }
 
-      detailsRef.push({ ...details[i], originalIndex: i });
+      detailsRef.push(detail);
     }
 
     // Generate router executions
@@ -972,9 +1050,9 @@ export class Router {
       });
 
       // Mark the listings as successfully handled
-      for (const { originalIndex } of elementErc721Details) {
-        success[originalIndex] = true;
-        orderIndexes.push(originalIndex);
+      for (const { orderId } of elementErc721Details) {
+        success[orderId] = true;
+        orderIds.push(orderId);
       }
     }
 
@@ -1024,9 +1102,9 @@ export class Router {
       });
 
       // Mark the listings as successfully handled
-      for (const { originalIndex } of elementErc721V2Details) {
-        success[originalIndex] = true;
-        orderIndexes.push(originalIndex);
+      for (const { orderId } of elementErc721V2Details) {
+        success[orderId] = true;
+        orderIds.push(orderId);
       }
     }
 
@@ -1082,9 +1160,9 @@ export class Router {
       });
 
       // Mark the listings as successfully handled
-      for (const { originalIndex } of elementErc1155Details) {
-        success[originalIndex] = true;
-        orderIndexes.push(originalIndex);
+      for (const { orderId } of elementErc1155Details) {
+        success[orderId] = true;
+        orderIds.push(orderId);
       }
     }
 
@@ -1143,9 +1221,9 @@ export class Router {
       });
 
       // Mark the listings as successfully handled
-      for (const { originalIndex } of foundationDetails) {
-        success[originalIndex] = true;
-        orderIndexes.push(originalIndex);
+      for (const { orderId } of foundationDetails) {
+        success[orderId] = true;
+        orderIds.push(orderId);
       }
     }
 
@@ -1208,9 +1286,9 @@ export class Router {
       });
 
       // Mark the listings as successfully handled
-      for (const { originalIndex } of looksRareDetails) {
-        success[originalIndex] = true;
-        orderIndexes.push(originalIndex);
+      for (const { orderId } of looksRareDetails) {
+        success[orderId] = true;
+        orderIds.push(orderId);
       }
     }
 
@@ -1317,9 +1395,9 @@ export class Router {
         });
 
         // Mark the listings as successfully handled
-        for (const { originalIndex } of currencyDetails) {
-          success[originalIndex] = true;
-          orderIndexes.push(originalIndex);
+        for (const { orderId } of currencyDetails) {
+          success[orderId] = true;
+          orderIds.push(orderId);
         }
       }
     }
@@ -1432,9 +1510,9 @@ export class Router {
         });
 
         // Mark the listings as successfully handled
-        for (const { originalIndex } of currencyDetails) {
-          success[originalIndex] = true;
-          orderIndexes.push(originalIndex);
+        for (const { orderId } of currencyDetails) {
+          success[orderId] = true;
+          orderIds.push(orderId);
         }
       }
     }
@@ -1489,9 +1567,9 @@ export class Router {
       });
 
       // Mark the listings as successfully handled
-      for (const { originalIndex } of sudoswapDetails) {
-        success[originalIndex] = true;
-        orderIndexes.push(originalIndex);
+      for (const { orderId } of sudoswapDetails) {
+        success[orderId] = true;
+        orderIds.push(orderId);
       }
     }
 
@@ -1566,9 +1644,9 @@ export class Router {
       });
 
       // Mark the listings as successfully handled
-      for (const { originalIndex } of nftxDetails) {
-        success[originalIndex] = true;
-        orderIndexes.push(originalIndex);
+      for (const { orderId } of nftxDetails) {
+        success[orderId] = true;
+        orderIds.push(orderId);
       }
     }
 
@@ -1625,10 +1703,18 @@ export class Router {
           });
 
           // Mark the listing as successfully handled
-          success[x2y2Details[0].originalIndex] = true;
-        } catch {
+          success[x2y2Details[0].orderId] = true;
+          orderIds.push(x2y2Details[0].orderId);
+        } catch (error) {
+          if (options?.onRecoverableError) {
+            await options.onRecoverableError("x2y2-listing", error, {
+              orderId: x2y2Details[0].orderId,
+              additionalInfo: { detail: x2y2Details[0], taker },
+            });
+          }
+
           if (!options?.partial) {
-            throw new Error("Could not generate fill data");
+            throw new Error(getErrorMessage(error));
           }
         }
       } else {
@@ -1650,7 +1736,18 @@ export class Router {
                   // Decode the input from the X2Y2 API response
                   exchange.contract.interface.decodeFunctionData("run", input).input
               )
-              .catch(() => undefined)
+              .catch(async (error) => {
+                if (options?.onRecoverableError) {
+                  await options.onRecoverableError("x2y2-listing", error, {
+                    orderId: x2y2Details[i].orderId,
+                    additionalInfo: { detail: x2y2Details[i], taker },
+                  });
+                }
+
+                if (!options?.partial) {
+                  throw new Error(getErrorMessage(error));
+                }
+              })
           )
         );
 
@@ -1684,7 +1781,8 @@ export class Router {
           for (let i = 0; i < x2y2Details.length; i++) {
             if (inputs[i]) {
               // Mark the listing as successfully handled
-              success[x2y2Details[i].originalIndex] = true;
+              success[x2y2Details[i].orderId] = true;
+              orderIds.push(x2y2Details[i].orderId);
             }
           }
         }
@@ -1697,15 +1795,22 @@ export class Router {
       const module = this.contracts.zeroExV4Module;
 
       const unsuccessfulCbIds: string[] = [];
-      for (const order of orders) {
+      for (const [i, order] of orders.entries()) {
         const cbId = order.params.cbOrderId;
         if (cbId) {
           // Release the order's signature
           await new Sdk.ZeroExV4.Exchange(this.chainId, String(this.options?.cbApiKey))
             .releaseOrder(taker, order)
-            .catch(() => {
+            .catch(async (error) => {
+              if (options?.onRecoverableError) {
+                await options.onRecoverableError("zeroex-v4-erc721-listing", error, {
+                  orderId: zeroexV4Erc721Details[i].orderId,
+                  additionalInfo: { detail: zeroexV4Erc721Details[i], taker },
+                });
+              }
+
               if (!options?.partial) {
-                throw new Error("Could not generate fill data");
+                throw new Error(getErrorMessage(error));
               } else {
                 unsuccessfulCbIds.push(cbId);
               }
@@ -1775,9 +1880,9 @@ export class Router {
         });
 
         // Mark the listings as successfully handled
-        for (const { originalIndex } of zeroexV4Erc721Details) {
-          success[originalIndex] = true;
-          orderIndexes.push(originalIndex);
+        for (const { orderId } of zeroexV4Erc721Details) {
+          success[orderId] = true;
+          orderIds.push(orderId);
         }
       }
     }
@@ -1788,15 +1893,22 @@ export class Router {
       const module = this.contracts.zeroExV4Module;
 
       const unsuccessfulCbIds: string[] = [];
-      for (const order of orders) {
+      for (const [i, order] of orders.entries()) {
         const cbId = order.params.cbOrderId;
         if (cbId) {
           // Release the order's signature
           await new Sdk.ZeroExV4.Exchange(this.chainId, String(this.options?.cbApiKey))
             .releaseOrder(taker, order)
-            .catch(() => {
+            .catch(async (error) => {
+              if (options?.onRecoverableError) {
+                await options.onRecoverableError("zeroex-v4-erc1155-listing", error, {
+                  orderId: zeroexV4Erc1155Details[i].orderId,
+                  additionalInfo: { detail: zeroexV4Erc1155Details[i], taker },
+                });
+              }
+
               if (!options?.partial) {
-                throw new Error("Could not generate fill data");
+                throw new Error(getErrorMessage(error));
               } else {
                 unsuccessfulCbIds.push(cbId);
               }
@@ -1872,9 +1984,9 @@ export class Router {
         });
 
         // Mark the listings as successfully handled
-        for (const { originalIndex } of zeroexV4Erc1155Details) {
-          success[originalIndex] = true;
-          orderIndexes.push(originalIndex);
+        for (const { orderId } of zeroexV4Erc1155Details) {
+          success[orderId] = true;
+          orderIds.push(orderId);
         }
       }
     }
@@ -1942,9 +2054,9 @@ export class Router {
       });
 
       // Mark the listings as successfully handled
-      for (const { originalIndex } of zoraDetails) {
-        success[originalIndex] = true;
-        orderIndexes.push(originalIndex);
+      for (const { orderId } of zoraDetails) {
+        success[orderId] = true;
+        orderIds.push(orderId);
       }
     }
 
@@ -2005,9 +2117,9 @@ export class Router {
       });
 
       // Mark the listings as successfully handled
-      for (const { originalIndex } of raribleDetails) {
-        success[originalIndex] = true;
-        orderIndexes.push(originalIndex);
+      for (const { orderId } of raribleDetails) {
+        success[orderId] = true;
+        orderIds.push(orderId);
       }
     }
 
@@ -2116,17 +2228,29 @@ export class Router {
               );
             }
           }
-        } catch {
-          if (!options?.partial) {
-            throw new Error("Could not generate swap execution");
-          } else {
-            // Since the swap execution generation failed, we should also skip the associated fill executions
-            swapDetails.map((s) => {
-              for (const { originalIndex } of s.details) {
-                success[originalIndex] = false;
+        } catch (error) {
+          // Since the swap execution generation failed, we should also skip the associated fill executions
+          await Promise.all(
+            swapDetails.map(async (s) => {
+              for (const detail of s.details) {
+                success[detail.orderId] = false;
+                txs.forEach((tx) => {
+                  tx.orderIds = tx.orderIds.filter((orderId) => orderId !== detail.orderId);
+                });
+
+                if (options?.onRecoverableError) {
+                  await options.onRecoverableError("swap-generation", error, {
+                    orderId: detail.orderId,
+                    additionalInfo: { detail, taker },
+                  });
+                }
               }
               unsuccessfulDependentExecutionIndexes.push(s.executionIndex);
-            });
+            })
+          );
+
+          if (!options?.partial) {
+            throw new Error(getErrorMessage(error));
           }
         }
       }
@@ -2167,12 +2291,12 @@ export class Router {
             .reduce((a, b) => a.add(b))
             .toHexString(),
         },
-        orderIndexes,
+        orderIds,
       });
     }
 
     if (!txs.length) {
-      throw new Error("No transactions could be generated");
+      throw new Error("Could not fill any of the requested orders");
     }
 
     return {
@@ -2192,19 +2316,24 @@ export class Router {
       partial?: boolean;
       // Force using permit
       forcePermit?: boolean;
-      // Needed for filling some OpenSea orders
-      openseaAuth?: string;
+      // Callback for handling recoverable errors
+      onRecoverableError?: (
+        kind: string,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        error: any,
+        data: {
+          orderId: string;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          additionalInfo: any;
+        }
+      ) => Promise<void>;
     }
-  ): Promise<{
-    txData: TxData;
-    approvals: NFTApproval[];
-    permits: NFTPermit[];
-    success: boolean[];
-  }> {
+  ): Promise<FillBidsResult> {
     // Assume the bid details are consistent with the underlying order object
 
-    if (options?.openseaAuth && details.length !== 1) {
-      throw new Error("Only a single bid can be fulfilled");
+    // When filling a single order in partial mode, propagate any errors back directly
+    if (options?.partial && details.length === 1) {
+      options.partial = false;
     }
 
     // CASE 1
@@ -2468,19 +2597,21 @@ export class Router {
           const order = detail.order as Sdk.Seaport.Types.PartialOrder;
           const module = this.contracts.seaportModule;
 
+          let url = `${this.options?.orderFetcherBaseUrl}/api/offer`;
+          url += `?orderHash=${order.id}`;
+          url += `&contract=${order.contract}`;
+          url += `&tokenId=${order.tokenId}`;
+          url += `&taker=${detail.owner ?? taker}`;
+          url += `&chainId=${this.chainId}`;
+          url += "&protocolVersion=v1.1";
+          url += order.unitPrice ? `&unitPrice=${order.unitPrice}` : "";
+
           try {
-            const result = await axios.get(
-              `https://order-fetcher.vercel.app/api/offer?orderHash=${order.id}&contract=${
-                order.contract
-              }&tokenId=${order.tokenId}&taker=${detail.owner ?? taker}&chainId=${this.chainId}` +
-                (order.unitPrice ? `&unitPrice=${order.unitPrice}` : "") +
-                (options?.openseaAuth ? `&authorization=${options.openseaAuth}` : ""),
-              {
-                headers: {
-                  "X-Api-Key": this.options?.orderFetcherApiKey,
-                },
-              }
-            );
+            const result = await axios.get(url, {
+              headers: {
+                "X-Api-Key": this.options?.orderFetcherApiKey,
+              },
+            });
 
             const fullOrder = new Sdk.Seaport.Order(this.chainId, result.data.order);
             executions.push({
@@ -2511,11 +2642,20 @@ export class Router {
             });
 
             success[i] = true;
-          } catch {
+          } catch (error) {
+            if (options?.onRecoverableError) {
+              options.onRecoverableError("order-fetcher-opensea-offer", error, {
+                orderId: detail.orderId,
+                additionalInfo: {
+                  detail,
+                  taker,
+                  url,
+                },
+              });
+            }
+
             if (!options?.partial) {
-              throw new Error("Could not generate fill data");
-            } else {
-              continue;
+              throw new Error(getErrorMessage(error));
             }
           }
 
@@ -2569,21 +2709,22 @@ export class Router {
           const order = detail.order as Sdk.SeaportV14.Types.PartialOrder;
           const module = this.contracts.seaportV14Module;
 
+          let url = `${this.options?.orderFetcherBaseUrl}/api/offer`;
+          url += `?orderHash=${order.id}`;
+          url += `&contract=${order.contract}`;
+          url += `&tokenId=${order.tokenId}`;
+          url += `&taker=${detail.isProtected ? taker : detail.owner ?? taker}`;
+          url += `&chainId=${this.chainId}`;
+          url += "&protocolVersion=v1.4";
+          url += order.unitPrice ? `&unitPrice=${order.unitPrice}` : "";
+          url += detail.isProtected ? "&isProtected=true" : "";
+
           try {
-            const result = await axios.get(
-              `https://order-fetcher.vercel.app/api/offer?orderHash=${order.id}&contract=${
-                order.contract
-              }&tokenId=${order.tokenId}&taker=${
-                options?.openseaAuth ? taker : detail.owner ?? taker
-              }&chainId=${this.chainId}` +
-                (order.unitPrice ? `&unitPrice=${order.unitPrice}` : "") +
-                (options?.openseaAuth ? `&authorization=${options.openseaAuth}` : ""),
-              {
-                headers: {
-                  "X-Api-Key": this.options?.orderFetcherApiKey,
-                },
-              }
-            );
+            const result = await axios.get(url, {
+              headers: {
+                "X-Api-Key": this.options?.orderFetcherApiKey,
+              },
+            });
 
             if (result.data.calldata) {
               // Fill directly
@@ -2591,7 +2732,7 @@ export class Router {
                 txData: {
                   from: taker,
                   to: Sdk.SeaportV14.Addresses.Exchange[this.chainId],
-                  data: result.data.calldata.slice(0, -8) + generateSourceBytes(options?.source),
+                  data: result.data.calldata + generateSourceBytes(options?.source),
                 },
                 success: [true],
                 approvals,
@@ -2628,11 +2769,20 @@ export class Router {
             });
 
             success[i] = true;
-          } catch {
+          } catch (error) {
+            if (options?.onRecoverableError) {
+              options.onRecoverableError("order-fetcher-opensea-offer", error, {
+                orderId: detail.orderId,
+                additionalInfo: {
+                  detail,
+                  taker,
+                  url,
+                },
+              });
+            }
+
             if (!options?.partial) {
-              throw new Error("Could not generate fill data");
-            } else {
-              continue;
+              throw new Error(getErrorMessage(error));
             }
           }
 
@@ -2703,11 +2853,19 @@ export class Router {
             });
 
             success[i] = true;
-          } catch {
+          } catch (error) {
+            if (options?.onRecoverableError) {
+              options.onRecoverableError("x2y2-offer", error, {
+                orderId: detail.orderId,
+                additionalInfo: {
+                  detail,
+                  taker,
+                },
+              });
+            }
+
             if (!options?.partial) {
-              throw new Error("Could not generate fill data");
-            } else {
-              continue;
+              throw new Error(getErrorMessage(error));
             }
           }
 
@@ -2763,11 +2921,19 @@ export class Router {
             }
 
             success[i] = true;
-          } catch {
+          } catch (error) {
+            if (options?.onRecoverableError) {
+              options.onRecoverableError("zeroex-v4-offer", error, {
+                orderId: detail.orderId,
+                additionalInfo: {
+                  detail,
+                  taker,
+                },
+              });
+            }
+
             if (!options?.partial) {
-              throw new Error("Could not generate fill data");
-            } else {
-              continue;
+              throw new Error(getErrorMessage(error));
             }
           }
 
@@ -2886,7 +3052,7 @@ export class Router {
     }
 
     if (!executions.length) {
-      throw new Error("No executions to handle");
+      throw new Error("Could not fill any of the requested orders");
     }
 
     // Generate router-level transaction data

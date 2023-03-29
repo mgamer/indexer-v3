@@ -8,7 +8,7 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
-import * as orderFixes from "@/jobs/order-fixes/queue";
+import * as orderFixes from "@/jobs/order-fixes/fixes";
 import * as resyncAttributeCache from "@/jobs/update-attribute/resync-attribute-cache";
 import * as tokenRefreshCacheQueue from "@/jobs/token-updates/token-refresh-cache";
 import { Collections } from "@/models/collections";
@@ -94,7 +94,7 @@ export const postRefreshTokenOptions: RouteOptions = {
       await resyncAttributeCache.addToQueue(contract, tokenId, 0);
 
       // Refresh the token floor sell and top bid
-      await tokenRefreshCacheQueue.addToQueue(contract, tokenId);
+      await tokenRefreshCacheQueue.addToQueue(contract, tokenId, true);
 
       return { message: "Request accepted" };
     } catch (error) {

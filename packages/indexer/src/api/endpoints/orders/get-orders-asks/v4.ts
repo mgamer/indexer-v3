@@ -8,7 +8,13 @@ import _ from "lodash";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { JoiPrice, getJoiPriceObject, JoiOrderCriteria } from "@/common/joi";
+import {
+  JoiPrice,
+  getJoiPriceObject,
+  JoiOrderCriteria,
+  JoiDynamicPrice,
+  getJoiDynamicPricingObject,
+} from "@/common/joi";
 import {
   buildContinuation,
   fromBuffer,
@@ -22,6 +28,7 @@ import { CollectionSets } from "@/models/collection-sets";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { Orders } from "@/utils/orders";
+import { TokenSets } from "@/models/token-sets";
 
 const version = "v4";
 
@@ -98,6 +105,14 @@ export const getOrdersAsksV4Options: RouteOptions = {
       includeRawData: Joi.boolean()
         .default(false)
         .description("If true, raw data is included in the response."),
+      includeDynamicPricing: Joi.boolean()
+        .default(false)
+        .description("If true, dynamic pricing data will be returned in the response."),
+      excludeEOA: Joi.boolean()
+        .default(false)
+        .description(
+          "Exclude orders that can only be filled by EOAs, to support filling with smart contracts."
+        ),
       startTimestamp: Joi.number().description(
         "Get events after a particular unix timestamp (inclusive)"
       ),
@@ -144,6 +159,7 @@ export const getOrdersAsksV4Options: RouteOptions = {
           validUntil: Joi.number().required(),
           quantityFilled: Joi.number().unsafe(),
           quantityRemaining: Joi.number().unsafe(),
+          dynamicPricing: JoiDynamicPrice.allow(null),
           criteria: JoiOrderCriteria.allow(null),
           status: Joi.string(),
           source: Joi.object().allow(null),
@@ -229,7 +245,7 @@ export const getOrdersAsksV4Options: RouteOptions = {
           ) AS status,
           orders.updated_at,
           (${criteriaBuildQuery}) AS criteria
-          ${query.includeRawData ? ", orders.raw_data" : ""}
+          ${query.includeRawData || query.includeDynamicPricing ? ", orders.raw_data" : ""}
         FROM orders
       `;
 
@@ -274,15 +290,19 @@ export const getOrdersAsksV4Options: RouteOptions = {
 
       if (query.tokenSetId) {
         baseQuery += `
-          JOIN token_sets_tokens tst1
-            ON tst1.token_set_id = orders.token_set_id
-          JOIN token_sets_tokens tst2
-            ON tst2.contract = tst1.contract
-            AND tst2.token_id = tst1.token_id
+            JOIN token_sets_tokens tst1
+              ON tst1.token_set_id = orders.token_set_id
+            JOIN token_sets_tokens tst2
+              ON tst2.contract = tst1.contract
+              AND tst2.token_id = tst1.token_id
         `;
 
-        (query as any).tokenSetId = `${query.tokenSetId}`;
         conditions.push(`tst2.token_set_id = $/tokenSetId/`);
+        const contractFilter = TokenSets.getContractFromTokenSetId(query.tokenSetId);
+        if (contractFilter) {
+          query.contractFilter = toBuffer(contractFilter);
+          conditions.push(`orders.contract = $/contractFilter/`);
+        }
       }
 
       if (query.contracts) {
@@ -340,17 +360,17 @@ export const getOrdersAsksV4Options: RouteOptions = {
           }
 
           collectionSetFilter = `
-          JOIN LATERAL (
-            SELECT
-              contract,
-              token_id
-            FROM
-              token_sets_tokens
-            WHERE
-              token_sets_tokens.token_set_id = orders.token_set_id
-            LIMIT 1) tst ON TRUE
-          JOIN tokens ON tokens.contract = tst.contract
-            AND tokens.token_id = tst.token_id
+            JOIN LATERAL (
+              SELECT
+                contract,
+                token_id
+              FROM
+                token_sets_tokens
+              WHERE
+                token_sets_tokens.token_set_id = orders.token_set_id
+              LIMIT 1) tst ON TRUE
+            JOIN tokens ON tokens.contract = tst.contract
+              AND tokens.token_id = tst.token_id
           `;
 
           conditions.push(`tokens.collection_id IN ($/collectionsIds:csv/)`);
@@ -377,6 +397,10 @@ export const getOrdersAsksV4Options: RouteOptions = {
         conditions.push(
           `orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL`
         );
+      }
+
+      if (query.excludeEOA) {
+        conditions.push(`orders.kind != 'blur'`);
       }
 
       if (orderStatusFilter) {
@@ -514,6 +538,16 @@ export const getOrdersAsksV4Options: RouteOptions = {
           validUntil: Number(r.valid_until),
           quantityFilled: Number(r.quantity_filled),
           quantityRemaining: Number(r.quantity_remaining),
+          dynamicPricing: query.includeDynamicPricing
+            ? await getJoiDynamicPricingObject(
+                r.dynamic,
+                r.kind,
+                query.normalizeRoyalties,
+                r.raw_data,
+                r.currency ? fromBuffer(r.currency) : undefined,
+                r.missing_royalties ? r.missing_royalties : undefined
+              )
+            : null,
           criteria: r.criteria,
           source: {
             id: source?.address,
@@ -526,7 +560,7 @@ export const getOrdersAsksV4Options: RouteOptions = {
           feeBreakdown: feeBreakdown,
           expiration: Number(r.expiration),
           isReservoir: r.is_reservoir,
-          isDynamic: Boolean(r.dynamic),
+          isDynamic: Boolean(r.dynamic || r.kind === "sudoswap"),
           createdAt: new Date(r.created_at * 1000).toISOString(),
           updatedAt: new Date(r.updated_at).toISOString(),
           rawData: query.includeRawData ? r.raw_data : undefined,

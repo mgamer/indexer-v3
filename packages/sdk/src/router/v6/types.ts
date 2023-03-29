@@ -154,32 +154,40 @@ export type GenericOrder =
 
 // Basic details for filling listings
 export type ListingFillDetails = {
+  orderId: string;
   contractKind: "erc721" | "erc1155";
   contract: string;
   tokenId: string;
   currency: string;
   price: string;
   source?: string;
+  isFlagged?: boolean;
   // Relevant for partially-fillable orders
   amount?: number | string;
   fees?: Fee[];
 };
 export type ListingDetails = GenericOrder & ListingFillDetails;
 
-// For keeping track of each listing's position in the original array
-export type ListingDetailsExtracted = {
-  originalIndex: number;
-} & ListingDetails;
-
 // For supporting filling listings having different underlying currencies
-export type PerCurrencyListingDetailsExtracted = {
-  [currency: string]: ListingDetailsExtracted[];
+export type PerCurrencyListingDetails = {
+  [currency: string]: ListingDetails[];
+};
+
+export type FillListingsResult = {
+  txs: {
+    approvals: FTApproval[];
+    permits: FTPermit[];
+    txData: TxData;
+    orderIds: string[];
+  }[];
+  success: { [orderId: string]: boolean };
 };
 
 // Bids
 
 // Basic details for filling bids
 export type BidFillDetails = {
+  orderId: string;
   contractKind: "erc721" | "erc1155";
   contract: string;
   tokenId: string;
@@ -190,9 +198,17 @@ export type BidFillDetails = {
   extraArgs?: any;
   // Relevant for partial Seaport orders
   owner?: string;
+  isProtected?: boolean;
   fees?: Fee[];
 };
 export type BidDetails = GenericOrder & BidFillDetails;
+
+export type FillBidsResult = {
+  txData: TxData;
+  approvals: NFTApproval[];
+  permits: NFTPermit[];
+  success: boolean[];
+};
 
 // Swaps
 
@@ -206,6 +222,6 @@ export type SwapDetail = {
   tokenOutAmount: BigNumberish;
   recipient: string;
   refundTo: string;
-  details: ListingDetailsExtracted[];
+  details: ListingDetails[];
   executionIndex: number;
 };

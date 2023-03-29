@@ -3,7 +3,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import * as Permit2 from "@reservoir0x/sdk/dist/router/v6/permits/permit2";
-import { ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
+import { FillListingsResult, ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
 import axios from "axios";
 import Joi from "joi";
 
@@ -11,10 +11,10 @@ import { inject } from "@/api/index";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn, formatPrice, fromBuffer, now, regex } from "@/common/utils";
+import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
-import { OrderKind, generateListingDetailsV6 } from "@/orderbook/orders";
+import { OrderKind, generateListingDetailsV6, routerOnRecoverableError } from "@/orderbook/orders";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as nftx from "@/orderbook/orders/nftx";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
@@ -72,13 +72,19 @@ export const getExecuteBuyV7Options: RouteOptions = {
             preferredOrderSource: Joi.string()
               .lowercase()
               .pattern(regex.domain)
-              .when("tokens", { is: Joi.exist(), then: Joi.allow(), otherwise: Joi.forbidden() })
+              .when("token", { is: Joi.exist(), then: Joi.allow(), otherwise: Joi.forbidden() })
               .description(
-                "If there are multiple listings with equal best price, prefer this source over others.\nNOTE: if you want to fill a listing that is not the best priced, you need to pass a specific order id."
+                "If there are multiple listings with equal best price, prefer this source over others.\nNOTE: if you want to fill a listing that is not the best priced, you need to pass a specific order id or use `exactOrderSource`."
               ),
+            exactOrderSource: Joi.string()
+              .lowercase()
+              .pattern(regex.domain)
+              .when("token", { is: Joi.exist(), then: Joi.allow(), otherwise: Joi.forbidden() })
+              .description("Only consider orders from this source."),
           })
             .oxor("token", "orderId", "rawOrder")
             .or("token", "orderId", "rawOrder")
+            .oxor("preferredOrderSource", "exactOrderSource")
         )
         .min(1)
         .required()
@@ -122,6 +128,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
       skipBalanceCheck: Joi.boolean()
         .default(false)
         .description("If true, balance check will be skipped."),
+      excludeEOA: Joi.boolean()
+        .default(false)
+        .description(
+          "Exclude orders that can only be filled by EOAs, to support filling with smart contracts."
+        ),
       maxFeePerGas: Joi.string().pattern(regex.number).description("Optional custom gas settings."),
       maxPriorityFeePerGas: Joi.string()
         .pattern(regex.number)
@@ -142,10 +153,17 @@ export const getExecuteBuyV7Options: RouteOptions = {
             .items(
               Joi.object({
                 status: Joi.string().valid("complete", "incomplete").required(),
+                orderIds: Joi.array().items(Joi.string()),
                 data: Joi.object(),
               })
             )
             .required(),
+        })
+      ),
+      errors: Joi.array().items(
+        Joi.object({
+          message: Joi.string(),
+          orderId: Joi.number(),
         })
       ),
       path: Joi.array().items(
@@ -289,6 +307,21 @@ export const getExecuteBuyV7Options: RouteOptions = {
           rawQuote: totalPrice.toString(),
         });
 
+        const flaggedResult = await idb.oneOrNone(
+          `
+            SELECT
+              tokens.is_flagged
+            FROM tokens
+            WHERE tokens.contract = $/contract/
+              AND tokens.token_id = $/tokenId/
+            LIMIT 1
+          `,
+          {
+            contract: toBuffer(token.contract),
+            tokenId: token.tokenId,
+          }
+        );
+
         listingDetails.push(
           generateListingDetailsV6(
             {
@@ -305,6 +338,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
               contract: token.contract,
               tokenId: token.tokenId,
               amount: token.quantity,
+              isFlagged: Boolean(flaggedResult.is_flagged),
             }
           )
         );
@@ -320,6 +354,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           data: any;
         };
         preferredOrderSource?: string;
+        exactOrderSource?: string;
       }[] = payload.items;
 
       for (const item of items) {
@@ -432,6 +467,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
           // which doesn't support royalty normalization and then filter out
           // such `null` fields in various normalized events/caches.
 
+          // Only one of `exactOrderSource` and `preferredOrderSource` will be set
+          const sourceDomain = item.exactOrderSource || item.preferredOrderSource;
+
           // Fetch all matching orders sorted by price
           const orderResults = await idb.manyOrNone(
             `
@@ -456,7 +494,12 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 AND orders.fillability_status = 'fillable'
                 AND orders.approval_status = 'approved'
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
-                ${payload.normalizeRoyalties ? " AND orders.kind != 'blur'" : ""}
+                ${
+                  payload.normalizeRoyalties || payload.excludeEOA
+                    ? " AND orders.kind != 'blur'"
+                    : ""
+                }
+                ${item.exactOrderSource ? " AND orders.source_id_int = $/sourceId/" : ""}
               ORDER BY
                 ${payload.normalizeRoyalties ? "orders.normalized_value" : "orders.value"},
                 ${
@@ -474,7 +517,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
             {
               tokenSetId: `token:${item.token}`,
               quantity: item.quantity,
-              sourceId: item.preferredOrderSource,
+              sourceId: sourceDomain ? sources.getByDomain(sourceDomain)?.id ?? -1 : undefined,
             }
           );
 
@@ -589,13 +632,14 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }
 
       // Set up generic filling steps
-      const steps: {
+      let steps: {
         id: string;
         action: string;
         description: string;
         kind: string;
         items: {
           status: string;
+          orderIds?: string[];
           data?: object;
         }[];
       }[] = [
@@ -630,27 +674,22 @@ export const getExecuteBuyV7Options: RouteOptions = {
       ];
 
       // Handle Blur authentication
-      let blurAuth: string | undefined;
+      let blurAuth: b.Auth | undefined;
       if (path.some((p) => p.source === "blur.io")) {
         const blurAuthId = b.getAuthId(payload.taker);
 
-        blurAuth = await b
-          .getAuth(blurAuthId)
-          .then((auth) => (auth ? auth.accessToken : undefined));
+        blurAuth = await b.getAuth(blurAuthId);
         if (!blurAuth) {
           const blurAuthChallengeId = b.getAuthChallengeId(payload.taker);
 
           let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
           if (!blurAuthChallenge) {
             blurAuthChallenge = (await axios
-              .get(
-                `https://order-fetcher.vercel.app/api/blur-auth-challenge?taker=${payload.taker}`,
-                {
-                  headers: {
-                    "X-Api-Key": config.orderFetcherApiKey,
-                  },
-                }
-              )
+              .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${payload.taker}`, {
+                headers: {
+                  "X-Api-Key": config.orderFetcherApiKey,
+                },
+              })
               .then((response) => response.data.authChallenge)) as b.AuthChallenge;
 
             await b.saveAuthChallenge(
@@ -699,13 +738,15 @@ export const getExecuteBuyV7Options: RouteOptions = {
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
+        orderFetcherBaseUrl: config.orderFetcherBaseUrl,
         orderFetcherApiKey: config.orderFetcherApiKey,
       });
-      const { txs, success } = await router.fillListingsTx(
-        listingDetails,
-        payload.taker,
-        buyInCurrency,
-        {
+
+      const errors: { orderId: string; message: string }[] = [];
+
+      let result: FillListingsResult;
+      try {
+        result = await router.fillListingsTx(listingDetails, payload.taker, buyInCurrency, {
           source: payload.source,
           partial: payload.partial,
           forceRouter: payload.forceRouter,
@@ -716,11 +757,25 @@ export const getExecuteBuyV7Options: RouteOptions = {
             conduitKey: Sdk.Seaport.Addresses.OpenseaConduitKey[config.chainId],
           },
           blurAuth,
-        }
-      );
+          onRecoverableError: async (kind, error, data) => {
+            errors.push({
+              orderId: data.orderId,
+              message: error.response?.data ?? error.message,
+            });
+            await routerOnRecoverableError(kind, error, data);
+          },
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        const boomError = Boom.badRequest(error.message);
+        boomError.output.payload.errors = errors;
+        throw boomError;
+      }
+
+      const { txs, success } = result;
 
       // Filter out any non-fillable orders from the path
-      path = path.filter((_, i) => success[i]);
+      path = path.filter((p) => success[p.orderId]);
 
       if (!path.length) {
         throw Boom.badRequest("No available orders");
@@ -734,8 +789,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
         ? bn(payload.maxPriorityFeePerGas).toHexString()
         : undefined;
 
-      for (const { txData, approvals, permits, orderIndexes } of txs) {
-        const subPath = path.filter((_, i) => orderIndexes.includes(i));
+      for (const { txData, approvals, permits, orderIds } of txs) {
+        const subPath = path.filter((p) => orderIds.includes(p.orderId));
 
         for (const approval of approvals) {
           const approvedAmount = await onChainData
@@ -841,9 +896,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         steps[3].items.push({
           status: "incomplete",
+          orderIds,
           data:
             // Do not return the final step unless all permits have a signature attached
-            steps[1].items.length === 0
+            steps[2].items.length === 0
               ? {
                   ...permitHandler.attachToRouterExecution(
                     txData,
@@ -854,6 +910,21 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 }
               : undefined,
         });
+      }
+
+      // Warning! When filtering the steps, we should ensure that it
+      // won't affect the client, which might be polling the API and
+      // expect to get the steps returned in the same order / at the
+      // same index.
+      if (buyInCurrency === Sdk.Common.Addresses.Eth[config.chainId]) {
+        // Buying in ETH will never require an approval/permit
+        steps = [steps[0], ...steps.slice(3)];
+      }
+      if (!blurAuth) {
+        // If we reached this point and the Blur auth is missing then we
+        // can be sure that no Blur orders were requested and it is safe
+        // to remove the auth step
+        steps = steps.slice(1);
       }
 
       return {
