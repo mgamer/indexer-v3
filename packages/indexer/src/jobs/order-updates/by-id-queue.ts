@@ -212,6 +212,37 @@ if (config.doBackgroundWork) {
 
           if (order) {
             if (order.side === "sell") {
+              const sellOrderEvent = {
+                fillabilityStatus: order.fillabilityStatus,
+                approvalStatus: order.approvalStatus,
+                contract: order.contract,
+                tokenId: order.tokenId,
+                id: order.id,
+                sourceIdInt: order.sourceIdInt,
+                validBetween: order.validBetween,
+                quantityRemaining: order.quantityRemaining,
+                nonce: order.nonce,
+                maker: order.maker,
+                value: order.value,
+                kind: trigger.kind,
+                txHash: trigger.txHash ? toBuffer(trigger.txHash) : null,
+                txTimestamp: trigger.txTimestamp || null,
+                orderKind: order.kind,
+                orderTokenSetId: order.tokenSetId,
+                orderDynamic: order.dynamic,
+                orderCurrency: order.currency,
+                orderCurrencyPrice: order.currency_price,
+                orderNormalizedValue: order.normalized_value,
+                orderCurrencyNormalizedValue: order.currency_normalized_value,
+                orderRawData: order.raw_data,
+              };
+              // trigger new sell order event
+              await websocketEventsTriggerQueue.addToQueue([
+                {
+                  kind: websocketEventsTriggerQueue.EventKind.NewSellOrder,
+                  data: sellOrderEvent,
+                },
+              ]);
               // Insert a corresponding order event
               await idb.none(
                 `
@@ -271,30 +302,7 @@ if (config.doBackgroundWork) {
                     $/orderRawData/
                   )
                 `,
-                {
-                  fillabilityStatus: order.fillabilityStatus,
-                  approvalStatus: order.approvalStatus,
-                  contract: order.contract,
-                  tokenId: order.tokenId,
-                  id: order.id,
-                  sourceIdInt: order.sourceIdInt,
-                  validBetween: order.validBetween,
-                  quantityRemaining: order.quantityRemaining,
-                  nonce: order.nonce,
-                  maker: order.maker,
-                  value: order.value,
-                  kind: trigger.kind,
-                  txHash: trigger.txHash ? toBuffer(trigger.txHash) : null,
-                  txTimestamp: trigger.txTimestamp || null,
-                  orderKind: order.kind,
-                  orderTokenSetId: order.tokenSetId,
-                  orderDynamic: order.dynamic,
-                  orderCurrency: order.currency,
-                  orderCurrencyPrice: order.currency_price,
-                  orderNormalizedValue: order.normalized_value,
-                  orderCurrencyNormalizedValue: order.currency_normalized_value,
-                  orderRawData: order.raw_data,
-                }
+                sellOrderEvent
               );
 
               const updateFloorAskPriceInfo = {
