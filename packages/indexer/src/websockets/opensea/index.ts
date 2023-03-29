@@ -15,7 +15,7 @@ import { redis } from "@/common/redis";
 import { now } from "@/common/utils";
 import { config } from "@/config/index";
 import { OpenseaWebsocketEvents } from "@/models/opensea-websocket-events";
-import { PartialOrderComponents } from "@/orderbook/orders/seaport";
+import { PartialOrderComponents } from "@/orderbook/orders/seaport-v1.1";
 import { generateHash, getSupportedChainName } from "@/websockets/opensea/utils";
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as orderbookOpenseaListings from "@/jobs/orderbook/opensea-listings-queue";
