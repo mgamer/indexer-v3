@@ -53,6 +53,10 @@ export const getTransfersV3Options: RouteOptions = {
         ),
       limit: Joi.number().integer().min(1).max(100).default(20),
       continuation: Joi.string().pattern(regex.base64),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     })
       .oxor("contract", "token", "collection", "txHash")
       .or("contract", "token", "collection", "txHash")
@@ -263,7 +267,8 @@ export const getTransfersV3Options: RouteOptions = {
                   nativeAmount: String(r.price),
                 },
               },
-              r.currency ? fromBuffer(r.currency) : Sdk.Common.Addresses.Eth[config.chainId]
+              r.currency ? fromBuffer(r.currency) : Sdk.Common.Addresses.Eth[config.chainId],
+              query.displayCurrency
             )
           : null,
       }));

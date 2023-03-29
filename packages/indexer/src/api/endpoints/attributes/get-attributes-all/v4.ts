@@ -9,6 +9,7 @@ import { logger } from "@/common/logger";
 import { getJoiPriceObject, JoiAttributeValue, JoiPrice } from "@/common/joi";
 import { config } from "@/config/index";
 import * as Sdk from "@reservoir0x/sdk";
+import { regex } from "@/common/utils";
 
 const version = "v4";
 
@@ -27,6 +28,12 @@ export const getAttributesAllV4Options: RouteOptions = {
         .description(
           "Filter to a particular collection with collection-id. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
+    }),
+    query: Joi.object({
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     }),
   },
   response: {
@@ -58,6 +65,7 @@ export const getAttributesAllV4Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const params = request.params as any;
+    const query = request.query as any;
 
     try {
       const baseQuery = `
@@ -115,7 +123,8 @@ export const getAttributesAllV4Options: RouteOptions = {
                               nativeAmount: String(value.floor_sell_value),
                             },
                           },
-                          Sdk.Common.Addresses.Eth[config.chainId]
+                          Sdk.Common.Addresses.Eth[config.chainId],
+                          query.displayCurrency
                         )
                       : undefined,
                 }))

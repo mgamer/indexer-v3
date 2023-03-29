@@ -64,6 +64,10 @@ export const getTokenActivityV5Options: RouteOptions = {
             .valid(..._.values(ActivityType))
         )
         .description("Types of events returned in response. Example: 'types=sale'"),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     }),
   },
   response: {
@@ -160,7 +164,8 @@ export const getTokenActivityV5Options: RouteOptions = {
                 nativeAmount: String(activity.price),
               },
             },
-            orderCurrency
+            orderCurrency,
+            query.displayCurrency
           ),
           amount: activity.amount,
           timestamp: activity.eventTimestamp,

@@ -178,6 +178,10 @@ export const getTokensV6Options: RouteOptions = {
       continuation: Joi.string()
         .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     })
       .or("collection", "contract", "tokens", "tokenSetId", "community", "collectionsSetId")
       .oxor("collection", "contract", "tokens", "tokenSetId", "community", "collectionsSetId")
@@ -959,7 +963,8 @@ export const getTokensV6Options: RouteOptions = {
                             .toString(),
                         },
                       },
-                      floorAskCurrency
+                      floorAskCurrency,
+                      query.displayCurrency
                     ),
                     end: await getJoiPriceObject(
                       {
@@ -969,7 +974,8 @@ export const getTokensV6Options: RouteOptions = {
                             .toString(),
                         },
                       },
-                      floorAskCurrency
+                      floorAskCurrency,
+                      query.displayCurrency
                     ),
                   },
                   time: {
@@ -992,7 +998,8 @@ export const getTokensV6Options: RouteOptions = {
                             amount: bn(price).add(missingRoyalties).toString(),
                           },
                         },
-                        floorAskCurrency
+                        floorAskCurrency,
+                        query.displayCurrency
                       )
                     )
                   ),
@@ -1012,7 +1019,8 @@ export const getTokensV6Options: RouteOptions = {
                             amount: bn(price).add(missingRoyalties).toString(),
                           },
                         },
-                        floorAskCurrency
+                        floorAskCurrency,
+                        query.displayCurrency
                       )
                     )
                   ),
@@ -1094,7 +1102,8 @@ export const getTokensV6Options: RouteOptions = {
                         nativeAmount: r.floor_sell_value,
                       },
                     },
-                    floorAskCurrency
+                    floorAskCurrency,
+                    query.displayCurrency
                   )
                 : null,
               maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
@@ -1136,7 +1145,8 @@ export const getTokensV6Options: RouteOptions = {
                             nativeAmount: r.top_buy_price,
                           },
                         },
-                        topBidCurrency
+                        topBidCurrency,
+                        query.displayCurrency
                       )
                     : null,
                   maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
