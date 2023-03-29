@@ -23,6 +23,7 @@ import { getCurrency } from "@/utils/currencies";
 import * as onChainData from "@/utils/on-chain-data";
 import { getPermitId, getPermit, savePermit } from "@/utils/permits/ft";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
+import { HashZero } from "@ethersproject/constants";
 
 const version = "v7";
 
@@ -754,7 +755,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           globalFees: feesOnTop,
           // TODO: Move this defaulting to the core SDK
           directFillingData: {
-            conduitKey: Sdk.Seaport.Addresses.OpenseaConduitKey[config.chainId],
+            conduitKey: Sdk.Seaport.Addresses.OpenseaConduitKey[config.chainId] ?? HashZero,
           },
           blurAuth,
           onRecoverableError: async (kind, error, data) => {

@@ -1,4 +1,4 @@
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, HashZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuildParams } from "@reservoir0x/sdk/dist/seaport/builders/base";
 import { generateSourceBytes, getRandomBytes } from "@reservoir0x/sdk/dist/utils";
@@ -88,7 +88,7 @@ export const getBuildInfo = async (
         ? Sdk.Seaport.Addresses.PausableZone[config.chainId] ?? AddressZero
         : AddressZero,
     // Use OpenSea's conduit for sharing approvals (where available)
-    conduitKey: Sdk.Seaport.Addresses.OpenseaConduitKey[config.chainId],
+    conduitKey: Sdk.Seaport.Addresses.OpenseaConduitKey[config.chainId] ?? HashZero,
     startTime: options.listingTime || now() - 1 * 60,
     endTime: options.expirationTime || now() + 6 * 30 * 24 * 3600,
     salt: source
