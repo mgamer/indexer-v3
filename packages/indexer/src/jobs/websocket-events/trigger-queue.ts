@@ -12,7 +12,10 @@ import {
   NewActivityWebsocketEventInfo,
 } from "@/jobs/websocket-events/events/new-activity-websocket-event";
 
-import { NewSellOrderWebsocketEvent } from "@/jobs/websocket-events/events/new-sell-order-websocket-event";
+import {
+  NewSellOrderWebsocketEvent,
+  NewSellOrderWebsocketEventInfo,
+} from "@/jobs/websocket-events/events/new-sell-order-websocket-event";
 
 import { randomUUID } from "crypto";
 import _ from "lodash";
@@ -86,8 +89,7 @@ export type EventInfo =
     }
   | {
       kind: EventKind.NewSellOrder;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      data: any;
+      data: NewSellOrderWebsocketEventInfo;
     };
 
 export const addToQueue = async (events: EventInfo[]) => {

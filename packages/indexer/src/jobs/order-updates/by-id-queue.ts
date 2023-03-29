@@ -445,7 +445,9 @@ if (config.doBackgroundWork) {
                 await websocketEventsTriggerQueue.addToQueue([
                   {
                     kind: websocketEventsTriggerQueue.EventKind.NewSellOrder,
-                    data: order,
+                    data: {
+                      orderId: order.id,
+                    },
                   },
                 ]);
               } else if (order.side === "buy") {
