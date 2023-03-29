@@ -43,6 +43,10 @@ export const getStatsV2Options: RouteOptions = {
       normalizeRoyalties: Joi.boolean()
         .default(false)
         .description("If true, prices will include missing royalties to be added on-top."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     })
       .oxor("collection", "token")
       .or("collection", "token"),
@@ -457,7 +461,8 @@ export const getStatsV2Options: RouteOptions = {
                             nativeAmount: r.floor_sell_value,
                           },
                         },
-                        fromBuffer(r.floor_sell_currency)
+                        fromBuffer(r.floor_sell_currency),
+                        query.displayCurrency
                       )
                     : null,
                   maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
@@ -488,7 +493,8 @@ export const getStatsV2Options: RouteOptions = {
                             nativeAmount: r.top_buy_price,
                           },
                         },
-                        fromBuffer(r.top_buy_currency)
+                        fromBuffer(r.top_buy_currency),
+                        query.displayCurrency
                       )
                     : null,
                   maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,

@@ -28,13 +28,12 @@ type Marketplace = {
 const version = "v1";
 
 export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
-  description: "Collections",
-  notes: "List of supported marketplaces for the collection.",
-  tags: ["api"],
+  description: "Supported marketplaces by collection",
+  notes: "Supported marketplaces by collection",
+  tags: ["api", "Collections"],
   plugins: {
     "hapi-swagger": {
       order: 5,
-      deprecated: true,
     },
   },
   validate: {
@@ -105,18 +104,6 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           },
           orderbook: "x2y2",
           orderKind: "x2y2",
-          listingEnabled: false,
-        },
-        {
-          name: "Foundation",
-          imageUrl: `https://${
-            getNetworkSettings().subDomain
-          }.reservoir.tools/redirect/sources/foundation/logo/v2`,
-          fee: {
-            bps: 500,
-          },
-          orderbook: null,
-          orderKind: null,
           listingEnabled: false,
         },
       ];

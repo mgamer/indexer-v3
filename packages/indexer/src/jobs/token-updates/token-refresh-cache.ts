@@ -27,7 +27,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { contract, tokenId, skipTopBidSimulation } = job.data;
+      const { contract, tokenId, checkTopBid } = job.data;
 
       if (contract === "0x4923917e9e288b95405e2c893d0ac46b895dda22") {
         // Skip OpenSea Shared contract simulations
@@ -69,9 +69,11 @@ if (config.doBackgroundWork) {
         });
       }
 
-      // Simulate and revalidate the top bid on the token
-      const topBid = await idb.oneOrNone(
-        `
+      // Top bid simulation is very costly so we only do it if explicitly requested
+      if (checkTopBid) {
+        // Simulate and revalidate the top bid on the token
+        const topBid = await idb.oneOrNone(
+          `
           SELECT
             o.id
           FROM orders o
@@ -92,27 +94,28 @@ if (config.doBackgroundWork) {
           ORDER BY o.value DESC
           LIMIT 1
         `,
-        {
-          contract: toBuffer(contract),
-          tokenId,
-        }
-      );
-      if (topBid) {
-        // Revalidate
-        await orderFixes.addToQueue([{ by: "id", data: { id: topBid.id } }]);
+          {
+            contract: toBuffer(contract),
+            tokenId,
+          }
+        );
+        if (topBid) {
+          // Revalidate
+          await orderFixes.addToQueue([{ by: "id", data: { id: topBid.id } }]);
 
-        // Simulate
-        if (!skipTopBidSimulation && config.chainId === 1) {
-          await inject({
-            method: "POST",
-            url: `/management/orders/simulate/v1`,
-            headers: {
-              "Content-Type": "application/json",
-            },
-            payload: {
-              id: topBid.id,
-            },
-          });
+          // Simulate
+          if (config.chainId === 1) {
+            await inject({
+              method: "POST",
+              url: `/management/orders/simulate/v1`,
+              headers: {
+                "Content-Type": "application/json",
+              },
+              payload: {
+                id: topBid.id,
+              },
+            });
+          }
         }
       }
     },
@@ -123,14 +126,10 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (
-  contract: string,
-  tokenId: string,
-  skipTopBidSimulation?: boolean
-) =>
+export const addToQueue = async (contract: string, tokenId: string, checkTopBid?: boolean) =>
   queue.add(
     randomUUID(),
-    { contract, tokenId, skipTopBidSimulation },
+    { contract, tokenId, checkTopBid },
     {
       // No more than one job per token per second
       jobId: `${contract}:${tokenId}:${now()}`,

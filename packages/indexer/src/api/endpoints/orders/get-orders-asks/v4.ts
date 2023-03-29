@@ -18,6 +18,7 @@ import {
 import { CollectionSets } from "@/models/collection-sets";
 import { Orders } from "@/utils/orders";
 import { Sources } from "@/models/sources";
+import { TokenSets } from "@/models/token-sets";
 
 const version = "v4";
 
@@ -126,6 +127,10 @@ export const getOrdersAsksV4Options: RouteOptions = {
         .max(1000)
         .default(50)
         .description("Amount of items returned in response."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     })
       .oxor("token", "tokenSetId")
       .with("community", "maker")
@@ -243,15 +248,19 @@ export const getOrdersAsksV4Options: RouteOptions = {
 
       if (query.tokenSetId) {
         baseQuery += `
-          JOIN token_sets_tokens tst1
-            ON tst1.token_set_id = orders.token_set_id
-          JOIN token_sets_tokens tst2
-            ON tst2.contract = tst1.contract
-            AND tst2.token_id = tst1.token_id
+            JOIN token_sets_tokens tst1
+              ON tst1.token_set_id = orders.token_set_id
+            JOIN token_sets_tokens tst2
+              ON tst2.contract = tst1.contract
+              AND tst2.token_id = tst1.token_id
         `;
 
-        (query as any).tokenSetId = `${query.tokenSetId}`;
         conditions.push(`tst2.token_set_id = $/tokenSetId/`);
+        const contractFilter = TokenSets.getContractFromTokenSetId(query.tokenSetId);
+        if (contractFilter) {
+          query.contractFilter = toBuffer(contractFilter);
+          conditions.push(`orders.contract = $/contractFilter/`);
+        }
       }
 
       if (query.contracts) {

@@ -17,11 +17,17 @@ contract ZeroExV4Module is BaseExchangeModule {
 
   // --- Fields ---
 
-  IZeroExV4 public constant EXCHANGE = IZeroExV4(0xDef1C0ded9bec7F1a1670819833240f027b25EfF);
+  IZeroExV4 public immutable EXCHANGE;
 
   // --- Constructor ---
 
-  constructor(address owner, address router) BaseModule(owner) BaseExchangeModule(router) {}
+  constructor(
+    address owner,
+    address router,
+    address exchange
+  ) BaseModule(owner) BaseExchangeModule(router) {
+    EXCHANGE = IZeroExV4(exchange);
+  }
 
   // --- Fallback ---
 

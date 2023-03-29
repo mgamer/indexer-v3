@@ -72,13 +72,19 @@ export const getExecuteBuyV7Options: RouteOptions = {
             preferredOrderSource: Joi.string()
               .lowercase()
               .pattern(regex.domain)
-              .when("tokens", { is: Joi.exist(), then: Joi.allow(), otherwise: Joi.forbidden() })
+              .when("token", { is: Joi.exist(), then: Joi.allow(), otherwise: Joi.forbidden() })
               .description(
-                "If there are multiple listings with equal best price, prefer this source over others.\nNOTE: if you want to fill a listing that is not the best priced, you need to pass a specific order id."
+                "If there are multiple listings with equal best price, prefer this source over others.\nNOTE: if you want to fill a listing that is not the best priced, you need to pass a specific order id or use `exactOrderSource`."
               ),
+            exactOrderSource: Joi.string()
+              .lowercase()
+              .pattern(regex.domain)
+              .when("token", { is: Joi.exist(), then: Joi.allow(), otherwise: Joi.forbidden() })
+              .description("Only consider orders from this source."),
           })
             .oxor("token", "orderId", "rawOrder")
             .or("token", "orderId", "rawOrder")
+            .oxor("preferredOrderSource", "exactOrderSource")
         )
         .min(1)
         .required()
@@ -157,7 +163,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       errors: Joi.array().items(
         Joi.object({
           message: Joi.string(),
-          orderId: Joi.number(),
+          orderId: Joi.string(),
         })
       ),
       path: Joi.array().items(
@@ -348,6 +354,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           data: any;
         };
         preferredOrderSource?: string;
+        exactOrderSource?: string;
       }[] = payload.items;
 
       for (const item of items) {
@@ -460,6 +467,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
           // which doesn't support royalty normalization and then filter out
           // such `null` fields in various normalized events/caches.
 
+          // Only one of `exactOrderSource` and `preferredOrderSource` will be set
+          const sourceDomain = item.exactOrderSource || item.preferredOrderSource;
+
           // Fetch all matching orders sorted by price
           const orderResults = await idb.manyOrNone(
             `
@@ -489,6 +499,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                     ? " AND orders.kind != 'blur'"
                     : ""
                 }
+                ${item.exactOrderSource ? " AND orders.source_id_int = $/sourceId/" : ""}
               ORDER BY
                 ${payload.normalizeRoyalties ? "orders.normalized_value" : "orders.value"},
                 ${
@@ -506,7 +517,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
             {
               tokenSetId: `token:${item.token}`,
               quantity: item.quantity,
-              sourceId: item.preferredOrderSource,
+              sourceId: sourceDomain ? sources.getByDomain(sourceDomain)?.id ?? -1 : undefined,
             }
           );
 
@@ -663,13 +674,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
       ];
 
       // Handle Blur authentication
-      let blurAuth: string | undefined;
+      let blurAuth: b.Auth | undefined;
       if (path.some((p) => p.source === "blur.io")) {
         const blurAuthId = b.getAuthId(payload.taker);
 
-        blurAuth = await b
-          .getAuth(blurAuthId)
-          .then((auth) => (auth ? auth.accessToken : undefined));
+        blurAuth = await b.getAuth(blurAuthId);
         if (!blurAuth) {
           const blurAuthChallengeId = b.getAuthChallengeId(payload.taker);
 
@@ -751,7 +760,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           onRecoverableError: async (kind, error, data) => {
             errors.push({
               orderId: data.orderId,
-              message: error.response?.data ?? error.message,
+              message: error.response?.data ? JSON.stringify(error.response.data) : error.message,
             });
             await routerOnRecoverableError(kind, error, data);
           },
@@ -890,7 +899,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           orderIds,
           data:
             // Do not return the final step unless all permits have a signature attached
-            steps[1].items.length === 0
+            steps[2].items.length === 0
               ? {
                   ...permitHandler.attachToRouterExecution(
                     txData,
@@ -920,6 +929,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
       return {
         steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
+        errors,
         path,
       };
     } catch (error) {

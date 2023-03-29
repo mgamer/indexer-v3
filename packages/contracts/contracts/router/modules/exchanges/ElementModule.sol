@@ -19,11 +19,17 @@ contract ElementModule is BaseExchangeModule {
 
   // --- Fields ---
 
-  IElement public constant EXCHANGE = IElement(0x20F780A973856B93f63670377900C1d2a50a77c4);
+  IElement public immutable EXCHANGE;
 
   // --- Constructor ---
 
-  constructor(address owner, address router) BaseModule(owner) BaseExchangeModule(router) {}
+  constructor(
+    address owner,
+    address router,
+    address exchange
+  ) BaseModule(owner) BaseExchangeModule(router) {
+    EXCHANGE = IElement(exchange);
+  }
 
   // --- Fallback ---
 

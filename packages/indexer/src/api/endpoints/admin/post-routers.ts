@@ -18,8 +18,15 @@ export const postRoutersOptions: RouteOptions = {
       "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     payload: Joi.object({
-      address: Joi.string().pattern(regex.address).required(),
-      domain: Joi.string().pattern(regex.domain).required(),
+      routers: Joi.array()
+        .items(
+          Joi.object({
+            address: Joi.string().pattern(regex.address).required(),
+            domain: Joi.string().pattern(regex.domain).required(),
+          })
+        )
+        .min(1)
+        .required(),
     }),
   },
   handler: async (request: Request) => {
@@ -31,26 +38,30 @@ export const postRoutersOptions: RouteOptions = {
     const payload = request.payload as any;
 
     try {
-      const address = payload.address;
-      const domain = payload.domain;
+      for (const router of payload.routers) {
+        const address = router.address;
+        const domain = router.domain;
 
-      await idb.none(
-        `
-          INSERT INTO routers (
-            address,
-            source_id
-          ) VALUES (
-            $/address/,
-            $/sourceId/
-          )
-        `,
-        {
-          address: toBuffer(address),
-          sourceId: await Sources.getInstance().then((sources) => sources.getByDomain(domain)?.id),
-        }
-      );
+        await idb.none(
+          `
+            INSERT INTO routers (
+              address,
+              source_id
+            ) VALUES (
+              $/address/,
+              $/sourceId/
+            ) ON CONFLICT DO NOTHING
+          `,
+          {
+            address: toBuffer(address),
+            sourceId: await Sources.getInstance().then(
+              (sources) => sources.getByDomain(domain)?.id
+            ),
+          }
+        );
 
-      await redis.publish(Channel.RoutersUpdated, `New router ${address} (${domain})`);
+        await redis.publish(Channel.RoutersUpdated, `New router ${address} (${domain})`);
+      }
 
       return { message: "Success" };
     } catch (error) {

@@ -6,7 +6,7 @@ import Joi from "joi";
 
 import { bn, formatEth, formatPrice, formatUsd, fromBuffer, now, regex } from "@/common/utils";
 import { Currency, getCurrency } from "@/utils/currencies";
-import { getUSDAndNativePrices } from "@/utils/prices";
+import { getUSDAndCurrencyPrices, getUSDAndNativePrices } from "@/utils/prices";
 import { Sources } from "@/models/sources";
 import crypto from "crypto";
 import { Assets } from "@/utils/assets";
@@ -109,9 +109,44 @@ export const getJoiPriceObject = async (
     };
   },
   currencyAddress: string,
+  displayCurrency?: string,
   totalFeeBps?: number
 ) => {
-  const currency = await getCurrency(currencyAddress);
+  let currency;
+
+  if (displayCurrency) {
+    const currentTime = now();
+    currency = await getCurrency(displayCurrency);
+
+    // Convert gross price
+    const convertedGrossPrice = await getUSDAndCurrencyPrices(
+      currencyAddress,
+      displayCurrency,
+      prices.gross.amount,
+      currentTime
+    );
+
+    if (convertedGrossPrice.currencyPrice) {
+      prices.gross.amount = convertedGrossPrice.currencyPrice;
+    }
+
+    // Convert net price
+    if (prices.net?.amount) {
+      const convertedNetPrice = await getUSDAndCurrencyPrices(
+        currencyAddress,
+        displayCurrency,
+        prices.net.amount,
+        currentTime
+      );
+
+      if (convertedNetPrice.currencyPrice) {
+        prices.net.amount = convertedNetPrice.currencyPrice;
+      }
+    }
+  } else {
+    currency = await getCurrency(currencyAddress);
+  }
+
   return {
     currency: {
       contract: currency.contract,
@@ -538,6 +573,8 @@ export const JoiSale = Joi.object({
   marketplaceFeeBps: Joi.number().optional(),
   paidFullRoyalty: Joi.boolean().optional(),
   feeBreakdown: Joi.array().items(JoiFeeBreakdown).optional(),
+  createdAt: Joi.string().optional(),
+  updatedAt: Joi.string().optional(),
 });
 
 export const feeInfoIsValid = (
@@ -615,6 +652,8 @@ export const getJoiSaleObject = async (sale: {
   txHash?: Buffer;
   logIndex?: number;
   batchIndex?: number;
+  updatedAt?: string;
+  createdAt?: string;
 }) => {
   const currency = await getCurrency(fromBuffer(sale.currencyAddress));
   const lastSaleFeeInfoIsValid = feeInfoIsValid(
@@ -716,5 +755,7 @@ export const getJoiSaleObject = async (sale: {
       sale.fees.marketplaceFeeBreakdown,
       lastSaleFeeInfoIsValid
     ),
+    createdAt: sale.createdAt,
+    updatedAt: sale.updatedAt,
   };
 };

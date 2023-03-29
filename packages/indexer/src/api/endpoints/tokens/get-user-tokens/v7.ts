@@ -110,6 +110,10 @@ export const getUserTokensV7Options: RouteOptions = {
       useNonFlaggedFloorAsk: Joi.boolean()
         .default(false)
         .description("If true, will return the collection non flagged floor ask."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     }),
   },
   response: {
@@ -122,7 +126,6 @@ export const getUserTokensV7Options: RouteOptions = {
             kind: Joi.string(),
             name: Joi.string().allow("", null),
             image: Joi.string().allow("", null),
-
             rarityScore: Joi.number().allow(null),
             rarityRank: Joi.number().allow(null),
             media: Joi.string().allow(null),
@@ -130,7 +133,7 @@ export const getUserTokensV7Options: RouteOptions = {
               id: Joi.string().allow(null),
               name: Joi.string().allow("", null),
               imageUrl: Joi.string().allow(null),
-              floorAskPrice: Joi.number().unsafe().allow(null),
+              floorAskPrice: JoiPrice.allow(null),
             }),
             lastSale: JoiSale.optional(),
             topBid: Joi.object({
@@ -403,6 +406,7 @@ export const getUserTokensV7Options: RouteOptions = {
                t.floor_sell_maker, t.floor_sell_valid_from, t.floor_sell_valid_to, t.floor_sell_source_id_int,
                t.rarity_score, ${selectLastSale}
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value,
+               o.currency AS collection_floor_sell_currency, o.currency_price AS collection_floor_sell_currency_price,
                c.name as collection_name, con.kind, c.metadata, ${
                  query.useNonFlaggedFloorAsk
                    ? "c.floor_sell_value"
@@ -432,6 +436,7 @@ export const getUserTokensV7Options: RouteOptions = {
           ) AS b
           ${tokensJoin}
           JOIN collections c ON c.id = t.collection_id
+          JOIN orders o ON o.id = c.floor_sell_id
           JOIN contracts con ON b.contract = con.address
       `;
 
@@ -521,7 +526,6 @@ export const getUserTokensV7Options: RouteOptions = {
           ? sources.get(Number(r.floor_sell_source_id_int), contract, tokenId)
           : undefined;
         const acquiredTime = new Date(r.acquired_at * 1000).toISOString();
-
         return {
           token: {
             contract: contract,
@@ -529,7 +533,6 @@ export const getUserTokensV7Options: RouteOptions = {
             kind: r.kind,
             name: r.name,
             image: r.image,
-
             rarityScore: r.rarity_score,
             rarityRank: r.rarity_rank,
             media: r.media,
@@ -538,7 +541,18 @@ export const getUserTokensV7Options: RouteOptions = {
               name: r.collection_name,
               imageUrl: r.metadata?.imageUrl,
               floorAskPrice: r.collection_floor_sell_value
-                ? formatEth(r.collection_floor_sell_value)
+                ? await getJoiPriceObject(
+                    {
+                      gross: {
+                        amount: String(
+                          r.collection_floor_sell_currency_price ?? r.collection_floor_sell_value
+                        ),
+                        nativeAmount: String(r.collection_floor_sell_value),
+                      },
+                    },
+                    fromBuffer(r.collection_floor_sell_currency),
+                    query.displayCurrency
+                  )
                 : null,
             },
             lastSale:
@@ -577,7 +591,8 @@ export const getUserTokensV7Options: RouteOptions = {
                             nativeAmount: r.top_bid_price,
                           },
                         },
-                        topBidCurrency
+                        topBidCurrency,
+                        query.displayCurrency
                       )
                     : null,
                 }
@@ -599,7 +614,8 @@ export const getUserTokensV7Options: RouteOptions = {
                         nativeAmount: r.floor_sell_value,
                       },
                     },
-                    floorAskCurrency
+                    floorAskCurrency,
+                    query.displayCurrency
                   )
                 : null,
               maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,

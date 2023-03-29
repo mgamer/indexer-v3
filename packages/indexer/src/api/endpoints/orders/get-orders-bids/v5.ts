@@ -124,6 +124,10 @@ export const getOrdersBidsV5Options: RouteOptions = {
         .max(1000)
         .default(50)
         .description("Amount of items returned in response."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     })
       .oxor("token", "tokenSetId", "contracts", "ids", "collection", "collectionsSetId")
       .with("community", "maker")
