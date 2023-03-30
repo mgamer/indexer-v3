@@ -9,9 +9,12 @@ import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { redisWebsocketPublisher } from "@/common/redis";
 import { logger } from "@/common/logger";
+import { Orders } from "@/utils/orders";
 export class NewSellOrderWebsocketEvent {
   public static async triggerEvent(data: NewSellOrderWebsocketEventInfo) {
     try {
+      const criteriaBuildQuery = Orders.buildCriteriaQuery("orders", "token_set_id", false);
+
       const rawResult = await idb.oneOrNone(
         `
             SELECT orders.id,
@@ -41,43 +44,8 @@ export class NewSellOrderWebsocketEvent {
             COALESCE(NULLIF(DATE_PART('epoch', orders.expiration), 'Infinity'), 0) AS expiration,
             orders.is_reservoir,
             extract(epoch
-                    FROM orders.created_at) AS created_at,
-            (CASE
-                  WHEN orders.fillability_status = 'filled' THEN 'filled'
-                  WHEN orders.fillability_status = 'cancelled' THEN 'cancelled'
-                  WHEN orders.fillability_status = 'expired' THEN 'expired'
-                  WHEN orders.fillability_status = 'no-balance' THEN 'inactive'
-                  WHEN orders.approval_status = 'no-approval' THEN 'inactive'
-                  ELSE 'active'
-              END) AS status,
-            orders.updated_at,
-            (CASE
-                  WHEN orders.token_set_id LIKE 'token:%' THEN
-                        (SELECT json_build_object('kind', 'token', 'data', json_build_object('token', json_build_object('tokenId', (split_part(orders.token_set_id, ':', 3))))))
-                  WHEN orders.token_set_id LIKE 'contract:%' THEN
-                        (SELECT json_build_object('kind', 'collection', 'data', json_build_object('collection', json_build_object('id', substring(orders.token_set_id
-                                                                                                                                                  FROM 10)))))
-                  WHEN orders.token_set_id LIKE 'range:%' THEN
-                        (SELECT json_build_object('kind', 'collection', 'data', json_build_object('collection', json_build_object('id', substring(orders.token_set_id
-                                                                                                                                                  FROM 7)))))
-                  WHEN orders.token_set_id LIKE 'list:%' THEN
-                        (SELECT CASE
-                                    WHEN token_sets.collection_id IS NULL
-                                          AND token_sets.attribute_id IS NULL THEN
-                                            (SELECT json_build_object('kind', 'custom'))
-                                    WHEN token_sets.attribute_id IS NULL THEN
-                                            (SELECT json_build_object('kind', 'collection', 'data', json_build_object('collection', json_build_object('id', token_sets.collection_id))))
-                                    ELSE
-                                            (SELECT json_build_object('kind', 'attribute', 'data', json_build_object('collection', json_build_object('id', (token_sets.schema -> 'data' ->> 'collection')::TEXT), 'attribute', json_build_object('key', (token_sets.schema -> 'data' -> 'attributes' -> 0 ->> 'key')::TEXT, 'value', (token_sets.schema -> 'data' -> 'attributes' -> 0 ->> 'value')::TEXT))))
-                                END
-                          FROM token_sets
-                          WHERE token_sets.id = orders.token_set_id
-                          LIMIT 1)
-                  WHEN orders.token_set_id LIKE 'dynamic:collection-non-flagged:%' THEN
-                        (SELECT json_build_object('kind', 'collection', 'data', json_build_object('collection', json_build_object('id', substring(orders.token_set_id
-                                                                                                                                                  FROM 32)))))
-                  ELSE NULL
-              END) AS criteria
+            FROM orders.created_at) AS created_at,
+            (${criteriaBuildQuery}) AS criteria
       FROM orders
       WHERE (orders.side = 'sell')
         AND (orders.id = $/orderId/)
@@ -152,14 +120,13 @@ export class NewSellOrderWebsocketEvent {
         isReservoir: rawResult.is_reservoir,
         isDynamic: Boolean(rawResult.dynamic || rawResult.kind === "sudoswap"),
         createdAt: new Date(rawResult.created_at * 1000).toISOString(),
-        updatedAt: new Date(rawResult.updated_at).toISOString(),
         rawData: rawResult.raw_data,
       };
 
       redisWebsocketPublisher.publish(
         "orders",
         JSON.stringify({
-          event: "new-sell-order",
+          event: "new-asks",
           data: result,
         })
       );
