@@ -232,9 +232,8 @@ export class DailyVolume {
 
     // Get a list of all collections that have non-null 1day values
     const collectionsWith1DayValues = await ridb.manyOrNone(
-      `SELECT id FROM collections WHERE day1_volume IS NOT NULL ${
-        collectionId ? "AND id = $/collectionId/" : ""
-      }`,
+      `SELECT id FROM collections WHERE day1_volume != 0
+       ${collectionId ? "AND id = $/collectionId/" : ""}`,
       { collectionId }
     );
 
@@ -253,15 +252,19 @@ export class DailyVolume {
               RANK() OVER (ORDER BY SUM(price) DESC, "collection_id") "rank",
               min(fe.price) AS "floor_sell_value",
               (
-                  SELECT sum("fe"."price") / (SELECT 
-                        sum("fe2"."price") 
-                        FROM fill_events_2 fe2 
-                       WHERE t.contract = fe2.contract AND
+                SELECT COALESCE(
+                  sum("fe"."price") / 
+                    NULLIF(
+                      (SELECT sum("fe2"."price") 
+                      FROM fill_events_2 fe2 
+                      WHERE t.contract = fe2.contract AND
                             fe2.price > 0
-                        AND "fe2"."timestamp" < $/yesterdayTimestamp/
-                        AND "fe2".timestamp >= $/endYesterdayTimestamp/
-                    )
-              ) as "volume_change"
+                      AND "fe2"."timestamp" < $/yesterdayTimestamp/
+                      AND "fe2".timestamp >= $/endYesterdayTimestamp/
+                      ), 0
+                    ), 100
+                )  as "volume_change"
+              )
 
             FROM "fill_events_2" "fe"
               JOIN "tokens" "t" ON "fe"."token_id" = "t"."token_id" AND "fe"."contract" = "t"."contract"
