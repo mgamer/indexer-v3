@@ -34,7 +34,7 @@ import { TxData, bn, generateSourceBytes, getErrorMessage, uniqBy } from "../../
 import ERC721Abi from "../../common/abis/Erc721.json";
 import ERC1155Abi from "../../common/abis/Erc1155.json";
 // Router
-import RouterAbi from "./abis/ReservoirV6_0_0.json";
+import RouterAbi from "./abis/ReservoirV6_0_1.json";
 // Modules
 import ElementModuleAbi from "./abis/ElementModule.json";
 import FoundationModuleAbi from "./abis/FoundationModule.json";
@@ -422,38 +422,6 @@ export class Router {
                 orderPrice,
                 options
               ),
-              orderIds: [detail.orderId],
-            },
-          ],
-          success: { [detail.orderId]: true },
-        };
-      }
-    }
-
-    // TODO: Add SuperRare router module
-    if (details.some(({ kind }) => kind === "superrare")) {
-      if (options?.relayer) {
-        throw new Error("Relayer not supported for Superrare orders");
-      }
-
-      if (details.length > 1) {
-        throw new Error("SuperRare sweeping is not supported");
-      } else {
-        if (options?.globalFees?.length) {
-          throw new Error("Fees not supported for Superrare orders");
-        }
-
-        const detail = details[0];
-
-        const order = detail.order as Sdk.SuperRare.Order;
-        const exchange = new Sdk.SuperRare.Exchange(this.chainId);
-
-        return {
-          txs: [
-            {
-              approvals: [],
-              permits: [],
-              txData: exchange.fillOrderTx(taker, order, options),
               orderIds: [detail.orderId],
             },
           ],
@@ -923,6 +891,8 @@ export class Router {
     const zoraDetails: ListingDetails[] = [];
     const nftxDetails: ListingDetails[] = [];
     const raribleDetails: ListingDetails[] = [];
+    const superRareDetails: ListingDetails[] = [];
+
     for (const detail of details) {
       // Skip any listings handled in a previous step
       if (success[detail.orderId]) {
@@ -988,6 +958,11 @@ export class Router {
 
         case "rarible": {
           detailsRef = raribleDetails;
+          break;
+        }
+
+        case "superrare": {
+          detailsRef = superRareDetails;
           break;
         }
 
@@ -1348,13 +1323,16 @@ export class Router {
                   [
                     await Promise.all(
                       orders.map(async (order, i) => {
+                        const totalAmount = order.getInfo()!.amount;
+                        const filledAmount = currencyDetails[i].amount ?? 1;
+
                         const orderData = {
                           parameters: {
                             ...order.params,
                             totalOriginalConsiderationItems: order.params.consideration.length,
                           },
-                          numerator: currencyDetails[i].amount ?? 1,
-                          denominator: order.getInfo()!.amount,
+                          numerator: filledAmount,
+                          denominator: totalAmount,
                           signature: order.params.signature,
                           extraData: await exchange.getExtraData(order),
                         };
@@ -1362,7 +1340,9 @@ export class Router {
                         if (currencyIsETH) {
                           return {
                             order: orderData,
-                            price: orders[i].getMatchingPrice(),
+                            price: bn(orders[i].getMatchingPrice())
+                              .mul(filledAmount)
+                              .div(totalAmount),
                           };
                         } else {
                           return orderData;
@@ -1461,23 +1441,28 @@ export class Router {
                   [
                     await Promise.all(
                       orders.map(async (order, i) => {
+                        const totalAmount = order.getInfo()!.amount;
+                        const filledAmount = currencyDetails[i].amount ?? 1;
+
                         const orderData = {
                           parameters: {
                             ...order.params,
                             totalOriginalConsiderationItems: order.params.consideration.length,
                           },
-                          numerator: currencyDetails[i].amount ?? 1,
-                          denominator: order.getInfo()!.amount,
+                          numerator: filledAmount,
+                          denominator: totalAmount,
                           signature: order.params.signature,
                           extraData: await exchange.getExtraData(orders[0], {
-                            amount: currencyDetails[0].amount ?? 1,
+                            amount: filledAmount,
                           }),
                         };
 
                         if (currencyIsETH) {
                           return {
                             order: orderData,
-                            price: orders[i].getMatchingPrice(),
+                            price: bn(orders[i].getMatchingPrice())
+                              .mul(filledAmount)
+                              .div(totalAmount),
                           };
                         } else {
                           return orderData;
@@ -2118,6 +2103,73 @@ export class Router {
 
       // Mark the listings as successfully handled
       for (const { orderId } of raribleDetails) {
+        success[orderId] = true;
+        orderIds.push(orderId);
+      }
+    }
+
+    // Handle SuperRare listings
+    if (superRareDetails.length) {
+      const orders = superRareDetails.map((d) => d.order as Sdk.SuperRare.Order);
+      const module = this.contracts.superRareModule;
+
+      const fees = getFees(superRareDetails);
+      const price = orders.map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
+      const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
+      const totalPrice = price.add(feeAmount);
+
+      executions.push({
+        module: module.address,
+        data:
+          orders.length === 1
+            ? module.interface.encodeFunctionData("acceptETHListing", [
+                {
+                  ...orders[0].params,
+                  token: orders[0].params.contract,
+                  priceWithFees: bn(orders[0].params.price).add(
+                    bn(orders[0].params.price).mul(3).div(100)
+                  ),
+                },
+                {
+                  fillTo: taker,
+                  refundTo: relayer,
+                  revertIfIncomplete: Boolean(!options?.partial),
+                  amount: price.add(price.mul(3).div(100)),
+                },
+                fees,
+              ])
+            : module.interface.encodeFunctionData("acceptETHListings", [
+                orders.map((order) => ({
+                  ...order.params,
+                  token: order.params.contract,
+                  priceWithFees: bn(orders[0].params.price).add(
+                    bn(orders[0].params.price).mul(3).div(100)
+                  ),
+                })),
+                {
+                  fillTo: taker,
+                  refundTo: relayer,
+                  revertIfIncomplete: Boolean(!options?.partial),
+                  amount: price.add(price.mul(3).div(100)),
+                },
+                fees,
+              ]),
+        value: totalPrice,
+      });
+
+      // Track any possibly required swap
+      swapDetails.push({
+        tokenIn: buyInCurrency,
+        tokenOut: Sdk.Common.Addresses.Eth[this.chainId],
+        tokenOutAmount: totalPrice,
+        recipient: this.contracts.superRareModule.address,
+        refundTo: relayer,
+        details: superRareDetails,
+        executionIndex: executions.length - 1,
+      });
+
+      // Mark the listings as successfully handled
+      for (const { orderId } of superRareDetails) {
         success[orderId] = true;
         orderIds.push(orderId);
       }

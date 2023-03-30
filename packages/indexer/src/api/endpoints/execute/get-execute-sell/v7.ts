@@ -588,9 +588,6 @@ export const getExecuteSellV7Options: RouteOptions = {
               continue;
             }
 
-            // Update the quantity to fill with the current order's available quantity
-            quantityToFill -= availableQuantity;
-
             await addToPath(
               {
                 id: result.id,
@@ -607,10 +604,13 @@ export const getExecuteSellV7Options: RouteOptions = {
                 kind: result.token_kind,
                 contract,
                 tokenId,
-                quantity: Math.min(item.quantity, availableQuantity),
+                quantity: Math.min(quantityToFill, availableQuantity),
                 owner,
               }
             );
+
+            // Update the quantity to fill with the current order's available quantity
+            quantityToFill -= availableQuantity;
           }
 
           if (quantityToFill > 0) {
@@ -846,6 +846,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           kind: "total-performance",
           totalTime: (perfTime2 - perfTime1) / 1000,
           items: bidDetails.map((b) => ({ orderKind: b.kind, isProtected: b.isProtected })),
+          itemsCount: bidDetails.length,
         })
       );
 
