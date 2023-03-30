@@ -85,6 +85,10 @@ CREATE INDEX "orders_conduit_index"
   ON "orders" ("maker", "side", "conduit")
   WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
 
+CREATE INDEX "orders_maker_side_conduit_index"
+  ON "orders" ("maker", "side", "conduit")
+  WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance' OR "fillability_status" = 'filled');
+
 CREATE INDEX "orders_kind_maker_nonce_full_index"
   ON "orders" ("kind", "maker", "nonce")
   WHERE ("contract" IS NOT NULL);
