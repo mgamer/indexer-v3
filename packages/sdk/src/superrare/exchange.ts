@@ -93,8 +93,8 @@ export class Exchange {
   public cancelOrderTx(order: Order): TxData {
     return {
       from: order.params.maker,
-      to: this.exchange.address,
-      data: this.exchange.interface.encodeFunctionData("removeSalePrice", [
+      to: this.baazar.address,
+      data: this.baazar.interface.encodeFunctionData("removeSalePrice", [
         order.params.contract,
         order.params.tokenId,
         AddressZero,
