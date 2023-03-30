@@ -230,14 +230,6 @@ export class DailyVolume {
     const currentDate = new Date();
     const startTime = new Date(currentDate.getTime() - 24 * 60 * 60 * 1000).getTime() / 1000;
 
-    // Get a list of all collections that have non-null 1day values
-    const collectionsWith1DayValues = await ridb.manyOrNone(
-      `SELECT id FROM collections WHERE day1_volume IS NOT NULL ${
-        collectionId ? "AND id = $/collectionId/" : ""
-      }`,
-      { collectionId }
-    );
-
     const results = await ridb.manyOrNone(
       `SELECT t1.collection_id,
             t1.volume,
@@ -312,38 +304,62 @@ export class DailyVolume {
       }
     }
 
-    const updatedCollectionIds = results.map((r: any) => r.collection_id);
-    const collectionsToUpdateToNull = collectionsWith1DayValues.filter(
-      (c: any) => !updatedCollectionIds.includes(c.id)
-    );
+    try {
+      await ridb.none(
+        `
+        UPDATE collections
+        SET
+          day1_volume = 0,
+          day1_rank = NULL,
+          day1_floor_sell_value = NULL,
+          day1_volume_change = NULL
+        WHERE id NOT IN (
+          SELECT collection_id
+          FROM (
+            SELECT t1.collection_id
+            FROM
+              (SELECT
+                t.contract,
+                "collection_id",
+                sum("fe"."price") AS "volume",
+                RANK() OVER (ORDER BY SUM(price) DESC, "collection_id") "rank",
+                min(fe.price) AS "floor_sell_value",
+                (
+                    SELECT sum("fe"."price") / (SELECT 
+                          sum("fe2"."price") 
+                          FROM fill_events_2 fe2 
+                        WHERE t.contract = fe2.contract AND
+                              fe2.price > 0
+                          AND "fe2"."timestamp" < $/yesterdayTimestamp/
+                          AND "fe2".timestamp >= $/endYesterdayTimestamp/
+                      )
+                ) as "volume_change"
 
-    if (collectionsToUpdateToNull.length) {
-      const updateToNullQueries = collectionsToUpdateToNull.map((c: any) => {
-        return {
-          query: `
-          UPDATE collections
-          SET
-            day1_volume = NULL,
-            day1_rank = NULL,
-            day1_floor_sell_value = NULL,
-            day1_volume_change = NULL
-          WHERE id = $/collection_id/
-        `,
-          values: { collection_id: c.id },
-        };
-      });
+              FROM "fill_events_2" "fe"
+                JOIN "tokens" "t" ON "fe"."token_id" = "t"."token_id" AND "fe"."contract" = "t"."contract"
+                JOIN "collections" "c" ON "t"."collection_id" = "c"."id"
+              WHERE
+                "fe"."timestamp" >= $/yesterdayTimestamp/
+                AND fe.price > 0
+                AND fe.is_primary IS NOT TRUE
+                AND coalesce(fe.wash_trading_score, 0) = 0
+                ${collectionId ? "AND collection_id = $/collectionId/" : ""}
+              GROUP BY t.contract, "collection_id") t1
+          ) t2
+        )
+    `,
+        {
+          yesterdayTimestamp: startTime,
+          endYesterdayTimestamp: startTime - 24 * 60 * 60,
 
-      try {
-        const concat = pgp.helpers.concat(updateToNullQueries);
-        await idb.none(concat);
-      } catch (error: any) {
-        logger.error(
-          "daily-volumes",
-          `Error while setting 1day values to null. collectionId=${collectionId}`
-        );
-
-        return false;
-      }
+          collectionId,
+        }
+      );
+    } catch (error: any) {
+      logger.error(
+        "daily-volumes",
+        `Error while inserting/updating daily volumes. collectionId=${collectionId}`
+      );
     }
 
     return true;
