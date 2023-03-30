@@ -61,6 +61,15 @@ export const getOpenseaSubDomain = () => {
   }
 };
 
+export const getOpenseaBaseUrl = () => {
+  switch (config.chainId) {
+    case 5:
+      return "https://testnets-api.opensea.io";
+    default:
+      return "https://api.opensea.io";
+  }
+};
+
 export const getServiceName = () => {
   return `indexer-${config.version}-${getNetworkName()}`;
 };
