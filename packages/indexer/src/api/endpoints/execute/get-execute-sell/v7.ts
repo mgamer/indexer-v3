@@ -846,6 +846,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           kind: "total-performance",
           totalTime: (perfTime2 - perfTime1) / 1000,
           items: bidDetails.map((b) => ({ orderKind: b.kind, isProtected: b.isProtected })),
+          itemsCount: bidDetails.length,
         })
       );
 

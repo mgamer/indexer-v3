@@ -190,6 +190,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payload = request.payload as any;
 
+    const perfTime1 = performance.now();
+
     try {
       // Handle fees on top
       const feesOnTop: {
@@ -926,6 +928,18 @@ export const getExecuteBuyV7Options: RouteOptions = {
         // to remove the auth step
         steps = steps.slice(1);
       }
+
+      const perfTime2 = performance.now();
+
+      logger.info(
+        "execute-buy-v7-performance",
+        JSON.stringify({
+          kind: "total-performance",
+          totalTime: (perfTime2 - perfTime1) / 1000,
+          items: listingDetails.map((b) => ({ orderKind: b.kind, source: b.source })),
+          itemsCount: listingDetails.length,
+        })
+      );
 
       return {
         steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
