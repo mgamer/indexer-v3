@@ -2,7 +2,6 @@ import { Interface } from "@ethersproject/abi";
 import { Provider } from "@ethersproject/abstract-provider";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
-import { HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { _TypedDataEncoder } from "@ethersproject/hash";
 import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
@@ -16,8 +15,7 @@ import * as Types from "./types";
 import * as Common from "../common";
 import { bn, getCurrentTimestamp, lc, n, s } from "../utils";
 
-import ConduitControllerAbi from "./abis/ConduitController.json";
-import ExchangeAbi from "./abis/Exchange.json";
+import { Exchange } from "./exchange";
 
 export class Order {
   public chainId: number;
@@ -240,14 +238,9 @@ export class Order {
   }
 
   public async checkFillability(provider: Provider) {
-    const conduitController = new Contract(
-      Addresses.ConduitController[this.chainId],
-      ConduitControllerAbi,
-      provider
-    );
-    const exchange = new Contract(Addresses.Exchange[this.chainId], ExchangeAbi, provider);
+    const exchange = new Exchange(this.chainId);
 
-    const status = await exchange.getOrderStatus(this.hash());
+    const status = await exchange.contract.connect(provider).getOrderStatus(this.hash());
     if (status.isCancelled) {
       throw new Error("not-fillable");
     }
@@ -255,18 +248,7 @@ export class Order {
       throw new Error("not-fillable");
     }
 
-    const makerConduit =
-      this.params.conduitKey === HashZero
-        ? Addresses.Exchange[this.chainId]
-        : await conduitController
-            .getConduit(this.params.conduitKey)
-            .then((result: { exists: boolean; conduit: string }) => {
-              if (!result.exists) {
-                throw new Error("invalid-conduit");
-              } else {
-                return result.conduit;
-              }
-            });
+    const makerConduit = exchange.deriveConduit(this.params.conduitKey);
 
     const info = this.getInfo()! as BaseOrderInfo;
     if (info.side === "buy") {

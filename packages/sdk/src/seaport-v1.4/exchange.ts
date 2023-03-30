@@ -7,7 +7,6 @@ import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { _TypedDataEncoder } from "@ethersproject/hash";
 import { keccak256 } from "@ethersproject/keccak256";
-import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
 import axios from "axios";
 import { MerkleTree } from "merkletreejs";
 
@@ -19,14 +18,17 @@ import * as CommonAddresses from "../common/addresses";
 import { TxData, bn, generateSourceBytes, lc, n, s } from "../utils";
 
 import ExchangeAbi from "./abis/Exchange.json";
+import { ConduitController } from "../seaport-base";
 
 export class Exchange {
   public chainId: number;
   public contract: Contract;
+  public conduitController: ConduitController;
 
   constructor(chainId: number) {
     this.chainId = chainId;
     this.contract = new Contract(Addresses.Exchange[this.chainId], ExchangeAbi);
+    this.conduitController = new ConduitController(this.chainId);
   }
 
   // --- Fill order ---
@@ -539,17 +541,7 @@ export class Exchange {
   public deriveConduit(conduitKey: string) {
     return conduitKey === HashZero
       ? Addresses.Exchange[this.chainId]
-      : "0x" +
-          solidityKeccak256(
-            ["bytes1", "address", "bytes32", "bytes32"],
-            [
-              "0xff",
-              Addresses.ConduitController[this.chainId],
-              conduitKey,
-              // https://github.com/ProjectOpenSea/seaport/blob/0a8e82ce7262b5ce0e67fa98a2131fd4c47c84e9/contracts/conduit/ConduitController.sol#L493
-              "0x023d904f2503c37127200ca07b976c3a53cc562623f67023115bf311f5805059",
-            ]
-          ).slice(-40);
+      : this.conduitController.deriveConduit(conduitKey);
   }
 
   // --- Derive basic sale information ---
