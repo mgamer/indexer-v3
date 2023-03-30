@@ -124,7 +124,7 @@ export class NewSellOrderWebsocketEvent {
       };
 
       redisWebsocketPublisher.publish(
-        "orders",
+        "asks",
         JSON.stringify({
           event: "ask.created",
           data: result,
