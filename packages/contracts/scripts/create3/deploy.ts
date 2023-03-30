@@ -156,4 +156,10 @@ export const triggerByModule = {
     ]),
   Permit2Module: async (chainId: number) =>
     dv("Permit2Module", "v1", [DEPLOYER, Sdk.Common.Addresses.Permit2[chainId]]),
+  SuperRareModule: async (chainId: number) =>
+    dv("SuperRareModule", "v1", [
+      DEPLOYER,
+      Sdk.RouterV6.Addresses.Router[chainId],
+      Sdk.SuperRare.Addresses.Bazaar[chainId],
+    ]),
 };

@@ -34,7 +34,7 @@ import { TxData, bn, generateSourceBytes, getErrorMessage, uniqBy } from "../../
 import ERC721Abi from "../../common/abis/Erc721.json";
 import ERC1155Abi from "../../common/abis/Erc1155.json";
 // Router
-import RouterAbi from "./abis/ReservoirV6_0_0.json";
+import RouterAbi from "./abis/ReservoirV6_0_1.json";
 // Modules
 import ElementModuleAbi from "./abis/ElementModule.json";
 import FoundationModuleAbi from "./abis/FoundationModule.json";
@@ -429,7 +429,6 @@ export class Router {
         };
       }
     }
-
 
     if (details.some(({ kind }) => kind === "blur")) {
       if (options?.relayer) {

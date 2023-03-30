@@ -8,17 +8,9 @@ import { ethers } from "hardhat";
 
 import { ExecutionInfo } from "../helpers/router";
 import { SuperRareListing, setupSuperRareListings } from "../helpers/superrare";
-import {
-  bn,
-  getChainId,
-  getRandomBoolean,
-  getRandomFloat,
-  getRandomInteger,
-  reset,
-  setupNFTs,
-} from "../../../utils";
+import { bn, getChainId, getRandomInteger, reset, setupNFTs } from "../../utils";
 
-describe("[ReservoirV6_0_0] SuperRare listings", () => {
+describe("[ReservoirV6_0_1] SuperRare listings", () => {
   const chainId = getChainId();
 
   let deployer: SignerWithAddress;
@@ -38,11 +30,13 @@ describe("[ReservoirV6_0_0] SuperRare listings", () => {
     ({ erc721 } = await setupNFTs(deployer));
 
     router = await ethers
-      .getContractFactory("ReservoirV6_0_0", deployer)
+      .getContractFactory("ReservoirV6_0_1", deployer)
       .then((factory) => factory.deploy());
     superRareModule = await ethers
       .getContractFactory("SuperRareModule", deployer)
-      .then((factory) => factory.deploy(router.address, router.address));
+      .then((factory) =>
+        factory.deploy(deployer.address, router.address, Sdk.SuperRare.Addresses.Bazaar[chainId])
+      );
   });
 
   const getBalances = async (token: string) => {

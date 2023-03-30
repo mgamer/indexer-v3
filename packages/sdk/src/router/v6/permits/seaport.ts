@@ -6,7 +6,7 @@ import { NFTToken } from "../types";
 import * as Sdk from "../../../index";
 import { TxData, getCurrentTimestamp, getRandomBytes } from "../../../utils";
 
-import RouterAbi from "../abis/ReservoirV6_0_0.json";
+import RouterAbi from "../abis/ReservoirV6_0_1.json";
 import SeaportModuleAbi from "../abis/SeaportModule.json";
 
 export type Data = {

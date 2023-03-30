@@ -23,7 +23,7 @@ import {
 } from "../utils";
 
 // TODO: Fix
-describe("[ReservoirV6_0_0] Router executions with amount checks", () => {
+describe("[ReservoirV6_0_1] Router executions with amount checks", () => {
   const chainId = getChainId();
 
   let deployer: SignerWithAddress;
@@ -45,7 +45,7 @@ describe("[ReservoirV6_0_0] Router executions with amount checks", () => {
     ({ erc721 } = await setupNFTs(deployer));
 
     router = await ethers
-      .getContractFactory("ReservoirV6_0_0", deployer)
+      .getContractFactory("ReservoirV6_0_1", deployer)
       .then((factory) => factory.deploy());
     seaportApprovalOrderZone = await ethers
       .getContractFactory("SeaportApprovalOrderZone", deployer)
