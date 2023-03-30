@@ -23,11 +23,17 @@ contract SuperRareModule is BaseExchangeModule {
 
   // --- Fields ---
 
-  ISuperRare public constant BAZAAR = ISuperRare(0x6D7c44773C52D396F43c2D511B81aa168E9a7a42);
+  ISuperRare public immutable BAZAAR;
 
   // --- Constructor ---
 
-  constructor(address owner, address router) BaseModule(owner) BaseExchangeModule(router) {}
+  constructor(
+    address owner,
+    address router,
+    address bazaar
+  ) BaseModule(owner) BaseExchangeModule(router) {
+    BAZAAR = ISuperRare(bazaar);
+  }
 
   // --- Fallback ---
 
@@ -49,11 +55,11 @@ contract SuperRareModule is BaseExchangeModule {
     // Execute fill
     _buy(
       listing.token,
-      listing.tokenId, 
-      listing.currency, 
+      listing.tokenId,
+      listing.currency,
       listing.price,
-      params.fillTo, 
-      params.revertIfIncomplete, 
+      params.fillTo,
+      params.revertIfIncomplete,
       listing.priceWithFees
     );
   }
@@ -71,7 +77,8 @@ contract SuperRareModule is BaseExchangeModule {
     refundETHLeftover(params.refundTo)
     chargeETHFees(fees, params.amount)
   {
-    for (uint256 i = 0; i < listings.length; ) {
+    uint256 length = listings.length;
+    for (uint256 i = 0; i < length; ) {
       _buy(
         listings[i].token,
         listings[i].tokenId,

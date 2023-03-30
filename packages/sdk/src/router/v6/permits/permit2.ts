@@ -9,7 +9,7 @@ import * as Sdk from "../../../index";
 import { TxData, bn, getCurrentTimestamp } from "../../../utils";
 
 import Permit2Abi from "../../../common/abis/Permit2.json";
-import RouterAbi from "../abis/ReservoirV6_0_0.json";
+import RouterAbi from "../abis/ReservoirV6_0_1.json";
 import Permit2ModuleAbi from "../abis/Permit2Module.json";
 
 export type TransferDetail = {
