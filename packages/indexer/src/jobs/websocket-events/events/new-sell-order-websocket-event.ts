@@ -126,12 +126,12 @@ export class NewSellOrderWebsocketEvent {
       redisWebsocketPublisher.publish(
         "orders",
         JSON.stringify({
-          event: "new-asks",
+          event: "new-ask",
           data: result,
         })
       );
     } catch (e) {
-      logger.error("new-sale-order-websocket-event", `Error triggering event. ${e}`);
+      logger.error("new-ask-websocket-event", `Error triggering event. ${e}`);
     }
   }
 }
