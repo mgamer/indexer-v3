@@ -158,6 +158,10 @@ jobs:
             ${{ github.sha }} \
             indexer-worker-polygon-4
           ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-polygon.yaml \
+            ${{ github.sha }} \
+            indexer-worker-polygon
+          ./utils/version_update.sh \
             ./prod/platform/indexer-websocket-ethereum.yaml \
             ${{ github.sha }} \
             indexer-websocket-ethereum
