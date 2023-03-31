@@ -33,24 +33,14 @@ export const getSyncOrdersAsksV1Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      sortBy: Joi.string()
-        .valid("createdAt", "updatedAt")
-        .default("updatedAt")
-        .description("Order the items are returned in the response."),
       sortDirection: Joi.string()
         .lowercase()
         .valid("asc", "desc")
-        .default("desc")
+        .default("asc")
         .description("Direction to order the items which are returned in the response."),
       continuation: Joi.string()
         .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
-      limit: Joi.number()
-        .integer()
-        .min(5000)
-        .max(5000)
-        .default(5000)
-        .description("Amount of items returned in response."),
     }),
   },
   response: {
@@ -101,9 +91,10 @@ export const getSyncOrdersAsksV1Options: RouteOptions = {
         })
       ),
       continuation: Joi.string().pattern(regex.base64).allow(null),
-    }).label(`getOrdersAsks${version.toUpperCase()}Response`),
+      cursor: Joi.string().pattern(regex.base64).allow(null),
+    }).label(`syncOrdersAsks${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(`get-orders-asks-${version}-handler`, `Wrong response schema: ${error}`);
+      logger.error(`sync-orders-asks-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -111,6 +102,8 @@ export const getSyncOrdersAsksV1Options: RouteOptions = {
     const query = request.query as any;
 
     const CACHE_TTL = 1000 * 60 * 60 * 24;
+
+    const limit = 1000;
 
     try {
       let baseQuery = `
@@ -173,33 +166,17 @@ export const getSyncOrdersAsksV1Options: RouteOptions = {
       } */
 
       if (query.continuation) {
-        const [createdAtOrUpdatedAt, id] = splitContinuation(
+        const [updatedAt, id] = splitContinuation(
           query.continuation,
           /^\d+(.\d+)?_0x[a-f0-9]{64}$/
         );
-        (query as any).createdAtOrUpdatedAt = createdAtOrUpdatedAt;
+        (query as any).updatedAt = updatedAt;
         (query as any).id = id;
 
-        if (query.sortBy === "updatedAt") {
-          if (query.sortDirection === "asc") {
-            conditions.push(
-              `(orders.updated_at, orders.id) > (to_timestamp($/priceOrCreatedAtOrUpdatedAt/), $/id/)`
-            );
-          } else {
-            conditions.push(
-              `(orders.updated_at, orders.id) < (to_timestamp($/priceOrCreatedAtOrUpdatedAt/), $/id/)`
-            );
-          }
+        if (query.sortDirection === "asc") {
+          conditions.push(`(orders.updated_at, orders.id) > (to_timestamp($/updatedAt/), $/id/)`);
         } else {
-          if (query.sortDirection === "asc") {
-            conditions.push(
-              `(orders.created_at, orders.id) > (to_timestamp($/priceOrCreatedAtOrUpdatedAt/), $/id/)`
-            );
-          } else {
-            conditions.push(
-              `(orders.created_at, orders.id) < (to_timestamp($/priceOrCreatedAtOrUpdatedAt/), $/id/)`
-            );
-          }
+          conditions.push(`(orders.updated_at, orders.id) < (to_timestamp($/updatedAt/), $/id/)`);
         }
       }
 
@@ -208,37 +185,23 @@ export const getSyncOrdersAsksV1Options: RouteOptions = {
       }
 
       // Sorting
-      if (query.sortBy === "updatedAt") {
-        if (query.sortDirection === "asc") {
-          baseQuery += ` ORDER BY orders.updated_at ASC, orders.id ASC`;
-        } else {
-          baseQuery += ` ORDER BY orders.updated_at DESC, orders.id DESC`;
-        }
+      if (query.sortDirection === "asc") {
+        baseQuery += ` ORDER BY orders.updated_at ASC, orders.id ASC`;
       } else {
-        if (query.sortDirection === "asc") {
-          baseQuery += ` ORDER BY orders.created_at ASC, orders.id ASC`;
-        } else {
-          baseQuery += ` ORDER BY orders.created_at DESC, orders.id DESC`;
-        }
+        baseQuery += ` ORDER BY orders.updated_at DESC, orders.id DESC`;
       }
 
       // Pagination
-      baseQuery += ` LIMIT $/limit/`;
+      baseQuery += ` LIMIT ${limit}`;
 
       const rawResult = await redb.manyOrNone(baseQuery, query);
 
       let continuationToken = null;
-      if (query.sortBy === "updatedAt") {
-        continuationToken = buildContinuation(
-          rawResult[rawResult.length - 1].updated_at + "_" + rawResult[rawResult.length - 1].id
-        );
-      } else {
-        continuationToken = buildContinuation(
-          rawResult[rawResult.length - 1].created_at + "_" + rawResult[rawResult.length - 1].id
-        );
-      }
+      continuationToken = buildContinuation(
+        rawResult[rawResult.length - 1].updated_at + "_" + rawResult[rawResult.length - 1].id
+      );
 
-      const continuation = rawResult.length === 5000 ? continuationToken : null;
+      const continuation = rawResult.length === limit ? continuationToken : null;
       const sources = await Sources.getInstance();
       const result = rawResult.map(async (r) => {
         let source: SourcesEntity | undefined;
@@ -322,13 +285,13 @@ export const getSyncOrdersAsksV1Options: RouteOptions = {
         cursor: !continuation ? continuationToken : null,
       });
 
-      if (rawResult.length === 5000) {
+      if (rawResult.length === limit) {
         response.ttl(CACHE_TTL);
       }
 
       return response;
     } catch (error) {
-      logger.error(`get-orders-asks-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(`sync-orders-asks-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },
