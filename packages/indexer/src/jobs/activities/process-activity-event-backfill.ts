@@ -20,7 +20,7 @@ import {
   SellOrderCancelledEventData,
 } from "@/jobs/activities/ask-cancel-activity";
 
-const QUEUE_NAME = "process-activity-event-queue";
+const QUEUE_NAME = "process-activity-event-backfill-queue";
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
@@ -64,7 +64,7 @@ if (config.doBackgroundWork) {
           break;
       }
     },
-    { connection: redis.duplicate(), concurrency: 45 }
+    { connection: redis.duplicate(), concurrency: 25 }
   );
 
   worker.on("error", (error) => {

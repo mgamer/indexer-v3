@@ -28,7 +28,6 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const { collection } = job.data;
-      logger.info(QUEUE_NAME, `Going to update token count for collection ${collection}`);
       const query = `
           UPDATE "collections"
           SET "token_count" = (SELECT COUNT(*) FROM "tokens" WHERE "collection_id" = $/collection/),
