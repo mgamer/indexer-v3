@@ -153,10 +153,6 @@ export class NewTopBidWebsocketEvent {
               event: "top-bid.changed",
               tags: {
                 collectionId: order.collection_id,
-                collectionSlug: order.collection_slug,
-                tokenSetId: order.token_set_id,
-                tokenId: order.token_set_id.split(":")[2],
-                maker: order.maker,
               },
               data: payload,
             })

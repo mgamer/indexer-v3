@@ -128,12 +128,7 @@ export class NewSellOrderWebsocketEvent {
         JSON.stringify({
           event: "ask.created",
           tags: {
-            collectionId: rawResult.contract,
-            tokenSetId: rawResult.token_set_id,
-            tokenId: rawResult.token_set_id.split(":")[2],
-            kind: rawResult.kind,
-            side: rawResult.side,
-            source: source?.getTitle(),
+            contract: fromBuffer(rawResult.contract),
           },
           data: result,
         })
