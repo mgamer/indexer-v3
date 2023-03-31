@@ -1,7 +1,7 @@
 import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
-import { OrderKind } from "@reservoir0x/sdk/dist/seaport/types";
+import { OrderKind } from "@reservoir0x/sdk/dist/seaport-base/types";
 import _ from "lodash";
 import pLimit from "p-limit";
 
