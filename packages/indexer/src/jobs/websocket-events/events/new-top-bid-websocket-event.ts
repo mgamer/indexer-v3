@@ -23,6 +23,7 @@ export class NewTopBidWebsocketEvent {
                 orders.maker,
                 orders.price,
                 orders.value,
+                orders.contract,
                 orders.currency_value,
                 orders.currency_price,
                 orders.currency,
@@ -108,6 +109,7 @@ export class NewTopBidWebsocketEvent {
       payloads.push({
         order: {
           id: order.id,
+          contract: fromBuffer(order.contract),
           maker: fromBuffer(order.maker),
           createdAt: new Date(order.created_at).toISOString(),
           validFrom: order.valid_from,
@@ -152,7 +154,7 @@ export class NewTopBidWebsocketEvent {
             JSON.stringify({
               event: "top-bid.changed",
               tags: {
-                collectionId: order.collection_id,
+                contract: order.contract,
               },
               data: payload,
             })
