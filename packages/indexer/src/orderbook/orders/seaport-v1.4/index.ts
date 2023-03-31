@@ -19,7 +19,7 @@ import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
-import { offChainCheck, offChainCheckPartial } from "@/orderbook/orders/seaport-v1.4/check";
+import { offChainCheck, offChainCheckPartial } from "@/orderbook/orders/seaport-base/check";
 import * as tokenSet from "@/orderbook/token-sets";
 import { TokenSet } from "@/orderbook/token-sets/token-list";
 import { getUSDAndNativePrices } from "@/utils/prices";
@@ -246,8 +246,9 @@ export const save = async (
       // Check: order fillability
       let fillabilityStatus = "fillable";
       let approvalStatus = "approved";
+      const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
       try {
-        await offChainCheck(order, {
+        await offChainCheck(order, exchange, {
           onChainApprovalRecheck: true,
           singleTokenERC721ApprovalCheck: metadata.fromOnChain,
         });

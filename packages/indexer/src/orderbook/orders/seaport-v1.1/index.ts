@@ -18,7 +18,7 @@ import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
-import { offChainCheck, offChainCheckPartial } from "@/orderbook/orders/seaport/check";
+import { offChainCheck, offChainCheckPartial } from "@/orderbook/orders/seaport-base/check";
 import * as tokenSet from "@/orderbook/token-sets";
 import { TokenSet } from "@/orderbook/token-sets/token-list";
 import { getUSDAndNativePrices } from "@/utils/prices";
@@ -32,7 +32,7 @@ import { allPlatformFeeRecipients } from "@/events-sync/handlers/royalties/confi
 export type OrderInfo =
   | {
       kind: "full";
-      orderParams: Sdk.Seaport.Types.OrderComponents;
+      orderParams: Sdk.SeaportBase.Types.OrderComponents;
       metadata: OrderMetadata;
       isReservoir?: boolean;
       isOpenSea?: boolean;
@@ -79,20 +79,20 @@ export const save = async (
   const orderValues: DbOrder[] = [];
 
   const arweaveData: {
-    order: Sdk.Seaport.Order;
+    order: Sdk.SeaportV11.Order;
     schemaHash?: string;
     source?: string;
   }[] = [];
 
   const handleOrder = async (
-    orderParams: Sdk.Seaport.Types.OrderComponents,
+    orderParams: Sdk.SeaportBase.Types.OrderComponents,
     metadata: OrderMetadata,
     isReservoir?: boolean,
     isOpenSea?: boolean,
     openSeaOrderParams?: PartialOrderComponents
   ) => {
     try {
-      const order = new Sdk.Seaport.Order(config.chainId, orderParams);
+      const order = new Sdk.SeaportV11.Order(config.chainId, orderParams);
       const info = order.getInfo();
       const id = order.hash();
 
@@ -192,7 +192,7 @@ export const save = async (
             // No zone
             AddressZero,
             // Pausable zone
-            Sdk.Seaport.Addresses.PausableZone[config.chainId],
+            Sdk.SeaportV11.Addresses.PausableZone[config.chainId],
           ].includes(order.params.zone)
         ) {
           return results.push({
@@ -236,8 +236,9 @@ export const save = async (
       // Check: order fillability
       let fillabilityStatus = "fillable";
       let approvalStatus = "approved";
+      const exchange = new Sdk.SeaportV11.Exchange(config.chainId);
       try {
-        await offChainCheck(order, {
+        await offChainCheck(order, exchange, {
           onChainApprovalRecheck: true,
           singleTokenERC721ApprovalCheck: metadata.fromOnChain,
         });
@@ -672,9 +673,7 @@ export const save = async (
         source_id_int: source?.id,
         is_reservoir: isReservoir ? isReservoir : null,
         contract: toBuffer(info.contract),
-        conduit: toBuffer(
-          new Sdk.Seaport.Exchange(config.chainId).deriveConduit(order.params.conduitKey)
-        ),
+        conduit: toBuffer(exchange.deriveConduit(order.params.conduitKey)),
         fee_bps: feeBps,
         fee_breakdown: feeBreakdown || null,
         dynamic: info.isDynamic ?? null,
@@ -1124,7 +1123,7 @@ export const save = async (
         source_id_int: source.id,
         is_reservoir: null,
         contract: toBuffer(orderParams.contract),
-        conduit: toBuffer(new Sdk.Seaport.Exchange(config.chainId).deriveConduit(conduitKey)),
+        conduit: toBuffer(new Sdk.SeaportV11.Exchange(config.chainId).deriveConduit(conduitKey)),
         fee_bps: feeBps,
         fee_breakdown: feeBreakdown || null,
         dynamic: orderParams.isDynamic ?? null,
@@ -1168,7 +1167,7 @@ export const save = async (
           ? handlePartialOrder(orderInfo.orderParams as PartialOrderComponents, orderInfo.metadata)
           : tracer.trace("handleOrder", { resource: "seaportSave" }, () =>
               handleOrder(
-                orderInfo.orderParams as Sdk.Seaport.Types.OrderComponents,
+                orderInfo.orderParams as Sdk.SeaportBase.Types.OrderComponents,
                 orderInfo.metadata,
                 orderInfo.isReservoir,
                 orderInfo.isOpenSea,
