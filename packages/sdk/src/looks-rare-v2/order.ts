@@ -10,15 +10,13 @@ import * as Addresses from "./addresses";
 import { Builders } from "./builders";
 import { BaseBuilder } from "./builders/base";
 import * as Types from "./types";
-// import * as Common from "../common";
-import {
-  // bn,
-  lc,
-  n,
-  s,
-} from "../utils";
+import * as Common from "../common";
+import { bn, lc, n, s } from "../utils";
 
 import ExchangeAbi from "./abis/Exchange.json";
+
+const MAGIC_VALUE_ORDER_NONCE_EXECUTED =
+  "0x53849a1acec87308423850dccd979fc7a4b74b75a79b19c3b98ec8df38a599db";
 
 export class Order {
   public chainId: number;
@@ -91,82 +89,82 @@ export class Order {
   }
 
   public async checkFillability(provider: Provider) {
-    // const chainId = await provider.getNetwork().then((n) => n.chainId);
+    const chainId = await provider.getNetwork().then((n) => n.chainId);
     const exchange = new Contract(Addresses.Exchange[this.chainId], ExchangeAbi, provider);
 
-    const executedOrCancelled = await exchange.isUserOrderNonceExecutedOrCancelled(
-      this.params.signer
-      // this.params.nonce
+    const executedOrCancelled = await exchange.userOrderNonce(
+      this.params.signer,
+      this.params.orderNonce
     );
 
-    if (executedOrCancelled) {
+    if (executedOrCancelled === MAGIC_VALUE_ORDER_NONCE_EXECUTED) {
       throw new Error("executed-or-cancelled");
     }
 
-    // if (this.params.isOrderAsk) {
-    //   // Detect the collection kind (erc721 or erc1155)
-    //   let kind: string | undefined;
-    //   if (!kind) {
-    //     const erc721 = new Common.Helpers.Erc721(provider, this.params.collection);
-    //     if (await erc721.isValid()) {
-    //       kind = "erc721";
+    if (this.params.quoteType === Types.QuoteType.Ask) {
+      // Detect the collection kind (erc721 or erc1155)
+      let kind: string | undefined;
+      if (!kind) {
+        const erc721 = new Common.Helpers.Erc721(provider, this.params.collection);
+        if (await erc721.isValid()) {
+          kind = "erc721";
 
-    //       // Check ownership
-    //       const owner = await erc721.getOwner(this.params.tokenId);
-    //       if (lc(owner) !== lc(this.params.signer)) {
-    //         throw new Error("no-balance");
-    //       }
+          // Check ownership
+          const owner = await erc721.getOwner(this.params.itemIds[0]);
+          if (lc(owner) !== lc(this.params.signer)) {
+            throw new Error("no-balance");
+          }
 
-    //       // Check approval
-    //       const isApproved = await erc721.isApproved(
-    //         this.params.signer,
-    //         Addresses.TransferManagerErc721[this.chainId]
-    //       );
-    //       if (!isApproved) {
-    //         throw new Error("no-approval");
-    //       }
-    //     }
-    //   }
-    //   if (!kind) {
-    //     const erc1155 = new Common.Helpers.Erc1155(provider, this.params.collection);
-    //     if (await erc1155.isValid()) {
-    //       kind = "erc1155";
+          // Check approval
+          const isApproved = await erc721.isApproved(
+            this.params.signer,
+            Addresses.TransferManager[this.chainId]
+          );
+          if (!isApproved) {
+            throw new Error("no-approval");
+          }
+        }
+      }
+      if (!kind) {
+        const erc1155 = new Common.Helpers.Erc1155(provider, this.params.collection);
+        if (await erc1155.isValid()) {
+          kind = "erc1155";
 
-    //       // Check balance
-    //       const balance = await erc1155.getBalance(this.params.signer, this.params.tokenId);
-    //       if (bn(balance).lt(1)) {
-    //         throw new Error("no-balance");
-    //       }
+          // Check balance
+          const balance = await erc1155.getBalance(this.params.signer, this.params.itemIds[0]);
+          if (bn(balance).lt(1)) {
+            throw new Error("no-balance");
+          }
 
-    //       // Check approval
-    //       const isApproved = await erc1155.isApproved(
-    //         this.params.signer,
-    //         Addresses.TransferManagerErc1155[this.chainId]
-    //       );
-    //       if (!isApproved) {
-    //         throw new Error("no-approval");
-    //       }
-    //     }
-    //   }
+          // Check approval
+          const isApproved = await erc1155.isApproved(
+            this.params.signer,
+            Addresses.TransferManager[this.chainId]
+          );
+          if (!isApproved) {
+            throw new Error("no-approval");
+          }
+        }
+      }
 
-    //   if (!kind) {
-    //     throw new Error("invalid");
-    //   }
-    // } else {
-    //   // Check that maker has enough balance to cover the payment
-    //   // and the approval to the token transfer proxy is set
-    //   const erc20 = new Common.Helpers.Erc20(provider, this.params.currency);
-    //   const balance = await erc20.getBalance(this.params.signer);
-    //   if (bn(balance).lt(this.params.price)) {
-    //     throw new Error("no-balance");
-    //   }
+      if (!kind) {
+        throw new Error("invalid");
+      }
+    } else {
+      // Check that maker has enough balance to cover the payment
+      // and the approval to the token transfer proxy is set
+      const erc20 = new Common.Helpers.Erc20(provider, this.params.currency);
+      const balance = await erc20.getBalance(this.params.signer);
+      if (bn(balance).lt(this.params.price)) {
+        throw new Error("no-balance");
+      }
 
-    //   // Check allowance
-    //   const allowance = await erc20.getAllowance(this.params.signer, Addresses.Exchange[chainId]);
-    //   if (bn(allowance).lt(this.params.price)) {
-    //     throw new Error("no-approval");
-    //   }
-    // }
+      // Check allowance
+      const allowance = await erc20.getAllowance(this.params.signer, Addresses.Exchange[chainId]);
+      if (bn(allowance).lt(this.params.price)) {
+        throw new Error("no-approval");
+      }
+    }
   }
 
   public buildMatching(taker: string, data?: object) {
@@ -179,9 +177,9 @@ export class Order {
         return new Builders.SingleToken(this.chainId);
       }
 
-      // case "contract-wide": {
-      //   return new Builders.ContractWide(this.chainId);
-      // }
+      case "contract-wide": {
+        return new Builders.ContractWide(this.chainId);
+      }
 
       default: {
         throw new Error("Unknown order kind");

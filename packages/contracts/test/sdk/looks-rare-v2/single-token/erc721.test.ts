@@ -80,7 +80,6 @@ describe("LooksRareV2 - SingleToken Erc721", () => {
       price,
       startTime: await getCurrentTimestamp(ethers.provider),
       endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
-      // nonce: await exchange.getNonce(ethers.provider, buyer.address),
     });
 
     // Sign the order
@@ -112,7 +111,6 @@ describe("LooksRareV2 - SingleToken Erc721", () => {
       price
       .sub(price.mul(50).div(10000))
     );
-
 
     expect(ownerAfter).to.eq(buyer.address);
   });

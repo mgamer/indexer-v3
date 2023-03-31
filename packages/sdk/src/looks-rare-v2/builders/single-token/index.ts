@@ -49,7 +49,7 @@ export class SingleTokenBuilder extends BaseBuilder {
       price: s(params.price),
       itemIds: params.itemIds.map((c) => s(c)),
       amounts: params.amounts.map((c) => s(c)),
-      strategyId: params.strategyId,
+      strategyId: 0,
       currency: params.currency,
       quoteType: params.quoteType,
       collectionType: params.collectionType,

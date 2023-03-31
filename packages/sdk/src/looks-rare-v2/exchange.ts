@@ -40,7 +40,7 @@ export class Exchange {
     const tx = this.fillOrderTx(await taker.getAddress(), makerOrder, takerOrderParams, options);
     return taker.sendTransaction({
       ...tx,
-      // gasLimit: 10000000
+      gasLimit: 10000000,
     });
   }
 

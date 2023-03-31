@@ -10,7 +10,7 @@ export interface BaseBuildParams {
   globalNonce?: number;
   subsetNonce?: number;
   orderNonce?: number;
-  strategyId: number;
+  strategyId?: number;
   collectionType: CollectionType;
 
   collection: string;

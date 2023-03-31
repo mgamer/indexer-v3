@@ -1,7 +1,6 @@
 import { BigNumberish } from "@ethersproject/bignumber";
-
+import { defaultAbiCoder } from "@ethersproject/abi";
 import { BaseBuildParams, BaseBuilder } from "../base";
-import * as Addresses from "../../addresses";
 import { Order } from "../../order";
 import { BytesEmpty, s } from "../../../utils";
 
@@ -29,54 +28,52 @@ export class ContractWideBuilder extends BaseBuilder {
   }
 
   public build(params: BuildParams) {
-    if (
-      params.strategy &&
-      ![
-        Addresses.StrategyCollectionSale[this.chainId],
-        Addresses.StrategyCollectionSaleDeprecated[this.chainId],
-      ].includes(params.strategy.toLowerCase())
-    ) {
-      throw new Error("Invalid strategy");
-    }
+    // if (
+    //   params.strategy &&
+    //   ![
+    //     Addresses.StrategyCollectionSale[this.chainId],
+    //     Addresses.StrategyCollectionSaleDeprecated[this.chainId],
+    //   ].includes(params.strategy.toLowerCase())
+    // ) {
+    //   throw new Error("Invalid strategy");
+    // }
 
-    if (params.isOrderAsk) {
-      throw new Error("Unsupported order side");
-    }
+    // if (params.isOrderAsk) {
+    //   throw new Error("Unsupported order side");
+    // }
 
     this.defaultInitialize(params);
 
     return new Order(this.chainId, {
       kind: "contract-wide",
-      isOrderAsk: params.isOrderAsk,
       signer: params.signer,
       collection: params.collection,
       price: s(params.price),
-      tokenId: "0",
-      amount: "1",
-      strategy: params.strategy ?? Addresses.StrategyCollectionSale[this.chainId],
+      itemIds: [],
+      amounts: ["1"],
+      strategyId: 1,
       currency: params.currency,
-      nonce: s(params.nonce),
+      quoteType: params.quoteType,
+      collectionType: params.collectionType,
+
       startTime: params.startTime!,
       endTime: params.endTime!,
-      minPercentageToAsk: params.minPercentageToAsk!,
-      params: BytesEmpty,
+      additionalParameters: params.additionalParameters ?? BytesEmpty,
+
+      globalNonce: params.globalNonce ?? 0,
+      subsetNonce: params.subsetNonce ?? 0,
+      orderNonce: params.orderNonce ?? 0,
+
       v: params.v,
       r: params.r,
       s: params.s,
     });
   }
 
-  public buildMatching(order: Order, taker: string, data: { tokenId: BigNumberish }) {
+  public buildMatching(order: Order, recipient: string, data: { tokenId: BigNumberish }) {
     return {
-      isOrderAsk: !order.params.isOrderAsk,
-      taker,
-      price: order.params.price,
-      tokenId: s(data.tokenId),
-      minPercentageToAsk:
-        order.params.strategy.toLowerCase() === Addresses.StrategyCollectionSale[this.chainId]
-          ? 9800
-          : 9750,
-      params: BytesEmpty,
+      recipient,
+      additionalParameters: defaultAbiCoder.encode(["uint256"], [data.tokenId]),
     };
   }
 }

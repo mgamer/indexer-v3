@@ -1,7 +1,7 @@
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import * as Common from "@reservoir0x/sdk/src/common";
-import * as LooksRare from "@reservoir0x/sdk/src/looks-rare";
+import * as LooksRareV2 from "@reservoir0x/sdk/src/looks-rare-v2";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
 import { ethers } from "hardhat";
@@ -13,7 +13,7 @@ import {
   setupNFTs,
 } from "../../../utils";
 
-describe("LooksRare - ContractWide Erc1155", () => {
+describe("LooksRareV2 - ContractWide Erc1155", () => {
   const chainId = getChainId();
 
   let deployer: SignerWithAddress;
@@ -42,7 +42,7 @@ describe("LooksRare - ContractWide Erc1155", () => {
     await weth.deposit(buyer, price);
 
     // Approve the exchange contract for the buyer
-    await weth.approve(buyer, LooksRare.Addresses.Exchange[chainId]);
+    await weth.approve(buyer, LooksRareV2.Addresses.Exchange[chainId]);
 
     // Mint erc1155 to seller
     await erc1155.connect(seller).mint(boughtTokenId);
@@ -52,23 +52,33 @@ describe("LooksRare - ContractWide Erc1155", () => {
     // Approve the transfer manager
     await nft.approve(
       seller,
-      LooksRare.Addresses.TransferManagerErc1155[chainId]
+      LooksRareV2.Addresses.TransferManager[chainId]
     );
 
-    const exchange = new LooksRare.Exchange(chainId);
+    const exchange = new LooksRareV2.Exchange(chainId);
 
-    const builder = new LooksRare.Builders.ContractWide(chainId);
+    await exchange.grantApprovals(seller, [
+      LooksRareV2.Addresses.Exchange[chainId]
+    ])
+
+    await exchange.grantApprovals(buyer, [
+      LooksRareV2.Addresses.Exchange[chainId]
+    ])
+
+    const builder = new LooksRareV2.Builders.ContractWide(chainId);
 
     // Build buy order
     const buyOrder = builder.build({
-      isOrderAsk: false,
+      quoteType: LooksRareV2.Types.QuoteType.Bid,
+      collectionType: LooksRareV2.Types.CollectionType.ERC1155,
       signer: buyer.address,
       collection: erc1155.address,
+      itemIds: [],
+      amounts: [1],
       currency: Common.Addresses.Weth[chainId],
       price,
       startTime: await getCurrentTimestamp(ethers.provider),
       endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
-      nonce: await exchange.getNonce(ethers.provider, buyer.address),
     });
 
     // Sign the order
@@ -103,7 +113,7 @@ describe("LooksRare - ContractWide Erc1155", () => {
     );
 
     expect(buyerBalanceAfter).to.eq(0);
-    expect(sellerBalanceAfter).to.eq(price.sub(price.mul(150).div(10000)));
+    expect(sellerBalanceAfter).to.eq(price.sub(price.mul(50).div(10000)));
     expect(ownerBalanceAfter).to.eq(0);
   });
 });
