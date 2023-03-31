@@ -34,7 +34,7 @@ import { TxData, bn, generateSourceBytes, getErrorMessage, uniqBy } from "../../
 import ERC721Abi from "../../common/abis/Erc721.json";
 import ERC1155Abi from "../../common/abis/Erc1155.json";
 // Router
-import RouterAbi from "./abis/ReservoirV6_0_0.json";
+import RouterAbi from "./abis/ReservoirV6_0_1.json";
 // Modules
 import ElementModuleAbi from "./abis/ElementModule.json";
 import FoundationModuleAbi from "./abis/FoundationModule.json";
@@ -161,7 +161,6 @@ export class Router {
       // Needed for filling Blur orders
       blurAuth?: {
         accessToken: string;
-        cfBm?: string;
       };
       // Callback for handling recoverable errors
       onRecoverableError?: (
@@ -431,38 +430,6 @@ export class Router {
       }
     }
 
-    // TODO: Add SuperRare router module
-    if (details.some(({ kind }) => kind === "superrare")) {
-      if (options?.relayer) {
-        throw new Error("Relayer not supported for Superrare orders");
-      }
-
-      if (details.length > 1) {
-        throw new Error("SuperRare sweeping is not supported");
-      } else {
-        if (options?.globalFees?.length) {
-          throw new Error("Fees not supported for Superrare orders");
-        }
-
-        const detail = details[0];
-
-        const order = detail.order as Sdk.SuperRare.Order;
-        const exchange = new Sdk.SuperRare.Exchange(this.chainId);
-
-        return {
-          txs: [
-            {
-              approvals: [],
-              permits: [],
-              txData: exchange.fillOrderTx(taker, order, options),
-              orderIds: [detail.orderId],
-            },
-          ],
-          success: { [detail.orderId]: true },
-        };
-      }
-    }
-
     if (details.some(({ kind }) => kind === "blur")) {
       if (options?.relayer) {
         throw new Error("Relayer not supported for Blur orders");
@@ -527,7 +494,6 @@ export class Router {
                 isFlagged: d.isFlagged,
               })),
               authToken: options?.blurAuth?.accessToken,
-              cfBm: options?.blurAuth?.cfBm,
             },
             {
               headers: {
@@ -625,7 +591,7 @@ export class Router {
     await Promise.all(
       details.map(async (detail, i) => {
         if (detail.kind === "seaport-partial") {
-          const order = detail.order as Sdk.Seaport.Types.PartialOrder;
+          const order = detail.order as Sdk.SeaportBase.Types.PartialOrder;
 
           let url = `${this.options?.orderFetcherBaseUrl}/api/listing`;
           url += `?contract=${detail.contract}`;
@@ -644,7 +610,7 @@ export class Router {
             });
 
             // Override the details
-            const fullOrder = new Sdk.Seaport.Order(this.chainId, result.data.order);
+            const fullOrder = new Sdk.SeaportV11.Order(this.chainId, result.data.order);
             details[i] = {
               ...detail,
               kind: "seaport",
@@ -673,7 +639,7 @@ export class Router {
     await Promise.all(
       details.map(async (detail, i) => {
         if (detail.kind === "seaport-v1.4-partial") {
-          const order = detail.order as Sdk.SeaportV14.Types.PartialOrder;
+          const order = detail.order as Sdk.SeaportBase.Types.PartialOrder;
 
           let url = `${this.options?.orderFetcherBaseUrl}/api/listing`;
           url += `?contract=${detail.contract}`;
@@ -730,18 +696,18 @@ export class Router {
           buyInCurrency === currency &&
           // All orders must have the same currency and conduit
           currency === details[0].currency &&
-          (order as Sdk.Seaport.Order).params.conduitKey ===
-            (details[0].order as Sdk.Seaport.Order).params.conduitKey &&
+          (order as Sdk.SeaportV11.Order).params.conduitKey ===
+            (details[0].order as Sdk.SeaportV11.Order).params.conduitKey &&
           !fees?.length
       ) &&
       !options?.globalFees?.length &&
       !options?.forceRouter &&
       !options?.relayer
     ) {
-      const exchange = new Sdk.Seaport.Exchange(this.chainId);
+      const exchange = new Sdk.SeaportV11.Exchange(this.chainId);
 
       const conduit = exchange.deriveConduit(
-        (details[0].order as Sdk.Seaport.Order).params.conduitKey
+        (details[0].order as Sdk.SeaportV11.Order).params.conduitKey
       );
 
       let approval: FTApproval | undefined;
@@ -755,7 +721,7 @@ export class Router {
       }
 
       if (details.length === 1) {
-        const order = details[0].order as Sdk.Seaport.Order;
+        const order = details[0].order as Sdk.SeaportV11.Order;
         return {
           txs: [
             {
@@ -776,7 +742,7 @@ export class Router {
           success: { [details[0].orderId]: true },
         };
       } else {
-        const orders = details.map((d) => d.order as Sdk.Seaport.Order);
+        const orders = details.map((d) => d.order as Sdk.SeaportV11.Order);
         return {
           txs: [
             {
@@ -817,7 +783,7 @@ export class Router {
       const exchange = new Sdk.SeaportV14.Exchange(this.chainId);
 
       const conduit = exchange.deriveConduit(
-        (details[0].order as Sdk.Seaport.Order).params.conduitKey
+        (details[0].order as Sdk.SeaportV11.Order).params.conduitKey
       );
 
       let approval: FTApproval | undefined;
@@ -925,6 +891,8 @@ export class Router {
     const zoraDetails: ListingDetails[] = [];
     const nftxDetails: ListingDetails[] = [];
     const raribleDetails: ListingDetails[] = [];
+    const superRareDetails: ListingDetails[] = [];
+
     for (const detail of details) {
       // Skip any listings handled in a previous step
       if (success[detail.orderId]) {
@@ -990,6 +958,11 @@ export class Router {
 
         case "rarible": {
           detailsRef = raribleDetails;
+          break;
+        }
+
+        case "superrare": {
+          detailsRef = superRareDetails;
           break;
         }
 
@@ -1296,11 +1269,11 @@ export class Router {
 
     // Handle Seaport listings
     if (Object.keys(seaportDetails).length) {
-      const exchange = new Sdk.Seaport.Exchange(this.chainId);
+      const exchange = new Sdk.SeaportV11.Exchange(this.chainId);
       for (const currency of Object.keys(seaportDetails)) {
         const currencyDetails = seaportDetails[currency];
 
-        const orders = currencyDetails.map((d) => d.order as Sdk.Seaport.Order);
+        const orders = currencyDetails.map((d) => d.order as Sdk.SeaportV11.Order);
         const module = this.contracts.seaportModule;
 
         const fees = getFees(currencyDetails);
@@ -1350,13 +1323,16 @@ export class Router {
                   [
                     await Promise.all(
                       orders.map(async (order, i) => {
+                        const totalAmount = order.getInfo()!.amount;
+                        const filledAmount = currencyDetails[i].amount ?? 1;
+
                         const orderData = {
                           parameters: {
                             ...order.params,
                             totalOriginalConsiderationItems: order.params.consideration.length,
                           },
-                          numerator: currencyDetails[i].amount ?? 1,
-                          denominator: order.getInfo()!.amount,
+                          numerator: filledAmount,
+                          denominator: totalAmount,
                           signature: order.params.signature,
                           extraData: await exchange.getExtraData(order),
                         };
@@ -1364,7 +1340,9 @@ export class Router {
                         if (currencyIsETH) {
                           return {
                             order: orderData,
-                            price: orders[i].getMatchingPrice(),
+                            price: bn(orders[i].getMatchingPrice())
+                              .mul(filledAmount)
+                              .div(totalAmount),
                           };
                         } else {
                           return orderData;
@@ -1463,23 +1441,28 @@ export class Router {
                   [
                     await Promise.all(
                       orders.map(async (order, i) => {
+                        const totalAmount = order.getInfo()!.amount;
+                        const filledAmount = currencyDetails[i].amount ?? 1;
+
                         const orderData = {
                           parameters: {
                             ...order.params,
                             totalOriginalConsiderationItems: order.params.consideration.length,
                           },
-                          numerator: currencyDetails[i].amount ?? 1,
-                          denominator: order.getInfo()!.amount,
+                          numerator: filledAmount,
+                          denominator: totalAmount,
                           signature: order.params.signature,
                           extraData: await exchange.getExtraData(orders[0], {
-                            amount: currencyDetails[0].amount ?? 1,
+                            amount: filledAmount,
                           }),
                         };
 
                         if (currencyIsETH) {
                           return {
                             order: orderData,
-                            price: orders[i].getMatchingPrice(),
+                            price: bn(orders[i].getMatchingPrice())
+                              .mul(filledAmount)
+                              .div(totalAmount),
                           };
                         } else {
                           return orderData;
@@ -2125,6 +2108,73 @@ export class Router {
       }
     }
 
+    // Handle SuperRare listings
+    if (superRareDetails.length) {
+      const orders = superRareDetails.map((d) => d.order as Sdk.SuperRare.Order);
+      const module = this.contracts.superRareModule;
+
+      const fees = getFees(superRareDetails);
+      const price = orders.map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
+      const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
+      const totalPrice = price.add(feeAmount);
+
+      executions.push({
+        module: module.address,
+        data:
+          orders.length === 1
+            ? module.interface.encodeFunctionData("acceptETHListing", [
+                {
+                  ...orders[0].params,
+                  token: orders[0].params.contract,
+                  priceWithFees: bn(orders[0].params.price).add(
+                    bn(orders[0].params.price).mul(3).div(100)
+                  ),
+                },
+                {
+                  fillTo: taker,
+                  refundTo: relayer,
+                  revertIfIncomplete: Boolean(!options?.partial),
+                  amount: price.add(price.mul(3).div(100)),
+                },
+                fees,
+              ])
+            : module.interface.encodeFunctionData("acceptETHListings", [
+                orders.map((order) => ({
+                  ...order.params,
+                  token: order.params.contract,
+                  priceWithFees: bn(orders[0].params.price).add(
+                    bn(orders[0].params.price).mul(3).div(100)
+                  ),
+                })),
+                {
+                  fillTo: taker,
+                  refundTo: relayer,
+                  revertIfIncomplete: Boolean(!options?.partial),
+                  amount: price.add(price.mul(3).div(100)),
+                },
+                fees,
+              ]),
+        value: totalPrice,
+      });
+
+      // Track any possibly required swap
+      swapDetails.push({
+        tokenIn: buyInCurrency,
+        tokenOut: Sdk.Common.Addresses.Eth[this.chainId],
+        tokenOutAmount: totalPrice,
+        recipient: this.contracts.superRareModule.address,
+        refundTo: relayer,
+        details: superRareDetails,
+        executionIndex: executions.length - 1,
+      });
+
+      // Mark the listings as successfully handled
+      for (const { orderId } of superRareDetails) {
+        success[orderId] = true;
+        orderIds.push(orderId);
+      }
+    }
+
     // Handle any needed swaps
 
     const successfulSwapExecutions: ExecutionInfo[] = [];
@@ -2429,7 +2479,9 @@ export class Router {
 
       const contract = detail.contract;
       const owner = taker;
-      const operator = Sdk.Seaport.Addresses.OpenseaConduit[this.chainId];
+      const operator = new Sdk.SeaportV11.Exchange(this.chainId).deriveConduit(
+        Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId]
+      );
 
       // Generate approval
       approvals.push({
@@ -2553,7 +2605,7 @@ export class Router {
         }
 
         case "seaport": {
-          const order = detail.order as Sdk.Seaport.Order;
+          const order = detail.order as Sdk.SeaportV11.Order;
           const module = this.contracts.seaportModule;
 
           const matchParams = order.buildMatching({
@@ -2562,7 +2614,7 @@ export class Router {
             ...(detail.extraArgs ?? {}),
           });
 
-          const exchange = new Sdk.Seaport.Exchange(this.chainId);
+          const exchange = new Sdk.SeaportV11.Exchange(this.chainId);
           executions.push({
             module: module.address,
             data: module.interface.encodeFunctionData(
@@ -2596,7 +2648,7 @@ export class Router {
         }
 
         case "seaport-partial": {
-          const order = detail.order as Sdk.Seaport.Types.PartialOrder;
+          const order = detail.order as Sdk.SeaportBase.Types.PartialOrder;
           const module = this.contracts.seaportModule;
 
           let url = `${this.options?.orderFetcherBaseUrl}/api/offer`;
@@ -2615,7 +2667,7 @@ export class Router {
               },
             });
 
-            const fullOrder = new Sdk.Seaport.Order(this.chainId, result.data.order);
+            const fullOrder = new Sdk.SeaportV11.Order(this.chainId, result.data.order);
             executions.push({
               module: module.address,
               data: module.interface.encodeFunctionData(
@@ -2708,7 +2760,7 @@ export class Router {
         }
 
         case "seaport-v1.4-partial": {
-          const order = detail.order as Sdk.SeaportV14.Types.PartialOrder;
+          const order = detail.order as Sdk.SeaportBase.Types.PartialOrder;
           const module = this.contracts.seaportV14Module;
 
           let url = `${this.options?.orderFetcherBaseUrl}/api/offer`;

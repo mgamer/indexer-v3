@@ -127,6 +127,10 @@ export const getOrdersBidsV5Options: RouteOptions = {
         .max(1000)
         .default(50)
         .description("Amount of items returned in response."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     })
       .oxor("token", "tokenSetId", "contracts", "ids", "collection", "collectionsSetId")
       .with("community", "maker")
@@ -280,7 +284,7 @@ export const getOrdersBidsV5Options: RouteOptions = {
       }
 
       if (query.token) {
-        baseQuery += ` JOIN token_sets_tokens ON token_sets_tokens.token_set_id = orders.token_set_id`;
+        baseQuery += ` JOIN token_sets_tokens ON token_sets_tokens.token_set_id = orders.token_set_id AND token_sets_tokens.contract = orders.contract`;
 
         const [contract, tokenId] = query.token.split(":");
 
@@ -522,7 +526,8 @@ export const getOrdersBidsV5Options: RouteOptions = {
               ? fromBuffer(r.currency)
               : r.side === "sell"
               ? Sdk.Common.Addresses.Eth[config.chainId]
-              : Sdk.Common.Addresses.Weth[config.chainId]
+              : Sdk.Common.Addresses.Weth[config.chainId],
+            query.displayCurrency
           ),
           validFrom: Number(r.valid_from),
           validUntil: Number(r.valid_until),

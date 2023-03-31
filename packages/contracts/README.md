@@ -31,7 +31,7 @@ yarn test ./test/router/v6/seaport/listings.test.ts
 
 #### Modules
 
-The [Reservoir router](../contracts/contracts/router/ReservoirV6_0_0.sol) is a singular immutable smart contract which acts as an execution layer on top of multiple [pluggable module contracts](../contracts/contracts/router/modules/). A module contract acts as a wrapper for a specific piece of funtionality (eg. filling Seaport/LooksRare/X2Y2 orders, swapping tokens on Uniswap V3). Modules can be registered by the owner of the router contract and once added they can never be revoked (thus ensuring there is no way to break backwards-compatibility).
+The [Reservoir router](../contracts/contracts/router/ReservoirV6_0_1.sol) is a singular immutable smart contract which acts as an execution layer on top of multiple [pluggable module contracts](../contracts/contracts/router/modules/). A module contract acts as a wrapper for a specific piece of funtionality (eg. filling Seaport/LooksRare/X2Y2 orders, swapping tokens on Uniswap V3). Modules can be registered by the owner of the router contract and once added they can never be revoked (thus ensuring there is no way to break backwards-compatibility).
 
 #### No state
 

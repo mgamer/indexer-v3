@@ -6,7 +6,7 @@ import Joi from "joi";
 
 import { bn, formatEth, formatPrice, formatUsd, fromBuffer, now, regex } from "@/common/utils";
 import { Currency, getCurrency } from "@/utils/currencies";
-import { getUSDAndNativePrices } from "@/utils/prices";
+import { getUSDAndCurrencyPrices, getUSDAndNativePrices } from "@/utils/prices";
 import { Sources } from "@/models/sources";
 import crypto from "crypto";
 import { Assets } from "@/utils/assets";
@@ -108,9 +108,44 @@ export const getJoiPriceObject = async (
     };
   },
   currencyAddress: string,
+  displayCurrency?: string,
   totalFeeBps?: number
 ) => {
-  const currency = await getCurrency(currencyAddress);
+  let currency;
+
+  if (displayCurrency) {
+    const currentTime = now();
+    currency = await getCurrency(displayCurrency);
+
+    // Convert gross price
+    const convertedGrossPrice = await getUSDAndCurrencyPrices(
+      currencyAddress,
+      displayCurrency,
+      prices.gross.amount,
+      currentTime
+    );
+
+    if (convertedGrossPrice.currencyPrice) {
+      prices.gross.amount = convertedGrossPrice.currencyPrice;
+    }
+
+    // Convert net price
+    if (prices.net?.amount) {
+      const convertedNetPrice = await getUSDAndCurrencyPrices(
+        currencyAddress,
+        displayCurrency,
+        prices.net.amount,
+        currentTime
+      );
+
+      if (convertedNetPrice.currencyPrice) {
+        prices.net.amount = convertedNetPrice.currencyPrice;
+      }
+    }
+  } else {
+    currency = await getCurrency(currencyAddress);
+  }
+
   return {
     currency: {
       contract: currency.contract,
@@ -221,7 +256,7 @@ export const getJoiDynamicPricingObject = async (
   kind: string,
   normalizeRoyalties: boolean,
   raw_data:
-    | Sdk.SeaportV14.Types.OrderComponents
+    | Sdk.SeaportBase.Types.OrderComponents
     | Sdk.Sudoswap.OrderParams
     | Sdk.Nftx.Types.OrderParams,
   currency?: string,
@@ -239,7 +274,7 @@ export const getJoiDynamicPricingObject = async (
   if (dynamic && (kind === "seaport" || kind === "seaport-v1.4")) {
     const order = new Sdk.SeaportV14.Order(
       config.chainId,
-      raw_data as Sdk.SeaportV14.Types.OrderComponents
+      raw_data as Sdk.SeaportBase.Types.OrderComponents
     );
 
     // Dutch auction

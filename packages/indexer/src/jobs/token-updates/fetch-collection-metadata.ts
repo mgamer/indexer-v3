@@ -129,7 +129,7 @@ if (config.doBackgroundWork) {
 
         // If token has moved collections, update the old collection's token count
         if (oldCollectionId) {
-          await collectionRecalcTokenCount.addToQueue(oldCollectionId);
+          await collectionRecalcTokenCount.addToQueue(oldCollectionId, true);
         }
 
         // If this is a new collection, recalculate floor price

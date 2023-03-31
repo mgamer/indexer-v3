@@ -223,6 +223,132 @@ export class DailyVolume {
   }
 
   /**
+   * update the 1day volume for all collections as a 24h rolling average
+   *
+   **/
+  public static async update1Day(collectionId = "") {
+    const currentDate = new Date();
+    const startTime = new Date(currentDate.getTime() - 24 * 60 * 60 * 1000).getTime() / 1000;
+
+    // Get a list of all collections that have non-null 1day values
+    const collectionsWith1DayValues = await ridb.manyOrNone(
+      `SELECT id FROM collections WHERE day1_volume != 0
+       ${collectionId ? "AND id = $/collectionId/" : ""}`,
+      { collectionId }
+    );
+
+    const results = await ridb.manyOrNone(
+      `SELECT t1.collection_id,
+            t1.volume,
+            t1.rank,
+            t1.floor_sell_value,
+            t1.volume_change,
+            t1.contract
+          FROM
+            (SELECT
+              t.contract,
+              "collection_id",
+              sum("fe"."price") AS "volume",
+              RANK() OVER (ORDER BY SUM(price) DESC, "collection_id") "rank",
+              min(fe.price) AS "floor_sell_value",
+              (
+                  SELECT sum("fe"."price") / (SELECT 
+                        sum("fe2"."price") 
+                        FROM fill_events_2 fe2 
+                       WHERE t.contract = fe2.contract AND
+                            fe2.price > 0
+                        AND "fe2"."timestamp" < $/yesterdayTimestamp/
+                        AND "fe2".timestamp >= $/endYesterdayTimestamp/
+                    )
+              ) as "volume_change"
+
+            FROM "fill_events_2" "fe"
+              JOIN "tokens" "t" ON "fe"."token_id" = "t"."token_id" AND "fe"."contract" = "t"."contract"
+              JOIN "collections" "c" ON "t"."collection_id" = "c"."id"
+            WHERE
+              "fe"."timestamp" >= $/yesterdayTimestamp/
+              AND fe.price > 0
+              AND fe.is_primary IS NOT TRUE
+              AND coalesce(fe.wash_trading_score, 0) = 0
+              ${collectionId ? "AND collection_id = $/collectionId/" : ""}
+            GROUP BY t.contract, "collection_id") t1`,
+      {
+        yesterdayTimestamp: startTime,
+        endYesterdayTimestamp: startTime - 24 * 60 * 60,
+
+        collectionId,
+      }
+    );
+
+    // If we have results, we can now insert them into the daily_volumes table and update collections
+    if (results.length) {
+      const queries: PgPromiseQuery[] = [];
+      results.forEach((values: any) => {
+        queries.push({
+          query: `
+            UPDATE collections
+            SET
+              day1_volume = $/volume/,
+              day1_rank = $/rank/,
+              day1_floor_sell_value = $/floor_sell_value/,
+              day1_volume_change = $/volume_change/
+            WHERE id = $/collection_id/
+            `,
+          values: values,
+        });
+      });
+
+      try {
+        const concat = pgp.helpers.concat(queries);
+        await idb.none(concat);
+      } catch (error: any) {
+        logger.error(
+          "daily-volumes",
+          `Error while inserting/updating daily volumes. collectionId=${collectionId}`
+        );
+
+        return false;
+      }
+    }
+
+    const updatedCollectionIds = results.map((r: any) => r.collection_id);
+    const collectionsToUpdateToNull = collectionsWith1DayValues.filter(
+      (c: any) => !updatedCollectionIds.includes(c.id)
+    );
+
+    if (collectionsToUpdateToNull.length) {
+      const updateToNullQueries = collectionsToUpdateToNull.map((c: any) => {
+        return {
+          query: `
+          UPDATE collections
+          SET
+            day1_volume = 0,
+            day1_rank = NULL,
+            day1_floor_sell_value = NULL,
+            day1_volume_change = NULL
+          WHERE id = $/collection_id/
+        `,
+          values: { collection_id: c.id },
+        };
+      });
+
+      try {
+        const concat = pgp.helpers.concat(updateToNullQueries);
+        await idb.none(concat);
+      } catch (error: any) {
+        logger.error(
+          "daily-volumes",
+          `Error while setting 1day values to null. collectionId=${collectionId}`
+        );
+
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
    * Update the collections table (fields day1_volume, day1_rank, etc) with latest values we have from daily_volumes
    *
    * @return boolean Returns false when it fails to update the collection, will need to reschedule the job
@@ -236,8 +362,6 @@ export class DailyVolume {
     date.setUTCHours(0, 0, 0, 0);
 
     const dateTimestamp = date.getTime();
-    const day1Timestamp = dateTimestamp / 1000 - 24 * 3600;
-    // the beginning of the day 7 days ago to the end of that day
     const day7Timestamps = [
       dateTimestamp / 1000 - 7 * 24 * 3600,
       dateTimestamp / 1000 - 6 * 24 * 3600,
@@ -250,42 +374,59 @@ export class DailyVolume {
     ];
 
     const valuesPostfix = useCleanValues ? "_clean" : "";
+    let day7Volumes: any = [];
+    let day30Volumes: any = [];
+    let allTimeVolumes: any = [];
 
-    let day1Results: any = [];
     let day7Results: any = [];
     let day30Results: any = [];
     let allTimeResults: any = [];
 
-    // Get the previous day data
+    // get volumes for last 7 days, 30 days and all time
+
+    const volumeQuery = `
+      SELECT
+        collection_id,
+        SUM(volume${valuesPostfix}) AS $1:name
+      FROM daily_volumes
+      WHERE timestamp >= $2
+      AND collection_id != '-1'
+      ${collectionId ? `AND collection_id = $3` : ""}
+      GROUP BY collection_id
+    `;
     try {
-      day1Results = await redb.manyOrNone(
-        `
-          SELECT 
-                 collection_id,
-                 rank${valuesPostfix} AS $1:name,
-                 volume${valuesPostfix} AS $2:name,
-                 floor_sell_value${valuesPostfix} as $3:name
-          FROM daily_volumes
-          WHERE timestamp = $4
-          AND collection_id != '-1'
-          ${collectionId ? `AND collection_id = $5` : ""}
-      `,
-        ["day1_rank", "day1_volume", "day1_floor_sell_value", day1Timestamp, collectionId]
-      );
-    } catch (error: any) {
+      day7Volumes = await redb.manyOrNone(volumeQuery, [
+        "day7_volume",
+        day7Timestamps[0],
+        collectionId,
+      ]);
+    } catch (error) {
       logger.error(
         "daily-volumes",
-        `Error while calculating previous day volumes. dateTimestamp=${dateTimestamp}, day1Timestamp=${day1Timestamp}, error=${error}`
+        `Error while getting 7day volume results. collectionId=${collectionId}`
       );
     }
 
-    if (!collectionId && !day1Results.length) {
+    try {
+      day30Volumes = await redb.manyOrNone(volumeQuery, [
+        "day30_volume",
+        day30Timestamps[0],
+        collectionId,
+      ]);
+    } catch (error) {
       logger.error(
         "daily-volumes",
-        `No daily volumes found for the previous day, should be impossible. dateTimestamp=${dateTimestamp}, day1Timestamp=${day1Timestamp}`
+        `Error while getting 30day volume results. collectionId=${collectionId}`
       );
+    }
 
-      return false;
+    try {
+      allTimeVolumes = await redb.manyOrNone(volumeQuery, ["all_time_volume", 0, collectionId]);
+    } catch (error) {
+      logger.error(
+        "daily-volumes",
+        `Error while getting all_time volume results. collectionId=${collectionId}`
+      );
     }
 
     // Get 7, 30, all_time days previous data
@@ -293,10 +434,9 @@ export class DailyVolume {
         SELECT 
                collection_id,
                RANK() OVER (ORDER BY SUM(volume${valuesPostfix}) DESC, "collection_id") $1:name,
-               SUM(volume${valuesPostfix}) AS $2:name,
-               MIN(floor_sell_value${valuesPostfix}) AS $3:name
+               MIN(floor_sell_value${valuesPostfix}) AS $2:name
         FROM daily_volumes
-        WHERE timestamp < $4 AND timestamp >= $5
+        WHERE timestamp < $3 AND timestamp >= $4
         AND collection_id != '-1'
         ${collectionId ? `AND collection_id = $5` : ""}
         GROUP BY collection_id
@@ -305,7 +445,6 @@ export class DailyVolume {
     try {
       day7Results = await redb.manyOrNone(query, [
         "day7_rank",
-        "day7_volume",
         "day7_floor_sell_value",
         day7Timestamps[1],
         day7Timestamps[0],
@@ -323,7 +462,6 @@ export class DailyVolume {
     try {
       day30Results = await redb.manyOrNone(query, [
         "day30_rank",
-        "day30_volume",
         "day30_floor_sell_value",
         day30Timestamps[1],
         day30Timestamps[0],
@@ -341,7 +479,6 @@ export class DailyVolume {
     try {
       allTimeResults = await redb.manyOrNone(query, [
         "all_time_rank",
-        "all_time_volume",
         "all_time_floor_sell_value",
         // 9999999999999 is the max timestamp we can store in postgres, so we use it to get all the data
         9999999999999,
@@ -357,7 +494,14 @@ export class DailyVolume {
       return false;
     }
 
-    const mergedArr = this.mergeArrays(day1Results, day7Results, day30Results, allTimeResults);
+    const mergedArr = this.mergeArrays(
+      day7Results,
+      day30Results,
+      allTimeResults,
+      day7Volumes,
+      day30Volumes,
+      allTimeVolumes
+    );
 
     if (!mergedArr.length) {
       logger.error(
@@ -376,8 +520,6 @@ export class DailyVolume {
           query: `
             UPDATE collections
             SET
-                day1_volume = $/day1_volume/,
-                ${collectionId ? "" : `day1_rank = $/day1_rank/,`}
                 day7_volume = $/day7_volume/,
                 ${collectionId ? "" : `day7_rank = $/day7_rank/,`}
                 day30_volume = $/day30_volume/,
@@ -434,7 +576,6 @@ export class DailyVolume {
       for (const row of mergedArr) {
         await redis
           .multi()
-          .zadd("collections_day1_rank", row.day1_rank, row.collection_id)
           .zadd("collections_day7_rank", row.day7_rank, row.collection_id)
           .zadd("collections_day30_rank", row.day30_rank, row.collection_id)
           .zadd("collections_all_time_rank", row.all_time_rank, row.collection_id)
@@ -631,13 +772,18 @@ export class DailyVolume {
   /**
    * Merge the individual arrays of day summaries together, make sure all fields exist for each collection_id
    *
-   * @param day1
    * @param day7
    * @param day30
    */
-  public static mergeArrays(day1: any, day7: any, day30: any, allTime: any) {
+  public static mergeArrays(
+    day7: any,
+    day30: any,
+    allTime: any,
+    day7Volumes: any,
+    day30Volumes: any,
+    allTimeVolumes: any
+  ) {
     const map = new Map();
-    day1.forEach((item: any) => map.set(item.collection_id, item));
     day7.forEach((item: any) =>
       map.set(item.collection_id, { ...map.get(item.collection_id), ...item })
     );
@@ -647,15 +793,23 @@ export class DailyVolume {
     allTime.forEach((item: any) =>
       map.set(item.collection_id, { ...map.get(item.collection_id), ...item })
     );
+
+    day7Volumes.forEach((item: any) =>
+      map.set(item.collection_id, { ...map.get(item.collection_id), ...item })
+    );
+
+    day30Volumes.forEach((item: any) =>
+      map.set(item.collection_id, { ...map.get(item.collection_id), ...item })
+    );
+
+    allTimeVolumes.forEach((item: any) =>
+      map.set(item.collection_id, { ...map.get(item.collection_id), ...item })
+    );
+
     const mergedArr = Array.from(map.values());
 
     for (let x = 0; x < mergedArr.length; x++) {
       const row = mergedArr[x];
-
-      if (!row["day1_volume"]) {
-        row["day1_volume"] = 0;
-        row["day1_rank"] = null;
-      }
 
       if (!row["day7_volume"]) {
         row["day7_volume"] = 0;
@@ -670,6 +824,13 @@ export class DailyVolume {
       if (!row["all_time_volume"]) {
         row["all_time_volume"] = 0;
         row["all_time_rank"] = null;
+      }
+
+      if (!row["day7_rank"]) {
+        row["day7_rank"] = null;
+      }
+      if (!row["day30_rank"]) {
+        row["day30_rank"] = null;
       }
     }
 

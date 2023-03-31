@@ -25,14 +25,20 @@ contract SwapModule is BaseExchangeModule {
 
   // --- Fields ---
 
-  IWETH public constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-
-  IUniswapV3Router public constant SWAP_ROUTER =
-    IUniswapV3Router(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
+  IWETH public immutable WETH;
+  IUniswapV3Router public immutable SWAP_ROUTER;
 
   // --- Constructor ---
 
-  constructor(address owner, address router) BaseModule(owner) BaseExchangeModule(router) {}
+  constructor(
+    address owner,
+    address router,
+    address weth,
+    address swapRouter
+  ) BaseModule(owner) BaseExchangeModule(router) {
+    WETH = IWETH(weth);
+    SWAP_ROUTER = IUniswapV3Router(swapRouter);
+  }
 
   // --- Fallback ---
 
@@ -71,12 +77,10 @@ contract SwapModule is BaseExchangeModule {
 
   // --- Swaps ---
 
-  function ethToExactOutput(Swap calldata swap, address refundTo)
-    external
-    payable
-    nonReentrant
-    refundETHLeftover(refundTo)
-  {
+  function ethToExactOutput(
+    Swap calldata swap,
+    address refundTo
+  ) external payable nonReentrant refundETHLeftover(refundTo) {
     if (address(swap.params.tokenIn) != address(WETH) || msg.value != swap.params.amountInMaximum) {
       revert WrongParams();
     }
@@ -103,11 +107,10 @@ contract SwapModule is BaseExchangeModule {
     }
   }
 
-  function erc20ToExactOutput(Swap calldata swap, address refundTo)
-    external
-    nonReentrant
-    refundERC20Leftover(refundTo, swap.params.tokenIn)
-  {
+  function erc20ToExactOutput(
+    Swap calldata swap,
+    address refundTo
+  ) external nonReentrant refundERC20Leftover(refundTo, swap.params.tokenIn) {
     // Approve the router if needed
     _approveERC20IfNeeded(swap.params.tokenIn, address(SWAP_ROUTER), swap.params.amountInMaximum);
 

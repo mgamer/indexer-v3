@@ -1,6 +1,6 @@
 import { idb, redb } from "@/common/db";
 import * as Pusher from "pusher";
-import { fromBuffer, now } from "@/common/utils";
+import { formatEth, fromBuffer, now } from "@/common/utils";
 import { Orders } from "@/utils/orders";
 import _ from "lodash";
 import { config } from "@/config/index";
@@ -34,8 +34,27 @@ export class NewTopBidWebsocketEvent {
                      NULLIF(DATE_PART('epoch', UPPER(orders.valid_between)), 'Infinity'),
                      0
                    ) AS "valid_until",
-                (${criteriaBuildQuery}) AS criteria
+                (${criteriaBuildQuery}) AS criteria,
+                c.id as collection_id,
+                c.slug as collection_slug,
+                c.name as collection_name,
+                c.normalized_floor_sell_id AS normalized_floor_sell_id,
+                c.normalized_floor_sell_value AS normalized_floor_sell_value,
+                c.normalized_floor_sell_source_id_int AS normalized_floor_sell_source_id_int,
+                normalized_floor_order.currency as normalized_floor_order_currency,
+                normalized_floor_order.currency_value as normalized_floor_order_currency_value,
+                c.floor_sell_id AS floor_sell_id,
+                c.floor_sell_value AS floor_sell_value,
+                c.floor_sell_source_id_int AS floor_sell_source_id_int,
+                floor_order.currency as floor_order_currency,
+                floor_order.currency_value as floor_order_currency_value,
+                COALESCE(((orders.value / (c.floor_sell_value * (1-((COALESCE(c.royalties_bps, 0)::float + 250) / 10000)))::numeric(78, 0) ) - 1) * 100, 0) AS floor_difference_percentage
+
               FROM orders
+                JOIN collections c on orders.contract = c.contract
+                JOIN orders normalized_floor_order ON c.normalized_floor_sell_id = normalized_floor_order.id
+                JOIN orders non_flagged_floor_order ON c.non_flagged_floor_sell_id = non_flagged_floor_order.id
+                JOIN orders floor_order ON c.floor_sell_id = floor_order.id
               WHERE orders.id = $/orderId/
               LIMIT 1
             `,
@@ -53,10 +72,39 @@ export class NewTopBidWebsocketEvent {
 
     const payloads = [];
     const owners = await NewTopBidWebsocketEvent.getOwners(order.token_set_id);
-    const ownersChunks = _.chunk(owners, Number(config.websocketServerEventMaxSizeInKb) * 20);
+    const ownersChunks = _.chunk(owners, 25 * 20);
     const source = (await Sources.getInstance()).get(Number(order.source_id_int));
 
     for (const ownersChunk of ownersChunks) {
+      const [price, priceNormalized] = await Promise.all([
+        getJoiPriceObject(
+          {
+            net: {
+              amount: order.currency_value ?? order.value,
+              nativeAmount: order.value,
+            },
+            gross: {
+              amount: order.currency_price ?? order.price,
+              nativeAmount: order.price,
+            },
+          },
+          fromBuffer(order.currency)
+        ),
+        getJoiPriceObject(
+          {
+            net: {
+              amount: order.currency_normalized_value ?? order.currency_value ?? order.value,
+              nativeAmount: order.normalized_value ?? order.value,
+            },
+            gross: {
+              amount: order.currency_price ?? order.price,
+              nativeAmount: order.price,
+            },
+          },
+          fromBuffer(order.currency)
+        ),
+      ]);
+
       payloads.push({
         order: {
           id: order.id,
@@ -71,35 +119,24 @@ export class NewTopBidWebsocketEvent {
             icon: source?.getIcon(),
             url: source?.metadata.url,
           },
-          price: await getJoiPriceObject(
-            {
-              net: {
-                amount: order.currency_value ?? order.value,
-                nativeAmount: order.value,
-              },
-              gross: {
-                amount: order.currency_price ?? order.price,
-                nativeAmount: order.price,
-              },
-            },
-            fromBuffer(order.currency)
-          ),
-          priceNormalized: await getJoiPriceObject(
-            {
-              net: {
-                amount: order.currency_normalized_value ?? order.currency_value ?? order.value,
-                nativeAmount: order.normalized_value ?? order.value,
-              },
-              gross: {
-                amount: order.currency_price ?? order.price,
-                nativeAmount: order.price,
-              },
-            },
-            fromBuffer(order.currency)
-          ),
+          price: {
+            currency: price.currency,
+            amount: price.amount,
+            netAmount: price.netAmount,
+            normalizedNetAmount: priceNormalized.netAmount,
+          },
+
           criteria: order.criteria,
         },
         owners: ownersChunk,
+        collection: {
+          id: order.collection_id,
+          slug: order.collection_slug,
+          name: order.collection_name,
+          floorAskPrice: formatEth(order.floor_sell_value),
+          floorAskPriceNormalized: formatEth(order.normalized_floor_sell_value),
+          floorDifferencePercentage: _.round(order.floor_difference_percentage || 0, 2),
+        },
       });
     }
 
@@ -113,7 +150,7 @@ export class NewTopBidWebsocketEvent {
           redisWebsocketPublisher.publish(
             "top-bids",
             JSON.stringify({
-              event: "new-top-bid",
+              event: "top-bid.changed",
               data: payload,
             })
           )

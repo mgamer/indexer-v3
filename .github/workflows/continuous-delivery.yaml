@@ -138,9 +138,17 @@ jobs:
             ${{ github.sha }} \
             indexer-worker-arbitrum
           ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-master.yaml \
+            ${{ github.sha }} \
+            indexer-worker-master
+          ./utils/version_update.sh \
             ./prod/platform/indexer-worker-optimism.yaml \
             ${{ github.sha }} \
             indexer-worker-optimism
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-polygon.yaml \
+            ${{ github.sha }} \
+            indexer-worker-polygon
           ./utils/version_update.sh \
             ./prod/platform/indexer-websocket-ethereum.yaml \
             ${{ github.sha }} \

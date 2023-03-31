@@ -5,7 +5,7 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { formatEth, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
@@ -78,6 +78,10 @@ export const getUserTokensV4Options: RouteOptions = {
       includeTopBid: Joi.boolean()
         .default(false)
         .description("If true, top bid will be returned in the response."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     }),
   },
   response: {
@@ -318,7 +322,8 @@ export const getUserTokensV4Options: RouteOptions = {
                             nativeAmount: r.top_bid_price,
                           },
                         },
-                        topBidCurrency
+                        topBidCurrency,
+                        query.displayCurrency
                       )
                     : null,
                 }
@@ -335,7 +340,8 @@ export const getUserTokensV4Options: RouteOptions = {
                       nativeAmount: r.floor_sell_value,
                     },
                   },
-                  floorAskCurrency
+                  floorAskCurrency,
+                  query.displayCurrency
                 )
               : null,
             acquiredAt: r.acquired_at ? new Date(r.acquired_at).toISOString() : null,
