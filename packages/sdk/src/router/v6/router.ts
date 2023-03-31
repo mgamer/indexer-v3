@@ -41,7 +41,6 @@ import ElementModuleAbi from "./abis/ElementModule.json";
 import FoundationModuleAbi from "./abis/FoundationModule.json";
 import LooksRareModuleAbi from "./abis/LooksRareModule.json";
 import NFTXModuleAbi from "./abis/NFTXModule.json";
-import Permit2ModuleAbi from "./abis/Permit2Module.json";
 import RaribleModuleAbi from "./abis/RaribleModule.json";
 import SeaportModuleAbi from "./abis/SeaportModule.json";
 import SeaportV14ModuleAbi from "./abis/SeaportV14Module.json";
@@ -135,11 +134,6 @@ export class Router {
         RaribleModuleAbi,
         provider
       ),
-      permit2Module: new Contract(
-        Addresses.Permit2Module[chainId] ?? AddressZero,
-        Permit2ModuleAbi,
-        provider
-      ),
       swapModule: new Contract(
         Addresses.SwapModule[chainId] ?? AddressZero,
         SwapModuleAbi,
@@ -208,6 +202,7 @@ export class Router {
         if (!isETH(this.chainId, detail.currency)) {
           approval = {
             currency: detail.currency,
+            amount: detail.price,
             owner: taker,
             operator: Sdk.Universe.Addresses.Exchange[this.chainId],
             txData: generateFTApprovalTxData(
@@ -285,6 +280,7 @@ export class Router {
         if (!isETH(this.chainId, detail.currency)) {
           approval = {
             currency: detail.currency,
+            amount: detail.price,
             owner: taker,
             operator: Sdk.Infinity.Addresses.Exchange[this.chainId],
             txData: generateFTApprovalTxData(
@@ -347,6 +343,7 @@ export class Router {
         if (!isETH(this.chainId, detail.currency)) {
           approval = {
             currency: detail.currency,
+            amount: detail.price,
             owner: taker,
             operator: Sdk.Flow.Addresses.Exchange[this.chainId],
             txData: generateNFTApprovalTxData(
@@ -712,6 +709,7 @@ export class Router {
       if (!isETH(this.chainId, details[0].currency)) {
         approval = {
           currency: details[0].currency,
+          amount: details[0].price,
           owner: taker,
           operator: conduit,
           txData: generateFTApprovalTxData(details[0].currency, taker, conduit),
@@ -786,6 +784,7 @@ export class Router {
       if (!isETH(this.chainId, details[0].currency)) {
         approval = {
           currency: details[0].currency,
+          amount: details[0].price,
           owner: taker,
           operator: conduit,
           txData: generateFTApprovalTxData(details[0].currency, taker, conduit),
@@ -2250,6 +2249,7 @@ export class Router {
 
             approvals.push({
               currency: tokenIn,
+              amount: inAmount,
               owner: relayer,
               operator: conduit,
               txData: generateFTApprovalTxData(tokenIn, relayer, conduit),

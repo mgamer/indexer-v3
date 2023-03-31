@@ -35,6 +35,7 @@ export type NFTPermit = {
 
 export type FTApproval = {
   currency: string;
+  amount: BigNumberish;
   owner: string;
   operator: string;
   txData: TxData;

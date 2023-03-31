@@ -53,7 +53,7 @@ const main = async () => {
   const chainId = await deploymentHelper.deployer.getChainId();
 
   const args = [deploymentHelper.deployer.address];
-  // await deploymentHelper.deploy("Permit2Module", args, {
+  // await deploymentHelper.deploy("SwapModule", args, {
   //   verifyOnEtherscan: true,
   // });
 };

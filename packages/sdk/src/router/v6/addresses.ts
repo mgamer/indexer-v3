@@ -17,13 +17,6 @@ export const ApprovalProxy: ChainIdToAddress = {};
 
 // Utility modules
 
-export const Permit2Module: ChainIdToAddress = {
-  [Network.Ethereum]: "0x96c15183d2349541da56510a63dbfc425641aa7f",
-  [Network.Polygon]: "0x96c15183d2349541da56510a63dbfc425641aa7f",
-  [Network.Optimism]: "0x96c15183d2349541da56510a63dbfc425641aa7f",
-  [Network.Arbitrum]: "0x96c15183d2349541da56510a63dbfc425641aa7f",
-};
-
 export const SwapModule: ChainIdToAddress = {
   [Network.Ethereum]: "0x5cf0a457d2b6c003232184178e87c91248f73477",
   [Network.Polygon]: "0x5cf0a457d2b6c003232184178e87c91248f73477",
