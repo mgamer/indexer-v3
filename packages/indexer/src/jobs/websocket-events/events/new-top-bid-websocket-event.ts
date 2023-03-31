@@ -148,9 +148,16 @@ export class NewTopBidWebsocketEvent {
       await Promise.all(
         payloads.map((payload) =>
           redisWebsocketPublisher.publish(
-            "top-bids",
+            "events",
             JSON.stringify({
               event: "top-bid.changed",
+              tags: {
+                collectionId: order.collection_id,
+                collectionSlug: order.collection_slug,
+                tokenSetId: order.token_set_id,
+                tokenId: order.token_id,
+                maker: order.maker,
+              },
               data: payload,
             })
           )
