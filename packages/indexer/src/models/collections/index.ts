@@ -138,7 +138,7 @@ export class Collections {
       collection.openseaFees as royalties.Royalty[] | undefined
     );
 
-    await marketplaceBlacklist.updateMarketplaceBlacklist(collection.id);
+    await marketplaceBlacklist.updateMarketplaceBlacklist(collection.contract);
   }
 
   public static async update(collectionId: string, fields: CollectionsEntityUpdateParams) {

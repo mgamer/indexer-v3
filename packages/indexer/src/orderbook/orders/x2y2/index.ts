@@ -15,7 +15,7 @@ import * as tokenSet from "@/orderbook/token-sets";
 import { Sources } from "@/models/sources";
 import * as royalties from "@/utils/royalties";
 import { Royalty } from "@/utils/royalties";
-import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
+// import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 
 export type OrderInfo = {
   orderParams: Sdk.X2Y2.Types.Order;
@@ -62,13 +62,13 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       }
 
-      const isFiltered = await checkMarketplaceIsFiltered(order.params.nft.token, "x2y2");
-      if (isFiltered) {
-        return results.push({
-          id,
-          status: "filtered",
-        });
-      }
+      // const isFiltered = await checkMarketplaceIsFiltered(order.params.nft.token, "x2y2");
+      // if (isFiltered) {
+      //   return results.push({
+      //     id,
+      //     status: "filtered",
+      //   });
+      // }
 
       const currentTime = now();
 

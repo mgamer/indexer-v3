@@ -58,8 +58,8 @@ export async function checkMarketplaceIsFiltered(collection: string, marketplace
   const operatorList = allOperatorList.filter((c) => c.marketplace === marketplace);
   let blacklist: string[] = [];
   const result = await getMarketplaceBlacklistFromDB(collection);
-  if (result && result.marketplace_blacklists) {
-    blacklist = result.marketplace_blacklists;
+  if (result && result.filtered_operators) {
+    blacklist = result.filtered_operators;
   } else {
     blacklist = await updateMarketplaceBlacklist(collection);
   }
@@ -84,7 +84,7 @@ export async function updateMarketplaceBlacklist(collection: string) {
   await idb.none(
     `
       UPDATE contracts
-        SET marketplace_blacklists = $/blacklists:json/
+        SET filtered_operators = $/blacklists:json/
       WHERE contracts.address = $/collection/
     `,
     {
@@ -98,7 +98,7 @@ export async function updateMarketplaceBlacklist(collection: string) {
 export async function getMarketplaceBlacklistFromDB(collection: string) {
   const collectionResult = await redb.oneOrNone(
     `
-      SELECT contracts.marketplace_blacklists
+      SELECT contracts.filtered_operators
       FROM contracts
       WHERE contracts.address = $/collection/
     `,

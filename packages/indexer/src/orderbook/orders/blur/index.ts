@@ -13,7 +13,7 @@ import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import { offChainCheck } from "@/orderbook/orders/blur/check";
 import * as tokenSet from "@/orderbook/token-sets";
-import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
+// import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 
 export type OrderInfo = {
   orderParams: Sdk.Blur.Types.BaseOrder;
@@ -64,13 +64,13 @@ export const save = async (
         });
       }
 
-      const isFiltered = await checkMarketplaceIsFiltered(order.params.collection, "blur");
-      if (isFiltered) {
-        return results.push({
-          id,
-          status: "filtered",
-        });
-      }
+      // const isFiltered = await checkMarketplaceIsFiltered(order.params.collection, "blur");
+      // if (isFiltered) {
+      //   return results.push({
+      //     id,
+      //     status: "filtered",
+      //   });
+      // }
 
       const currentTime = now();
       const expirationTime = order.params.expirationTime;
