@@ -76,6 +76,25 @@ export const addPendingOrdersLooksRare = async (
   }
 };
 
+export const addPendingOrdersLooksRareV2 = async (
+  data: { order: Sdk.LooksRareV2.Order; schemaHash?: string; source?: string }[]
+) => {
+  if (config.arweaveRelayerKey && data.length) {
+    await redis.rpush(
+      PENDING_DATA_KEY,
+      ...data.map(({ order, schemaHash }) =>
+        JSON.stringify({
+          kind: "looks-rare-v2",
+          data: {
+            ...order.params,
+            schemaHash,
+          },
+        })
+      )
+    );
+  }
+};
+
 export const addPendingOrdersForward = async (
   data: { order: Sdk.Forward.Order; schemaHash?: string; source?: string }[]
 ) => {

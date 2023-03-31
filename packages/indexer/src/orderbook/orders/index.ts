@@ -71,7 +71,8 @@ export type OrderKind =
   | "okex"
   | "bend-dao"
   | "superrare"
-  | "zeroex-v2";
+  | "zeroex-v2"
+  | "looks-rare-v2";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
