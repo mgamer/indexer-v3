@@ -19,7 +19,7 @@ import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
-import { offChainCheck, offChainCheckPartial } from "@/orderbook/orders/seaport-v1.4/check";
+import { offChainCheck, offChainCheckPartial } from "@/orderbook/orders/seaport-base/check";
 import * as tokenSet from "@/orderbook/token-sets";
 import { TokenSet } from "@/orderbook/token-sets/token-list";
 import { getUSDAndNativePrices } from "@/utils/prices";
@@ -33,7 +33,7 @@ import { allPlatformFeeRecipients } from "@/events-sync/handlers/royalties/confi
 export type OrderInfo =
   | {
       kind: "full";
-      orderParams: Sdk.SeaportV14.Types.OrderComponents;
+      orderParams: Sdk.SeaportBase.Types.OrderComponents;
       metadata: OrderMetadata;
       isReservoir?: boolean;
       isOpenSea?: boolean;
@@ -86,7 +86,7 @@ export const save = async (
   }[] = [];
 
   const handleOrder = async (
-    orderParams: Sdk.SeaportV14.Types.OrderComponents,
+    orderParams: Sdk.SeaportBase.Types.OrderComponents,
     metadata: OrderMetadata,
     isReservoir?: boolean,
     isOpenSea?: boolean,
@@ -246,8 +246,9 @@ export const save = async (
       // Check: order fillability
       let fillabilityStatus = "fillable";
       let approvalStatus = "approved";
+      const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
       try {
-        await offChainCheck(order, {
+        await offChainCheck(order, exchange, {
           onChainApprovalRecheck: true,
           singleTokenERC721ApprovalCheck: metadata.fromOnChain,
         });
@@ -1217,7 +1218,7 @@ export const save = async (
           ? handlePartialOrder(orderInfo.orderParams as PartialOrderComponents, orderInfo.metadata)
           : tracer.trace("handleOrder", { resource: "seaportV14Save" }, () =>
               handleOrder(
-                orderInfo.orderParams as Sdk.SeaportV14.Types.OrderComponents,
+                orderInfo.orderParams as Sdk.SeaportBase.Types.OrderComponents,
                 orderInfo.metadata,
                 orderInfo.isReservoir,
                 orderInfo.isOpenSea,
