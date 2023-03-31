@@ -28,6 +28,10 @@ export const getActivityV5Options: RouteOptions = {
         .description("If true, metadata is included in the response."),
       limit: Joi.number().integer().min(1).max(1000).default(20),
       continuation: Joi.string().pattern(regex.base64),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
       sortDirection: Joi.string()
         .lowercase()
         .valid("asc", "desc")
@@ -108,7 +112,8 @@ export const getActivityV5Options: RouteOptions = {
                     nativeAmount: String(activity.price),
                   },
                 },
-                fromBuffer(activity.order.currency)
+                fromBuffer(activity.order.currency),
+                query.displayCurrency
               )
             : undefined,
           amount: activity.amount,

@@ -18,7 +18,7 @@ export const getOwnersV1Options: RouteOptions = {
   description: "Owners",
   notes:
     "Get owners with various filters applied, and a summary of their ownership. Useful for exploring top owners in a collection or attribute.",
-  tags: ["api", "Owners"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 6,

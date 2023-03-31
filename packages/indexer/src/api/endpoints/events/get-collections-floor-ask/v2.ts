@@ -61,6 +61,10 @@ export const getCollectionsFloorAskV2Options: RouteOptions = {
         .max(1000)
         .default(50)
         .description("Amount of items returned in response."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     }).oxor("collection"),
   },
   response: {
@@ -229,7 +233,8 @@ export const getCollectionsFloorAskV2Options: RouteOptions = {
                     ),
                   },
                 },
-                fromBuffer(r.order_currency)
+                fromBuffer(r.order_currency),
+                query.displayCurrency
               )
             : undefined,
           validUntil: r.price ? Number(r.valid_until) : null,

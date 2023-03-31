@@ -75,6 +75,10 @@ export const getCollectionActivityV6Options: RouteOptions = {
             .valid(..._.values(ActivityType))
         )
         .description("Types of events returned in response. Example: 'types=sale'"),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     })
       .xor("collection", "collectionsSetId", "community")
       .with("attributes", "collection"),
@@ -170,7 +174,8 @@ export const getCollectionActivityV6Options: RouteOptions = {
                     nativeAmount: String(activity.price),
                   },
                 },
-                fromBuffer(activity.order.currency)
+                fromBuffer(activity.order.currency),
+                query.displayCurrency
               )
             : undefined,
           amount: activity.amount,

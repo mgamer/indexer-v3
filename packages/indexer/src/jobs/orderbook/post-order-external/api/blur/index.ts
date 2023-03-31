@@ -66,6 +66,8 @@ const handleErrorResponse = (response: any) => {
       throw new RequestWasThrottledError("Request was throttled by Blur", delay);
     }
     case 400:
-      throw new InvalidRequestError("Request was rejected by Blur");
+      throw new InvalidRequestError(
+        response.data ? JSON.stringify(response.data) : "Request was rejected by Blur"
+      );
   }
 };

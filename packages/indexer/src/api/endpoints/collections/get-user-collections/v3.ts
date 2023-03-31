@@ -5,7 +5,7 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { formatEth, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
 import { Assets } from "@/utils/assets";
 import { Sources } from "@/models/sources";
@@ -63,6 +63,10 @@ export const getUserCollectionsV3Options: RouteOptions = {
         .max(100)
         .default(20)
         .description("Amount of items returned in response."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     }),
   },
   response: {
@@ -313,7 +317,8 @@ export const getUserCollectionsV3Options: RouteOptions = {
                       nativeAmount: String(r.floor_sell_value),
                     },
                   },
-                  fromBuffer(r.floor_sell_currency)
+                  fromBuffer(r.floor_sell_currency),
+                  query.displayCurrency
                 )
               : undefined,
             rank: {
@@ -357,7 +362,8 @@ export const getUserCollectionsV3Options: RouteOptions = {
                     nativeAmount: String(r.top_buy_value),
                   },
                 },
-                fromBuffer(r.top_buy_currency)
+                fromBuffer(r.top_buy_currency),
+                query.displayCurrency
               )
             : undefined;
 

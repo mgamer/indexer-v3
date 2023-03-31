@@ -75,7 +75,7 @@ export const setupRouterWithModules = async (chainId: number, deployer: SignerWi
   // Deploy router
 
   const router = await ethers
-    .getContractFactory("ReservoirV6_0_0", deployer)
+    .getContractFactory("ReservoirV6_0_1", deployer)
     .then((factory) => factory.deploy());
   Sdk.RouterV6.Addresses.Router[chainId] = router.address.toLowerCase();
 
@@ -83,31 +83,48 @@ export const setupRouterWithModules = async (chainId: number, deployer: SignerWi
 
   const looksRareModule = await ethers
     .getContractFactory("LooksRareModule", deployer)
-    .then((factory) => factory.deploy(deployer.address, router.address));
+    .then((factory) =>
+      factory.deploy(deployer.address, router.address, Sdk.LooksRare.Addresses.Exchange[chainId])
+    );
   Sdk.RouterV6.Addresses.LooksRareModule[chainId] = looksRareModule.address.toLowerCase();
 
   const seaportModule = await ethers
     .getContractFactory("SeaportModule", deployer)
-    .then((factory) => factory.deploy(deployer.address, router.address));
+    .then((factory) =>
+      factory.deploy(deployer.address, router.address, Sdk.SeaportV11.Addresses.Exchange[chainId])
+    );
   Sdk.RouterV6.Addresses.SeaportModule[chainId] = seaportModule.address.toLowerCase();
 
   const seaportV14Module = await ethers
     .getContractFactory("SeaportV14Module", deployer)
-    .then((factory) => factory.deploy(deployer.address, router.address));
+    .then((factory) =>
+      factory.deploy(deployer.address, router.address, Sdk.SeaportV14.Addresses.Exchange[chainId])
+    );
   Sdk.RouterV6.Addresses.SeaportV14Module[chainId] = seaportV14Module.address.toLowerCase();
 
   const zeroExV4Module = await ethers
     .getContractFactory("ZeroExV4Module", deployer)
-    .then((factory) => factory.deploy(deployer.address, router.address));
+    .then((factory) =>
+      factory.deploy(deployer.address, router.address, Sdk.ZeroExV4.Addresses.Exchange[chainId])
+    );
   Sdk.RouterV6.Addresses.ZeroExV4Module[chainId] = zeroExV4Module.address.toLowerCase();
 
   const swapModule = (await ethers
     .getContractFactory("SwapModule", deployer)
-    .then((factory) => factory.deploy(deployer.address, deployer.address))) as any;
+    .then((factory) =>
+      factory.deploy(
+        deployer.address,
+        deployer.address,
+        Sdk.Common.Addresses.Weth[chainId],
+        Sdk.Common.Addresses.SwapRouter[chainId]
+      )
+    )) as any;
   Sdk.RouterV6.Addresses.SwapModule[chainId] = swapModule.address.toLowerCase();
 
   const permit2Module = (await ethers
     .getContractFactory("Permit2Module", deployer)
-    .then((factory) => factory.deploy(deployer.address))) as any;
+    .then((factory) =>
+      factory.deploy(deployer.address, Sdk.Common.Addresses.Permit2[chainId])
+    )) as any;
   Sdk.RouterV6.Addresses.Permit2Module[chainId] = permit2Module.address.toLowerCase();
 };

@@ -28,7 +28,7 @@ const version = "v7";
 
 export const getExecuteBuyV7Options: RouteOptions = {
   description: "Buy tokens (fill listings)",
-  tags: ["api", "Router"],
+  tags: ["api", "Fill Orders (buy & sell)"],
   timeout: {
     server: 20 * 1000,
   },
@@ -163,7 +163,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       errors: Joi.array().items(
         Joi.object({
           message: Joi.string(),
-          orderId: Joi.number(),
+          orderId: Joi.string(),
         })
       ),
       path: Joi.array().items(
@@ -189,6 +189,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
   handler: async (request: Request) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payload = request.payload as any;
+
+    const perfTime1 = performance.now();
 
     try {
       // Handle fees on top
@@ -549,9 +551,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
               continue;
             }
 
-            // Update the quantity to fill with the current order's available quantity
-            quantityToFill -= availableQuantity;
-
             await addToPath(
               {
                 id: result.id,
@@ -567,9 +566,12 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 kind: result.token_kind,
                 contract,
                 tokenId,
-                quantity: Math.min(item.quantity, availableQuantity),
+                quantity: Math.min(quantityToFill, availableQuantity),
               }
             );
+
+            // Update the quantity to fill with the current order's available quantity
+            quantityToFill -= availableQuantity;
           }
 
           if (quantityToFill > 0) {
@@ -754,13 +756,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
           globalFees: feesOnTop,
           // TODO: Move this defaulting to the core SDK
           directFillingData: {
-            conduitKey: Sdk.Seaport.Addresses.OpenseaConduitKey[config.chainId],
+            conduitKey: Sdk.SeaportV11.Addresses.OpenseaConduitKey[config.chainId],
           },
           blurAuth,
           onRecoverableError: async (kind, error, data) => {
             errors.push({
               orderId: data.orderId,
-              message: error.response?.data ?? error.message,
+              message: error.response?.data ? JSON.stringify(error.response.data) : error.message,
             });
             await routerOnRecoverableError(kind, error, data);
           },
@@ -927,8 +929,21 @@ export const getExecuteBuyV7Options: RouteOptions = {
         steps = steps.slice(1);
       }
 
+      const perfTime2 = performance.now();
+
+      logger.info(
+        "execute-buy-v7-performance",
+        JSON.stringify({
+          kind: "total-performance",
+          totalTime: (perfTime2 - perfTime1) / 1000,
+          items: listingDetails.map((b) => ({ orderKind: b.kind, source: b.source })),
+          itemsCount: listingDetails.length,
+        })
+      );
+
       return {
         steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
+        errors,
         path,
       };
     } catch (error) {

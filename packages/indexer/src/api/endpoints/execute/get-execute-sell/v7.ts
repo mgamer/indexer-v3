@@ -26,7 +26,7 @@ const version = "v7";
 
 export const getExecuteSellV7Options: RouteOptions = {
   description: "Sell tokens (accept bids)",
-  tags: ["api", "Router"],
+  tags: ["api", "Fill Orders (buy & sell)"],
   timeout: {
     server: 20 * 1000,
   },
@@ -131,7 +131,7 @@ export const getExecuteSellV7Options: RouteOptions = {
       errors: Joi.array().items(
         Joi.object({
           message: Joi.string(),
-          orderId: Joi.number(),
+          orderId: Joi.string(),
         })
       ),
       path: Joi.array().items(
@@ -588,9 +588,6 @@ export const getExecuteSellV7Options: RouteOptions = {
               continue;
             }
 
-            // Update the quantity to fill with the current order's available quantity
-            quantityToFill -= availableQuantity;
-
             await addToPath(
               {
                 id: result.id,
@@ -607,10 +604,13 @@ export const getExecuteSellV7Options: RouteOptions = {
                 kind: result.token_kind,
                 contract,
                 tokenId,
-                quantity: Math.min(item.quantity, availableQuantity),
+                quantity: Math.min(quantityToFill, availableQuantity),
                 owner,
               }
             );
+
+            // Update the quantity to fill with the current order's available quantity
+            quantityToFill -= availableQuantity;
           }
 
           if (quantityToFill > 0) {
@@ -722,7 +722,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           onRecoverableError: async (kind, error, data) => {
             errors.push({
               orderId: data.orderId,
-              message: error.response?.data ?? error.message,
+              message: error.response?.data ? JSON.stringify(error.response.data) : error.message,
             });
             await routerOnRecoverableError(kind, error, data);
           },
@@ -846,6 +846,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           kind: "total-performance",
           totalTime: (perfTime2 - perfTime1) / 1000,
           items: bidDetails.map((b) => ({ orderKind: b.kind, isProtected: b.isProtected })),
+          itemsCount: bidDetails.length,
         })
       );
 

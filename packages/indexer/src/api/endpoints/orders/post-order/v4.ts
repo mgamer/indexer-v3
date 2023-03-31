@@ -19,7 +19,7 @@ const version = "v4";
 
 export const postOrderV4Options: RouteOptions = {
   description: "Submit signed orders",
-  tags: ["api", "Orderbook"],
+  tags: ["api", "Create Orders (list & bid)"],
   plugins: {
     "hapi-swagger": {
       order: 5,
@@ -303,7 +303,7 @@ export const postOrderV4Options: RouteOptions = {
 
               const orderId =
                 order.kind === "seaport"
-                  ? new Sdk.Seaport.Order(config.chainId, order.data).hash()
+                  ? new Sdk.SeaportV11.Order(config.chainId, order.data).hash()
                   : new Sdk.SeaportV14.Order(config.chainId, order.data).hash();
 
               if (orderbook === "opensea") {

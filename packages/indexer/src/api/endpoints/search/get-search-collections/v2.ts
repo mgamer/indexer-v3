@@ -150,7 +150,8 @@ export const getSearchCollectionsV2Options: RouteOptions = {
                       nativeAmount: String(collection.floor_sell_value),
                     },
                   },
-                  fromBuffer(collection.floor_sell_currency)
+                  fromBuffer(collection.floor_sell_currency),
+                  query.displayCurrency
                 )
               : undefined,
             openseaVerificationStatus: collection.opensea_verification_status,
