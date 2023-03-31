@@ -5,6 +5,7 @@ import { bn } from "@/common/utils";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as onChainData from "@/utils/on-chain-data";
 import { PartialOrderComponents } from "@/orderbook/orders/seaport-v1.4/index";
+import { config } from "@/config/index";
 
 export const offChainCheck = async (
   order: Sdk.SeaportBase.IOrder,
