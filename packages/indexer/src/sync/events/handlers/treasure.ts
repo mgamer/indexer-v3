@@ -28,7 +28,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         }
 
         const orderKind = "treasure";
-        const orderSide = "buy";
+        const orderSide = "sell";
         const attributionData = await utils.extractAttributionData(
           baseEventParams.txHash,
           orderKind
