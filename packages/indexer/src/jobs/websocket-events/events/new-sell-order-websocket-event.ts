@@ -129,7 +129,7 @@ export class NewSellOrderWebsocketEvent {
           event: "ask.created",
           tags: {
             collectionId: rawResult.contract,
-            token_set_id: rawResult.token_set_id,
+            tokenSetId: rawResult.token_set_id,
             tokenId: rawResult.token_set_id.split(":")[2],
             kind: rawResult.kind,
             side: rawResult.side,
