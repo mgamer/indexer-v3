@@ -19,6 +19,11 @@ export const OpenseaConduitKey: ChainIdToAddress = {
   [Network.EthereumGoerli]: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
   [Network.Polygon]: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
   [Network.Optimism]: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
+  [Network.Arbitrum]: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
+};
+
+export const ReservoirConduitKey: ChainIdToAddress = {
+  // TODO: Deploy own conduit to mainnet
 };
 
 // Zones

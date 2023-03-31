@@ -11,6 +11,10 @@ export const Router: ChainIdToAddress = {
   [Network.Arbitrum]: "0xc2c862322e9c97d6244a3506655da95f05246fd8",
 };
 
+// Approval proxy
+
+export const ApprovalProxy: ChainIdToAddress = {};
+
 // Utility modules
 
 export const Permit2Module: ChainIdToAddress = {
@@ -85,5 +89,5 @@ export const RaribleModule: ChainIdToAddress = {
 };
 
 export const SuperRareModule: ChainIdToAddress = {
-  //TODO add SuperRareModule address
+  // TODO: Deploy SuperRareModule to mainnet
 };

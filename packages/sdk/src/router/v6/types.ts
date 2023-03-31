@@ -3,7 +3,6 @@ import { BigNumberish } from "@ethersproject/bignumber";
 import * as Sdk from "../../index";
 import { TxData } from "../../utils";
 
-import * as UniswapPermit from "./permits/permit2";
 import * as SeaportPermit from "./permits/seaport";
 
 // Approvals and permits
@@ -39,14 +38,6 @@ export type FTApproval = {
   owner: string;
   operator: string;
   txData: TxData;
-};
-
-export type FTPermit = {
-  currencies: string[];
-  details: {
-    kind: "permit2";
-    data: UniswapPermit.Data;
-  };
 };
 
 // Misc
@@ -176,7 +167,6 @@ export type PerCurrencyListingDetails = {
 export type FillListingsResult = {
   txs: {
     approvals: FTApproval[];
-    permits: FTPermit[];
     txData: TxData;
     orderIds: string[];
   }[];
