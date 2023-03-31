@@ -825,6 +825,13 @@ export class DailyVolume {
         row["all_time_volume"] = 0;
         row["all_time_rank"] = null;
       }
+
+      if (!row["day7_rank"]) {
+        row["day7_rank"] = null;
+      }
+      if (!row["day30_rank"]) {
+        row["day30_rank"] = null;
+      }
     }
 
     return mergedArr;
