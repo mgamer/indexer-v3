@@ -152,4 +152,14 @@ export const setupRouterWithModules = async (chainId: number, deployer: SignerWi
       )
     )) as any;
   Sdk.RouterV6.Addresses.SwapModule[chainId] = swapModule.address.toLowerCase();
+
+  const approvalProxy = await ethers
+    .getContractFactory("ReservoirApprovalProxy", deployer)
+    .then((factory) =>
+      factory.deploy(Sdk.SeaportBase.Addresses.ConduitController[chainId], router.address)
+    );
+  Sdk.RouterV6.Addresses.ApprovalProxy[chainId] = approvalProxy.address.toLowerCase();
+
+  const conduitKey = await setupConduit(chainId, deployer, [approvalProxy.address]);
+  Sdk.SeaportBase.Addresses.ReservoirConduitKey[chainId] = conduitKey;
 };

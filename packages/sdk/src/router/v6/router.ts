@@ -6,7 +6,6 @@ import axios from "axios";
 
 import * as Addresses from "./addresses";
 import * as ApprovalProxy from "./approval-proxy";
-import * as SeaportPermit from "./permits/seaport";
 
 import {
   BidDetails,
@@ -18,7 +17,6 @@ import {
   ListingDetails,
   ListingFillDetails,
   NFTApproval,
-  NFTPermit,
   PerCurrencyListingDetails,
   PerPoolSwapDetails,
   SwapDetail,
@@ -862,8 +860,8 @@ export class Router {
     // Keep track of any approvals that might be needed
     const approvals: FTApproval[] = [];
 
-    // Keep track of any ERC20 transfers that need to be performed
-    const erc20TransferItems: ApprovalProxy.TransferItem[] = [];
+    // Keep track of any FT transfers that need to be performed
+    const ftTransferItems: ApprovalProxy.TransferItem[] = [];
 
     // Keep track of which order ids were handled
     const orderIds: string[] = [];
@@ -2257,7 +2255,7 @@ export class Router {
 
             if (tokenIn !== tokenOut) {
               // The swap module will take care of handling additional transfers
-              erc20TransferItems.push({
+              ftTransferItems.push({
                 items: [
                   {
                     itemType: ApprovalProxy.ItemType.ERC20,
@@ -2270,7 +2268,7 @@ export class Router {
               });
             } else {
               // We need to split the permit items based on the individual transfers
-              erc20TransferItems.push(
+              ftTransferItems.push(
                 ...transfers.map((t) => ({
                   items: transfers.map((t) => ({
                     itemType: ApprovalProxy.ItemType.ERC20,
@@ -2318,27 +2316,39 @@ export class Router {
       // Prepend any swap executions
       executions = [...successfulSwapExecutions, ...executions];
 
+      // If the buy-in currency is not ETH then we won't need any `value` fields
+      if (buyInCurrency !== Sdk.Common.Addresses.Eth[this.chainId]) {
+        executions.forEach((e) => {
+          e.value = 0;
+        });
+      }
+
       txs.push({
         approvals,
         txData: {
           from: relayer,
-          to: this.contracts.router.address,
-          data:
-            (erc20TransferItems.length
-              ? this.contracts.approvalProxy.interface.encodeFunctionData(
+          ...(ftTransferItems.length
+            ? {
+                to: this.contracts.approvalProxy.address,
+                data: this.contracts.approvalProxy.interface.encodeFunctionData(
                   "bulkTransferWithExecute",
                   [
-                    erc20TransferItems,
+                    ftTransferItems,
                     executions,
                     Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId],
                   ]
-                )
-              : this.contracts.router.interface.encodeFunctionData("execute", [executions])) +
-            generateSourceBytes(options?.source),
-          value: executions
-            .map((e) => bn(e.value))
-            .reduce((a, b) => a.add(b))
-            .toHexString(),
+                ),
+              }
+            : {
+                to: this.contracts.router.address,
+                data:
+                  this.contracts.router.interface.encodeFunctionData("execute", [executions]) +
+                  generateSourceBytes(options?.source),
+                value: executions
+                  .map((e) => bn(e.value))
+                  .reduce((a, b) => a.add(b))
+                  .toHexString(),
+              }),
         },
         orderIds,
       });
@@ -2363,8 +2373,8 @@ export class Router {
       source?: string;
       // Skip any errors (either off-chain or on-chain)
       partial?: boolean;
-      // Force using permit
-      forcePermit?: boolean;
+      // Force filling via the approval proxy
+      forceApprovalProxy?: boolean;
       // Callback for handling recoverable errors
       onRecoverableError?: (
         kind: string,
@@ -2416,7 +2426,6 @@ export class Router {
           }),
           success: [true],
           approvals: [approval],
-          permits: [],
         };
       }
     }
@@ -2454,7 +2463,6 @@ export class Router {
           }),
           success: [true],
           approvals: [approval],
-          permits: [],
         };
       }
     }
@@ -2468,8 +2476,8 @@ export class Router {
     // Keep track of any approvals that might be needed
     const approvals: NFTApproval[] = [];
 
-    // Keep track of the tokens needed by each module
-    const permitItems: SeaportPermit.Item[] = [];
+    // Keep track of any NFT transfers that need to be performed
+    const nftTransferItems: ApprovalProxy.TransferItem[] = [];
 
     for (let i = 0; i < details.length; i++) {
       const detail = details[i];
@@ -2477,7 +2485,7 @@ export class Router {
       const contract = detail.contract;
       const owner = taker;
       const operator = new Sdk.SeaportV11.Exchange(this.chainId).deriveConduit(
-        Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId]
+        Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId]
       );
 
       // Generate approval
@@ -2543,14 +2551,19 @@ export class Router {
         }
       }
 
-      permitItems.push({
-        token: {
-          kind: detail.contractKind,
-          contract: detail.contract,
-          tokenId: detail.tokenId,
-          amount: detail.amount,
-        },
-        receiver: module.address,
+      nftTransferItems.push({
+        items: [
+          {
+            itemType:
+              detail.contractKind === "erc721"
+                ? ApprovalProxy.ItemType.ERC721
+                : ApprovalProxy.ItemType.ERC1155,
+            token: detail.contract,
+            identifier: detail.tokenId,
+            amount: detail.amount ?? 1,
+          },
+        ],
+        recipient: module.address,
       });
     }
 
@@ -2778,6 +2791,12 @@ export class Router {
             });
 
             if (result.data.calldata) {
+              const contract = detail.contract;
+              const owner = taker;
+              const operator = new Sdk.SeaportBase.ConduitController(this.chainId).deriveConduit(
+                Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId]
+              );
+
               // Fill directly
               return {
                 txData: {
@@ -2786,8 +2805,14 @@ export class Router {
                   data: result.data.calldata + generateSourceBytes(options?.source),
                 },
                 success: [true],
-                approvals,
-                permits: [],
+                approvals: [
+                  {
+                    contract,
+                    owner,
+                    operator,
+                    txData: generateNFTApprovalTxData(contract, owner, operator),
+                  },
+                ],
               };
             }
 
@@ -3106,12 +3131,11 @@ export class Router {
       throw new Error("Could not fill any of the requested orders");
     }
 
-    // Generate router-level transaction data
-    const routerLevelTxData = this.contracts.router.interface.encodeFunctionData("execute", [
-      executions,
-    ]);
+    if (executions.length === 1 && !options?.forceApprovalProxy) {
+      const routerLevelTxData = this.contracts.router.interface.encodeFunctionData("execute", [
+        executions,
+      ]);
 
-    if (executions.length === 1 && !options?.forcePermit) {
       // Use the on-received ERC721/ERC1155 hooks for approval-less bid filling
       const detail = details[success.findIndex(Boolean)];
       if (detail.contractKind === "erc721") {
@@ -3127,7 +3151,6 @@ export class Router {
           },
           success,
           approvals: [],
-          permits: [],
         };
       } else {
         return {
@@ -3142,15 +3165,21 @@ export class Router {
           },
           success,
           approvals: [],
-          permits: [],
         };
       }
     } else {
       return {
         txData: {
           from: taker,
-          to: Addresses.Router[this.chainId],
-          data: routerLevelTxData + generateSourceBytes(options?.source),
+          to: this.contracts.approvalProxy.address,
+          data: this.contracts.approvalProxy.interface.encodeFunctionData(
+            "bulkTransferWithExecute",
+            [
+              nftTransferItems,
+              executions,
+              Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId],
+            ]
+          ),
         },
         success,
         // Ensure approvals are unique
@@ -3158,22 +3187,6 @@ export class Router {
           approvals.filter((_, i) => success[i]),
           ({ txData: { from, to, data } }) => `${from}-${to}-${data}`
         ),
-        // Generate permits
-        permits: await (async (): Promise<NFTPermit[]> => {
-          const items = permitItems.filter((_, i) => success[i]);
-          return [
-            {
-              tokens: items.map((i) => i.token),
-              details: {
-                kind: "seaport",
-                data: await new SeaportPermit.Handler(this.chainId, this.provider).generate(
-                  taker,
-                  items
-                ),
-              },
-            },
-          ];
-        })(),
       };
     }
   }

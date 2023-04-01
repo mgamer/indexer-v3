@@ -3,8 +3,6 @@ import { BigNumberish } from "@ethersproject/bignumber";
 import * as Sdk from "../../index";
 import { TxData } from "../../utils";
 
-import * as SeaportPermit from "./permits/seaport";
-
 // Approvals and permits
 
 // NFTs
@@ -21,14 +19,6 @@ export type NFTApproval = {
   owner: string;
   operator: string;
   txData: TxData;
-};
-
-export type NFTPermit = {
-  tokens: NFTToken[];
-  details: {
-    kind: "seaport";
-    data: SeaportPermit.Data;
-  };
 };
 
 // FTs
@@ -197,7 +187,6 @@ export type BidDetails = GenericOrder & BidFillDetails;
 export type FillBidsResult = {
   txData: TxData;
   approvals: NFTApproval[];
-  permits: NFTPermit[];
   success: boolean[];
 };
 
