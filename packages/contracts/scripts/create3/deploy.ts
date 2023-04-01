@@ -78,6 +78,11 @@ const dv = async (contractName: string, version: string, args: any[]) => {
 
 export const triggerByModule = {
   ReservoirV6_0_1: async () => dv("ReservoirV6_0_1", "v3", []),
+  ReservoirApprovalProxy: async (chainId: number) =>
+    dv("ReservoirApprovalProxy", "v1", [
+      Sdk.SeaportBase.Addresses.ConduitController[chainId],
+      Sdk.RouterV6.Addresses.Router[chainId],
+    ]),
   ElementModule: async (chainId: number) =>
     dv("ElementModule", "v1", [
       DEPLOYER,

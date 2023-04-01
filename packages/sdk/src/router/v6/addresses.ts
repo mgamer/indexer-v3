@@ -13,7 +13,13 @@ export const Router: ChainIdToAddress = {
 
 // Approval proxy
 
-export const ApprovalProxy: ChainIdToAddress = {};
+export const ApprovalProxy: ChainIdToAddress = {
+  [Network.Ethereum]: "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
+  [Network.EthereumGoerli]: "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
+  [Network.Polygon]: "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
+  [Network.Optimism]: "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
+  [Network.Arbitrum]: "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
+};
 
 // Utility modules
 

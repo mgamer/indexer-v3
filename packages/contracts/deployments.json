@@ -81,5 +81,14 @@
     "v1": {
       "1": "0x428a6be88fc0d25778e3c3f6e09fcfdc9a526fad"
     }
+  },
+  "ReservoirApprovalProxy": {
+    "v1": {
+      "1": "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
+      "5": "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
+      "10": "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
+      "137": "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
+      "42161": "0x79ce8f93063f8be4573a58f250b003859ebb7a24"
+    }
   }
 }

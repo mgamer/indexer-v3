@@ -2,7 +2,6 @@
 pragma solidity ^0.8.9;
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 import {IConduit, IConduitController} from "../interfaces/IConduit.sol";
 import {IReservoirV6_0_1} from "../interfaces/IReservoirV6_0_1.sol";
