@@ -55,7 +55,7 @@ export const getApiKeyDetails: RouteOptions = {
         email: apiKey.email,
         active: apiKey.active,
         tier: apiKey.tier,
-        permissions: JSON.stringify(apiKey.permissions),
+        permissions: apiKey.permissions ? JSON.stringify(apiKey.permissions) : null,
         createdAt: new Date(apiKey.createdAt).toISOString(),
       };
     } catch (error) {
