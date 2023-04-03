@@ -1,7 +1,7 @@
 import { Queue, QueueScheduler, Worker } from "bullmq";
 import cron from "node-cron";
 
-import { idb } from "@/common/db";
+import { hdb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis, redlock } from "@/common/redis";
 import { now } from "@/common/utils";
@@ -34,7 +34,8 @@ if (config.doBackgroundWork && config.master) {
     async () => {
       logger.info(QUEUE_NAME, "Invalidating expired orders");
 
-      const expiredOrders: { id: string }[] = await idb.manyOrNone(
+      // Use `hdb` for lower timeouts (to avoid long-running queries which can result in deadlocks)
+      const expiredOrders: { id: string }[] = await hdb.manyOrNone(
         `
           WITH x AS (
             SELECT
