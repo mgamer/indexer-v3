@@ -18,16 +18,22 @@ import ExchangeAbi from "./abis/Exchange.json";
 import { SeaportBaseExchange } from "../seaport-base/exchange";
 
 export class Exchange extends SeaportBaseExchange {
+  protected exchangeAddress: string;
+  protected cancellationZoneAddress: string;
+  public contract: Contract;
+
   constructor(chainId: number) {
-    const contract = new Contract(Addresses.Exchange[chainId], ExchangeAbi);
-    super(chainId, contract);
+    super(chainId);
+    this.exchangeAddress = Addresses.Exchange[chainId];
+    this.cancellationZoneAddress = Addresses.CancellationZone[chainId];
+    this.contract = new Contract(this.exchangeAddress, ExchangeAbi);
   }
 
   // --- Derive conduit from key ---
 
   public deriveConduit(conduitKey: string) {
     return conduitKey === HashZero
-      ? Addresses.Exchange[this.chainId]
+      ? this.exchangeAddress
       : this.conduitController.deriveConduit(conduitKey);
   }
 
@@ -128,7 +134,7 @@ export class Exchange extends SeaportBaseExchange {
   // --- Get extra data ---
 
   public requiresExtraData(order: IOrder): boolean {
-    if (order.params.zone === Addresses.CancellationZone[this.chainId]) {
+    if (order.params.zone === this.cancellationZoneAddress) {
       return true;
     }
     return false;
@@ -137,7 +143,7 @@ export class Exchange extends SeaportBaseExchange {
   // matchParams should always pass for seaport-v1.4
   public async getExtraData(order: IOrder, matchParams?: Types.MatchParams): Promise<string> {
     switch (order.params.zone) {
-      case Addresses.CancellationZone[this.chainId]: {
+      case this.cancellationZoneAddress: {
         return axios
           .post(
             `https://seaport-oracle-${

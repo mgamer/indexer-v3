@@ -14,12 +14,11 @@ import { ConduitController } from "../seaport-base";
 
 export abstract class SeaportBaseExchange {
   public chainId: number;
-  public contract: Contract;
+  public abstract contract: Contract;
   public conduitController: ConduitController;
 
-  constructor(chainId: number, contract: Contract) {
+  constructor(chainId: number) {
     this.chainId = chainId;
-    this.contract = contract;
     this.conduitController = new ConduitController(this.chainId);
   }
 

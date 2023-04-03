@@ -6,9 +6,11 @@ import { SeaportBaseExchange } from "../seaport-base/exchange";
 import { IOrder } from "../seaport-base/order";
 
 export class Exchange extends SeaportBaseExchange {
+  public contract: Contract;
+
   constructor(chainId: number) {
-    const contract = new Contract(Addresses.Exchange[chainId], ExchangeAbi);
-    super(chainId, contract);
+    super(chainId);
+    this.contract = new Contract(Addresses.Exchange[chainId], ExchangeAbi);
   }
 
   // --- Derive conduit from key ---
