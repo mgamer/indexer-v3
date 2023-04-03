@@ -28,6 +28,7 @@ import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as refreshContractCollectionsMetadata from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { allPlatformFeeRecipients } from "@/events-sync/handlers/royalties/config";
+// import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 
 export type OrderInfo =
   | {
@@ -815,6 +816,14 @@ export const save = async (
           status: "unknown-collection",
         });
       }
+
+      // const isFiltered = await checkMarketplaceIsFiltered(collection.id, "seaport");
+      // if (isFiltered) {
+      //   return results.push({
+      //     id,
+      //     status: "filtered",
+      //   });
+      // }
 
       // Check and save: associated token set
       let schemaHash = generateSchemaHash();
