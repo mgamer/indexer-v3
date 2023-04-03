@@ -68,7 +68,7 @@ if (config.doBackgroundWork) {
         await addToQueue(timestamp + 1);
       }
     },
-    { connection: redis.duplicate(), concurrency: 1 }
+    { connection: redis.duplicate(), concurrency: 10 }
   );
 
   worker.on("error", (error) => {
@@ -76,9 +76,9 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire([`${QUEUE_NAME}-lock`], 60 * 60 * 24 * 30 * 1000)
+    .acquire([`${QUEUE_NAME}-lock-2`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
-      await addToQueue(1680524520);
+      await addToQueue(1680527026 + 3600);
     })
     .catch(() => {
       // Skip on any errors
