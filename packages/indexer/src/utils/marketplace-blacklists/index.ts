@@ -11,6 +11,8 @@ export type Opreator = {
   marketplace: OrderKind;
 };
 
+const conduitController = new Sdk.SeaportBase.ConduitController(config.chainId);
+
 const allOperatorList: Opreator[] = [
   {
     address: Sdk.Blur.Addresses.ExecutionDelegate[config.chainId],
@@ -29,11 +31,15 @@ const allOperatorList: Opreator[] = [
     marketplace: "nftx",
   },
   {
-    address: Sdk.Seaport.Addresses.OpenseaConduit[config.chainId],
+    address: conduitController.deriveConduit(
+      Sdk.SeaportV11.Addresses.OpenseaConduitKey[config.chainId]
+    ),
     marketplace: "seaport",
   },
   {
-    address: Sdk.SeaportV14.Addresses.OpenseaConduit[config.chainId],
+    address: conduitController.deriveConduit(
+      Sdk.SeaportV11.Addresses.OpenseaConduitKey[config.chainId]
+    ),
     marketplace: "seaport-v1.4",
   },
   {
@@ -69,7 +75,7 @@ export async function checkMarketplaceIsFiltered(collection: string, marketplace
 
 export const getMarketplaceBlacklist = async (collection: string) => {
   const contract = new Contract(
-    Sdk.Seaport.Addresses.OperatorFilterRegistry[config.chainId],
+    Sdk.SeaportV11.Addresses.OperatorFilterRegistry[config.chainId],
     new Interface([
       "function filteredOperators(address registrant) external view returns (address[] memory)",
     ]),
