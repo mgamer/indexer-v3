@@ -1,4 +1,5 @@
 import { Queue, QueueScheduler, Worker } from "bullmq";
+import _ from "lodash";
 import cron from "node-cron";
 
 import { hdb } from "@/common/db";
@@ -7,6 +8,7 @@ import { redis, redlock } from "@/common/redis";
 import { now } from "@/common/utils";
 import { config } from "@/config/index";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
+import * as backfillExpiredOrders from "@/jobs/backfill/backfill-expired-orders";
 
 const QUEUE_NAME = "expired-orders";
 
@@ -29,10 +31,20 @@ new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
 // BACKGROUND WORKER AND MASTER ONLY
 if (config.doBackgroundWork && config.master) {
+  const intervalInSeconds = 5;
+
   worker = new Worker(
     QUEUE_NAME,
     async () => {
       logger.info(QUEUE_NAME, "Invalidating expired orders");
+
+      // Update the expired orders second by second
+      const currentTime = now();
+      await backfillExpiredOrders.addToQueue(
+        _.range(0, intervalInSeconds).map((s) => currentTime - s)
+      );
+
+      // As a safety mechanism, update any left expired orders
 
       // Use `hdb` for lower timeouts (to avoid long-running queries which can result in deadlocks)
       const expiredOrders: { id: string }[] = await hdb.manyOrNone(
@@ -57,7 +69,6 @@ if (config.doBackgroundWork && config.master) {
       );
       logger.info(QUEUE_NAME, `Invalidated ${expiredOrders.length} orders`);
 
-      const currentTime = now();
       await orderUpdatesById.addToQueue(
         expiredOrders.map(
           ({ id }) =>
@@ -77,11 +88,10 @@ if (config.doBackgroundWork && config.master) {
 
   const addToQueue = async () => queue.add(QUEUE_NAME, {});
   cron.schedule(
-    // Every 5 seconds
-    "*/5 * * * * *",
+    `*/${intervalInSeconds} * * * * *`,
     async () =>
       await redlock
-        .acquire(["expired-orders-check-lock"], 2 * 1000)
+        .acquire(["expired-orders-check-lock"], (intervalInSeconds - 3) * 1000)
         .then(async () => {
           logger.info(QUEUE_NAME, "Triggering expired orders check");
           await addToQueue();
