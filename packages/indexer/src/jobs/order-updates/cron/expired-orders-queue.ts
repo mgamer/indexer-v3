@@ -43,7 +43,7 @@ if (config.doBackgroundWork) {
             FROM orders
             WHERE upper(orders.valid_between) < now()
               AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
-            LIMIT 2000
+            LIMIT 5000
           )
           UPDATE orders SET
             fillability_status = 'expired',
@@ -76,11 +76,11 @@ if (config.doBackgroundWork) {
 
   const addToQueue = async () => queue.add(QUEUE_NAME, {});
   cron.schedule(
-    // Every 5 seconds
-    "*/5 * * * * *",
+    // Every 4 seconds
+    "*/4 * * * * *",
     async () =>
       await redlock
-        .acquire(["expired-orders-check-lock"], (5 - 3) * 1000)
+        .acquire(["expired-orders-check-lock"], 1000)
         .then(async () => {
           logger.info(QUEUE_NAME, "Triggering expired orders check");
           await addToQueue();
