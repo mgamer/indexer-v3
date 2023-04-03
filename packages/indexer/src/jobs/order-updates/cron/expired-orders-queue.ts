@@ -43,7 +43,7 @@ if (config.doBackgroundWork && config.master) {
             FROM orders
             WHERE upper(orders.valid_between) < now()
               AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
-            LIMIT 10000
+            LIMIT 5000
           )
           UPDATE orders SET
             fillability_status = 'expired',
