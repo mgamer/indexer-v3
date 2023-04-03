@@ -154,7 +154,7 @@ export class NewTopBidWebsocketEvent {
             JSON.stringify({
               event: "top-bid.changed",
               tags: {
-                contract: order.contract,
+                contract: fromBuffer(order.contract),
               },
               data: payload,
             })
