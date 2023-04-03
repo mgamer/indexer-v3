@@ -47,7 +47,8 @@ if (config.doBackgroundWork) {
           FROM x
           WHERE orders.id = x.id
           RETURNING orders.id
-        `
+        `,
+        { timestamp }
       );
       logger.info(QUEUE_NAME, `Invalidated ${expiredOrders.length} orders`);
 
