@@ -57,9 +57,9 @@ export class BuyTokenBuilderBase {
 
     const builder = new Sdk.SeaportBase.Builders.SingleToken(config.chainId);
 
-    const tokenId = options.tokenId;
-    const amount = options.quantity;
-
-    return builder?.build({ ...buildInfo.params, tokenId, amount }, orderBuilder);
+    return builder.build(
+      { ...buildInfo.params, tokenId: options.tokenId, amount: options.quantity },
+      orderBuilder
+    );
   }
 }

@@ -11,7 +11,7 @@ import {
   BaseOrderBuildOptions,
   OrderBuildInfo,
   padSourceToSalt,
-} from "../../seaport-base/build/utils";
+} from "@/orderbook/orders/seaport-base/build/utils";
 
 export const getBuildInfo = async (
   options: BaseOrderBuildOptions,
