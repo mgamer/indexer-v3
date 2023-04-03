@@ -46,22 +46,42 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
         ),
     }),
   },
+  response: {
+    schema: Joi.object({
+      marketplaces: Joi.array().items(
+        Joi.object({
+          name: Joi.string(),
+          imageUrl: Joi.string(),
+          fee: Joi.object({
+            bps: Joi.number(),
+          }),
+          royalties: Joi.object({
+            minBps: Joi.number(),
+            maxBps: Joi.number(),
+          }),
+          orderbook: Joi.string().allow(null),
+          orderKind: Joi.string().allow(null),
+          listingEnabled: Joi.boolean(),
+        })
+      ),
+    }),
+  },
   handler: async (request: Request) => {
     const params = request.params as any;
 
     try {
       const collectionResult = await redb.oneOrNone(
         `
-      SELECT
-        collections.new_royalties,
-        collections.marketplace_fees,
-        collections.contract
-      FROM collections
-      JOIN contracts
-        ON collections.contract = contracts.address
-      WHERE collections.id = $/collection/
-      LIMIT 1
-    `,
+          SELECT
+            collections.new_royalties,
+            collections.marketplace_fees,
+            collections.contract
+          FROM collections
+          JOIN contracts
+            ON collections.contract = contracts.address
+          WHERE collections.id = $/collection/
+          LIMIT 1
+        `,
         { collection: params.collection }
       );
 
@@ -106,6 +126,18 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           orderKind: "x2y2",
           listingEnabled: false,
         },
+        {
+          name: "Blur",
+          imageUrl: `https://${
+            getNetworkSettings().subDomain
+          }.reservoir.tools/redirect/sources/blur/logo/v2`,
+          fee: {
+            bps: 0,
+          },
+          orderbook: "blur",
+          orderKind: "blur",
+          listingEnabled: false,
+        },
       ];
 
       let openseaMarketplaceFees: { bps: number; recipient: string }[] =
@@ -123,9 +155,12 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
 
       const openseaRoyalties: { bps: number; recipient: string }[] =
         collectionResult.new_royalties?.opensea;
-      const maxOpenseaRoyaltiesBps = openseaRoyalties
-        .map(({ bps }) => bps)
-        .reduce((a, b) => a + b, 0);
+
+      let maxOpenseaRoyaltiesBps;
+
+      if (openseaRoyalties) {
+        maxOpenseaRoyaltiesBps = openseaRoyalties.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
+      }
 
       const openseaMarketplace = {
         name: "OpenSea",
@@ -135,10 +170,12 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
         fee: {
           bps: openseaMarketplaceFees[0]?.bps ?? 0,
         },
-        royalties: {
-          minBps: Math.min(maxOpenseaRoyaltiesBps, 50),
-          maxBps: maxOpenseaRoyaltiesBps,
-        },
+        royalties: maxOpenseaRoyaltiesBps
+          ? {
+              minBps: Math.min(maxOpenseaRoyaltiesBps, 50),
+              maxBps: maxOpenseaRoyaltiesBps,
+            }
+          : undefined,
         orderbook: "opensea",
         orderKind: "seaport-v1.4",
         listingEnabled: false,
@@ -150,7 +187,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
         let listableOrderbooks = ["reservoir"];
         switch (config.chainId) {
           case 1: {
-            listableOrderbooks = ["reservoir", "opensea", "looks-rare", "x2y2"];
+            listableOrderbooks = ["reservoir", "opensea", "looks-rare", "x2y2", "blur"];
             break;
           }
           case 4: {

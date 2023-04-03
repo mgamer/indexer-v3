@@ -70,20 +70,7 @@ export const buildCollectionOffer = async (
   collectionSlug: string,
   apiKey = ""
 ) => {
-  let url = `${getOpenseaBaseUrl()}/v2/offers/build`;
-
-  if (config.openSeaCrossPostingApiUrl) {
-    url = `${config.openSeaCrossPostingApiUrl}/v2/offers/build`;
-  }
-
-  logger.error(
-    "opensea-orderbook-api",
-    `Build OpenSea collection offer debug. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, url=${url}, openSeaCrossPostingApiUrl=${
-      config.openSeaCrossPostingApiUrl
-    }, getOpenseaBaseUrl=${getOpenseaBaseUrl()}, openSeaCrossPostingApiKeyHeader=${
-      config.openSeaCrossPostingApiKeyHeader
-    }, openSeaCrossPostingApiKey=${config.openSeaCrossPostingApiKey}`
-  );
+  const url = `${config.openSeaCrossPostingApiUrl || getOpenseaBaseUrl()}/v2/offers/build`;
 
   return (
     axios
@@ -117,9 +104,7 @@ export const buildCollectionOffer = async (
       .catch((error) => {
         logger.error(
           "opensea-orderbook-api",
-          `Build OpenSea collection offer error. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, url=${url}, openSeaCrossPostingApiUrl=${
-            config.openSeaCrossPostingApiUrl
-          }, getOpenseaBaseUrl=${getOpenseaBaseUrl()}, error=${error}, responseStatus=${
+          `Build OpenSea collection offer error. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, url=${url}, error=${error}, responseStatus=${
             error.response?.status
           }, responseData=${JSON.stringify(error.response?.data)}`
         );

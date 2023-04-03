@@ -25,6 +25,7 @@ import "@/jobs/token-updates";
 import "@/jobs/update-attribute";
 import "@/jobs/websocket-events";
 import "@/jobs/metrics";
+import "@/jobs/opensea-orders";
 
 // Export all job queues for monitoring through the BullMQ UI
 
@@ -36,6 +37,7 @@ import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsync
 import * as arweaveSyncBackfill from "@/jobs/arweave-sync/backfill-queue";
 import * as arweaveSyncRealtime from "@/jobs/arweave-sync/realtime-queue";
 
+import * as backfillExpiredOrders from "@/jobs/backfill/backfill-expired-orders";
 import * as backfillFoundationSales from "@/jobs/backfill/backfill-foundation-sales";
 import * as backfillMints from "@/jobs/backfill/backfill-mints";
 import * as backfillSaleRoyalties from "@/jobs/backfill/backfill-sale-royalties";
@@ -63,6 +65,7 @@ import * as updateCollectionDailyVolume from "@/jobs/collection-updates/update-c
 import * as currencies from "@/jobs/currencies/index";
 
 import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
+import * as oneDayVolumes from "@/jobs/daily-volumes/1day-volumes";
 
 import * as exportData from "@/jobs/data-export/export-data";
 
@@ -130,6 +133,9 @@ import * as websocketEventsTriggerQueue from "@/jobs/websocket-events/trigger-qu
 
 import * as countApiUsage from "@/jobs/metrics/count-api-usage";
 
+import * as openseaOrdersProcessQueue from "@/jobs/opensea-orders/process-queue";
+import * as openseaOrdersFetchQueue from "@/jobs/opensea-orders/fetch-queue";
+
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
   orderUpdatesByMaker.worker,
@@ -151,6 +157,7 @@ export const allJobQueues = [
   arweaveSyncBackfill.queue,
   arweaveSyncRealtime.queue,
 
+  backfillExpiredOrders.queue,
   backfillFoundationSales.queue,
   backfillMints.queue,
   backfillSaleRoyalties.queue,
@@ -179,6 +186,7 @@ export const allJobQueues = [
   updateCollectionDailyVolume.queue,
 
   dailyVolumes.queue,
+  oneDayVolumes.queue,
 
   exportData.queue,
 
@@ -245,4 +253,7 @@ export const allJobQueues = [
   websocketEventsTriggerQueue.queue,
 
   countApiUsage.queue,
+
+  openseaOrdersProcessQueue.queue,
+  openseaOrdersFetchQueue.queue,
 ];
