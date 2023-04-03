@@ -76,9 +76,41 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire([`${QUEUE_NAME}-lock-2`], 60 * 60 * 24 * 30 * 1000)
+    .acquire([`${QUEUE_NAME}-lock-3`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
-      await addToQueue(1680527026 + 3600);
+      await addToQueue(1680527026 + 500);
+      await addToQueue(1680527026 + 1000);
+      await addToQueue(1680527026 + 1500);
+      await addToQueue(1680527026 + 2000);
+      await addToQueue(1680527026 + 2500);
+      await addToQueue(1680527026 + 3000);
+      await addToQueue(1680527026 + 3500);
+      await addToQueue(1680527026 + 4500);
+      await addToQueue(1680527026 + 5000);
+      await addToQueue(1680527026 + 5500);
+      await addToQueue(1680527026 + 6000);
+      await addToQueue(1680527026 + 6500);
+      await addToQueue(1680527026 + 7000);
+      await addToQueue(1680527026 + 7500);
+      await addToQueue(1680527026 + 8500);
+      await addToQueue(1680527026 + 9000);
+      await addToQueue(1680527026 + 9500);
+      await addToQueue(1680527026 + 10000);
+      await addToQueue(1680527026 + 11000);
+      await addToQueue(1680527026 + 12000);
+      await addToQueue(1680527026 + 13000);
+      await addToQueue(1680527026 + 14000);
+      await addToQueue(1680527026 + 15000);
+      await addToQueue(1680527026 + 16000);
+      await addToQueue(1680527026 + 17000);
+      await addToQueue(1680527026 + 18000);
+      await addToQueue(1680527026 + 19000);
+      await addToQueue(1680527026 + 20000);
+      await addToQueue(1680527026 + 21000);
+      await addToQueue(1680527026 + 22000);
+      await addToQueue(1680527026 + 23000);
+      await addToQueue(1680527026 + 24000);
+      await addToQueue(1680527026 + 25000);
     })
     .catch(() => {
       // Skip on any errors
