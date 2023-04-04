@@ -1,5 +1,5 @@
 import { Filter } from "@ethersproject/abstract-provider";
-import _ from "lodash";
+import _, { now } from "lodash";
 import pLimit from "p-limit";
 
 import { logger } from "@/common/logger";
@@ -318,7 +318,15 @@ export const syncEvents = async (
   }
 
   const enhancedEvents: EnhancedEvent[] = [];
+  const startTime = now();
   await baseProvider.getLogs(eventFilter).then(async (logs) => {
+    logger.info(
+      "sync-events",
+      `RPC getLogs [${fromBlock}, ${toBlock}] total blocks ${toBlock - fromBlock} time ${
+        (now() - startTime) / 1000
+      }s`
+    );
+
     const availableEventData = getEventData();
 
     for (const log of logs) {
