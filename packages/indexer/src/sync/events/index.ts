@@ -18,6 +18,7 @@ import * as blockCheck from "@/jobs/events-sync/block-check-queue";
 import * as eventsSyncBackfillProcess from "@/jobs/events-sync/process/backfill";
 import * as eventsSyncRealtimeProcess from "@/jobs/events-sync/process/realtime";
 import { BlocksToCheck } from "@/jobs/events-sync/block-check-queue";
+import { idb } from "@/common/db";
 
 export const extractEventsBatches = async (
   enhancedEvents: EnhancedEvent[],
@@ -284,10 +285,25 @@ export const syncEvents = async (
   // processes fetch those blocks as needed / if needed).
   let startTime = now();
   if (!backfill && toBlock - fromBlock + 1 <= 32) {
-    const limit = pLimit(32);
-    await Promise.all(
-      _.range(fromBlock, toBlock + 1).map((block) => limit(() => syncEventsUtils.fetchBlock(block)))
+    const existingBlocks = await idb.manyOrNone(
+      `
+        SELECT blocks.number
+        FROM blocks
+        WHERE blocks.number IN ($/blocks:list/)
+      `,
+      { blocks: _.range(fromBlock, toBlock + 1) }
     );
+
+    let blocksToFetch = _.range(fromBlock, toBlock + 1);
+    if (existingBlocks) {
+      blocksToFetch = _.difference(
+        blocksToFetch,
+        existingBlocks.map((block) => block.number)
+      );
+    }
+
+    const limit = pLimit(32);
+    await Promise.all(blocksToFetch.map((block) => limit(() => syncEventsUtils.fetchBlock(block))));
   }
 
   logger.info(
