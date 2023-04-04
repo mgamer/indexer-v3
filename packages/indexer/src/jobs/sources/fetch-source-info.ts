@@ -75,6 +75,7 @@ if (config.doBackgroundWork) {
       const tokenUrlRinkeby = getTokenUrl(html, url, "rinkeby");
       const tokenUrlPolygon = getTokenUrl(html, url, "polygon");
       const tokenUrlGoerli = getTokenUrl(html, url, "goerli");
+      const tokenUrlArbitrum = getTokenUrl(html, url, "arbitrum");
 
       // Update the source data
       const sources = await Sources.getInstance();
@@ -84,6 +85,7 @@ if (config.doBackgroundWork) {
         tokenUrlMainnet,
         tokenUrlRinkeby,
         tokenUrlPolygon,
+        tokenUrlArbitrum,
         tokenUrlGoerli,
       });
     },
