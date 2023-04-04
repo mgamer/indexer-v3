@@ -365,7 +365,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         ...defaultNetworkSettings,
         metadataMintDelay: 180,
         enableWebSocket: true,
-        realtimeSyncFrequencySeconds: 5,
         realtimeSyncMaxBlockLag: 32,
         lastBlockLatency: 10,
         backfillBlockBatchSize: 60,
