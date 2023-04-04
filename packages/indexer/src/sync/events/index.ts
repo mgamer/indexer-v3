@@ -440,7 +440,7 @@ export const syncEvents = async (
       }
 
       const blocksToCheck: BlocksToCheck[] = [];
-      let blockNumbersArray = _.range(fromBlock, toBlock + 1);
+      let blockNumbersArray = _.range(fromBlock, toBlock);
 
       // Put all fetched blocks on a delayed queue
       [...blocksSet.values()].map(async (blockData) => {
