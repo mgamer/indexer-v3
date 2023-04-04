@@ -392,7 +392,15 @@ export const syncEvents = async (
     );
 
     // Process the retrieved events asynchronously
+    startTime = now();
     const eventsBatches = await extractEventsBatches(enhancedEvents, backfill);
+    logger.info(
+      "sync-events-timing",
+      `Extract events batches [${fromBlock}, ${toBlock}] total blocks ${toBlock - fromBlock} time ${
+        (now() - startTime) / 1000
+      }s`
+    );
+
     if (backfill) {
       await eventsSyncBackfillProcess.addToQueue(eventsBatches);
     } else {
