@@ -282,12 +282,20 @@ export const syncEvents = async (
   // related to every of those blocks a priori for efficiency. Otherwise, it can be
   // too inefficient to do it and in this case we just proceed (and let any further
   // processes fetch those blocks as needed / if needed).
+  let startTime = now();
   if (!backfill && toBlock - fromBlock + 1 <= 32) {
     const limit = pLimit(32);
     await Promise.all(
       _.range(fromBlock, toBlock + 1).map((block) => limit(() => syncEventsUtils.fetchBlock(block)))
     );
   }
+
+  logger.info(
+    "sync-events-timing",
+    `RPC getBlockWithTransactions [${fromBlock}, ${toBlock}] total blocks ${
+      toBlock - fromBlock
+    } time ${(now() - startTime) / 1000}s`
+  );
 
   // Generate the events filter with one of the following options:
   // - fetch all events
@@ -318,10 +326,10 @@ export const syncEvents = async (
   }
 
   const enhancedEvents: EnhancedEvent[] = [];
-  const startTime = now();
+  startTime = now();
   await baseProvider.getLogs(eventFilter).then(async (logs) => {
     logger.info(
-      "sync-events",
+      "sync-events-timing",
       `RPC getLogs [${fromBlock}, ${toBlock}] total blocks ${toBlock - fromBlock} time ${
         (now() - startTime) / 1000
       }s`
@@ -329,6 +337,7 @@ export const syncEvents = async (
 
     const availableEventData = getEventData();
 
+    startTime = now();
     for (const log of logs) {
       try {
         const baseEventParams = await parseEvent(log, blocksCache);
@@ -374,6 +383,13 @@ export const syncEvents = async (
         throw error;
       }
     }
+
+    logger.info(
+      "sync-events-timing",
+      `Parse and save events [${fromBlock}, ${toBlock}] total blocks ${toBlock - fromBlock} time ${
+        (now() - startTime) / 1000
+      }s`
+    );
 
     // Process the retrieved events asynchronously
     const eventsBatches = await extractEventsBatches(enhancedEvents, backfill);
