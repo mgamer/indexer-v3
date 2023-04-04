@@ -24,8 +24,6 @@ import * as countApiUsage from "@/jobs/metrics/count-api-usage";
 
 let server: Hapi.Server;
 
-export const inject = (options: Hapi.ServerInjectOptions) => server.inject(options);
-
 export const start = async (): Promise<void> => {
   server = Hapi.server({
     port: config.port,
@@ -323,3 +321,5 @@ export const start = async (): Promise<void> => {
   await server.start();
   logger.info("process", `Started on port ${config.port}`);
 };
+
+export const inject = (options: Hapi.ServerInjectOptions) => server?.inject(options);
