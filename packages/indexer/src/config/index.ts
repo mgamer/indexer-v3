@@ -97,8 +97,7 @@ export const config = {
   flowApiKey: String(process.env.FLOW_API_KEY),
   orderFetcherApiKey: String(process.env.ORDER_FETCHER_API_KEY),
 
-  // TODO: Should be an environment variable
-  orderFetcherBaseUrl: "https://order-fetcher.up.railway.app",
+  orderFetcherBaseUrl: String(process.env.ORDER_FETCHER_BASE_URL),
   railwayStaticUrl: String(process.env.RAILWAY_STATIC_URL || ""),
 
   cipherSecret: String(process.env.CIPHER_SECRET),
