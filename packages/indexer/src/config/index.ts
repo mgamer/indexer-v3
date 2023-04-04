@@ -1,6 +1,6 @@
 export const config = {
   version: String(process.env.VERSION),
-  port: Number(process.env.PORT ?? 3000),
+  port: Number(process.env.PORT),
   chainId: Number(process.env.CHAIN_ID),
 
   adminApiKey: String(process.env.ADMIN_API_KEY),
