@@ -213,7 +213,7 @@ export type EventSubKind =
   | "blend-repay"
   | "blend-refinance"
   | "blend-buy-locked"
-  | "blend-nonce-incremented";
+  | "blend-nonce-incremented"
   | "collection-new-pool"
   | "collection-token-deposit"
   | "collection-token-withdrawal"
