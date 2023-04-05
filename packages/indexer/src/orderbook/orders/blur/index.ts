@@ -315,7 +315,7 @@ export type BidOrderInfo = {
 
 const getBlurBidId = (collection: string) =>
   // Buy orders have a single order id per collection
-  keccak256(["string", "address", "string"], ["blur", collection]);
+  keccak256(["string", "address"], ["blur", collection]);
 
 export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
@@ -386,7 +386,7 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
           id,
           kind: "blur",
           side: "buy",
-          fillability_status: totalQuantity > 0 ? "fillable" : "no-balance",
+          fillability_status: "fillable",
           approval_status: "approved",
           token_set_id: tokenSetId,
           token_set_schema_hash: toBuffer(schemaHash),
@@ -405,6 +405,7 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
           is_reservoir: null,
           contract: toBuffer(orderParams.collection),
           conduit: null,
+          // TODO: Include royalty fees
           fee_bps: 0,
           fee_breakdown: null,
           dynamic: null,
@@ -420,11 +421,11 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
         results.push({
           id,
           status: "success",
-          unfillable: totalQuantity === 0,
         });
       } else {
         const currentBid = orderResult.raw_data as Sdk.Blur.Types.BlurBidPool;
         const bidUpdates = orderParams;
+
         if (currentBid.collection !== bidUpdates.collection) {
           return results.push({
             id,
@@ -450,34 +451,47 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
         // Remove any empty price points
         currentBid.pricePoints = currentBid.pricePoints.filter((pp) => pp.executableSize > 0);
 
-        // Handle: price
-        const price = currentBid.pricePoints[0].price;
+        if (!currentBid.pricePoints.length) {
+          await idb.none(
+            `
+              UPDATE orders SET
+                fillability_status = 'filled',
+                updated_at = now()
+              WHERE orders.id = $/id/
+            `,
+            { id }
+          );
+        } else {
+          // Handle: price
+          const price = currentBid.pricePoints[0].price;
 
-        const totalQuantity = currentBid.pricePoints
-          .map((p) => p.executableSize)
-          .reduce((a, b) => a + b, 0);
+          const totalQuantity = currentBid.pricePoints
+            .map((p) => p.executableSize)
+            .reduce((a, b) => a + b, 0);
 
-        await idb.none(
-          `
-            UPDATE orders SET
-              fillability_status = ${totalQuantity === 0 ? "fillable" : "no-balance"},
-              price = $/price/,
-              currency_price = $/price/,
-              value = $/price/,
-              currency_value = $/price/,
-              quantity_remaining = $/totalQuantity/,
-              valid_between = tstzrange(date_trunc('seconds', to_timestamp(now())), 'Infinity', '[]'),
-              expiration = 'Infinity',
-              updated_at = now(),
-              raw_data = $/rawData:json/
-            WHERE orders.id = $/id/
-          `,
-          {
-            id,
-            price,
-            totalQuantity,
-          }
-        );
+          await idb.none(
+            `
+              UPDATE orders SET
+                fillability_status = 'fillable',
+                price = $/price/,
+                currency_price = $/price/,
+                value = $/price/,
+                currency_value = $/price/,
+                quantity_remaining = $/totalQuantity/,
+                valid_between = tstzrange(date_trunc('seconds', to_timestamp(now())), 'Infinity', '[]'),
+                expiration = 'Infinity',
+                updated_at = now(),
+                raw_data = $/rawData:json/
+              WHERE orders.id = $/id/
+            `,
+            {
+              id,
+              price,
+              totalQuantity,
+              rawData: currentBid,
+            }
+          );
+        }
 
         results.push({
           id,
@@ -537,7 +551,7 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
 
     await ordersUpdateById.addToQueue(
       results
-        .filter((r) => r.status === "success" && !r.unfillable)
+        .filter((r) => r.status === "success")
         .map(
           ({ id }) =>
             ({
