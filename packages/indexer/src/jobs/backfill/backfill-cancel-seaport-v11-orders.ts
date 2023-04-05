@@ -89,9 +89,13 @@ if (config.doBackgroundWork) {
 
   if (config.chainId === 1) {
     redlock
-      .acquire([`${QUEUE_NAME}-lock-4`], 60 * 60 * 24 * 30 * 1000)
+      .acquire([`${QUEUE_NAME}-lock-5`], 60 * 60 * 24 * 30 * 1000)
       .then(async () => {
-        await addToQueue(HashZero);
+        await addToQueue("0x3" + HashZero.slice(3));
+        await addToQueue("0x6" + HashZero.slice(3));
+        await addToQueue("0x9" + HashZero.slice(3));
+        await addToQueue("0xb" + HashZero.slice(3));
+        await addToQueue("0xe" + HashZero.slice(3));
       })
       .catch(() => {
         // Skip on any errors
