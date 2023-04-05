@@ -26,6 +26,7 @@ if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
     "CollectionBidsPrice",
     async (message: { contractAddress: string; updates: Sdk.Blur.Types.BlurBidPricePoint[] }) => {
       try {
+        logger.info(COMPONENT, JSON.stringify(message));
         if (message.contractAddress === "0x19b86299c21505cdf59ce63740b240a9c822b5e4") {
           await orderbook.addToQueue([
             {
