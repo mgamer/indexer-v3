@@ -143,7 +143,8 @@ export type GenericOrderInfo =
     }
   | {
       kind: "blur";
-      info: orders.blur.OrderInfo;
+      // Blur bids get saved via a different process
+      info: orders.blur.ListingOrderInfo;
       relayToArweave?: boolean;
       validateBidValue?: boolean;
     }
@@ -254,7 +255,7 @@ export const jobProcessor = async (job: Job) => {
       }
 
       case "blur": {
-        result = await orders.blur.save([info], relayToArweave);
+        result = await orders.blur.saveListings([info], relayToArweave);
         break;
       }
 
