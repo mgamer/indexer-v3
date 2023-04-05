@@ -543,7 +543,6 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
         "dynamic",
         "raw_data",
         { name: "expiration", mod: ":raw" },
-        "originated_at",
       ],
       {
         table: "orders",
