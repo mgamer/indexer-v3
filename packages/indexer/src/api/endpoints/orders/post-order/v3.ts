@@ -206,14 +206,14 @@ export const postOrderV3Options: RouteOptions = {
             throw new Error("Unsupported orderbook");
           }
 
-          const orderInfo: orders.blur.OrderInfo = {
+          const orderInfo: orders.blur.ListingOrderInfo = {
             orderParams: order.data,
             metadata: {
               schema,
             },
           };
 
-          const [result] = await orders.blur.save([orderInfo]);
+          const [result] = await orders.blur.saveListings([orderInfo]);
 
           if (result.status === "already-exists") {
             return { message: "Success", orderId: result.id };
