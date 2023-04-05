@@ -370,7 +370,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 15,
-        headBlockDelay: 8,
+        headBlockDelay: 7,
         backfillBlockBatchSize: 60,
         reorgCheckFrequency: [30],
         subDomain: "api-polygon",
@@ -425,7 +425,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
-        headBlockDelay: 8,
+        headBlockDelay: 10,
         subDomain: "api-arbitrum",
         coingecko: {
           networkId: "arbitrum-one",
