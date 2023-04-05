@@ -46,7 +46,9 @@ if (
           // the backfill queue.
           const maxBlocks = getNetworkSettings().realtimeSyncMaxBlockLag;
 
-          const headBlock = await baseProvider.getBlockNumber();
+          // For high volume chains get up to headBlockDelay from RPC head block to avoid skipping missing blocks
+          const headBlock =
+            (await baseProvider.getBlockNumber()) - getNetworkSettings().headBlockDelay;
 
           // Fetch the last synced blocked
           let localBlock = Number(await redis.get(`${QUEUE_NAME}-last-block`));
