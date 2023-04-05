@@ -35,6 +35,12 @@ export const getSalesV4Options: RouteOptions = {
         .description(
           "Filter to a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
+      tokens: Joi.array()
+        .items(Joi.string().lowercase().pattern(regex.token))
+        .max(20)
+        .description(
+          "Array of tokens. Example: `tokens[0]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:704 tokens[1]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:979`"
+        ),
       includeTokenMetadata: Joi.boolean().description(
         "If enabled, also include token metadata in the response."
       ),
@@ -96,6 +102,7 @@ export const getSalesV4Options: RouteOptions = {
 
     let paginationFilter = "";
     let tokenFilter = "";
+    let tokensFilter = "";
     let tokenJoins = "";
     let collectionFilter = "";
 
@@ -123,6 +130,25 @@ export const getSalesV4Options: RouteOptions = {
       (query as any).contract = toBuffer(contract);
       (query as any).tokenId = tokenId;
       tokenFilter = `fill_events_2.contract = $/contract/ AND fill_events_2.token_id = $/tokenId/`;
+    } else if (query.tokens) {
+      if (!_.isArray(query.tokens)) {
+        query.tokens = [query.tokens];
+      }
+
+      for (const token of query.tokens) {
+        const [contract, tokenId] = token.split(":");
+        const tokensFilter = `('${_.replace(contract, "0x", "\\x")}', '${tokenId}')`;
+
+        if (_.isUndefined((query as any).tokensFilter)) {
+          (query as any).tokensFilter = [];
+        }
+
+        (query as any).tokensFilter.push(tokensFilter);
+      }
+
+      (query as any).tokensFilter = _.join((query as any).tokensFilter, ",");
+
+      tokensFilter = `(fill_events_2.contract, fill_events_2.token_id) IN ($/tokensFilter:raw/)`;
     } else if (query.collection) {
       if (query.attributes) {
         const attributes: { key: string; value: string }[] = [];
@@ -261,6 +287,7 @@ export const getSalesV4Options: RouteOptions = {
           WHERE
             ${collectionFilter}
             ${tokenFilter}
+            ${tokensFilter}
             ${paginationFilter}
             ${timestampFilter}
       
