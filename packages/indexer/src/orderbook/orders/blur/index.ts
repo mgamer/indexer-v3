@@ -8,7 +8,6 @@ import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { Sources } from "@/models/sources";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
@@ -31,18 +30,9 @@ export type ListingOrderInfo = {
   metadata: OrderMetadata;
 };
 
-export const saveListings = async (
-  orderInfos: ListingOrderInfo[],
-  relayToArweave?: boolean
-): Promise<SaveResult[]> => {
+export const saveListings = async (orderInfos: ListingOrderInfo[]): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
-
-  const arweaveData: {
-    order: Sdk.Blur.Order;
-    schemaHash?: string;
-    source?: string;
-  }[] = [];
 
   const handleOrder = async ({ orderParams, metadata }: ListingOrderInfo) => {
     try {
@@ -230,10 +220,6 @@ export const saveListings = async (
         status: "success",
         unfillable,
       });
-
-      if (relayToArweave) {
-        arweaveData.push({ order, schemaHash, source: source?.domain });
-      }
     } catch (error) {
       logger.error(
         "orders-blur-save",
@@ -298,10 +284,6 @@ export const saveListings = async (
             } as ordersUpdateById.OrderInfo)
         )
     );
-
-    if (relayToArweave) {
-      await arweaveRelay.addPendingOrdersBlur(arweaveData);
-    }
   }
 
   return results;
