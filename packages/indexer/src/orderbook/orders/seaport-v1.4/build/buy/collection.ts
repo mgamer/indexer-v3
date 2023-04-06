@@ -1,17 +1,17 @@
 import * as Sdk from "@reservoir0x/sdk";
 import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers";
-import { BaseBuilder } from "@reservoir0x/sdk/dist/seaport-v1.4/builders/base";
 
 import { idb } from "@/common/db";
 import { redis } from "@/common/redis";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as utils from "@/orderbook/orders/seaport-v1.4/build/utils";
+import { getBuildInfo } from "@/orderbook/orders/seaport-v1.4/build/utils";
+import { BaseOrderBuildOptions } from "@/orderbook/orders/seaport-base/build/utils";
 import { generateSchemaHash } from "@/orderbook/orders/utils";
 import * as OpenSeaApi from "@/jobs/orderbook/post-order-external/api/opensea";
 import { Tokens } from "@/models/tokens";
 
-interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
+interface BuildOrderOptions extends BaseOrderBuildOptions {
   collection: string;
 }
 
@@ -37,7 +37,7 @@ export const build = async (options: BuildOrderOptions) => {
     throw new Error("Collection has too many tokens");
   }
 
-  const buildInfo = await utils.getBuildInfo(
+  const buildInfo = await getBuildInfo(
     {
       ...options,
       contract: fromBuffer(collectionResult.contract),
@@ -49,7 +49,9 @@ export const build = async (options: BuildOrderOptions) => {
   const collectionIsContractWide = collectionResult.token_set_id?.startsWith("contract:");
   if (collectionIsContractWide && !options.excludeFlaggedTokens) {
     // By default, use a contract-wide builder
-    let builder: BaseBuilder = new Sdk.SeaportV14.Builders.ContractWide(config.chainId);
+    let builder: Sdk.SeaportBase.BaseBuilder = new Sdk.SeaportBase.Builders.ContractWide(
+      config.chainId
+    );
 
     if (options.orderbook === "opensea") {
       const buildCollectionOfferParams = await OpenSeaApi.buildCollectionOffer(
@@ -67,14 +69,16 @@ export const build = async (options: BuildOrderOptions) => {
         (buildInfo.params as any).merkleRoot =
           buildCollectionOfferParams.partialParameters.consideration[0].identifierOrCriteria;
 
-        builder = new Sdk.SeaportV14.Builders.TokenList(config.chainId);
+        builder = new Sdk.SeaportBase.Builders.TokenList(config.chainId);
       }
     }
 
-    return builder.build(buildInfo.params);
+    return builder.build(buildInfo.params, Sdk.SeaportV14.Order);
   } else {
     // Use a token-list builder
-    const builder: BaseBuilder = new Sdk.SeaportV14.Builders.TokenList(config.chainId);
+    const builder: Sdk.SeaportBase.BaseBuilder = new Sdk.SeaportBase.Builders.TokenList(
+      config.chainId
+    );
 
     if (options.orderbook === "opensea") {
       // We need to fetch from OpenSea the most up-to-date merkle root
@@ -132,6 +136,6 @@ export const build = async (options: BuildOrderOptions) => {
       (buildInfo.params as any).merkleRoot = cachedMerkleRoot;
     }
 
-    return builder.build(buildInfo.params);
+    return builder.build(buildInfo.params, Sdk.SeaportV14.Order);
   }
 };

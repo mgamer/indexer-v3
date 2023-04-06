@@ -731,13 +731,11 @@ export const getExecuteBuyV6Options: RouteOptions = {
       ];
 
       // Handle Blur authentication
-      let blurAuth: string | undefined;
+      let blurAuth: b.Auth | undefined;
       if (path.some((p) => p.source === "blur.io")) {
         const blurAuthId = b.getAuthId(payload.taker);
 
-        blurAuth = await b
-          .getAuth(blurAuthId)
-          .then((auth) => (auth ? auth.accessToken : undefined));
+        blurAuth = await b.getAuth(blurAuthId);
         if (!blurAuth) {
           const blurAuthChallengeId = b.getAuthChallengeId(payload.taker);
 
@@ -871,7 +869,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
               config.chainId === 1
                 ? // Use OpenSea's conduit for sharing approvals
                   "0x1e0049783f008a0085193e00003d00cd54003c71"
-                : Sdk.Seaport.Addresses.Exchange[config.chainId];
+                : Sdk.SeaportV11.Addresses.Exchange[config.chainId];
           } else if (listings.every((d) => d.kind === "universe")) {
             conduit = Sdk.Universe.Addresses.Exchange[config.chainId];
           } else if (listings.every((d) => d.kind === "rarible")) {

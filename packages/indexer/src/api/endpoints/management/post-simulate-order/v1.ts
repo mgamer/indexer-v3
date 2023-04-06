@@ -131,12 +131,12 @@ export const postSimulateOrderV1Options: RouteOptions = {
       if (orderResult.side === "sell") {
         const response = await inject({
           method: "POST",
-          url: `/execute/buy/v6`,
+          url: "/execute/buy/v7",
           headers: {
             "Content-Type": "application/json",
           },
           payload: {
-            orderIds: [id],
+            items: [{ orderId: id }],
             taker: genericTaker,
             skipBalanceCheck: true,
             currency: Sdk.Common.Addresses.Eth[config.chainId],
@@ -232,14 +232,18 @@ export const postSimulateOrderV1Options: RouteOptions = {
 
         const response = await inject({
           method: "POST",
-          url: "/execute/sell/v6",
+          url: "/execute/sell/v7",
           headers: {
             "Content-Type": "application/json",
           },
           payload: {
-            orderId: id,
+            items: [
+              {
+                token: `${fromBuffer(tokenResult.contract)}:${tokenResult.token_id}`,
+                orderId: id,
+              },
+            ],
             taker: owner,
-            token: `${fromBuffer(tokenResult.contract)}:${tokenResult.token_id}`,
             allowInactiveOrderIds: true,
           },
         });

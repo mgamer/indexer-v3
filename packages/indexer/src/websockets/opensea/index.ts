@@ -15,7 +15,7 @@ import { redis } from "@/common/redis";
 import { now } from "@/common/utils";
 import { config } from "@/config/index";
 import { OpenseaWebsocketEvents } from "@/models/opensea-websocket-events";
-import { PartialOrderComponents } from "@/orderbook/orders/seaport";
+import { OpenseaOrderParams } from "@/orderbook/orders/seaport-v1.1";
 import { generateHash, getSupportedChainName } from "@/websockets/opensea/utils";
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as orderbookOpenseaListings from "@/jobs/orderbook/opensea-listings-queue";
@@ -77,7 +77,6 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
             orderInfo = {
               kind: protocolData.kind,
               info: {
-                kind: "full",
                 orderParams: protocolData.order.params,
                 metadata: {
                   originatedAt: event.sent_at,
@@ -213,7 +212,7 @@ export const handleEvent = (
   type: EventType,
   payload: unknown
   // `PartialOrderComponents` has the same types for both `seaport` and `seaport-v1.4`
-): PartialOrderComponents | null => {
+): OpenseaOrderParams | null => {
   switch (type) {
     case EventType.ITEM_LISTED:
       return handleItemListedEvent(payload as ItemListedEventPayload);
@@ -231,7 +230,7 @@ export const handleEvent = (
 type ProtocolData =
   | {
       kind: "seaport";
-      order: Sdk.Seaport.Order;
+      order: Sdk.SeaportV11.Order;
     }
   | {
       kind: "seaport-v1.4";
@@ -250,8 +249,8 @@ export const parseProtocolData = (payload: unknown): ProtocolData | undefined =>
     }
 
     const protocol = (payload as any).protocol_address;
-    if (protocol === Sdk.Seaport.Addresses.Exchange[config.chainId]) {
-      const order = new Sdk.Seaport.Order(config.chainId, {
+    if (protocol === Sdk.SeaportV11.Addresses.Exchange[config.chainId]) {
+      const order = new Sdk.SeaportV11.Order(config.chainId, {
         endTime: protocolData.parameters.endTime,
         startTime: protocolData.parameters.startTime,
         consideration: protocolData.parameters.consideration,

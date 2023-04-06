@@ -28,6 +28,7 @@ import { CollectionSets } from "@/models/collection-sets";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { Orders } from "@/utils/orders";
+import { TokenSets } from "@/models/token-sets";
 
 const version = "v4";
 
@@ -136,6 +137,10 @@ export const getOrdersAsksV4Options: RouteOptions = {
         .max(1000)
         .default(50)
         .description("Amount of items returned in response."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     })
       .oxor("token", "tokenSetId")
       .with("community", "maker")
@@ -288,25 +293,7 @@ export const getOrdersAsksV4Options: RouteOptions = {
       }
 
       if (query.tokenSetId) {
-        // When filtering by token set id it could be problematic on small token sets which might not have any listings
-        // we first try to fetch up to 3000 tokens, if the set has less than this we would user the orders.token_set_id IN (...)
-        // if the token set has more than 3000 it's highly likely there are listings which would not cause the query to time out
-        // in that case it would be better to use the JOINs approach
-        const limit = 3000;
-        (query as any).tokenSetId = `${query.tokenSetId}`;
-
-        const tokenSetIds = await redb.manyOrNone(
-          `
-          SELECT CONCAT('token:', REPLACE(contract::text, '\\x', '0x'), ':', token_id) AS "token_set_id"
-          FROM token_sets_tokens
-          WHERE token_set_id = $/tokenSetId/
-          LIMIT ${limit};
-        `,
-          query
-        );
-
-        if (tokenSetIds && _.size(tokenSetIds) == limit) {
-          baseQuery += `
+        baseQuery += `
             JOIN token_sets_tokens tst1
               ON tst1.token_set_id = orders.token_set_id
             JOIN token_sets_tokens tst2
@@ -314,10 +301,11 @@ export const getOrdersAsksV4Options: RouteOptions = {
               AND tst2.token_id = tst1.token_id
         `;
 
-          conditions.push(`tst2.token_set_id = $/tokenSetId/`);
-        } else if (tokenSetIds && _.size(tokenSetIds) > 0) {
-          (query as any).tokenSetIds = _.map(tokenSetIds, (t) => t.token_set_id);
-          conditions.push(`orders.token_set_id IN ($/tokenSetIds:list/)`);
+        conditions.push(`tst2.token_set_id = $/tokenSetId/`);
+        const contractFilter = TokenSets.getContractFromTokenSetId(query.tokenSetId);
+        if (contractFilter) {
+          query.contractFilter = toBuffer(contractFilter);
+          conditions.push(`orders.contract = $/contractFilter/`);
         }
       }
 
@@ -548,7 +536,8 @@ export const getOrdersAsksV4Options: RouteOptions = {
               ? fromBuffer(r.currency)
               : r.side === "sell"
               ? Sdk.Common.Addresses.Eth[config.chainId]
-              : Sdk.Common.Addresses.Weth[config.chainId]
+              : Sdk.Common.Addresses.Weth[config.chainId],
+            query.displayCurrency
           ),
           validFrom: Number(r.valid_from),
           validUntil: Number(r.valid_until),

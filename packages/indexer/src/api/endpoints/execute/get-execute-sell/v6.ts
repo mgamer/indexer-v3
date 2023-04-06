@@ -267,6 +267,7 @@ export const getExecuteSellV6Options: RouteOptions = {
                 AND orders.approval_status = 'approved'
                 AND orders.quantity_remaining >= $/quantity/
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                ${payload.normalizeRoyalties ? " AND orders.normalized_value IS NOT NULL" : ""}
                 ${isFlagged ? "AND orders.kind NOT IN ('x2y2', 'seaport')" : ""}
               ORDER BY orders.value DESC
             `,
@@ -483,11 +484,10 @@ export const getExecuteSellV6Options: RouteOptions = {
 
       // Direct filling on OpenSea might require an approval
       if (txData.to === Sdk.SeaportV14.Addresses.Exchange[config.chainId]) {
-        const isApproved = await getNftApproval(
-          bidDetails.contract,
-          payload.taker,
-          Sdk.SeaportV14.Addresses.OpenseaConduit[config.chainId]
+        const conduit = new Sdk.SeaportV14.Exchange(config.chainId).deriveConduit(
+          Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId]
         );
+        const isApproved = await getNftApproval(bidDetails.contract, payload.taker, conduit);
 
         if (!isApproved) {
           steps[0].items.push({

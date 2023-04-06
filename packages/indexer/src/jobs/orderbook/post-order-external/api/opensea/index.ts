@@ -8,7 +8,7 @@ import {
   RequestWasThrottledError,
   InvalidRequestError,
 } from "@/jobs/orderbook/post-order-external/api/errors";
-import { getOpenseaNetworkName, getOpenseaSubDomain } from "@/config/network";
+import { getOpenseaBaseUrl, getOpenseaNetworkName, getOpenseaSubDomain } from "@/config/network";
 
 // Open Sea default rate limit - 2 requests per second for post apis
 export const RATE_LIMIT_REQUEST_COUNT = 2;
@@ -37,28 +37,26 @@ export const postOrder = async (order: Sdk.SeaportV14.Order, apiKey: string) => 
       }),
       {
         headers:
-          config.chainId === 1
+          config.chainId != 5
             ? {
                 "Content-Type": "application/json",
                 "X-Api-Key": apiKey || config.openSeaApiKey,
               }
             : {
                 "Content-Type": "application/json",
-                // The request will fail if passing the API key on Rinkeby
+                // The request will fail if passing the API key on Opensea Testnet APIs
               },
       }
     )
     .catch((error) => {
-      if (error.response) {
-        logger.error(
-          "opensea-orderbook-api",
-          `Failed to post order to OpenSea. order=${JSON.stringify(
-            order
-          )}, apiKey=${apiKey}, status=${error.response.status}, data=${JSON.stringify(
-            error.response.data
-          )}`
-        );
+      logger.error(
+        "opensea-orderbook-api",
+        `Post OpenSea order error. order=${JSON.stringify(order)}, error=${error}, responseStatus=${
+          error.response?.status
+        }, responseData=${JSON.stringify(error.response?.data)}`
+      );
 
+      if (error.response) {
         handleErrorResponse(error.response);
       }
 
@@ -72,7 +70,7 @@ export const buildCollectionOffer = async (
   collectionSlug: string,
   apiKey = ""
 ) => {
-  const url = `https://${getOpenseaSubDomain()}.opensea.io/v2/offers/build`;
+  const url = `${config.openSeaCrossPostingApiUrl || getOpenseaBaseUrl()}/v2/offers/build`;
 
   return (
     axios
@@ -89,14 +87,15 @@ export const buildCollectionOffer = async (
         }),
         {
           headers:
-            config.chainId === 1
+            config.chainId != 5
               ? {
                   "Content-Type": "application/json",
-                  "X-Api-Key": apiKey || config.openSeaApiKey,
+                  [config.openSeaCrossPostingApiKeyHeader]:
+                    apiKey || config.openSeaCrossPostingApiKey,
                 }
               : {
                   "Content-Type": "application/json",
-                  // The request will fail if passing the API key on Rinkeby
+                  // The request will fail if passing the API key on Opensea Testnet APIs
                 },
         }
       )
@@ -105,17 +104,12 @@ export const buildCollectionOffer = async (
       .catch((error) => {
         logger.error(
           "opensea-orderbook-api",
-          `Build OpenSea collection offer error. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, error=${error}`
+          `Build OpenSea collection offer error. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, url=${url}, error=${error}, responseStatus=${
+            error.response?.status
+          }, responseData=${JSON.stringify(error.response?.data)}`
         );
 
         if (error.response) {
-          logger.error(
-            "opensea-orderbook-api",
-            `Failed to build OpenSea collection offer. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, status: ${
-              error.response.status
-            }, data:${JSON.stringify(error.response.data)}`
-          );
-
           handleErrorResponse(error.response);
         }
 
@@ -153,14 +147,14 @@ export const buildTraitOffer = async (
         }),
         {
           headers:
-            config.chainId === 1
+            config.chainId != 5
               ? {
                   "Content-Type": "application/json",
                   "X-Api-Key": apiKey || config.openSeaApiKey,
                 }
               : {
                   "Content-Type": "application/json",
-                  // The request will fail if passing the API key on Rinkeby
+                  // The request will fail if passing the API key on Opensea Testnet APIs
                 },
         }
       )
@@ -169,17 +163,12 @@ export const buildTraitOffer = async (
       .catch((error) => {
         logger.error(
           "opensea_orderbook_api",
-          `Build OpenSea trait offer error. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, traitType=${traitType}, traitValue=${traitValue}, error=${error}`
+          `Build OpenSea trait offer error. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, traitType=${traitType}, traitValue=${traitValue}, error=${error}, responseStatus=${
+            error.response?.status
+          }, responseData=${JSON.stringify(error.response?.data)}`
         );
 
         if (error.response) {
-          logger.error(
-            "opensea_orderbook_api",
-            `Failed to build OpenSea trait offer. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, traitType=${traitType}, traitValue=${traitValue}, status: ${
-              error.response.status
-            }, data:${JSON.stringify(error.response.data)}`
-          );
-
           handleErrorResponse(error.response);
         }
 
@@ -193,7 +182,8 @@ export const postCollectionOffer = async (
   collectionSlug: string,
   apiKey: string
 ) => {
-  const url = `https://${getOpenseaSubDomain()}.opensea.io/v2/offers`;
+  const url = `${getOpenseaBaseUrl()}/v2/offers`;
+
   const data = JSON.stringify({
     criteria: {
       collection: {
@@ -213,14 +203,14 @@ export const postCollectionOffer = async (
   await axios
     .post(url, data, {
       headers:
-        config.chainId === 1
+        config.chainId != 5
           ? {
               "Content-Type": "application/json",
               "X-Api-Key": apiKey || config.openSeaApiKey,
             }
           : {
               "Content-Type": "application/json",
-              // The request will fail if passing the API key on Rinkeby
+              // The request will fail if passing the API key on Opensea Testnet APIs
             },
     })
     .catch((error) => {
@@ -228,19 +218,12 @@ export const postCollectionOffer = async (
         "opensea-orderbook-api",
         `Post OpenSea collection offer error. order=${JSON.stringify(
           order
-        )}, collectionSlug=${collectionSlug}, url=${url}, data=${data}, error=${error}`
+        )}, collectionSlug=${collectionSlug}, url=${url}, apiKey=${apiKey}, data=${data}, error=${error}, responseStatus=${
+          error.response?.status
+        }, responseData=${JSON.stringify(error.response?.data)}`
       );
 
       if (error.response) {
-        logger.error(
-          "opensea-orderbook-api",
-          `Failed to post collection offer to OpenSea. order=${JSON.stringify(
-            order
-          )}, collectionSlug=${collectionSlug}, url=${url}, data=${data}, status=${
-            error.response.status
-          }, data=${JSON.stringify(error.response.data)}`
-        );
-
         handleErrorResponse(error.response);
       }
 
@@ -278,14 +261,14 @@ export const postTraitOffer = async (
   await axios
     .post(url, data, {
       headers:
-        config.chainId === 1
+        config.chainId != 5
           ? {
               "Content-Type": "application/json",
               "X-Api-Key": apiKey || config.openSeaApiKey,
             }
           : {
               "Content-Type": "application/json",
-              // The request will fail if passing the API key on Rinkeby
+              // The request will fail if passing the API key on Opensea Testnet APIs
             },
     })
     .catch((error) => {
@@ -293,19 +276,12 @@ export const postTraitOffer = async (
         "opensea-orderbook-api",
         `Post OpenSea trait offer error. order=${JSON.stringify(
           order
-        )}, collectionSlug=${collectionSlug}, url=${url}, data=${data}, error=${error}`
+        )}, collectionSlug=${collectionSlug}, url=${url}, data=${data}, error=${error}, responseStatus=${
+          error.response?.status
+        }, responseData=${JSON.stringify(error.response?.data)}`
       );
 
       if (error.response) {
-        logger.error(
-          "opensea-orderbook-api",
-          `Failed to post trait offer to OpenSea. order=${JSON.stringify(
-            order
-          )}, collectionSlug=${collectionSlug}, url=${url}, data=${data}, status=${
-            error.response.status
-          }, data=${JSON.stringify(error.response.data)}`
-        );
-
         handleErrorResponse(error.response);
       }
 

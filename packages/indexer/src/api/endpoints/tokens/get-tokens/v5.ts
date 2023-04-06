@@ -175,6 +175,10 @@ export const getTokensV5Options: RouteOptions = {
       continuation: Joi.string()
         .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     })
       .or("collection", "contract", "tokens", "tokenSetId", "community", "collectionsSetId")
       .oxor("collection", "contract", "tokens", "tokenSetId", "community", "collectionsSetId")
@@ -317,6 +321,7 @@ export const getTokensV5Options: RouteOptions = {
                 AND nb.amount > 0
                 AND nb.owner != o.maker
             )
+            ${query.normalizeRoyalties ? " AND o.normalized_value IS NOT NULL" : ""}
           ORDER BY o.value DESC
           LIMIT 1
         ) y ON TRUE
@@ -418,7 +423,7 @@ export const getTokensV5Options: RouteOptions = {
       LEFT JOIN LATERAL (
         SELECT
           CASE WHEN f.royalty_fee_breakdown IS NOT NULL THEN true
-          WHEN o.fee_breakdown IS NULL THEN false 
+          WHEN o.fee_breakdown IS NULL THEN false
           WHEN 'royalty' IN (SELECT jsonb_array_elements(o.fee_breakdown)->>'kind') THEN true
           ELSE false END AS royalties_paid
         FROM fill_events_2 f
@@ -458,6 +463,13 @@ export const getTokensV5Options: RouteOptions = {
       if (query.currencies) {
         sourceConditions.push(`o.currency IN ($/currenciesFilter:raw/)`);
       }
+
+      sourceConditions.push(`
+        tst.token_id IN (
+          SELECT token_id FROM orders
+          WHERE ${sourceConditions.join(" AND ")}
+        )
+      `);
 
       if (query.contract) {
         sourceConditions.push(`tst.contract = $/contract/`);
@@ -504,7 +516,7 @@ export const getTokensV5Options: RouteOptions = {
           ORDER BY token_id, contract, ${
             query.normalizeRoyalties ? "o.normalized_value" : "o.value"
           }
-        ) s ON s.contract = t.contract AND s.token_id = t.token_id      
+        ) s ON s.contract = t.contract AND s.token_id = t.token_id
       `;
     }
 
@@ -959,7 +971,7 @@ export const getTokensV5Options: RouteOptions = {
 
           if (r.floor_sell_raw_data) {
             if (r.floor_sell_dynamic && r.floor_sell_order_kind === "seaport") {
-              const order = new Sdk.Seaport.Order(config.chainId, r.floor_sell_raw_data);
+              const order = new Sdk.SeaportV11.Order(config.chainId, r.floor_sell_raw_data);
 
               // Dutch auction
               dynamicPricing = {
@@ -974,7 +986,8 @@ export const getTokensV5Options: RouteOptions = {
                             .toString(),
                         },
                       },
-                      floorAskCurrency
+                      floorAskCurrency,
+                      query.displayCurrency
                     ),
                     end: await getJoiPriceObject(
                       {
@@ -984,7 +997,8 @@ export const getTokensV5Options: RouteOptions = {
                             .toString(),
                         },
                       },
-                      floorAskCurrency
+                      floorAskCurrency,
+                      query.displayCurrency
                     ),
                   },
                   time: {
@@ -1007,7 +1021,8 @@ export const getTokensV5Options: RouteOptions = {
                             amount: bn(price).add(missingRoyalties).toString(),
                           },
                         },
-                        floorAskCurrency
+                        floorAskCurrency,
+                        query.displayCurrency
                       )
                     )
                   ),
@@ -1027,7 +1042,8 @@ export const getTokensV5Options: RouteOptions = {
                             amount: bn(price).add(missingRoyalties).toString(),
                           },
                         },
-                        floorAskCurrency
+                        floorAskCurrency,
+                        query.displayCurrency
                       )
                     )
                   ),
@@ -1096,7 +1112,8 @@ export const getTokensV5Options: RouteOptions = {
                         nativeAmount: r.floor_sell_value,
                       },
                     },
-                    floorAskCurrency
+                    floorAskCurrency,
+                    query.displayCurrency
                   )
                 : null,
               maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
@@ -1138,7 +1155,8 @@ export const getTokensV5Options: RouteOptions = {
                             nativeAmount: r.top_buy_price,
                           },
                         },
-                        topBidCurrency
+                        topBidCurrency,
+                        query.displayCurrency
                       )
                     : null,
                   maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,

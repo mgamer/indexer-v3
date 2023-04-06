@@ -19,6 +19,7 @@ export type BlurData = {
   marketplaceData: string;
   authToken: string;
   signature: string;
+  isCollectionBid?: boolean;
 };
 
 export async function postOrder(order: BlurData, apiKey: string): Promise<void> {
@@ -31,6 +32,7 @@ export async function postOrder(order: BlurData, apiKey: string): Promise<void> 
         marketplaceData: order.marketplaceData,
         authToken: order.authToken,
         signature: order.signature,
+        isCollectionBid: order.isCollectionBid ? "true" : undefined,
       },
       {
         headers: {
@@ -64,6 +66,8 @@ const handleErrorResponse = (response: any) => {
       throw new RequestWasThrottledError("Request was throttled by Blur", delay);
     }
     case 400:
-      throw new InvalidRequestError("Request was rejected by Blur");
+      throw new InvalidRequestError(
+        response.data ? JSON.stringify(response.data) : "Request was rejected by Blur"
+      );
   }
 };

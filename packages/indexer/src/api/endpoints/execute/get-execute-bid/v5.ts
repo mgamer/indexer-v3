@@ -1,25 +1,32 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { BigNumber } from "@ethersproject/bignumber";
+import { _TypedDataEncoder } from "@ethersproject/hash";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import { TxData } from "@reservoir0x/sdk/dist/utils";
+import axios from "axios";
 import Joi from "joi";
 import _ from "lodash";
 
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn, regex } from "@/common/utils";
+import { bn, now, regex } from "@/common/utils";
 import { config } from "@/config/index";
+import * as b from "@/utils/auth/blur";
+
+// Blur
+import * as blurBuyCollection from "@/orderbook/orders/blur/build/buy/collection";
 
 // LooksRare
 import * as looksRareBuyToken from "@/orderbook/orders/looks-rare/build/buy/token";
 import * as looksRareBuyCollection from "@/orderbook/orders/looks-rare/build/buy/collection";
 
 // Seaport
-import * as seaportBuyAttribute from "@/orderbook/orders/seaport/build/buy/attribute";
-import * as seaportBuyToken from "@/orderbook/orders/seaport/build/buy/token";
-import * as seaportBuyCollection from "@/orderbook/orders/seaport/build/buy/collection";
+import * as seaportBuyAttribute from "@/orderbook/orders/seaport-v1.1/build/buy/attribute";
+import * as seaportBuyToken from "@/orderbook/orders/seaport-v1.1/build/buy/token";
+import * as seaportBuyCollection from "@/orderbook/orders/seaport-v1.1/build/buy/collection";
 
 // Seaport v1.4
 import * as seaportV14BuyAttribute from "@/orderbook/orders/seaport-v1.4/build/buy/attribute";
@@ -52,7 +59,7 @@ export const getExecuteBidV5Options: RouteOptions = {
   description: "Create bids (offers)",
   notes: "Generate bids and submit them to multiple marketplaces",
   timeout: { server: 60000 },
-  tags: ["api", "Orderbook"],
+  tags: ["api", "Create Orders (list & bid)"],
   plugins: {
     "hapi-swagger": {
       order: 11,
@@ -106,6 +113,7 @@ export const getExecuteBidV5Options: RouteOptions = {
             .required(),
           orderKind: Joi.string()
             .valid(
+              "blur",
               "zeroex-v4",
               "seaport",
               "seaport-v1.4",
@@ -128,7 +136,16 @@ export const getExecuteBidV5Options: RouteOptions = {
             }),
           }).description("Additional options."),
           orderbook: Joi.string()
-            .valid("reservoir", "opensea", "looks-rare", "x2y2", "universe", "infinity", "flow")
+            .valid(
+              "blur",
+              "reservoir",
+              "opensea",
+              "looks-rare",
+              "x2y2",
+              "universe",
+              "infinity",
+              "flow"
+            )
             .default("reservoir")
             .description("Orderbook where order is placed. Example: `Reservoir`"),
           orderbookApiKey: Joi.string().description("Optional API key for the target orderbook"),
@@ -232,18 +249,8 @@ export const getExecuteBidV5Options: RouteOptions = {
         nonce?: string;
       }[];
 
-      // TODO: This shouldn't be here
-      let currency = "ETH";
-      let wrappedCurrency = "WETH";
-      switch (config.chainId) {
-        case 137:
-          currency = "MATIC";
-          wrappedCurrency = "WMATIC";
-          break;
-      }
-
       // Set up generic bid steps
-      const steps: {
+      let steps: {
         id: string;
         action: string;
         description: string;
@@ -255,9 +262,16 @@ export const getExecuteBidV5Options: RouteOptions = {
         }[];
       }[] = [
         {
+          id: "auth",
+          action: "Sign auth challenge",
+          description: "Before being able to list, it might be needed to sign an auth challenge",
+          kind: "signature",
+          items: [],
+        },
+        {
           id: "currency-wrapping",
-          action: `Wrapping ${currency}`,
-          description: `We'll ask your approval for converting ${currency} to ${wrappedCurrency}. Gas fee required.`,
+          action: `Wrapping currency`,
+          description: `We'll ask your approval to wrap the currency for bidding. Gas fee required.`,
           kind: "transaction",
           items: [],
         },
@@ -283,7 +297,7 @@ export const getExecuteBidV5Options: RouteOptions = {
         "seaport-v1.4": [] as {
           order: {
             kind: "seaport-v1.4";
-            data: Sdk.SeaportV14.Types.OrderComponents;
+            data: Sdk.SeaportBase.Types.OrderComponents;
           };
           tokenSetId?: string;
           attribute?: {
@@ -299,6 +313,69 @@ export const getExecuteBidV5Options: RouteOptions = {
           orderIndex: number;
         }[],
       };
+
+      // Handle Blur authentication
+      let blurAuth: string | undefined;
+      if (params.some((p) => p.orderKind === "blur")) {
+        const blurAuthId = b.getAuthId(maker);
+
+        blurAuth = await b
+          .getAuth(blurAuthId)
+          .then((auth) => (auth ? auth.accessToken : undefined));
+        if (!blurAuth) {
+          const blurAuthChallengeId = b.getAuthChallengeId(maker);
+
+          let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
+          if (!blurAuthChallenge) {
+            blurAuthChallenge = (await axios
+              .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${maker}`, {
+                headers: {
+                  "X-Api-Key": config.orderFetcherApiKey,
+                },
+              })
+              .then((response) => response.data.authChallenge)) as b.AuthChallenge;
+
+            await b.saveAuthChallenge(
+              blurAuthChallengeId,
+              blurAuthChallenge,
+              // Give a 1 minute buffer for the auth challenge to expire
+              Math.floor(new Date(blurAuthChallenge?.expiresOn).getTime() / 1000) - now() - 60
+            );
+          }
+
+          steps[0].items.push({
+            status: "incomplete",
+            data: {
+              sign: {
+                signatureKind: "eip191",
+                message: blurAuthChallenge.message,
+              },
+              post: {
+                endpoint: "/execute/auth-signature/v1",
+                method: "POST",
+                body: {
+                  kind: "blur",
+                  id: blurAuthChallengeId,
+                },
+              },
+            },
+          });
+
+          // Force the client to poll
+          steps[1].items.push({
+            status: "incomplete",
+          });
+
+          // Return an early since any next steps are dependent on the Blur auth
+          return {
+            steps,
+          };
+        } else {
+          steps[0].items.push({
+            status: "complete",
+          });
+        }
+      }
 
       const errors: { message: string; orderIndex: number }[] = [];
       await Promise.all(
@@ -323,7 +400,7 @@ export const getExecuteBidV5Options: RouteOptions = {
           }
 
           // TODO: Fix cross-posting collection bids to LooksRare and X2Y2
-          if (!token && !["reservoir", "opensea"].includes(params.orderbook)) {
+          if (!token && !["blur", "reservoir", "opensea"].includes(params.orderbook)) {
             return errors.push({
               message: `Only single-token bids are supported on orderbook ${params.orderbook}`,
               orderIndex: i,
@@ -342,27 +419,45 @@ export const getExecuteBidV5Options: RouteOptions = {
           }
 
           try {
+            const WETH = Sdk.Common.Addresses.Weth[config.chainId];
+            const BETH = Sdk.Blur.Addresses.Beth[config.chainId];
+
+            // Default currency for Blur is BETH
+            if (params.orderKind === "blur" && params.currency === WETH) {
+              params.currency = BETH;
+            }
+
+            // Check currency
+            if (params.orderKind === "blur" && params.currency !== BETH) {
+              return errors.push({ message: "Unsupported currency", orderIndex: i });
+            } else if (params.orderKind !== "blur" && params.currency === BETH) {
+              return errors.push({ message: "Unsupported currency", orderIndex: i });
+            }
+
+            const totalPrice = bn(params.weiPrice).mul(params.quantity ?? 1);
+
             // Check the maker's balance
+
             const currency = new Sdk.Common.Helpers.Erc20(baseProvider, params.currency);
             const currencyBalance = await currency.getBalance(maker);
-            if (bn(currencyBalance).lt(params.weiPrice)) {
-              if (params.currency === Sdk.Common.Addresses.Weth[config.chainId]) {
+            if (bn(currencyBalance).lt(totalPrice)) {
+              if ([WETH, BETH].includes(params.currency)) {
                 const ethBalance = await baseProvider.getBalance(maker);
-                if (bn(currencyBalance).add(ethBalance).lt(params.weiPrice)) {
+                if (bn(currencyBalance).add(ethBalance).lt(totalPrice)) {
                   return errors.push({
                     message: "Maker does not have sufficient balance",
                     orderIndex: i,
                   });
                 } else {
                   const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
-                  const wrapTx = weth.depositTransaction(
-                    maker,
-                    bn(params.weiPrice).sub(currencyBalance)
-                  );
+                  const wrapTx = weth.depositTransaction(maker, totalPrice.sub(currencyBalance));
 
-                  steps[0].items.push({
+                  steps[1].items.push({
                     status: "incomplete",
-                    data: wrapTx,
+                    data:
+                      params.currency === BETH
+                        ? { ...wrapTx, to: Sdk.Blur.Addresses.Beth[config.chainId] }
+                        : wrapTx,
                     orderIndexes: [i],
                   });
                 }
@@ -386,6 +481,67 @@ export const getExecuteBidV5Options: RouteOptions = {
               collectionId && !attributeKey && !attributeValue ? collectionId : undefined;
 
             switch (params.orderKind) {
+              case "blur": {
+                if (!["blur"].includes(params.orderbook)) {
+                  return errors.push({ message: "Unsupported orderbook", orderIndex: i });
+                }
+
+                if (!collection) {
+                  return errors.push({
+                    message: "Only collection bids are supported",
+                    orderIndex: i,
+                  });
+                }
+
+                // TODO: Return an error if the collection is not supported by Blur
+
+                const { signData, marketplaceData } = await blurBuyCollection.build({
+                  ...params,
+                  maker,
+                  contract: collection,
+                  authToken: blurAuth!,
+                });
+
+                steps[3].items.push({
+                  status: "incomplete",
+                  data: {
+                    sign: {
+                      signatureKind: "eip712",
+                      domain: signData.domain,
+                      types: signData.types,
+                      value: signData.value,
+                      primaryType: _TypedDataEncoder.getPrimaryType(signData.types),
+                    },
+                    post: {
+                      endpoint: "/order/v4",
+                      method: "POST",
+                      body: {
+                        items: [
+                          {
+                            order: {
+                              kind: "blur",
+                              data: {
+                                maker,
+                                marketplaceData,
+                                authToken: blurAuth!,
+                                isCollectionBid: true,
+                              },
+                            },
+                            collection,
+                            orderbook: params.orderbook,
+                            orderbookApiKey: params.orderbookApiKey,
+                          },
+                        ],
+                        source,
+                      },
+                    },
+                  },
+                  orderIndexes: [i],
+                });
+
+                break;
+              }
+
               case "seaport": {
                 if (!["reservoir"].includes(params.orderbook)) {
                   return errors.push({
@@ -394,7 +550,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   });
                 }
 
-                let order: Sdk.Seaport.Order;
+                let order: Sdk.SeaportV11.Order;
                 if (token) {
                   const [contract, tokenId] = token.split(":");
                   order = await seaportBuyToken.build({
@@ -437,7 +593,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   });
                 }
 
-                const exchange = new Sdk.Seaport.Exchange(config.chainId);
+                const exchange = new Sdk.SeaportV11.Exchange(config.chainId);
                 const conduit = exchange.deriveConduit(order.params.conduitKey);
 
                 // Check the maker's approval
@@ -447,12 +603,12 @@ export const getExecuteBidV5Options: RouteOptions = {
                   approvalTx = currency.approveTransaction(maker, conduit);
                 }
 
-                steps[1].items.push({
+                steps[2].items.push({
                   status: !approvalTx ? "complete" : "incomplete",
                   data: approvalTx,
                   orderIndexes: [i],
                 });
-                steps[2].items.push({
+                steps[3].items.push({
                   status: "incomplete",
                   data: {
                     sign: order.getSignatureData(),
@@ -565,7 +721,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   approvalTx = currency.approveTransaction(maker, conduit);
                 }
 
-                steps[1].items.push({
+                steps[2].items.push({
                   status: !approvalTx ? "complete" : "incomplete",
                   data: approvalTx,
                   orderIndexes: [i],
@@ -653,12 +809,12 @@ export const getExecuteBidV5Options: RouteOptions = {
                   );
                 }
 
-                steps[1].items.push({
+                steps[2].items.push({
                   status: !approvalTx ? "complete" : "incomplete",
                   data: approvalTx,
                   orderIndexes: [i],
                 });
-                steps[2].items.push({
+                steps[3].items.push({
                   status: "incomplete",
                   data: {
                     sign: order.getSignatureData(),
@@ -743,12 +899,12 @@ export const getExecuteBidV5Options: RouteOptions = {
                   );
                 }
 
-                steps[1].items.push({
+                steps[2].items.push({
                   status: !approvalTx ? "complete" : "incomplete",
                   data: approvalTx,
                   orderIndexes: [i],
                 });
-                steps[2].items.push({
+                steps[3].items.push({
                   status: "incomplete",
                   data: {
                     sign: order.getSignatureData(),
@@ -837,12 +993,12 @@ export const getExecuteBidV5Options: RouteOptions = {
                   );
                 }
 
-                steps[1].items.push({
+                steps[2].items.push({
                   status: !approvalTx ? "complete" : "incomplete",
                   data: approvalTx,
                   orderIndexes: [i],
                 });
-                steps[2].items.push({
+                steps[3].items.push({
                   status: "incomplete",
                   data: {
                     sign: order.getSignatureData(),
@@ -930,12 +1086,12 @@ export const getExecuteBidV5Options: RouteOptions = {
                   );
                 }
 
-                steps[1].items.push({
+                steps[2].items.push({
                   status: !approvalTx ? "complete" : "incomplete",
                   data: approvalTx,
                   orderIndexes: [i],
                 });
-                steps[2].items.push({
+                steps[3].items.push({
                   status: "incomplete",
                   data: {
                     sign: order.getSignatureData(),
@@ -1016,12 +1172,12 @@ export const getExecuteBidV5Options: RouteOptions = {
                   );
                 }
 
-                steps[1].items.push({
+                steps[2].items.push({
                   status: !approvalTx ? "complete" : "incomplete",
                   data: approvalTx,
                   orderIndexes: [i],
                 });
-                steps[2].items.push({
+                steps[3].items.push({
                   status: "incomplete",
                   data: {
                     sign: new Sdk.X2Y2.Exchange(
@@ -1089,12 +1245,12 @@ export const getExecuteBidV5Options: RouteOptions = {
                   );
                 }
 
-                steps[1].items.push({
+                steps[2].items.push({
                   status: !approvalTx ? "complete" : "incomplete",
                   data: approvalTx,
                   orderIndexes: [i],
                 });
-                steps[2].items.push({
+                steps[3].items.push({
                   status: "incomplete",
                   data: {
                     sign: order.getSignatureData(),
@@ -1121,7 +1277,10 @@ export const getExecuteBidV5Options: RouteOptions = {
               }
             }
           } catch (error: any) {
-            return errors.push({ message: error.message ?? "Internal error", orderIndex: i });
+            return errors.push({
+              message: error.response?.data ? JSON.stringify(error.response.data) : error.message,
+              orderIndex: i,
+            });
           }
         })
       );
@@ -1133,7 +1292,7 @@ export const getExecuteBidV5Options: RouteOptions = {
         const orders = bulkOrders["seaport-v1.4"];
         if (orders.length === 1) {
           const order = new Sdk.SeaportV14.Order(config.chainId, orders[0].order.data);
-          steps[2].items.push({
+          steps[3].items.push({
             status: "incomplete",
             data: {
               sign: order.getSignatureData(),
@@ -1164,7 +1323,7 @@ export const getExecuteBidV5Options: RouteOptions = {
             orders.map((o) => new Sdk.SeaportV14.Order(config.chainId, o.order.data))
           );
 
-          steps[2].items.push({
+          steps[3].items.push({
             status: "incomplete",
             data: {
               sign: signatureData,
@@ -1197,32 +1356,37 @@ export const getExecuteBidV5Options: RouteOptions = {
         }
       }
 
-      // We should only have a single wrapping transaction
-      if (steps[0].items.length > 1) {
-        let amount = bn(0);
-        for (let i = 0; i < steps[0].items.length; i++) {
-          const itemAmount = bn(steps[0].items[i].data?.value || 0);
-          if (itemAmount.gt(amount)) {
-            amount = itemAmount;
+      // We should only have a single wrapping transaction per currency
+      if (steps[1].items.length > 1) {
+        const amounts: { [to: string]: BigNumber } = {};
+        for (let i = 0; i < steps[1].items.length; i++) {
+          const data = steps[1].items[i].data;
+          if (data) {
+            const itemAmount = bn(data.value || 0);
+            if (!amounts[data.to] || itemAmount.gt(amounts[data.to])) {
+              amounts[data.to] = itemAmount;
+            }
           }
         }
 
-        if (amount.gt(0)) {
-          const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
-          const wrapTx = weth.depositTransaction(maker, amount);
+        steps[1].items = [];
+        for (const [to, amount] of Object.entries(amounts)) {
+          if (amount.gt(0)) {
+            const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
+            const wrapTx = weth.depositTransaction(maker, amount);
 
-          steps[0].items = [
-            {
+            steps[1].items.push({
               status: "incomplete",
-              data: wrapTx,
-            },
-          ];
-        } else {
-          steps[0].items = [];
+              data: {
+                ...wrapTx,
+                to,
+              },
+            });
+          }
         }
       }
 
-      if (!steps[2].items.length) {
+      if (!steps[3].items.length) {
         const error = Boom.badRequest("No bids can be created");
         error.output.payload.errors = errors;
         throw error;
@@ -1248,6 +1412,17 @@ export const getExecuteBidV5Options: RouteOptions = {
             })(),
           }));
         }
+      }
+
+      // Warning! When filtering the steps, we should ensure that it
+      // won't affect the client, which might be polling the API and
+      // expect to get the steps returned in the same order / at the
+      // same index.
+      if (!blurAuth) {
+        // If we reached this point and the Blur auth is missing then we
+        // can be sure that no Blur orders were requested and it is safe
+        // to remove the auth step
+        steps = steps.slice(1);
       }
 
       return { steps, errors };

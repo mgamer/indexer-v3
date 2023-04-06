@@ -24,12 +24,11 @@ import * as looksRareSellToken from "@/orderbook/orders/looks-rare/build/sell/to
 import * as looksRareCheck from "@/orderbook/orders/looks-rare/check";
 
 // Seaport
-import * as seaportSellToken from "@/orderbook/orders/seaport/build/sell/token";
-import * as seaportCheck from "@/orderbook/orders/seaport/check";
+import * as seaportSellToken from "@/orderbook/orders/seaport-v1.1/build/sell/token";
+import * as seaportCheck from "@/orderbook/orders/seaport-base/check";
 
 // Seaport v1.4
 import * as seaportV14SellToken from "@/orderbook/orders/seaport-v1.4/build/sell/token";
-import * as seaportV14Check from "@/orderbook/orders/seaport-v1.4/check";
 
 // X2Y2
 import * as x2y2SellToken from "@/orderbook/orders/x2y2/build/sell/token";
@@ -56,7 +55,7 @@ const version = "v5";
 export const getExecuteListV5Options: RouteOptions = {
   description: "Create asks (listings)",
   notes: "Generate listings and submit them to multiple marketplaces",
-  tags: ["api", "Orderbook"],
+  tags: ["api", "Create Orders (list & bid)"],
   plugins: {
     "hapi-swagger": {
       order: 11,
@@ -199,27 +198,29 @@ export const getExecuteListV5Options: RouteOptions = {
   handler: async (request: Request) => {
     const payload = request.payload as any;
 
-    try {
-      const maker = payload.maker as string;
-      const source = payload.source as string | undefined;
-      const params = payload.params as {
-        token: string;
-        quantity?: number;
-        weiPrice: string;
-        orderKind: string;
-        orderbook: string;
-        fees: string[];
-        options?: any;
-        orderbookApiKey?: string;
-        automatedRoyalties: boolean;
-        royaltyBps?: number;
-        listingTime?: number;
-        expirationTime?: number;
-        salt?: string;
-        nonce?: string;
-        currency?: string;
-      }[];
+    const maker = payload.maker as string;
+    const source = payload.source as string | undefined;
+    const params = payload.params as {
+      token: string;
+      quantity?: number;
+      weiPrice: string;
+      orderKind: string;
+      orderbook: string;
+      fees: string[];
+      options?: any;
+      orderbookApiKey?: string;
+      automatedRoyalties: boolean;
+      royaltyBps?: number;
+      listingTime?: number;
+      expirationTime?: number;
+      salt?: string;
+      nonce?: string;
+      currency?: string;
+    }[];
 
+    const perfTime1 = performance.now();
+
+    try {
       // Set up generic listing steps
       let steps: {
         id: string;
@@ -261,7 +262,7 @@ export const getExecuteListV5Options: RouteOptions = {
         "seaport-v1.4": [] as {
           order: {
             kind: "seaport-v1.4";
-            data: Sdk.SeaportV14.Types.OrderComponents;
+            data: Sdk.SeaportBase.Types.OrderComponents;
           };
           orderbook: string;
           orderbookApiKey?: string;
@@ -669,8 +670,11 @@ export const getExecuteListV5Options: RouteOptions = {
                 let approvalTx: TxData | undefined;
 
                 // Check the order's fillability
+                const exchange = new Sdk.SeaportV11.Exchange(config.chainId);
                 try {
-                  await seaportCheck.offChainCheck(order, { onChainApprovalRecheck: true });
+                  await seaportCheck.offChainCheck(order, exchange, {
+                    onChainApprovalRecheck: true,
+                  });
                 } catch (error: any) {
                   switch (error.message) {
                     case "no-balance-no-approval":
@@ -680,8 +684,6 @@ export const getExecuteListV5Options: RouteOptions = {
 
                     case "no-approval": {
                       // Generate an approval transaction
-
-                      const exchange = new Sdk.Seaport.Exchange(config.chainId);
                       const info = order.getInfo()!;
 
                       const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
@@ -764,8 +766,11 @@ export const getExecuteListV5Options: RouteOptions = {
                 let approvalTx: TxData | undefined;
 
                 // Check the order's fillability
+                const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
                 try {
-                  await seaportV14Check.offChainCheck(order, { onChainApprovalRecheck: true });
+                  await seaportCheck.offChainCheck(order, exchange, {
+                    onChainApprovalRecheck: true,
+                  });
                 } catch (error: any) {
                   switch (error.message) {
                     case "no-balance-no-approval":
@@ -775,8 +780,6 @@ export const getExecuteListV5Options: RouteOptions = {
 
                     case "no-approval": {
                       // Generate an approval transaction
-
-                      const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
                       const info = order.getInfo()!;
 
                       const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
@@ -818,7 +821,7 @@ export const getExecuteListV5Options: RouteOptions = {
                   return errors.push({ message: "Unsupported orderbook", orderIndex: i });
                 }
                 if (params.fees?.length) {
-                  return errors.push({ message: "custom-fees-not-supported", orderIndex: i });
+                  return errors.push({ message: "Custom fees not supported", orderIndex: i });
                 }
 
                 const order = await looksRareSellToken.build({
@@ -900,7 +903,7 @@ export const getExecuteListV5Options: RouteOptions = {
                   return errors.push({ message: "Unsupported orderbook", orderIndex: i });
                 }
                 if (params.fees?.length) {
-                  return errors.push({ message: "custom-fees-not-supported", orderIndex: i });
+                  return errors.push({ message: "Custom fees not supported", orderIndex: i });
                 }
 
                 const order = await x2y2SellToken.build({
@@ -1058,7 +1061,10 @@ export const getExecuteListV5Options: RouteOptions = {
               }
             }
           } catch (error: any) {
-            return errors.push({ message: error.message ?? "Internal error", orderIndex: i });
+            return errors.push({
+              message: error.response?.data ? JSON.stringify(error.response.data) : error.message,
+              orderIndex: i,
+            });
           }
         })
       );
@@ -1165,7 +1171,25 @@ export const getExecuteListV5Options: RouteOptions = {
         steps = steps.slice(1);
       }
 
-      return { steps, errors };
+      const perfTime2 = performance.now();
+
+      logger.info(
+        "execute-list-v5-performance",
+        JSON.stringify({
+          kind: "total-performance",
+          totalTime: (perfTime2 - perfTime1) / 1000,
+          items: params.map((p) => ({
+            orderKind: p.orderKind,
+            orderbook: p.orderbook,
+          })),
+          itemsCount: params.length,
+        })
+      );
+
+      return {
+        steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
+        errors,
+      };
     } catch (error) {
       if (!(error instanceof Boom.Boom)) {
         logger.error(`get-execute-list-${version}-handler`, `Handler failure: ${error}`);

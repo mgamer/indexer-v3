@@ -53,11 +53,11 @@ export const getSyncSalesV1Options: RouteOptions = {
         throw Boom.badRequest("Invalid continuation string used");
       }
 
-      (query as any).updatedAt = new Date(contArr[0]).toISOString();
+      (query as any).updatedAt = contArr[0];
       (query as any).txHash = toBuffer(contArr[1]);
       (query as any).logIndex = contArr[2];
       (query as any).batchIndex = contArr[3];
-      paginationFilter = ` AND (updated_at, tx_hash, log_index, batch_index) > ($/updatedAt/, $/txHash/, $/logIndex/, $/batchIndex/)`;
+      paginationFilter = ` AND (updated_at, tx_hash, log_index, batch_index) > (to_timestamp($/updatedAt/), $/txHash/, $/logIndex/, $/batchIndex/)`;
     }
 
     try {
@@ -90,8 +90,8 @@ export const getSyncSalesV1Options: RouteOptions = {
             fill_events_2.royalty_fee_breakdown,
             fill_events_2.marketplace_fee_breakdown,
             fill_events_2.paid_full_royalty,
-            fill_events_2.updated_at,
-            fill_events_2.created_at
+            fill_events_2.created_at,
+            extract(epoch from updated_at) updated_ts
           FROM fill_events_2
             LEFT JOIN currencies
             ON fill_events_2.currency = currencies.contract
@@ -104,7 +104,7 @@ export const getSyncSalesV1Options: RouteOptions = {
       const rawResult = await redb.manyOrNone(baseQuery, query);
 
       const continuationToken = buildContinuation(
-        rawResult[rawResult.length - 1].updated_at +
+        rawResult[rawResult.length - 1].updated_ts +
           "_" +
           fromBuffer(rawResult[rawResult.length - 1].tx_hash) +
           "_" +
@@ -112,6 +112,7 @@ export const getSyncSalesV1Options: RouteOptions = {
           "_" +
           rawResult[rawResult.length - 1].batch_index
       );
+
       const continuation = rawResult.length === LIMIT ? continuationToken : null;
       const result = rawResult.map(async (r) => {
         return await getJoiSaleObject({
@@ -148,7 +149,7 @@ export const getSyncSalesV1Options: RouteOptions = {
           logIndex: r.log_index,
           batchIndex: r.batch_index,
           createdAt: new Date(r.created_at).toISOString(),
-          updatedAt: new Date(r.updated_at).toISOString(),
+          updatedAt: new Date(r.updated_ts * 1000).toISOString(),
         });
       });
 

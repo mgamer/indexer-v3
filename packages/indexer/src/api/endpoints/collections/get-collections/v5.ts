@@ -137,6 +137,10 @@ export const getCollectionsV5Options: RouteOptions = {
       continuation: Joi.string().description(
         "Use continuation token to request next offset of items."
       ),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     }).oxor("id", "slug", "name", "collectionsSetId", "community", "contract"),
   },
   response: {
@@ -660,7 +664,8 @@ export const getCollectionsV5Options: RouteOptions = {
                         nativeAmount: r.floor_sell_value,
                       },
                     },
-                    floorAskCurrency
+                    floorAskCurrency,
+                    query.displayCurrency
                   )
                 : null,
               maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
@@ -695,7 +700,8 @@ export const getCollectionsV5Options: RouteOptions = {
                             nativeAmount: r.top_buy_price,
                           },
                         },
-                        topBidCurrency
+                        topBidCurrency,
+                        query.displayCurrency
                       )
                     : null,
                   maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,

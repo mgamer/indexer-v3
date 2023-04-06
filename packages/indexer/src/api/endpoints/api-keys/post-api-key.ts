@@ -12,7 +12,7 @@ export const postApiKey: RouteOptions = {
   description: "Generate API Key",
   notes:
     "The API key can be used in every route, by setting it as a request header **x-api-key**.\n\n<a href='https://docs.reservoir.tools/reference/getting-started'>Learn more</a> about API Keys and Rate Limiting",
-  tags: ["api", "Management"],
+  tags: ["api", "x-admin"],
   plugins: {
     "hapi-swagger": {
       payloadType: "form",
