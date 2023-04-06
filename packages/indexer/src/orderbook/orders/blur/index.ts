@@ -1,5 +1,6 @@
 import { AddressZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
+import { parseEther } from "@ethersproject/units";
 import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
 
@@ -374,7 +375,7 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
         }
 
         // Handle: price
-        const price = orderParams.pricePoints[0].price;
+        const price = parseEther(orderParams.pricePoints[0].price).toString();
 
         const totalQuantity = orderParams.pricePoints
           .map((p) => p.executableSize)
@@ -463,7 +464,7 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
           );
         } else {
           // Handle: price
-          const price = currentBid.pricePoints[0].price;
+          const price = parseEther(currentBid.pricePoints[0].price).toString();
 
           const totalQuantity = currentBid.pricePoints
             .map((p) => p.executableSize)
