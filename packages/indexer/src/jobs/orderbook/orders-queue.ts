@@ -170,6 +170,12 @@ export type GenericOrderInfo =
       info: orders.superrare.OrderInfo;
       relayToArweave?: boolean;
       validateBidValue?: boolean;
+    }
+  | {
+      kind: "looks-rare-v2";
+      info: orders.looksRareV2.OrderInfo;
+      relayToArweave?: boolean;
+      validateBidValue?: boolean;
     };
 
 export const jobProcessor = async (job: Job) => {
@@ -270,6 +276,11 @@ export const jobProcessor = async (job: Job) => {
 
       case "superrare": {
         result = await orders.superrare.save([info]);
+        break;
+      }
+
+      case "looks-rare-v2": {
+        result = await orders.looksRareV2.save([info]);
         break;
       }
     }

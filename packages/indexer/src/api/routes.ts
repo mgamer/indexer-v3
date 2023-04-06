@@ -24,6 +24,8 @@ import * as syncEndpoints from "@/api/endpoints/sync";
 import * as assetsEndpoints from "@/api/endpoints/assets";
 import * as sourcesEndpoints from "@/api/endpoints/sources";
 import * as websocketEndpoints from "@/api/endpoints/websocket";
+import * as debugEndpoints from "@/api/endpoints/debug";
+import { config } from "@/config/index";
 
 export const setupRoutes = (server: Server) => {
   // Activity
@@ -1310,4 +1312,31 @@ export const setupRoutes = (server: Server) => {
     path: "/websocket/user-auth",
     options: websocketEndpoints.postWebsocketUserAuthOptions,
   });
+
+  // Debug Test
+  if (config.isDev) {
+    server.route({
+      method: "GET",
+      path: "/debug/eventParsing",
+      options: debugEndpoints.eventParsingOptions,
+    });
+
+    server.route({
+      method: "POST",
+      path: "/debug/orderSaving",
+      options: debugEndpoints.orderSavingOptions,
+    });
+
+    server.route({
+      method: "GET",
+      path: "/debug/getOrder",
+      options: debugEndpoints.getOrderOptions,
+    });
+
+    server.route({
+      method: "GET",
+      path: "/debug/reset",
+      options: debugEndpoints.resetOptions,
+    });
+  }
 };

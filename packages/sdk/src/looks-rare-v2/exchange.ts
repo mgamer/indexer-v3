@@ -125,11 +125,31 @@ export class Exchange {
     };
   }
 
+  public async cancelAllOrders(maker: Signer, side: "buy" | "sell"): Promise<ContractTransaction> {
+    const tx = this.cancelAllOrdersTx(await maker.getAddress(), side);
+    return maker.sendTransaction(tx);
+  }
+
+  public cancelAllOrdersTx(maker: string, side: "buy" | "sell"): TxData {
+    const bid = side === "buy" ? true : false;
+    const ask = side === "sell" ? true : false;
+    return {
+      from: maker,
+      to: this.contract.address,
+      data: this.contract.interface.encodeFunctionData("incrementBidAskNonces", [bid, ask]),
+    };
+  }
+
   // --- Get nonce ---
 
-  public async getNonce(provider: Provider, user: string): Promise<BigNumberish> {
-    return new Contract(Addresses.Exchange[this.chainId], ExchangeAbi)
+  public async getNonce(
+    provider: Provider,
+    user: string,
+    side: "sell" | "buy"
+  ): Promise<BigNumberish> {
+    const nonces = await new Contract(Addresses.Exchange[this.chainId], ExchangeAbi)
       .connect(provider)
       .userBidAskNonces(user);
+    return side === "sell" ? nonces.askNonce : nonces.bidNonce;
   }
 }

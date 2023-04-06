@@ -4,7 +4,7 @@ import { bn } from "@/common/utils";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import * as utils from "@/events-sync/utils";
-import { getERC20Transfer } from "@/events-sync/handlers/utils/erc20";
+// import { getERC20Transfer } from "@/events-sync/handlers/utils/erc20";
 import { getUSDAndNativePrices } from "@/utils/prices";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
@@ -22,22 +22,39 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
     const eventData = getEventData([subKind])[0];
     switch (subKind) {
-      // case "looks-rare-v2-order-nonces-cancelled": {
-      //   const parsedLog = eventData.abi.parseLog(log);
-      //   const maker = parsedLog.args["user"].toLowerCase();
-      //   const newMinNonce = parsedLog.args["newMinNonce"].toString();
+      case "looks-rare-v2-new-bid-ask-nonces": {
+        const parsedLog = eventData.abi.parseLog(log);
+        const maker = parsedLog.args["user"].toLowerCase();
+        const bidNonce = parsedLog.args["bidNonce"].toString();
+        const askNonce = parsedLog.args["askNonce"].toString();
 
-      //   onChainData.bulkCancelEvents.push({
-      //     orderKind: "looks-rare",
-      //     maker,
-      //     minNonce: newMinNonce,
-      //     baseEventParams,
-      //   });
+        let batchIndex = baseEventParams.batchIndex;
+        onChainData.bulkCancelEvents.push({
+          orderKind: "looks-rare-v2",
+          maker,
+          minNonce: askNonce,
+          baseEventParams: {
+            ...baseEventParams,
+            batchIndex: batchIndex++,
+          },
+          orderSide: "sell",
+        });
 
-      //   break;
-      // }
+        onChainData.bulkCancelEvents.push({
+          orderKind: "looks-rare-v2",
+          maker,
+          minNonce: bidNonce,
+          orderSide: "buy",
+          baseEventParams: {
+            ...baseEventParams,
+            batchIndex: batchIndex++,
+          },
+        });
 
-      case "looks-rare-cancel-multiple-orders": {
+        break;
+      }
+
+      case "looks-rare-v2-order-nonces-cancelled": {
         const parsedLog = eventData.abi.parseLog(log);
         const maker = parsedLog.args["user"].toLowerCase();
         const orderNonces = parsedLog.args["orderNonces"].map(String);
@@ -58,21 +75,28 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         break;
       }
 
-      case "looks-rare-taker-ask": {
+      case "looks-rare-v2-taker-ask": {
         const parsedLog = eventData.abi.parseLog(log);
-        const orderId = parsedLog.args["orderHash"].toLowerCase();
-        const orderNonce = parsedLog.args["orderNonce"].toString();
-        const maker = parsedLog.args["maker"].toLowerCase();
-        let taker = parsedLog.args["taker"].toLowerCase();
+
+        const orderId = parsedLog.args["nonceInvalidationParameters"]["orderHash"].toLowerCase();
+        const orderNonce = parsedLog.args["nonceInvalidationParameters"]["orderNonce"].toString();
+
+        const maker = parsedLog.args["askUser"].toLowerCase();
+        let taker = parsedLog.args["bidUser"].toLowerCase();
+
         const currency = parsedLog.args["currency"].toLowerCase();
-        let currencyPrice = parsedLog.args["price"].toString();
+        // let currencyPrice = parsedLog.args["price"].toString();
         const contract = parsedLog.args["collection"].toLowerCase();
-        const tokenId = parsedLog.args["tokenId"].toString();
-        const amount = parsedLog.args["amount"].toString();
+
+        // It's might be multiple
+        const tokenId = parsedLog.args["itemIds"][0].toString();
+        const amount = parsedLog.args["amounts"][0].toString();
+
+        let currencyPrice = parsedLog.args["feeAmounts"][0].toString();
 
         // Handle: attribution
 
-        const orderKind = "looks-rare";
+        const orderKind = "looks-rare-v2";
         const attributionData = await utils.extractAttributionData(
           baseEventParams.txHash,
           orderKind,
@@ -116,7 +140,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         // Cancel all the other orders of the maker having the same nonce
         onChainData.nonceCancelEvents.push({
-          orderKind: "looks-rare",
+          orderKind: "looks-rare-v2",
           maker,
           nonce: orderNonce,
           baseEventParams,
@@ -144,45 +168,27 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           maker,
           taker,
         });
-
-        // If an ERC20 transfer occured in the same transaction as a sale
-        // then we need resync the maker's ERC20 approval to the exchange
-        const erc20 = getERC20Transfer(currentTxLogs);
-        if (erc20) {
-          onChainData.makerInfos.push({
-            context: `${baseEventParams.txHash}-buy-approval`,
-            maker,
-            trigger: {
-              kind: "approval-change",
-              txHash: baseEventParams.txHash,
-              txTimestamp: baseEventParams.timestamp,
-            },
-            data: {
-              kind: "buy-approval",
-              contract: erc20,
-              orderKind: "looks-rare",
-            },
-          });
-        }
 
         break;
       }
 
-      case "looks-rare-taker-bid": {
+      case "looks-rare-v2-taker-bid": {
         const parsedLog = eventData.abi.parseLog(log);
-        const orderId = parsedLog.args["orderHash"].toLowerCase();
-        const orderNonce = parsedLog.args["orderNonce"].toString();
-        const maker = parsedLog.args["maker"].toLowerCase();
-        let taker = parsedLog.args["taker"].toLowerCase();
+        const orderId = parsedLog.args["nonceInvalidationParameters"]["orderHash"].toLowerCase();
+        const orderNonce = parsedLog.args["nonceInvalidationParameters"]["orderNonce"].toString();
+        const maker = parsedLog.args["bidUser"].toLowerCase();
+        let taker = parsedLog.args["bidRecipient"].toLowerCase();
         const currency = parsedLog.args["currency"].toLowerCase();
-        let currencyPrice = parsedLog.args["price"].toString();
+        let currencyPrice = parsedLog.args["feeAmounts"][0].toString();
         const contract = parsedLog.args["collection"].toLowerCase();
-        const tokenId = parsedLog.args["tokenId"].toString();
-        const amount = parsedLog.args["amount"].toString();
+
+        // It's might be multiple
+        const tokenId = parsedLog.args["itemIds"][0].toString();
+        const amount = parsedLog.args["amounts"][0].toString();
 
         // Handle: attribution
 
-        const orderKind = "looks-rare";
+        const orderKind = "looks-rare-v2";
         const attributionData = await utils.extractAttributionData(
           baseEventParams.txHash,
           orderKind,
@@ -226,7 +232,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         // Cancel all the other orders of the maker having the same nonce
         onChainData.nonceCancelEvents.push({
-          orderKind: "looks-rare",
+          orderKind: "looks-rare-v2",
           maker,
           nonce: orderNonce,
           baseEventParams,
@@ -254,26 +260,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           maker,
           taker,
         });
-
-        // If an ERC20 transfer occured in the same transaction as a sale
-        // then we need resync the maker's ERC20 approval to the exchange
-        const erc20 = getERC20Transfer(currentTxLogs);
-        if (erc20) {
-          onChainData.makerInfos.push({
-            context: `${baseEventParams.txHash}-buy-approval`,
-            maker,
-            trigger: {
-              kind: "approval-change",
-              txHash: baseEventParams.txHash,
-              txTimestamp: baseEventParams.timestamp,
-            },
-            data: {
-              kind: "buy-approval",
-              contract: erc20,
-              orderKind: "looks-rare",
-            },
-          });
-        }
 
         break;
       }

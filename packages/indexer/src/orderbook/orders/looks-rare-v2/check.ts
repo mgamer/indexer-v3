@@ -30,7 +30,7 @@ export const offChainCheck = async (
 
   if (options?.checkFilledOrCancelled) {
     // Check: order is not cancelled
-    const cancelled = await commonHelpers.isOrderCancelled(id, "looks-rare");
+    const cancelled = await commonHelpers.isOrderCancelled(id, "looks-rare-v2");
     if (cancelled) {
       throw new Error("cancelled");
     }
@@ -43,14 +43,14 @@ export const offChainCheck = async (
   }
 
   // Check: order's nonce was not bulk cancelled
-  // const minNonce = await commonHelpers.getMinNonce("looks-rare", order.params.signer);
+  // const minNonce = await commonHelpers.getMinNonce("looks-rare-v2", order.params.signer);
   // if (minNonce.gt(order.params.nonce)) {
   //   throw new Error("cancelled");
   // }
 
   // Check: order's nonce was not individually cancelled
   // const nonceCancelled = await commonHelpers.isNonceCancelled(
-  //   "looks-rare",
+  //   "looks-rare-v2",
   //   order.params.signer,
   //   order.params.nonce
   // );

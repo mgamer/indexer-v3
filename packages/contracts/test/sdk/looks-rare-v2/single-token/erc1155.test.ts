@@ -78,17 +78,9 @@ describe("LooksRare - SingleToken Erc1155", () => {
       amounts: [1],
       currency: Common.Addresses.Weth[chainId],
       price,
+      orderNonce: await exchange.getNonce(ethers.provider, buyer.address, "buy"),
       startTime: await getCurrentTimestamp(ethers.provider),
       endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
-      // isOrderAsk: false,
-      // signer: buyer.address,
-      // collection: erc1155.address,
-      // tokenId: boughtTokenId,
-      // currency: Common.Addresses.Weth[chainId],
-      // price,
-      // startTime: await getCurrentTimestamp(ethers.provider),
-      // endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
-      // nonce: await exchange.getNonce(ethers.provider, buyer.address),
     });
 
     // Sign the order
@@ -170,16 +162,7 @@ describe("LooksRare - SingleToken Erc1155", () => {
       price,
       startTime: await getCurrentTimestamp(ethers.provider),
       endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
-      // isOrderAsk: true,
-      // signer: seller.address,
-      // collection: erc1155.address,
-      // tokenId: soldTokenId,
-      // // LooksRare sell orders are in WETH
-      // currency: Common.Addresses.Weth[chainId],
-      // price,
-      // startTime: await getCurrentTimestamp(ethers.provider),
-      // endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
-      // nonce: await exchange.getNonce(ethers.provider, seller.address),
+      orderNonce: await exchange.getNonce(ethers.provider, buyer.address, "sell"),
     });
 
     // Sign the order

@@ -1,0 +1,357 @@
+import { Contract } from "@ethersproject/contracts";
+import { parseEther } from "@ethersproject/units";
+import * as Common from "@reservoir0x/sdk/src/common";
+import * as LooksRareV2 from "@reservoir0x/sdk/src/looks-rare-v2";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
+import { ethers } from "hardhat";
+import {
+    getChainId,
+    getCurrentTimestamp,
+    reset,
+    setupNFTs,
+} from "../../utils";
+import * as indexrHelper from "../../indexer-helper";
+import chalk from 'chalk';
+
+const green = chalk.green;
+const error = chalk.red;
+
+describe("LooksRareV2 - Indexer Integration Test", () => {
+    const chainId = getChainId();
+
+    let deployer: SignerWithAddress;
+    let alice: SignerWithAddress;
+    let bob: SignerWithAddress;
+
+    let erc721: Contract;
+
+    beforeEach(async () => {
+        // Reset Indexer
+        await indexrHelper.reset();
+        [deployer, alice, bob] = await ethers.getSigners();
+        ({ erc721 } = await setupNFTs(deployer));
+    });
+
+    afterEach(async () => {
+        await reset();
+    });
+
+    const testCase = async ({
+        cancelOrder = false,
+        isListing = false,
+        bulkCancel = false,
+        executeByRouterAPI = false
+    }) => {
+
+        const buyer = alice;
+        const seller = bob;
+
+        const price = parseEther("1");
+        const boughtTokenId = Math.floor(Math.random() * 100000);
+        const weth = new Common.Helpers.Weth(ethers.provider, chainId);
+
+        // Mint weth to buyer
+        await weth.deposit(buyer, price);
+        await weth.deposit(seller, price);
+
+        // Approve the exchange contract for the buyer
+        await weth.approve(seller, LooksRareV2.Addresses.Exchange[chainId]);
+        await weth.approve(buyer, LooksRareV2.Addresses.Exchange[chainId]);
+
+        // Mint erc721 to seller
+        await erc721.connect(seller).mint(boughtTokenId);
+      
+        const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
+
+        // Approve the transfer manager
+        await nft.approve(
+            seller,
+            LooksRareV2.Addresses.TransferManager[chainId]
+        );
+
+        await nft.approve(
+            buyer,
+            LooksRareV2.Addresses.TransferManager[chainId]
+        );
+
+        const exchange = new LooksRareV2.Exchange(chainId);
+        try {
+            await exchange.grantApprovals(seller, [
+                LooksRareV2.Addresses.Exchange[chainId]
+            ])
+            await exchange.grantApprovals(buyer, [
+                LooksRareV2.Addresses.Exchange[chainId]
+            ])
+        } catch { }
+
+        console.log(green("\n\n\t Build Order"));
+
+        const builder = new LooksRareV2.Builders.SingleToken(chainId);
+
+        // Build order
+        const orderParameters = {
+            quoteType: LooksRareV2.Types.QuoteType.Bid,
+            strategyId: 0,
+            collectionType: LooksRareV2.Types.CollectionType.ERC721,
+            signer: buyer.address,
+            collection: erc721.address,
+            itemIds: [boughtTokenId],
+            amounts: [1],
+            currency: Common.Addresses.Weth[chainId],
+            price,
+            orderNonce: (await exchange.getNonce(ethers.provider, buyer.address, "buy")),
+            startTime: await getCurrentTimestamp(ethers.provider),
+            endTime: (await getCurrentTimestamp(ethers.provider)) + 86400 * 31,
+        }
+
+        let order = builder.build(orderParameters);
+        let matchOrder = order.buildMatching(seller.address);
+        await order.sign(buyer);
+
+        if (isListing) {
+            const listingParams = {
+                quoteType: LooksRareV2.Types.QuoteType.Ask,
+                strategyId: 0,
+                collectionType: LooksRareV2.Types.CollectionType.ERC721,
+                signer: seller.address,
+                collection: erc721.address,
+                itemIds: [boughtTokenId],
+                amounts: [1],
+                currency: Common.Addresses.Weth[chainId],
+                price,
+                startTime: await getCurrentTimestamp(ethers.provider),
+                endTime: (await getCurrentTimestamp(ethers.provider)) + 86400 * 31,
+                orderNonce: (await exchange.getNonce(ethers.provider, buyer.address, "sell")),
+            }
+            order = builder.build(listingParams);
+            matchOrder = order.buildMatching(buyer.address);
+            await order.sign(seller);
+        }
+
+        console.log(green("\t Perform Order Saving:"));
+
+        // Call the Indexer to save the order
+        const saveResult = await indexrHelper.doOrderSaving({
+            contract: erc721.address,
+            kind: "erc721",
+            currency: order.params.currency,
+            // Refresh balance incase the local indexer doesn't have the state
+            makers: [
+                order.params.signer
+            ],
+            nfts: [
+                {
+                collection: erc721.address,
+                tokenId: boughtTokenId.toString(),
+                owner: seller.address
+            }
+        ],
+            orders: [
+                // Order Info
+                {
+                    // export name from the @/orderbook/index
+                    kind: "looksRareV2",
+                    data: order.params
+                }
+            ]
+        })
+
+        const orderInfo = saveResult[0];
+
+        console.log(`\t\t - Status: ${orderInfo.status}`)
+        console.log(`\t\t - ID: ${orderInfo.id}`)
+
+        // Handle Cancel Test
+        if (cancelOrder) {
+
+            console.log("\t Cancel Order")
+            const tx = await exchange.cancelOrder(!isListing ? buyer : seller, order);
+
+            console.log(green("\t Event Parsing:"))
+            const parseResult = await indexrHelper.doEventParsing(tx.hash, false);
+            const onChainData = parseResult.onChainData[0];
+            if (!onChainData) {
+                console.log("\t\t  Parse Event Failed")
+            }
+
+            await new Promise((resolve) => {
+                setTimeout(resolve, 4 * 1000)
+            })
+
+            const orderState = await indexrHelper.getOrder(orderInfo.id);
+            const { nonceCancelEvents } = onChainData;
+            if (nonceCancelEvents.length) {
+                console.log(green(`\t\t found nonceCancelEvents(${nonceCancelEvents.length})`))
+            } else {
+                console.log(error("\t\t nonceCancelEvents not found"))
+            }
+
+
+            console.log(green("\t Order Status: "))
+            console.log("\t\t - Final Order Status =", JSON.stringify({
+                fillability_status: orderState.fillability_status,
+                approval_status: orderState.approval_status
+            }))
+            return;
+        }
+
+        // Handle Cancel Test
+        if (bulkCancel) {
+            console.log(green("\t Bulk Cancel Order"))
+            const orderSide = isListing ? 'sell' : 'buy';
+            const tx = await exchange.cancelAllOrders(!isListing ? buyer : seller, orderSide);
+
+            console.log(green("\t Event Parsing:"))
+            const parseResult = await indexrHelper.doEventParsing(tx.hash, false);
+
+            if (parseResult.error) {
+                console.log(error(JSON.stringify(parseResult.error, null, 2)))
+                return;
+            }
+
+            const onChainData = parseResult.onChainData[0];
+            if (!onChainData) {
+                console.log("\t\t  Parse Event Failed")
+            }
+
+            await new Promise((resolve) => {
+                setTimeout(resolve, 2 * 1000)
+            })
+
+            const orderState = await indexrHelper.getOrder(orderInfo.id);
+            const { bulkCancelEvents } = onChainData;
+            if (bulkCancelEvents.length) {
+                console.log(green(`\t\t found bulkCancelEvents ${bulkCancelEvents.length}`))
+            } else {
+                console.log(error("\t\t bulkCancelEvents not found"))
+            }
+            
+            console.log(green("\t Order Status: "))
+            console.log("\t\t - Final Order Status =", JSON.stringify({
+                fillability_status: orderState.fillability_status,
+                approval_status: orderState.approval_status
+            }))
+            return;
+        }
+
+        await order.checkFillability(ethers.provider);
+
+        // Fill Order
+
+        let fillTxHash: string | null = null;
+
+
+        if (!executeByRouterAPI) {
+            const tx = await exchange.fillOrder(!isListing ? seller : buyer, order, matchOrder);
+            await tx.wait();
+            fillTxHash = tx.hash;
+        } else {
+            if (!isListing) {
+                try {
+                    const executeResponse = await indexrHelper.executeSellV7({
+                        items: [
+                            {
+                                token: `${erc721.address}:${boughtTokenId}`,
+                                quantity: 1,
+                                orderId: orderInfo.id
+                            }
+                        ],
+                        taker: matchOrder.recipient,
+                    });
+
+                    const allSteps = executeResponse.steps;
+                    const lastSetp = allSteps[allSteps.length -1]
+                    const tx = await seller.sendTransaction(lastSetp.items[0].data);
+                    await tx.wait();
+                    fillTxHash = tx.hash;
+                } catch (error) {
+                    console.log('executeSellV7 failed', error)
+                }
+            } else {
+                try {
+                    const payload = {
+                        items: [
+                            {
+                                orderId: orderInfo.id
+                            }
+                        ],
+                        taker: matchOrder.recipient,
+                    }
+                    const executeResponse = await indexrHelper.executeBuyV7(payload);
+                    const allSteps = executeResponse.steps;
+                    const lastSetp = allSteps[allSteps.length -1]
+
+                    const transcation = lastSetp.items[0];
+                    const tx = await buyer.sendTransaction({
+                        ...transcation.data,
+                        gasLimit: 300000
+                    });
+                    await tx.wait();
+                    fillTxHash = tx.hash;
+                } catch (error) {
+                    console.log('executeBuyV7 failed', (error as any ).toString())
+                }
+            }
+        }
+
+        if (!fillTxHash) {
+            return 
+        }
+
+        // Call Indexer to index the transcation
+        const skipProcessing = false;
+
+        console.log(green("\t Event Parsing:"))
+        const parseResult = await indexrHelper.doEventParsing(fillTxHash, skipProcessing);
+        const onChainData = parseResult.onChainData[0];
+        if (!onChainData) {
+            console.log("\t\t  Parse Event Failed")
+        }
+
+        const { fillEvents } = onChainData
+
+        const matchFillEvent = fillEvents.find((event: any) => event.orderId === orderInfo.id);
+        if (matchFillEvent) {
+            console.log("\t\t - Found Fill Event")
+        } else {
+            console.log("\t\t - Fill Event Not Found")
+        }
+
+        console.log(green("\t Order Status: "))
+        const finalOrderState = await indexrHelper.getOrder(orderInfo.id);
+        console.log("\t\t - Final Order Status =", JSON.stringify({
+            fillability_status: finalOrderState.fillability_status,
+            approval_status: finalOrderState.approval_status
+        }))
+    }
+
+    it("Fill Offer", async () => testCase({}));
+
+    it("Fill Listing", async () => testCase({
+        isListing: true
+    }));
+
+    it("Fill Listing With Cancel", async () => testCase({
+        bulkCancel: true
+    }));
+
+    it("Fill Listing With Bulk Cancel - Multiple", async () => {
+        await testCase({
+            bulkCancel: true
+        });
+        await testCase({
+            bulkCancel: true
+        });
+        console.log("\n")
+    });
+
+    it("Fill Offer via Router API", async () => testCase({
+        executeByRouterAPI: true
+    }));
+
+    it("Fill Listing via Router API", async () => testCase({
+        isListing: true,
+        executeByRouterAPI: true
+    }));
+
+});

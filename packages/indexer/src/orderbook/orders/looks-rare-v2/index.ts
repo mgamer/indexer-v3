@@ -69,6 +69,14 @@ export const save = async (
         });
       }
 
+      // Mutiple tokens
+      if (order.params.itemIds.length > 1) {
+        return results.push({
+          id,
+          status: "bundle-order-unsupported",
+        });
+      }
+
       // Check: order is not expired
       const expirationTime = order.params.endTime;
       if (currentTime >= expirationTime) {
@@ -181,7 +189,7 @@ export const save = async (
         {
           kind: "marketplace",
           recipient: "0x5924a28caaf1cc016617874a2f0c3710d881f3c1",
-          bps: 150,
+          bps: 50,
         },
       ];
 
@@ -300,7 +308,7 @@ export const save = async (
       const validTo = `date_trunc('seconds', to_timestamp(${order.params.endTime}))`;
       orderValues.push({
         id,
-        kind: "looks-rare",
+        kind: "looks-rare-v2",
         side,
         fillability_status: fillabilityStatus,
         approval_status: approvalStatus,

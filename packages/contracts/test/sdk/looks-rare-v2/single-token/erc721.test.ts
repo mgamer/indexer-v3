@@ -34,7 +34,7 @@ describe("LooksRareV2 - SingleToken Erc721", () => {
     const buyer = alice;
     const seller = bob;
     const price = parseEther("1");
-    const boughtTokenId = 0;
+    const boughtTokenId = 1;
 
     const weth = new Common.Helpers.Weth(ethers.provider, chainId);
 
@@ -57,18 +57,19 @@ describe("LooksRareV2 - SingleToken Erc721", () => {
 
     const exchange = new LooksRareV2.Exchange(chainId);
 
-    await exchange.grantApprovals(seller, [
-      LooksRareV2.Addresses.Exchange[chainId]
-    ])
-
-    await exchange.grantApprovals(buyer, [
-      LooksRareV2.Addresses.Exchange[chainId]
-    ])
+    try {
+      await exchange.grantApprovals(seller, [
+        LooksRareV2.Addresses.Exchange[chainId]
+      ])
+  
+      await exchange.grantApprovals(buyer, [
+        LooksRareV2.Addresses.Exchange[chainId]
+      ])
+    } catch {}
 
     const builder = new LooksRareV2.Builders.SingleToken(chainId);
 
-    // Build buy order
-    const buyOrder = builder.build({
+    const orderParameters = {
       quoteType: LooksRareV2.Types.QuoteType.Bid,
       strategyId: 0,
       collectionType: LooksRareV2.Types.CollectionType.ERC721,
@@ -78,12 +79,18 @@ describe("LooksRareV2 - SingleToken Erc721", () => {
       amounts: [1],
       currency: Common.Addresses.Weth[chainId],
       price,
+      orderNonce: await exchange.getNonce(ethers.provider, buyer.address, "buy"),
       startTime: await getCurrentTimestamp(ethers.provider),
-      endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
-    });
+      endTime: (await getCurrentTimestamp(ethers.provider)) + 86400 * 31,
+    }
 
+    // Build buy order
+    const buyOrder = builder.build(orderParameters);
     // Sign the order
     await buyOrder.sign(buyer);
+
+    console.log('orderParameters', JSON.stringify( buyOrder.params))
+    // return;
 
     // Create matching sell order
     const sellOrder = buyOrder.buildMatching(seller.address);
@@ -99,7 +106,7 @@ describe("LooksRareV2 - SingleToken Erc721", () => {
     expect(ownerBefore).to.eq(seller.address);
 
     // Match orders
-    await exchange.fillOrder(seller, buyOrder, sellOrder);
+    const tx = await exchange.fillOrder(seller, buyOrder, sellOrder);
 
     const buyerBalanceAfter = await weth.getBalance(buyer.address);
     const sellerBalanceAfter = await weth.getBalance(seller.address);
@@ -158,6 +165,7 @@ describe("LooksRareV2 - SingleToken Erc721", () => {
       currency: Common.Addresses.Eth[chainId],
       price,
       startTime: await getCurrentTimestamp(ethers.provider),
+      orderNonce: await exchange.getNonce(ethers.provider, buyer.address, "sell"),
       endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
     });
 
@@ -178,9 +186,11 @@ describe("LooksRareV2 - SingleToken Erc721", () => {
 
     // Match orders
     // const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
-    await exchange.fillOrder(buyer, sellOrder, buyOrder, {
+    const tx = await exchange.fillOrder(buyer, sellOrder, buyOrder, {
       source: "reservoir.market",
     });
+
+    console.log("fillOrder", tx.hash)
 
     const buyerBalanceAfter = await ethers.provider.getBalance(buyer.address);
     const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);

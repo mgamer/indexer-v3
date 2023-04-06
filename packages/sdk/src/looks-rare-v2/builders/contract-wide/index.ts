@@ -60,9 +60,9 @@ export class ContractWideBuilder extends BaseBuilder {
       endTime: params.endTime!,
       additionalParameters: params.additionalParameters ?? BytesEmpty,
 
-      globalNonce: params.globalNonce ?? 0,
-      subsetNonce: params.subsetNonce ?? 0,
-      orderNonce: params.orderNonce ?? 0,
+      globalNonce: params.globalNonce ? s(params.globalNonce) : "0",
+      subsetNonce: params.subsetNonce ? s(params.subsetNonce) : "0",
+      orderNonce: params.orderNonce ? s(params.orderNonce) : "0",
 
       v: params.v,
       r: params.r,

@@ -14,9 +14,9 @@ export type MakerOrderParams = {
   kind?: OrderKind;
 
   quoteType: QuoteType;
-  globalNonce: number;
-  subsetNonce: number;
-  orderNonce: number;
+  globalNonce: string;
+  subsetNonce: string;
+  orderNonce: string;
   strategyId: number;
   collectionType: CollectionType;
 

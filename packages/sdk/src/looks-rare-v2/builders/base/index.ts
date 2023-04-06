@@ -7,9 +7,9 @@ import { getCurrentTimestamp } from "../../../utils";
 
 export interface BaseBuildParams {
   quoteType: QuoteType;
-  globalNonce?: number;
-  subsetNonce?: number;
-  orderNonce?: number;
+  globalNonce?: BigNumberish;
+  subsetNonce?: BigNumberish;
+  orderNonce?: BigNumberish;
   strategyId?: number;
   collectionType: CollectionType;
 

@@ -21,6 +21,7 @@ export * as rarible from "@/orderbook/orders/rarible";
 export * as nftx from "@/orderbook/orders/nftx";
 export * as manifold from "@/orderbook/orders/manifold";
 export * as superrare from "@/orderbook/orders/superrare";
+export * as looksRareV2 from "@/orderbook/orders/looks-rare-v2";
 
 // Imports
 import * as Sdk from "@reservoir0x/sdk";
@@ -417,6 +418,14 @@ export const generateListingDetailsV6 = (
       };
     }
 
+    case "looks-rare-v2": {
+      return {
+        kind: "looks-rare-v2",
+        ...common,
+        order: new Sdk.LooksRareV2.Order(config.chainId, order.rawData),
+      };
+    }
+
     default: {
       throw new Error("Unsupported order kind");
     }
@@ -687,6 +696,15 @@ export const generateBidDetailsV6 = async (
       };
     }
 
+    case "looks-rare-v2": {
+      const sdkOrder = new Sdk.LooksRareV2.Order(config.chainId, order.rawData);
+      return {
+        kind: "looks-rare-v2",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
     default: {
       throw new Error("Unsupported order kind");
     }
@@ -805,6 +823,14 @@ export const generateListingDetailsV5 = (
         kind: "rarible",
         ...common,
         order: new Sdk.Rarible.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "looks-rare-v2": {
+      return {
+        kind: "looks-rare",
+        ...common,
+        order: new Sdk.LooksRare.Order(config.chainId, order.rawData),
       };
     }
 

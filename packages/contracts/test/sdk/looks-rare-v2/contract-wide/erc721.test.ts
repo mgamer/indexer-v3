@@ -79,6 +79,7 @@ describe("LooksRareV2 - ContractWide Erc721", () => {
       price,
       startTime: await getCurrentTimestamp(ethers.provider),
       endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
+      orderNonce: await exchange.getNonce(ethers.provider, buyer.address, "buy"),
     });
 
     // Sign the order
