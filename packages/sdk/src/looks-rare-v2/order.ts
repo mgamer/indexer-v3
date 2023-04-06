@@ -128,23 +128,19 @@ export class Order {
         }
       } else if (this.params.collectionType === Types.CollectionType.ERC1155) {
         const erc1155 = new Common.Helpers.Erc1155(provider, this.params.collection);
-        if (await erc1155.isValid()) {
-          kind = "erc1155";
+        // Check balance
+        const balance = await erc1155.getBalance(this.params.signer, this.params.itemIds[0]);
+        if (bn(balance).lt(1)) {
+          throw new Error("no-balance");
+        }
 
-          // Check balance
-          const balance = await erc1155.getBalance(this.params.signer, this.params.itemIds[0]);
-          if (bn(balance).lt(1)) {
-            throw new Error("no-balance");
-          }
-
-          // Check approval
-          const isApproved = await erc1155.isApproved(
-            this.params.signer,
-            Addresses.TransferManager[this.chainId]
-          );
-          if (!isApproved) {
-            throw new Error("no-approval");
-          }
+        // Check approval
+        const isApproved = await erc1155.isApproved(
+          this.params.signer,
+          Addresses.TransferManager[this.chainId]
+        );
+        if (!isApproved) {
+          throw new Error("no-approval");
         }
       } else {
         throw new Error("invalid");
