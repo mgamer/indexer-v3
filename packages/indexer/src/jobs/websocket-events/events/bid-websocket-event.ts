@@ -10,6 +10,7 @@ import { SourcesEntity } from "@/models/sources/sources-entity";
 import { redisWebsocketPublisher } from "@/common/redis";
 import { logger } from "@/common/logger";
 import { Orders } from "@/utils/orders";
+import { TriggerKind } from "@/jobs/order-updates/types";
 export class BidWebsocketEvent {
   public static async triggerEvent(data: BidWebsocketEventInfo) {
     try {
@@ -133,10 +134,11 @@ export class BidWebsocketEvent {
         rawData: rawResult.raw_data,
       };
 
+      const eventType = data.kind === "new-order" ? "bid.created" : "bid.updated";
       redisWebsocketPublisher.publish(
         "events",
         JSON.stringify({
-          event: data.eventType,
+          event: eventType,
           tags: {
             contract: fromBuffer(rawResult.contract),
           },
@@ -151,5 +153,5 @@ export class BidWebsocketEvent {
 
 export type BidWebsocketEventInfo = {
   orderId: string;
-  eventType: "bid.created" | "bid.updated";
+  kind: TriggerKind;
 };

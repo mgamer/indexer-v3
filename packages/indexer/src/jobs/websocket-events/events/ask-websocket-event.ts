@@ -133,10 +133,12 @@ export class AskWebsocketEvent {
         rawData: rawResult.raw_data,
       };
 
+      const eventType = data.kind === "new-order" ? "bid.created" : "bid.updated";
+
       redisWebsocketPublisher.publish(
         "events",
         JSON.stringify({
-          event: data.eventType,
+          event: eventType,
           tags: {
             contract: fromBuffer(rawResult.contract),
           },
@@ -151,5 +153,5 @@ export class AskWebsocketEvent {
 
 export type AskWebsocketEventInfo = {
   orderId: string;
-  eventType: "ask.created" | "ask.updated";
+  kind: string;
 };

@@ -17,9 +17,10 @@ import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/
 import * as tokenUpdatesFloorAsk from "@/jobs/token-updates/floor-queue";
 import * as tokenUpdatesNormalizedFloorAsk from "@/jobs/token-updates/normalized-floor-queue";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
-import * as askWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ask-websocket-events-trigger-queue";
-import * as bidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/bid-websocket-events-trigger-queue";
-import * as newTopBidTriggerQueue from "@/jobs/websocket-events/new-top-bid-trigger-queue";
+import {
+  WebsocketEventKind,
+  WebsocketEventRouter,
+} from "../websocket-events/websocket-event-router";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -170,12 +171,12 @@ if (config.doBackgroundWork) {
                 buyOrderResult[0].attributeId
               ) {
                 //  Only trigger websocket event for non collection offers.
-                await newTopBidTriggerQueue.addToQueue([
-                  {
-                    kind: newTopBidTriggerQueue.EventKind.NewTopBid,
-                    data: { orderId: buyOrderResult[0].topBuyId },
+                await WebsocketEventRouter({
+                  eventKind: WebsocketEventKind.NewTopBid,
+                  eventInfo: {
+                    orderId: buyOrderResult[0].topBuyId,
                   },
-                ]);
+                });
               }
 
               for (const result of buyOrderResult) {
@@ -299,18 +300,6 @@ if (config.doBackgroundWork) {
                 }
               );
 
-              // Trigger ask created for all new orders, ask updated for all other ask events
-              const eventType = trigger.kind === "new-order" ? "ask.created" : "ask.updated";
-              await askWebsocketEventsTriggerQueue.addToQueue([
-                {
-                  kind: askWebsocketEventsTriggerQueue.EventKind.AskEvent,
-                  data: {
-                    orderId: order.id,
-                    eventType,
-                  },
-                },
-              ]);
-
               const updateFloorAskPriceInfo = {
                 contract: fromBuffer(order.contract),
                 tokenId: order.tokenId,
@@ -400,18 +389,6 @@ if (config.doBackgroundWork) {
                   orderRawData: order.raw_data,
                 }
               );
-
-              // Trigger ask created for all new orders, ask updated for all other ask events
-              const eventType = trigger.kind === "new-order" ? "bid.created" : "bid.updated";
-              await bidWebsocketEventsTriggerQueue.addToQueue([
-                {
-                  kind: bidWebsocketEventsTriggerQueue.EventKind.BidEvent,
-                  data: {
-                    orderId: order.id,
-                    eventType,
-                  },
-                },
-              ]);
             }
 
             let eventInfo;
@@ -477,6 +454,15 @@ if (config.doBackgroundWork) {
             if (eventInfo) {
               await processActivityEvent.addToQueue([eventInfo as processActivityEvent.EventInfo]);
             }
+
+            await WebsocketEventRouter({
+              eventInfo: {
+                kind: order.kind,
+                orderId: order.id,
+              },
+              eventKind:
+                order.side === "sell" ? WebsocketEventKind.SellOrder : WebsocketEventKind.BuyOrder,
+            });
           }
         }
 

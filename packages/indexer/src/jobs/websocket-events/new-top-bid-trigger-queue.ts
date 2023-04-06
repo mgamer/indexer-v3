@@ -30,17 +30,13 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { kind, data } = job.data as EventInfo;
+      const { data } = job.data as EventInfo;
 
-      switch (kind) {
-        case EventKind.NewTopBid:
-          await tracer.trace(
-            "triggerEvent",
-            { resource: "NewTopBidWebsocketEvent", tags: { event: data } },
-            () => NewTopBidWebsocketEvent.triggerEvent(data)
-          );
-          break;
-      }
+      await tracer.trace(
+        "triggerEvent",
+        { resource: "NewTopBidWebsocketEvent", tags: { event: data } },
+        () => NewTopBidWebsocketEvent.triggerEvent(data)
+      );
     },
     { connection: redis.duplicate(), concurrency: 20 }
   );
@@ -54,7 +50,6 @@ export enum EventKind {
 }
 
 export type EventInfo = {
-  kind: EventKind.NewTopBid;
   data: NewTopBidWebsocketEventInfo;
 };
 
