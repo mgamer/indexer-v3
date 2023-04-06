@@ -75,7 +75,7 @@ function generateUpdateQuery(bulkCancelValues: DbEvent[], acrossAll: boolean) {
     FROM "x"
     WHERE "o"."maker" = "x"."maker"
       AND "o"."kind" = "x"."order_kind"
-      AND "o"."side" = "x"."side"
+      AND "x"."side" IS NULL OR "o"."side" = "x"."side"
       ${acrossAll ? `` : `AND "o"."nonce" < "x"."min_nonce" `}
       AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
     RETURNING "o"."id", "x"."tx_hash", "x"."timestamp", "x"."log_index", "x"."batch_index", "x"."block_hash"

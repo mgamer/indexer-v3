@@ -12,6 +12,8 @@ export class ContractWideBuilder extends BaseBuilder {
     try {
       const copyOrder = this.build({
         ...order.params,
+        itemId: order.params.itemIds[0],
+        amount: order.params.amounts[0],
       });
 
       if (!copyOrder) {
@@ -41,7 +43,7 @@ export class ContractWideBuilder extends BaseBuilder {
       collection: params.collection,
       price: s(params.price),
       itemIds: [],
-      amounts: ["1"],
+      amounts: [s(params.amount)],
       strategyId: 1,
       currency: params.currency,
       quoteType: params.quoteType,

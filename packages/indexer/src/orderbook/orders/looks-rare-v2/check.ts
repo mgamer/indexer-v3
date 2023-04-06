@@ -43,20 +43,22 @@ export const offChainCheck = async (
   }
 
   // Check: order's nonce was not bulk cancelled
-  // const minNonce = await commonHelpers.getMinNonce("looks-rare-v2", order.params.signer);
-  // if (minNonce.gt(order.params.nonce)) {
-  //   throw new Error("cancelled");
-  // }
+  const side = order.params.quoteType === Sdk.LooksRareV2.Types.QuoteType.Ask ? "sell" : "buy";
+  const minNonce = await commonHelpers.getMinNonce("looks-rare-v2", order.params.signer, side);
+  if (minNonce.gt(order.params.orderNonce)) {
+    throw new Error("cancelled");
+  }
 
   // Check: order's nonce was not individually cancelled
-  // const nonceCancelled = await commonHelpers.isNonceCancelled(
-  //   "looks-rare-v2",
-  //   order.params.signer,
-  //   order.params.nonce
-  // );
-  // if (nonceCancelled) {
-  //   throw new Error("cancelled");
-  // }
+  const nonceCancelled = await commonHelpers.isNonceCancelled(
+    "looks-rare-v2",
+    order.params.signer,
+    order.params.orderNonce
+  );
+
+  if (nonceCancelled) {
+    throw new Error("cancelled");
+  }
 
   let hasBalance = true;
   let hasApproval = true;

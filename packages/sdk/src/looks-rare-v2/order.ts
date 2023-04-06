@@ -245,7 +245,7 @@ const normalize = (order: Types.MakerOrderParams): Types.MakerOrderParams => {
     globalNonce: s(order.globalNonce),
     subsetNonce: s(order.subsetNonce),
     orderNonce: s(order.orderNonce),
-    strategyId: order.strategyId,
+    strategyId: n(order.strategyId),
     collectionType: order.collectionType,
     quoteType: order.quoteType,
     collection: lc(order.collection),

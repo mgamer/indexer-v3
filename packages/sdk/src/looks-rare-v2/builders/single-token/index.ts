@@ -12,6 +12,8 @@ export class SingleTokenBuilder extends BaseBuilder {
     try {
       const copyOrder = this.build({
         ...order.params,
+        itemId: order.params.itemIds[0],
+        amount: order.params.amounts[0],
       });
 
       if (!copyOrder) {
@@ -37,8 +39,8 @@ export class SingleTokenBuilder extends BaseBuilder {
       signer: params.signer,
       collection: params.collection,
       price: s(params.price),
-      itemIds: params.itemIds.map((c) => s(c)),
-      amounts: params.amounts.map((c) => s(c)),
+      itemIds: [s(params.itemId)],
+      amounts: [s(params.amount)],
       strategyId: 0,
       currency: params.currency,
       quoteType: params.quoteType,

@@ -95,8 +95,8 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
             collectionType: LooksRareV2.Types.CollectionType.ERC721,
             signer: buyer.address,
             collection: erc721.address,
-            itemIds: [boughtTokenId],
-            amounts: [1],
+            itemId: boughtTokenId,
+            amount: 1,
             currency: Common.Addresses.Weth[chainId],
             price,
             orderNonce: (await exchange.getNonce(ethers.provider, buyer.address, "buy")),
@@ -115,8 +115,8 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
                 collectionType: LooksRareV2.Types.CollectionType.ERC721,
                 signer: seller.address,
                 collection: erc721.address,
-                itemIds: [boughtTokenId],
-                amounts: [1],
+                itemId: boughtTokenId,
+                amount: 1,
                 currency: Common.Addresses.Weth[chainId],
                 price,
                 startTime: await getCurrentTimestamp(ethers.provider),
@@ -325,15 +325,7 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
         }))
     }
 
-    it("Fill Offer", async () => testCase({}));
-
-    it("Fill Listing", async () => testCase({
-        isListing: true
-    }));
-
-    it("Fill Listing With Cancel", async () => testCase({
-        bulkCancel: true
-    }));
+    
 
     it("Fill Listing With Bulk Cancel - Multiple", async () => {
         await testCase({
@@ -354,4 +346,13 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
         executeByRouterAPI: true
     }));
 
+    it("Fill Offer", async () => testCase({}));
+
+    it("Fill Listing", async () => testCase({
+        isListing: true
+    }));
+
+    it("Fill Listing With Cancel", async () => testCase({
+        bulkCancel: true
+    }));
 });

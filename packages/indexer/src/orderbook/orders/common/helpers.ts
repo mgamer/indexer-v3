@@ -103,7 +103,11 @@ export const getNftApproval = async (
   return approvalResult ? approvalResult.approved : false;
 };
 
-export const getMinNonce = async (orderKind: OrderKind, maker: string): Promise<BigNumber> => {
+export const getMinNonce = async (
+  orderKind: OrderKind,
+  maker: string,
+  side?: string
+): Promise<BigNumber> => {
   const bulkCancelResult: { nonce: string } | null = await idb.oneOrNone(
     `
       SELECT coalesce(
@@ -111,7 +115,9 @@ export const getMinNonce = async (orderKind: OrderKind, maker: string): Promise<
           SELECT bulk_cancel_events.min_nonce FROM bulk_cancel_events
           WHERE bulk_cancel_events.order_kind = $/orderKind/
             AND bulk_cancel_events.maker = $/maker/
+            AND bulk_cancel_events.side IS NULL OR bulk_cancel_events.side = $/side/
           ORDER BY bulk_cancel_events.min_nonce DESC
+          
           LIMIT 1
         ),
         0
@@ -119,6 +125,7 @@ export const getMinNonce = async (orderKind: OrderKind, maker: string): Promise<
     `,
     {
       orderKind,
+      side,
       maker: toBuffer(maker),
     }
   );
