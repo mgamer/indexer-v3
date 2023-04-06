@@ -157,7 +157,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         };
 
         const eventType = data.kind === "new-order" ? "bid.created" : "bid.updated";
-        redisWebsocketPublisher.publish(
+        await redisWebsocketPublisher.publish(
           "events",
           JSON.stringify({
             event: eventType,
