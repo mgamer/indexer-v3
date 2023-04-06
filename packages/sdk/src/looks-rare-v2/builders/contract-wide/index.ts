@@ -3,6 +3,7 @@ import { defaultAbiCoder } from "@ethersproject/abi";
 import { BaseBuildParams, BaseBuilder } from "../base";
 import { Order } from "../../order";
 import { BytesEmpty, s } from "../../../utils";
+import { QuoteType } from "../../types";
 
 interface BuildParams extends BaseBuildParams {}
 
@@ -28,9 +29,9 @@ export class ContractWideBuilder extends BaseBuilder {
   }
 
   public build(params: BuildParams) {
-    // if (params.isOrderAsk) {
-    //   throw new Error("Unsupported order side");
-    // }
+    if (params.quoteType === QuoteType.Ask) {
+      throw new Error("Unsupported order side");
+    }
 
     this.defaultInitialize(params);
 
@@ -49,14 +50,10 @@ export class ContractWideBuilder extends BaseBuilder {
       startTime: params.startTime!,
       endTime: params.endTime!,
       additionalParameters: params.additionalParameters ?? BytesEmpty,
-
-      globalNonce: params.globalNonce ? s(params.globalNonce) : "0",
-      subsetNonce: params.subsetNonce ? s(params.subsetNonce) : "0",
-      orderNonce: params.orderNonce ? s(params.orderNonce) : "0",
-
-      v: params.v,
-      r: params.r,
-      s: params.s,
+      globalNonce: s(params.globalNonce),
+      subsetNonce: s(params.subsetNonce),
+      orderNonce: s(params.orderNonce),
+      signature: params.signature,
     });
   }
 

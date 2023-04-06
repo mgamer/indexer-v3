@@ -38,10 +38,7 @@ export class Exchange {
     }
   ): Promise<ContractTransaction> {
     const tx = this.fillOrderTx(await taker.getAddress(), makerOrder, takerOrderParams, options);
-    return taker.sendTransaction({
-      ...tx,
-      gasLimit: 10000000,
-    });
+    return taker.sendTransaction(tx);
   }
 
   public async grantApprovals(maker: Signer, operators: string[]) {
@@ -68,11 +65,7 @@ export class Exchange {
     let data: string;
     let value: string | undefined;
 
-    const signature = {
-      v: makerOrder.params.v!,
-      r: makerOrder.params.r!,
-      s: makerOrder.params.s!,
-    };
+    const signature = makerOrder.params.signature!;
 
     const makerSignature = joinSignature(signature);
     const affiliate = AddressZero;

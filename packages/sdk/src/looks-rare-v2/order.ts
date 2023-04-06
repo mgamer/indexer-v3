@@ -1,6 +1,5 @@
 import { Provider } from "@ethersproject/abstract-provider";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
-import { splitSignature } from "@ethersproject/bytes";
 import { HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { _TypedDataEncoder } from "@ethersproject/hash";
@@ -49,15 +48,14 @@ export class Order {
   }
 
   public async sign(signer: TypedDataSigner) {
-    const { v, r, s } = splitSignature(
-      await signer._signTypedData(EIP712_DOMAIN(this.chainId), EIP712_TYPES, this.params)
+    const signature = await signer._signTypedData(
+      EIP712_DOMAIN(this.chainId),
+      EIP712_TYPES,
+      this.params
     );
-
     this.params = {
       ...this.params,
-      v,
-      r,
-      s,
+      signature: signature,
     };
   }
 
@@ -66,16 +64,18 @@ export class Order {
       signatureKind: "eip712",
       domain: EIP712_DOMAIN(this.chainId),
       types: EIP712_TYPES,
+      primaryType: _TypedDataEncoder.getPrimaryType(EIP712_TYPES),
       value: toRawOrder(this),
     };
   }
 
   public checkSignature() {
-    const signer = verifyTypedData(EIP712_DOMAIN(this.chainId), EIP712_TYPES, toRawOrder(this), {
-      v: this.params.v,
-      r: this.params.r ?? "",
-      s: this.params.s ?? "",
-    });
+    const signer = verifyTypedData(
+      EIP712_DOMAIN(this.chainId),
+      EIP712_TYPES,
+      toRawOrder(this),
+      this.params.signature!
+    );
 
     if (lc(this.params.signer) !== lc(signer)) {
       throw new Error("Invalid signature");
@@ -101,31 +101,32 @@ export class Order {
       throw new Error("executed-or-cancelled");
     }
 
+    const nonces = await exchange.userBidAskNonces(this.params.signer);
+    const userCurrentNonce =
+      this.params.quoteType === Types.QuoteType.Ask ? nonces.askNonce : nonces.bidNonce;
+
+    if (userCurrentNonce.gt(this.params.orderNonce)) {
+      throw new Error("cancelled");
+    }
+
     if (this.params.quoteType === Types.QuoteType.Ask) {
-      // Detect the collection kind (erc721 or erc1155)
-      let kind: string | undefined;
-      if (!kind) {
+      if (this.params.collectionType === Types.CollectionType.ERC721) {
         const erc721 = new Common.Helpers.Erc721(provider, this.params.collection);
-        if (await erc721.isValid()) {
-          kind = "erc721";
-
-          // Check ownership
-          const owner = await erc721.getOwner(this.params.itemIds[0]);
-          if (lc(owner) !== lc(this.params.signer)) {
-            throw new Error("no-balance");
-          }
-
-          // Check approval
-          const isApproved = await erc721.isApproved(
-            this.params.signer,
-            Addresses.TransferManager[this.chainId]
-          );
-          if (!isApproved) {
-            throw new Error("no-approval");
-          }
+        // Check ownership
+        const owner = await erc721.getOwner(this.params.itemIds[0]);
+        if (lc(owner) !== lc(this.params.signer)) {
+          throw new Error("no-balance");
         }
-      }
-      if (!kind) {
+
+        // Check approval
+        const isApproved = await erc721.isApproved(
+          this.params.signer,
+          Addresses.TransferManager[this.chainId]
+        );
+        if (!isApproved) {
+          throw new Error("no-approval");
+        }
+      } else if (this.params.collectionType === Types.CollectionType.ERC1155) {
         const erc1155 = new Common.Helpers.Erc1155(provider, this.params.collection);
         if (await erc1155.isValid()) {
           kind = "erc1155";
@@ -145,9 +146,7 @@ export class Order {
             throw new Error("no-approval");
           }
         }
-      }
-
-      if (!kind) {
+      } else {
         throw new Error("invalid");
       }
     } else {
@@ -247,9 +246,9 @@ const normalize = (order: Types.MakerOrderParams): Types.MakerOrderParams => {
 
   return {
     kind: order.kind,
-    globalNonce: order.globalNonce,
-    subsetNonce: order.subsetNonce,
-    orderNonce: order.orderNonce,
+    globalNonce: s(order.globalNonce),
+    subsetNonce: s(order.subsetNonce),
+    orderNonce: s(order.orderNonce),
     strategyId: order.strategyId,
     collectionType: order.collectionType,
     quoteType: order.quoteType,
@@ -259,11 +258,9 @@ const normalize = (order: Types.MakerOrderParams): Types.MakerOrderParams => {
     price: s(order.price),
     itemIds: order.itemIds.map((c) => s(c)),
     amounts: order.amounts.map((c) => s(c)),
-    additionalParameters: order.additionalParameters,
+    additionalParameters: lc(order.additionalParameters),
     startTime: n(order.startTime),
     endTime: n(order.endTime),
-    v: order.v ?? 0,
-    r: order.r ?? HashZero,
-    s: order.s ?? HashZero,
+    signature: order.signature ?? HashZero,
   };
 };

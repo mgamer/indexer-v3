@@ -10,7 +10,7 @@ import {
     reset,
     setupNFTs,
 } from "../../utils";
-import * as indexrHelper from "../../indexer-helper";
+import * as indexerHelper from "../../indexer-helper";
 import chalk from 'chalk';
 
 const green = chalk.green;
@@ -27,7 +27,7 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
 
     beforeEach(async () => {
         // Reset Indexer
-        await indexrHelper.reset();
+        await indexerHelper.reset();
         [deployer, alice, bob] = await ethers.getSigners();
         ({ erc721 } = await setupNFTs(deployer));
     });
@@ -131,7 +131,7 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
         console.log(green("\t Perform Order Saving:"));
 
         // Call the Indexer to save the order
-        const saveResult = await indexrHelper.doOrderSaving({
+        const saveResult = await indexerHelper.doOrderSaving({
             contract: erc721.address,
             kind: "erc721",
             currency: order.params.currency,
@@ -168,7 +168,7 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
             const tx = await exchange.cancelOrder(!isListing ? buyer : seller, order);
 
             console.log(green("\t Event Parsing:"))
-            const parseResult = await indexrHelper.doEventParsing(tx.hash, false);
+            const parseResult = await indexerHelper.doEventParsing(tx.hash, false);
             const onChainData = parseResult.onChainData[0];
             if (!onChainData) {
                 console.log("\t\t  Parse Event Failed")
@@ -178,7 +178,7 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
                 setTimeout(resolve, 4 * 1000)
             })
 
-            const orderState = await indexrHelper.getOrder(orderInfo.id);
+            const orderState = await indexerHelper.getOrder(orderInfo.id);
             const { nonceCancelEvents } = onChainData;
             if (nonceCancelEvents.length) {
                 console.log(green(`\t\t found nonceCancelEvents(${nonceCancelEvents.length})`))
@@ -202,7 +202,7 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
             const tx = await exchange.cancelAllOrders(!isListing ? buyer : seller, orderSide);
 
             console.log(green("\t Event Parsing:"))
-            const parseResult = await indexrHelper.doEventParsing(tx.hash, false);
+            const parseResult = await indexerHelper.doEventParsing(tx.hash, false);
 
             if (parseResult.error) {
                 console.log(error(JSON.stringify(parseResult.error, null, 2)))
@@ -218,7 +218,7 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
                 setTimeout(resolve, 2 * 1000)
             })
 
-            const orderState = await indexrHelper.getOrder(orderInfo.id);
+            const orderState = await indexerHelper.getOrder(orderInfo.id);
             const { bulkCancelEvents } = onChainData;
             if (bulkCancelEvents.length) {
                 console.log(green(`\t\t found bulkCancelEvents ${bulkCancelEvents.length}`))
@@ -248,7 +248,7 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
         } else {
             if (!isListing) {
                 try {
-                    const executeResponse = await indexrHelper.executeSellV7({
+                    const executeResponse = await indexerHelper.executeSellV7({
                         items: [
                             {
                                 token: `${erc721.address}:${boughtTokenId}`,
@@ -277,7 +277,7 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
                         ],
                         taker: matchOrder.recipient,
                     }
-                    const executeResponse = await indexrHelper.executeBuyV7(payload);
+                    const executeResponse = await indexerHelper.executeBuyV7(payload);
                     const allSteps = executeResponse.steps;
                     const lastSetp = allSteps[allSteps.length -1]
 
@@ -302,7 +302,7 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
         const skipProcessing = false;
 
         console.log(green("\t Event Parsing:"))
-        const parseResult = await indexrHelper.doEventParsing(fillTxHash, skipProcessing);
+        const parseResult = await indexerHelper.doEventParsing(fillTxHash, skipProcessing);
         const onChainData = parseResult.onChainData[0];
         if (!onChainData) {
             console.log("\t\t  Parse Event Failed")
@@ -318,7 +318,7 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
         }
 
         console.log(green("\t Order Status: "))
-        const finalOrderState = await indexrHelper.getOrder(orderInfo.id);
+        const finalOrderState = await indexerHelper.getOrder(orderInfo.id);
         console.log("\t\t - Final Order Status =", JSON.stringify({
             fillability_status: finalOrderState.fillability_status,
             approval_status: finalOrderState.approval_status

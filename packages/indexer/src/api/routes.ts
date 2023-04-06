@@ -1386,22 +1386,22 @@ export const setupRoutes = (server: Server) => {
   });
 
   // Debug Test
-  if (config.isDev) {
+  if (config.enableDebug) {
     server.route({
       method: "GET",
-      path: "/debug/eventParsing",
+      path: "/debug/event-parsing",
       options: debugEndpoints.eventParsingOptions,
     });
 
     server.route({
       method: "POST",
-      path: "/debug/orderSaving",
+      path: "/debug/order-saving",
       options: debugEndpoints.orderSavingOptions,
     });
 
     server.route({
       method: "GET",
-      path: "/debug/getOrder",
+      path: "/debug/get-order",
       options: debugEndpoints.getOrderOptions,
     });
 

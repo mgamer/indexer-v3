@@ -126,5 +126,5 @@ export const config = {
   doProcessBackfilling: Boolean(Number(process.env.DO_PROCESS_BACKFILLING)),
   doProcessRealtime: Boolean(Number(process.env.DO_PROCESS_REALTIME)),
 
-  isDev: Boolean(Number(process.env.IS_DEV)),
+  enableDebug: Boolean(Number(process.env.ENABLE_DEBUG)),
 };

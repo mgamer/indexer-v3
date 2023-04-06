@@ -52,9 +52,7 @@ export class SingleTokenBuilder extends BaseBuilder {
       subsetNonce: params.subsetNonce ? s(params.subsetNonce) : "0",
       orderNonce: params.orderNonce ? s(params.orderNonce) : "0",
 
-      v: params.v,
-      r: params.r,
-      s: params.s,
+      signature: params.signature,
     });
   }
 

@@ -3,7 +3,7 @@ import axios from "axios";
 let indexUrl = process.env.INDEXER_URL || "http://localhost:3000";
 
 export async function doEventParsing(tx: string, skipProcessing: boolean = true) {
-    const { data } = await axios.get(`${indexUrl}/debug/eventParsing`, {
+    const { data } = await axios.get(`${indexUrl}/debug/event-parsing`, {
         params: {
             tx,
             skipProcessing
@@ -13,12 +13,12 @@ export async function doEventParsing(tx: string, skipProcessing: boolean = true)
 }
 
 export async function doOrderSaving(postData: any) {
-    const { data } = await axios.post(`${indexUrl}/debug/orderSaving`, postData);
+    const { data } = await axios.post(`${indexUrl}/debug/order-saving`, postData);
     return data
 }
 
 export async function getOrder(orderId: string) {
-    const { data } = await axios.get(`${indexUrl}/debug/getOrder`, {
+    const { data } = await axios.get(`${indexUrl}/debug/get-order`, {
         params: {
             orderId
         }

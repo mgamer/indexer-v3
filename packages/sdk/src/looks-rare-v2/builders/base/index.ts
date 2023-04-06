@@ -24,9 +24,7 @@ export interface BaseBuildParams {
   amounts: BigNumberish[];
 
   additionalParameters?: string;
-  v?: number;
-  r?: string;
-  s?: string;
+  signature?: string;
 }
 
 export abstract class BaseBuilder {
@@ -39,11 +37,12 @@ export abstract class BaseBuilder {
   protected defaultInitialize(params: BaseBuildParams) {
     params.startTime = params.startTime ?? getCurrentTimestamp(-1 * 60);
     params.endTime = params.endTime ?? getCurrentTimestamp(24 * 60 * 60);
-    // params.minPercentageToAsk = params.minPercentageToAsk ?? 8500;
-    // params.nonce = params.nonce ?? getRandomBytes(10);
-    params.v = params.v ?? 0;
-    params.r = params.r ?? HashZero;
-    params.s = params.s ?? HashZero;
+
+    params.globalNonce = params.globalNonce ?? "0";
+    params.subsetNonce = params.subsetNonce ?? "0";
+    params.orderNonce = params.orderNonce ?? "0";
+
+    params.signature = params.signature ?? HashZero;
   }
 
   public abstract isValid(order: Order): boolean;

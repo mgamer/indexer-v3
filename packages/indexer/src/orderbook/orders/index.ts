@@ -828,14 +828,6 @@ export const generateListingDetailsV5 = (
       };
     }
 
-    case "looks-rare-v2": {
-      return {
-        kind: "looks-rare",
-        ...common,
-        order: new Sdk.LooksRare.Order(config.chainId, order.rawData),
-      };
-    }
-
     default: {
       throw new Error("Unsupported order kind");
     }

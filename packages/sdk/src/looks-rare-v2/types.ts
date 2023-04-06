@@ -32,9 +32,7 @@ export type MakerOrderParams = {
 
   additionalParameters: string;
 
-  v?: number;
-  r?: string;
-  s?: string;
+  signature?: string;
 };
 
 export type TakerOrderParams = {
