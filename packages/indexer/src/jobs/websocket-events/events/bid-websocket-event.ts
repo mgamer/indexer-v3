@@ -10,8 +10,8 @@ import { SourcesEntity } from "@/models/sources/sources-entity";
 import { redisWebsocketPublisher } from "@/common/redis";
 import { logger } from "@/common/logger";
 import { Orders } from "@/utils/orders";
-export class NewSellOrderWebsocketEvent {
-  public static async triggerEvent(data: NewSellOrderWebsocketEventInfo) {
+export class BidWebsocketEvent {
+  public static async triggerEvent(data: BidWebsocketEventInfo) {
     try {
       const criteriaBuildQuery = Orders.buildCriteriaQuery("orders", "token_set_id", false);
 
@@ -45,6 +45,16 @@ export class NewSellOrderWebsocketEvent {
             orders.is_reservoir,
             extract(epoch
             FROM orders.created_at) AS created_at,
+            (
+            CASE
+              WHEN orders.fillability_status = 'filled' THEN 'filled'
+              WHEN orders.fillability_status = 'cancelled' THEN 'cancelled'
+              WHEN orders.fillability_status = 'expired' THEN 'expired'
+              WHEN orders.fillability_status = 'no-balance' THEN 'inactive'
+              WHEN orders.approval_status = 'no-approval' THEN 'inactive'
+              ELSE 'active'
+            END
+          ) AS status,
             (${criteriaBuildQuery}) AS criteria
       FROM orders
       WHERE (orders.side = 'sell')
@@ -126,7 +136,7 @@ export class NewSellOrderWebsocketEvent {
       redisWebsocketPublisher.publish(
         "events",
         JSON.stringify({
-          event: "ask.created",
+          event: data.eventType,
           tags: {
             contract: fromBuffer(rawResult.contract),
           },
@@ -134,11 +144,12 @@ export class NewSellOrderWebsocketEvent {
         })
       );
     } catch (e) {
-      logger.error("new-ask-websocket-event", `Error triggering event. ${e}`);
+      logger.error("bid-updated-websocket-event", `Error triggering event. ${e}`);
     }
   }
 }
 
-export type NewSellOrderWebsocketEventInfo = {
+export type BidWebsocketEventInfo = {
   orderId: string;
+  eventType: "bid.created" | "bid.updated";
 };

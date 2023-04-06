@@ -7,21 +7,12 @@ import {
   NewTopBidWebsocketEventInfo,
   NewTopBidWebsocketEvent,
 } from "@/jobs/websocket-events/events/new-top-bid-websocket-event";
-import {
-  NewActivityWebsocketEvent,
-  NewActivityWebsocketEventInfo,
-} from "@/jobs/websocket-events/events/new-activity-websocket-event";
-
-import {
-  NewSellOrderWebsocketEvent,
-  NewSellOrderWebsocketEventInfo,
-} from "@/jobs/websocket-events/events/new-sell-order-websocket-event";
 
 import { randomUUID } from "crypto";
 import _ from "lodash";
 import tracer from "@/common/tracer";
 
-const QUEUE_NAME = "websocket-events-trigger-queue";
+const QUEUE_NAME = "new-top-bid-trigger-queue";
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
@@ -49,20 +40,6 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
             () => NewTopBidWebsocketEvent.triggerEvent(data)
           );
           break;
-        case EventKind.NewActivity:
-          await tracer.trace(
-            "triggerEvent",
-            { resource: "NewActivityWebsocketEvent", tags: { event: data } },
-            () => NewActivityWebsocketEvent.triggerEvent(data)
-          );
-          break;
-        case EventKind.NewSellOrder:
-          await tracer.trace(
-            "triggerEvent",
-            { resource: "NewSellOrderWebsocketEvent", tags: { event: data } },
-            () => NewSellOrderWebsocketEvent.triggerEvent(data)
-          );
-          break;
       }
     },
     { connection: redis.duplicate(), concurrency: 20 }
@@ -74,23 +51,12 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
 
 export enum EventKind {
   NewTopBid = "new-top-bid",
-  NewActivity = "new-activity",
-  NewSellOrder = "new-sell-order",
 }
 
-export type EventInfo =
-  | {
-      kind: EventKind.NewTopBid;
-      data: NewTopBidWebsocketEventInfo;
-    }
-  | {
-      kind: EventKind.NewActivity;
-      data: NewActivityWebsocketEventInfo;
-    }
-  | {
-      kind: EventKind.NewSellOrder;
-      data: NewSellOrderWebsocketEventInfo;
-    };
+export type EventInfo = {
+  kind: EventKind.NewTopBid;
+  data: NewTopBidWebsocketEventInfo;
+};
 
 export const addToQueue = async (events: EventInfo[]) => {
   if (!config.doWebsocketServerWork) {

@@ -5,7 +5,7 @@ import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as websocketEventsTriggerQueue from "@/jobs/websocket-events/trigger-queue";
+import * as websocketEventsTriggerQueue from "@/jobs/websocket-events/ask-websocket-events-trigger-queue";
 
 const QUEUE_NAME = "collection-updates-top-bid-queue";
 
