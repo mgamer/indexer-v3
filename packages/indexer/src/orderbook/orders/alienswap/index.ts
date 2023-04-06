@@ -393,7 +393,7 @@ export const save = async (
 
       // Handle: source
       const sources = await Sources.getInstance();
-      let source: SourcesEntity | undefined = await sources.getOrInsert("alienswap.market");
+      let source: SourcesEntity | undefined = await sources.getOrInsert("alienswap.xyz");
 
       // If cross posting, source should always be opensea.
       const sourceHash = bn(order.params.salt)._hex.slice(0, 10);
