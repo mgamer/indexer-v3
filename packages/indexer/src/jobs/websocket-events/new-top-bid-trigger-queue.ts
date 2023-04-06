@@ -10,7 +10,6 @@ import {
 
 import { randomUUID } from "crypto";
 import _ from "lodash";
-import tracer from "@/common/tracer";
 
 const QUEUE_NAME = "new-top-bid-trigger-queue";
 
@@ -32,11 +31,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
     async (job: Job) => {
       const { data } = job.data as EventInfo;
 
-      await tracer.trace(
-        "triggerEvent",
-        { resource: "NewTopBidWebsocketEvent", tags: { event: data } },
-        () => NewTopBidWebsocketEvent.triggerEvent(data)
-      );
+      NewTopBidWebsocketEvent.triggerEvent(data);
     },
     { connection: redis.duplicate(), concurrency: 20 }
   );
