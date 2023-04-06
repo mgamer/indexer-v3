@@ -146,7 +146,13 @@ jobs:
             ${{ github.sha }} \
             indexer-worker-optimism
           ./utils/version_update.sh \
-            ./prod/platform/indexer-worker-polygon.yaml \
+            ./prod/platform/indexer-worker-polygon-1.yaml \
+            ${{ github.sha }} \
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-polygon-2.yaml \
+            ${{ github.sha }} \
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-polygon-3.yaml \
             ${{ github.sha }} \
             indexer-worker-polygon
           ./utils/version_update.sh \
