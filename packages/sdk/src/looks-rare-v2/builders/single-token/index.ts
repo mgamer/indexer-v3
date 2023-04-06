@@ -29,16 +29,6 @@ export class SingleTokenBuilder extends BaseBuilder {
   }
 
   public build(params: BuildParams) {
-    // if (
-    //   params.strategy &&
-    //   ![
-    //     Addresses.StrategyStandardSale[this.chainId],
-    //     Addresses.StrategyStandardSaleDeprecated[this.chainId],
-    //   ].includes(params.strategy.toLowerCase())
-    // ) {
-    //   throw new Error("Invalid strategy");
-    // }
-
     this.defaultInitialize(params);
 
     return new Order(this.chainId, {

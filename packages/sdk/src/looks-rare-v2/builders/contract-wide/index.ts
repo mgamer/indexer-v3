@@ -28,16 +28,6 @@ export class ContractWideBuilder extends BaseBuilder {
   }
 
   public build(params: BuildParams) {
-    // if (
-    //   params.strategy &&
-    //   ![
-    //     Addresses.StrategyCollectionSale[this.chainId],
-    //     Addresses.StrategyCollectionSaleDeprecated[this.chainId],
-    //   ].includes(params.strategy.toLowerCase())
-    // ) {
-    //   throw new Error("Invalid strategy");
-    // }
-
     // if (params.isOrderAsk) {
     //   throw new Error("Unsupported order side");
     // }
