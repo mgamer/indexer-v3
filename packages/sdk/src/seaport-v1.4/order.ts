@@ -17,13 +17,18 @@ import * as Common from "../common";
 import { bn, getCurrentTimestamp, lc, n, s } from "../utils";
 
 import { Exchange } from "./exchange";
+import { SeaportBaseExchange } from "../seaport-base";
 
 export class Order implements IOrder {
   public chainId: number;
   public params: Types.OrderComponents;
+  protected exchangeAddress: string;
+  protected exchange: SeaportBaseExchange;
 
   constructor(chainId: number, params: Types.OrderComponents) {
     this.chainId = chainId;
+    this.exchangeAddress = Addresses.Exchange[chainId];
+    this.exchange = new Exchange(chainId);
 
     try {
       this.params = normalize(params);
@@ -46,7 +51,7 @@ export class Order implements IOrder {
 
   public async sign(signer: TypedDataSigner) {
     const signature = await signer._signTypedData(
-      EIP712_DOMAIN(this.chainId),
+      EIP712_DOMAIN(this.chainId, this.exchangeAddress),
       ORDER_EIP712_TYPES,
       this.params
     );
@@ -60,7 +65,7 @@ export class Order implements IOrder {
   public getSignatureData() {
     return {
       signatureKind: "eip712",
-      domain: EIP712_DOMAIN(this.chainId),
+      domain: EIP712_DOMAIN(this.chainId, this.exchangeAddress),
       types: ORDER_EIP712_TYPES,
       value: this.params,
       primaryType: _TypedDataEncoder.getPrimaryType(ORDER_EIP712_TYPES),
@@ -121,7 +126,9 @@ export class Order implements IOrder {
           ["bytes"],
           [
             "0x1901" +
-              _TypedDataEncoder.hashDomain(EIP712_DOMAIN(this.chainId)).slice(2) +
+              _TypedDataEncoder
+                .hashDomain(EIP712_DOMAIN(this.chainId, this.exchangeAddress))
+                .slice(2) +
               bulkOrderHash.slice(2),
           ]
         );
@@ -132,7 +139,7 @@ export class Order implements IOrder {
         }
       } else {
         const signer = verifyTypedData(
-          EIP712_DOMAIN(this.chainId),
+          EIP712_DOMAIN(this.chainId, this.exchangeAddress),
           ORDER_EIP712_TYPES,
           this.params,
           signature
@@ -148,7 +155,7 @@ export class Order implements IOrder {
       }
 
       const eip712Hash = _TypedDataEncoder.hash(
-        EIP712_DOMAIN(this.chainId),
+        EIP712_DOMAIN(this.chainId, this.exchangeAddress),
         ORDER_EIP712_TYPES,
         this.params
       );
@@ -244,9 +251,7 @@ export class Order implements IOrder {
   }
 
   public async checkFillability(provider: Provider) {
-    const exchange = new Exchange(this.chainId);
-
-    const status = await exchange.contract.connect(provider).getOrderStatus(this.hash());
+    const status = await this.exchange.contract.connect(provider).getOrderStatus(this.hash());
     if (status.isCancelled) {
       throw new Error("not-fillable");
     }
@@ -254,7 +259,7 @@ export class Order implements IOrder {
       throw new Error("not-fillable");
     }
 
-    const makerConduit = exchange.deriveConduit(this.params.conduitKey);
+    const makerConduit = this.exchange.deriveConduit(this.params.conduitKey);
 
     const info = this.getInfo()! as BaseOrderInfo;
     if (info.side === "buy") {
@@ -396,11 +401,11 @@ export class Order implements IOrder {
   }
 }
 
-export const EIP712_DOMAIN = (chainId: number) => ({
+export const EIP712_DOMAIN = (chainId: number, exchangeAddress: string) => ({
   name: "Seaport",
   version: "1.4",
   chainId,
-  verifyingContract: Addresses.Exchange[chainId],
+  verifyingContract: exchangeAddress,
 });
 
 const normalize = (order: Types.OrderComponents): Types.OrderComponents => {

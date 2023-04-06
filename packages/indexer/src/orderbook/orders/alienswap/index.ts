@@ -2,6 +2,7 @@ import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import _ from "lodash";
 import pLimit from "p-limit";
+import axios from "axios";
 
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
@@ -161,6 +162,7 @@ export const save = async (
             // No zone
             AddressZero,
             // Cancellation zone
+            Sdk.SeaportV14.Addresses.CancellationZone[config.chainId],
           ].includes(order.params.zone)
         ) {
           return results.push({
@@ -521,6 +523,37 @@ export const save = async (
           logger.warn(
             "orders-alienswap-save",
             `Bid value validation - error. orderId=${id}, contract=${info.contract}, tokenId=${tokenId}, error=${error}`
+          );
+        }
+      }
+
+      // Handle: off-chain cancellation via replacement
+      if (order.params.zone === Sdk.SeaportV14.Addresses.CancellationZone[config.chainId]) {
+        const replacedOrderResult = await idb.oneOrNone(
+          `
+            SELECT
+              orders.raw_data
+            FROM orders
+            WHERE orders.id = $/id/
+          `,
+          {
+            id: order.params.salt,
+          }
+        );
+        if (
+          replacedOrderResult &&
+          // Replacement is only possible if the replaced order is an off-chain cancellable one
+          replacedOrderResult.raw_data.zone ===
+            Sdk.SeaportV14.Addresses.CancellationZone[config.chainId]
+        ) {
+          await axios.post(
+            `https://seaport-oracle-${
+              config.chainId === 1 ? "mainnet" : "goerli"
+            }.up.railway.app/api/replacements`,
+            {
+              newOrders: [order.params],
+              replacedOrders: [replacedOrderResult.raw_data],
+            }
           );
         }
       }

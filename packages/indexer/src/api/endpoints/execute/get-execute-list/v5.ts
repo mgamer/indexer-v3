@@ -115,6 +115,14 @@ export const getExecuteListV5Options: RouteOptions = {
                 otherwise: Joi.forbidden(),
               }),
             }),
+            alienswap: Joi.object({
+              useOffChainCancellation: Joi.boolean().required(),
+              replaceOrderId: Joi.string().when("useOffChainCancellation", {
+                is: true,
+                then: Joi.optional(),
+                otherwise: Joi.forbidden(),
+              }),
+            }),
           }).description("Additional options."),
           orderbook: Joi.string()
             .valid("blur", "opensea", "looks-rare", "reservoir", "x2y2", "universe", "flow")

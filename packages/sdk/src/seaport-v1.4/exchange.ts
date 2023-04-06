@@ -96,7 +96,7 @@ export class Exchange extends SeaportBaseExchange {
     return {
       signatureData: {
         signatureKind: "eip712",
-        domain: EIP712_DOMAIN(this.chainId),
+        domain: EIP712_DOMAIN(this.chainId, this.exchangeAddress),
         types,
         value: { tree: chunks },
         primaryType: _TypedDataEncoder.getPrimaryType(types),

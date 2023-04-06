@@ -43,7 +43,10 @@ export const getBuildInfo = async (
   const conduitKey = Sdk.Alienswap.Addresses.OpenseaConduitKey[config.chainId];
 
   // No zone by default
-  const zone = AddressZero;
+  let zone = AddressZero;
+  if (options.useOffChainCancellation) {
+    zone = Sdk.SeaportV14.Addresses.CancellationZone[config.chainId];
+  }
 
   const source = options.source;
 
