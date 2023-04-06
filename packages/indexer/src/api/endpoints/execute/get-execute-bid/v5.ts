@@ -1372,7 +1372,7 @@ export const getExecuteBidV5Options: RouteOptions = {
         }
       }
 
-      // put alienswap bulk orders together
+      // Post any alienswap bulk orders together
       {
         const orders = bulkOrders["alienswap"];
         if (orders.length === 1) {

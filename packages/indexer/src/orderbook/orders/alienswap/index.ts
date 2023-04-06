@@ -30,7 +30,6 @@ export type OrderInfo = {
   orderParams: Sdk.SeaportBase.Types.OrderComponents;
   metadata: OrderMetadata;
   isReservoir?: boolean;
-  isOpenSea?: boolean;
 };
 
 type SaveResult = {
@@ -57,8 +56,7 @@ export const save = async (
   const handleOrder = async (
     orderParams: Sdk.SeaportBase.Types.OrderComponents,
     metadata: OrderMetadata,
-    isReservoir?: boolean,
-    isOpenSea?: boolean
+    isReservoir?: boolean
   ) => {
     try {
       const order = new Sdk.Alienswap.Order(config.chainId, orderParams);
@@ -182,25 +180,14 @@ export const save = async (
         });
       }
 
-      // Make sure no zero signatures are allowed
-      if (order.params.signature && /^0x0+$/g.test(order.params.signature)) {
-        order.params.signature = undefined;
-      }
-
       // Check: order has a valid signature
-      if (metadata.fromOnChain || (isOpenSea && !order.params.signature)) {
-        // Skip if:
-        // - the order was validated on-chain
-        // - the order is coming from OpenSea and it doesn't have a signature
-      } else {
-        try {
-          await order.checkSignature(baseProvider);
-        } catch {
-          return results.push({
-            id,
-            status: "invalid-signature",
-          });
-        }
+      try {
+        await order.checkSignature(baseProvider);
+      } catch {
+        return results.push({
+          id,
+          status: "invalid-signature",
+        });
       }
 
       // Check: order fillability
@@ -322,12 +309,6 @@ export const save = async (
       }
 
       // Handle: royalties
-      const openSeaFeeRecipients = [
-        "0x5b3256965e7c3cf26e11fcaf296dfc8807c01073",
-        "0x8de9c5a032463c561423387a9648c5c7bcc5bc90",
-        "0x0000a26b00c1f0df003000390027140000faa719",
-      ];
-
       let openSeaRoyalties: royalties.Royalty[];
 
       if (order.params.kind === "single-token") {
@@ -412,7 +393,7 @@ export const save = async (
 
       // Handle: source
       const sources = await Sources.getInstance();
-      let source: SourcesEntity | undefined = await sources.getOrInsert("opensea.io");
+      let source: SourcesEntity | undefined = await sources.getOrInsert("alienswap.market");
 
       // If cross posting, source should always be opensea.
       const sourceHash = bn(order.params.salt)._hex.slice(0, 10);
@@ -424,17 +405,7 @@ export const save = async (
       // If the order is native, override any default source
       if (isReservoir) {
         if (metadata.source) {
-          // If we can detect the marketplace (only OpenSea for now) do not override
-          if (
-            _.isEmpty(
-              _.intersection(
-                feeBreakdown.map(({ recipient }) => recipient),
-                openSeaFeeRecipients
-              )
-            )
-          ) {
-            source = await sources.getOrInsert(metadata.source);
-          }
+          source = await sources.getOrInsert(metadata.source);
         } else {
           source = undefined;
         }
@@ -635,8 +606,7 @@ export const save = async (
           handleOrder(
             orderInfo.orderParams as Sdk.SeaportBase.Types.OrderComponents,
             orderInfo.metadata,
-            orderInfo.isReservoir,
-            orderInfo.isOpenSea
+            orderInfo.isReservoir
           )
         )
       )

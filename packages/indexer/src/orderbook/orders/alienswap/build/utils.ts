@@ -39,8 +39,8 @@ export const getBuildInfo = async (
 
   const exchange = new Sdk.Alienswap.Exchange(config.chainId);
 
-  // Use alienswap's conduit key
-  const conduitKey = Sdk.Alienswap.Addresses.OpenseaConduitKey[config.chainId];
+  // Use same conduit key as seaport-v1.4 and seaport-v1.4
+  const conduitKey = Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId];
 
   // No zone by default
   let zone = AddressZero;
