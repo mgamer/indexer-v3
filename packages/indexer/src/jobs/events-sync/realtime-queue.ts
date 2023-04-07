@@ -97,7 +97,7 @@ if (
         }
       });
     },
-    { connection: redis.duplicate(), concurrency: 5 }
+    { connection: redis.duplicate(), concurrency: 15 }
   );
 
   worker.on("error", (error) => {
