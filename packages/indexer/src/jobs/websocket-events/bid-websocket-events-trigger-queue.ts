@@ -189,6 +189,9 @@ export const addToQueue = async (events: EventInfo[]) => {
     _.map(events, (event) => ({
       name: randomUUID(),
       data: event,
+      opts: {
+        delay: 5000,
+      },
     }))
   );
 };
