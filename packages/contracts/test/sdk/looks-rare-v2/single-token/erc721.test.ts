@@ -89,9 +89,6 @@ describe("LooksRareV2 - SingleToken Erc721", () => {
     // Sign the order
     await buyOrder.sign(buyer);
 
-    console.log('orderParameters', JSON.stringify( buyOrder.params))
-    // return;
-
     // Create matching sell order
     const sellOrder = buyOrder.buildMatching(seller.address);
 
@@ -184,13 +181,11 @@ describe("LooksRareV2 - SingleToken Erc721", () => {
     // expect(sellerBalanceBefore).to.eq(0);
     expect(ownerBefore).to.eq(seller.address);
 
-    // Match orders
+    // Match orders,
     // const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
-    const tx = await exchange.fillOrder(buyer, sellOrder, buyOrder, {
+    await exchange.fillOrder(buyer, sellOrder, buyOrder, {
       source: "reservoir.market",
     });
-
-    console.log("fillOrder", tx.hash)
 
     const buyerBalanceAfter = await ethers.provider.getBalance(buyer.address);
     const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);

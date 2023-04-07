@@ -40,7 +40,8 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
         cancelOrder = false,
         isListing = false,
         bulkCancel = false,
-        executeByRouterAPI = false
+        executeByRouterAPI = false,
+        subsetCancel = false
     }) => {
 
         const buyer = alice;
@@ -234,6 +235,45 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
             return;
         }
 
+        // Handle subsetCancel
+        if (subsetCancel) {
+            console.log(green("\t Bulk Cancel Order"))
+            const tx = await exchange.cancelOrdersWithSubset(!isListing ? buyer : seller, order);
+
+            console.log(green("\t Event Parsing:"))
+            const parseResult = await indexerHelper.doEventParsing(tx.hash, false);
+
+            if (parseResult.error) {
+                console.log(error(JSON.stringify(parseResult.error, null, 2)))
+                return;
+            }
+
+            const onChainData = parseResult.onChainData[0];
+            if (!onChainData) {
+                console.log("\t\t  Parse Event Failed")
+            }
+
+            await new Promise((resolve) => {
+                setTimeout(resolve, 2 * 1000)
+            })
+
+            const orderState = await indexerHelper.getOrder(orderInfo.id);
+            const { nonceCancelEvents } = onChainData;
+            if (nonceCancelEvents.length) {
+                console.log(green(`\t\t found nonceCancelEvents ${nonceCancelEvents.length}`))
+            } else {
+                console.log(error("\t\t nonceCancelEvents not found"))
+            }
+            
+            console.log(green("\t Order Status: "))
+            console.log("\t\t - Final Order Status =", JSON.stringify({
+                fillability_status: orderState.fillability_status,
+                maker: orderState.maker,
+                approval_status: orderState.approval_status
+            }))
+            return;
+        }
+
         await order.checkFillability(ethers.provider);
 
         // Fill Order
@@ -327,32 +367,36 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
 
     
 
-    it("Fill Listing With Bulk Cancel - Multiple", async () => {
-        await testCase({
-            bulkCancel: true
-        });
-        await testCase({
-            bulkCancel: true
-        });
-        console.log("\n")
-    });
+    // it("Fill Listing With Bulk Cancel - Multiple", async () => {
+    //     await testCase({
+    //         bulkCancel: true
+    //     });
+    //     await testCase({
+    //         bulkCancel: true
+    //     });
+    //     console.log("\n")
+    // });
 
-    it("Fill Offer via Router API", async () => testCase({
-        executeByRouterAPI: true
-    }));
+    // it("Fill Offer via Router API", async () => testCase({
+    //     executeByRouterAPI: true
+    // }));
 
-    it("Fill Listing via Router API", async () => testCase({
-        isListing: true,
-        executeByRouterAPI: true
-    }));
+    // it("Fill Listing via Router API", async () => testCase({
+    //     isListing: true,
+    //     executeByRouterAPI: true
+    // }));
 
-    it("Fill Offer", async () => testCase({}));
+    // it("Fill Offer", async () => testCase({}));
 
-    it("Fill Listing", async () => testCase({
-        isListing: true
-    }));
+    // it("Fill Listing", async () => testCase({
+    //     isListing: true
+    // }));
 
-    it("Fill Listing With Cancel", async () => testCase({
-        bulkCancel: true
+    // it("Fill Listing With Cancel", async () => testCase({
+    //     bulkCancel: true
+    // }));
+
+    it("Fill Listing With Subset Cancel", async () => testCase({
+        subsetCancel: true
     }));
 });

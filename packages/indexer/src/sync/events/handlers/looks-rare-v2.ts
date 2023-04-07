@@ -56,6 +56,28 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         break;
       }
 
+      case "looks-rare-v2-subset-nonces-cancelled": {
+        const parsedLog = eventData.abi.parseLog(log);
+        const maker = parsedLog.args["user"].toLowerCase();
+        const subsetNonces = parsedLog.args["subsetNonces"].map(String);
+
+        let batchIndex = 1;
+        for (const subsetNonce of subsetNonces) {
+          onChainData.nonceCancelEvents.push({
+            orderKind: "looks-rare-v2",
+            maker,
+            nonce: subsetNonce,
+            baseEventParams: {
+              ...baseEventParams,
+              batchIndex: batchIndex++,
+            },
+            isSubset: true,
+          });
+        }
+
+        break;
+      }
+
       case "looks-rare-v2-order-nonces-cancelled": {
         const parsedLog = eventData.abi.parseLog(log);
         const maker = parsedLog.args["user"].toLowerCase();

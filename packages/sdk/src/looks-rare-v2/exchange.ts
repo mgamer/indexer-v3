@@ -118,6 +118,21 @@ export class Exchange {
     };
   }
 
+  public async cancelOrdersWithSubset(maker: Signer, order: Order): Promise<ContractTransaction> {
+    const tx = this.cancelOrdersWithSubsetTx(await maker.getAddress(), order);
+    return maker.sendTransaction(tx);
+  }
+
+  public cancelOrdersWithSubsetTx(maker: string, order: Order): TxData {
+    return {
+      from: maker,
+      to: this.contract.address,
+      data: this.contract.interface.encodeFunctionData("cancelSubsetNonces", [
+        [order.params.subsetNonce],
+      ]),
+    };
+  }
+
   public async cancelAllOrders(maker: Signer, side: "buy" | "sell"): Promise<ContractTransaction> {
     const tx = this.cancelAllOrdersTx(await maker.getAddress(), side);
     return maker.sendTransaction(tx);
@@ -134,17 +149,6 @@ export class Exchange {
   }
 
   // --- Get nonce ---
-
-  // public async getNonce(
-  //   provider: Provider,
-  //   user: string,
-  //   side: "sell" | "buy"
-  // ): Promise<BigNumberish> {
-  //   const nonces = await new Contract(Addresses.Exchange[this.chainId], ExchangeAbi)
-  //     .connect(provider)
-  //     .userOrderNonce(user);
-  //   return side === "sell" ? nonces.askNonce : nonces.bidNonce;
-  // }
 
   public async getGlobalNonce(
     provider: Provider,

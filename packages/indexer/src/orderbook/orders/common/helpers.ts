@@ -115,10 +115,9 @@ export const getMinNonce = async (
           SELECT bulk_cancel_events.min_nonce FROM bulk_cancel_events
           WHERE bulk_cancel_events.order_kind = $/orderKind/
             AND bulk_cancel_events.maker = $/maker/
-            ` + side
-      ? `AND bulk_cancel_events.side = $/side/`
-      : "" +
-          `
+            ` +
+      (side ? `AND bulk_cancel_events.side = $/side/` : "") +
+      `
           ORDER BY bulk_cancel_events.min_nonce DESC
           
           LIMIT 1
