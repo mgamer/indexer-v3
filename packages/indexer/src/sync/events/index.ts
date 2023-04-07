@@ -422,7 +422,8 @@ export const syncEvents = async (
     if (backfill) {
       await eventsSyncBackfillProcess.addToQueue(eventsBatches);
     } else {
-      await eventsSyncRealtimeProcess.addToQueue(eventsBatches, true);
+      // await eventsSyncRealtimeProcess.addToQueue(eventsBatches, true);
+      await eventsSyncRealtimeProcess.addToQueue(eventsBatches);
     }
 
     // Make sure to recheck the ingested blocks with a delay in order to undo any reorgs
