@@ -10,9 +10,9 @@ import { getJoiSaleObject, JoiSale } from "@/common/joi";
 import { buildContinuation, regex, splitContinuation, toBuffer } from "@/common/utils";
 import * as Boom from "@hapi/boom";
 
-const version = "v4";
+const version = "v5";
 
-export const getSalesV4Options: RouteOptions = {
+export const getSalesV5Options: RouteOptions = {
   description: "Sales",
   notes: "Get recent sales for a contract or token.",
   tags: ["api", "Sales"],
@@ -101,7 +101,8 @@ export const getSalesV4Options: RouteOptions = {
     const query = request.query as any;
 
     let paginationFilter = "";
-    let tokenFilter = "";
+    let contractFilter = "";
+    let tokensFilter = "";
     let tokenJoins = "";
     let collectionFilter = "";
 
@@ -122,13 +123,26 @@ export const getSalesV4Options: RouteOptions = {
       }
 
       (query as any).contractsFilter = _.join((query as any).contractsFilter, ",");
-      tokenFilter = `fill_events_2.contract IN ($/contractsFilter:raw/)`;
-    } else if (query.token) {
-      const [contract, tokenId] = query.token.split(":");
+      contractFilter = `fill_events_2.contract IN ($/contractsFilter:raw/)`;
+    } else if (query.tokens) {
+      if (!_.isArray(query.tokens)) {
+        query.tokens = [query.tokens];
+      }
 
-      (query as any).contract = toBuffer(contract);
-      (query as any).tokenId = tokenId;
-      tokenFilter = `fill_events_2.contract = $/contract/ AND fill_events_2.token_id = $/tokenId/`;
+      for (const token of query.tokens) {
+        const [contract, tokenId] = token.split(":");
+        const tokensFilter = `('${_.replace(contract, "0x", "\\x")}', '${tokenId}')`;
+
+        if (_.isUndefined((query as any).tokensFilter)) {
+          (query as any).tokensFilter = [];
+        }
+
+        (query as any).tokensFilter.push(tokensFilter);
+      }
+
+      (query as any).tokensFilter = _.join((query as any).tokensFilter, ",");
+
+      tokensFilter = `(fill_events_2.contract, fill_events_2.token_id) IN ($/tokensFilter:raw/)`;
     } else if (query.collection) {
       if (query.attributes) {
         const attributes: { key: string; value: string }[] = [];
@@ -266,7 +280,8 @@ export const getSalesV4Options: RouteOptions = {
           ${tokenJoins}
           WHERE
             ${collectionFilter}
-            ${tokenFilter}
+            ${contractFilter}
+            ${tokensFilter}
             ${paginationFilter}
             ${timestampFilter}
       
