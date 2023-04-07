@@ -1,5 +1,5 @@
 import { Filter } from "@ethersproject/abstract-provider";
-import _ from "lodash";
+import _, { now } from "lodash";
 import pLimit from "p-limit";
 
 import { logger } from "@/common/logger";
@@ -283,6 +283,7 @@ export const syncEvents = async (
   // related to every of those blocks a priori for efficiency. Otherwise, it can be
   // too inefficient to do it and in this case we just proceed (and let any further
   // processes fetch those blocks as needed / if needed).
+  let startTime = now();
   if (!backfill && toBlock - fromBlock + 1 <= 32) {
     const existingBlocks = await idb.manyOrNone(
       `
@@ -306,6 +307,12 @@ export const syncEvents = async (
       blocksToFetch.map((block) => limit(() => syncEventsUtils.fetchBlock(block, true)))
     );
   }
+  logger.info(
+    "sync-events-timing",
+    `RPC getBlockByNumber block range [${fromBlock}, ${toBlock}] total blocks ${
+      toBlock - fromBlock
+    } time ${(now() - startTime) / 1000}s`
+  );
 
   // Generate the events filter with one of the following options:
   // - fetch all events
@@ -336,7 +343,14 @@ export const syncEvents = async (
   }
 
   const enhancedEvents: EnhancedEvent[] = [];
+  startTime = now();
   await baseProvider.getLogs(eventFilter).then(async (logs) => {
+    logger.info(
+      "sync-events-timing",
+      `RPC getLogs block range [${fromBlock}, ${toBlock}] total blocks ${
+        toBlock - fromBlock
+      } time ${(now() - startTime) / 1000}s`
+    );
     const availableEventData = getEventData();
 
     for (const log of logs) {
