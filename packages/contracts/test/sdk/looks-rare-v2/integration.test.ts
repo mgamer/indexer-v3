@@ -367,34 +367,34 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
 
     
 
-    // it("Fill Listing With Bulk Cancel - Multiple", async () => {
-    //     await testCase({
-    //         bulkCancel: true
-    //     });
-    //     await testCase({
-    //         bulkCancel: true
-    //     });
-    //     console.log("\n")
-    // });
+    it("Fill Listing With Bulk Cancel - Multiple", async () => {
+        await testCase({
+            bulkCancel: true
+        });
+        await testCase({
+            bulkCancel: true
+        });
+        console.log("\n")
+    });
 
-    // it("Fill Offer via Router API", async () => testCase({
-    //     executeByRouterAPI: true
-    // }));
+    it("Fill Offer via Router API", async () => testCase({
+        executeByRouterAPI: true
+    }));
 
-    // it("Fill Listing via Router API", async () => testCase({
-    //     isListing: true,
-    //     executeByRouterAPI: true
-    // }));
+    it("Fill Listing via Router API", async () => testCase({
+        isListing: true,
+        executeByRouterAPI: true
+    }));
 
-    // it("Fill Offer", async () => testCase({}));
+    it("Fill Offer", async () => testCase({}));
 
-    // it("Fill Listing", async () => testCase({
-    //     isListing: true
-    // }));
+    it("Fill Listing", async () => testCase({
+        isListing: true
+    }));
 
-    // it("Fill Listing With Cancel", async () => testCase({
-    //     bulkCancel: true
-    // }));
+    it("Fill Listing With Cancel", async () => testCase({
+        bulkCancel: true
+    }));
 
     it("Fill Listing With Subset Cancel", async () => testCase({
         subsetCancel: true
