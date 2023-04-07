@@ -72,7 +72,7 @@ if (
         .acquire(["realtime-process-size-check-lock"], (60 - 5) * 1000)
         .then(async () => {
           const size = await queue.count();
-          if (size >= 40000) {
+          if (size >= 20000) {
             logger.error(
               "realtime-process-size-check",
               `Realtime process buffering up: size=${size}`
