@@ -3,7 +3,7 @@ import { HashZero } from "@ethersproject/constants";
 
 import { Order } from "../../order";
 import { TakerOrderParams, QuoteType, CollectionType } from "../../types";
-import { getCurrentTimestamp } from "../../../utils";
+import { getCurrentTimestamp, getRandomBytes } from "../../../utils";
 
 export interface BaseBuildParams {
   quoteType: QuoteType;
@@ -38,9 +38,9 @@ export abstract class BaseBuilder {
     params.startTime = params.startTime ?? getCurrentTimestamp(-1 * 60);
     params.endTime = params.endTime ?? getCurrentTimestamp(24 * 60 * 60);
 
+    params.orderNonce = params.orderNonce ?? getRandomBytes(10);
     params.globalNonce = params.globalNonce ?? "0";
     params.subsetNonce = params.subsetNonce ?? "0";
-    params.orderNonce = params.orderNonce ?? "0";
 
     params.signature = params.signature ?? HashZero;
   }

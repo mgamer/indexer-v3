@@ -79,7 +79,7 @@ describe("LooksRareV2 - SingleToken Erc721", () => {
       amount: 1,
       currency: Common.Addresses.Weth[chainId],
       price,
-      orderNonce: await exchange.getNonce(ethers.provider, buyer.address, "buy"),
+      globalNonce: await exchange.getGlobalNonce(ethers.provider, buyer.address, "buy"),
       startTime: await getCurrentTimestamp(ethers.provider),
       endTime: (await getCurrentTimestamp(ethers.provider)) + 86400 * 31,
     }
@@ -165,7 +165,7 @@ describe("LooksRareV2 - SingleToken Erc721", () => {
       currency: Common.Addresses.Eth[chainId],
       price,
       startTime: await getCurrentTimestamp(ethers.provider),
-      orderNonce: await exchange.getNonce(ethers.provider, buyer.address, "sell"),
+      globalNonce: await exchange.getGlobalNonce(ethers.provider, buyer.address, "sell"),
       endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
     });
 

@@ -45,7 +45,7 @@ export const offChainCheck = async (
   // Check: order's nonce was not bulk cancelled
   const side = order.params.quoteType === Sdk.LooksRareV2.Types.QuoteType.Ask ? "sell" : "buy";
   const minNonce = await commonHelpers.getMinNonce("looks-rare-v2", order.params.signer, side);
-  if (minNonce.gt(order.params.orderNonce)) {
+  if (minNonce.gt(order.params.globalNonce)) {
     throw new Error("cancelled");
   }
 

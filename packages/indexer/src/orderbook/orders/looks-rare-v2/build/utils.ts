@@ -1,6 +1,5 @@
 import * as Sdk from "@reservoir0x/sdk";
-import { BaseBuildParams } from "@reservoir0x/sdk/dist/looks-rare/builders/base";
-import axios from "axios";
+import { BaseBuildParams } from "@reservoir0x/sdk/dist/looks-rare-v2/builders/base";
 
 import { redb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
@@ -26,7 +25,8 @@ export const getBuildInfo = async (
   const collectionResult = await redb.oneOrNone(
     `
       SELECT
-        contracts.address
+        contracts.address,
+        contracts.kind
       FROM collections
       JOIN contracts
         ON collections.contract = contracts.address
@@ -41,35 +41,20 @@ export const getBuildInfo = async (
   }
 
   const buildParams: BaseBuildParams = {
-    isOrderAsk: side === "sell",
+    quoteType:
+      side === "sell" ? Sdk.LooksRareV2.Types.QuoteType.Ask : Sdk.LooksRareV2.Types.QuoteType.Bid,
     collection: fromBuffer(collectionResult.address),
+    collectionType:
+      collectionResult.kind === "erc721"
+        ? Sdk.LooksRareV2.Types.CollectionType.ERC721
+        : Sdk.LooksRareV2.Types.CollectionType.ERC1155,
     signer: options.maker,
-    // Protocol fee (1.5%) + optional fixed royalties (0.5%)
-    minPercentageToAsk: 9800,
     price: options.weiPrice,
-    // LooksRare uses WETH instead of ETH for sell orders too
+    itemId: "0",
+    amount: 1,
     currency: Sdk.Common.Addresses.Weth[config.chainId],
-    // TODO: We should only use LooksRare's nonce when cross-posting to their orderbook
-    nonce: await axios
-      .get(
-        `https://${
-          config.chainId === 5 ? "api-goerli." : "api."
-        }looksrare.org/api/v1/orders/nonce?address=${options.maker}`,
-        {
-          headers:
-            config.chainId === 1
-              ? {
-                  "Content-Type": "application/json",
-                  "X-Looks-Api-Key": config.looksRareApiKey,
-                }
-              : {
-                  "Content-Type": "application/json",
-                },
-        }
-      )
-      .then(({ data }: { data: { data: string } }) => data.data),
-    startTime: options.listingTime,
-    endTime: options.expirationTime,
+    startTime: options.listingTime!,
+    endTime: options.expirationTime!,
   };
 
   return {

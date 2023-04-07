@@ -38,6 +38,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             batchIndex: batchIndex++,
           },
           orderSide: "sell",
+          acrossAll: true,
         });
 
         onChainData.bulkCancelEvents.push({
@@ -45,6 +46,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           maker,
           minNonce: bidNonce,
           orderSide: "buy",
+          acrossAll: true,
           baseEventParams: {
             ...baseEventParams,
             batchIndex: batchIndex++,

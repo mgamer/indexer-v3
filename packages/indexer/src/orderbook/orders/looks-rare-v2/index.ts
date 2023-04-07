@@ -206,7 +206,6 @@ export const save = async (
         onChainRoyalties = await royalties.getRoyaltiesByTokenSet(tokenSetId, "onchain");
       }
 
-      // TODO: Remove (for backwards-compatibility only)
       if (!onChainRoyalties.length) {
         if (order.params.kind === "single-token") {
           onChainRoyalties = await royalties.getRoyalties(
@@ -230,8 +229,8 @@ export const save = async (
           },
         ];
       } else {
-        // If there is no royalty, the marketplace fee will be 2%
-        feeBreakdown[0].bps = 200;
+        // If there is no royalty, the marketplace fee will be 0.5%
+        feeBreakdown[0].bps = 50;
       }
 
       const price = order.params.price;
@@ -323,7 +322,7 @@ export const save = async (
         currency_value: value,
         needs_conversion: null,
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
-        nonce: order.params.globalNonce.toString(),
+        nonce: order.params.orderNonce.toString(),
         source_id_int: source?.id,
         is_reservoir: isReservoir ? isReservoir : null,
         contract: toBuffer(order.params.collection),

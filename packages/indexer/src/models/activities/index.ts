@@ -233,7 +233,7 @@ export class Activities {
 
     baseQuery += ` LIMIT $/limit/`;
 
-    const activities: ActivitiesEntityParams[] | null = await idb.manyOrNone(baseQuery, {
+    const activities: ActivitiesEntityParams[] | null = await redb.manyOrNone(baseQuery, {
       limit,
       id,
       eventTimestamp,

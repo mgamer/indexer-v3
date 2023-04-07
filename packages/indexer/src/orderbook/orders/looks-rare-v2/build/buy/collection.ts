@@ -1,9 +1,9 @@
 import * as Sdk from "@reservoir0x/sdk";
-import { BaseBuilder } from "@reservoir0x/sdk/dist/looks-rare/builders/base";
+import { BaseBuilder } from "@reservoir0x/sdk/dist/looks-rare-v2/builders/base";
 
 import { redb } from "@/common/db";
 import { config } from "@/config/index";
-import * as utils from "@/orderbook/orders/looks-rare/build/utils";
+import * as utils from "@/orderbook/orders/looks-rare-v2/build/utils";
 
 interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
   collection: string;
@@ -31,6 +31,6 @@ export const build = async (options: BuildOrderOptions) => {
     throw new Error("Could not generate build info");
   }
 
-  const builder: BaseBuilder = new Sdk.LooksRare.Builders.ContractWide(config.chainId);
+  const builder: BaseBuilder = new Sdk.LooksRareV2.Builders.ContractWide(config.chainId);
   return builder.build(buildInfo.params);
 };

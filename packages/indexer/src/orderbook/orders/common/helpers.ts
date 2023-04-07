@@ -106,7 +106,7 @@ export const getNftApproval = async (
 export const getMinNonce = async (
   orderKind: OrderKind,
   maker: string,
-  side?: string
+  side?: "sell" | "buy"
 ): Promise<BigNumber> => {
   const bulkCancelResult: { nonce: string } | null = await idb.oneOrNone(
     `
@@ -115,7 +115,10 @@ export const getMinNonce = async (
           SELECT bulk_cancel_events.min_nonce FROM bulk_cancel_events
           WHERE bulk_cancel_events.order_kind = $/orderKind/
             AND bulk_cancel_events.maker = $/maker/
-            AND bulk_cancel_events.side IS NULL OR bulk_cancel_events.side = $/side/
+            ` + side
+      ? `AND bulk_cancel_events.side = $/side/`
+      : "" +
+          `
           ORDER BY bulk_cancel_events.min_nonce DESC
           
           LIMIT 1

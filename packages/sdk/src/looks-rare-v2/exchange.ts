@@ -135,7 +135,18 @@ export class Exchange {
 
   // --- Get nonce ---
 
-  public async getNonce(
+  // public async getNonce(
+  //   provider: Provider,
+  //   user: string,
+  //   side: "sell" | "buy"
+  // ): Promise<BigNumberish> {
+  //   const nonces = await new Contract(Addresses.Exchange[this.chainId], ExchangeAbi)
+  //     .connect(provider)
+  //     .userOrderNonce(user);
+  //   return side === "sell" ? nonces.askNonce : nonces.bidNonce;
+  // }
+
+  public async getGlobalNonce(
     provider: Provider,
     user: string,
     side: "sell" | "buy"
