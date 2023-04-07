@@ -161,7 +161,6 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           "events",
           JSON.stringify({
             event: eventType,
-            trigger: data.kind,
             tags: {
               contract: fromBuffer(rawResult.contract),
             },
