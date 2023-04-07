@@ -384,9 +384,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               baseProvider
             );
             priceList.push(poolPrice);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } catch (error: any) {
-            logger.error("orders-nftx-save", `Failed to get price: ${error} ${error.stack}`);
+          } catch {
             break;
           }
         }
