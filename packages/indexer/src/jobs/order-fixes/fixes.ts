@@ -1,4 +1,3 @@
-import { HashZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
@@ -6,11 +5,10 @@ import { randomUUID } from "crypto";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { now, toBuffer } from "@/common/utils";
+import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
-import * as orderbook from "@/jobs/orderbook/orders-queue";
 
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as raribleCheck from "@/orderbook/orders/rarible/check";
@@ -19,6 +17,7 @@ import * as seaportCheck from "@/orderbook/orders/seaport-base/check";
 import * as x2y2Check from "@/orderbook/orders/x2y2/check";
 import * as zeroExV4Check from "@/orderbook/orders/zeroex-v4/check";
 import * as blurCheck from "@/orderbook/orders/blur/check";
+import * as nftxCheck from "@/orderbook/orders/nftx/check";
 
 const QUEUE_NAME = "order-fixes";
 
@@ -51,6 +50,7 @@ if (config.doBackgroundWork) {
             const result = await idb.oneOrNone(
               `
                 SELECT
+                  orders.id,
                   orders.side,
                   orders.token_set_id,
                   orders.kind,
@@ -240,23 +240,16 @@ if (config.doBackgroundWork) {
                 }
 
                 case "nftx": {
-                  const order = new Sdk.Nftx.Order(config.chainId, result.raw_data);
-                  await orderbook.addToQueue([
-                    {
-                      kind: "nftx",
-                      info: {
-                        orderParams: {
-                          pool: order.params.pool,
-                          txHash: HashZero,
-                          txTimestamp: now(),
-                          txBlock: result.block_number,
-                          logIndex: result.log_index,
-                          forceRecheck: true,
-                        },
-                        metadata: {},
-                      },
-                    },
-                  ]);
+                  try {
+                    await nftxCheck.offChainCheck(result.id);
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  } catch (error: any) {
+                    if (error.message === "no-balance") {
+                      fillabilityStatus = "no-balance";
+                    } else {
+                      return;
+                    }
+                  }
                   break;
                 }
 
