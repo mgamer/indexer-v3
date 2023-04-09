@@ -225,8 +225,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const parsedLog = eventData.abi.parseLog(log);
         const orderId = parsedLog.args["nonceInvalidationParameters"]["orderHash"].toLowerCase();
         const orderNonce = parsedLog.args["nonceInvalidationParameters"]["orderNonce"].toString();
-        const maker = parsedLog.args["bidRecipient"].toLowerCase();
-        let taker = parsedLog.args["bidUser"].toLowerCase();
+        const maker = parsedLog.args["bidUser"].toLowerCase();
+        let taker = parsedLog.args["bidRecipient"].toLowerCase();
         const currency = parsedLog.args["currency"].toLowerCase();
         let currencyPrice = parsedLog.args["feeAmounts"][0].toString();
         const contract = parsedLog.args["collection"].toLowerCase();
@@ -314,25 +314,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           maker,
           taker,
         });
-
-        // then we need resync the maker's ERC20 approval to the exchange
-        const erc20 = getERC20Transfer(currentTxLogs);
-        if (erc20) {
-          onChainData.makerInfos.push({
-            context: `${baseEventParams.txHash}-buy-approval`,
-            maker,
-            trigger: {
-              kind: "approval-change",
-              txHash: baseEventParams.txHash,
-              txTimestamp: baseEventParams.timestamp,
-            },
-            data: {
-              kind: "buy-approval",
-              contract: erc20,
-              orderKind: "looks-rare-v2",
-            },
-          });
-        }
 
         break;
       }

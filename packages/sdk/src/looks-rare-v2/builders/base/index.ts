@@ -20,8 +20,6 @@ export interface BaseBuildParams {
 
   startTime: number;
   endTime: number;
-  itemId: BigNumberish;
-  amount: BigNumberish;
 
   additionalParameters?: string;
   signature?: string;

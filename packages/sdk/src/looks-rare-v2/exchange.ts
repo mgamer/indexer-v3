@@ -69,7 +69,7 @@ export class Exchange {
 
     const makerSignature = joinSignature(signature);
     const affiliate = AddressZero;
-    const merkleTree = {
+    const merkleTree = makerOrder.params.merkletree ?? {
       root: HashZero,
       proof: [],
     };

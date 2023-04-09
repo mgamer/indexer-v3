@@ -1,9 +1,12 @@
 import { Provider } from "@ethersproject/abstract-provider";
-import { TypedDataSigner } from "@ethersproject/abstract-signer";
 import { HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { _TypedDataEncoder } from "@ethersproject/hash";
 import { verifyTypedData } from "@ethersproject/wallet";
+import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
+import { recoverAddress } from "@ethersproject/transactions";
+import { TypedDataSigner } from "@ethersproject/abstract-signer";
+import { Eip712MakerMerkleTree } from "./utils/Eip712MakerMerkleTree";
 
 import * as Addresses from "./addresses";
 import { Builders } from "./builders";
@@ -59,6 +62,33 @@ export class Order {
     };
   }
 
+  static async signBulkOrders(signer: TypedDataSigner, orders: Order[]) {
+    const tree = new Eip712MakerMerkleTree(orders.map((_) => _.params));
+    const chainId = orders[0].chainId;
+    const domain = EIP712_DOMAIN(chainId);
+    const hexRoot = tree.hexRoot;
+    const signature = await signer._signTypedData(domain, tree.types, tree.getDataToSign());
+
+    const merkleTreeProofs: Types.MerkleTree[] = orders.map((_, index) => {
+      const { proof } = tree.getPositionalProof(index);
+      return {
+        root: hexRoot,
+        proof: proof.map((node) => {
+          return {
+            position: node[0] as number,
+            value: node[1] as string,
+          };
+        }),
+      };
+    });
+
+    for (let index = 0; index < orders.length; index++) {
+      const order = orders[index];
+      order.params.merkletree = merkleTreeProofs[index];
+      order.params.signature = signature;
+    }
+  }
+
   public getSignatureData() {
     return {
       signatureKind: "eip712",
@@ -70,15 +100,43 @@ export class Order {
   }
 
   public checkSignature() {
-    const signer = verifyTypedData(
-      EIP712_DOMAIN(this.chainId),
-      EIP712_TYPES,
-      toRawOrder(this),
-      this.params.signature!
-    );
+    const signature = this.params.signature!;
 
-    if (lc(this.params.signer) !== lc(signer)) {
-      throw new Error("Invalid signature");
+    if (this.params.merkletree) {
+      const merkletree = this.params.merkletree;
+      const height = merkletree.proof.length!;
+      const root = merkletree.root!;
+
+      const types = getBatchOrderTypes(height);
+      const encoder = _TypedDataEncoder.from(types);
+
+      const bulkOrderTypeHash = solidityKeccak256(["string"], [encoder.encodeType("BatchOrder")]);
+      const bulkOrderHash = solidityKeccak256(["bytes"], [bulkOrderTypeHash + root.slice(2)]);
+
+      const value = solidityKeccak256(
+        ["bytes"],
+        [
+          "0x1901" +
+            _TypedDataEncoder.hashDomain(EIP712_DOMAIN(this.chainId)).slice(2) +
+            bulkOrderHash.slice(2),
+        ]
+      );
+
+      const signer = recoverAddress(value, signature);
+      if (lc(this.params.signer) !== lc(signer)) {
+        throw new Error("Invalid signature");
+      }
+    } else {
+      const signer = verifyTypedData(
+        EIP712_DOMAIN(this.chainId),
+        EIP712_TYPES,
+        toRawOrder(this),
+        signature
+      );
+
+      if (lc(this.params.signer) !== lc(signer)) {
+        throw new Error("Invalid signature");
+      }
     }
   }
 
@@ -230,6 +288,13 @@ const EIP712_TYPES = {
   ],
 };
 
+export const getBatchOrderTypes = (height: number) => {
+  return {
+    BatchOrder: [{ name: "tree", type: `Maker${`[2]`.repeat(height)}` }],
+    Maker: EIP712_TYPES.Maker,
+  };
+};
+
 const toRawOrder = (order: Order): object => ({
   ...order.params,
 });
@@ -258,5 +323,6 @@ const normalize = (order: Types.MakerOrderParams): Types.MakerOrderParams => {
     startTime: n(order.startTime),
     endTime: n(order.endTime),
     signature: order.signature ?? HashZero,
+    merkletree: order.merkletree,
   };
 };

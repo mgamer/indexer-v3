@@ -1,8 +1,12 @@
 import { BaseBuildParams, BaseBuilder } from "../base";
 import { Order } from "../../order";
 import { BytesEmpty, s } from "../../../utils";
+import { BigNumberish } from "@ethersproject/bignumber";
 
-interface BuildParams extends BaseBuildParams {}
+interface BuildParams extends BaseBuildParams {
+  itemId: BigNumberish;
+  amount: BigNumberish;
+}
 
 export class SingleTokenBuilder extends BaseBuilder {
   public isValid(order: Order): boolean {
