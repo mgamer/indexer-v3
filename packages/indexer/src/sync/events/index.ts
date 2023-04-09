@@ -449,6 +449,7 @@ export const unsyncEvents = async (block: number, blockHash: string) => {
     es.bulkCancels.removeEvents(block, blockHash),
     es.nonceCancels.removeEvents(block, blockHash),
     es.cancels.removeEvents(block, blockHash),
+    es.subsetNonceCancels.removeEvents(block, blockHash),
     es.ftTransfers.removeEvents(block, blockHash),
     es.nftApprovals.removeEvents(block, blockHash),
     es.nftTransfers.removeEvents(block, blockHash),

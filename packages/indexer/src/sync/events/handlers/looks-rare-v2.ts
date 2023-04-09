@@ -63,7 +63,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         let batchIndex = 1;
         for (const subsetNonce of subsetNonces) {
-          onChainData.nonceCancelEvents.push({
+          onChainData.subsetNonceCancelEvents.push({
             orderKind: "looks-rare-v2",
             maker,
             nonce: subsetNonce,
@@ -71,7 +71,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               ...baseEventParams,
               batchIndex: batchIndex++,
             },
-            isSubset: true,
           });
         }
 
@@ -106,10 +105,9 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const orderNonce = parsedLog.args["nonceInvalidationParameters"]["orderNonce"].toString();
 
         const maker = parsedLog.args["bidUser"].toLowerCase();
-        let taker = parsedLog.args["askUser"].toLowerCase();
+        let taker = parsedLog.args["feeRecipients"][0].toLowerCase();
 
         const currency = parsedLog.args["currency"].toLowerCase();
-        // let currencyPrice = parsedLog.args["price"].toString();
         const contract = parsedLog.args["collection"].toLowerCase();
 
         // It's might be multiple
@@ -225,8 +223,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const parsedLog = eventData.abi.parseLog(log);
         const orderId = parsedLog.args["nonceInvalidationParameters"]["orderHash"].toLowerCase();
         const orderNonce = parsedLog.args["nonceInvalidationParameters"]["orderNonce"].toString();
-        const maker = parsedLog.args["bidUser"].toLowerCase();
-        let taker = parsedLog.args["bidRecipient"].toLowerCase();
+        const maker = parsedLog.args["feeRecipients"][0].toLowerCase();
+        let taker = parsedLog.args["bidUser"].toLowerCase();
         const currency = parsedLog.args["currency"].toLowerCase();
         let currencyPrice = parsedLog.args["feeAmounts"][0].toString();
         const contract = parsedLog.args["collection"].toLowerCase();

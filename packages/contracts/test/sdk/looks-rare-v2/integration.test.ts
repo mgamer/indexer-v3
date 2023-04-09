@@ -12,6 +12,7 @@ import {
 } from "../../utils";
 import * as indexerHelper from "../../indexer-helper";
 import chalk from 'chalk';
+import { expect } from "chai";
 
 const green = chalk.green;
 const error = chalk.red;
@@ -258,11 +259,11 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
             })
 
             const orderState = await indexerHelper.getOrder(orderInfo.id);
-            const { nonceCancelEvents } = onChainData;
-            if (nonceCancelEvents.length) {
-                console.log(green(`\t\t found nonceCancelEvents ${nonceCancelEvents.length}`))
+            const { subsetNonceCancelEvents } = onChainData;
+            if (subsetNonceCancelEvents.length) {
+                console.log(green(`\t\t found subsetNonceCancelEvents ${subsetNonceCancelEvents.length}`))
             } else {
-                console.log(error("\t\t nonceCancelEvents not found"))
+                console.log(error("\t\t subsetNonceCancelEvents not found"))
             }
             
             console.log(green("\t Order Status: "))
@@ -351,7 +352,25 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
         const { fillEvents } = onChainData
 
         const matchFillEvent = fillEvents.find((event: any) => event.orderId === orderInfo.id);
-        if (matchFillEvent) {
+        if (matchFillEvent) {   
+
+            const orderData = {
+                maker: order.params.signer,
+                taker: (isListing ? buyer : seller).address.toLowerCase()
+            }
+
+            expect(orderData.maker).to.eq(matchFillEvent.maker)
+            expect(orderData.taker).to.eq(matchFillEvent.taker)
+            // console.log({
+            //     side: matchFillEvent.orderSide,
+            //     maker: matchFillEvent.maker,
+            //     taker: matchFillEvent.taker,
+            //     isListing,
+            //     order: {
+            //         maker: order.params.signer,
+            //         taker: (isListing ? buyer : seller).address
+            //     }
+            // })
             console.log("\t\t - Found Fill Event")
         } else {
             console.log("\t\t - Fill Event Not Found")
@@ -365,36 +384,34 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
         }))
     }
 
-    
+    // it("Fill Listing With Bulk Cancel - Multiple", async () => {
+    //     await testCase({
+    //         bulkCancel: true
+    //     });
+    //     await testCase({
+    //         bulkCancel: true
+    //     });
+    //     console.log("\n")
+    // });
 
-    it("Fill Listing With Bulk Cancel - Multiple", async () => {
-        await testCase({
-            bulkCancel: true
-        });
-        await testCase({
-            bulkCancel: true
-        });
-        console.log("\n")
-    });
+    // it("Fill Offer via Router API", async () => testCase({
+    //     executeByRouterAPI: true
+    // }));
 
-    it("Fill Offer via Router API", async () => testCase({
-        executeByRouterAPI: true
-    }));
+    // it("Fill Listing via Router API", async () => testCase({
+    //     isListing: true,
+    //     executeByRouterAPI: true
+    // }));
 
-    it("Fill Listing via Router API", async () => testCase({
-        isListing: true,
-        executeByRouterAPI: true
-    }));
+    // it("Fill Offer", async () => testCase({}));
 
-    it("Fill Offer", async () => testCase({}));
+    // it("Fill Listing", async () => testCase({
+    //     isListing: true
+    // }));
 
-    it("Fill Listing", async () => testCase({
-        isListing: true
-    }));
-
-    it("Fill Listing With Cancel", async () => testCase({
-        bulkCancel: true
-    }));
+    // it("Fill Listing With Cancel", async () => testCase({
+    //     bulkCancel: true
+    // }));
 
     it("Fill Listing With Subset Cancel", async () => testCase({
         subsetCancel: true

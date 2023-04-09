@@ -4,7 +4,6 @@ import { parseEther } from "@ethersproject/units";
 import * as Common from "@reservoir0x/sdk/src/common";
 import * as LooksRareV2 from "@reservoir0x/sdk/src/looks-rare-v2";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { expect } from "chai";
 import { ethers } from "hardhat";
 
 import {
@@ -48,7 +47,6 @@ describe("LooksRareV2 - Bulk Erc721", () => {
         signer: buyer.address,
         collection: erc721.address,
         itemId: 1,
-        amount: 1,
         currency: Common.Addresses.Weth[chainId],
         price,
         globalNonce: (await exchange.getGlobalNonce(ethers.provider, buyer.address, "buy")),
@@ -63,7 +61,6 @@ describe("LooksRareV2 - Bulk Erc721", () => {
         signer: buyer.address,
         collection: erc721.address,
         itemId: 1,
-        amount: 1,
         currency: Common.Addresses.Weth[chainId],
         price,
         globalNonce: (await exchange.getGlobalNonce(ethers.provider, buyer.address, "buy")),

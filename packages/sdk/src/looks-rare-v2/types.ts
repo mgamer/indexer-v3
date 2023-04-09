@@ -59,7 +59,7 @@ export type MakerOrderParams = {
 
   additionalParameters: string;
   signature?: string;
-  merkletree?: MerkleTree;
+  merkleTree?: MerkleTree;
 };
 
 export type TakerOrderParams = {

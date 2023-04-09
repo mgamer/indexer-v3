@@ -9,6 +9,7 @@ export type Event = {
   maker: string;
   nonce: string;
   baseEventParams: BaseEventParams;
+  isSubset?: boolean;
 };
 
 type DbEvent = {
@@ -40,13 +41,28 @@ function generateUpdateQuery(nonceCancelValues: DbEvent[]) {
       "maker",
       "nonce",
     ],
-    { table: "nonce_cancel_events" }
+    { table: "subset_nonce_events" }
   );
 
   // Atomically insert the nonce cancel events and update order statuses.
+  // return `INSERT INTO "subset_nonce_events" (
+  //   "address",
+  //   "block",
+  //   "block_hash",
+  //   "tx_hash",
+  //   "tx_index",
+  //   "log_index",
+  //   "timestamp",
+  //   "batch_index",
+  //   "order_kind",
+  //   "maker",
+  //   "nonce"
+  // ) VALUES ${pgp.helpers.values(nonceCancelValues, columns)}
+  // ON CONFLICT DO NOTHING
+  // RETURNING "order_kind", "maker", "nonce", "tx_hash", "timestamp", "log_index", "batch_index", "block_hash"`
   return `
     WITH "x" AS (
-      INSERT INTO "nonce_cancel_events" (
+      INSERT INTO "subset_nonce_events" (
         "address",
         "block",
         "block_hash",
@@ -62,16 +78,21 @@ function generateUpdateQuery(nonceCancelValues: DbEvent[]) {
       ON CONFLICT DO NOTHING
       RETURNING "order_kind", "maker", "nonce", "tx_hash", "timestamp", "log_index", "batch_index", "block_hash"
     )
-    UPDATE "orders" AS "o" SET
-      "fillability_status" = 'cancelled',
-      "expiration" = to_timestamp("x"."timestamp"),
-      "updated_at" = now()
-    FROM "x"
+    SELECT 
+      "o"."raw_data"->>'subsetNonce' as subset_nonce, 
+      "o"."id",
+      "o"."maker",
+      "o"."kind" AS "order_kind", 
+      "o"."nonce", 
+      "x"."tx_hash", 
+      "x"."timestamp", 
+      "x"."log_index", 
+      "x"."batch_index",
+      "x"."block_hash"
+    FROM "orders" AS "o", "x"
     WHERE "o"."kind" = "x"."order_kind"
       AND "o"."maker" = "x"."maker"
-      AND "o"."nonce" = "x"."nonce"
       AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-    RETURNING "o"."id", "x"."tx_hash", "x"."timestamp", "x"."log_index", "x"."batch_index", "x"."block_hash"
   `;
 }
 
@@ -91,6 +112,7 @@ export const addEvents = async (events: Event[], backfill = false) => {
       maker: toBuffer(event.maker),
       nonce: event.nonce,
     };
+
     nonceCancelValues.push(dbEvent);
   }
 
@@ -101,9 +123,44 @@ export const addEvents = async (events: Event[], backfill = false) => {
   }
 
   if (query) {
-    // No need to buffer through the write queue since there
-    // are no chances of database deadlocks in this scenario
-    const result = await idb.manyOrNone(query);
+    const allOrders = await idb.manyOrNone(query);
+    const effectedOrders = allOrders
+      .map((c) => {
+        c.maker = fromBuffer(c.maker);
+        return c;
+      })
+      .filter((c) => {
+        const macthed = events.find((d) => d.maker === c.maker && d.orderKind === c.order_kind);
+        return c.subset_nonce == macthed?.nonce;
+      });
+
+    const updateValues = effectedOrders.map((_) => {
+      return {
+        id: _.id,
+        timestamp: _.timestamp,
+      };
+    });
+
+    const columns = new pgp.helpers.ColumnSet(["id", "timestamp"], {
+      table: "orders",
+    });
+
+    // Update in bacth
+    const updateResult = await idb.manyOrNone(`
+      UPDATE orders SET
+        "fillability_status" = 'cancelled',
+        "expiration" = to_timestamp("x"."timestamp"),
+        "updated_at" = now()
+      FROM (
+        VALUES ${pgp.helpers.values(updateValues, columns)}
+      ) AS x(id, timestamp)
+      WHERE orders.id = x.id
+      RETURNING orders.id
+    `);
+
+    const result = updateResult.map((c) => {
+      return effectedOrders.find((d) => d.id === c.id);
+    });
 
     if (!backfill) {
       // TODO: Ideally, we should trigger all further processing
@@ -139,7 +196,7 @@ export const removeEvents = async (block: number, blockHash: string) => {
   // knew, it might mess up other higher-level order processes.
   await idb.any(
     `
-      DELETE FROM nonce_cancel_events
+      DELETE FROM subset_nonce_events
       WHERE block = $/block/
         AND block_hash = $/blockHash/
     `,

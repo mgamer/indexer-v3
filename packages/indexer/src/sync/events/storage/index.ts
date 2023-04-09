@@ -14,3 +14,4 @@ export * as ftTransfers from "@/events-sync/storage/ft-transfer-events";
 export * as nftApprovals from "@/events-sync/storage/nft-approval-events";
 export * as nftTransfers from "@/events-sync/storage/nft-transfer-events";
 export * as nonceCancels from "@/events-sync/storage/nonce-cancel-events";
+export * as subsetNonceCancels from "@/events-sync/storage/subset-nonce-cancel-events";

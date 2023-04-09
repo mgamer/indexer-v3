@@ -84,7 +84,7 @@ export class Order {
 
     for (let index = 0; index < orders.length; index++) {
       const order = orders[index];
-      order.params.merkletree = merkleTreeProofs[index];
+      order.params.merkleTree = merkleTreeProofs[index];
       order.params.signature = signature;
     }
   }
@@ -102,10 +102,10 @@ export class Order {
   public checkSignature() {
     const signature = this.params.signature!;
 
-    if (this.params.merkletree) {
-      const merkletree = this.params.merkletree;
-      const height = merkletree.proof.length!;
-      const root = merkletree.root!;
+    if (this.params.merkleTree) {
+      const merkleTree = this.params.merkleTree;
+      const height = merkleTree.proof.length!;
+      const root = merkleTree.root!;
 
       const types = getBatchOrderTypes(height);
       const encoder = _TypedDataEncoder.from(types);
@@ -323,6 +323,6 @@ const normalize = (order: Types.MakerOrderParams): Types.MakerOrderParams => {
     startTime: n(order.startTime),
     endTime: n(order.endTime),
     signature: order.signature ?? HashZero,
-    merkletree: order.merkletree,
+    merkleTree: order.merkleTree,
   };
 };
