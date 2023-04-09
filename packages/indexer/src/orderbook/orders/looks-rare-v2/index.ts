@@ -70,7 +70,7 @@ export const save = async (
       }
 
       // Mutiple tokens
-      if (order.params.itemIds.length > 1) {
+      if (order.params.itemIds.length > 1 || bn(order.params.amounts[0]).gt(1)) {
         return results.push({
           id,
           status: "bundle-order-unsupported",

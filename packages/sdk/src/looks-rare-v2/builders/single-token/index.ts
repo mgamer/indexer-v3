@@ -5,7 +5,6 @@ import { BigNumberish } from "@ethersproject/bignumber";
 
 interface BuildParams extends BaseBuildParams {
   itemId: BigNumberish;
-  amount: BigNumberish;
 }
 
 export class SingleTokenBuilder extends BaseBuilder {
@@ -14,7 +13,6 @@ export class SingleTokenBuilder extends BaseBuilder {
       const copyOrder = this.build({
         ...order.params,
         itemId: order.params.itemIds[0],
-        amount: order.params.amounts[0],
       });
 
       if (!copyOrder) {
@@ -41,7 +39,7 @@ export class SingleTokenBuilder extends BaseBuilder {
       collection: params.collection,
       price: s(params.price),
       itemIds: [s(params.itemId)],
-      amounts: [s(params.amount)],
+      amounts: ["1"],
       strategyId: 0,
       currency: params.currency,
       quoteType: params.quoteType,
