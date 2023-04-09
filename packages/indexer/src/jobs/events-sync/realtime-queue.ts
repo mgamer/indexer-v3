@@ -89,9 +89,14 @@ if (
 
           logger.info(
             "sync-events-timing",
-            `Events realtime syncing providerHeadBlock ${providerHeadBlock} block range [${fromBlock}, ${headBlock}] total blocks ${
-              headBlock - fromBlock
-            } time ${(now() - startTime) / 1000}s`
+            JSON.stringify({
+              message: "Events realtime syncing",
+              providerHeadBlock,
+              headBlock,
+              fromBlock,
+              totalBlocks: headBlock - fromBlock,
+              syncTime: (now() - startTime) / 1000,
+            })
           );
         } catch (error) {
           logger.error(QUEUE_NAME, `Events realtime syncing failed: ${error}`);
@@ -108,7 +113,7 @@ if (
 
   // Monitor the job as bullmq has bugs and job might be stuck and needs to be manually removed
   cron.schedule(`*/${getNetworkSettings().realtimeSyncFrequencySeconds} * * * * *`, async () => {
-    if (_.includes([137, 42161, 10], config.chainId)) {
+    if (_.includes([1, 137, 42161, 10], config.chainId)) {
       const job = await queue.getJob(`${config.chainId}`);
 
       if (job && (await job.isFailed())) {
@@ -124,7 +129,7 @@ if (
 
 export const addToQueue = async () => {
   let jobId;
-  if (_.includes([137, 42161, 10], config.chainId)) {
+  if (_.includes([1, 137, 42161, 10], config.chainId)) {
     jobId = `${config.chainId}`;
   }
 
