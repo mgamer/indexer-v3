@@ -45,21 +45,6 @@ function generateUpdateQuery(nonceCancelValues: DbEvent[]) {
   );
 
   // Atomically insert the nonce cancel events and update order statuses.
-  // return `INSERT INTO "subset_nonce_events" (
-  //   "address",
-  //   "block",
-  //   "block_hash",
-  //   "tx_hash",
-  //   "tx_index",
-  //   "log_index",
-  //   "timestamp",
-  //   "batch_index",
-  //   "order_kind",
-  //   "maker",
-  //   "nonce"
-  // ) VALUES ${pgp.helpers.values(nonceCancelValues, columns)}
-  // ON CONFLICT DO NOTHING
-  // RETURNING "order_kind", "maker", "nonce", "tx_hash", "timestamp", "log_index", "batch_index", "block_hash"`
   return `
     WITH "x" AS (
       INSERT INTO "subset_nonce_events" (
