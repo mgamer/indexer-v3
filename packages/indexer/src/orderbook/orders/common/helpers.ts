@@ -172,6 +172,29 @@ export const isOrderCancelled = async (orderId: string, orderKind: OrderKind): P
   return cancelResult ? true : false;
 };
 
+export const isSubsetNonceCancelled = async (
+  orderKind: OrderKind,
+  maker: string,
+  subsetNonce: string
+): Promise<boolean> => {
+  const nonceCancelResult = await idb.oneOrNone(
+    `
+      SELECT nonce FROM subset_nonce_events
+      WHERE order_kind = $/orderKind/
+        AND maker = $/maker/
+        AND nonce = $/nonce/
+      LIMIT 1
+    `,
+    {
+      orderKind,
+      maker: toBuffer(maker),
+      nonce: subsetNonce,
+    }
+  );
+
+  return nonceCancelResult ? true : false;
+};
+
 export const getQuantityFilled = async (orderId: string): Promise<BigNumber> => {
   const fillResult = await idb.oneOrNone(
     `

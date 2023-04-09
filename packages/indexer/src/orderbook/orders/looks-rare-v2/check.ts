@@ -50,7 +50,7 @@ export const offChainCheck = async (
   }
 
   // Check: order's subsetNonce was not individually cancelled
-  const subsetNonceCancelled = await commonHelpers.isNonceCancelled(
+  const subsetNonceCancelled = await commonHelpers.isSubsetNonceCancelled(
     "looks-rare-v2",
     order.params.signer,
     order.params.subsetNonce
