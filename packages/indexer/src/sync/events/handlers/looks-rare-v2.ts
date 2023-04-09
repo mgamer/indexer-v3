@@ -7,6 +7,22 @@ import * as utils from "@/events-sync/utils";
 import { getERC20Transfer } from "@/events-sync/handlers/utils/erc20";
 import { getUSDAndNativePrices } from "@/utils/prices";
 
+import { idb, pgp } from "@/common/db";
+import { fromBuffer, toBuffer } from "@/common/utils";
+
+type DbEvent = {
+  address: Buffer;
+  block: number;
+  block_hash: Buffer;
+  tx_hash: Buffer;
+  tx_index: number;
+  log_index: number;
+  timestamp: number;
+  batch_index: number;
+  maker: Buffer;
+  nonce: string;
+};
+
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   // Keep track of all events within the currently processing transaction
   let currentTx: string | undefined;
@@ -62,17 +78,116 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const subsetNonces = parsedLog.args["subsetNonces"].map(String);
 
         let batchIndex = 1;
+
+        const nonceCancelValues: DbEvent[] = [];
+
         for (const subsetNonce of subsetNonces) {
-          onChainData.subsetNonceCancelEvents.push({
-            orderKind: "looks-rare-v2",
-            maker,
+          nonceCancelValues.push({
+            address: toBuffer(baseEventParams.address),
+            block: baseEventParams.block,
+            block_hash: toBuffer(baseEventParams.blockHash),
+            tx_hash: toBuffer(baseEventParams.txHash),
+            tx_index: baseEventParams.txIndex,
+            log_index: baseEventParams.logIndex,
+            timestamp: baseEventParams.timestamp,
+            batch_index: batchIndex,
+            maker: toBuffer(maker),
             nonce: subsetNonce,
-            baseEventParams: {
-              ...baseEventParams,
-              batchIndex: batchIndex++,
-            },
           });
+          batchIndex++;
         }
+
+        const columns = new pgp.helpers.ColumnSet(
+          [
+            "address",
+            "block",
+            "block_hash",
+            "tx_hash",
+            "tx_index",
+            "log_index",
+            "timestamp",
+            "batch_index",
+            "maker",
+            "nonce",
+          ],
+          { table: "looksrare_v2_subset_nonce_cancel_events" }
+        );
+
+        // Atomically insert the nonce cancel events and update order statuses.
+        const query = `
+          WITH "x" AS (
+            INSERT INTO "looksrare_v2_subset_nonce_cancel_events" (
+              "address",
+              "block",
+              "block_hash",
+              "tx_hash",
+              "tx_index",
+              "log_index",
+              "timestamp",
+              "batch_index",
+              "maker",
+              "nonce"
+            ) VALUES ${pgp.helpers.values(nonceCancelValues, columns)}
+            ON CONFLICT DO NOTHING
+            RETURNING "maker", "nonce", "tx_hash", "timestamp", "log_index", "batch_index", "block_hash"
+          )
+          SELECT 
+            "o"."raw_data"->>'subsetNonce' as subset_nonce, 
+            "o"."id",
+            "o"."maker",
+            "o"."kind" AS "order_kind", 
+            "o"."nonce", 
+            "x"."tx_hash", 
+            "x"."timestamp", 
+            "x"."log_index", 
+            "x"."batch_index",
+            "x"."block_hash"
+          FROM "orders" AS "o", "x"
+          WHERE "o"."kind" = 'looks-rare-v2'
+            AND "o"."maker" = "x"."maker"
+            AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
+        `;
+
+        const allOrders = await idb.manyOrNone(query);
+        const effectedOrders = allOrders
+          .map((c) => {
+            c.maker = fromBuffer(c.maker);
+            return c;
+          })
+          .filter((c) => {
+            const macthed = nonceCancelValues.find(
+              (d) => fromBuffer(d.maker) === c.maker && d.nonce === c.subset_nonce
+            );
+            return macthed;
+          });
+
+        if (!effectedOrders.length) {
+          break;
+        }
+
+        const updateValues = effectedOrders.map((_) => {
+          return {
+            id: _.id,
+            timestamp: _.timestamp,
+          };
+        });
+
+        const orderColumns = new pgp.helpers.ColumnSet(["id", "timestamp"], {
+          table: "orders",
+        });
+
+        // Update in bacth
+        await idb.manyOrNone(`
+          UPDATE orders SET
+            "fillability_status" = 'cancelled',
+            "expiration" = to_timestamp("x"."timestamp"),
+            "updated_at" = now()
+          FROM (
+            VALUES ${pgp.helpers.values(updateValues, orderColumns)}
+          ) AS x(id, timestamp)
+          WHERE orders.id = x.id
+          RETURNING orders.id
+        `);
 
         break;
       }

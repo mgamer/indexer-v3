@@ -173,20 +173,17 @@ export const isOrderCancelled = async (orderId: string, orderKind: OrderKind): P
 };
 
 export const isSubsetNonceCancelled = async (
-  orderKind: OrderKind,
   maker: string,
   subsetNonce: string
 ): Promise<boolean> => {
   const nonceCancelResult = await idb.oneOrNone(
     `
-      SELECT nonce FROM subset_nonce_events
-      WHERE order_kind = $/orderKind/
-        AND maker = $/maker/
+      SELECT nonce FROM looksrare_v2_subset_nonce_cancel_events
+      WHERE maker = $/maker/
         AND nonce = $/nonce/
       LIMIT 1
     `,
     {
-      orderKind,
       maker: toBuffer(maker),
       nonce: subsetNonce,
     }

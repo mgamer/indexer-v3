@@ -34,7 +34,6 @@ export type OnChainData = {
   cancelEventsOnChain: es.cancels.Event[];
   bulkCancelEvents: es.bulkCancels.Event[];
   nonceCancelEvents: es.nonceCancels.Event[];
-  subsetNonceCancelEvents: es.subsetNonceCancels.Event[];
 
   // Approvals
   // Due to some complexities around them, ft approvals are handled
@@ -68,7 +67,6 @@ export const initOnChainData = (): OnChainData => ({
   cancelEventsOnChain: [],
   bulkCancelEvents: [],
   nonceCancelEvents: [],
-  subsetNonceCancelEvents: [],
 
   nftApprovalEvents: [],
 
@@ -105,7 +103,6 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
     es.cancels.addEventsOnChain(data.cancelEventsOnChain),
     es.bulkCancels.addEvents(data.bulkCancelEvents),
     es.nonceCancels.addEvents(data.nonceCancelEvents),
-    es.subsetNonceCancels.addEvents(data.subsetNonceCancelEvents),
     es.nftApprovals.addEvents(data.nftApprovalEvents),
     es.ftTransfers.addEvents(data.ftTransferEvents, Boolean(backfill)),
     es.nftTransfers.addEvents(data.nftTransferEvents, Boolean(backfill)),

@@ -17,7 +17,7 @@ export const resetOptions: RouteOptions = {
       idb.oneOrNone(`DELETE FROM nonce_cancel_events`),
       idb.oneOrNone(`DELETE FROM orders`),
       idb.oneOrNone(`DELETE FROM bulk_cancel_events`),
-      idb.oneOrNone(`DELETE FROM subset_nonce_events`),
+      idb.oneOrNone(`DELETE FROM looksrare_v2_subset_nonce_cancel_events`),
     ]);
     return result;
   },

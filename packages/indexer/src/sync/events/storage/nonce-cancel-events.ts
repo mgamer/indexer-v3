@@ -25,60 +25,10 @@ type DbEvent = {
   nonce: string;
 };
 
-function generateUpdateQuery(nonceCancelValues: DbEvent[]) {
-  const columns = new pgp.helpers.ColumnSet(
-    [
-      "address",
-      "block",
-      "block_hash",
-      "tx_hash",
-      "tx_index",
-      "log_index",
-      "timestamp",
-      "batch_index",
-      "order_kind",
-      "maker",
-      "nonce",
-    ],
-    { table: "nonce_cancel_events" }
-  );
-
-  // Atomically insert the nonce cancel events and update order statuses.
-  return `
-    WITH "x" AS (
-      INSERT INTO "nonce_cancel_events" (
-        "address",
-        "block",
-        "block_hash",
-        "tx_hash",
-        "tx_index",
-        "log_index",
-        "timestamp",
-        "batch_index",
-        "order_kind",
-        "maker",
-        "nonce"
-      ) VALUES ${pgp.helpers.values(nonceCancelValues, columns)}
-      ON CONFLICT DO NOTHING
-      RETURNING "order_kind", "maker", "nonce", "tx_hash", "timestamp", "log_index", "batch_index", "block_hash"
-    )
-    UPDATE "orders" AS "o" SET
-      "fillability_status" = 'cancelled',
-      "expiration" = to_timestamp("x"."timestamp"),
-      "updated_at" = now()
-    FROM "x"
-    WHERE "o"."kind" = "x"."order_kind"
-      AND "o"."maker" = "x"."maker"
-      AND "o"."nonce" = "x"."nonce"
-      AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
-    RETURNING "o"."id", "x"."tx_hash", "x"."timestamp", "x"."log_index", "x"."batch_index", "x"."block_hash"
-  `;
-}
-
 export const addEvents = async (events: Event[], backfill = false) => {
   const nonceCancelValues: DbEvent[] = [];
   for (const event of events) {
-    const dbEvent = {
+    nonceCancelValues.push({
       address: toBuffer(event.baseEventParams.address),
       block: event.baseEventParams.block,
       block_hash: toBuffer(event.baseEventParams.blockHash),
@@ -90,14 +40,58 @@ export const addEvents = async (events: Event[], backfill = false) => {
       order_kind: event.orderKind,
       maker: toBuffer(event.maker),
       nonce: event.nonce,
-    };
-    nonceCancelValues.push(dbEvent);
+    });
   }
 
   let query: string | undefined;
-
   if (nonceCancelValues.length) {
-    query = generateUpdateQuery(nonceCancelValues);
+    const columns = new pgp.helpers.ColumnSet(
+      [
+        "address",
+        "block",
+        "block_hash",
+        "tx_hash",
+        "tx_index",
+        "log_index",
+        "timestamp",
+        "batch_index",
+        "order_kind",
+        "maker",
+        "nonce",
+      ],
+      { table: "nonce_cancel_events" }
+    );
+
+    // Atomically insert the nonce cancel events and update order statuses.
+    query = `
+      WITH "x" AS (
+        INSERT INTO "nonce_cancel_events" (
+          "address",
+          "block",
+          "block_hash",
+          "tx_hash",
+          "tx_index",
+          "log_index",
+          "timestamp",
+          "batch_index",
+          "order_kind",
+          "maker",
+          "nonce"
+        ) VALUES ${pgp.helpers.values(nonceCancelValues, columns)}
+        ON CONFLICT DO NOTHING
+        RETURNING "order_kind", "maker", "nonce", "tx_hash", "timestamp", "log_index", "batch_index", "block_hash"
+      )
+      UPDATE "orders" AS "o" SET
+        "fillability_status" = 'cancelled',
+        "expiration" = to_timestamp("x"."timestamp"),
+        "updated_at" = now()
+      FROM "x"
+      WHERE "o"."kind" = "x"."order_kind"
+        AND "o"."maker" = "x"."maker"
+        AND "o"."nonce" = "x"."nonce"
+        AND ("o"."fillability_status" = 'fillable' OR "o"."fillability_status" = 'no-balance')
+      RETURNING "o"."id", "x"."tx_hash", "x"."timestamp", "x"."log_index", "x"."batch_index", "x"."block_hash"
+    `;
   }
 
   if (query) {
