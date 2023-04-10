@@ -86,7 +86,12 @@ export const save = async (
       }
 
       // Check: order has Weth as payment token
-      if (order.params.currency !== Sdk.Common.Addresses.Weth[config.chainId]) {
+      if (
+        [
+          Sdk.Common.Addresses.Weth[config.chainId],
+          Sdk.Common.Addresses.Eth[config.chainId],
+        ].includes(order.params.currency)
+      ) {
         return results.push({
           id,
           status: "unsupported-payment-token",

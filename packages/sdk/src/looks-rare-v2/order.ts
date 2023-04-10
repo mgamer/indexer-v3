@@ -133,7 +133,6 @@ export class Order {
         toRawOrder(this),
         signature
       );
-
       if (lc(this.params.signer) !== lc(signer)) {
         throw new Error("Invalid signature");
       }
