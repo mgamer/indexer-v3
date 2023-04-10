@@ -233,6 +233,10 @@ export const extractEventsBatches = async (
             kind: "blend",
             data: kindToEvents.get("blend") ?? [],
           },
+          {
+            kind: "collection",
+            data: kindToEvents.get("collection") ?? [],
+          },
         ];
 
         txHashToEventsBatch.set(txHash, {
