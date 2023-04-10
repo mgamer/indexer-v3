@@ -24,6 +24,13 @@ export abstract class SeaportBaseExchange {
 
   public abstract deriveConduit(conduitKey: string): string;
 
+  public abstract eip712Domain(): {
+    name: string;
+    version: string;
+    chainId: number;
+    verifyingContract: string;
+  };
+
   // --- Fill order ---
 
   public async fillOrder(

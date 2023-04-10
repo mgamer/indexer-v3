@@ -247,7 +247,7 @@ export const postOrderV3Options: RouteOptions = {
               orderId = new Sdk.SeaportV14.Order(config.chainId, order.data).hash();
               break;
             case "alienswap":
-              orderId = new Sdk.SeaportV11.Order(config.chainId, order.data).hash();
+              orderId = new Sdk.Alienswap.Order(config.chainId, order.data).hash();
               break;
           }
 

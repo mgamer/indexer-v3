@@ -15,4 +15,18 @@ export class Exchange extends SeaportV14Exchange {
     this.cancellationZoneAddress = CancellationZone[chainId];
     this.contract = new Contract(this.exchangeAddress, ExchangeAbi);
   }
+
+  public eip712Domain(): {
+    name: string;
+    version: string;
+    chainId: number;
+    verifyingContract: string;
+  } {
+    return {
+      name: "Alienswap",
+      version: "1.4",
+      chainId: this.chainId,
+      verifyingContract: this.exchangeAddress,
+    };
+  }
 }

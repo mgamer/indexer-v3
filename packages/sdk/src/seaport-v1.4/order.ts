@@ -51,7 +51,7 @@ export class Order implements IOrder {
 
   public async sign(signer: TypedDataSigner) {
     const signature = await signer._signTypedData(
-      EIP712_DOMAIN(this.chainId, this.exchangeAddress),
+      this.exchange.eip712Domain(),
       ORDER_EIP712_TYPES,
       this.params
     );
@@ -65,7 +65,7 @@ export class Order implements IOrder {
   public getSignatureData() {
     return {
       signatureKind: "eip712",
-      domain: EIP712_DOMAIN(this.chainId, this.exchangeAddress),
+      domain: this.exchange.eip712Domain(),
       types: ORDER_EIP712_TYPES,
       value: this.params,
       primaryType: _TypedDataEncoder.getPrimaryType(ORDER_EIP712_TYPES),
@@ -126,9 +126,7 @@ export class Order implements IOrder {
           ["bytes"],
           [
             "0x1901" +
-              _TypedDataEncoder
-                .hashDomain(EIP712_DOMAIN(this.chainId, this.exchangeAddress))
-                .slice(2) +
+              _TypedDataEncoder.hashDomain(this.exchange.eip712Domain()).slice(2) +
               bulkOrderHash.slice(2),
           ]
         );
@@ -139,7 +137,7 @@ export class Order implements IOrder {
         }
       } else {
         const signer = verifyTypedData(
-          EIP712_DOMAIN(this.chainId, this.exchangeAddress),
+          this.exchange.eip712Domain(),
           ORDER_EIP712_TYPES,
           this.params,
           signature
@@ -155,7 +153,7 @@ export class Order implements IOrder {
       }
 
       const eip712Hash = _TypedDataEncoder.hash(
-        EIP712_DOMAIN(this.chainId, this.exchangeAddress),
+        this.exchange.eip712Domain(),
         ORDER_EIP712_TYPES,
         this.params
       );
@@ -401,12 +399,12 @@ export class Order implements IOrder {
   }
 }
 
-export const EIP712_DOMAIN = (chainId: number, exchangeAddress: string) => ({
-  name: "Seaport",
-  version: "1.4",
-  chainId,
-  verifyingContract: exchangeAddress,
-});
+// export const EIP712_DOMAIN = (chainId: number, exchangeAddress: string) => ({
+//   name: "Seaport",
+//   version: "1.4",
+//   chainId: 11155111,
+//   verifyingContract: exchangeAddress,
+// });
 
 const normalize = (order: Types.OrderComponents): Types.OrderComponents => {
   // Perform some normalization operations on the order:

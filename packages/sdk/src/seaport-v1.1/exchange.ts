@@ -7,10 +7,26 @@ import { IOrder } from "../seaport-base/order";
 
 export class Exchange extends SeaportBaseExchange {
   public contract: Contract;
+  protected exchangeAddress: string;
 
   constructor(chainId: number) {
     super(chainId);
-    this.contract = new Contract(Addresses.Exchange[chainId], ExchangeAbi);
+    this.exchangeAddress = Addresses.Exchange[chainId];
+    this.contract = new Contract(this.exchangeAddress, ExchangeAbi);
+  }
+
+  public eip712Domain(): {
+    name: string;
+    version: string;
+    chainId: number;
+    verifyingContract: string;
+  } {
+    return {
+      name: "Seaport",
+      version: "1.1",
+      chainId: this.chainId,
+      verifyingContract: this.exchangeAddress,
+    };
   }
 
   // --- Derive conduit from key ---

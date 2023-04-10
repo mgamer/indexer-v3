@@ -10,7 +10,6 @@ import { MerkleTree } from "merkletreejs";
 
 import * as Addresses from "./addresses";
 import { ORDER_EIP712_TYPES, IOrder } from "../seaport-base/order";
-import { EIP712_DOMAIN } from "./order";
 import * as Types from "../seaport-base/types";
 import { bn } from "../utils";
 
@@ -27,6 +26,20 @@ export class Exchange extends SeaportBaseExchange {
     this.exchangeAddress = Addresses.Exchange[chainId];
     this.cancellationZoneAddress = Addresses.CancellationZone[chainId];
     this.contract = new Contract(this.exchangeAddress, ExchangeAbi);
+  }
+
+  public eip712Domain(): {
+    name: string;
+    version: string;
+    chainId: number;
+    verifyingContract: string;
+  } {
+    return {
+      name: "Seaport",
+      version: "1.4",
+      chainId: this.chainId,
+      verifyingContract: this.exchangeAddress,
+    };
   }
 
   // --- Derive conduit from key ---
@@ -96,7 +109,7 @@ export class Exchange extends SeaportBaseExchange {
     return {
       signatureData: {
         signatureKind: "eip712",
-        domain: EIP712_DOMAIN(this.chainId, this.exchangeAddress),
+        domain: this.eip712Domain(),
         types,
         value: { tree: chunks },
         primaryType: _TypedDataEncoder.getPrimaryType(types),
