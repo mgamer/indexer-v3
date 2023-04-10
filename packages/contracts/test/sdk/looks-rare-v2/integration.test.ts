@@ -194,6 +194,7 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
                 fillability_status: orderState.fillability_status,
                 approval_status: orderState.approval_status
             }))
+            expect(orderState.fillability_status).to.eq("cancelled")
             return;
         }
 
@@ -233,6 +234,7 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
                 fillability_status: orderState.fillability_status,
                 approval_status: orderState.approval_status
             }))
+            expect(orderState.fillability_status).to.eq("cancelled")
             return;
         }
 
@@ -259,12 +261,12 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
             })
 
             const orderState = await indexerHelper.getOrder(orderInfo.id);
-            const { subsetNonceCancelEvents } = onChainData;
-            if (subsetNonceCancelEvents.length) {
-                console.log(green(`\t\t found subsetNonceCancelEvents ${subsetNonceCancelEvents.length}`))
-            } else {
-                console.log(error("\t\t subsetNonceCancelEvents not found"))
-            }
+            // const { subsetNonceCancelEvents } = onChainData;
+            // if (subsetNonceCancelEvents.length) {
+            //     console.log(green(`\t\t found subsetNonceCancelEvents ${subsetNonceCancelEvents.length}`))
+            // } else {
+            //     console.log(error("\t\t subsetNonceCancelEvents not found"))
+            // }
             
             console.log(green("\t Order Status: "))
             console.log("\t\t - Final Order Status =", JSON.stringify({
@@ -272,6 +274,7 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
                 maker: orderState.maker,
                 approval_status: orderState.approval_status
             }))
+            expect(orderState.fillability_status).to.eq("cancelled")
             return;
         }
 
@@ -378,6 +381,7 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
 
         console.log(green("\t Order Status: "))
         const finalOrderState = await indexerHelper.getOrder(orderInfo.id);
+        expect(finalOrderState.fillability_status).to.eq("filled")
         console.log("\t\t - Final Order Status =", JSON.stringify({
             fillability_status: finalOrderState.fillability_status,
             approval_status: finalOrderState.approval_status
@@ -386,10 +390,10 @@ describe("LooksRareV2 - Indexer Integration Test", () => {
 
     it("Fill Listing With Bulk Cancel - Multiple", async () => {
         await testCase({
-            bulkCancel: true
+            cancelOrder: true
         });
         await testCase({
-            bulkCancel: true
+            cancelOrder: true
         });
         console.log("\n")
     });

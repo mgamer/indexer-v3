@@ -1,8 +1,9 @@
 import axios from "axios";
 
-let indexUrl = process.env.INDEXER_URL || "http://localhost:3000";
+let indexUrl = process.env.INDEXER_URL || "http://127.0.0.1:3000";
 
 export async function doEventParsing(tx: string, skipProcessing: boolean = true) {
+   
     const { data } = await axios.get(`${indexUrl}/debug/event-parsing`, {
         params: {
             tx,
